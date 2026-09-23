@@ -106,6 +106,12 @@ post:
                 type: [string, 'null']
               messageId:
                 type: [string, 'null']
+              discardedVotes:
+                description: >-
+                  Voix supprimees par une RELANCE (`force`). Dit explicitement,
+                  parce qu'effacer des bulletins en silence serait
+                  indefendable, meme quand il n'y en a qu'un.
+                type: [integer, 'null']
               team1Name:
                 description: >-
                   Equipes du match, rendues a la cloture. Le bot les nomme dans

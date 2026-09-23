@@ -63330,6 +63330,9 @@
        "votable": {
         "type": "boolean"
        },
+       "discardedVotes": {
+        "type": "number"
+       },
        "match": {
         "type": "object",
         "properties": {
@@ -63363,6 +63366,7 @@
        "poll",
        "candidates",
        "votable",
+       "discardedVotes",
        "match"
       ]
      },

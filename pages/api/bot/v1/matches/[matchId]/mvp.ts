@@ -86,6 +86,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       channelId: body.channelId ?? null,
       messageId: body.messageId ?? null,
       durationHours: body.durationHours ?? undefined,
+      force: !!body.force,
     });
     if (!opened) {
       return res.status(500).json({ error: "Échec de l'ouverture du vote" });
@@ -97,6 +98,9 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
       poll: opened.poll,
       candidates: opened.candidates,
       votable: opened.candidates.length >= 2,
+      // Le bot le DIT à qui relance : supprimer des bulletins en silence
+      // serait indéfendable, même quand il n'y en a qu'un.
+      discardedVotes: opened.discardedVotes,
       // Noms des équipes : le bot compose son message sans eux quand
       // l'ouverture vient d'une commande staff et non de l'événement du match.
       match: opened.match,

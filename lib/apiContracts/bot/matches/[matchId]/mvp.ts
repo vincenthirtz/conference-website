@@ -29,4 +29,14 @@ export const mvpBodySchema = z.object({
   messageId: z.string().min(1).max(64).nullish(),
   /** Fenêtre de vote en heures (action `open`), 48 par défaut. */
   durationHours: z.number().int().min(1).max(168).nullish(),
+  /**
+   * RELANCE (action `open`) : repartir de zéro sur un scrutin déjà ouvert.
+   *
+   * Sans elle, un vote posté ne peut plus jamais être reposté — l'ancrage
+   * Discord est reconduit à chaque appel, et le bot refuse tant qu'un
+   * `discord_message_id` existe, même si le message a été supprimé. La relance
+   * refige les candidates, remet la fenêtre à zéro, efface l'ancrage et PURGE
+   * les voix (la liste ayant changé, les anciennes fausseraient le décompte).
+   */
+  force: z.boolean().nullish(),
 });

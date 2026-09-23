@@ -78,9 +78,11 @@ function shortTeam(name: string | null | undefined): string {
  * trois joueuses arrivées depuis, votables pour un match qu'elles n'ont pas
  * disputé, et une remplaçante réellement entrée en jeu qui ne l'est pas.
  *
- * Repli sur le roster courant quand aucune participante n'est relevée (match
- * ancien, ou relevé pas encore écrit) : mieux vaut une liste approximative
- * qu'aucun vote.
+ * Repli sur le roster courant, ÉQUIPE PAR ÉQUIPE, quand aucune de ses
+ * participantes n'est relevée (match ancien, relevé pas encore écrit, ou
+ * feuille jamais validée) : mieux vaut une liste approximative qu'aucun vote.
+ * Le repli était autrefois global au match, ce qui faisait disparaître une
+ * équipe entière dès que l'AUTRE avait composé — cf. le bloc dédié plus bas.
  *
  * Les remplaçantes sont exclues dans les deux cas — une liste de vingt noms
  * rend le vote illisible, et `is_substitute` du relevé dit bien « n'a pas
@@ -168,14 +170,33 @@ export async function listMvpCandidates(
     if (p.user_id) playedUserIds.add(p.user_id);
     if (p.battle_tag) playedTags.add(p.battle_tag.toLowerCase());
   }
-  const hasLineup = playedUserIds.size > 0 || playedTags.size > 0;
-
   const played = (m: { user_id?: string | null; battle_tag?: string | null }) =>
     (m.user_id && playedUserIds.has(m.user_id)) ||
     (m.battle_tag != null && playedTags.has(m.battle_tag.toLowerCase()));
 
+  // LE REPLI EST DÉCIDÉ PAR ÉQUIPE, PAS PAR MATCH — et cette nuance a coûté un
+  // scrutin entier le 2026-09-23.
+  //
+  // Un seul booléen global disait « ce match a un relevé ». Sur LVN ASHES vs
+  // Team Positivité, une seule des deux avait validé sa feuille : le booléen
+  // passait à `true`, le filtre « a joué » s'appliquait AUX DEUX ÉQUIPES, et
+  // les neuf joueuses de Team Positivité disparaissaient sans un log. Le vote
+  // proposait quatre noms, tous du même côté — il ne pouvait désigner qu'une
+  // Ashes.
+  //
+  // Une équipe « a composé » si au moins une de ses joueuses figure au relevé.
+  // Celles qui n'ont rien déclaré retombent sur leur roster, exactement comme
+  // si personne n'avait composé. Le repli redevient ce que son commentaire
+  // d'origine promettait : une liste approximative plutôt qu'aucune.
+  const equipesAvecFeuille = new Set<string>();
+  for (const m of members || []) {
+    if (played(m)) equipesAvecFeuille.add(m.team_id as string);
+  }
+
   const candidates: MvpCandidate[] = (members || [])
-    .filter((m) => (hasLineup ? played(m) : !m.is_substitute))
+    .filter((m) =>
+      equipesAvecFeuille.has(m.team_id as string) ? played(m) : !m.is_substitute
+    )
     .map((m) => {
       const name = m.display_name || m.battle_tag || null;
       return {
@@ -243,6 +264,23 @@ export async function openMvpVote(
     channelId?: string | null;
     messageId?: string | null;
     durationHours?: number;
+    /**
+     * RELANCE : repartir de zéro sur un scrutin déjà ouvert.
+     *
+     * Sans elle, un vote posté ne peut plus jamais être reposté. L'ancrage
+     * Discord est reconduit à chaque appel (`opts.messageId ?? existing`), et
+     * le bot refuse de poster tant qu'un `discord_message_id` existe — même si
+     * le message a été supprimé, ce que le site n'a aucun moyen de savoir.
+     * Le 2026-09-23, un scrutin mal composé a été supprimé sur Discord et
+     * l'état est resté définitivement coincé.
+     *
+     * La relance refige les candidates, remet la fenêtre à zéro, EFFACE
+     * l'ancrage (pour qu'un nouveau message parte) et PURGE les voix : la
+     * liste des candidates ayant changé, une voix pour quelqu'un qui n'y
+     * figure plus fausserait le décompte — `castMvpVote` vérifie la candidature
+     * à l'encaissement, pas au dépouillement.
+     */
+    force?: boolean;
   } = {}
 ): Promise<{
   poll: MvpPollRow;
@@ -252,6 +290,8 @@ export async function openMvpVote(
     team1Name: string | null;
     team2Name: string | null;
   };
+  /** Voix supprimées par la relance. 0 hors relance. */
+  discardedVotes: number;
 } | null> {
   const { match, candidates } = await listMvpCandidates(tenantId, matchId);
   if (!match) return null;
@@ -270,12 +310,23 @@ export async function openMvpVote(
   const nowIso = now.toISOString();
 
   // Le message Discord est toujours rafraîchi : le bot peut avoir reposté.
-  const anchor = {
-    discord_channel_id: opts.channelId ?? existing?.discord_channel_id ?? null,
-    discord_message_id: opts.messageId ?? existing?.discord_message_id ?? null,
-  };
+  //
+  // SAUF EN RELANCE, où l'ancien ancrage est précisément ce qu'il faut jeter.
+  // Le reconduire ferait croire au bot qu'un message existe encore, et il
+  // refuserait de reposter — la situation même qu'on débloque.
+  const anchor = opts.force
+    ? {
+        discord_channel_id: opts.channelId ?? null,
+        discord_message_id: opts.messageId ?? null,
+      }
+    : {
+        discord_channel_id:
+          opts.channelId ?? existing?.discord_channel_id ?? null,
+        discord_message_id:
+          opts.messageId ?? existing?.discord_message_id ?? null,
+      };
 
-  if (existing?.posted_at && !existing.closed_at) {
+  if (existing?.posted_at && !existing.closed_at && !opts.force) {
     const { data } = await supabaseAdmin
       .from('match_mvp_polls')
       .update({ ...anchor, updated_at: nowIso })
@@ -287,7 +338,33 @@ export async function openMvpVote(
       poll: (data as MvpPollRow) ?? existing,
       candidates,
       match: matchInfo,
+      discardedVotes: 0,
     };
+  }
+
+  // Purge des voix : la liste des candidates vient de changer, celles qui
+  // portaient sur quelqu'un qui n'y figure plus fausseraient le décompte.
+  // On compte AVANT de supprimer, pour pouvoir le dire à qui relance — une
+  // suppression silencieuse de bulletins serait indéfendable.
+  let discardedVotes = 0;
+  if (opts.force && existing?.id) {
+    const { data: anciennes } = await supabaseAdmin
+      .from('match_mvp_votes')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('match_id', matchId);
+    discardedVotes = (anciennes ?? []).length;
+    if (discardedVotes > 0) {
+      const { error: delErr } = await supabaseAdmin
+        .from('match_mvp_votes')
+        .delete()
+        .eq('tenant_id', tenantId)
+        .eq('match_id', matchId);
+      if (delErr) {
+        logger.error('[mvp] openMvpVote purge votes error:', delErr);
+        return null;
+      }
+    }
   }
 
   const closesAt = new Date(now.getTime() + hours * 3600_000).toISOString();
@@ -313,7 +390,12 @@ export async function openMvpVote(
       logger.error('[mvp] openMvpVote update error:', error);
       return null;
     }
-    return { poll: data as MvpPollRow, candidates, match: matchInfo };
+    return {
+      poll: data as MvpPollRow,
+      candidates,
+      match: matchInfo,
+      discardedVotes,
+    };
   }
 
   const { data, error } = await supabaseAdmin
@@ -325,7 +407,12 @@ export async function openMvpVote(
     logger.error('[mvp] openMvpVote insert error:', error);
     return null;
   }
-  return { poll: data as MvpPollRow, candidates, match: matchInfo };
+  return {
+    poll: data as MvpPollRow,
+    candidates,
+    match: matchInfo,
+    discardedVotes,
+  };
 }
 
 export type CastVoteResult =

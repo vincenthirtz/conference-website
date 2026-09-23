@@ -411,3 +411,80 @@ describe('/api/bot/v1/matches/[matchId]/mvp', () => {
     expect(res.statusCode).toBe(409);
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * LE REPLI SUR LE ROSTER EST PAR ÉQUIPE (2026-09-23).
+ *
+ * Un seul booléen global disait « ce match a un relevé ». Sur LVN ASHES vs
+ * Team Positivité, une seule des deux avait validé sa feuille : le filtre
+ * « a joué » s'appliquait AUX DEUX, et les neuf joueuses de l'équipe qui
+ * n'avait rien déclaré disparaissaient sans un log. Le vote proposait quatre
+ * noms, tous du même côté — il ne pouvait désigner qu'une Ashes.
+ *
+ * Ces tests tiennent la règle dans les trois configurations possibles.
+ * -------------------------------------------------------------------------*/
+
+describe('candidates — repli sur le roster, équipe par équipe', () => {
+  beforeEach(() => {
+    resetSupabaseMock();
+    seedBotAuth({ tenantId: TENANT, apiKey: 'test-key' });
+    seed();
+  });
+
+  it('une seule équipe a composé : L’AUTRE NE DISPARAÎT PAS', async () => {
+    // Seule l'équipe A relève sa composition. Avant le correctif, l'équipe B
+    // était intégralement effacée.
+    store.match_participants = [
+      {
+        tenant_id: TENANT,
+        match_id: MATCH,
+        user_id: U_ALICE,
+        battle_tag: 'Alice#1111',
+        is_substitute: false,
+      },
+    ] as any;
+
+    const res = await call(MATCH, { method: 'GET' });
+    const ids = (res.body as any).candidates.map((c: any) => c.memberId);
+
+    // Équipe A : la feuille fait foi — seule Alice, pas Bea.
+    expect(ids).toContain(ALICE);
+    expect(ids).not.toContain(BEA);
+    // Équipe B : aucune feuille, donc son roster de titulaires.
+    expect(ids).toContain(CHLOE);
+    // La remplaçante de roster reste exclue du repli.
+    expect(ids).not.toContain(SUB);
+  });
+
+  it('les deux ont composé : la feuille fait foi des deux côtés', async () => {
+    store.match_participants = [
+      {
+        tenant_id: TENANT,
+        match_id: MATCH,
+        user_id: U_ALICE,
+        battle_tag: 'Alice#1111',
+        is_substitute: false,
+      },
+      {
+        tenant_id: TENANT,
+        match_id: MATCH,
+        user_id: U_CHLOE,
+        battle_tag: 'Chloe#3333',
+        is_substitute: false,
+      },
+    ] as any;
+
+    const res = await call(MATCH, { method: 'GET' });
+    const ids = (res.body as any).candidates.map((c: any) => c.memberId);
+    expect(ids).toEqual(expect.arrayContaining([ALICE, CHLOE]));
+    expect(ids).not.toContain(BEA);
+  });
+
+  it('aucune n’a composé : les deux rosters, comme avant', async () => {
+    store.match_participants = [] as any;
+    const res = await call(MATCH, { method: 'GET' });
+    const ids = (res.body as any).candidates.map((c: any) => c.memberId);
+    expect(ids).toEqual(expect.arrayContaining([ALICE, BEA, CHLOE]));
+    expect(ids).not.toContain(SUB);
+  });
+});
