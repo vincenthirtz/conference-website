@@ -16,7 +16,7 @@
 // TOUT LE RESTE SE RÈGLE EN LIGNE, depuis la page Outils du tournoi : quels
 // types annoncer, avec quelle phrase, au-dessus de quel seuil, combien de temps,
 // avec quel son. Ces réglages voyagent avec les alertes (`/api/overlay/alerts`)
-// et s'appliquent en moins de cinq secondes — parce qu'en plein direct, on ne
+// et s'appliquent en une dizaine de secondes — parce qu'en plein direct, on ne
 // recolle pas une URL dans OBS.
 //
 // CE QUI NE S'AFFICHE JAMAIS : ce qui s'est passé avant l'ouverture de la
@@ -31,7 +31,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
-import { useOverlayPoll } from '@/hooks/useOverlayPoll';
+import { LIVE_OVERLAY_POLL_MS, useOverlayPoll } from '@/hooks/useOverlayPoll';
 import { AlertBoxSource } from '@/components/overlay/match/AlertBoxSource';
 import {
   ALERT_KINDS,
@@ -132,7 +132,7 @@ export default function AlertBoxOverlayPage() {
   }, [router.isReady, demo, tenant]);
 
   const { data, fatal } = useOverlayPoll<OverlayAlertsResponse>(url, {
-    intervalMs: 5000,
+    intervalMs: LIVE_OVERLAY_POLL_MS,
   });
   const demoFeed = useDemoFeed(demo);
   const feed = demo ? demoFeed : data;
@@ -146,7 +146,7 @@ export default function AlertBoxOverlayPage() {
   const [queue, setQueue] = useState(initialAlertQueue);
   const [current, setCurrent] = useState<StreamAlert | null>(null);
   // La file est relue par les minuteries ; une ref évite de les relancer à
-  // chaque poll (toutes les 5 s pendant six heures).
+  // chaque poll (toutes les 10 s pendant six heures).
   const queueRef = useRef(queue);
   queueRef.current = queue;
 
@@ -176,7 +176,7 @@ export default function AlertBoxOverlayPage() {
   }, [current, queue]);
 
   // 3. La retirer quand son temps est passé. La durée vient des réglages, donc
-  //    d'une modification faite en admin il y a moins de cinq secondes.
+  //    d'une modification faite en admin il y a une dizaine de secondes.
   useEffect(() => {
     if (!current) return undefined;
     const ms = feed?.settings.durationMs ?? 19_000;

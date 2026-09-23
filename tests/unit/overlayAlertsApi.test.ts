@@ -195,7 +195,9 @@ describe('contrat de la réponse', () => {
     // peut être fausse.
     const res = await get();
     expect(res.body.serverTime).toBe(new Date(NOW).toISOString());
-    expect(res.headers['Cache-Control']).toContain('s-maxage=5');
+    // Aligné sur la cadence des sources (10 s) : le CDN ne peut dédoubler
+    // que ce qu'il a le droit de garder.
+    expect(res.headers['Cache-Control']).toContain('s-maxage=10');
     expect(res.headers['X-Robots-Tag']).toBe('noindex');
   });
 

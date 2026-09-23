@@ -50,7 +50,7 @@ export default async function handler(
     return res.status(405).json({ error: 'Méthode non autorisée.' });
   }
 
-  // La source poll toutes les 3 s pendant des heures : la borne est large,
+  // La source poll toutes les 10 s pendant des heures : la borne est large,
   // elle n'est là que contre un scraping.
   if (applyRateLimit(req, res, { max: 120, windowMs: 60_000 }, 'overlay-mvp')) {
     return;
@@ -68,11 +68,11 @@ export default async function handler(
     const nowMs = Date.now();
     const poll = await readPublicMvpFeed(tenantId, nowMs);
 
-    // Même cache que la boîte d'alertes : cinq secondes suffisent à absorber
-    // deux sources ouvertes sur le même poste sans dédoubler les requêtes.
+    // Aligné sur la cadence des sources (10 s) : deux sources ouvertes sur
+    // le même poste ne doivent pas doubler les requêtes.
     res.setHeader(
       'Cache-Control',
-      'public, s-maxage=3, stale-while-revalidate=10'
+      'public, s-maxage=10, stale-while-revalidate=30'
     );
     res.setHeader('X-Robots-Tag', 'noindex');
 

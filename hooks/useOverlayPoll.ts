@@ -11,6 +11,26 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+/**
+ * Cadence des sources « vivantes » — alertes, scrutin public, régie fusionnée.
+ *
+ * DIX SECONDES, ET C'EST UN ARBITRAGE DE COÛT. À 5 s, la seule boîte
+ * d'alertes produit 720 appels par heure, chacun déclenchant six requêtes en
+ * base : près de 4 300 requêtes/heure pour une source, et 8 000 relevées sur
+ * le compteur Supabase en une heure le 2026-09-23. Doubler l'intervalle divise
+ * tout cela par deux.
+ *
+ * CE QU'ON PAIE : une alerte de sub apparaît jusqu'à dix secondes après
+ * l'événement au lieu de cinq. Sur un direct, c'est imperceptible — l'alerte
+ * dure dix-neuf secondes et les événements n'arrivent pas en rafale. Ce qu'on
+ * ne paie PAS : rien n'est manqué, la fenêtre de rattrapage côté serveur est
+ * de quinze minutes.
+ *
+ * Le compte à rebours du scrutin, lui, est LOCAL : il continue de descendre à
+ * la seconde, sans requête.
+ */
+export const LIVE_OVERLAY_POLL_MS = 10_000;
+
 export function useOverlayPoll<T>(
   url: string | null,
   { enabled = true, intervalMs = 15_000 } = {}

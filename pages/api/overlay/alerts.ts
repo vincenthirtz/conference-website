@@ -4,7 +4,7 @@
 // événements Twitch reçus par webhook, les dons HelloAsso, et la configuration
 // que la régie a posée depuis la page Outils — le tout en UN appel.
 //
-// UN SEUL APPEL, ET C'EST VOULU. La source poll toutes les 5 s pendant six
+// UN SEUL APPEL, ET C'EST VOULU. La source poll toutes les 10 s pendant six
 // heures ; trois requêtes au lieu d'une, c'est trois fois plus d'occasions
 // qu'une d'elles échoue et laisse l'écran dans un état incohérent (des alertes
 // sans leurs règles annonceraient ce que la régie a éteint).
@@ -143,7 +143,7 @@ export default async function handler(
     //
     // POURQUOI CE GREFFON PLUTÔT QU'UNE SECONDE ROUTE. Une régie qui empile
     // quatre sources navigateur fait quatre fois le tour du réseau, en boucle,
-    // pendant six heures. Le scrutin interrogeait toutes les 3 s, la boîte
+    // pendant six heures. Le scrutin interrogeait ALORS toutes les 3 s, la boîte
     // toutes les 5 s : près de 2 000 appels par heure à elles deux, chacun
     // déclenchant plusieurs requêtes en base — 8 000 requêtes Supabase en une
     // heure le 2026-09-23.
@@ -258,7 +258,7 @@ export default async function handler(
 
     res.setHeader(
       'Cache-Control',
-      'public, s-maxage=5, stale-while-revalidate=15'
+      'public, s-maxage=10, stale-while-revalidate=30'
     );
     res.setHeader('X-Robots-Tag', 'noindex');
     return res.status(200).json({

@@ -5,7 +5,7 @@
 //
 // POURQUOI CETTE EXTRACTION. Une régie qui empile quatre sources navigateur
 // fait quatre fois le tour du réseau, en boucle, pendant six heures. Le
-// scrutin public interrogeait toutes les 3 s, la boîte d'alertes toutes les
+// scrutin public interrogeait alors toutes les 3 s, la boîte d'alertes toutes les
 // 5 s : à elles deux, près de 2 000 appels par heure, chacun déclenchant
 // plusieurs requêtes en base. C'est ce qui a fait monter le compteur Supabase
 // à 8 000 requêtes en une heure le 2026-09-23.

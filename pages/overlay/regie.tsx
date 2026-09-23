@@ -17,7 +17,8 @@
 //
 // POURQUOI FUSIONNER. Quatre sources navigateur, c'est quatre fois le tour du
 // réseau, en boucle, pendant six heures. Le scrutin public interrogeait toutes
-// les 3 s et la boîte d'alertes toutes les 5 s : près de 2 000 appels par
+// les 3 s et la boîte d'alertes toutes les 5 s (cadences d'ALORS ; les deux
+// sont passées à 10 s depuis) : près de 2 000 appels par
 // heure à elles deux, chacun déclenchant plusieurs requêtes en base — d'où
 // 8 000 requêtes Supabase en une heure le 2026-09-23. Ici, UN seul appel les
 // sert toutes les deux (`?with=mvp`).
@@ -46,7 +47,7 @@ import { useRouter } from 'next/router';
 
 import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
-import { useOverlayPoll } from '@/hooks/useOverlayPoll';
+import { LIVE_OVERLAY_POLL_MS, useOverlayPoll } from '@/hooks/useOverlayPoll';
 import { AlertBoxSource } from '@/components/overlay/match/AlertBoxSource';
 import { PublicMvpSource } from '@/components/overlay/match/PublicMvpSource';
 import { PartnersSource } from '@/components/overlay/match/PartnersSource';
@@ -121,7 +122,7 @@ export default function RegieOverlayPage() {
   }, [router.isReady, tenant, avecMvp]);
 
   const { data, fatal } = useOverlayPoll<OverlayAlertsResponse>(url, {
-    intervalMs: 5000,
+    intervalMs: LIVE_OVERLAY_POLL_MS,
   });
 
   // Les partenaires gardent leur route, cachée quinze minutes côté serveur :

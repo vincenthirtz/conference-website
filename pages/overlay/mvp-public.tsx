@@ -33,7 +33,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 
 import { useT } from '@/lib/i18n/useT';
-import { useOverlayPoll } from '@/hooks/useOverlayPoll';
+import { LIVE_OVERLAY_POLL_MS, useOverlayPoll } from '@/hooks/useOverlayPoll';
 import { PublicMvpSource } from '@/components/overlay/match/PublicMvpSource';
 import type { OverlayPublicMvpResponse } from '@/pages/api/overlay/mvp-public';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
@@ -77,7 +77,7 @@ export default function PublicMvpOverlayPage() {
     : null;
 
   const { data, fatal } = useOverlayPoll<OverlayPublicMvpResponse>(url, {
-    intervalMs: 3000,
+    intervalMs: LIVE_OVERLAY_POLL_MS,
   });
 
   return (
