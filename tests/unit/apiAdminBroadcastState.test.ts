@@ -7,6 +7,7 @@ import {
   setAuthUser,
 } from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
+import { __resetPlanCacheForTests } from '../../utils/billing/tenantCapabilityGate';
 
 vi.mock('@/utils/botEvents', () => ({
   emitBotEvent: vi.fn(async () => ({
@@ -68,6 +69,10 @@ const RUN_ID = '11111111-1111-1111-1111-111111111111';
 beforeEach(() => {
   resetSupabaseMock();
   invalidateStaffCache();
+  // Le palier est gardé une minute en mémoire pour ne pas relire la même
+  // ligne 720 fois par heure depuis les overlays. Sans ce reset, le plan
+  // d'un test fuirait dans le suivant.
+  __resetPlanCacheForTests();
   setAuthUser({ id: 'user-1' });
   store.staff = [makeStaffRow('admin')] as any;
   (emitBotEvent as any).mockClear();
