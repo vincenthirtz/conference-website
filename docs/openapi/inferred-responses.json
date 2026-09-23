@@ -35267,145 +35267,129 @@
   },
   "GET /api/overlay/mvp-public": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
+    "type": "object",
+    "properties": {
+     "poll": {
+      "type": [
+       "object",
+       "null"
+      ],
       "properties": {
-       "poll": {
-        "type": "null"
-       },
-       "serverTime": {
+       "matchId": {
         "type": "string"
-       }
-      },
-      "required": [
-       "poll",
-       "serverTime"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "poll": {
-        "type": "object",
-        "properties": {
-         "matchId": {
-          "type": "string"
-         },
-         "roundName": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "team1Name": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "team2Name": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "closesAt": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "isOpen": {
-          "type": "boolean"
-         },
-         "candidates": {
-          "type": "array",
-          "items": {
-           "type": "object",
-           "properties": {
-            "memberId": {
-             "type": "string"
-            },
-            "label": {
-             "type": "string"
-            },
-            "teamName": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "votes": {
-             "type": "number"
-            },
-            "share": {
-             "type": "number"
-            }
-           },
-           "required": [
-            "memberId",
-            "label",
-            "teamName",
-            "votes",
-            "share"
+       },
+       "roundName": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "team1Name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "team2Name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "closesAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "isOpen": {
+        "type": "boolean"
+       },
+       "candidates": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "memberId": {
+           "type": "string"
+          },
+          "label": {
+           "type": "string"
+          },
+          "teamName": {
+           "type": [
+            "string",
+            "null"
            ]
+          },
+          "votes": {
+           "type": "number"
+          },
+          "share": {
+           "type": "number"
           }
          },
-         "total": {
+         "required": [
+          "memberId",
+          "label",
+          "teamName",
+          "votes",
+          "share"
+         ]
+        }
+       },
+       "total": {
+        "type": "number"
+       },
+       "bySource": {
+        "type": "object",
+        "properties": {
+         "twitch": {
           "type": "number"
          },
-         "bySource": {
-          "type": "object",
-          "properties": {
-           "twitch": {
-            "type": "number"
-           },
-           "discord": {
-            "type": "number"
-           }
-          },
-          "required": [
-           "twitch",
-           "discord"
-          ]
-         },
-         "winnerMemberId": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "winnerLabel": {
-          "type": [
-           "string",
-           "null"
-          ]
+         "discord": {
+          "type": "number"
          }
         },
         "required": [
-         "matchId",
-         "roundName",
-         "team1Name",
-         "team2Name",
-         "closesAt",
-         "isOpen",
-         "candidates",
-         "total",
-         "bySource",
-         "winnerMemberId",
-         "winnerLabel"
+         "twitch",
+         "discord"
         ]
        },
-       "serverTime": {
-        "type": "string"
+       "winnerMemberId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "winnerLabel": {
+        "type": [
+         "string",
+         "null"
+        ]
        }
       },
       "required": [
-       "poll",
-       "serverTime"
+       "matchId",
+       "roundName",
+       "team1Name",
+       "team2Name",
+       "closesAt",
+       "isOpen",
+       "candidates",
+       "total",
+       "bySource",
+       "winnerMemberId",
+       "winnerLabel"
       ]
+     },
+     "serverTime": {
+      "type": "string"
      }
+    },
+    "required": [
+     "poll",
+     "serverTime"
     ]
    }
   },
@@ -70087,7 +70071,7 @@
   "pages/api/admin/documents.ts:179",
   "pages/api/admin/documents.ts:288",
   "pages/api/admin/matches/[matchId]/lineup.ts:168",
-  "pages/api/admin/matches/[matchId]/lineup.ts:284",
+  "pages/api/admin/matches/[matchId]/lineup.ts:295",
   "pages/api/admin/matches/[matchId]/mvp-public.ts:177",
   "pages/api/admin/matches/[matchId]/mvp-public.ts:189",
   "pages/api/admin/matches/[matchId]/mvp-public.ts:237",
@@ -70104,6 +70088,6 @@
   "pages/api/teams/invitations/index.ts:314",
   "pages/api/teams/invite-links/by-token.ts:229",
   "pages/api/teams/invite-links/by-token.ts:307",
-  "pages/api/teams/matches/[matchId]/lineup.ts:284"
+  "pages/api/teams/matches/[matchId]/lineup.ts:295"
  ]
 }

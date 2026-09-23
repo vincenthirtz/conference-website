@@ -235,7 +235,18 @@ export default withSubjectRoute(
         user_id: uid,
         battle_tag: m?.battle_tag ?? null,
         role: m?.role ?? null,
-        is_substitute: !!m?.is_substitute,
+        // TITULAIRE PAR CONSTRUCTION : cette liste est `check.starters`,
+        // c'est-à-dire ce que la capitaine a DÉCLARÉ comme composition de
+        // départ. Recopier `is_substitute` du ROSTER, comme ici avant le
+        // 2026-09-24, faisait mentir le relevé : une remplaçante de roster
+        // qui démarre un match était enregistrée « n'a pas commencé », et
+        // `listMvpCandidates` l'excluait du vote MVP alors qu'elle avait
+        // joué. C'est exactement le cas que le commentaire de cette
+        // fonction-là disait vouloir corriger.
+        //
+        // `role` garde la valeur du roster : il décrit la PERSONNE (son
+        // statut dans l'équipe), pas ce qu'elle a fait sur ce match-ci.
+        is_substitute: false,
       };
     });
 
