@@ -112,7 +112,10 @@ export async function readPublicMvpFeed(
   const parMembre = new Map<string, number>();
   for (const t of [twitch, discord]) {
     for (const row of t.rows) {
-      parMembre.set(row.memberId, (parMembre.get(row.memberId) ?? 0) + row.votes);
+      parMembre.set(
+        row.memberId,
+        (parMembre.get(row.memberId) ?? 0) + row.votes
+      );
     }
   }
 

@@ -26,6 +26,10 @@ import { resolveEmbedTenantId } from '@/utils/embed';
 import { readTenantBranding } from '@/utils/tenant';
 import { capabilityDenial } from '@/utils/billing/tenantCapabilityGate';
 import {
+  readPublicMvpFeed,
+  type OverlayPublicMvpPoll,
+} from '@/utils/overlay/publicMvpFeed';
+import {
   resolveAlertFrame,
   resolveAlertSoundUrl,
   type AlertFrameKind,
@@ -80,6 +84,12 @@ export type OverlayAlertsResponse = {
     logoUrl: string | null;
     accent: string | null;
   } | null;
+  /**
+   * Le scrutin public À L'ÉCRAN, servi UNIQUEMENT si la source le demande
+   * (`?with=mvp`). Absent sinon — une source qui n'affiche pas le vote n'a pas
+   * à en payer les requêtes.
+   */
+  publicMvp?: OverlayPublicMvpPoll | null;
   /** L'horloge du SERVEUR : celle du poste de régie peut être fausse. */
   serverTime: string;
 };
@@ -127,6 +137,32 @@ export default async function handler(
 
     const nowMs = Date.now();
     const sinceIso = new Date(nowMs - ALERTS_WINDOW_MS).toISOString();
+
+    // `?with=mvp` — la source FUSIONNÉE (`/overlay/regie`) demande aussi le
+    // scrutin public, pour n'interroger qu'une fois.
+    //
+    // POURQUOI CE GREFFON PLUTÔT QU'UNE SECONDE ROUTE. Une régie qui empile
+    // quatre sources navigateur fait quatre fois le tour du réseau, en boucle,
+    // pendant six heures. Le scrutin interrogeait toutes les 3 s, la boîte
+    // toutes les 5 s : près de 2 000 appels par heure à elles deux, chacun
+    // déclenchant plusieurs requêtes en base — 8 000 requêtes Supabase en une
+    // heure le 2026-09-23.
+    //
+    // Le coût du greffon est nul quand personne ne le demande, et d'UNE
+    // requête quand aucun scrutin n'est ouvert.
+    const demande = new Set(
+      String(
+        Array.isArray(req.query.with)
+          ? req.query.with[0]
+          : (req.query.with ?? '')
+      )
+        .split(',')
+        .map((x) => x.trim().toLowerCase())
+        .filter(Boolean)
+    );
+    const publicMvp = demande.has('mvp')
+      ? await readPublicMvpFeed(tenantId, nowMs)
+      : undefined;
 
     const [eventsRes, donationsRes, settingsRes, rulesRes, branding] =
       await Promise.all([
@@ -232,6 +268,7 @@ export default async function handler(
       alerts: settings.enabled ? alerts : [],
       settings,
       rules,
+      ...(publicMvp !== undefined ? { publicMvp } : {}),
       branding: branding
         ? {
             name: branding.name ?? null,

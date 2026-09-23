@@ -79,6 +79,7 @@ export default {
   scrimResultWinner: 'Winner',
   scrimResultDraw: 'Draw',
 
+  regieDocTitle: 'Stream source — control room (all-in-one)',
   donDocTitle: 'Stream source — donate',
   donEyebrow: 'Donate',
   donTitle: 'Support the association',

@@ -58,6 +58,9 @@ export default {
   source_donAlert_name: 'Donation alert (HelloAsso)',
   source_donAlert_desc:
     'A “Thank you for this donation of €10!” alert for every HelloAsso donation the association receives, on a transparent background — to sit next to Streamlabs, which has no HelloAsso integration. Amount only: the donor’s name is never shown (they type it for their tax receipt, not for the stream). Donations already received when the source opens are not replayed. &goal=500 adds a gauge (total since midnight, or since &from=YYYY-MM-DD), &gauge=only shows just the gauge, &duration=8 sets how long an alert stays (3 to 30 s), &demo=1 sends fake donations to set up the scene.',
+  source_regie_name: 'Control room — all-in-one (recommended)',
+  source_regie_desc:
+    'Alerts, the crowd favourite vote, the partner strip and the donation QR in ONE source. Prefer it over the four separate ones: four sources poll the site four times over, all evening long; this one polls once. Each element switches off on its own — &alertes=0, &mvp=0, &partenaires=0, &don=0 — so a break scene can show the QR without alerts, and a game scene the opposite. &don=carte puts the QR large and centred. &scale=1.2 scales everything, &accent=F0E63C, &tenant=<slug>. The four separate sources still work: an existing scene will not break.',
   source_mvpPublic_name: 'Crowd favourite',
   source_mvpPublic_desc:
     'The crowd MVP vote, live: candidates, bars, remaining time, then the winner once the poll closes. Twitch chat votes (!mvp <number>) and Discord supporters add up — one crowd on two platforms. The source follows whichever poll is OPEN: paste it once for the evening, it shows nothing while no poll runs, and keeps the result on screen for three minutes after closing. The poll is opened and closed from the caster cockpit, not here. &position=top or bottom, &scale=1.4, &limit=6 to show only the top six, &accent=BA18FF.',

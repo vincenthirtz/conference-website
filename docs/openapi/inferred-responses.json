@@ -34468,6 +34468,151 @@
    "200": {
     "type": "object",
     "properties": {
+     "branding": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "name": {
+        "type": "string"
+       },
+       "logoUrl": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "accent": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "name",
+       "logoUrl",
+       "accent"
+      ]
+     },
+     "serverTime": {
+      "type": "string"
+     },
+     "publicMvp": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "matchId": {
+        "type": "string"
+       },
+       "roundName": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "team1Name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "team2Name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "closesAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "isOpen": {
+        "type": "boolean"
+       },
+       "candidates": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "memberId": {
+           "type": "string"
+          },
+          "label": {
+           "type": "string"
+          },
+          "teamName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "votes": {
+           "type": "number"
+          },
+          "share": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "memberId",
+          "label",
+          "teamName",
+          "votes",
+          "share"
+         ]
+        }
+       },
+       "total": {
+        "type": "number"
+       },
+       "bySource": {
+        "type": "object",
+        "properties": {
+         "twitch": {
+          "type": "number"
+         },
+         "discord": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "twitch",
+         "discord"
+        ]
+       },
+       "winnerMemberId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "winnerLabel": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "matchId",
+       "roundName",
+       "team1Name",
+       "team2Name",
+       "closesAt",
+       "isOpen",
+       "candidates",
+       "total",
+       "bySource",
+       "winnerMemberId",
+       "winnerLabel"
+      ]
+     },
      "alerts": {
       "type": "array",
       "items": {
@@ -34612,45 +34757,14 @@
         "minAmount"
        ]
       }
-     },
-     "branding": {
-      "type": [
-       "object",
-       "null"
-      ],
-      "properties": {
-       "name": {
-        "type": "string"
-       },
-       "logoUrl": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "accent": {
-        "type": [
-         "string",
-         "null"
-        ]
-       }
-      },
-      "required": [
-       "name",
-       "logoUrl",
-       "accent"
-      ]
-     },
-     "serverTime": {
-      "type": "string"
      }
     },
     "required": [
+     "branding",
+     "serverTime",
      "alerts",
      "settings",
-     "rules",
-     "branding",
-     "serverTime"
+     "rules"
     ]
    }
   },

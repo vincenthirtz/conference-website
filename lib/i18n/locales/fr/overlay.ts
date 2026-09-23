@@ -89,6 +89,9 @@ export default ns('overlay', {
   scrimResultDraw: 'Match nul',
 
   // Source « faire un don » (`/overlay/don`).
+  // Source FUSIONNÉE : alertes + coup de cœur du public + partenaires + QR,
+  // en une seule source OBS.
+  regieDocTitle: 'Source de stream — régie (tout-en-un)',
   donDocTitle: 'Source de stream — faire un don',
   donEyebrow: 'Faire un don',
   donTitle: 'Soutenez l’association',

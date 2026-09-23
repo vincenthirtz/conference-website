@@ -33,6 +33,11 @@ type Props = {
 
 /** Les sources, dans l'ordre où une régie les ajoute à sa scène. */
 const SOURCES = [
+  // LA SOURCE FUSIONNÉE EN PREMIER : c'est celle qu'une régie devrait coller,
+  // et les quatre qu'elle remplace deviennent des cas particuliers. Quatre
+  // sources navigateur, c'est quatre fois le tour du réseau en boucle pendant
+  // six heures — 8 000 requêtes Supabase en une heure le 2026-09-23.
+  { key: 'regie', size: '1920×1080' },
   { key: 'scoreboard', size: '1920×250' },
   { key: 'teams', size: '1920×1080' },
   { key: 'maps', size: '600×600' },
@@ -63,6 +68,9 @@ const SOURCES = [
 
 /** Sources propres à l'association (ses partenaires, son QR, ses dons). */
 const DONATION_KEYS: ReadonlySet<string> = new Set([
+  // La source fusionnée embarque le QR et les partenaires de l'ASSOCIATION :
+  // même règle d'appartenance qu'eux.
+  'regie',
   'alerts',
   'partners',
   'don',
@@ -73,6 +81,7 @@ function sourceUrl(baseUrl: string, tournamentRef: string, key: string) {
   const tournament = encodeURIComponent(tournamentRef);
   if (key === 'day') return `${baseUrl}/overlay/day?tournament=${tournament}`;
   if (key === 'scrims') return `${baseUrl}/overlay/scrims`;
+  if (key === 'regie') return `${baseUrl}/overlay/regie`;
   if (key === 'scrimResult') return `${baseUrl}/overlay/scrim-result`;
   if (key === 'mvpPublic') return `${baseUrl}/overlay/mvp-public`;
   if (key === 'partners') return `${baseUrl}/overlay/partenaires`;
