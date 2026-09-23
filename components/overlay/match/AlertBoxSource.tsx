@@ -10,21 +10,33 @@
 // Les bornes ci-dessous ont été MESURÉES image par image sur le fichier ; les
 // changer sans remesurer décalera le texte.
 //
-// VP9 PROFIL 0, AVEC ALPHA — ET LE PROFIL COMPTE AUTANT QUE LE CODEC. Le
-// navigateur embarqué d'OBS décode le VP9 (pas l'AV1 — cf.
-// `TcgAnnouncement.tsx`), et le fichier porte un vrai canal alpha : pas
-// d'incrustation couleur à régler, la source se pose telle quelle sur le jeu.
-// Il n'y a PAS de repli MP4 : le H.264 n'a pas d'alpha, un repli afficherait un
-// rectangle noir en plein direct — mieux vaut le texte seul.
+// VP9 PROFIL 0, AVEC ALPHA — ET C'EST LA COMBINAISON QUI COMPTE. Le fichier
+// porte un vrai canal alpha : pas d'incrustation couleur à régler, la source se
+// pose telle quelle sur le jeu. Il n'y a PAS de repli MP4 : le H.264 n'a pas
+// d'alpha, un repli afficherait un rectangle noir en plein direct — mieux vaut
+// le texte seul.
 //
-// Ce commentaire s'est arrêté à « OBS décode le VP9 » jusqu'au 2026-09-23, et
-// cette demi-vérité a coûté deux correctifs à côté de la plaque. L'habillage
-// était en VP9 **profil 1** (`gbrp`, 4:4:4) : le CEF d'OBS ne connaît que les
-// profils 0 et 2 et rendait `PIPELINE_ERROR_DECODE` à la première image, donc
-// le texte seul, en plein direct. Chrome de bureau, lui, le lisait sans broncher
-// — aucun test en navigateur ne pouvait l'attraper, il a fallu se brancher en
-// CDP sur la source OBS pour le voir. `tests/unit/overlayAlertFrame.test.ts`
-// fige désormais profil, alpha, parité des dimensions et rapport d'image.
+// Ce commentaire s'est arrêté à « le navigateur embarqué d'OBS décode le VP9 »
+// jusqu'au 2026-09-23, et cette demi-vérité a coûté deux correctifs à côté de
+// la plaque. L'habillage était en VP9 profil 1 (`gbrp`, 4:4:4) AVEC alpha, et
+// le CEF d'OBS rendait `PIPELINE_ERROR_DECODE` à la première image — donc le
+// texte seul, en plein direct. Chrome de bureau, lui, le lisait sans broncher :
+// aucun test en navigateur ne pouvait l'attraper, il a fallu se brancher en CDP
+// sur la source OBS pour le voir.
+//
+// CE QUI A ÉTÉ RÉELLEMENT MESURÉ, dans OBS 32.2.2 / Chromium 127, parce qu'une
+// affirmation de plus sur ce qu'OBS « sait lire » ne vaut rien sans épreuve :
+//
+//     VP9 profil 0 + alpha   ✔        VP9 profil 1 SANS alpha   ✔
+//     VP8 + alpha            ✔        VP9 profil 1 AVEC alpha   ✘
+//     AV1 sans alpha         ✔        (AV1 + alpha : non testé)
+//
+// Ce n'est donc PAS « le profil 1 est indécodable », et l'AV1 passe — la
+// première version de ce correctif affirmait les deux, à tort. Le point de
+// rupture est le flux alpha, porté en BlockAdditions et décodé par un second
+// décodeur qui, lui, veut du profil 0. `utils/uploads/webmCodec.ts` refuse
+// cette combinaison à l'envoi, et `tests/unit/overlayAlertFrame.test.ts` la
+// refuse sur le fichier livré.
 //
 // Le fichier est en 1000×562, soit exactement le double de la taille sur
 // laquelle les bornes ci-dessous ont été mesurées : le rapport d'image est

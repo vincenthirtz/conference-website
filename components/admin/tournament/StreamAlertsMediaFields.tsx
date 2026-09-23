@@ -142,6 +142,8 @@ export function alertFileErrorMessage(t: Dict, err: unknown): string | null {
       });
     case 'unsupported_type':
       return t.fileUnsupportedType;
+    case 'alpha_needs_vp9_profile0':
+      return t.fileAlphaNeedsVp9Profile0;
     case 'content_mismatch':
     case 'invalid_base64':
     case 'missing_data':

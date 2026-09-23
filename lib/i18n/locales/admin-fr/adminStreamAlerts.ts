@@ -85,6 +85,11 @@ export default adminNs('adminStreamAlerts', {
   fileTooLargeAny: '2 Mio pour un son ou une image, 8 Mio pour une vidéo',
   fileContentMismatch:
     'Le contenu du fichier ne correspond pas au format annoncé.',
+  // Refus d'encodage : dire QUOI refaire, pas seulement que c'est refusé. Une
+  // régie qui lit « format refusé » réessaie le même fichier ; celle qui lit
+  // « profil 0 » le réexporte. Le détail technique est ici à sa place.
+  fileAlphaNeedsVp9Profile0:
+    'Cette vidéo transparente est en VP9 profil 1 : le navigateur d’OBS ne sait pas la décoder et n’afficherait que le texte. Réexporte-la en VP9 profil 0 (ou en VP8), la transparence est conservée.',
 
   accentLabel: 'Couleur d’accent',
   accentHelp: 'Teinte de l’habillage. « Défaut » rend la couleur de la charte.',

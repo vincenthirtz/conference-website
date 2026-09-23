@@ -20,6 +20,14 @@
 // codec supplémentaire. En accepter d'autres produirait un rectangle noir en
 // plein direct, ce qui est pire qu'un refus à l'envoi.
 //
+// MAIS LE CONTENEUR NE DIT PAS TOUT, et ce paragraphe l'a longtemps laissé
+// croire. Le 2026-09-23, un WebM au format irréprochable a fait échouer la
+// boîte d'alertes en plein direct : son encodage interne (VP9 profil 1 AVEC
+// canal alpha) est indécodable par le navigateur embarqué d'OBS, alors que
+// Chrome de bureau le lit sans broncher. Le type MIME et les magic bytes
+// passaient tous les deux. D'où le contrôle d'encodage ci-dessous, dont
+// `webmCodec.ts` porte le détail et les mesures.
+//
 // POURQUOI UN PLAFOND VIDÉO PLUS HAUT, MAIS PAS TRÈS HAUT. Un habillage
 // d'overlay est un court élément décoratif, pas un extrait. 8 Mio laissent
 // largement la place à quelques secondes encodées correctement, et bornent ce
@@ -31,6 +39,7 @@ import {
   IMAGE_MAX_BYTES,
   decodeImagePayload,
 } from './imageBytes';
+import { webmRejectionCode } from './webmCodec';
 
 /** Nature du média, telle que l'overlay devra la rendre (`<img>` ou `<video>`). */
 export type MediaKind = 'image' | 'video';
@@ -123,6 +132,15 @@ export function decodeMediaPayload(
   if (buffer.length > VIDEO_MAX_BYTES) return { ok: false, code: 'too_large' };
   if (!hasVideoMagicBytes(buffer, mimeType)) {
     return { ok: false, code: 'content_mismatch' };
+  }
+
+  // LES MAGIC BYTES NE SUFFISENT PAS POUR LE WEBM. Un WebM parfaitement formé
+  // peut rester indécodable par la source OBS selon son encodage interne — c'est
+  // arrivé le 2026-09-23, en plein direct, avec l'habillage du code lui-même.
+  // `webmCodec.ts` porte le détail et la matrice de ce qui a été testé.
+  if (mimeType === 'video/webm') {
+    const rejection = webmRejectionCode(buffer);
+    if (rejection) return { ok: false, code: rejection };
   }
 
   return { ok: true, buffer, ext, kind: 'video' };

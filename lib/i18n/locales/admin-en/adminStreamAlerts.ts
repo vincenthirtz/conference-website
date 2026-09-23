@@ -77,6 +77,8 @@ export default {
   fileTooLarge: 'File too heavy: {max} maximum.',
   fileTooLargeAny: '2 MiB for a sound or an image, 8 MiB for a video',
   fileContentMismatch: 'The file contents do not match the declared format.',
+  fileAlphaNeedsVp9Profile0:
+    'This transparent video is VP9 profile 1, which the OBS browser cannot decode — your alerts would show text only. Re-export it as VP9 profile 0 (or VP8); transparency is preserved.',
 
   accentLabel: 'Accent colour',
   accentHelp: 'Overlay tint. “Default” restores the brand colour.',
