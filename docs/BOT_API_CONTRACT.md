@@ -1030,7 +1030,7 @@ code. Les tableaux par domaine ci-dessous gardent le contexte rédigé ; un test
 ce tableau.
 
 <!-- BEGIN GENERATED: bot-inventory -->
-_Tableau généré depuis les options `withBotRoute` des handlers — ne pas éditer à la main : `npm run contract:bot-inventory`. 94 routes._
+_Tableau généré depuis les options `withBotRoute` des handlers — ne pas éditer à la main : `npm run contract:bot-inventory`. 95 routes._
 
 | Route | Méthodes | Idem. | Rate-key | Plafond | Portée / plan |
 | --- | --- | --- | --- | --- | --- |
@@ -1062,6 +1062,7 @@ _Tableau généré depuis les options `withBotRoute` des handlers — ne pas éd
 | [`matches/[matchId]/evidence.ts`](../pages/api/bot/v1/matches/[matchId]/evidence.ts) | GET, POST | oui | `bot-match-evidence` | 40/min (+10/acteur) | — |
 | [`matches/[matchId]/forfeit.ts`](../pages/api/bot/v1/matches/[matchId]/forfeit.ts) | POST | oui | `bot-match-forfeit` | 20/min (+5/acteur) | — |
 | [`matches/[matchId]/mvp.ts`](../pages/api/bot/v1/matches/[matchId]/mvp.ts) | GET, POST | — | `bot-match-mvp` | 600/min (+20/acteur) | — |
+| [`matches/[matchId]/mvp-public.ts`](../pages/api/bot/v1/matches/[matchId]/mvp-public.ts) | GET, POST | — | `bot-match-mvp-public` | 900/min (+10/acteur) | — |
 | [`matches/[matchId]/preset.ts`](../pages/api/bot/v1/matches/[matchId]/preset.ts) | GET | — | `bot-match-preset` | 60/min | — |
 | [`matches/[matchId]/report.ts`](../pages/api/bot/v1/matches/[matchId]/report.ts) | POST | oui | `bot-match-report` | 30/min (+5/acteur) | — |
 | [`matches/[matchId]/reset.ts`](../pages/api/bot/v1/matches/[matchId]/reset.ts) | POST | oui | `bot-match-reset` | 20/min (+5/acteur) | — |

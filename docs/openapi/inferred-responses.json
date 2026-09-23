@@ -25010,6 +25010,203 @@
     ]
    }
   },
+  "GET /api/bot/v1/matches/{matchId}/mvp-public": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "matchId": {
+      "type": "string"
+     },
+     "roundName": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "team1Name": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "team2Name": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "candidates": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "memberId": {
+         "type": "string"
+        },
+        "teamId": {
+         "type": "string"
+        },
+        "teamName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "battleTag": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "displayName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "label": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "memberId",
+        "teamId",
+        "teamName",
+        "battleTag",
+        "displayName",
+        "label"
+       ]
+      }
+     },
+     "isOpen": {
+      "type": "boolean"
+     },
+     "closesAt": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "channelId": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "messageId": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "tallies": {
+      "type": "object",
+      "properties": {
+       "twitch": {
+        "type": "object",
+        "properties": {
+         "source": {
+          "type": "string",
+          "enum": [
+           "discord",
+           "twitch"
+          ]
+         },
+         "rows": {
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "memberId": {
+             "type": "string"
+            },
+            "votes": {
+             "type": "number"
+            },
+            "share": {
+             "type": "number"
+            }
+           },
+           "required": [
+            "memberId",
+            "votes",
+            "share"
+           ]
+          }
+         },
+         "total": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "source",
+         "rows",
+         "total"
+        ]
+       },
+       "discord": {
+        "type": "object",
+        "properties": {
+         "source": {
+          "type": "string",
+          "enum": [
+           "discord",
+           "twitch"
+          ]
+         },
+         "rows": {
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "memberId": {
+             "type": "string"
+            },
+            "votes": {
+             "type": "number"
+            },
+            "share": {
+             "type": "number"
+            }
+           },
+           "required": [
+            "memberId",
+            "votes",
+            "share"
+           ]
+          }
+         },
+         "total": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "source",
+         "rows",
+         "total"
+        ]
+       }
+      },
+      "required": [
+       "twitch",
+       "discord"
+      ]
+     }
+    },
+    "required": [
+     "matchId",
+     "roundName",
+     "team1Name",
+     "team2Name",
+     "candidates",
+     "isOpen",
+     "closesAt",
+     "channelId",
+     "messageId",
+     "tallies"
+    ]
+   }
+  },
   "GET /api/bot/v1/matches/{matchId}/preset": {
    "200": {
     "type": "object",
@@ -63242,6 +63439,38 @@
     ]
    }
   },
+  "POST /api/bot/v1/matches/{matchId}/mvp-public": {
+   "200": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "success": {
+        "type": "boolean"
+       },
+       "memberId": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "success",
+       "memberId"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "success": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "success"
+      ]
+     }
+    ]
+   }
+  },
   "POST /api/bot/v1/matches/{matchId}/report": {
    "200": {
     "anyOf": [
@@ -69671,9 +69900,9 @@
   "pages/api/admin/documents.ts:288",
   "pages/api/admin/matches/[matchId]/lineup.ts:168",
   "pages/api/admin/matches/[matchId]/lineup.ts:284",
-  "pages/api/admin/matches/[matchId]/mvp-public.ts:150",
-  "pages/api/admin/matches/[matchId]/mvp-public.ts:162",
-  "pages/api/admin/matches/[matchId]/mvp-public.ts:193",
+  "pages/api/admin/matches/[matchId]/mvp-public.ts:177",
+  "pages/api/admin/matches/[matchId]/mvp-public.ts:189",
+  "pages/api/admin/matches/[matchId]/mvp-public.ts:237",
   "pages/api/admin/tcg/fanart.ts:229",
   "pages/api/admin/tcg/welcome-gift.ts:72",
   "pages/api/cron/domain-verify.ts:123",

@@ -102,6 +102,20 @@ export const BOT_EVENT_NAMES = [
   'helloasso.payment.received',
   'captain.support.opened',
   'tournament.finalized',
+  /*
+   * LE SCRUTIN MVP DU PUBLIC, ouvert et fermé par la RÉGIE depuis le cockpit.
+   *
+   * Poussés, et pas laissés au poller du bot : la fenêtre publique dure DIX
+   * MINUTES, quand le poller de clôture MVP tourne toutes les dix minutes. Il
+   * la raterait entièrement — le message de vote arriverait après la
+   * fermeture, ou jamais.
+   *
+   * `data` porte tout ce qu'il faut pour poster sans second aller-retour :
+   * matchId, équipes, candidates ordonnées, `closesAt`. À la clôture,
+   * l'élue et les décomptes.
+   */
+  'mvp.public.opened',
+  'mvp.public.closed',
   'dispute.sla_breached',
   'checkin.nudge',
   'broadcast.state_changed',

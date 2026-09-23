@@ -41,6 +41,7 @@ import {
 } from '@/utils/mvp/publicVote';
 import { tallySource } from '@/utils/mvp/awards';
 import { logger } from '@/utils/logger';
+import { emitBotEvent } from '@/utils/botEvents';
 
 /**
  * 200 voix par appel : large pour un pic de chat réel, assez bas pour qu'un
@@ -147,6 +148,32 @@ async function handler(
       });
     }
 
+    // Le bot ouvre son propre bureau de vote sur Discord. POUSSÉ, et pas
+    // laissé à son poller : celui-ci tourne toutes les dix minutes, soit la
+    // durée entière du scrutin — il le raterait.
+    //
+    // Rejouer un `open` sur un scrutin déjà ouvert n'émet RIEN : sans ça, un
+    // double-clic en régie posterait deux messages de vote.
+    if (!opened.alreadyOpen) {
+      await emitBotEvent(
+        'mvp.public.opened',
+        {
+          matchId: id,
+          roundName: match.roundName,
+          team1Name: match.team1Name,
+          team2Name: match.team2Name,
+          closesAt: opened.poll.closes_at,
+          // Ordonnées : le bot compose son sélecteur sans second appel.
+          candidates: opened.candidates.map((c) => ({
+            memberId: c.memberId,
+            label: c.label,
+            teamName: c.teamName,
+          })),
+        },
+        tenantId
+      );
+    }
+
     return res.status(200).json({
       poll: opened.poll,
       candidates: opened.candidates,
@@ -188,6 +215,23 @@ async function handler(
 
   logger.info(
     `[admin/mvp-public] close match=${id} winner=${settled.award?.memberId ?? 'none'} reason=${settled.reason ?? '-'}`
+  );
+
+  // Le bot ferme son sélecteur et affiche le résultat. Même urgence qu'à
+  // l'ouverture : laisser un bouton cliquable sur un scrutin clos est
+  // exactement le décrochage que ce système existe pour empêcher.
+  await emitBotEvent(
+    'mvp.public.closed',
+    {
+      matchId: id,
+      winnerLabel,
+      winnerMemberId: settled.award?.memberId ?? null,
+      reason: settled.reason,
+      team1Name: settled.team1Name,
+      team2Name: settled.team2Name,
+      bySource: settled.award?.bySource ?? null,
+    },
+    tenantId
   );
 
   return res.status(200).json({

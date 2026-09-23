@@ -1,0 +1,71 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  summary: Etat du scrutin MVP du public, pour le bot.
+  description: >-
+    Candidates ordonnees, fenetre de vote et ancrage du message. Decomptes
+    AGREGES seulement : les `voter_key` ne sortent d'aucune API, pas meme vers
+    le bot.
+  operationId: botGetMatchPublicMvp
+  x-zod-query: bot.matches/[matchId]/mvp-public.query
+  tags:
+    - bot/matches
+  security:
+    - BotApiKey: []
+  responses:
+    '200':
+      description: Etat du scrutin public.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      $ref: '#/components/responses/NotFound'
+post:
+  summary: Voix d'une supportrice Discord, ou ancrage du message du bot.
+  description: >-
+    LE BOT NE PEUT NI OUVRIR NI CLORE ce scrutin, et ce n'est pas un oubli : la
+    regie decide, depuis le cockpit, parce que c'est elle qui l'annonce a
+    l'antenne. Deux autorites sur la meme urne produiraient un scrutin ferme
+    d'un cote et ouvert de l'autre.
+
+
+    Une voix ici vaut une voix du chat Twitch : meme table, deux `source`, et
+    le depouillement les ADDITIONNE.
+
+
+    L'appartenance au role Supporter est verifiee par le BOT, seul a connaitre
+    les roles Discord ; cette route fait confiance a son appelant.
+  operationId: botPostMatchPublicMvp
+  x-zod-query: bot.matches/[matchId]/mvp-public.query
+  tags:
+    - bot/matches
+  security:
+    - BotApiKey: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: bot.matches/[matchId]/mvp-public
+  responses:
+    '200':
+      description: Voix enregistree, ou message ancre.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      description: Le vote du public est clos.
+    '429':
+      $ref: '#/components/responses/RateLimited'
