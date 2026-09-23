@@ -1,0 +1,57 @@
+get:
+  summary: Le scrutin MVP du public a l'ecran, pour la source OBS.
+  description: >-
+    PUBLIQUE, comme toutes les sources de stream : un navigateur OBS ne peut
+    pas s'authentifier.
+
+
+    AUCUN PARAMETRE DE MATCH, et c'est le point : la route rend le scrutin
+    OUVERT du moment. Pendant un direct on ne recolle pas une URL dans OBS
+    entre deux matchs — l'overlay se colle une fois pour la soiree et suit la
+    regie tout seul.
+
+
+    Le resultat reste rendu TROIS MINUTES apres la cloture, le temps de
+    l'annoncer a l'antenne ; ensuite `poll` vaut `null` et la source n'affiche
+    plus rien. Un scrutin ouvert prime toujours sur un resultat remanent.
+
+
+    DES AGREGATS, JAMAIS UNE VOIX : `voter_key` ne sort d'aucune API, et
+    surtout pas de celle-ci. Les libelles sont filtres de leur discriminant
+    BattleNet cote serveur — un overlay passe a l'antenne et se retrouve dans
+    les rediffusions.
+  operationId: overlayPublicMvp
+  tags:
+    - public/misc
+  # Source OBS : un navigateur embarque ne peut pas s authentifier.
+  security: []
+  parameters:
+    - name: tenant
+      in: query
+      required: false
+      description: Slug d'espace, pour les sources d'un autre organisateur.
+      schema:
+        type: string
+  responses:
+    '200':
+      description: >-
+        Le scrutin a l ecran. `poll` vaut null quand il n y en a aucun.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              poll:
+                type: ['object', 'null']
+                additionalProperties: true
+              serverTime:
+                type: string
+                format: date-time
+    '402':
+      description: Espace sans l'offre Regie.
+    '405':
+      description: Methode non autorisee.
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

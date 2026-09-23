@@ -63,6 +63,11 @@ export default {
   scrimsDateTbd: 'Date TBD',
 
   alertsDocTitle: 'Stream source — alert box',
+  publicMvpDocTitle: 'Stream source — crowd favourite',
+  publicMvpTitleOpen: 'Vote: crowd favourite',
+  publicMvpTitleClosed: 'Crowd favourite',
+  publicMvpHowTo: '!mvp <number> in chat',
+  publicMvpTotals: '{total} votes · {twitch} Twitch · {discord} Discord',
 
   partnersDocTitle: 'Stream source — partners',
   partnersHeading: 'They support us',

@@ -69,6 +69,13 @@ export default ns('overlay', {
   // Source « partenaires » (`/overlay/partenaires`).
   // Source « boîte d'alertes » (`/overlay/alertes`).
   alertsDocTitle: 'Source de stream — boîte d’alertes',
+  // Coup de cœur du public : le scrutin des viewers Twitch et des supporters
+  // Discord, à l'antenne.
+  publicMvpDocTitle: 'Source de stream — coup de cœur du public',
+  publicMvpTitleOpen: 'Votez : coup de cœur du public',
+  publicMvpTitleClosed: 'Coup de cœur du public',
+  publicMvpHowTo: '!mvp <numéro> dans le chat',
+  publicMvpTotals: '{total} voix · {twitch} Twitch · {discord} Discord',
 
   partnersDocTitle: 'Source de stream — partenaires',
   partnersHeading: 'Ils nous soutiennent',

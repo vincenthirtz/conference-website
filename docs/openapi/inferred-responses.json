@@ -35265,6 +35265,150 @@
     ]
    }
   },
+  "GET /api/overlay/mvp-public": {
+   "200": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "poll": {
+        "type": "null"
+       },
+       "serverTime": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "poll",
+       "serverTime"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "poll": {
+        "type": "object",
+        "properties": {
+         "matchId": {
+          "type": "string"
+         },
+         "roundName": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "team1Name": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "team2Name": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "closesAt": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "isOpen": {
+          "type": "boolean"
+         },
+         "candidates": {
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "memberId": {
+             "type": "string"
+            },
+            "label": {
+             "type": "string"
+            },
+            "teamName": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "votes": {
+             "type": "number"
+            },
+            "share": {
+             "type": "number"
+            }
+           },
+           "required": [
+            "memberId",
+            "label",
+            "teamName",
+            "votes",
+            "share"
+           ]
+          }
+         },
+         "total": {
+          "type": "number"
+         },
+         "bySource": {
+          "type": "object",
+          "properties": {
+           "twitch": {
+            "type": "number"
+           },
+           "discord": {
+            "type": "number"
+           }
+          },
+          "required": [
+           "twitch",
+           "discord"
+          ]
+         },
+         "winnerMemberId": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "winnerLabel": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
+        },
+        "required": [
+         "matchId",
+         "roundName",
+         "team1Name",
+         "team2Name",
+         "closesAt",
+         "isOpen",
+         "candidates",
+         "total",
+         "bySource",
+         "winnerMemberId",
+         "winnerLabel"
+        ]
+       },
+       "serverTime": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "poll",
+       "serverTime"
+      ]
+     }
+    ]
+   }
+  },
   "GET /api/overlay/scrim-result": {
    "200": {
     "type": "object",
