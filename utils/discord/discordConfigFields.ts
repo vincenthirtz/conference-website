@@ -40,6 +40,12 @@ export type DiscordConfig = {
   free_players_channel_id: string | null;
   /** Salon d'annonce des équipes qui recrutent (event team_opening.published). */
   team_openings_channel_id: string | null;
+  /**
+   * Salon où le bot annonce la MVP à la clôture d'un vote. DISTINCT du salon de
+   * vote (`mvp_votes_channel_id`, résolu côté bot) : on vote dans un salon de
+   * travail, on annonce dans un salon qui se lit.
+   */
+  mvp_results_channel_id: string | null;
   teams_voice_category_id: string | null;
   captain_role_id: string | null;
   substitute_role_id: string | null;
@@ -147,6 +153,14 @@ export function getDiscordConfigFields(t: Dict): FieldDef[] {
       key: 'team_openings_channel_id',
       label: t.fieldTeamOpeningsLabel,
       help: t.fieldTeamOpeningsHelp,
+      kind: 'single',
+      section: 'channels',
+      channelKind: 'text',
+    },
+    {
+      key: 'mvp_results_channel_id',
+      label: t.fieldMvpResultsLabel,
+      help: t.fieldMvpResultsHelp,
       kind: 'single',
       section: 'channels',
       channelKind: 'text',

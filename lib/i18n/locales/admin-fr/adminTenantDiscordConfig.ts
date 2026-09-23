@@ -33,6 +33,9 @@ export default adminNs('adminTenantDiscordConfig', {
   fieldTeamOpeningsLabel: 'Channel équipes qui recrutent',
   fieldTeamOpeningsHelp:
     "Les annonces des équipes qui cherchent une joueuse y sont publiées. Sans salon, l'annonce n'a pas lieu. Salon distinct de celui des joueuses sans équipe : les deux publics ne sont pas les mêmes.",
+  fieldMvpResultsLabel: 'Channel des résultats MVP',
+  fieldMvpResultsHelp:
+    "La MVP élue y est annoncée à la clôture du vote. Sans salon, aucune annonce — le résultat reste visible dans le salon du vote, où le bot édite son message. Salon distinct de celui du vote : on vote dans un salon de travail, on annonce dans un salon qui se lit. Rien n'est publié si le vote n'a désigné personne (moins de trois voix, ou égalité en tête).",
   fieldMemberLeaveLabel: 'Channel des départs',
   fieldMemberLeaveHelp:
     'Notifie quand un membre quitte le serveur (embed de départ). Vide = désactivé. Fallback env MEMBER_LEAVE_CHANNEL_ID.',

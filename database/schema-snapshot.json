@@ -1796,6 +1796,7 @@
       "guild_id",
       "matches_live_channel_id",
       "member_leave_channel_id",
+      "mvp_results_channel_id",
       "news_ingest_channel_id",
       "placement_roles",
       "scrims_announce_channel_id",

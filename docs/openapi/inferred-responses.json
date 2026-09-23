@@ -28017,6 +28017,12 @@
               "null"
              ]
             },
+            "mvp_results_channel_id": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
             "captain_role_id": {
              "type": [
               "string",
@@ -28112,6 +28118,7 @@
             "scrims_announce_channel_id",
             "free_players_channel_id",
             "team_openings_channel_id",
+            "mvp_results_channel_id",
             "captain_role_id",
             "substitute_role_id",
             "staff_role_owner_id",
@@ -28204,6 +28211,7 @@
        "scrims_announce_channel_id": {},
        "free_players_channel_id": {},
        "team_openings_channel_id": {},
+       "mvp_results_channel_id": {},
        "captain_role_id": {},
        "substitute_role_id": {},
        "staff_role_owner_id": {},
@@ -28224,6 +28232,7 @@
        "scrims_announce_channel_id",
        "free_players_channel_id",
        "team_openings_channel_id",
+       "mvp_results_channel_id",
        "captain_role_id",
        "substitute_role_id",
        "staff_role_owner_id",

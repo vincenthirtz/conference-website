@@ -42,6 +42,10 @@ const NULLABLE_SNOWFLAKE_KEYS = [
   // (event team_opening.published). Meme piege a eviter — un champ affiche
   // dans l'admin mais absent d'ici est jete EN SILENCE.
   'team_openings_channel_id',
+  // Salon d'annonce de la MVP a la cloture d'un vote. Distinct du salon de
+  // VOTE (mvp_votes_channel_id, resolu cote bot) : on vote dans un salon de
+  // travail, on annonce dans un salon qui se lit.
+  'mvp_results_channel_id',
   'captain_role_id',
   'substitute_role_id',
   'staff_role_owner_id',

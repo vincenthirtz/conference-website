@@ -34,6 +34,9 @@ export default {
   fieldTeamOpeningsLabel: 'Recruiting teams channel',
   fieldTeamOpeningsHelp:
     'Postings from teams looking for a player are announced there. Without a channel, no announcement happens. Separate from the free agents channel: the two audiences are not the same.',
+  fieldMvpResultsLabel: 'MVP results channel',
+  fieldMvpResultsHelp:
+    'The elected MVP is announced there when the vote closes. Without a channel, no announcement — the result still shows in the voting channel, where the bot edits its own message. Separate from the voting channel: you vote in a working channel, you announce in a channel people read. Nothing is posted when the vote named no one (fewer than three votes, or a tie at the top).',
   fieldMemberLeaveLabel: 'Departures channel',
   fieldMemberLeaveHelp:
     'Notifies when a member leaves the server (departure embed). Empty = disabled. Fallback env MEMBER_LEAVE_CHANNEL_ID.',
