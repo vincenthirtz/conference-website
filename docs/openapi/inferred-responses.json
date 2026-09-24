@@ -18177,6 +18177,24 @@
          },
          "tiebreakerGameRate": {
           "type": "number"
+         },
+         "gamesWithDuration": {
+          "type": "number"
+         },
+         "pickedMaps": {
+          "type": "number"
+         },
+         "pickerWinRate": {
+          "type": "number"
+         },
+         "pickDecided": {
+          "type": "number"
+         },
+         "mapsWithHeroBans": {
+          "type": "number"
+         },
+         "totalHeroBans": {
+          "type": "number"
          }
         },
         "required": [
@@ -18185,7 +18203,13 @@
          "totalGames",
          "avgGameDurationMin",
          "overtimeRate",
-         "tiebreakerGameRate"
+         "tiebreakerGameRate",
+         "gamesWithDuration",
+         "pickedMaps",
+         "pickerWinRate",
+         "pickDecided",
+         "mapsWithHeroBans",
+         "totalHeroBans"
         ]
        },
        "teams": {
@@ -18241,6 +18265,15 @@
           "picks": {
            "type": "number"
           },
+          "pickDecided": {
+           "type": "number"
+          },
+          "pickerWins": {
+           "type": "number"
+          },
+          "pickerWinRate": {
+           "type": "number"
+          },
           "bans": {
            "type": "number"
           },
@@ -18257,6 +18290,9 @@
          "required": [
           "mapName",
           "picks",
+          "pickDecided",
+          "pickerWins",
+          "pickerWinRate",
           "bans",
           "gamesPlayed",
           "avgDurationMin",
@@ -18301,13 +18337,139 @@
           "winRate"
          ]
         }
+       },
+       "heroBans": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "hero": {
+           "type": "string"
+          },
+          "name": {
+           "type": "string"
+          },
+          "role": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "bans": {
+           "type": "number"
+          },
+          "rate": {
+           "type": "number"
+          },
+          "byTeam": {
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "teamId": {
+              "type": "string"
+             },
+             "name": {
+              "type": "string"
+             },
+             "count": {
+              "type": "number"
+             }
+            },
+            "required": [
+             "teamId",
+             "name",
+             "count"
+            ]
+           }
+          }
+         },
+         "required": [
+          "hero",
+          "name",
+          "role",
+          "bans",
+          "rate",
+          "byTeam"
+         ]
+        }
+       },
+       "teamBans": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "teamId": {
+           "type": "string"
+          },
+          "name": {
+           "type": "string"
+          },
+          "maps": {
+           "type": "number"
+          },
+          "made": {
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "hero": {
+              "type": "string"
+             },
+             "name": {
+              "type": "string"
+             },
+             "count": {
+              "type": "number"
+             }
+            },
+            "required": [
+             "hero",
+             "name",
+             "count"
+            ]
+           }
+          },
+          "received": {
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "hero": {
+              "type": "string"
+             },
+             "name": {
+              "type": "string"
+             },
+             "count": {
+              "type": "number"
+             }
+            },
+            "required": [
+             "hero",
+             "name",
+             "count"
+            ]
+           }
+          }
+         },
+         "required": [
+          "teamId",
+          "name",
+          "maps",
+          "made",
+          "received"
+         ]
+        }
        }
       },
       "required": [
        "summary",
        "teams",
        "maps",
-       "heroes"
+       "heroes",
+       "heroBans",
+       "teamBans"
       ]
      },
      "tiers": {
