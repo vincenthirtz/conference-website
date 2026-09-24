@@ -18,6 +18,7 @@
 // un vrai 0 %.
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -124,14 +125,22 @@ export default function StatsAnalyticsPanel() {
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={fetchAnalytics}
-          disabled={loading}
-          className="px-4 py-2 rounded bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold disabled:opacity-50"
-        >
-          {loading ? t.loading : t.refresh}
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href={{ query: { ...router.query, tab: 'entry' } }}
+            className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-sm font-semibold"
+          >
+            {t.entryCta}
+          </Link>
+          <button
+            type="button"
+            onClick={fetchAnalytics}
+            disabled={loading}
+            className="px-4 py-2 rounded bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold disabled:opacity-50"
+          >
+            {loading ? t.loading : t.refresh}
+          </button>
+        </div>
       </div>
 
       {errorMsg && (

@@ -94,4 +94,27 @@ export default adminNs('adminTournamentAnalytics', {
   colBansMade: 'Ses bans',
   colBansReceived: 'Bans subis',
   errorUnexpected: 'Erreur inattendue',
+  entryCta: 'Saisir une soirée',
+  entryHeading: 'Saisie d’une soirée',
+  entrySubtitle:
+    'Pour chaque match du jour : les maps jouées, qui a choisi la map, les bans de héros et le score de chaque map. Le score du match se calcule tout seul à partir des maps.',
+  entryDayLabel: 'Soirée',
+  entryMatchCount: '{count} match(s)',
+  entryToFill: '{count} à saisir',
+  entryNoMatches: 'Aucun match programmé dans ce tournoi.',
+  entryForfeit: 'Forfait : rien à saisir.',
+  entryTbd: 'Affiche pas encore fixée.',
+  entryOpenMatch: 'Ouvrir la fiche du match',
+  entryUnsaved: 'Modifications non enregistrées',
+  entryRecomputeNote:
+    'À l’enregistrement, le score du match est recalculé depuis les maps et le match passe « terminé ».',
+  entryTieWarning:
+    '{count} map(s) à égalité : aucune gagnante ne sera comptée pour elles.',
+  entrySaveMatch: 'Enregistrer ce match',
+  entrySaveAll: 'Enregistrer les {count} matchs modifiés',
+  entrySaving: 'Enregistrement…',
+  entrySaved: 'Match enregistré.',
+  entrySavedAll: '{ok} match(s) enregistré(s) sur {total}.',
+  entrySaveError: 'Enregistrement impossible.',
+  entryLoadError: 'Impossible de charger les matchs.',
 });

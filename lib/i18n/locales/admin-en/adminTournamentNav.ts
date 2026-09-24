@@ -41,6 +41,7 @@ export default {
   subBracketVeto: 'Veto',
   subStatsOverview: 'Standings',
   subStatsAnalytics: 'Analytics',
+  subStatsEntry: 'Data entry',
   subStatsPodium: 'Podium',
   subStatsMvp: 'MVP votes',
 

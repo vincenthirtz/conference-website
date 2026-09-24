@@ -1,7 +1,7 @@
 // pages/admin/tournament/[id]/stats.tsx
 // Merged stats route. Hosts the former /stats (standings), /analytics
 // (aggregated KPIs), /podium (final ranking) and the live MVP vote board as
-// deep-linkable sub-tabs (`?tab=overview|analytics|podium|mvp`). The old /analytics and /podium routes
+// deep-linkable sub-tabs (`?tab=overview|analytics|entry|podium|mvp`). The old /analytics and /podium routes
 // redirect here.
 
 import Head from 'next/head';
@@ -18,6 +18,7 @@ import StatsOverviewPanel from '@/components/admin/tournament/StatsOverviewPanel
 import StatsAnalyticsPanel from '@/components/admin/tournament/StatsAnalyticsPanel';
 import StatsPodiumPanel from '@/components/admin/tournament/StatsPodiumPanel';
 import StatsMvpPanel from '@/components/admin/tournament/StatsMvpPanel';
+import SessionEntryPanel from '@/components/admin/tournament/SessionEntryPanel';
 import type { StaffProps } from '@/types/admin';
 import nsAdminTournamentNav from '@/lib/i18n/locales/admin-fr/adminTournamentNav';
 
@@ -36,6 +37,7 @@ export default function AdminTournamentStatsPage(_: StaffProps) {
   const tabs = [
     { id: 'overview', label: nav.subStatsOverview },
     { id: 'analytics', label: nav.subStatsAnalytics },
+    { id: 'entry', label: nav.subStatsEntry },
     { id: 'podium', label: nav.subStatsPodium },
     { id: 'mvp', label: nav.subStatsMvp },
   ];
@@ -67,6 +69,7 @@ export default function AdminTournamentStatsPage(_: StaffProps) {
           >
             {active === 'overview' && <StatsOverviewPanel />}
             {active === 'analytics' && <StatsAnalyticsPanel />}
+            {active === 'entry' && <SessionEntryPanel />}
             {active === 'podium' && <StatsPodiumPanel />}
             {active === 'mvp' && <StatsMvpPanel />}
           </div>

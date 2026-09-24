@@ -43,6 +43,7 @@ export default adminNs('adminTournamentNav', {
   subBracketVeto: 'Veto',
   subStatsOverview: 'Classement',
   subStatsAnalytics: 'Analytics',
+  subStatsEntry: 'Saisie',
   subStatsPodium: 'Podium',
   subStatsMvp: 'Votes MVP',
 
