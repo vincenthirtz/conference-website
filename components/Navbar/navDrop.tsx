@@ -1,14 +1,13 @@
 import { forwardRef, useEffect, useState, type JSX } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import links from '@/config/links.json';
 import type { LinkItem } from '@/types/types';
 import type { INavDropProp } from '@/types/components';
 import { useT } from '@/lib/i18n/useT';
 import LanguageToggle from './LanguageToggle';
 import nsNavbar from '@/lib/i18n/locales/fr/navbar';
 
-const HIDDEN_PUBLIC_LINKS = new Set(['À propos', 'Cast', 'Sponsors']);
+import { PUBLIC_LINKS, activePublicLinkRef, publicLinkKey } from './navigation';
 
 function Chevron({ open, size = 'md' }: { open: boolean; size?: 'sm' | 'md' }) {
   const cls = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
@@ -51,7 +50,10 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
   const linkLabel = (title: string) =>
     (tNav.publicLinks as Record<string, string>)[title] ?? title;
   const [openPublic, setOpenPublic] = useState<string | null>(null);
-  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
+  // Dans l'admin, sa section s'ouvre dépliée : c'est l'espace en cours.
+  const [adminMenuOpen, setAdminMenuOpen] = useState(
+    () => router.pathname.startsWith('/admin/') || router.pathname === '/admin'
+  );
   const [expandedAdminSubs, setExpandedAdminSubs] = useState<Set<string>>(
     () => new Set()
   );
@@ -76,9 +78,8 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
 
   const closeAndNavigate = () => setDrop(false);
 
-  const publicLinks = links.filter(
-    (link) => !HIDDEN_PUBLIC_LINKS.has(link.title)
-  );
+  const publicLinks = PUBLIC_LINKS;
+  const activeKey = activePublicLinkRef(router.asPath);
 
   return (
     <div
@@ -301,10 +302,7 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
           {publicLinks.map((link: LinkItem) => {
             const hasSubMenu = !!link.subMenu;
             const isOpen = openPublic === link.title;
-            const isActive =
-              (!hasSubMenu && router.pathname === link.ref) ||
-              (hasSubMenu &&
-                link.subMenu!.some((s) => s.ref && router.pathname === s.ref));
+            const isActive = activeKey === publicLinkKey(link);
 
             if (!hasSubMenu) {
               return (

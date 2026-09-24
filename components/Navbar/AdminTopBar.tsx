@@ -2,8 +2,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import linksConfig from '@/config/links.json';
-import type { LinkItem } from '@/types/types';
 import type { AdminLink } from '@/types/components';
 import { formatStaffRoleLabel, type StaffRole } from '@/utils/staffRoles';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
@@ -13,6 +11,9 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 import ProfileModal from '@/components/admin/profile/ProfileModal';
 import nsAdminTopBar from '@/lib/i18n/locales/fr/adminTopBar';
+import { flatPublicLinks } from './navigation';
+import nsNavbar from '@/lib/i18n/locales/fr/navbar';
+import { isAdminLinkActive } from './headerBars';
 
 // TenantSwitcher intentionally not rendered here: on the
 // conference-website domain the active tenant is always DEFAULT_TENANT_ID
@@ -61,6 +62,7 @@ export default function AdminTopBar({
   accountLinks = [],
 }: AdminTopBarProps) {
   const t = useT(nsAdminTopBar);
+  const tNav = useT(nsNavbar);
   const branding = useTenantBranding();
   const router = useRouter();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -210,20 +212,12 @@ export default function AdminTopBar({
   );
   if (categories.length === 0 && singleLinks.length === 0) return null;
 
-  const publicLinks: { title: string; ref: string }[] = [];
-  for (const link of linksConfig as LinkItem[]) {
-    if (link.subMenu) {
-      for (const sub of link.subMenu) {
-        if (sub.ref)
-          publicLinks.push({
-            title: `${link.title} – ${sub.title}`,
-            ref: sub.ref,
-          });
-      }
-    } else if (link.ref) {
-      publicLinks.push({ title: link.title, ref: link.ref });
-    }
-  }
+  // Le menu du site, depuis la source unique (navigation.ts) : mêmes entrées
+  // masquées que le menu public, et titres traduits — la barre les montrait
+  // tous, en français seulement.
+  const publicLinks = flatPublicLinks(
+    (title) => (tNav.publicLinks as Record<string, string>)[title] ?? title
+  );
 
   const toggleMenu = (title: string) => {
     setOpenMenu((prev) => (prev === title ? null : title));
@@ -324,7 +318,16 @@ export default function AdminTopBar({
                 <Link
                   key={link.ref}
                   href={link.ref}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium text-neutral-300 transition-all hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                  aria-current={
+                    isAdminLinkActive(router.pathname, link)
+                      ? 'page'
+                      : undefined
+                  }
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
+                    isAdminLinkActive(router.pathname, link)
+                      ? 'bg-purple-500/15 text-white shadow-[inset_0_-2px_0_0_rgba(178,75,224,0.9)]'
+                      : 'text-neutral-300'
+                  }`}
                 >
                   {link.title}
                   {isCurrentTournament && (
@@ -379,6 +382,7 @@ export default function AdminTopBar({
                   label={cat.title}
                   open={openMenu === cat.title}
                   onToggle={() => toggleMenu(cat.title)}
+                  active={isAdminLinkActive(router.pathname, cat)}
                 />
                 <DropdownPanel open={openMenu === cat.title}>
                   {cat.children?.map((child) => {
@@ -461,10 +465,13 @@ function DropdownButton({
   label,
   open,
   onToggle,
+  active = false,
 }: {
   label: string;
   open: boolean;
   onToggle: () => void;
+  /** La catégorie contient la page courante (refonte des menus, plan 8). */
+  active?: boolean;
 }) {
   return (
     <button
@@ -473,7 +480,9 @@ function DropdownButton({
       className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
         open
           ? 'bg-white/[0.08] text-white'
-          : 'text-neutral-300 hover:bg-white/[0.06] hover:text-white'
+          : active
+            ? 'bg-purple-500/15 text-white shadow-[inset_0_-2px_0_0_rgba(178,75,224,0.9)]'
+            : 'text-neutral-300 hover:bg-white/[0.06] hover:text-white'
       }`}
       aria-expanded={open}
       aria-haspopup="true"

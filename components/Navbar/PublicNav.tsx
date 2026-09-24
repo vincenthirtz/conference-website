@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import linksConfig from '@/config/links.json';
 import type { LinkItem } from '@/types/types';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useT } from '@/lib/i18n/useT';
@@ -10,7 +9,7 @@ import LanguageToggle from './LanguageToggle';
 import AccountMenu, { type LabeledAccountLink } from './AccountMenu';
 import nsNavbar from '@/lib/i18n/locales/fr/navbar';
 
-const HIDDEN_PUBLIC_LINKS = new Set(['À propos', 'Cast', 'Sponsors']);
+import { PUBLIC_LINKS, activePublicLinkRef, publicLinkKey } from './navigation';
 
 type PublicNavProps = {
   staffLoading: boolean;
@@ -85,19 +84,16 @@ export default function PublicNav({
     closeMenu();
   };
 
-  const links = linksConfig.filter(
-    (link) => !HIDDEN_PUBLIC_LINKS.has(link.title)
-  );
+  const links = PUBLIC_LINKS;
+  // L'URL réelle, pas le motif de route : cf. activePublicLinkRef.
+  const activeKey = activePublicLinkRef(router.asPath);
 
   return (
     <div className="flex items-center gap-2">
       {links.map((link: LinkItem) => {
         const hasSubMenu = !!link.subMenu;
         const isOpen = openMenu === link.title;
-        const isActive =
-          (!hasSubMenu && router.pathname === link.ref) ||
-          (hasSubMenu &&
-            link.subMenu!.some((s) => s.ref && router.pathname === s.ref));
+        const isActive = activeKey === publicLinkKey(link);
 
         return (
           <div

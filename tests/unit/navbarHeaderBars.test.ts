@@ -13,6 +13,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   accountLinks,
+  isAdminLinkActive,
   isPlayerLinkActive,
   resolveHeaderBars,
   routeSpace,
@@ -256,5 +257,25 @@ describe('pendingBar — pas de clignotement au chargement', () => {
         adminLinkCount: 3,
       }).pendingBar
     ).toBeNull();
+  });
+});
+
+describe('isAdminLinkActive', () => {
+  const cat = {
+    ref: null,
+    children: [{ ref: '/admin/tournaments' }, { ref: '/admin/matches' }],
+  };
+  it('la catégorie qui contient la page est active', () => {
+    expect(isAdminLinkActive('/admin/tournaments/[id]', cat)).toBe(true);
+    expect(isAdminLinkActive('/admin/tcg', cat)).toBe(false);
+  });
+  it('le tableau de bord seulement en correspondance exacte', () => {
+    expect(isAdminLinkActive('/admin', { ref: '/admin' })).toBe(true);
+    expect(isAdminLinkActive('/admin/tcg', { ref: '/admin' })).toBe(false);
+  });
+  it('un préfixe de nom ne suffit pas', () => {
+    expect(
+      isAdminLinkActive('/admin/matches-archive', { ref: '/admin/matches' })
+    ).toBe(false);
   });
 });

@@ -3,8 +3,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
-import linksConfig from '@/config/links.json';
-import type { LinkItem } from '@/types/types';
 import type { PlayerLink } from './playerLinks';
 import type { PlayerNotificationsPayload } from '@/pages/api/player/notifications';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
@@ -16,6 +14,8 @@ import nsPlayerTopBar from '@/lib/i18n/locales/fr/playerTopBar';
 import { useDocumentVisible } from '@/hooks/useDocumentVisible';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 import { isPlayerLinkActive } from './headerBars';
+import { flatPublicLinks } from './navigation';
+import nsNavbar from '@/lib/i18n/locales/fr/navbar';
 
 const SITE_MENU_KEY = '__site__';
 const MOBILE_MENU_KEY = '__mobile__';
@@ -83,6 +83,7 @@ export default function PlayerTopBar({
   adminHref = null,
 }: PlayerTopBarProps) {
   const t = useT(nsPlayerTopBar);
+  const tNav = useT(nsNavbar);
   const branding = useTenantBranding();
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
@@ -155,20 +156,12 @@ export default function PlayerTopBar({
     return () => router.events.off('routeChangeStart', close);
   }, [router.events]);
 
-  const publicLinks: { title: string; ref: string }[] = [];
-  for (const link of linksConfig as LinkItem[]) {
-    if (link.subMenu) {
-      for (const sub of link.subMenu) {
-        if (sub.ref)
-          publicLinks.push({
-            title: `${link.title} – ${sub.title}`,
-            ref: sub.ref,
-          });
-      }
-    } else if (link.ref) {
-      publicLinks.push({ title: link.title, ref: link.ref });
-    }
-  }
+  // Le menu du site, depuis la source unique (navigation.ts) : mêmes entrées
+  // masquées que le menu public, et titres traduits — la barre les montrait
+  // tous, en français seulement.
+  const publicLinks = flatPublicLinks(
+    (title) => (tNav.publicLinks as Record<string, string>)[title] ?? title
+  );
 
   const toggleMenu = (title: string) => {
     setOpenMenu((prev) => (prev === title ? null : title));

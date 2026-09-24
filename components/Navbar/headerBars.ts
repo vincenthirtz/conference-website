@@ -151,3 +151,31 @@ export function isPlayerLinkActive(pathname: string, ref: string): boolean {
     pathname.startsWith(prefix)
   );
 }
+
+/**
+ * Une entrée du menu admin est-elle celle de la page courante ? Sa propre
+ * route (ou une sous-route), ou celle d'un descendant — pour surligner la
+ * catégorie qui contient la page (plan 8). `/admin` (tableau de bord)
+ * seulement en correspondance exacte.
+ */
+export function isAdminLinkActive(
+  pathname: string,
+  link: {
+    ref?: string | null;
+    children?: { ref?: string | null; children?: unknown[] }[];
+  }
+): boolean {
+  const ref = link.ref ?? null;
+  if (ref) {
+    if (
+      ref === '/admin'
+        ? pathname === '/admin'
+        : pathname === ref || pathname.startsWith(`${ref}/`)
+    ) {
+      return true;
+    }
+  }
+  return (link.children ?? []).some((c) =>
+    isAdminLinkActive(pathname, c as Parameters<typeof isAdminLinkActive>[1])
+  );
+}
