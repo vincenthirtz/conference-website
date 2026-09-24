@@ -19,7 +19,7 @@ import {
 // match. Absent et « connu comme vide » sont deux choses, et l'API doit
 // accepter les deux.
 export const mvpBodySchema = z.object({
-  action: z.enum(['open', 'vote', 'close']),
+  action: z.enum(['open', 'vote', 'close', 'candidates']),
   /** Votante (action `vote`) — son identifiant Discord tient l'unicité. */
   discordUserId: discordIdSchema.nullish(),
   /** Joueuse choisie (action `vote`). */
@@ -39,4 +39,11 @@ export const mvpBodySchema = z.object({
    * les voix (la liste ayant changé, les anciennes fausseraient le décompte).
    */
   force: z.boolean().nullish(),
+  /**
+   * Correction de la liste d'un vote OUVERT (action `candidates`) : ids
+   * `team_members` à ajouter (joueuse d'une des deux équipes) et à retirer.
+   * Les voix sont gardées, sauf celles portées sur une joueuse retirée.
+   */
+  add: z.array(uuidSchema).max(25).nullish(),
+  remove: z.array(uuidSchema).max(25).nullish(),
 });

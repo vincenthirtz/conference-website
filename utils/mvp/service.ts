@@ -109,6 +109,13 @@ export async function listMvpCandidates(
     team2Name: string | null;
   } | null;
   candidates: MvpCandidate[];
+  /**
+   * TOUT l'effectif des deux équipes, au même format et dans le même ordre.
+   * Sert à corriger la liste d'un vote ouvert (ajouter une remplaçante entrée
+   * en jeu mais absente de la feuille) et à nommer une candidate ajoutée à la
+   * main, que la liste calculée ne contient pas.
+   */
+  roster: MvpCandidate[];
 }> {
   const { data: match } = await supabaseAdmin
     .from('matches')
@@ -119,7 +126,7 @@ export async function listMvpCandidates(
     .eq('id', matchId)
     .maybeSingle();
 
-  if (!match) return { match: null, candidates: [] };
+  if (!match) return { match: null, candidates: [], roster: [] };
 
   const teamIds = [match.team1_id, match.team2_id].filter(
     (x): x is string => !!x
@@ -138,6 +145,7 @@ export async function listMvpCandidates(
         team2Name: null,
       },
       candidates: [],
+      roster: [],
     };
   }
 
@@ -194,27 +202,36 @@ export async function listMvpCandidates(
     if (played(m)) equipesAvecFeuille.add(m.team_id as string);
   }
 
+  const toCandidate = (m: {
+    id: unknown;
+    team_id: unknown;
+    battle_tag?: string | null;
+    display_name?: string | null;
+  }): MvpCandidate => {
+    const name = m.display_name || m.battle_tag || null;
+    return {
+      memberId: m.id as string,
+      teamId: m.team_id as string,
+      teamName: teamName.get(m.team_id as string) ?? null,
+      battleTag: m.battle_tag ?? null,
+      displayName: m.display_name ?? null,
+      label: `[${shortTeam(teamName.get(m.team_id as string))}] ${name ?? 'Joueuse'}`,
+    };
+  };
+  // Ordre stable : équipe 1 puis équipe 2, alphabétique à l'intérieur.
+  const byDisplayOrder = (a: MvpCandidate, b: MvpCandidate) => {
+    if (a.teamId !== b.teamId) {
+      if (a.teamId === match.team1_id) return -1;
+      if (b.teamId === match.team1_id) return 1;
+    }
+    return a.label.localeCompare(b.label);
+  };
+  const roster = (members || []).map(toCandidate).sort(byDisplayOrder);
+
   const candidates: MvpCandidate[] = (members || [])
     .filter((m) => !equipesAvecFeuille.has(m.team_id as string) || played(m))
-    .map((m) => {
-      const name = m.display_name || m.battle_tag || null;
-      return {
-        memberId: m.id as string,
-        teamId: m.team_id as string,
-        teamName: teamName.get(m.team_id) ?? null,
-        battleTag: m.battle_tag ?? null,
-        displayName: m.display_name ?? null,
-        label: `[${shortTeam(teamName.get(m.team_id))}] ${name ?? 'Joueuse'}`,
-      };
-    })
-    // Ordre stable : équipe 1 puis équipe 2, alphabétique à l'intérieur.
-    .sort((a, b) => {
-      if (a.teamId !== b.teamId) {
-        if (a.teamId === match.team1_id) return -1;
-        if (b.teamId === match.team1_id) return 1;
-      }
-      return a.label.localeCompare(b.label);
-    });
+    .map(toCandidate)
+    .sort(byDisplayOrder);
 
   return {
     match: {
@@ -229,7 +246,29 @@ export async function listMvpCandidates(
       team2Name: match.team2_id ? (teamName.get(match.team2_id) ?? null) : null,
     },
     candidates,
+    roster,
   };
+}
+
+/**
+ * Les candidates d'un vote DÉJÀ OUVERT : la liste figée à l'ouverture (et
+ * corrigée depuis par le staff), pas celle qu'on calculerait aujourd'hui.
+ *
+ * Sans ce relais, une remplaçante ajoutée à la main disparaissait de tout ce
+ * qui relit la liste calculée — message reposté, nom de la gagnante — alors
+ * qu'on pouvait voter pour elle. Rien d'ouvert : la liste calculée.
+ */
+export function frozenCandidates(
+  roster: MvpCandidate[],
+  computed: MvpCandidate[],
+  poll: Pick<MvpPollRow, 'posted_at' | 'candidate_player_ids'> | null
+): MvpCandidate[] {
+  const ids = poll?.posted_at ? poll.candidate_player_ids : null;
+  if (!ids || ids.length === 0) return computed;
+  const wanted = new Set(ids);
+  // L'ordre du roster (équipe 1 puis 2, alphabétique) : une candidate ajoutée
+  // se range avec son équipe, pas en queue de liste.
+  return roster.filter((c) => wanted.has(c.memberId));
 }
 
 /** Lit la ligne de vote d'un match (null si aucun vote n'a été ouvert). */
@@ -292,7 +331,10 @@ export async function openMvpVote(
   /** Voix supprimées par la relance. 0 hors relance. */
   discardedVotes: number;
 } | null> {
-  const { match, candidates } = await listMvpCandidates(tenantId, matchId);
+  const { match, candidates, roster } = await listMvpCandidates(
+    tenantId,
+    matchId
+  );
   if (!match) return null;
   const matchInfo = {
     roundName: match.roundName,
@@ -335,7 +377,9 @@ export async function openMvpVote(
       .maybeSingle();
     return {
       poll: (data as MvpPollRow) ?? existing,
-      candidates,
+      // La liste du vote en cours, corrections du staff comprises — pas une
+      // liste recalculée qui les ignorerait.
+      candidates: frozenCandidates(roster, candidates, existing),
       match: matchInfo,
       discardedVotes: 0,
     };
@@ -491,6 +535,136 @@ export async function castMvpVote(params: {
     return { ok: false, error: 'write_failed' };
   }
   return { ok: true, memberId, changed: true };
+}
+
+export type EditCandidatesError =
+  | 'no_poll'
+  | 'closed'
+  | 'not_in_match'
+  | 'not_a_candidate'
+  | 'too_many'
+  | 'too_few'
+  | 'write_failed';
+
+/** Plafond du menu Discord : 25 options. */
+export const MAX_MVP_CANDIDATES = 25;
+
+/**
+ * Corrige la liste d'un vote OUVERT : ajouter une joueuse de l'une des deux
+ * équipes (une remplaçante entrée en jeu que la feuille ne porte pas), en
+ * retirer une (restée sur le banc).
+ *
+ * POURQUOI PAS LA RELANCE. `/mvp ouvrir relancer` refait la liste depuis la
+ * feuille et EFFACE TOUTES LES VOIX : corriger un nom coûtait le scrutin
+ * entier. Ici les voix sont gardées, sauf celles portées sur une joueuse
+ * retirée — elles ne peuvent plus compter, et elles sont comptées pour être
+ * dites (supprimer des bulletins en silence serait indéfendable).
+ *
+ * Une joueuse ajoutée doit appartenir à l'effectif d'une des deux équipes :
+ * le bot n'a pas à faire voter pour quelqu'un d'étranger au match.
+ */
+export async function editMvpCandidates(
+  tenantId: string,
+  matchId: string,
+  change: { add?: string[]; remove?: string[] }
+): Promise<
+  | {
+      ok: true;
+      poll: MvpPollRow;
+      candidates: MvpCandidate[];
+      added: MvpCandidate[];
+      removed: MvpCandidate[];
+      discardedVotes: number;
+      match: { team1Name: string | null; team2Name: string | null };
+    }
+  | { ok: false; error: EditCandidatesError }
+> {
+  const { match, candidates, roster } = await listMvpCandidates(
+    tenantId,
+    matchId
+  );
+  if (!match) return { ok: false, error: 'no_poll' };
+  const poll = await readMvpPoll(tenantId, matchId);
+  if (!poll?.posted_at) return { ok: false, error: 'no_poll' };
+  if (
+    poll.closed_at ||
+    (poll.closes_at && new Date(poll.closes_at).getTime() <= Date.now())
+  ) {
+    return { ok: false, error: 'closed' };
+  }
+
+  const current = frozenCandidates(roster, candidates, poll).map(
+    (c) => c.memberId
+  );
+  const inRoster = new Set(roster.map((c) => c.memberId));
+  const add = Array.from(new Set(change.add ?? []));
+  const remove = Array.from(new Set(change.remove ?? []));
+
+  if (add.some((id) => !inRoster.has(id))) {
+    return { ok: false, error: 'not_in_match' };
+  }
+  if (remove.some((id) => !current.includes(id))) {
+    return { ok: false, error: 'not_a_candidate' };
+  }
+
+  const next = new Set(current.filter((id) => !remove.includes(id)));
+  for (const id of add) next.add(id);
+  if (next.size > MAX_MVP_CANDIDATES) return { ok: false, error: 'too_many' };
+  if (next.size < 2) return { ok: false, error: 'too_few' };
+
+  // Les voix portées sur une joueuse retirée : comptées, puis supprimées.
+  let discardedVotes = 0;
+  if (remove.length > 0) {
+    const { data: lost } = await supabaseAdmin
+      .from('match_mvp_votes')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('match_id', matchId)
+      .in('member_id', remove);
+    discardedVotes = (lost ?? []).length;
+    if (discardedVotes > 0) {
+      const { error: delErr } = await supabaseAdmin
+        .from('match_mvp_votes')
+        .delete()
+        .eq('tenant_id', tenantId)
+        .eq('match_id', matchId)
+        .in('member_id', remove);
+      if (delErr) {
+        logger.error('[mvp] editMvpCandidates purge error:', delErr);
+        return { ok: false, error: 'write_failed' };
+      }
+    }
+  }
+
+  // Ordre d'affichage : celui du roster.
+  const nextIds = roster.map((c) => c.memberId).filter((id) => next.has(id));
+  const { data, error } = await supabaseAdmin
+    .from('match_mvp_polls')
+    .update({
+      candidate_player_ids: nextIds,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('tenant_id', tenantId)
+    .eq('id', poll.id)
+    .select('*')
+    .maybeSingle();
+  if (error || !data) {
+    logger.error('[mvp] editMvpCandidates update error:', error);
+    return { ok: false, error: 'write_failed' };
+  }
+
+  const byId = new Map(roster.map((c) => [c.memberId, c]));
+  const pick = (ids: string[]) =>
+    ids.map((id) => byId.get(id)).filter((c): c is MvpCandidate => !!c);
+  return {
+    ok: true,
+    poll: data as MvpPollRow,
+    candidates: pick(nextIds),
+    added: pick(add.filter((id) => !current.includes(id))),
+    removed: pick(remove),
+    discardedVotes,
+    match: { team1Name: match.team1Name, team2Name: match.team2Name },
+  };
 }
 
 /** Voix brutes d'un match, prêtes pour le dépouillement pur. */

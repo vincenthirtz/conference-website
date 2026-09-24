@@ -2026,6 +2026,20 @@ Limite de corps **15 Mo**.
 **Errors** : `400` (body invalide, base64 / magic bytes / extension),
 `401`, `403` (rôle insuffisant), `404` (match introuvable), `500`.
 
+#### Vote MVP — `GET/POST /api/bot/v1/matches/:matchId/mvp`
+
+| Action (`POST`) | Corps | Effet |
+| --- | --- | --- |
+| `open` | `{ channelId, messageId, durationHours?, force? }` | Ouvre le vote et **fige** les candidates (feuille du match, repli sur l'effectif par équipe). `force` = relance : nouvelle liste, **toutes les voix effacées**. |
+| `vote` | `{ discordUserId, memberId }` | Une voix par personne, la dernière compte. `400` si la joueuse n'est pas candidate. |
+| `candidates` | `{ add?: uuid[], remove?: uuid[] }` | Corrige la liste d'un vote **ouvert** — remplaçante entrée en jeu absente de la feuille, joueuse restée sur le banc. Les voix sont **gardées**, sauf celles portées sur une joueuse retirée (rendues dans `discardedVotes`). Réponse : `{ poll, candidates, added, removed, discardedVotes, match }`. Erreurs : `409` pas de vote ouvert / vote clos, `400` joueuse hors des deux équipes, retrait d'une non-candidate, plus de 25 ou moins de 2 candidates. |
+| `close` | `{}` | Dépouille et rend la gagnante (`winnerLabel` résolu sur tout l'effectif : une candidate ajoutée à la main est nommée). |
+
+`GET` rend `candidates` — la liste **figée** du vote s'il est ouvert, corrections
+comprises — et `roster`, tout l'effectif des deux équipes au même format (le bot
+y puise pour `/mvp ajouter`). Côté bot : `/mvp ajouter` et `/mvp retirer`
+(admin) appellent `candidates` puis éditent le message de vote sur place.
+
 ### Players (by Discord ID lookups)
 
 | Route                                                                                                                              | Methods | Idem. | Rate-key                                                           |

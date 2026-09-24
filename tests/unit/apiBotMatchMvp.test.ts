@@ -512,3 +512,88 @@ describe('candidates — repli sur le roster, équipe par équipe', () => {
     expect(ids).toEqual(expect.arrayContaining([ALICE, BEA, CHLOE, SUB]));
   });
 });
+
+describe('candidates — corriger la liste d’un vote ouvert', () => {
+  // Feuille : Bea côté A, Chloe côté B. Sub (remplaçante B) est entrée en jeu
+  // mais la feuille ne la porte pas ; la relance aurait effacé toutes les voix.
+  const edit = (body: Record<string, unknown>) =>
+    call(MATCH, { method: 'POST', body: { action: 'candidates', ...body } });
+
+  beforeEach(() => {
+    resetSupabaseMock();
+    seedBotAuth({ tenantId: TENANT, apiKey: 'test-key' });
+    seed();
+    store.match_participants = [
+      { tenant_id: TENANT, match_id: MATCH, user_id: U_BEA, battle_tag: 'Bea#2222', is_substitute: false },
+      { tenant_id: TENANT, match_id: MATCH, user_id: U_CHLOE, battle_tag: 'Chloe#3333', is_substitute: false },
+    ] as any;
+  });
+
+  it('ajoute une remplaçante sans effacer les voix, et on peut voter pour elle', async () => {
+    await open();
+    await vote('900000000000000001', BEA);
+    await vote('900000000000000002', CHLOE);
+
+    const res = await edit({ add: [SUB] });
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).candidates.map((c: any) => c.memberId)).toEqual([
+      BEA,
+      CHLOE,
+      SUB,
+    ]);
+    expect((res.body as any).added.map((c: any) => c.memberId)).toEqual([SUB]);
+    expect((res.body as any).discardedVotes).toBe(0);
+    expect(store.match_mvp_votes).toHaveLength(2);
+
+    // La lecture rend la liste CORRIGÉE, pas celle de la feuille.
+    const got = await call(MATCH);
+    expect((got.body as any).candidates.map((c: any) => c.memberId)).toContain(SUB);
+    expect((got.body as any).roster.map((c: any) => c.memberId)).toEqual([
+      ALICE,
+      BEA,
+      CHLOE,
+      SUB,
+    ]);
+
+    expect((await vote('900000000000000003', SUB)).statusCode).toBe(200);
+  });
+
+  it('retire une joueuse : seules SES voix partent, et c’est dit', async () => {
+    await open();
+    await edit({ add: [SUB] });
+    await vote('900000000000000001', BEA);
+    await vote('900000000000000002', CHLOE);
+
+    const res = await edit({ remove: [CHLOE] });
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).discardedVotes).toBe(1);
+    expect(store.match_mvp_votes).toHaveLength(1);
+    expect((await vote('900000000000000004', CHLOE)).statusCode).toBe(400);
+  });
+
+  it('refuse une joueuse étrangère au match, une retirée qui n’est pas candidate, et moins de deux candidates', async () => {
+    await open();
+    expect(
+      (await edit({ add: ['33333333-3333-4333-8333-3333333333ee'] })).statusCode
+    ).toBe(400);
+    expect((await edit({ remove: [ALICE] })).statusCode).toBe(400);
+    expect((await edit({ remove: [BEA] })).statusCode).toBe(400);
+    expect((await edit({})).statusCode).toBe(400);
+  });
+
+  it('rien à corriger sans vote ouvert', async () => {
+    expect((await edit({ add: [SUB] })).statusCode).toBe(409);
+  });
+
+  it('une remplaçante ajoutée puis élue est NOMMÉE à la clôture', async () => {
+    await open();
+    await edit({ add: [SUB] });
+    await vote('900000000000000001', SUB);
+    await vote('900000000000000002', SUB);
+    await vote('900000000000000003', SUB);
+
+    const res = await close();
+    expect((res.body as any).award?.memberId).toBe(SUB);
+    expect((res.body as any).winnerLabel).toBe('[Les Bravos] Sub');
+  });
+});

@@ -25071,6 +25071,49 @@
        ]
       }
      },
+     "roster": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "memberId": {
+         "type": "string"
+        },
+        "teamId": {
+         "type": "string"
+        },
+        "teamName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "battleTag": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "displayName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "label": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "memberId",
+        "teamId",
+        "teamName",
+        "battleTag",
+        "displayName",
+        "label"
+       ]
+      }
+     },
      "poll": {
       "type": [
        "object",
@@ -25175,6 +25218,7 @@
      "status",
      "roundName",
      "candidates",
+     "roster",
      "poll"
     ]
    }
@@ -63467,6 +63511,267 @@
   "POST /api/bot/v1/matches/{matchId}/mvp": {
    "200": {
     "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "poll": {
+        "type": "object",
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "match_id": {
+          "type": "string"
+         },
+         "posted_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "closes_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "closed_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "candidate_player_ids": {
+          "type": [
+           "array",
+           "null"
+          ],
+          "items": {
+           "type": "string"
+          }
+         },
+         "winner_member_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "winner_battle_tag": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "winner_source": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "winner_votes": {
+          "type": [
+           "number",
+           "null"
+          ]
+         },
+         "total_votes": {
+          "type": [
+           "number",
+           "null"
+          ]
+         },
+         "discord_channel_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "discord_message_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
+        },
+        "required": [
+         "id",
+         "match_id",
+         "posted_at",
+         "closes_at",
+         "closed_at",
+         "candidate_player_ids",
+         "winner_member_id",
+         "winner_battle_tag",
+         "winner_source",
+         "winner_votes",
+         "total_votes",
+         "discord_channel_id",
+         "discord_message_id"
+        ]
+       },
+       "candidates": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "memberId": {
+           "type": "string"
+          },
+          "teamId": {
+           "type": "string"
+          },
+          "teamName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "battleTag": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "displayName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "label": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "memberId",
+          "teamId",
+          "teamName",
+          "battleTag",
+          "displayName",
+          "label"
+         ]
+        }
+       },
+       "added": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "memberId": {
+           "type": "string"
+          },
+          "teamId": {
+           "type": "string"
+          },
+          "teamName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "battleTag": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "displayName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "label": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "memberId",
+          "teamId",
+          "teamName",
+          "battleTag",
+          "displayName",
+          "label"
+         ]
+        }
+       },
+       "removed": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "memberId": {
+           "type": "string"
+          },
+          "teamId": {
+           "type": "string"
+          },
+          "teamName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "battleTag": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "displayName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "label": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "memberId",
+          "teamId",
+          "teamName",
+          "battleTag",
+          "displayName",
+          "label"
+         ]
+        }
+       },
+       "discardedVotes": {
+        "type": "number"
+       },
+       "match": {
+        "type": "object",
+        "properties": {
+         "team1Name": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "team2Name": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
+        },
+        "required": [
+         "team1Name",
+         "team2Name"
+        ]
+       }
+      },
+      "required": [
+       "poll",
+       "candidates",
+       "added",
+       "removed",
+       "discardedVotes",
+       "match"
+      ]
+     },
      {
       "type": "object",
       "properties": {

@@ -5,8 +5,10 @@ get:
     - bot/matches
   summary: Candidates et etat du vote MVP d'un match.
   description: >-
-    Sert au bot a (re)poster le message de vote : la liste des titulaires des
-    deux equipes, et l'etat du vote s'il a deja ete ouvert.
+    Sert au bot a (re)poster le message de vote : les candidates (la liste
+    FIGEE du vote s'il est ouvert, corrections du staff comprises), tout
+    l'effectif des deux equipes (`roster`, pour `/mvp ajouter`), et l'etat du
+    vote.
   operationId: botGetMatchMvp
   responses:
     '200':
@@ -42,6 +44,13 @@ get:
                       type: [string, 'null']
                     label:
                       type: string
+              roster:
+                description: >-
+                  Tout l'effectif des deux equipes, meme format que
+                  `candidates`. Le bot y puise les joueuses a ajouter au vote.
+                type: array
+                items:
+                  type: object
               poll:
                 type: ['object', 'null']
     '400':
@@ -54,11 +63,13 @@ get:
 post:
   tags:
     - bot/matches
-  summary: Ouvre le vote MVP, encaisse une voix, ou clot et depouille.
+  summary: Ouvre le vote MVP, encaisse une voix, corrige les candidates, ou clot.
   description: >-
     Trois actions sur la meme route. `open` fige les candidates et ancre le
     message poste par le bot ; `vote` enregistre une voix (une par personne, la
-    derniere compte) ; `close` ferme le vote et desige la gagnante. Le
+    derniere compte) ; `candidates` corrige la liste d'un vote ouvert (`add`,
+    `remove` : ids team_members) SANS effacer les voix, sauf celles portees sur
+    une joueuse retiree ; `close` ferme le vote et desige la gagnante. Le
     depouillement fait passer les voix Twitch devant les voix Discord quand le
     chat du live a vote.
   operationId: botPostMatchMvp
@@ -106,9 +117,20 @@ post:
                 type: [string, 'null']
               messageId:
                 type: [string, 'null']
+              added:
+                description: Candidates ajoutees (action `candidates`).
+                type: array
+                items:
+                  type: object
+              removed:
+                description: Candidates retirees (action `candidates`).
+                type: array
+                items:
+                  type: object
               discardedVotes:
                 description: >-
-                  Voix supprimees par une RELANCE (`force`). Dit explicitement,
+                  Voix supprimees par une RELANCE (`force`), ou portees sur une
+                  joueuse retiree (action `candidates`). Dit explicitement,
                   parce qu'effacer des bulletins en silence serait
                   indefendable, meme quand il n'y en a qu'un.
                 type: [integer, 'null']

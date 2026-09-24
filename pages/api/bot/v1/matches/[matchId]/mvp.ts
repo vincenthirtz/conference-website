@@ -12,6 +12,9 @@
 //   POST { action: 'open' }  → ouvre le vote, fige les candidates, ancre le message
 //   POST { action: 'vote' }  → une voix (une par personne, la dernière compte)
 //   POST { action: 'close' } → ferme et dépouille, rend la gagnante
+//   POST { action: 'candidates', add?, remove? } → corrige la liste d'un vote
+//                                ouvert (remplaçante entrée en jeu, joueuse
+//                                restée sur le banc) SANS effacer les voix
 //
 // Auth : x-api-key (BOT_API_KEY) + x-tenant-id. Pas d'acteur staff : voter est
 // ouvert à tout le serveur, c'est le principe d'un vote du public.
@@ -21,6 +24,8 @@ import type { NextApiResponse } from 'next';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import {
   castMvpVote,
+  editMvpCandidates,
+  frozenCandidates,
   listMvpCandidates,
   openMvpVote,
   readMvpPoll,
@@ -41,19 +46,49 @@ const VOTE_ERRORS: Record<string, { status: number; message: string }> = {
   write_failed: { status: 500, message: 'Échec de l’enregistrement du vote' },
 };
 
+/** Erreurs de `editMvpCandidates` → statut + message montrable dans Discord. */
+const CANDIDATES_ERRORS: Record<string, { status: number; message: string }> = {
+  no_poll: {
+    status: 409,
+    message: "Aucun vote MVP n'est ouvert sur ce match",
+  },
+  closed: { status: 409, message: 'Le vote MVP est clos' },
+  not_in_match: {
+    status: 400,
+    message: "Cette joueuse n'est dans aucune des deux équipes du match",
+  },
+  not_a_candidate: {
+    status: 400,
+    message: "Cette joueuse n'est pas candidate sur ce vote",
+  },
+  too_many: { status: 400, message: 'Discord limite le vote à 25 candidates' },
+  too_few: { status: 400, message: 'Il faut au moins deux candidates' },
+  write_failed: {
+    status: 500,
+    message: 'Échec de la mise à jour des candidates',
+  },
+};
+
 async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const { matchId } = req.botQuery as z.infer<typeof mvpQuerySchema>;
   const tenantId = req.botContext.tenantId;
 
   if (req.method === 'GET') {
-    const { match, candidates } = await listMvpCandidates(tenantId, matchId);
+    const { match, candidates, roster } = await listMvpCandidates(
+      tenantId,
+      matchId
+    );
     if (!match) return res.status(404).json({ error: 'Match introuvable' });
     const poll = await readMvpPoll(tenantId, matchId);
     return res.status(200).json({
       matchId,
       status: match.status,
       roundName: match.roundName,
-      candidates,
+      // Vote ouvert : SA liste (corrections du staff comprises).
+      candidates: frozenCandidates(roster, candidates, poll),
+      // Tout l'effectif des deux équipes : le bot y puise pour proposer qui
+      // ajouter au vote (`/mvp ajouter`).
+      roster,
       poll,
     });
   }
@@ -137,6 +172,34 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     });
   }
 
+  if (body.action === 'candidates') {
+    if (!body.add?.length && !body.remove?.length) {
+      return res.status(400).json({ error: 'add ou remove est requis' });
+    }
+    const edited = await editMvpCandidates(tenantId, matchId, {
+      add: body.add ?? [],
+      remove: body.remove ?? [],
+    });
+    if (!edited.ok) {
+      const mapped = CANDIDATES_ERRORS[edited.error] ?? {
+        status: 500,
+        message: 'Erreur',
+      };
+      return res.status(mapped.status).json({ error: mapped.message });
+    }
+    logger.info(
+      `[bot/mvp] candidates match=${matchId} +${edited.added.length} -${edited.removed.length} voixPurgées=${edited.discardedVotes}`
+    );
+    return res.status(200).json({
+      poll: edited.poll,
+      candidates: edited.candidates,
+      added: edited.added,
+      removed: edited.removed,
+      discardedVotes: edited.discardedVotes,
+      match: edited.match,
+    });
+  }
+
   // action === 'close'
   const settled = await settleMatchMvp(tenantId, matchId, { close: true });
   if (!settled) return res.status(404).json({ error: 'Match introuvable' });
@@ -147,10 +210,11 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   // une joueuse veut être nommée (display_name avant BattleTag).
   let winnerLabel: string | null = null;
   if (settled.award) {
-    const { candidates } = await listMvpCandidates(tenantId, matchId);
+    // L'EFFECTIF, pas la liste calculée : une remplaçante ajoutée à la main
+    // n'y figure pas, et sa victoire s'annonçait sans nom.
+    const { roster } = await listMvpCandidates(tenantId, matchId);
     winnerLabel =
-      candidates.find((c) => c.memberId === settled.award!.memberId)?.label ??
-      null;
+      roster.find((c) => c.memberId === settled.award!.memberId)?.label ?? null;
   }
 
   // L'ancrage du message accompagne le résultat. Sans lui, une clôture demandée
