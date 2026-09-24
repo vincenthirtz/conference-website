@@ -93,6 +93,7 @@ export default {
     'From the opening round to the grand final: the path to the title at a glance.',
   formatStepLabel: 'Stage {n}',
   formatEmpty: 'The detailed format will be published soon.',
+  formatCtaFinals: 'View the finals',
   formatCta: 'View the full bracket',
   formatMatchLabel: 'Format: {format}',
   formatSwissRounds: '{count} rounds',

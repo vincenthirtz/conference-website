@@ -15,6 +15,7 @@ export default {
   teams: 'Teams',
   matches: 'Matches',
   bracket: 'Bracket',
+  finals: 'Finals',
   maps: 'Maps',
   standings: 'Standings',
   stats: 'Stats',

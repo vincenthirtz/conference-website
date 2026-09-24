@@ -28,6 +28,10 @@ import { formatPlayDateShort } from '@/utils/maps/poolScope';
 import { logger } from '../../../utils/logger';
 import nsTournamentMaps from '@/lib/i18n/locales/fr/tournamentMaps';
 import { containsFfaStage } from '@/utils/stages/ffaStage';
+import {
+  bracketTabMode,
+  type BracketTabMode,
+} from '@/utils/stages/bracketStage';
 type MapsDict = typeof nsTournamentMaps.fr;
 type Tournament = {
   id: string;
@@ -127,6 +131,7 @@ type Props = {
   maps: MapStat[];
   hasVetoData: boolean;
   hasFfaStage: boolean;
+  bracketTab: BracketTabMode;
   seo: SeoProps;
 };
 
@@ -320,6 +325,8 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 
   const hasFfaStage = containsFfaStage(stagesRes.data);
 
+  const bracketTab = bracketTabMode(stagesRes.data);
+
   const allMatches = (matchesRes.data || []) as MatchRow[];
   const matches = allMatches.filter((m) => !m.is_bye);
   const matchIds = matches.map((m) => m.id);
@@ -396,6 +403,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       maps,
       hasVetoData,
       hasFfaStage,
+      bracketTab,
       seo: buildMapsSeo(tournament as Tournament),
     },
     revalidate: 60,
@@ -410,6 +418,7 @@ export default function TournamentMapsPage({
   maps,
   hasVetoData,
   hasFfaStage,
+  bracketTab,
 }: Props) {
   const t = useT(nsTournamentMaps);
   const { lang } = useLang();
@@ -589,6 +598,7 @@ export default function TournamentMapsPage({
           tournamentPath={tournamentPath}
           active="maps"
           showPodium={isCompleted}
+          bracketLabel={bracketTab}
           showFfa={hasFfaStage}
         />
 

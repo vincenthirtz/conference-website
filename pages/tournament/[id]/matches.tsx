@@ -29,6 +29,7 @@ import PrintExportButton from '@/components/PrintExportButton';
 import TeamAvatar from '@/components/Team/TeamAvatar';
 import nsTournamentMatches from '@/lib/i18n/locales/fr/tournamentMatches';
 import { containsFfaStage } from '@/utils/stages/ffaStage';
+import { bracketTabMode } from '@/utils/stages/bracketStage';
 
 // Fuseau de référence pour placer les matchs dans la grille mensuelle.
 const MATCHES_TZ = 'Europe/Paris';
@@ -219,6 +220,7 @@ export default function TournamentMatchesPage({
   const isCompleted =
     tournament.status === 'finished' || tournament.status === 'completed';
   const hasFfaStage = containsFfaStage(stages);
+  const bracketTab = bracketTabMode(stages);
 
   const filteredMatches = useMemo(() => {
     return matches.filter((m) => {
@@ -366,6 +368,7 @@ export default function TournamentMatchesPage({
             tournamentPath={tournamentPath}
             active="matches"
             showPodium={isCompleted}
+            bracketLabel={bracketTab}
             showFfa={hasFfaStage}
           />
         </div>

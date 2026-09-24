@@ -50,6 +50,10 @@ import type {
   TournamentPhase,
 } from '@/components/tournament/landing/types';
 import { containsFfaStage } from '@/utils/stages/ffaStage';
+import {
+  bracketTabMode,
+  type BracketTabMode,
+} from '@/utils/stages/bracketStage';
 
 type TournamentPageProps = {
   tournament: LandingTournament & {
@@ -66,6 +70,7 @@ type TournamentPageProps = {
   totalMatches: number;
   finishedMatchesCount: number;
   hasFfaStage: boolean;
+  bracketTab: BracketTabMode;
   leagues: LandingLeague[];
   /** Suivi en cours de tournoi : direct, à suivre, résultats. */
   hub: LiveHubData;
@@ -399,6 +404,7 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       totalMatches,
       finishedMatchesCount,
       hasFfaStage: containsFfaStage(stages),
+      bracketTab: bracketTabMode(stages),
       leagues,
       hub,
       standings,
@@ -418,6 +424,7 @@ export default function TournamentPage({
   totalMatches,
   finishedMatchesCount,
   hasFfaStage,
+  bracketTab,
   leagues,
   hub,
   standings,
@@ -459,6 +466,7 @@ export default function TournamentPage({
           tournamentPath={tournamentPath}
           active="hub"
           showPodium={isCompleted}
+          bracketLabel={bracketTab}
           showFfa={hasFfaStage}
         />
       </div>

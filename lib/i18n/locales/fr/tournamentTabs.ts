@@ -14,6 +14,7 @@ export default ns('tournamentTabs', {
   teams: 'Équipes',
   matches: 'Matchs',
   bracket: 'Bracket',
+  finals: 'Phase finale',
   maps: 'Maps',
   standings: 'Classement',
   stats: 'Stats',

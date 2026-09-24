@@ -25,6 +25,7 @@ export default function TournamentTabs({
   tournamentPath,
   active,
   showBracket = true,
+  bracketLabel = 'bracket',
   showPodium = true,
   showFfa = false,
   className = '',
@@ -34,6 +35,12 @@ export default function TournamentTabs({
   active: TournamentTabKey;
   /** Afficher l'onglet Bracket (par défaut oui ; la page gère l'état vide). */
   showBracket?: boolean;
+  /**
+   * Libellé de l'onglet Bracket : `finals` (« Phase finale ») pour un tournoi
+   * sans phase à élimination, dont la page montre alors les finales et la
+   * course à la qualification (cf. utils/stages/bracketStage.ts).
+   */
+  bracketLabel?: 'bracket' | 'finals';
   /** Afficher l'onglet Podium (par défaut oui). */
   showPodium?: boolean;
   /** Afficher l'onglet FFA (uniquement si le tournoi a une phase FFA). */
@@ -50,7 +57,7 @@ export default function TournamentTabs({
       ? [
           {
             key: 'bracket' as TournamentTabKey,
-            label: t.bracket,
+            label: bracketLabel === 'finals' ? t.finals : t.bracket,
             href: `${tournamentPath}/bracket`,
           },
         ]

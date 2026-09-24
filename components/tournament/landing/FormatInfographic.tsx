@@ -10,6 +10,7 @@ import { Section, SectionHeader, Reveal } from './primitives';
 import type { LandingStage } from './types';
 import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 import nsTournamentDetail from '@/lib/i18n/locales/fr/tournamentDetail';
+import { bracketTabMode } from '@/utils/stages/bracketStage';
 
 const STAGE_ICON: Record<string, string> = {
   group: '🎯',
@@ -115,7 +116,9 @@ export default function FormatInfographic({
       <div className="mt-8 flex justify-center">
         <Link href={`${tournamentPath}/bracket`}>
           <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition-colors hover:border-[var(--color-violet)]/50 hover:bg-[var(--color-violet)]/10">
-            {t.formatCta}
+            {bracketTabMode(stages) === 'finals'
+              ? t.formatCtaFinals
+              : t.formatCta}
             <svg
               className="h-4 w-4"
               fill="none"

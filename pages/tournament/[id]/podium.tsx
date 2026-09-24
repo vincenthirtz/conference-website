@@ -21,6 +21,10 @@ import { logger } from '../../../utils/logger';
 import nsTournamentPodium from '@/lib/i18n/locales/fr/tournamentPodium';
 import { containsFfaStage } from '@/utils/stages/ffaStage';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
+import {
+  bracketTabMode,
+  type BracketTabMode,
+} from '@/utils/stages/bracketStage';
 
 /** Recopie du `.select()` du palmarès figé, embed compris. */
 type PodiumRankRow = {
@@ -68,6 +72,7 @@ type Props = {
   tournament: Tournament;
   rankings: RankingRow[];
   hasFfaStage: boolean;
+  bracketTab: BracketTabMode;
   seo: SeoProps;
 };
 
@@ -148,6 +153,8 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 
   const hasFfaStage = containsFfaStage(stagesRes.data);
 
+  const bracketTab = bracketTabMode(stagesRes.data);
+
   if (!rankRows || rankRows.length === 0) {
     return { notFound: true, revalidate: 60 };
   }
@@ -175,6 +182,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       tournament,
       rankings,
       hasFfaStage,
+      bracketTab,
       seo: buildPodiumSeo(tournament),
     },
     revalidate: 60,
@@ -205,6 +213,7 @@ export default function TournamentPodiumPage({
   tournament,
   rankings,
   hasFfaStage,
+  bracketTab,
 }: Props) {
   const t = useT(nsTournamentPodium);
   const locale = useLocale();
@@ -246,6 +255,7 @@ export default function TournamentPodiumPage({
           tournamentPath={tournamentPath}
           active="podium"
           showPodium={isCompleted}
+          bracketLabel={bracketTab}
           showFfa={hasFfaStage}
         />
 

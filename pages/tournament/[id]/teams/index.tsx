@@ -26,6 +26,10 @@ import TournamentTabs from '@/components/tournament/TournamentTabs';
 import nsTournamentTeams from '@/lib/i18n/locales/fr/tournamentTeams';
 import { containsFfaStage } from '@/utils/stages/ffaStage';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
+import {
+  bracketTabMode,
+  type BracketTabMode,
+} from '@/utils/stages/bracketStage';
 
 type Tournament = {
   id: string;
@@ -50,6 +54,7 @@ type Props = {
   tournament: Tournament;
   teams: Team[];
   hasFfaStage: boolean;
+  bracketTab: BracketTabMode;
   seo: SeoProps;
 };
 
@@ -111,6 +116,8 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 
   const hasFfaStage = containsFfaStage(stagesRes.data);
 
+  const bracketTab = bracketTabMode(stagesRes.data);
+
   // La jointure `team:teams(...)` est typée en tableau par Supabase mais renvoie
   // un objet unique à l'exécution (relation 1-1 via la FK) — même traitement que
   // la page tournoi parente.
@@ -128,6 +135,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       tournament,
       teams,
       hasFfaStage,
+      bracketTab,
       seo: buildTeamsListSeo(tournament, teams.length),
     },
     revalidate: 60,
@@ -138,6 +146,7 @@ export default function TournamentTeamsPage({
   tournament,
   teams,
   hasFfaStage,
+  bracketTab,
 }: Props) {
   const t = useT(nsTournamentTeams);
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
@@ -176,6 +185,7 @@ export default function TournamentTeamsPage({
           tournamentPath={tournamentPath}
           active="teams"
           showPodium={isCompleted}
+          bracketLabel={bracketTab}
           showFfa={hasFfaStage}
         />
 

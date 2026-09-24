@@ -24,6 +24,10 @@ import type { TiebreakerKey } from '@/utils/stages/tiebreakers';
 import { useT, format } from '@/lib/i18n/useT';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
 import nsTournamentStandings from '@/lib/i18n/locales/fr/tournamentStandings';
+import {
+  bracketTabMode,
+  type BracketTabMode,
+} from '@/utils/stages/bracketStage';
 
 type StandingsDict = typeof nsTournamentStandings.fr;
 
@@ -39,6 +43,7 @@ type Props = {
   tournament: Tournament;
   tables: PublicStandingsTable[];
   hasFfaStage: boolean;
+  bracketTab: BracketTabMode;
   // En prop, pas en import : `publicStandings` importe `supabaseAdmin`, et
   // l'importer dans le composant embarquerait ce module côté client.
   formLength: number;
@@ -99,6 +104,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       tournament,
       tables,
       hasFfaStage: stageTypes.includes('ffa'),
+      bracketTab: bracketTabMode(stageTypes),
       formLength: FORM_LENGTH,
       seo: buildStandingsSeo(tournament),
     },
@@ -110,6 +116,7 @@ export default function TournamentStandingsPage({
   tournament,
   tables,
   hasFfaStage,
+  bracketTab,
   formLength,
 }: Props) {
   const t = useT(nsTournamentStandings);
@@ -140,6 +147,7 @@ export default function TournamentStandingsPage({
           tournamentPath={tournamentPath}
           active="standings"
           showPodium={isCompleted}
+          bracketLabel={bracketTab}
           showFfa={hasFfaStage}
         />
 

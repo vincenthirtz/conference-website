@@ -20,6 +20,10 @@ import TournamentTabs from '@/components/tournament/TournamentTabs';
 import nsTournamentMvp from '@/lib/i18n/locales/fr/tournamentMvp';
 import { containsFfaStage } from '@/utils/stages/ffaStage';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
+import {
+  bracketTabMode,
+  type BracketTabMode,
+} from '@/utils/stages/bracketStage';
 
 /** Recopie du `.select()` des matchs terminés, embed du sondage MVP compris. */
 type FinishedMatchRow = {
@@ -84,6 +88,7 @@ type Props = {
   leaderboard: LeaderboardEntry[];
   perMatch: PerMatchEntry[];
   hasFfaStage: boolean;
+  bracketTab: BracketTabMode;
   seo: SeoProps;
 };
 
@@ -130,6 +135,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     .eq('tenant_id', tenantId)
     .eq('tournament_id', tournamentId);
   const hasFfaStage = containsFfaStage(stagesRes.data);
+  const bracketTab = bracketTabMode(stagesRes.data);
 
   const matchesRes = await supabaseAdmin
     .from('matches')
@@ -290,6 +296,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       leaderboard,
       perMatch,
       hasFfaStage,
+      bracketTab,
       seo: buildMvpSeo(tournament.name),
     },
     revalidate: 60,
@@ -336,6 +343,7 @@ export default function TournamentMvpPage({
   leaderboard,
   perMatch,
   hasFfaStage,
+  bracketTab,
 }: Props) {
   const t = useT(nsTournamentMvp);
   const locale = useLocale();
@@ -381,6 +389,7 @@ export default function TournamentMvpPage({
             tournamentPath={tournamentPath}
             active="mvp"
             showPodium={isCompleted}
+            bracketLabel={bracketTab}
             showFfa={hasFfaStage}
           />
 

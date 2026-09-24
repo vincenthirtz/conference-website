@@ -28,6 +28,18 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { logger } from '@/utils/logger';
 import nsTournamentBracket from '@/lib/i18n/locales/fr/tournamentBracket';
 import { containsFfaStage } from '@/utils/stages/ffaStage';
+import {
+  bracketTabMode,
+  type BracketTabMode,
+} from '@/utils/stages/bracketStage';
+import { readPublicStandings } from '@/utils/stages/publicStandings';
+import {
+  buildFinalsPhase,
+  type FinalsMatch,
+  type FinalsPhase,
+  type RaceMatch,
+} from '@/utils/tournament/finalsPhase';
+import FinalsPhaseView from '@/components/tournament/FinalsPhaseView';
 
 type BracketDict = typeof nsTournamentBracket.fr;
 
@@ -49,6 +61,9 @@ type Props = {
   loserRounds: BracketRound[];
   isDoubleElim: boolean;
   hasFfaStage: boolean;
+  tabMode: BracketTabMode;
+  /** Tournoi sans arbre : finales + course à la qualification. */
+  finals: FinalsPhase | null;
   seo: SeoProps;
 };
 
@@ -73,8 +88,21 @@ function buildRounds(matches: ScheduleMatch[]): BracketRound[] {
     }));
 }
 
-function buildBracketSeo(tournament: Tournament): SeoProps {
+function buildBracketSeo(
+  tournament: Tournament,
+  mode: BracketTabMode
+): SeoProps {
   const name = tournament.name;
+  if (mode === 'finals') {
+    return {
+      title: { fr: `Phase finale – ${name}`, en: `Finals – ${name}` },
+      description: {
+        fr: `Phase finale du tournoi ${name} — OW Women's Cup : affiches de la grande et de la petite finale, et course à la qualification.`,
+        en: `Finals of the ${name} tournament — OW Women's Cup: grand final and third-place matchups, and the race to qualify.`,
+      },
+      type: 'website',
+    };
+  }
   return {
     title: { fr: `Bracket – ${name}`, en: `Bracket – ${name}` },
     description: {
@@ -138,8 +166,8 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
         bracket_side,
         next_match_win_id,
         next_match_win_slot,
-        team1:team1_id ( id, name, short_name, logo_url ),
-        team2:team2_id ( id, name, short_name, logo_url )
+        team1:team1_id ( id, slug, name, short_name, logo_url ),
+        team2:team2_id ( id, slug, name, short_name, logo_url )
       `
       )
       .eq('tenant_id', tenantId)
@@ -175,6 +203,28 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   );
   const lbMatches = bracketMatches.filter((m) => m.bracket_side === 'lb');
 
+  // Pas d'arbre et pas de phase à élimination : la page montre la phase
+  // finale. Les finales sont les matchs créés HORS phase ; la course se joue
+  // sur les matchs de la (des) phase(s) de classement.
+  const tabMode = bracketTabMode(stageTypes);
+  let finals: FinalsPhase | null = null;
+  if (bracketMatches.length === 0 && tabMode === 'finals') {
+    const tables = await readPublicStandings(tenantId, tournament.id);
+    const finalsMatches = matches.filter(
+      (m) => !m.stage_id && !m.is_bye
+    ) as unknown as FinalsMatch[];
+    finals = buildFinalsPhase({
+      // Plusieurs poules : l'appariement « 1er contre 2e » n'a plus de sens
+      // sans règle inter-poules — pas de projection, les affiches restent
+      // « à déterminer » jusqu'à ce que le staff les place.
+      standings: tables.length === 1 ? tables[0].rows : [],
+      finals: finalsMatches,
+      raceMatches: matches.filter(
+        (m) => !!m.stage_id
+      ) as unknown as RaceMatch[],
+    });
+  }
+
   return {
     props: {
       tournament: tournament as Tournament,
@@ -182,7 +232,9 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       loserRounds: buildRounds(lbMatches),
       isDoubleElim,
       hasFfaStage,
-      seo: buildBracketSeo(tournament as Tournament),
+      tabMode,
+      finals,
+      seo: buildBracketSeo(tournament as Tournament, tabMode),
     },
     revalidate: 60,
   };
@@ -194,6 +246,8 @@ export default function TournamentBracketPage({
   loserRounds,
   isDoubleElim,
   hasFfaStage,
+  tabMode,
+  finals,
 }: Props) {
   const t = useT(nsTournamentBracket);
   const { lang } = useLang();
@@ -226,7 +280,9 @@ export default function TournamentBracketPage({
           </div>
 
           <Heading typeStyle="heading-md" className="text-brand-gradient mb-1">
-            {format(t.heading, { name: tournament.name })}
+            {format(finals ? t.finalsHeading : t.heading, {
+              name: tournament.name,
+            })}
           </Heading>
           <span className="brand-rule mb-2" aria-hidden />
           {dateRangeLabel && (
@@ -237,20 +293,25 @@ export default function TournamentBracketPage({
             textColor="text-gray-200"
             className="max-w-xl"
           >
-            {t.description}
+            {finals && finals.qualifiers > 0
+              ? format(t.finalsDescription, { count: finals.qualifiers })
+              : t.description}
           </Paragraph>
         </section>
 
         <TournamentTabs
           tournamentPath={tournamentPath}
           active="bracket"
+          bracketLabel={tabMode}
           showPodium={isCompleted}
           showFfa={hasFfaStage}
         />
 
         {/* Bracket */}
         <section>
-          {!hasBracket ? (
+          {finals ? (
+            <FinalsPhaseView phase={finals} tournamentPath={tournamentPath} />
+          ) : !hasBracket ? (
             <div className="bg-black/60 border border-white/5 rounded-2xl p-8 text-center">
               <p className="text-lg font-semibold text-gray-100 mb-1">
                 {t.emptyTitle}

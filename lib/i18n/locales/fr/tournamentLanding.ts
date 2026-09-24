@@ -94,6 +94,7 @@ export default ns('tournamentLanding', {
   formatStepLabel: 'Phase {n}',
   formatEmpty: 'Le format détaillé sera publié prochainement.',
   formatCta: 'Voir le bracket complet',
+  formatCtaFinals: 'Voir la phase finale',
   formatMatchLabel: 'Format : {format}',
   formatSwissRounds: '{count} rounds',
   scheduleHeading: 'Les grandes étapes',
