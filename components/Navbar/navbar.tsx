@@ -11,7 +11,7 @@ import PublicNav from './PublicNav';
 import LiveLogoPulse from './LiveLogoPulse';
 import { ADMIN_LINKS, filterAdminLinks } from './adminLinks';
 import { PLAYER_LINKS } from './playerLinks';
-import { resolveHeaderBars } from './headerBars';
+import { accountLinks, resolveHeaderBars, routeSpace } from './headerBars';
 import { useT } from '@/lib/i18n/useT';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 import nsNavbar from '@/lib/i18n/locales/fr/navbar';
@@ -132,6 +132,20 @@ function Navbar(): JSX.Element {
   const playerAvatarUrl =
     (playerUser?.user_metadata?.avatar_url as string | undefined) || null;
 
+  // Menu de compte : de quoi rejoindre les AUTRES espaces depuis celui-ci.
+  // Libellés résolus ici, une fois, pour les trois menus qui l'affichent.
+  const canAdmin = isStaff && visibleAdminLinks.length > 0;
+  const accountLabels: Record<string, string> = {
+    player: tNav.accountMySpace,
+    profile: tNav.accountProfile,
+    admin: tNav.accountAdmin,
+  };
+  const labeledAccountLinks = accountLinks({
+    space: routeSpace(router.pathname),
+    hasUser: !!playerUser,
+    canAdmin,
+  }).map((l) => ({ ...l, label: accountLabels[l.key] }));
+
   const headerOffset = showAdminBar
     ? ADMIN_BAR_HEIGHT
     : showPlayerBar
@@ -185,6 +199,7 @@ function Navbar(): JSX.Element {
             links={visibleAdminLinks}
             height={ADMIN_BAR_HEIGHT}
             onLogout={handleLogout}
+            accountLinks={labeledAccountLinks}
           />
           <CommandPalette />
         </>
@@ -284,7 +299,23 @@ function Navbar(): JSX.Element {
 
           {!hideMarketingNav && (
             <div className="hidden min-[1119px]:flex">
-              <PublicNav staffLoading={loading} showStaffLogin={!isStaff} />
+              <PublicNav
+                staffLoading={loading}
+                showStaffLogin={!isStaff}
+                account={
+                  playerUser
+                    ? {
+                        name: isStaff && staffName ? staffName : playerName,
+                        avatarUrl: playerAvatarUrl,
+                        roleLabel: isStaff ? null : playerRoleLabel,
+                        links: labeledAccountLinks,
+                        menuLabel: tNav.accountMenu,
+                        logoutLabel: tNav.logout,
+                        onLogout: isStaff ? handleLogout : handlePlayerLogout,
+                      }
+                    : null
+                }
+              />
             </div>
           )}
 
@@ -306,6 +337,10 @@ function Navbar(): JSX.Element {
                 adminLoading={loading}
                 offsetTop={headerHeight}
                 onLogout={handleLogout}
+                accountLinks={playerUser ? labeledAccountLinks : []}
+                onAccountLogout={
+                  playerUser && !isStaff ? handlePlayerLogout : undefined
+                }
               />
             )}
           </div>

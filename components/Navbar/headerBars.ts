@@ -21,34 +21,84 @@ export type HeaderBars = {
 };
 
 /**
+ * Les trois espaces du site. La barre d'en-tête dépend de l'ESPACE de la page,
+ * pas de qui est connecté.
+ *
+ * `/player/[userId]` est le profil PUBLIC d'une joueuse (ISR, indexable) : il
+ * vit sous /player pour des raisons de routage mais appartient au site public
+ * — même règle que `_app.tsx`.
+ */
+export type NavSpace = 'public' | 'player' | 'admin';
+
+export function routeSpace(pathname: string): NavSpace {
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) return 'admin';
+  if (
+    (pathname === '/player' || pathname.startsWith('/player/')) &&
+    pathname !== '/player/[userId]'
+  ) {
+    return 'player';
+  }
+  return 'public';
+}
+
+/**
  * Une seule barre à la fois — et jamais aucune quand une page en réclame une.
  *
- * SUR /player, LA BARRE JOUEUSE GAGNE, staff compris. Avant, « staff » primait
- * partout : une capitaine qui est AUSSI staff n'avait sur son espace joueuse
- * que la barre admin, sans « Mes matchs », « Notifications » ni « Profil ». On
- * a écarté l'empilement des deux barres (88 px d'en-tête sur mobile, et tous
- * les `pt-24` de l'espace joueuse à revoir la veille du tournoi) : la barre
- * joueuse porte à la place un lien retour vers l'administration. Hors /player,
- * rien ne change — et l'admin inspecte l'espace d'une joueuse depuis
- * `/admin/users/[id]/player-view`, qui reste sous la barre admin.
+ * LA BARRE SUIT L'ESPACE (2026-09-24). Avant, la barre admin s'affichait
+ * PARTOUT dès qu'on était staff, et elle remplace le menu public : sur
+ * l'accueil ou une page tournoi, un membre du staff n'avait plus le menu du
+ * site — seulement un sous-menu « Site ». Désormais :
+ *   - espace public  → menu public, pour tout le monde, staff compris ;
+ *   - /admin         → barre admin (si staff avec au moins un lien) ;
+ *   - /player        → barre joueuse (si connectée), staff compris.
+ * Le passage d'un espace à l'autre se fait par le menu de compte
+ * (`accountLinks`), présent dans les trois.
  *
  * Invariant « jamais sans en-tête » (tests/unit/navbarHeaderNeverEmpty.test.ts)
  * préservé : `PlayerTopBar` ne se supprime jamais elle-même, et la barre admin
- * n'est montrée que si elle a au moins un lien.
+ * n'est montrée que si elle a au moins un lien — sinon le menu public reste.
  */
 export function resolveHeaderBars(input: HeaderBarsInput): HeaderBars {
-  const isPlayerRoute = input.pathname.startsWith('/player');
+  const space = routeSpace(input.pathname);
   const showPlayerBar =
-    isPlayerRoute &&
+    space === 'player' &&
     !input.staffLoading &&
     !input.playerLoading &&
     input.hasPlayerUser;
   const showAdminBar =
-    !showPlayerBar &&
+    space === 'admin' &&
     !input.staffLoading &&
     input.isStaff &&
     input.adminLinkCount > 0;
   return { showAdminBar, showPlayerBar };
+}
+
+export type AccountLinkKey = 'player' | 'profile' | 'admin';
+export type AccountLink = { key: AccountLinkKey; href: string };
+
+/**
+ * Le menu de compte : de quoi rejoindre les AUTRES espaces depuis celui où
+ * l'on est. Sur le site public, une joueuse connectée n'avait aucun lien vers
+ * son espace (les boutons Connexion / Inscription disparaissaient sans être
+ * remplacés) ; dans l'admin, rien ne menait à l'espace joueuse.
+ *
+ * `canAdmin` : staff avec au moins un lien admin — la même garde que la barre.
+ */
+export function accountLinks(input: {
+  space: NavSpace;
+  hasUser: boolean;
+  canAdmin: boolean;
+}): AccountLink[] {
+  if (!input.hasUser) return [];
+  const out: AccountLink[] = [];
+  if (input.space !== 'player') {
+    out.push({ key: 'player', href: '/player' });
+    out.push({ key: 'profile', href: '/player/profile' });
+  }
+  if (input.canAdmin && input.space !== 'admin') {
+    out.push({ key: 'admin', href: '/admin' });
+  }
+  return out;
 }
 
 /**

@@ -53,6 +53,10 @@ export interface INavDropProp {
   adminLoading: boolean;
   offsetTop?: number;
   onLogout: () => void;
+  /** Liens du menu de compte (Mon espace, Mon profil, Administration). */
+  accountLinks?: { key: string; href: string; label: string }[];
+  /** Déconnexion d'un compte connecté NON staff (le staff a la sienne). */
+  onAccountLogout?: () => void;
 }
 
 export interface PastEditonCardProp {

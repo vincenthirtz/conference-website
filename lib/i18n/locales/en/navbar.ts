@@ -26,6 +26,10 @@ export default {
   login: 'Sign in',
   signup: 'Register',
   logout: 'Sign out',
+  accountMenu: 'My account',
+  accountMySpace: 'My space',
+  accountProfile: 'My profile',
+  accountAdmin: 'Admin',
   mobileMenuAria: 'Mobile menu',
   publicLinks: {
     Accueil: 'Home',

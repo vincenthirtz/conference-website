@@ -29,6 +29,8 @@ type AdminTopBarProps = {
   links: AdminLink[];
   height: number;
   onLogout: () => void;
+  /** Liens vers les autres espaces (Mon espace, Mon profil) — menu de compte. */
+  accountLinks?: { key: string; href: string; label: string }[];
 };
 
 function ChevronDown({ open }: { open: boolean }) {
@@ -56,6 +58,7 @@ export default function AdminTopBar({
   links,
   height,
   onLogout,
+  accountLinks = [],
 }: AdminTopBarProps) {
   const t = useT(nsAdminTopBar);
   const branding = useTenantBranding();
@@ -294,6 +297,19 @@ export default function AdminTopBar({
                 </PanelLink>
               ))}
             </DropdownPanel>
+
+            {/* L'espace joueuse, à un clic : rien n'y menait depuis l'admin. */}
+            {accountLinks
+              .filter((l) => l.key === 'player')
+              .map((l) => (
+                <Link
+                  key={l.key}
+                  href={l.href}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium text-neutral-300 transition-all hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                >
+                  {l.label}
+                </Link>
+              ))}
 
             <span className="mx-1 h-5 w-px bg-white/[0.06]" />
 

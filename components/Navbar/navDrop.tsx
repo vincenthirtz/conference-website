@@ -39,6 +39,8 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
     adminLoading,
     offsetTop = 74,
     onLogout,
+    accountLinks = [],
+    onAccountLogout,
   },
   ref
 ): JSX.Element {
@@ -90,7 +92,37 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
         className="flex h-full w-full flex-col gap-2 overflow-y-auto px-5 pb-10 pt-6"
         style={{ maxHeight: dropHeight }}
       >
-        {!isStaff && (
+        {/* Compte connecté : ses espaces EN TÊTE. Une joueuse connectée voyait
+            ici « Connexion staff » et « Inscription » — rien vers son espace. */}
+        {accountLinks.length > 0 && (
+          <div className="mb-2 flex flex-col gap-2">
+            {accountLinks.map((l) => (
+              <Link
+                key={l.key}
+                href={l.href}
+                onClick={closeAndNavigate}
+                className="flex min-h-[48px] items-center justify-between rounded-xl border border-[var(--color-violet)]/40 bg-[var(--color-violet)]/10 px-4 py-3 text-[15px] font-medium text-white transition-all hover:bg-[var(--color-violet)]/20"
+              >
+                {l.label}
+                <span aria-hidden>→</span>
+              </Link>
+            ))}
+            {onAccountLogout && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDrop(false);
+                  onAccountLogout();
+                }}
+                className="flex min-h-[48px] items-center rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left text-[15px] text-neutral-300 transition-all hover:bg-white/[0.08] hover:text-white"
+              >
+                {tNav.logout}
+              </button>
+            )}
+          </div>
+        )}
+
+        {!isStaff && accountLinks.length === 0 && (
           <div
             className={`mb-2 flex flex-col gap-2 transition-opacity ${adminLoading ? 'opacity-0' : 'opacity-100'}`}
           >

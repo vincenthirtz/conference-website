@@ -25,6 +25,10 @@ export default ns('navbar', {
   login: 'Connexion',
   signup: 'Inscription',
   logout: 'Déconnexion',
+  accountMenu: 'Mon compte',
+  accountMySpace: 'Mon espace',
+  accountProfile: 'Mon profil',
+  accountAdmin: 'Administration',
   mobileMenuAria: 'Menu mobile',
   publicLinks: {
     Accueil: 'Accueil',

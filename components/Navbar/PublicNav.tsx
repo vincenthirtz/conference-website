@@ -7,6 +7,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useT } from '@/lib/i18n/useT';
 import PlayerBell from './PlayerBell';
 import LanguageToggle from './LanguageToggle';
+import AccountMenu, { type LabeledAccountLink } from './AccountMenu';
 import nsNavbar from '@/lib/i18n/locales/fr/navbar';
 
 const HIDDEN_PUBLIC_LINKS = new Set(['À propos', 'Cast', 'Sponsors']);
@@ -14,11 +15,22 @@ const HIDDEN_PUBLIC_LINKS = new Set(['À propos', 'Cast', 'Sponsors']);
 type PublicNavProps = {
   staffLoading: boolean;
   showStaffLogin: boolean;
+  /** Compte connecté : menu de compte à la place de Connexion / Inscription. */
+  account?: {
+    name: string;
+    avatarUrl: string | null;
+    roleLabel: string | null;
+    links: LabeledAccountLink[];
+    menuLabel: string;
+    logoutLabel: string;
+    onLogout: () => void;
+  } | null;
 };
 
 export default function PublicNav({
   staffLoading,
   showStaffLogin,
+  account = null,
 }: PublicNavProps) {
   const router = useRouter();
   const tNav = useT(nsNavbar);
@@ -240,6 +252,18 @@ export default function PublicNav({
       <PlayerBell />
 
       <LanguageToggle className="ml-1" />
+
+      {authUser && account && (
+        <AccountMenu
+          name={account.name}
+          avatarUrl={account.avatarUrl}
+          roleLabel={account.roleLabel}
+          links={account.links}
+          menuLabel={account.menuLabel}
+          logoutLabel={account.logoutLabel}
+          onLogout={account.onLogout}
+        />
+      )}
 
       {showStaffLogin && !authUser && (
         <div
