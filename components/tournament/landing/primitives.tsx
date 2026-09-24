@@ -24,7 +24,7 @@ export function Section({
   return (
     <section
       id={id}
-      className={`relative scroll-mt-24 py-16 sm:py-20 md:py-24 ${className}`}
+      className={`relative scroll-mt-24 py-12 sm:py-14 md:py-16 ${className}`}
     >
       <div
         className={`relative z-[1] mx-auto w-full max-w-6xl px-4 sm:px-6 ${containerClassName}`}
@@ -122,7 +122,7 @@ export function SectionHeader({
   const isCenter = align === 'center';
   return (
     <div
-      className={`mb-10 flex flex-col gap-4 md:mb-14 ${
+      className={`mb-8 flex flex-col gap-4 md:mb-10 ${
         isCenter
           ? 'items-center text-center'
           : 'items-start text-left md:flex-row md:items-end md:justify-between'

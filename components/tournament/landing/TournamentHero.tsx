@@ -16,6 +16,8 @@ import type {
   LandingLeague,
   TournamentPhase,
 } from './types';
+import { COMMUNITY_LINKS } from './types';
+import type { HubMatch } from '@/utils/tournament/liveHub';
 import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
 export default function TournamentHero({
@@ -26,6 +28,8 @@ export default function TournamentHero({
   placesRemaining,
   leagues,
   registrationOpen,
+  liveMatch = null,
+  nextMatch = null,
 }: {
   tournament: LandingTournament;
   phase: TournamentPhase;
@@ -34,6 +38,10 @@ export default function TournamentHero({
   placesRemaining: number | null;
   leagues: LandingLeague[];
   registrationOpen: boolean;
+  /** Match en cours (tournoi lancé) : le hero l'annonce au lieu d'un décompte. */
+  liveMatch?: HubMatch | null;
+  /** Prochain match programmé : ce que le décompte vise pendant le tournoi. */
+  nextMatch?: HubMatch | null;
 }) {
   const t = useT(nsTournamentLanding);
   const { lang } = useLang();
@@ -223,14 +231,46 @@ export default function TournamentHero({
             </div>
           </div>
 
-          {/* Colonne droite : compte à rebours géant */}
+          {/* Colonne droite : compte à rebours géant.
+              Pendant le tournoi, il visait encore le coup d'envoi — passé —
+              et n'affichait que « Le tournoi est en cours » sur quatre cases
+              vides. Il vise désormais le PROCHAIN MATCH, ou annonce celui qui
+              se joue. */}
           <div className="lg:justify-self-end">
             <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md sm:p-8">
-              <TournamentCountdown
-                targetDate={tournament.kickoff_at ?? tournament.start_date}
-                phase={phase}
-                size="giant"
-              />
+              {phase === 'live' && liveMatch ? (
+                <HeroMatch
+                  match={liveMatch}
+                  live
+                  label={t.heroLiveMatch}
+                  cta={t.heroWatchLive}
+                  href={liveMatch.stream_url || COMMUNITY_LINKS.twitch}
+                  external
+                  tbd={t.hubTbd}
+                />
+              ) : phase === 'live' && nextMatch ? (
+                <>
+                  <TournamentCountdown
+                    targetDate={nextMatch.scheduled_at}
+                    phase="upcoming"
+                    size="giant"
+                    label={t.heroNextMatchIn}
+                    endedLabel={t.heroNextMatchStarting}
+                  />
+                  <HeroMatch
+                    match={nextMatch}
+                    cta={t.heroSeeMatch}
+                    href={`/match/${nextMatch.id}`}
+                    tbd={t.hubTbd}
+                  />
+                </>
+              ) : (
+                <TournamentCountdown
+                  targetDate={tournament.kickoff_at ?? tournament.start_date}
+                  phase={phase}
+                  size="giant"
+                />
+              )}
               {phase !== 'live' && phase !== 'finished' && (
                 <p className="mt-6 flex items-center gap-2 text-xs text-gray-400">
                   <span className="h-1 w-1 rounded-full bg-[var(--color-green)]" />
@@ -244,6 +284,63 @@ export default function TournamentHero({
         </div>
       </div>
     </header>
+  );
+}
+
+/** L'affiche d'un match dans le hero : équipes, manche, lien. */
+function HeroMatch({
+  match,
+  live = false,
+  label,
+  cta,
+  href,
+  external = false,
+  tbd,
+}: {
+  match: HubMatch;
+  live?: boolean;
+  label?: string;
+  cta: string;
+  href: string;
+  external?: boolean;
+  tbd: string;
+}) {
+  const name = (team: HubMatch['team1']) => team?.name ?? tbd;
+  const meta = [match.round_name, match.match_format?.toUpperCase()]
+    .filter(Boolean)
+    .join(' · ');
+  const linkCls =
+    'mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--color-violet-cta)] px-5 py-2.5 text-sm font-bold text-white transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]';
+  return (
+    <div className={live ? '' : 'mt-5'}>
+      {label && (
+        <p className="mb-3 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-red-300">
+          <span className="tl-live-dot h-1.5 w-1.5 rounded-full bg-red-400" />
+          {label}
+        </p>
+      )}
+      <p className="text-lg font-extrabold leading-tight text-white sm:text-xl">
+        {name(match.team1)}{' '}
+        <span className="font-semibold text-gray-500">vs</span>{' '}
+        {name(match.team2)}
+      </p>
+      {meta && (
+        <p className="mt-1 text-[11px] uppercase tracking-wider text-gray-400">
+          {meta}
+        </p>
+      )}
+      {external ? (
+        <a href={href} target="_blank" rel="noreferrer" className={linkCls}>
+          {cta}
+          <ArrowGlyph />
+        </a>
+      ) : (
+        <Link href={href} className={linkCls}>
+          {cta}
+          <ArrowGlyph />
+        </Link>
+      )}
+    </div>
   );
 }
 

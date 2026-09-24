@@ -442,6 +442,8 @@ export default function TournamentPage({
   // Ce booléen pilote le hero, le bloc final et la barre collante à la fois.
   const registrationOpen = phase === 'upcoming' && placesRemaining !== 0;
   const isCompleted = phase === 'finished';
+  // Tournoi lancé (en cours, terminé ou annulé) : la page sert à SUIVRE.
+  const running = phase !== 'upcoming';
 
   return (
     <div className="min-h-screen bg-[#0a0a1a] text-white">
@@ -453,6 +455,8 @@ export default function TournamentPage({
         placesRemaining={placesRemaining}
         leagues={leagues}
         registrationOpen={registrationOpen}
+        liveMatch={hub.live[0] ?? null}
+        nextMatch={hub.upcoming[0] ?? null}
       />
 
       <QuickFacts
@@ -471,24 +475,34 @@ export default function TournamentPage({
         />
       </div>
 
-      {/* Suivi en tête dès qu'il y a des matchs : c'est ce que cherche qui
-          revient sur la page pendant le tournoi. */}
-      {phase !== 'upcoming' && (
-        <LiveHub
-          hub={hub}
-          standings={standings}
-          tournamentPath={tournamentPath}
-        />
+      {/* DEUX PAGES EN UNE. Avant le coup d'envoi, la landing présente le
+          tournoi : chiffres, format, déroulé, récompenses, inscription.
+          Une fois lancé, on vient suivre : le suivi et la diffusion passent
+          en tête, et les blocs qui ne faisaient plus que répéter le suivi
+          (chiffres, déroulé J1→J7, podium « À venir », « inscriptions
+          closes ») s'effacent — 17 blocs en file, c'était une page qu'on
+          ne lisait plus jusqu'en bas. */}
+      {running && (
+        <>
+          <LiveHub
+            hub={hub}
+            standings={standings}
+            tournamentPath={tournamentPath}
+          />
+          <StreamingSection phase={phase} />
+        </>
       )}
 
-      <TournamentStats
-        phase={phase}
-        totalTeams={totalTeams}
-        placesRemaining={placesRemaining}
-        totalMatches={totalMatches}
-        finishedMatches={finishedMatchesCount}
-        stagesCount={stages.length}
-      />
+      {!running && (
+        <TournamentStats
+          phase={phase}
+          totalTeams={totalTeams}
+          placesRemaining={placesRemaining}
+          totalMatches={totalMatches}
+          finishedMatches={finishedMatchesCount}
+          stagesCount={stages.length}
+        />
+      )}
 
       <TeamRoster
         teams={teams}
@@ -505,17 +519,29 @@ export default function TournamentPage({
         formatDetails={tournament.format_details}
       />
 
-      <BracketPreview
-        stages={stages}
-        rounds={rounds}
-        tournamentPath={tournamentPath}
-      />
-
-      <PrizeTeaser />
+      {!running && (
+        <>
+          <BracketPreview
+            stages={stages}
+            rounds={rounds}
+            tournamentPath={tournamentPath}
+          />
+          {/* Avant le tournoi : les premiers matchs, juste après le déroulé
+              qui les annonce. */}
+          {hub.upcoming.length > 0 && (
+            <LiveHub
+              hub={hub}
+              standings={standings}
+              tournamentPath={tournamentPath}
+            />
+          )}
+          <PrizeTeaser />
+        </>
+      )}
 
       <PrizePoolCard tournamentId={tournament.id} />
 
-      <StreamingSection phase={phase} />
+      {!running && <StreamingSection phase={phase} />}
 
       <SponsorsStrip partners={partners} />
 
@@ -527,20 +553,14 @@ export default function TournamentPage({
         <ArbitrationPanel slugOrId={tournament.slug || tournament.id} />
       </div>
 
-      {/* Avant le tournoi, le calendrier des premiers matchs fait partie de
-          la découverte : le bloc de suivi arrive alors après le format. */}
-      {phase === 'upcoming' && hub.upcoming.length > 0 && (
-        <LiveHub
-          hub={hub}
-          standings={standings}
-          tournamentPath={tournamentPath}
+      {/* Inscriptions closes : le bloc final ne faisait que répéter la carte
+          Discord de la section Communauté, juste au-dessus. */}
+      {registrationOpen && (
+        <FinalCta
+          registrationOpen={registrationOpen}
+          registerHref={registerHref}
         />
       )}
-
-      <FinalCta
-        registrationOpen={registrationOpen}
-        registerHref={registerHref}
-      />
 
       <StickyRegisterBar
         registrationOpen={registrationOpen}

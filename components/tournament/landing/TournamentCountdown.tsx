@@ -28,10 +28,16 @@ export default function TournamentCountdown({
   targetDate,
   phase,
   size = 'giant',
+  label: labelOverride,
+  endedLabel,
 }: {
   targetDate?: string | null;
   phase: TournamentPhase;
   size?: 'giant' | 'compact';
+  /** Libellé tant que le décompte court (ex. « Prochain match dans »). */
+  label?: string;
+  /** Libellé une fois l'instant atteint (défaut : « Le tournoi est en cours »). */
+  endedLabel?: string;
 }) {
   const t = useT(nsTournamentLanding);
   const targetMs = targetDate ? new Date(targetDate).getTime() : NaN;
@@ -52,8 +58,12 @@ export default function TournamentCountdown({
     return null;
   }
 
-  const label =
-    phase === 'live' || (mounted && parts === null)
+  const reached = mounted && parts === null;
+  const label = labelOverride
+    ? reached
+      ? (endedLabel ?? t.countdownLabelLive)
+      : labelOverride
+    : phase === 'live' || reached
       ? t.countdownLabelLive
       : t.countdownLabelUpcoming;
 
@@ -77,8 +87,11 @@ export default function TournamentCountdown({
         {label}
       </p>
 
-      {/* Réserve la hauteur avant hydratation pour éviter le layout shift. */}
-      {!mounted || !parts ? (
+      {/* Réserve la hauteur avant hydratation pour éviter le layout shift.
+          Instant DÉPASSÉ : plus rien à décompter — on n'affiche pas quatre
+          cases vides sous « Le tournoi est en cours » (c'était le cas en
+          plein tournoi, le décompte visant un coup d'envoi passé). */}
+      {reached ? null : !mounted || !parts ? (
         <div
           aria-hidden="true"
           className={`grid grid-cols-4 gap-2 sm:gap-3 ${isGiant ? 'max-w-md' : 'max-w-xs'}`}
