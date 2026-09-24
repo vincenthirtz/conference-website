@@ -233,6 +233,17 @@ export default function TcgPhotosPanel() {
                         date: formatDate(photo.submittedAt, locale),
                       })}
                     </p>
+                    {/* Avant de valider : sans profil joueuse, aucune carte
+                        n'affichera cette photo. */}
+                    {photo.hasPlayerProfile === false && (
+                      <p
+                        role="note"
+                        className="mt-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-xs text-amber-200"
+                      >
+                        <span className="font-semibold">{t.noCardTitle}</span>{' '}
+                        {t.noCardBody}
+                      </p>
+                    )}
                     <Link
                       href={`/player/${photo.userId}`}
                       target="_blank"

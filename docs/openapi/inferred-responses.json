@@ -14295,6 +14295,12 @@
           "null"
          ]
         },
+        "hasPlayerProfile": {
+         "type": [
+          "boolean",
+          "null"
+         ]
+        },
         "submittedAt": {
          "type": [
           "string",
@@ -14318,6 +14324,7 @@
         "userId",
         "displayName",
         "email",
+        "hasPlayerProfile",
         "submittedAt",
         "photoPath",
         "photoUrl"
@@ -41192,13 +41199,20 @@
        },
        "rejectedReason": {
         "type": "null"
+       },
+       "hasPlayerProfile": {
+        "type": [
+         "boolean",
+         "null"
+        ]
        }
       },
       "required": [
        "status",
        "photoUrl",
        "optedIn",
-       "rejectedReason"
+       "rejectedReason",
+       "hasPlayerProfile"
       ]
      },
      {
@@ -41221,13 +41235,20 @@
          "string",
          "null"
         ]
+       },
+       "hasPlayerProfile": {
+        "type": [
+         "boolean",
+         "null"
+        ]
        }
       },
       "required": [
        "status",
        "photoUrl",
        "optedIn",
-       "rejectedReason"
+       "rejectedReason",
+       "hasPlayerProfile"
       ]
      }
     ]

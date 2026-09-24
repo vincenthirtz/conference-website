@@ -36,6 +36,8 @@ type State = {
   photoUrl: string | null;
   optedIn: boolean;
   rejectedReason: string | null;
+  /** `false` : aucune carte possible pour ce compte (`null` = inconnu). */
+  hasPlayerProfile?: boolean | null;
 };
 
 export default function TcgPhotoCard() {
@@ -76,6 +78,8 @@ export default function TcgPhotoCard() {
           return format(t.errTooLarge, { mo: MAX_MB });
         case 'content_mismatch':
           return t.errContentMismatch;
+        case 'no_player_profile':
+          return t.errNoPlayerProfile;
         default:
           return t.errGeneric;
       }
@@ -158,6 +162,8 @@ export default function TcgPhotoCard() {
 
   if (!state) return null;
 
+  const noProfile = state.hasPlayerProfile === false;
+
   const statusLabel =
     state.status === 'pending'
       ? t.statusPending
@@ -214,25 +220,41 @@ export default function TcgPhotoCard() {
         <p className="mt-3 text-xs text-gray-500">{t.replaceWarning}</p>
       )}
 
+      {/* Sans profil joueuse, on le dit AVANT l'envoi : une photo déposée ici
+          serait validée pour une carte qui n'existe pas. */}
+      {noProfile && (
+        <div
+          role="note"
+          className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3"
+        >
+          <p className="text-sm font-semibold text-amber-200">
+            {t.noProfileTitle}
+          </p>
+          <p className="mt-1 text-xs text-amber-100/80">{t.noProfileBody}</p>
+        </div>
+      )}
+
       <div className="mt-4 flex flex-wrap gap-2">
-        <label className="inline-flex cursor-pointer items-center rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white transition hover:border-[var(--color-yellow)]/60 hover:text-[var(--color-yellow)]">
-          <input
-            ref={fileRef}
-            type="file"
-            accept={ACCEPT}
-            className="sr-only"
-            disabled={busy !== null}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void onPick(file);
-            }}
-          />
-          {busy === 'upload'
-            ? t.uploading
-            : state.photoUrl
-              ? t.replace
-              : t.choose}
-        </label>
+        {!noProfile && (
+          <label className="inline-flex cursor-pointer items-center rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white transition hover:border-[var(--color-yellow)]/60 hover:text-[var(--color-yellow)]">
+            <input
+              ref={fileRef}
+              type="file"
+              accept={ACCEPT}
+              className="sr-only"
+              disabled={busy !== null}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void onPick(file);
+              }}
+            />
+            {busy === 'upload'
+              ? t.uploading
+              : state.photoUrl
+                ? t.replace
+                : t.choose}
+          </label>
+        )}
 
         {state.photoUrl && (
           <button

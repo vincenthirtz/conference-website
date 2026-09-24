@@ -65,6 +65,11 @@ export default ns('playerTcg', {
   errContentMismatch:
     'Ce fichier n’est pas une image valide, malgré son extension.',
   errGeneric: 'Envoi impossible pour le moment. Réessaie dans un instant.',
+  errNoPlayerProfile:
+    'Ce compte n’a pas de profil joueuse : ta photo n’irait sur aucune carte. Connecte-toi avec le compte de ton équipe.',
+  noProfileTitle: 'Pas de carte pour ce compte',
+  noProfileBody:
+    'Ce compte n’a pas de profil joueuse dans le tournoi, donc aucune carte à illustrer. Si tu joues en équipe, connecte-toi avec le compte que tu utilises pour ton équipe (souvent Discord) pour envoyer ta photo.',
 
   /* --- Collection et paquets --- */
 

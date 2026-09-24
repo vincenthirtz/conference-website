@@ -28,6 +28,7 @@ describe('normalizePendingPhotos', () => {
             photoPath: 'tcg/x.webp',
             photoUrl: 'https://cdn/x.webp',
             submittedAt: '2026-09-14T10:00:00Z',
+            hasPlayerProfile: false,
           },
         ],
         total: 1,
@@ -42,6 +43,9 @@ describe('normalizePendingPhotos', () => {
         photoPath: 'tcg/x.webp',
         photoUrl: 'https://cdn/x.webp',
         submittedAt: '2026-09-14T10:00:00Z',
+        // Aucun profil joueuse : le panneau prévient qu'aucune carte
+        // n'affichera la photo (cas réel du 2026-09-23).
+        hasPlayerProfile: false,
       },
     ]);
   });
@@ -58,6 +62,8 @@ describe('normalizePendingPhotos', () => {
       photoPath: null,
       photoUrl: null,
       submittedAt: null,
+      // Non fourni = inconnu, jamais « pas de profil ».
+      hasPlayerProfile: null,
     });
   });
 
@@ -83,6 +89,7 @@ describe('photoOwnerLabel', () => {
     photoPath: null,
     photoUrl: null,
     submittedAt: null,
+    hasPlayerProfile: true,
   };
 
   it('affiche le pseudo, puis l’email, puis l’identifiant tronqué', () => {

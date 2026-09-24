@@ -18,6 +18,9 @@ export default adminNs('adminTcgPhotos', {
   loadError: 'Impossible de charger la file.',
 
   submittedAt: 'Déposée le {date}',
+  noCardTitle: 'Aucune carte :',
+  noCardBody:
+    'ce compte n’a pas de profil joueuse. Approuvée, la photo ne s’affichera nulle part — la joueuse s’est sans doute connectée avec un autre compte que celui de son équipe.',
   viewProfile: 'Voir la fiche',
 
   approve: 'Approuver',

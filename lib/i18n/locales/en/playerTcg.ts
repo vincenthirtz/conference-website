@@ -51,6 +51,11 @@ export default {
   errTooLarge: 'File too large: {mo} MB maximum.',
   errContentMismatch: 'This file is not a valid image, despite its extension.',
   errGeneric: 'Upload failed for now. Try again in a moment.',
+  errNoPlayerProfile:
+    'This account has no player profile: your photo would not appear on any card. Log in with your team account.',
+  noProfileTitle: 'No card for this account',
+  noProfileBody:
+    'This account has no player profile in the tournament, so there is no card to illustrate. If you play on a team, log in with the account you use for your team (often Discord) to upload your photo.',
 
   /* --- Collection and packs --- */
 

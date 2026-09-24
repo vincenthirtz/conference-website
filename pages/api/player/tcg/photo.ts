@@ -16,6 +16,12 @@
 //      `photo_path`. Comme `tcg_pack_cards` ne référence QUE la joueuse et
 //      jamais son image, le retrait atteint aussi les cartes DÉJÀ distribuées.
 //
+// UN QUATRIÈME, AJOUTÉ LE 2026-09-24 : PAS DE PHOTO SANS CARTE. Un compte sans
+// profil joueuse dans l'espace n'a pas de carte (cf. utils/tcg/playerProfile.ts) :
+// sa photo, même validée, ne s'affichait nulle part. Cas réel — une joueuse
+// connectée avec un compte e-mail à côté de son compte Discord d'équipe. Le
+// dépôt est refusé avec un code dédié, et le GET le dit avant qu'elle essaie.
+//
 // Ces trois points valent particulièrement ici : la photo d'une personne
 // réelle, sur un objet que d'autres collectionnent, dans un milieu où les
 // joueuses subissent du harcèlement. Ce ne sont pas des précautions
@@ -39,6 +45,7 @@ import { revalidatePlayerCard } from '@/utils/tcg/revalidatePlayerCard';
 import { logger } from '@/utils/logger';
 import { enqueuePhotoPurge, tryPurgeNow } from '@/utils/tcg/photoPurge';
 import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from '@/utils/uploads/storageCache';
+import { hasPlayerProfile } from '@/utils/tcg/playerProfile';
 
 /** Même bucket public que les logos d'équipe, sous un préfixe dédié. */
 const BUCKET = 'teams-images';
@@ -108,14 +115,19 @@ async function readState(
     return;
   }
 
-  const { data, error } = await supabaseAdmin!
-    .from('tcg_player_cards')
-    .select(
-      'opted_in_at, revoked_at, photo_path, photo_status, photo_rejected_reason'
-    )
-    .eq('tenant_id', tenantId)
-    .eq('user_id', userId)
-    .maybeSingle();
+  const [{ data, error }, profile] = await Promise.all([
+    supabaseAdmin!
+      .from('tcg_player_cards')
+      .select(
+        'opted_in_at, revoked_at, photo_path, photo_status, photo_rejected_reason'
+      )
+      .eq('tenant_id', tenantId)
+      .eq('user_id', userId)
+      .maybeSingle(),
+    // `null` (lecture en échec) = inconnu : l'écran ne bloque pas sur un doute,
+    // le POST tranchera.
+    hasPlayerProfile(tenantId, userId),
+  ]);
 
   if (error) {
     logger.error('[tcg/photo] read error: %s', error.message);
@@ -137,6 +149,7 @@ async function readState(
       photoUrl: null,
       optedIn: false,
       rejectedReason: null,
+      hasPlayerProfile: profile,
     });
   }
 
@@ -150,6 +163,7 @@ async function readState(
     photoUrl,
     optedIn: Boolean(row.opted_in_at) && !row.revoked_at,
     rejectedReason: row.photo_rejected_reason ?? null,
+    hasPlayerProfile: profile,
   });
 }
 
@@ -167,6 +181,21 @@ async function submitPhoto(
     applyRateLimit(req, res, { max: 5, windowMs: 60_000 }, 'player-tcg-photo')
   ) {
     return;
+  }
+
+  // Avant tout envoi : sans profil joueuse, aucune carte ne portera la photo.
+  // Refusée ici, elle n'entre ni dans le bucket public ni dans la file de
+  // relecture du staff.
+  const profile = await hasPlayerProfile(tenantId, userId);
+  if (profile === null) {
+    return res.status(500).json({ error: 'Lecture impossible.' });
+  }
+  if (!profile) {
+    return res.status(409).json({
+      error:
+        "Ce compte n'a pas de profil joueuse : connecte-toi avec le compte de ton équipe.",
+      code: 'no_player_profile',
+    });
   }
 
   const { data, mimeType } = req.body || {};

@@ -25,6 +25,11 @@ export type PendingPhoto = {
   photoPath: string | null;
   photoUrl: string | null;
   submittedAt: string | null;
+  /**
+   * `false` : le compte n'a pas de profil joueuse dans l'espace, donc aucune
+   * carte — approuver la photo ne l'afficherait nulle part. `null` = inconnu.
+   */
+  hasPlayerProfile: boolean | null;
 };
 
 function str(value: unknown): string | null {
@@ -55,6 +60,8 @@ export function normalizePendingPhotos(raw: unknown): PendingPhoto[] {
       photoPath: str(row.photoPath),
       photoUrl: str(row.photoUrl),
       submittedAt: str(row.submittedAt),
+      hasPlayerProfile:
+        typeof row.hasPlayerProfile === 'boolean' ? row.hasPlayerProfile : null,
     });
   }
   return out;

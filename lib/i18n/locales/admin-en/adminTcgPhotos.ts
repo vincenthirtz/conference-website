@@ -20,6 +20,9 @@ export default {
   loadError: 'Could not load the queue.',
 
   submittedAt: 'Submitted on {date}',
+  noCardTitle: 'No card:',
+  noCardBody:
+    'this account has no player profile. If approved, the photo will not show anywhere — the player probably logged in with a different account from their team account.',
   viewProfile: 'View profile',
 
   approve: 'Approve',

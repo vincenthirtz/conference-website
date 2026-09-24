@@ -25,6 +25,12 @@ get:
                 type: boolean
               rejectedReason:
                 type: [string, 'null']
+              hasPlayerProfile:
+                type: [boolean, 'null']
+                description: |
+                  `false` : ce compte n'a pas de profil joueuse dans l'espace,
+                  donc aucune carte ; un depot serait refuse (409
+                  `no_player_profile`). `null` : lecture en echec, inconnu.
     '401':
       $ref: '#/components/responses/Unauthorized'
 post:
@@ -83,6 +89,21 @@ post:
                 type: integer
     '401':
       $ref: '#/components/responses/Unauthorized'
+    '409':
+      description: |
+        `code` : `no_player_profile`. Le compte n'a pas de profil joueuse
+        dans l'espace : aucune carte ne porterait la photo. Rien n'est
+        envoye au bucket ni ajoute a la file de relecture.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+                enum: [no_player_profile]
     '500':
       description: |
         Lecture de la photo precedente en echec (rien n'est envoye au

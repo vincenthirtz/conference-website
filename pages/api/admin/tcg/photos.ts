@@ -37,6 +37,7 @@
 // précisément ce que la file sert à éviter.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { readPlayerProfileIds } from '@/utils/tcg/playerProfile';
 import { z } from 'zod';
 
 import { supabaseAdmin } from '@/utils/supabase';
@@ -122,7 +123,14 @@ async function listPending(
     updated_at: string | null;
   }>;
 
-  const profiles = await resolveProfiles(rows.map((row) => row.user_id));
+  const userIds = rows.map((row) => row.user_id);
+  // Profil joueuse : sans lui, pas de carte — une photo approuvée ne
+  // s'afficherait nulle part (cas réel du 2026-09-23). `null` = inconnu, la
+  // file s'affiche quand même, comme pour les pseudos.
+  const [profiles, playerIds] = await Promise.all([
+    resolveProfiles(userIds),
+    readPlayerProfileIds(ctx.tenantId, userIds),
+  ]);
 
   const photos = rows.map((row) => {
     const profile = profiles.get(row.user_id);
@@ -132,6 +140,7 @@ async function listPending(
       // le second (cf. `utils/teams/memberDisplayName.ts`).
       displayName: profile?.display_name || profile?.full_name || null,
       email: profile?.email ?? null,
+      hasPlayerProfile: playerIds ? playerIds.has(row.user_id) : null,
       submittedAt: row.updated_at,
       // Le chemin exact de CE fichier : le PATCH le renvoie pour que la
       // décision porte sur l'image affichée, et pas sur une remplaçante.

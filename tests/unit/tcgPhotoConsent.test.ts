@@ -743,3 +743,51 @@ describe('POST/DELETE /api/player/tcg/photo — une lecture ratée ne crée pas 
     expect(cardRow().photo_path).toBe(PHOTO_PATH);
   });
 });
+
+/* -------------------------------------------------------------------------- */
+/* Pas de photo sans carte (cas réel du 2026-09-23)                             */
+/* -------------------------------------------------------------------------- */
+
+describe('photo d’un compte sans profil joueuse', () => {
+  // Une joueuse connectée avec un compte e-mail, à côté du compte Discord de
+  // son équipe : sa photo validée n'allait sur aucune carte.
+
+  it('POST : refusé avec un code dédié, rien n’est enregistré', async () => {
+    // Pas de seedPlayer : aucun profil joueuse pour ce compte.
+    const res = makeRes();
+    await photoHandler(
+      makeReq({
+        method: 'POST',
+        body: { data: PNG_1PX, mimeType: 'image/png' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(409);
+    expect(res.body.code).toBe('no_player_profile');
+    expect(store.tcg_player_cards ?? []).toHaveLength(0);
+  });
+
+  it('GET : l’écran joueuse le sait avant l’envoi', async () => {
+    const res = makeRes();
+    await photoHandler(makeReq({ method: 'GET' }), res);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.hasPlayerProfile).toBe(false);
+
+    seedPlayer();
+    const res2 = makeRes();
+    await photoHandler(makeReq({ method: 'GET' }), res2);
+    expect(res2.body.hasPlayerProfile).toBe(true);
+  });
+
+  it('file de relecture : le staff voit qu’aucune carte n’affichera la photo', async () => {
+    // Photo déjà en attente (déposée avant le garde-fou), compte sans profil.
+    seedCard({ photo_status: 'pending' });
+    seedStaff();
+    const res = makeRes();
+    await moderationHandler(makeReq({ method: 'GET' }), res);
+    expect(res.body.photos[0]).toMatchObject({
+      userId: PLAYER,
+      hasPlayerProfile: false,
+    });
+  });
+});
