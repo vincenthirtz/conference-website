@@ -15,6 +15,7 @@ import nsNewsTags from '@/lib/i18n/locales/fr/newsTags';
 import { newsTagLabel } from '@/utils/news/newsTag';
 import ShareLinks from '@/components/shared/ShareLinks';
 import { absoluteUrl } from '@/utils/siteUrl';
+import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 
 type HomeNewsV2Props = {
   news: HomeNewsItem[];
@@ -37,8 +38,13 @@ function getExcerpt(item: HomeNewsItem, fallback: string, max = 140) {
   return `${item.content.slice(0, max)}…`;
 }
 
+/** Logo du site, vignette d'une actu sans visuel (même fichier que la navbar). */
+const DEFAULT_NEWS_LOGO = '/img/logos/2026-logo.png';
+
 function NewsCard({ item }: { item: HomeNewsItem }) {
   const t = useT(nsHomeV2);
+  const branding = useTenantBranding();
+  const fallbackLogo = branding?.logoUrl ?? DEFAULT_NEWS_LOGO;
   const tagLabels = useT(nsNewsTags);
   const locale = useLocale();
   const date = formatDate(item, locale);
@@ -73,7 +79,19 @@ function NewsCard({ item }: { item: HomeNewsItem }) {
             }`}
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-violet)]/30 to-[var(--color-green)]/20" />
+          // Sans visuel (les actus relayées depuis Discord n'en ont pas) : le
+          // logo du site, entier, plutôt qu'un dégradé vide. Celui de l'espace
+          // en marque blanche s'il en a un.
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-violet)]/30 to-[var(--color-green)]/20">
+            <Image
+              src={fallbackLogo}
+              alt=""
+              fill
+              sizes="(max-width: 768px) 100vw, 33vw"
+              className="object-contain p-8 opacity-90 transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:transform-none"
+              unoptimized={fallbackLogo !== DEFAULT_NEWS_LOGO}
+            />
+          </div>
         )}
         {item.tag && (
           <span className="absolute left-3 top-3 rounded-full border border-white/10 bg-black/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-green-light)]">
