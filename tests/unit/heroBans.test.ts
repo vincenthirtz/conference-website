@@ -25,6 +25,7 @@ import {
 import { invalidateStaffCache } from '../../utils/staff';
 import {
   computeHeroBanStats,
+  computeMapBanStats,
   normalizeHeroBans,
   normalizePickedBy,
   vetoPicksFromGames,
@@ -242,5 +243,43 @@ describe('PUT /api/matches/[matchId]/games — picks et bans', () => {
       gameIndex: 1,
     });
     expect((store.games as any[]).map((g) => g.id)).toEqual(['g-old']);
+  });
+});
+
+describe('computeMapBanStats', () => {
+  it('agrège par map : parties, choix, héros bannis', () => {
+    const out = computeMapBanStats([
+      {
+        map_name: 'Oasis',
+        picked_by_team_id: null,
+        hero_bans: [
+          { team_id: 'A', hero: 'orisa' },
+          { team_id: 'B', hero: 'cassidy' },
+        ],
+      },
+      {
+        map_name: 'Oasis',
+        hero_bans: [
+          { team_id: 'C', hero: 'cassidy' },
+          { team_id: 'D', hero: 'mauga' },
+        ],
+      },
+      { map_name: "King's Row", picked_by_team_id: 'C', hero_bans: [] },
+      { map_name: null, hero_bans: [{ team_id: 'A', hero: 'ana' }] },
+    ]);
+    expect(out.map((m) => m.map)).toEqual(['Oasis', "King's Row"]);
+    const oasis = out[0];
+    expect(oasis).toMatchObject({ played: 2, picked: 0, mapsWithBans: 2 });
+    expect(oasis.bans.map((b) => [b.hero, b.count])).toEqual([
+      ['cassidy', 2],
+      ['mauga', 1],
+      ['orisa', 1],
+    ]);
+    expect(out[1]).toMatchObject({
+      played: 1,
+      picked: 1,
+      mapsWithBans: 0,
+      bans: [],
+    });
   });
 });

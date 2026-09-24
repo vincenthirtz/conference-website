@@ -15,13 +15,22 @@ import TournamentTabs from '@/components/tournament/TournamentTabs';
 import HeroBanStats, {
   type HeroBanStatView,
 } from '@/components/tournament/HeroBanStats';
-import { computeHeroBanStats } from '@/utils/matches/heroBans';
+import {
+  computeHeroBanStats,
+  computeMapBanStats,
+  type MapBanStat,
+} from '@/utils/matches/heroBans';
+import MapBanStats from '@/components/tournament/MapBanStats';
 
 import { logger } from '../../../utils/logger';
 import nsTournamentStats from '@/lib/i18n/locales/fr/tournamentStats';
 import { containsFfaStage } from '@/utils/stages/ffaStage';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
 import { readPublicStandings } from '@/utils/stages/publicStandings';
+import {
+  bracketTabMode,
+  type BracketTabMode,
+} from '@/utils/stages/bracketStage';
 
 /** Recopie du `.select()` embarquant l'équipe depuis `stage_teams`. */
 type StageTeamEmbedRow = { team: Relation<SimpleTeam> };
@@ -60,6 +69,8 @@ type GameRow = {
   team1_score: number | null;
   team2_score: number | null;
   hero_bans?: unknown;
+  map_name?: string | null;
+  picked_by_team_id?: string | null;
 };
 
 type TeamStat = {
@@ -80,7 +91,10 @@ type Props = {
   tournament: Tournament;
   teamStats: TeamStat[];
   heroBans: { mapsWithBans: number; heroes: HeroBanStatView[] };
+  /** Bans de héros map par map (saisie par partie). */
+  mapBans: MapBanStat[];
   hasFfaStage: boolean;
+  bracketTab: BracketTabMode;
   /**
    * Ids d'équipes dans l'ordre du classement OFFICIEL (page Classement). La
    * page triait par winrate, et son « Top 3 » contredisait le classement.
@@ -151,6 +165,8 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   }
 
   const hasFfaStage = containsFfaStage(stagesRes.data);
+
+  const bracketTab = bracketTabMode(stagesRes.data);
   const stageIds = ((stagesRes.data || []) as { id: string }[]).map(
     (s) => s.id
   );
@@ -183,7 +199,9 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     matchIds.length > 0
       ? supabaseAdmin
           .from('games')
-          .select('match_id, team1_score, team2_score, hero_bans')
+          .select(
+            'match_id, map_name, team1_score, team2_score, hero_bans, picked_by_team_id'
+          )
           .eq('tenant_id', tenantId)
           .in('match_id', matchIds)
       : Promise.resolve({ data: [] as GameRow[], error: null }),
@@ -214,7 +232,9 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
         tournament: tournament as Tournament,
         teamStats: [],
         heroBans: { mapsWithBans: 0, heroes: [] },
+        mapBans: [],
         hasFfaStage,
+        bracketTab,
         officialOrder: [],
         seo: buildStatsSeo(tournament as Tournament),
       },
@@ -249,7 +269,9 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       tournament: tournament as Tournament,
       teamStats,
       heroBans,
+      mapBans: computeMapBanStats(games),
       hasFfaStage,
+      bracketTab,
       // Plusieurs tables (poules) : ordre par rang, poule par poule.
       officialOrder: standingsTables
         .flatMap((tb) => tb.rows)
@@ -265,7 +287,9 @@ export default function TournamentStatsPage({
   tournament,
   teamStats,
   heroBans,
+  mapBans,
   hasFfaStage,
+  bracketTab,
   officialOrder,
 }: Props) {
   const t = useT(nsTournamentStats);
@@ -379,6 +403,7 @@ export default function TournamentStatsPage({
           tournamentPath={tournamentPath}
           active="stats"
           showPodium={isCompleted}
+          bracketLabel={bracketTab}
           showFfa={hasFfaStage}
         />
 
@@ -443,6 +468,8 @@ export default function TournamentStatsPage({
           mapsWithBans={heroBans.mapsWithBans}
           heroes={heroBans.heroes}
         />
+
+        <MapBanStats maps={mapBans} />
 
         {/* Tableau complet */}
         {teamStats.length > 0 && (

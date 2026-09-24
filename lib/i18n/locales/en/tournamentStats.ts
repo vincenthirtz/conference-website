@@ -46,6 +46,16 @@ export default {
   wdLabel: 'W/L:',
   mapsLabel: 'Maps:',
   heroBansHeading: 'Most banned heroes',
+  mapBansHeading: 'Bans by map',
+  mapBansIntro:
+    'For each map played: how often, how often a team picked it, and the heroes banned on it.',
+  mapBansNone: 'Bans not recorded',
+  mapBansChipTitle:
+    '{hero}: banned {count} time(s) over {maps} recorded map(s)',
+  colMap: 'Map',
+  colMapPlayed: 'Played',
+  colMapPicked: 'Picked',
+  colMapBans: 'Banned heroes',
   heroBansIntro: 'Across {maps} maps with recorded bans.',
   heroBansIntro_one: 'Across 1 map with recorded bans.',
   colHero: 'Hero',

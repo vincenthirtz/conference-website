@@ -195,3 +195,72 @@ export function vetoPicksFromGames<
       map_name: g.map_name as string,
     }));
 }
+
+export type MapBanStat = {
+  map: string;
+  /** Parties jouées sur cette map. */
+  played: number;
+  /** Dont choisies par une équipe (le reste : imposée ou inconnue). */
+  picked: number;
+  /** Parties de cette map dont les bans ont été relevés. */
+  mapsWithBans: number;
+  /** Héros bannis sur cette map, du plus banni au moins banni. */
+  bans: { hero: string; name: string; role: string | null; count: number }[];
+};
+
+/**
+ * Bans de héros MAP PAR MAP : ce qu'on retire sur Oasis n'est pas ce qu'on
+ * retire sur King's Row. Le classement global des bans (computeHeroBanStats)
+ * écrase cette différence.
+ */
+export function computeMapBanStats(
+  games: {
+    map_name?: string | null;
+    hero_bans?: unknown;
+    picked_by_team_id?: string | null;
+  }[]
+): MapBanStat[] {
+  const agg = new Map<
+    string,
+    {
+      played: number;
+      picked: number;
+      withBans: number;
+      heroes: Map<string, number>;
+    }
+  >();
+  for (const g of games) {
+    const map = g.map_name?.trim();
+    if (!map) continue;
+    const e = agg.get(map) ?? {
+      played: 0,
+      picked: 0,
+      withBans: 0,
+      heroes: new Map<string, number>(),
+    };
+    e.played += 1;
+    if (g.picked_by_team_id) e.picked += 1;
+    const bans = readHeroBans(g.hero_bans);
+    if (bans.length > 0) e.withBans += 1;
+    for (const b of bans) e.heroes.set(b.hero, (e.heroes.get(b.hero) ?? 0) + 1);
+    agg.set(map, e);
+  }
+  return Array.from(agg.entries())
+    .map(([map, e]) => ({
+      map,
+      played: e.played,
+      picked: e.picked,
+      mapsWithBans: e.withBans,
+      bans: Array.from(e.heroes.entries())
+        .map(([hero, count]) => ({
+          hero,
+          name: heroName(hero),
+          role: heroRole(hero),
+          count,
+        }))
+        .sort(
+          (a, b) => b.count - a.count || a.name.localeCompare(b.name, 'fr')
+        ),
+    }))
+    .sort((a, b) => b.played - a.played || a.map.localeCompare(b.map, 'fr'));
+}
