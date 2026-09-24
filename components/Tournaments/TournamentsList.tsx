@@ -151,7 +151,7 @@ export default function TournamentsList({ tournaments }: TournamentsListProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
+      <main className="container mx-auto px-4 pt-header pb-16 max-w-6xl">
         {/* Header */}
         <section className="mb-12 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-[0.16em] text-gray-300 mb-4">

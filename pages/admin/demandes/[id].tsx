@@ -320,7 +320,7 @@ function AdminDemandeDetailPage() {
   if (loading || !demande) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12">
           {errorMsg ? (
             <div className="max-w-2xl mx-auto rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
               {errorMsg}

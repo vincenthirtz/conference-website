@@ -836,7 +836,7 @@ export default function PlayerDashboardScreen() {
     return (
       <>
         <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-          <main className="max-w-md mx-auto px-4 py-10 pt-32 text-center">
+          <main className="max-w-md mx-auto px-4 py-10 pt-header-xl text-center">
             <h1 className="text-3xl font-bold text-gradient">
               {t.playerSpace}
             </h1>
@@ -867,7 +867,7 @@ export default function PlayerDashboardScreen() {
     <>
       {dialog}
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-        <main className="max-w-4xl mx-auto px-4 py-10 pt-24">
+        <main className="max-w-4xl mx-auto px-4 py-10 pt-header">
           {/* Header */}
           <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
             <div>

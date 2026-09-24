@@ -1070,7 +1070,7 @@ export default function PlayerManageTeamScreen() {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-        <main className="max-w-3xl mx-auto px-4 py-10 pt-24">
+        <main className="max-w-3xl mx-auto px-4 py-10 pt-header">
           <Link
             href="/player"
             className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-6"

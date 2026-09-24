@@ -52,7 +52,7 @@ export function PlayerDashboardSkeleton(): JSX.Element {
       aria-busy="true"
       aria-live="polite"
     >
-      <main className="max-w-4xl mx-auto px-4 py-10 pt-24">
+      <main className="max-w-4xl mx-auto px-4 py-10 pt-header">
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <div className="space-y-3">
             <SkeletonLine width="w-64" height="h-7" />
@@ -105,7 +105,7 @@ export function PlayerPageSkeleton({
       aria-busy="true"
       aria-live="polite"
     >
-      <main className="max-w-4xl mx-auto px-4 py-10 pt-24 space-y-6">
+      <main className="max-w-4xl mx-auto px-4 py-10 pt-header space-y-6">
         <div className="space-y-3">
           <SkeletonLine width="w-1/3" height="h-7" />
           <SkeletonLine width="w-2/3" height="h-3" />

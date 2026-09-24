@@ -277,7 +277,7 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-        <main className="mx-auto max-w-md px-4 py-10 pt-32 text-center">
+        <main className="mx-auto max-w-md px-4 py-10 pt-header-xl text-center">
           <p className="text-gray-300">{t.connectPrompt}</p>
           <Link
             href={loginHref}
@@ -310,7 +310,7 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
   if (!data && sessionExpired) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-        <main className="mx-auto max-w-2xl px-4 py-10 pt-28">
+        <main className="mx-auto max-w-2xl px-4 py-10 pt-header-lg">
           {sessionNotice}
         </main>
       </div>
@@ -320,7 +320,7 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
   if (!data) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-        <main className="mx-auto max-w-2xl px-4 py-10 pt-28">
+        <main className="mx-auto max-w-2xl px-4 py-10 pt-header-lg">
           <div
             role="alert"
             className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-4 text-sm text-red-100"
@@ -397,7 +397,7 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <main className="mx-auto max-w-2xl px-4 py-10 pt-24">
+      <main className="mx-auto max-w-2xl px-4 py-10 pt-header">
         {sessionNotice}
         <Link
           href="/player/matches"

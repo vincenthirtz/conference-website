@@ -177,7 +177,7 @@ export default function AdminOnboardingPage({ currentStaffDiscordId }: Props) {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12">
           <Breadcrumb
             items={[
               { label: t.breadcrumbAdmin, href: '/admin' },

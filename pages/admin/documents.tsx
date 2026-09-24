@@ -257,7 +257,7 @@ export default function AdminDocumentsPage(_props: StaffProps) {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 pt-20 pb-12 sm:px-6 lg:px-8">
+        <div className="w-full px-4 pt-header pb-12 sm:px-6 lg:px-8">
           <div className="mb-6">
             <p className="text-sm text-neutral-400">{t.eyebrow}</p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight md:text-4xl">

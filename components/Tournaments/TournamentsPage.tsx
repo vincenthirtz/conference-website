@@ -26,7 +26,7 @@ export default function TournamentsPage({
   if (loadError) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-        <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
+        <main className="container mx-auto px-4 pt-header pb-16 max-w-6xl">
           <section className="text-center py-16" role="alert">
             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
               <svg
