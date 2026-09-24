@@ -11,6 +11,7 @@ import { ns } from '../../ns';
 export default ns('tournamentLanding', {
   eyebrowOfficial: 'Tournoi officiel',
   liveNow: 'En direct',
+  tournamentInProgress: 'En cours',
   heroSubtitle:
     'La compétition Overwatch 100 % féminine et inclusive. Cinq maps, une arène, une seule couronne à décrocher.',
   placesRemaining_one: '{count} place restante',

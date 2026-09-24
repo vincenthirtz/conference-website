@@ -12,6 +12,7 @@
 export default {
   eyebrowOfficial: 'Official tournament',
   liveNow: 'Live now',
+  tournamentInProgress: 'In progress',
   heroSubtitle:
     "The 100% women's & inclusive Overwatch competition. Five maps, one arena, a single crown to claim.",
   placesRemaining_one: '{count} spot left',

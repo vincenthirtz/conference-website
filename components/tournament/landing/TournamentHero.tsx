@@ -128,12 +128,21 @@ export default function TournamentHero({
               <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-medium text-gray-200 backdrop-blur-sm">
                 {gameLabel(tournament.game)}
               </span>
-              {phase === 'live' && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-red-300">
-                  <span className="tl-live-dot h-1.5 w-1.5 rounded-full bg-red-400" />
-                  {t.liveNow}
-                </span>
-              )}
+              {/* « En direct » (rouge, pulsé) seulement quand un match se
+                  JOUE : affiché tout le tournoi, il laissait croire à un live
+                  entre deux soirées. Sinon « En cours », vert et fixe. */}
+              {phase === 'live' &&
+                (liveMatch ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-red-300">
+                    <span className="tl-live-dot h-1.5 w-1.5 rounded-full bg-red-400" />
+                    {t.liveNow}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-green)]/40 bg-[var(--color-green)]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--color-green-light)]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-green)]" />
+                    {t.tournamentInProgress}
+                  </span>
+                ))}
             </div>
 
             <h1 className="text-4xl font-black leading-[0.98] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
