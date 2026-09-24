@@ -95,7 +95,7 @@ async function handler(
         supabaseAdmin
           .from('games')
           .select(
-            'match_id, map_name, map_order, team1_score, team2_score, winner_team_id, duration_minutes, is_tiebreaker, went_overtime'
+            'match_id, map_name, map_order, team1_score, team2_score, winner_team_id, duration_minutes, is_tiebreaker, went_overtime, picked_by_team_id, hero_bans'
           )
           .in('match_id', matchIds)
           .eq('tenant_id', ctx.tenantId),

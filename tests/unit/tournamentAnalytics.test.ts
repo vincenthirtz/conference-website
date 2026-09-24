@@ -626,6 +626,8 @@ describe('computeTournamentAnalytics — robustness on empty input', () => {
     expect(out.teams).toEqual([]);
     expect(out.maps).toEqual([]);
     expect(out.heroes).toEqual([]);
+    expect(out.heroBans).toEqual([]);
+    expect(out.teamBans).toEqual([]);
 
     expect(out.summary).toEqual({
       totalMatches: 0,
@@ -634,11 +636,173 @@ describe('computeTournamentAnalytics — robustness on empty input', () => {
       avgGameDurationMin: 0,
       overtimeRate: 0,
       tiebreakerGameRate: 0,
+      gamesWithDuration: 0,
+      pickedMaps: 0,
+      pickerWinRate: 0,
+      pickDecided: 0,
+      mapsWithHeroBans: 0,
+      totalHeroBans: 0,
     });
 
     // Explicit NaN guards.
     expect(Number.isNaN(out.summary.avgGameDurationMin)).toBe(false);
     expect(Number.isNaN(out.summary.overtimeRate)).toBe(false);
     expect(Number.isNaN(out.summary.tiebreakerGameRate)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Saisie par partie : games.picked_by_team_id / games.hero_bans (Cup 2026).
+// ---------------------------------------------------------------------------
+
+describe('computeTournamentAnalytics — saisie par partie', () => {
+  // A bat B 2-0 : map 1 imposée, map 2 choisie par B (perdue par B).
+  // C bat D 2-1 : map 2 choisie par D (gagnée par D), map 3 choisie par C.
+  const matches: AnalyticsMatch[] = [
+    makeMatch({ id: 'm1', team1_id: 'A', team2_id: 'B', winner_team_id: 'A' }),
+    makeMatch({ id: 'm2', team1_id: 'C', team2_id: 'D', winner_team_id: 'C' }),
+  ];
+  const games: AnalyticsGame[] = [
+    {
+      ...makeGame({
+        match_id: 'm1',
+        map_name: 'Oasis',
+        map_order: 0,
+        winner_team_id: 'A',
+      }),
+      picked_by_team_id: null,
+      hero_bans: [
+        { team_id: 'A', hero: 'orisa' },
+        { team_id: 'B', hero: 'cassidy' },
+      ],
+    },
+    {
+      ...makeGame({
+        match_id: 'm1',
+        map_name: 'Hollywood',
+        map_order: 1,
+        winner_team_id: 'A',
+      }),
+      picked_by_team_id: 'B',
+      hero_bans: [
+        { team_id: 'B', hero: 'bastion' },
+        { team_id: 'A', hero: 'ana' },
+      ],
+    },
+    {
+      ...makeGame({
+        match_id: 'm2',
+        map_name: 'Oasis',
+        map_order: 0,
+        winner_team_id: 'C',
+      }),
+      hero_bans: [
+        { team_id: 'D', hero: 'cassidy' },
+        // Équipe étrangère au match : ignorée du profil par équipe.
+        { team_id: 'ZZ', hero: 'mauga' },
+      ],
+    },
+    {
+      ...makeGame({
+        match_id: 'm2',
+        map_name: 'Hollywood',
+        map_order: 1,
+        winner_team_id: 'D',
+      }),
+      picked_by_team_id: 'D',
+    },
+    {
+      ...makeGame({
+        match_id: 'm2',
+        map_name: "King's Row",
+        map_order: 2,
+        winner_team_id: 'C',
+      }),
+      picked_by_team_id: 'C',
+      hero_bans: 'pas un tableau',
+    },
+  ];
+  const teamsById = teamsMap(
+    { id: 'A', name: 'Ashes' },
+    { id: 'B', name: 'Bravo' },
+    { id: 'C', name: 'Charlie' },
+    { id: 'D', name: 'Delta' }
+  );
+
+  it('compte les picks saisis par partie et le taux de victoire du choisisseur', () => {
+    const out = computeTournamentAnalytics(
+      emptyInput({ matches, games, teamsById })
+    );
+    const hollywood = out.maps.find((m) => m.mapName === 'Hollywood');
+    expect(hollywood?.picks).toBe(2);
+    expect(hollywood?.pickDecided).toBe(2);
+    expect(hollywood?.pickerWins).toBe(1); // D gagne son choix, B perd le sien
+    expect(out.summary.pickedMaps).toBe(3);
+    expect(out.summary.pickDecided).toBe(3);
+    expect(out.summary.pickerWinRate).toBeCloseTo(2 / 3);
+    expect(out.maps.find((m) => m.mapName === 'Oasis')?.picks).toBe(0);
+  });
+
+  it('un match avec des picks au veto ne recompte pas ceux de ses parties', () => {
+    const vetos: AnalyticsVeto[] = [
+      makeVeto({
+        match_id: 'm1',
+        step_number: 1,
+        action: 'pick',
+        team_id: 'B',
+        map_name: 'Hollywood',
+      }),
+    ];
+    const out = computeTournamentAnalytics(
+      emptyInput({ matches, games, vetos, teamsById })
+    );
+    expect(out.maps.find((m) => m.mapName === 'Hollywood')?.picks).toBe(2);
+    expect(out.summary.pickedMaps).toBe(3);
+  });
+
+  it('agrège les bans de héros sur les maps qui en portent', () => {
+    const out = computeTournamentAnalytics(
+      emptyInput({ matches, games, teamsById })
+    );
+    expect(out.summary.mapsWithHeroBans).toBe(3);
+    expect(out.summary.totalHeroBans).toBe(6);
+    const cassidy = out.heroBans.find((h) => h.hero === 'cassidy');
+    expect(cassidy?.bans).toBe(2);
+    expect(cassidy?.rate).toBeCloseTo(2 / 3);
+    expect(cassidy?.byTeam.map((b) => b.name).sort()).toEqual([
+      'Bravo',
+      'Delta',
+    ]);
+    expect(out.heroBans[0].hero).toBe('cassidy'); // le plus banni en tête
+  });
+
+  it('profil de bans par équipe : faits et subis', () => {
+    const out = computeTournamentAnalytics(
+      emptyInput({ matches, games, teamsById })
+    );
+    const a = out.teamBans.find((t) => t.teamId === 'A');
+    expect(a?.maps).toBe(2);
+    expect(a?.made.map((h) => h.hero).sort()).toEqual(['ana', 'orisa']);
+    expect(a?.received.map((h) => h.hero).sort()).toEqual([
+      'bastion',
+      'cassidy',
+    ]);
+    const c = out.teamBans.find((t) => t.teamId === 'C');
+    expect(c?.received).toEqual([
+      { hero: 'cassidy', name: 'Cassidy', count: 1 },
+    ]);
+    expect(c?.made).toEqual([]); // le ban de ZZ n'est attribué à personne
+  });
+
+  it('sans saisie de durée, gamesWithDuration vaut 0', () => {
+    const out = computeTournamentAnalytics(
+      emptyInput({
+        matches,
+        games: games.map((g) => ({ ...g, duration_minutes: null })),
+        teamsById,
+      })
+    );
+    expect(out.summary.gamesWithDuration).toBe(0);
+    expect(out.heroBans.length).toBeGreaterThan(0);
   });
 });

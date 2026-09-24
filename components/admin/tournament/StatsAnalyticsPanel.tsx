@@ -10,16 +10,25 @@
 //   - Equipes : classement (name, joues, V-D, winrate %, maps +/-).
 //   - Maps : picks, bans, games joues, duree moy, % OT.
 //   - Heros : picks, bans, V-D, winrate % (masquee si vide).
+//   - Bans de heros / bans par equipe : saisie par partie (games.hero_bans),
+//     la seule source de la Cup 2026 (ni veto ni draft).
+//
+// Un indicateur jamais saisi (duree, prolongations, manches decisives) est
+// MASQUE plutot qu'affiche a « — » ou « 0 % » : un 0 % non saisi se lit comme
+// un vrai 0 %.
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useAdminT } from '@/lib/i18n/useAdminT';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type {
+  HeroCount,
   TournamentAnalytics,
   TournamentAnalyticsHero,
+  TournamentAnalyticsHeroBan,
   TournamentAnalyticsMap,
   TournamentAnalyticsTeam,
+  TournamentAnalyticsTeamBans,
 } from '@/utils/analytics/tournamentAnalytics';
 import nsAdminTournamentAnalytics from '@/lib/i18n/locales/admin-fr/adminTournamentAnalytics';
 import TierListPanel from './TierListPanel';
@@ -80,7 +89,18 @@ export default function StatsAnalyticsPanel() {
     analytics.summary.totalMatches === 0 &&
     analytics.teams.length === 0 &&
     analytics.maps.length === 0 &&
-    analytics.heroes.length === 0;
+    analytics.heroes.length === 0 &&
+    analytics.heroBans.length === 0;
+
+  const summary = analytics?.summary;
+  const hasDuration = !!summary && summary.gamesWithDuration > 0;
+  const hasOvertime = !!summary && summary.overtimeRate > 0;
+  const hasTiebreaker = !!summary && summary.tiebreakerGameRate > 0;
+  const notRecorded = [
+    !hasDuration && t.notRecordedDuration,
+    !hasOvertime && t.notRecordedOvertime,
+    !hasTiebreaker && t.notRecordedTiebreaker,
+  ].filter((v): v is string => Boolean(v));
 
   return (
     <>
@@ -130,47 +150,99 @@ export default function StatsAnalyticsPanel() {
         </div>
       )}
 
-      {analytics && !isEmpty && (
+      {analytics && summary && !isEmpty && (
         <div className="space-y-6">
           {/* Resume */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <SummaryCard
-              label={t.kpiMatchesPlayed}
-              value={`${analytics.summary.finishedMatches}/${analytics.summary.totalMatches}`}
-              color="emerald"
-            />
-            <SummaryCard
-              label={t.kpiGamesPlayed}
-              value={String(analytics.summary.totalGames)}
-              color="purple"
-            />
-            <SummaryCard
-              label={t.kpiAvgDuration}
-              value={fmtMin(analytics.summary.avgGameDurationMin)}
-              color="blue"
-            />
-            <SummaryCard
-              label={t.kpiOvertime}
-              value={pct(analytics.summary.overtimeRate)}
-              color="amber"
-            />
-            <SummaryCard
-              label={t.kpiDecisiveGames}
-              value={pct(analytics.summary.tiebreakerGameRate)}
-              color="neutral"
-            />
-            <SummaryCard
-              label={t.kpiTotalMatches}
-              value={String(analytics.summary.totalMatches)}
-              color="neutral"
-            />
+          <div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <SummaryCard
+                label={t.kpiMatchesPlayed}
+                value={`${summary.finishedMatches}/${summary.totalMatches}`}
+                color="emerald"
+              />
+              <SummaryCard
+                label={t.kpiGamesPlayed}
+                value={String(summary.totalGames)}
+                color="purple"
+              />
+              {summary.pickedMaps > 0 && (
+                <SummaryCard
+                  label={t.kpiPickedMaps}
+                  value={String(summary.pickedMaps)}
+                  color="blue"
+                />
+              )}
+              {summary.pickDecided > 0 && (
+                <SummaryCard
+                  label={t.kpiPickerWinRate}
+                  value={pct(summary.pickerWinRate)}
+                  hint={format(t.kpiPickerWinRateHint, {
+                    wins: analytics.maps.reduce((a, m) => a + m.pickerWins, 0),
+                    total: summary.pickDecided,
+                  })}
+                  color="blue"
+                />
+              )}
+              {summary.totalHeroBans > 0 && (
+                <SummaryCard
+                  label={t.kpiHeroBans}
+                  value={String(summary.totalHeroBans)}
+                  hint={format(t.kpiHeroBansHint, {
+                    maps: summary.mapsWithHeroBans,
+                  })}
+                  color="amber"
+                />
+              )}
+              {hasDuration && (
+                <SummaryCard
+                  label={t.kpiAvgDuration}
+                  value={fmtMin(summary.avgGameDurationMin)}
+                  color="blue"
+                />
+              )}
+              {hasOvertime && (
+                <SummaryCard
+                  label={t.kpiOvertime}
+                  value={pct(summary.overtimeRate)}
+                  color="amber"
+                />
+              )}
+              {hasTiebreaker && (
+                <SummaryCard
+                  label={t.kpiDecisiveGames}
+                  value={pct(summary.tiebreakerGameRate)}
+                  color="neutral"
+                />
+              )}
+            </div>
+            {notRecorded.length > 0 && summary.totalGames > 0 && (
+              <p className="mt-2 text-xs text-neutral-500">
+                {format(t.notRecorded, { fields: notRecorded.join(', ') })}
+              </p>
+            )}
           </div>
 
           {/* Equipes */}
           <TeamsTable teams={analytics.teams} />
 
           {/* Maps */}
-          <MapsTable maps={analytics.maps} />
+          <MapsTable
+            maps={analytics.maps}
+            showDuration={hasDuration}
+            showOvertime={hasOvertime}
+          />
+
+          {/* Bans de heros saisis par partie (masques si aucun) */}
+          {analytics.heroBans.length > 0 && (
+            <HeroBansTable
+              heroBans={analytics.heroBans}
+              totalBans={summary.totalHeroBans}
+              maps={summary.mapsWithHeroBans}
+            />
+          )}
+          {analytics.teamBans.length > 0 && (
+            <TeamBansTable teamBans={analytics.teamBans} />
+          )}
 
           {/* Heros (masquee si vide) */}
           {analytics.heroes.length > 0 && (
@@ -200,10 +272,12 @@ type SummaryColor = 'blue' | 'emerald' | 'amber' | 'purple' | 'neutral';
 function SummaryCard({
   label,
   value,
+  hint,
   color,
 }: {
   label: string;
   value: string;
+  hint?: string;
   color: SummaryColor;
 }) {
   const colorClasses: Record<SummaryColor, string> = {
@@ -217,6 +291,9 @@ function SummaryCard({
     <div className={`rounded-xl border p-4 ${colorClasses[color]}`}>
       <div className="text-2xl font-bold">{value}</div>
       <div className="text-xs text-neutral-400">{label}</div>
+      {hint && (
+        <div className="text-[11px] text-neutral-500 mt-0.5">{hint}</div>
+      )}
     </div>
   );
 }
@@ -345,8 +422,20 @@ function TeamsTable({ teams }: { teams: TournamentAnalyticsTeam[] }) {
   );
 }
 
-function MapsTable({ maps }: { maps: TournamentAnalyticsMap[] }) {
+function MapsTable({
+  maps,
+  showDuration,
+  showOvertime,
+}: {
+  maps: TournamentAnalyticsMap[];
+  showDuration: boolean;
+  showOvertime: boolean;
+}) {
   const t = useAdminT(nsAdminTournamentAnalytics);
+  // Colonnes masquees quand aucune ligne n'a de donnee : une colonne de zeros
+  // ou de tirets n'apprend rien.
+  const showBans = maps.some((m) => m.bans > 0);
+  const showPickerWins = maps.some((m) => m.pickDecided > 0);
   return (
     <TableShell
       title={t.mapsTitle}
@@ -361,44 +450,276 @@ function MapsTable({ maps }: { maps: TournamentAnalyticsMap[] }) {
               {t.colMap}
             </th>
             <th scope="col" className="px-4 py-2 text-center">
-              {t.colPicks}
-            </th>
-            <th scope="col" className="px-4 py-2 text-center">
-              {t.colBans}
-            </th>
-            <th scope="col" className="px-4 py-2 text-center">
               {t.colGames}
             </th>
             <th scope="col" className="px-4 py-2 text-center">
-              {t.colAvgDuration}
+              {t.colPicks}
             </th>
-            <th scope="col" className="px-4 py-2 text-center">
-              {t.colOvertime}
-            </th>
+            {showPickerWins && (
+              <th scope="col" className="px-4 py-2 text-center">
+                {t.colPickerWins}
+              </th>
+            )}
+            {showBans && (
+              <th scope="col" className="px-4 py-2 text-center">
+                {t.colBans}
+              </th>
+            )}
+            {showDuration && (
+              <th scope="col" className="px-4 py-2 text-center">
+                {t.colAvgDuration}
+              </th>
+            )}
+            {showOvertime && (
+              <th scope="col" className="px-4 py-2 text-center">
+                {t.colOvertime}
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
           {maps.map((m) => (
             <tr key={m.mapName} className="border-t border-neutral-700">
               <td className="px-4 py-2 font-medium">{m.mapName}</td>
-              <td className="px-4 py-2 text-center">{m.picks}</td>
-              <td className="px-4 py-2 text-center text-neutral-300">
-                {m.bans}
-              </td>
               <td className="px-4 py-2 text-center font-semibold">
                 {m.gamesPlayed}
               </td>
-              <td className="px-4 py-2 text-center text-neutral-300">
-                {fmtMin(m.avgDurationMin)}
-              </td>
               <td className="px-4 py-2 text-center">
-                {m.overtimeRate > 0 ? (
-                  <span className="text-amber-400 font-semibold">
-                    {pct(m.overtimeRate)}
-                  </span>
+                {m.picks > 0 ? (
+                  m.picks
                 ) : (
-                  <span className="text-neutral-500">0%</span>
+                  <span className="text-neutral-500">0</span>
                 )}
+              </td>
+              {showPickerWins && (
+                <td className="px-4 py-2 text-center">
+                  {m.pickDecided > 0 ? (
+                    <span className="text-xs">
+                      {m.pickerWins}/{m.pickDecided}
+                      <span className="text-neutral-400">
+                        {' '}
+                        ({pct(m.pickerWinRate)})
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="text-neutral-500">—</span>
+                  )}
+                </td>
+              )}
+              {showBans && (
+                <td className="px-4 py-2 text-center text-neutral-300">
+                  {m.bans}
+                </td>
+              )}
+              {showDuration && (
+                <td className="px-4 py-2 text-center text-neutral-300">
+                  {fmtMin(m.avgDurationMin)}
+                </td>
+              )}
+              {showOvertime && (
+                <td className="px-4 py-2 text-center">
+                  {m.overtimeRate > 0 ? (
+                    <span className="text-amber-400 font-semibold">
+                      {pct(m.overtimeRate)}
+                    </span>
+                  ) : (
+                    <span className="text-neutral-500">0%</span>
+                  )}
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </TableShell>
+  );
+}
+
+const ROLE_STYLE: Record<string, string> = {
+  tank: 'bg-sky-900/50 text-sky-300 border-sky-700/60',
+  damage: 'bg-red-900/40 text-red-300 border-red-700/60',
+  support: 'bg-emerald-900/40 text-emerald-300 border-emerald-700/60',
+};
+
+function RoleBadge({ role }: { role: string | null }) {
+  const t = useAdminT(nsAdminTournamentAnalytics);
+  if (!role) return <span className="text-neutral-500">—</span>;
+  const label =
+    role === 'tank'
+      ? t.roleTank
+      : role === 'damage'
+        ? t.roleDamage
+        : role === 'support'
+          ? t.roleSupport
+          : role;
+  return (
+    <span
+      className={`inline-block rounded border px-1.5 py-0.5 text-[11px] ${
+        ROLE_STYLE[role] ?? 'bg-neutral-700 text-neutral-300 border-neutral-600'
+      }`}
+    >
+      {label}
+    </span>
+  );
+}
+
+/** Barre horizontale proportionnelle (part 0..1) + libelle. */
+function RateBar({ fraction }: { fraction: number }) {
+  const p = Math.round((fraction ?? 0) * 100);
+  return (
+    <div className="flex items-center gap-2 justify-center">
+      <div className="w-20 h-2 bg-neutral-700 rounded-full overflow-hidden">
+        <div className="h-full bg-amber-500" style={{ width: `${p}%` }} />
+      </div>
+      <span className="text-xs font-mono w-10 text-right">{p}%</span>
+    </div>
+  );
+}
+
+/** Liste compacte « Héros ×n » ; au-dela de `max`, un « +k » en fin. */
+function HeroChips({ items, max = 4 }: { items: HeroCount[]; max?: number }) {
+  if (items.length === 0) return <span className="text-neutral-500">—</span>;
+  const shown = items.slice(0, max);
+  const rest = items.length - shown.length;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {shown.map((h) => (
+        <span
+          key={h.hero}
+          className="rounded bg-neutral-700/70 px-1.5 py-0.5 text-xs whitespace-nowrap"
+        >
+          {h.name}
+          {h.count > 1 && <span className="text-neutral-400"> ×{h.count}</span>}
+        </span>
+      ))}
+      {rest > 0 && (
+        <span
+          className="px-1 py-0.5 text-xs text-neutral-400"
+          title={items
+            .slice(max)
+            .map((h) => `${h.name} ×${h.count}`)
+            .join(', ')}
+        >
+          +{rest}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function HeroBansTable({
+  heroBans,
+  totalBans,
+  maps,
+}: {
+  heroBans: TournamentAnalyticsHeroBan[];
+  totalBans: number;
+  maps: number;
+}) {
+  const t = useAdminT(nsAdminTournamentAnalytics);
+  return (
+    <TableShell
+      title={t.heroBansTitle}
+      subtitle={format(t.heroBansSubtitle, { bans: totalBans, maps })}
+      emptyLabel={t.heroesEmpty}
+      isEmpty={heroBans.length === 0}
+    >
+      <table className="w-full text-sm">
+        <thead className="bg-neutral-750 text-neutral-300">
+          <tr>
+            <th scope="col" className="px-4 py-2 text-left">
+              {t.colHero}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colRole}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colBans}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colBanRate}
+            </th>
+            <th scope="col" className="px-4 py-2 text-left">
+              {t.colBannedBy}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {heroBans.map((h) => (
+            <tr key={h.hero} className="border-t border-neutral-700">
+              <td className="px-4 py-2 font-medium">{h.name}</td>
+              <td className="px-4 py-2 text-center">
+                <RoleBadge role={h.role} />
+              </td>
+              <td className="px-4 py-2 text-center font-semibold">{h.bans}</td>
+              <td className="px-4 py-2 text-center">
+                <RateBar fraction={h.rate} />
+              </td>
+              <td className="px-4 py-2">
+                <div className="flex flex-wrap gap-1">
+                  {h.byTeam.map((b) => (
+                    <span
+                      key={b.teamId}
+                      className="rounded bg-neutral-700/70 px-1.5 py-0.5 text-xs whitespace-nowrap"
+                    >
+                      {b.name}
+                      {b.count > 1 && (
+                        <span className="text-neutral-400"> ×{b.count}</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </TableShell>
+  );
+}
+
+function TeamBansTable({
+  teamBans,
+}: {
+  teamBans: TournamentAnalyticsTeamBans[];
+}) {
+  const t = useAdminT(nsAdminTournamentAnalytics);
+  return (
+    <TableShell
+      title={t.teamBansTitle}
+      subtitle={t.teamBansSubtitle}
+      emptyLabel={t.teamsEmpty}
+      isEmpty={teamBans.length === 0}
+    >
+      <table className="w-full text-sm">
+        <thead className="bg-neutral-750 text-neutral-300">
+          <tr>
+            <th scope="col" className="px-4 py-2 text-left">
+              {t.colTeam}
+            </th>
+            <th scope="col" className="px-4 py-2 text-center">
+              {t.colMaps}
+            </th>
+            <th scope="col" className="px-4 py-2 text-left">
+              {t.colBansMade}
+            </th>
+            <th scope="col" className="px-4 py-2 text-left">
+              {t.colBansReceived}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {teamBans.map((tb) => (
+            <tr key={tb.teamId} className="border-t border-neutral-700">
+              <td className="px-4 py-2 font-medium">{tb.name}</td>
+              <td className="px-4 py-2 text-center text-neutral-300">
+                {tb.maps}
+              </td>
+              <td className="px-4 py-2">
+                <HeroChips items={tb.made} />
+              </td>
+              <td className="px-4 py-2">
+                <HeroChips items={tb.received} />
               </td>
             </tr>
           ))}
