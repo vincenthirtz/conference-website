@@ -31,6 +31,7 @@ import {
   bracketTabMode,
   type BracketTabMode,
 } from '@/utils/stages/bracketStage';
+import { gameLabel } from '@/config/games';
 
 /** Recopie du `.select()` embarquant l'équipe depuis `stage_teams`. */
 type StageTeamEmbedRow = { team: Relation<SimpleTeam> };
@@ -363,7 +364,7 @@ export default function TournamentStatsPage({
                   OW Women&apos;s Cup
                 </span>
                 <span className="text-gray-200">
-                  {tournament.game || 'Overwatch'}
+                  {gameLabel(tournament.game)}
                 </span>
                 <span className="w-[1px] h-3 bg-white/20" />
                 <span className={statusColor}>{statusLabel}</span>

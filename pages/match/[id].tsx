@@ -24,6 +24,7 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import { logger } from '../../utils/logger';
 import MatchPredictionCard from '@/components/predictions/MatchPredictionCard';
 import nsMatchDetail from '@/lib/i18n/locales/fr/matchDetail';
+import { gameLabel } from '@/config/games';
 
 /** Recopie du `.select()` des membres composant les compositions. */
 type LineupRow = {
@@ -175,7 +176,7 @@ function buildMatchSeo(
     (match.is_bye ? 'BYE' : 'TBD');
   const versus = `${t1} vs ${t2}`;
   const tournamentName = match.tournament.name;
-  const game = match.tournament.game || 'Overwatch';
+  const game = gameLabel(match.tournament.game);
   const matchUrl = `${SEO_BASE_URL}/match/${match.id}`;
 
   const jsonLd: Record<string, unknown> = {
@@ -501,7 +502,7 @@ export default function MatchPage({ match, lineups, mvp }: Props) {
                   OW Women&apos;s Cup
                 </span>
                 <span className="text-gray-200">
-                  {match.tournament.game || 'Overwatch'}
+                  {gameLabel(match.tournament.game)}
                 </span>
                 <span className="w-[1px] h-3 bg-white/20" />
                 <span className={statusChipClass}>{statusLabel}</span>

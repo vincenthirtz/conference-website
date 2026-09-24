@@ -13,6 +13,7 @@ import { useT, format } from '@/lib/i18n/useT';
 
 import { logger } from '../../../utils/logger';
 import nsMatchGames from '@/lib/i18n/locales/fr/matchGames';
+import { gameLabel } from '@/config/games';
 
 type MatchGamesDict = typeof nsMatchGames.fr;
 type SimpleTeam = {
@@ -191,7 +192,7 @@ export default function MatchGamesPage({ match }: Props) {
                   OW Women&apos;s Cup
                 </span>
                 <span className="text-gray-200">
-                  {match.tournament.game || 'Overwatch'}
+                  {gameLabel(match.tournament.game)}
                 </span>
                 <span className="w-[1px] h-3 bg-white/20" />
                 <span className={statusChipClass}>{statusLabel}</span>

@@ -15,6 +15,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { logger } from '../../utils/logger';
 import nsScrimDetail from '@/lib/i18n/locales/fr/scrimDetail';
+import { gameLabel } from '@/config/games';
 
 type TeamMini = {
   id: string;
@@ -96,7 +97,7 @@ export function buildScrimSeo(scrim: ScrimDetail): SeoProps {
       ? `${name(scrim.team1, tbd)} vs ${name(scrim.team2, tbd)}`
       : scrim.name;
   const url = `${SEO_BASE_URL}/scrim/${encodeURIComponent(scrim.slug || scrim.id)}`;
-  const game = scrim.game || 'Overwatch';
+  const game = gameLabel(scrim.game);
   const dateOpts: Intl.DateTimeFormatOptions = {
     day: 'numeric',
     month: 'long',

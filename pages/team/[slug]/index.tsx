@@ -47,6 +47,7 @@ import { buildTeamPage } from '@/utils/teams/buildTeamPage';
 import type { TeamPageProps } from '@/utils/teams/buildTeamPage';
 
 import { teamPageSeoFallback } from '@/components/Team/teamPageSeo';
+import { gameLabel } from '@/config/games';
 
 export const getStaticPaths: GetStaticPaths = async () => {
   // On-demand generation: no team is pre-rendered at build time, every slug
@@ -889,7 +890,7 @@ export default function TeamPage({
                             {tournament.name}
                           </p>
                           <div className="flex items-center gap-2 text-xs text-gray-400">
-                            <span>{tournament.game || 'Overwatch'}</span>
+                            <span>{gameLabel(tournament.game)}</span>
                             <span className="text-gray-600">•</span>
                             <StatusBadge status={tournament.status} />
                           </div>

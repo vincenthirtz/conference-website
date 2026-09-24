@@ -10,6 +10,7 @@ import { formatDateRange } from '@/utils/tournamentDates';
 import { Reveal } from './primitives';
 import type { LandingTournament } from './types';
 import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
+import { gameLabel } from '@/config/games';
 
 type Fact = { icon: string; label: string; value: string };
 
@@ -39,7 +40,7 @@ export default function QuickFacts({
 
   const facts: Fact[] = [
     { icon: '📅', label: t.factDate, value: dateRange || t.factTbd },
-    { icon: '🎮', label: t.factGame, value: tournament.game || 'Overwatch' },
+    { icon: '🎮', label: t.factGame, value: gameLabel(tournament.game) },
     { icon: '🌍', label: t.factRegion, value: t.factRegionValue },
     { icon: '👥', label: t.factTeams, value: teamsValue },
     { icon: '🏆', label: t.factFormat, value: tournament.format || t.factTbd },

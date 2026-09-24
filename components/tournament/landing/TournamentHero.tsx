@@ -19,6 +19,7 @@ import type {
 import { COMMUNITY_LINKS } from './types';
 import type { HubMatch } from '@/utils/tournament/liveHub';
 import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
+import { gameLabel } from '@/config/games';
 
 export default function TournamentHero({
   tournament,
@@ -108,7 +109,7 @@ export default function TournamentHero({
                 {t.eyebrowOfficial}
               </span>
               <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-medium text-gray-200 backdrop-blur-sm">
-                {tournament.game || 'Overwatch'}
+                {gameLabel(tournament.game)}
               </span>
               {phase === 'live' && (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-red-300">

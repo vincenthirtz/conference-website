@@ -40,6 +40,7 @@ import {
   type RaceMatch,
 } from '@/utils/tournament/finalsPhase';
 import FinalsPhaseView from '@/components/tournament/FinalsPhaseView';
+import { gameLabel } from '@/config/games';
 
 type BracketDict = typeof nsTournamentBracket.fr;
 
@@ -272,9 +273,7 @@ export default function TournamentBracketPage({
             <span className="px-1.5 py-[2px] rounded-full bg-gradient-to-r from-[var(--color-violet)] to-[var(--color-green)] text-black font-semibold">
               OW Women&apos;s Cup
             </span>
-            <span className="text-gray-200">
-              {tournament.game || 'Overwatch'}
-            </span>
+            <span className="text-gray-200">{gameLabel(tournament.game)}</span>
             <span className="w-[1px] h-3 bg-white/20" />
             <span className={statusColor}>{statusLabel}</span>
           </div>

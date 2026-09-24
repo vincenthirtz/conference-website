@@ -79,6 +79,16 @@ export function getGame(slug: string): GameDef | null {
   return (GAMES as Record<string, GameDef>)[slug] ?? null;
 }
 
+/**
+ * Nom AFFICHABLE d'un jeu : « Overwatch », pas le slug `overwatch` stocké en
+ * base, que les pages publiques affichaient tel quel. Slug inconnu : rendu tel
+ * quel ; absent : Overwatch, le jeu par défaut du circuit.
+ */
+export function gameLabel(slug: string | null | undefined): string {
+  if (!slug) return 'Overwatch';
+  return getGame(slug)?.label ?? slug;
+}
+
 export function listGames(): GameDef[] {
   return GAME_SLUGS.map((s) => GAMES[s]);
 }

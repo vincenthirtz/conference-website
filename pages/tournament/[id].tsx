@@ -54,6 +54,7 @@ import {
   bracketTabMode,
   type BracketTabMode,
 } from '@/utils/stages/bracketStage';
+import { gameLabel } from '@/config/games';
 
 type TournamentPageProps = {
   tournament: LandingTournament & {
@@ -618,7 +619,7 @@ function getStatusLabelEn(status: string): string {
 function buildTournamentSeo(
   tournament: TournamentPageProps['tournament']
 ): SeoProps {
-  const game = tournament.game || 'Overwatch';
+  const game = gameLabel(tournament.game);
   const dateLabelFr = formatDateRange(
     tournament.start_date,
     tournament.end_date,

@@ -30,6 +30,7 @@ import TeamAvatar from '@/components/Team/TeamAvatar';
 import nsTournamentMatches from '@/lib/i18n/locales/fr/tournamentMatches';
 import { containsFfaStage } from '@/utils/stages/ffaStage';
 import { bracketTabMode } from '@/utils/stages/bracketStage';
+import { gameLabel } from '@/config/games';
 
 // Fuseau de référence pour placer les matchs dans la grille mensuelle.
 const MATCHES_TZ = 'Europe/Paris';
@@ -314,7 +315,7 @@ export default function TournamentMatchesPage({
                   OW Women&apos;s Cup
                 </span>
                 <span className="text-gray-200">
-                  {tournament.game || 'Overwatch'}
+                  {gameLabel(tournament.game)}
                 </span>
                 {/* Le statut du tournoi est une métadonnée d'écran : sur une
                     feuille, « PUBLISHED » n'apprend rien à personne. */}
