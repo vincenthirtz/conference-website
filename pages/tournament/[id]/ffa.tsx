@@ -114,7 +114,13 @@ export default function TournamentFfaPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <main className="container mx-auto max-w-5xl px-4 pt-24 pb-16">
+      <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 pt-24 pb-16">
+        <TournamentTabs
+          tournamentPath={tournamentPath}
+          active="ffa"
+          showPodium={isCompleted}
+          showFfa={true}
+        />
         <header className="mb-8">
           <p className="text-[10px] uppercase tracking-widest text-[var(--color-green-light)] mb-2">
             {t.eyebrow}
@@ -135,13 +141,6 @@ export default function TournamentFfaPage({
             {stageName ? `${tournamentName} · ${stageName}` : tournamentName}
           </Paragraph>
         </header>
-
-        <TournamentTabs
-          tournamentPath={tournamentPath}
-          active="ffa"
-          showPodium={isCompleted}
-          showFfa={true}
-        />
 
         {standings.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-12 text-center">

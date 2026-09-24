@@ -458,6 +458,15 @@ export default function TournamentPage({
         registrationOpen={registrationOpen}
         liveMatch={hub.live[0] ?? null}
         nextMatch={hub.upcoming[0] ?? null}
+        tabs={
+          <TournamentTabs
+            tournamentPath={tournamentPath}
+            active="hub"
+            showPodium={isCompleted}
+            bracketLabel={bracketTab}
+            showFfa={hasFfaStage}
+          />
+        }
       />
 
       <QuickFacts
@@ -465,16 +474,6 @@ export default function TournamentPage({
         totalTeams={totalTeams}
         maxTeams={maxTeams}
       />
-
-      <div className="mx-auto mt-12 w-full max-w-6xl px-4 sm:px-6">
-        <TournamentTabs
-          tournamentPath={tournamentPath}
-          active="hub"
-          showPodium={isCompleted}
-          bracketLabel={bracketTab}
-          showFfa={hasFfaStage}
-        />
-      </div>
 
       {/* DEUX PAGES EN UNE. Avant le coup d'envoi, la landing présente le
           tournoi : chiffres, format, déroulé, récompenses, inscription.

@@ -235,7 +235,14 @@ export default function TournamentPodiumPage({
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 pt-24 pb-16">
+        <TournamentTabs
+          tournamentPath={tournamentPath}
+          active="podium"
+          showPodium={isCompleted}
+          bracketLabel={bracketTab}
+          showFfa={hasFfaStage}
+        />
         <div className="flex flex-col items-center text-center mb-10">
           <p className="text-xs uppercase tracking-widest text-[var(--color-yellow)] mb-2">
             {t.eyebrow}
@@ -250,14 +257,6 @@ export default function TournamentPodiumPage({
             </Paragraph>
           )}
         </div>
-
-        <TournamentTabs
-          tournamentPath={tournamentPath}
-          active="podium"
-          showPodium={isCompleted}
-          bracketLabel={bracketTab}
-          showFfa={hasFfaStage}
-        />
 
         {top3.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">

@@ -355,7 +355,14 @@ export default function TournamentMvpPage({
   return (
     <>
       <main className="bg-neutral-950 text-white min-h-screen pt-24 pb-16">
-        <div className="max-w-5xl mx-auto px-4">
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+          <TournamentTabs
+            tournamentPath={tournamentPath}
+            active="mvp"
+            showPodium={isCompleted}
+            bracketLabel={bracketTab}
+            showFfa={hasFfaStage}
+          />
           <section className="mb-6">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
               <div>
@@ -384,14 +391,6 @@ export default function TournamentMvpPage({
               </div>
             </div>
           </section>
-
-          <TournamentTabs
-            tournamentPath={tournamentPath}
-            active="mvp"
-            showPodium={isCompleted}
-            bracketLabel={bracketTab}
-            showFfa={hasFfaStage}
-          />
 
           {leaderboard.length === 0 ? (
             <section className="bg-black/60 border border-white/5 rounded-2xl p-8 text-center">

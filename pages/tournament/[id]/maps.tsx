@@ -549,7 +549,14 @@ export default function TournamentMapsPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
+      <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 pt-24 pb-16">
+        <TournamentTabs
+          tournamentPath={tournamentPath}
+          active="maps"
+          showPodium={isCompleted}
+          bracketLabel={bracketTab}
+          showFfa={hasFfaStage}
+        />
         {/* Header */}
         <section className="mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -594,14 +601,6 @@ export default function TournamentMapsPage({
             </div>
           </div>
         </section>
-
-        <TournamentTabs
-          tournamentPath={tournamentPath}
-          active="maps"
-          showPodium={isCompleted}
-          bracketLabel={bracketTab}
-          showFfa={hasFfaStage}
-        />
 
         {/* Pool jouable — affiché dès la publication du tournoi, alors que les
             statistiques plus bas restent vides jusqu'au premier game. */}

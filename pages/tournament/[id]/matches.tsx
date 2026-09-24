@@ -305,7 +305,17 @@ export default function TournamentMatchesPage({
 
   return (
     <div className="print-document min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
+      <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 pt-24 pb-16">
+        {/* Onglets : de la navigation, donc rien à faire sur une feuille. */}
+        <div className="print:hidden">
+          <TournamentTabs
+            tournamentPath={tournamentPath}
+            active="matches"
+            showPodium={isCompleted}
+            bracketLabel={bracketTab}
+            showFfa={hasFfaStage}
+          />
+        </div>
         {/* Header */}
         <section className="mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -362,17 +372,6 @@ export default function TournamentMatchesPage({
             <PrintExportButton className="shrink-0 self-start" />
           </div>
         </section>
-
-        {/* Onglets : de la navigation, donc rien à faire sur une feuille. */}
-        <div className="print:hidden">
-          <TournamentTabs
-            tournamentPath={tournamentPath}
-            active="matches"
-            showPodium={isCompleted}
-            bracketLabel={bracketTab}
-            showFfa={hasFfaStage}
-          />
-        </div>
 
         {/* Filters — commandes d'écran. Le PDF garde la liste TELLE QU'ELLE est
             filtrée à l'écran (c'est le but : imprimer ce qu'on regarde), mais

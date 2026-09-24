@@ -128,7 +128,14 @@ export default function TournamentStandingsPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <main className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
+      <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 pt-24 pb-16">
+        <TournamentTabs
+          tournamentPath={tournamentPath}
+          active="standings"
+          showPodium={isCompleted}
+          bracketLabel={bracketTab}
+          showFfa={hasFfaStage}
+        />
         <section className="mb-6">
           <Heading typeStyle="heading-md" className="text-brand-gradient mb-1">
             {format(t.heading, { name: tournament.name })}
@@ -142,14 +149,6 @@ export default function TournamentStandingsPage({
             {t.description}
           </Paragraph>
         </section>
-
-        <TournamentTabs
-          tournamentPath={tournamentPath}
-          active="standings"
-          showPodium={isCompleted}
-          bracketLabel={bracketTab}
-          showFfa={hasFfaStage}
-        />
 
         {tables.length === 0 ? (
           <div className="bg-black/60 border border-white/5 rounded-2xl p-4">

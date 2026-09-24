@@ -155,7 +155,14 @@ export default function TournamentTeamsPage({
 
   return (
     <main className="bg-neutral-950 text-white min-h-screen pt-24 pb-16">
-      <div className="max-w-5xl mx-auto px-4">
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+        <TournamentTabs
+          tournamentPath={tournamentPath}
+          active="teams"
+          showPodium={isCompleted}
+          bracketLabel={bracketTab}
+          showFfa={hasFfaStage}
+        />
         <section className="mb-8">
           <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-green-light)]/90">
             {t.eyebrow}
@@ -180,14 +187,6 @@ export default function TournamentTeamsPage({
             })}
           </p>
         </section>
-
-        <TournamentTabs
-          tournamentPath={tournamentPath}
-          active="teams"
-          showPodium={isCompleted}
-          bracketLabel={bracketTab}
-          showFfa={hasFfaStage}
-        />
 
         {teams.length === 0 ? (
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center">

@@ -5,6 +5,7 @@
 // grain, badge OW / jeu / statut (+ LIVE), titre, sous-titre, méta, rareté
 // (places restantes), compte à rebours géant et double CTA.
 
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
@@ -31,6 +32,7 @@ export default function TournamentHero({
   registrationOpen,
   liveMatch = null,
   nextMatch = null,
+  tabs,
 }: {
   tournament: LandingTournament;
   phase: TournamentPhase;
@@ -43,6 +45,12 @@ export default function TournamentHero({
   liveMatch?: HubMatch | null;
   /** Prochain match programmé : ce que le décompte vise pendant le tournoi. */
   nextMatch?: HubMatch | null;
+  /**
+   * Barre d'onglets du tournoi, posée EN HAUT du hero — même conteneur et
+   * même hauteur que sur les autres onglets, où elle ouvre la page. Sous le
+   * hero, elle sautait d'une page à l'autre.
+   */
+  tabs?: ReactNode;
 }) {
   const t = useT(nsTournamentLanding);
   const { lang } = useLang();
@@ -99,7 +107,16 @@ export default function TournamentHero({
         />
       </div>
 
-      <div className="mx-auto w-full max-w-6xl px-4 pb-16 pt-28 sm:px-6 sm:pt-32 md:pb-24 md:pt-40">
+      {tabs && (
+        <div className="relative z-[2] mx-auto w-full max-w-6xl px-4 pt-24 sm:px-6">
+          {tabs}
+        </div>
+      )}
+      <div
+        className={`mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6 md:pb-24 ${
+          tabs ? 'pt-4 sm:pt-6 md:pt-10' : 'pt-28 sm:pt-32 md:pt-40'
+        }`}
+      >
         <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
           {/* Colonne gauche : identité + CTA */}
           <div>
