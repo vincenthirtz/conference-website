@@ -299,3 +299,63 @@ describe('GET /api/overlay/day', () => {
     expect(res.body.capability).toBe('matchOverlays');
   });
 });
+
+describe('jour forcé depuis l’onglet Outils (source déjà collée dans OBS)', () => {
+  beforeEach(() => {
+    resetSupabaseMock();
+    seed();
+  });
+
+  it('sans date dans l’URL, la source suit le jour forcé encore valide', async () => {
+    Object.assign(store.tournaments[0]!, {
+      overlay_day_date: '2026-09-19',
+      overlay_day_set_at: new Date().toISOString(),
+    });
+    const res = makeRes();
+    await handler(makeReq({ tournament: 'cup-2026' }), res);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.date).toBe('2026-09-19');
+    expect(res.body.matches).toHaveLength(1);
+  });
+
+  it('une date explicite dans l’URL prime sur le forçage', async () => {
+    Object.assign(store.tournaments[0]!, {
+      overlay_day_date: '2026-09-19',
+      overlay_day_set_at: new Date().toISOString(),
+    });
+    const res = makeRes();
+    await handler(makeReq({ tournament: 'cup-2026', date: '2026-09-18' }), res);
+    expect(res.body.date).toBe('2026-09-18');
+  });
+
+  it('un forçage de plus de 12 h est ignoré : retour au jour même', async () => {
+    Object.assign(store.tournaments[0]!, {
+      overlay_day_date: '2026-09-19',
+      overlay_day_set_at: new Date(Date.now() - 13 * 3600_000).toISOString(),
+    });
+    const res = makeRes();
+    await handler(makeReq({ tournament: 'cup-2026' }), res);
+    expect(res.body.date).not.toBe('2026-09-19');
+  });
+});
+
+describe('activeDayOverride / isDayString', () => {
+  it('valide le format et le calendrier', async () => {
+    const { isDayString } = await import('../../utils/overlay/dayOverride');
+    expect(isDayString('2026-09-23')).toBe(true);
+    expect(isDayString('2026-02-30')).toBe(false);
+    expect(isDayString('23/09/2026')).toBe(false);
+  });
+
+  it('honore 12 h, pas une seconde de plus', async () => {
+    const { activeDayOverride, DAY_OVERRIDE_TTL_MS } = await import(
+      '../../utils/overlay/dayOverride'
+    );
+    const setAt = '2026-09-24T10:00:00.000Z';
+    const t0 = new Date(setAt).getTime();
+    const row = { overlay_day_date: '2026-09-23', overlay_day_set_at: setAt };
+    expect(activeDayOverride(row, t0 + 1000)).toBe('2026-09-23');
+    expect(activeDayOverride(row, t0 + DAY_OVERRIDE_TTL_MS)).toBeNull();
+    expect(activeDayOverride({ overlay_day_date: null }, t0)).toBeNull();
+  });
+});

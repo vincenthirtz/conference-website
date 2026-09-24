@@ -1,0 +1,90 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: Jour force de la source OBS « Matchs du jour ».
+  description: |
+    Requires `manage_tournaments`. La source `/overlay/day?tournament=…`
+    (sans `date`) affiche ce jour tant que le forcage est valide (12 h apres
+    sa pose), sinon le jour meme a Paris.
+  operationId: adminGetTournamentOverlayDay
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Etat du forcage.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              date:
+                type: [string, 'null']
+                description: Jour force, `AAAA-MM-JJ`.
+              setAt:
+                type: [string, 'null']
+              expiresAt:
+                type: [string, 'null']
+              active:
+                type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+put:
+  summary: Envoie un jour a la source OBS « Matchs du jour » (ou le retire).
+  description: |
+    Requires `manage_tournaments`. `date: null` retire le forcage (retour au
+    jour meme). La source deja collee dans OBS le suit a son prochain
+    rafraichissement ; le forcage expire seul au bout de 12 h. Journalise.
+  operationId: adminPutTournamentOverlayDay
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - date
+          properties:
+            date:
+              type: [string, 'null']
+              description: '`AAAA-MM-JJ`, ou null pour revenir au jour meme.'
+  responses:
+    '200':
+      description: Forcage enregistre.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              date:
+                type: [string, 'null']
+              setAt:
+                type: [string, 'null']
+              expiresAt:
+                type: [string, 'null']
+              active:
+                type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

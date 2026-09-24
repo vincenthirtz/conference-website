@@ -572,6 +572,7 @@ function TournamentToolsPage({
                 </h3>
                 <StreamSourcesPanel
                   tournamentRef={tournament.slug ?? tournament.id}
+                  tournamentId={tournament.id}
                   baseUrl={embedBase}
                   enabled={canUseMatchOverlays}
                   planLabel={planLabel}

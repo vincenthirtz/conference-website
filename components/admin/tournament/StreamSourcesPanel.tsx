@@ -14,13 +14,19 @@
 // deux rencontres. Figer une source sur un match précis reste possible (la
 // note le dit), mais ce n'est pas le défaut.
 
-import { useState } from 'react';
-import { useAdminT } from '@/lib/i18n/useAdminT';
+import { useCallback, useEffect, useState } from 'react';
+import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
 import nsAdminTournamentEmbed from '@/lib/i18n/locales/admin-fr/adminTournamentEmbed';
 
 type Props = {
   /** Slug (ou id) du tournoi, tel qu'il ira dans l'URL. */
   tournamentRef: string;
+  /**
+   * Id du tournoi : pour ENVOYER un jour à la source « Matchs du jour » déjà
+   * collée dans OBS (route admin overlay-day). Absent : aperçu seul.
+   */
+  tournamentId?: string;
   /** Base absolue du site, déjà résolue par la page. */
   baseUrl: string;
   /** Le palier de l'espace ouvre-t-il les sources par match ? */
@@ -77,6 +83,21 @@ const DONATION_KEYS: ReadonlySet<string> = new Set([
   'donAlert',
 ]);
 
+/** `AAAA-MM-JJ` → `JJ/MM`. */
+function shortDay(day: string): string {
+  const [, m, d] = day.split('-');
+  return `${d}/${m}`;
+}
+
+/** Heure de Paris d'un instant ISO, `HH:MM`. */
+function shortTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Paris',
+  });
+}
+
 /** `AAAA-MM-JJ` du jour, heure de Paris — le jour que la source affiche. */
 function parisToday(): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -103,6 +124,7 @@ function sourceUrl(baseUrl: string, tournamentRef: string, key: string) {
 
 export default function StreamSourcesPanel({
   tournamentRef,
+  tournamentId,
   baseUrl,
   enabled,
   planLabel,
@@ -113,6 +135,47 @@ export default function StreamSourcesPanel({
   // Jour testé pour « Matchs du jour » : la source montre AUJOURD'HUI, donc
   // rien un jour sans match — impossible de la régler avant la soirée.
   const [testDay, setTestDay] = useState<string>(() => parisToday());
+  // Jour FORCÉ côté serveur : la source déjà collée dans OBS le suit.
+  const { adminFetchJson } = useAdminFetch();
+  const [forced, setForced] = useState<{
+    date: string | null;
+    expiresAt: string | null;
+    active: boolean;
+  } | null>(null);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+
+  const overlayDayUrl = tournamentId
+    ? `/api/admin/tournament/${tournamentId}/overlay-day`
+    : null;
+
+  useEffect(() => {
+    if (!overlayDayUrl || !enabled) return;
+    adminFetchJson<typeof forced>(overlayDayUrl)
+      .then(setForced)
+      .catch(() => setForced(null));
+  }, [overlayDayUrl, enabled, adminFetchJson]);
+
+  const sendDay = useCallback(
+    async (date: string | null) => {
+      if (!overlayDayUrl) return;
+      setSending(true);
+      setSendError(null);
+      try {
+        setForced(
+          await adminFetchJson<typeof forced>(overlayDayUrl, {
+            method: 'PUT',
+            body: JSON.stringify({ date }),
+          })
+        );
+      } catch (err) {
+        setSendError((err as Error)?.message || t.daySendError);
+      } finally {
+        setSending(false);
+      }
+    },
+    [overlayDayUrl, adminFetchJson, t]
+  );
   // Le QR de don et les alertes de don sont ceux de l'association.
   const sources = SOURCES.filter(
     (s) => showDonation || !DONATION_KEYS.has(s.key)
@@ -214,9 +277,50 @@ export default function StreamSourcesPanel({
                   >
                     {t.dayTestBtn}
                   </a>
+                  {overlayDayUrl && (
+                    <button
+                      type="button"
+                      onClick={() => void sendDay(testDay)}
+                      disabled={!testDay || sending}
+                      className="rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-40"
+                    >
+                      {t.daySendBtn}
+                    </button>
+                  )}
                   <span className="text-[11px] text-neutral-500">
                     {t.dayTestHint}
                   </span>
+                  {overlayDayUrl && (
+                    <div className="flex w-full flex-wrap items-center gap-2 text-[11px]">
+                      {forced?.active && forced.date ? (
+                        <>
+                          <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-300">
+                            {format(t.dayForcedStatus, {
+                              day: shortDay(forced.date),
+                              until: forced.expiresAt
+                                ? shortTime(forced.expiresAt)
+                                : '—',
+                            })}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => void sendDay(null)}
+                            disabled={sending}
+                            className="rounded-md border border-neutral-600 px-2 py-0.5 text-neutral-200 hover:border-neutral-400 disabled:opacity-40"
+                          >
+                            {t.dayResetBtn}
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-neutral-500">
+                          {t.dayLiveStatus}
+                        </span>
+                      )}
+                      {sendError && (
+                        <span className="text-red-300">{sendError}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -2046,6 +2046,8 @@
       "max_teams",
       "min_players",
       "name",
+      "overlay_day_date",
+      "overlay_day_set_at",
       "registration_fields",
       "roster_locked_at",
       "roster_unlocked_until",

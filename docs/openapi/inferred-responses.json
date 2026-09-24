@@ -21088,6 +21088,40 @@
     ]
    }
   },
+  "GET /api/admin/tournament/{id}/overlay-day": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "date": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "setAt": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "expiresAt": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "active": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "date",
+     "setAt",
+     "expiresAt",
+     "active"
+    ]
+   }
+  },
   "GET /api/admin/tournament/{id}/podium-preview": {
    "200": {
     "type": "object",
@@ -69909,6 +69943,40 @@
     },
     "required": [
      "webhook"
+    ]
+   }
+  },
+  "PUT /api/admin/tournament/{id}/overlay-day": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "date": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "setAt": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "expiresAt": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "active": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "date",
+     "setAt",
+     "expiresAt",
+     "active"
     ]
    }
   },

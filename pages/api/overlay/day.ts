@@ -9,7 +9,9 @@
 //
 // URL :
 //   /api/overlay/day?tournament=<id|slug>[&date=YYYY-MM-DD][&tenant=<slug>]
-// Sans `date`, c'est aujourd'hui à Paris (cf. utils/overlay/dayOverlay.ts).
+// Sans `date`, c'est le jour FORCÉ par l'admin s'il y en a un encore valide
+// (onglet Outils, cf. utils/overlay/dayOverride.ts), sinon aujourd'hui à Paris
+// (cf. utils/overlay/dayOverlay.ts). Une `date` explicite prime toujours.
 //
 // MÊMES RESTRICTIONS que les sources par match, pour la même raison : le
 // tournoi doit être `visibility='public'`, et l'espace doit porter la capacité
@@ -34,6 +36,7 @@ import {
   selectDayMatches,
   type OverlayDayMatchView,
 } from '@/utils/overlay/dayOverlay';
+import { activeDayOverride } from '@/utils/overlay/dayOverride';
 
 /** Strictement ce que l'écran affiche : ni notes, ni lobby, ni jetons. */
 const MATCH_COLUMNS =
@@ -47,6 +50,8 @@ type TournamentRow = {
   short_name: string | null;
   game: string | null;
   visibility: string | null;
+  overlay_day_date: string | null;
+  overlay_day_set_at: string | null;
 };
 
 export type OverlayDayResponse = {
@@ -101,10 +106,10 @@ export default async function handler(
   }
 
   const nowMs = Date.now();
-  const bounds = resolveDayBounds(
-    firstParam(req.query.date as string | string[] | undefined),
-    nowMs
+  const explicitDate = firstParam(
+    req.query.date as string | string[] | undefined
   );
+  let bounds = resolveDayBounds(explicitDate, nowMs);
   if (!bounds) {
     return res
       .status(400)
@@ -115,7 +120,7 @@ export default async function handler(
     const tenantId = await resolveEmbedTenantId(req.query);
     const tournament = await findTournamentByIdOrSlug<TournamentRow>(
       tournamentRef,
-      'id, tenant_id, slug, name, short_name, game, visibility',
+      'id, tenant_id, slug, name, short_name, game, visibility, overlay_day_date, overlay_day_set_at',
       tenantId
     );
     // Un tournoi privé ne se diffuse pas, même à qui devine son slug.
@@ -130,6 +135,13 @@ export default async function handler(
       'Les sources de stream font partie de l’offre Régie.'
     );
     if (denial) return res.status(402).json(denial);
+
+    // Jour forcé depuis l'onglet Outils : la source déjà collée dans OBS le
+    // suit, sans changer d'URL. Une `date` explicite prime.
+    if (!explicitDate) {
+      const forced = activeDayOverride(tournament, nowMs);
+      if (forced) bounds = resolveDayBounds(forced, nowMs) ?? bounds;
+    }
 
     // Filtré par jour ICI plutôt qu'en SQL : la journée se calcule à Paris et
     // un match sans horaire se range sur son coup d'envoi réel — deux règles
