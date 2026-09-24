@@ -15,6 +15,9 @@ export default {
   statusOngoing: 'Ongoing',
   statusFinished: 'Finished',
   statusCancelled: 'Cancelled',
+  statusForfeit: 'Forfeit',
+  statusPostponed: 'Postponed',
+  statusDisputed: 'Disputed',
   heading: 'Matches – {name}',
   description:
     'Find here the full list of tournament matches. Use the filters to browse by stage or by status (upcoming, ongoing, finished).',

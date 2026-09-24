@@ -700,9 +700,13 @@ function MatchRow({
     match.team1_score !== undefined &&
     match.team2_score !== null &&
     match.team2_score !== undefined;
+  // Un forfait à 0 - 0 n'est pas un score : c'est un forfait annulé dont le
+  // statut n'a pas été remis. Le « Forfait » du statut suffit.
+  const blankForfeit =
+    match.status === 'walkover' && !match.team1_score && !match.team2_score;
 
   const scoreLabel =
-    isFinished || hasScores
+    (isFinished || hasScores) && !blankForfeit
       ? `${match.team1_score ?? 0} - ${match.team2_score ?? 0}`
       : '';
 
@@ -1167,6 +1171,14 @@ function getMatchStatusShort(status: MatchStatus, t: MatchesDict): string {
       return t.statusFinished;
     case 'cancelled':
       return t.statusCancelled;
+    // Sans ces cas, la valeur brute s'affichait : « walkover » en anglais sur
+    // un site en français.
+    case 'walkover':
+      return t.statusForfeit;
+    case 'postponed':
+      return t.statusPostponed;
+    case 'disputed':
+      return t.statusDisputed;
     default:
       return status;
   }
@@ -1183,6 +1195,8 @@ function getMatchStatusColor(status: MatchStatus): string {
       return 'px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60';
     case 'cancelled':
       return 'px-1.5 py-[2px] rounded-full bg-red-500/20 text-red-200 border border-red-500/60';
+    case 'walkover':
+      return 'px-1.5 py-[2px] rounded-full bg-purple-500/20 text-purple-200 border border-purple-500/60';
     default:
       return 'px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30';
   }

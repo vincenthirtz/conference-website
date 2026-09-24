@@ -14,6 +14,9 @@ export default ns('tournamentMatches', {
   statusOngoing: 'En cours',
   statusFinished: 'Terminé',
   statusCancelled: 'Annulé',
+  statusForfeit: 'Forfait',
+  statusPostponed: 'Reporté',
+  statusDisputed: 'Contesté',
   heading: 'Matchs – {name}',
   description:
     'Retrouvez ici la liste complète des matchs du tournoi. Utilisez les filtres pour naviguer par phase ou par statut (à venir, en cours, terminés).',
