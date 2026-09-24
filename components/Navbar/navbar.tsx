@@ -107,7 +107,7 @@ function Navbar(): JSX.Element {
   // `hideMarketingNav = true` pour une barre qui ne s'affichait jamais : la
   // page se retrouvait sans AUCUN en-tête, sur le site public comme ailleurs.
   // L'en-tête ne se masque que si quelque chose le remplace VRAIMENT.
-  const { showAdminBar, showPlayerBar } = resolveHeaderBars({
+  const { showAdminBar, showPlayerBar, pendingBar } = resolveHeaderBars({
     pathname: router.pathname,
     staffLoading: loading,
     isStaff,
@@ -146,18 +146,32 @@ function Navbar(): JSX.Element {
     canAdmin,
   }).map((l) => ({ ...l, label: accountLabels[l.key] }));
 
-  const headerOffset = showAdminBar
-    ? ADMIN_BAR_HEIGHT
-    : showPlayerBar
-      ? PLAYER_BAR_HEIGHT
-      : 0;
+  const headerOffset =
+    showAdminBar || pendingBar === 'admin'
+      ? ADMIN_BAR_HEIGHT
+      : showPlayerBar || pendingBar === 'player'
+        ? PLAYER_BAR_HEIGHT
+        : 0;
   const headerHeight = NAV_HEIGHT + headerOffset;
 
   // Masquer la nav publique est conditionné EXACTEMENT à ce qui la remplace.
   // Avec `isStaff` seul, la fenêtre `isStaff && loading` (ou un chunk
   // AdminTopBar — `dynamic(ssr:false)` — qui n'arrive pas) laissait la page
   // sans AUCUN en-tête : ni nav publique, ni top-bar.
-  const hideMarketingNav = showAdminBar || showPlayerBar;
+  // `pendingBar` : session en cours de résolution dans /admin ou /player. On
+  // réserve la barre de l'espace plutôt que d'afficher le menu public, qui
+  // basculait une fraction de seconde plus tard (refonte des menus, plan 5).
+  const hideMarketingNav = showAdminBar || showPlayerBar || !!pendingBar;
+
+  // Hauteur VISIBLE de l'en-tête, publiée pour toute la page (plan 4) : les
+  // pages et les ancres s'y alignent au lieu de supposer 75 ou 44 px.
+  const visibleHeaderHeight = hideMarketingNav ? headerOffset : NAV_HEIGHT;
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--app-header-h',
+      `${visibleHeaderHeight}px`
+    );
+  }, [visibleHeaderHeight]);
 
   // Pas de signOut ICI : /admin/logout s'en charge (et purge en plus les
   // cookies serveur). L'awaiter ajoutait un aller-retour réseau COMPLET —
@@ -203,6 +217,16 @@ function Navbar(): JSX.Element {
           />
           <CommandPalette />
         </>
+      )}
+
+      {pendingBar && (
+        // Place réservée, même hauteur et même fond que la barre attendue :
+        // rien ne saute quand elle arrive.
+        <div
+          aria-hidden="true"
+          className="fixed inset-x-0 top-0 z-[120] border-b border-white/[0.06] bg-neutral-950/80 backdrop-blur-2xl"
+          style={{ height: headerOffset }}
+        />
       )}
 
       {showPlayerBar && (

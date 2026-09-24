@@ -189,6 +189,11 @@
 }
 
 :root {
+  /* Hauteur RÉELLE de l'en-tête (menu public, barre admin ou barre joueuse),
+   * publiée par components/Navbar/navbar.tsx à chaque changement. Défaut :
+   * le menu public. Refonte des menus, plan 4 : les pages s'y alignent via
+   * `pt-header` / `scroll-mt-header` au lieu de pt-20 / pt-24 codés en dur. */
+  --app-header-h: 75px;
   /* ─────── Palette de marque (logo violet / vert / jaune) ─────────────────
    * REBRAND Lot A. Les 3 couleurs du logo + leurs échelles sont la nouvelle
    * source de vérité. Les alias legacy (--color-cyan, --color-magenta, …) sont
@@ -580,6 +585,13 @@ select option {
 }
 
 @layer utilities {
+  /* Sous l'en-tête, quelle que soit sa hauteur (cf. --app-header-h). */
+  .pt-header {
+    padding-top: calc(var(--app-header-h) + 1.5rem);
+  }
+  .scroll-mt-header {
+    scroll-margin-top: calc(var(--app-header-h) + 1rem);
+  }
   .gradient-bg {
     background-image: var(--gradient-brand) !important;
     -webkit-mask-image: linear-gradient(

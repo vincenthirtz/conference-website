@@ -42,7 +42,7 @@ describe('resolveHeaderBars', () => {
           isStaff: true,
           adminLinkCount: 12,
         })
-      ).toEqual({ showAdminBar: false, showPlayerBar: true });
+      ).toMatchObject({ showAdminBar: false, showPlayerBar: true });
     }
   });
 
@@ -54,7 +54,7 @@ describe('resolveHeaderBars', () => {
         isStaff: true,
         adminLinkCount: 12,
       })
-    ).toEqual({ showAdminBar: true, showPlayerBar: false });
+    ).toMatchObject({ showAdminBar: true, showPlayerBar: false });
     // Avant le 2026-09-24 : barre admin ici, et plus de menu du site.
     for (const pathname of ['/', '/tournament/[id]', '/player/[userId]']) {
       expect(
@@ -65,7 +65,7 @@ describe('resolveHeaderBars', () => {
           adminLinkCount: 12,
         }),
         pathname
-      ).toEqual({ showAdminBar: false, showPlayerBar: false });
+      ).toMatchObject({ showAdminBar: false, showPlayerBar: false });
     }
   });
 
@@ -73,10 +73,11 @@ describe('resolveHeaderBars', () => {
     expect(resolveHeaderBars({ ...resolved, pathname: '/player' })).toEqual({
       showAdminBar: false,
       showPlayerBar: true,
+      pendingBar: null,
     });
     expect(
       resolveHeaderBars({ ...resolved, pathname: '/tournaments' })
-    ).toEqual({ showAdminBar: false, showPlayerBar: false });
+    ).toMatchObject({ showAdminBar: false, showPlayerBar: false });
   });
 
   it('rien tant qu’une session se résout, ni sans session joueuse', () => {
@@ -86,14 +87,14 @@ describe('resolveHeaderBars', () => {
         pathname: '/player',
         staffLoading: true,
       })
-    ).toEqual({ showAdminBar: false, showPlayerBar: false });
+    ).toMatchObject({ showAdminBar: false, showPlayerBar: false });
     expect(
       resolveHeaderBars({
         ...resolved,
         pathname: '/player',
         playerLoading: true,
       })
-    ).toEqual({ showAdminBar: false, showPlayerBar: false });
+    ).toMatchObject({ showAdminBar: false, showPlayerBar: false });
     // Staff sans session joueuse résolue sur /player : aucune barre d'espace,
     // donc le menu public reste — la barre admin n'a rien à faire hors /admin.
     expect(
@@ -104,7 +105,7 @@ describe('resolveHeaderBars', () => {
         isStaff: true,
         adminLinkCount: 3,
       })
-    ).toEqual({ showAdminBar: false, showPlayerBar: false });
+    ).toMatchObject({ showAdminBar: false, showPlayerBar: false });
   });
 
   it('jamais deux barres, et jamais la barre admin sans lien', () => {
@@ -179,6 +180,9 @@ describe('routeSpace', () => {
     expect(routeSpace('/player/matches')).toBe('player');
     // Profil PUBLIC d'une joueuse : site public.
     expect(routeSpace('/player/[userId]')).toBe('public');
+    // Pages d'accès de /admin : ouvertes à un anonyme, donc site public.
+    expect(routeSpace('/admin/login')).toBe('public');
+    expect(routeSpace('/admin/reset-password')).toBe('public');
   });
 });
 
@@ -215,5 +219,42 @@ describe('accountLinks', () => {
     expect(keys({ space: 'player', hasUser: true, canAdmin: false })).toEqual(
       []
     );
+  });
+});
+
+describe('pendingBar — pas de clignotement au chargement', () => {
+  it('réserve la barre de l’espace tant que la session se résout', () => {
+    expect(
+      resolveHeaderBars({
+        ...resolved,
+        pathname: '/admin/tcg',
+        staffLoading: true,
+      }).pendingBar
+    ).toBe('admin');
+    expect(
+      resolveHeaderBars({
+        ...resolved,
+        pathname: '/player',
+        playerLoading: true,
+      }).pendingBar
+    ).toBe('player');
+  });
+
+  it('rien à réserver sur le site public, ni une fois la session connue', () => {
+    expect(
+      resolveHeaderBars({ ...resolved, pathname: '/', staffLoading: true })
+        .pendingBar
+    ).toBeNull();
+    expect(
+      resolveHeaderBars({ ...resolved, pathname: '/player' }).pendingBar
+    ).toBeNull();
+    expect(
+      resolveHeaderBars({
+        ...resolved,
+        pathname: '/admin',
+        isStaff: true,
+        adminLinkCount: 3,
+      }).pendingBar
+    ).toBeNull();
   });
 });

@@ -18,6 +18,14 @@ export type HeaderBarsInput = {
 export type HeaderBars = {
   showAdminBar: boolean;
   showPlayerBar: boolean;
+  /**
+   * Session encore en cours de résolution dans un espace applicatif : on
+   * réserve la place de SA barre au lieu d'afficher le menu public, qui
+   * basculait ensuite — le clignotement du plan 5. /admin (hors pages
+   * d'accès, cf. ADMIN_ACCESS_PAGES) est réservé au staff ; /player redirige
+   * un anonyme vers la connexion.
+   */
+  pendingBar: 'admin' | 'player' | null;
 };
 
 /**
@@ -30,7 +38,20 @@ export type HeaderBars = {
  */
 export type NavSpace = 'public' | 'player' | 'admin';
 
+/**
+ * Pages de /admin ouvertes à un visiteur NON connecté : elles relèvent du site
+ * public — sinon on y réserverait la barre admin pendant le chargement, puis
+ * on la remplacerait par le menu public (le clignotement inverse).
+ */
+const ADMIN_ACCESS_PAGES = new Set([
+  '/admin/login',
+  '/admin/logout',
+  '/admin/forgot-password',
+  '/admin/reset-password',
+]);
+
 export function routeSpace(pathname: string): NavSpace {
+  if (ADMIN_ACCESS_PAGES.has(pathname)) return 'public';
   if (pathname === '/admin' || pathname.startsWith('/admin/')) return 'admin';
   if (
     (pathname === '/player' || pathname.startsWith('/player/')) &&
@@ -70,7 +91,15 @@ export function resolveHeaderBars(input: HeaderBarsInput): HeaderBars {
     !input.staffLoading &&
     input.isStaff &&
     input.adminLinkCount > 0;
-  return { showAdminBar, showPlayerBar };
+  const pendingBar =
+    space === 'admin' && input.staffLoading
+      ? 'admin'
+      : space === 'player' &&
+          (input.playerLoading || input.staffLoading) &&
+          !showPlayerBar
+        ? 'player'
+        : null;
+  return { showAdminBar, showPlayerBar, pendingBar };
 }
 
 export type AccountLinkKey = 'player' | 'profile' | 'admin';
