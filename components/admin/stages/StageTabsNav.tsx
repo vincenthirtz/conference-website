@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { StageType } from '@/types/admin';
 import nsAdminStageNav from '@/lib/i18n/locales/admin-fr/adminStageNav';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 /**
  * Stable identifiers for the stage sub-screen tabs. Each maps to a real route
@@ -68,6 +69,8 @@ type Props = {
   tournamentId?: string | null;
   tournamentName?: string | null;
   className?: string;
+  /** Fil d'Ariane automatique (défaut : oui). `false` si la page a le sien. */
+  breadcrumb?: boolean;
 };
 
 /**
@@ -84,6 +87,7 @@ export default function StageTabsNav({
   tournamentId,
   tournamentName,
   className = '',
+  breadcrumb = true,
 }: Props) {
   const t = useAdminT(nsAdminStageNav);
   const tx = t as Record<string, string>;
@@ -96,19 +100,24 @@ export default function StageTabsNav({
     : t.backTournaments;
 
   return (
-    <nav
-      aria-label={t.ariaLabel}
-      className={`mb-6 flex flex-col gap-3 ${className}`}
-    >
-      <Link
-        href={backHref}
-        className="inline-flex w-fit items-center gap-2 text-sm text-neutral-400 hover:text-white"
+    <>
+      {/* Fil d'Ariane (refonte des menus, plan 8) : posé ici plutôt que dans
+          chaque page — plusieurs sont des god-components gelés. */}
+      {breadcrumb && <AdminBreadcrumbs />}
+      <nav
+        aria-label={t.ariaLabel}
+        className={`mb-6 flex flex-col gap-3 ${className}`}
       >
-        {backLabel}
-      </Link>
-      <div className="flex flex-wrap gap-1 border-b border-neutral-700/60">
-        {TAB_ORDER.filter(({ id }) => isTabVisible(id, active, stageType)).map(
-          ({ id, labelKey }) => {
+        <Link
+          href={backHref}
+          className="inline-flex w-fit items-center gap-2 text-sm text-neutral-400 hover:text-white"
+        >
+          {backLabel}
+        </Link>
+        <div className="flex flex-wrap gap-1 border-b border-neutral-700/60">
+          {TAB_ORDER.filter(({ id }) =>
+            isTabVisible(id, active, stageType)
+          ).map(({ id, labelKey }) => {
             const selected = id === active;
             return (
               <Link
@@ -124,9 +133,9 @@ export default function StageTabsNav({
                 {tx[labelKey]}
               </Link>
             );
-          }
-        )}
-      </div>
-    </nav>
+          })}
+        </div>
+      </nav>
+    </>
   );
 }

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentNav from '@/lib/i18n/locales/admin-fr/adminTournamentNav';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 /**
  * Les GROUPES de l'espace tournoi.
@@ -122,6 +123,8 @@ type Props = {
   tournamentId: string;
   active: TournamentTabId;
   className?: string;
+  /** Fil d'Ariane automatique (défaut : oui). `false` si la page a le sien. */
+  breadcrumb?: boolean;
 };
 
 /** Style partagé des onglets de premier niveau. */
@@ -149,6 +152,7 @@ export default function TournamentTabsNav({
   tournamentId,
   active,
   className = '',
+  breadcrumb = true,
 }: Props) {
   const t = useAdminT(nsAdminTournamentNav);
   const tx = t as Record<string, string>;
@@ -165,61 +169,66 @@ export default function TournamentTabsNav({
   const showSubBar = group.members.length > 1;
 
   return (
-    <nav
-      aria-label={t.ariaLabel}
-      className={`mb-6 flex flex-col gap-3 ${className}`}
-    >
-      {/* Remonter d'un cran : depuis le tableau de bord (racine du tournoi)
-          vers la liste des tournois ; depuis tout autre écran, vers le tableau
-          de bord. */}
-      <Link
-        href={
-          active === 'dashboard'
-            ? '/admin/tournaments'
-            : `/admin/tournament/${tournamentId}/dashboard`
-        }
-        className="inline-flex w-fit items-center gap-2 text-sm text-neutral-400 hover:text-white"
+    <>
+      {/* Fil d'Ariane (refonte des menus, plan 8) : posé ici plutôt que dans
+          chaque page — plusieurs sont des god-components gelés. */}
+      {breadcrumb && <AdminBreadcrumbs />}
+      <nav
+        aria-label={t.ariaLabel}
+        className={`mb-6 flex flex-col gap-3 ${className}`}
       >
-        {active === 'dashboard' ? tx.backToList : t.back}
-      </Link>
+        {/* Remonter d'un cran : depuis le tableau de bord (racine du tournoi)
+            vers la liste des tournois ; depuis tout autre écran, vers le tableau
+            de bord. */}
+        <Link
+          href={
+            active === 'dashboard'
+              ? '/admin/tournaments'
+              : `/admin/tournament/${tournamentId}/dashboard`
+          }
+          className="inline-flex w-fit items-center gap-2 text-sm text-neutral-400 hover:text-white"
+        >
+          {active === 'dashboard' ? tx.backToList : t.back}
+        </Link>
 
-      <div className="flex flex-wrap items-end gap-1 border-b border-neutral-700/60">
-        {TOURNAMENT_TAB_GROUPS.map((g) => {
-          const selected = g.id === active;
-          return (
-            <Link
-              key={g.id}
-              href={tournamentTabHref(tournamentId, g.id)}
-              aria-current={selected ? 'page' : undefined}
-              className={tabClassName(selected)}
-            >
-              {tx[g.labelKey]}
-            </Link>
-          );
-        })}
-      </div>
-
-      {showSubBar && (
-        <div className="flex flex-wrap gap-1">
-          {group.members.map((m) => {
-            const selected = m.route === currentRoute;
+        <div className="flex flex-wrap items-end gap-1 border-b border-neutral-700/60">
+          {TOURNAMENT_TAB_GROUPS.map((g) => {
+            const selected = g.id === active;
             return (
               <Link
-                key={m.route}
-                href={`/admin/tournament/${tournamentId}/${m.route}`}
+                key={g.id}
+                href={tournamentTabHref(tournamentId, g.id)}
                 aria-current={selected ? 'page' : undefined}
-                className={`rounded-lg px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
-                  selected
-                    ? 'bg-neutral-800 font-medium text-white'
-                    : 'text-neutral-400 hover:bg-neutral-800/60 hover:text-neutral-200'
-                }`}
+                className={tabClassName(selected)}
               >
-                {tx[m.labelKey]}
+                {tx[g.labelKey]}
               </Link>
             );
           })}
         </div>
-      )}
-    </nav>
+
+        {showSubBar && (
+          <div className="flex flex-wrap gap-1">
+            {group.members.map((m) => {
+              const selected = m.route === currentRoute;
+              return (
+                <Link
+                  key={m.route}
+                  href={`/admin/tournament/${tournamentId}/${m.route}`}
+                  aria-current={selected ? 'page' : undefined}
+                  className={`rounded-lg px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
+                    selected
+                      ? 'bg-neutral-800 font-medium text-white'
+                      : 'text-neutral-400 hover:bg-neutral-800/60 hover:text-neutral-200'
+                  }`}
+                >
+                  {tx[m.labelKey]}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </nav>
+    </>
   );
 }

@@ -72,6 +72,25 @@ export const ENTITY_ROUTES: {
   { pattern: '/admin/events/[runId]', list: '/admin/regie', key: 'event' },
 ];
 
+/**
+ * Pages qui ont DÉJÀ un fil d'Ariane fait main, plus riche (avec le nom de
+ * l'équipe, du tournoi…) : le fil automatique s'y tait, au lieu d'en ajouter
+ * un second. Tenu ici, en un seul endroit, plutôt que par une option dans
+ * chaque page — plusieurs sont des god-components gelés.
+ */
+export const OWN_BREADCRUMB_ROUTES: ReadonlySet<string> = new Set([
+  '/admin/events/[runId]/director',
+  '/admin/leagues/[id]',
+  '/admin/matches/[matchId]/edit',
+  '/admin/news/[id]',
+  '/admin/stages/[stageId]',
+  '/admin/teams/[teamId]',
+  '/admin/teams/[teamId]/edit',
+  '/admin/tenants/[id]',
+  '/admin/tenants/[id]/discord-config/[guildId]',
+  '/admin/users/[userId]/staff-view',
+]);
+
 /** Chemin des nœuds jusqu'au premier nœud dont `href` vaut `target`. */
 function findTrail(
   nodes: AdminNavNode[],
@@ -125,6 +144,7 @@ export function adminBreadcrumb(
   labels: { root: string; entities: Record<EntityKey, string> }
 ): Crumb[] {
   if (pathname === '/admin' || !pathname.startsWith('/admin/')) return [];
+  if (OWN_BREADCRUMB_ROUTES.has(pathname)) return [];
   const url = cleanPath(asPath);
 
   const entity = ENTITY_ROUTES.find(

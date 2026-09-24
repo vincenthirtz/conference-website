@@ -21,7 +21,6 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import type { StaffProps } from '@/types/admin';
 import nsAdminStageSeeding from '@/lib/i18n/locales/admin-fr/adminStageSeeding';
-import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 type TeamLite = {
   id: string;
@@ -438,7 +437,6 @@ function SeedingComparatorPage(_: StaffProps) {
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          <AdminBreadcrumbs />
           <StageTabsNav
             stageId={String(id ?? '')}
             active="seeding"

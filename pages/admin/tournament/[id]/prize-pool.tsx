@@ -14,7 +14,6 @@ import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
 import nsAdminTournamentPrizePool from '@/lib/i18n/locales/admin-fr/adminTournamentPrizePool';
-import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 type PrizePool = {
   id: string;
@@ -218,7 +217,6 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
         <title>{t.headTitle}</title>
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-header">
-        <AdminBreadcrumbs />
         <div className="max-w-4xl mx-auto px-6 py-10">
           <TournamentTabsNav
             tournamentId={String(tournamentId ?? '')}

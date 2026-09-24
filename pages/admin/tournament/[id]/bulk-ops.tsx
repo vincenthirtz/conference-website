@@ -14,7 +14,6 @@ import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, StageSummary, TournamentMini } from '@/types/admin';
 import nsAdminTournamentBulkOps from '@/lib/i18n/locales/admin-fr/adminTournamentBulkOps';
-import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 /** Un match tel que l'écran d'opérations groupées le liste. */
 type BulkMatchRow = {
@@ -293,7 +292,6 @@ function BulkOpsPage(_: StaffProps) {
         <title>{t.headTitle}</title>
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-header">
-        <AdminBreadcrumbs />
         <div className="max-w-5xl mx-auto px-6 py-10">
           <TournamentTabsNav
             tournamentId={String(tournamentId ?? '')}

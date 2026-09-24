@@ -45,7 +45,7 @@ describe('adminBreadcrumb', () => {
     expect(c.some((x) => x.href === '/admin/tournaments')).toBe(true);
   });
 
-  it('entités à motif long : planning de scrim, config Discord d’un espace', () => {
+  it('entités à motif long : planning de scrim, sous-page de phase', () => {
     expect(
       crumb(
         '/admin/scrims/plannings/[planningId]',
@@ -53,11 +53,10 @@ describe('adminBreadcrumb', () => {
       ).some((x) => x.href === '/admin/scrims')
     ).toBe(true);
     expect(
-      crumb(
-        '/admin/tenants/[id]/discord-config/[guildId]',
-        '/admin/tenants/t1/discord-config/g1'
-      ).at(-1)
-    ).toEqual({ label: 'Espace', href: '/admin/tenants/t1' });
+      crumb('/admin/stages/[stageId]/seeding', '/admin/stages/s1/seeding').at(
+        -1
+      )
+    ).toEqual({ label: 'Phase', href: '/admin/stages/s1' });
   });
 
   it('rien sur le tableau de bord ni hors admin', () => {
@@ -77,5 +76,17 @@ describe('adminBreadcrumb', () => {
     for (const e of ENTITY_ROUTES) {
       expect(hrefs.has(e.list), `${e.pattern} → ${e.list}`).toBe(true);
     }
+  });
+});
+
+describe('pages au fil fait main', () => {
+  it('le fil automatique s’y tait (pas de doublon)', () => {
+    expect(crumb('/admin/stages/[stageId]', '/admin/stages/s1')).toEqual([]);
+    expect(crumb('/admin/teams/[teamId]', '/admin/teams/t1')).toEqual([]);
+    // … mais pas sur les sous-pages, qui n'en ont pas.
+    expect(
+      crumb('/admin/stages/[stageId]/seeding', '/admin/stages/s1/seeding')
+        .length
+    ).toBeGreaterThan(1);
   });
 });

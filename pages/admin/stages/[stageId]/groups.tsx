@@ -16,7 +16,6 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import type { StaffProps, StageType } from '@/types/admin';
 import nsAdminStageGroups from '@/lib/i18n/locales/admin-fr/adminStageGroups';
-import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 type TeamInfo = {
   teamId: string;
@@ -354,7 +353,6 @@ function AdminStageGroupsPage(_props: StaffProps) {
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          <AdminBreadcrumbs />
           {/* Header */}
           <div className="mb-8">
             <StageTabsNav
