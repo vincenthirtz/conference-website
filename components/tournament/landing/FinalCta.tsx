@@ -29,7 +29,7 @@ export default function FinalCta({
         <Reveal>
           <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-green-light)]">
             <span className="brand-dot" aria-hidden />
-            {registrationOpen ? t.finalEyebrow : t.finalClosedHeading}
+            {registrationOpen ? t.finalEyebrow : t.finalClosedEyebrow}
           </span>
           <h2 className="text-brand-gradient mt-4 text-4xl font-black leading-[1.02] tracking-tight sm:text-5xl md:text-6xl">
             {registrationOpen ? t.finalHeading : t.finalClosedHeading}

@@ -9,6 +9,7 @@ import { useReveal } from '@/hooks/useReveal';
 import { useCountUp } from '@/hooks/useCountUp';
 import { Section, SectionHeader, Spotlight } from './primitives';
 import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
+import type { TournamentPhase } from './types';
 
 type NumericStat = {
   kind: 'number';
@@ -33,7 +34,13 @@ const ACCENT: Record<'violet' | 'green' | 'yellow', string> = {
 function StatCard({ stat }: { stat: Stat }) {
   const { ref, revealed } = useReveal<HTMLDivElement>();
   const counted = useCountUp(stat.kind === 'number' ? stat.value : 0, revealed);
-  const display = stat.kind === 'number' ? counted : stat.value;
+  // Avant révélation, la VRAIE valeur : c'est ce que contient le HTML servi.
+  // Le compteur partait de 0 dès le rendu serveur — moteurs de recherche,
+  // aperçus de lien et lecteurs sans JS lisaient « 0 équipes engagées ».
+  // La carte est invisible tant qu'elle n'est pas révélée (tl-reveal), donc
+  // l'animation 0 → valeur reste intacte pour qui fait défiler la page.
+  const display =
+    stat.kind === 'number' ? (revealed ? counted : stat.value) : stat.value;
   return (
     <div
       ref={ref}
@@ -53,14 +60,18 @@ function StatCard({ stat }: { stat: Stat }) {
 }
 
 export default function TournamentStats({
+  phase,
   totalTeams,
   placesRemaining,
   totalMatches,
+  finishedMatches,
   stagesCount,
 }: {
+  phase: TournamentPhase;
   totalTeams: number;
   placesRemaining: number | null;
   totalMatches: number;
+  finishedMatches: number;
   stagesCount: number;
 }) {
   const t = useT(nsTournamentLanding);
@@ -72,13 +83,24 @@ export default function TournamentStats({
       label: t.statTeamsLabel,
       accent: 'violet',
     },
-    {
-      kind: 'number',
-      value:
-        placesRemaining !== null && placesRemaining > 0 ? placesRemaining : 0,
-      label: t.statSlotsLabel,
-      accent: 'green',
-    },
+    // Une fois le tournoi lancé, « places restantes » ne vaut plus que 0 :
+    // l'avancement dit quelque chose, lui.
+    phase === 'upcoming'
+      ? {
+          kind: 'number',
+          value:
+            placesRemaining !== null && placesRemaining > 0
+              ? placesRemaining
+              : 0,
+          label: t.statSlotsLabel,
+          accent: 'green',
+        }
+      : {
+          kind: 'number',
+          value: finishedMatches,
+          label: t.statPlayedLabel,
+          accent: 'green',
+        },
     {
       kind: 'number',
       value: totalMatches,

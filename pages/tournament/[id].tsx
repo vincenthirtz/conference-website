@@ -30,6 +30,16 @@ import TournamentFaq from '@/components/tournament/landing/TournamentFaq';
 import FinalCta from '@/components/tournament/landing/FinalCta';
 import StickyRegisterBar from '@/components/tournament/landing/StickyRegisterBar';
 import TournamentInfoCards from '@/components/tournament/landing/TournamentInfoCards';
+import LiveHub from '@/components/tournament/landing/LiveHub';
+import {
+  buildLiveHub,
+  type HubMatch,
+  type LiveHub as LiveHubData,
+} from '@/utils/tournament/liveHub';
+import {
+  readPublicStandings,
+  type PublicStandingsTable,
+} from '@/utils/stages/publicStandings';
 import type {
   LandingTournament,
   LandingRound,
@@ -57,6 +67,10 @@ type TournamentPageProps = {
   finishedMatchesCount: number;
   hasFfaStage: boolean;
   leagues: LandingLeague[];
+  /** Suivi en cours de tournoi : direct, à suivre, résultats. */
+  hub: LiveHubData;
+  /** Classement OFFICIEL (celui de la page Classement). */
+  standings: PublicStandingsTable[];
   seo: SeoProps;
 };
 
@@ -141,6 +155,8 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
     leaguesResult,
     partnersResult,
     roundsResult,
+    hubMatchesResult,
+    standings,
   ] = await Promise.all([
     supabaseAdmin
       .from('tournament_stages')
@@ -195,6 +211,21 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       .eq('tournament_id', tournamentId)
       .neq('status', 'cancelled')
       .order('round_number', { ascending: true }),
+
+    // Bloc de suivi : tous les matchs avec leurs équipes. Un tournoi en compte
+    // quelques dizaines — le tri direct / à suivre / résultats se fait en
+    // mémoire (utils/tournament/liveHub.ts), testable sans base.
+    supabaseAdmin
+      .from('matches')
+      .select(
+        'id, scheduled_at, status, is_bye, round_name, match_format, team1_score, team2_score, winner_team_id, forfeit_team_id, stream_url, team1:team1_id ( id, slug, name, short_name, logo_url ), team2:team2_id ( id, slug, name, short_name, logo_url )'
+      )
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId)
+      .is('deleted_at', null)
+      .neq('status', 'cancelled'),
+
+    readPublicStandings(tenantId, tournamentId),
   ]);
 
   if (stagesResult.error)
@@ -211,6 +242,22 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
     logger.error('tournament partners error:', partnersResult.error);
   if (roundsResult.error)
     logger.error('tournament rounds error:', roundsResult.error);
+  if (hubMatchesResult.error)
+    logger.error('tournament hub matches error:', hubMatchesResult.error);
+
+  // Embeds `team1:…` / `team2:…` : objet ou tableau selon PostgREST.
+  const one = <T,>(v: T | T[] | null | undefined): T | null =>
+    Array.isArray(v) ? (v[0] ?? null) : (v ?? null);
+  const hubMatches: HubMatch[] = (
+    (hubMatchesResult.data ?? []) as unknown as (Omit<
+      HubMatch,
+      'team1' | 'team2'
+    > & {
+      team1: HubMatch['team1'] | HubMatch['team1'][];
+      team2: HubMatch['team2'] | HubMatch['team2'][];
+    })[]
+  ).map((m) => ({ ...m, team1: one(m.team1), team2: one(m.team2) }));
+  const hub = buildLiveHub(hubMatches, new Date());
 
   const rawStages = (stagesResult.data || []) as unknown as (LandingStage & {
     visible?: boolean | null;
@@ -353,6 +400,8 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       finishedMatchesCount,
       hasFfaStage: containsFfaStage(stages),
       leagues,
+      hub,
+      standings,
       seo: buildTournamentSeo(tournament),
     },
     revalidate: 60,
@@ -367,8 +416,11 @@ export default function TournamentPage({
   partners,
   totalTeams,
   totalMatches,
+  finishedMatchesCount,
   hasFfaStage,
   leagues,
+  hub,
+  standings,
 }: Omit<TournamentPageProps, 'seo'>) {
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
   const registerHref = `/team/create?tournament=${tournament.id}`;
@@ -411,10 +463,22 @@ export default function TournamentPage({
         />
       </div>
 
+      {/* Suivi en tête dès qu'il y a des matchs : c'est ce que cherche qui
+          revient sur la page pendant le tournoi. */}
+      {phase !== 'upcoming' && (
+        <LiveHub
+          hub={hub}
+          standings={standings}
+          tournamentPath={tournamentPath}
+        />
+      )}
+
       <TournamentStats
+        phase={phase}
         totalTeams={totalTeams}
         placesRemaining={placesRemaining}
         totalMatches={totalMatches}
+        finishedMatches={finishedMatchesCount}
         stagesCount={stages.length}
       />
 
@@ -454,6 +518,16 @@ export default function TournamentPage({
       <div className="mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6">
         <ArbitrationPanel slugOrId={tournament.slug || tournament.id} />
       </div>
+
+      {/* Avant le tournoi, le calendrier des premiers matchs fait partie de
+          la découverte : le bloc de suivi arrive alors après le format. */}
+      {phase === 'upcoming' && hub.upcoming.length > 0 && (
+        <LiveHub
+          hub={hub}
+          standings={standings}
+          tournamentPath={tournamentPath}
+        />
+      )}
 
       <FinalCta
         registrationOpen={registrationOpen}

@@ -48,8 +48,10 @@ export default function TournamentHero({
 
   const isFull = placesRemaining === 0;
 
+  // Les places ne parlent qu'avant le coup d'envoi : en plein tournoi, une
+  // pastille rouge « Complet » se lisait comme une mauvaise nouvelle.
   const placesLabel =
-    placesRemaining === null
+    placesRemaining === null || phase !== 'upcoming'
       ? null
       : placesRemaining <= 0
         ? t.placesFull
@@ -177,9 +179,17 @@ export default function TournamentHero({
                   </span>
                 </Link>
               ) : (
-                <Link href={`${tournamentPath}/bracket`}>
+                // Pendant le tournoi, on vient voir qui joue : les matchs. Le
+                // bracket reste l'entrée une fois le tournoi terminé.
+                <Link
+                  href={
+                    phase === 'live'
+                      ? `${tournamentPath}/matches`
+                      : `${tournamentPath}/bracket`
+                  }
+                >
                   <span className="tl-cta-glow inline-flex items-center gap-2 rounded-full bg-[var(--color-violet-cta)] px-7 py-3 text-sm font-bold text-white transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]">
-                    {t.ctaViewBracket}
+                    {phase === 'live' ? t.ctaViewMatches : t.ctaViewBracket}
                     <ArrowGlyph />
                   </span>
                 </Link>
