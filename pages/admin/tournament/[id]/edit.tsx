@@ -19,6 +19,7 @@ import { getGame } from '@/config/games';
 import { TOURNAMENT_TIMEZONES } from '@/utils/timezone';
 import nsAdminTournamentEdit from '@/lib/i18n/locales/admin-fr/adminTournamentEdit';
 import nsAdminRegistrationFields from '@/lib/i18n/locales/admin-fr/adminRegistrationFields';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 type ApiResponse = {
   tournament: Tournament;
@@ -275,6 +276,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12">
+          <AdminBreadcrumbs />
           {/* Header */}
           <div className="mb-8">
             <TournamentTabsNav

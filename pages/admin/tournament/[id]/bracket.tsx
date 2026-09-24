@@ -18,6 +18,7 @@ import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import type { StaffProps } from '@/types/admin';
 import nsAdminTournamentNav from '@/lib/i18n/locales/admin-fr/adminTournamentNav';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 // Placeholder de chargement partagé par les panels code-splittés.
 const PanelLoading = () => (
@@ -74,6 +75,7 @@ export default function AdminTournamentBracketPage(_: StaffProps) {
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
+          <AdminBreadcrumbs />
           <TournamentTabsNav tournamentId={tournamentId} active="bracket" />
 
           <Tabs

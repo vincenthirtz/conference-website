@@ -68,6 +68,7 @@ import type { AdminUserProfilePayload } from '@/pages/api/admin/users/[userId]/p
 
 import { logger } from '../../../../utils/logger';
 import nsAdminUserPlayerView from '@/lib/i18n/locales/admin-fr/adminUserPlayerView';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 type Dict = typeof nsAdminUserPlayerView.fr;
 
@@ -532,6 +533,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
+          <AdminBreadcrumbs />
           {/* Back link + cross-link to the captain view */}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <Link

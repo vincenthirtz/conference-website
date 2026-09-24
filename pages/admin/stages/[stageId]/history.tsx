@@ -8,6 +8,7 @@ import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StageType } from '@/types/admin';
 import nsAdminStageHistory from '@/lib/i18n/locales/admin-fr/adminStageHistory';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 type StaffShape = {
   id: string;
@@ -155,6 +156,7 @@ function AdminStageHistoryPage(_props: StaffProps) {
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-header">
+        <AdminBreadcrumbs />
         {/* Header */}
         <StageTabsNav
           stageId={String(stageId ?? '')}

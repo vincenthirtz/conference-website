@@ -8,6 +8,7 @@ import { withStaffPage } from '@/utils/staff';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentHistory from '@/lib/i18n/locales/admin-fr/adminTournamentHistory';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 type StaffShape = {
   id: string;
@@ -125,6 +126,7 @@ function AdminTournamentHistoryPage(_props: StaffProps) {
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-header">
+        <AdminBreadcrumbs />
         <TournamentTabsNav tournamentId={String(id ?? '')} active="tools" />
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">

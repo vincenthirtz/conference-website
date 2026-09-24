@@ -14,6 +14,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import type { MatchStatus } from '@/types/admin';
 import nsAdminStageSwiss from '@/lib/i18n/locales/admin-fr/adminStageSwiss';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 type Dict = typeof nsAdminStageSwiss.fr;
 
@@ -312,6 +313,7 @@ function AdminSwissStagePage(_props: StaffProps) {
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-header">
+        <AdminBreadcrumbs />
         {/* Header */}
         <StageTabsNav
           stageId={String(stageId ?? '')}

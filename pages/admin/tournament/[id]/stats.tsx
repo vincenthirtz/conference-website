@@ -21,6 +21,7 @@ import StatsMvpPanel from '@/components/admin/tournament/StatsMvpPanel';
 import SessionEntryPanel from '@/components/admin/tournament/SessionEntryPanel';
 import type { StaffProps } from '@/types/admin';
 import nsAdminTournamentNav from '@/lib/i18n/locales/admin-fr/adminTournamentNav';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 const ID_BASE = 'admin-tournament-stats';
 
@@ -51,6 +52,7 @@ export default function AdminTournamentStatsPage(_: StaffProps) {
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
+          <AdminBreadcrumbs />
           <TournamentTabsNav tournamentId={tournamentId} active="results" />
 
           <Tabs

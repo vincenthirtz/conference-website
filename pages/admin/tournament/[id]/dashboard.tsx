@@ -44,6 +44,7 @@ import {
 } from '@/utils/dashboard/buildTournamentDashboard';
 import nsAdminTournamentDashboard from '@/lib/i18n/locales/admin-fr/adminTournamentDashboard';
 import nsAdminTournamentOverview from '@/lib/i18n/locales/admin-fr/adminTournamentOverview';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 /* -----------------------------------------------------------
  * Constantes UI
@@ -677,6 +678,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="mx-auto max-w-[1500px] px-4 pb-14 pt-header sm:px-6 lg:px-8">
+          <AdminBreadcrumbs />
           {/* ─── Header ────────────────────────────────────────────── */}
           <TournamentTabsNav
             tournamentId={String(tournamentId ?? '')}

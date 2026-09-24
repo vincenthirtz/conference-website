@@ -18,6 +18,7 @@ import {
 } from '@/config/tournament-templates';
 import type { StaffProps, StageType, StageSummary } from '@/types/admin';
 import nsAdminTournamentStagesList from '@/lib/i18n/locales/admin-fr/adminTournamentStagesList';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
@@ -224,6 +225,7 @@ function StagesPage(_: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-header">
+        <AdminBreadcrumbs />
         <div className="max-w-6xl mx-auto px-6 py-10">
           <TournamentTabsNav
             tournamentId={String(tournamentId ?? '')}

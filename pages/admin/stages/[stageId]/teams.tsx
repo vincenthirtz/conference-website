@@ -17,6 +17,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../../utils/logger';
 import nsAdminStageTeams from '@/lib/i18n/locales/admin-fr/adminStageTeams';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 type StaffShape = {
   id: string;
   role: string;
@@ -482,6 +483,7 @@ function AdminStageTeamsPage(_props: StaffProps) {
       </Head>
 
       <div className="min-h-screen bg-neutral-900 text-white p-6 pt-header">
+        <AdminBreadcrumbs />
         {/* Header */}
         <StageTabsNav
           stageId={String(stageId ?? '')}

@@ -44,6 +44,7 @@ import {
 import { getGame, type GameDef } from '@/config/games';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentMaps from '@/lib/i18n/locales/admin-fr/adminTournamentMaps';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 type StaffShape = {
   id: string;
@@ -314,6 +315,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
         <title>{t.headTitle}</title>
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-header">
+        <AdminBreadcrumbs />
         <div className="max-w-6xl mx-auto px-6 py-10">
           <TournamentTabsNav
             tournamentId={String(tournamentId ?? '')}

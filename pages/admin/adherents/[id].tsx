@@ -6,6 +6,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminAdherentDetail from '@/lib/i18n/locales/admin-fr/adminAdherentDetail';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 type Props = {
   staff: {
@@ -250,6 +251,7 @@ function AdminEditAdherentPage(_props: Props) {
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
+          <AdminBreadcrumbs />
           {/* Header */}
           <div className="mb-8">
             <Link

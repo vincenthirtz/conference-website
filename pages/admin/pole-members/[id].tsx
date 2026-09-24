@@ -7,6 +7,7 @@ import { useToast } from '@/components/Toast';
 import { POLE_KEYS, POLE_LABELS, type PoleKey } from '@/utils/associationPoles';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminPoleMemberEdit from '@/lib/i18n/locales/admin-fr/adminPoleMemberEdit';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 type Props = {
   staff: {
@@ -113,6 +114,7 @@ function AdminPoleMemberEditPage(_props: Props) {
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12">
+          <AdminBreadcrumbs />
           <div className="mb-8">
             <button
               type="button"

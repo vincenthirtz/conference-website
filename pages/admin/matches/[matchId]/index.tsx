@@ -15,6 +15,7 @@ import MatchHistoryDrawer from '@/components/admin/MatchHistoryDrawer';
 import MatchLineupsPanel from '@/components/admin/MatchLineupsPanel';
 import Modal from '@/components/admin/Modal';
 import nsAdminMatchDetail from '@/lib/i18n/locales/admin-fr/adminMatchDetail';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 type TeamMini = {
   id: string;
@@ -288,6 +289,7 @@ function MatchViewPage(_: StaffProps) {
         <title>{format(t.pageTitle, { id: matchIdStr ?? '' })}</title>
       </Head>
       <div className="min-h-screen bg-neutral-950 text-white pt-header">
+        <AdminBreadcrumbs />
         <div className="max-w-6xl mx-auto px-6 py-10">
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
