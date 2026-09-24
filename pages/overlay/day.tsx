@@ -13,6 +13,8 @@
 //               du moment
 //   scale       0.5 → 2
 //   tenant      slug d'espace, pour les sources d'un autre organisateur
+//   preview     1 = fond sombre, pour tester la source dans un onglet (bouton
+//               « Tester » de l'onglet Outils) ; OBS, lui, veut le transparent
 //
 // Rendue sans chrome par `_app.tsx` (préfixe `/overlay`), fond transparent,
 // `noindex`. Mêmes restrictions que les sources par match (cf. l'API).
@@ -42,6 +44,9 @@ export default function DayOverlayPage() {
   const tournament = firstParam(router.query.tournament)?.trim() || null;
   const date = firstParam(router.query.date) ?? null;
   const tenant = firstParam(router.query.tenant) ?? null;
+  // Aperçu dans un navigateur : un fond transparent y devient blanc, et le
+  // texte clair de la source disparaît.
+  const preview = firstParam(router.query.preview) === '1';
 
   // Une URL incomplète doit se voir dès qu'on la colle dans OBS.
   const configError =
@@ -65,7 +70,7 @@ export default function DayOverlayPage() {
       <style jsx global>{`
         html,
         body {
-          background: transparent !important;
+          background: ${preview ? '#0b0b14' : 'transparent'} !important;
         }
       `}</style>
 

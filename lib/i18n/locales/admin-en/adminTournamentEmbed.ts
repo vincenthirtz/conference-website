@@ -20,6 +20,10 @@ export default {
   themeDark: 'Dark',
   snippetLabel: 'iframe snippet',
   copyBtn: 'Copy',
+  dayTestLabel: 'Test on the day of',
+  dayTestBtn: 'Test',
+  dayTestHint:
+    'Preview on a dark background — the URL to paste in OBS does not change.',
   copiedBtn: 'Copied',
   copiedToast: 'Snippet copied',
   openWidget: 'Open widget',

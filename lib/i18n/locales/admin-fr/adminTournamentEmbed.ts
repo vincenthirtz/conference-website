@@ -19,6 +19,10 @@ export default adminNs('adminTournamentEmbed', {
   themeDark: 'Sombre',
   snippetLabel: 'Extrait iframe',
   copyBtn: 'Copier',
+  dayTestLabel: 'Tester sur le jour du',
+  dayTestBtn: 'Tester',
+  dayTestHint:
+    'Aperçu sur fond sombre — l’URL à coller dans OBS ne change pas.',
   copiedBtn: 'Copié',
   copiedToast: 'Snippet copié',
   openWidget: 'Ouvrir le widget',

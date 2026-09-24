@@ -77,6 +77,16 @@ const DONATION_KEYS: ReadonlySet<string> = new Set([
   'donAlert',
 ]);
 
+/** `AAAA-MM-JJ` du jour, heure de Paris — le jour que la source affiche. */
+function parisToday(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Paris',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
 function sourceUrl(baseUrl: string, tournamentRef: string, key: string) {
   const tournament = encodeURIComponent(tournamentRef);
   if (key === 'day') return `${baseUrl}/overlay/day?tournament=${tournament}`;
@@ -100,6 +110,9 @@ export default function StreamSourcesPanel({
 }: Props) {
   const t = useAdminT(nsAdminTournamentEmbed);
   const [copied, setCopied] = useState<string | null>(null);
+  // Jour testé pour « Matchs du jour » : la source montre AUJOURD'HUI, donc
+  // rien un jour sans match — impossible de la régler avant la soirée.
+  const [testDay, setTestDay] = useState<string>(() => parisToday());
   // Le QR de don et les alertes de don sont ceux de l'association.
   const sources = SOURCES.filter(
     (s) => showDonation || !DONATION_KEYS.has(s.key)
@@ -172,6 +185,40 @@ export default function StreamSourcesPanel({
                   {copied === s.key ? t.copiedBtn : t.copyBtn}
                 </button>
               </div>
+              {s.key === 'day' && (
+                // TEST SUR UN AUTRE JOUR. L'URL à coller reste celle du jour
+                // (ci-dessus) ; ce bouton n'ouvre qu'un aperçu daté, sur fond
+                // sombre (`preview=1`).
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <label
+                    htmlFor="day-overlay-test-date"
+                    className="text-xs text-neutral-400"
+                  >
+                    {t.dayTestLabel}
+                  </label>
+                  <input
+                    id="day-overlay-test-date"
+                    type="date"
+                    value={testDay}
+                    onChange={(e) => setTestDay(e.target.value)}
+                    className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-white [color-scheme:dark]"
+                  />
+                  <a
+                    href={`${url}&date=${encodeURIComponent(testDay)}&preview=1`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-disabled={!testDay}
+                    className={`rounded-md bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-blue-500 ${
+                      testDay ? '' : 'pointer-events-none opacity-40'
+                    }`}
+                  >
+                    {t.dayTestBtn}
+                  </a>
+                  <span className="text-[11px] text-neutral-500">
+                    {t.dayTestHint}
+                  </span>
+                </div>
+              )}
             </div>
           );
         })}
