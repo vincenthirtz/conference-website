@@ -51,10 +51,24 @@ type HeldByOther = {
   heldByEmail: string | null;
 };
 
-export default function DiscordLinkCard({ id }: { id?: string }) {
+export default function DiscordLinkCard({
+  id,
+  chrome = 'card',
+  loginPath,
+  returnTo,
+}: {
+  id?: string;
+  /** `bare` : sans encadré ni titre, pour le chrome d'un hôte (modale admin). */
+  chrome?: 'card' | 'bare';
+  /** Où renvoyer sur 401 (défaut de useAdminFetch sinon). */
+  loginPath?: string;
+  /** Retour du rattachement Discord (défaut : la page courante). */
+  returnTo?: string;
+}) {
   const t = useT(nsPlayerDiscordLink);
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
+  const { adminFetchJson } = useAdminFetch(loginPath ? { loginPath } : {});
+  const bare = chrome === 'bare';
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 
@@ -147,7 +161,7 @@ export default function DiscordLinkCard({ id }: { id?: string }) {
       const { error } = await supabaseClient.auth.linkIdentity({
         provider: 'discord',
         options: {
-          redirectTo: `${window.location.origin}${router.pathname}`,
+          redirectTo: `${window.location.origin}${returnTo ?? router.pathname}`,
         },
       });
       if (error) throw error;
@@ -165,15 +179,21 @@ export default function DiscordLinkCard({ id }: { id?: string }) {
   return (
     <section
       id={id}
-      aria-labelledby={id ? `${id}-title` : undefined}
-      className="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl"
+      aria-labelledby={id && !bare ? `${id}-title` : undefined}
+      className={
+        bare
+          ? 'scroll-mt-24'
+          : 'scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl'
+      }
     >
-      <h2
-        id={id ? `${id}-title` : undefined}
-        className="mb-4 text-lg font-semibold text-white"
-      >
-        {t.title}
-      </h2>
+      {!bare && (
+        <h2
+          id={id ? `${id}-title` : undefined}
+          className="mb-4 text-lg font-semibold text-white"
+        >
+          {t.title}
+        </h2>
+      )}
 
       {status.linked ? (
         <>

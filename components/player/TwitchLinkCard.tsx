@@ -58,6 +58,17 @@ type Props = {
   onStatus?: (status: TwitchLinkStatus | null) => void;
   /** Ancre, pour qu'un lien de la page puisse y mener. */
   id?: string;
+  /**
+   * `bare` : contenu SANS encadré ni titre, pour être posé dans le chrome d'un
+   * hôte (la modale profil admin a ses propres sections titrées).
+   */
+  chrome?: 'card' | 'bare';
+  /**
+   * Où revenir après le flux OAuth (chemin interne, query acceptée). Par
+   * défaut la page courante ; la modale admin passe `/admin?profile=1`, qui
+   * la rouvre.
+   */
+  returnTo?: string;
 };
 
 export default function TwitchLinkCard({
@@ -65,6 +76,8 @@ export default function TwitchLinkCard({
   pitch,
   onStatus,
   id,
+  chrome = 'card',
+  returnTo,
 }: Props) {
   const router = useRouter();
   const t = useT(nsPlayerTwitchLink);
@@ -142,8 +155,9 @@ export default function TwitchLinkCard({
   if (!status || !status.configured) return null;
 
   const startHref = `/api/auth/twitch/start?returnTo=${encodeURIComponent(
-    router.pathname
+    returnTo ?? router.pathname
   )}`;
+  const bare = chrome === 'bare';
 
   // Variante « argumentaire » : seulement tant que rien n'est lié. Une fois le
   // compte rattaché, répéter ce qu'on gagne n'apprend plus rien ; c'est la
@@ -184,10 +198,16 @@ export default function TwitchLinkCard({
   return (
     <section
       id={id}
-      className="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6"
+      className={
+        bare
+          ? 'scroll-mt-24'
+          : 'scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6'
+      }
     >
-      <h2 className="text-lg font-semibold">{t.title}</h2>
-      <p className="mt-1 max-w-prose text-sm text-gray-400">{t.intro}</p>
+      {!bare && <h2 className="text-lg font-semibold">{t.title}</h2>}
+      <p className={`${bare ? '' : 'mt-1 '}max-w-prose text-sm text-gray-400`}>
+        {t.intro}
+      </p>
       {/* Ce qui est demandé, dit avant le bouton. */}
       <p className="mt-2 max-w-prose text-xs text-gray-500">{t.scopeNote}</p>
       <p className="mt-1 max-w-prose text-xs text-gray-500">{t.optionalNote}</p>

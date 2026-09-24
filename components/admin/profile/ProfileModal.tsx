@@ -10,6 +10,8 @@ import Modal from '@/components/admin/Modal';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import Tabs, { tabButtonId, tabPanelId } from '@/components/admin/Tabs';
 import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
+import SectionCard from './ProfileSectionCard';
+import ProfileLinkedAccounts from './ProfileLinkedAccounts';
 
 import { logger } from '@/utils/logger';
 import nsAdminProfile from '@/lib/i18n/locales/admin-fr/adminProfile';
@@ -30,27 +32,8 @@ type ProfileModalProps = {
 };
 
 type TabId = 'profile' | 'security' | 'privacy';
-type Accent = 'purple' | 'blue' | 'amber' | 'emerald' | 'red' | 'gray';
 
 const TAB_ID_BASE = 'admin-profile';
-
-// Accents alignés sur StatCard / le dashboard admin (anneau + dégradé).
-const ACCENT_RING: Record<Accent, string> = {
-  purple: 'ring-purple-500/30 from-purple-500/10',
-  blue: 'ring-blue-500/30 from-blue-500/10',
-  amber: 'ring-amber-500/30 from-amber-500/10',
-  emerald: 'ring-emerald-500/30 from-emerald-500/10',
-  red: 'ring-red-500/30 from-red-500/10',
-  gray: 'ring-white/10 from-white/[0.06]',
-};
-const ACCENT_TEXT: Record<Accent, string> = {
-  purple: 'text-purple-300',
-  blue: 'text-blue-300',
-  amber: 'text-amber-300',
-  emerald: 'text-emerald-300',
-  red: 'text-red-300',
-  gray: 'text-neutral-300',
-};
 
 const inputClass =
   'w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500/70 text-sm text-white placeholder:text-neutral-500 transition-shadow';
@@ -82,36 +65,6 @@ function ErrorBanner({ message }: { message: string }) {
   );
 }
 
-// Carte de section — reprend le motif dashboard (anneau + dégradé d'accent).
-function SectionCard({
-  title,
-  icon,
-  accent = 'gray',
-  children,
-}: {
-  title: string;
-  icon: ReactNode;
-  accent?: Accent;
-  children: ReactNode;
-}) {
-  return (
-    <section
-      className={`rounded-2xl bg-neutral-900/40 bg-gradient-to-br to-transparent ring-1 p-6 ${ACCENT_RING[accent]}`}
-    >
-      <h3 className="mb-4 flex items-center gap-2.5 text-base font-semibold text-white">
-        <span
-          className={`flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06] ring-1 ring-white/10 ${ACCENT_TEXT[accent]}`}
-        >
-          {icon}
-        </span>
-        {title}
-      </h3>
-      {children}
-    </section>
-  );
-}
-
-// Tuile clé/valeur façon StatCard.
 function InfoTile({
   label,
   children,
@@ -647,6 +600,8 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                 returnTo="/admin?profile=1"
               />
             </SectionCard>
+
+            <ProfileLinkedAccounts t={t} />
           </div>
         )}
 

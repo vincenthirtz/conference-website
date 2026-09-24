@@ -98,7 +98,7 @@ const BASELINE: Record<string, number> = {
   // 764 écrites : la fiche a rendu ses secrets bot à un panneau (T8), et le
   // plafond suit — un gel qui ne descend jamais finit par ne plus rien geler.
   'pages/admin/tenants/[id].tsx': 794,
-  'components/admin/profile/ProfileModal.tsx': 914,
+  'components/admin/profile/ProfileModal.tsx': 869,
   'components/admin/navigation/adminNav.ts': 881,
   'pages/admin/stages/[stageId]/groups.tsx': 858,
   'pages/admin/broadcast/live.tsx': 837,

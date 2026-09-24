@@ -74,4 +74,7 @@ export default adminNs('adminProfile', {
   errorDelete: 'Erreur lors de la suppression.',
   errorUnexpected: 'Erreur inattendue',
   battlenetHeading: 'Vérifier mon BattleTag',
+  twitchHeading: 'Mon compte Twitch',
+  discordHeading: 'Mon compte Discord',
+  tcgHeading: 'Ma carte à collectionner',
 });

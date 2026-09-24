@@ -74,4 +74,7 @@ export default {
   errorDelete: 'Error during deletion.',
   errorUnexpected: 'Unexpected error',
   battlenetHeading: 'Verify my BattleTag',
+  twitchHeading: 'My Twitch account',
+  discordHeading: 'My Discord account',
+  tcgHeading: 'My collectible card',
 };

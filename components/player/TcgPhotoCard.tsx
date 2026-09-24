@@ -40,10 +40,19 @@ type State = {
   hasPlayerProfile?: boolean | null;
 };
 
-export default function TcgPhotoCard() {
+export default function TcgPhotoCard({
+  chrome = 'card',
+  loginPath = '/login',
+}: {
+  /** `bare` : sans encadré ni titre, pour le chrome d'un hôte (modale admin). */
+  chrome?: 'card' | 'bare';
+  /** Où renvoyer sur 401 : `/login` côté joueuse, `/admin/login` côté staff. */
+  loginPath?: string;
+} = {}) {
   const t = useT(nsPlayerTcg);
   const { addToast } = useToast();
-  const { adminFetch, adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  const { adminFetch, adminFetchJson } = useAdminFetch({ loginPath });
+  const bare = chrome === 'bare';
 
   const [state, setState] = useState<State | null>(null);
   const [busy, setBusy] = useState<'upload' | 'remove' | null>(null);
@@ -174,8 +183,14 @@ export default function TcgPhotoCard() {
           : t.statusNone;
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl">
-      <h2 className="mb-2 text-lg font-semibold">{t.title}</h2>
+    <section
+      className={
+        bare
+          ? ''
+          : 'rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl'
+      }
+    >
+      {!bare && <h2 className="mb-2 text-lg font-semibold">{t.title}</h2>}
       <p className="mb-4 text-sm text-gray-300">{t.intro}</p>
 
       <div className="mb-5 rounded-xl border border-white/10 bg-white/[0.04] p-4">
