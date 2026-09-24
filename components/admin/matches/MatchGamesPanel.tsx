@@ -265,7 +265,10 @@ export default function MatchGamesPanel({
             </div>
 
             <div className="flex flex-col items-center gap-2 pt-5">
-              <label className="flex items-center gap-1.5 text-xs text-neutral-400 cursor-pointer">
+              <label
+                title={t.otHint}
+                className="flex items-center gap-1.5 text-xs text-neutral-400 cursor-pointer"
+              >
                 <input
                   type="checkbox"
                   checked={g.went_overtime}
@@ -281,7 +284,10 @@ export default function MatchGamesPanel({
                 />
                 {t.ot}
               </label>
-              <label className="flex items-center gap-1.5 text-xs text-neutral-400 cursor-pointer">
+              <label
+                title={t.tbHint}
+                className="flex items-center gap-1.5 text-xs text-neutral-400 cursor-pointer"
+              >
                 <input
                   type="checkbox"
                   checked={g.is_tiebreaker}

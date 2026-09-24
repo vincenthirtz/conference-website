@@ -66,8 +66,11 @@ export default adminNs('adminMatchEdit', {
   mapsGoToVeto: 'Faire le veto',
   teamShort1Fallback: 'Éq. 1',
   teamShort2Fallback: 'Éq. 2',
-  ot: 'OT',
-  tb: 'TB',
+  ot: 'Prolongation',
+  tb: 'Map décisive',
+  otHint: 'La map est allée en prolongation (overtime).',
+  tbHint:
+    'Map qui départage la série, ex. la 3e map d’un BO3 à 1-1 (tiebreaker).',
   deleteMapTitle: 'Supprimer cette map',
   pickedByLabel: 'Choisie par',
   pickedByNone: 'Imposée / inconnue',

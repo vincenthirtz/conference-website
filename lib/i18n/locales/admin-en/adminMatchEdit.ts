@@ -67,8 +67,11 @@ export default {
   mapsGoToVeto: 'Run the veto',
   teamShort1Fallback: 'T1',
   teamShort2Fallback: 'T2',
-  ot: 'OT',
-  tb: 'TB',
+  ot: 'Overtime',
+  tb: 'Deciding map',
+  otHint: 'The map went to overtime.',
+  tbHint:
+    'The map that decides the series, e.g. map 3 of a BO3 at 1-1 (tiebreaker).',
   deleteMapTitle: 'Delete this map',
   pickedByLabel: 'Picked by',
   pickedByNone: 'Imposed / unknown',
