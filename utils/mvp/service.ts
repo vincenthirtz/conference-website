@@ -84,9 +84,11 @@ function shortTeam(name: string | null | undefined): string {
  * Le repli était autrefois global au match, ce qui faisait disparaître une
  * équipe entière dès que l'AUTRE avait composé — cf. le bloc dédié plus bas.
  *
- * Les remplaçantes sont exclues dans les deux cas — une liste de vingt noms
- * rend le vote illisible, et `is_substitute` du relevé dit bien « n'a pas
- * commencé », ce qui reste le meilleur signal disponible.
+ * Les remplaçantes sont candidates dans les deux cas, pour le vote des
+ * équipes comme pour le coup de cœur du public : une remplaçante entrée en
+ * cours de série a autant joué qu'une titulaire, et le relevé ne dit pas qui
+ * est entrée. Un roster plafonne à `MAX_ROSTER_ROWS` (10) : deux équipes
+ * tiennent sous la limite de 25 options du menu Discord.
  */
 export async function listMvpCandidates(
   tenantId: string,
@@ -141,7 +143,7 @@ export async function listMvpCandidates(
 
   const { data: members } = await supabaseAdmin
     .from('team_members')
-    .select('id, team_id, user_id, battle_tag, display_name, is_substitute')
+    .select('id, team_id, user_id, battle_tag, display_name')
     .eq('tenant_id', tenantId)
     .in('team_id', teamIds);
 
@@ -157,7 +159,7 @@ export async function listMvpCandidates(
   // Qui a joué CE match. Le vote porte sur une partie, pas sur un effectif.
   const { data: participants } = await supabaseAdmin
     .from('match_participants')
-    .select('user_id, battle_tag, is_substitute')
+    .select('user_id, battle_tag')
     .eq('tenant_id', tenantId)
     .eq('match_id', matchId);
 
@@ -166,7 +168,6 @@ export async function listMvpCandidates(
   const playedUserIds = new Set<string>();
   const playedTags = new Set<string>();
   for (const p of participants || []) {
-    if (p.is_substitute) continue;
     if (p.user_id) playedUserIds.add(p.user_id);
     if (p.battle_tag) playedTags.add(p.battle_tag.toLowerCase());
   }
@@ -194,9 +195,7 @@ export async function listMvpCandidates(
   }
 
   const candidates: MvpCandidate[] = (members || [])
-    .filter((m) =>
-      equipesAvecFeuille.has(m.team_id as string) ? played(m) : !m.is_substitute
-    )
+    .filter((m) => !equipesAvecFeuille.has(m.team_id as string) || played(m))
     .map((m) => {
       const name = m.display_name || m.battle_tag || null;
       return {

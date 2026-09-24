@@ -8,7 +8,7 @@
 //
 // Couvert :
 //   - 404 hors tenant / match inconnu
-//   - candidates = titulaires des deux équipes, remplaçantes exclues
+//   - candidates = les deux équipes, remplaçantes comprises
 //   - `open` refuse un match non terminé (rejeu de match.finished sur un litige)
 //   - une personne = une voix, la dernière compte
 //   - vote pour une non-candidate refusé, vote après clôture refusé
@@ -202,21 +202,19 @@ describe('/api/bot/v1/matches/[matchId]/mvp', () => {
     expect((await call(MATCH_FOREIGN)).statusCode).toBe(404);
   });
 
-  it('à défaut de composition relevée, retombe sur les titulaires du roster', async () => {
+  it('à défaut de composition relevée, retombe sur le roster, remplaçantes comprises', async () => {
     const res = await call(MATCH);
     expect(res.statusCode).toBe(200);
     const ids = (res.body as any).candidates.map((c: any) => c.memberId);
-    expect(ids).toEqual([ALICE, BEA, CHLOE]);
-    expect(ids).not.toContain(SUB);
+    expect(ids).toEqual([ALICE, BEA, CHLOE, SUB]);
     expect((res.body as any).candidates[0].label).toBe('[Les Alpines] Alice');
     expect((res.body as any).poll).toBeNull();
   });
 
   it('propose CELLES QUI ONT JOUÉ quand la composition est relevée', async () => {
-    // Le roster courant contient Alice, Bea et Chloe. Le relevé du match dit
-    // qu'Alice n'a pas joué et que la remplaçante est entrée : proposer le
-    // roster reviendrait à faire voter pour une absente et à priver de voix
-    // quelqu'un qui était sur le serveur.
+    // Le roster courant contient Alice, Bea, Chloe et Sub. Le relevé du match
+    // ne porte pas Alice : proposer le roster reviendrait à faire voter pour
+    // une absente.
     store.match_participants = [
       {
         tenant_id: TENANT,
@@ -239,20 +237,37 @@ describe('/api/bot/v1/matches/[matchId]/mvp', () => {
         battle_tag: 'Sub#4444',
         is_substitute: false,
       },
-      // Alice était sur la feuille, mais remplaçante ce jour-là.
-      {
-        tenant_id: TENANT,
-        match_id: MATCH,
-        user_id: U_ALICE,
-        battle_tag: 'Alice#1111',
-        is_substitute: true,
-      },
     ] as any;
 
     const res = await call(MATCH);
     const ids = (res.body as any).candidates.map((c: any) => c.memberId);
     expect(ids).toEqual([BEA, CHLOE, SUB]);
     expect(ids).not.toContain(ALICE);
+  });
+
+  it('une remplaçante portée au relevé reste candidate', async () => {
+    // Le relevé ne dit pas qui est entrée en cours de série : une remplaçante
+    // de la feuille peut avoir joué autant qu'une titulaire.
+    store.match_participants = [
+      {
+        tenant_id: TENANT,
+        match_id: MATCH,
+        user_id: U_ALICE,
+        battle_tag: 'Alice#1111',
+        is_substitute: false,
+      },
+      {
+        tenant_id: TENANT,
+        match_id: MATCH,
+        user_id: U_BEA,
+        battle_tag: 'Bea#2222',
+        is_substitute: true,
+      },
+    ] as any;
+
+    const res = await call(MATCH);
+    const ids = (res.body as any).candidates.map((c: any) => c.memberId);
+    expect(ids).toEqual(expect.arrayContaining([ALICE, BEA]));
   });
 
   it('raccroche une joueuse sans compte par son BattleTag', async () => {
@@ -292,6 +307,7 @@ describe('/api/bot/v1/matches/[matchId]/mvp', () => {
       ALICE,
       BEA,
       CHLOE,
+      SUB,
     ]);
     expect((res.body as any).poll.posted_at).toBeTruthy();
     expect((res.body as any).poll.closes_at).toBeTruthy();
@@ -336,7 +352,17 @@ describe('/api/bot/v1/matches/[matchId]/mvp', () => {
     expect((store.match_mvp_votes as any)[0].member_id).toBe(BEA);
   });
 
-  it('refuse une voix pour une joueuse hors liste (remplaçante)', async () => {
+  it('refuse une voix pour une joueuse hors liste', async () => {
+    // Sub n'est pas au relevé alors que son équipe a composé : hors liste.
+    store.match_participants = [
+      {
+        tenant_id: TENANT,
+        match_id: MATCH,
+        user_id: U_CHLOE,
+        battle_tag: 'Chloe#3333',
+        is_substitute: false,
+      },
+    ] as any;
     await open();
     const res = await vote('900000000000000001', SUB);
     expect(res.statusCode).toBe(400);
@@ -450,10 +476,9 @@ describe('candidates — repli sur le roster, équipe par équipe', () => {
     // Équipe A : la feuille fait foi — seule Alice, pas Bea.
     expect(ids).toContain(ALICE);
     expect(ids).not.toContain(BEA);
-    // Équipe B : aucune feuille, donc son roster de titulaires.
+    // Équipe B : aucune feuille, donc tout son roster, remplaçante comprise.
     expect(ids).toContain(CHLOE);
-    // La remplaçante de roster reste exclue du repli.
-    expect(ids).not.toContain(SUB);
+    expect(ids).toContain(SUB);
   });
 
   it('les deux ont composé : la feuille fait foi des deux côtés', async () => {
@@ -484,7 +509,6 @@ describe('candidates — repli sur le roster, équipe par équipe', () => {
     store.match_participants = [] as any;
     const res = await call(MATCH, { method: 'GET' });
     const ids = (res.body as any).candidates.map((c: any) => c.memberId);
-    expect(ids).toEqual(expect.arrayContaining([ALICE, BEA, CHLOE]));
-    expect(ids).not.toContain(SUB);
+    expect(ids).toEqual(expect.arrayContaining([ALICE, BEA, CHLOE, SUB]));
   });
 });
