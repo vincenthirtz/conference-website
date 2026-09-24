@@ -57,6 +57,8 @@ export default adminNs('adminMatchEdit', {
   mapsEmpty:
     'Aucune map enregistrée. Cliquez sur « Ajouter une map » pour détailler le score par map.',
   mapLabel: 'Map',
+  mapLabelNumbered: 'Map {n}',
+  mapOptional: '(optionnelle)',
   mapNamePlaceholder: 'Nom de la map',
   mapNameSuggestPlaceholder: 'Nom de la map (ex : {example})',
   mapsFromVeto: 'Cartes issues du veto — inutile de les ressaisir.',

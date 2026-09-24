@@ -116,5 +116,7 @@ export default {
   entrySaved: 'Match saved.',
   entrySavedAll: '{ok} of {total} match(es) saved.',
   entrySaveError: 'Could not save.',
+  entryUnnamedMap: 'A map has a score or bans but no name.',
+  entryMissingMaps: 'This format needs at least {count} maps.',
   entryLoadError: 'Could not load matches.',
 };

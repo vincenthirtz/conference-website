@@ -24,9 +24,13 @@ import MatchGamesPanel, {
   type MatchGameRow,
 } from '@/components/admin/matches/MatchGamesPanel';
 import {
+  blankGame,
   defaultSessionDay,
   groupMatchesByDay,
+  isBlankGame,
+  mapSlots,
   needsEntry,
+  prepareGamesForSave,
 } from '@/utils/matches/sessionEntry';
 import { parisDayKey } from '@/utils/maps/roundPools';
 import nsAdminTournamentAnalytics from '@/lib/i18n/locales/admin-fr/adminTournamentAnalytics';
@@ -151,7 +155,17 @@ export default function SessionEntryPanel() {
     setDrafts((prev) => {
       const next = { ...prev };
       for (const m of current.matches) {
-        if (!dirty.has(m.id)) next[m.id] = gamesFromRows(m.games ?? []);
+        if (dirty.has(m.id)) continue;
+        const rows = m.games ?? [];
+        // Rien de saisi : on ouvre directement les emplacements du format
+        // (Map 1, Map 2, Map 3 en BO3) plutôt qu'une liste vide.
+        next[m.id] =
+          rows.length > 0
+            ? gamesFromRows(rows)
+            : Array.from(
+                { length: mapSlots(m.match_format).slots },
+                (_, i): MatchGameInput => ({ ...blankGame(i), hero_bans: [] })
+              );
       }
       return next;
     });
@@ -191,7 +205,22 @@ export default function SessionEntryPanel() {
   /** Enregistre un match ; `true` si c'est passé. */
   const saveMatch = useCallback(
     async (matchId: string): Promise<boolean> => {
-      const games = drafts[matchId] ?? [];
+      const match = matches?.find((x) => x.id === matchId);
+      const prepared = prepareGamesForSave(
+        drafts[matchId] ?? [],
+        mapSlots(match?.match_format).required
+      );
+      if (!prepared.ok) {
+        setErrors((prev) => ({
+          ...prev,
+          [matchId]:
+            prepared.error === 'unnamed_map'
+              ? t.entryUnnamedMap
+              : format(t.entryMissingMaps, { count: prepared.count ?? 0 }),
+        }));
+        return false;
+      }
+      const games = prepared.games;
       setErrors((prev) => {
         const { [matchId]: _drop, ...rest } = prev;
         return rest;
@@ -221,7 +250,7 @@ export default function SessionEntryPanel() {
         return false;
       }
     },
-    [drafts, adminFetch, t]
+    [drafts, matches, adminFetch, t]
   );
 
   /**
@@ -342,7 +371,7 @@ export default function SessionEntryPanel() {
                 const games = drafts[m.id] ?? [];
                 const isDirty = dirty.has(m.id);
                 const ties = games.filter(
-                  (g) => g.team1_score === g.team2_score
+                  (g) => !isBlankGame(g) && g.team1_score === g.team2_score
                 ).length;
                 const todo = needsEntry(m, todayKey);
                 return (
@@ -402,6 +431,7 @@ export default function SessionEntryPanel() {
                           team1={m.team1}
                           team2={m.team2}
                           showPickBans={game === 'overwatch' || game === null}
+                          requiredMaps={mapSlots(m.match_format).required}
                           t={tMatch as unknown as Record<string, string>}
                         />
                         {ties > 0 && (

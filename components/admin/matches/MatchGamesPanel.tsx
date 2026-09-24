@@ -12,6 +12,7 @@
 // doit rester libre. C'est le serveur qui ramène ensuite l'orthographe à celle
 // du pool (cf. utils/maps/pool.ts).
 
+import { useId } from 'react';
 import Link from 'next/link';
 import { format } from '@/lib/i18n/useAdminT';
 import { readHeroBans, type HeroBan } from '@/utils/matches/heroBans';
@@ -77,6 +78,11 @@ type Props = {
   vetoHref?: string | null;
   /** Saisie des picks et bans de héros (Overwatch uniquement). */
   showPickBans?: boolean;
+  /**
+   * Nombre de maps OBLIGATOIRES (le minimum pour gagner la série : 2 en BO3).
+   * Les maps au-delà sont marquées « optionnelle ». Absent : aucune mention.
+   */
+  requiredMaps?: number;
   t: Record<string, string>;
 };
 
@@ -89,8 +95,13 @@ export default function MatchGamesPanel({
   vetoComplete = null,
   vetoHref = null,
   showPickBans = false,
+  requiredMaps,
   t,
 }: Props) {
+  // Un id PAR panneau : l'écran de saisie d'une soirée en affiche plusieurs,
+  // et des <datalist> au même id se masquaient — tous les champs proposaient
+  // les cartes du premier match.
+  const datalistId = `map-pool-${useId().replace(/:/g, '')}`;
   return (
     <section className="space-y-4">
       {/* D'où viennent les cartes. Le veto vit dans un sous-onglet du
@@ -138,7 +149,7 @@ export default function MatchGamesPanel({
       </div>
 
       {mapPool.length > 0 && (
-        <datalist id="map-pool-options">
+        <datalist id={datalistId}>
           {mapPool.map((name) => (
             <option key={name} value={name} />
           ))}
@@ -158,7 +169,12 @@ export default function MatchGamesPanel({
             <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="col-span-2 md:col-span-1">
                 <label className="block text-xs text-neutral-400 mb-1">
-                  {t.mapLabel}
+                  {format(t.mapLabelNumbered, { n: idx + 1 })}
+                  {requiredMaps !== undefined && idx >= requiredMaps && (
+                    <span className="ml-1 text-neutral-500">
+                      {t.mapOptional}
+                    </span>
+                  )}
                 </label>
                 {/* Liste de suggestions plutôt que <select> : une
                       partie peut se jouer sur une arène hors pool,
@@ -166,7 +182,7 @@ export default function MatchGamesPanel({
                       ensuite l'orthographe à celle du pool. */}
                 <input
                   type="text"
-                  list={mapPool.length > 0 ? 'map-pool-options' : undefined}
+                  list={mapPool.length > 0 ? datalistId : undefined}
                   className="w-full px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={g.map_name}
                   onChange={(e) => {

@@ -58,6 +58,8 @@ export default {
   mapsEmpty:
     'No maps recorded. Click « Add a map » to detail the score per map.',
   mapLabel: 'Map',
+  mapLabelNumbered: 'Map {n}',
+  mapOptional: '(optional)',
   mapNamePlaceholder: 'Map name',
   mapNameSuggestPlaceholder: 'Map name (e.g. {example})',
   mapsFromVeto: 'Maps come from the veto — no need to retype them.',

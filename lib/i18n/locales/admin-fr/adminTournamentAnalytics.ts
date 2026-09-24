@@ -116,5 +116,7 @@ export default adminNs('adminTournamentAnalytics', {
   entrySaved: 'Match enregistré.',
   entrySavedAll: '{ok} match(s) enregistré(s) sur {total}.',
   entrySaveError: 'Enregistrement impossible.',
+  entryUnnamedMap: 'Une map a un score ou des bans mais pas de nom.',
+  entryMissingMaps: 'Il faut au moins {count} maps pour ce format.',
   entryLoadError: 'Impossible de charger les matchs.',
 });

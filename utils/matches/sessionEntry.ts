@@ -82,3 +82,86 @@ export function defaultSessionDay(
   if (past.length > 0) return past[past.length - 1].day;
   return days[0]?.day ?? null;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Emplacements de maps                                                        */
+/* -------------------------------------------------------------------------- */
+
+/** Une partie telle que l'éditeur la manipule (forme de MatchGameInput). */
+export type DraftGame = {
+  map_name: string;
+  map_order: number;
+  team1_score: number;
+  team2_score: number;
+  is_tiebreaker: boolean;
+  went_overtime: boolean;
+  picked_by_team_id: string | null;
+  hero_bans: unknown[];
+};
+
+/**
+ * Emplacements à ouvrir pour un format : un BO3 propose Map 1, Map 2 et
+ * Map 3, dont 2 obligatoires (le minimum pour gagner la série). Format
+ * inconnu : BO3, le format par défaut du circuit.
+ */
+export function mapSlots(format: string | null | undefined): {
+  slots: number;
+  required: number;
+} {
+  const n = Number(/^bo(\d+)$/i.exec((format ?? '').trim())?.[1]);
+  const slots = Number.isInteger(n) && n >= 1 && n <= 9 ? n : 3;
+  return { slots, required: Math.ceil(slots / 2) };
+}
+
+export function blankGame(order: number): DraftGame {
+  return {
+    map_name: '',
+    map_order: order,
+    team1_score: 0,
+    team2_score: 0,
+    is_tiebreaker: false,
+    went_overtime: false,
+    picked_by_team_id: null,
+    hero_bans: [],
+  };
+}
+
+/** Emplacement jamais touché : ni nom, ni score, ni pick, ni ban. */
+export function isBlankGame(g: DraftGame): boolean {
+  return (
+    g.map_name.trim() === '' &&
+    !g.team1_score &&
+    !g.team2_score &&
+    !g.picked_by_team_id &&
+    g.hero_bans.length === 0 &&
+    !g.is_tiebreaker &&
+    !g.went_overtime
+  );
+}
+
+export type PrepareResult<G extends DraftGame> =
+  | { ok: true; games: G[] }
+  | { ok: false; error: 'unnamed_map' | 'missing_required'; count?: number };
+
+/**
+ * Ce qui part à l'enregistrement : les emplacements vides sont retirés (une
+ * Map 3 non jouée n'est pas une partie), l'ordre est renuméroté. Refusé :
+ * une map remplie sans nom, ou moins de maps que le minimum du format.
+ * Aucune map du tout est accepté (rien à enregistrer côté parties).
+ */
+export function prepareGamesForSave<G extends DraftGame>(
+  games: G[],
+  required: number
+): PrepareResult<G> {
+  const filled = games.filter((g) => !isBlankGame(g));
+  if (filled.some((g) => g.map_name.trim() === '')) {
+    return { ok: false, error: 'unnamed_map' };
+  }
+  if (filled.length > 0 && filled.length < required) {
+    return { ok: false, error: 'missing_required', count: required };
+  }
+  return {
+    ok: true,
+    games: filled.map((g, i) => ({ ...g, map_order: i })),
+  };
+}
