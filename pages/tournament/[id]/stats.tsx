@@ -21,6 +21,7 @@ import { logger } from '../../../utils/logger';
 import nsTournamentStats from '@/lib/i18n/locales/fr/tournamentStats';
 import { containsFfaStage } from '@/utils/stages/ffaStage';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
+import { readPublicStandings } from '@/utils/stages/publicStandings';
 
 /** Recopie du `.select()` embarquant l'équipe depuis `stage_teams`. */
 type StageTeamEmbedRow = { team: Relation<SimpleTeam> };
@@ -80,6 +81,11 @@ type Props = {
   teamStats: TeamStat[];
   heroBans: { mapsWithBans: number; heroes: HeroBanStatView[] };
   hasFfaStage: boolean;
+  /**
+   * Ids d'équipes dans l'ordre du classement OFFICIEL (page Classement). La
+   * page triait par winrate, et son « Top 3 » contredisait le classement.
+   */
+  officialOrder: string[];
   seo: SeoProps;
 };
 
@@ -124,8 +130,8 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   }
   const tournamentId = tournament.id;
 
-  // Phase B : stages + matches en parallèle
-  const [stagesRes, matchesRes] = await Promise.all([
+  // Phase B : stages + matches + classement officiel en parallèle
+  const [stagesRes, matchesRes, standingsTables] = await Promise.all([
     supabaseAdmin
       .from('tournament_stages')
       .select('id, stage_type')
@@ -137,6 +143,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId)
       .neq('status', 'cancelled'),
+    readPublicStandings(tenantId, tournamentId),
   ]);
 
   if (matchesRes.error) {
@@ -208,6 +215,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
         teamStats: [],
         heroBans: { mapsWithBans: 0, heroes: [] },
         hasFfaStage,
+        officialOrder: [],
         seo: buildStatsSeo(tournament as Tournament),
       },
       revalidate: 60,
@@ -242,6 +250,11 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       teamStats,
       heroBans,
       hasFfaStage,
+      // Plusieurs tables (poules) : ordre par rang, poule par poule.
+      officialOrder: standingsTables
+        .flatMap((tb) => tb.rows)
+        .sort((a, b) => a.rank - b.rank)
+        .map((r) => r.teamId),
       seo: buildStatsSeo(tournament as Tournament),
     },
     revalidate: 60,
@@ -253,6 +266,7 @@ export default function TournamentStatsPage({
   teamStats,
   heroBans,
   hasFfaStage,
+  officialOrder,
 }: Props) {
   const t = useT(nsTournamentStats);
   const { lang } = useLang();
@@ -269,7 +283,13 @@ export default function TournamentStatsPage({
   const totalTeams = teamStats.length;
   const totalMatches = teamStats.reduce((acc, t) => acc + t.matchesPlayed, 0);
 
+  // Ordre du classement officiel ; une équipe absente du classement (aucune
+  // phase à classement) retombe sur l'ancien tri, après les autres.
+  const officialIndex = new Map(officialOrder.map((id, i) => [id, i]));
   const sortedByWinrate = [...teamStats].sort((a, b) => {
+    const ia = officialIndex.get(a.teamId) ?? Number.POSITIVE_INFINITY;
+    const ib = officialIndex.get(b.teamId) ?? Number.POSITIVE_INFINITY;
+    if (ia !== ib) return ia - ib;
     if (b.winrate !== a.winrate) {
       return b.winrate - a.winrate;
     }
@@ -278,7 +298,33 @@ export default function TournamentStatsPage({
 
   const topTeams = sortedByWinrate.slice(0, 3);
 
-  const bestMapDiff = [...teamStats].sort((a, b) => b.mapDiff - a.mapDiff)[0];
+  // Meilleur winrate / meilleure diff : à égalité, nommer UNE équipe revenait
+  // à en choisir une au hasard (4 équipes à 100 % en début de saison).
+  const played = teamStats.filter((s) => s.matchesPlayed > 0);
+  const bestWinrate = played.length
+    ? Math.max(...played.map((s) => s.winrate))
+    : null;
+  const bestWinrateTeams =
+    bestWinrate === null
+      ? []
+      : sortedByWinrate.filter(
+          (s) => s.matchesPlayed > 0 && s.winrate === bestWinrate
+        );
+  const bestDiff = played.length
+    ? Math.max(...played.map((s) => s.mapDiff))
+    : null;
+  const bestDiffTeams =
+    bestDiff === null
+      ? []
+      : sortedByWinrate.filter(
+          (s) => s.matchesPlayed > 0 && s.mapDiff === bestDiff
+        );
+  const leaderHint = (teams: TeamStat[]): string | undefined =>
+    teams.length === 0
+      ? undefined
+      : teams.length === 1
+        ? teams[0].teamShortName || teams[0].teamName
+        : format(t.hintTied, { count: teams.length });
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
 
   return (
@@ -351,35 +397,26 @@ export default function TournamentStatsPage({
                 <StatCard
                   label={t.statMatchesPlayed}
                   value={Math.round(totalMatches / 2)}
-                  hint={format(t.hintParticipations, { count: totalMatches })}
                 />
                 <StatCard
                   label={t.statTopWinrate}
                   value={
-                    topTeams[0]
-                      ? `${(topTeams[0].winrate * 100).toFixed(0)}%`
+                    bestWinrate !== null
+                      ? `${(bestWinrate * 100).toFixed(0)}%`
                       : '—'
                   }
-                  hint={
-                    topTeams[0]
-                      ? topTeams[0].teamShortName || topTeams[0].teamName
-                      : undefined
-                  }
+                  hint={leaderHint(bestWinrateTeams)}
                 />
                 <StatCard
                   label={t.statBestMapDiff}
                   value={
-                    bestMapDiff
-                      ? bestMapDiff.mapDiff > 0
-                        ? `+${bestMapDiff.mapDiff}`
-                        : bestMapDiff.mapDiff.toString()
+                    bestDiff !== null
+                      ? bestDiff > 0
+                        ? `+${bestDiff}`
+                        : bestDiff.toString()
                       : '—'
                   }
-                  hint={
-                    bestMapDiff
-                      ? bestMapDiff.teamShortName || bestMapDiff.teamName
-                      : undefined
-                  }
+                  hint={leaderHint(bestDiffTeams)}
                 />
               </div>
             )}
