@@ -1,7 +1,7 @@
 import '@/styles/globals.css';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { Work_Sans } from 'next/font/google';
 import Footer from '@/components/Footer/footer';
 import Navbar from '@/components/Navbar/navbar';
@@ -15,6 +15,7 @@ import { SessionProvider } from '@/hooks/useSession';
 import { TenantBrandingProvider } from '@/lib/branding/TenantBrandingProvider';
 import { ActiveTeamProvider } from '@/components/player/ActiveTeamContext';
 import type { TenantBranding } from '@/utils/tenant';
+import { resolveAppChrome } from '@/utils/layout/appChrome';
 
 const workSans = Work_Sans({
   subsets: ['latin'],
@@ -70,45 +71,17 @@ function MyApp({ Component, pageProps, router, branding }: AppPropsWithSeo) {
   // on l'expose ici explicitement plutôt que d'éteindre la vérification.
   const staticSeo = (Component as { seo?: SeoProps }).seo;
   const seo = dynamicSeo ?? staticSeo;
+  // Ce qui entoure la page (en-tête, pied, réseaux, mesure, indexation,
+  // manifeste) : une règle par type de page, dans utils/layout/appChrome.ts
+  // (refonte des menus, plan 9) — plus des conditions éparpillées ici.
+  const chrome = resolveAppChrome(router.pathname);
   const isAdmin = router.pathname.startsWith('/admin');
   const isCaster = router.pathname.startsWith('/caster');
-  // Espace joueur PRIVÉ (auth, gate client) → noindex + manifest dédié.
-  // Exception : `/player/[userId]` est le profil PUBLIC (rating/H2H, ISR,
-  // indexable). Il vit sous /player/* pour des raisons de routing mais doit
-  // rester référençable — on l'exclut donc du scope "applicatif".
-  const isPublicPlayerProfile = router.pathname === '/player/[userId]';
-  const isPlayer =
-    router.pathname.startsWith('/player') && !isPublicPlayerProfile;
-  // Embeddable surfaces (iframe) render bare: no Navbar/Footer/Toast/cookie
-  // banner/socials. They are read-only and meant to be framed by third parties.
-  const isEmbed = router.pathname.startsWith('/embed');
-  // OBS browser-source overlays (`/overlay/*`, broadcast renderer) render
-  // chrome-less too: no Navbar/Footer/Toast/cookie banner. They may run for
-  // hours in OBS and must composite cleanly over the video canvas.
-  const isOverlay = router.pathname.startsWith('/overlay');
-  // Pages techniques : retours OAuth / liens magiques (`/auth/*`) et page
-  // d'accès refusé. Servies en 200, sans contenu à référencer — /403 était
-  // indexable avec un canonical, /auth/discord-member n'avait même pas de seo.
-  const isTechnical =
-    router.pathname.startsWith('/auth/') || router.pathname === '/403';
-  // Routes "applicatives" (admin + cockpit caster + espace joueur) : pas
-  // d'index. L'espace joueur est gate cote client et n'a pas de contenu
-  // public a referencer — on force noindex pour eviter d'indexer des coquilles
-  // vides / pages d'auth. La navbar/footer marketing restent (sauf caster qui
-  // gere sa propre chrome legere — cf. /caster/cockpit).
-  const effectiveSeo: SeoProps =
-    isAdmin || isCaster || isPlayer || isEmbed || isOverlay || isTechnical
-      ? { ...seo, noindex: true }
-      : { ...seo };
-
-  const manifestHref = useMemo(() => {
-    if (isAdmin) return '/admin/manifest.webmanifest';
-    if (isCaster) return '/caster/manifest.webmanifest';
-    if (isPlayer) return '/player/manifest.webmanifest';
-    return '/site.webmanifest';
-  }, [isAdmin, isCaster, isPlayer]);
-
-  const isAppScope = isAdmin || isCaster || isPlayer;
+  const effectiveSeo: SeoProps = chrome.noindex
+    ? { ...seo, noindex: true }
+    : { ...seo };
+  const manifestHref = chrome.manifest;
+  const isAppScope = chrome.appScope;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -121,7 +94,7 @@ function MyApp({ Component, pageProps, router, branding }: AppPropsWithSeo) {
 
   // Bare pages (iframe embeds + OBS overlays): render only the page, no
   // global chrome (Navbar/Footer/Toast/cookie banner/socials).
-  if (isEmbed || isOverlay) {
+  if (chrome.bare) {
     return (
       <ErrorBoundary>
         <TenantBrandingProvider branding={branding}>
@@ -165,21 +138,21 @@ function MyApp({ Component, pageProps, router, branding }: AppPropsWithSeo) {
                     )}
                   </Head>
                   <DefaultSeo {...effectiveSeo} />
-                  {!isCaster && <Navbar />}
+                  {chrome.navbar && <Navbar />}
                   <main id="main-content">
                     <Component {...pageProps} />
                   </main>
                   {isAdmin && <PushOptIn />}
                   {(isAdmin || isCaster) && <PWAInstallAndUpdate />}
                   {(isAdmin || isCaster) && <OfflineBanner />}
-                  {!isCaster && <Footer />}
-                  {!isAdmin && !isCaster && <FloatingSocials />}
+                  {chrome.footer && <Footer />}
+                  {chrome.floatingSocials && <FloatingSocials />}
                   <BackToTopButton />
                   <CookieBanner />
                   {/* Ni l'admin ni le cockpit caster ne sont mesurés : ce sont
                       des surfaces internes, leur trafic fausserait l'entonnoir
                       d'acquisition. */}
-                  {!isAdmin && !isCaster && <AnalyticsScript />}
+                  {chrome.analytics && <AnalyticsScript />}
                   <ToastContainer />
                 </div>
               </ToastProvider>
