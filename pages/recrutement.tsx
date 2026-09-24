@@ -87,7 +87,7 @@ function RecrutementPage() {
           <div className="absolute right-10 top-10 h-[360px] w-[360px] rounded-full bg-[var(--color-violet)]/30 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-4xl px-6 pt-28 pb-12 text-center">
+        <div className="relative mx-auto max-w-4xl px-6 pt-header-lg pb-12 text-center">
           <p className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
             {t.heroBadge}
           </p>

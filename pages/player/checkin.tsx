@@ -211,7 +211,7 @@ function PlayerCheckin() {
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-        <main className="max-w-md mx-auto px-4 py-10 pt-32 text-center">
+        <main className="max-w-md mx-auto px-4 py-10 pt-header-xl text-center">
           <h1 className="text-3xl font-bold text-gradient">{t.title}</h1>
           <p className="mt-4 text-gray-300">{t.signinPrompt}</p>
           <Link
@@ -231,7 +231,7 @@ function PlayerCheckin() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <main className="max-w-2xl mx-auto px-4 py-10 pt-24 pb-16">
+      <main className="max-w-2xl mx-auto px-4 py-10 pt-header pb-16">
         <div className="mb-8">
           <div className="flex items-center gap-3 text-sm text-gray-400">
             <Link

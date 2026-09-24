@@ -191,7 +191,7 @@ export default function TeamPage({
       )}
 
       <main
-        className={`container mx-auto px-4 max-w-6xl pb-16 ${team.banner_url ? '-mt-20 relative z-10' : 'pt-24'}`}
+        className={`container mx-auto px-4 max-w-6xl pb-16 ${team.banner_url ? '-mt-20 relative z-10' : 'pt-header'}`}
       >
         {/* Header */}
         <section className="mb-10">

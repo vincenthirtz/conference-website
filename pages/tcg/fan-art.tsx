@@ -82,7 +82,7 @@ function FanArtCreditsPage({ credits }: Props) {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      <main className="mx-auto max-w-5xl px-6 pt-32 pb-24">
+      <main className="mx-auto max-w-5xl px-6 pt-header-xl pb-24">
         <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
           {t.creditsBadge}
         </p>

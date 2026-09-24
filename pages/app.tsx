@@ -303,7 +303,7 @@ function AppPage() {
           <div className="absolute left-1/3 bottom-0 h-[300px] w-[300px] rounded-full bg-violet-600/20 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-6xl px-6 pt-32 pb-20 text-center">
+        <div className="relative mx-auto max-w-6xl px-6 pt-header-xl pb-20 text-center">
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
             <span className="rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 px-2 py-[2px] text-[10px] font-semibold text-black">
               PWA

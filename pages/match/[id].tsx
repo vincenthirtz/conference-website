@@ -492,7 +492,7 @@ export default function MatchPage({ match, lineups, mvp }: Props) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <main className="container mx-auto px-4 pt-24 pb-16 max-w-5xl">
+      <main className="container mx-auto px-4 pt-header pb-16 max-w-5xl">
         {/* Header / meta */}
         <section className="mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

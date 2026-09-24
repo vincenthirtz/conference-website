@@ -1368,7 +1368,7 @@ function TournamentSimulatorPage() {
           }
         `}</style>
       </Head>
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white pt-24">
+      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white pt-header">
         <div className="max-w-[1600px] mx-auto px-6 py-10">
           {/* Header */}
           <div className="flex items-center justify-between flex-wrap gap-4 mb-8">

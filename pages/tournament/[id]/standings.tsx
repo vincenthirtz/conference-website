@@ -128,7 +128,7 @@ export default function TournamentStandingsPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 pt-24 pb-16">
+      <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 pt-header pb-16">
         <TournamentTabs
           tournamentPath={tournamentPath}
           active="standings"

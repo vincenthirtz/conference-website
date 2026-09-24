@@ -294,7 +294,7 @@ function AdminStageCreatePage(_props: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
+      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-header">
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <div>
@@ -310,7 +310,7 @@ function AdminStageCreatePage(_props: StaffProps) {
           </div>
         </div>
 
-        <div className="max-w-3xl bg-neutral-800 border border-neutral-700 rounded-xl p-6 pt-20">
+        <div className="max-w-3xl bg-neutral-800 border border-neutral-700 rounded-xl p-6 pt-header">
           {errorMsg && (
             <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
               {errorMsg}

@@ -147,7 +147,7 @@ function AdminTeamsPrintPage() {
         data-print-sheet
         className="print-document min-h-screen bg-surface-deep text-white"
       >
-        <div className="mx-auto w-full max-w-5xl px-4 pt-20 pb-12 sm:px-6 print:max-w-none print:p-0">
+        <div className="mx-auto w-full max-w-5xl px-4 pt-header pb-12 sm:px-6 print:max-w-none print:p-0">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
             <Link
               href={backHref}

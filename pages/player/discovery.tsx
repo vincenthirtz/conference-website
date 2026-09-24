@@ -219,7 +219,7 @@ function PlayerDiscovery() {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-        <main className="max-w-5xl mx-auto px-4 py-10 pt-24">
+        <main className="max-w-5xl mx-auto px-4 py-10 pt-header">
           <div className="flex items-center justify-center py-20">
             <div className="w-8 h-8 border-2 border-white/20 border-t-purple-400 rounded-full animate-spin" />
           </div>
@@ -255,7 +255,7 @@ function PlayerDiscovery() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <main className="max-w-5xl mx-auto px-4 py-10 pt-24 pb-16">
+      <main className="max-w-5xl mx-auto px-4 py-10 pt-header pb-16">
         <div className="mb-8">
           <div className="flex items-center gap-3 text-sm text-gray-400">
             <Link href="/player" className="hover:text-white transition">

@@ -533,7 +533,7 @@ function Timeline2026Page({
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       {/* ── En-tête ─────────────────────────────────────────────────────── */}
-      <header className="mx-auto max-w-5xl px-6 pb-10 pt-32">
+      <header className="mx-auto max-w-5xl px-6 pb-10 pt-header-xl">
         <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-neutral-500">
           {t.heroEyebrow}
         </p>

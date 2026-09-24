@@ -1136,7 +1136,7 @@ function PlayerTcg() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
       <main
-        className="container mx-auto px-4 pb-16 pt-24"
+        className="container mx-auto px-4 pb-16 pt-header"
         aria-busy={isLoading}
       >
         <div className="flex flex-wrap items-baseline justify-between gap-3">

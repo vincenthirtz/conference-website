@@ -124,7 +124,7 @@ function AdminRatingsPage(_props: StaffProps) {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8 pt-20 pb-12 space-y-6">
+        <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8 pt-header pb-12 space-y-6">
           <Breadcrumb
             items={[
               { label: t.breadcrumbAdmin, href: '/admin' },

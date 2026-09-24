@@ -110,7 +110,7 @@ export default function AdminNewsEdit() {
       <Head>
         <title>{t.pageTitle}</title>
       </Head>
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
+      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-header">
         <Breadcrumb
           items={[
             { label: t.breadcrumbNews, href: '/admin/news' },

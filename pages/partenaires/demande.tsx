@@ -153,7 +153,7 @@ function PartnershipRequestPage() {
           <div className="absolute right-0 top-10 h-[360px] w-[360px] rounded-full bg-pink-500/20 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-3xl px-6 pt-32 pb-16">
+        <div className="relative mx-auto max-w-3xl px-6 pt-header-xl pb-16">
           <Link
             href="/partenaires"
             className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition mb-6"

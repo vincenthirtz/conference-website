@@ -108,7 +108,7 @@ export default function TournamentHero({
       </div>
 
       {tabs && (
-        <div className="relative z-[2] mx-auto w-full max-w-6xl px-4 pt-24 sm:px-6">
+        <div className="relative z-[2] mx-auto w-full max-w-6xl px-4 pt-header sm:px-6">
           {tabs}
         </div>
       )}

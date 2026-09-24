@@ -178,7 +178,7 @@ function MapsVoxelPage({ maps }: Props) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0d0b14] via-[#120f1c] to-[#0d0b14]">
-      <main className="mx-auto max-w-7xl px-4 pt-28 pb-16 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 pt-header-lg pb-16 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-4">
           <p className="text-xs uppercase tracking-[0.22em] text-purple-300">
             {t.eyebrow}

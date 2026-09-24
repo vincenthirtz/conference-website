@@ -188,7 +188,7 @@ function DeveloperHubPage({ staff }: Props) {
       </Head>
 
       <div className="min-h-screen bg-neutral-950 text-white">
-        <div className="mx-auto max-w-5xl px-4 pt-28 pb-24 sm:px-6">
+        <div className="mx-auto max-w-5xl px-4 pt-header-lg pb-24 sm:px-6">
           {/* ===== Header ===== */}
           <header className="mb-10">
             <nav

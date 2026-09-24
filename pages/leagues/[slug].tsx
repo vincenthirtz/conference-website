@@ -176,7 +176,7 @@ export default function LeagueDetailPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
-      <main className="mx-auto max-w-4xl px-4 pb-16 pt-24 sm:px-6">
+      <main className="mx-auto max-w-4xl px-4 pb-16 pt-header sm:px-6">
         <Link
           href="/leagues"
           className="mb-6 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"

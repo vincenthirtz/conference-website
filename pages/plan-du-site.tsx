@@ -107,7 +107,7 @@ function SiteMapPage() {
           <div className="absolute left-10 bottom-0 h-48 w-48 rounded-full bg-amber-400/20 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-5xl px-6 pt-24 pb-12 sm:pt-28">
+        <div className="relative mx-auto max-w-5xl px-6 pt-header pb-12 sm:pt-header-lg">
           <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
             {t.heroBadge}
           </p>

@@ -628,7 +628,7 @@ function ApiReferencePage({ spec }: PageProps) {
           <div className="absolute -left-32 -top-32 h-[420px] w-[420px] rounded-full bg-purple-600/30 blur-3xl" />
           <div className="absolute right-10 top-10 h-[360px] w-[360px] rounded-full bg-pink-500/20 blur-3xl" />
         </div>
-        <div className="relative mx-auto max-w-5xl px-6 pt-32 pb-10">
+        <div className="relative mx-auto max-w-5xl px-6 pt-header-xl pb-10">
           <Link
             href="/organisateurs#developpeurs"
             className="text-sm text-gray-300 hover:text-white"

@@ -109,7 +109,7 @@ function EspaceCapitainePage() {
           <div className="absolute right-10 top-10 h-[360px] w-[360px] rounded-full bg-[var(--color-green)]/20 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto flex max-w-5xl justify-end px-6 pt-24">
+        <div className="relative mx-auto flex max-w-5xl justify-end px-6 pt-header">
           <LanguageToggle />
         </div>
 

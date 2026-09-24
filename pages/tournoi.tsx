@@ -374,7 +374,7 @@ function Tournoi() {
           <div className="absolute right-10 top-10 w-[360px] h-[360px] rounded-full bg-[var(--color-violet)]/25 blur-3xl" />
         </div>
 
-        <div className="max-w-6xl mx-auto px-6 pt-32 pb-14 relative">
+        <div className="max-w-6xl mx-auto px-6 pt-header-xl pb-14 relative">
           <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-green-light)]/90">
             {t.eyebrow}
           </p>

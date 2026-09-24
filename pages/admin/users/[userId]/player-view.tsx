@@ -531,7 +531,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+        <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
           {/* Back link + cross-link to the captain view */}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <Link

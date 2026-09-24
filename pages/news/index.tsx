@@ -181,7 +181,7 @@ function NewsIndexPage({ news, loadError }: NewsIndexProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950">
-      <div className="container mx-auto px-4 pt-28 pb-16">
+      <div className="container mx-auto px-4 pt-header-lg pb-16">
         {/* Header */}
         <div className="mb-12 text-center">
           <div className="mb-4 inline-block border-b-2 border-purple-400 text-lg font-semibold text-white">

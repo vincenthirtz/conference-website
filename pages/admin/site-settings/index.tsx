@@ -61,7 +61,7 @@ export default function AdminSiteSettingsPage(_: StaffProps) {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
           <div className="mb-6">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
               {t.heading}

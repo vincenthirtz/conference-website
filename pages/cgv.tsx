@@ -74,7 +74,7 @@ function CgvPage() {
           <div className="absolute right-10 top-10 h-[360px] w-[360px] rounded-full bg-pink-500/20 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-3xl px-6 pb-14 pt-32 text-center">
+        <div className="relative mx-auto max-w-3xl px-6 pb-14 pt-header-xl text-center">
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
             {t.heroBadge}
           </p>

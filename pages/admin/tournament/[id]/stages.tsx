@@ -223,7 +223,7 @@ function StagesPage(_: StaffProps) {
       <Head>
         <title>{t.pageTitle}</title>
       </Head>
-      <div className="min-h-screen bg-neutral-950 text-white pt-24">
+      <div className="min-h-screen bg-neutral-950 text-white pt-header">
         <div className="max-w-6xl mx-auto px-6 py-10">
           <TournamentTabsNav
             tournamentId={String(tournamentId ?? '')}

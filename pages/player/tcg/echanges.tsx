@@ -697,7 +697,7 @@ function PlayerTcgTrades() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-      <main className="container mx-auto px-4 pb-16 pt-24">
+      <main className="container mx-auto px-4 pb-16 pt-header">
         <Link
           href="/player/tcg"
           className={`text-sm text-purple-300 underline-offset-4 hover:underline ${FOCUS_RING}`}

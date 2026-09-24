@@ -144,7 +144,7 @@ function ScrimsPage({ scrims, ladder }: ScrimsPageProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-16">
         <Heading
           level="h1"
           className="text-brand-gradient !text-4xl md:!text-5xl"

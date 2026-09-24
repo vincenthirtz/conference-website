@@ -235,7 +235,7 @@ export default function TournamentPodiumPage({
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
-      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 pt-24 pb-16">
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 pt-header pb-16">
         <TournamentTabs
           tournamentPath={tournamentPath}
           active="podium"

@@ -354,7 +354,7 @@ export default function TournamentMvpPage({
 
   return (
     <>
-      <main className="bg-neutral-950 text-white min-h-screen pt-24 pb-16">
+      <main className="bg-neutral-950 text-white min-h-screen pt-header pb-16">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
           <TournamentTabs
             tournamentPath={tournamentPath}

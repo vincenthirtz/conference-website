@@ -305,7 +305,7 @@ export default function TournamentMatchesPage({
 
   return (
     <div className="print-document min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 pt-24 pb-16">
+      <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 pt-header pb-16">
         {/* Onglets : de la navigation, donc rien à faire sur une feuille. */}
         <div className="print:hidden">
           <TournamentTabs

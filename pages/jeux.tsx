@@ -170,7 +170,7 @@ function GamesPage() {
           <div className="absolute left-10 bottom-0 h-48 w-48 rounded-full bg-cyan-400/20 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-6xl px-6 pt-32 pb-16">
+        <div className="relative mx-auto max-w-6xl px-6 pt-header-xl pb-16">
           <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-200">
             {t.badgeMulti}
           </p>

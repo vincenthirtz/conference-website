@@ -427,7 +427,7 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
   if (loading || !planning || !config) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white">
-        <div className="max-w-3xl mx-auto px-4 pt-20 pb-12">
+        <div className="max-w-3xl mx-auto px-4 pt-header pb-12">
           {error ? (
             <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
               {error}
@@ -450,7 +450,7 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
         </title>
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12 space-y-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12 space-y-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <Link

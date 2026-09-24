@@ -76,7 +76,7 @@ export default function LeaguesPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <main className="container mx-auto max-w-5xl px-4 pb-16 pt-24">
+      <main className="container mx-auto max-w-5xl px-4 pb-16 pt-header">
         <header className="mb-8 flex flex-col items-center text-center">
           <p className="mb-2 text-xs uppercase tracking-widest text-[var(--color-violet-light)]">
             {t.eyebrow}

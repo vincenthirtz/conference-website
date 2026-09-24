@@ -1244,7 +1244,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
       <Head>
         <title>{t.headTitle}</title>
       </Head>
-      <div className="min-h-screen bg-neutral-950 text-white pt-24">
+      <div className="min-h-screen bg-neutral-950 text-white pt-header">
         <div className="max-w-[110rem] mx-auto px-6 py-8">
           <Breadcrumb
             items={[

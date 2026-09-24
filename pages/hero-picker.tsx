@@ -132,7 +132,7 @@ export default function HeroPickerPage() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white pb-16">
-      <div className="container max-w-4xl mx-auto px-4 pt-24 space-y-6">
+      <div className="container max-w-4xl mx-auto px-4 pt-header space-y-6">
         <div className="flex flex-wrap items-center gap-3">
           <Heading level="h1" typeStyle="heading-md" className="text-gradient">
             {t.title}

@@ -231,7 +231,7 @@ export default function TeamStatsPage({
         <title>{title} | OW Women&apos;s Cup</title>
       </Head>
 
-      <main className="container mx-auto px-4 pt-24 pb-16 max-w-5xl">
+      <main className="container mx-auto px-4 pt-header pb-16 max-w-5xl">
         {/* HERO */}
         <section className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">

@@ -215,7 +215,7 @@ export default function LorePage({ media }: LorePageProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950">
-      <div className="container mx-auto px-4 pt-28 pb-16">
+      <div className="container mx-auto px-4 pt-header-lg pb-16">
         {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-block text-lg text-white font-semibold border-b-2 border-purple-400 mb-4">

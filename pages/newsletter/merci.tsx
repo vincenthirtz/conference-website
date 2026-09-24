@@ -19,7 +19,7 @@ function NewsletterMerciPage() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      <main className="mx-auto flex max-w-2xl flex-col items-center px-4 pt-32 pb-24 text-center">
+      <main className="mx-auto flex max-w-2xl flex-col items-center px-4 pt-header-xl pb-24 text-center">
         <div
           className={`w-full rounded-2xl border px-6 py-10 sm:px-10 ${
             isInvalid

@@ -1884,7 +1884,7 @@ export default function PublicCreateTeamPage() {
   );
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-black via-[#0b0b12] to-black px-4 pb-16 pt-24 text-white">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-black via-[#0b0b12] to-black px-4 pb-16 pt-header text-white">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -left-40 -top-16 h-[420px] w-[420px] rounded-full bg-[var(--color-violet)]/20 blur-3xl"

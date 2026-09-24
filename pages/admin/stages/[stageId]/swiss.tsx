@@ -311,7 +311,7 @@ function AdminSwissStagePage(_props: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
+      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-header">
         {/* Header */}
         <StageTabsNav
           stageId={String(stageId ?? '')}

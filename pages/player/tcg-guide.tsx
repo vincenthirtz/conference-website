@@ -167,7 +167,7 @@ function TcgGuide(): JSX.Element {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <main className="mx-auto max-w-3xl px-4 pt-24 pb-20">
+      <main className="mx-auto max-w-3xl px-4 pt-header pb-20">
         <div className="mb-10">
           <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-gray-300">
             {t.heroBadge}

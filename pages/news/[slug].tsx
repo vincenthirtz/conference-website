@@ -215,7 +215,7 @@ export default function NewsSlugPage({
           `max-width: 1200px`, qui l'emporte sur tout `max-w-*` de Tailwind
           posé à côté. Le `max-w-4xl` qui figurait sur cette page n'a donc
           jamais rien fait. On compose la colonne à la main. */}
-      <div className="mx-auto w-full max-w-[46rem] px-4 pt-24">
+      <div className="mx-auto w-full max-w-[46rem] px-4 pt-header">
         <Link
           href="/"
           className="text-sm text-[var(--color-violet-light)] hover:text-[var(--color-violet)]"

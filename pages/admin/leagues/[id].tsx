@@ -394,7 +394,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pt-20 pb-12 space-y-4">
+        <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pt-header pb-12 space-y-4">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-64 w-full" rounded="rounded-2xl" />
           <Skeleton className="h-40 w-full" rounded="rounded-2xl" />
@@ -406,7 +406,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
   if (errorMsg && !league) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+        <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pt-header pb-12">
           <Breadcrumb
             items={[
               { label: t.breadcrumbAdmin, href: '/admin' },
@@ -438,7 +438,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pt-20 pb-12 space-y-6">
+        <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pt-header pb-12 space-y-6">
           <Breadcrumb
             items={[
               { label: t.breadcrumbAdmin, href: '/admin' },

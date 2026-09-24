@@ -124,7 +124,7 @@ function AdminTournamentHistoryPage(_props: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-20">
+      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-header">
         <TournamentTabsNav tournamentId={String(id ?? '')} active="tools" />
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">

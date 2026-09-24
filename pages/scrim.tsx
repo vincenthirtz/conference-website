@@ -67,7 +67,7 @@ function ScrimPage({ teams }: Props) {
   const openTeams = teams.filter((team) => team.open_for_scrim === true);
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <main className="container mx-auto max-w-5xl px-4 pt-24 pb-16">
+      <main className="container mx-auto max-w-5xl px-4 pt-header pb-16">
         <section className="mb-10 text-center">
           <span className="inline-block px-3 py-1 rounded-full border border-[var(--color-green)]/40 bg-[var(--color-green)]/10 text-[var(--color-green-light)] text-xs uppercase tracking-wide mb-4">
             {t.badge}
