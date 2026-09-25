@@ -139,6 +139,34 @@ describe('phase du match', () => {
     ).toBe('live');
   });
 
+  it('un statut « en cours » suffit, même sans coup d’envoi horodaté', () => {
+    for (const status of ['live', 'in_progress']) {
+      expect(matchPhase({ status, started_at: null })).toBe('live');
+    }
+  });
+
+  it('un score déjà saisi (1-0) passe le match en direct', () => {
+    expect(
+      matchPhase({
+        status: 'pending',
+        started_at: null,
+        team1_score: 1,
+        team2_score: 0,
+      })
+    ).toBe('live');
+  });
+
+  it('un 0-0 sans autre indice reste à venir', () => {
+    expect(
+      matchPhase({
+        status: 'scheduled',
+        started_at: null,
+        team1_score: 0,
+        team2_score: 0,
+      })
+    ).toBe('upcoming');
+  });
+
   it('un match ni clos ni démarré est à venir', () => {
     expect(matchPhase({ status: 'pending', started_at: null })).toBe(
       'upcoming'

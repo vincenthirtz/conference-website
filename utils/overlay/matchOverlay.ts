@@ -117,14 +117,28 @@ export type OverlayMatchView = {
   veto: OverlayVetoStepView[];
 };
 
-/** Phase d'un match, du point de vue de l'écran. */
+/** Statuts d'un match en train de se jouer. */
+const LIVE_STATUSES = new Set(['live', 'in_progress', 'ongoing', 'started']);
+
+/**
+ * Phase d'un match, du point de vue de l'écran.
+ *
+ * Un match est « en direct » dès qu'un indice le dit : coup d'envoi horodaté,
+ * statut en cours, OU un score déjà saisi. Le staff saisit souvent le 1-0 sans
+ * avoir « lancé » le match : ne regarder que `started_at` laissait « VS » à
+ * l'écran jusqu'au résultat final.
+ */
 export function matchPhase(row: {
   status: string | null;
   started_at: string | null;
+  team1_score?: number | null;
+  team2_score?: number | null;
 }): OverlayPhase {
   const status = (row.status ?? '').trim().toLowerCase();
   if (CLOSED_STATUSES.has(status)) return 'final';
-  return row.started_at ? 'live' : 'upcoming';
+  if (row.started_at || LIVE_STATUSES.has(status)) return 'live';
+  if ((row.team1_score ?? 0) > 0 || (row.team2_score ?? 0) > 0) return 'live';
+  return 'upcoming';
 }
 
 function sideOf(
