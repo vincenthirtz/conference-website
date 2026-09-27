@@ -72,7 +72,9 @@ async function handler(
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed.' });
   }
-  if (applyRateLimit(req, res, { max: 5, windowMs: 60_000 }, 'tcg-drop-setup')) {
+  if (
+    applyRateLimit(req, res, { max: 5, windowMs: 60_000 }, 'tcg-drop-setup')
+  ) {
     return;
   }
 

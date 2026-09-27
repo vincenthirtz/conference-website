@@ -135,7 +135,10 @@ describe('POST /api/admin/twitch/tcg-drop/setup', () => {
 
     // La création porte le titre qui sert de clé de reprise, et saute la file
     // d'attente de la chaîne : un échange en attente ne nous parviendrait pas.
-    const [, init] = fetchMock.mock.calls[1] as unknown as [string, RequestInit];
+    const [, init] = fetchMock.mock.calls[1] as unknown as [
+      string,
+      RequestInit,
+    ];
     const sent = JSON.parse(init.body as string);
     expect(sent.title).toBe(TCG_DROP_REWARD_TITLE);
     expect(sent.should_redemptions_skip_request_queue).toBe(true);
@@ -149,7 +152,9 @@ describe('POST /api/admin/twitch/tcg-drop/setup', () => {
     const fetchMock = mockHelix([
       {
         ok: true,
-        payload: { data: [{ id: 'rw-existante', title: TCG_DROP_REWARD_TITLE }] },
+        payload: {
+          data: [{ id: 'rw-existante', title: TCG_DROP_REWARD_TITLE }],
+        },
       },
     ]);
 
@@ -201,7 +206,10 @@ describe('POST /api/admin/twitch/tcg-drop/setup', () => {
     seedConnection();
     mockHelix([
       { ok: true, payload: { data: [] } },
-      { ok: false, payload: { message: 'CREATE_CUSTOM_REWARD_DUPLICATE_REWARD' } },
+      {
+        ok: false,
+        payload: { message: 'CREATE_CUSTOM_REWARD_DUPLICATE_REWARD' },
+      },
     ]);
     const res = makeRes();
     await handler(makeReq(), res);

@@ -102,7 +102,11 @@ export default function TcgDropHealthCard() {
     try {
       const { rewardId } = await adminFetchJson<{ rewardId: string }>(
         '/api/admin/twitch/tcg-drop/setup',
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        }
       );
       await adminFetchJson('/api/admin/twitch/eventsub/tcg-drop', {
         method: 'POST',
