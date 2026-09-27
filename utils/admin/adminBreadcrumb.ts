@@ -172,3 +172,52 @@ export function adminBreadcrumb(
   const out = crumbs.filter((c) => c.href !== url);
   return out.length > 1 ? out : [];
 }
+
+/**
+ * Le fil d'une page, à partir des fils PRÉCALCULÉS.
+ *
+ * Même résultat que `adminBreadcrumb`, sans l'arbre : cette version est celle
+ * que le composant appelle, pour que `ADMIN_NAV` (844 lignes de rôles,
+ * d'icônes et de cartes) cesse d'être recopié dans le bundle de chaque page
+ * profonde — cf. l'en-tête de `components/admin/navigation/adminNavTrail.ts`.
+ *
+ * L'équivalence des deux n'est pas une intention : `tests/unit/adminNavTrail`
+ * les fait tourner côte à côte sur toutes les routes admin du dépôt.
+ */
+export function adminBreadcrumbFromTrails(
+  pathname: string,
+  asPath: string,
+  trails: Record<string, Crumb[]>,
+  hrefsByLength: readonly string[],
+  labels: { root: string; entities: Record<EntityKey, string> }
+): Crumb[] {
+  if (pathname === '/admin' || !pathname.startsWith('/admin/')) return [];
+  if (OWN_BREADCRUMB_ROUTES.has(pathname)) return [];
+  const url = cleanPath(asPath);
+
+  const entity = ENTITY_ROUTES.find(
+    (e) => pathname === e.pattern || pathname.startsWith(`${e.pattern}/`)
+  );
+  const listHref =
+    entity?.list ??
+    // `hrefsByLength` est trié du plus long au plus court : le premier qui
+    // préfixe est le meilleur. `/admin` est exclu, comme il l'était dans la
+    // marche sur l'arbre — sinon toute page admin s'y accrocherait.
+    hrefsByLength.find(
+      (h) => h !== '/admin' && (pathname === h || pathname.startsWith(`${h}/`))
+    ) ??
+    null;
+  if (!listHref) return [];
+
+  const crumbs: Crumb[] = [{ label: labels.root, href: '/admin' }];
+  for (const c of trails[listHref] ?? []) crumbs.push(c);
+
+  if (entity && pathname !== entity.pattern) {
+    const depth = entity.pattern.split('/').length;
+    const href = url.split('/').slice(0, depth).join('/');
+    crumbs.push({ label: labels.entities[entity.key], href });
+  }
+
+  const out = crumbs.filter((c) => c.href !== url);
+  return out.length > 1 ? out : [];
+}

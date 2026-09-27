@@ -9,8 +9,11 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useT } from '@/lib/i18n/useT';
-import { ADMIN_NAV } from '@/components/admin/navigation/adminNav';
-import { adminBreadcrumb } from '@/utils/admin/adminBreadcrumb';
+import {
+  ADMIN_NAV_HREFS,
+  ADMIN_NAV_TRAILS,
+} from '@/components/admin/navigation/adminNavTrail';
+import { adminBreadcrumbFromTrails } from '@/utils/admin/adminBreadcrumb';
 import nsAdminTopBar from '@/lib/i18n/locales/fr/adminTopBar';
 
 export default function AdminBreadcrumbs({
@@ -20,21 +23,27 @@ export default function AdminBreadcrumbs({
 }) {
   const router = useRouter();
   const t = useT(nsAdminTopBar);
-  const crumbs = adminBreadcrumb(router.pathname, router.asPath, ADMIN_NAV, {
-    root: t.crumbRoot,
-    entities: {
-      tournament: t.crumbTournament,
-      match: t.crumbMatch,
-      stage: t.crumbStage,
-      team: t.crumbTeam,
-      user: t.crumbUser,
-      tenant: t.crumbTenant,
-      scrim: t.crumbScrim,
-      planning: t.crumbPlanning,
-      league: t.crumbLeague,
-      event: t.crumbEvent,
-    },
-  });
+  const crumbs = adminBreadcrumbFromTrails(
+    router.pathname,
+    router.asPath,
+    ADMIN_NAV_TRAILS,
+    ADMIN_NAV_HREFS,
+    {
+      root: t.crumbRoot,
+      entities: {
+        tournament: t.crumbTournament,
+        match: t.crumbMatch,
+        stage: t.crumbStage,
+        team: t.crumbTeam,
+        user: t.crumbUser,
+        tenant: t.crumbTenant,
+        scrim: t.crumbScrim,
+        planning: t.crumbPlanning,
+        league: t.crumbLeague,
+        event: t.crumbEvent,
+      },
+    }
+  );
   if (crumbs.length === 0) return null;
 
   return (
