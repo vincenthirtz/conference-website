@@ -40,6 +40,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { earnReward } from './earnSources';
 import { refreshBalance } from './grantVictoryRewards';
+import { announcePackGranted } from './announcePackGranted';
 
 /** Origine dans `tcg_wallet_entries` (vocabulaire du porte-monnaie). */
 const WALLET_SOURCE_KIND = 'welcome_gift';
@@ -225,18 +226,25 @@ export async function grantWelcomeGift(input: {
   //    ce filtre, un rejeu ajouterait un paquet à tout le monde : rien, dans
   //    `tcg_packs`, ne l'en empêcherait (cf. l'en-tête).
   let packsGranted = 0;
+  /** Paquets réellement créés, pour n'annoncer que ce qui existe. */
+  let packRows: { id: string; user_id: string }[] = [];
   if (packs > 0) {
-    const { error: packError } = await supabaseAdmin.from('tcg_packs').insert(
-      credited.map((userId) => ({
-        tenant_id: tenantId,
-        user_id: userId,
-        source_kind: PACK_SOURCE_KIND,
-        // Pas de match derrière un cadeau : la colonne reste nulle, et c'est
-        // précisément pourquoi elle ne protège de rien ici.
-        source_match_id: null,
-        granted_at: nowIso,
-      }))
-    );
+    const { data: insertedPacks, error: packError } = await supabaseAdmin
+      .from('tcg_packs')
+      .insert(
+        credited.map((userId) => ({
+          tenant_id: tenantId,
+          user_id: userId,
+          source_kind: PACK_SOURCE_KIND,
+          // Pas de match derrière un cadeau : la colonne reste nulle, et c'est
+          // précisément pourquoi elle ne protège de rien ici.
+          source_match_id: null,
+          granted_at: nowIso,
+        }))
+      )
+      // Les identifiants servent de clé de déduplication à l'annonce : sans
+      // match, le couple (joueuse, match) n'en fait pas une.
+      .select('id, user_id');
     if (packError) {
       // Les pièces sont déjà écrites et ne seront pas rejouées : on le dit
       // fort. Le manque est visible (des pièces sans paquet) et réparable à la
@@ -255,6 +263,7 @@ export async function grantWelcomeGift(input: {
         packError.message
       );
     } else {
+      packRows = (insertedPacks ?? []) as { id: string; user_id: string }[];
       packsGranted = credited.length;
     }
   }
@@ -262,6 +271,22 @@ export async function grantWelcomeGift(input: {
   // 3) Recalcul du solde depuis le registre, jamais un incrément : un incrément
   //    perdu creuse un écart définitif, un recalcul se répare tout seul.
   await Promise.all(credited.map((userId) => refreshBalance(tenantId, userId)));
+
+  // 4) Annoncer, et seulement ce qui a été écrit.
+  //
+  // Ce cadeau était posé EN SILENCE : au 2026-09-27, 37 des 61 paquets
+  // d'accueil n'avaient jamais été ouverts, contre 16 sur 39 pour les victoires
+  // — les seules qui étaient annoncées. Vingt points d'écart sur la seule
+  // différence d'être prévenue.
+  await announcePackGranted({
+    tenantId,
+    reason: 'welcome',
+    coins,
+    recipients: packRows.map((row) => ({
+      userId: row.user_id,
+      packId: row.id,
+    })),
+  });
 
   return { ...base, granted: credited.length, packsGranted };
 }

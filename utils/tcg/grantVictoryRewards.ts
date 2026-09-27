@@ -46,9 +46,7 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
-import { emitBotEvent } from '@/utils/botEvents';
-import { getDiscordLinksForUsers } from '@/utils/discordLinks';
-import { absoluteSiteUrl } from '@/utils/siteUrl';
+import { announcePackGranted } from './announcePackGranted';
 import { coinsForWin } from './economy';
 import { recomputeWalletBalance } from './walletRpc';
 
@@ -195,12 +193,13 @@ export async function grantVictoryRewards(input: {
     // annoncée. Une erreur à l'étape 2 laisse `grantedRows` à `null`, et on
     // n'annonce alors rien plutôt que de promettre un paquet introuvable.
     const newlyGranted = (grantedRows ?? []).map((r) => r.user_id);
-    await announceNewPacks({
+    await announcePackGranted({
       tenantId,
+      reason: 'victory',
       matchId,
       isScrim,
       coins: amount,
-      userIds: newlyGranted,
+      recipients: newlyGranted.map((userId) => ({ userId })),
     });
   } catch (err) {
     // Un hook d'effet de bord ne casse pas son hôte. Cf. l'en-tête.
@@ -210,55 +209,6 @@ export async function grantVictoryRewards(input: {
       err instanceof Error ? err.message : String(err)
     );
   }
-}
-
-/**
- * Émet `tcg.pack_granted`, une fois par gagnante.
- *
- * UN ÉVÉNEMENT PAR DESTINATAIRE, comme `scrim.request` et `checkin.nudge` : un
- * envoi refusé (DM fermés) ne doit pas faire rejouer les autres au retry, et un
- * paquet est de toute façon individuel.
- *
- * LE LIEN DISCORD EST RÉSOLU ICI, pas côté bot. Le site est le seul à connaître
- * la correspondance compte ↔ Discord ; la lui laisser porter évite au bot une
- * requête par destinataire. Une joueuse sans compte lié n'est PAS une erreur :
- * l'événement part quand même avec `discordUserId: null`, et le consommateur
- * décide (un DM est impossible, une annonce en salon reste possible).
- *
- * Ne lève jamais : `emitBotEvent` rend un résultat plutôt que de jeter, et
- * l'appelante est un hook qui ne doit pas casser son hôte.
- */
-async function announceNewPacks(input: {
-  tenantId: string;
-  matchId: string;
-  isScrim: boolean;
-  coins: number;
-  userIds: readonly string[];
-}): Promise<void> {
-  if (input.userIds.length === 0) return;
-
-  const links = await getDiscordLinksForUsers([...input.userIds]);
-  // Absolue : ce lien part dans un DM, où un chemin relatif est inerte.
-  const ctaUrl = absoluteSiteUrl('/player/tcg');
-
-  await Promise.all(
-    input.userIds.map((userId) => {
-      const link = links.get(userId) ?? null;
-      return emitBotEvent(
-        'tcg.pack_granted',
-        {
-          userId,
-          discordUserId: link?.discordUserId ?? null,
-          discordUsername: link?.discordUsername ?? null,
-          matchId: input.matchId,
-          isScrim: input.isScrim,
-          coins: input.coins,
-          ctaUrl,
-        },
-        input.tenantId
-      );
-    })
-  );
 }
 
 /**

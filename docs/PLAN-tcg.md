@@ -61,9 +61,20 @@ sur 63 personnes qui possèdent des pièces, **aucune n'en a dépensé une seule
 
 Deux ruptures distinctes, qui appellent deux réponses distinctes :
 
-1. **Rien ne ramène personne.** Un paquet est attribué en silence, au moment
-   d'une victoire, pendant que la joueuse est ailleurs. Elle l'apprend si elle
-   repasse sur `/player/tcg` — et 40 comptes sur 63 ne l'ont pas fait.
+1. **Une moitié des paquets n'est annoncée à personne.** La rédaction initiale
+   de ce plan disait « rien ne ramène personne ». C'ÉTAIT FAUX, et la
+   vérification l'a montré avant qu'un lot ne parte dessus : `tcg.pack_granted`
+   existe, 22 événements sont partis, tous délivrés, avec un identifiant
+   Discord. Le partage par origine est sans appel :
+
+   | origine  | paquets | jamais ouverts |
+   |----------|---------|----------------|
+   | victoire | 39      | 16 (**41 %**)  | ← annoncée en DM
+   | accueil  | 61      | 37 (**61 %**)  | ← silencieuse
+
+   Vingt points d'écart sur la seule différence d'être prévenue. L'annonce
+   n'était pas absente : elle vivait chez un seul producteur, et le cadeau
+   d'accueil — la voie la PLUS nombreuse — ne l'appelait pas.
 2. **Il n'y a rien à faire de ce qu'on possède.** Le seul débit existant est le
    booster à 300 pièces, c'est-à-dire « plus de la même chose ». Douze personnes
    peuvent se l'offrir ; aucune n'en a envie. Une monnaie qu'on accumule sans
@@ -83,11 +94,11 @@ au-delà de ce qui se consomme.
 
 | Lot | Titre | Impact | Effort | Pourquoi à ce rang |
 |---|---|---|---|---|
-| T1 | Ramener la joueuse à son paquet | 🟥 | S | 53 paquets en attente, une notification les débloque |
+| T1 | Ramener la joueuse à son paquet | 🟥 | S | ✅ **livré le 2026-09-27** |
 | T2 | Donner une raison de dépenser | 🟥 | L | 0 pièce dépensée sur 10 805 |
 | T3 | Activer les échanges | 🟥 | M | tout est construit, il manque un réglage et quatre arbitrages |
 | T4 | Finir la chaîne du drop Twitch | 🟧 | S | 18 personnes rattachées attendent, deux gestes manquent |
-| T5 | Les quatre voies qui n'ont jamais payé | 🟧 | M | le barème promet ce qu'il ne verse pas |
+| T5 | Les quatre voies qui n'ont jamais payé | 🟧 | M | ✅ **instruit le 2026-09-27** — aucune n'est cassée |
 | T6 | Faire monter l'opt-in photo, sans le forcer | 🟧 | M | 15 photos sur 63 comptes |
 | T7 | Amorcer le fan art | 🟧 | S | zéro soumission n'est pas une panne, c'est un silence |
 | T8 | Un set d'événement | 🟩 | M | le premier motif de revenir qui ne dépende pas d'une victoire |
@@ -96,27 +107,39 @@ au-delà de ce qui se consomme.
 
 ---
 
-## T1 · Ramener la joueuse à son paquet — 🟥 / S
+## T1 · Ramener la joueuse à son paquet — ✅ LIVRÉ (2026-09-27)
 
-**Le constat.** 53 paquets sur 100 n'ont jamais été ouverts, répartis sur 40
-comptes. Ce n'est pas du désintérêt : personne n'a été prévenu. Le paquet est
-créé par `applyMatchRatingIncremental`, au moment où le score est saisi, souvent
-plusieurs heures après le match et toujours sans que la joueuse soit devant son
-écran.
+**Le constat, après vérification — et il n'était pas celui qu'on croyait.** Ce
+lot devait « ajouter une notification ». Elle existait : `tcg.pack_granted`
+part depuis `grantVictoryRewards`, 22 événements sont sortis, tous délivrés,
+avec un identifiant Discord. Partir sur la rédaction initiale aurait produit un
+doublon de DM.
 
-**Ce qu'on fait.** Émettre un événement à l'attribution d'un paquet, et le faire
-sortir par les canaux qui existent déjà (outbox → DM Discord / push web, avec
-les préférences par canal du système de notifications). Un message par paquet,
-pas de relance : celle-ci viendrait au digest (voir plus bas).
+Ce qui manquait n'était pas l'annonce, c'étaient ses APPELANTS. Elle vivait
+chez un seul producteur — la victoire — et le cadeau d'accueil, qui pose un
+paquet à chaque compte créé, n'y touchait pas. 61 paquets d'accueil, 37 jamais
+ouverts, contre 41 % pour les victoires annoncées.
 
-**Ce qu'on ne fait pas.** Pas de mail. Un paquet n'est pas une information
-urgente, et un canal de plus se paie en désinscriptions sur tous les autres.
+**Ce qui a été fait.**
+- `utils/tcg/announcePackGranted.ts` : l'annonce sort de `grantVictoryRewards`
+  et devient le passage unique. Une annonce qui vit chez un producteur est une
+  annonce que le producteur suivant oublie, sans que rien ne le signale.
+- Les deux voies d'accueil (`grantWelcomeGift`, `grantSelfWelcome`) l'appellent,
+  et rendent désormais l'identifiant du paquet créé — sans match, le couple
+  (joueuse, match) ne fait pas une clé de déduplication.
+- Le DM du bot distingue le cadeau de la victoire : « ta victoire t'a rapporté »
+  est faux pour un accueil, et absurde pour une supportrice qui ne joue pas. Un
+  `reason` absent retombe sur `victory`, pour les événements restés en outbox
+  pendant le déploiement.
 
-**Vérification.** Compter les ouvertures dans les 48 h suivant l'attribution,
-avant et après. Si le ratio ne bouge pas, le problème n'était pas la
-notification — et les lots suivants s'en trouvent réordonnés.
+**Les deux bords sont tenus, et tous deux sont silencieux en production :** on
+n'annonce que ce qui a été écrit (le 2026-09-14, 58 paquets ont été rejetés
+pendant que les pièces étaient créditées — annoncer là enverrait vers une page
+vide), et un rejeu du cadeau ne renotifie personne.
 
----
+**Ce qui reste à mesurer.** Le taux d'ouverture des paquets d'accueil, dans deux
+semaines. C'est la seule chose qui dira si les 20 points d'écart tenaient bien à
+l'annonce.
 
 ## T2 · Donner une raison de dépenser — 🟥 / L
 
@@ -196,27 +219,31 @@ T5 traite.
 
 ---
 
-## T5 · Les quatre voies qui n'ont jamais payé — 🟧 / M
+## T5 · Les quatre voies qui n'ont jamais payé — ✅ INSTRUIT (2026-09-27)
 
-**Le constat.** `checkin_streak`, `placement`, `collection_set` et `twitch_drop`
-figurent au barème montré aux joueuses. Aucune n'a jamais écrit une ligne. Un
-barème qui promet ce qu'il ne verse pas abîme la confiance dans tout le reste,
-y compris dans ce qui marche.
+**Le constat de départ.** `checkin_streak`, `placement`, `collection_set` et
+`twitch_drop` figurent au barème montré aux joueuses et n'ont jamais écrit une
+ligne. La rédaction initiale en concluait qu'« un barème qui promet ce qu'il ne
+verse pas abîme la confiance ». **Vérification faite, aucune des quatre n'est
+cassée** — et c'est une conclusion différente, qui change ce qu'il y a à faire.
 
-**Ce qu'on fait.** Pour chacune, établir si elle est **inatteignable** (condition
-jamais réunie), **cassée** (condition réunie, rien versé) ou **en attente d'un
-geste** (le cas de `twitch_drop`, cf. T4). Puis : réparer, ou retirer du barème
-affiché et le dire.
+| voie | verdict | ce que dit la base |
+|---|---|---|
+| `checkin_streak` | **inatteignable** | seuil à 5 check-ins consécutifs ; la meilleure équipe en compte **3**. Câblé depuis `utils/checkin.ts`. |
+| `collection_set` | **inatteignable** | la meilleure collection réunit **3 équipes sur 10** et **3 maps sur 22**. Dépend du volume d'ouverture, donc de T1 et T2. |
+| `placement` | **en attente d'un geste** | 2 tournois clos, et `final_rankings` **vide** : la finalisation n'a jamais été lancée. Le manque est en AMONT de la récompense. |
+| `twitch_drop` | **en attente d'un geste** | cf. T4 — deux actions manuelles dans la console Twitch. |
 
-`placement` est le cas à regarder en premier : il se déclenche à la fin d'un
-tournoi, et la Cup 2026 en cours n'en a pas encore fini un. Il est probablement
-sain — mais « probablement » n'est pas une vérification.
+**Ce qu'il y a à faire, du coup, et ce n'est pas ce qui était écrit.** Rien à
+réparer, rien à retirer du barème : ces voies paieront. Ce qui manque, c'est que
+le barème dise **où on en est** plutôt que de promettre à plat — « 3 check-ins
+sur 5 » se lit comme un objectif, « série de check-ins : 50 pièces » se lit
+comme une promesse non tenue. C'est un changement d'affichage sur
+`/player/tcg`, à faire quand une des deux voies inatteignables s'approchera.
 
-**Ce qu'on ne fait pas.** Rétro-créditer. Une récompense manquée sur une période
-passée ne se rattrape pas sans réécrire l'histoire du registre, qui est un
-journal en ajout seul.
-
----
+**Ce que ce lot a coûté, et pourquoi il valait la peine.** Une journée de
+requêtes, zéro ligne de code. Sans lui, on aurait « réparé » quatre choses qui
+fonctionnent.
 
 ## T6 · Faire monter l'opt-in photo, sans le forcer — 🟧 / M
 
@@ -336,3 +363,9 @@ d'intégrité, aucune écriture) et les requêtes de comptage citées. **Refaire
 mesure avant d'entamer un lot** : ce plan décrit l'état du 2026-09-27, et la
 leçon de TCG.md §7 est qu'une liste de travaux qui décrit un passé révolu coûte
 plus qu'une liste vide.
+
+Cette leçon s'est vérifiée sur ce plan même, dès son premier lot. T1 devait
+ajouter une notification qui existait déjà, T5 réparer quatre voies dont aucune
+n'est cassée. Les deux se sont corrigés en une requête. **Un lot commence par
+une mesure, pas par le paragraphe qui le décrit** — y compris quand ce
+paragraphe vient d'être écrit.

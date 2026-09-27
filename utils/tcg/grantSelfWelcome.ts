@@ -57,6 +57,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { earnReward } from './earnSources';
 import { refreshBalance } from './grantVictoryRewards';
+import { announcePackGranted } from './announcePackGranted';
 
 /** Le motif qui ouvre droit à l'accueil — et l'étiquette qu'il laisse. */
 export type WelcomeGround = 'supporter' | 'staff';
@@ -305,16 +306,23 @@ export async function grantSelfWelcome(input: {
 
   // 2) Le paquet, seulement maintenant qu'on sait l'avoir créditée.
   let packGranted = false;
+  let packId: string | null = null;
   if (packs > 0) {
-    const { error: packError } = await supabaseAdmin.from('tcg_packs').insert({
-      tenant_id: tenantId,
-      user_id: userId,
-      source_kind: PACK_SOURCE_KIND,
-      // Pas de match derrière un cadeau — et c'est aussi pourquoi l'index
-      // unique de `tcg_packs` ne protège de rien ici.
-      source_match_id: null,
-      granted_at: nowIso,
-    });
+    const { data: insertedPack, error: packError } = await supabaseAdmin
+      .from('tcg_packs')
+      .insert({
+        tenant_id: tenantId,
+        user_id: userId,
+        source_kind: PACK_SOURCE_KIND,
+        // Pas de match derrière un cadeau — et c'est aussi pourquoi l'index
+        // unique de `tcg_packs` ne protège de rien ici.
+        source_match_id: null,
+        granted_at: nowIso,
+      })
+      // L'identifiant sert de clé de déduplication à l'annonce : sans match,
+      // le couple (joueuse, match) n'en fait pas une.
+      .select('id')
+      .maybeSingle();
     if (packError) {
       logger.error(
         '[tcg/self-welcome] paquet non accordé pour %s: %s',
@@ -323,12 +331,24 @@ export async function grantSelfWelcome(input: {
       );
     } else {
       packGranted = true;
+      packId = (insertedPack as { id?: string } | null)?.id ?? null;
     }
   }
 
   // 3) Recalcul du solde depuis le registre, jamais un incrément : un incrément
   //    perdu creuse un écart définitif, un recalcul se répare tout seul.
   await refreshBalance(tenantId, userId);
+
+  // 4) Annoncer — ce cadeau était posé en silence, et c'est la voie la plus
+  //    nombreuse (cf. l'en-tête de `announcePackGranted`).
+  if (packGranted) {
+    await announcePackGranted({
+      tenantId,
+      reason: 'welcome',
+      coins,
+      recipients: [{ userId, packId }],
+    });
+  }
 
   return { status: 'granted', coins, packGranted, ground };
 }
