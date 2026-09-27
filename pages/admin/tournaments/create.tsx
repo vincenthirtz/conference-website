@@ -36,6 +36,7 @@ type CreateTournamentBody = {
   max_teams?: number | null;
   min_players?: number | null;
   max_players?: number | null;
+  solo_mode?: boolean;
   is_public?: boolean;
   is_featured?: boolean;
   logo_url?: string | null;
@@ -103,6 +104,7 @@ function AdminTournamentCreatePage(_props: Props) {
     format_type: string;
     max_teams: string;
     min_players: string;
+    solo_mode: boolean;
     max_players: string;
     is_public: boolean;
     is_featured: boolean;
@@ -118,6 +120,7 @@ function AdminTournamentCreatePage(_props: Props) {
     format_type: '',
     max_teams: '',
     min_players: '',
+    solo_mode: false,
     max_players: '',
     is_public: false,
     is_featured: false,
@@ -189,6 +192,7 @@ function AdminTournamentCreatePage(_props: Props) {
       format_type: form.format_type || null,
       max_teams: form.max_teams ? Number(form.max_teams) : null,
       min_players: form.min_players ? Number(form.min_players) : null,
+      solo_mode: form.solo_mode,
       max_players: form.max_players ? Number(form.max_players) : null,
       is_public: form.is_public,
       is_featured: form.is_featured,
@@ -549,6 +553,27 @@ function AdminTournamentCreatePage(_props: Props) {
                       />
                     </div>
                   </div>
+
+                  {/* Inscription individuelle : une case, deux conséquences
+                      (parcours d'inscription + silence Discord). Le texte
+                      d'aide les dit toutes les deux, parce qu'aucune ne se
+                      devine depuis le libellé. */}
+                  <label className="mt-1 flex items-start gap-3 rounded-xl border border-neutral-700/60 bg-neutral-900/40 p-3 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-900"
+                      checked={form.solo_mode}
+                      onChange={(e) =>
+                        updateField('solo_mode', e.target.checked)
+                      }
+                    />
+                    <span>
+                      <span className="font-medium">{t.soloModeLabel}</span>
+                      <span className="mt-1 block text-xs text-neutral-400">
+                        {t.soloModeHelp}
+                      </span>
+                    </span>
+                  </label>
                 </section>
 
                 {/* Visibilite & visuels */}

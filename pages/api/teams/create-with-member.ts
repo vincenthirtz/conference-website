@@ -1018,6 +1018,20 @@ export default async function handler(
     tournament_name: string;
     demande_id: string | null;
   } | null = null;
+  /**
+   * Le tournoi visé est-il en inscription individuelle ?
+   *
+   * Lu ici, mais consommé tout en bas, au moment d'annoncer `team.created` :
+   * une « équipe » d'une joueuse ne doit PAS déclencher le provisionnement
+   * Discord (rôle + vocal + salon texte par équipe). Sur un événement solo à
+   * trente inscrites, c'est trente rôles et soixante salons créés pour rien.
+   *
+   * Renseigné dès que le tournoi est trouvé, AVANT le filtre sur `status` :
+   * l'inscription automatique n'a lieu que si le tournoi est `published`, mais
+   * la question Discord se pose pour toute création rattachée à ce tournoi,
+   * quel que soit son statut.
+   */
+  let soloTournament = false;
   const tournamentId = body.tournament_id?.toString().trim() || null;
 
   if (tournamentId) {
@@ -1025,10 +1039,12 @@ export default async function handler(
       // Verify tournament exists and is published
       const { data: tournament } = await supabaseAdmin
         .from('tournaments')
-        .select('id, name, status, max_teams, min_players')
+        .select('id, name, status, max_teams, min_players, solo_mode')
         .eq('id', tournamentId)
         .eq('tenant_id', tenantId)
         .single();
+
+      soloTournament = tournament?.solo_mode === true;
 
       if (tournament && tournament.status === 'published') {
         // ── Deux effectifs, deux décisions ────────────────────────────────
@@ -1291,7 +1307,21 @@ export default async function handler(
 
   // Bot push : team.created -> le bot cree le salon vocal natif de l'equipe
   // (chantier voice par equipe). Idempotent cote bot via teams.discord_voice_channel_id.
+  //
+  // SAUF en inscription individuelle : la « team » ne représente alors qu'une
+  // joueuse, et lui provisionner un rôle, un vocal et un salon texte n'a aucun
+  // sens — c'est le serveur Discord entier qu'on noierait, un événement solo
+  // comptant autant d'équipes que d'inscrites. Rien d'autre ne change : la
+  // team, son roster d'une joueuse et son inscription au tournoi suivent le
+  // chemin habituel.
+  if (soloTournament) {
+    logger.info('[/api/teams/create-with-member] solo: team.created non émis', {
+      teamId: createdTeam.id,
+      tournamentId,
+    });
+  }
   void (async () => {
+    if (soloTournament) return;
     // Mode manager : il n'y a PAS encore de capitaine (la désignée n'a pas
     // accepté). On n'annonce donc aucun capitaine au bot — sinon il assignerait
     // le rôle d'équipe à quelqu'un qui n'en fait pas partie. Le créateur

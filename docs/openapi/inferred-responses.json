@@ -17991,6 +17991,9 @@
          "null"
         ]
        },
+       "solo_mode": {
+        "type": "boolean"
+       },
        "roster_locked_at": {
         "type": [
          "string",
@@ -18122,6 +18125,7 @@
        "max_teams",
        "min_players",
        "max_players",
+       "solo_mode",
        "roster_locked_at",
        "is_public",
        "is_featured",
@@ -47371,7 +47375,8 @@
         "max_teams": {},
         "logo_url": {},
         "banner_url": {},
-        "created_at": {}
+        "created_at": {},
+        "solo_mode": {}
        },
        "required": [
         "registration_fields",
@@ -47388,7 +47393,8 @@
         "max_teams",
         "logo_url",
         "banner_url",
-        "created_at"
+        "created_at",
+        "solo_mode"
        ]
       }
      },
@@ -69781,6 +69787,9 @@
          "null"
         ]
        },
+       "solo_mode": {
+        "type": "boolean"
+       },
        "roster_locked_at": {
         "type": [
          "string",
@@ -69912,6 +69921,7 @@
        "max_teams",
        "min_players",
        "max_players",
+       "solo_mode",
        "roster_locked_at",
        "is_public",
        "is_featured",

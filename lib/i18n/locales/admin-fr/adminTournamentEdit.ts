@@ -50,6 +50,9 @@ export default adminNs('adminTournamentEdit', {
   minPlayersHelp: 'Nombre minimum de membres requis pour inscrire une équipe',
   maxPlayersLabel: 'Joueuses max. par équipe',
   maxPlayersHelp: 'Nombre maximum de membres autorisé par équipe',
+  soloModeLabel: 'Inscription individuelle (sans équipe)',
+  soloModeHelp:
+    "Chaque participante s'inscrit seule depuis /tournament/<id>/inscription-solo et compte pour une « équipe » d'une joueuse portant son pseudo. Aucun rôle ni salon Discord n'est créé pour elle. Le format FFA (classement par points) est celui qui convient à ce type d'événement.",
   sectionVisuals: 'Visuels',
   logoLabel: 'Logo (URL)',
   bannerLabel: 'Bannière (URL)',

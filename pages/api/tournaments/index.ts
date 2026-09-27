@@ -37,6 +37,14 @@ export type PublicTournament = {
   // une page publique. Un jsonb invalide ressort en `[]`, pas en `null` :
   // « pas de champ personnalisé » et « champs illisibles » se rendent pareil.
   registration_fields: RegistrationField[] | null;
+  /**
+   * Inscription individuelle : une participante s'inscrit seule, représentée
+   * par une équipe d'une joueuse. Exposé publiquement parce que c'est le
+   * parcours d'inscription lui-même qui en dépend — /team/create s'en sert
+   * pour renvoyer vers le formulaire solo plutôt que d'ouvrir son wizard
+   * d'équipe.
+   */
+  solo_mode: boolean;
 };
 
 export default async function handler(
@@ -77,7 +85,8 @@ export default async function handler(
       logo_url,
       banner_url,
       created_at,
-      registration_fields
+      registration_fields,
+      solo_mode
     `;
 
     let query = supabaseAdmin

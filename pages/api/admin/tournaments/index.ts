@@ -33,6 +33,21 @@ export type TournamentCreateInput = {
   start_date?: string | null;
   end_date?: string | null;
   max_teams?: number | null;
+  /**
+   * Effectif minimum par équipe. Présent dans le formulaire de création depuis
+   * toujours, mais il était absent de ce type ET du payload inséré : la valeur
+   * saisie partait dans la requête et disparaissait sans un mot, et il fallait
+   * rouvrir le tournoi en édition pour qu'elle prenne. Même piège que la
+   * whitelist de `tenant_discord_config`.
+   */
+  min_players?: number | null;
+  /**
+   * Inscription individuelle (voir `tournaments.solo_mode`). Doit pouvoir se
+   * poser DÈS la création : c'est ce drapeau qui décide du parcours
+   * d'inscription, et un tournoi solo créé sans lui envoie ses premières
+   * inscrites dans le wizard d'équipe.
+   */
+  solo_mode?: boolean | null;
 };
 
 // Rôle minimum : manager (gestion tournois)
@@ -216,6 +231,19 @@ async function handlePost(
     }
   }
 
+  // Validation min_players — même règle que le PATCH (entier >= 1).
+  if (body.min_players !== undefined && body.min_players !== null) {
+    if (
+      typeof body.min_players !== 'number' ||
+      !Number.isInteger(body.min_players) ||
+      body.min_players < 1
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'min_players must be an integer >= 1' });
+    }
+  }
+
   const payload = {
     tenant_id: ctx.tenantId,
     name: body.name,
@@ -225,6 +253,8 @@ async function handlePost(
     start_date: body.start_date ?? null,
     end_date: body.end_date ?? null,
     max_teams: body.max_teams ?? null,
+    min_players: body.min_players ?? null,
+    solo_mode: body.solo_mode === true,
   };
 
   const { data, error } = await supabaseAdmin!

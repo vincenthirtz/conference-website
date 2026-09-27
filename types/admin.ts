@@ -74,6 +74,12 @@ export type Tournament = {
   max_teams: number | null;
   min_players: number | null;
   max_players: number | null;
+  /**
+   * Inscription individuelle : une participante s'inscrit seule, représentée
+   * par une équipe d'une joueuse (cf. `tournaments.solo_mode`). Optionnel côté
+   * type : les réponses d'API antérieures à la colonne ne le portent pas.
+   */
+  solo_mode?: boolean;
   is_public: boolean;
   is_featured: boolean;
   logo_url: string | null;

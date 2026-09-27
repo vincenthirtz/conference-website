@@ -26,6 +26,13 @@ type TournamentDetail = {
   max_teams: number | null;
   min_players: number | null;
   max_players: number | null;
+  /**
+   * Inscription individuelle : une participante s'inscrit seule, représentée
+   * par une équipe d'une joueuse. Coupe le provisionnement Discord et aiguille
+   * le parcours public vers le formulaire solo. Sans effet sur le moteur de
+   * compétition, qui continue de raisonner en équipes.
+   */
+  solo_mode: boolean;
   roster_locked_at: string | null;
   is_public: boolean;
   is_featured: boolean;
@@ -118,6 +125,7 @@ async function handleGet(
         max_teams,
         min_players,
         max_players,
+        solo_mode,
         roster_locked_at,
         visibility,
         is_featured,
@@ -177,6 +185,7 @@ async function handlePatch(
       max_teams,
       min_players,
       max_players,
+      solo_mode,
       is_public,
       is_featured,
       logo_url,
@@ -374,6 +383,7 @@ async function handlePatch(
     if (max_teams !== undefined) updatePayload.max_teams = max_teams;
     if (min_players !== undefined) updatePayload.min_players = min_players;
     if (max_players !== undefined) updatePayload.max_players = max_players;
+    if (solo_mode !== undefined) updatePayload.solo_mode = solo_mode === true;
     // Map is_public (frontend) to visibility (database)
     if (is_public !== undefined)
       updatePayload.visibility = is_public ? 'public' : 'private';
@@ -421,6 +431,7 @@ async function handlePatch(
         max_teams,
         min_players,
         max_players,
+        solo_mode,
         roster_locked_at,
         visibility,
         is_featured,

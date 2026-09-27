@@ -43,6 +43,9 @@ export default adminNs('adminTournamentsCreate', {
   maxTeamsLabel: "Nombre max. d'equipes",
   minPlayersLabel: 'Nombre min. de joueurs par equipe',
   maxPlayersLabel: 'Nombre max. de joueurs par equipe',
+  soloModeLabel: 'Inscription individuelle (sans équipe)',
+  soloModeHelp:
+    "Chaque participante s'inscrit seule depuis /tournament/<id>/inscription-solo et compte pour une « équipe » d'une joueuse portant son pseudo. Aucun rôle ni salon Discord n'est créé pour elle. Le format FFA (classement par points) est celui qui convient à ce type d'événement.",
   visibilityVisuals: 'Visibilite & visuels',
   makePublic: 'Rendre le tournoi public sur le site',
   makeFeatured: 'Mettre en avant (section "featured")',

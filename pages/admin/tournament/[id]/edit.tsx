@@ -79,6 +79,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
     format_type: string;
     max_teams: string;
     min_players: string;
+    solo_mode: boolean;
     max_players: string;
     is_public: boolean;
     is_featured: boolean;
@@ -103,6 +104,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
     format_type: '',
     max_teams: '',
     min_players: '',
+    solo_mode: false,
     max_players: '',
     is_public: false,
     is_featured: false,
@@ -163,6 +165,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
         format_type: tour.format_type || '',
         max_teams: tour.max_teams ? String(tour.max_teams) : '',
         min_players: tour.min_players ? String(tour.min_players) : '',
+        solo_mode: tour.solo_mode === true,
         max_players: tour.max_players ? String(tour.max_players) : '',
         is_public: tour.is_public,
         is_featured: tour.is_featured,
@@ -237,6 +240,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
       format_type: form.format_type || null,
       max_teams: form.max_teams ? Number(form.max_teams) : null,
       min_players: form.min_players ? Number(form.min_players) : null,
+      solo_mode: form.solo_mode,
       max_players: form.max_players ? Number(form.max_players) : null,
       is_public: form.is_public,
       is_featured: form.is_featured,
@@ -610,6 +614,28 @@ function AdminTournamentEditPage(_props: StaffProps) {
                             {t.maxPlayersHelp}
                           </p>
                         </div>
+                        {/* Inscription individuelle : une case, deux
+                            conséquences (parcours d'inscription + silence
+                            Discord), toutes deux dites dans l'aide — aucune ne
+                            se devine depuis le libellé. */}
+                        <label className="md:col-span-2 flex items-start gap-3 rounded-xl border border-neutral-700/60 bg-neutral-900/40 p-3 text-sm cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-900"
+                            checked={form.solo_mode}
+                            onChange={(e) =>
+                              updateField('solo_mode', e.target.checked)
+                            }
+                          />
+                          <span>
+                            <span className="font-medium">
+                              {t.soloModeLabel}
+                            </span>
+                            <span className="mt-1 block text-xs text-neutral-500">
+                              {t.soloModeHelp}
+                            </span>
+                          </span>
+                        </label>
                       </div>
                     </section>
 
