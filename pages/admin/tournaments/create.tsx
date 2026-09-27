@@ -7,6 +7,12 @@ import {
   TOURNAMENT_TEMPLATES,
   type TournamentTemplate,
 } from '@/config/tournament-templates';
+import {
+  applyTemplateDefaults,
+  stageTypeBadgeClass,
+} from '@/utils/admin/tournamentTemplateForm';
+import SoloModeCheckbox from '@/components/admin/tournaments/SoloModeCheckbox';
+import TemplatePicker from '@/components/admin/tournaments/TemplatePicker';
 import { useAutoSave } from '@/utils/useAutoSave';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
@@ -42,25 +48,6 @@ type CreateTournamentBody = {
   logo_url?: string | null;
   banner_url?: string | null;
 };
-
-function stageTypeBadge(type: string) {
-  switch (type) {
-    case 'bracket':
-      return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
-    case 'swiss':
-      return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
-    case 'group':
-      return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-    case 'round_robin':
-      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
-    case 'showmatch':
-      return 'bg-pink-500/20 text-pink-300 border-pink-500/30';
-    case 'ffa':
-      return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
-    default:
-      return 'bg-neutral-500/20 text-neutral-300 border-neutral-500/30';
-  }
-}
 
 export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
@@ -162,39 +149,12 @@ function AdminTournamentCreatePage(_props: Props) {
   }
 
   /**
-   * Choisir un gabarit, et poser les réglages de tournoi qu'il emporte.
-   *
-   * Un gabarit ne décrit pas qu'une suite de phases : certaines n'ont de sens
-   * qu'avec un paramétrage précis du tournoi. Une structure FFA « chacune pour
-   * soi » laissée avec `solo_mode` à false renvoie les participantes dans le
-   * wizard d'équipe, et un `min_players` hérité de la Cup fait remonter
-   * « roster incomplet » à chaque inscription — deux réglages invisibles, deux
-   * façons de rater l'événement APRÈS avoir choisi le bon gabarit.
-   *
-   * Les valeurs restent modifiables : on les écrit dans le formulaire, sous
-   * les yeux de l'organisatrice, on ne les impose pas à l'envoi. Le nom saisi
-   * n'est jamais touché — c'est la seule chose qu'elle a déjà tapée.
-   *
-   * Désélectionner ne remet RIEN en arrière : une valeur relue et acceptée
-   * est devenue la sienne, la reprendre serait plus surprenant que de la
-   * laisser.
+   * Choisir un gabarit, et poser les réglages de tournoi qu'il emporte —
+   * la règle vit dans `applyTemplateDefaults`, qui explique pourquoi.
    */
   function selectTemplate(tpl: TournamentTemplate | null) {
     setSelectedTemplate(tpl);
-    const d = tpl?.defaults;
-    if (!d) return;
-    setForm((prev) => ({
-      ...prev,
-      ...(d.solo_mode !== undefined ? { solo_mode: d.solo_mode } : {}),
-      ...(d.min_players !== undefined
-        ? { min_players: String(d.min_players) }
-        : {}),
-      ...(d.max_players !== undefined
-        ? { max_players: String(d.max_players) }
-        : {}),
-      ...(d.max_teams !== undefined ? { max_teams: String(d.max_teams) } : {}),
-      ...(d.is_public !== undefined ? { is_public: d.is_public } : {}),
-    }));
+    setForm((prev) => applyTemplateDefaults(prev, tpl));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -360,57 +320,17 @@ function AdminTournamentCreatePage(_props: Props) {
                 </div>
               )}
 
-              {/* Template selector */}
-              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-                <h2 className="text-lg font-semibold">{t.templateTitle}</h2>
-                <p className="text-xs text-neutral-400">{t.templateHelp}</p>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  {/* No template option */}
-                  <button
-                    type="button"
-                    onClick={() => selectTemplate(null)}
-                    className={`p-4 rounded-xl border text-left transition-all ${
-                      !selectedTemplate
-                        ? 'bg-blue-600/20 border-blue-500/50 ring-1 ring-blue-500/30'
-                        : 'bg-neutral-900/50 border-neutral-700 hover:bg-neutral-800 hover:border-neutral-600'
-                    }`}
-                  >
-                    <div className="font-medium text-sm">{t.noTemplate}</div>
-                    <div className="text-xs text-neutral-400 mt-1">
-                      {t.noTemplateDesc}
-                    </div>
-                  </button>
-
-                  {[...TOURNAMENT_TEMPLATES, ...customTemplates].map((tpl) => (
-                    <button
-                      key={tpl.id}
-                      type="button"
-                      onClick={() => selectTemplate(tpl)}
-                      className={`p-4 rounded-xl border text-left transition-all ${
-                        selectedTemplate?.id === tpl.id
-                          ? 'bg-blue-600/20 border-blue-500/50 ring-1 ring-blue-500/30'
-                          : 'bg-neutral-900/50 border-neutral-700 hover:bg-neutral-800 hover:border-neutral-600'
-                      }`}
-                    >
-                      <div className="font-medium text-sm">{tpl.name}</div>
-                      <div className="text-xs text-neutral-400 mt-1">
-                        {tpl.description}
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {tpl.stages.map((s, i) => (
-                          <span
-                            key={i}
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${stageTypeBadge(s.stage_type)}`}
-                          >
-                            {s.name}
-                          </span>
-                        ))}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </section>
+              <TemplatePicker
+                templates={[...TOURNAMENT_TEMPLATES, ...customTemplates]}
+                selected={selectedTemplate}
+                onSelect={selectTemplate}
+                labels={{
+                  title: t.templateTitle,
+                  help: t.templateHelp,
+                  noTemplate: t.noTemplate,
+                  noTemplateDesc: t.noTemplateDesc,
+                }}
+              />
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Informations generales */}
@@ -592,26 +512,12 @@ function AdminTournamentCreatePage(_props: Props) {
                     </div>
                   </div>
 
-                  {/* Inscription individuelle : une case, deux conséquences
-                      (parcours d'inscription + silence Discord). Le texte
-                      d'aide les dit toutes les deux, parce qu'aucune ne se
-                      devine depuis le libellé. */}
-                  <label className="mt-1 flex items-start gap-3 rounded-xl border border-neutral-700/60 bg-neutral-900/40 p-3 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-900"
-                      checked={form.solo_mode}
-                      onChange={(e) =>
-                        updateField('solo_mode', e.target.checked)
-                      }
-                    />
-                    <span>
-                      <span className="font-medium">{t.soloModeLabel}</span>
-                      <span className="mt-1 block text-xs text-neutral-400">
-                        {t.soloModeHelp}
-                      </span>
-                    </span>
-                  </label>
+                  <SoloModeCheckbox
+                    checked={form.solo_mode}
+                    onChange={(v) => updateField('solo_mode', v)}
+                    label={t.soloModeLabel}
+                    help={t.soloModeHelp}
+                  />
                 </section>
 
                 {/* Visibilite & visuels */}
@@ -822,7 +728,7 @@ function AdminTournamentCreatePage(_props: Props) {
                           </svg>
                         )}
                         <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium border ${stageTypeBadge(s.stage_type)}`}
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium border ${stageTypeBadgeClass(s.stage_type)}`}
                         >
                           {s.name}
                         </span>

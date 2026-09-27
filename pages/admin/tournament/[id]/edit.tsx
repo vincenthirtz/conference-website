@@ -12,6 +12,7 @@ import RegistrationFieldsEditor, {
   hasRegistrationFieldErrors,
 } from '@/components/admin/RegistrationFieldsEditor';
 import TournamentVisualsSection from '@/components/admin/tournament/TournamentVisualsSection';
+import TournamentFormatFields from '@/components/admin/tournament/TournamentFormatFields';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { StaffProps, Tournament } from '@/types/admin';
 import type { RegistrationField } from '@/utils/registrationFields';
@@ -516,126 +517,10 @@ function AdminTournamentEditPage(_props: StaffProps) {
                           </p>
                         </div>
 
-                        <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
-                            {t.formatLabel}
-                          </label>
-                          <input
-                            type="text"
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.format}
-                            onChange={(e) =>
-                              updateField('format', e.target.value)
-                            }
-                            placeholder="BO3"
-                          />
-                          <p className="text-xs text-neutral-500 mt-1">
-                            {t.formatHelp}
-                          </p>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
-                            {t.formatTypeLabel}
-                          </label>
-                          <select
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.format_type}
-                            onChange={(e) =>
-                              updateField('format_type', e.target.value)
-                            }
-                          >
-                            <option value="">{t.formatTypeNone}</option>
-                            <option value="single_elim">
-                              {t.formatSingleElim}
-                            </option>
-                            <option value="double_elim">
-                              {t.formatDoubleElim}
-                            </option>
-                            <option value="swiss">{t.formatSwiss}</option>
-                            <option value="round_robin">
-                              {t.formatRoundRobin}
-                            </option>
-                            <option value="showmatch">
-                              {t.formatShowmatch}
-                            </option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
-                            {t.maxTeamsLabel}
-                          </label>
-                          <input
-                            type="number"
-                            min={2}
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.max_teams}
-                            onChange={(e) =>
-                              updateField('max_teams', e.target.value)
-                            }
-                            placeholder="16"
-                          />
-                        </div>
-
-                        <div className="md:col-span-2">
-                          <label className="block text-sm mb-1 text-neutral-300">
-                            {t.minPlayersLabel}
-                          </label>
-                          <input
-                            type="number"
-                            min={1}
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.min_players}
-                            onChange={(e) =>
-                              updateField('min_players', e.target.value)
-                            }
-                            placeholder="5"
-                          />
-                          <p className="text-xs text-neutral-500 mt-1">
-                            {t.minPlayersHelp}
-                          </p>
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-sm mb-1 text-neutral-300">
-                            {t.maxPlayersLabel}
-                          </label>
-                          <input
-                            type="number"
-                            min={1}
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.max_players}
-                            onChange={(e) =>
-                              updateField('max_players', e.target.value)
-                            }
-                            placeholder="10"
-                          />
-                          <p className="text-xs text-neutral-500 mt-1">
-                            {t.maxPlayersHelp}
-                          </p>
-                        </div>
-                        {/* Inscription individuelle : une case, deux
-                            conséquences (parcours d'inscription + silence
-                            Discord), toutes deux dites dans l'aide — aucune ne
-                            se devine depuis le libellé. */}
-                        <label className="md:col-span-2 flex items-start gap-3 rounded-xl border border-neutral-700/60 bg-neutral-900/40 p-3 text-sm cursor-pointer">
-                          <input
-                            type="checkbox"
-                            className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-900"
-                            checked={form.solo_mode}
-                            onChange={(e) =>
-                              updateField('solo_mode', e.target.checked)
-                            }
-                          />
-                          <span>
-                            <span className="font-medium">
-                              {t.soloModeLabel}
-                            </span>
-                            <span className="mt-1 block text-xs text-neutral-500">
-                              {t.soloModeHelp}
-                            </span>
-                          </span>
-                        </label>
+                        <TournamentFormatFields
+                          form={form}
+                          updateField={updateField}
+                        />
                       </div>
                     </section>
 

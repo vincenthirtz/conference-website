@@ -2056,6 +2056,7 @@
       "schedule_rules",
       "short_name",
       "slug",
+      "solo_mode",
       "start_date",
       "status",
       "tenant_id",

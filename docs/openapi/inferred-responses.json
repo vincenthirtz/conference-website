@@ -17879,6 +17879,26 @@
         "description": {
          "type": "string"
         },
+        "defaults": {
+         "type": "object",
+         "properties": {
+          "solo_mode": {
+           "type": "boolean"
+          },
+          "min_players": {
+           "type": "number"
+          },
+          "max_players": {
+           "type": "number"
+          },
+          "max_teams": {
+           "type": "number"
+          },
+          "is_public": {
+           "type": "boolean"
+          }
+         }
+        },
         "stages": {
          "type": "array",
          "items": {
@@ -17891,6 +17911,7 @@
             "type": "string",
             "enum": [
              "bracket",
+             "ffa",
              "group",
              "other",
              "round_robin",
@@ -60079,6 +60100,26 @@
        "description": {
         "type": "string"
        },
+       "defaults": {
+        "type": "object",
+        "properties": {
+         "solo_mode": {
+          "type": "boolean"
+         },
+         "min_players": {
+          "type": "number"
+         },
+         "max_players": {
+          "type": "number"
+         },
+         "max_teams": {
+          "type": "number"
+         },
+         "is_public": {
+          "type": "boolean"
+         }
+        }
+       },
        "stages": {
         "type": "array",
         "items": {
@@ -60091,6 +60132,7 @@
            "type": "string",
            "enum": [
             "bracket",
+            "ffa",
             "group",
             "other",
             "round_robin",
