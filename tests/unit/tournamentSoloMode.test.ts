@@ -316,6 +316,62 @@ describe('POST /api/admin/tournaments — champs d’inscription', () => {
     expect((store.tournaments as any[])[0].solo_mode).toBe(false);
   });
 
+  it('persiste TOUS les champs du formulaire, pas seulement les connus', async () => {
+    // Le formulaire envoyait `format_type`, `is_public`, `is_featured`,
+    // `logo_url` et `banner_url` depuis toujours ; l'endpoint les jetait sans
+    // un mot, et il fallait rouvrir le tournoi en édition pour qu'ils
+    // prennent. Une whitelist silencieuse ne se voit que si on l'assère.
+    store.tournaments = [];
+    const res = makeRes();
+    await adminTournamentsHandler(
+      adminReq({
+        name: 'Cup complète',
+        format_type: 'swiss',
+        max_players: 7,
+        is_public: true,
+        is_featured: true,
+        logo_url: 'https://example.test/logo.png',
+        banner_url: 'https://example.test/banner.png',
+      }),
+      res
+    );
+
+    expect(res.statusCode).toBe(201);
+    const row = (store.tournaments as any[])[0];
+    expect(row.format_type).toBe('swiss');
+    expect(row.max_players).toBe(7);
+    expect(row.is_featured).toBe(true);
+    expect(row.logo_url).toBe('https://example.test/logo.png');
+    expect(row.banner_url).toBe('https://example.test/banner.png');
+    // `is_public` → `visibility` : MÊME correspondance que le PATCH, pas une
+    // seconde convention. Un tournoi créé public doit l'être aussi à la
+    // relecture, sinon l'écran d'édition contredit celui de création.
+    expect(row.visibility).toBe('public');
+  });
+
+  it('ne publie RIEN par omission', async () => {
+    store.tournaments = [];
+    const res = makeRes();
+    await adminTournamentsHandler(adminReq({ name: 'Brouillon' }), res);
+
+    expect(res.statusCode).toBe(201);
+    const row = (store.tournaments as any[])[0];
+    expect(row.visibility).toBe('private');
+    expect(row.is_featured).toBe(false);
+  });
+
+  it('refuse un max_players non entier, comme le PATCH', async () => {
+    store.tournaments = [];
+    const res = makeRes();
+    await adminTournamentsHandler(
+      adminReq({ name: 'Cup', max_players: 2.5 }),
+      res
+    );
+
+    expect(res.statusCode).toBe(400);
+    expect((store.tournaments as any[]) ?? []).toHaveLength(0);
+  });
+
   it('refuse un min_players non entier plutôt que de l’ignorer', async () => {
     store.tournaments = [];
     const res = makeRes();

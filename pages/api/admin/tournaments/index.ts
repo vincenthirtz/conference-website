@@ -48,6 +48,19 @@ export type TournamentCreateInput = {
    * inscrites dans le wizard d'équipe.
    */
   solo_mode?: boolean | null;
+  /** Effectif maximum par équipe. */
+  max_players?: number | null;
+  /** Structure du tournoi (single_elim, swiss, …). Texte libre en base. */
+  format_type?: string | null;
+  /**
+   * Publication. Le formulaire parle en booléen, la base en `visibility`
+   * ('public' | 'private') : la correspondance est celle du PATCH, pas une
+   * seconde convention inventée ici.
+   */
+  is_public?: boolean | null;
+  is_featured?: boolean | null;
+  logo_url?: string | null;
+  banner_url?: string | null;
 };
 
 // Rôle minimum : manager (gestion tournois)
@@ -231,16 +244,15 @@ async function handlePost(
     }
   }
 
-  // Validation min_players — même règle que le PATCH (entier >= 1).
-  if (body.min_players !== undefined && body.min_players !== null) {
-    if (
-      typeof body.min_players !== 'number' ||
-      !Number.isInteger(body.min_players) ||
-      body.min_players < 1
-    ) {
+  // Effectifs — mêmes règles que le PATCH (entier >= 1), pour qu'une valeur
+  // acceptée à la création le reste à l'édition, et inversement.
+  for (const field of ['min_players', 'max_players'] as const) {
+    const value = body[field];
+    if (value === undefined || value === null) continue;
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
       return res
         .status(400)
-        .json({ error: 'min_players must be an integer >= 1' });
+        .json({ error: `${field} must be an integer >= 1` });
     }
   }
 
@@ -254,7 +266,16 @@ async function handlePost(
     end_date: body.end_date ?? null,
     max_teams: body.max_teams ?? null,
     min_players: body.min_players ?? null,
+    max_players: body.max_players ?? null,
+    format_type: body.format_type ?? null,
     solo_mode: body.solo_mode === true,
+    is_featured: body.is_featured === true,
+    logo_url: body.logo_url ?? null,
+    banner_url: body.banner_url ?? null,
+    // Correspondance IDENTIQUE à celle du PATCH (`is_public ? 'public' :
+    // 'private'`). Le défaut reste `private` quand le champ est absent : un
+    // tournoi ne se publie pas par omission.
+    visibility: body.is_public === true ? 'public' : 'private',
   };
 
   const { data, error } = await supabaseAdmin!
