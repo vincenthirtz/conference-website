@@ -103,7 +103,7 @@ au-delà de ce qui se consomme.
 | T7 | Amorcer le fan art | 🟧 | S | zéro soumission n'est pas une panne, c'est un silence |
 | T8 | Un set d'événement | 🟩 | M | le premier motif de revenir qui ne dépende pas d'une victoire |
 | T9 | « Ne pas figurer dans le TCG » | 🟧 | M | ✅ **livré le 2026-09-27** |
-| T10 | Vérifier ce qui n'a jamais été vu | 🟧 | M | UX non relue en navigateur, 12 figurines, garde des types de carte |
+| T10 | Vérifier ce qui n'a jamais été vu | 🟧 | M | ⚠️ **partiel (2026-09-27)** — mesure livrée, les deux autres volets sont bloqués sur un geste humain |
 
 ---
 
@@ -398,26 +398,61 @@ endroits.
 **Ce qui reste à mesurer.** Rien, et c'est normal : un garde-fou de consentement
 ne se juge pas à son taux d'usage. S'il ne sert jamais, tant mieux.
 
-## T10 · Vérifier ce qui n'a jamais été vu — 🟧 / M
+## T10 · Vérifier ce qui n'a jamais été vu — ⚠️ PARTIEL (2026-09-27)
 
-Trois dettes de vérification, réunies parce qu'elles ont la même nature : du
-travail livré que personne n'a regardé tourner.
+Des trois volets, **un seul pouvait être livré**. Les deux autres ne sont pas
+reportés faute de temps : ils attendent un geste que le code ne peut pas faire.
 
-1. **La passe UX de `/player/tcg` et `/tcg` (2026-09-15)** — focus, `aria-live`
-   du tirage, `prefers-reduced-motion`, squelettes, cibles de 44 px, repère non
-   chromatique de rareté, confirmation de recyclage chiffrée. Livrée sans
-   qu'aucun `next dev` ait pu être lancé. À relire à 360 / 768 / 1280 px, et à
-   couvrir d'un scénario Playwright « charger plus » sur base locale.
-2. **Douze héros sans figurine voxel** (Domina, D.Mon, Anran, Emre, Freja,
-   Shion, Sierra, Doctrine, Fika, Juno, Mizuki, Wuyang) : ils retombent sur la
-   figurine de leur rôle, ce qui est un repli correct — mais le repli est
-   silencieux, et c'est ce silence qui avait masqué le bogue **Soldier: 76**.
-3. **Un tableau de bord d'engagement** : les chiffres de la section 1 ont été
-   tirés à la main, en SQL, un par un. Tant qu'il faut ouvrir un client SQL pour
-   savoir si le jeu vit, personne ne le saura — et un plan comme celui-ci se
-   refera de mémoire dans six mois.
+### ✅ Le tableau de bord — livré, et le constat était faux
 
----
+Le plan disait : « les chiffres de la section 1 ont été tirés à la main, en SQL
+[…] tant qu'il faut ouvrir un client SQL pour savoir si le jeu vit, personne ne
+le saura ». **Un tableau de bord existait déjà**, et il est fourni :
+`/admin/tcg` rend les paquets (distribués, ouverts, en attente, ventilés par
+origine), la monnaie (en circulation, gagnée, dépensée, ventilée par origine),
+les cartes par rareté et les photos par statut.
+
+Ce qui manquait était plus précis, et c'est exactement le chiffre qui a fondé
+T1 : **le taux d'ouverture PAR ORIGINE**. Le total mélange des populations qui
+ne se comportent pas pareil et rend une moyenne qui ne décrit personne — la
+victoire ouvrait à 59 %, l'accueil à 39 %, et cet écart de vingt points était
+invisible à l'écran.
+
+`openRates` le calcule, chaque tuile d'origine le porte. Le piège est le zéro :
+une origine qui n'a jamais rien distribué n'a PAS un taux de 0 % — elle n'en a
+pas. Les confondre ferait passer le drop Twitch, dont la chaîne attend deux
+gestes manuels, pour une voie que personne n'ouvre : le diagnostic exactement
+inverse, sur l'écran censé le donner.
+
+### ⛔ La passe navigateur et le scénario « charger plus »
+
+**Bloqué, et le dépôt le documente lui-même.** `.github/workflows/e2e.yml` le
+dit : la suite Playwright ne tourne nulle part. Sur le Mac elle fait chauffer la
+machine ; en local, `.env` pointe la PRODUCTION et le garde-fou de
+`supabaseTestClient` interrompt toute spec qui sème. **87 specs écrites, aucune
+jouée.** Le runner GitHub réglerait les deux, mais il lui faut un socle de
+schéma — les 340 migrations ne sont pas horodatées et leur ordre alphabétique
+n'est pas leur ordre chronologique. La marche à suivre est dans
+[E2E-LOCAL-SUPABASE.md](./E2E-LOCAL-SUPABASE.md) ; **elle demande le mot de
+passe base, que seul un humain a**.
+
+Écrire ici un scénario de plus produirait une 88ᵉ spec jamais jouée — c'est-à-dire
+l'inverse exact de ce que ce lot s'appelle.
+
+### ⛔ Les douze figurines
+
+Domina, D.Mon, Anran, Emre, Freja, Shion, Sierra, Doctrine, Fika, Juno, Mizuki,
+Wuyang. Elles retombent sur la figurine de leur rôle — un repli correct, pas un
+trou. `tests/unit/heroFigureCoverage` tient la file d'attente et refuse qu'elle
+s'allonge en silence. **Sculpter est un travail d'illustration**, et le garde-fou
+suffit à ce que l'oubli ne passe pas.
+
+### Ce que ce lot apprend sur les autres
+
+Trois volets, un livrable. Les deux blocages ne se débloquent pas avec du code —
+comme T4 (deux gestes dans la console Twitch) et T7 (un appel à œuvres). Sur dix
+lots, **quatre attendent quelqu'un**, et c'est une information de pilotage plus
+utile qu'un lot de plus.
 
 ## 3. Ce qu'on ne fait pas, et pourquoi
 

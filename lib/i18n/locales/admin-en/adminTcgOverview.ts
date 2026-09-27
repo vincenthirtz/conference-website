@@ -26,6 +26,7 @@ export default {
   packsGranted: 'Handed out',
   packsOpened: 'Opened',
   packsOpenedHint: '{percent}% of packs',
+  packsOpenRateHint: '{percent}% opened',
   packsPending: 'Never opened',
   packsFromVictory: 'Earned (win)',
   packsFromPurchase: 'Purchased',

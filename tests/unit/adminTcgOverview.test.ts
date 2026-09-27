@@ -448,6 +448,17 @@ describe('GET /api/admin/tcg/overview — agrégation', () => {
         placement: 0,
         streak: 0,
       },
+      // Les non-ouverts par origine : zéro partout, comme le reste. C'est la
+      // mesure qui a fondé le lot T1 — le total `pending` mélange des
+      // populations qui ne se comportent pas pareil.
+      pendingBySource: {
+        victory: 0,
+        purchase: 0,
+        welcome: 0,
+        drop: 0,
+        placement: 0,
+        streak: 0,
+      },
     });
     expect(res.body.cards).toEqual({
       total: 0,
@@ -493,6 +504,16 @@ describe('GET /api/admin/tcg/overview — agrégation', () => {
       bySource: {
         victory: 2,
         purchase: 1,
+        welcome: 0,
+        drop: 0,
+        placement: 0,
+        streak: 0,
+      },
+      // L'unique paquet non ouvert est une victoire : le total `pending` le
+      // disait déjà, la ventilation dit LEQUEL — c'est toute la différence.
+      pendingBySource: {
+        victory: 1,
+        purchase: 0,
         welcome: 0,
         drop: 0,
         placement: 0,

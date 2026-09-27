@@ -100,6 +100,8 @@ export type TcgOverviewLabels = {
   packsOpened: string;
   /** Interpole `{percent}`. */
   packsOpenedHint: string;
+  /** Taux d'ouverture d'UNE origine. Interpole `{percent}`. */
+  packsOpenRateHint: string;
   packsPending: string;
   packsFromVictory: string;
   packsFromPurchase: string;
@@ -211,6 +213,22 @@ const PHOTOS_QUEUE_HREF = '/admin/moderation?tab=tcg-photos';
  * inexpliquée — exactement le faux signal que cet endpoint s'interdit de
  * produire.
  */
+/**
+ * Le taux d'ouverture d'une origine, en note sous la tuile.
+ *
+ * `undefined` quand il n'existe pas — une origine qui n'a jamais rien
+ * distribué n'a pas un taux de 0 %, et l'afficher la ferait passer pour une
+ * origine que personne n'ouvre, ce qui est le contraire.
+ */
+function openRateHint(
+  labels: TcgOverviewLabels,
+  rate: number | null
+): string | undefined {
+  return rate === null
+    ? undefined
+    : format(labels.packsOpenRateHint, { percent: rate });
+}
+
 function coinSourceLabel(kind: string, labels: TcgOverviewLabels): string {
   switch (kind) {
     case 'match_win':
@@ -377,31 +395,43 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
                 label={labels.packsFromVictory}
                 value={num(data.packs.fromVictory)}
                 accent="gray"
+                hint={openRateHint(labels, data.packs.openRateBySource.victory)}
               />
               <StatCard
                 label={labels.packsFromPurchase}
                 value={num(data.packs.fromPurchase)}
                 accent="gray"
+                hint={openRateHint(
+                  labels,
+                  data.packs.openRateBySource.purchase
+                )}
               />
               <StatCard
                 label={labels.packsFromWelcome}
                 value={num(data.packs.fromWelcome)}
                 accent="gray"
+                hint={openRateHint(labels, data.packs.openRateBySource.welcome)}
               />
               <StatCard
                 label={labels.packsFromDrop}
                 value={num(data.packs.fromDrop)}
                 accent="gray"
+                hint={openRateHint(labels, data.packs.openRateBySource.drop)}
               />
               <StatCard
                 label={labels.packsFromPlacement}
                 value={num(data.packs.fromPlacement)}
                 accent="gray"
+                hint={openRateHint(
+                  labels,
+                  data.packs.openRateBySource.placement
+                )}
               />
               <StatCard
                 label={labels.packsFromStreak}
                 value={num(data.packs.fromStreak)}
                 accent="gray"
+                hint={openRateHint(labels, data.packs.openRateBySource.streak)}
               />
             </div>
           </WidgetCard>

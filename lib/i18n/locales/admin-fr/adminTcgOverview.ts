@@ -32,6 +32,9 @@ export default adminNs('adminTcgOverview', {
   packsGranted: 'Distribués',
   packsOpened: 'Ouverts',
   packsOpenedHint: '{percent} % des paquets',
+  // Le taux PAR ORIGINE : le total mélange des populations qui ne se
+  // comportent pas pareil, et c'est cet écart qui a fondé le lot T1.
+  packsOpenRateHint: '{percent} % ouverts',
   packsPending: 'Jamais ouverts',
   packsFromVictory: 'Offerts (victoire)',
   packsFromPurchase: 'Achetés',

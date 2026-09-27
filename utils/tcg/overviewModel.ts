@@ -56,7 +56,29 @@ export type TcgOverviewPacks = {
   fromPlacement: Count;
   /** Série de check-ins. */
   fromStreak: Count;
+  /**
+   * Taux d'ouverture PAR ORIGINE, en pourcentage entier — la mesure utile.
+   *
+   * Le total « ouverts / distribués » mélange des populations qui ne se
+   * comportent pas pareil, et rend une moyenne qui ne décrit personne. Au
+   * 2026-09-27, la victoire ouvrait à 59 % et l'accueil à 39 % : vingt points
+   * d'écart invisibles dans le total, et c'est cet écart qui a fondé le lot T1.
+   *
+   * `null` pour une origine dont un des deux compteurs manque, ou qui n'a
+   * jamais rien distribué — un taux sur zéro paquet n'est pas 0 %, il n'existe
+   * pas.
+   */
+  openRateBySource: Record<PackSourceKey, number | null>;
 };
+
+/** Les origines de paquet, telles que l'aperçu les ventile. */
+export type PackSourceKey =
+  | 'victory'
+  | 'purchase'
+  | 'welcome'
+  | 'drop'
+  | 'placement'
+  | 'streak';
 
 export type TcgOverviewCoins = {
   inCirculation: Count;
@@ -252,10 +274,46 @@ function normalizeSubject(raw: unknown): TcgOverviewSubject | null {
  * inattendue donne un panneau vide, pas un écran blanc. C'est une vue de
  * lecture — elle ne doit pas pouvoir casser la page qui l'héberge.
  */
+/**
+ * Le taux d'OUVERTURE d'une origine, en pourcentage entier.
+ *
+ * `distribués - non ouverts` plutôt qu'un compteur « ouverts par origine » de
+ * plus : les deux chiffres viennent de la même lecture, et en demander un
+ * troisième multiplierait les occasions qu'une clé manque.
+ *
+ * Rend `null` dès qu'un des deux manque OU que rien n'a été distribué. Un taux
+ * sur zéro paquet n'est pas 0 % — l'afficher ferait passer une origine jamais
+ * servie pour une origine que personne n'ouvre, ce qui est le contraire.
+ */
+export function openRates(
+  bySource: Record<string, unknown>,
+  pendingBySource: Record<string, unknown>
+): Record<PackSourceKey, number | null> {
+  const keys: PackSourceKey[] = [
+    'victory',
+    'purchase',
+    'welcome',
+    'drop',
+    'placement',
+    'streak',
+  ];
+  const out = {} as Record<PackSourceKey, number | null>;
+  for (const key of keys) {
+    const granted = asCount(bySource[key]);
+    const pending = asCount(pendingBySource[key]);
+    out[key] =
+      granted === null || pending === null || granted <= 0
+        ? null
+        : Math.round(((granted - pending) / granted) * 100);
+  }
+  return out;
+}
+
 export function normalizeTcgOverview(raw: unknown): TcgOverview {
   const root = asRecord(raw);
   const packsRaw = asRecord(root.packs);
   const bySource = asRecord(packsRaw.bySource);
+  const pendingBySource = asRecord(packsRaw.pendingBySource);
   const coinsRaw = asRecord(root.coins);
   const cardsRaw = asRecord(root.cards);
   const byRarityRaw = asRecord(cardsRaw.byRarity);
@@ -288,6 +346,7 @@ export function normalizeTcgOverview(raw: unknown): TcgOverview {
       fromDrop: asCount(bySource.drop),
       fromPlacement: asCount(bySource.placement),
       fromStreak: asCount(bySource.streak),
+      openRateBySource: openRates(bySource, pendingBySource),
     },
     coins: {
       inCirculation: asCount(coinsRaw.inCirculation),

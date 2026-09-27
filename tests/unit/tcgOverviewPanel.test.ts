@@ -46,6 +46,18 @@ function fullPayload() {
         placement: 1,
         streak: 2,
       },
+      // Des non-ouverts CHOISIS pour que les taux soient parlants : la victoire
+      // à 50 %, l'accueil à 0 %, le drop jamais distribué. C'est exactement la
+      // forme d'écart que le lot T1 a trouvée en production, et que le total
+      // `pending` seul n'aurait pas montrée.
+      pendingBySource: {
+        victory: 1,
+        purchase: 0,
+        welcome: 1,
+        drop: 0,
+        placement: 1,
+        streak: 2,
+      },
     },
     coins: {
       inCirculation: 250,
@@ -104,6 +116,15 @@ describe('normalizeTcgOverview — réponse nominale', () => {
       fromDrop: 3,
       fromPlacement: 1,
       fromStreak: 2,
+      openRateBySource: {
+        victory: 50,
+        purchase: 100,
+        // Distribué une fois, jamais ouvert : un VRAI zéro.
+        welcome: 0,
+        drop: 100,
+        placement: 0,
+        streak: 0,
+      },
     });
     expect(data.coins).toEqual({
       inCirculation: 250,

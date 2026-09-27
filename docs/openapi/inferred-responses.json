@@ -13918,13 +13918,63 @@
          "placement",
          "streak"
         ]
+       },
+       "pendingBySource": {
+        "type": "object",
+        "properties": {
+         "victory": {
+          "type": [
+           "number",
+           "null"
+          ]
+         },
+         "purchase": {
+          "type": [
+           "number",
+           "null"
+          ]
+         },
+         "welcome": {
+          "type": [
+           "number",
+           "null"
+          ]
+         },
+         "drop": {
+          "type": [
+           "number",
+           "null"
+          ]
+         },
+         "placement": {
+          "type": [
+           "number",
+           "null"
+          ]
+         },
+         "streak": {
+          "type": [
+           "number",
+           "null"
+          ]
+         }
+        },
+        "required": [
+         "victory",
+         "purchase",
+         "welcome",
+         "drop",
+         "placement",
+         "streak"
+        ]
        }
       },
       "required": [
        "granted",
        "opened",
        "pending",
-       "bySource"
+       "bySource",
+       "pendingBySource"
       ]
      },
      "coins": {

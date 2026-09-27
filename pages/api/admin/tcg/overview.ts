@@ -174,6 +174,27 @@ export type TcgOverview = {
       /** Série de check-ins. */
       streak: Count;
     };
+    /**
+     * Paquets JAMAIS OUVERTS, par origine — et c'est la mesure qui compte.
+     *
+     * POURQUOI ELLE EST ICI. `bySource` dit ce qu'on a distribué ; il ne dit
+     * pas ce qui est arrivé ensuite. Or c'est le rapport entre les deux qui a
+     * fondé le lot T1 du plan TCG : au 2026-09-27, les paquets de VICTOIRE —
+     * annoncés en DM — étaient ouverts à 59 %, ceux d'ACCUEIL — silencieux — à
+     * 39 %. Vingt points d'écart sur la seule différence d'être prévenue, et
+     * il fallait un client SQL pour le voir.
+     *
+     * Le total `pending` ne l'aurait jamais montré : il mélange les deux
+     * populations et rend une moyenne qui ne décrit personne.
+     */
+    pendingBySource: {
+      victory: Count;
+      purchase: Count;
+      welcome: Count;
+      drop: Count;
+      placement: Count;
+      streak: Count;
+    };
   };
   coins: {
     /** Somme des soldes : ce qui est détenu, donc dépensable demain. */
@@ -319,6 +340,12 @@ async function handler(
     packsDropR,
     packsPlacementR,
     packsStreakR,
+    pendingVictoryR,
+    pendingPurchaseR,
+    pendingWelcomeR,
+    pendingDropR,
+    pendingPlacementR,
+    pendingStreakR,
     photosPendingR,
     photosApprovedR,
     photosRejectedR,
@@ -385,6 +412,46 @@ async function handler(
       .from('tcg_packs')
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
+      .eq('source_kind', 'streak'),
+    // Les mêmes origines, mais NON OUVERTES. Six requêtes de plus plutôt qu'un
+    // `group by` : ce fichier compte chaque chiffre séparément, exprès — sa
+    // convention `null` ≠ `0` veut qu'une lecture en échec se voie, et un
+    // agrégat unique ferait tomber les six d'un coup.
+    db
+      .from('tcg_packs')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .is('opened_at', null)
+      .eq('source_kind', 'victory'),
+    db
+      .from('tcg_packs')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .is('opened_at', null)
+      .eq('source_kind', 'purchase'),
+    db
+      .from('tcg_packs')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .is('opened_at', null)
+      .eq('source_kind', 'welcome'),
+    db
+      .from('tcg_packs')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .is('opened_at', null)
+      .eq('source_kind', 'drop'),
+    db
+      .from('tcg_packs')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .is('opened_at', null)
+      .eq('source_kind', 'placement'),
+    db
+      .from('tcg_packs')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .is('opened_at', null)
       .eq('source_kind', 'streak'),
 
     // La file de relecture : le même filtre que `photos.ts`, pour que le
@@ -712,6 +779,14 @@ async function handler(
         drop: resolveCount(packsDropR, 'packs.drop'),
         placement: resolveCount(packsPlacementR, 'packs.placement'),
         streak: resolveCount(packsStreakR, 'packs.streak'),
+      },
+      pendingBySource: {
+        victory: resolveCount(pendingVictoryR, 'packs.pending.victory'),
+        purchase: resolveCount(pendingPurchaseR, 'packs.pending.purchase'),
+        welcome: resolveCount(pendingWelcomeR, 'packs.pending.welcome'),
+        drop: resolveCount(pendingDropR, 'packs.pending.drop'),
+        placement: resolveCount(pendingPlacementR, 'packs.pending.placement'),
+        streak: resolveCount(pendingStreakR, 'packs.pending.streak'),
       },
     },
     coins: {
