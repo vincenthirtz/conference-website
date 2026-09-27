@@ -4,9 +4,11 @@
 //
 // CE QUE CES TESTS TIENNENT, et pourquoi chacun compte :
 //
-//   1. LE BOT NE PEUT NI OUVRIR NI CLORE. C'est une frontière, pas un oubli.
-//      Deux autorités sur la même urne donneraient un scrutin fermé d'un côté
-//      et ouvert de l'autre — et personne ne saurait lequel fait foi.
+//   1. UN ADMIN PEUT OUVRIR ET CLORE DEPUIS DISCORD (`/mvp-public`) — décision
+//      de l'orga du 2026-09-27, pour les matchs sans régie. Avant, le bot n'en
+//      avait pas le pouvoir. Ces gestes ne renvoient AUCUN événement au bot :
+//      c'est lui qui a appelé et qui poste, un événement le ferait poster deux
+//      fois. Et les mêmes refus que côté site s'appliquent (match non terminé).
 //   2. UNE VOIX HORS FENÊTRE EST REFUSÉE. La brièveté du scrutin est sa seule
 //      protection contre le brigadage ; si elle ne ferme pas vraiment, elle ne
 //      protège de rien.
@@ -146,13 +148,73 @@ describe('/api/bot/v1/matches/[matchId]/mvp-public', () => {
     seed();
   });
 
-  it('n’expose ni `open` ni `close` : la régie seule décide', async () => {
-    for (const action of ['open', 'close']) {
-      const res = await call('POST', { action });
-      // Refusé par le schéma du contrat, avant toute logique.
-      expect(res.statusCode).toBe(400);
+  it('`open` ouvre le scrutin et rend de quoi poster, sans événement renvoyé au bot', async () => {
+    store.bot_event_outbox = [] as any;
+    const res = await call('POST', {
+      action: 'open',
+      windowMinutes: 15,
+      discordUserId: '900000000000000009',
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({
+      matchId: MATCH,
+      team1Name: 'Les Alpines',
+      team2Name: 'Les Bravos',
+      alreadyOpen: false,
+      votable: true,
+      messageId: null,
+    });
+    expect(res.body.candidates.map((c: any) => c.memberId).sort()).toEqual(
+      [ALICE, BEA].sort()
+    );
+    const polls = store.match_public_mvp_polls as any[];
+    expect(polls).toHaveLength(1);
+    // Fenêtre demandée : ~15 min.
+    const minutes =
+      (new Date(polls[0].closes_at).getTime() - Date.now()) / 60_000;
+    expect(minutes).toBeGreaterThan(14);
+    expect(minutes).toBeLessThanOrEqual(15);
+    expect(
+      ((store.bot_event_outbox as any[]) ?? []).filter((e) =>
+        String(e.event_name).startsWith('mvp.public')
+      )
+    ).toHaveLength(0);
+  });
+
+  it('`open` refuse un match non terminé', async () => {
+    (store.matches as any[])[0].status = 'live';
+    const res = await call('POST', { action: 'open' });
+    expect(res.statusCode).toBe(409);
+    expect(res.body.code).toBe('NOT_FINISHED');
+    expect(((store.match_public_mvp_polls as any[]) ?? []).length).toBe(0);
+  });
+
+  it('`close` dépouille et rend le résultat, sans événement renvoyé au bot', async () => {
+    ouvrirScrutin();
+    store.bot_event_outbox = [] as any;
+    for (const [who, i] of [
+      [ALICE, 1],
+      [ALICE, 2],
+      [ALICE, 3],
+      [BEA, 4],
+    ] as const) {
+      const r = await vote(`90000000000000000${i}`, who);
+      expect(r.statusCode).toBe(200);
     }
-    expect((store.match_public_mvp_polls as any).length).toBe(0);
+    const res = await call('POST', { action: 'close' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({
+      matchId: MATCH,
+      winnerMemberId: ALICE,
+      reason: null,
+      totalVotes: 4,
+    });
+    expect((store.match_public_mvp_polls as any[])[0].closed_at).toBeTruthy();
+    expect(
+      ((store.bot_event_outbox as any[]) ?? []).filter((e) =>
+        String(e.event_name).startsWith('mvp.public')
+      )
+    ).toHaveLength(0);
   });
 
   it('enregistre la voix d’une supportrice', async () => {

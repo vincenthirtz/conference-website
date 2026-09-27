@@ -223,6 +223,28 @@ describe('GET /api/admin/tournament/[id]/mvp-public-votes', () => {
     expect(res.headers['Cache-Control']).toBe('no-store');
   });
 
+  it('liste les matchs TERMINÉS sans vote du public, pour les lancer à la main', async () => {
+    const M3 = 'aaaaaaaa-0000-4000-8000-000000000003';
+    (store.matches as unknown as Array<Record<string, unknown>>).push({
+      id: M3,
+      tenant_id: TENANT,
+      tournament_id: TID,
+      round_name: 'J1',
+      scheduled_at: '2026-09-21T20:00:00Z',
+      status: 'finished',
+      team1_id: T2,
+      team2_id: T1,
+    });
+    const res = makeRes();
+    await handler(makeReq(), res as never);
+    const openable = (
+      res.body as { openable: Array<{ id: string; team1Name: string }> }
+    ).openable;
+    // M1 a déjà un vote, M2 n'est pas terminé : seul M3 est proposé.
+    expect(openable.map((m) => m.id)).toEqual([M3]);
+    expect(openable[0].team1Name).toBe('Bravo');
+  });
+
   it('une gagnante figée est rendue comme un titre du public (Twitch + Discord)', async () => {
     (
       store.match_public_mvp_polls as unknown as Array<Record<string, unknown>>
