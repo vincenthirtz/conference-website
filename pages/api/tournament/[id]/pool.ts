@@ -78,12 +78,10 @@ export default withAuthRoute(async function handler(req, res, { user }) {
 
   if (req.method === 'POST') {
     if (tournament.status !== 'published') {
-      return res
-        .status(409)
-        .json({
-          error: 'Registrations are closed.',
-          code: 'REGISTRATION_CLOSED',
-        });
+      return res.status(409).json({
+        error: 'Registrations are closed.',
+        code: 'REGISTRATION_CLOSED',
+      });
     }
     const parsed = BodySchema.safeParse(req.body ?? {});
     if (!parsed.success) {
@@ -103,12 +101,10 @@ export default withAuthRoute(async function handler(req, res, { user }) {
     if (originTeamId) {
       const mine = await listPlayerTeams(tenantId, user.id);
       if (!mine.some((t) => t.id === originTeamId)) {
-        return res
-          .status(403)
-          .json({
-            error: 'Not a member of this team.',
-            code: 'NOT_TEAM_MEMBER',
-          });
+        return res.status(403).json({
+          error: 'Not a member of this team.',
+          code: 'NOT_TEAM_MEMBER',
+        });
       }
     }
 
