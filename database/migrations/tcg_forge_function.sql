@@ -197,8 +197,14 @@ COMMENT ON FUNCTION public.tcg_forge_card IS
   'Forge TCG : consomme des doublons + des pièces et rend une carte d''une rareté supérieure, en UNE transaction. Le sujet est choisi par l''application (la rareté se déduit des badges, calculés en TypeScript). Lève forge_cards_unavailable / forge_would_empty_subject / forge_insufficient_funds.';
 
 -- Service-role uniquement : l'API authentifie la joueuse avant d'appeler.
-REVOKE ALL ON FUNCTION public.tcg_forge_card FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.tcg_forge_card FROM anon, authenticated;
+-- La SIGNATURE est obligatoire : `tests/unit/definerFunctionGrants` lit les
+-- migrations et n'associe une révocation à sa fonction que par
+-- `ON FUNCTION public.<nom>(…)`. Sans parenthèses, la révocation existe en base
+-- mais le garde-fou ne la voit pas — et il a raison de refuser, une convention
+-- qu'on relâche pour un cas est une convention qui ne tient plus.
+REVOKE ALL ON FUNCTION public.tcg_forge_card(uuid, uuid, jsonb, integer, text, text, uuid, uuid, text, text, uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.tcg_forge_card(uuid, uuid, jsonb, integer, text, text, uuid, uuid, text, text, uuid) FROM anon;
+REVOKE ALL ON FUNCTION public.tcg_forge_card(uuid, uuid, jsonb, integer, text, text, uuid, uuid, text, text, uuid) FROM authenticated;
 
 -- ===========================================================================
 -- `tcg_buy_cosmetic` — l'achat d'un habillage de vitrine, même discipline.
@@ -279,5 +285,6 @@ $$;
 COMMENT ON FUNCTION public.tcg_buy_cosmetic IS
   'Achat d''un cosmétique de vitrine, en UNE transaction : débit du registre + ajout à unlocked_cosmetics. Verrouille la ligne de vitrine (FOR UPDATE) pour que deux achats simultanés du même objet ne passent pas tous les deux. Lève cosmetic_already_owned / cosmetic_insufficient_funds. Le catalogue et le prix vivent côté application (utils/tcg/cosmetics.ts).';
 
-REVOKE ALL ON FUNCTION public.tcg_buy_cosmetic FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.tcg_buy_cosmetic FROM anon, authenticated;
+REVOKE ALL ON FUNCTION public.tcg_buy_cosmetic(uuid, uuid, text, integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.tcg_buy_cosmetic(uuid, uuid, text, integer) FROM anon;
+REVOKE ALL ON FUNCTION public.tcg_buy_cosmetic(uuid, uuid, text, integer) FROM authenticated;
