@@ -1,0 +1,47 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    description: Tournament UUID. Slugs are refused on purpose — a guessable slug would reveal that a private tournament exists.
+    schema:
+      type: string
+      format: uuid
+get:
+  tags:
+    - public/misc
+  summary: QR code of a tournament's registration link.
+  description: |
+    Encodes the registration link chosen by `tournamentRegisterHref`: the solo
+    form for a `solo_mode` event, the team wizard otherwise. Meant for emails
+    (which block `data:` URIs), posters and OBS scenes. Only the link is
+    encoded: the registration page itself stays 404 until the tournament is
+    public. CDN-cached one day.
+  operationId: getTournamentQr
+  security: []
+  parameters:
+    - name: size
+      in: query
+      required: false
+      description: Side in pixels, clamped to 128–1024 (512 by default).
+      schema:
+        type: integer
+    - name: format
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [png, svg]
+  responses:
+    '200':
+      description: QR code image.
+      content:
+        image/png: {}
+        image/svg+xml: {}
+    '400':
+      description: Invalid tournament ID.
+    '404':
+      description: Tournament not found.
+    '405':
+      description: Method not allowed.
+    '429':
+      $ref: '#/components/responses/RateLimited'

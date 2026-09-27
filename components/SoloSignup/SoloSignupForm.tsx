@@ -20,11 +20,12 @@
 // ANTI-SPAM. Honeypot hors écran + captcha maison récupéré PARESSEUSEMENT à la
 // première interaction : afficher la page ne doit pas déclencher de requête.
 
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useT, format as fmt } from '@/lib/i18n/useT';
 import nsSoloSignup from '@/lib/i18n/locales/fr/soloSignup';
 import type { RegistrationField } from '@/utils/registrationFields';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
+import { usePlayerSession } from '@/hooks/usePlayerSession';
 
 type FieldValue = string | number | boolean;
 type Captcha = { token: string; question: string };
@@ -103,6 +104,42 @@ export default function SoloSignupForm({
   const [success, setSuccess] = useState<Success | null>(null);
 
   const captchaFetchedRef = useRef(false);
+
+  // PRÉ-REMPLISSAGE depuis le profil d'une joueuse CONNECTÉE — c'est ce qui
+  // rend le QR code d'un événement utile : scanné sur un téléphone où elle est
+  // déjà connectée, il ne lui reste qu'à répondre au captcha et valider.
+  // Une seule fois, et seulement les champs VIDES : ne jamais écraser ce
+  // qu'elle a commencé à taper. `redirect: false` — une anonyme garde le
+  // formulaire vierge, elle n'est pas renvoyée vers la connexion.
+  const { user } = usePlayerSession({ redirect: false });
+  const [prefilled, setPrefilled] = useState(false);
+  const prefillDoneRef = useRef(false);
+  useEffect(() => {
+    if (!user || prefillDoneRef.current) return;
+    prefillDoneRef.current = true;
+    const meta = user.user_metadata ?? {};
+    const name =
+      typeof meta.display_name === 'string' ? meta.display_name.trim() : '';
+    const tag =
+      typeof meta.battle_tag === 'string' ? meta.battle_tag.trim() : '';
+    const mail = user.email?.trim() ?? '';
+    let filled = false;
+    if (name) {
+      setPseudo((prev) => prev || name);
+      filled = true;
+    }
+    // Un BattleTag mal formé en profil ferait échouer la validation : mieux
+    // vaut un champ vide qu'une erreur au premier clic.
+    if (tag && BATTLE_TAG_REGEX.test(tag)) {
+      setBattleTag((prev) => prev || tag);
+      filled = true;
+    }
+    if (mail) {
+      setEmail((prev) => prev || mail);
+      filled = true;
+    }
+    setPrefilled(filled);
+  }, [user]);
   // Clé stable par INTENTION : tant que l'inscription n'a pas abouti, un
   // double-clic ou un retry réseau rejoue la même clé et ne crée pas deux
   // inscriptions. Elle est renouvelée après un succès, pour que « inscrire une
@@ -312,6 +349,14 @@ export default function SoloSignupForm({
       <div>
         <h2 className="text-lg font-semibold text-white">{t.formTitle}</h2>
         <p className="mt-1 text-sm text-gray-400">{t.formHint}</p>
+        {prefilled && (
+          <p
+            className="mt-2 text-sm text-[var(--color-green)]"
+            data-testid="solo-signup-prefilled"
+          >
+            {t.prefilledNotice}
+          </p>
+        )}
       </div>
 
       {/* Honeypot : hors écran, jamais annoncé aux lecteurs d'écran. */}

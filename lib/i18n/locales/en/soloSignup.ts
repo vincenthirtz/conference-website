@@ -74,4 +74,6 @@ export default {
   closedTitle: 'Entries are not open',
   closedBody:
     'This event is not taking entries right now. Check back a little later, or ask staff where things stand.',
+  prefilledNotice:
+    'Filled in from your profile: check it, answer the anti-bot question and submit.',
 };

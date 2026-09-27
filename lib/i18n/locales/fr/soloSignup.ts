@@ -83,4 +83,6 @@ export default ns('soloSignup', {
   closedTitle: 'Les inscriptions ne sont pas ouvertes',
   closedBody:
     'Cet événement n’accepte pas d’inscription pour le moment. Reviens un peu plus tard, ou demande au staff où ça en est.',
+  prefilledNotice:
+    'Pré-rempli depuis ton profil : vérifie, réponds à la question anti-robot et valide.',
 });
