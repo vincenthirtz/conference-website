@@ -73,6 +73,17 @@ export type PlayerFace = {
    * portée par la figurine. `null` → le violet du logo.
    */
   teamColor: string | null;
+  /**
+   * Elle s'est RETIRÉE du TCG (`tcg_player_cards.excluded_at`).
+   *
+   * Les autres champs sont alors DÉJÀ vidés — nom, image, héros, figurine,
+   * couleur. Un appelant qui ignore ce drapeau rend donc une carte anonyme,
+   * ce qui est le comportement voulu : faire dépendre l'anonymat d'un drapeau
+   * que chaque lecteur doit penser à regarder, c'est la garantie qu'un lecteur
+   * l'oubliera. Le drapeau n'existe que pour ceux qui veulent le DIRE plutôt
+   * que d'afficher un vide.
+   */
+  withdrawn?: boolean;
 };
 
 export type TeamFace = {
@@ -128,12 +139,12 @@ export async function readPlayerFaces(
       .eq('tenant_id', tenantId)
       .in('user_id', ids),
     // Le filtre de consentement, en une clause : approuvée ET non révoquée.
+    // `excluded_at` voyage AVEC : c'est la même table, et le retrait total se
+    // décide au même endroit que la photo.
     supabaseAdmin
       .from('tcg_player_cards')
-      .select('user_id, photo_path, photo_status, revoked_at')
+      .select('user_id, photo_path, photo_status, revoked_at, excluded_at')
       .eq('tenant_id', tenantId)
-      .eq('photo_status', 'approved')
-      .is('revoked_at', null)
       .in('user_id', ids),
     // SANS filtre de tenant : ces préférences appartiennent au compte, pas au
     // club. Cf. l'en-tête du module.
@@ -170,10 +181,21 @@ export async function readPlayerFaces(
   }
 
   const photoByUser = new Map<string, string>();
+  /** Celles qui se sont retirées : leur face sera ANONYME, quoi qu'on lise. */
+  const withdrawn = new Set<string>();
   for (const row of (cardsRes.data ?? []) as Array<{
     user_id: string;
     photo_path: string | null;
+    photo_status: string | null;
+    revoked_at: string | null;
+    excluded_at: string | null;
   }>) {
+    if (row.excluded_at) withdrawn.add(row.user_id);
+    // Le filtre de consentement est passé du SQL au code depuis que cette
+    // requête sert aussi aux retraits : une carte approuvée ET non révoquée,
+    // rien d'autre. La condition est la même, écrite au même endroit que celle
+    // qu'elle complète plutôt que répartie entre deux couches.
+    if (row.photo_status !== 'approved' || row.revoked_at) continue;
     if (!row.photo_path) continue;
     photoByUser.set(
       row.user_id,
@@ -279,12 +301,39 @@ export async function readPlayerFaces(
     };
   };
 
+  /**
+   * La face d'une joueuse RETIRÉE : tout est vidé, rien n'est supprimé.
+   *
+   * Les cartes déjà tirées restent dans les collections d'autrui — les
+   * détruire punirait des tiers, parfois pour une carte obtenue par échange,
+   * c'est-à-dire payée. Mais plus rien n'y désigne quelqu'un.
+   *
+   * `userId` SURVIT, et il le faut : c'est la clé de la carte, celle qui
+   * distingue deux exemplaires et qui permet de redevenir nominative si elle
+   * revient. Ce n'est pas un nom, et il ne s'affiche nulle part.
+   */
+  const anonymous = (userId: string): PlayerFace => ({
+    userId,
+    displayName: null,
+    imageUrl: null,
+    hasTcgPhoto: false,
+    heroName: null,
+    heroSource: null,
+    figureRole: null,
+    teamColor: null,
+    withdrawn: true,
+  });
+
   for (const row of (ratingsRes.data ?? []) as Array<{
     user_id: string;
     display_name: string | null;
     battle_tag: string | null;
     avatar_url: string | null;
   }>) {
+    if (withdrawn.has(row.user_id)) {
+      faces.set(row.user_id, anonymous(row.user_id));
+      continue;
+    }
     const photo = photoByUser.get(row.user_id) ?? null;
     faces.set(row.user_id, {
       userId: row.user_id,
@@ -302,6 +351,13 @@ export async function readPlayerFaces(
   // plus besoin.
   for (const id of ids) {
     if (!faces.has(id)) {
+      // Le retrait vaut AUSSI ici. Sans ce test, une joueuse sans ligne de
+      // classement qui se retire garderait sa figurine et sa couleur d'équipe :
+      // le chemin de repli aurait défait le retrait, en silence.
+      if (withdrawn.has(id)) {
+        faces.set(id, anonymous(id));
+        continue;
+      }
       const photo = photoByUser.get(id) ?? null;
       faces.set(id, {
         userId: id,

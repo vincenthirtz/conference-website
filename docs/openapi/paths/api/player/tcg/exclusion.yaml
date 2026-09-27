@@ -1,0 +1,81 @@
+get:
+  tags:
+    - public/auth
+  summary: Am I withdrawn from the TCG?
+  operationId: playerTcgExclusionGet
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Withdrawal state.
+      content:
+        application/json: {}
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - public/auth
+  summary: Withdraw entirely from the TCG.
+  description: |
+    The three safeguards of docs/TCG.md §2 cover the PHOTO. A card exists
+    WITHOUT one — carrying a name, a team, a rarity derived from her record —
+    and nothing let someone not appear at all. You could remove your face, not
+    your name.
+
+    Three effects, in this order, and the order matters:
+      1. the PHOTO is queued for purge FIRST. It is the only step that can
+         leave a file reachable in a public bucket, so it happens before
+         anything else is written, and the whole request is ABANDONED if it
+         fails — better a withdrawal to redo than an orphan file;
+      2. `excluded_at` is set, which drops her from the draw pool
+         (`poolQueries`) — series follow on their own, they read the same pool;
+      3. cards ALREADY drawn are ANONYMISED by `readPlayerFaces`: no name, no
+         photo, no figurine.
+
+    Cards already drawn are NOT deleted. Destroying them would punish third
+    parties, sometimes for a card obtained through a trade — that is, paid for.
+    You do not fix a consent failure by creating another one.
+
+    REVERSIBLE (see DELETE): a withdrawal you cannot undo is a decision you
+    hesitate to take, therefore a consent you do not dare withdraw.
+  operationId: playerTcgWithdraw
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Withdrawn.
+      content:
+        application/json: {}
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      description: Nothing was written — typically the photo purge could not be queued.
+  x-codegen-request-body-name: none
+delete:
+  tags:
+    - public/auth
+  summary: Come back to the TCG.
+  description: |
+    Clears `excluded_at`. Her cards become named again — they never stopped
+    being hers. The photo does NOT come back: it was purged, which is exactly
+    what was asked.
+  operationId: playerTcgRejoin
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Back in.
+      content:
+        application/json: {}
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

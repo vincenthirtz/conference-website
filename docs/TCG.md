@@ -205,6 +205,54 @@ qu'un logo n'est pas fait pour être rogné, là où une illustration remplit so
 cadre. Les deux champs restent donc distincts jusqu'au rendu, au lieu d'être
 fusionnés à la lecture.
 
+### 2.4 bis Le quatrième garde-fou : ne pas figurer du tout
+
+Ajouté le **2026-09-27** (lot T9 de [PLAN-tcg.md](./PLAN-tcg.md)), et il comble
+un trou que les trois premiers laissaient ouvert : ils couvrent la PHOTO. Or une
+carte existe sans photo — avec un nom, une équipe, une rareté tirée d'un
+palmarès. On pouvait retirer son visage, **pas son nom**.
+
+`tcg_player_cards.excluded_at` fait trois choses, et le CHEMIN compte autant que
+le résultat :
+
+1. **La photo part la première**, par la file de purge existante (§2.3). C'est
+   la seule étape qui peut laisser un fichier joignable dans un bucket public :
+   elle a lieu avant toute autre écriture, et l'opération entière est
+   **abandonnée** si elle échoue. Un retrait à recommencer vaut mieux qu'un
+   fichier orphelin — et surtout mieux que se déclarer retirée avec son visage
+   encore en ligne.
+2. **Elle sort du vivier** (`poolQueries`) : plus aucun paquet ne peut la tirer.
+   Les séries suivent d'elles-mêmes, puisqu'elles lisent le même vivier. La
+   lecture des retraits est *fail-closed* : si elle échoue, le vivier est déclaré
+   illisible plutôt que complet — remettre dans les paquets quelqu'un qui en est
+   sortie est le seul mode d'échec inacceptable ici.
+3. **Les cartes déjà tirées sont anonymisées**, pas supprimées
+   (`readPlayerFaces` rend ni nom, ni photo, ni figurine, ni couleur d'équipe).
+
+**Le troisième point est un arbitrage, et il mérite sa justification.** Deux
+autres réponses étaient possibles :
+
+- *les laisser telles quelles* — ce que fait une fan art retirée — reviendrait à
+  dire « tu n'es plus tirée, mais tu circules encore sous ton nom ». Ce n'est pas
+  un retrait, c'est un arrêt des ventes ;
+- *les supprimer* détruirait la collection de tiers qui n'ont rien fait, et
+  parfois une carte obtenue par **échange**, c'est-à-dire payée. On ne répare pas
+  un défaut de consentement en en créant un autre.
+
+L'anonymisation ne prend rien à personne : aucune collection ne rétrécit, aucun
+échange n'est défait, et plus rien ne désigne quelqu'un.
+
+**L'anonymat ne dépend d'aucun drapeau à penser à regarder.** `readPlayerFaces`
+rend directement les champs vidés ; le drapeau `withdrawn` n'existe que pour un
+écran qui voudrait le DIRE plutôt qu'afficher un vide. Faire dépendre l'anonymat
+d'une condition que chaque lecteur doit se rappeler, c'est la garantie qu'un
+lecteur l'oubliera — et ce module a huit appelants.
+
+**Réversible**, et c'est essentiel : un retrait qu'on ne peut pas défaire est une
+décision qu'on hésite à prendre, donc un consentement qu'on n'ose pas retirer.
+Revenir ne rend pas la photo, qui a été purgée — c'est précisément ce qui était
+demandé.
+
 ### 2.5 La vitrine : montrer ses cartes, en opt-in
 
 Une joueuse peut exposer **jusqu'à trois cartes** de sa collection sur SA fiche

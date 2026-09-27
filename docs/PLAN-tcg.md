@@ -102,7 +102,7 @@ au-delà de ce qui se consomme.
 | T6 | Faire monter l'opt-in photo, sans le forcer | 🟧 | M | ✅ **livré le 2026-09-27** |
 | T7 | Amorcer le fan art | 🟧 | S | zéro soumission n'est pas une panne, c'est un silence |
 | T8 | Un set d'événement | 🟩 | M | le premier motif de revenir qui ne dépende pas d'une victoire |
-| T9 | « Ne pas figurer dans le TCG » | 🟧 | M | le consentement qui manque encore |
+| T9 | « Ne pas figurer dans le TCG » | 🟧 | M | ✅ **livré le 2026-09-27** |
 | T10 | Vérifier ce qui n'a jamais été vu | 🟧 | M | UX non relue en navigateur, 12 figurines, garde des types de carte |
 
 ---
@@ -369,23 +369,34 @@ de refaire la liste de mémoire.
 
 ---
 
-## T9 · « Ne pas figurer dans le TCG » — 🟧 / M
+## T9 · « Ne pas figurer dans le TCG » — ✅ LIVRÉ (2026-09-27)
 
-**Le constat.** Les trois garde-fous de TCG.md §2 couvrent la PHOTO : rien
-n'entre sans un geste de la joueuse, tout se retire. Mais une carte existe sans
-photo, avec un nom et une équipe, et **rien ne permet de ne pas figurer du tout**.
+Le quatrième garde-fou de consentement. Le détail vit désormais dans
+[TCG.md §2.4 bis](./TCG.md), à côté des trois autres — c'est là qu'on le
+cherchera, pas dans un plan.
 
-**Ce qu'on fait.** Un opt-out, branché sur `readDrawPool` — les séries suivront
-d'elles-mêmes, puisqu'elles lisent le même vivier. Décider aussi le sort des
-cartes DÉJÀ tirées : les retirer des collections d'autrui est une opération
-lourde, les y laisser contredit le retrait. C'est un arbitrage humain, à prendre
-avant d'écrire le code.
+**Ce que ce lot a tranché**, et que le plan laissait explicitement à l'humain :
+le sort des cartes DÉJÀ tirées. Elles sont **anonymisées**, pas supprimées. Les
+laisser nominatives n'aurait pas été un retrait mais un arrêt des ventes ; les
+supprimer aurait détruit la collection de tiers, parfois une carte obtenue par
+échange, c'est-à-dire payée. On ne répare pas un défaut de consentement en en
+créant un autre.
 
-**Ce qu'on ne fait pas.** Déduire l'opt-out d'un autre réglage (compte privé,
-découverte désactivée). Un consentement qui se déduit d'autre chose n'en est pas
-un — c'est la leçon du garde-fou photo.
+**Ce que la vérification préalable a confirmé**, contrairement aux trois lots
+précédents : les deux points de passage annoncés par le plan en SONT bien. Le
+vivier n'a qu'une définition (`poolQueries`, partagée par le contenu et les
+tailles) et la face d'une joueuse n'a qu'un lecteur (`readPlayerFaces`, huit
+appelants). C'est ce qui rend le retrait complet réalisable sans toucher à dix
+endroits.
 
----
+**Deux choix de robustesse, chacun contre un échec silencieux :**
+- la lecture des retraits est *fail-closed* — un vivier illisible est rendu en
+  erreur, jamais comme un vivier complet ;
+- l'anonymat ne dépend d'aucun drapeau : `readPlayerFaces` rend les champs déjà
+  vidés, et un appelant qui ignore `withdrawn` rend quand même une carte anonyme.
+
+**Ce qui reste à mesurer.** Rien, et c'est normal : un garde-fou de consentement
+ne se juge pas à son taux d'usage. S'il ne sert jamais, tant mieux.
 
 ## T10 · Vérifier ce qui n'a jamais été vu — 🟧 / M
 

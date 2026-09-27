@@ -51,15 +51,52 @@ export type DrawPoolResult =
  *
  * `head` : `true` ne rapatrie aucune ligne et ne demande que le compte.
  */
-function poolQueries(tenantId: string, head: boolean) {
+/**
+ * Les joueuses qui se sont RETIRÉES du TCG (`tcg_player_cards.excluded_at`).
+ *
+ * Lues à part et passées au filtre plutôt que jointes : `player_ratings` et
+ * `tcg_player_cards` n'ont pas de relation PostgREST déclarée, et en créer une
+ * pour un filtre négatif coûterait un rechargement de cache de schéma.
+ *
+ * NE LÈVE JAMAIS, mais un échec est RENDU (`null`) et non avalé en liste vide :
+ * traiter « je n'ai pas pu lire les retraits » comme « personne ne s'est
+ * retirée » ferait retomber dans le vivier quelqu'un qui en est sortie — le
+ * seul mode d'échec inacceptable ici.
+ */
+async function readExcludedPlayerIds(
+  tenantId: string
+): Promise<string[] | null> {
+  const { data, error } = await supabaseAdmin!
+    .from('tcg_player_cards')
+    .select('user_id')
+    .eq('tenant_id', tenantId)
+    .not('excluded_at', 'is', null);
+  if (error) return null;
+  return ((data ?? []) as Array<{ user_id: string }>).map((r) => r.user_id);
+}
+
+function poolQueries(
+  tenantId: string,
+  head: boolean,
+  /** Retraits à exclure du vivier des joueuses. */
+  excluded: readonly string[]
+) {
   const db = supabaseAdmin!;
   const count = head ? ({ count: 'exact', head: true } as const) : undefined;
+  // `not(...in...)` plutôt qu'un filtre applicatif : `readDrawPoolSizes` ne
+  // rapatrie aucune ligne (`head: true`), il ne peut donc rien retrancher
+  // après coup. Le filtre doit être DANS la requête pour que le compte et le
+  // contenu décrivent le même vivier — c'est exactement ce que ce module
+  // existe pour garantir.
+  const players = db
+    .from('player_ratings')
+    .select('user_id', count)
+    .eq('tenant_id', tenantId)
+    .limit(POOL_LIMIT);
   return [
-    db
-      .from('player_ratings')
-      .select('user_id', count)
-      .eq('tenant_id', tenantId)
-      .limit(POOL_LIMIT),
+    excluded.length > 0
+      ? players.not('user_id', 'in', `(${excluded.join(',')})`)
+      : players,
     db
       .from('teams')
       .select('id', count)
@@ -107,8 +144,16 @@ export async function readDrawPoolSizes(
 ): Promise<DrawPoolSizesResult> {
   if (!supabaseAdmin) return { ok: false, error: 'supabaseAdmin absent' };
 
+  // Les retraits d'abord : sans eux on ne sait pas décrire le vivier, et un
+  // vivier décrit à tort est pire qu'un vivier illisible — il remettrait dans
+  // les paquets quelqu'un qui en est sortie.
+  const excluded = await readExcludedPlayerIds(tenantId);
+  if (excluded === null) {
+    return { ok: false, error: 'retraits TCG illisibles' };
+  }
+
   const [playersRes, teamsRes, fanartRes] = await Promise.all(
-    poolQueries(tenantId, true)
+    poolQueries(tenantId, true, excluded)
   );
 
   if (playersRes.error || teamsRes.error || fanartRes.error) {
@@ -135,8 +180,16 @@ export async function readDrawPoolSizes(
 export async function readDrawPool(tenantId: string): Promise<DrawPoolResult> {
   if (!supabaseAdmin) return { ok: false, error: 'supabaseAdmin absent' };
 
+  // Les retraits d'abord : sans eux on ne sait pas décrire le vivier, et un
+  // vivier décrit à tort est pire qu'un vivier illisible — il remettrait dans
+  // les paquets quelqu'un qui en est sortie.
+  const excluded = await readExcludedPlayerIds(tenantId);
+  if (excluded === null) {
+    return { ok: false, error: 'retraits TCG illisibles' };
+  }
+
   const [playersRes, teamsRes, fanartRes] = await Promise.all(
-    poolQueries(tenantId, false)
+    poolQueries(tenantId, false, excluded)
   );
 
   if (playersRes.error || teamsRes.error || fanartRes.error) {

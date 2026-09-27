@@ -12,7 +12,19 @@ import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import DiscoveryCard from '@/components/player/DiscoveryCard';
 import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
+import dynamic from 'next/dynamic';
 import TcgPhotoCard from '@/components/player/TcgPhotoCard';
+/**
+ * Le retrait du TCG, chargé À LA DEMANDE. Il est sous la ligne de flottaison
+ * d'une longue page de réglages et tire sa propre boîte de dialogue : en
+ * statique, il coûtait 5 ko gzippés à toutes les visites pour un geste rare
+ * (constaté au budget de bundle). Un contrôle de consentement doit être
+ * JOIGNABLE, pas présent dans le premier octet.
+ */
+const TcgExclusionCard = dynamic(
+  () => import('@/components/player/TcgExclusionCard'),
+  { ssr: false, loading: () => null }
+);
 import HeroPreferencesCard from '@/components/player/HeroPreferencesCard';
 import TwitchLinkCard from '@/components/player/TwitchLinkCard';
 import DiscordLinkCard from '@/components/player/DiscordLinkCard';
@@ -755,6 +767,12 @@ function PlayerProfile() {
           <div id="tcg-photo" className="scroll-mt-24">
             <TcgPhotoCard displayName={displayName} />
           </div>
+
+          {/* Le retrait TOTAL, à part du dépôt : ce ne sont pas les mêmes
+              gestes, et la carte ci-dessus ne rend rien tant qu'elle n'a pas
+              pu lire son état — adosser le retrait à elle le rendrait
+              injoignable exactement quand quelque chose ne va pas. */}
+          <TcgExclusionCard />
 
           {/* Changer mon email */}
           <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">

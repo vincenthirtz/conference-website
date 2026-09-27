@@ -205,6 +205,24 @@ export default ns('playerTcg', {
     'Sans photo, ta carte existe quand même — mais c’est la photo qui en fait une carte. Relue par l’équipe avant publication, remplaçable et retirable à tout moment.',
   inviteCta: 'Déposer ma photo',
   inviteLater: 'Plus tard',
+  // --- Retrait total du TCG (lot T9) ---------------------------------------
+  exclusionTitle: 'Ne pas figurer dans le TCG',
+  exclusionWhatGoes:
+    'Tu sors du tirage : plus aucun paquet ne peut contenir ta carte, et ta photo est supprimée.',
+  exclusionWhatStays:
+    'Les cartes déjà tirées restent dans les collections des autres, mais deviennent anonymes — ni ton nom, ni ta photo, ni ta figurine.',
+  exclusionReversible:
+    'Réversible à tout moment. Ta photo, elle, ne revient pas : elle aura été supprimée.',
+  exclusionCta: 'Me retirer du TCG',
+  exclusionConfirmTitle: 'Te retirer du TCG ?',
+  exclusionConfirmBody:
+    'Tu sors du tirage et ta photo est supprimée. Les cartes déjà tirées restent chez celles qui les ont, mais sans rien qui te désigne. Tu peux revenir quand tu veux.',
+  exclusionConfirmCta: 'Me retirer',
+  exclusionDone: 'C’est fait : tu ne figures plus dans le TCG.',
+  exclusionUndone: 'Te revoilà dans le TCG.',
+  exclusionActive:
+    'Tu ne figures pas dans le TCG. Aucun paquet ne peut te tirer, et les cartes déjà tirées sont anonymes.',
+  exclusionRejoin: 'Revenir dans le TCG',
   foil: 'Brillante',
   copies: '×{count}',
   // Crédit de l'artiste d'un logo d'équipe. Ici plutôt que dans `teamDetail` :

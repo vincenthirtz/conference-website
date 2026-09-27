@@ -1661,6 +1661,23 @@
     ]
    }
   },
+  "DELETE /api/player/tcg/exclusion": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "excluded": {
+      "type": "boolean"
+     },
+     "excludedAt": {
+      "type": "null"
+     }
+    },
+    "required": [
+     "excluded",
+     "excludedAt"
+    ]
+   }
+  },
   "DELETE /api/player/tcg/photo": {
    "200": {
     "type": "object",
@@ -41039,6 +41056,26 @@
     ]
    }
   },
+  "GET /api/player/tcg/exclusion": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "excluded": {
+      "type": "boolean"
+     },
+     "excludedAt": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "excluded",
+     "excludedAt"
+    ]
+   }
+  },
   "GET /api/player/tcg/fanart": {
    "200": {
     "anyOf": [
@@ -67435,6 +67472,23 @@
     "required": [
      "key",
      "balance"
+    ]
+   }
+  },
+  "POST /api/player/tcg/exclusion": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "excluded": {
+      "type": "boolean"
+     },
+     "excludedAt": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "excluded",
+     "excludedAt"
     ]
    }
   },

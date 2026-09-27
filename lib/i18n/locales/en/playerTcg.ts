@@ -162,6 +162,23 @@ export default {
     'Your card exists without one — but the photo is what makes it a card. Reviewed by the team before publication, replaceable and removable at any time.',
   inviteCta: 'Add my photo',
   inviteLater: 'Later',
+  exclusionTitle: 'Stay out of the TCG',
+  exclusionWhatGoes:
+    'You leave the draw: no pack can contain your card any more, and your photo is deleted.',
+  exclusionWhatStays:
+    'Cards already drawn stay in other people’s collections, but become anonymous — no name, no photo, no figurine.',
+  exclusionReversible:
+    'Reversible at any time. Your photo does not come back: it will have been deleted.',
+  exclusionCta: 'Remove me from the TCG',
+  exclusionConfirmTitle: 'Leave the TCG?',
+  exclusionConfirmBody:
+    'You leave the draw and your photo is deleted. Cards already drawn stay with whoever has them, but with nothing identifying you. You can come back whenever you want.',
+  exclusionConfirmCta: 'Remove me',
+  exclusionDone: 'Done: you no longer appear in the TCG.',
+  exclusionUndone: 'You are back in the TCG.',
+  exclusionActive:
+    'You do not appear in the TCG. No pack can draw you, and cards already drawn are anonymous.',
+  exclusionRejoin: 'Come back to the TCG',
   foil: 'Foil',
   copies: '×{count}',
   logoCredit: 'Logo by {artist}',

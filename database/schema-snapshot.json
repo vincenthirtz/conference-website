@@ -1508,6 +1508,7 @@
     ],
     "tcg_player_cards": [
       "created_at",
+      "excluded_at",
       "opted_in_at",
       "photo_path",
       "photo_rejected_reason",
