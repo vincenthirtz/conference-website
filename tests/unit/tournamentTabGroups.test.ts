@@ -104,6 +104,9 @@ describe('groupes d’onglets du tournoi', () => {
     const multi = TOURNAMENT_TAB_GROUPS.filter((g) => g.members.length > 1).map(
       (g) => g.id
     );
-    expect(multi.sort()).toEqual(['matches', 'settings', 'tools']);
+    // `stages` depuis le 2026-09-27 : « Répartition » (liste d'attente des
+    // tournois regroupés en équipes de 5) y rejoint « Phases », dont la page
+    // n'a pas de sous-onglets propres — pas de doublon de barre.
+    expect(multi.sort()).toEqual(['matches', 'settings', 'stages', 'tools']);
   });
 });
