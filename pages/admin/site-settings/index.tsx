@@ -22,6 +22,9 @@ const TeamRolesPanel = lazyPanel(
 const HelloAssoAccountPanel = lazyPanel(
   () => import('@/components/admin/site-settings/HelloAssoAccountPanel')
 );
+const SeasonalLogosPanel = lazyPanel(
+  () => import('@/components/admin/site-settings/SeasonalLogosPanel')
+);
 const EmailSenderPanel = lazyPanel(
   () => import('@/components/admin/site-settings/EmailSenderPanel')
 );
@@ -45,6 +48,9 @@ export default function AdminSiteSettingsPage(_: StaffProps) {
     { id: 'general', label: t.tabGeneral },
     { id: 'discord', label: t.tabDiscord },
     { id: 'team-roles', label: t.tabTeamRoles },
+    // Logos d'événement (Octobre rose, Noël…) : programmés par dates, ils
+    // remplacent le logo du site puis s'effacent seuls.
+    { id: 'seasonal-logos', label: t.tabSeasonalLogos },
     // Compte d'envoi de l'espace : sans lui, un espace tiers n'envoie aucun
     // email (il n'emprunte pas celui de la plateforme).
     { id: 'email-sender', label: t.tabEmailSender },
@@ -86,6 +92,7 @@ export default function AdminSiteSettingsPage(_: StaffProps) {
             {active === 'general' && <GeneralSettingsPanel />}
             {active === 'discord' && <DiscordWebhooksPanel />}
             {active === 'team-roles' && <TeamRolesPanel />}
+            {active === 'seasonal-logos' && <SeasonalLogosPanel />}
             {active === 'email-sender' && <EmailSenderPanel />}
             {active === 'helloasso' && <HelloAssoAccountPanel />}
           </div>

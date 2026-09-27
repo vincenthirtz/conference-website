@@ -1,0 +1,31 @@
+get:
+  tags:
+    - public/misc
+  summary: Event logo to show today, or null for the default logo.
+  description: |
+    Read by the navigation bar of every page. Only the logo live today is
+    returned — the rest of the calendar stays admin-side. CDN-cached 5 minutes.
+  operationId: getSeasonalLogo
+  security: []
+  responses:
+    '200':
+      description: Active event logo, or null.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [logo]
+            properties:
+              logo:
+                type: object
+                nullable: true
+                required: [url, name]
+                properties:
+                  url:
+                    type: string
+                  name:
+                    type: string
+    '405':
+      description: Method not allowed.
+    '429':
+      $ref: '#/components/responses/RateLimited'

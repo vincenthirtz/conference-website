@@ -10,6 +10,7 @@ import { useFocusTrap } from '@/hooks/useFocusTrap';
 import LanguageToggle from './LanguageToggle';
 import { useT, format } from '@/lib/i18n/useT';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
+import { useSeasonalLogo } from '@/lib/branding/useSeasonalLogo';
 import nsPlayerTopBar from '@/lib/i18n/locales/fr/playerTopBar';
 import { useDocumentVisible } from '@/hooks/useDocumentVisible';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
@@ -85,6 +86,7 @@ export default function PlayerTopBar({
   const t = useT(nsPlayerTopBar);
   const tNav = useT(nsNavbar);
   const branding = useTenantBranding();
+  const seasonal = useSeasonalLogo(!branding);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   // La cloche compte pour l'équipe ACTIVE, comme le tableau de bord et
@@ -193,13 +195,21 @@ export default function PlayerTopBar({
           aria-label={t.homeAria}
         >
           <Image
-            src={branding?.logoUrl ?? '/img/logos/2026-logo.png'}
-            alt={branding?.name ? `${branding.name} logo` : 'conference logo'}
+            src={
+              branding?.logoUrl ?? seasonal?.url ?? '/img/logos/2026-logo.png'
+            }
+            alt={
+              branding?.name
+                ? `${branding.name} logo`
+                : seasonal
+                  ? `conference logo — ${seasonal.name}`
+                  : 'conference logo'
+            }
             width={150}
             height={38}
             className="block h-8 w-auto transition-transform duration-300 hover:scale-[1.03]"
             priority
-            unoptimized={Boolean(branding?.logoUrl)}
+            unoptimized={Boolean(branding?.logoUrl || seasonal)}
           />
         </Link>
 

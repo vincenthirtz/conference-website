@@ -1,0 +1,103 @@
+get:
+  summary: Read the event-logo calendar (Pink October, Halloween, Christmas…).
+  description: |
+    Event logos replace the site logo between two Paris-time dates (inclusive),
+    then the default logo comes back on its own. Returns the whole calendar,
+    the id of the logo live today (overlaps: the most recently started wins)
+    and today's date in Paris.
+  operationId: adminGetSiteSettingsSeasonalLogos
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Calendar.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+            properties:
+              logos:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+              activeId:
+                type: string
+                nullable: true
+              today:
+                type: string
+                format: date
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '405':
+      description: Method not allowed.
+    '429':
+      $ref: '#/components/responses/RateLimited'
+put:
+  summary: Replace the event-logo calendar.
+  description: |
+    The list is written as a whole: ids must be unique (`^[\w-]{1,40}$`), at
+    most 24 entries, `name` up to 60 chars, `startDate`/`endDate` as
+    YYYY-MM-DD with `endDate >= startDate` (inclusive, Paris time), and `url`
+    must be https or a site-relative path. An empty list restores the default
+    logo.
+  operationId: adminPutSiteSettingsSeasonalLogos
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [logos]
+          properties:
+            logos:
+              type: array
+              maxItems: 24
+              items:
+                type: object
+                required: [id, name, url, startDate, endDate, enabled]
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                    maxLength: 60
+                  url:
+                    type: string
+                  startDate:
+                    type: string
+                    format: date
+                  endDate:
+                    type: string
+                    format: date
+                  enabled:
+                    type: boolean
+  responses:
+    '200':
+      description: Saved calendar (same shape as GET).
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      description: '`code: invalid_body`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '405':
+      description: Method not allowed.
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      description: Write failed.

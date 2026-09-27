@@ -19,13 +19,19 @@
 // tourne toujours : une source d'habillage n'a pas à deviner l'état du stream,
 // c'est OBS qui décide quand la scène est à l'écran.
 //
+// LOGO D'ÉVÉNEMENT. Sans `logo` en paramètre, la source suit le logo
+// saisonnier programmé dans l'admin (Octobre rose, Noël… cf.
+// utils/seasonalLogo.ts) : l'habillage change avec le site sans retoucher OBS.
+// C'est son seul appel réseau, et il n'est pas bloquant — hors ligne ou en
+// échec, le logo par défaut reste affiché.
+//
 // Rendue sans chrome par `_app.tsx` (préfixe `/overlay`), fond transparent,
-// `noindex`. Aucune donnée, aucun appel réseau : elle marche hors ligne, ce qui
-// est exactement ce qu'on veut d'un habillage un soir de diffusion.
+// `noindex`.
 
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import PulseCanvas from '@/components/brand/PulseCanvas';
+import { useSeasonalLogo } from '@/lib/branding/useSeasonalLogo';
 
 const DEFAULT_LOGO = '/img/logos/2026-logo.png';
 const DEFAULT_SIZE = 256;
@@ -64,7 +70,13 @@ export default function LogoOverlayPage() {
 
   const size = parseSize(firstParam(router.query.size));
   const gapMs = parseGap(firstParam(router.query.gap));
-  const logo = parseLogo(firstParam(router.query.logo));
+  // Un `logo` explicite l'emporte : c'est un espace qui n'est pas la Cup, les
+  // événements de la Cup ne le concernent pas.
+  const explicitLogo = firstParam(router.query.logo);
+  const seasonal = useSeasonalLogo(!explicitLogo);
+  const logo = explicitLogo
+    ? parseLogo(explicitLogo)
+    : (seasonal?.url ?? DEFAULT_LOGO);
   const glow = firstParam(router.query.glow) !== 'off';
 
   // Le pulse encadre le logo : la même proportion que dans la navbar (crochets

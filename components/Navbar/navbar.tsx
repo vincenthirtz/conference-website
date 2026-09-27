@@ -14,6 +14,7 @@ import { PLAYER_LINKS } from './playerLinks';
 import { accountLinks, resolveHeaderBars, routeSpace } from './headerBars';
 import { useT } from '@/lib/i18n/useT';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
+import { useSeasonalLogo } from '@/lib/branding/useSeasonalLogo';
 import nsNavbar from '@/lib/i18n/locales/fr/navbar';
 
 const DEFAULT_LOGO_SRC = '/img/logos/2026-logo.png';
@@ -36,8 +37,15 @@ function Navbar(): JSX.Element {
   const router = useRouter();
   const tNav = useT(nsNavbar);
   const branding = useTenantBranding();
-  const logoSrc = branding?.logoUrl ?? DEFAULT_LOGO_SRC;
-  const logoAlt = branding?.name ? `${branding.name} logo` : 'conference logo';
+  // Logo d'événement (Octobre rose, Noël…) : seulement pour la Cup — un espace
+  // en marque blanche garde le sien.
+  const seasonal = useSeasonalLogo(!branding);
+  const logoSrc = branding?.logoUrl ?? seasonal?.url ?? DEFAULT_LOGO_SRC;
+  const logoAlt = branding?.name
+    ? `${branding.name} logo`
+    : seasonal
+      ? `conference logo — ${seasonal.name}`
+      : 'conference logo';
 
   const {
     isStaff,
@@ -281,10 +289,11 @@ function Navbar(): JSX.Element {
                   height={64}
                   className="block h-16 w-auto transition-transform duration-300 group-hover:scale-[1.04]"
                   priority
-                  // Custom-domain logos (branding) live on arbitrary hosts;
-                  // skip next/image optimization (and its remotePatterns check)
-                  // for them. The default logo stays optimized (unchanged).
-                  unoptimized={Boolean(branding?.logoUrl)}
+                  // Custom-domain logos (branding) and seasonal logos (Supabase
+                  // Storage) live on other hosts; skip next/image optimization
+                  // (and its remotePatterns check) for them. The default logo
+                  // stays optimized (unchanged).
+                  unoptimized={Boolean(branding?.logoUrl || seasonal)}
                 />
               </Link>
             )}

@@ -10131,6 +10131,61 @@
     ]
    }
   },
+  "GET /api/admin/site-settings/seasonal-logos": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "logos": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "name": {
+         "type": "string"
+        },
+        "url": {
+         "type": "string"
+        },
+        "startDate": {
+         "type": "string"
+        },
+        "endDate": {
+         "type": "string"
+        },
+        "enabled": {
+         "type": "boolean"
+        }
+       },
+       "required": [
+        "id",
+        "name",
+        "url",
+        "startDate",
+        "endDate",
+        "enabled"
+       ]
+      }
+     },
+     "activeId": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "today": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "logos",
+     "activeId",
+     "today"
+    ]
+   }
+  },
   "GET /api/admin/site-settings/team-roles": {
    "200": {
     "type": "object",
@@ -45653,6 +45708,34 @@
     ]
    }
   },
+  "GET /api/seasonal-logo": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "logo": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "url": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "url",
+       "name"
+      ]
+     }
+    },
+    "required": [
+     "logo"
+    ]
+   }
+  },
   "GET /api/site-settings": {
    "200": {
     "anyOf": [
@@ -69837,6 +69920,61 @@
     },
     "required": [
      "webhook"
+    ]
+   }
+  },
+  "PUT /api/admin/site-settings/seasonal-logos": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "logos": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "name": {
+         "type": "string"
+        },
+        "url": {
+         "type": "string"
+        },
+        "startDate": {
+         "type": "string"
+        },
+        "endDate": {
+         "type": "string"
+        },
+        "enabled": {
+         "type": "boolean"
+        }
+       },
+       "required": [
+        "id",
+        "name",
+        "url",
+        "startDate",
+        "endDate",
+        "enabled"
+       ]
+      }
+     },
+     "activeId": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "today": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "logos",
+     "activeId",
+     "today"
     ]
    }
   },
