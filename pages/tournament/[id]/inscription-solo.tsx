@@ -42,6 +42,7 @@ import { logger } from '@/utils/logger';
 import { useT } from '@/lib/i18n/useT';
 import nsSoloSignup from '@/lib/i18n/locales/fr/soloSignup';
 import SoloSignupForm from '@/components/SoloSignup/SoloSignupForm';
+import PoolSignupForm from '@/components/SoloSignup/PoolSignupForm';
 
 type TournamentLite = {
   id: string;
@@ -50,6 +51,7 @@ type TournamentLite = {
   status: string;
   visibility: string | null;
   solo_mode: boolean | null;
+  pooled_teams: boolean | null;
   registration_fields: unknown;
 };
 
@@ -59,6 +61,11 @@ type Props = {
   tournamentPath: string;
   /** Inscriptions ouvertes : seul `published` accepte une inscription. */
   open: boolean;
+  /**
+   * Inscription regroupée en équipes de 5 (`pooled_teams`) : connexion
+   * requise, formulaire et statut dédiés (PoolSignupForm).
+   */
+  pooled: boolean;
   registrationFields: RegistrationField[];
   seo: SeoProps;
 };
@@ -91,7 +98,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 
   const tournament = await findTournamentByIdOrSlug<TournamentLite>(
     id,
-    'id, slug, name, status, visibility, solo_mode, registration_fields',
+    'id, slug, name, status, visibility, solo_mode, pooled_teams, registration_fields',
     tenantId
   );
   if (!tournament) {
@@ -100,8 +107,9 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   if (tournament.visibility && tournament.visibility !== 'public') {
     return { notFound: true, revalidate: 60 };
   }
-  // Le garde qui compte : hors mode solo, cette page n'existe pas.
-  if (tournament.solo_mode !== true) {
+  // Le garde qui compte : hors inscription individuelle (solo, ou regroupée
+  // en équipes), cette page n'existe pas.
+  if (tournament.solo_mode !== true && tournament.pooled_teams !== true) {
     return { notFound: true, revalidate: 60 };
   }
 
@@ -123,6 +131,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       tournamentName: tournament.name,
       tournamentPath: `/tournament/${tournament.slug || tournament.id}`,
       open: tournament.status === 'published',
+      pooled: tournament.pooled_teams === true,
       registrationFields: defs.ok ? defs.fields : [],
       seo: buildSeo(tournament.name),
     },
@@ -135,6 +144,7 @@ export default function SoloSignupPage({
   tournamentName,
   tournamentPath,
   open,
+  pooled,
   registrationFields,
 }: Props) {
   const t = useT(nsSoloSignup);
@@ -158,13 +168,15 @@ export default function SoloSignupPage({
             {tournamentName}
           </Paragraph>
           <Paragraph className="mx-auto mt-1 max-w-xl text-gray-400">
-            {t.subtitle}
+            {pooled ? t.poolSubtitle : t.subtitle}
           </Paragraph>
         </div>
       </div>
 
       <section className="mx-auto max-w-2xl px-6 pb-16">
-        {open ? (
+        {open && pooled ? (
+          <PoolSignupForm tournamentId={tournamentId} />
+        ) : open ? (
           <SoloSignupForm
             tournamentId={tournamentId}
             tournamentName={tournamentName}

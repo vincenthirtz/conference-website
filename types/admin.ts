@@ -80,6 +80,8 @@ export type Tournament = {
    * type : les réponses d'API antérieures à la colonne ne le portent pas.
    */
   solo_mode?: boolean;
+  /** Inscription individuelle regroupée en équipes de 5 (`tournaments.pooled_teams`). */
+  pooled_teams?: boolean;
   is_public: boolean;
   is_featured: boolean;
   logo_url: string | null;

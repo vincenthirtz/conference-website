@@ -54,6 +54,9 @@ export default {
   soloModeLabel: 'Individual sign-up (no team)',
   soloModeHelp:
     'Each entrant signs up alone from /tournament/<id>/inscription-solo and counts as a one-player "team" named after her. No Discord role or channel is created for her. The FFA format (points standings) is the one built for this kind of event.',
+  pooledTeamsLabel: 'Individual sign-up pooled into 5-player teams',
+  pooledTeamsHelp:
+    'Each player signs up alone (login required). As soon as 5 members of the same team have signed up, the team is entered with them; the others join a waitlist that staff distributes. Event line-ups do not change the real teams. Leave “max players” empty.',
   sectionVisuals: 'Visuals',
   logoLabel: 'Logo (URL)',
   bannerLabel: 'Banner (URL)',

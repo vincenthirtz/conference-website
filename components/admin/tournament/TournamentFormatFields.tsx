@@ -26,6 +26,7 @@ export type TournamentFormatForm = {
   min_players: string;
   max_players: string;
   solo_mode: boolean;
+  pooled_teams: boolean;
 };
 
 /**
@@ -45,7 +46,7 @@ type UpdateFormatField = {
       | 'max_players',
     value: string
   ): void;
-  (field: 'solo_mode', value: boolean): void;
+  (field: 'solo_mode' | 'pooled_teams', value: boolean): void;
 };
 
 type Props = {
@@ -141,12 +142,36 @@ export default function TournamentFormatFields({ form, updateField }: Props) {
           type="checkbox"
           className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-900"
           checked={form.solo_mode}
-          onChange={(e) => updateField('solo_mode', e.target.checked)}
+          onChange={(e) => {
+            updateField('solo_mode', e.target.checked);
+            // Exclusifs : cocher l'un décoche l'autre.
+            if (e.target.checked) updateField('pooled_teams', false);
+          }}
         />
         <span>
           <span className="font-medium">{t.soloModeLabel}</span>
           <span className="mt-1 block text-xs text-neutral-500">
             {t.soloModeHelp}
+          </span>
+        </span>
+      </label>
+
+      {/* Inscription individuelle REGROUPÉE en équipes de 5 : exclusive du
+          mode solo ci-dessus. */}
+      <label className="md:col-span-2 flex items-start gap-3 rounded-xl border border-neutral-700/60 bg-neutral-900/40 p-3 text-sm cursor-pointer">
+        <input
+          type="checkbox"
+          className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-900"
+          checked={form.pooled_teams}
+          onChange={(e) => {
+            updateField('pooled_teams', e.target.checked);
+            if (e.target.checked) updateField('solo_mode', false);
+          }}
+        />
+        <span>
+          <span className="font-medium">{t.pooledTeamsLabel}</span>
+          <span className="mt-1 block text-xs text-neutral-500">
+            {t.pooledTeamsHelp}
           </span>
         </span>
       </label>

@@ -81,6 +81,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
     max_teams: string;
     min_players: string;
     solo_mode: boolean;
+    pooled_teams: boolean;
     max_players: string;
     is_public: boolean;
     is_featured: boolean;
@@ -106,6 +107,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
     max_teams: '',
     min_players: '',
     solo_mode: false,
+    pooled_teams: false,
     max_players: '',
     is_public: false,
     is_featured: false,
@@ -167,6 +169,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
         max_teams: tour.max_teams ? String(tour.max_teams) : '',
         min_players: tour.min_players ? String(tour.min_players) : '',
         solo_mode: tour.solo_mode === true,
+        pooled_teams: tour.pooled_teams === true,
         max_players: tour.max_players ? String(tour.max_players) : '',
         is_public: tour.is_public,
         is_featured: tour.is_featured,
@@ -242,6 +245,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
       max_teams: form.max_teams ? Number(form.max_teams) : null,
       min_players: form.min_players ? Number(form.min_players) : null,
       solo_mode: form.solo_mode,
+      pooled_teams: form.pooled_teams,
       max_players: form.max_players ? Number(form.max_players) : null,
       is_public: form.is_public,
       is_featured: form.is_featured,

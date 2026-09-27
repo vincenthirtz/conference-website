@@ -117,7 +117,7 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
     );
 
   const tournamentColumns =
-    'id, name, short_name, slug, game, status, format, max_teams, solo_mode, start_date, end_date, rules_url, logo_url, banner_url, description_info, schedule_details, schedule_rules, format_details, visibility, created_at, updated_at';
+    'id, name, short_name, slug, game, status, format, max_teams, solo_mode, pooled_teams, start_date, end_date, rules_url, logo_url, banner_url, description_info, schedule_details, schedule_rules, format_details, visibility, created_at, updated_at';
 
   const tenantId = DEFAULT_TENANT_ID;
 

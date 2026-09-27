@@ -33,6 +33,8 @@ type TournamentDetail = {
    * compétition, qui continue de raisonner en équipes.
    */
   solo_mode: boolean;
+  /** Inscription individuelle regroupée en équipes de 5 (cf. utils/tournaments/pool.ts). */
+  pooled_teams: boolean;
   roster_locked_at: string | null;
   is_public: boolean;
   is_featured: boolean;
@@ -126,6 +128,7 @@ async function handleGet(
         min_players,
         max_players,
         solo_mode,
+        pooled_teams,
         roster_locked_at,
         visibility,
         is_featured,
@@ -186,6 +189,7 @@ async function handlePatch(
       min_players,
       max_players,
       solo_mode,
+      pooled_teams,
       is_public,
       is_featured,
       logo_url,
@@ -384,6 +388,18 @@ async function handlePatch(
     if (min_players !== undefined) updatePayload.min_players = min_players;
     if (max_players !== undefined) updatePayload.max_players = max_players;
     if (solo_mode !== undefined) updatePayload.solo_mode = solo_mode === true;
+    if (pooled_teams !== undefined)
+      updatePayload.pooled_teams = pooled_teams === true;
+    // Les deux modes d'inscription individuelle s'excluent : une équipe d'une
+    // joueuse (solo) n'est pas une équipe de 5 formée par le staff (pool).
+    if (
+      updatePayload.solo_mode === true &&
+      updatePayload.pooled_teams === true
+    ) {
+      return res.status(400).json({
+        error: 'solo_mode and pooled_teams are mutually exclusive.',
+      });
+    }
     // Map is_public (frontend) to visibility (database)
     if (is_public !== undefined)
       updatePayload.visibility = is_public ? 'public' : 'private';
@@ -432,6 +448,7 @@ async function handlePatch(
         min_players,
         max_players,
         solo_mode,
+        pooled_teams,
         roster_locked_at,
         visibility,
         is_featured,

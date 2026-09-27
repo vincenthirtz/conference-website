@@ -45,6 +45,7 @@ export type PublicTournament = {
    * d'équipe.
    */
   solo_mode: boolean;
+  pooled_teams: boolean;
 };
 
 export default async function handler(
@@ -86,7 +87,8 @@ export default async function handler(
       banner_url,
       created_at,
       registration_fields,
-      solo_mode
+      solo_mode,
+      pooled_teams
     `;
 
     let query = supabaseAdmin

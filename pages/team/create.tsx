@@ -288,6 +288,8 @@ export default function PublicCreateTeamPage() {
                 registration_fields?: RegistrationField[];
                 /** Inscription individuelle : ce wizard n'est pas le bon écran. */
                 solo_mode?: boolean;
+                /** Inscription individuelle regroupée : même aiguillage. */
+                pooled_teams?: boolean;
               }[]
             | undefined
         )?.find((t) => t.id === tournamentIdParam);
@@ -296,7 +298,7 @@ export default function PublicCreateTeamPage() {
         // On renvoie vers le formulaire solo plutôt que de laisser quelqu'un
         // créer une équipe d'une joueuse à la main. `replace` et non `push` :
         // le retour arrière doit ramener d'où l'on vient, pas ici.
-        if (found?.solo_mode === true) {
+        if (found?.solo_mode === true || found?.pooled_teams === true) {
           void router.replace(`/tournament/${found.id}/inscription-solo`);
           return;
         }

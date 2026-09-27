@@ -47,7 +47,8 @@ export const getStaticProps: GetStaticProps<
       start_date,
       end_date,
       max_teams,
-      solo_mode
+      solo_mode,
+      pooled_teams
     `
     )
     .eq('tenant_id', DEFAULT_TENANT_ID)

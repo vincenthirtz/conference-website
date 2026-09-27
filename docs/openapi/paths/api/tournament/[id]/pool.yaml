@@ -1,0 +1,117 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  tags:
+    - public/misc
+  summary: My individual entry to a pooled 5-player-team tournament.
+  description: |
+    For tournaments with `pooled_teams`: each player signs up alone; a real
+    team is entered as soon as 5 of its members have signed up, the others
+    wait for staff to place them. Returns the caller's entry, the teams she
+    plays for, and her team's progress ("3 / 5 signed up"). 404 unless the
+    tournament is public and pooled.
+  operationId: getTournamentPoolEntry
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Entry status.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      description: Invalid tournament ID.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      description: Tournament not found (or not pooled / not public).
+    '429':
+      $ref: '#/components/responses/RateLimited'
+post:
+  tags:
+    - public/misc
+  summary: Sign up (or update my entry) to a pooled tournament.
+  description: |
+    Atomic on the database side (`pool_register`): the "5 members of the same
+    team" threshold cannot be crossed twice or missed by two concurrent
+    sign-ups. `originTeamId` must be a team the caller plays for (403
+    otherwise). `teamRegistered: true` when THIS call entered the team.
+  operationId: postTournamentPoolEntry
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [displayName, battleTag, originTeamId]
+          properties:
+            displayName:
+              type: string
+              minLength: 2
+              maxLength: 40
+            battleTag:
+              type: string
+            originTeamId:
+              type: string
+              format: uuid
+              nullable: true
+  responses:
+    '200':
+      description: Entry status, plus `teamRegistered`.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      description: '`code: BATTLETAG_INVALID | NAME_INVALID | INVALID_BODY`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: '`code: NOT_TEAM_MEMBER`.'
+    '404':
+      description: Tournament not found (or not pooled / not public).
+    '409':
+      description: '`code: REGISTRATION_CLOSED`.'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      description: '`code: SERVER_ERROR`.'
+delete:
+  tags:
+    - public/misc
+  summary: Withdraw my waitlisted entry.
+  description: |
+    Only a waitlisted entry can be withdrawn by the player: a placed one is
+    part of an entered team, and removing it would break the other four's
+    team without them knowing — that goes through staff.
+  operationId: deleteTournamentPoolEntry
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Entry status after withdrawal.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      description: Tournament not found (or not pooled / not public).
+    '409':
+      description: '`code: NOT_WITHDRAWABLE`.'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      description: '`code: SERVER_ERROR`.'

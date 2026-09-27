@@ -1915,6 +1915,139 @@
     ]
    }
   },
+  "DELETE /api/tournament/{id}/pool": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "entry": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "status": {
+        "type": "string",
+        "enum": [
+         "placed",
+         "waitlist",
+         "withdrawn"
+        ]
+       },
+       "displayName": {
+        "type": "string"
+       },
+       "battleTag": {
+        "type": "string"
+       },
+       "originTeam": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "name": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "id",
+         "name"
+        ]
+       },
+       "placedTeam": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "name": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "id",
+         "name"
+        ]
+       }
+      },
+      "required": [
+       "status",
+       "displayName",
+       "battleTag",
+       "originTeam",
+       "placedTeam"
+      ]
+     },
+     "teams": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "name": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "id",
+        "name"
+       ]
+      }
+     },
+     "teamProgress": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "team": {
+        "type": "object",
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "name": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "id",
+         "name"
+        ]
+       },
+       "signedUp": {
+        "type": "number"
+       },
+       "needed": {
+        "type": "number"
+       },
+       "teamRegistered": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "team",
+       "signedUp",
+       "needed",
+       "teamRegistered"
+      ]
+     }
+    },
+    "required": [
+     "entry",
+     "teams",
+     "teamProgress"
+    ]
+   }
+  },
   "GET /api/admin/active-tenant": {
    "200": {
     "type": "object",
@@ -18178,6 +18311,9 @@
        "solo_mode": {
         "type": "boolean"
        },
+       "pooled_teams": {
+        "type": "boolean"
+       },
        "roster_locked_at": {
         "type": [
          "string",
@@ -18310,6 +18446,7 @@
        "min_players",
        "max_players",
        "solo_mode",
+       "pooled_teams",
        "roster_locked_at",
        "is_public",
        "is_featured",
@@ -47626,6 +47763,139 @@
     ]
    }
   },
+  "GET /api/tournament/{id}/pool": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "entry": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "status": {
+        "type": "string",
+        "enum": [
+         "placed",
+         "waitlist",
+         "withdrawn"
+        ]
+       },
+       "displayName": {
+        "type": "string"
+       },
+       "battleTag": {
+        "type": "string"
+       },
+       "originTeam": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "name": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "id",
+         "name"
+        ]
+       },
+       "placedTeam": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "name": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "id",
+         "name"
+        ]
+       }
+      },
+      "required": [
+       "status",
+       "displayName",
+       "battleTag",
+       "originTeam",
+       "placedTeam"
+      ]
+     },
+     "teams": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "name": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "id",
+        "name"
+       ]
+      }
+     },
+     "teamProgress": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "team": {
+        "type": "object",
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "name": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "id",
+         "name"
+        ]
+       },
+       "signedUp": {
+        "type": "number"
+       },
+       "needed": {
+        "type": "number"
+       },
+       "teamRegistered": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "team",
+       "signedUp",
+       "needed",
+       "teamRegistered"
+      ]
+     }
+    },
+    "required": [
+     "entry",
+     "teams",
+     "teamProgress"
+    ]
+   }
+  },
   "GET /api/tournaments": {
    "200": {
     "type": "object",
@@ -47697,7 +47967,8 @@
         "logo_url": {},
         "banner_url": {},
         "created_at": {},
-        "solo_mode": {}
+        "solo_mode": {},
+        "pooled_teams": {}
        },
        "required": [
         "registration_fields",
@@ -47715,7 +47986,8 @@
         "logo_url",
         "banner_url",
         "created_at",
-        "solo_mode"
+        "solo_mode",
+        "pooled_teams"
        ]
       }
      },
@@ -69181,6 +69453,143 @@
     ]
    }
   },
+  "POST /api/tournament/{id}/pool": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "teamRegistered": {
+      "type": "boolean"
+     },
+     "entry": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "status": {
+        "type": "string",
+        "enum": [
+         "placed",
+         "waitlist",
+         "withdrawn"
+        ]
+       },
+       "displayName": {
+        "type": "string"
+       },
+       "battleTag": {
+        "type": "string"
+       },
+       "originTeam": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "name": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "id",
+         "name"
+        ]
+       },
+       "placedTeam": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "name": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "id",
+         "name"
+        ]
+       }
+      },
+      "required": [
+       "status",
+       "displayName",
+       "battleTag",
+       "originTeam",
+       "placedTeam"
+      ]
+     },
+     "teams": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "name": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "id",
+        "name"
+       ]
+      }
+     },
+     "teamProgress": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "team": {
+        "type": "object",
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "name": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "id",
+         "name"
+        ]
+       },
+       "signedUp": {
+        "type": "number"
+       },
+       "needed": {
+        "type": "number"
+       },
+       "teamRegistered": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "team",
+       "signedUp",
+       "needed",
+       "teamRegistered"
+      ]
+     }
+    },
+    "required": [
+     "teamRegistered",
+     "entry",
+     "teams",
+     "teamProgress"
+    ]
+   }
+  },
   "POST /api/twitch/exchange": {
    "200": {
     "type": "object",
@@ -70318,6 +70727,9 @@
        "solo_mode": {
         "type": "boolean"
        },
+       "pooled_teams": {
+        "type": "boolean"
+       },
        "roster_locked_at": {
         "type": [
          "string",
@@ -70450,6 +70862,7 @@
        "min_players",
        "max_players",
        "solo_mode",
+       "pooled_teams",
        "roster_locked_at",
        "is_public",
        "is_featured",

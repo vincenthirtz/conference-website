@@ -1039,14 +1039,25 @@ export default async function handler(
       // Verify tournament exists and is published
       const { data: tournament } = await supabaseAdmin
         .from('tournaments')
-        .select('id, name, status, max_teams, min_players, solo_mode')
+        .select(
+          'id, name, status, max_teams, min_players, solo_mode, pooled_teams'
+        )
         .eq('id', tournamentId)
         .eq('tenant_id', tenantId)
         .single();
 
       soloTournament = tournament?.solo_mode === true;
 
-      if (tournament && tournament.status === 'published') {
+      // Tournoi REGROUPÉ en équipes de 5 (`pooled_teams`) : on n'y entre que
+      // par l'inscription individuelle (/api/tournament/<id>/pool), qui inscrit
+      // l'équipe à 5 membres et tient la liste d'attente. Rattacher ici une
+      // équipe créée par le wizard contournerait les deux. L'équipe est créée,
+      // simplement pas inscrite ; le wizard aiguille déjà vers le bon écran.
+      if (
+        tournament &&
+        tournament.status === 'published' &&
+        tournament.pooled_teams !== true
+      ) {
         // ── Deux effectifs, deux décisions ────────────────────────────────
         //
         // Depuis le modèle invite-accept (« existence ≠ consentement »), les

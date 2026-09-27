@@ -53,6 +53,9 @@ export default adminNs('adminTournamentEdit', {
   soloModeLabel: 'Inscription individuelle (sans équipe)',
   soloModeHelp:
     "Chaque participante s'inscrit seule depuis /tournament/<id>/inscription-solo et compte pour une « équipe » d'une joueuse portant son pseudo. Aucun rôle ni salon Discord n'est créé pour elle. Le format FFA (classement par points) est celui qui convient à ce type d'événement.",
+  pooledTeamsLabel: 'Inscription individuelle regroupée en équipes de 5',
+  pooledTeamsHelp:
+    'Chaque joueuse s’inscrit seule (connexion requise). Dès que 5 membres d’une même équipe sont inscrites, l’équipe est inscrite avec elles ; les autres vont en liste d’attente, que le staff répartit. Les compositions de l’événement ne modifient pas les vraies équipes. Laisser « joueuses max » vide.',
   sectionVisuals: 'Visuels',
   logoLabel: 'Logo (URL)',
   bannerLabel: 'Bannière (URL)',

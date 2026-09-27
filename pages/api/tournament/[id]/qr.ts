@@ -55,7 +55,8 @@ export default async function handler(
   const tournament = await findTournamentByIdOrSlug<{
     id: string;
     solo_mode: boolean | null;
-  }>(id, 'id, solo_mode');
+    pooled_teams: boolean | null;
+  }>(id, 'id, solo_mode, pooled_teams');
   if (!tournament) {
     return res.status(404).json({ error: 'Tournament not found' });
   }
@@ -70,7 +71,7 @@ export default async function handler(
     width: size,
   };
 
-  // Le lien ne change pas pour un tournoi donné (seul `solo_mode` le décide) :
+  // Le lien ne change pas pour un tournoi donné (seuls `solo_mode` / `pooled_teams` le décident) :
   // un jour de cache CDN suffit, et tolère une bascule solo ↔ équipe.
   res.setHeader(
     'Cache-Control',

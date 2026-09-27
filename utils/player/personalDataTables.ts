@@ -442,6 +442,29 @@ export const PERSONAL_DATA_TABLES: readonly PersonalDataTable[] = [
 
   /* -------------------------------------------- Équipes & recrutement --- */
   {
+    table: 'tournament_pool_entries',
+    columns: ['user_id'],
+    // Pas de FK vers auth.users (comme partout dans le schéma public) : sans
+    // suppression explicite, l'inscription survivrait au compte.
+    policy: { kind: 'delete' },
+    why: 'Ses inscriptions individuelles aux événements regroupés en équipes (pseudo, BattleTag, équipe d’origine) n’ont plus d’objet sans son compte : elles sont supprimées. Les équipes déjà inscrites grâce à elle restent inscrites — c’est l’équipe, pas elle, qui figure au tournoi.',
+    export: {
+      columns: [
+        'id',
+        'tenant_id',
+        'tournament_id',
+        'display_name',
+        'battle_tag',
+        'origin_team_id',
+        'status',
+        'placed_team_id',
+        'placed_at',
+        'created_at',
+        'updated_at',
+      ],
+    },
+  },
+  {
     table: 'free_players',
     columns: ['auth_user_id'],
     // La FK est ON DELETE SET NULL : sans suppression explicite, l'annonce de

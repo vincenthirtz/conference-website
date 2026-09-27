@@ -76,4 +76,39 @@ export default {
     'This event is not taking entries right now. Check back a little later, or ask staff where things stand.',
   prefilledNotice:
     'Filled in from your profile: check it, answer the anti-bot question and submit.',
+  // --- Pooled 5-player teams (pooled_teams) ---------------------------------
+  poolSubtitle:
+    'Sign up on your own: as soon as 5 players from your team have signed up, the team is entered. No team, or your team isn’t complete? Staff will place you in a team before the event.',
+  poolLoading: 'Loading…',
+  poolLoginTitle: 'Log in to sign up',
+  poolLoginBody:
+    'Your account tells us which team you play for: that’s how your team gets entered as soon as there are 5 of you.',
+  poolLoginCta: 'Log in',
+  poolFormTitle: 'My entry',
+  poolFormHint:
+    'Pick your team: it is entered as soon as {needed} of its players have signed up. Otherwise you join the waitlist and staff will place you.',
+  poolTeamLabel: 'My team',
+  poolNoTeam: 'I don’t have a team',
+  poolTeamHelp:
+    'Only teams you play for are listed (not those where you are coach or manager).',
+  poolTeamLockedHelp:
+    'You are already placed in an entered team: contact staff to change it.',
+  poolSubmit: 'Sign me up',
+  poolSave: 'Save',
+  poolCancel: 'Cancel',
+  poolEdit: 'Edit',
+  poolWithdraw: 'Withdraw',
+  poolErrNotMember: 'You are not a member of this team.',
+  poolTeamJustRegistered: 'That’s 5 of you: your team is entered! 🎉',
+  poolPlacedTitle: 'You’re in',
+  poolPlacedBody: 'You play for {team}.',
+  poolWaitTeamTitle: 'Waiting for your team',
+  poolWaitTeamBody:
+    '{count} / {needed} players from {team} have signed up. The team is entered automatically once there are {needed} of you: nudge your teammates!',
+  poolWaitTeamFull:
+    'Your team is already entered with 5 players: you stay on the waitlist, and staff may place you in another team.',
+  poolWaitSoloTitle: 'You’re on the waitlist',
+  poolWaitSoloBody:
+    'Staff will place you in a team before the event. You’ll be notified.',
+  poolRecap: 'Signed up as {pseudo} ({tag}).',
 };

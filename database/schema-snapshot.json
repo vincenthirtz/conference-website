@@ -1994,6 +1994,20 @@
       "tenant_id",
       "tournament_id"
     ],
+    "tournament_pool_entries": [
+      "battle_tag",
+      "created_at",
+      "display_name",
+      "id",
+      "origin_team_id",
+      "placed_at",
+      "placed_team_id",
+      "status",
+      "tenant_id",
+      "tournament_id",
+      "updated_at",
+      "user_id"
+    ],
     "tournament_prize_pools": [
       "base_amount_cents",
       "created_at",
@@ -2061,6 +2075,7 @@
       "name",
       "overlay_day_date",
       "overlay_day_set_at",
+      "pooled_teams",
       "registration_fields",
       "roster_locked_at",
       "roster_unlocked_until",
@@ -3247,6 +3262,22 @@
     },
     "tournament_maps_tournament_id_fkey": {
       "source": "tournament_maps",
+      "target": "tournaments"
+    },
+    "tournament_pool_entries_origin_team_id_fkey": {
+      "source": "tournament_pool_entries",
+      "target": "teams"
+    },
+    "tournament_pool_entries_placed_team_id_fkey": {
+      "source": "tournament_pool_entries",
+      "target": "teams"
+    },
+    "tournament_pool_entries_tenant_id_fkey": {
+      "source": "tournament_pool_entries",
+      "target": "tenants"
+    },
+    "tournament_pool_entries_tournament_id_fkey": {
+      "source": "tournament_pool_entries",
       "target": "tournaments"
     },
     "tournament_prize_pools_tenant_id_fkey": {

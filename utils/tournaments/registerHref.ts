@@ -23,6 +23,11 @@ export type RegisterHrefTournament = {
   id: string;
   /** Absent des réponses d'API antérieures à la colonne : traité comme false. */
   solo_mode?: boolean | null;
+  /**
+   * Inscription individuelle regroupée en équipes de 5 : même porte d'entrée
+   * que le solo (la page choisit le formulaire). Absent = false.
+   */
+  pooled_teams?: boolean | null;
 };
 
 /**
@@ -34,7 +39,7 @@ export type RegisterHrefTournament = {
 export function tournamentRegisterHref(
   tournament: RegisterHrefTournament
 ): string {
-  return tournament.solo_mode === true
+  return tournament.solo_mode === true || tournament.pooled_teams === true
     ? `/tournament/${tournament.id}/inscription-solo`
     : `/team/create?tournament=${tournament.id}`;
 }

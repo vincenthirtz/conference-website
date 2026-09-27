@@ -85,4 +85,39 @@ export default ns('soloSignup', {
     'Cet événement n’accepte pas d’inscription pour le moment. Reviens un peu plus tard, ou demande au staff où ça en est.',
   prefilledNotice:
     'Pré-rempli depuis ton profil : vérifie, réponds à la question anti-robot et valide.',
+  // --- Mode regroupé en équipes de 5 (pooled_teams) ---------------------------
+  poolSubtitle:
+    'Inscris-toi seule : dès que 5 joueuses de ton équipe sont inscrites, l’équipe est inscrite. Sans équipe, ou si ton équipe n’est pas au complet, le staff te place dans une équipe avant l’événement.',
+  poolLoading: 'Chargement…',
+  poolLoginTitle: 'Connecte-toi pour t’inscrire',
+  poolLoginBody:
+    'Ton compte nous dit dans quelle équipe tu joues : c’est ce qui permet d’inscrire ton équipe dès que vous êtes 5.',
+  poolLoginCta: 'Me connecter',
+  poolFormTitle: 'Mon inscription',
+  poolFormHint:
+    'Choisis ton équipe : elle est inscrite dès que {needed} de ses joueuses le sont. Sinon, tu passes en liste d’attente et le staff te place.',
+  poolTeamLabel: 'Mon équipe',
+  poolNoTeam: 'Je n’ai pas d’équipe',
+  poolTeamHelp:
+    'Seules les équipes où tu joues apparaissent (pas celles où tu es coach ou manager).',
+  poolTeamLockedHelp:
+    'Tu es déjà placée dans une équipe inscrite : pour en changer, contacte le staff.',
+  poolSubmit: 'M’inscrire',
+  poolSave: 'Enregistrer',
+  poolCancel: 'Annuler',
+  poolEdit: 'Modifier',
+  poolWithdraw: 'Me retirer',
+  poolErrNotMember: 'Tu ne fais pas partie de cette équipe.',
+  poolTeamJustRegistered: 'Vous êtes 5 : ton équipe est inscrite ! 🎉',
+  poolPlacedTitle: 'Tu es inscrite',
+  poolPlacedBody: 'Tu joues dans l’équipe {team}.',
+  poolWaitTeamTitle: 'En attente de ton équipe',
+  poolWaitTeamBody:
+    '{count} / {needed} joueuses de {team} sont inscrites. L’équipe sera inscrite automatiquement dès que vous serez {needed} : relance tes coéquipières !',
+  poolWaitTeamFull:
+    'Ton équipe est déjà inscrite avec 5 joueuses : tu restes en liste d’attente, le staff pourra te placer dans une autre équipe.',
+  poolWaitSoloTitle: 'Tu es en liste d’attente',
+  poolWaitSoloBody:
+    'Le staff te placera dans une équipe avant l’événement. Tu seras prévenue.',
+  poolRecap: 'Inscrite en tant que {pseudo} ({tag}).',
 });
