@@ -97,7 +97,7 @@ au-delà de ce qui se consomme.
 | T1 | Ramener la joueuse à son paquet | 🟥 | S | ✅ **livré le 2026-09-27** |
 | T2 | Donner une raison de dépenser | 🟥 | L | ✅ **livré le 2026-09-27** |
 | T3 | Activer les échanges | 🟥 | M | ✅ **livré le 2026-09-27** (activation = opt-in joueuse) |
-| T4 | Finir la chaîne du drop Twitch | 🟧 | S | 18 personnes rattachées attendent, deux gestes manquent |
+| T4 | Finir la chaîne du drop Twitch | 🟧 | S | ✅ **code livré le 2026-09-27** — reste un clic admin + la vérif en direct |
 | T5 | Les quatre voies qui n'ont jamais payé | 🟧 | M | ✅ **instruit le 2026-09-27** — aucune n'est cassée |
 | T6 | Faire monter l'opt-in photo, sans le forcer | 🟧 | M | ✅ **livré le 2026-09-27** |
 | T7 | Amorcer le fan art | 🟧 | S | zéro soumission n'est pas une panne, c'est un silence |
@@ -244,24 +244,35 @@ proposition. Si personne n'active encore, le frein n'était pas le risque
 d'insistance — et c'est l'entrée du parcours qu'il faut regarder, pas ses
 garde-fous.
 
-## T4 · Finir la chaîne du drop Twitch — 🟧 / S
+## T4 · Finir la chaîne du drop Twitch — ✅ CODE LIVRÉ (2026-09-27)
 
 **Le constat.** 18 comptes ont rattaché leur Twitch — la carte argumentée du
 2026-09-15 a marché (elle en comptait **0** au 2026-09-14). Et `twitch_drop`
 n'apparaît dans **aucun** gain : pas un crédit versé.
 
-**Ce qu'on fait.** Les deux gestes qui restent sont MANUELS par construction, et
-ne sont pas du code : connecter la chaîne (OAuth broadcaster) et créer la
-récompense de points de chaîne dans la console Twitch. Les faire, puis regarder
-le premier direct.
+**Le plan était périmé.** Il annonçait « deux gestes manuels dans la console
+Twitch ». Mesuré le 2026-09-27 : la chaîne EST connectée (`womens_cup`) et le
+scope `channel:manage:redemptions` déjà accordé. Il ne restait qu'un geste —
+créer la récompense puis poser l'abonnement EventSub — et il n'avait aucune
+raison d'être manuel : une récompense créée dans la console appartient à la
+chaîne, pas à notre `client_id`, et Helix refuse ensuite d'en honorer les
+échanges (`only_manageable_rewards`).
 
-**Ce qu'on ne fait pas.** Automatiser ces deux gestes. Ils engagent le compte
-Twitch de l'association ; ils se font une fois, à la main, en connaissance de
-cause.
+**Ce qui est livré.** `POST /api/admin/twitch/tcg-drop/setup` crée la
+récompense « Carte à collectionner » (1 000 points par défaut) ou reprend la
+nôtre si elle existe — idempotent, pas de doublon visible sur la chaîne. La
+carte de santé du drop (`/admin/broadcast/live`) offre le bouton « Mettre le
+drop en service », qui enchaîne création puis abonnement.
 
-**Vérification.** Un crédit `twitch_drop` en base après le prochain direct. Tant
-qu'il n'y en a pas, la voie reste affichée au barème sans rien verser — ce que
-T5 traite.
+**Reste à faire, côté humain.**
+1. Une fois déployé : cliquer « Mettre le drop en service » sur
+   `/admin/broadcast/live` (compte admin — permission `manage_broadcast`). La
+   carte doit passer au vert.
+2. Pendant le prochain direct : un échange réel de la récompense.
+
+**Vérification.** Un crédit `twitch_drop` en base après cet échange — seule
+preuve que la chaîne est vivante. Tant qu'il n'y en a pas, la voie reste
+affichée au barème sans rien verser — ce que T5 traite.
 
 ---
 
@@ -278,7 +289,7 @@ cassée** — et c'est une conclusion différente, qui change ce qu'il y a à fa
 | `checkin_streak` | **inatteignable** | seuil à 5 check-ins consécutifs ; la meilleure équipe en compte **3**. Câblé depuis `utils/checkin.ts`. |
 | `collection_set` | **inatteignable** | la meilleure collection réunit **3 équipes sur 10** et **3 maps sur 22**. Dépend du volume d'ouverture, donc de T1 et T2. |
 | `placement` | **en attente d'un geste** | 2 tournois clos, et `final_rankings` **vide** : la finalisation n'a jamais été lancée. Le manque est en AMONT de la récompense. |
-| `twitch_drop` | **en attente d'un geste** | cf. T4 — deux actions manuelles dans la console Twitch. |
+| `twitch_drop` | **en attente d'un geste** | cf. T4 — un clic admin, puis un échange en direct. |
 
 **Ce qu'il y a à faire, du coup, et ce n'est pas ce qui était écrit.** Rien à
 réparer, rien à retirer du barème : ces voies paieront. Ce qui manque, c'est que
