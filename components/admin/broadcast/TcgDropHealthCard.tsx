@@ -21,6 +21,13 @@
 // récepteur, `user_removed` ne demande rien. Un « ça ne marche plus » unique
 // enverrait chercher au mauvais endroit.
 //
+// ELLE DIAGNOSTIQUE, ET DEPUIS LE 2026-09-27 ELLE RÉPARE. Toute la chaîne
+// était livrée — récompense, abonnement, webhook signé — mais le `POST` qui met
+// le drop en service n'avait AUCUNE interface : il fallait créer une récompense
+// à la main puis appeler une API sans écran. Mesuré ce jour-là : chaîne
+// connectée, dix-huit comptes rattachés, zéro crédit versé. Un écran qui montre
+// une panne sans offrir le geste qui la répare n'est qu'à moitié un écran.
+//
 // SE MASQUE PLUTÔT QUE D'AFFICHER UN 403. La route exige `manage_broadcast`,
 // réservée à l'admin, alors que cette console est ouverte au rôle `caster`.
 // Une casteuse ne doit pas voir un bloc en erreur permanente : on rend `null`,
@@ -59,6 +66,7 @@ export default function TcgDropHealthCard() {
   const [state, setState] = useState<EventSubState | null | undefined>(
     undefined
   );
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -78,6 +86,39 @@ export default function TcgDropHealthCard() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /**
+   * Met le drop en service : la récompense, puis l'abonnement.
+   *
+   * DEUX APPELS, MAIS UN SEUL EFFET DE BORD REJOUABLE. `setup` reprend la
+   * récompense existante plutôt que d'en créer une seconde, et l'abonnement
+   * vérifie l'existence avant de créer : relancer après un échec partiel est
+   * sans danger — c'est ce qui permet d'offrir un simple bouton « réessayer »
+   * plutôt qu'une procédure.
+   */
+  const setup = useCallback(async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const { rewardId } = await adminFetchJson<{ rewardId: string }>(
+        '/api/admin/twitch/tcg-drop/setup',
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }
+      );
+      await adminFetchJson('/api/admin/twitch/eventsub/tcg-drop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rewardId }),
+      });
+      await load();
+    } catch (err) {
+      logger.error('[admin/tcg-drop-health] setup error:', err);
+      // L'état est rechargé quoi qu'il arrive : la carte dira elle-même ce qui
+      // reste bloquant, ce qui vaut mieux qu'un message d'erreur générique.
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, adminFetchJson, load]);
 
   if (!state) return null;
 
@@ -132,6 +173,23 @@ export default function TcgDropHealthCard() {
             </li>
           ))}
         </ul>
+      )}
+
+      {/* LE GESTE QUI RÉPARE, à côté de la panne qu'il répare. Il n'est offert
+          que pour ce qu'il sait faire : ni le secret HMAC (variable
+          d'environnement) ni le scope (reconnexion de la chaîne) ne se
+          rattrapent d'ici, et proposer un bouton qui ne peut pas aboutir
+          enverrait chercher au mauvais endroit — le reproche exact que
+          l'en-tête de cette carte adresse au voyant rouge unique. */}
+      {!healthy && !unknown && state.secretConfigured && state.hasScope && (
+        <button
+          type="button"
+          onClick={() => void setup()}
+          disabled={busy}
+          className="mt-3 inline-flex min-h-9 items-center rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-500/30 disabled:opacity-50"
+        >
+          {busy ? t.dropSetupBusy : t.dropSetupCta}
+        </button>
       )}
 
       {/* Le statut BRUT de chaque souscription en peine : les causes appellent

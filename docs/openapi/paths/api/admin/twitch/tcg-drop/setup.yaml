@@ -1,0 +1,61 @@
+post:
+  tags:
+    - admin/broadcast
+  summary: Set up the TCG channel-points drop in one step.
+  description: |
+    The whole chain was already shipped — reward creation, EventSub
+    subscription, a signed and tested webhook, a health card. Nothing LINKED
+    the two writes: the subscription POST had no UI at all, so the only way
+    through was to create a reward by hand and then call an API with no screen.
+    Measured on 2026-09-27: channel connected, eighteen accounts linked, **zero
+    coins ever granted**.
+
+    IDEMPOTENT ON PURPOSE. Chaining "create" then "subscribe" from a browser
+    leaves, on the first failure of the second, an orphan reward ON THE CHANNEL
+    — visible to viewers — and the next click would create a second one. So we
+    read OUR rewards first and reuse the drop's if it already exists.
+
+    `only_manageable_rewards=true` is why you must NOT create it by hand: a
+    reward created in the Twitch console belongs to the channel, not to our
+    `client_id`, so Helix refuses to list, edit or fulfil it. The chain would
+    look set up and stay half inert.
+
+    Returns the reward id; the caller then posts it to
+    `/api/admin/twitch/eventsub/tcg-drop`, which persists `tcg_reward_id` and
+    creates the webhook subscription.
+  operationId: adminTwitchTcgDropSetup
+  security:
+    - StaffSession: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            cost:
+              type: integer
+              minimum: 1
+              description: |
+                Cost in CHANNEL POINTS — Twitch's currency, not the TCG coin
+                scale. Confusing the two would price the reward at 12 points.
+                Defaults to a deliberately cautious value.
+  responses:
+    '200':
+      description: Reward created or reused.
+      content:
+        application/json: {}
+    '400':
+      description: '`code: invalid_body`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '405':
+      description: Method not allowed.
+    '409':
+      description: '`code: not_connected` or `missing_scope`.'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '502':
+      description: '`code: reward_create_failed` — Twitch refused or is unreachable.'

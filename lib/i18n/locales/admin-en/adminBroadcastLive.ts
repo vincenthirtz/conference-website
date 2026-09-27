@@ -111,6 +111,8 @@ export default {
     'Scope channel:read:redemptions missing — reconnect the channel.',
   dropRewardMissing:
     'No channel-point reward designated: nothing to listen to.',
+  dropSetupCta: 'Set up the drop',
+  dropSetupBusy: 'Setting up…',
   dropNoSubscription:
     'No active subscription: Twitch will send no redemption at all.',
   dropSubscriptionAiling: 'Subscription failing: {status}',

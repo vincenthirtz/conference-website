@@ -62652,6 +62652,27 @@
     ]
    }
   },
+  "POST /api/admin/twitch/tcg-drop/setup": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "rewardId": {
+      "type": "string"
+     },
+     "reused": {
+      "type": "boolean"
+     },
+     "cost": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "rewardId",
+     "reused",
+     "cost"
+    ]
+   }
+  },
   "POST /api/admin/upload": {
    "200": {
     "type": "object",

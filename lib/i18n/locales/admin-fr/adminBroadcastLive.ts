@@ -116,6 +116,8 @@ export default adminNs('adminBroadcastLive', {
     'Scope channel:read:redemptions manquant — reconnecte la chaîne.',
   dropRewardMissing:
     'Aucune récompense de points de chaîne désignée : rien à écouter.',
+  dropSetupCta: 'Mettre le drop en service',
+  dropSetupBusy: 'Mise en service…',
   dropNoSubscription:
     'Aucune souscription active : Twitch n’enverra aucun échange.',
   /** Interpole `{status}` — le statut BRUT de Twitch, jamais reformulé. */
