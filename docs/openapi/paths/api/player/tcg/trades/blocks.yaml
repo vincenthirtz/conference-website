@@ -1,0 +1,100 @@
+get:
+  tags:
+    - public/auth
+  summary: List the people I have blocked from offering me trades.
+  description: |
+    Returns MY blocks only. Returning anyone else's would tell whoever can read
+    an API response who blocked whom.
+  operationId: playerTcgTradeBlocksList
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: My blocks.
+      content:
+        application/json: {}
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - public/auth
+  summary: Block someone from offering me trades.
+  description: |
+    Trades offered only two answers to an unwanted approach: decline (and get
+    24 h of quiet before the next one), or switch trading off FOR EVERYONE. In a
+    scene where players are harassed, having to cut yourself off from everyone
+    to be safe from one person means she wins.
+
+    THE BLOCKED PERSON LEARNS NOTHING. Her proposals get
+    `recipient_unavailable`, exactly like a recipient who does not accept
+    trades. A refusal that can be told apart is a refusal that informs — and
+    that invites retaliation elsewhere. The check lives in `tcg_propose_trade`,
+    with every other trade invariant.
+
+    Blocks are DIRECTED: they stop her offering to me, not the reverse. There is
+    no cap: you do not ration a protection. Re-blocking succeeds silently.
+  operationId: playerTcgTradeBlock
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [userId]
+          properties:
+            userId:
+              type: string
+              format: uuid
+  responses:
+    '201':
+      description: Blocked.
+      content:
+        application/json: {}
+    '400':
+      description: '`code: invalid_body` or `self_block`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+delete:
+  tags:
+    - public/auth
+  summary: Unblock someone.
+  description: |
+    Returns 200 even when nothing was removed: the wanted state is reached, and
+    counting rows to return a 404 would only confirm who was blocked.
+  operationId: playerTcgTradeUnblock
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [userId]
+          properties:
+            userId:
+              type: string
+              format: uuid
+  responses:
+    '200':
+      description: Unblocked.
+      content:
+        application/json: {}
+    '400':
+      description: '`code: invalid_body`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

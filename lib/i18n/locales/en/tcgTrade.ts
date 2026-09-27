@@ -156,4 +156,13 @@ export default {
   err_daily_limit: 'You have reached today’s trade limit.',
   err_partner_daily_limit: 'This collector has reached today’s trade limit.',
   err_not_eligible: 'One of the two accounts is still too recent to trade.',
+  blockPerson: 'Block',
+  blockConfirmTitle: 'Stop receiving offers?',
+  blockConfirmBody:
+    '{name} will no longer be able to offer you a trade. She will not be told: her offers are simply declined. You can undo this any time.',
+  blockDone: 'Blocked. This person can no longer offer you a trade.',
+  balanceEven: 'Even trade: {get} for {give}, at comparable rarities.',
+  balanceForYou: 'In your favour: you get {bestGet} for {bestGive}.',
+  balanceAgainstYou:
+    'Careful: you are giving {bestGive} for {bestGet}. Nothing forbids it — your call.',
 };

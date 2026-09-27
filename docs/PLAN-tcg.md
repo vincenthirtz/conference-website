@@ -96,7 +96,7 @@ au-delà de ce qui se consomme.
 |---|---|---|---|---|
 | T1 | Ramener la joueuse à son paquet | 🟥 | S | ✅ **livré le 2026-09-27** |
 | T2 | Donner une raison de dépenser | 🟥 | L | ✅ **livré le 2026-09-27** |
-| T3 | Activer les échanges | 🟥 | M | tout est construit, il manque un réglage et quatre arbitrages |
+| T3 | Activer les échanges | 🟥 | M | ✅ **livré le 2026-09-27** (activation = opt-in joueuse) |
 | T4 | Finir la chaîne du drop Twitch | 🟧 | S | 18 personnes rattachées attendent, deux gestes manquent |
 | T5 | Les quatre voies qui n'ont jamais payé | 🟧 | M | ✅ **instruit le 2026-09-27** — aucune n'est cassée |
 | T6 | Faire monter l'opt-in photo, sans le forcer | 🟧 | M | 15 photos sur 63 comptes |
@@ -191,33 +191,58 @@ C'est ce qui tient la fonctionnalité hors du régime des boîtes à butin.
 semaine. Si le compteur reste à zéro dans quinze jours, le problème n'était pas
 l'absence de débit — et T3 passe devant.
 
-## T3 · Activer les échanges — 🟥 / M
+## T3 · Activer les échanges — ✅ LIVRÉ (2026-09-27)
 
-**Le constat.** Tables, fonctions à cinq types de sujet, page, règles, 72 h de
-péremption, plafonds : tout est déployé depuis le 2026-09-15. `tcg_trade_settings`
-compte **zéro ligne**, `tcg_trades` zéro. Ce n'est pas une panne, c'est un opt-in
-que personne n'a coché — et il faut le dire au prochain passage plutôt que de le
-rediagnostiquer.
+**Le constat, corrigé au passage.** Ce lot annonçait « activer pour le
+tenant ». `tcg_trade_settings` est en réalité une ligne PAR JOUEUSE
+(`accepts_proposals`, faux par défaut) : zéro ligne veut dire que **personne
+n'a coché son propre opt-in**, pas qu'un réglage staff manque. Il n'y a rien à
+activer de notre côté — ce qu'il fallait, c'est rendre l'opt-in tenable.
 
-**Ce qu'on fait.** (a) Activer pour le tenant. (b) Trancher les quatre décisions
-que TCG.md §7 laisse explicitement à l'humain :
+**Les deux arbitrages qui demandaient du code sont livrés.**
 
-- **l'équilibre de valeur** : la parité porte sur le NOMBRE de cartes, pas sur
-  la rareté. Une commune contre une légendaire passe si la destinataire accepte.
-  À garder tel quel, mais à AFFICHER : la destinataire doit voir l'écart de
-  rareté avant d'accepter, sinon le consentement n'en est pas un ;
-- **le blocage d'une personne** : aujourd'hui seulement refus + 24 h, ou
-  désactivation globale. Entre les deux, il manque « pas avec elle ». Dans un
-  milieu où le harcèlement existe, c'est le manque le plus sérieux ;
-- **les seuils** (72 h, 5/10, 3 par jour, 14 j / 7 j) : défauts prudents, jamais
-  mesurés. À laisser tels quels et à relire après un mois d'usage réel ;
-- **`drop` exclu des échanges** : prive une supportrice sans achat de tout
-  échange. À rouvrir une fois T4 livré, sinon la règle protège un vide.
+**L'écart de rareté, dit avant d'accepter.** La parité porte sur le NOMBRE de
+cartes, jamais sur leur valeur : une commune contre une légendaire passe si la
+destinataire accepte. On garde cette règle — arbitrer la valeur à sa place
+serait décider pour elle — mais « elle accepte » n'a de sens que si elle voit.
+Chaque carte affichait déjà sa rareté ; avec cinq cartes de chaque côté,
+comparer est un travail qu'on ne fait pas. `utils/tcg/tradeBalance.ts` en fait
+la somme et rend un verdict en un mot, surligné quand l'échange est à son
+désavantage. Informatif, jamais bloquant.
 
-**Vérification.** Une proposition acceptée de bout en bout, avec régénération
-des deux fiches, avant d'annoncer la fonctionnalité.
+Le barème est ORDINAL, pas monétaire : on additionne des rangs de rareté, pas
+des « valeurs ». Inventer une monnaie de la rareté créerait un prix, donc une
+spéculation — ce que ce plan refuse explicitement.
 
----
+**« Pas avec elle ».** Les échanges n'offraient que deux réponses à une
+sollicitation non désirée : refuser (et subir 24 h de répit avant la suivante),
+ou couper les échanges POUR TOUT LE MONDE. Dans un milieu où les joueuses
+subissent du harcèlement, devoir se couper de tous pour se protéger d'une
+seule, c'est la faire gagner.
+
+`tcg_trade_blocks` est ORIENTÉ (elle ne peut plus me solliciter, l'inverse reste
+ouvert) et **la personne bloquée n'apprend rien** : sa proposition reçoit
+`recipient_unavailable`, indistinguable d'une destinataire qui n'accepte pas les
+échanges. Un refus qui se distingue est un refus qui informe, et qui invite la
+représaille ailleurs. Aucun plafond sur le nombre de blocages : on ne rationne
+pas une protection.
+
+Le refus vit dans `tcg_propose_trade`, avec tous les autres invariants de
+l'échange — une garde de sécurité ne doit pas être la seule à dépendre du chemin
+emprunté pour l'atteindre. La fonction a été patchée depuis sa définition RÉELLE
+(`pg_get_functiondef`), pas depuis une copie recollée : 250 lignes de
+consentements et de verrous ne se retranscrivent pas de mémoire.
+
+**Les deux autres arbitrages, inchangés et pour cause.**
+- Les seuils (72 h, 5/10, 3 par jour, 14 j / 7 j) restent des défauts prudents,
+  à relire après un mois d'usage réel — il n'y en a eu aucun.
+- `drop` reste exclu des échanges : la rouvrir n'a de sens qu'une fois T4
+  livré, sinon la règle protège un vide.
+
+**Ce qui reste à mesurer.** Le premier opt-in coché, puis la première
+proposition. Si personne n'active encore, le frein n'était pas le risque
+d'insistance — et c'est l'entrée du parcours qu'il faut regarder, pas ses
+garde-fous.
 
 ## T4 · Finir la chaîne du drop Twitch — 🟧 / S
 

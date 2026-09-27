@@ -171,4 +171,16 @@ export default ns('tcgTrade', {
   err_partner_daily_limit:
     'Cette collectionneuse a atteint le nombre d’échanges du jour.',
   err_not_eligible: 'Un des deux comptes est encore trop récent pour échanger.',
+  // --- Blocage et bilan de rareté (lot T3) ---------------------------------
+  blockPerson: 'Bloquer',
+  blockConfirmTitle: 'Ne plus recevoir de proposition ?',
+  blockConfirmBody:
+    '{name} ne pourra plus te proposer d’échange. Elle n’en sera pas informée : ses propositions seront simplement refusées. Tu peux revenir dessus quand tu veux.',
+  blockDone: 'Bloquée. Cette personne ne peut plus te proposer d’échange.',
+  balanceEven:
+    'Échange équilibré : {get} contre {give}, à raretés comparables.',
+  balanceForYou:
+    'À ton avantage : tu reçois du {bestGet} contre du {bestGive}.',
+  balanceAgainstYou:
+    'Attention : tu donnes du {bestGive} contre du {bestGet}. Rien ne l’interdit — c’est à toi de voir.',
 });

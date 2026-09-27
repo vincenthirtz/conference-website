@@ -33,6 +33,7 @@ import TcgCard, { type TcgCardSubject } from '@/components/tcg/TcgCard';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { TcgRarity } from '@/utils/tcg/rarity';
+import { tradeBalance, type TradeBalance } from '@/utils/tcg/tradeBalance';
 import type { GameMascotSlug } from '@/utils/tcg/gameMascots';
 // Types SEULEMENT : effacés à la compilation. Importer le module lui-même ferait
 // entrer `supabaseAdmin` dans le bundle navigateur.
@@ -448,12 +449,36 @@ function PlayerTcgTrades() {
   /* Actions sur une proposition                                             */
   /* ---------------------------------------------------------------------- */
 
+  /**
+   * Le bilan de rareté d'une proposition, du point de vue de la destinataire.
+   *
+   * Calculé À L'AFFICHAGE et non côté API : c'est une lecture des cartes déjà
+   * reçues, et la faire voyager obligerait le serveur à rendre deux fois la
+   * même information.
+   */
+  const balanceOf = useCallback(
+    (trade: TradeView) =>
+      tradeBalance({ offered: trade.offered, requested: trade.requested }),
+    []
+  );
+
   const act = useCallback(
-    async (trade: TradeView, action: 'accept' | 'decline' | 'cancel') => {
+    async (
+      trade: TradeView,
+      action: 'accept' | 'decline' | 'cancel',
+      /**
+       * `skipConfirm` : le geste a DÉJÀ été confirmé par l'appelant. Sert au
+       * blocage, qui refuse dans la foulée — enchaîner deux boîtes de dialogue
+       * pour une seule décision ferait cliquer sans lire la seconde.
+       */
+      opts?: { skipConfirm?: boolean }
+    ) => {
       const name = trade.counterpart.displayName ?? t.unknownName;
       const limits = settings?.limits;
-      let ok = false;
-      if (action === 'accept') {
+      let ok = opts?.skipConfirm === true;
+      if (ok) {
+        // Confirmé ailleurs : on saute la question, pas les écritures.
+      } else if (action === 'accept') {
         const givesLast = trade.requested.some(
           (c) =>
             typeof (c as { ownedCopies?: number }).ownedCopies === 'number' &&
@@ -544,6 +569,43 @@ function PlayerTcgTrades() {
       loadTrades,
       loadSettings,
     ]
+  );
+
+  /**
+   * Bloquer la proposante — puis refuser, dans la foulée.
+   *
+   * L'ordre compte : bloquer d'abord ferme la porte même si le refus échoue.
+   * L'inverse laisserait une fenêtre où la proposition suivante passe encore.
+   */
+  const blockProposer = useCallback(
+    async (trade: TradeView) => {
+      if (busy) return;
+      const ok = await confirm({
+        title: t.blockConfirmTitle,
+        subtitle: format(t.blockConfirmBody, {
+          name: trade.counterpart.displayName ?? t.unknownName,
+        }),
+        variant: 'warning',
+        confirmLabel: t.blockPerson,
+        cancelLabel: t.confirmBack,
+      });
+      if (!ok) return;
+      setBusy(`block:${trade.id}`);
+      try {
+        await adminFetchJson('/api/player/tcg/trades/blocks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: trade.counterpart.userId }),
+        });
+        addToast(t.blockDone, 'success');
+        await act(trade, 'decline', { skipConfirm: true });
+      } catch (err) {
+        addToast((err as Error)?.message ?? t.err_generic, 'error');
+      } finally {
+        setBusy(null);
+      }
+    },
+    [act, busy, confirm, adminFetchJson, addToast, t]
   );
 
   /* ---------------------------------------------------------------------- */
@@ -687,6 +749,29 @@ function PlayerTcgTrades() {
       })}
     </ul>
   );
+
+  /**
+   * La phrase du bilan. Table explicite plutôt qu'une clé construite : trois
+   * verdicts, trois formulations, et celle qui alerte doit pouvoir s'écrire
+   * autrement que les deux autres.
+   */
+  const balanceLabel = (
+    dict: typeof nsTcgTrade.fr,
+    balance: TradeBalance
+  ): string => {
+    const bestGet = labels.rarity[balance.offered.best ?? 'common'];
+    const bestGive = labels.rarity[balance.requested.best ?? 'common'];
+    if (balance.verdict === 'favours_recipient') {
+      return format(dict.balanceForYou, { bestGet, bestGive });
+    }
+    if (balance.verdict === 'favours_proposer') {
+      return format(dict.balanceAgainstYou, { bestGet, bestGive });
+    }
+    return format(dict.balanceEven, {
+      get: balance.offered.count,
+      give: balance.requested.count,
+    });
+  };
 
   const tabClass = (active: boolean) =>
     `min-h-11 rounded-full px-4 py-2 text-sm font-semibold transition ${FOCUS_RING} ${
@@ -1043,6 +1128,25 @@ function PlayerTcgTrades() {
                         </div>
                       </div>
 
+                      {/* L'ÉCART DE RARETÉ, dit avant d'accepter. La parité
+                          porte sur le NOMBRE de cartes, jamais sur leur
+                          valeur — une commune contre une légendaire passe si
+                          la destinataire accepte. Mais « elle accepte » n'a de
+                          sens que si elle voit : avec cinq cartes de chaque
+                          côté, comparer est un travail qu'on ne fait pas.
+                          Informatif, jamais bloquant. */}
+                      {received && pending && (
+                        <p
+                          className={`mt-3 rounded-lg px-3 py-2 text-xs ${
+                            balanceOf(trade).verdict === 'favours_proposer'
+                              ? 'bg-amber-500/10 text-amber-200'
+                              : 'bg-white/5 text-gray-300'
+                          }`}
+                        >
+                          {balanceLabel(t, balanceOf(trade))}
+                        </p>
+                      )}
+
                       {pending && (
                         <div className="mt-4 flex flex-wrap gap-2">
                           {received ? (
@@ -1070,6 +1174,22 @@ function PlayerTcgTrades() {
                                 {busy === `decline:${trade.id}`
                                   ? t.working
                                   : t.decline}
+                              </button>
+                              {/* Entre « refuser » (et 24 h de répit) et
+                                  « couper les échanges pour tout le monde », il
+                                  manquait « pas avec elle ». Devoir se couper
+                                  de tous pour se protéger d'une seule, c'est
+                                  la faire gagner. */}
+                              <button
+                                type="button"
+                                onClick={() => void blockProposer(trade)}
+                                disabled={busy !== null}
+                                aria-busy={busy === `block:${trade.id}`}
+                                className={`min-h-11 rounded-xl border border-white/10 px-4 py-2 text-sm text-gray-400 transition hover:bg-white/5 hover:text-gray-200 disabled:opacity-40 ${FOCUS_RING}`}
+                              >
+                                {busy === `block:${trade.id}`
+                                  ? t.working
+                                  : t.blockPerson}
                               </button>
                             </>
                           ) : (

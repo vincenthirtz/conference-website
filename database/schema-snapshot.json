@@ -1530,6 +1530,12 @@
       "updated_at",
       "user_id"
     ],
+    "tcg_trade_blocks": [
+      "blocked_user_id",
+      "created_at",
+      "tenant_id",
+      "user_id"
+    ],
     "tcg_trade_items": [
       "card_fanart_id",
       "card_map_slug",
@@ -3048,6 +3054,10 @@
     },
     "tcg_showcases_tenant_id_fkey": {
       "source": "tcg_showcases",
+      "target": "tenants"
+    },
+    "tcg_trade_blocks_tenant_id_fkey": {
+      "source": "tcg_trade_blocks",
       "target": "tenants"
     },
     "tcg_trade_items_trade_id_fkey": {

@@ -1674,6 +1674,19 @@
     ]
    }
   },
+  "DELETE /api/player/tcg/trades/blocks": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "unblocked": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "unblocked"
+    ]
+   }
+  },
   "DELETE /api/player/team-reviews": {
    "200": {
     "anyOf": [
@@ -42673,6 +42686,34 @@
     ]
    }
   },
+  "GET /api/player/tcg/trades/blocks": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "blocked": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "userId": {
+         "type": "string"
+        },
+        "since": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "userId",
+        "since"
+       ]
+      }
+     }
+    },
+    "required": [
+     "blocked"
+    ]
+   }
+  },
   "GET /api/player/tcg/trades/cards": {
    "200": {
     "anyOf": [
@@ -67957,6 +67998,19 @@
     },
     "required": [
      "trade"
+    ]
+   }
+  },
+  "POST /api/player/tcg/trades/blocks": {
+   "201": {
+    "type": "object",
+    "properties": {
+     "blocked": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "blocked"
     ]
    }
   },
