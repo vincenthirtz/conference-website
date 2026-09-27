@@ -55,6 +55,8 @@ function stageTypeBadge(type: string) {
       return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
     case 'showmatch':
       return 'bg-pink-500/20 text-pink-300 border-pink-500/30';
+    case 'ffa':
+      return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
     default:
       return 'bg-neutral-500/20 text-neutral-300 border-neutral-500/30';
   }
@@ -157,6 +159,42 @@ function AdminTournamentCreatePage(_props: Props) {
     value: (typeof form)[K]
   ) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  /**
+   * Choisir un gabarit, et poser les réglages de tournoi qu'il emporte.
+   *
+   * Un gabarit ne décrit pas qu'une suite de phases : certaines n'ont de sens
+   * qu'avec un paramétrage précis du tournoi. Une structure FFA « chacune pour
+   * soi » laissée avec `solo_mode` à false renvoie les participantes dans le
+   * wizard d'équipe, et un `min_players` hérité de la Cup fait remonter
+   * « roster incomplet » à chaque inscription — deux réglages invisibles, deux
+   * façons de rater l'événement APRÈS avoir choisi le bon gabarit.
+   *
+   * Les valeurs restent modifiables : on les écrit dans le formulaire, sous
+   * les yeux de l'organisatrice, on ne les impose pas à l'envoi. Le nom saisi
+   * n'est jamais touché — c'est la seule chose qu'elle a déjà tapée.
+   *
+   * Désélectionner ne remet RIEN en arrière : une valeur relue et acceptée
+   * est devenue la sienne, la reprendre serait plus surprenant que de la
+   * laisser.
+   */
+  function selectTemplate(tpl: TournamentTemplate | null) {
+    setSelectedTemplate(tpl);
+    const d = tpl?.defaults;
+    if (!d) return;
+    setForm((prev) => ({
+      ...prev,
+      ...(d.solo_mode !== undefined ? { solo_mode: d.solo_mode } : {}),
+      ...(d.min_players !== undefined
+        ? { min_players: String(d.min_players) }
+        : {}),
+      ...(d.max_players !== undefined
+        ? { max_players: String(d.max_players) }
+        : {}),
+      ...(d.max_teams !== undefined ? { max_teams: String(d.max_teams) } : {}),
+      ...(d.is_public !== undefined ? { is_public: d.is_public } : {}),
+    }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -331,7 +369,7 @@ function AdminTournamentCreatePage(_props: Props) {
                   {/* No template option */}
                   <button
                     type="button"
-                    onClick={() => setSelectedTemplate(null)}
+                    onClick={() => selectTemplate(null)}
                     className={`p-4 rounded-xl border text-left transition-all ${
                       !selectedTemplate
                         ? 'bg-blue-600/20 border-blue-500/50 ring-1 ring-blue-500/30'
@@ -348,7 +386,7 @@ function AdminTournamentCreatePage(_props: Props) {
                     <button
                       key={tpl.id}
                       type="button"
-                      onClick={() => setSelectedTemplate(tpl)}
+                      onClick={() => selectTemplate(tpl)}
                       className={`p-4 rounded-xl border text-left transition-all ${
                         selectedTemplate?.id === tpl.id
                           ? 'bg-blue-600/20 border-blue-500/50 ring-1 ring-blue-500/30'
@@ -791,6 +829,11 @@ function AdminTournamentCreatePage(_props: Props) {
                       </div>
                     ))}
                   </div>
+                  {selectedTemplate.defaults && (
+                    <p className="rounded-lg border border-neutral-700/60 bg-neutral-900/40 px-3 py-2 text-xs text-neutral-300">
+                      {t.templateDefaultsApplied}
+                    </p>
+                  )}
                   <p className="text-xs text-neutral-500 mt-2">
                     {t.templateStagesNote}
                   </p>

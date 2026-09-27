@@ -1,15 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { TOURNAMENT_TEMPLATES } from '../../config/tournament-templates';
+import {
+  STAGE_TYPES,
+  TOURNAMENT_TEMPLATES,
+} from '../../config/tournament-templates';
 import type { TournamentTemplate } from '../../config/tournament-templates';
 
-const VALID_STAGE_TYPES = [
-  'group',
-  'bracket',
-  'swiss',
-  'round_robin',
-  'showmatch',
-  'other',
-];
+/**
+ * Dérivée de la source, et non recopiée : la copie locale d'origine rendait ce
+ * test rouge dès qu'un type de phase légitime était ajouté (cas de `ffa`), ce
+ * qui ne signalait rien d'autre que sa propre obsolescence.
+ */
+const VALID_STAGE_TYPES: readonly string[] = STAGE_TYPES;
 
 describe('TOURNAMENT_TEMPLATES', () => {
   it('contains at least 3 templates', () => {

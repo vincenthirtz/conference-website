@@ -44,6 +44,8 @@ export default {
   maxTeamsLabel: 'Max. number of teams',
   minPlayersLabel: 'Min. players per team',
   maxPlayersLabel: 'Max. players per team',
+  templateDefaultsApplied:
+    'This template filled in the matching settings on the left (sign-up, squad sizes, visibility). You can still change them before creating.',
   soloModeLabel: 'Individual sign-up (no team)',
   soloModeHelp:
     'Each entrant signs up alone from /tournament/<id>/inscription-solo and counts as a one-player "team" named after her. No Discord role or channel is created for her. The FFA format (points standings) is the one built for this kind of event.',
