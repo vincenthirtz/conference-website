@@ -17,8 +17,7 @@ get:
             required: [logo]
             properties:
               logo:
-                type: object
-                nullable: true
+                type: [object, 'null']
                 required: [url, name]
                 properties:
                   url:

@@ -61,9 +61,8 @@ post:
             battleTag:
               type: string
             originTeamId:
-              type: string
+              type: [string, 'null']
               format: uuid
-              nullable: true
   responses:
     '200':
       description: Entry status, plus `teamRegistered`.
