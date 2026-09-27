@@ -243,6 +243,30 @@ export const PERSONAL_DATA_TABLES: readonly PersonalDataTable[] = [
     export: { columns: ['tenant_id', 'accepts_proposals', 'updated_at'] },
   },
   {
+    table: 'tcg_trade_blocks',
+    // LES DEUX SENS, parce que l'EFFACEMENT doit couvrir les deux : les
+    // blocages qu'elle a posés, et ceux posés contre elle. Ne déclarer que le
+    // premier laisserait des lignes pointant un compte disparu.
+    columns: ['user_id', 'blocked_user_id'],
+    policy: { kind: 'delete' },
+    why: 'Ses blocages d’échange partent avec son compte, dans les deux sens : ceux qu’elle a posés n’ont plus d’objet, et garder « untel a bloqué ce compte » après sa disparition conserverait un jugement sur quelqu’un qui n’est plus là pour en répondre.',
+    export: {
+      // OMIS, ET C'EST UNE DÉCISION DE SÉCURITÉ, pas une économie.
+      //
+      // L'exporteur interroge la table UNE FOIS PAR COLONNE déclarée et fusionne
+      // (cf. `exportPersonalData`). Exporter cette table lui rendrait donc AUSSI
+      // les lignes où elle est la personne bloquée — c'est-à-dire lui dire
+      // qu'elle l'est, et par qui. Toute la protection tient sur le fait que la
+      // personne bloquée ne le sait pas ; un export qui le révèle la transforme
+      // en renseignement et invite la représaille ailleurs.
+      //
+      // Elle n'y perd pas l'accès à SES données : ses propres blocages se lisent
+      // dans l'application (`GET /api/player/tcg/trades/blocks`), qui ne rend
+      // que les siens.
+      omit: 'Vos blocages d’échange se consultent dans vos réglages d’échange. Ils ne figurent pas ici parce que la table mêle inséparablement vos décisions et celles d’autres personnes, et que révéler les secondes défairait la protection qu’elles ont posée.',
+    },
+  },
+  {
     table: 'tcg_wallet_entries',
     columns: ['user_id'],
     policy: { kind: 'delete' },
