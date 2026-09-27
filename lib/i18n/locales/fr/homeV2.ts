@@ -99,6 +99,13 @@ export default ns('homeV2', {
     'Ils soutiennent la compétition · ils la diffusent · ils en parlent',
   supportPartnersLink: 'Voir tous les partenaires',
   supportBecomePartner: 'Devenir partenaire',
+  // --- Bande organisatrice (HomeOrganiserCta) -----------------------------
+  organiserEyebrow: 'Vous organisez ?',
+  organiserTitle: 'Montez votre tournoi, comme celui-ci',
+  organiserBody:
+    'Tout ce que vous venez de voir — inscriptions, calendrier, bracket, classement, bot Discord — se met en place depuis votre propre espace. Association, école, communauté : créez le vôtre en quelques minutes.',
+  organiserCtaCreate: 'Créer mon tournoi',
+  organiserCtaOffer: 'Voir l’offre',
   socialEyebrow: 'En direct de nos comptes',
   socialTitle: 'Nos réseaux',
   socialOpen: 'Voir la publication',

@@ -33,6 +33,7 @@ import HomeStandings from '@/components/Home/HomeStandings';
 import HomeSpotlight from '@/components/Home/HomeSpotlight';
 import HomeNewsV2 from '@/components/Home/HomeNewsV2';
 import HomeSupportStrip from '@/components/Home/HomeSupportStrip';
+import HomeOrganiserCta from '@/components/Home/HomeOrganiserCta';
 import HomeSocialWall from '@/components/Home/HomeSocialWall';
 import type { SocialFeedItem } from '@/utils/social/socialFeed';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
@@ -164,6 +165,10 @@ function Home({
       {/* Après les actus, et pas avant : une annonce rédigée pour le site
           prime sur un post recopié d'ailleurs. */}
       <HomeSocialWall items={socialFeed} />
+
+      {/* Après la démonstration, avant le bandeau de confiance : qui a fait
+          défiler jusqu'ici a vu tourner ce qu'on lui propose de monter. */}
+      <HomeOrganiserCta />
 
       <HomeSupportStrip partners={partners} />
     </div>

@@ -76,6 +76,12 @@ export default {
     'They support the competition · they broadcast it · they talk about it',
   supportPartnersLink: 'View all partners',
   supportBecomePartner: 'Become a partner',
+  organiserEyebrow: 'Running an event?',
+  organiserTitle: 'Build your own tournament, like this one',
+  organiserBody:
+    'Everything you just saw — sign-ups, schedule, bracket, standings, Discord bot — runs from your own space. Association, school, community: set yours up in minutes.',
+  organiserCtaCreate: 'Create my tournament',
+  organiserCtaOffer: 'See the offer',
   socialEyebrow: 'Straight from our accounts',
   socialTitle: 'Our socials',
   socialOpen: 'View the post',
