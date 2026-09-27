@@ -30,6 +30,29 @@ export default {
   expired: 'Expired',
   trialBadge: 'Free trial',
   nonprofitBadge: 'Free — verified non-profit',
+  rnaTitle: 'Are you a non-profit?',
+  rnaIntro:
+    'Enter your RNA number and the Discovery tier is free, with no time limit. The number is checked against the French business directory.',
+  rnaFieldLabel: 'RNA number',
+  rnaSubmit: 'Check',
+  rnaChecking: 'Checking…',
+  rnaRemove: 'Remove this number',
+  rnaVerified: 'Non-profit verified — Discovery is free',
+  rnaAwaitingStaff: 'Number saved, awaiting staff review',
+  rnaPendingNotInDirectory:
+    'Valid number, but not listed in the French business directory — which is the case for non-profits without a SIREN. Your declaration is saved and staff will review it shortly.',
+  rnaPendingInactive:
+    'The directory reports a non-profit that is no longer active. Your declaration is saved; staff will get back to you.',
+  rnaPendingDirectoryDown:
+    'The directory did not respond. Your number is saved and will be checked automatically later.',
+  rnaErrorInvalid:
+    'An RNA number is a “W” followed by 9 characters, for example W751074179.',
+  rnaErrorAlreadyUsed: 'This number is already linked to another space.',
+  rnaErrorNotAssociation:
+    'This number refers to an entity that is not a non-profit.',
+  rnaErrorGeneric: 'The check failed. Try again in a moment.',
+  rnaScopeNote:
+    'The waiver covers the Discovery tier. A space on Régie or Circuit keeps its plan and pays for it.',
   trialNotice:
     'Your space is on a free trial. When it ends, it drops back to the Discovery tier and the Discord bot stops responding — subscribe to keep it running.',
   downgradeNoticeTitle: 'Reduced access',

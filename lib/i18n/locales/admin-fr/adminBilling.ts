@@ -30,6 +30,30 @@ export default adminNs('adminBilling', {
   expired: 'Expiré',
   trialBadge: 'Essai gratuit',
   nonprofitBadge: 'Offert — association vérifiée',
+  // --- Numéro RNA (Découverte offerte, seconde porte) ----------------------
+  rnaTitle: 'Vous êtes une association ?',
+  rnaIntro:
+    'Donnez votre numéro RNA : le palier Découverte vous est offert, sans limite de durée. Le numéro est vérifié auprès de l’Annuaire des Entreprises.',
+  rnaFieldLabel: 'Numéro RNA',
+  rnaSubmit: 'Vérifier',
+  rnaChecking: 'Vérification…',
+  rnaRemove: 'Retirer ce numéro',
+  rnaVerified: 'Association vérifiée — Découverte offerte',
+  rnaAwaitingStaff: 'Numéro enregistré, en attente de validation par le staff',
+  rnaPendingNotInDirectory:
+    'Numéro valide, mais absent de l’Annuaire des Entreprises — c’est le cas des associations sans SIREN. Votre déclaration est enregistrée et le staff la valide sous peu.',
+  rnaPendingInactive:
+    'L’annuaire indique une association qui n’est plus en activité. Votre déclaration est enregistrée ; le staff vous répondra.',
+  rnaPendingDirectoryDown:
+    'L’Annuaire des Entreprises n’a pas répondu. Votre numéro est enregistré et sera vérifié automatiquement plus tard.',
+  rnaErrorInvalid:
+    'Un numéro RNA s’écrit « W » suivi de 9 caractères, par exemple W751074179.',
+  rnaErrorAlreadyUsed: 'Ce numéro est déjà rattaché à un autre espace.',
+  rnaErrorNotAssociation:
+    'Ce numéro désigne une structure qui n’est pas une association.',
+  rnaErrorGeneric: 'La vérification a échoué. Réessayez dans un instant.',
+  rnaScopeNote:
+    'La gratuité porte sur le palier Découverte. Un espace en Régie ou en Circuit garde son plan et le paie.',
   trialNotice:
     "Votre espace est en essai gratuit. À la fin de l'essai, il repasse sur le palier Découverte et le bot Discord cesse de répondre — souscrivez pour le garder actif.",
   downgradeNoticeTitle: 'Accès réduit',

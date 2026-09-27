@@ -1264,6 +1264,20 @@
     ]
    }
   },
+  "DELETE /api/admin/tenants/{id}/nonprofit-rna": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "removed": {
+      "type": "boolean",
+      "const": true
+     }
+    },
+    "required": [
+     "removed"
+    ]
+   }
+  },
   "DELETE /api/admin/tenants/{id}/rotate-secrets": {
    "200": {
     "type": "object",
@@ -17071,6 +17085,18 @@
        "null"
       ]
      },
+     "nonprofitRna": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "nonprofitVerifiedVia": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
      "capabilities": {
       "type": "object",
       "properties": {
@@ -17231,6 +17257,8 @@
      "graceEndsAt",
      "nonprofitFree",
      "nonprofitOrgName",
+     "nonprofitRna",
+     "nonprofitVerifiedVia",
      "capabilities",
      "catalog",
      "payments"
@@ -69734,6 +69762,38 @@
     },
     "required": [
      "config"
+    ]
+   }
+  },
+  "PUT /api/admin/tenants/{id}/nonprofit-rna": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "pendingReason": {
+      "type": "string",
+      "enum": [
+       "directory_unavailable",
+       "inactive",
+       "not_in_directory"
+      ]
+     },
+     "rna": {
+      "type": "string"
+     },
+     "verified": {
+      "type": "boolean"
+     },
+     "orgName": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "rna",
+     "verified",
+     "orgName"
     ]
    }
   },

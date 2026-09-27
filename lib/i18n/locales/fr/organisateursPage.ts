@@ -153,7 +153,7 @@ export default ns('organisateursPage', {
 
   nonprofitTitle: 'Vous êtes une association ?',
   nonprofitBody:
-    'Reliez votre compte HelloAsso : la formule Découverte vous est offerte, sans échéance ni relance de paiement. C’est le même compte qui encaissera les cagnottes de vos tournois.',
+    'Donnez votre numéro RNA : la formule Découverte vous est offerte, sans échéance ni relance de paiement. Nous vérifions le numéro auprès de l’Annuaire des Entreprises — aucun document à envoyer. Relier un compte HelloAsso ouvre la même gratuité, si vous en avez déjà un.',
   nonprofitCta: 'Créer mon espace',
 
   offersCustomNeed:

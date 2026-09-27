@@ -144,7 +144,7 @@ export default {
 
   nonprofitTitle: 'Running a non-profit?',
   nonprofitBody:
-    'Connect your HelloAsso account and the Discovery plan is on us — no expiry, no payment reminder. It is the same account that will collect your tournament prize pools.',
+    'Give us your RNA number and the Discovery plan is on us — no expiry, no payment reminder. We check the number against the French business directory, so there is no paperwork to send. Connecting a HelloAsso account opens the same waiver, if you already have one.',
   nonprofitCta: 'Create my space',
 
   offersCustomNeed: 'A need that fits none of the three? Write to us.',

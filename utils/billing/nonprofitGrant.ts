@@ -7,12 +7,25 @@
 // HelloAsso ne paie rien ; chez nous, elle payait 100 €/an un palier sans bot
 // Discord.
 //
-// CE QUI FAIT FOI. Pas un formulaire, pas un numéro RNA que personne n'irait
-// contrôler : l'espace relie ses identifiants API HelloAsso — ce qu'il doit
-// faire de toute façon pour encaisser ses propres cagnottes — et l'appel qui
-// réussit EST la vérification, puisque HelloAsso n'ouvre de compte qu'à des
-// organismes à but non lucratif. L'estampille (`tenants.nonprofit_verified_at`)
-// est posée là, et retirée quand le compte est délié.
+// CE QUI FAIT FOI — DEUX PORTES depuis le 2026-09-27.
+//
+//   1. `helloasso` : l'espace relie ses identifiants API HelloAsso — ce qu'il
+//      doit faire de toute façon pour encaisser ses propres cagnottes — et
+//      l'appel qui réussit EST la vérification, puisque HelloAsso n'ouvre de
+//      compte qu'à des organismes à but non lucratif.
+//   2. `rna` : l'espace donne son numéro RNA, et l'Annuaire des Entreprises le
+//      résout en une association en activité (cf. `utils/billing/rna.ts`).
+//
+// La seconde porte existe parce que la première était trop étroite : elle
+// n'accueillait que les associations qui encaissent en ligne, et qui ont déjà
+// choisi HelloAsso. Ce fichier a longtemps écarté le RNA comme « un numéro que
+// personne n'irait contrôler » — ce qui décrivait une intention, pas une
+// impossibilité : l'annuaire public le contrôle, gratuitement et sans clé.
+//
+// L'estampille (`tenants.nonprofit_verified_at`) est la même dans les deux cas ;
+// seule sa PROVENANCE change (`nonprofit_verified_via`), et elle compte : délier
+// HelloAsso retire l'estampille, mais seulement celle que HelloAsso avait
+// posée (cf. `helloassoUnlinkClearsGrant`).
 //
 // CE QUE LA GRATUITÉ COUVRE, ET CE QU'ELLE NE COUVRE PAS : l'entrée de gamme,
 // pas le catalogue. Une association vérifiée qui choisit Régie ou Circuit paie
@@ -37,6 +50,9 @@ export type NonprofitState = {
   nonprofit_verified_at?: string | null;
 };
 
+/** D'où vient l'estampille. `null` = ligne antérieure au suivi de provenance. */
+export type NonprofitVerifiedVia = 'helloasso' | 'rna' | 'staff';
+
 /**
  * Cet espace a-t-il droit à la Découverte offerte ?
  *
@@ -58,4 +74,23 @@ export function nonprofitDiscoveryIsFree(state: NonprofitState): boolean {
  */
 export function isBillableTenant(state: NonprofitState): boolean {
   return !nonprofitDiscoveryIsFree(state);
+}
+
+/**
+ * Délier HelloAsso doit-il retirer la gratuité ?
+ *
+ * LE PIÈGE QUE CETTE FONCTION EXISTE POUR FERMER. La règle d'origine — « la
+ * preuve disparaît avec le compte qui la portait » — était juste tant qu'il n'y
+ * avait qu'une porte. Avec deux, elle devient fausse : une association vérifiée
+ * par son RNA, qui aurait par ailleurs relié puis délié HelloAsso, perdrait sa
+ * gratuité alors qu'aucune preuve n'a disparu. Et elle la perdrait en silence,
+ * au milieu d'une opération qui ne parle que d'encaissement.
+ *
+ * Une provenance NULLE retire, elle aussi : avant le 2026-09-27 la seule porte
+ * était HelloAsso, donc une estampille sans provenance vient de là.
+ */
+export function helloassoUnlinkClearsGrant(
+  via: NonprofitVerifiedVia | string | null | undefined
+): boolean {
+  return !via || via === 'helloasso';
 }

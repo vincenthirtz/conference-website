@@ -41,6 +41,7 @@ import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { absoluteSiteUrl } from '@/utils/siteUrl';
 import { helloAssoNotificationUrl } from '@/utils/billing/helloassoAccount';
 import { verifyHelloAssoCredentials } from '@/utils/helloasso';
+import { helloassoUnlinkClearsGrant } from '@/utils/billing/nonprofitGrant';
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,98}[a-z0-9]$/;
 
@@ -100,6 +101,7 @@ async function stampNonprofitVerification(
     .update({
       nonprofit_verified_at: new Date().toISOString(),
       nonprofit_org_name: organizationName ?? null,
+      nonprofit_verified_via: 'helloasso',
     })
     .eq('id', tenantId);
   if (error) {
@@ -108,17 +110,43 @@ async function stampNonprofitVerification(
 }
 
 /**
- * Retire l'estampille quand le compte est délié.
+ * Retire l'estampille quand le compte est délié — SI elle venait de là.
  *
  * La preuve disparaît avec le compte qui la portait : garder la gratuité après
  * la déliaison, ce serait offrir un palier sur la foi d'un compte qu'on ne peut
  * plus interroger.
+ *
+ * Mais depuis le 2026-09-27 une seconde porte existe (le numéro RNA, résolu
+ * contre l'Annuaire des Entreprises), et elle ne dépend pas de HelloAsso. Une
+ * association vérifiée par son RNA qui délie son compte d'encaissement ne perd
+ * AUCUNE preuve : lui retirer la gratuité au passage serait une punition
+ * silencieuse, décidée au milieu d'une opération qui ne parle que de paiement.
+ * D'où la relecture de la provenance avant d'effacer quoi que ce soit.
  */
 async function clearNonprofitVerification(tenantId: string): Promise<void> {
   if (!supabaseAdmin) return;
+  const { data: tenant } = await supabaseAdmin
+    .from('tenants')
+    .select('nonprofit_verified_via')
+    .eq('id', tenantId)
+    .maybeSingle();
+
+  if (!helloassoUnlinkClearsGrant(tenant?.nonprofit_verified_via)) {
+    logger.info(
+      '[admin/helloasso] estampille conservée (provenance %s) tenant=%s',
+      tenant?.nonprofit_verified_via,
+      tenantId
+    );
+    return;
+  }
+
   const { error } = await supabaseAdmin
     .from('tenants')
-    .update({ nonprofit_verified_at: null, nonprofit_org_name: null })
+    .update({
+      nonprofit_verified_at: null,
+      nonprofit_org_name: null,
+      nonprofit_verified_via: null,
+    })
     .eq('id', tenantId);
   if (error) {
     logger.error('[admin/helloasso] retrait estampille: %s', error.message);

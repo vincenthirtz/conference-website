@@ -508,10 +508,12 @@ function OrganisateursPage({ proof }: Props) {
           </Link>
         </div>
 
-        {/* Gratuité associative. Le compte HelloAsso relié FAIT la vérification
-            (HelloAsso n'ouvre de compte qu'à des organismes à but non
-            lucratif), donc aucune paperasse à demander — cf.
-            utils/billing/nonprofitGrant.ts. */}
+        {/* Gratuité associative, DEUX portes depuis le 2026-09-27 : le numéro
+            RNA résolu contre l'Annuaire des Entreprises, ou un compte HelloAsso
+            relié (HelloAsso n'ouvre de compte qu'à des organismes à but non
+            lucratif). Le RNA est annoncé EN PREMIER : il n'exige ni compte
+            d'encaissement, ni choix d'un prestataire — cf.
+            utils/billing/nonprofitGrant.ts et utils/billing/rna.ts. */}
         <div className="mx-auto mt-4 flex max-w-3xl flex-wrap items-center justify-between gap-4 rounded-2xl border border-emerald-400/40 bg-emerald-400/[0.07] p-5">
           <div className="max-w-xl">
             <p className="font-semibold text-emerald-50">{t.nonprofitTitle}</p>

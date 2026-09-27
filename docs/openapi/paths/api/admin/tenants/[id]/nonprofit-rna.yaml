@@ -1,0 +1,88 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+put:
+  summary: Declare a tenant's RNA number (French non-profit registry).
+  description: |
+    Declares the RNA number of the space and, when the number resolves to an
+    ACTIVE non-profit in the French business directory
+    (recherche-entreprises.api.gouv.fr, public, no key), stamps the space as a
+    verified non-profit — which makes the `discovery` tier non-billable.
+
+    Three outcomes:
+      * resolved as an active non-profit → `verified: true`, waiver granted;
+      * resolved as something else → `422 RNA_NOT_ASSOCIATION`, nothing written;
+      * not found / inactive / directory unreachable → `verified: false` with a
+        `pendingReason`. The declaration IS stored and staff decide. This is not
+        an error: the directory only lists non-profits registered with INSEE,
+        and many small ones hold a valid RNA without a SIREN.
+
+    The waiver covers the entry tier only — a space on `regie` or `circuit`
+    keeps its plan and pays for it. Scoped to the staff's active tenant unless
+    the caller is a cross-tenant pole-admin. Accepts `Idempotency-Key`.
+  operationId: adminPutTenantNonprofitRna
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [rna]
+          properties:
+            rna:
+              type: string
+              description: RNA number, `W` followed by 9 alphanumerics. Spaces, dashes and lowercase are accepted and normalised.
+              example: W751074179
+  responses:
+    '200':
+      description: Declaration recorded (verified, or pending staff review).
+      content:
+        application/json: {}
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      description: This RNA is already linked to another space.
+      content:
+        application/json: {}
+    '422':
+      description: The number refers to an entity that is not a non-profit.
+      content:
+        application/json: {}
+    '500':
+      $ref: '#/components/responses/ServerError'
+delete:
+  summary: Remove a tenant's declared RNA number.
+  description: |
+    Clears the declared number. Also clears the non-profit stamp, but ONLY when
+    that stamp came from the RNA (`nonprofit_verified_via = 'rna'`): a space
+    verified through HelloAsso keeps its waiver, since no proof disappeared.
+  operationId: adminDeleteTenantNonprofitRna
+  tags:
+    - admin/tenants
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Number removed.
+      content:
+        application/json: {}
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '500':
+      $ref: '#/components/responses/ServerError'

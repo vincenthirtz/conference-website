@@ -26,6 +26,7 @@ import PlanOrderPanel from '@/components/admin/billing/PlanOrderPanel';
 import { CGV_VERSION } from '@/utils/billing/cgv';
 import { logger } from '../../utils/logger';
 import nsAdminBilling from '@/lib/i18n/locales/admin-fr/adminBilling';
+import NonprofitRnaCard from '@/components/admin/billing/NonprofitRnaCard';
 
 type CatalogItem = {
   plan: PurchasablePlan;
@@ -59,9 +60,12 @@ type BillingResponse = {
   /** L'échéance est passée mais les capacités tiennent encore (T10). */
   inGrace?: boolean;
   graceEndsAt?: string | null;
-  /** Découverte offerte : association vérifiée via HelloAsso. */
+  /** Découverte offerte : association vérifiée (HelloAsso ou numéro RNA). */
   nonprofitFree?: boolean;
   nonprofitOrgName?: string | null;
+  /** Numéro RNA déclaré, et provenance de l'estampille. */
+  nonprofitRna?: string | null;
+  nonprofitVerifiedVia?: string | null;
   capabilities: PlanFeatures;
   catalog: CatalogItem[];
   payments: PaymentRow[];
@@ -566,6 +570,19 @@ function AdminBillingPage({ staff }: Props) {
                   {renderCapabilities(data.capabilities, 'current')}
                 </div>
               </section>
+
+              {/* La porte de la gratuité, juste sous le plan courant : c'est là
+                  qu'on vient voir ce qu'on paie, donc là qu'il faut apprendre
+                  qu'on peut ne rien payer. */}
+              {tenantId && (
+                <NonprofitRnaCard
+                  tenantId={tenantId}
+                  rna={data.nonprofitRna ?? null}
+                  verifiedVia={data.nonprofitVerifiedVia ?? null}
+                  orgName={data.nonprofitOrgName ?? null}
+                  onChanged={fetchData}
+                />
+              )}
 
               {/* Plan non self-serve : encart dédié au lieu du catalogue.
                   `foundation` est la Coupe elle-même, hors facturation. */}

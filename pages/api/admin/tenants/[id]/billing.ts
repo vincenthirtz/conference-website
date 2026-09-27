@@ -48,6 +48,9 @@ type TenantRow = {
   /** Estampille « association vérifiée » (cf. utils/billing/nonprofitGrant). */
   nonprofit_verified_at?: string | null;
   nonprofit_org_name?: string | null;
+  /** Numéro RNA déclaré (la seconde porte de la Découverte offerte). */
+  nonprofit_rna?: string | null;
+  nonprofit_verified_via?: string | null;
 };
 
 type PaymentRow = {
@@ -87,7 +90,7 @@ async function handler(
   const { data: tenant, error: tenantErr } = await supabaseAdmin
     .from('tenants')
     .select(
-      'id, plan, plan_status, plan_started_at, plan_expires_at, plan_is_trial, plan_term, nonprofit_verified_at, nonprofit_org_name'
+      'id, plan, plan_status, plan_started_at, plan_expires_at, plan_is_trial, plan_term, nonprofit_verified_at, nonprofit_org_name, nonprofit_rna, nonprofit_verified_via'
     )
     .eq('id', id)
     .maybeSingle();
@@ -188,6 +191,10 @@ async function handler(
       nonprofit_verified_at: t.nonprofit_verified_at ?? null,
     }),
     nonprofitOrgName: t.nonprofit_org_name ?? null,
+    nonprofitRna: t.nonprofit_rna ?? null,
+    // L'écran en a besoin pour dire si un numéro déclaré a OUVERT la gratuité
+    // ou attend encore : déclaré n'est pas vérifié.
+    nonprofitVerifiedVia: t.nonprofit_verified_via ?? null,
     capabilities,
     catalog,
     payments,
