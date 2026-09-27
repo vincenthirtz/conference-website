@@ -102,6 +102,16 @@ const TcgCosmeticsPanel = dynamic(
   () => import('@/components/tcg/TcgCosmeticsPanel'),
   { ssr: false, loading: PanelLoading }
 );
+/**
+ * L'invitation à déposer sa photo (lot T6). Elle vit ICI et pas seulement sur
+ * la fiche de profil : 15 comptes sur 63 avaient déposé, tous approuvés — le
+ * parcours perdait les gens avant le dépôt, et le dépôt était sur une autre
+ * page. Elle se tait d'elle-même dès qu'une photo existe, ou qu'on l'a fermée.
+ */
+const TcgPhotoInvite = dynamic(
+  () => import('@/components/tcg/TcgPhotoInvite'),
+  { ssr: false, loading: () => null }
+);
 /** Même chargeur pour le rendu et pour le préchargement (cf. plus bas). */
 const loadPackReveal = () => import('@/components/tcg/TcgPackReveal');
 const TcgPackReveal = dynamic(loadPackReveal, {
@@ -1716,6 +1726,10 @@ function PlayerTcg() {
         {loadState === 'ready' && (
           <TcgShowcaseEditor className="mt-8" reloadToken={totals.total} />
         )}
+
+        {/* Avant les débits : proposer de dépenser à quelqu'un dont la carte
+            n'existe pas encore vraiment serait mettre la charrue avant. */}
+        <TcgPhotoInvite className="mt-8" />
 
         {/* Les deux débits, après la collection : on ne propose de dépenser
             qu'à qui a déjà vu ce qu'il possède. */}

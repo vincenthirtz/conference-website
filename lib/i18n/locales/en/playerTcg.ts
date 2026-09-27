@@ -151,6 +151,17 @@ export default {
   cosmeticUnequip: 'Remove',
   cosmeticBought: 'Look unlocked.',
   cosmeticFailed: 'That did not work. Try again in a moment.',
+  previewTitle: 'Here is how it will look',
+  previewHint:
+    'Nothing is sent until you confirm. You can replace or remove it at any time, even after approval.',
+  previewSend: 'Send this photo',
+  previewDiscard: 'Cancel',
+  previewPickAnother: 'Pick another photo',
+  inviteTitle: 'Your card has no photo yet',
+  inviteBody:
+    'Your card exists without one — but the photo is what makes it a card. Reviewed by the team before publication, replaceable and removable at any time.',
+  inviteCta: 'Add my photo',
+  inviteLater: 'Later',
   foil: 'Foil',
   copies: '×{count}',
   logoCredit: 'Logo by {artist}',

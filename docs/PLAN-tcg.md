@@ -99,7 +99,7 @@ au-delà de ce qui se consomme.
 | T3 | Activer les échanges | 🟥 | M | ✅ **livré le 2026-09-27** (activation = opt-in joueuse) |
 | T4 | Finir la chaîne du drop Twitch | 🟧 | S | 18 personnes rattachées attendent, deux gestes manquent |
 | T5 | Les quatre voies qui n'ont jamais payé | 🟧 | M | ✅ **instruit le 2026-09-27** — aucune n'est cassée |
-| T6 | Faire monter l'opt-in photo, sans le forcer | 🟧 | M | 15 photos sur 63 comptes |
+| T6 | Faire monter l'opt-in photo, sans le forcer | 🟧 | M | ✅ **livré le 2026-09-27** |
 | T7 | Amorcer le fan art | 🟧 | S | zéro soumission n'est pas une panne, c'est un silence |
 | T8 | Un set d'événement | 🟩 | M | le premier motif de revenir qui ne dépende pas d'une victoire |
 | T9 | « Ne pas figurer dans le TCG » | 🟧 | M | le consentement qui manque encore |
@@ -291,29 +291,48 @@ comme une promesse non tenue. C'est un changement d'affichage sur
 requêtes, zéro ligne de code. Sans lui, on aurait « réparé » quatre choses qui
 fonctionnent.
 
-## T6 · Faire monter l'opt-in photo, sans le forcer — 🟧 / M
+## T6 · Faire monter l'opt-in photo, sans le forcer — ✅ LIVRÉ (2026-09-27)
 
-**Le constat.** 15 cartes de joueuse portent une photo, sur 63 comptes actifs.
-Une carte sans photo existe et se collectionne, mais c'est la photo qui fait la
-carte.
+**La mesure d'abord, et elle déplace le problème.** 15 photos sur 63 comptes —
+et **les 15 sont approuvées**. Zéro refus, zéro en attente, un seul retrait. La
+modération n'est donc pas le goulot : le parcours perd les gens AVANT le dépôt.
 
-**Ce qu'on fait.** Traiter les trois raisons plausibles de ne pas déposer, dans
-l'ordre : on ne sait pas que c'est possible (le point d'entrée est discret) ; on
-ne sait pas à quoi ça ressemblera (aucun aperçu avant dépôt) ; on ne sait pas ce
-qu'on peut défaire (le retrait rétroactif existe et n'est dit nulle part à
-l'endroit du dépôt). Aperçu en direct, mention du retrait sous le bouton, et une
-invitation UNIQUE dans l'espace joueuse.
+**Les trois raisons supposées, vérifiées une par une.** La rédaction initiale en
+listait trois ; la troisième était fausse.
 
-**Ce qu'on ne fait pas.** Relancer. Une invitation qui se répète sur une photo
-de soi n'est pas une invitation, c'est une pression — et c'est exactement le
-genre de pression que les garde-fous de TCG.md §2 existent pour empêcher. Une
-fois refusée, l'invitation ne revient pas.
+| supposé | vérifié |
+|---|---|
+| le point d'entrée est discret | **pire que ça** : le dépôt vit sur `/player/profile`, jamais sur `/player/tcg`. Qui passe son temps dans l'espace collection n'a aucun chemin vers lui. |
+| aucun aperçu avant dépôt | **vrai** : choisir un fichier l'envoyait dans la foulée. On découvrait le cadrage APRÈS, sur une photo déjà en modération. |
+| le retrait n'est dit nulle part | **faux** : `consentRevocable` figure dans le bloc de consentement, au-dessus du bouton, avant tout dépôt. Rien à faire. |
 
-**Vérification.** La courbe des dépôts, et **le nombre de retraits** : s'il monte
-avec les dépôts, c'est que l'invitation a convaincu des gens qu'elle n'aurait pas
-dû convaincre.
+**Ce qui a été fait.**
 
----
+*L'aperçu rend la VRAIE carte.* Pas une vignette : `TcgCard`, avec la photo
+choisie en `data:` (que `next/image` sert sans optimiseur). Ce qui inquiète
+n'est pas la photo, c'est ce que le cadrage en fait — une imitation qui mentirait
+sur le recadrage serait pire que rien. Rien ne part avant un second geste, et un
+refus du serveur laisse la photo à l'écran plutôt que de renvoyer au sélecteur.
+
+*L'invitation est posée là où sont les joueuses*, sur `/player/tcg`, avec un
+lien ancré vers le dépôt.
+
+**Ce qui distingue une invitation d'une relance**, et qui décide de tout le
+composant : elle est passive (un bloc sur une page qu'on a ouverte, jamais un DM
+ni une notification) ; elle disparaît dès qu'une photo existe ; elle disparaît
+aussi sur « plus tard », et ne revient pas. `shouldInvite` se tait sur quatre
+états, chacun étant un cas où l'invitation deviendrait une relance — photo
+déposée, **en attente** (elle a fait le geste), **refusée** (relancer quelqu'un
+sur un échec de modération), ou aucune carte possible.
+
+Le refus est gardé dans le navigateur : le mettre en base coûterait une colonne
+et une route pour un réglage d'écran, et le pire cas est un bloc passif revu une
+fois sur un autre appareil.
+
+**Ce qui reste à mesurer.** La courbe des dépôts, **et le nombre de retraits**.
+Si les retraits montent avec les dépôts, c'est que l'invitation a convaincu des
+gens qu'elle n'aurait pas dû convaincre — et c'est elle qu'il faudra retirer,
+pas ajuster.
 
 ## T7 · Amorcer le fan art — 🟧 / S
 

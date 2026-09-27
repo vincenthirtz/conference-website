@@ -750,7 +750,11 @@ function PlayerProfile() {
               ne rend RIEN tant qu'elle n'a pas pu lire celui-ci : mieux vaut
               une section absente qu'un « aucune photo » affiché à tort à une
               joueuse qui en a déposé une. */}
-          <TcgPhotoCard />
+          {/* L'ancre : l'invitation posée sur /player/tcg amène ici, et sans
+              elle elle déposerait la visiteuse en haut d'une longue page. */}
+          <div id="tcg-photo" className="scroll-mt-24">
+            <TcgPhotoCard displayName={displayName} />
+          </div>
 
           {/* Changer mon email */}
           <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">

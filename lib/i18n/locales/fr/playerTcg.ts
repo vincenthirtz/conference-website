@@ -192,6 +192,19 @@ export default ns('playerTcg', {
   cosmeticUnequip: 'Enlever',
   cosmeticBought: 'Habillage débloqué.',
   cosmeticFailed: 'Opération impossible. Réessaie dans un instant.',
+  // --- Aperçu avant envoi de la photo (lot T6) -----------------------------
+  previewTitle: 'Voilà ce que ça donnera',
+  previewHint:
+    'Rien n’est envoyé tant que tu n’as pas confirmé. Tu pourras la remplacer ou la retirer à tout moment, même après validation.',
+  previewSend: 'Envoyer cette photo',
+  previewDiscard: 'Annuler',
+  previewPickAnother: 'Choisir une autre photo',
+  // --- Invitation à déposer sa photo (lot T6) ------------------------------
+  inviteTitle: 'Ta carte n’a pas encore ta photo',
+  inviteBody:
+    'Sans photo, ta carte existe quand même — mais c’est la photo qui en fait une carte. Relue par l’équipe avant publication, remplaçable et retirable à tout moment.',
+  inviteCta: 'Déposer ma photo',
+  inviteLater: 'Plus tard',
   foil: 'Brillante',
   copies: '×{count}',
   // Crédit de l'artiste d'un logo d'équipe. Ici plutôt que dans `teamDetail` :
