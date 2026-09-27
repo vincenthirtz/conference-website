@@ -19,6 +19,8 @@ export default adminNs('adminTournamentNav', {
   tabMatches: 'Matchs',
   tabBracket: 'Bracket',
   tabStages: 'Phases',
+  subStagesList: 'Phases',
+  subStagesPool: 'Répartition',
   tabResults: 'Résultats',
   tabSettings: 'Réglages',
   tabTools: 'Outils',

@@ -19,6 +19,8 @@ export default {
   tabMatches: 'Matches',
   tabBracket: 'Bracket',
   tabStages: 'Phases',
+  subStagesList: 'Stages',
+  subStagesPool: 'Distribution',
   tabResults: 'Results',
   tabSettings: 'Settings',
   tabTools: 'Tools',

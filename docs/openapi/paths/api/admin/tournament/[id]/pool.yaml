@@ -1,0 +1,103 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  tags:
+    - admin/tournaments
+  summary: Waitlist distribution view of a pooled 5-player-team tournament.
+  description: |
+    Entered teams with their placed players, the waitlist, and a PROPOSED
+    distribution (biggest same-team cores first, topped up with players
+    without a team, then with players from the smallest other cores; leftover
+    solos grouped in mixed teams of 5). A proposal, never applied by itself.
+    409 `NOT_POOLED` if the tournament does not use pooled sign-up.
+  operationId: adminGetTournamentPool
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Distribution view.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      description: Invalid tournament ID.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      description: Tournament not found.
+    '409':
+      description: '`code: NOT_POOLED`.'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+post:
+  tags:
+    - admin/tournaments
+  summary: Place waitlisted players, or send one back to the waitlist.
+  description: |
+    `place` into an entered team or the origin team of one of the players;
+    `place-new` creates a mixed team for the event (inactive, off the
+    directory, no members — players keep their real team); `unplace` sends a
+    player back (the team is unregistered when it loses its last player and
+    has no match yet). Invariants are enforced by `pool_place` /
+    `pool_unplace` on the database side. Returns the refreshed view.
+  operationId: adminPostTournamentPool
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [action]
+          properties:
+            action:
+              type: string
+              enum: [place, place-new, unplace]
+            entryIds:
+              type: array
+              maxItems: 5
+              items:
+                type: string
+                format: uuid
+            teamId:
+              type: string
+              format: uuid
+            teamName:
+              type: string
+              minLength: 2
+              maxLength: 60
+            entryId:
+              type: string
+              format: uuid
+  responses:
+    '200':
+      description: Refreshed distribution view.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      description: '`code: INVALID_BODY | INVALID_TARGET`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      description: Tournament not found.
+    '409':
+      description: '`code: NOT_POOLED | TEAM_FULL | NOT_WAITING | NOT_PLACED`.'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      description: '`code: SERVER_ERROR`.'

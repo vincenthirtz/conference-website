@@ -21566,6 +21566,193 @@
     ]
    }
   },
+  "GET /api/admin/tournament/{id}/pool": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "teamSize": {
+      "type": "number"
+     },
+     "squads": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "teamId": {
+         "type": "string"
+        },
+        "teamName": {
+         "type": "string"
+        },
+        "mixed": {
+         "type": "boolean"
+        },
+        "members": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "id": {
+            "type": "string"
+           },
+           "displayName": {
+            "type": "string"
+           },
+           "battleTag": {
+            "type": "string"
+           },
+           "originTeamId": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "originTeamName": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "createdAt": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "id",
+           "displayName",
+           "battleTag",
+           "originTeamId",
+           "originTeamName",
+           "createdAt"
+          ]
+         }
+        }
+       },
+       "required": [
+        "teamId",
+        "teamName",
+        "mixed",
+        "members"
+       ]
+      }
+     },
+     "waitlist": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "displayName": {
+         "type": "string"
+        },
+        "battleTag": {
+         "type": "string"
+        },
+        "originTeamId": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "originTeamName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "createdAt": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "id",
+        "displayName",
+        "battleTag",
+        "originTeamId",
+        "originTeamName",
+        "createdAt"
+       ]
+      }
+     },
+     "proposal": {
+      "type": "object",
+      "properties": {
+       "squads": {
+        "type": "array",
+        "items": {
+         "anyOf": [
+          {
+           "type": "object",
+           "properties": {
+            "kind": {
+             "type": "string",
+             "const": "core"
+            },
+            "teamId": {
+             "type": "string"
+            },
+            "teamName": {
+             "type": "string"
+            },
+            "entryIds": {
+             "type": "array",
+             "items": {
+              "type": "string"
+             }
+            }
+           },
+           "required": [
+            "kind",
+            "teamId",
+            "teamName",
+            "entryIds"
+           ]
+          },
+          {
+           "type": "object",
+           "properties": {
+            "kind": {
+             "type": "string",
+             "const": "mixed"
+            },
+            "entryIds": {
+             "type": "array",
+             "items": {
+              "type": "string"
+             }
+            }
+           },
+           "required": [
+            "kind",
+            "entryIds"
+           ]
+          }
+         ]
+        }
+       },
+       "leftoverIds": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       }
+      },
+      "required": [
+       "squads",
+       "leftoverIds"
+      ]
+     }
+    },
+    "required": [
+     "teamSize",
+     "squads",
+     "waitlist",
+     "proposal"
+    ]
+   }
+  },
   "GET /api/admin/tournament/{id}/schedule-diagnostics": {
    "200": {
     "type": "object",
@@ -61700,6 +61887,193 @@
     },
     "required": [
      "matches"
+    ]
+   }
+  },
+  "POST /api/admin/tournament/{id}/pool": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "teamSize": {
+      "type": "number"
+     },
+     "squads": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "teamId": {
+         "type": "string"
+        },
+        "teamName": {
+         "type": "string"
+        },
+        "mixed": {
+         "type": "boolean"
+        },
+        "members": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "id": {
+            "type": "string"
+           },
+           "displayName": {
+            "type": "string"
+           },
+           "battleTag": {
+            "type": "string"
+           },
+           "originTeamId": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "originTeamName": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "createdAt": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "id",
+           "displayName",
+           "battleTag",
+           "originTeamId",
+           "originTeamName",
+           "createdAt"
+          ]
+         }
+        }
+       },
+       "required": [
+        "teamId",
+        "teamName",
+        "mixed",
+        "members"
+       ]
+      }
+     },
+     "waitlist": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "displayName": {
+         "type": "string"
+        },
+        "battleTag": {
+         "type": "string"
+        },
+        "originTeamId": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "originTeamName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "createdAt": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "id",
+        "displayName",
+        "battleTag",
+        "originTeamId",
+        "originTeamName",
+        "createdAt"
+       ]
+      }
+     },
+     "proposal": {
+      "type": "object",
+      "properties": {
+       "squads": {
+        "type": "array",
+        "items": {
+         "anyOf": [
+          {
+           "type": "object",
+           "properties": {
+            "kind": {
+             "type": "string",
+             "const": "core"
+            },
+            "teamId": {
+             "type": "string"
+            },
+            "teamName": {
+             "type": "string"
+            },
+            "entryIds": {
+             "type": "array",
+             "items": {
+              "type": "string"
+             }
+            }
+           },
+           "required": [
+            "kind",
+            "teamId",
+            "teamName",
+            "entryIds"
+           ]
+          },
+          {
+           "type": "object",
+           "properties": {
+            "kind": {
+             "type": "string",
+             "const": "mixed"
+            },
+            "entryIds": {
+             "type": "array",
+             "items": {
+              "type": "string"
+             }
+            }
+           },
+           "required": [
+            "kind",
+            "entryIds"
+           ]
+          }
+         ]
+        }
+       },
+       "leftoverIds": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       }
+      },
+      "required": [
+       "squads",
+       "leftoverIds"
+      ]
+     }
+    },
+    "required": [
+     "teamSize",
+     "squads",
+     "waitlist",
+     "proposal"
     ]
    }
   },
