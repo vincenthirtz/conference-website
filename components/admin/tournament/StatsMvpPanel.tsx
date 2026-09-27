@@ -1,8 +1,13 @@
 // components/admin/tournament/StatsMvpPanel.tsx
 // Admin : suivi en direct des votes MVP d'un tournoi (sous-onglets `mvp` et
-// `mvp-public` de la page Résultats). Lecture seule —
-// GET /api/admin/tournament/[id]/mvp-votes (vote des équipes) ou
+// `mvp-public` de la page Résultats).
+// GET /api/admin/tournament/[id]/mvp-votes (vote des équipes, lecture seule) ou
 // /mvp-public-votes (vote du public, Twitch + Discord additionnés).
+//
+// Le vote du PUBLIC se pilote aussi d'ici : le lancer à la main sur un match
+// terminé, ou le clore avant l'échéance — pour un match sans régie, où le
+// cockpit caster n'est pas ouvert. Le site prévient le bot, qui poste le vote
+// dans son salon Discord (POST /api/admin/matches/[matchId]/mvp-public).
 //
 // Se rafraîchit seul tant qu'un vote est ouvert et que l'onglet est visible :
 // c'est un écran qu'on laisse ouvert pendant un match.
@@ -10,6 +15,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAdminFetch, type AdminFetchError } from '@/hooks/useAdminFetch';
+import { useToast } from '@/components/Toast';
 import { useDocumentVisible } from '@/hooks/useDocumentVisible';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -21,7 +27,23 @@ import type {
 } from '@/utils/mvp/voteBoard';
 import nsAdminTournamentMvpVotes from '@/lib/i18n/locales/admin-fr/adminTournamentMvpVotes';
 
-type Response = VoteBoard & { tournament: { id: string; name: string } };
+/** Match terminé sans vote du public : on peut le lancer à la main. */
+type OpenableMatch = {
+  id: string;
+  roundName: string | null;
+  scheduledAt: string | null;
+  team1Name: string | null;
+  team2Name: string | null;
+};
+
+type Response = VoteBoard & {
+  tournament: { id: string; name: string };
+  /** Vote du public seulement. */
+  openable?: OpenableMatch[];
+};
+
+/** Défaut du serveur (DEFAULT_PUBLIC_WINDOW_MINUTES), rappelé dans le champ. */
+const DEFAULT_PUBLIC_MINUTES = 10;
 type Filter = 'all' | 'open' | 'closed';
 type Dict = typeof nsAdminTournamentMvpVotes.fr;
 
@@ -69,8 +91,12 @@ export default function StatsMvpPanel({
   const locale = useLocale();
   const visible = useDocumentVisible();
   const { adminFetchJson } = useAdminFetch();
+  const { addToast } = useToast();
 
   const [data, setData] = useState<Response | null>(null);
+  const [openMatchId, setOpenMatchId] = useState('');
+  const [minutes, setMinutes] = useState(String(DEFAULT_PUBLIC_MINUTES));
+  const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
@@ -119,6 +145,31 @@ export default function StatsMvpPanel({
         minute: '2-digit',
       }).format(new Date(iso)),
     [locale]
+  );
+
+  /** Lancer / clore le vote du public d'un match, puis recharger. */
+  const runPublic = useCallback(
+    async (
+      matchId: string,
+      body: { action: 'open'; windowMinutes: number } | { action: 'close' }
+    ) => {
+      setBusy(true);
+      try {
+        await adminFetchJson(`/api/admin/matches/${matchId}/mvp-public`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        addToast(body.action === 'open' ? t.openDone : t.closeDone, 'success');
+        if (body.action === 'open') setOpenMatchId('');
+        await load(true);
+      } catch (err) {
+        addToast((err as AdminFetchError).message || t.actionError, 'error');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [adminFetchJson, addToast, load, t.openDone, t.closeDone, t.actionError]
   );
 
   const shown = useMemo(() => {
@@ -181,6 +232,64 @@ export default function StatsMvpPanel({
         </div>
       )}
 
+      {kind === 'public' && data && (
+        <section className="rounded-xl border border-purple-500/30 bg-purple-500/[0.05] p-4">
+          <h3 className="font-semibold">{t.openTitle}</h3>
+          <p className="text-xs text-neutral-400 mt-1">{t.openHelp}</p>
+          {(data.openable ?? []).length === 0 ? (
+            <p className="text-sm text-neutral-500 mt-3">{t.openNone}</p>
+          ) : (
+            <div className="mt-3 flex flex-wrap items-end gap-3">
+              <label className="text-xs text-neutral-400">
+                {t.openMatchLabel}
+                <select
+                  className="mt-1 block rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-white"
+                  value={openMatchId}
+                  onChange={(e) => setOpenMatchId(e.target.value)}
+                >
+                  <option value="">—</option>
+                  {(data.openable ?? []).map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.team1Name ?? t.tbd} {t.vs} {m.team2Name ?? t.tbd}
+                      {m.roundName ? ` · ${m.roundName}` : ''}
+                      {m.scheduledAt ? ` · ${fmtDate(m.scheduledAt)}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs text-neutral-400">
+                {t.openMinutesLabel}
+                <input
+                  type="number"
+                  min={1}
+                  max={360}
+                  className="mt-1 block w-24 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-white"
+                  value={minutes}
+                  onChange={(e) => setMinutes(e.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                disabled={
+                  busy ||
+                  !openMatchId ||
+                  !(Number(minutes) >= 1 && Number(minutes) <= 360)
+                }
+                onClick={() =>
+                  void runPublic(openMatchId, {
+                    action: 'open',
+                    windowMinutes: Math.round(Number(minutes)),
+                  })
+                }
+                className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-purple-600 text-white hover:bg-purple-500 disabled:opacity-50"
+              >
+                {t.openCta}
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+
       {data && data.matches.length === 0 && (
         <p className="text-neutral-400">
           {kind === 'public' ? t.emptyPublic : t.empty}
@@ -215,7 +324,19 @@ export default function StatsMvpPanel({
 
           <ul className="space-y-4">
             {shown.map((m) => (
-              <MatchCard key={m.id} match={m} t={t} fmtDate={fmtDate} />
+              <MatchCard
+                key={m.id}
+                match={m}
+                t={t}
+                fmtDate={fmtDate}
+                onClose={
+                  kind === 'public' &&
+                  (m.state === 'open' || m.state === 'expired')
+                    ? () => void runPublic(m.id, { action: 'close' })
+                    : undefined
+                }
+                busy={busy}
+              />
             ))}
           </ul>
         </>
@@ -239,10 +360,15 @@ function MatchCard({
   match: m,
   t,
   fmtDate,
+  onClose,
+  busy = false,
 }: {
   match: VoteBoardMatch;
   t: Dict;
   fmtDate: (iso: string) => string;
+  /** Vote du public ouvert : le clore maintenant. */
+  onClose?: () => void;
+  busy?: boolean;
 }) {
   return (
     <li className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
@@ -274,6 +400,16 @@ function MatchCard({
             <span className="text-[11px] text-neutral-500">
               {format(t.closesAt, { date: fmtDate(m.closesAt) })}
             </span>
+          )}
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={busy}
+              className="mt-1 px-2.5 py-1 rounded-lg text-xs font-semibold border border-neutral-600 text-neutral-200 hover:bg-neutral-700/50 disabled:opacity-50"
+            >
+              {t.closeCta}
+            </button>
           )}
         </div>
       </div>

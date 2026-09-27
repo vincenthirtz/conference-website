@@ -49,4 +49,15 @@ export default adminNs('adminTournamentMvpVotes', {
   emptyPublic:
     'Aucun vote du public n’a encore été ouvert pour ce tournoi. Il s’ouvre depuis le cockpit caster (/admin/caster › Poll MVP), match rattaché.',
   sourceCombined: 'Twitch + Discord',
+  openTitle: 'Lancer un vote du public',
+  openHelp:
+    'Pour un match terminé, sans passer par le cockpit caster (match sans diffusion, par exemple). Le bot poste le vote dans son salon Discord ; seuls les supporters votent, les !mvp du chat Twitch ne sont relayés que par le cockpit.',
+  openNone: 'Aucun match terminé sans vote du public.',
+  openMatchLabel: 'Match',
+  openMinutesLabel: 'Durée (min)',
+  openCta: 'Lancer le vote',
+  openDone: 'Vote du public lancé.',
+  closeCta: 'Clore maintenant',
+  closeDone: 'Vote du public clos.',
+  actionError: 'L’opération a échoué.',
 });

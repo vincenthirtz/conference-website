@@ -5,12 +5,20 @@
 //   GET                              -> état + candidates, pour poster le message
 //   POST { action: 'vote' }          -> une voix de supportrice
 //   POST { action: 'anchor' }        -> où le bot a posté, pour éditer ensuite
+//   POST { action: 'open' }          -> un admin lance le vote (/mvp-public)
+//   POST { action: 'close' }         -> un admin le clôt (/mvp-public)
 //
-// LE BOT NE PEUT NI OUVRIR NI CLORE, et ce n'est pas un oubli. La régie décide
-// quand le scrutin s'ouvre et se ferme, parce que c'est elle qui l'annonce à
-// l'antenne et qui voit le direct. Donner ces deux gestes au bot créerait deux
-// autorités sur la même urne — et la première conséquence serait un scrutin
-// fermé côté Discord mais encore ouvert à l'écran, ou l'inverse.
+// OUVRIR / CLORE DEPUIS DISCORD — décision de l'orga du 2026-09-27. Le vote du
+// public ne s'ouvrait que depuis le cockpit régie, parce que c'est elle qui
+// l'annonce à l'antenne. Mais un match sans diffusion n'avait alors aucun vote
+// du public. Un admin peut donc le lancer depuis Discord (`/mvp-public`, gate
+// admin côté bot) ou depuis l'onglet « MVP du public » du site.
+//   La régie reste l'autorité quand elle diffuse. Un vote ouvert HORS cockpit
+// ne reçoit pas les `!mvp` du chat Twitch : c'est le cockpit qui les lit et les
+// relaie. Ce n'est pas un défaut à corriger ici, c'est ce que « sans régie »
+// veut dire.
+//   Pas d'événement renvoyé au bot pour ces deux gestes : c'est lui qui a
+// appelé, il poste / édite lui-même dans la foulée (cf. publicVoteActions).
 //
 // UNE VOIX ICI VAUT UNE VOIX DU CHAT. Elles atterrissent dans la même table,
 // sous deux `source` différentes, et le dépouillement les ADDITIONNE : viewers
@@ -31,6 +39,10 @@ import {
   readPublicVotes,
 } from '@/utils/mvp/publicVote';
 import { tallySource } from '@/utils/mvp/awards';
+import {
+  closePublicVoteForMatch,
+  openPublicVoteForMatch,
+} from '@/utils/mvp/publicVoteActions';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import type { z } from 'zod';
@@ -74,6 +86,57 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   }
 
   const body = req.botInput as z.infer<typeof mvpPublicBodySchema>;
+
+  if (body.action === 'open') {
+    const opened = await openPublicVoteForMatch(tenantId, matchId, {
+      windowMinutes: body.windowMinutes ?? undefined,
+      notifyBot: false,
+    });
+    if (!opened.ok) {
+      return res
+        .status(opened.status)
+        .json({ error: opened.error, code: opened.code });
+    }
+    logger.info(
+      `[bot/mvp-public] open match=${matchId} by discord=${body.discordUserId ?? '?'} alreadyOpen=${opened.alreadyOpen}`
+    );
+    // Tout ce qu'il faut au bot pour poster son sélecteur sans second appel —
+    // et l'ancrage éventuel, pour qu'il ne reposte pas un vote déjà affiché.
+    return res.status(200).json({
+      matchId,
+      roundName: opened.match.roundName,
+      team1Name: opened.match.team1Name,
+      team2Name: opened.match.team2Name,
+      closesAt: opened.poll.closes_at,
+      candidates: opened.candidates,
+      alreadyOpen: opened.alreadyOpen,
+      votable: opened.votable,
+      channelId: opened.poll.discord_channel_id ?? null,
+      messageId: opened.poll.discord_message_id ?? null,
+    });
+  }
+
+  if (body.action === 'close') {
+    const closed = await closePublicVoteForMatch(tenantId, matchId, {
+      notifyBot: false,
+      origin: `bot/mvp-public discord=${body.discordUserId ?? '?'}`,
+    });
+    if (!closed.ok) {
+      return res
+        .status(closed.status)
+        .json({ error: closed.error, code: closed.code });
+    }
+    return res.status(200).json({
+      matchId,
+      winnerLabel: closed.winnerLabel,
+      winnerMemberId: closed.award?.memberId ?? null,
+      reason: closed.reason,
+      team1Name: closed.team1Name,
+      team2Name: closed.team2Name,
+      bySource: closed.award?.bySource ?? null,
+      totalVotes: closed.award?.totalVotes ?? null,
+    });
+  }
 
   if (body.action === 'anchor') {
     if (!body.channelId || !body.messageId) {

@@ -21148,6 +21148,48 @@
    "200": {
     "type": "object",
     "properties": {
+     "openable": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "roundName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "scheduledAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team1Name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team2Name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "id",
+        "roundName",
+        "scheduledAt",
+        "team1Name",
+        "team2Name"
+       ]
+      }
+     },
      "matches": {
       "type": "array",
       "items": {
@@ -21408,6 +21450,7 @@
      }
     },
     "required": [
+     "openable",
      "matches",
      "totals",
      "tournament"
@@ -65499,6 +65542,171 @@
      {
       "type": "object",
       "properties": {
+       "matchId": {
+        "type": "string"
+       },
+       "roundName": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "team1Name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "team2Name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "closesAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "candidates": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "memberId": {
+           "type": "string"
+          },
+          "label": {
+           "type": "string"
+          },
+          "teamName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "memberId",
+          "label",
+          "teamName"
+         ]
+        }
+       },
+       "alreadyOpen": {
+        "type": "boolean"
+       },
+       "votable": {
+        "type": "boolean"
+       },
+       "channelId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "messageId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "matchId",
+       "roundName",
+       "team1Name",
+       "team2Name",
+       "closesAt",
+       "candidates",
+       "alreadyOpen",
+       "votable",
+       "channelId",
+       "messageId"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "matchId": {
+        "type": "string"
+       },
+       "winnerLabel": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "winnerMemberId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "reason": {
+        "type": [
+         "string",
+         "null"
+        ],
+        "enum": [
+         "no_votes",
+         "tie",
+         "too_few_votes",
+         null
+        ]
+       },
+       "team1Name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "team2Name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "bySource": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "twitch": {
+          "type": "number"
+         },
+         "discord": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "twitch",
+         "discord"
+        ]
+       },
+       "totalVotes": {
+        "type": [
+         "number",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "matchId",
+       "winnerLabel",
+       "winnerMemberId",
+       "reason",
+       "team1Name",
+       "team2Name",
+       "bySource",
+       "totalVotes"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
        "success": {
         "type": "boolean"
        },
@@ -72344,9 +72552,9 @@
   "pages/api/admin/documents.ts:288",
   "pages/api/admin/matches/[matchId]/lineup.ts:168",
   "pages/api/admin/matches/[matchId]/lineup.ts:295",
-  "pages/api/admin/matches/[matchId]/mvp-public.ts:177",
-  "pages/api/admin/matches/[matchId]/mvp-public.ts:189",
-  "pages/api/admin/matches/[matchId]/mvp-public.ts:237",
+  "pages/api/admin/matches/[matchId]/mvp-public.ts:125",
+  "pages/api/admin/matches/[matchId]/mvp-public.ts:137",
+  "pages/api/admin/matches/[matchId]/mvp-public.ts:149",
   "pages/api/admin/tcg/fanart.ts:229",
   "pages/api/admin/tcg/welcome-gift.ts:72",
   "pages/api/cron/domain-verify.ts:123",

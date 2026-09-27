@@ -2,10 +2,12 @@
 // Source unique handler ↔ spec OpenAPI (`x-zod: bot.matches/[matchId]/mvp-public`).
 // Module sans effet de bord : zod et utilitaires purs seulement.
 //
-// DEUX ACTIONS SEULEMENT, et c'est volontaire. Le bot ne peut ni OUVRIR ni
-// CLORE ce scrutin : c'est la régie qui le fait, depuis le cockpit, parce que
-// c'est elle qui annonce le vote à l'antenne et sait quand le fermer. Le bot
-// n'est qu'un second bureau de vote — il ancre son message et relaie des voix.
+// QUATRE ACTIONS. `vote` et `anchor` : le bot comme second bureau de vote.
+// `open` et `close` : depuis le 2026-09-27, un ADMIN peut aussi lancer et clore
+// le vote du public depuis Discord (`/mvp-public`), pour un match sans régie
+// — décision de l'orga. La régie reste l'autorité quand elle diffuse : un vote
+// ouvert hors cockpit ne reçoit pas les `!mvp` du chat Twitch, que seul le
+// cockpit relaie. Le gate admin est côté bot (rôles Discord).
 //
 // Même forme que son jumeau `mvp.ts` : un seul objet plutôt qu'une union
 // discriminée, les champs conditionnels étant vérifiés dans le handler. Et
@@ -19,9 +21,14 @@ import {
 } from '../../../../../utils/botValidation';
 
 export const mvpPublicBodySchema = z.object({
-  action: z.enum(['vote', 'anchor']),
-  /** Votante (action `vote`) — son identifiant Discord tient l'unicité. */
+  action: z.enum(['vote', 'anchor', 'open', 'close']),
+  /**
+   * Votante (action `vote`) — son identifiant Discord tient l'unicité.
+   * Admin qui agit (actions `open` / `close`) — pour la trace.
+   */
   discordUserId: discordIdSchema.nullish(),
+  /** Durée du scrutin en minutes (action `open`), 1 → 360, défaut 10. */
+  windowMinutes: z.number().int().min(1).max(360).nullish(),
   /** Joueuse choisie (action `vote`). */
   memberId: uuidSchema.nullish(),
   /** Où le bot a posté son message (action `anchor`), pour l'éditer ensuite. */

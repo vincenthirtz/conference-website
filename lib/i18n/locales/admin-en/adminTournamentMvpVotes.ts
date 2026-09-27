@@ -47,4 +47,15 @@ export default {
   emptyPublic:
     'No audience vote has been opened for this tournament yet. It opens from the caster cockpit (/admin/caster › MVP poll), with a match linked.',
   sourceCombined: 'Twitch + Discord',
+  openTitle: 'Start an audience vote',
+  openHelp:
+    'For a finished match, without the caster cockpit (a match that is not broadcast, for instance). The bot posts the vote in its Discord channel; only supporters vote, Twitch chat !mvp votes are relayed by the cockpit only.',
+  openNone: 'No finished match without an audience vote.',
+  openMatchLabel: 'Match',
+  openMinutesLabel: 'Duration (min)',
+  openCta: 'Start the vote',
+  openDone: 'Audience vote started.',
+  closeCta: 'Close now',
+  closeDone: 'Audience vote closed.',
+  actionError: 'The operation failed.',
 };

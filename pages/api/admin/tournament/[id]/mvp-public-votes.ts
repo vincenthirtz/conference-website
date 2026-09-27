@@ -178,10 +178,27 @@ async function handler(
       mode: 'public',
     });
 
+    // Les matchs sur lesquels un vote du public peut être LANCÉ À LA MAIN :
+    // terminés, jamais ouverts. Les refus fins (forfait, bye) restent au
+    // serveur à l'ouverture — la liste ne fait que ne pas proposer l'évident.
+    const openable = matches
+      .filter((m) => m.status === 'finished' && !polls.has(m.id))
+      .sort((a, b) =>
+        (b.scheduled_at ?? '').localeCompare(a.scheduled_at ?? '')
+      )
+      .map((m) => ({
+        id: m.id,
+        roundName: m.round_name,
+        scheduledAt: m.scheduled_at,
+        team1Name: m.team1_id ? (teamName.get(m.team1_id) ?? null) : null,
+        team2Name: m.team2_id ? (teamName.get(m.team2_id) ?? null) : null,
+      }));
+
     res.setHeader('Cache-Control', 'no-store');
     return res.status(200).json({
       tournament: { id: tournament.id, name: tournament.name },
       ...board,
+      openable,
     });
   } catch (err) {
     logger.error('[admin/tournament/mvp-public-votes] error:', err);
