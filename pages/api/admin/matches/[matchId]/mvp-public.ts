@@ -27,21 +27,19 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 
 import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
-import { logStaffAction } from '@/utils/staffLogs';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { listMvpCandidates } from '@/utils/mvp/service';
 import {
-  DEFAULT_PUBLIC_WINDOW_MINUTES,
   castPublicVotes,
-  openPublicVote,
   readPublicPoll,
   readPublicVotes,
-  settlePublicVote,
 } from '@/utils/mvp/publicVote';
+import {
+  closePublicVoteForMatch,
+  openPublicVoteForMatch,
+} from '@/utils/mvp/publicVoteActions';
 import { tallySource } from '@/utils/mvp/awards';
-import { logger } from '@/utils/logger';
-import { emitBotEvent } from '@/utils/botEvents';
 
 /**
  * 200 voix par appel : large pour un pic de chat réel, assez bas pour qu'un
@@ -114,71 +112,21 @@ async function handler(
   const body = parsed.data;
 
   if (body.action === 'open') {
-    const { match } = await listMvpCandidates(tenantId, id);
-    if (!match) return res.status(404).json({ error: 'Match introuvable' });
-
-    // Mêmes deux refus que le vote des équipes, et pour les mêmes raisons :
-    // on ne vote pas sur une partie en cours, ni sur une partie non jouée.
-    if (match.status !== 'finished') {
-      return res
-        .status(409)
-        .json({ error: "Le match n'est pas terminé", status: match.status });
-    }
-    if (match.isWalkover) {
-      return res.status(409).json({
-        error: "Ce match n'a pas été joué (forfait ou bye) : pas de MVP",
-      });
-    }
-
-    const opened = await openPublicVote(tenantId, id, {
-      windowMinutes: body.windowMinutes ?? DEFAULT_PUBLIC_WINDOW_MINUTES,
+    // Refus, journal staff et événement au bot : cf. utils/mvp/publicVoteActions.
+    // Ouvert depuis le site, c'est le site qui prévient le bot.
+    const opened = await openPublicVoteForMatch(tenantId, id, {
+      windowMinutes: body.windowMinutes,
+      staffId: ctx?.staff?.id ?? null,
+      notifyBot: true,
     });
-    if (!opened) {
-      return res.status(500).json({ error: "Échec de l'ouverture du scrutin" });
+    if (!opened.ok) {
+      return res.status(opened.status).json({ error: opened.error });
     }
-
-    if (ctx?.staff?.id && !opened.alreadyOpen) {
-      await logStaffAction({
-        staff_id: ctx.staff.id,
-        action: 'open_public_mvp',
-        entity_type: 'match',
-        entity_id: id,
-        tournament_id: match.tournamentId,
-        payload: { closesAt: opened.poll.closes_at },
-      });
-    }
-
-    // Le bot ouvre son propre bureau de vote sur Discord. POUSSÉ, et pas
-    // laissé à son poller : celui-ci tourne toutes les dix minutes, soit la
-    // durée entière du scrutin — il le raterait.
-    //
-    // Rejouer un `open` sur un scrutin déjà ouvert n'émet RIEN : sans ça, un
-    // double-clic en régie posterait deux messages de vote.
-    if (!opened.alreadyOpen) {
-      await emitBotEvent(
-        'mvp.public.opened',
-        {
-          matchId: id,
-          roundName: match.roundName,
-          team1Name: match.team1Name,
-          team2Name: match.team2Name,
-          closesAt: opened.poll.closes_at,
-          // Ordonnées : le bot compose son sélecteur sans second appel.
-          candidates: opened.candidates.map((c) => ({
-            memberId: c.memberId,
-            label: c.label,
-            teamName: c.teamName,
-          })),
-        },
-        tenantId
-      );
-    }
-
     return res.status(200).json({
       poll: opened.poll,
       candidates: opened.candidates,
       alreadyOpen: opened.alreadyOpen,
-      votable: opened.candidates.length >= 2,
+      votable: opened.votable,
     });
   }
 
@@ -190,58 +138,22 @@ async function handler(
   }
 
   // action === 'close'
-  const settled = await settlePublicVote(tenantId, id, { close: true });
-  if (!settled) return res.status(404).json({ error: 'Match introuvable' });
-
-  // Le nom de l'élue, pour que l'appelant l'affiche sans second aller-retour.
-  let winnerLabel: string | null = null;
-  if (settled.award) {
-    const { candidates } = await listMvpCandidates(tenantId, id);
-    winnerLabel =
-      candidates.find((c) => c.memberId === settled.award!.memberId)?.label ??
-      null;
-  }
-
-  if (ctx?.staff?.id) {
-    await logStaffAction({
-      staff_id: ctx.staff.id,
-      action: 'close_public_mvp',
-      entity_type: 'match',
-      entity_id: id,
-      tournament_id: null,
-      payload: { winnerMemberId: settled.award?.memberId ?? null },
-    });
-  }
-
-  logger.info(
-    `[admin/mvp-public] close match=${id} winner=${settled.award?.memberId ?? 'none'} reason=${settled.reason ?? '-'}`
-  );
-
-  // Le bot ferme son sélecteur et affiche le résultat. Même urgence qu'à
-  // l'ouverture : laisser un bouton cliquable sur un scrutin clos est
-  // exactement le décrochage que ce système existe pour empêcher.
-  await emitBotEvent(
-    'mvp.public.closed',
-    {
-      matchId: id,
-      winnerLabel,
-      winnerMemberId: settled.award?.memberId ?? null,
-      reason: settled.reason,
-      team1Name: settled.team1Name,
-      team2Name: settled.team2Name,
-      bySource: settled.award?.bySource ?? null,
-    },
-    tenantId
-  );
+  const closed = await closePublicVoteForMatch(tenantId, id, {
+    staffId: ctx?.staff?.id ?? null,
+    notifyBot: true,
+    origin: 'admin/mvp-public',
+  });
+  if (!closed.ok)
+    return res.status(closed.status).json({ error: closed.error });
 
   return res.status(200).json({
     success: true,
-    award: settled.award,
-    winnerLabel,
-    reason: settled.reason,
-    tallies: settled.tallies,
-    team1Name: settled.team1Name,
-    team2Name: settled.team2Name,
+    award: closed.award,
+    winnerLabel: closed.winnerLabel,
+    reason: closed.reason,
+    tallies: closed.tallies,
+    team1Name: closed.team1Name,
+    team2Name: closed.team2Name,
   });
 }
 
