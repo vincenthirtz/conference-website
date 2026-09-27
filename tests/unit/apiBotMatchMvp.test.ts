@@ -524,8 +524,20 @@ describe('candidates — corriger la liste d’un vote ouvert', () => {
     seedBotAuth({ tenantId: TENANT, apiKey: 'test-key' });
     seed();
     store.match_participants = [
-      { tenant_id: TENANT, match_id: MATCH, user_id: U_BEA, battle_tag: 'Bea#2222', is_substitute: false },
-      { tenant_id: TENANT, match_id: MATCH, user_id: U_CHLOE, battle_tag: 'Chloe#3333', is_substitute: false },
+      {
+        tenant_id: TENANT,
+        match_id: MATCH,
+        user_id: U_BEA,
+        battle_tag: 'Bea#2222',
+        is_substitute: false,
+      },
+      {
+        tenant_id: TENANT,
+        match_id: MATCH,
+        user_id: U_CHLOE,
+        battle_tag: 'Chloe#3333',
+        is_substitute: false,
+      },
     ] as any;
   });
 
@@ -547,7 +559,9 @@ describe('candidates — corriger la liste d’un vote ouvert', () => {
 
     // La lecture rend la liste CORRIGÉE, pas celle de la feuille.
     const got = await call(MATCH);
-    expect((got.body as any).candidates.map((c: any) => c.memberId)).toContain(SUB);
+    expect((got.body as any).candidates.map((c: any) => c.memberId)).toContain(
+      SUB
+    );
     expect((got.body as any).roster.map((c: any) => c.memberId)).toEqual([
       ALICE,
       BEA,
