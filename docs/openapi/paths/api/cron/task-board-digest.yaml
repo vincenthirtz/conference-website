@@ -1,7 +1,7 @@
 get:
   tags:
     - cron
-  summary: Digest quotidien des boards Kanban (emet task.digest par tenant).
+  summary: Recap hebdomadaire des boards Kanban (emet task.digest par tenant).
   operationId: cronTaskBoardDigestGet
   description: |
     Netlify scheduled function. Pour chaque board NON archivé (tous tenants),
@@ -31,7 +31,7 @@ get:
 post:
   tags:
     - cron
-  summary: Digest quotidien des boards Kanban (variante POST).
+  summary: Recap hebdomadaire des boards Kanban (variante POST).
   operationId: cronTaskBoardDigestPost
   description: Same as `GET /api/cron/task-board-digest`.
   security:

@@ -1,12 +1,12 @@
 // netlify/functions/task-board-digest-cron.ts
 // Netlify Scheduled Function — déclenche /api/cron/task-board-digest une fois
-// par jour pour émettre le digest matinal des boards Kanban internes.
+// par SEMAINE (lundi matin) pour émettre le récap des boards Kanban internes.
 //
 // Pour chaque board non archivé, l'endpoint agrège les compteurs (total,
 // colonnes, overdue, dueToday) et émet un event `task.digest` par tenant
 // (outbox → push/DM Discord via le bot). Réponse 200 { emitted, boards }.
 //
-// Le schedule est configuré dans netlify.toml (30 7 * * *). Env vars requises :
+// Le schedule est configuré dans netlify.toml (30 7 * * 1). Env vars requises :
 //   CRON_SECRET, URL (ou SITE_URL).
 
 import type { Handler } from '@netlify/functions';

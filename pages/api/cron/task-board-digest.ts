@@ -1,6 +1,10 @@
 // pages/api/cron/task-board-digest.ts
 //
-// Scheduled function (Netlify) — digest quotidien des boards Kanban internes.
+// Scheduled function (Netlify) — récap HEBDOMADAIRE des boards Kanban internes
+// (lundi 07:30 UTC ; il était quotidien jusqu'au 2026-09-27 — un récap posté
+// chaque matin dans le même salon cesse d'être lu, et le staff finit par
+// filtrer le salon entier). Les rappels d'échéance restent quotidiens, carte
+// par carte : /api/cron/task-due-reminders.
 //
 // Pour chaque board NON archivé (tous tenants confondus), calcule :
 //   - `total`     : cartes vivantes (deleted_at IS NULL) du board,

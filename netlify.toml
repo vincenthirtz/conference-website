@@ -168,13 +168,23 @@
 [functions."social-mirror-cron"]
   schedule = "*/15 * * * *"
 
-# Scheduled function: digest matinal des boards Kanban internes. Pour chaque
-# board non archivé, agrège les compteurs (total, colonnes, overdue, dueToday)
-# et émet un event `task.digest` par tenant (outbox → push/DM Discord).
-# Une fois par jour à 07:30 UTC — juste avant les rappels d'échéance de 08:00,
-# pour un point de situation matinal. Requiert CRON_SECRET + URL (ou SITE_URL).
+# Scheduled function: récap des boards Kanban internes. Pour chaque board non
+# archivé, agrège les compteurs (total, colonnes, overdue, dueToday) et émet un
+# event `task.digest` par tenant (outbox → push/DM Discord).
+#
+# UNE FOIS PAR SEMAINE, le lundi à 07:30 UTC. Il tournait tous les matins :
+# posté chaque jour dans le même salon, un récap qui ne change qu'à la marge
+# cesse d'être lu, et le staff finit par filtrer le salon entier — y compris ce
+# qui compte. Le lundi matin, il redevient ce qu'il doit être : le point de
+# départ de la semaine.
+#
+# Les échéances, elles, restent quotidiennes : c'est `task-due-reminders-cron`
+# qui s'en charge, carte par carte, la veille du jour dit. Les passer à la
+# semaine ferait silencieusement sauter tous les rappels des six autres jours.
+#
+# Requiert CRON_SECRET + URL (ou SITE_URL).
 [functions."task-board-digest-cron"]
-  schedule = "30 7 * * *"
+  schedule = "30 7 * * 1"
 
 # Scheduled function: relance des équipes dans LEUR salon textuel Discord pour
 # compléter leur roster avant le verrouillage. Tourne tous les jours à 09:00 UTC
