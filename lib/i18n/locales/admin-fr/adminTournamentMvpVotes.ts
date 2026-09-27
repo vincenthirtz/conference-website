@@ -42,4 +42,11 @@ export default adminNs('adminTournamentMvpVotes', {
   sourceDiscord: 'Discord',
   vs: 'vs',
   tbd: 'À déterminer',
+  // --- Vote MVP DU PUBLIC (onglet `mvp-public`) ------------------------------
+  headingPublic: 'Votes MVP du public',
+  introPublic:
+    'Le « coup de cœur du public » : ouvert par la régie depuis le cockpit caster, une dizaine de minutes, les viewers Twitch (!mvp N) et les supporters Discord. Contrairement au vote des équipes, les deux plateformes s’ADDITIONNENT. Le « en tête » applique cette règle : au moins {min} voix au total, pas d’égalité.',
+  emptyPublic:
+    'Aucun vote du public n’a encore été ouvert pour ce tournoi. Il s’ouvre depuis le cockpit caster (/admin/caster › Poll MVP), match rattaché.',
+  sourceCombined: 'Twitch + Discord',
 });

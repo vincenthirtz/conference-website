@@ -311,6 +311,40 @@ export async function readPublicVotes(
   }));
 }
 
+/**
+ * Les voix de PLUSIEURS matchs, groupées par match — pour le tableau de suivi
+ * staff (un tournoi entier), en une seule requête.
+ */
+export async function readPublicVotesForMatches(
+  tenantId: string,
+  matchIds: readonly string[]
+): Promise<Map<string, MvpVote[]>> {
+  const out = new Map<string, MvpVote[]>();
+  if (matchIds.length === 0) return out;
+
+  const { data, error } = await supabaseAdmin
+    .from('match_public_mvp_votes')
+    .select('match_id, member_id, source, voter_key')
+    .eq('tenant_id', tenantId)
+    .in('match_id', matchIds as string[]);
+
+  if (error) {
+    logger.error('[mvp-public] readPublicVotesForMatches error:', error);
+    return out;
+  }
+
+  for (const row of data ?? []) {
+    const list = out.get(row.match_id as string) ?? [];
+    list.push({
+      memberId: row.member_id as string,
+      source: row.source as MvpVoteSource,
+      voterKey: row.voter_key as string,
+    });
+    out.set(row.match_id as string, list);
+  }
+  return out;
+}
+
 export type PublicSettleResult = {
   award: PublicMvpAward | null;
   reason: MvpNoAwardReason | null;

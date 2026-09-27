@@ -10,9 +10,16 @@
 //
 // Aucun `voter_key` ne sort d'ici : on compte des voix, on n'expose pas de
 // votants.
+//
+// DEUX SCRUTINS, UN MÊME TABLEAU (`mode`). Le vote des ÉQUIPES désigne sa MVP
+// sur une seule plateforme (Twitch prime, sinon Discord — `resolveMatchMvp`).
+// Le vote du PUBLIC additionne les deux (`resolvePublicMvp`) : un viewer
+// Twitch et une supportrice Discord pèsent autant. Le mode choisit la règle,
+// pour que le panneau affiche ce que CE dépouillement-là décidera.
 
 import {
   resolveMatchMvp,
+  resolvePublicMvp,
   tallySource,
   type MvpNoAwardReason,
   type MvpVote,
@@ -66,6 +73,15 @@ export type VoteBoardSource = {
   }>;
 };
 
+/** Quel scrutin le tableau décrit. */
+export type VoteBoardMode = 'teams' | 'public';
+
+/**
+ * Plateforme qui a décidé du titre. `combined` : vote du public, où Twitch et
+ * Discord s'additionnent.
+ */
+export type VoteBoardDecisionSource = MvpVoteSource | 'combined';
+
 export type VoteBoardMatch = VoteBoardMatchInput & {
   state: MvpPollState;
   closesAt: string | null;
@@ -78,7 +94,7 @@ export type VoteBoardMatch = VoteBoardMatchInput & {
     | {
         memberId: string;
         label: string;
-        source: MvpVoteSource;
+        source: VoteBoardDecisionSource;
         votes: number;
         total: number;
       }
@@ -131,8 +147,11 @@ export function buildVoteBoard(input: {
   votes: Map<string, MvpVote[]>;
   members: Map<string, VoteBoardMember>;
   now: Date;
+  /** Défaut `teams` : le comportement historique. */
+  mode?: VoteBoardMode;
 }): VoteBoard {
   const { polls, votes, members, now } = input;
+  const mode = input.mode ?? 'teams';
   const label = (id: string) => members.get(id)?.label ?? UNKNOWN;
 
   const out: VoteBoardMatch[] = [];
@@ -157,16 +176,30 @@ export function buildVoteBoard(input: {
       });
     }
 
-    const outcome = resolveMatchMvp({ matchId: m.id }, matchVotes);
-    const leader: VoteBoardMatch['leader'] = outcome.award
-      ? {
-          memberId: outcome.award.memberId,
-          label: label(outcome.award.memberId),
-          source: outcome.award.source,
-          votes: outcome.award.winnerVotes,
-          total: outcome.award.totalVotes,
-        }
-      : { memberId: null, reason: outcome.reason };
+    let leader: VoteBoardMatch['leader'];
+    if (mode === 'public') {
+      const outcome = resolvePublicMvp({ matchId: m.id }, matchVotes);
+      leader = outcome.award
+        ? {
+            memberId: outcome.award.memberId,
+            label: label(outcome.award.memberId),
+            source: 'combined',
+            votes: outcome.award.winnerVotes,
+            total: outcome.award.totalVotes,
+          }
+        : { memberId: null, reason: outcome.reason };
+    } else {
+      const outcome = resolveMatchMvp({ matchId: m.id }, matchVotes);
+      leader = outcome.award
+        ? {
+            memberId: outcome.award.memberId,
+            label: label(outcome.award.memberId),
+            source: outcome.award.source,
+            votes: outcome.award.winnerVotes,
+            total: outcome.award.totalVotes,
+          }
+        : { memberId: null, reason: outcome.reason };
+    }
 
     out.push({
       ...m,

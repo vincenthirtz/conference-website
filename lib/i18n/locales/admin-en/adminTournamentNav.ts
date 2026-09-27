@@ -46,6 +46,7 @@ export default {
   subStatsEntry: 'Data entry',
   subStatsPodium: 'Podium',
   subStatsMvp: 'MVP votes',
+  subStatsMvpPublic: 'Audience MVP',
 
   tabStats: 'Results',
   tabMaps: 'Map pool',

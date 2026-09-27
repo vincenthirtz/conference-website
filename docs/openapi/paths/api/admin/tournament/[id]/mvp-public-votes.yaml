@@ -1,0 +1,37 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: Live AUDIENCE MVP vote board of a tournament, match by match.
+  description: |
+    Twin of `mvp-votes`, on the audience vote tables (opened by the broadcast
+    crew from the caster cockpit; Twitch `!mvp N` and Discord supporters).
+    Unlike the teams' vote, both platforms are ADDED UP: `leader.source` and
+    `winner.source` are `combined`. Same board shape otherwise: poll state,
+    per-platform tally, who would win if settled now, frozen winner once
+    closed. Voter identifiers are never returned.
+  operationId: adminTournamentMvpPublicVotes
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Vote board.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

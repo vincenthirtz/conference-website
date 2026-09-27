@@ -1,7 +1,7 @@
 // pages/admin/tournament/[id]/stats.tsx
 // Merged stats route. Hosts the former /stats (standings), /analytics
 // (aggregated KPIs), /podium (final ranking) and the live MVP vote board as
-// deep-linkable sub-tabs (`?tab=overview|analytics|entry|podium|mvp`). The old /analytics and /podium routes
+// deep-linkable sub-tabs (`?tab=overview|analytics|entry|podium|mvp|mvp-public`). The old /analytics and /podium routes
 // redirect here.
 
 import Head from 'next/head';
@@ -40,6 +40,9 @@ export default function AdminTournamentStatsPage(_: StaffProps) {
     { id: 'entry', label: nav.subStatsEntry },
     { id: 'podium', label: nav.subStatsPodium },
     { id: 'mvp', label: nav.subStatsMvp },
+    // Le vote du PUBLIC (cockpit caster) : tables et règle de dépouillement
+    // à part, même écran de suivi.
+    { id: 'mvp-public', label: nav.subStatsMvpPublic },
   ];
   const [active, setActive] = useQueryTab(tabs);
 
@@ -72,6 +75,7 @@ export default function AdminTournamentStatsPage(_: StaffProps) {
             {active === 'entry' && <SessionEntryPanel />}
             {active === 'podium' && <StatsPodiumPanel />}
             {active === 'mvp' && <StatsMvpPanel />}
+            {active === 'mvp-public' && <StatsMvpPanel kind="public" />}
           </div>
         </div>
       </div>

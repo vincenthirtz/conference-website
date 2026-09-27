@@ -1,6 +1,8 @@
 // components/admin/tournament/StatsMvpPanel.tsx
-// Admin : suivi en direct des votes MVP d'un tournoi (sous-onglet `mvp` de la
-// page Résultats). Lecture seule — GET /api/admin/tournament/[id]/mvp-votes.
+// Admin : suivi en direct des votes MVP d'un tournoi (sous-onglets `mvp` et
+// `mvp-public` de la page Résultats). Lecture seule —
+// GET /api/admin/tournament/[id]/mvp-votes (vote des équipes) ou
+// /mvp-public-votes (vote du public, Twitch + Discord additionnés).
 //
 // Se rafraîchit seul tant qu'un vote est ouvert et que l'onglet est visible :
 // c'est un écran qu'on laisse ouvert pendant un match.
@@ -24,6 +26,11 @@ type Filter = 'all' | 'open' | 'closed';
 type Dict = typeof nsAdminTournamentMvpVotes.fr;
 
 const REFRESH_SECONDS = 30;
+/**
+ * Le vote du public dure une dizaine de minutes : à 30 s, l'écran raterait un
+ * tiers de ce qui s'y passe. Toujours seulement tant qu'un vote est ouvert.
+ */
+const PUBLIC_REFRESH_SECONDS = 10;
 
 const STATE_CLASSES: Record<MvpPollState, string> = {
   open: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
@@ -39,13 +46,21 @@ function stateLabel(t: Dict, s: MvpPollState): string {
   return t.stateNone;
 }
 
+/** Quel vote le panneau suit : celui des équipes, ou celui du public. */
+export type StatsMvpKind = 'teams' | 'public';
+
 function sourceLabel(t: Dict, s: string | null): string {
+  if (s === 'combined') return t.sourceCombined;
   if (s === 'twitch') return t.sourceTwitch;
   if (s === 'discord') return t.sourceDiscord;
   return t.winnerManual;
 }
 
-export default function StatsMvpPanel() {
+export default function StatsMvpPanel({
+  kind = 'teams',
+}: {
+  kind?: StatsMvpKind;
+}) {
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
@@ -66,7 +81,9 @@ export default function StatsMvpPanel() {
       if (!quiet) setLoading(true);
       try {
         const json = await adminFetchJson<Response>(
-          `/api/admin/tournament/${tournamentId}/mvp-votes`
+          `/api/admin/tournament/${tournamentId}/${
+            kind === 'public' ? 'mvp-public-votes' : 'mvp-votes'
+          }`
         );
         setData(json);
         setError(null);
@@ -76,7 +93,7 @@ export default function StatsMvpPanel() {
         if (!quiet) setLoading(false);
       }
     },
-    [tournamentId, adminFetchJson, t.errorLoad]
+    [tournamentId, kind, adminFetchJson, t.errorLoad]
   );
 
   useEffect(() => {
@@ -84,11 +101,13 @@ export default function StatsMvpPanel() {
   }, [load]);
 
   const hasOpen = (data?.totals.openPolls ?? 0) > 0;
+  const refreshSeconds =
+    kind === 'public' ? PUBLIC_REFRESH_SECONDS : REFRESH_SECONDS;
   useEffect(() => {
     if (!hasOpen || !visible) return;
-    const timer = setInterval(() => void load(true), REFRESH_SECONDS * 1000);
+    const timer = setInterval(() => void load(true), refreshSeconds * 1000);
     return () => clearInterval(timer);
-  }, [hasOpen, visible, load]);
+  }, [hasOpen, visible, load, refreshSeconds]);
 
   const fmtDate = useCallback(
     (iso: string) =>
@@ -119,13 +138,17 @@ export default function StatsMvpPanel() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-3xl">
-          <h2 className="text-xl font-semibold">{t.heading}</h2>
+          <h2 className="text-xl font-semibold">
+            {kind === 'public' ? t.headingPublic : t.heading}
+          </h2>
           <p className="text-sm text-neutral-400 mt-1">
-            {format(t.intro, { min: MIN_VOTES_FOR_AWARD })}
+            {format(kind === 'public' ? t.introPublic : t.intro, {
+              min: MIN_VOTES_FOR_AWARD,
+            })}
           </p>
           {hasOpen && (
             <p className="text-xs text-neutral-500 mt-1">
-              {format(t.autoRefresh, { seconds: REFRESH_SECONDS })}
+              {format(t.autoRefresh, { seconds: refreshSeconds })}
             </p>
           )}
         </div>
@@ -159,7 +182,9 @@ export default function StatsMvpPanel() {
       )}
 
       {data && data.matches.length === 0 && (
-        <p className="text-neutral-400">{t.empty}</p>
+        <p className="text-neutral-400">
+          {kind === 'public' ? t.emptyPublic : t.empty}
+        </p>
       )}
 
       {data && data.matches.length > 0 && (

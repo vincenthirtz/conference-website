@@ -41,4 +41,10 @@ export default {
   sourceDiscord: 'Discord',
   vs: 'vs',
   tbd: 'TBD',
+  headingPublic: 'Audience MVP votes',
+  introPublic:
+    'The “audience favourite”: opened by the broadcast crew from the caster cockpit, about ten minutes, Twitch viewers (!mvp N) and Discord supporters. Unlike the teams’ vote, both platforms are ADDED UP. “Leading” applies that rule: at least {min} votes in total, no tie.',
+  emptyPublic:
+    'No audience vote has been opened for this tournament yet. It opens from the caster cockpit (/admin/caster › MVP poll), with a match linked.',
+  sourceCombined: 'Twitch + Discord',
 };
