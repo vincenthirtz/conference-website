@@ -1520,10 +1520,13 @@
       "user_id"
     ],
     "tcg_showcases": [
+      "background",
       "created_at",
       "enabled",
+      "frame",
       "subject_keys",
       "tenant_id",
+      "unlocked_cosmetics",
       "updated_at",
       "user_id"
     ],

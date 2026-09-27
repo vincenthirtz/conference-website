@@ -171,6 +171,27 @@ export default ns('playerTcg', {
   rarityRare: 'Rare',
   rarityEpic: 'Épique',
   rarityLegendary: 'Légendaire',
+  // --- La forge (lot T2) ---------------------------------------------------
+  forgeTitle: 'La forge',
+  forgeIntro:
+    'Échange {count} doublons d’une même rareté contre une carte de joueuse du palier au-dessus, que tu n’as pas encore. Coût : {price} pièces en plus des cartes.',
+  forgeTier: '{from} → {to}',
+  forgeCta: 'Forger une carte {rarity}',
+  forgeBusy: 'Forge en cours…',
+  forgePickMore: 'Encore {count} carte(s) à choisir.',
+  forgeNoFunds: 'Solde insuffisant.',
+  forgeDone: 'Carte {rarity} forgée !',
+  forgeFailed: 'La forge a échoué. Réessaie dans un instant.',
+  // --- Habillages de vitrine (lot T2) --------------------------------------
+  cosmeticTitle: 'Habiller ma vitrine',
+  cosmeticIntro:
+    'Un cadre et un fond pour les trois cartes que tu montres sur ta fiche. L’achat se fait une fois ; changer d’habillage ou l’enlever ne coûte rien.',
+  cosmeticFrames: 'Cadres',
+  cosmeticBackgrounds: 'Fonds',
+  cosmeticEquip: 'Poser',
+  cosmeticUnequip: 'Enlever',
+  cosmeticBought: 'Habillage débloqué.',
+  cosmeticFailed: 'Opération impossible. Réessaie dans un instant.',
   foil: 'Brillante',
   copies: '×{count}',
   // Crédit de l'artiste d'un logo d'équipe. Ici plutôt que dans `teamDetail` :

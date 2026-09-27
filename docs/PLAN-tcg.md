@@ -95,7 +95,7 @@ au-delà de ce qui se consomme.
 | Lot | Titre | Impact | Effort | Pourquoi à ce rang |
 |---|---|---|---|---|
 | T1 | Ramener la joueuse à son paquet | 🟥 | S | ✅ **livré le 2026-09-27** |
-| T2 | Donner une raison de dépenser | 🟥 | L | 0 pièce dépensée sur 10 805 |
+| T2 | Donner une raison de dépenser | 🟥 | L | ✅ **livré le 2026-09-27** |
 | T3 | Activer les échanges | 🟥 | M | tout est construit, il manque un réglage et quatre arbitrages |
 | T4 | Finir la chaîne du drop Twitch | 🟧 | S | 18 personnes rattachées attendent, deux gestes manquent |
 | T5 | Les quatre voies qui n'ont jamais payé | 🟧 | M | ✅ **instruit le 2026-09-27** — aucune n'est cassée |
@@ -141,34 +141,55 @@ vide), et un rejeu du cadeau ne renotifie personne.
 semaines. C'est la seule chose qui dira si les 20 points d'écart tenaient bien à
 l'annonce.
 
-## T2 · Donner une raison de dépenser — 🟥 / L
+## T2 · Donner une raison de dépenser — ✅ LIVRÉ (2026-09-27)
 
-**Le constat.** 10 805 pièces gagnées, **zéro dépensée**. Le seul débit est le
-booster à 300 pièces : payer pour cinq cartes de plus quand on a déjà un paquet
-non ouvert en attente n'a aucun sens, et douze personnes qui en ont les moyens
-l'ont compris avant nous.
+**Le constat.** 10 805 pièces gagnées, **zéro dépensée**. Le booster à 300
+pièces était le seul débit : payer pour cinq cartes de plus quand un paquet non
+ouvert attend déjà n'a aucun intérêt, et douze personnes qui en avaient les
+moyens l'avaient compris avant nous.
 
-**Ce qu'on fait.** Deux débits qui portent une intention, et non « plus de la
-même chose » :
+**Deux débits, et ils ne vendent pas la même chose.**
 
-1. **La forge** — convertir des doublons en une carte d'une rareté supérieure,
-   à un taux qui reste défavorable (on ne fabrique pas une légendaire à bon
-   compte). C'est le débit qui répond à la vraie frustration : les doublons
-   s'accumulent et le recyclage (30 pièces, utilisé **une fois**) ne les rend
-   pas désirables.
-2. **Les cosmétiques de vitrine** — cadre, fond, ordre mis en avant sur
-   `tcg_showcases`. Deux vitrines configurées aujourd'hui : c'est peu, et rien
-   n'y récompense l'effort.
+**La forge** — trois doublons d'une même rareté plus 150 pièces contre UNE carte
+de joueuse du palier au-dessus, *que l'on ne possède pas*. Elle relie les deux
+manques : les doublons s'entassaient (le recyclage à 30 pièces avait servi UNE
+fois en tout) pendant que les collections stagnaient (la meilleure réunissait 3
+équipes sur 10, personne n'avait complété une série).
 
-**Contrainte non négociable.** La monnaie **se gagne, elle ne s'achète pas**
-(TCG.md §4). Aucun de ces débits n'ouvre une voie d'achat en euros, ni
-directement ni par un intermédiaire — c'est ce qui tient la fonctionnalité hors
-du régime des boîtes à butin.
+Le barème se défend dans les deux sens, et un test le fige : on abandonne 3
+doublons (90 pièces au recyclage) et on en paie 150, soit 240 contre 300 pour un
+booster — moins cher, moins de cartes, mais une certitude que le hasard n'offre
+pas. Défavorable au volume, favorable à la collection.
 
-**Ce qu'on ne fait pas.** Pas de marché entre joueuses avec prix en pièces :
-cela ferait de la monnaie un objet de spéculation, et de la rareté un prix.
+Cartes de JOUEUSE seulement : une map (`common`) et une mascotte (`rare`) ont
+une rareté fixe, « un palier au-dessus » n'y veut rien dire.
 
----
+**Les habillages de vitrine** — un cadre, un fond, sur les trois cartes de la
+fiche publique. Deux vitrines seulement étaient configurées sur 63 comptes :
+rien n'y récompensait l'effort. `unlocked_cosmetics` (acheté) est séparé de
+`frame`/`background` (posé), pour que changer d'avis ne coûte rien — si essayer
+se payait, personne n'essaierait, et le débit n'existerait que sur le papier.
+
+**Tout ce qui touche à la monnaie est TRANSACTIONNEL.** `tcg_forge_card` et
+`tcg_buy_cosmetic` font leurs écritures en une fois. Ce n'est pas de la
+prudence abstraite : `booster.ts` débitait puis livrait côté application, et un
+504 PostgREST entre les deux — mode d'échec constaté ici, ~1,7 % — faisait
+perdre 300 pièces pour rien. La forge et l'achat suivent le chemin que ce
+correctif avait ouvert.
+
+**Les refus sont doublés, exprès.** Une fois dans le module pur (message utile,
+et surtout aucune écriture tentée : `pool_exhausted` refuse AVANT la
+transaction, sinon on prélèverait et on détruirait trois cartes pour ne rien
+rendre), une fois dans la transaction (l'invariant tient même si une autre
+requête est passée entre la lecture et l'écriture).
+
+**Ce qui ne bouge pas.** La monnaie se gagne, elle ne s'achète pas : aucun de
+ces débits n'ouvre une voie en euros, ni directement ni par un intermédiaire.
+C'est ce qui tient la fonctionnalité hors du régime des boîtes à butin.
+
+**Ce qui reste à mesurer.** Le premier coin dépensé, et le nombre de forges par
+semaine. Si le compteur reste à zéro dans quinze jours, le problème n'était pas
+l'absence de débit — et T3 passe devant.
 
 ## T3 · Activer les échanges — 🟥 / M
 

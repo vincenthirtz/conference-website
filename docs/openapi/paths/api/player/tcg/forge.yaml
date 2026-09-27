@@ -1,0 +1,72 @@
+post:
+  summary: Forge duplicates into a higher-rarity player card.
+  description: |
+    Consumes three duplicate cards of the same rarity plus a coin fee, and
+    returns one player card of the next rarity up that the caller does NOT
+    already own.
+
+    Why it exists: on 2026-09-27 production held 10 805 coins earned and **zero
+    spent**. The 300-coin booster was the only sink and offered "more of the
+    same"; meanwhile duplicates piled up (recycling had been used once, ever).
+    The forge spends the useless to grant the missing.
+
+    Every write happens inside one transaction (`tcg_forge_card`): removing the
+    three cards, debiting, creating the pack and placing the card only make
+    sense together.
+
+    Player cards only. Maps (`common`) and mascots (`rare`) have a FIXED rarity,
+    so "one rarity up" is meaningless for them; team rarity would need one query
+    per team.
+
+    Refusals are 409 with a machine-readable `code`: `not_enough`,
+    `mixed_rarity`, `top_rarity`, `not_a_duplicate`, `insufficient_funds`,
+    `pool_exhausted` (nothing left to grant at that tier — refused BEFORE any
+    write), `already_used` (a card was consumed by a concurrent request).
+  operationId: playerTcgForge
+  tags:
+    - public/auth
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [cards]
+          properties:
+            cards:
+              type: array
+              minItems: 1
+              maxItems: 10
+              description: The duplicates to consume, by pack and position.
+              items:
+                type: object
+                required: [packId, position]
+                properties:
+                  packId:
+                    type: string
+                    format: uuid
+                  position:
+                    type: integer
+  responses:
+    '201':
+      description: Card forged.
+      content:
+        application/json: {}
+    '400':
+      description: '`code: invalid_body`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '405':
+      description: Method not allowed.
+      content:
+        application/json: {}
+    '409':
+      description: Forge refused; see `code`.
+      content:
+        application/json: {}
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

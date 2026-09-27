@@ -1,0 +1,107 @@
+get:
+  tags:
+    - public/auth
+  summary: Showcase cosmetics — catalogue, owned keys and what is equipped.
+  description: |
+    Returns the catalogue ALONGSIDE the state, so the screen does not hold a
+    second copy of prices and labels: a price tuned in the coin scale arrives on
+    its own.
+  operationId: playerTcgCosmeticsGet
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Catalogue + owned + equipped.
+      content:
+        application/json: {}
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - public/auth
+  summary: Buy a showcase cosmetic with earned coins.
+  description: |
+    Charges once, and refuses a second purchase of the same item
+    (`already_owned`): charging twice for something you can only own once is the
+    surest way to lose trust in a currency, and it leaves no trace anywhere but
+    in a balance.
+
+    Debit and unlock happen inside one transaction (`tcg_buy_cosmetic`), which
+    also locks the showcase row so two simultaneous purchases cannot both pass
+    the "already owned" check.
+
+    Coins are EARNED, never bought: no euro path is opened here, directly or
+    otherwise (cf. docs/TCG.md §4).
+  operationId: playerTcgCosmeticsBuy
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [key]
+          properties:
+            key:
+              type: string
+              description: Catalogue key (see GET).
+  responses:
+    '201':
+      description: Bought; returns the new balance.
+      content:
+        application/json: {}
+    '400':
+      description: '`code: unknown_cosmetic`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '409':
+      description: '`code: already_owned` or `insufficient_funds`.'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+put:
+  tags:
+    - public/auth
+  summary: Equip (or clear) a showcase cosmetic.
+  description: |
+    NEVER charges. Changing your look is free, and so is going back to the
+    default (`null`): if equipping cost anything, every try would be paid for
+    and nobody would try — which empties the sink of its purpose.
+
+    `null` clears the slot and depends on nothing: a removal that could fail
+    would leave in place exactly what is being removed.
+  operationId: playerTcgCosmeticsEquip
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            frame:
+              type: [string, 'null']
+            background:
+              type: [string, 'null']
+  responses:
+    '200':
+      description: Equipped.
+      content:
+        application/json: {}
+    '400':
+      description: '`code: invalid_body`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '409':
+      description: '`code: not_unlocked`.'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

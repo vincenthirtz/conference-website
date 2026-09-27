@@ -67,6 +67,35 @@ export const RECYCLE_REFUND_COINS = Math.max(
   Math.round(BOOSTER_PRICE_COINS / 10)
 );
 
+/**
+ * Nombre de DOUBLONS d'une même rareté que la forge consomme.
+ *
+ * Trois, et pas cinq : il faut que le geste soit atteignable. Au 2026-09-27,
+ * 235 cartes avaient été tirées pour 63 comptes — exiger cinq doublons d'une
+ * même rareté aurait rendu la forge théorique pour presque tout le monde, et
+ * un débit qu'on ne peut pas déclencher ne dépense rien.
+ */
+export const FORGE_DUPLICATES_REQUIRED = 3;
+
+/**
+ * Pièces prélevées par une forge, EN PLUS des doublons.
+ *
+ * La moitié d'un booster. Le calcul se défend dans les deux sens :
+ *   - ce qu'on abandonne (3 doublons recyclables = 90 pièces, plus 150 payées)
+ *     vaut 240 pièces, contre 300 pour un booster de cinq cartes ;
+ *   - mais la forge rend UNE carte CHOISIE dans un palier supérieur, et que
+ *     l'on ne possède pas. On paie moins cher, pour moins de cartes, avec une
+ *     certitude que le booster n'offre pas.
+ *
+ * Défavorable au volume, favorable à la collection : c'est exactement ce qui
+ * manquait. Les séries stagnent (la meilleure collection réunit 3 équipes sur
+ * 10) et les doublons s'entassent, le recyclage n'ayant servi qu'une fois.
+ *
+ * DÉRIVÉ, comme ses voisins : régler le prix du booster règle la forge, et les
+ * deux ne peuvent pas diverger.
+ */
+export const FORGE_FEE_COINS = Math.max(1, Math.round(BOOSTER_PRICE_COINS / 2));
+
 /** Ce que rapporte une victoire, selon la nature de la rencontre. */
 export function coinsForWin(isScrim: boolean): number {
   return isScrim ? SCRIM_WIN_COINS : MATCH_WIN_COINS;

@@ -24,7 +24,7 @@
 //     MOINS autant de cartes qu'il y en avait à l'écran : revenir à la première
 //     page ferait disparaître ce qu'on était en train de regarder.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
@@ -86,6 +86,20 @@ const FanartSubmitPanel = dynamic(
 );
 const TcgShowcaseEditor = dynamic(
   () => import('@/components/tcg/TcgShowcaseEditor'),
+  { ssr: false, loading: PanelLoading }
+);
+/**
+ * La forge et les habillages : deux DÉBITS, ajoutés le 2026-09-27 parce que la
+ * monnaie ne se dépensait pas (10 805 pièces gagnées, zéro dépensée). Chargés à
+ * la demande comme leurs voisins — ils ne concernent que qui fait défiler
+ * jusqu'ici.
+ */
+const TcgForgePanel = dynamic(() => import('@/components/tcg/TcgForgePanel'), {
+  ssr: false,
+  loading: PanelLoading,
+});
+const TcgCosmeticsPanel = dynamic(
+  () => import('@/components/tcg/TcgCosmeticsPanel'),
   { ssr: false, loading: PanelLoading }
 );
 /** Même chargeur pour le rendu et pour le préchargement (cf. plus bas). */
@@ -343,6 +357,21 @@ function subjectKey(card: DrawnCard | CollectionCard): string {
   if (card.kind === 'fanart') return `f-${card.fanartId}`;
   if (card.kind === 'mascot') return `x-${card.slug}`;
   return `t-${card.teamId}`;
+}
+
+/**
+ * Le nom d'une carte, en une ligne.
+ *
+ * Repli sur l'identifiant plutôt que sur une chaîne vide : dans une liste où
+ * l'on choisit ce qu'on va DÉTRUIRE, une ligne sans nom est pire qu'une ligne
+ * laide.
+ */
+function cardLabel(card: CollectionCard): string {
+  if (card.kind === 'player') return card.displayName ?? card.userId;
+  if (card.kind === 'team') return card.name ?? card.teamId;
+  if (card.kind === 'map') return card.name ?? card.slug;
+  if (card.kind === 'fanart') return card.title ?? card.fanartId;
+  return card.name ?? card.slug;
 }
 
 /** La face à passer à `TcgCard`, pour les deux formes de carte. */
@@ -645,6 +674,28 @@ function PlayerTcg() {
    * moins autant, pour qu'une action faite en bas d'une longue collection ne
    * ramène pas à la première page.
    */
+  /**
+   * Ce que la forge peut consommer : les sujets dont l'API a désigné un
+   * exemplaire cédable (`recyclable`).
+   *
+   * On projette ICI plutôt que de passer `CollectionCard` au panneau : celui-ci
+   * n'a que faire des figurines, des crédits d'artiste et des engagements
+   * d'échange, et l'y exposer le rendrait solidaire d'un type qui bouge.
+   */
+  const forgeCards = useMemo(
+    () =>
+      cards
+        .filter((card) => card.recyclable)
+        .map((card) => ({
+          key: subjectKey(card),
+          label: cardLabel(card),
+          rarity: card.rarity,
+          count: card.count,
+          recyclable: card.recyclable ?? null,
+        })),
+    [cards]
+  );
+
   const load = useCallback(
     async (keepCards = 0) => {
       try {
@@ -1665,6 +1716,16 @@ function PlayerTcg() {
         {loadState === 'ready' && (
           <TcgShowcaseEditor className="mt-8" reloadToken={totals.total} />
         )}
+
+        {/* Les deux débits, après la collection : on ne propose de dépenser
+            qu'à qui a déjà vu ce qu'il possède. */}
+        <TcgForgePanel
+          className="mt-8"
+          cards={forgeCards}
+          balance={balance}
+          onForged={() => void load()}
+        />
+        <TcgCosmeticsPanel className="mt-8" onChanged={() => void load()} />
 
         <p className="mt-10 text-xs text-gray-500">
           <Link href="/player/profile" className="hover:text-gray-300">

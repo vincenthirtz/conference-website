@@ -40965,6 +40965,67 @@
     ]
    }
   },
+  "GET /api/player/tcg/cosmetics": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "catalog": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "key": {
+         "type": "string"
+        },
+        "kind": {
+         "type": "string",
+         "enum": [
+          "background",
+          "frame"
+         ]
+        },
+        "label": {
+         "type": "string"
+        },
+        "priceCoins": {
+         "type": "number"
+        }
+       },
+       "required": [
+        "key",
+        "kind",
+        "label",
+        "priceCoins"
+       ]
+      }
+     },
+     "owned": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "frame": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "background": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "catalog",
+     "owned",
+     "frame",
+     "background"
+    ]
+   }
+  },
   "GET /api/player/tcg/fanart": {
    "200": {
     "anyOf": [
@@ -67319,6 +67380,54 @@
     ]
    }
   },
+  "POST /api/player/tcg/cosmetics": {
+   "201": {
+    "type": "object",
+    "properties": {
+     "key": {
+      "type": "string"
+     },
+     "balance": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "key",
+     "balance"
+    ]
+   }
+  },
+  "POST /api/player/tcg/forge": {
+   "201": {
+    "type": "object",
+    "properties": {
+     "packId": {
+      "type": "string"
+     },
+     "userId": {
+      "type": "string"
+     },
+     "rarity": {
+      "type": "string",
+      "enum": [
+       "common",
+       "epic",
+       "legendary",
+       "rare"
+      ]
+     },
+     "balance": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "packId",
+     "userId",
+     "rarity",
+     "balance"
+    ]
+   }
+  },
   "POST /api/player/tcg/packs": {
    "200": {
     "type": "object",
@@ -70315,6 +70424,12 @@
      "email",
      "broadcastEmail"
     ]
+   }
+  },
+  "PUT /api/player/tcg/cosmetics": {
+   "200": {
+    "type": "object",
+    "additionalProperties": {}
    }
   },
   "PUT /api/player/tcg/showcase": {
