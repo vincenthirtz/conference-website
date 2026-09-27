@@ -16,6 +16,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { formatSiteDate } from '@/utils/timezone';
 import nsTournamentsList from '@/lib/i18n/locales/fr/tournamentsList';
+import { tournamentRegisterHref } from '@/utils/tournaments/registerHref';
 
 export type Tournament = {
   id: string;
@@ -28,6 +29,8 @@ export type Tournament = {
   start_date: string | null;
   end_date: string | null;
   max_teams: number | null;
+  /** Inscription individuelle : change la cible du bouton « S'inscrire ». */
+  solo_mode?: boolean | null;
 };
 
 export type TournamentsListProps = {
@@ -483,7 +486,7 @@ function TournamentCard({ tournament, status }: TournamentCardProps) {
             <div className="flex items-center gap-3">
               {status !== 'past' && (
                 <Link
-                  href={`/team/create?tournament=${tournament.id}`}
+                  href={tournamentRegisterHref(tournament)}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <span className="px-3 py-1 rounded-full text-[11px] font-semibold bg-gradient-to-r from-[var(--color-green)] to-[var(--color-yellow)] text-black hover:from-[var(--color-green-light)] hover:to-[var(--color-yellow-light)] transition-colors">

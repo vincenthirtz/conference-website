@@ -185,6 +185,7 @@ import enPlayerMatch from './playerMatch';
 import enPlayerAgenda from './playerAgenda';
 import enPlayerMyTeams from './playerMyTeams';
 import enRejoindrePage from './rejoindrePage';
+import enSoloSignup from './soloSignup';
 import enRecrutementPage from './recrutementPage';
 import enProductionPartner from './productionPartner';
 import enPalmaresPage from './palmaresPage';
@@ -358,6 +359,7 @@ const enDict = {
   playerAgenda: enPlayerAgenda,
   playerMyTeams: enPlayerMyTeams,
   rejoindrePage: enRejoindrePage,
+  soloSignup: enSoloSignup,
   recrutementPage: enRecrutementPage,
   productionPartner: enProductionPartner,
   palmaresPage: enPalmaresPage,

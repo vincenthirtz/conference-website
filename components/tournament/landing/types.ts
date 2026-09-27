@@ -16,6 +16,12 @@ export type LandingTournament = {
   status: string;
   format?: string | null;
   max_teams?: number | null;
+  /**
+   * Inscription individuelle (`tournaments.solo_mode`) : le bouton
+   * « S'inscrire » vise alors le formulaire solo et non le wizard d'équipe
+   * (cf. `utils/tournaments/registerHref`).
+   */
+  solo_mode?: boolean | null;
   start_date?: string | null;
   end_date?: string | null;
   /**

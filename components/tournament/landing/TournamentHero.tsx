@@ -21,6 +21,7 @@ import { COMMUNITY_LINKS } from './types';
 import type { HubMatch } from '@/utils/tournament/liveHub';
 import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 import { gameLabel } from '@/config/games';
+import { tournamentRegisterHref } from '@/utils/tournaments/registerHref';
 
 export default function TournamentHero({
   tournament,
@@ -60,7 +61,7 @@ export default function TournamentHero({
     tournament.end_date,
     lang
   );
-  const registerHref = `/team/create?tournament=${tournament.id}`;
+  const registerHref = tournamentRegisterHref(tournament);
   const teamsHref = `${tournamentPath}/teams`;
 
   const isFull = placesRemaining === 0;

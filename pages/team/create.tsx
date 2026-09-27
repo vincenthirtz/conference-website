@@ -270,6 +270,7 @@ export default function PublicCreateTeamPage() {
     refreshCaptcha();
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `router` volontairement exclu — l'objet change à chaque navigation et relancerait cette requête pour rien ; seul l'identifiant du tournoi doit déclencher le chargement.
   useEffect(() => {
     if (!tournamentIdParam) return;
     fetch(`/api/tournaments`)
@@ -285,9 +286,20 @@ export default function PublicCreateTeamPage() {
                 /** Champs d'inscription personnalisés ; absents des versions
                  *  antérieures de l'API, d'où l'`Array.isArray` plus bas. */
                 registration_fields?: RegistrationField[];
+                /** Inscription individuelle : ce wizard n'est pas le bon écran. */
+                solo_mode?: boolean;
               }[]
             | undefined
         )?.find((t) => t.id === tournamentIdParam);
+        // Tournoi en inscription individuelle : ce wizard demande un nom
+        // d'équipe, un roster et un capitanat — trois questions sans objet.
+        // On renvoie vers le formulaire solo plutôt que de laisser quelqu'un
+        // créer une équipe d'une joueuse à la main. `replace` et non `push` :
+        // le retour arrière doit ramener d'où l'on vient, pas ici.
+        if (found?.solo_mode === true) {
+          void router.replace(`/tournament/${found.id}/inscription-solo`);
+          return;
+        }
         if (found) {
           setTournamentInfo({
             id: found.id,

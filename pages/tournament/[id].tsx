@@ -55,6 +55,7 @@ import {
   type BracketTabMode,
 } from '@/utils/stages/bracketStage';
 import { gameLabel } from '@/config/games';
+import { tournamentRegisterHref } from '@/utils/tournaments/registerHref';
 
 type TournamentPageProps = {
   tournament: LandingTournament & {
@@ -116,7 +117,7 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
     );
 
   const tournamentColumns =
-    'id, name, short_name, slug, game, status, format, max_teams, start_date, end_date, rules_url, logo_url, banner_url, description_info, schedule_details, schedule_rules, format_details, visibility, created_at, updated_at';
+    'id, name, short_name, slug, game, status, format, max_teams, solo_mode, start_date, end_date, rules_url, logo_url, banner_url, description_info, schedule_details, schedule_rules, format_details, visibility, created_at, updated_at';
 
   const tenantId = DEFAULT_TENANT_ID;
 
@@ -431,7 +432,7 @@ export default function TournamentPage({
   standings,
 }: Omit<TournamentPageProps, 'seo'>) {
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
-  const registerHref = `/team/create?tournament=${tournament.id}`;
+  const registerHref = tournamentRegisterHref(tournament);
 
   const phase = computePhase(tournament.status);
   const maxTeams = tournament.max_teams ?? null;
@@ -680,7 +681,7 @@ function buildTournamentSeo(
           offers: {
             '@type': 'Offer',
             availability: 'InStock',
-            url: `${SEO_BASE_URL}/team/create?tournament=${tournament.id}`,
+            url: `${SEO_BASE_URL}${tournamentRegisterHref(tournament)}`,
             price: '0',
             priceCurrency: 'EUR',
           },

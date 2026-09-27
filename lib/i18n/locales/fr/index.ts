@@ -45,6 +45,7 @@ import nsNavbar from './navbar';
 import nsFooter from './footer';
 import nsNewsletterSignup from './newsletterSignup';
 import nsRejoindrePage from './rejoindrePage';
+import nsSoloSignup from './soloSignup';
 import nsRecrutementPage from './recrutementPage';
 import nsNewsletterMerci from './newsletterMerci';
 import nsCookieBanner from './cookieBanner';
@@ -218,6 +219,7 @@ export const frDict = {
   footer: nsFooter.fr,
   newsletterSignup: nsNewsletterSignup.fr,
   rejoindrePage: nsRejoindrePage.fr,
+  soloSignup: nsSoloSignup.fr,
   recrutementPage: nsRecrutementPage.fr,
   newsletterMerci: nsNewsletterMerci.fr,
   cookieBanner: nsCookieBanner.fr,
