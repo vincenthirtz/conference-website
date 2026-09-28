@@ -27,7 +27,8 @@ export type EntityKey =
   | 'scrim'
   | 'planning'
   | 'league'
-  | 'event';
+  | 'event'
+  | 'caster';
 
 /**
  * Pages d'entité : leur motif, la liste dont elles relèvent dans le menu, et
@@ -70,6 +71,14 @@ export const ENTITY_ROUTES: {
   { pattern: '/admin/leagues/[id]', list: '/admin/leagues', key: 'league' },
   // Déroulé d'émission : sa liste est le run-of-show (Diffusion › Run-of-show).
   { pattern: '/admin/events/[runId]', list: '/admin/events', key: 'event' },
+  // Fiche d'une casteuse : sa liste vit dans Diffusion › Casteuses. Sans
+  // cette entrée, `/admin/cast-members` n'étant plus une entrée de menu, la
+  // fiche n'avait AUCUN fil d'Ariane.
+  {
+    pattern: '/admin/cast-members/[id]',
+    list: '/admin/diffusion/casteuses',
+    key: 'caster',
+  },
 ];
 
 /**

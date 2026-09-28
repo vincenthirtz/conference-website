@@ -33,8 +33,11 @@ export default function DiffusionCasteusesPage(_props: StaffProps) {
         <title>{t.castersPageTitle}</title>
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
           <DiffusionTabsNav active="casters" />
+          {/* Titre de PAGE pour les lecteurs d'écran : le panneau, conçu pour
+              un onglet du hub Association, ne porte qu'un h2. */}
+          <h1 className="sr-only">{t.tabCasters}</h1>
           <CastMembersListPanel />
         </div>
       </div>

@@ -1,7 +1,7 @@
 // pages/admin/broadcast/live.tsx
 // Lot 7 — Live Broadcast Console.
 // Single-pane view of the active event_run + current segment + casters +
-// stream URL + overlay state. Manager+ can edit on_air / lower_third / PiP.
+// stream URL + overlay state. manage_broadcast edits on_air / lower_third / PiP.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
@@ -427,7 +427,7 @@ function BroadcastLivePage({ staff }: StaffProps) {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-8">
           <LiveConsoleHeader
             heading={t.heading}
             subtitle={format(t.subtitle, { seconds: POLL_MS / 1000 })}

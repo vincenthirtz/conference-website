@@ -150,7 +150,7 @@ export default function DiffusionOverlaysPage({
         <title>{t.pageTitle}</title>
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
           <DiffusionTabsNav active="overlays" />
           <h1 className="text-3xl font-extrabold tracking-tight">
             {t.heading}

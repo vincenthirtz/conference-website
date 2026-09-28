@@ -26,6 +26,7 @@ export default {
   crumbPlanning: 'Planning',
   crumbLeague: 'League',
   crumbEvent: 'Event',
+  crumbCaster: 'Caster',
   logout: 'Log out',
   alertsActive_one: '{count} active alert',
   alertsActive_other: '{count} active alerts',

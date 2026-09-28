@@ -41,6 +41,7 @@ export default function AdminBreadcrumbs({
         planning: t.crumbPlanning,
         league: t.crumbLeague,
         event: t.crumbEvent,
+        caster: t.crumbCaster,
       },
     }
   );

@@ -587,7 +587,7 @@ function RegiePage({ staff }: StaffProps) {
         <div
           className={`${
             wide ? 'max-w-6xl' : 'max-w-2xl'
-          } mx-auto px-4 sm:px-6 pt-16 pb-12`}
+          } mx-auto px-4 sm:px-6 pt-header pb-12`}
         >
           {children}
         </div>

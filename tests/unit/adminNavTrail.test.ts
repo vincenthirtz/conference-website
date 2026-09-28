@@ -74,6 +74,7 @@ const LABELS = {
     planning: 'Planning',
     league: 'Ligue',
     event: 'Déroulé',
+    caster: 'Casteuse',
   },
 } as const;
 

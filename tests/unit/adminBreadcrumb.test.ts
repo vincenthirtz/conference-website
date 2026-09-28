@@ -20,12 +20,25 @@ const labels = {
     planning: 'Planning',
     league: 'Ligue',
     event: 'Événement',
+    caster: 'Casteuse',
   },
 };
 const crumb = (pathname: string, asPath: string) =>
   adminBreadcrumb(pathname, asPath, ADMIN_NAV, labels);
 
 describe('adminBreadcrumb', () => {
+  it('fiche d’une casteuse : on remonte à Diffusion › Casteuses', () => {
+    // Sans entrée dédiée, la fiche n'avait AUCUN fil : `/admin/cast-members`
+    // n'est plus une entrée de menu depuis que la liste a rejoint la diffusion.
+    const c = crumb('/admin/cast-members/[id]', '/admin/cast-members/abc');
+    expect(c.map((x) => x.label)).toEqual([
+      'Administration',
+      'Diffusion',
+      'Casteuses',
+    ]);
+    expect(c.at(-1)?.href).toBe('/admin/diffusion/casteuses');
+  });
+
   it('résultats d’un tournoi : on remonte au tournoi et à la liste', () => {
     const c = crumb(
       '/admin/tournament/[id]/stats',

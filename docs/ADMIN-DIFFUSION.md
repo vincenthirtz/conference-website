@@ -104,3 +104,25 @@ gels ont suivi la baisse (1038 → 959, 837 → 813).
 | 8 | Les casteuses rejoignent la diffusion (+ redirections en un saut) |
 | 9 | Les chaînes Twitch rejoignent la diffusion |
 | 10 | Tests e2e et cette doc |
+
+## Deuxième chantier (10 lots, même jour)
+
+Issu d'un audit de l'espace (16 constats vérifiés dans le code).
+
+| Lot | Correctif |
+|---|---|
+| 1 | Plus de bouton vers un 403 : lien Director seulement avec `manage_broadcast` ; carte TCG sans lien pour qui n'a pas `manage_tcg` ; « forcer le jour » seulement avec `manage_tournaments` |
+| 2 | Prédictions et commandes Twitch (`TwitchDrivePanels`) montées seulement avec `manage_broadcast` — elles répondaient 403 aux casteuses et sondaient pour rien |
+| 3 | Un run **en direct** ne se supprime plus : 409 `run_live` côté API, bouton désactivé |
+| 4 | Director relié : Console live, Cockpit, URL `/overlay/<run>` (copier, ouvrir) ; fil d'Ariane vers le run-of-show |
+| 5 | Cockpit et Scènes sur `withStaffPage('caster')` (gates faits main supprimés) ; démarrer/clore/piloter au **droit** `manage_broadcast`, y compris `/api/admin/broadcast/state` ; `next=` vers la page demandée pour tout visiteur non connecté |
+| 6 | Une panne ne ressemble plus à une liste vide (Casteuses, Chaînes Twitch : erreur + Réessayer) ; compteurs du run-of-show justes sous filtre |
+| 7 | `useVisiblePoll` : relecture au retour sur l'onglet (cockpit, director) ; la console live ignore les réponses périmées |
+| 8 | Overlays : « Ouvrir » par source, échec de copie signalé, tournoi gardé dans l'URL |
+| 9 | Director traduit (« Cue composer », « Waves »…) ; `aria-label` du « × » ; `role="alert"` ; statut Twitch annoncé seul |
+| 10 | Même marge haute (`pt-header`) partout ; onglets et vrai lien retour sur les fiches ; fil d'Ariane de la fiche casteuse ; `h1` de la page Casteuses |
+
+**Hors périmètre, notés** : un indicateur « overlay regardé » demanderait un
+battement de cœur côté overlay (inexistant) ; les raccourcis clavier de la
+console live et le point « run en direct » dans la barre d'onglets restent à
+faire.

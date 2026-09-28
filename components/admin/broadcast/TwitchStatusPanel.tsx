@@ -181,9 +181,7 @@ export default function TwitchStatusPanel() {
   // Chat Twitch (host DIFFÉRENT : www.twitch.tv, pas player.twitch.tv). Reste
   // consultable même hors live → affiché indépendamment du statut. `darkpopout`
   // = thème sombre cohérent avec la console admin.
-  // ⚠️ CSP : proxy.ts frame-src n'autorise que player.twitch.tv, PAS
-  // www.twitch.tv → l'iframe sera bloquée tant que la directive n'est pas
-  // complétée (signalé au coordinateur, hors périmètre de ce widget).
+  // CSP : proxy.ts frame-src autorise player.twitch.tv ET www.twitch.tv.
   const chatSrc = parent
     ? `https://www.twitch.tv/embed/${encodeURIComponent(
         primaryLogin

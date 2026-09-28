@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
+import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
@@ -126,11 +128,11 @@ function AdminCastMemberEditPage(_props: Props) {
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12">
           <AdminBreadcrumbs />
+          <DiffusionTabsNav active="casters" />
           {/* Header */}
           <div className="mb-8">
-            <button
-              type="button"
-              onClick={() => router.push('/admin/diffusion/casteuses')}
+            <Link
+              href="/admin/diffusion/casteuses"
               className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
             >
               <svg
@@ -147,7 +149,7 @@ function AdminCastMemberEditPage(_props: Props) {
                 />
               </svg>
               {t.back}
-            </button>
+            </Link>
 
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
               {t.heading}

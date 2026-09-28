@@ -27,7 +27,8 @@ const EMPTY_FORM = {
 
 /**
  * Création d'une casteuse dans une modale, ouverte depuis la liste
- * (`/admin/cast-members`). Remplace l'ancienne page `/admin/cast-members/new`.
+ * (Diffusion › Casteuses, `/admin/diffusion/casteuses`, `?new=1`). Remplace
+ * l'ancienne page `/admin/cast-members/new`.
  */
 export default function CastMemberFormModal({
   open,

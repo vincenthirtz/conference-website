@@ -25,6 +25,7 @@ export default ns('adminTopBar', {
   crumbPlanning: 'Planning',
   crumbLeague: 'Ligue',
   crumbEvent: 'Événement',
+  crumbCaster: 'Casteuse',
   logout: 'Déconnexion',
   alertsActive_one: '{count} alerte active',
   alertsActive_other: '{count} alertes actives',
