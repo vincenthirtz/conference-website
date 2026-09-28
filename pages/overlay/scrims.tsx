@@ -33,6 +33,7 @@ import {
 } from '@/components/overlay/match/UpcomingScrimsSource';
 import type { OverlayScrimsResponse } from '@/pages/api/overlay/scrims';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
+import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 
 function firstParam(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
@@ -52,6 +53,8 @@ function parseScale(raw: string | undefined): number {
 
 export default function ScrimsOverlayPage() {
   const router = useRouter();
+  // Signal de présence (Diffusion › Overlays : « affichée »).
+  useOverlayHeartbeat('scrims');
   const t = useT(nsOverlay);
   const locale = useLocale();
 

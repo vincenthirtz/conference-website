@@ -44,6 +44,7 @@ import {
   parseGoalCents,
 } from '@/utils/overlay/donAlert';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
+import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 
 /** Logo de l'association, pour son propre espace (branding nul). */
 const DEFAULT_LOGO_SRC = '/img/logos/2026-logo.png';
@@ -105,6 +106,8 @@ function useDemoFeed(
 
 export default function DonationAlertOverlayPage() {
   const router = useRouter();
+  // Signal de présence (Diffusion › Overlays : « affichée »).
+  useOverlayHeartbeat('donAlert');
   const t = useT(nsOverlay);
 
   const demo = firstParam(router.query.demo) === '1';

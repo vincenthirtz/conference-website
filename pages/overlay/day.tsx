@@ -26,6 +26,7 @@ import { useDayOverlay } from '@/hooks/useDayOverlay';
 import { DayScheduleSource } from '@/components/overlay/match/DayScheduleSource';
 import { parseDayLimit } from '@/utils/overlay/dayOverlay';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
+import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 
 function firstParam(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
@@ -39,6 +40,8 @@ function parseScale(raw: string | undefined): number {
 
 export default function DayOverlayPage() {
   const router = useRouter();
+  // Signal de présence (Diffusion › Overlays : « affichée »).
+  useOverlayHeartbeat('day');
   const t = useT(nsOverlay);
 
   const tournament = firstParam(router.query.tournament)?.trim() || null;

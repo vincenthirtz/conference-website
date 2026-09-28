@@ -26,6 +26,7 @@ import { DEFAULT_OVERLAY_ACCENT } from '@/components/overlay/match/MatchSources'
 import { ScrimResultSource } from '@/components/overlay/match/ScrimResultSource';
 import type { OverlayScrimResultResponse } from '@/pages/api/overlay/scrim-result';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
+import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 
 function firstParam(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
@@ -45,6 +46,8 @@ function parseScale(raw: string | undefined): number {
 
 export default function ScrimResultOverlayPage() {
   const router = useRouter();
+  // Signal de présence (Diffusion › Overlays : « affichée »).
+  useOverlayHeartbeat('scrimResult');
   const t = useT(nsOverlay);
 
   const params = new URLSearchParams();

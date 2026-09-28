@@ -26,6 +26,7 @@ import { useT } from '@/lib/i18n/useT';
 import { stageStyle, useStageFit } from '@/hooks/useStageFit';
 import { DEFAULT_OVERLAY_ACCENT } from '@/components/overlay/match/MatchSources';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
+import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 
 const QR_SRC = '/images/qr.png';
 const LOGO_SRC = '/img/logos/2026-logo.png';
@@ -50,6 +51,8 @@ function parseScale(raw: string | undefined): number {
 
 export default function DonationOverlayPage() {
   const router = useRouter();
+  // Signal de présence (Diffusion › Overlays : « affichée »).
+  useOverlayHeartbeat('don');
   const t = useT(nsOverlay);
 
   const corner = firstParam(router.query.layout) === 'corner';

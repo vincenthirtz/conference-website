@@ -67,6 +67,7 @@ import {
 } from '@/utils/overlay/alertBox';
 import type { OverlayAlertsResponse } from '@/pages/api/overlay/alerts';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
+import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 
 /** Respiration entre deux alertes : elles ne doivent pas se coller. */
 const GAP_MS = 900;
@@ -95,6 +96,8 @@ const actif = (raw: string | undefined) => raw !== '0';
 
 export default function RegieOverlayPage() {
   const router = useRouter();
+  // Signal de présence (Diffusion › Overlays : « affichée »).
+  useOverlayHeartbeat('regie');
   const t = useT(nsOverlay);
   const locale = useLocale();
 

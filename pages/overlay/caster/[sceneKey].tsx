@@ -52,6 +52,7 @@ import { CasterPlayerOverlay } from '@/components/overlay/caster/CasterPlayerOve
 import { CasterLeaderboardOverlay } from '@/components/overlay/caster/CasterLeaderboardOverlay';
 import { CasterStandingsOverlay } from '@/components/overlay/caster/CasterStandingsOverlay';
 import { CasterCameraOverlay } from '@/components/overlay/caster/CasterCameraOverlay';
+import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 
 /** Filet de sécurité si le socket Realtime lâche en cours de show. */
 const POLL_MS = 15_000;
@@ -101,6 +102,12 @@ function SceneOverlay({ scene }: { scene: CasterScene }) {
 
 function CasterOverlayPage() {
   const router = useRouter();
+  // Signal de présence (Diffusion › Overlays : « affichée »).
+  useOverlayHeartbeat(
+    router.isReady && typeof router.query.sceneKey === 'string'
+      ? `caster:${router.query.sceneKey}`
+      : null
+  );
   const raw = router.query.sceneKey;
   const sceneKey = typeof raw === 'string' ? raw : '';
 

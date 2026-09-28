@@ -37,6 +37,7 @@ import { LIVE_OVERLAY_POLL_MS, useOverlayPoll } from '@/hooks/useOverlayPoll';
 import { PublicMvpSource } from '@/components/overlay/match/PublicMvpSource';
 import type { OverlayPublicMvpResponse } from '@/pages/api/overlay/mvp-public';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
+import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 
 /** Le violet du scrutin public, le même que l'embed Discord. */
 const DEFAULT_ACCENT = '#ba18ff';
@@ -69,6 +70,8 @@ function parseLimit(raw: string | undefined): number {
 
 export default function PublicMvpOverlayPage() {
   const router = useRouter();
+  // Signal de présence (Diffusion › Overlays : « affichée »).
+  useOverlayHeartbeat('mvpPublic');
   const t = useT(nsOverlay);
   const tenant = firstParam(router.query.tenant);
 

@@ -32,6 +32,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import PulseCanvas from '@/components/brand/PulseCanvas';
 import { useSeasonalLogo } from '@/lib/branding/useSeasonalLogo';
+import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 
 const DEFAULT_LOGO = '/img/logos/2026-logo.png';
 const DEFAULT_SIZE = 256;
@@ -67,6 +68,8 @@ export function parseLogo(raw: string | undefined): string {
 
 export default function LogoOverlayPage() {
   const router = useRouter();
+  // Signal de présence (Diffusion › Overlays : « affichée »).
+  useOverlayHeartbeat('logo');
 
   const size = parseSize(firstParam(router.query.size));
   const gapMs = parseGap(firstParam(router.query.gap));

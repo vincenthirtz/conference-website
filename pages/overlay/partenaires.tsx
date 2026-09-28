@@ -43,6 +43,7 @@ import {
   type PartnerRow,
 } from '@/utils/overlay/partnersOverlay';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
+import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 
 type PartnersApiResponse = { items: PartnerRow[] };
 
@@ -64,6 +65,8 @@ function parseScale(raw: string | undefined): number {
 
 export default function PartnersOverlayPage() {
   const router = useRouter();
+  // Signal de présence (Diffusion › Overlays : « affichée »).
+  useOverlayHeartbeat('partners');
   const t = useT(nsOverlay);
 
   // 15 min : c'est le cache de l'API, et la liste des partenaires ne bouge

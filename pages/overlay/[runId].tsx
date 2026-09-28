@@ -26,9 +26,12 @@ import {
   type OverlayBranding,
 } from '@/components/overlay/OverlayRenderer';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
+import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 
 function OverlayPage() {
   const router = useRouter();
+  // Signal de présence (Diffusion › Overlays : « affichée »).
+  useOverlayHeartbeat('run');
   const t = useT(nsOverlay);
   const runIdRaw = router.query.runId;
   const runId = typeof runIdRaw === 'string' ? runIdRaw : '';

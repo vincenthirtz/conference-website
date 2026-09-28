@@ -38,6 +38,7 @@ import { useTcgOverlayFeed } from '@/hooks/useTcgOverlayFeed';
 import TcgAnnouncement from '@/components/overlay/TcgAnnouncement';
 import type { OverlayPosition } from '@/utils/tcg/overlayThemeShape';
 import nsOverlayTcg from '@/lib/i18n/locales/fr/overlayTcg';
+import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 
 /** Jeton base64url ; même forme que celle admise par la route. */
 const TOKEN_RE = /^[A-Za-z0-9_-]{20,120}$/;
@@ -58,6 +59,8 @@ const ANCHOR: Record<OverlayPosition, string> = {
 
 export default function TcgOverlayPage() {
   const router = useRouter();
+  // Signal de présence (Diffusion › Overlays : « affichée »).
+  useOverlayHeartbeat('tcg');
   const t = useT(nsOverlayTcg);
 
   const raw = router.query.token;

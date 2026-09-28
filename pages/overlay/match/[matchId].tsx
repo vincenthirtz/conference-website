@@ -36,6 +36,7 @@ import {
   DEFAULT_OVERLAY_ACCENT,
 } from '@/components/overlay/match/MatchSources';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
+import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 
 function firstParam(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
@@ -57,6 +58,14 @@ function parseScale(raw: string | undefined): number {
 
 function MatchOverlayPage() {
   const router = useRouter();
+  // Signal de présence (Diffusion › Overlays : « affichée »).
+  useOverlayHeartbeat(
+    router.isReady
+      ? typeof router.query.source === 'string'
+        ? router.query.source
+        : 'match'
+      : null
+  );
   const t = useT(nsOverlay);
 
   const matchIdRaw = firstParam(router.query.matchId) ?? '';
