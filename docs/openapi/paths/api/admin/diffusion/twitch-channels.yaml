@@ -1,0 +1,24 @@
+get:
+  tags:
+    - admin/broadcast
+  summary: Chaînes Twitch actives de l'espace, en lecture seule (statut d'antenne).
+  description: |
+    Tout le staff (rôle caster et plus), espace du staff. `channel` et
+    `label` des chaînes actives — la route d'édition
+    (`/api/admin/twitch-channels`) reste réservée à `manage_broadcast`.
+  operationId: adminDiffusionTwitchChannels
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: '`{ items: { channel: string, label: string | null }[] }`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '405':
+      description: Méthode non autorisée (lecture seule).
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

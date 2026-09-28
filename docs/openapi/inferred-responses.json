@@ -3719,6 +3719,37 @@
     ]
    }
   },
+  "GET /api/admin/diffusion/twitch-channels": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "items": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "channel": {
+         "type": "string"
+        },
+        "label": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "channel",
+        "label"
+       ]
+      }
+     }
+    },
+    "required": [
+     "items"
+    ]
+   }
+  },
   "GET /api/admin/discord-logs": {
    "200": {
     "type": "object",

@@ -5,8 +5,9 @@
 // quitter la console.
 //
 // Contrats consommés (aucune écriture) :
-//  - GET /api/admin/twitch-channels → { items: TwitchChannelRow[] } (staff-scoped,
-//    résout le tenant depuis le contexte admin ; actives uniquement par défaut).
+//  - GET /api/admin/diffusion/twitch-channels → { items } : chaînes ACTIVES de
+//    l'espace du staff, lecture seule, ouverte au rôle caster (la route
+//    d'édition exigeait manage_broadcast et masquait le panneau aux casteuses).
 //  - GET /api/twitch/live?channels=a,b → { statuses: { <chan>: { live, title?,
 //    viewer_count? } } } ; 503 si TWITCH_CLIENT_ID/SECRET absents.
 //
@@ -26,33 +27,20 @@
 // Poll 60s VISIBILITY-GATÉ (comme le reste de la console) + refetch au retour
 // visible. Pas de realtime : le statut Twitch bouge lentement.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useTwitchLiveStatuses } from '@/hooks/useTwitchLiveStatuses';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminBroadcastLive from '@/lib/i18n/locales/admin-fr/adminBroadcastLive';
 
-type TwitchChannelRow = {
-  channel: string;
-  label: string | null;
-  is_active: boolean;
-};
-
-type LiveStatus = {
-  live: boolean;
-  title?: string;
-  viewer_count?: number;
-};
-
-const POLL_MS = 60_000;
+type TwitchChannelRow = { channel: string; label: string | null };
 
 export default function TwitchStatusPanel() {
   const t = useAdminT(nsAdminBroadcastLive);
-  const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { adminFetchJson } = useAdminFetch();
 
   // channels === null : chargement en cours. [] : aucune chaîne active (masqué).
   const [channels, setChannels] = useState<TwitchChannelRow[] | null>(null);
-  const [statuses, setStatuses] = useState<Record<string, LiveStatus>>({});
-  const [notConfigured, setNotConfigured] = useState(false);
   // `parent` du player Twitch : indisponible côté SSR, récupéré après hydratation
   // (comme LiveTwitchSection). Sans lui, Twitch refuse l'embed.
   const [parent, setParent] = useState<string | null>(null);
@@ -62,25 +50,22 @@ export default function TwitchStatusPanel() {
     if (typeof window !== 'undefined') setParent(window.location.hostname);
   }, []);
 
-  // Liste des logins actifs, jointe — sert de clé de dépendance stable au poll.
   const activeChannels = useMemo(
-    () => (channels ?? []).filter((c) => c.is_active && c.channel),
+    () => (channels ?? []).filter((c) => c.channel),
     [channels]
   );
-  const loginsKey = useMemo(
-    () => activeChannels.map((c) => c.channel.trim().toLowerCase()).join(','),
-    [activeChannels]
-  );
 
-  // 1) Chaînes du tenant (une seule fois). L'endpoint admin résout le tenant de
-  //    façon fiable et ne renvoie que les chaînes actives par défaut. En cas
-  //    d'échec on dégrade en « aucune chaîne » (widget masqué), jamais de crash.
+  // 1) Chaînes actives de l'espace (une seule fois), par la route LECTURE
+  //    SEULE de la diffusion : la route d'édition exigeait manage_broadcast,
+  //    et le panneau se masquait pour les casteuses, celles qui sont à
+  //    l'antenne. En cas d'échec : « aucune chaîne » (masqué), jamais de crash.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const json = await adminFetchJson<{ items: TwitchChannelRow[] }>(
-          '/api/admin/twitch-channels'
+          '/api/admin/diffusion/twitch-channels',
+          { skipAuthRedirect: true }
         );
         if (!cancelled) setChannels(json.items ?? []);
       } catch {
@@ -92,62 +77,11 @@ export default function TwitchStatusPanel() {
     };
   }, [adminFetchJson]);
 
-  // 2) Statuts live. adminFetch renvoie la Response brute → on inspecte le status
-  //    pour distinguer le 503 (« non configuré ») des autres erreurs (neutre).
-  const fetchStatuses = useCallback(
-    async (logins: string) => {
-      if (!logins) return;
-      try {
-        const res = await adminFetch(
-          `/api/twitch/live?channels=${encodeURIComponent(logins)}`,
-          { skipAuthRedirect: true }
-        );
-        if (res.status === 503) {
-          setNotConfigured(true);
-          return;
-        }
-        if (!res.ok) return; // état neutre : on garde le dernier statut connu.
-        const json = (await res.json()) as {
-          statuses?: Record<string, LiveStatus>;
-        };
-        setNotConfigured(false);
-        const map: Record<string, LiveStatus> = {};
-        Object.entries(json.statuses ?? {}).forEach(([ch, info]) => {
-          map[ch.toLowerCase()] = {
-            live: Boolean(info?.live),
-            title: info?.title,
-            viewer_count: info?.viewer_count,
-          };
-        });
-        setStatuses(map);
-      } catch {
-        // Réseau HS : on reste neutre (dernier statut affiché), pas de crash.
-      }
-    },
-    [adminFetch]
+  // 2) Statuts live : le hook partagé (60 s onglet visible, relecture au
+  //    retour, 503 = « non configuré », erreur = dernier statut conservé).
+  const { statuses, notConfigured } = useTwitchLiveStatuses(
+    activeChannels.map((c) => c.channel)
   );
-
-  useEffect(() => {
-    if (!loginsKey) return;
-    fetchStatuses(loginsKey);
-    function tick() {
-      if (
-        typeof document !== 'undefined' &&
-        document.visibilityState !== 'visible'
-      )
-        return;
-      fetchStatuses(loginsKey);
-    }
-    const handle = setInterval(tick, POLL_MS);
-    function onVisible() {
-      if (document.visibilityState === 'visible') fetchStatuses(loginsKey);
-    }
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      clearInterval(handle);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  }, [loginsKey, fetchStatuses]);
 
   // Chargement initial des chaînes : ligne discrète (pas d'écran blanc).
   if (channels === null) {
