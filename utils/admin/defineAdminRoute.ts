@@ -37,7 +37,6 @@
 
 import { randomUUID } from 'node:crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { z, type ZodType } from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { csrfCheck, resolveGuard, type StaffGuard } from '@/utils/staff';
@@ -51,7 +50,7 @@ import { logStaffAction, type StaffLogAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
 import type { AuthenticatedStaffContext } from '@/types/staff';
 import { AdminError, type AdminErrorBody, type AdminErrorCode } from './errors';
-import type { ServiceContext } from './serviceContext';
+import type { AdminDb, ServiceContext } from './serviceContext';
 
 /* -------------------------------------------------------------------------
  * Types publics
@@ -354,7 +353,9 @@ export function defineAdminRoute(def: AdminRouteDefinition): AdminRouteHandler {
 
         let auditDetails: AuditDetails | null = null;
         const ctx: AdminRouteContext = {
-          db: supabaseAdmin as SupabaseClient,
+          // `supabaseAdmin` reste non typé pour le code historique : seul le
+          // chemin des modules migrés reçoit le client typé.
+          db: supabaseAdmin as unknown as AdminDb,
           tenantId: st.tenantId,
           actor: { kind: 'staff', staffId: st.staff.id, userId: st.user.id },
           logger,

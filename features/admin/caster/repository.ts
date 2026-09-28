@@ -1,19 +1,9 @@
 // features/admin/caster/repository.ts
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-
-export type FinishedMatchRow = {
-  id: string;
-  round_name: string | null;
-  team1_id: string | null;
-  team2_id: string | null;
-  completed_at: string | null;
-  is_bye: boolean | null;
-  forfeit_team_id: string | null;
-};
+import type { AdminDb } from '@/utils/admin/serviceContext';
 
 export async function listFinishedMatches(
-  db: SupabaseClient,
+  db: AdminDb,
   tenantId: string,
   limit: number
 ) {
@@ -26,11 +16,11 @@ export async function listFinishedMatches(
     .eq('status', 'finished')
     .order('completed_at', { ascending: false, nullsFirst: false })
     .limit(limit);
-  return { rows: (data ?? []) as FinishedMatchRow[], error };
+  return { rows: data ?? [], error };
 }
 
 export async function teamNamesByIds(
-  db: SupabaseClient,
+  db: AdminDb,
   tenantId: string,
   ids: string[]
 ): Promise<Map<string, string>> {
@@ -41,7 +31,7 @@ export async function teamNamesByIds(
     .select('id, name')
     .eq('tenant_id', tenantId)
     .in('id', ids);
-  for (const t of (data ?? []) as Array<{ id: string; name: string }>) {
+  for (const t of data ?? []) {
     names.set(t.id, t.name);
   }
   return names;

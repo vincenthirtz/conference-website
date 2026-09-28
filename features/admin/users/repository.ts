@@ -1,6 +1,6 @@
 // features/admin/users/repository.ts
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { AdminDb } from '@/utils/admin/serviceContext';
 
 export type UserSearchRow = {
   id: string;
@@ -16,9 +16,11 @@ export type UserSearchRow = {
  * auth.users + battle_tag/username via team_members/profiles + jointure
  * équipe) — elle remplace 5+ requêtes et une boucle N+1 getUserById.
  */
-export async function searchUsers(db: SupabaseClient, query: string) {
+export async function searchUsers(db: AdminDb, query: string) {
   const { data, error } = await db.rpc('admin_search_users', {
     p_query: query,
   });
+  // Cast CONSERVÉ : le générateur type toute colonne d'un `RETURNS TABLE`
+  // comme non nulle ; `UserSearchRow` dit la vérité (nullable).
   return { rows: (data as UserSearchRow[] | null) ?? [], error };
 }

@@ -3,25 +3,20 @@
 // `tenantId` est un paramètre OBLIGATOIRE de chaque fonction : une requête
 // non scopée ne peut pas s'écrire par accident.
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { FREE_PLAYER_SELECT, type FreePlayerRow } from '@/utils/freePlayers';
+import type { AdminDb } from '@/utils/admin/serviceContext';
+import { FREE_PLAYER_SELECT } from '@/utils/freePlayers';
 
-export type FreePlayerRemovalRow = Pick<
-  FreePlayerRow,
-  'id' | 'source' | 'display_name' | 'discord_username'
->;
-
-export async function listByTenant(db: SupabaseClient, tenantId: string) {
+export async function listByTenant(db: AdminDb, tenantId: string) {
   const { data, error } = await db
     .from('free_players')
     .select(FREE_PLAYER_SELECT)
     .eq('tenant_id', tenantId)
     .order('marked_at', { ascending: false });
-  return { rows: (data ?? []) as FreePlayerRow[], error };
+  return { rows: data ?? [], error };
 }
 
 export async function findForRemoval(
-  db: SupabaseClient,
+  db: AdminDb,
   tenantId: string,
   id: string
 ) {
@@ -31,14 +26,10 @@ export async function findForRemoval(
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .maybeSingle();
-  return { row: (data ?? null) as FreePlayerRemovalRow | null, error };
+  return { row: data ?? null, error };
 }
 
-export async function deleteById(
-  db: SupabaseClient,
-  tenantId: string,
-  id: string
-) {
+export async function deleteById(db: AdminDb, tenantId: string, id: string) {
   const { error } = await db
     .from('free_players')
     .delete()

@@ -307,7 +307,7 @@ fautif, ni traduire.
 - [x] `requestId` dans l'en-tête `X-Request-Id`, dans le corps d'erreur et dans le log.
 - [ ] Le toast d'erreur côté client affiche le `requestId` (L10).
 
-### L5 · Types Supabase générés + fin du `select('*')` — 🟥 / L
+### L5 · Types Supabase générés + fin du `select('*')` — 🟨 TYPES LIVRÉS (2026-09-29) · `select('*')` en cours
 
 **Problème.** Aucun type de base généré : les lignes sont typées à la main (`types/admin.ts`,
 408 lignes) ou pas du tout. 101 `select('*')` en admin. Une colonne renommée casse en prod — et le
@@ -329,9 +329,24 @@ et la validation des colonnes par le mock.
   trou « colonne inexistante verte en test ».
 
 **Critères d'acceptation**
-- [ ] `tsc --noEmit` détecte une colonne inexistante dans un `.select()` d'une route migrée.
-- [ ] Le mock rejette un `select` sur une colonne absente du schéma généré.
-- [ ] Cliquet `select('*')` en admin : 101 → 0 à la fin du plan.
+- [x] [`types/database.generated.ts`](../types/database.generated.ts) (163 tables et vues),
+      exclu de biome ; [`databaseTypesFreshness.test.ts`](../tests/unit/databaseTypesFreshness.test.ts)
+      compare ses colonnes à `schema-snapshot.json`, table par table.
+- [x] **Typage progressif, pas big-bang** : `supabaseAdmin` reste non typé pour le code
+      historique ; seuls les modules migrés reçoivent `ctx.db: AdminDb`
+      (`SupabaseClient<Database>`). Typer le client global d'un coup aurait allumé des
+      centaines d'erreurs dans 700 fichiers.
+- [x] `tsc --noEmit` détecte une colonne inexistante dans un `.select()` d'un module migré —
+      vérifié par mutation : `column 'nom' does not exist on 'event_runs'`.
+- [x] Les casts `as X[]` des repositories retirés (ils auraient masqué l'erreur). Un seul
+      conservé, et commenté : le générateur type les colonnes d'un `RETURNS TABLE` comme non
+      nulles, ce qui est faux pour `admin_search_users`.
+- [x] Premier gain visible : le contrat de `diffusion/twitch-channels` disait `label` nullable,
+      la base dit `NOT NULL`.
+- [ ] Le mock rejette un `select` sur une colonne absente — **reporté** : `supabaseSelectSchema`
+      couvre déjà toute la base de code par lecture de source, et le client typé couvre les
+      modules ; changer le mock partagé par 700 tests n'apporte plus assez pour son risque.
+- [ ] Cliquet `select('*')` en admin : 102 → 0 à la fin du plan (au fil des lots 15–20).
 
 ### L6 · Schémas zod partagés (DTO client ↔ serveur) — 🟧 / M
 

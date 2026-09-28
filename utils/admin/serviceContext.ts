@@ -6,6 +6,7 @@
 // une route bot, un cron ou un test, sans mock HTTP.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database.generated';
 import type { Logger } from '@/utils/logger';
 
 export type ServiceActor =
@@ -13,8 +14,14 @@ export type ServiceActor =
   | { kind: 'bot' }
   | { kind: 'system' };
 
+/**
+ * Client typé par le schéma généré (lot L5) : un `.select('colonne')` sur une
+ * colonne inexistante ne compile pas, et les lignes lues sont typées.
+ */
+export type AdminDb = SupabaseClient<Database>;
+
 export type ServiceContext = {
-  db: SupabaseClient;
+  db: AdminDb;
   /** Tenant sur lequel TOUTE lecture/écriture est scopée. Jamais optionnel. */
   tenantId: string;
   actor: ServiceActor;

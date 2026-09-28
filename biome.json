@@ -13,7 +13,8 @@
       "!**/playwright-report",
       "!**/public",
       "!**/next-env.d.ts",
-      "!docs/openapi/inferred-responses.json"
+      "!docs/openapi/inferred-responses.json",
+      "!types/database.generated.ts"
     ]
   },
   "formatter": {
