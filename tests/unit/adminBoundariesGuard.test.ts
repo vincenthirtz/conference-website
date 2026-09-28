@@ -144,6 +144,30 @@ describe('frontières des modules features/admin', () => {
     expect(v).toEqual([]);
   });
 
+  it('TanStack Query ne sort pas de l’admin (bundle public intact)', () => {
+    // La librairie est autorisée pour l'admin seul (lot L10). Un import depuis
+    // une page publique, un composant partagé ou `_app` la ferait entrer dans
+    // le premier chargement de tout le site — sans erreur, sans alerte.
+    const allowed =
+      /^(pages[/\\]admin|features[/\\]admin|components[/\\]admin|tests)[/\\]/;
+    const offenders = [
+      'pages',
+      'components',
+      'hooks',
+      'utils',
+      'lib',
+      'features',
+    ]
+      .flatMap((d) => walk(d))
+      .filter((rel) => !allowed.test(rel))
+      .filter((rel) =>
+        fs
+          .readFileSync(path.join(ROOT, rel), 'utf8')
+          .includes('@tanstack/react-query')
+      );
+    expect(offenders).toEqual([]);
+  });
+
   it('les pages/api migrées ne font que réexporter leur module', () => {
     const api = walk('pages/api/admin')
       .map((rel) => ({
