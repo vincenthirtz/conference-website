@@ -122,7 +122,18 @@ Issu d'un audit de l'espace (16 constats vérifiés dans le code).
 | 9 | Director traduit (« Cue composer », « Waves »…) ; `aria-label` du « × » ; `role="alert"` ; statut Twitch annoncé seul |
 | 10 | Même marge haute (`pt-header`) partout ; onglets et vrai lien retour sur les fiches ; fil d'Ariane de la fiche casteuse ; `h1` de la page Casteuses |
 
-**Hors périmètre, notés** : un indicateur « overlay regardé » demanderait un
-battement de cœur côté overlay (inexistant) ; les raccourcis clavier de la
-console live et le point « run en direct » dans la barre d'onglets restent à
-faire.
+**Hors périmètre, noté** : un indicateur « overlay regardé » demanderait un
+battement de cœur côté overlay (inexistant).
+
+## Troisième chantier (8 lots)
+
+| Lot | Apport |
+|---|---|
+| 1 | Point rouge « en direct » sur Cockpit et Console live, depuis tout écran de la diffusion — `GET /api/admin/diffusion/live-status` (tout le staff, espace du staff) |
+| 2 | Badge « En direct » sur la liste des chaînes Twitch — `hooks/useTwitchLiveStatuses` |
+| 3 | Statut d'antenne Twitch visible des casteuses — `GET /api/admin/diffusion/twitch-channels` (lecture seule, rôle caster) |
+| 4 | Raccourcis clavier de la console live : Maj+1…6 scènes, Maj+A antenne, Maj+P PiP, « ? » aide — toujours avec Maj, jamais pendant une saisie |
+| 5 | Copie d'URL qui marche aussi en http local / dock OBS (`utils/clipboard.ts`, repli `execCommand`) |
+| 6 | Briques communes des panneaux Twitch (`twitchPanelUtils.tsx`) ; gel de `TwitchCommandsPanel` abaissé 1203 → 1172 |
+| 7 | Un seul formulaire casteuse (`CastMemberFields`) : image en champ texte (l'`url` refusait `/img/…`), libellés reliés aux champs |
+| 8 | Heure HH:MM du director mutualisée (`utils/director/clock.ts`) |
