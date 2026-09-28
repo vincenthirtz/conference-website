@@ -451,6 +451,58 @@ describe('GET /api/player/tcg/collection — agrégation', () => {
       'common',
     ]);
   });
+
+  it('sert une mascotte et une fan art sous LEUR type, jamais en équipe', async () => {
+    // Régression prod (2026-09-28) : la route n'avait de branche que pour
+    // joueuse, map et équipe. Les 7 mascottes tirées sortaient en « équipe »
+    // sans nom ni logo — et une fan art aurait subi le même sort.
+    const FANART = '44444444-4444-4444-8444-444444444443';
+    seedPack(PACK_A);
+    (store.tcg_fanart_cards ||= []).push({
+      id: FANART,
+      tenant_id: DEFAULT_TENANT_ID,
+      status: 'approved',
+      title: 'Aube sur Hanaoka',
+      artist_name: 'Mira',
+      artist_url: null,
+      image_path: 'tcg-fanart/mira.png',
+    });
+    (store.tcg_pack_cards ||= []).push(
+      {
+        pack_id: PACK_A,
+        position: 901,
+        subject_kind: 'mascot',
+        card_mascot_slug: 'pachimari',
+        rarity: 'rare',
+        is_foil: false,
+        recycled_at: null,
+      },
+      {
+        pack_id: PACK_A,
+        position: 902,
+        subject_kind: 'fanart',
+        card_fanart_id: FANART,
+        rarity: 'epic',
+        is_foil: false,
+        recycled_at: null,
+      }
+    );
+
+    const res = await getCollection();
+
+    expect(res.statusCode).toBe(200);
+    const byKind = Object.fromEntries(
+      res.body.cards.map((c: any) => [c.kind, c])
+    );
+    expect(byKind.team).toBeUndefined();
+    expect(byKind.mascot).toMatchObject({ slug: 'pachimari' });
+    expect(byKind.mascot.name).toBeTruthy();
+    expect(byKind.fanart).toMatchObject({
+      fanartId: FANART,
+      title: 'Aube sur Hanaoka',
+      artistName: 'Mira',
+    });
+  });
 });
 
 /* -------------------------------------------------------------------------- */

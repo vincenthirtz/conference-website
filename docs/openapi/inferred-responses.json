@@ -41446,6 +41446,10 @@
             },
             "slug": {},
             "name": {},
+            "fanartId": {},
+            "title": {},
+            "artistName": {},
+            "artistUrl": {},
             "teamId": {},
             "logoUrl": {},
             "cardImageUrl": {},
@@ -41529,6 +41533,10 @@
             "userId": {},
             "displayName": {},
             "figure": {},
+            "fanartId": {},
+            "title": {},
+            "artistName": {},
+            "artistUrl": {},
             "teamId": {},
             "logoUrl": {},
             "cardImageUrl": {},
@@ -41539,6 +41547,184 @@
             "slug",
             "name",
             "imageUrl",
+            "rarity",
+            "isFoil",
+            "count",
+            "recyclable",
+            "engagedCopies",
+            "recyclableEngaged"
+           ]
+          },
+          {
+           "type": "object",
+           "properties": {
+            "kind": {
+             "type": "string",
+             "const": "fanart"
+            },
+            "fanartId": {
+             "type": "string"
+            },
+            "title": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "artistName": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "artistUrl": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "imageUrl": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "rarity": {
+             "type": "string",
+             "enum": [
+              "common",
+              "epic",
+              "legendary",
+              "rare"
+             ]
+            },
+            "isFoil": {
+             "type": "boolean"
+            },
+            "count": {
+             "type": "number"
+            },
+            "recyclable": {
+             "type": [
+              "object",
+              "null"
+             ],
+             "properties": {
+              "packId": {
+               "type": "string"
+              },
+              "position": {
+               "type": "number"
+              }
+             },
+             "required": [
+              "packId",
+              "position"
+             ]
+            },
+            "engagedCopies": {
+             "type": "number"
+            },
+            "recyclableEngaged": {
+             "type": "boolean"
+            },
+            "userId": {},
+            "displayName": {},
+            "figure": {},
+            "slug": {},
+            "name": {},
+            "teamId": {},
+            "logoUrl": {},
+            "cardImageUrl": {},
+            "logoCredit": {}
+           },
+           "required": [
+            "kind",
+            "fanartId",
+            "title",
+            "artistName",
+            "artistUrl",
+            "imageUrl",
+            "rarity",
+            "isFoil",
+            "count",
+            "recyclable",
+            "engagedCopies",
+            "recyclableEngaged"
+           ]
+          },
+          {
+           "type": "object",
+           "properties": {
+            "kind": {
+             "type": "string",
+             "const": "mascot"
+            },
+            "slug": {
+             "type": "string"
+            },
+            "name": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "rarity": {
+             "type": "string",
+             "enum": [
+              "common",
+              "epic",
+              "legendary",
+              "rare"
+             ]
+            },
+            "isFoil": {
+             "type": "boolean"
+            },
+            "count": {
+             "type": "number"
+            },
+            "recyclable": {
+             "type": [
+              "object",
+              "null"
+             ],
+             "properties": {
+              "packId": {
+               "type": "string"
+              },
+              "position": {
+               "type": "number"
+              }
+             },
+             "required": [
+              "packId",
+              "position"
+             ]
+            },
+            "engagedCopies": {
+             "type": "number"
+            },
+            "recyclableEngaged": {
+             "type": "boolean"
+            },
+            "userId": {},
+            "displayName": {},
+            "imageUrl": {},
+            "figure": {},
+            "fanartId": {},
+            "title": {},
+            "artistName": {},
+            "artistUrl": {},
+            "teamId": {},
+            "logoUrl": {},
+            "cardImageUrl": {},
+            "logoCredit": {}
+           },
+           "required": [
+            "kind",
+            "slug",
+            "name",
             "rarity",
             "isFoil",
             "count",
@@ -41644,7 +41830,11 @@
             "userId": {},
             "displayName": {},
             "imageUrl": {},
-            "figure": {}
+            "figure": {},
+            "fanartId": {},
+            "title": {},
+            "artistName": {},
+            "artistUrl": {}
            },
            "required": [
             "kind",

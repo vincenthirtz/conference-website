@@ -38,12 +38,19 @@ import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 import { POOL_LIMIT } from '@/utils/tcg/drawPack';
-import { readPlayerFaces, readTeamFaces } from '@/utils/tcg/readCardFaces';
+import {
+  readFanartFaces,
+  readPlayerFaces,
+  readTeamFaces,
+} from '@/utils/tcg/readCardFaces';
 import { readMapFaces, MAP_POOL_SLUGS } from '@/utils/tcg/readMapFaces';
 import { cardSubjectKey, type TcgCardKind } from '@/utils/tcg/subjectKey';
 import { readOwnedCardRows } from '@/utils/tcg/readOwnedCards';
 import { readDrawPoolSizes } from '@/utils/tcg/readDrawPool';
-import { GAME_MASCOT_SLUGS } from '@/utils/tcg/gameMascots';
+import {
+  GAME_MASCOT_SLUGS,
+  gameMascotDisplayName,
+} from '@/utils/tcg/gameMascots';
 import { copyRef, readEngagedCopies } from '@/utils/tcg/engagedCards';
 import {
   compareCollectionOrder,
@@ -339,7 +346,7 @@ export default withAuthRoute(async function handler(
 
   // 4) Les faces — relues, jamais figées (retrait de consentement rétroactif),
   //    et SEULEMENT pour la page servie.
-  const [playerFaces, teamFaces, mapFaces] = await Promise.all([
+  const [playerFaces, teamFaces, mapFaces, fanartFaces] = await Promise.all([
     readPlayerFaces(
       tenantId,
       page.filter((a) => a.kind === 'player').map((a) => a.subjectId)
@@ -351,6 +358,10 @@ export default withAuthRoute(async function handler(
     // Pas de `tenantId` : les maps ne sont pas des données de tenant mais un
     // registre commun, lu en mémoire (cf. `utils/tcg/readMapFaces.ts`).
     readMapFaces(page.filter((a) => a.kind === 'map').map((a) => a.subjectId)),
+    readFanartFaces(
+      tenantId,
+      page.filter((a) => a.kind === 'fanart').map((a) => a.subjectId)
+    ),
   ]);
 
   /**
@@ -412,6 +423,40 @@ export default withAuthRoute(async function handler(
         slug: a.subjectId,
         name: face?.name ?? null,
         imageUrl: face?.imageUrl ?? null,
+        rarity: a.rarity,
+        isFoil: a.hasFoil,
+        count: a.count,
+        recyclable: recyclableOf(a),
+        engagedCopies: a.engagedCopies,
+        recyclableEngaged: recyclableEngagedOf(a),
+      };
+    }
+    // FAN ART ET MASCOTTE AVAIENT DISPARU DE CETTE ROUTE : seules joueuse et
+    // map avaient leur branche, et tout le reste tombait dans la branche
+    // équipe ci-dessous — 7 mascottes servies en « équipe » sans nom ni logo
+    // (constaté en prod le 2026-09-28). Chaque type a maintenant la sienne.
+    if (a.kind === 'fanart') {
+      const face = fanartFaces.get(a.subjectId);
+      return {
+        kind: 'fanart' as const,
+        fanartId: a.subjectId,
+        title: face?.title ?? null,
+        artistName: face?.artistName ?? null,
+        artistUrl: face?.artistUrl ?? null,
+        imageUrl: face?.imageUrl ?? null,
+        rarity: a.rarity,
+        isFoil: a.hasFoil,
+        count: a.count,
+        recyclable: recyclableOf(a),
+        engagedCopies: a.engagedCopies,
+        recyclableEngaged: recyclableEngagedOf(a),
+      };
+    }
+    if (a.kind === 'mascot') {
+      return {
+        kind: 'mascot' as const,
+        slug: a.subjectId,
+        name: gameMascotDisplayName(a.subjectId),
         rarity: a.rarity,
         isFoil: a.hasFoil,
         count: a.count,
