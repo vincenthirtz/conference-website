@@ -97,6 +97,7 @@ describe('filterAdminLinks – owner role', () => {
       'Run-of-show',
       'Scènes',
       'Overlays',
+      'Casteuses',
     ]);
   });
 

@@ -21,6 +21,11 @@ describe('onglets Diffusion', () => {
     ]);
   });
 
+  it('réserve les casteuses à manage_communications, comme leur page', () => {
+    expect(ids(['manage_broadcast'])).not.toContain('casters');
+    expect(ids(['manage_communications'])).toContain('casters');
+  });
+
   it('masque le run-of-show sans manage_broadcast, le montre avec', () => {
     expect(ids(['manage_tcg'])).not.toContain('runofshow');
     expect(ids(['manage_broadcast'])).toContain('runofshow');

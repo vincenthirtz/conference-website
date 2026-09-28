@@ -2,10 +2,10 @@ import { test, expect } from '@playwright/test';
 import { supabaseTestClient } from '../utils/supabaseTestClient';
 
 test.describe('Admin cast-members pages (sans auth)', () => {
-  test('GET /admin/association?tab=cast redirige vers login', async ({
+  test('GET /admin/diffusion/casteuses redirige vers login', async ({
     page,
   }) => {
-    await page.goto('/admin/association?tab=cast');
+    await page.goto('/admin/diffusion/casteuses');
     await page.waitForTimeout(1000);
 
     const url = page.url();
@@ -14,7 +14,7 @@ test.describe('Admin cast-members pages (sans auth)', () => {
 
     expect(
       redirectedToLogin || redirectedTo403,
-      `/admin/association?tab=cast devrait rediriger vers login ou 403. URL actuelle: ${url}`
+      `/admin/diffusion/casteuses devrait rediriger vers login ou 403. URL actuelle: ${url}`
     ).toBeTruthy();
   });
 

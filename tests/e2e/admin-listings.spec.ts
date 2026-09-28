@@ -52,7 +52,7 @@ const LISTING_PAGES = [
   },
   {
     label: 'Cast members',
-    url: '/admin/association?tab=cast',
+    url: '/admin/diffusion/casteuses',
     heading: /Pôle Production/i,
     loadedSignal: null,
   },

@@ -253,13 +253,13 @@ test.describe('Admin pages — Test Coach', () => {
 
   // ─── Contenu : Cast members ─────────────────────────────────────
 
-  test('Page liste casteuses (GET /admin/association?tab=cast)', async ({
+  test('Page liste casteuses (GET /admin/diffusion/casteuses)', async ({
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await loginAsCoach(page);
 
-    await page.goto('/admin/association?tab=cast');
+    await page.goto('/admin/diffusion/casteuses');
     await page.waitForLoadState('networkidle');
     await expectPageLoaded(page);
   });
@@ -271,7 +271,9 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/cast-members/new');
-    await page.waitForURL(/\/admin\/cast-members\?new=1/, { timeout: 10000 });
+    await page.waitForURL(/\/admin\/diffusion\/casteuses\?new=1/, {
+      timeout: 10000,
+    });
     await page.waitForLoadState('networkidle');
     await expectPageLoaded(page);
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10000 });

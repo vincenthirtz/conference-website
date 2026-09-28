@@ -83,7 +83,7 @@ test.describe('Pages admin sans auth — redirection ou 403', () => {
     '/admin/teams',
     '/admin/communications?tab=news',
     '/admin/users/manage',
-    '/admin/association?tab=cast',
+    '/admin/diffusion/casteuses',
     '/admin/cast-members/new',
     '/admin/partners',
     '/admin/partners/new',

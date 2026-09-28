@@ -58,7 +58,7 @@ const ADMIN_PAGES = [
   { path: '/admin/teams', label: 'Equipes' },
   { path: '/admin/communications?tab=news', label: 'Actualites' },
   { path: '/admin/partners', label: 'Partenaires' },
-  { path: '/admin/association?tab=cast', label: 'Cast' },
+  { path: '/admin/diffusion/casteuses', label: 'Cast' },
   { path: '/admin/association?tab=adherents', label: 'Adherents' },
   { path: '/admin/logs', label: 'Logs staff' },
   { path: '/admin/users/manage', label: 'Utilisateurs' },
