@@ -11,6 +11,10 @@
 > (navigation / hubs, livré) et [IMPROVEMENT_BACKLOG.md](./IMPROVEMENT_BACKLOG.md) (qualité continue,
 > 5 items ouverts). Les items Q018/Q019/Q021/Q026 y sont repris explicitement quand un lot les couvre.
 >
+> **Suite (2026-09-29)** : l'industrialisation technique de l'admin (couches, route déclarative,
+> client typé, découpe des monolithes) est planifiée dans
+> [PLAN-industrialisation-admin.md](./PLAN-industrialisation-admin.md).
+>
 > Légende — **Impact** : 🟥 élevé · 🟧 moyen · 🟩 faible · **Effort** : S (< 1 h) · M (qq h) · L (chantier).
 
 ---
