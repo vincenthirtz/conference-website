@@ -153,8 +153,9 @@ Garde-fous du projet à appliquer d'office :
   Aucune mesure d'audience avant consentement.
 - **Barème** : prix dérivés de `PLAN_PRICES_EUR` ; le logiciel Womenscup OBS
   et la direction automatique relèvent du palier Éditeur (sur devis).
-- **Technique** : pas de dépendance ajoutée sans accord (zero-dependency
-  policy) ; pas d'images générées par IA dans nos visuels.
+- **Technique** : une dépendance s'ajoute quand elle vaut mieux que de
+  maintenir le code nous-mêmes (politique levée le 2026-09-29) ; pas
+  d'images générées par IA dans nos visuels.
 - **Décisions verrouillées** : relire `MEMORY.md` avant de proposer de défaire
   une décision produit (multi-tenant, plans, découverte…).
 

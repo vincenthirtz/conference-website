@@ -79,7 +79,7 @@ E2E tests need `.env.local` with Supabase credentials. `TEST_BASE_URL` overrides
 - **Pre-commit**: `npm run lint && npm run format:check && npm run test:unit`, plus the spec(s) you touched.
 - **Conventional Commits**: `feat(public): ...`, `fix(news): ...`, `refactor(components/Navbar): ...`. Use the most specific scope.
 - **Scope check**: `git diff --stat` before committing — easy to drift into `/admin/*` or `pages/api/*` (which belong to other agents).
-- **Zero-dependency policy**: no new npm packages without explicit approval.
+- **Dependencies**: adding a package is allowed when it clearly beats maintaining our own code — justify it in the commit message (see the Dependencies policy in `CLAUDE.md`). Keep the public first-load bundle lean (`npm run bundle:budget`).
 
 ## When building a new public page
 

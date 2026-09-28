@@ -84,7 +84,7 @@ E2E tests need `.env.local` with Supabase credentials. Use `TEST_BASE_URL` for n
 - **Pre-commit**: `npm run lint && npm run format:check && npm run test:unit`, plus the Playwright spec(s) you touched.
 - **Conventional Commits**: `feat(admin): ...`, `fix(admin/tournaments): ...`, `refactor(components/admin): ...`. Don't mix scopes.
 - **Scope check**: `git diff --stat` before commit — easy to accidentally touch a public page.
-- **Zero-dependency policy**: no new npm packages without explicit approval.
+- **Dependencies**: adding a package is allowed when it clearly beats maintaining our own code — justify it in the commit message (see the Dependencies policy in `CLAUDE.md`).
 
 ## When building a new admin page
 

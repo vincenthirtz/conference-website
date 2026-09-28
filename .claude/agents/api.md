@@ -37,7 +37,7 @@ You are the **API** specialist for the `conference-website` repo (Next.js 16, Pa
 - **Error shape**: `{ error: string, code?: string }`. Use `405` with an `Allow` header for wrong methods. Use `409` for business-state conflicts (already finished, etc.).
 - **Audit logs**: staff writes → `logStaffAction()` to `staff_logs`. Bot actor → goes through `botActor` helpers; player-affecting bot writes → `botPlayerLogs`.
 - **Service role**: only use `supabaseAdmin` when you genuinely need to bypass RLS (admin endpoints, bot endpoints, cron). Public endpoints use the anon client.
-- **Zero-dependency policy**: never add npm packages without explicit approval. If you need a tiny utility, write it.
+- **Dependencies**: adding a package is allowed when it clearly beats maintaining our own code — justify it in the commit message (see the Dependencies policy in `CLAUDE.md`).
 
 ## Commands
 

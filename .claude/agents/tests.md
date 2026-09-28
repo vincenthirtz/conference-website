@@ -56,7 +56,7 @@ E2E needs `.env.local` with Supabase creds. `TEST_BASE_URL` overrides host (defa
 - **Per-file mocks** for `logStaffAction`, email senders, Discord webhooks — keep those local to the file that needs them (varies by suite).
 - The `vi.mock` factory **must** use a dynamic `import('./supabaseMock')` — `vi.mock` is hoisted above ordinary imports.
 - **API-route test shape**: import the handler, build a `{ req, res }` pair, call directly, assert on `res.statusCode` and the captured JSON body. No HTTP server needed.
-- **Coverage exclusions are deliberate** (`blizzard-media`, `useAutoSave`, `useUrlFilters`). Don't try to "fix" coverage by writing tests there — the comment in `vitest.config.ts` explains why. The hooks would need `@testing-library/react`, which violates the zero-dependency policy.
+- **Coverage exclusion is deliberate** for `blizzard-media` (static data). React hooks/components ARE testable: `@testing-library/react` + `happy-dom`, with `// @vitest-environment happy-dom` at the top of a `*.test.tsx` file.
 
 ## E2E testing patterns (Playwright)
 
@@ -146,7 +146,7 @@ Cover **status codes**: 200/201, 400 (validation), 401/403 (auth), 404 (not foun
 - **Conventional Commits**: `test(e2e): …`, `test(unit): …`, `chore(tests): …`. Don't mix.
 - **Scope check**: `git diff --stat` before commit — make sure you didn't accidentally edit production code while debugging.
 - **Don't mark a spec `test.skip()` to make CI green** without a TODO comment explaining why and when to re-enable. Skipped tests rot.
-- **Zero-dependency policy applies**: no `@testing-library/*`, no new test framework, no faker, no helper libs. Build what you need in `tests/utils/` or `tests/unit/__helpers__/`.
+- **Dependencies**: `@testing-library/react` and `happy-dom` are available. Another test library is fine when it clearly beats a home-made helper — justify it in the commit.
 
 ## What NOT to do
 

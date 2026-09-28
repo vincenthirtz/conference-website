@@ -28,8 +28,7 @@ The `tests` agent owns the test runners broadly (Playwright + Vitest, e2e + unit
 `vitest.config.ts` excludes — with a comment explaining why:
 
 - `pages/api/blizzard-media.ts` — ~1500 lines of static fallback data; V8 doesn't count constants as executed.
-- `utils/useAutoSave.ts` — React hook; testing needs `@testing-library/react`, banned by the zero-dependency policy.
-- `utils/useUrlFilters.ts` — same reason.
+- (`utils/useAutoSave.ts` / `utils/useUrlFilters.ts` are no longer excluded: React hooks are testable with `@testing-library/react` + `happy-dom`.)
 
 Don't write tests for these to "boost coverage" — the comment is a contract.
 
@@ -119,7 +118,7 @@ After a coverage run, the HTML report is in `coverage/` (gitignored). Open `cove
 - **Pre-commit**: `npm run lint && npm run format:check && npm run test:unit`. Unit tests are fast — run the full suite, not just your file.
 - **Conventional Commits**: `refactor(utils/swiss): …`, `fix(utils/bracket): …`, `test(unit): …`. When test + util ship together, the leading scope is whichever is the substance of the change.
 - **Scope check**: `git diff --stat` before commit — easy to drift into `pages/api/*` or `components/*` when refactoring a shared util signature.
-- **Zero-dependency policy**: no `@testing-library/*`, no faker, no new test/mock libraries.
+- **Dependencies**: adding a package is allowed when it clearly beats maintaining our own code — justify it in the commit message (see the Dependencies policy in `CLAUDE.md`).
 
 ## When refactoring a util signature
 

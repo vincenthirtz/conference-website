@@ -3,7 +3,11 @@ import path from 'path';
 
 export default defineConfig({
   test: {
-    include: ['tests/unit/**/*.test.ts'],
+    // `.test.tsx` : hooks et composants React, rendus avec
+    // @testing-library/react dans un DOM happy-dom (commentaire
+    // `// @vitest-environment happy-dom` en tête du fichier). Les `.test.ts`
+    // restent en environnement node — rien ne change pour eux.
+    include: ['tests/unit/**/*.test.ts', 'tests/unit/**/*.test.tsx'],
     setupFiles: ['tests/unit/__helpers__/testSetup.ts'],
     // 20 s au lieu des 5 s par défaut. MESURÉ : `voxelMaps.test.ts` génère la
     // géométrie complète des maquettes et passe en 7 s lancé seul, mais dépasse
@@ -38,18 +42,14 @@ export default defineConfig({
       include: ['utils/**/*.ts', 'pages/api/**/*.ts'],
       exclude: [
         '**/*.test.ts',
+        '**/*.test.tsx',
         '**/*.d.ts',
         'tests/**',
         // Excluded from coverage:
         // - blizzard-media: ~1500 lines of static fallback data (KNOWN_MEDIA
         //   tables). V8 doesn't count constant declarations as executed, so
         //   the file drags the project total down disproportionately.
-        // - useAutoSave / useUrlFilters: React hooks. Testing them needs
-        //   @testing-library/react, which is forbidden by the zero-dependency
-        //   policy in CLAUDE.md.
         'pages/api/blizzard-media.ts',
-        'utils/useAutoSave.ts',
-        'utils/useUrlFilters.ts',
       ],
     },
   },

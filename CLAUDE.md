@@ -147,7 +147,7 @@ Phase 1 (DB) done — 32 tables now carry `tenant_id`. Phase 2 (bot) sends `x-te
 
 ## Project Policies
 
-**Zero-dependency policy.** Never add packages to `dependencies` / `devDependencies` without explicit approval. For CI-only tools, install them in the CI workflow directly. (Current deps are intentionally minimal — see `package.json`.)
+**Dependencies.** The former zero-dependency policy was lifted on 2026-09-29. Add a package when it clearly beats writing and maintaining the code ourselves (e.g. `@tanstack/react-query` for the admin data layer, `@testing-library/react` for hook/component tests). Prefer small, well-maintained libraries; say in the commit message why the package is worth it; keep client-side packages out of the public first-load bundle unless the public pages need them (`scripts/bundle-budget.mjs`, `adminBoundariesGuard`).
 
 ## Commit Convention
 
@@ -174,7 +174,7 @@ After fixing files, verify you haven't modified files outside scope. Run `git di
 
 - E2E: Playwright. Use `--grep-invert` (not `--ignore-pattern`). Watch for transparent background inheritance when asserting contrast.
 - Unit: Vitest with an in-memory Supabase mock under `tests/unit/__helpers__/testSetup.ts`. Tests cover API handlers heavily (`apiRoutesBatch*.test.ts`, `apiAdmin*.test.ts`, `apiBot*.test.ts`).
-- Coverage excludes `pages/api/blizzard-media.ts` (~1500 lines of static fallback data, drags totals), `utils/useAutoSave.ts` / `utils/useUrlFilters.ts` (would need `@testing-library/react`, forbidden by zero-dep policy).
+- Coverage excludes `pages/api/blizzard-media.ts` (~1500 lines of static fallback data, drags totals). React hooks and components can now be tested with `@testing-library/react` in a `// @vitest-environment happy-dom` file (`*.test.tsx`).
 
 ### ⚠️ Le mock Supabase ne valide pas les colonnes
 
