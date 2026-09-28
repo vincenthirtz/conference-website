@@ -308,7 +308,17 @@ function toSchema(type, checker, stack = [], depth = 0) {
     const symName = type.getSymbol()?.getName();
     if (symName === 'Date') return { type: 'string', format: 'date-time' };
     if (type.getCallSignatures().length) return {};
-    const props = checker.getPropertiesOfType(type);
+    // Tri alphabétique : l'ordre que rend le compilateur dépend de l'ordre
+    // dans lequel il a RENCONTRÉ les types (unions, intersections), donc de
+    // l'ensemble des fichiers chargés. Sans tri, ajouter un module ailleurs
+    // réordonnait les propriétés de routes sans rapport — du bruit dans
+    // chaque diff du contrat.
+    const props = checker
+      .getPropertiesOfType(type)
+      .slice()
+      .sort((a, b) =>
+        a.getName() < b.getName() ? -1 : a.getName() > b.getName() ? 1 : 0
+      );
     const schema = { type: 'object' };
     const properties = {};
     const required = [];
