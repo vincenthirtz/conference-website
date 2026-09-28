@@ -30,6 +30,7 @@ import {
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
 import StreamSourcesPanel from '@/components/admin/tournament/StreamSourcesPanel';
+import StreamAlertsPanel from '@/components/admin/tournament/StreamAlertsPanel';
 import nsAdminDiffusionOverlays from '@/lib/i18n/locales/admin-fr/adminDiffusionOverlays';
 
 type TournamentOption = { id: string; name: string; slug: string | null };
@@ -65,6 +66,7 @@ export const getServerSideProps = withStaffPage<SsrProps>(
 type Props = StaffProps & SsrProps;
 
 export default function DiffusionOverlaysPage({
+  staff,
   tournaments,
   canUseMatchOverlays,
   planLabel,
@@ -85,6 +87,16 @@ export default function DiffusionOverlaysPage({
     }
   }, [wanted, tournaments]);
   const selected = tournaments.find((x) => x.id === selectedId) ?? null;
+
+  // Les réglages de la boîte d'alertes : mêmes conditions que sa source (elle
+  // n'existe que pour l'espace de l'association, avec la capacité de régie),
+  // plus le droit que l'API exige. Dans l'onglet Outils, la page demandait
+  // `manage_tournaments` quand l'API demande `manage_broadcast` : un
+  // responsable tournoi voyait un panneau qui échouait à chaque geste.
+  const canTuneAlerts =
+    isDefaultTenant &&
+    canUseMatchOverlays &&
+    (staff?.permissions ?? []).includes('manage_broadcast');
 
   const [baseUrl, setBaseUrl] = useState<string>(
     process.env.NEXT_PUBLIC_SITE_URL ?? ''
@@ -157,6 +169,12 @@ export default function DiffusionOverlaysPage({
               </div>
             )}
           </section>
+
+          {canTuneAlerts && (
+            <section className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+              <StreamAlertsPanel />
+            </section>
+          )}
 
           <section className="mt-8">
             <h2 className="text-lg font-semibold">{t.elsewhereTitle}</h2>

@@ -18,13 +18,10 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
-import StreamAlertsPanel from '@/components/admin/tournament/StreamAlertsPanel';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { logger } from '@/utils/logger';
 import nsAdminTournamentOverview from '@/lib/i18n/locales/admin-fr/adminTournamentOverview';
 import nsAdminTournamentEmbed from '@/lib/i18n/locales/admin-fr/adminTournamentEmbed';
-import { PLAN_LABELS } from '@/utils/billing/planFeatures';
-import { readOverlayAccess } from '@/utils/admin/overlayAccess';
 
 type TournamentBasics = {
   id: string;
@@ -34,19 +31,11 @@ type TournamentBasics = {
   description_info: string | null;
 };
 
+// Les sources OBS et les alertes ont rejoint Diffusion › Overlays (lots 5-6) :
+// la capacité « overlays de régie » s'y lit (`utils/admin/overlayAccess.ts`),
+// cet onglet n'en a plus besoin.
 type SsrProps = {
   initialTournament: TournamentBasics | null;
-  /**
-   * Le palier de l'espace ouvre-t-il les sources de stream par match ?
-   *
-   * Calculé côté serveur, comme l'API le calcule : une capacité lue dans le
-   * navigateur serait une capacité négociable.
-   */
-  canUseMatchOverlays: boolean;
-  /** Palier en cours, nommé dans l'encart quand la capacité manque. */
-  planLabel: string;
-  /** Espace de la Women's Cup : lui seul reçoit la source de don (son QR). */
-  isDefaultTenant: boolean;
 };
 
 export const getServerSideProps = withStaffPage<SsrProps>(
@@ -55,12 +44,7 @@ export const getServerSideProps = withStaffPage<SsrProps>(
     const rawId = ctx.params?.id ?? ctx.query.id;
     const id = Array.isArray(rawId) ? rawId[0] : rawId;
     if (!id || !isValidUUID(String(id)) || !supabaseAdmin) {
-      return {
-        initialTournament: null,
-        canUseMatchOverlays: false,
-        planLabel: PLAN_LABELS.discovery,
-        isDefaultTenant: false,
-      };
+      return { initialTournament: null };
     }
     const { data, error } = await supabaseAdmin
       .from('tournaments')
@@ -74,18 +58,13 @@ export const getServerSideProps = withStaffPage<SsrProps>(
 
     return {
       initialTournament: (data as TournamentBasics | null) ?? null,
-      ...(await readOverlayAccess(staffCtx.tenantId)),
     };
   }
 );
 
 type Props = StaffProps & SsrProps;
 
-function TournamentToolsPage({
-  initialTournament,
-  canUseMatchOverlays,
-  isDefaultTenant,
-}: Props) {
+function TournamentToolsPage({ initialTournament }: Props) {
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : (id ?? '');
@@ -559,18 +538,6 @@ function TournamentToolsPage({
                   {te.sourcesMovedCta}
                 </Link>
               </div>
-
-              {/* Les réglages de la boîte d'alertes, sous l'URL qu'ils
-                  pilotent. Même condition que la source elle-même : elle
-                  n'apparaît dans la liste ci-dessus que pour l'espace de
-                  l'association (ce sont SES alertes) et avec la capacité de
-                  régie — un éditeur sans source à régler n'aurait rien à
-                  faire ici. */}
-              {isDefaultTenant && canUseMatchOverlays && (
-                <div className="mt-6 border-t border-neutral-700/40 pt-5">
-                  <StreamAlertsPanel />
-                </div>
-              )}
             </WidgetCard>
           )}
         </div>
