@@ -142,4 +142,6 @@ export default adminNs('adminBroadcastLive', {
   hotkeysAir: 'Maj+A : prendre / rendre l’antenne',
   hotkeysPip: 'Maj+P : PiP',
   hotkeysHelp: '? : afficher ou masquer cette aide',
+  overlayShown: 'Overlay affiché',
+  overlayNotShown: 'Overlay non affiché dans OBS',
 });

@@ -122,8 +122,6 @@ Issu d'un audit de l'espace (16 constats vérifiés dans le code).
 | 9 | Director traduit (« Cue composer », « Waves »…) ; `aria-label` du « × » ; `role="alert"` ; statut Twitch annoncé seul |
 | 10 | Même marge haute (`pt-header`) partout ; onglets et vrai lien retour sur les fiches ; fil d'Ariane de la fiche casteuse ; `h1` de la page Casteuses |
 
-**Hors périmètre, noté** : un indicateur « overlay regardé » demanderait un
-battement de cœur côté overlay (inexistant).
 
 ## Troisième chantier (8 lots)
 
@@ -137,3 +135,28 @@ battement de cœur côté overlay (inexistant).
 | 6 | Briques communes des panneaux Twitch (`twitchPanelUtils.tsx`) ; gel de `TwitchCommandsPanel` abaissé 1203 → 1172 |
 | 7 | Un seul formulaire casteuse (`CastMemberFields`) : image en champ texte (l'`url` refusait `/img/…`), libellés reliés aux champs |
 | 8 | Heure HH:MM du director mutualisée (`utils/director/clock.ts`) |
+
+## Quatrième chantier (5 lots)
+
+| Lot | Apport |
+|---|---|
+| 1 | Le director a ses onglets Diffusion (montés dans `RunStatusHeader`) |
+| 2 | Largeur stable : le cockpit ne saute plus de 42 à 72 rem au démarrage d'un run ; run-of-show et chaînes Twitch alignés à 6xl |
+| 3 | **Signal de présence des overlays** : table `overlay_heartbeats` (migration `overlay_heartbeats.sql`), `POST /api/overlay/heartbeat` (public, limité en débit), `GET /api/admin/diffusion/overlay-presence` (staff) |
+| 4 | Les 14 pages `/overlay/*` signalent toutes les 30 s, **tant qu'elles sont visibles** (`useOverlayHeartbeat`) — une source masquée dans OBS s'éteint |
+| 5 | Diffusion › Overlays : badge « ● Affichée » / « Vue il y a 3 min » / « Jamais affichée » par source ; console live : « Overlay affiché » ou « non affiché dans OBS » |
+
+**Le modèle.** Une ligne par (espace, source), écrasée : on répond à « est-ce
+affiché maintenant ? », pas à un historique. Une source est affichée si son
+dernier signal date de moins de 75 s (deux signaux et demi manqués). L'état se
+calcule sur l'heure du **serveur** : un poste de régie dont l'horloge dérive
+n'éteint pas une source vivante.
+
+**La limite assumée.** Les overlays n'ont pas de session : le signal n'est pas
+authentifié et peut être simulé. L'impact se borne à un indicateur trompeur —
+aucune donnée n'est exposée ni modifiée.
+
+**Les noms de source** reprennent les clés du panneau des sources (`regie`,
+`alerts`, `day`, `mvpPublic`, `partners`, `don`, `donAlert`, `scrims`,
+`scrimResult`, et pour les sources de match la valeur de `?source=`), plus
+`run`, `logo`, `tcg` et `caster:<scène>`.

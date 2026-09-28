@@ -20,6 +20,7 @@ import { copyText } from '@/utils/clipboard';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import nsAdminTournamentEmbed from '@/lib/i18n/locales/admin-fr/adminTournamentEmbed';
+import type { OverlayPresence } from '@/hooks/useOverlayPresence';
 
 type Props = {
   /** Slug (ou id) du tournoi, tel qu'il ira dans l'URL. */
@@ -37,7 +38,23 @@ type Props = {
   planLabel: string;
   /** Espace de la Women's Cup : seul à qui le QR de don appartient. */
   showDonation?: boolean;
+  /**
+   * Signal de présence des overlays (`useOverlayPresence`). Absent ou `null` :
+   * aucun badge, plutôt qu'un faux « éteint ».
+   */
+  presence?: OverlayPresence | null;
 };
+
+/** « 12 s », « 3 min », « 2 h » — depuis le dernier signal. */
+function agoLabel(
+  sec: number,
+  t: { agoSeconds: string; agoMinutes: string; agoHours: string }
+) {
+  if (sec < 60) return t.agoSeconds.replace('{n}', String(sec));
+  if (sec < 3600)
+    return t.agoMinutes.replace('{n}', String(Math.floor(sec / 60)));
+  return t.agoHours.replace('{n}', String(Math.floor(sec / 3600)));
+}
 
 /** Les sources, dans l'ordre où une régie les ajoute à sa scène. */
 const SOURCES = [
@@ -131,6 +148,7 @@ export default function StreamSourcesPanel({
   enabled,
   planLabel,
   showDonation = false,
+  presence = null,
 }: Props) {
   const t = useAdminT(nsAdminTournamentEmbed);
   const [copied, setCopied] = useState<string | null>(null);
@@ -241,8 +259,30 @@ export default function StreamSourcesPanel({
                   <div className="text-sm font-medium text-white">{label}</div>
                   <div className="mt-0.5 text-xs text-neutral-500">{desc}</div>
                 </div>
-                <span className="shrink-0 rounded-md bg-neutral-800 px-2 py-1 font-mono text-[10px] text-neutral-400">
-                  {s.size}
+                <span className="flex shrink-0 items-center gap-1.5">
+                  {presence && (
+                    // AFFICHÉE OU PAS : l'URL collée dans OBS ne le disait
+                    // jamais (source masquée, OBS fermé, URL de travers).
+                    <span
+                      className={`rounded-md px-2 py-1 text-[10px] font-semibold ${
+                        presence.isLive(s.key)
+                          ? 'bg-emerald-500/15 text-emerald-300'
+                          : 'bg-neutral-800 text-neutral-500'
+                      }`}
+                    >
+                      {presence.isLive(s.key)
+                        ? t.presenceLive
+                        : presence.secondsAgo(s.key) === null
+                          ? t.presenceNever
+                          : t.presenceStale.replace(
+                              '{ago}',
+                              agoLabel(presence.secondsAgo(s.key) ?? 0, t)
+                            )}
+                    </span>
+                  )}
+                  <span className="rounded-md bg-neutral-800 px-2 py-1 font-mono text-[10px] text-neutral-400">
+                    {s.size}
+                  </span>
                 </span>
               </div>
               <div className="relative">

@@ -132,4 +132,6 @@ export default {
   hotkeysAir: 'Shift+A: go on / off air',
   hotkeysPip: 'Shift+P: PiP',
   hotkeysHelp: '?: show or hide this help',
+  overlayShown: 'Overlay on screen',
+  overlayNotShown: 'Overlay not shown in OBS',
 };

@@ -90,4 +90,10 @@ export default {
   source_day_name: 'Today’s matches',
   source_day_desc:
     'The day’s schedule (Paris time): kick-off times, match-ups, live scores, current match highlighted. Add &date=YYYY-MM-DD for another day, &limit=N for the number of rows.',
+  presenceLive: '● On screen',
+  presenceStale: 'Seen {ago} ago',
+  presenceNever: 'Never shown',
+  agoSeconds: '{n}s',
+  agoMinutes: '{n} min',
+  agoHours: '{n}h',
 };

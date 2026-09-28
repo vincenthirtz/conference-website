@@ -33,6 +33,7 @@ import StreamSourcesPanel from '@/components/admin/tournament/StreamSourcesPanel
 import StreamAlertsPanel from '@/components/admin/tournament/StreamAlertsPanel';
 import { lazyPanel } from '@/components/admin/lazyPanel';
 import nsAdminDiffusionOverlays from '@/lib/i18n/locales/admin-fr/adminDiffusionOverlays';
+import { useOverlayPresence } from '@/hooks/useOverlayPresence';
 
 // Chargée à la demande : seul qui a `manage_tcg` la voit.
 const TcgOverlaySection = lazyPanel(
@@ -93,6 +94,8 @@ export default function DiffusionOverlaysPage({
     }
   }, [wanted, tournaments]);
   const selected = tournaments.find((x) => x.id === selectedId) ?? null;
+  // Quelles sources s'affichent MAINTENANT dans OBS (signal des overlays).
+  const presence = useOverlayPresence();
 
   // Les réglages de la boîte d'alertes : mêmes conditions que sa source (elle
   // n'existe que pour l'espace de l'association, avec la capacité de régie),
@@ -201,6 +204,7 @@ export default function DiffusionOverlaysPage({
                   enabled={canUseMatchOverlays}
                   planLabel={planLabel}
                   showDonation={isDefaultTenant}
+                  presence={presence}
                 />
               </div>
             )}

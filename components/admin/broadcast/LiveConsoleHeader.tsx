@@ -10,6 +10,9 @@ import Link from 'next/link';
 import { useStaffSession } from '@/hooks/useStaffSession';
 import RealtimeStatusBadge from '@/components/admin/RealtimeStatusBadge';
 import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
+import { useOverlayPresence } from '@/hooks/useOverlayPresence';
+import { useAdminT } from '@/lib/i18n/useAdminT';
+import nsAdminBroadcastLive from '@/lib/i18n/locales/admin-fr/adminBroadcastLive';
 
 export default function LiveConsoleHeader({
   heading,
@@ -36,6 +39,8 @@ export default function LiveConsoleHeader({
   // Le director exige `manage_broadcast` (cf. RegieHeader) : pas de lien vers
   // un 403 pour la casteuse qui ouvre cette console.
   const { staffPermissions, loading } = useStaffSession();
+  const presence = useOverlayPresence();
+  const tl = useAdminT(nsAdminBroadcastLive);
   const canOpenDirector =
     !loading && staffPermissions.includes('manage_broadcast');
   return (
@@ -52,6 +57,19 @@ export default function LiveConsoleHeader({
               connectedLabel={connectedLabel}
               degradedLabel={degradedLabel}
             />
+            {runId && presence && (
+              // L'overlay du run est-il dans OBS ? Sans lui, on pilotait
+              // scènes et bandeaux… que personne ne voyait.
+              <span
+                className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                  presence.isLive('run')
+                    ? 'bg-emerald-500/15 text-emerald-300'
+                    : 'bg-amber-500/15 text-amber-200'
+                }`}
+              >
+                {presence.isLive('run') ? tl.overlayShown : tl.overlayNotShown}
+              </span>
+            )}
           </div>
           <p className="text-sm text-neutral-400 mt-1">{subtitle}</p>
         </div>
