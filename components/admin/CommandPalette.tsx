@@ -21,6 +21,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useStaffSession } from '@/hooks/useStaffSession';
+import { canAccess } from '@/utils/admin/adminAccess';
+import { PALETTE_ACTIONS } from './commandPaletteActions';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminCommandPalette from '@/lib/i18n/locales/admin-fr/adminCommandPalette';
 import type { AdminSearchPayload, SearchHit } from '@/pages/api/admin/search';
@@ -73,32 +76,24 @@ export default function CommandPalette() {
   // sinon la tabulation repart du début de la page.
   const restoreRef = useRef<HTMLElement | null>(null);
 
-  /** Actions fixes — « aller à », toujours proposées. */
+  /**
+   * Actions fixes — « aller à ». Filtrées par la règle d'accès de leur cible
+   * (lot L14) : sans ça, un arbitre se voyait proposer « Support » et
+   * « Tâches », deux 403.
+   */
+  const { staffRole, staffPermissions } = useStaffSession();
   const actions = useMemo<SearchHit[]>(
-    () => [
-      {
-        kind: 'tournament',
-        id: 'action-current',
-        title: t.actionCurrentTournament,
+    () =>
+      PALETTE_ACTIONS.filter((a) =>
+        canAccess(a.access, staffRole, staffPermissions)
+      ).map((a) => ({
+        kind: a.kind,
+        id: a.id,
+        title: t[a.titleKey],
         subtitle: null,
-        href: '/admin/tournoi-en-cours',
-      },
-      {
-        kind: 'task',
-        id: 'action-tasks',
-        title: t.actionTasks,
-        subtitle: null,
-        href: '/admin/tasks',
-      },
-      {
-        kind: 'ticket',
-        id: 'action-support',
-        title: t.actionSupport,
-        subtitle: null,
-        href: '/admin/moderation?tab=support',
-      },
-    ],
-    [t]
+        href: a.href,
+      })),
+    [t, staffRole, staffPermissions]
   );
 
   const close = useCallback(() => {

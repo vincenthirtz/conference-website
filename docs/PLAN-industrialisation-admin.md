@@ -550,24 +550,38 @@ restent faites main.
 - [ ] 5 000 lignes simulées restent fluides (< 16 ms par frame au défilement).
 - [ ] Un lien copié rouvre la même vue (filtres, tri, page).
 
-### L14 · Registre de modules (nav, gating, fil d'Ariane, palette) — 🟥 / M
+### L14 · Registre de modules (nav, gating, fil d'Ariane, palette) — ✅ LIVRÉ (2026-09-29), plan révisé
 
-**Problème.** Ajouter un écran = toucher `adminNav.ts`, `adminNavCards.ts`, `adminNavTrail.ts`,
-`withStaffPage(…)` dans la page, la palette de commandes et parfois les quick-links. Un oubli =
-écran invisible, ou visible mais interdit.
+**Ce que l'état des lieux a changé.** Le registre existait déjà : `ADMIN_NAV` est la source
+unique du menu et des cartes du tableau de bord, et le fil d'Ariane (`adminNavTrail.ts`) en est
+dérivé et **testé** (`adminNavTrail.test.ts`). Créer un `module.ts` par domaine aurait dupliqué
+`ADMIN_NAV`, pas remplacé. Ce qui manquait n'était pas un registre de plus mais une **preuve**
+que le registre dit vrai.
 
-**Livrable.**
-- `features/admin/<domaine>/module.ts` déclare ses écrans : chemin, titre (clé i18n), icône,
-  permission requise, parent (fil d'Ariane), commandes palette, raccourcis.
-- `features/admin/registry.ts` agrège ; nav, cartes, fil d'Ariane, palette et
-  `withStaffPage` **dérivent** du registre (`withAdminModulePage('teams.edit')`).
-- Test : chaque fichier de `pages/admin/**` correspond à une entrée du registre et inversement ;
-  la permission du registre = celle des routes API qu'il appelle (au moins en lecture).
+**Ce qui a été fait.**
+- [`utils/admin/adminAccess.ts`](../utils/admin/adminAccess.ts) : UNE règle d'accès client
+  (`canAccess`, `rolesAdmitted`, `diffusionTabAccess`), utilisée par le menu, les onglets
+  Diffusion et la palette ⌘K — chacun avait la sienne, la palette aucune.
+- [`adminLinkGuards.test.ts`](../tests/unit/adminLinkGuards.test.ts) : pour les TROIS surfaces
+  de liens (menu avec héritage du rôle, onglets Diffusion, palette), chaque lien mène à une page
+  qui existe, dont la garde serveur se lit, et **n'admet aucun rôle que la page refuse**. Les
+  liens plus fermés que leur page sont déclarés un par un, avec leur raison ; la liste ne peut
+  pas se périmer.
+- Défauts réels trouvés et corrigés :
+  - la palette proposait « Tâches » et « Support » à tout le staff — arbitres et casters
+    tombaient sur un 403 ; ses raccourcis vivent maintenant dans
+    [`commandPaletteActions.ts`](../components/admin/commandPaletteActions.ts), avec leur règle ;
+  - quatre onglets Diffusion (Cockpit, Live, Scènes, Overlays) se déclaraient « tout le staff »
+    pour des pages réservées au caster (sans effet visible aujourd'hui : un arbitre n'atteint
+    aucune page Diffusion — mais la règle écrite était fausse).
 
-**Critères d'acceptation**
-- [ ] Ajouter un écran ne touche que le module + le fichier de page.
-- [ ] Un écran dont la permission manque au rôle n'apparaît ni dans la nav ni dans la palette.
-- [ ] `adminNav*.ts` n'ont plus de liste écrite à la main.
+**Question ouverte (produit)** : le tableau de bord `/admin` admet bénévoles et arbitres
+(contenu filtré), mais le menu ne leur montre pas « Dashboard ». Voulu ou oubli ? Déclaré dans
+`NARROWER_ON_PURPOSE` en attendant la réponse.
+
+**Non retenu** : exiger que toute page `pages/admin` figure au menu — 36 pages ne le sont pas,
+presque toutes légitimement (connexion, sous-pages « nouveau… » ouvertes depuis leur liste,
+anciennes routes redirigées). La règle n'aurait produit qu'une liste d'exceptions.
 
 ---
 

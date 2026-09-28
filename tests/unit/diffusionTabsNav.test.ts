@@ -41,6 +41,18 @@ describe('onglets Diffusion', () => {
     );
   });
 
+  it('masque aux rôles étroits les écrans réservés au caster (lot L14)', () => {
+    const forReferee = visibleDiffusionTabs(
+      ['run_checkin', 'arbitrate_matches'],
+      'referee'
+    ).map((t) => t.id);
+    expect(forReferee).toEqual([]);
+    const forCaster = visibleDiffusionTabs(['use_cast_cockpit'], 'caster').map(
+      (t) => t.id
+    );
+    expect(forCaster).toEqual(['cockpit', 'live', 'scenes', 'overlays']);
+  });
+
   it('chaque onglet vise une page admin distincte', () => {
     const hrefs = DIFFUSION_TABS.map((t) => t.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);

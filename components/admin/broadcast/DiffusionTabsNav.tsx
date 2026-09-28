@@ -25,6 +25,8 @@
 
 import Link from 'next/link';
 import { useStaffSession } from '@/hooks/useStaffSession';
+import { canAccess, diffusionTabAccess } from '@/utils/admin/adminAccess';
+import type { StaffRole } from '@/utils/staffRoles';
 import { useDiffusionLive } from '@/hooks/useDiffusionLive';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminDiffusionNav from '@/lib/i18n/locales/admin-fr/adminDiffusionNav';
@@ -46,14 +48,30 @@ export type DiffusionTab = {
   labelKey: {
     [K in keyof Dict]: K extends `tab${string}` ? K : never;
   }[keyof Dict];
-  /** Permission exigée par la page ; absente = tout le staff. */
+  /** Permission exigée par la page. */
   permission?: string;
+  /**
+   * Rôle minimum exigé par la page quand elle se garde par rôle. Ni l'un ni
+   * l'autre = tout le staff. `adminLinkGuards.test.ts` vérifie que la règle
+   * n'est pas plus ouverte que la page.
+   */
+  minRole?: StaffRole;
 };
 
 /** L'ordre est celui d'une soirée : on conduit, on surveille, on habille. */
 export const DIFFUSION_TABS: readonly DiffusionTab[] = [
-  { id: 'cockpit', href: '/admin/regie', labelKey: 'tabCockpit' },
-  { id: 'live', href: '/admin/broadcast/live', labelKey: 'tabLive' },
+  {
+    id: 'cockpit',
+    href: '/admin/regie',
+    labelKey: 'tabCockpit',
+    minRole: 'caster',
+  },
+  {
+    id: 'live',
+    href: '/admin/broadcast/live',
+    labelKey: 'tabLive',
+    minRole: 'caster',
+  },
   // Le déroulé : on le prépare avant, on le conduit depuis le director.
   {
     id: 'runofshow',
@@ -61,11 +79,17 @@ export const DIFFUSION_TABS: readonly DiffusionTab[] = [
     labelKey: 'tabRunOfShow',
     permission: 'manage_broadcast',
   },
-  { id: 'scenes', href: '/admin/caster', labelKey: 'tabScenes' },
+  {
+    id: 'scenes',
+    href: '/admin/caster',
+    labelKey: 'tabScenes',
+    minRole: 'caster',
+  },
   {
     id: 'overlays',
     href: '/admin/diffusion/overlays',
     labelKey: 'tabOverlays',
+    minRole: 'caster',
   },
   {
     id: 'casters',
@@ -92,16 +116,20 @@ export const LIVE_TABS: ReadonlySet<DiffusionTabId> = new Set([
   'live',
 ]);
 
-/** Les onglets visibles pour ces permissions (`null` = pas encore lues). */
+/**
+ * Les onglets visibles pour ces permissions (`null` = pas encore lues) et ce
+ * rôle (absent = inconnu : les onglets gardés par rôle restent affichés).
+ */
 export function visibleDiffusionTabs(
-  permissions: readonly string[] | null
+  permissions: readonly string[] | null,
+  role?: StaffRole | null
 ): DiffusionTab[] {
-  return DIFFUSION_TABS.filter(
-    (tab) =>
-      !tab.permission ||
-      permissions === null ||
-      permissions.includes(tab.permission)
-  );
+  if (permissions === null) return [...DIFFUSION_TABS];
+  return DIFFUSION_TABS.filter((tab) => {
+    if (tab.permission) return permissions.includes(tab.permission);
+    if (!role) return true;
+    return canAccess(diffusionTabAccess(tab), role, permissions);
+  });
 }
 
 export default function DiffusionTabsNav({
@@ -110,8 +138,11 @@ export default function DiffusionTabsNav({
   active: DiffusionTabId;
 }) {
   const t = useAdminT(nsAdminDiffusionNav);
-  const { staffPermissions, loading } = useStaffSession();
-  const tabs = visibleDiffusionTabs(loading ? null : staffPermissions);
+  const { staffPermissions, staffRole, loading } = useStaffSession();
+  const tabs = visibleDiffusionTabs(
+    loading ? null : staffPermissions,
+    staffRole
+  );
   // Un run en direct se voit depuis N'IMPORTE quel écran de la diffusion :
   // on préparait les overlays sans savoir que l'antenne avait démarré.
   const live = useDiffusionLive();
