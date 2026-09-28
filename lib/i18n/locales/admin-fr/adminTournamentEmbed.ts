@@ -19,6 +19,8 @@ export default adminNs('adminTournamentEmbed', {
   themeDark: 'Sombre',
   snippetLabel: 'Extrait iframe',
   copyBtn: 'Copier',
+  openBtn: 'Ouvrir',
+  copyFailed: 'Copie impossible : sélectionnez l’URL à la main.',
   dayTestLabel: 'Tester sur le jour du',
   dayTestBtn: 'Tester',
   daySendBtn: 'Envoyer dans OBS',

@@ -167,7 +167,20 @@ export default function DiffusionOverlaysPage({
                 {t.tournamentLabel}
                 <select
                   value={selectedId}
-                  onChange={(e) => setSelectedId(e.target.value)}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setSelectedId(id);
+                    // Dans l'URL : un rechargement (ou un lien partagé à la
+                    // régie) rouvre CE tournoi, pas le plus récent.
+                    void router.replace(
+                      {
+                        pathname: router.pathname,
+                        query: { ...router.query, tournament: id },
+                      },
+                      undefined,
+                      { shallow: true }
+                    );
+                  }}
                   className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
                 >
                   {tournaments.map((x) => (

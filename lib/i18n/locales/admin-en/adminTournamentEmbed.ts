@@ -20,6 +20,8 @@ export default {
   themeDark: 'Dark',
   snippetLabel: 'iframe snippet',
   copyBtn: 'Copy',
+  openBtn: 'Open',
+  copyFailed: 'Copy failed: select the URL by hand.',
   dayTestLabel: 'Test on the day of',
   dayTestBtn: 'Test',
   daySendBtn: 'Send to OBS',

@@ -1,7 +1,8 @@
 // components/admin/tournament/StreamSourcesPanel.tsx
 //
 // « Sources de stream (OBS) » — le panneau d'où une régie copie les URLs à
-// coller dans OBS, sur l'onglet Outils du tournoi.
+// coller dans OBS, sur Diffusion › Overlays (il vivait dans l'onglet Outils
+// de chaque tournoi jusqu'au 2026-09-28).
 //
 // Sans cet écran, la fonctionnalité n'existe pas : personne ne devine une URL
 // d'overlay. C'est ici que la capacité de plan `matchOverlays` devient quelque
@@ -14,7 +15,7 @@
 // deux rencontres. Figer une source sur un match précis reste possible (la
 // note le dit), mais ce n'est pas le défaut.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import nsAdminTournamentEmbed from '@/lib/i18n/locales/admin-fr/adminTournamentEmbed';
@@ -181,15 +182,28 @@ export default function StreamSourcesPanel({
     (s) => showDonation || !DONATION_KEYS.has(s.key)
   );
 
+  // Un seul minuteur, annulé au démontage : changer de tournoi démonte le
+  // panneau (clé), et un `setCopied` tardif visait un composant disparu.
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+    },
+    []
+  );
   const copy = async (value: string, key: string) => {
+    let ok = true;
     try {
       await navigator.clipboard.writeText(value);
-      setCopied(key);
-      setTimeout(() => setCopied(null), 1500);
     } catch {
-      // Presse-papiers refusé (contexte non sécurisé, permission) : l'URL
-      // reste sélectionnable à la main, rien à signaler bruyamment.
+      // Presse-papiers refusé (contexte non sécurisé, permission) : on le DIT,
+      // l'URL reste sélectionnable à la main. En silence, on croyait avoir
+      // copié et on collait l'ancienne URL dans OBS.
+      ok = false;
     }
+    setCopied(ok ? key : `${key}:failed`);
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopied(null), ok ? 1500 : 4000);
   };
 
   if (!enabled) {
@@ -237,17 +251,38 @@ export default function StreamSourcesPanel({
                 </span>
               </div>
               <div className="relative">
-                <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-neutral-700/60 bg-neutral-950/70 p-3 pr-20 font-mono text-[11px] text-neutral-300">
+                <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-neutral-700/60 bg-neutral-950/70 p-3 pr-40 font-mono text-[11px] text-neutral-300">
                   {url}
                 </pre>
-                <button
-                  type="button"
-                  onClick={() => copy(url, s.key)}
-                  className="absolute right-2 top-2 rounded-md bg-neutral-700 px-2.5 py-1 text-xs font-medium transition-colors hover:bg-neutral-600"
-                >
-                  {copied === s.key ? t.copiedBtn : t.copyBtn}
-                </button>
+                <div className="absolute right-2 top-2 flex gap-1.5">
+                  {/* VÉRIFIER AVANT DE COLLER : seule « Matchs du jour » avait
+                      un aperçu ; les autres ne se voyaient qu'une fois dans
+                      OBS, en direct. */}
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${t.openBtn} — ${label}`}
+                    className="rounded-md border border-neutral-600 px-2.5 py-1 text-xs font-medium text-neutral-200 transition-colors hover:bg-neutral-700"
+                  >
+                    {t.openBtn}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => copy(url, s.key)}
+                    className="rounded-md bg-neutral-700 px-2.5 py-1 text-xs font-medium transition-colors hover:bg-neutral-600"
+                  >
+                    <span aria-live="polite">
+                      {copied === s.key ? t.copiedBtn : t.copyBtn}
+                    </span>
+                  </button>
+                </div>
               </div>
+              {copied === `${s.key}:failed` && (
+                <p role="alert" className="mt-1.5 text-xs text-amber-200">
+                  {t.copyFailed}
+                </p>
+              )}
               {s.key === 'day' && (
                 // TEST SUR UN AUTRE JOUR. L'URL à coller reste celle du jour
                 // (ci-dessus) ; ce bouton n'ouvre qu'un aperçu daté, sur fond
