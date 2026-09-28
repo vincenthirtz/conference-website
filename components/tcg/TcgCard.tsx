@@ -152,6 +152,12 @@ export type TcgCardSubject =
       imageUrl: string | null;
       artistName: string | null;
       artistUrl: string | null;
+      /**
+       * `association` : un visuel de l'association (logo d'événement, dépôt
+       * staff) rangé dans la même table. Affiché EN ENTIER (un logo recadré
+       * perd son sens) et marqué de la catégorie. Absent = fan art.
+       */
+      category?: 'fanart' | 'association';
     }
   | {
       /**
@@ -209,6 +215,11 @@ export type TcgCardProps = {
      * en dur dans une seule langue.
      */
     roles?: Record<FigureRole, string>;
+    /**
+     * Nom de la catégorie « L'association », posé sur ses cartes. Optionnel :
+     * sans lui, la carte s'affiche sans badge plutôt qu'en une seule langue.
+     */
+    association?: string;
   };
 };
 
@@ -267,6 +278,8 @@ export default function TcgCard({
   // que les deux décisions n'en font qu'une : une illustration est faite pour
   // remplir le cadre, un logo pour y flotter sans être rogné.
   const usesTeamLogo = subject.kind === 'team' && !subject.cardImageUrl;
+  const isAssociation =
+    subject.kind === 'fanart' && subject.category === 'association';
   const imageUrl =
     subject.kind === 'team'
       ? (subject.cardImageUrl ?? subject.logoUrl)
@@ -328,7 +341,11 @@ export default function TcgCard({
             alt=""
             fill
             sizes="(max-width: 640px) 45vw, 180px"
-            className={usesTeamLogo ? 'object-contain p-4' : 'object-cover'}
+            className={
+              usesTeamLogo || isAssociation
+                ? 'object-contain p-4'
+                : 'object-cover'
+            }
             // Optimisée seulement quand c'est sûr (cf.
             // `shouldOptimizeCardImage`) : c'est ce qui rend son `srcset` à
             // `sizes`, que `unoptimized` rendait lettre morte.
@@ -419,6 +436,11 @@ export default function TcgCard({
               className="truncate text-[11px]"
             />
           )}
+        {isAssociation && labels.association && (
+          <p className="text-[11px] font-semibold text-emerald-300">
+            {labels.association}
+          </p>
+        )}
         {subject.kind === 'fanart' &&
           subject.artistName &&
           labels.logoCredit && (

@@ -54,6 +54,7 @@ export default {
   filterAll: 'All',
   filterTeams: 'Teams',
   filterMaps: 'Maps',
+  filterAssociation: 'The association',
   countCards: '{n} cards',
   filterEmpty: 'No card in this category yet.',
 

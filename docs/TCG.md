@@ -1105,6 +1105,39 @@ n'existe pas. Défaut proposé : `rare` (`DEFAULT_FANART_RARITY`), jamais impos�
   compléter — une série ne doit exiger que des cartes qu'un paquet peut donner
   en nombre stable, et le vivier des fan arts grandit au fil des validations.
 
+### La catégorie « L'association »
+
+[`pages/api/admin/tcg/association.ts`](../pages/api/admin/tcg/association.ts)
+(créer, modifier, retirer), onglet **L'association** de `/admin/tcg`
+([`TcgAssociationPanel`](../components/admin/tcg/TcgAssociationPanel.tsx)).
+Migration [`tcg_association_cards.sql`](../database/migrations/tcg_association_cards.sql).
+
+Les visuels de l'association : les **logos d'événement** du calendrier
+(`site_settings.seasonal_logos` — Octobre rose, Noël…) et les **images
+déposées par le staff**.
+
+**Une catégorie, pas un type de carte.** Une carte de l'association est une
+image, un titre, un crédit et une rareté choisie à la main — une fan art.
+Elle vit dans `tcg_fanart_cards` (`category = 'association'`) et reste
+`subject_kind = 'fanart'` : tirage (emplacement de décor, part des fan arts),
+échanges, forge, vitrine et recyclage la traitent sans une ligne de plus. Un
+sixième `subject_kind` aurait imposé de recopier les deux CHECK de
+`tcg_pack_cards` et les fonctions SQL d'échange et de forge.
+
+- **Pas de modération** : déposée par le staff sous `manage_tcg`, elle naît
+  `approved`. Retirer (`revoked`) la sort des paquets à venir ; les
+  exemplaires tirés restent, face neutre. Elle se rétablit.
+- **Pas de proposante** (`submitted_by` NULL, autorisé pour cette seule
+  catégorie par `tcg_fanart_submitter_check`) : l'effacement du compte d'un
+  membre du staff ne retire pas des cartes que d'autres possèdent.
+- **Un logo importé est copié** sous `tcg-association/`, pas référencé : le
+  calendrier se modifie librement. Seuls les logos hébergés dans le bucket se
+  copient ; `source_ref = 'seasonal:<id>'`, unique par espace, empêche un
+  double import.
+- **Affichage** : image en entier (`object-contain`), badge « L'association ».
+  Filtre dédié sur le catalogue public `/tcg` ; absente de la page de crédits
+  `/tcg/fan-art` et de la file de modération des fan arts.
+
 ### Les échanges : carte contre carte
 
 La première interaction entre collectionneuses

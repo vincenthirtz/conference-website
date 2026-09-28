@@ -624,6 +624,7 @@ async function openPack(
           artistName: face?.artistName ?? null,
           artistUrl: face?.artistUrl ?? null,
           imageUrl: face?.imageUrl ?? null,
+          category: face?.category ?? 'fanart',
         };
       }
       if (c.subject_kind === 'mascot') {

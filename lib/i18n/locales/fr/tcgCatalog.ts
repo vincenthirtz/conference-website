@@ -60,6 +60,8 @@ export default ns('tcgCatalog', {
   filterAll: 'Tout',
   filterTeams: 'Équipes',
   filterMaps: 'Maps',
+  // Logos d'événement et visuels déposés par le staff.
+  filterAssociation: 'L’association',
   countCards: '{n} cartes',
   // Filtre sans résultat : une grille vide ressemble à une page cassée.
   filterEmpty: 'Aucune carte dans cette catégorie pour l’instant.',

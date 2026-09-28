@@ -151,3 +151,54 @@ export function displayableArtistUrl(
     return null;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* La catégorie « L'association »                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Les catégories d'une carte de `tcg_fanart_cards` (CHECK
+ * `tcg_fanart_category_check`, migration `tcg_association_cards.sql`).
+ *
+ * `association` : les visuels de l'association — logos d'événement et images
+ * déposées par le staff. Même table, même type de carte (`fanart`) : tirage,
+ * échanges, forge et vitrine les traitent sans une ligne de plus. Seuls
+ * l'affichage et la façon d'entrer au catalogue diffèrent.
+ */
+export const FANART_CATEGORIES = ['fanart', 'association'] as const;
+export type FanartCategory = (typeof FANART_CATEGORIES)[number];
+
+/** Une valeur lue en base, ramenée à une catégorie connue. */
+export function fanartCategoryOf(raw: unknown): FanartCategory {
+  return raw === 'association' ? 'association' : 'fanart';
+}
+
+/** Crédit par défaut d'une carte de l'association. */
+export const ASSOCIATION_DEFAULT_CREDIT = 'L’association';
+
+/** Préfixe des fichiers de la catégorie dans le bucket TCG. */
+export const ASSOCIATION_STORAGE_PREFIX = 'tcg-association';
+
+/** `source_ref` d'un logo d'événement importé. */
+export function seasonalLogoSourceRef(logoId: string): string {
+  return `seasonal:${logoId}`;
+}
+
+/**
+ * Le chemin DANS LE BUCKET d'une URL publique Supabase Storage, ou `null`.
+ *
+ * Un logo d'événement est une URL (upload du back-office → bucket public, ou
+ * chemin du site). Seul le premier cas se copie en carte : la carte a besoin
+ * d'un objet du bucket qui lui appartienne, pas d'un lien qui pourrait changer.
+ */
+export function bucketPathFromPublicUrl(
+  url: string,
+  bucket: string
+): string | null {
+  const marker = `/storage/v1/object/public/${bucket}/`;
+  const at = url.indexOf(marker);
+  if (at === -1) return null;
+  const path = decodeURIComponent(url.slice(at + marker.length).split('?')[0]);
+  if (!path || path.includes('..') || path.startsWith('/')) return null;
+  return path;
+}

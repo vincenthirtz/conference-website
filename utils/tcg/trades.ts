@@ -343,6 +343,8 @@ export type TradeCardView =
       artistName: string | null;
       artistUrl: string | null;
       imageUrl: string | null;
+      /** `association` : visuel de l'association (cf. `FanartFace`). */
+      category?: 'fanart' | 'association';
     })
   | (CardBase & {
       kind: 'mascot';
@@ -422,6 +424,7 @@ export async function readSubjectFaces(
         artistName: f?.artistName ?? null,
         artistUrl: f?.artistUrl ?? null,
         imageUrl: f?.imageUrl ?? null,
+        category: f?.category ?? 'fanart',
         ...base,
       };
     }

@@ -229,6 +229,9 @@ export default ns('playerTcg', {
   // la carte ET la fiche l'affichent, et une seule clé leur garantit la même
   // formulation. `{artist}` devient le lien vers l'artiste.
   logoCredit: 'Logo : {artist}',
+  // Badge des cartes de la catégorie « L'association » (logos d'événement,
+  // visuels déposés par le staff).
+  cardAssociation: 'L’association',
   roleTank: 'Tank',
   roleDamage: 'Dégâts',
   roleSupport: 'Soutien',

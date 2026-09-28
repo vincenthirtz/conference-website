@@ -88,6 +88,7 @@ import enAdminTenantDetail from './adminTenantDetail';
 import enAdminTenantRequestsList from './adminTenantRequestsList';
 import enAdminCircuitPartners from './adminCircuitPartners';
 import enAdminTcgFanart from './adminTcgFanart';
+import enAdminTcgAssociation from './adminTcgAssociation';
 import enAdminTcgPage from './adminTcgPage';
 import enAdminPartnershipRequestsList from './adminPartnershipRequestsList';
 import enAdminPartnershipRequestDetail from './adminPartnershipRequestDetail';
@@ -287,6 +288,7 @@ const adminEnDict = {
   adminTenantRequestsList: enAdminTenantRequestsList,
   adminCircuitPartners: enAdminCircuitPartners,
   adminTcgFanart: enAdminTcgFanart,
+  adminTcgAssociation: enAdminTcgAssociation,
   adminTcgPage: enAdminTcgPage,
   adminPartnershipRequestsList: enAdminPartnershipRequestsList,
   adminPartnershipRequestDetail: enAdminPartnershipRequestDetail,

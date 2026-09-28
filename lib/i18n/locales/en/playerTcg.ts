@@ -182,6 +182,7 @@ export default {
   foil: 'Foil',
   copies: '×{count}',
   logoCredit: 'Logo by {artist}',
+  cardAssociation: 'The association',
   roleTank: 'Tank',
   roleDamage: 'Damage',
   roleSupport: 'Support',

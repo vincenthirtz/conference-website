@@ -131,6 +131,7 @@ function subjectOf(card: TradeCardView): TcgCardSubject {
       imageUrl: card.imageUrl,
       artistName: card.artistName,
       artistUrl: card.artistUrl,
+      category: card.category,
     };
   }
   if (card.kind === 'mascot') {
@@ -179,6 +180,7 @@ function PlayerTcgTrades() {
       foil: tc.foil,
       copies: tc.copies,
       logoCredit: tc.logoCredit,
+      association: tc.cardAssociation,
     }),
     [tc]
   );

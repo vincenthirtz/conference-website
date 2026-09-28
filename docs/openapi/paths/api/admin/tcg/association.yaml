@@ -1,0 +1,135 @@
+get:
+  tags:
+    - admin/tcg
+  summary: Cartes de la categorie « L'association » et logos d'evenement importables.
+  description: |
+    Toutes les cartes de la categorie (publiees et retirees), plus les logos du
+    calendrier (`site_settings.seasonal_logos`) avec leur etat : deja importe
+    (`cardId`), importable (heberge dans le bucket) ou non. Permission
+    `manage_tcg`.
+  operationId: adminListTcgAssociation
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Cartes, logos d'evenement, raretes et valeurs par defaut.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+post:
+  tags:
+    - admin/tcg
+  summary: Creer une carte de l'association (depot d'image ou logo d'evenement).
+  description: |
+    `upload` : image en base64 (magic bytes verifies, 2 Mio max). `import_logo` :
+    copie l'image d'un logo d'evenement du bucket sous `tcg-association/` — la
+    carte ne depend plus du calendrier. Pas de moderation : la carte nait
+    `approved`, sans proposante (`submitted_by` NULL). Journalise
+    (`create_tcg_association_card`).
+  operationId: adminCreateTcgAssociation
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [action]
+          properties:
+            action:
+              type: string
+              enum: [upload, import_logo]
+            data:
+              type: string
+              description: Image en data URL (upload).
+            mimeType:
+              type: string
+            logoId:
+              type: string
+              description: Identifiant du logo d'evenement (import_logo).
+            title:
+              type: string
+              minLength: 2
+              maxLength: 80
+            credit:
+              type: string
+              minLength: 2
+              maxLength: 80
+            rarity:
+              type: string
+              enum: [common, rare, epic, legendary]
+  responses:
+    '201':
+      description: Carte creee.
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      description: '`code: logo_not_found`.'
+    '409':
+      description: '`code: already_imported`.'
+    '422':
+      description: '`code: logo_not_in_bucket` — logo heberge hors du stockage.'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+patch:
+  tags:
+    - admin/tcg
+  summary: Modifier, retirer ou retablir une carte de l'association.
+  description: |
+    `update` (titre, credit, rarete), `revoke` (sort des paquets a venir, les
+    exemplaires tires restent), `restore`. Ecriture conditionnee au statut de
+    depart. Journalise.
+  operationId: adminUpdateTcgAssociation
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [action, id]
+          properties:
+            action:
+              type: string
+              enum: [update, revoke, restore]
+            id:
+              $ref: '#/components/schemas/Uuid'
+            title:
+              type: string
+              minLength: 2
+              maxLength: 80
+            credit:
+              type: string
+              minLength: 2
+              maxLength: 80
+            rarity:
+              type: string
+              enum: [common, rare, epic, legendary]
+  responses:
+    '200':
+      description: Carte mise a jour.
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      description: '`code: conflict` — introuvable ou deja dans cet etat.'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

@@ -63,6 +63,19 @@ type CatalogCard =
       name: string | null;
       imageUrl: string | null;
       rarity: TcgRarity;
+    }
+  | {
+      /**
+       * Une carte de la catégorie « L'association » : logo d'événement ou
+       * visuel déposé par le staff. Aucune personne derrière — une entité,
+       * comme une équipe : elle a sa place ici.
+       */
+      kind: 'association';
+      id: string;
+      name: string | null;
+      imageUrl: string | null;
+      credit: string | null;
+      rarity: TcgRarity;
     };
 
 type Props = {
@@ -72,7 +85,7 @@ type Props = {
   seo: SeoProps;
 };
 
-type Filter = 'all' | 'team' | 'map';
+type Filter = 'all' | 'team' | 'map' | 'association';
 
 function TcgCatalogPage({ cards, playerCount }: Props) {
   const t = useT(nsTcgCatalog);
@@ -96,6 +109,7 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
     // Sans ce gabarit, `TcgCard` n'affiche aucun crédit : c'est l'écran qui
     // décide, pour qu'aucun texte en dur ne s'affiche dans une seule langue.
     logoCredit: tc.logoCredit,
+    association: tc.cardAssociation,
   };
 
   const earnSteps = [
@@ -136,6 +150,11 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
     { key: 'all', label: t.filterAll },
     { key: 'team', label: t.filterTeams },
     { key: 'map', label: t.filterMaps },
+    // Filtre montré seulement s'il a quelque chose à montrer : une catégorie
+    // vide en tête de catalogue ressemblerait à une promesse non tenue.
+    ...(cards.some((c) => c.kind === 'association')
+      ? [{ key: 'association' as const, label: t.filterAssociation }]
+      : []),
   ];
 
   return (
@@ -275,12 +294,22 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
                           cardImageUrl: card.cardImageUrl,
                           logoCredit: card.logoCredit ?? null,
                         }
-                      : {
-                          kind: 'map',
-                          slug: card.id,
-                          name: card.name,
-                          imageUrl: card.imageUrl,
-                        }
+                      : card.kind === 'association'
+                        ? {
+                            kind: 'fanart',
+                            fanartId: card.id,
+                            name: card.name,
+                            imageUrl: card.imageUrl,
+                            artistName: card.credit,
+                            artistUrl: null,
+                            category: 'association',
+                          }
+                        : {
+                            kind: 'map',
+                            slug: card.id,
+                            name: card.name,
+                            imageUrl: card.imageUrl,
+                          }
                   }
                   rarity={card.rarity}
                   labels={cardLabels}
@@ -443,7 +472,37 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
     .select('user_id', { count: 'exact', head: true })
     .eq('tenant_id', DEFAULT_TENANT_ID);
 
-  const cards = [...teamCards, ...mapCards];
+  // L'ASSOCIATION : ses visuels publiés. Pas les fan arts de la communauté,
+  // qui ont leur page de crédits (`/tcg/fan-art`).
+  const { TCG_BUCKET } = await import('@/utils/tcg/teamCardImage');
+  const { data: assoRows } = await supabaseAdmin
+    .from('tcg_fanart_cards')
+    .select('id, title, artist_name, image_path, rarity')
+    .eq('tenant_id', DEFAULT_TENANT_ID)
+    .eq('category', 'association')
+    .eq('status', 'approved')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  const associationCards: CatalogCard[] = (
+    (assoRows ?? []) as Array<{
+      id: string;
+      title: string;
+      artist_name: string | null;
+      image_path: string;
+      rarity: TcgRarity | null;
+    }>
+  ).map((row) => ({
+    kind: 'association',
+    id: row.id,
+    name: row.title,
+    imageUrl:
+      supabaseAdmin.storage.from(TCG_BUCKET).getPublicUrl(row.image_path).data
+        ?.publicUrl ?? null,
+    credit: row.artist_name,
+    rarity: row.rarity ?? 'rare',
+  }));
+
+  const cards = [...teamCards, ...mapCards, ...associationCards];
 
   return {
     props: {

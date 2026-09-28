@@ -74,6 +74,8 @@ export type TcgPackRevealProps = {
       copies: string;
       /** Gabarit du crédit de logo ; absent ⇒ aucun crédit (cf. `TcgCard`). */
       logoCredit?: string;
+      /** Badge de la catégorie « L'association » (cf. `TcgCard`). */
+      association?: string;
     };
   };
 };

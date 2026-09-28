@@ -243,6 +243,8 @@ type CollectionCard = Engagement &
         artistName: string | null;
         artistUrl: string | null;
         imageUrl: string | null;
+        /** `association` : visuel de l'association. Optionnel (réponse d'avant). */
+        category?: 'fanart' | 'association';
         rarity: TcgRarity;
         isFoil: boolean;
         count: number;
@@ -301,6 +303,7 @@ type DrawnCard = { position: number; isNew?: boolean } & (
       artistName: string | null;
       artistUrl: string | null;
       imageUrl: string | null;
+      category?: 'fanart' | 'association';
       rarity: TcgRarity;
       isFoil: boolean;
     }
@@ -408,6 +411,7 @@ function cardSubject(card: DrawnCard | CollectionCard): TcgCardSubject {
       imageUrl: card.imageUrl,
       artistName: card.artistName,
       artistUrl: card.artistUrl,
+      category: card.category,
     };
   }
   if (card.kind === 'mascot') {
@@ -590,6 +594,7 @@ function PlayerTcg() {
     // Partagé avec la révélation (`labels.card`) : les deux affichent le
     // crédit, ou aucune.
     logoCredit: t.logoCredit,
+    association: t.cardAssociation,
     // Sous la figurine d'une joueuse sans photo : le rôle qu'elle représente.
     roles: {
       tank: t.roleTank,

@@ -444,6 +444,7 @@ export default withAuthRoute(async function handler(
         artistName: face?.artistName ?? null,
         artistUrl: face?.artistUrl ?? null,
         imageUrl: face?.imageUrl ?? null,
+        category: face?.category ?? 'fanart',
         rarity: a.rarity,
         isFoil: a.hasFoil,
         count: a.count,

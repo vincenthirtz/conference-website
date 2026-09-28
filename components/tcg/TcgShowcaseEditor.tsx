@@ -84,6 +84,7 @@ type CollectionCard =
       artistName: string | null;
       artistUrl: string | null;
       imageUrl: string | null;
+      category?: 'fanart' | 'association';
       rarity: TcgRarity;
       isFoil: boolean;
     }
@@ -172,6 +173,7 @@ export default function TcgShowcaseEditor({
     foil: tTcg.foil,
     copies: tTcg.copies,
     logoCredit: tTcg.logoCredit,
+    association: tTcg.cardAssociation,
   };
 
   const apply = useCallback((data: ShowcaseResponse, keepSelection = false) => {
@@ -459,7 +461,9 @@ export default function TcgShowcaseEditor({
                         : card.kind === 'team'
                           ? t.kindTeam
                           : card.kind === 'fanart'
-                            ? t.kindFanart
+                            ? card.category === 'association'
+                              ? tTcg.cardAssociation
+                              : t.kindFanart
                             : card.kind === 'mascot'
                               ? t.kindMascot
                               : t.kindMap;

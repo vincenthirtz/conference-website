@@ -128,6 +128,8 @@ export type ShowcaseCard =
       artistName: string | null;
       artistUrl: string | null;
       imageUrl: string | null;
+      /** `association` : visuel de l'association (cf. `FanartFace`). */
+      category?: 'fanart' | 'association';
       rarity: TcgRarity;
       isFoil: boolean;
     }
@@ -291,6 +293,7 @@ export async function resolveShowcaseCards(
         artistName: face?.artistName ?? null,
         artistUrl: face?.artistUrl ?? null,
         imageUrl: face?.imageUrl ?? null,
+        category: face?.category ?? 'fanart',
         rarity,
         isFoil,
       };

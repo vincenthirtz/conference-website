@@ -47,6 +47,7 @@ export function showcaseCardSubject(card: ShowcaseCard): TcgCardSubject {
       imageUrl: card.imageUrl,
       artistName: card.artistName,
       artistUrl: card.artistUrl,
+      category: card.category,
     };
   }
   if (card.kind === 'mascot') {
@@ -104,6 +105,7 @@ export default function TcgShowcaseSection({
                 foil: tTcg.foil,
                 copies: tTcg.copies,
                 logoCredit: tTcg.logoCredit,
+                association: tTcg.cardAssociation,
               }}
             />
           </li>

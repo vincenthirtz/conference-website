@@ -36,7 +36,11 @@ import { logger } from '@/utils/logger';
 import { recommendCardHero } from '@/utils/heroes/recommendCardHero';
 import { maskBattleTag } from '@/utils/battleTag';
 import { TCG_BUCKET, tcgTeamImageUrl } from '@/utils/tcg/teamCardImage';
-import { displayableArtistUrl } from '@/utils/tcg/fanart';
+import {
+  displayableArtistUrl,
+  fanartCategoryOf,
+  type FanartCategory,
+} from '@/utils/tcg/fanart';
 import { resolveLogoCredit, type LogoCredit } from '@/utils/teams/logoCredit';
 import {
   figureRoleFromHeroRole,
@@ -433,6 +437,11 @@ export type FanartFace = {
   artistName: string | null;
   artistUrl: string | null;
   imageUrl: string | null;
+  /**
+   * `association` : un visuel de l'association (logo d'événement, dépôt
+   * staff), pas l'œuvre d'une autrice. La carte l'affiche autrement.
+   */
+  category: FanartCategory;
 };
 
 /**
@@ -456,7 +465,7 @@ export async function readFanartFaces(
 
   const { data, error } = await supabaseAdmin
     .from('tcg_fanart_cards')
-    .select('id, title, artist_name, artist_url, image_path, status')
+    .select('id, title, artist_name, artist_url, image_path, status, category')
     .eq('tenant_id', tenantId)
     .eq('status', 'approved')
     .in('id', ids);
@@ -471,8 +480,10 @@ export async function readFanartFaces(
     artist_name: string | null;
     artist_url: string | null;
     image_path: string | null;
+    category?: string | null;
   }>) {
     faces.set(row.id, {
+      category: fanartCategoryOf(row.category),
       fanartId: row.id,
       title: row.title,
       artistName: row.artist_name,

@@ -125,6 +125,9 @@ async function handler(
       .from('tcg_fanart_cards')
       .select(SELECT)
       .eq('tenant_id', ctx.tenantId)
+      // Les cartes de l'association ont leur propre panneau
+      // (`/api/admin/tcg/association`) : cette file ne relit que la communauté.
+      .eq('category', 'fanart')
       .eq('status', status)
       // La file de modération se prend par le bas : la plus ancienne attend le
       // plus longtemps. Les autres vues, elles, montrent les récentes d'abord.
@@ -193,6 +196,7 @@ async function handler(
     .update(update)
     .eq('tenant_id', ctx.tenantId)
     .eq('id', body.id)
+    .eq('category', 'fanart')
     .eq('status', from)
     .select(SELECT);
   if (error) {

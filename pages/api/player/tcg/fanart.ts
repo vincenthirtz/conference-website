@@ -253,6 +253,9 @@ async function submit(
     .insert({
       tenant_id: tenantId,
       submitted_by: userId,
+      // Explicite plutôt que laissé au DEFAULT : la file de modération filtre
+      // sur cette colonne, et une proposition ne doit jamais s'en échapper.
+      category: 'fanart',
       title,
       artist_name: artistName,
       artist_url: artistUrl,

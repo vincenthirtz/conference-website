@@ -32,6 +32,7 @@ import nsAdminTcgPage from '@/lib/i18n/locales/admin-fr/adminTcgPage';
 import nsAdminTcgOverview from '@/lib/i18n/locales/admin-fr/adminTcgOverview';
 import nsAdminTcgPhotos from '@/lib/i18n/locales/admin-fr/adminTcgPhotos';
 import nsAdminTcgFanart from '@/lib/i18n/locales/admin-fr/adminTcgFanart';
+import nsAdminTcgAssociation from '@/lib/i18n/locales/admin-fr/adminTcgAssociation';
 
 const ID_BASE = 'admin-tcg';
 
@@ -43,6 +44,9 @@ const TcgPhotosPanel = lazyPanel(
 );
 const TcgFanartPanel = lazyPanel(
   () => import('@/components/admin/moderation/TcgFanartPanel')
+);
+const TcgAssociationPanel = lazyPanel(
+  () => import('@/components/admin/tcg/TcgAssociationPanel')
 );
 const TcgCataloguePanel = lazyPanel(
   () => import('@/components/admin/tcg/TcgCataloguePanel')
@@ -71,6 +75,7 @@ export default function AdminTcgPage(_props: StaffProps) {
   const tTcgOverview = useAdminT(nsAdminTcgOverview);
   const tTcgPhotos = useAdminT(nsAdminTcgPhotos);
   const tTcgFanart = useAdminT(nsAdminTcgFanart);
+  const tTcgAssociation = useAdminT(nsAdminTcgAssociation);
 
   // L'économie d'abord : c'est la vue qu'on ouvre pour SAVOIR. Les deux files
   // ne réclament l'attention que lorsqu'elles ont quelque chose dedans.
@@ -78,6 +83,7 @@ export default function AdminTcgPage(_props: StaffProps) {
     { id: 'economie', label: tTcgOverview.tabLabel },
     { id: 'photos', label: tTcgPhotos.tabLabel },
     { id: 'fanart', label: tTcgFanart.tabLabel },
+    { id: 'association', label: tTcgAssociation.tabLabel },
     { id: 'vue', label: t.tabCatalogue },
     { id: 'dormants', label: t.tabEngagement },
   ];
@@ -116,6 +122,8 @@ export default function AdminTcgPage(_props: StaffProps) {
               <TcgEngagementPanel />
             ) : active === 'vue' ? (
               <TcgCataloguePanel />
+            ) : active === 'association' ? (
+              <TcgAssociationPanel />
             ) : active === 'fanart' ? (
               <TcgFanartPanel />
             ) : active === 'photos' ? (

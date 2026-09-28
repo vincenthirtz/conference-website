@@ -4555,6 +4555,7 @@
           "create_prize_pool",
           "create_stage",
           "create_swiss_round",
+          "create_tcg_association_card",
           "create_team",
           "create_tenant",
           "create_tournament",
@@ -4658,8 +4659,10 @@
           "requestMoreInfo",
           "resend_credentials",
           "resolve_match_dispute",
+          "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_tcg_association_card",
           "revoke_tcg_fanart",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
@@ -4745,6 +4748,7 @@
           "update_staff_role",
           "update_stage",
           "update_support_ticket",
+          "update_tcg_association_card",
           "update_team",
           "update_team_member",
           "update_tenant",
@@ -5908,6 +5912,7 @@
           "create_prize_pool",
           "create_stage",
           "create_swiss_round",
+          "create_tcg_association_card",
           "create_team",
           "create_tenant",
           "create_tournament",
@@ -6011,8 +6016,10 @@
           "requestMoreInfo",
           "resend_credentials",
           "resolve_match_dispute",
+          "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_tcg_association_card",
           "revoke_tcg_fanart",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
@@ -6098,6 +6105,7 @@
           "update_staff_role",
           "update_stage",
           "update_support_ticket",
+          "update_tcg_association_card",
           "update_team",
           "update_team_member",
           "update_tenant",
@@ -7862,6 +7870,7 @@
           "create_prize_pool",
           "create_stage",
           "create_swiss_round",
+          "create_tcg_association_card",
           "create_team",
           "create_tenant",
           "create_tournament",
@@ -7965,8 +7974,10 @@
           "requestMoreInfo",
           "resend_credentials",
           "resolve_match_dispute",
+          "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_tcg_association_card",
           "revoke_tcg_fanart",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
@@ -8052,6 +8063,7 @@
           "update_staff_role",
           "update_stage",
           "update_support_ticket",
+          "update_tcg_association_card",
           "update_team",
           "update_team_member",
           "update_tenant",
@@ -10976,6 +10988,7 @@
           "create_prize_pool",
           "create_stage",
           "create_swiss_round",
+          "create_tcg_association_card",
           "create_team",
           "create_tenant",
           "create_tournament",
@@ -11079,8 +11092,10 @@
           "requestMoreInfo",
           "resend_credentials",
           "resolve_match_dispute",
+          "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_tcg_association_card",
           "revoke_tcg_fanart",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
@@ -11166,6 +11181,7 @@
           "update_staff_role",
           "update_stage",
           "update_support_ticket",
+          "update_tcg_association_card",
           "update_team",
           "update_team_member",
           "update_tenant",
@@ -13605,6 +13621,248 @@
     },
     "required": [
      "comments"
+    ]
+   }
+  },
+  "GET /api/admin/tcg/association": {
+   "200": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "item": {
+        "type": "object",
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "title": {
+          "type": "string"
+         },
+         "credit": {
+          "type": "string"
+         },
+         "imageUrl": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "status": {
+          "type": "string"
+         },
+         "rarity": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "sourceRef": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "createdAt": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "id",
+         "title",
+         "credit",
+         "imageUrl",
+         "status",
+         "rarity",
+         "sourceRef",
+         "createdAt"
+        ]
+       }
+      },
+      "required": [
+       "item"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "items": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "title": {
+           "type": "string"
+          },
+          "credit": {
+           "type": "string"
+          },
+          "imageUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "status": {
+           "type": "string"
+          },
+          "rarity": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "sourceRef": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "createdAt": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "id",
+          "title",
+          "credit",
+          "imageUrl",
+          "status",
+          "rarity",
+          "sourceRef",
+          "createdAt"
+         ]
+        }
+       },
+       "eventLogos": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "name": {
+           "type": "string"
+          },
+          "url": {
+           "type": "string"
+          },
+          "importable": {
+           "type": "boolean"
+          },
+          "cardId": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "id",
+          "name",
+          "url",
+          "importable",
+          "cardId"
+         ]
+        }
+       },
+       "rarities": {
+        "type": "array",
+        "items": {
+         "type": "string",
+         "enum": [
+          "common",
+          "epic",
+          "legendary",
+          "rare"
+         ]
+        }
+       },
+       "defaultRarity": {
+        "type": "string",
+        "enum": [
+         "common",
+         "epic",
+         "legendary",
+         "rare"
+        ]
+       },
+       "defaultCredit": {
+        "type": "string"
+       },
+       "maxBytes": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "items",
+       "eventLogos",
+       "rarities",
+       "defaultRarity",
+       "defaultCredit",
+       "maxBytes"
+      ]
+     }
+    ]
+   },
+   "201": {
+    "type": "object",
+    "properties": {
+     "item": {
+      "type": "object",
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "title": {
+        "type": "string"
+       },
+       "credit": {
+        "type": "string"
+       },
+       "imageUrl": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string"
+       },
+       "rarity": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "sourceRef": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "createdAt": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "id",
+       "title",
+       "credit",
+       "imageUrl",
+       "status",
+       "rarity",
+       "sourceRef",
+       "createdAt"
+      ]
+     }
+    },
+    "required": [
+     "item"
     ]
    }
   },
@@ -16107,6 +16365,7 @@
           "create_prize_pool",
           "create_stage",
           "create_swiss_round",
+          "create_tcg_association_card",
           "create_team",
           "create_tenant",
           "create_tournament",
@@ -16210,8 +16469,10 @@
           "requestMoreInfo",
           "resend_credentials",
           "resolve_match_dispute",
+          "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_tcg_association_card",
           "revoke_tcg_fanart",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
@@ -16297,6 +16558,7 @@
           "update_staff_role",
           "update_stage",
           "update_support_ticket",
+          "update_tcg_association_card",
           "update_team",
           "update_team_member",
           "update_tenant",
@@ -20517,6 +20779,7 @@
           "create_prize_pool",
           "create_stage",
           "create_swiss_round",
+          "create_tcg_association_card",
           "create_team",
           "create_tenant",
           "create_tournament",
@@ -20620,8 +20883,10 @@
           "requestMoreInfo",
           "resend_credentials",
           "resolve_match_dispute",
+          "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_tcg_association_card",
           "revoke_tcg_fanart",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
@@ -20707,6 +20972,7 @@
           "update_staff_role",
           "update_stage",
           "update_support_ticket",
+          "update_tcg_association_card",
           "update_team",
           "update_team_member",
           "update_tenant",
@@ -41450,6 +41716,7 @@
             "title": {},
             "artistName": {},
             "artistUrl": {},
+            "category": {},
             "teamId": {},
             "logoUrl": {},
             "cardImageUrl": {},
@@ -41537,6 +41804,7 @@
             "title": {},
             "artistName": {},
             "artistUrl": {},
+            "category": {},
             "teamId": {},
             "logoUrl": {},
             "cardImageUrl": {},
@@ -41587,6 +41855,13 @@
              "type": [
               "string",
               "null"
+             ]
+            },
+            "category": {
+             "type": "string",
+             "enum": [
+              "association",
+              "fanart"
              ]
             },
             "rarity": {
@@ -41645,6 +41920,7 @@
             "artistName",
             "artistUrl",
             "imageUrl",
+            "category",
             "rarity",
             "isFoil",
             "count",
@@ -41716,6 +41992,7 @@
             "title": {},
             "artistName": {},
             "artistUrl": {},
+            "category": {},
             "teamId": {},
             "logoUrl": {},
             "cardImageUrl": {},
@@ -41834,7 +42111,8 @@
             "fanartId": {},
             "title": {},
             "artistName": {},
-            "artistUrl": {}
+            "artistUrl": {},
+            "category": {}
            },
            "required": [
             "kind",
@@ -42839,6 +43117,13 @@
             "null"
            ]
           },
+          "category": {
+           "type": "string",
+           "enum": [
+            "association",
+            "fanart"
+           ]
+          },
           "rarity": {
            "type": "string",
            "enum": [
@@ -43242,6 +43527,13 @@
                "string",
                "null"
               ]
+             },
+             "category": {
+              "type": "string",
+              "enum": [
+               "association",
+               "fanart"
+              ]
              }
             },
             "required": [
@@ -43559,6 +43851,13 @@
               "type": [
                "string",
                "null"
+              ]
+             },
+             "category": {
+              "type": "string",
+              "enum": [
+               "association",
+               "fanart"
               ]
              },
              "ownedCopies": {
@@ -43987,6 +44286,13 @@
               "string",
               "null"
              ]
+            },
+            "category": {
+             "type": "string",
+             "enum": [
+              "association",
+              "fanart"
+             ]
             }
            },
            "required": [
@@ -44324,6 +44630,13 @@
              "type": [
               "string",
               "null"
+             ]
+            },
+            "category": {
+             "type": "string",
+             "enum": [
+              "association",
+              "fanart"
              ]
             }
            },
@@ -69209,6 +69522,13 @@
             "null"
            ]
           },
+          "category": {
+           "type": "string",
+           "enum": [
+            "association",
+            "fanart"
+           ]
+          },
           "isNew": {
            "type": "boolean"
           },
@@ -69237,6 +69557,7 @@
           "artistName",
           "artistUrl",
           "imageUrl",
+          "category",
           "position",
           "rarity",
           "isFoil"
@@ -72441,6 +72762,13 @@
             "null"
            ]
           },
+          "category": {
+           "type": "string",
+           "enum": [
+            "association",
+            "fanart"
+           ]
+          },
           "rarity": {
            "type": "string",
            "enum": [
@@ -72753,7 +73081,7 @@
   "pages/api/admin/matches/[matchId]/mvp-public.ts:125",
   "pages/api/admin/matches/[matchId]/mvp-public.ts:137",
   "pages/api/admin/matches/[matchId]/mvp-public.ts:149",
-  "pages/api/admin/tcg/fanart.ts:229",
+  "pages/api/admin/tcg/fanart.ts:233",
   "pages/api/admin/tcg/welcome-gift.ts:72",
   "pages/api/cron/domain-verify.ts:123",
   "pages/api/cron/quota-alerts.ts:114",

@@ -46,6 +46,9 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
         .from('tcg_fanart_cards')
         .select('id, title, artist_name, artist_url, image_path')
         .eq('tenant_id', DEFAULT_TENANT_ID)
+        // Les crédits de la COMMUNAUTÉ : les visuels de l'association n'ont
+        // pas d'autrice à remercier ici (catalogue `/tcg`, filtre dédié).
+        .eq('category', 'fanart')
         .eq('status', 'approved')
         .order('created_at', { ascending: false })
         .limit(200);
