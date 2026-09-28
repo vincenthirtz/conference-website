@@ -70,7 +70,8 @@ const BASELINE: Record<string, number> = {
   // 959 : en-tête et pastille de connexion partis dans
   // `components/Caster/RegieHeader.tsx` (onglets « Diffusion »).
   // 886 : sondage de secours mutualisé (hooks/useVisiblePoll).
-  'pages/admin/regie.tsx': 886,
+  // 881 : largeur du conteneur stabilisée (plus de paramètre `wide`).
+  'pages/admin/regie.tsx': 881,
   'pages/admin/users/[userId]/player-view.tsx': 1092,
   // 860 écrites : le panneau « Visuels » (logo, bannière, règlement PDF, et
   // désormais la chaîne de diffusion par défaut) est parti dans

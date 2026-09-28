@@ -574,21 +574,17 @@ function RegiePage({ staff }: StaffProps) {
     />
   );
 
-  // `wide` : le cockpit passe en deux colonnes dès qu'un run est live (voir plus
-  // bas). Une colonne de 42rem suffisait pour un formulaire ; pour conduire une
-  // antenne, empiler timer, cues, checklist et briefing impose de scroller au
-  // moment où on en a le moins le temps.
-  const shell = (children: React.ReactNode, wide = false) => (
+  // Conteneur TOUJOURS large (6xl, comme les autres écrans de la diffusion) :
+  // il changeait de largeur au démarrage d'un run, et l'en-tête et les onglets
+  // sautaient avec lui. C'est le CONTENU qui reste étroit (2xl) hors direct —
+  // une colonne suffit à un formulaire —, et passe en deux colonnes en direct.
+  const shell = (children: React.ReactNode) => (
     <>
       <Head>
         <title>{tr.docTitle}</title>
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
-        <div
-          className={`${
-            wide ? 'max-w-6xl' : 'max-w-2xl'
-          } mx-auto px-4 sm:px-6 pt-header pb-12`}
-        >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
           {children}
         </div>
       </div>
@@ -597,7 +593,7 @@ function RegiePage({ staff }: StaffProps) {
 
   if (session.loading) {
     return shell(
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-10 text-center text-sm text-neutral-400 flex flex-col items-center gap-3">
+      <div className="max-w-2xl rounded-2xl border border-neutral-800 bg-neutral-900/50 p-10 text-center text-sm text-neutral-400 flex flex-col items-center gap-3">
         <div className="w-10 h-10 border-2 border-neutral-700 border-t-purple-400 rounded-full animate-spin" />
         {t.connecting}
       </div>
@@ -608,7 +604,7 @@ function RegiePage({ staff }: StaffProps) {
     return shell(
       <>
         {header}
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-6 text-center space-y-4">
+        <div className="max-w-2xl rounded-2xl border border-neutral-800 bg-neutral-900/50 p-6 text-center space-y-4">
           <h2 className="text-lg font-semibold">{t.accessInactiveTitle}</h2>
           <p className="text-sm text-neutral-300">{t.accessInactiveBody}</p>
           <button
@@ -627,7 +623,7 @@ function RegiePage({ staff }: StaffProps) {
     return shell(
       <>
         {header}
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-6 text-center space-y-4">
+        <div className="max-w-2xl rounded-2xl border border-neutral-800 bg-neutral-900/50 p-6 text-center space-y-4">
           <h2 className="text-lg font-semibold">{t.connectionErrorTitle}</h2>
           <p className="text-sm text-neutral-300">{t.connectionErrorBody}</p>
           <button
@@ -646,7 +642,7 @@ function RegiePage({ staff }: StaffProps) {
     <>
       {header}
 
-      <div className="space-y-4">
+      <div className={liveRunId ? 'space-y-4' : 'max-w-2xl space-y-4'}>
         {/* Rappel discret : le navigateur ne peut pas garder l'ecran eveille. */}
         {!wakeLockSupported && (
           <p className="flex items-center gap-1.5 text-[11px] text-neutral-500 px-1">
@@ -859,8 +855,7 @@ function RegiePage({ staff }: StaffProps) {
 
       {/* Confirmation « Terminer le run ». */}
       {confirmDialog}
-    </>,
-    !!liveRunId
+    </>
   );
 }
 
