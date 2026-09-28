@@ -22,7 +22,7 @@
 // Gate SSR : tout staff, `withStaffPage('caster')`. Démarrer, clore et piloter
 // un run suivent le DROIT `manage_broadcast` (celui des routes), pas le rôle.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -30,6 +30,7 @@ import { useRouter } from 'next/router';
 import { useToast } from '@/components/Toast';
 import { useCasterSession } from '@/hooks/useCasterSession';
 import { useEventRunRealtime } from '@/hooks/useEventRunRealtime';
+import { useVisiblePoll } from '@/hooks/useVisiblePoll';
 import { useCockpitHeartbeat } from '@/hooks/useCockpitHeartbeat';
 import { useCueStream } from '@/hooks/useCueStream';
 import { useWakeLock } from '@/hooks/useWakeLock';
@@ -270,8 +271,6 @@ function RegiePage({ staff }: StaffProps) {
   // dernieres donnees a l ecran + un bandeau "reconnexion" pendant un refresh.
   const [sessionLost, setSessionLost] = useState(false);
 
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   // Debloque le contexte audio Web Audio des la premiere interaction.
   useEffect(() => {
     let done = false;
@@ -343,21 +342,8 @@ function RegiePage({ staff }: StaffProps) {
     fetchRun();
   }, [fetchRun, session.error, session.loading]);
 
-  // 3. Polling de secours (visibility-gated).
-  useEffect(() => {
-    function tick() {
-      if (
-        typeof document !== 'undefined' &&
-        document.visibilityState !== 'visible'
-      )
-        return;
-      fetchRun();
-    }
-    pollRef.current = setInterval(tick, POLL_INTERVAL_MS);
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [fetchRun]);
+  // 3. Polling de secours, onglet visible, et relecture au retour.
+  useVisiblePoll(fetchRun, POLL_INTERVAL_MS);
 
   // 4. Realtime : merge des changements segments + run (callbacks memoises).
   const handleSegmentChange = useCallback(

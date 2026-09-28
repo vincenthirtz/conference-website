@@ -36,6 +36,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useEventRunRealtime } from '@/hooks/useEventRunRealtime';
+import { useVisiblePoll } from '@/hooks/useVisiblePoll';
 import { sendOverrunAutoCue } from '@/components/admin/events/overrunAutoCue';
 import { useOverrunWatcher } from '@/hooks/useOverrunWatcher';
 import { useToast } from '@/components/Toast';
@@ -121,8 +122,6 @@ function DirectorPage(_props: StaffProps) {
     Array<{ cast_member_id: string; name: string }>
   >([]);
 
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   // --- Detection de reorder concurrent (Finding #14) --------------------------
   // Quand on reordonne en optimistic, on memorise l'ordre attendu (id -> index)
   // et l'instant. Si, dans la fenetre qui suit, un changement realtime d'ordre
@@ -169,22 +168,9 @@ function DirectorPage(_props: StaffProps) {
     fetchData();
   }, [fetchData]);
 
-  // Polling de secours : si realtime decroche, on rafraichit toutes les 30s
-  // quand l'onglet est visible. Le realtime reste la source principale.
-  useEffect(() => {
-    function tick() {
-      if (
-        typeof document !== 'undefined' &&
-        document.visibilityState !== 'visible'
-      )
-        return;
-      fetchData();
-    }
-    pollRef.current = setInterval(tick, POLL_INTERVAL_MS);
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [fetchData]);
+  // Polling de secours (30 s, onglet visible) et relecture au retour sur
+  // l'onglet. Le realtime reste la source principale.
+  useVisiblePoll(fetchData, POLL_INTERVAL_MS);
 
   // Realtime : merge des changements dans l'etat local.
   //

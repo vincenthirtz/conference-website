@@ -62,13 +62,14 @@ const BASELINE: Record<string, number> = {
   'pages/admin/teams/[teamId]/edit.tsx': 1503,
   'pages/admin/matches/[matchId]/edit.tsx': 1315,
   'pages/admin/teams/index.tsx': 1445,
-  'pages/admin/events/[runId]/director.tsx': 1277,
+  // 1263 : sondage de secours mutualisé (hooks/useVisiblePoll).
+  'pages/admin/events/[runId]/director.tsx': 1263,
   'components/admin/moderation/SupportPanel.tsx': 1167,
   'components/admin/broadcast/TwitchCommandsPanel.tsx': 1203,
   // 959 : en-tête et pastille de connexion partis dans
   // `components/Caster/RegieHeader.tsx` (onglets « Diffusion »).
-  // 900 : le gate SSR fait main remplacé par withStaffPage('caster').
-  'pages/admin/regie.tsx': 900,
+  // 886 : sondage de secours mutualisé (hooks/useVisiblePoll).
+  'pages/admin/regie.tsx': 886,
   'pages/admin/users/[userId]/player-view.tsx': 1092,
   // 860 écrites : le panneau « Visuels » (logo, bannière, règlement PDF, et
   // désormais la chaîne de diffusion par défaut) est parti dans
@@ -104,10 +105,6 @@ const BASELINE: Record<string, number> = {
   'components/admin/profile/ProfileModal.tsx': 869,
   'components/admin/navigation/adminNav.ts': 881,
   'pages/admin/stages/[stageId]/groups.tsx': 858,
-  // 813 : en-tête parti dans `components/admin/broadcast/LiveConsoleHeader.tsx`
-  // (onglets « Diffusion »).
-  // 811 : panneaux Twitch d'écriture regroupés (TwitchDrivePanels).
-  'pages/admin/broadcast/live.tsx': 811,
   'pages/admin/leagues/[id].tsx': 827,
   'pages/admin/scrims/plannings/[planningId].tsx': 813,
   // 576 écrites : le sélecteur de journée, la grille, le formulaire d'ajout et

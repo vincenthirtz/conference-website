@@ -3,13 +3,14 @@
 // Single-pane view of the active event_run + current segment + casters +
 // stream URL + overlay state. Manager+ can edit on_air / lower_third / PiP.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useEventRunRealtime } from '@/hooks/useEventRunRealtime';
+import { useVisiblePoll } from '@/hooks/useVisiblePoll';
 import { useToast } from '@/components/Toast';
 import LiveConsoleHeader from '@/components/admin/broadcast/LiveConsoleHeader';
 import TwitchStatusPanel from '@/components/admin/broadcast/TwitchStatusPanel';
@@ -156,47 +157,33 @@ function BroadcastLivePage({ staff }: StaffProps) {
     });
   }, [router.isReady, router.query.twitch]);
 
+  // Numéro de lecture : une réponse de sondage partie AVANT un événement
+  // temps réel (ou une lecture plus récente) arrive parfois après — elle
+  // écrasait alors l'antenne fraîche. Seule la dernière lecture s'applique.
+  const readSeq = useRef(0);
   const fetchState = useCallback(async () => {
-    setError(null);
+    const seq = ++readSeq.current;
     try {
       const json = await adminFetchJson<LiveResponse>(
         '/api/admin/broadcast/state'
       );
+      if (seq !== readSeq.current) return;
+      setError(null);
       setData(json);
       setLowerDraft((prev) =>
         prev === '' && json.state?.lower_third ? json.state.lower_third : prev
       );
     } catch (err) {
+      if (seq !== readSeq.current) return;
       const e = err as AdminFetchError;
       setError(e.message || t.errorLoad);
     } finally {
-      setLoading(false);
+      if (seq === readSeq.current) setLoading(false);
     }
   }, [adminFetchJson, t.errorLoad]);
 
-  // Poll de secours (15 s) — filet si le realtime décroche. On le VISIBILITY-GATE
-  // (pas de fetch onglet caché) et on refetch au retour visible, comme le
-  // Director/cockpit. Le realtime reste la source primaire de fraîcheur.
-  useEffect(() => {
-    fetchState();
-    function tick() {
-      if (
-        typeof document !== 'undefined' &&
-        document.visibilityState !== 'visible'
-      )
-        return;
-      fetchState();
-    }
-    const handle = setInterval(tick, POLL_MS);
-    function onVisible() {
-      if (document.visibilityState === 'visible') fetchState();
-    }
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      clearInterval(handle);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  }, [fetchState]);
+  // Poll de secours (15 s, onglet visible), relecture au retour sur l'onglet.
+  useVisiblePoll(fetchState, POLL_MS, { immediate: true });
 
   // Timeline complète du run : nécessaire pour nommer la cible du « prochain
   // match » dans la confirmation. Réservé aux managers (endpoint events =
@@ -232,6 +219,7 @@ function BroadcastLivePage({ staff }: StaffProps) {
       const raw = partial as Record<string, unknown>;
       const nextState = raw.broadcast_state as BroadcastStateV1 | undefined;
       const nextStatus = raw.status as EventRun['status'] | undefined;
+      readSeq.current += 1; // toute lecture en vol est désormais périmée
       setData((prev) => {
         if (!prev || !prev.run) return prev;
         return {
