@@ -73,9 +73,10 @@ function AdminEventsIndexPage(_props: StaffProps) {
 
   const [createOpen, setCreateOpen] = useState(false);
 
-  // Filtre statut → param serveur (`status`). `limit: 100` réplique la requête
-  // d'origine ; `includeTotal: false` car aucun total serveur n'est affiché
-  // (les compteurs d'onglets sont dérivés côté client de `items`).
+  // TOUS les runs, filtrés À L'ÉCRAN. Le filtre partait au serveur, et les
+  // compteurs d'onglets se calculaient sur la liste déjà filtrée : choisir
+  // « Brouillons » affichait Live 0 et Terminés 0. `limit: 100` réplique la
+  // requête d'origine ; aucun total serveur n'est affiché.
   const {
     data: items,
     loading,
@@ -84,7 +85,6 @@ function AdminEventsIndexPage(_props: StaffProps) {
   } = useAdminResource<EventRun, ListResponse>('/api/admin/events', {
     limit: 100,
     includeTotal: false,
-    params: { status: statusFilter === 'all' ? undefined : statusFilter },
     select: (res) => res.items ?? [],
   });
 
@@ -120,6 +120,14 @@ function AdminEventsIndexPage(_props: StaffProps) {
       addToast((err as Error)?.message ?? t.deleteFailed, 'error');
     }
   }
+
+  const visible = useMemo(
+    () =>
+      statusFilter === 'all'
+        ? items
+        : items.filter((r) => r.status === statusFilter),
+    [items, statusFilter]
+  );
 
   const counts = useMemo(() => {
     const c = { draft: 0, live: 0, done: 0 };
@@ -175,6 +183,7 @@ function AdminEventsIndexPage(_props: StaffProps) {
                 key={tab.v}
                 type="button"
                 onClick={() => setStatusFilter(tab.v)}
+                aria-pressed={statusFilter === tab.v}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                   statusFilter === tab.v
                     ? 'bg-purple-600/30 border-purple-500/60 text-white'
@@ -201,6 +210,15 @@ function AdminEventsIndexPage(_props: StaffProps) {
           {loading ? (
             <div className="py-16">
               <LoadingSpinner label={t.loading} />
+            </div>
+          ) : items.length > 0 && visible.length === 0 ? (
+            // Des runs existent, aucun sous CE filtre : pas d'invitation à
+            // « créer le premier run ».
+            <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30">
+              <EmptyState
+                title={t.emptyFilteredTitle}
+                description={t.emptyFilteredDescription}
+              />
             </div>
           ) : items.length === 0 ? (
             <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30">
@@ -244,7 +262,7 @@ function AdminEventsIndexPage(_props: StaffProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((r) => (
+                  {visible.map((r) => (
                     <tr
                       key={r.id}
                       data-testid={`event-row-${r.id}`}

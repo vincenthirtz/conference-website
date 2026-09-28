@@ -70,6 +70,7 @@ function AdminTwitchChannelsPage(_props: Props) {
   const {
     data: channels,
     loading,
+    error: loadError,
     refresh: fetchData,
     mutate,
   } = useAdminResource<TwitchChannelRow, ApiResponse>(
@@ -268,6 +269,20 @@ function AdminTwitchChannelsPage(_props: Props) {
             {loading ? (
               <div className="flex items-center justify-center py-20">
                 <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+              </div>
+            ) : loadError && channels.length === 0 ? (
+              // UNE LECTURE RATÉE N'EST PAS UNE LISTE VIDE. Sans cette branche,
+              // une panne affichait l'état « aucun élément » — et on en recréait
+              // un qui existait déjà.
+              <div role="alert" className="py-16 text-center">
+                <p className="text-sm text-red-200">{t.loadError}</p>
+                <button
+                  type="button"
+                  onClick={() => void fetchData()}
+                  className="mt-4 rounded-lg border border-neutral-600 bg-neutral-800 px-4 py-2 text-sm text-white hover:bg-neutral-700"
+                >
+                  {t.retry}
+                </button>
               </div>
             ) : filteredChannels.length === 0 ? (
               <div className="text-center py-20 text-neutral-400">

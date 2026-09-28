@@ -31,4 +31,6 @@ export default {
   errorReorder: 'Error while saving the order.',
   errorDelete: 'Delete error.',
   errorUpdate: 'Update error.',
+  loadError: 'Could not load the channels.',
+  retry: 'Retry',
 };

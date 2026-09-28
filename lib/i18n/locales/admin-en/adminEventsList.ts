@@ -59,4 +59,6 @@ export default {
   cancel: 'Cancel',
   submit: 'Create',
   submitting: 'Creating…',
+  emptyFilteredTitle: 'No run with this status',
+  emptyFilteredDescription: 'Switch filters to see the other runs.',
 };

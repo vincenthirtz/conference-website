@@ -30,4 +30,6 @@ export default adminNs('adminTwitchChannelsList', {
   errorReorder: "Erreur lors de la sauvegarde de l'ordre.",
   errorDelete: 'Erreur de suppression.',
   errorUpdate: 'Erreur de modification.',
+  loadError: 'Impossible de charger les chaînes.',
+  retry: 'Réessayer',
 });

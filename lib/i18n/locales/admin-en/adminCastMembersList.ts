@@ -44,4 +44,6 @@ export default {
   errorDelete: 'Delete error.',
   errorUpdateFailed: 'Unable to update',
   errorUpdate: 'Update error.',
+  loadError: 'Could not load the casters.',
+  retry: 'Retry',
 };

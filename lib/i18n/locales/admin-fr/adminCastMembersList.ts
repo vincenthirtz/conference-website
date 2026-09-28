@@ -43,4 +43,6 @@ export default adminNs('adminCastMembersList', {
   errorDelete: 'Erreur de suppression.',
   errorUpdateFailed: 'Modification impossible',
   errorUpdate: 'Erreur de modification.',
+  loadError: 'Impossible de charger les casteuses.',
+  retry: 'Réessayer',
 });

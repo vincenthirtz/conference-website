@@ -59,4 +59,6 @@ export default adminNs('adminEventsList', {
   cancel: 'Annuler',
   submit: 'Créer',
   submitting: 'Création…',
+  emptyFilteredTitle: 'Aucun run avec ce statut',
+  emptyFilteredDescription: 'Changez de filtre pour voir les autres runs.',
 });
