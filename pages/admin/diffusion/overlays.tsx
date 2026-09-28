@@ -105,6 +105,10 @@ export default function DiffusionOverlaysPage({
     (staff?.permissions ?? []).includes('manage_broadcast');
   // L'overlay TCG : le droit de ses routes (jeton, habillage).
   const canTuneTcg = (staff?.permissions ?? []).includes('manage_tcg');
+  // « Forcer le jour » de la source « Matchs du jour » écrit via une route
+  // `manage_tournaments` : sans ce droit, le panneau ne reçoit pas le tournoi
+  // à piloter et n'affiche que les URL, au lieu d'un bouton qui échoue.
+  const canForceDay = (staff?.permissions ?? []).includes('manage_tournaments');
 
   const [baseUrl, setBaseUrl] = useState<string>(
     process.env.NEXT_PUBLIC_SITE_URL ?? ''
@@ -126,11 +130,18 @@ export default function DiffusionOverlaysPage({
       title: t.sceneOverlays,
       desc: t.sceneOverlaysDesc,
     },
-    // Qui a `manage_tcg` règle l'overlay TCG juste au-dessus : le renvoi ne
-    // sert qu'aux autres, pour savoir que la source existe et où elle vit.
+    // Qui a `manage_tcg` règle l'overlay TCG juste au-dessus. Pour les
+    // autres, une carte qui dit que la source existe et QUI la règle — sans
+    // lien : /admin/tcg exige ce même droit, le lien menait à un 403.
     ...(canTuneTcg
       ? []
-      : [{ href: '/admin/tcg', title: t.tcgOverlay, desc: t.tcgOverlayDesc }]),
+      : [
+          {
+            href: null,
+            title: t.tcgOverlay,
+            desc: `${t.tcgOverlayDesc} ${t.tcgOverlayNoAccess}`,
+          },
+        ]),
   ];
 
   return (
@@ -172,7 +183,7 @@ export default function DiffusionOverlaysPage({
                 <StreamSourcesPanel
                   key={selected.id}
                   tournamentRef={selected.slug ?? selected.id}
-                  tournamentId={selected.id}
+                  tournamentId={canForceDay ? selected.id : undefined}
                   baseUrl={baseUrl}
                   enabled={canUseMatchOverlays}
                   planLabel={planLabel}
@@ -198,11 +209,28 @@ export default function DiffusionOverlaysPage({
             <h2 className="text-lg font-semibold">{t.elsewhereTitle}</h2>
             <p className="mt-1 text-sm text-neutral-400">{t.elsewhereIntro}</p>
             <ul className="mt-3 grid gap-3 sm:grid-cols-3">
-              {elsewhere.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className="block h-full rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 transition hover:border-rose-500/40"
+              {elsewhere.map((item) =>
+                item.href ? (
+                  <li key={item.title}>
+                    <Link
+                      href={item.href}
+                      className="block h-full rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 transition hover:border-rose-500/40"
+                    >
+                      <span className="block text-sm font-semibold text-white">
+                        {item.title}
+                      </span>
+                      <span className="mt-1 block text-xs text-neutral-400">
+                        {item.desc}
+                      </span>
+                      <span className="mt-2 inline-block text-xs text-rose-300">
+                        {t.open} →
+                      </span>
+                    </Link>
+                  </li>
+                ) : (
+                  <li
+                    key={item.title}
+                    className="h-full rounded-xl border border-neutral-800 bg-neutral-900/40 p-4"
                   >
                     <span className="block text-sm font-semibold text-white">
                       {item.title}
@@ -210,12 +238,9 @@ export default function DiffusionOverlaysPage({
                     <span className="mt-1 block text-xs text-neutral-400">
                       {item.desc}
                     </span>
-                    <span className="mt-2 inline-block text-xs text-rose-300">
-                      {t.open} →
-                    </span>
-                  </Link>
-                </li>
-              ))}
+                  </li>
+                )
+              )}
             </ul>
           </section>
         </div>

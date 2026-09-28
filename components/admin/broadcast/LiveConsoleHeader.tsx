@@ -7,6 +7,7 @@
 // barre d'onglets commune sans la faire grossir. Rendu À L'IDENTIQUE.
 
 import Link from 'next/link';
+import { useStaffSession } from '@/hooks/useStaffSession';
 import RealtimeStatusBadge from '@/components/admin/RealtimeStatusBadge';
 import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
 
@@ -32,6 +33,11 @@ export default function LiveConsoleHeader({
   refreshLabel: string;
   onRefresh: () => void;
 }) {
+  // Le director exige `manage_broadcast` (cf. RegieHeader) : pas de lien vers
+  // un 403 pour la casteuse qui ouvre cette console.
+  const { staffPermissions, loading } = useStaffSession();
+  const canOpenDirector =
+    !loading && staffPermissions.includes('manage_broadcast');
   return (
     <>
       <DiffusionTabsNav active="live" />
@@ -50,7 +56,7 @@ export default function LiveConsoleHeader({
           <p className="text-sm text-neutral-400 mt-1">{subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
-          {runId && (
+          {runId && canOpenDirector && (
             <Link
               href={`/admin/events/${runId}/director`}
               className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"

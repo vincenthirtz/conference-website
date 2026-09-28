@@ -19,5 +19,6 @@ export default {
   sceneOverlaysDesc: 'Scoreboard and branding, one URL per scene.',
   tcgOverlay: 'TCG announcements',
   tcgOverlayDesc: 'Cards drawn during the stream, via a private token.',
+  tcgOverlayNoAccess: 'Its token needs the TCG permission: ask an admin.',
   open: 'Open',
 };

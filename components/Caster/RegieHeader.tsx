@@ -9,6 +9,7 @@
 // Rendu À L'IDENTIQUE — mêmes classes, même `data-testid`, mêmes libellés.
 
 import Link from 'next/link';
+import { useStaffSession } from '@/hooks/useStaffSession';
 import { useT } from '@/lib/i18n/useT';
 import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
 import nsAdminRegie from '@/lib/i18n/locales/fr/adminRegie';
@@ -74,6 +75,12 @@ export default function RegieHeader({
   onSignOut: () => void;
 }) {
   const tr = useT(nsAdminRegie);
+  // Le director exige `manage_broadcast` : le montrer à une casteuse, c'était
+  // lui offrir, en plein direct, le bouton le plus visible de l'en-tête… vers
+  // un 403. Masqué tant que la session n'est pas lue.
+  const { staffPermissions, loading } = useStaffSession();
+  const canOpenDirector =
+    !loading && staffPermissions.includes('manage_broadcast');
   return (
     <>
       <DiffusionTabsNav active="cockpit" />
@@ -88,7 +95,7 @@ export default function RegieHeader({
           <p className="text-sm text-neutral-400 mt-1">{tr.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
-          {liveRunId && (
+          {liveRunId && canOpenDirector && (
             <Link
               href={`/admin/events/${liveRunId}/director`}
               className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"

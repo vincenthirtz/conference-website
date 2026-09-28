@@ -25,5 +25,7 @@ export default adminNs('adminDiffusionOverlays', {
   sceneOverlaysDesc: 'Tableau de score et habillage, une URL par scène.',
   tcgOverlay: 'Annonces TCG',
   tcgOverlayDesc: 'Les cartes tirées pendant le direct, par jeton privé.',
+  tcgOverlayNoAccess:
+    'Son jeton se règle avec le droit TCG : demandez-le à un·e admin.',
   open: 'Ouvrir',
 });
