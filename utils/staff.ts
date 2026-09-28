@@ -719,11 +719,18 @@ export function withStaffPage<
       const loaded = await loader(ctx, staffCtx);
       return { props: { ...baseProps, ...loaded } };
     } catch (err: unknown) {
-      // Non connecté → redirection vers /admin/login
+      // Non connecté → /admin/login, AVEC la page demandée en `next=` : les
+      // gates faits main du cockpit et des scènes le faisaient déjà, et
+      // c'était leur dernière raison d'exister. Seules les URL admin sont
+      // reprises (la page de connexion re-valide `next` de son côté).
       if (err instanceof StaffUnauthenticatedError) {
+        const next = ctx.resolvedUrl;
         return {
           redirect: {
-            destination: '/admin/login',
+            destination:
+              typeof next === 'string' && next.startsWith('/admin')
+                ? `/admin/login?next=${encodeURIComponent(next)}`
+                : '/admin/login',
             permanent: false,
           },
         };

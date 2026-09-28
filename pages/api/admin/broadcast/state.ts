@@ -10,6 +10,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';
+import { hasStaffPermission } from '@/utils/staffPermissions';
 import { withAdminIdempotency } from '@/utils/adminIdempotency';
 import { logStaffAction } from '@/utils/staffLogs';
 import { emitBotEvent } from '@/utils/botEvents';
@@ -121,9 +122,17 @@ async function handler(
         return res.status(400).json({ error: 'No fields to update' });
       }
 
-      // Find the current live run for the tenant — required since we patch
-      // its broadcast_state. Manager can update; caster reads only.
-      if (ctx.staff.role === 'caster') {
+      // Écrire l'état d'antenne = piloter la régie : le droit
+      // `manage_broadcast`, comme start/end/next-match. Le test portait sur le
+      // RÔLE caster, ce qui refusait une casteuse munie du droit et laissait
+      // passer un arbitre ou un bénévole qui ne l'ont pas.
+      if (
+        !hasStaffPermission(
+          ctx.role,
+          ctx.staff.extra_permissions,
+          'manage_broadcast'
+        )
+      ) {
         return res.status(403).json({ error: 'Caster cannot edit state' });
       }
 

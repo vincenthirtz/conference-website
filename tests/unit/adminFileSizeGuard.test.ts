@@ -67,7 +67,8 @@ const BASELINE: Record<string, number> = {
   'components/admin/broadcast/TwitchCommandsPanel.tsx': 1203,
   // 959 : en-tête et pastille de connexion partis dans
   // `components/Caster/RegieHeader.tsx` (onglets « Diffusion »).
-  'pages/admin/regie.tsx': 959,
+  // 900 : le gate SSR fait main remplacé par withStaffPage('caster').
+  'pages/admin/regie.tsx': 900,
   'pages/admin/users/[userId]/player-view.tsx': 1092,
   // 860 écrites : le panneau « Visuels » (logo, bannière, règlement PDF, et
   // désormais la chaîne de diffusion par défaut) est parti dans

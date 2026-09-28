@@ -129,7 +129,7 @@ function BroadcastLivePage({ staff }: StaffProps) {
   );
   const [origin, setOrigin] = useState('');
 
-  const canEdit = staff.role !== 'caster';
+  const canEdit = (staff.permissions ?? []).includes('manage_broadcast');
   const runId = data?.run?.id ?? null;
 
   // window.location.origin est indisponible côté SSR ; on le récupère après

@@ -19,15 +19,13 @@
 //   - Un panneau « Nouveau run » (admin/owner uniquement) permet de créer puis
 //     démarrer un run quand aucun run n'est live.
 //
-// Gate SSR : owner / admin / caster UNIQUEMENT (PAS manager). `withStaffPage`
-// exprime un seuil (minRole) et ne peut pas décrire cet ensemble non-contigu,
-// d'où un `getServerSideProps` custom (voir en bas du fichier).
+// Gate SSR : tout staff, `withStaffPage('caster')`. Démarrer, clore et piloter
+// un run suivent le DROIT `manage_broadcast` (celui des routes), pas le rôle.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import type { GetServerSideProps, GetServerSidePropsContext } from 'next';
 
 import { useToast } from '@/components/Toast';
 import { useCasterSession } from '@/hooks/useCasterSession';
@@ -45,11 +43,7 @@ import type { StaffProps } from '@/types/admin';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { computeRunSchedule } from '@/utils/eventSchedule';
 import { useT, format } from '@/lib/i18n/useT';
-import {
-  requireStaffRoleFromRequest,
-  StaffUnauthenticatedError,
-  StaffUnauthorizedError,
-} from '@/utils/staff';
+import { withStaffPage } from '@/utils/staff';
 
 import LiveSegmentBlock from '@/components/Caster/LiveSegmentBlock';
 import NewRunPanel from '@/components/Caster/NewRunPanel';
@@ -237,7 +231,9 @@ function RegiePage({ staff }: StaffProps) {
   // Le panneau « Nouveau run » exige l'endpoint /start (rôle 'admin') : réservé
   // aux admin/owner. Un caster ne le voit pas. L'endpoint /end est lui aussi
   // 'admin' → on réutilise le même gate pour « Terminer le run ».
-  const canStartRun = staff.role === 'admin' || staff.role === 'owner';
+  // Le droit des routes start/end, pas le rôle : une casteuse à qui l'on a
+  // accordé `manage_broadcast` pilote, un admin sans lui ne verrait rien.
+  const canStartRun = (staff.permissions ?? []).includes('manage_broadcast');
 
   // Confirmation + mutation idempotente pour « Terminer le run ».
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
@@ -895,64 +891,9 @@ RegiePage.seo = seo;
 export default RegiePage;
 
 /**
- * Gate SSR custom : owner / admin / caster UNIQUEMENT (PAS manager).
- *
- * `withStaffPage(minRole)` exprime un SEUIL (rôle >= minRole) et ne peut donc
- * pas décrire cet ensemble non-contigu (caster est le rôle le plus bas, manager
- * est juste au-dessus). On authentifie donc tout staff via
- * `requireStaffRoleFromRequest(_, 'caster')` puis on exclut explicitement
- * `manager`. Pour le reste, on réplique fidèlement ce que fait `withStaffPage` :
- * baseProps { staff, activeTenantKind } + gestion des erreurs d'auth.
+ * Gate SSR : tout staff (caster/admin/owner). Le gate fait main qui excluait
+ * `manager` n'avait plus de raison d'être depuis le retrait de ce rôle, et il
+ * privait la page des permissions effectives (d'où des boutons décidés sur le
+ * rôle). `withStaffPage` renvoie aussi `next=` vers la page demandée.
  */
-export const getServerSideProps: GetServerSideProps = async (
-  ctx: GetServerSidePropsContext
-) => {
-  const { req, res } = ctx;
-  try {
-    // Gate = tout staff (caster/admin/owner). Le rôle 'manager' a été retiré des
-    // rôles staff : plus besoin de l'exclure explicitement, l'ensemble « tout
-    // staff » vaut désormais exactement caster/admin/owner.
-    const staffCtx = await requireStaffRoleFromRequest(
-      req as never,
-      res as never,
-      'caster'
-    );
-
-    // Nature du tenant actif (organizer/developer) — comme withStaffPage.
-    // Fail-safe 'organizer' pour ne jamais durcir accidentellement l'accès.
-    const { getTenantKind } = await import('@/utils/tenantKind');
-    let activeTenantKind: 'organizer' | 'developer' = 'organizer';
-    try {
-      activeTenantKind = (await getTenantKind(staffCtx.tenantId)) as
-        | 'organizer'
-        | 'developer';
-    } catch (e) {
-      logger.error('[regie] getTenantKind error', e);
-    }
-
-    return {
-      props: {
-        staff: {
-          id: staffCtx.staff.id,
-          role: staffCtx.role,
-          display_name: staffCtx.staff.display_name,
-        },
-        activeTenantKind,
-      },
-    };
-  } catch (err: unknown) {
-    if (err instanceof StaffUnauthenticatedError) {
-      return {
-        redirect: {
-          destination: '/admin/login?next=/admin/regie',
-          permanent: false,
-        },
-      };
-    }
-    if (err instanceof StaffUnauthorizedError) {
-      return { redirect: { destination: '/403', permanent: false } };
-    }
-    logger.error('[regie] getServerSideProps error', err);
-    return { redirect: { destination: '/500', permanent: false } };
-  }
-};
+export const getServerSideProps = withStaffPage('caster');

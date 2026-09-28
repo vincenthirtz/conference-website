@@ -52,9 +52,7 @@
 //    Indicateur consultatif dans la liste des scènes + bandeau d'édition
 //    simultanée dans le panneau. Aucun verrou dur.
 //
-// Gate SSR : réplique de /admin/regie — tout staff (caster/admin/owner) via
-// requireStaffRoleFromRequest(_, 'caster') + baseProps { staff,
-// activeTenantKind } comme withStaffPage (voir getServerSideProps en bas).
+// Gate SSR : tout staff (caster/admin/owner), `withStaffPage('caster')`.
 
 import {
   useCallback,
@@ -67,7 +65,6 @@ import {
 import Head from 'next/head';
 import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
 import dynamic from 'next/dynamic';
-import type { GetServerSideProps, GetServerSidePropsContext } from 'next';
 
 import EmptyState from '@/components/admin/EmptyState';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
@@ -115,11 +112,7 @@ import {
   type CasterSceneType,
 } from '@/types/caster';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import {
-  requireStaffRoleFromRequest,
-  StaffUnauthenticatedError,
-  StaffUnauthorizedError,
-} from '@/utils/staff';
+import { withStaffPage } from '@/utils/staff';
 import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 // Panneau OBS (lot 3) : WebSocket direct navigateur → OBS local + localStorage
@@ -684,58 +677,5 @@ CasterScenesPage.seo = seo;
 
 export default CasterScenesPage;
 
-/**
- * Gate SSR : tout staff (caster/admin/owner) — réplique fidèle du gate custom
- * de /admin/regie. `requireStaffRoleFromRequest(_, 'caster')` authentifie le
- * staff (caster est le rôle plancher), puis on reconstruit les baseProps de
- * `withStaffPage` : { staff, activeTenantKind } avec fail-safe 'organizer'.
- */
-export const getServerSideProps: GetServerSideProps = async (
-  ctx: GetServerSidePropsContext
-) => {
-  const { req, res } = ctx;
-  try {
-    const staffCtx = await requireStaffRoleFromRequest(
-      req as never,
-      res as never,
-      'caster'
-    );
-
-    // Nature du tenant actif (organizer/developer) — comme withStaffPage.
-    // Fail-safe 'organizer' pour ne jamais durcir accidentellement l'accès.
-    const { getTenantKind } = await import('@/utils/tenantKind');
-    let activeTenantKind: 'organizer' | 'developer' = 'organizer';
-    try {
-      activeTenantKind = (await getTenantKind(staffCtx.tenantId)) as
-        | 'organizer'
-        | 'developer';
-    } catch (e) {
-      logger.error('[admin/caster] getTenantKind error', e);
-    }
-
-    return {
-      props: {
-        staff: {
-          id: staffCtx.staff.id,
-          role: staffCtx.role,
-          display_name: staffCtx.staff.display_name,
-        },
-        activeTenantKind,
-      },
-    };
-  } catch (err: unknown) {
-    if (err instanceof StaffUnauthenticatedError) {
-      return {
-        redirect: {
-          destination: '/admin/login?next=/admin/caster',
-          permanent: false,
-        },
-      };
-    }
-    if (err instanceof StaffUnauthorizedError) {
-      return { redirect: { destination: '/403', permanent: false } };
-    }
-    logger.error('[admin/caster] getServerSideProps error', err);
-    return { redirect: { destination: '/500', permanent: false } };
-  }
-};
+/** Gate SSR : tout staff (caster/admin/owner), avec `next=` vers la page. */
+export const getServerSideProps = withStaffPage('caster');
