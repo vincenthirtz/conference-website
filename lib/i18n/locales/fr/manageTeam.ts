@@ -20,6 +20,11 @@ export default ns('manageTeam', {
   accessDeniedBody:
     "Tu dois etre capitaine ou manager d'une equipe pour acceder a cette page.",
   backToSpace: 'Retour a mon espace',
+  // Admin (droit manage_teams) sans équipe : la liste des joueuses libres lui
+  // est ouverte côté administration.
+  accessDeniedStaffBody:
+    'Tu ne geres aucune equipe. En tant qu’admin, tu retrouves toutes les joueuses libres dans l’administration.',
+  staffFreePlayersLink: 'Voir les joueuses libres',
   tabTitle: "Gerer {name} | OW Women's Cup",
   // Une membre sans droits VOIT son équipe sans la gérer : lui promettre
   // « Gérer » dans l'onglet serait faux.

@@ -25,6 +25,7 @@ import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
 import { loginHrefFor } from '@/utils/player/sessionExpiry';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useStaffSession } from '@/hooks/useStaffSession';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import CopyButton from '@/components/player/CopyButton';
@@ -230,6 +231,10 @@ export default function PlayerManageTeamScreen() {
   // `readOnly` = inspection staff : l'écran devient une photo fidèle, sans
   // aucun levier. Le roster et les demandes viennent du sujet via `?as=`.
   const { withSubject, readOnly, isInspecting, subjectId } = usePlayerArea();
+  // Un admin sans équipe arrivait ici sur un refus sec, alors que la liste des
+  // joueuses libres lui est ouverte côté administration (`manage_teams`).
+  const { staffPermissions } = useStaffSession();
+  const staffSeesFreePlayers = staffPermissions.includes('manage_teams');
   // Équipe sur laquelle l'écran agit — pertinent seulement pour un manager
   // multi-équipes ; `withTeam` est l'identité dans tous les autres cas.
   const { withTeam } = useActiveTeam();
@@ -1046,13 +1051,27 @@ export default function PlayerManageTeamScreen() {
       <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white flex items-center justify-center px-4">
         <div className="text-center">
           <h1 className="text-xl font-bold mb-4">{t.accessDeniedTitle}</h1>
-          <p className="text-gray-400 mb-6">{t.accessDeniedBody}</p>
-          <Link
-            href="/player"
-            className="inline-block px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 font-semibold transition"
-          >
-            {t.backToSpace}
-          </Link>
+          <p className="text-gray-400 mb-6">
+            {staffSeesFreePlayers
+              ? t.accessDeniedStaffBody
+              : t.accessDeniedBody}
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {staffSeesFreePlayers && (
+              <Link
+                href="/admin/free-players"
+                className="inline-block px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold transition"
+              >
+                {t.staffFreePlayersLink}
+              </Link>
+            )}
+            <Link
+              href="/player"
+              className="inline-block px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 font-semibold transition"
+            >
+              {t.backToSpace}
+            </Link>
+          </div>
         </div>
       </div>
     );
