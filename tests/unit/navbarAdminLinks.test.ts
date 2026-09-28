@@ -96,6 +96,7 @@ describe('filterAdminLinks – owner role', () => {
       'Console live',
       'Run-of-show',
       'Scènes',
+      'Overlays',
     ]);
   });
 
@@ -194,6 +195,7 @@ describe('filterAdminLinks – caster role', () => {
       'Cockpit',
       'Console live',
       'Scènes',
+      'Overlays',
     ]);
   });
 
