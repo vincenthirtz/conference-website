@@ -84,6 +84,7 @@ function seedApproved(over: Record<string, unknown> = {}) {
       id: FANART,
       tenant_id: DEFAULT_TENANT_ID,
       submitted_by: PLAYER,
+      category: 'fanart',
       title: 'Hinode en garde',
       artist_name: 'Lya',
       artist_url: 'https://lya.example/art',

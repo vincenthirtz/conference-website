@@ -327,6 +327,7 @@ export function resetSupabaseMock() {
   };
   storageUploads.length = 0;
   storageRemovals.length = 0;
+  storageCopies.length = 0;
   _storageRemoveResult = { data: null, error: null };
   _tableWriteErrors = {};
   _rpcResults.clear();
@@ -939,6 +940,13 @@ export const storageUploads: Array<{ bucket: string; path: string }> = [];
  */
 export const storageRemovals: Array<{ bucket: string; paths: string[] }> = [];
 
+/** Captures every `storage.from(bucket).copy(from, to)` call for assertions. */
+export const storageCopies: Array<{
+  bucket: string;
+  from: string;
+  to: string;
+}> = [];
+
 /** State for `supabaseAdmin.storage.from(bucket).remove()`. */
 let _storageRemoveResult: {
   data: unknown;
@@ -984,6 +992,10 @@ export const supabaseAdmin = {
       remove: (paths: string[]) => {
         storageRemovals.push({ bucket, paths: [...paths] });
         return Promise.resolve(_storageRemoveResult);
+      },
+      copy: (from: string, to: string) => {
+        storageCopies.push({ bucket, from, to });
+        return Promise.resolve({ data: { path: to }, error: null });
       },
       createSignedUrl: (_path: string, _ttl?: number) =>
         Promise.resolve(_storageSignedUrlResult),
