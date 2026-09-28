@@ -5,7 +5,8 @@
 //   GET   → les cartes de la catégorie (toutes, retirées comprises) et les
 //           logos d'événement qu'on peut importer.
 //   POST  → `upload` : déposer une image ; `import_logo` : faire d'un logo
-//           d'événement (`site_settings.seasonal_logos`) une carte.
+//           d'événement (`site_settings.seasonal_logos`) une carte ;
+//           `voxel_logo` : la carte du logo par défaut EN VOXEL (le nœud).
 //   PATCH → `update` (titre, crédit, rareté), `revoke`, `restore`.
 //
 // PAS DE FILE DE MODÉRATION. Une fan art est l'œuvre d'une inconnue, relue
@@ -23,6 +24,14 @@
 // calendrier pourrait vider des cartes possédées. On copie l'objet sous
 // `tcg-association/`. Seuls les logos hébergés dans le bucket se copient — un
 // chemin du site (`/img/...`) n'est pas un objet qu'on puisse dupliquer ici.
+//
+// LE VOXEL DU LOGO EST FIGÉ EN FICHIER. La figurine du nœud
+// (`utils/tcg/mascotFigure.ts`) se rend à la volée sur `/api/tcg/figure/...`,
+// mais une carte désigne un objet du bucket : on rend le SVG une fois, côté
+// serveur, et on le dépose. Le SVG sort de NOTRE moteur — rien de fourni par
+// quelqu'un d'autre n'entre dans le bucket par cette voie. La version du
+// modèle est dans `source_ref` : une retouche du nœud (`MASCOT_VERSION`)
+// ouvre droit à une nouvelle carte sans écraser celles déjà possédées.
 //
 // RETIRER N'EST PAS SUPPRIMER, comme pour les fan arts : `revoked` sort la
 // carte des paquets à venir ; les exemplaires tirés restent, face neutre.
@@ -56,6 +65,16 @@ import {
   seasonalLogoSourceRef,
 } from '@/utils/tcg/fanart';
 import { RARITY_ORDER } from '@/utils/tcg/rarity';
+import {
+  MASCOT_VERSION,
+  mascotUrl,
+  renderMascotSvg,
+} from '@/utils/tcg/mascotFigure';
+
+/** `source_ref` de la carte du logo par défaut en voxel. */
+const VOXEL_LOGO_REF = `voxel:noeud:v${MASCOT_VERSION}`;
+/** Son titre par défaut. */
+const VOXEL_LOGO_TITLE = 'Le nœud en briques';
 
 export const config = {
   // Même plafond que le dépôt de fan art : base64 + JSON pour 2 Mio d'image.
@@ -88,7 +107,25 @@ const postSchema = z.discriminatedUnion('action', [
       rarity: rarityEnum.optional(),
     })
     .strict(),
+  z
+    .object({
+      action: z.literal('voxel_logo'),
+      title: title.optional(),
+      rarity: rarityEnum.optional(),
+    })
+    .strict(),
 ]);
+
+/** Une carte existe-t-elle déjà pour cette origine ? */
+async function hasSourceRef(tenantId: string, ref: string): Promise<boolean> {
+  const { data } = await supabaseAdmin!
+    .from('tcg_fanart_cards')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('source_ref', ref)
+    .maybeSingle();
+  return Boolean(data);
+}
 
 const patchSchema = z.discriminatedUnion('action', [
   z
@@ -201,6 +238,11 @@ async function list(
   return res.status(200).json({
     items: rows.map(toPayload),
     eventLogos,
+    voxelLogo: {
+      // Aperçu servi par la route des figurines : ce que la carte montrera.
+      previewUrl: mascotUrl(null),
+      cardId: cardByRef.get(VOXEL_LOGO_REF)?.id ?? null,
+    },
     rarities: RARITY_ORDER,
     defaultRarity: DEFAULT_FANART_RARITY,
     defaultCredit: ASSOCIATION_DEFAULT_CREDIT,
@@ -260,6 +302,30 @@ async function create(
       return res.status(500).json({ error: 'Envoi impossible.' });
     }
     cardTitle = body.title;
+  } else if (body.action === 'voxel_logo') {
+    sourceRef = VOXEL_LOGO_REF;
+    if (await hasSourceRef(ctx.tenantId, sourceRef)) {
+      return res.status(409).json({
+        error: 'Le voxel du logo est déjà une carte.',
+        code: 'already_imported',
+      });
+    }
+    path = `${ASSOCIATION_STORAGE_PREFIX}/noeud-voxel-v${MASCOT_VERSION}-${crypto.randomBytes(4).toString('hex')}.svg`;
+    const { error } = await supabaseAdmin!.storage
+      .from(TCG_BUCKET)
+      .upload(path, Buffer.from(renderMascotSvg(null), 'utf8'), {
+        contentType: 'image/svg+xml',
+        upsert: false,
+        cacheControl: IMMUTABLE_UPLOAD_CACHE_CONTROL,
+      });
+    if (error) {
+      logger.error(
+        '[admin/tcg/association] dépôt du voxel impossible: %s',
+        error.message
+      );
+      return res.status(500).json({ error: 'Envoi impossible.' });
+    }
+    cardTitle = body.title ?? VOXEL_LOGO_TITLE;
   } else {
     const logos = parseSeasonalLogos(
       await getSetting(SEASONAL_LOGOS_SETTING_KEY, ctx.tenantId)
@@ -279,13 +345,7 @@ async function create(
       });
     }
     sourceRef = seasonalLogoSourceRef(logo.id);
-    const { data: existing } = await supabaseAdmin!
-      .from('tcg_fanart_cards')
-      .select('id')
-      .eq('tenant_id', ctx.tenantId)
-      .eq('source_ref', sourceRef)
-      .maybeSingle();
-    if (existing) {
+    if (await hasSourceRef(ctx.tenantId, sourceRef)) {
       return res.status(409).json({
         error: 'Ce logo est déjà une carte.',
         code: 'already_imported',
@@ -363,7 +423,7 @@ async function create(
     payload: {
       title: row.title,
       rarity: row.rarity,
-      source: body.action === 'upload' ? 'upload' : sourceRef,
+      source: sourceRef ?? 'upload',
     },
   });
 

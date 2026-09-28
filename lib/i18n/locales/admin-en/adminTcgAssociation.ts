@@ -16,6 +16,11 @@ export default {
   eventLogoNotImportable:
     'Hébergé hors du stockage : redéposez-le depuis le calendrier des logos pour pouvoir l’importer.',
   importLogo: 'Importer en carte',
+  voxelTitle: 'Logo par défaut en voxel',
+  voxelIntro:
+    'Le nœud de l’association, en briques — la même figurine que celle du moteur voxel. La carte en fige le rendu actuel.',
+  voxelCreate: 'Créer la carte voxel',
+  toastVoxelCreated: 'Carte voxel du logo créée.',
   uploadTitle: 'Déposer une image',
   labelFile: 'Image (PNG, JPEG ou WebP, {max} Mo max)',
   labelTitle: 'Titre de la carte',

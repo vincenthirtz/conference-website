@@ -37,6 +37,8 @@ type EventLogo = {
 type Response = {
   items: Item[];
   eventLogos: EventLogo[];
+  /** Optionnel : une API plus ancienne (déploiement en cours) ne le rend pas. */
+  voxelLogo?: { previewUrl: string; cardId: string | null };
   rarities: string[];
   defaultRarity: string;
   defaultCredit: string;
@@ -110,6 +112,19 @@ export default function TcgAssociationPanel() {
         }),
       },
       t.toastImported
+    );
+
+  const createVoxel = () =>
+    run(
+      'voxel',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'voxel_logo',
+          rarity: data?.defaultRarity,
+        }),
+      },
+      t.toastVoxelCreated
     );
 
   const upload = async () => {
@@ -254,6 +269,36 @@ export default function TcgAssociationPanel() {
           </ul>
         )}
       </div>
+
+      {/* Le logo par défaut, en voxel */}
+      {data.voxelLogo && (
+        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+          {/* biome-ignore lint/performance/noImgElement: SVG rendu par nos soins — next/image n'optimise pas le SVG */}
+          <img
+            src={data.voxelLogo.previewUrl}
+            alt=""
+            className="h-28 w-20 shrink-0 rounded bg-neutral-950 object-contain"
+          />
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold">{t.voxelTitle}</h3>
+            <p className="mt-1 text-sm text-neutral-400">{t.voxelIntro}</p>
+            {data.voxelLogo.cardId ? (
+              <p className="mt-2 text-xs text-emerald-300">
+                {t.eventLogoImported}
+              </p>
+            ) : (
+              <button
+                type="button"
+                disabled={busy !== null}
+                onClick={() => void createVoxel()}
+                className="mt-2 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
+              >
+                {busy === 'voxel' ? t.working : t.voxelCreate}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Dépôt staff */}
       <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">

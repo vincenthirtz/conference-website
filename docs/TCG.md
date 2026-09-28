@@ -1134,6 +1134,10 @@ sixième `subject_kind` aurait imposé de recopier les deux CHECK de
   calendrier se modifie librement. Seuls les logos hébergés dans le bucket se
   copient ; `source_ref = 'seasonal:<id>'`, unique par espace, empêche un
   double import.
+- **Le logo par défaut en voxel** : le nœud de `utils/tcg/mascotFigure.ts`,
+  rendu en SVG côté serveur et déposé sous `tcg-association/` (action
+  `voxel_logo`). `source_ref = 'voxel:noeud:v<MASCOT_VERSION>'` : une carte
+  par version du modèle, jamais écrasée.
 - **Affichage** : image en entier (`object-contain`), badge « L'association ».
   Filtre dédié sur le catalogue public `/tcg` ; absente de la page de crédits
   `/tcg/fan-art` et de la file de modération des fan arts.

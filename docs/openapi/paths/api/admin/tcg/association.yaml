@@ -28,7 +28,9 @@ post:
   description: |
     `upload` : image en base64 (magic bytes verifies, 2 Mio max). `import_logo` :
     copie l'image d'un logo d'evenement du bucket sous `tcg-association/` — la
-    carte ne depend plus du calendrier. Pas de moderation : la carte nait
+    carte ne depend plus du calendrier. `voxel_logo` : rend le SVG du noeud
+    (logo par defaut, `utils/tcg/mascotFigure.ts`) et le depose — une carte
+    par version du modele. Pas de moderation : la carte nait
     `approved`, sans proposante (`submitted_by` NULL). Journalise
     (`create_tcg_association_card`).
   operationId: adminCreateTcgAssociation
@@ -44,7 +46,7 @@ post:
           properties:
             action:
               type: string
-              enum: [upload, import_logo]
+              enum: [upload, import_logo, voxel_logo]
             data:
               type: string
               description: Image en data URL (upload).

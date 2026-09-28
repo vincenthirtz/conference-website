@@ -13770,6 +13770,24 @@
          ]
         }
        },
+       "voxelLogo": {
+        "type": "object",
+        "properties": {
+         "previewUrl": {
+          "type": "string"
+         },
+         "cardId": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
+        },
+        "required": [
+         "previewUrl",
+         "cardId"
+        ]
+       },
        "rarities": {
         "type": "array",
         "items": {
@@ -13801,6 +13819,7 @@
       "required": [
        "items",
        "eventLogos",
+       "voxelLogo",
        "rarities",
        "defaultRarity",
        "defaultCredit",
