@@ -12,6 +12,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
+import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import slugify from 'slugify';
@@ -141,6 +142,7 @@ function AdminEventsIndexPage(_props: StaffProps) {
               { label: t.breadcrumbRunOfShow },
             ]}
           />
+          <DiffusionTabsNav active="runofshow" />
 
           <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
             <div>

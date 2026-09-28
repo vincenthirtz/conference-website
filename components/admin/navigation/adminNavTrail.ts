@@ -62,6 +62,10 @@ export const ADMIN_NAV_TRAILS: Record<string, NavCrumb[]> = {
     { label: 'Diffusion', href: null },
     { label: 'Console live', href: '/admin/broadcast/live' },
   ],
+  '/admin/events': [
+    { label: 'Diffusion', href: null },
+    { label: 'Run-of-show', href: '/admin/events' },
+  ],
   '/admin/caster': [
     { label: 'Diffusion', href: null },
     { label: 'Scènes', href: '/admin/caster' },

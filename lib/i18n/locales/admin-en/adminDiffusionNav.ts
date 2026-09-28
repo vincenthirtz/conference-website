@@ -5,6 +5,7 @@
 export default {
   ariaLabel: 'Broadcast screens',
   tabCockpit: 'Cockpit',
+  tabRunOfShow: 'Run-of-show',
   tabLive: 'Live console',
   tabScenes: 'Scenes',
 };

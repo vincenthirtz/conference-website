@@ -12,6 +12,7 @@ import { adminNs } from '../../ns';
 export default adminNs('adminDiffusionNav', {
   ariaLabel: 'Écrans de la diffusion',
   tabCockpit: 'Cockpit',
+  tabRunOfShow: 'Run-of-show',
   tabLive: 'Console live',
   tabScenes: 'Scènes',
 });

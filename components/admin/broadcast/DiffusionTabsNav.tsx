@@ -30,7 +30,7 @@ import nsAdminDiffusionNav from '@/lib/i18n/locales/admin-fr/adminDiffusionNav';
 
 type Dict = typeof nsAdminDiffusionNav.fr;
 
-export type DiffusionTabId = 'cockpit' | 'live' | 'scenes';
+export type DiffusionTabId = 'cockpit' | 'live' | 'runofshow' | 'scenes';
 
 export type DiffusionTab = {
   id: DiffusionTabId;
@@ -46,6 +46,13 @@ export type DiffusionTab = {
 export const DIFFUSION_TABS: readonly DiffusionTab[] = [
   { id: 'cockpit', href: '/admin/regie', labelKey: 'tabCockpit' },
   { id: 'live', href: '/admin/broadcast/live', labelKey: 'tabLive' },
+  // Le déroulé : on le prépare avant, on le conduit depuis le director.
+  {
+    id: 'runofshow',
+    href: '/admin/events',
+    labelKey: 'tabRunOfShow',
+    permission: 'manage_broadcast',
+  },
   { id: 'scenes', href: '/admin/caster', labelKey: 'tabScenes' },
 ];
 

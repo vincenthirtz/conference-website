@@ -367,6 +367,15 @@ export const ADMIN_NAV: AdminNavNode[] = [
         minRole: 'caster',
       },
       {
+        // Le déroulé des soirées : n'avait AUCUNE entrée de menu, on n'y
+        // arrivait que par le fil d'Ariane du director.
+        id: 'run-of-show',
+        topBarLabel: 'Run-of-show',
+        href: '/admin/events',
+        permission: 'manage_broadcast',
+        minRole: 'caster',
+      },
+      {
         id: 'caster-scenes',
         topBarLabel: 'Scènes',
         href: '/admin/caster',
