@@ -522,7 +522,7 @@ export type StaffGuard =
  * SSR. Rien ne garantissait que ça reste vrai, et l'échec aurait été un 500
  * opaque sur une page admin.
  */
-async function resolveGuard(
+export async function resolveGuard(
   req: SupabaseServerReq,
   res: SupabaseServerRes,
   guard: StaffGuard

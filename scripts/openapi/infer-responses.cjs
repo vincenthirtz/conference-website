@@ -342,6 +342,85 @@ function toSchema(type, checker, stack = [], depth = 0) {
   return {};
 }
 
+/* ------------------------------------------------------------------------ *
+ * Routes déclaratives (`defineAdminRoute`, lot L3 du plan d'industrialisation
+ * de l'admin). Pas de `res.json` à lire : la réponse est la VALEUR DE RETOUR
+ * du handler de chaque méthode. On suit l'export par défaut (souvent un
+ * réexport de `features/admin/<domaine>/routes`) jusqu'à l'appel
+ * `defineAdminRoute({...})`, puis on type le retour de chaque `handler`.
+ * ------------------------------------------------------------------------ */
+
+function declarativeRouteObject(sf, checker) {
+  const modSym = checker.getSymbolAtLocation(sf);
+  if (!modSym) return null;
+  let def = checker
+    .getExportsOfModule(modSym)
+    .find((s) => s.escapedName === 'default');
+  if (!def) return null;
+  if (def.flags & ts.SymbolFlags.Alias) def = checker.getAliasedSymbol(def);
+  for (const decl of def.declarations ?? []) {
+    const expr = ts.isExportAssignment(decl)
+      ? decl.expression
+      : ts.isVariableDeclaration(decl)
+        ? decl.initializer
+        : null;
+    if (
+      expr &&
+      ts.isCallExpression(expr) &&
+      ts.isIdentifier(expr.expression) &&
+      expr.expression.text === 'defineAdminRoute' &&
+      expr.arguments[0] &&
+      ts.isObjectLiteralExpression(expr.arguments[0])
+    ) {
+      return expr.arguments[0];
+    }
+  }
+  return null;
+}
+
+function propOf(obj, name) {
+  return obj.properties.find(
+    (p) =>
+      (ts.isPropertyAssignment(p) || ts.isMethodDeclaration(p)) &&
+      p.name &&
+      ts.isIdentifier(p.name) &&
+      p.name.text === name
+  );
+}
+
+/** [méthode, statut, types de réponse] pour chaque méthode déclarée. */
+function declarativeResponses(obj, checker) {
+  const out = [];
+  for (const method of METHODS) {
+    const prop = propOf(obj, method);
+    if (!prop || !ts.isPropertyAssignment(prop)) continue;
+    let spec = prop.initializer;
+    // `read({...})` / `mutate({...})` : aides d'inférence, transparentes.
+    if (ts.isCallExpression(spec) && spec.arguments[0])
+      spec = spec.arguments[0];
+    if (!ts.isObjectLiteralExpression(spec)) continue;
+    const statusProp = propOf(spec, 'status');
+    const status =
+      statusProp &&
+      ts.isPropertyAssignment(statusProp) &&
+      ts.isNumericLiteral(statusProp.initializer)
+        ? Number(statusProp.initializer.text)
+        : 200;
+    const handler = propOf(spec, 'handler');
+    if (!handler) continue;
+    const sig = checker.getTypeAtLocation(handler).getCallSignatures()[0];
+    if (!sig) continue;
+    const ret = checker.getReturnTypeOfSignature(sig);
+    const awaited = checker.getAwaitedType(ret) ?? ret;
+    // `RESPONSE_SENT` (unique symbol) = le handler a écrit lui-même : ignoré.
+    const parts = (awaited.isUnion() ? awaited.types : [awaited]).filter(
+      (t) => !(t.flags & ts.TypeFlags.UniqueESSymbol)
+    );
+    out.push([method, status, parts]);
+  }
+  return out;
+}
+
 /* ------------------------------------------------------------------------ */
 
 function inferResponses(root = process.cwd()) {
@@ -352,8 +431,24 @@ function inferResponses(root = process.cwd()) {
   for (const file of files.sort()) {
     const sf = program.getSourceFile(file);
     if (!sf) continue;
-    const declared = declaredMethods(sf);
     const url = apiPathOf(root, file);
+    const addSchema = (m, status, schema) => {
+      const byStatus = (responses[`${m} ${url}`] ??= {});
+      const list = (byStatus[status] ??= []);
+      const k = JSON.stringify(schema);
+      if (!list.some((s) => JSON.stringify(s) === k)) list.push(schema);
+    };
+    const declarative = declarativeRouteObject(sf, checker);
+    if (declarative) {
+      for (const [m, status, types] of declarativeResponses(
+        declarative,
+        checker
+      )) {
+        for (const t of types) addSchema(m, status, toSchema(t, checker));
+      }
+      continue;
+    }
+    const declared = declaredMethods(sf);
     (function visit(node) {
       if (
         ts.isCallExpression(node) &&
@@ -386,13 +481,7 @@ function inferResponses(root = process.cwd()) {
               checker.getTypeAtLocation(node.arguments[0]),
               checker
             );
-            for (const m of methods) {
-              const key = `${m} ${url}`;
-              const byStatus = (responses[key] ??= {});
-              const list = (byStatus[status] ??= []);
-              const k = JSON.stringify(schema);
-              if (!list.some((s) => JSON.stringify(s) === k)) list.push(schema);
-            }
+            for (const m of methods) addSchema(m, status, schema);
           }
         }
       }
