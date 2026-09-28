@@ -27,6 +27,12 @@ export type MapFace = {
   name: string;
   /** Maquette voxel pré-rendue, ou `null` pour une map inconnue. */
   imageUrl: string | null;
+  /**
+   * Miniature WebP de la maquette (`npm run maps:thumbs`), pour les écrans qui
+   * montrent beaucoup de maps à la fois : le SVG pèse 120 à 175 Ko et se
+   * dessine polygone par polygone, la miniature ~8 Ko.
+   */
+  thumbUrl: string | null;
   /** Mode de jeu (`control`, `escort`, …) ; `null` si inconnu. */
   layout: string | null;
 };
@@ -54,13 +60,14 @@ export function isKnownMapSlug(slug: unknown): slug is string {
 export function mapFace(slug: string): MapFace {
   const recipe = BY_SLUG.get(slug);
   if (!recipe) {
-    return { slug, name: slug, imageUrl: null, layout: null };
+    return { slug, name: slug, imageUrl: null, thumbUrl: null, layout: null };
   }
   return {
     slug,
     name: recipe.name,
     // Chemin des maquettes pré-rendues (`npm run maps:render`).
     imageUrl: `/img/maps/overwatch/${recipe.slug}.svg`,
+    thumbUrl: `/img/maps/overwatch/thumbs/${recipe.slug}.webp`,
     layout: recipe.layout ?? null,
   };
 }

@@ -4,6 +4,7 @@
 // USAGE:
 //   npm run maps:render            # toutes les recettes écrites à la main
 //   npm run maps:render -- --all   # + une maquette dérivée pour chaque map du registre
+//   puis : npm run maps:thumbs     # miniatures WebP dérivées (vue TCG staff)
 //
 // Sortie : public/img/maps/<jeu>/<slug>.svg (assets servis) + une planche-contact
 // map-previews.html a la racine (outil de dev, hors public/, ignoree par git).

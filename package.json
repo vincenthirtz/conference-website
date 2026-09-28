@@ -21,7 +21,8 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:unit:coverage": "vitest run --coverage",
-    "maps:render": "node --import ./scripts/register-ts.mjs scripts/render-map-previews.ts"
+    "maps:render": "node --import ./scripts/register-ts.mjs scripts/render-map-previews.ts",
+    "maps:thumbs": "node scripts/render-map-thumbs.mjs"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.6.1",

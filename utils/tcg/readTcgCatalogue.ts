@@ -255,7 +255,9 @@ export async function readTcgCatalogue(
       kind: 'map',
       id: slug,
       label: face?.name ?? slug,
-      imageUrl: face?.imageUrl ?? null,
+      // La miniature, pas la maquette : trente SVG voxel dessinés ensemble
+      // rendaient la vue lente (cf. `MapFace.thumbUrl`).
+      imageUrl: face?.thumbUrl ?? face?.imageUrl ?? null,
       owned: owns(key),
       holders: holdersOf(key),
     });
