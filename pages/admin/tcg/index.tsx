@@ -54,11 +54,10 @@ const TcgCataloguePanel = lazyPanel(
 const TcgEngagementPanel = lazyPanel(
   () => import('@/components/admin/tcg/TcgEngagementPanel')
 );
-const TcgOverlayCard = lazyPanel(
-  () => import('@/components/admin/tcg/TcgOverlayCard')
-);
-const TcgOverlayThemeCard = lazyPanel(
-  () => import('@/components/admin/tcg/TcgOverlayThemeCard')
+// Jeton et habillage de l'overlay TCG : câblés une fois, partagés avec
+// Diffusion › Overlays (lot 7).
+const TcgOverlaySection = lazyPanel(
+  () => import('@/components/admin/tcg/TcgOverlaySection')
 );
 const TcgWelcomeGiftCard = lazyPanel(
   () => import('@/components/admin/tcg/TcgWelcomeGiftCard')
@@ -131,63 +130,7 @@ export default function AdminTcgPage(_props: StaffProps) {
             ) : (
               <div className="space-y-6">
                 <TcgOverviewPanel labels={tTcgOverview} />
-                <TcgOverlayCard
-                  labels={{
-                    heading: tTcgOverview.overlayHeading,
-                    subtitle: tTcgOverview.overlaySubtitle,
-                    none: tTcgOverview.overlayNone,
-                    createdAt: tTcgOverview.overlayCreatedAt,
-                    lastUsedAt: tTcgOverview.overlayLastUsedAt,
-                    neverUsed: tTcgOverview.overlayNeverUsed,
-                    reveal: tTcgOverview.overlayReveal,
-                    hide: tTcgOverview.overlayHide,
-                    copy: tTcgOverview.overlayCopy,
-                    copied: tTcgOverview.overlayCopied,
-                    create: tTcgOverview.overlayCreate,
-                    rotate: tTcgOverview.overlayRotate,
-                    rotateWarning: tTcgOverview.overlayRotateWarning,
-                    revoke: tTcgOverview.overlayRevoke,
-                    revokeWarning: tTcgOverview.overlayRevokeWarning,
-                    working: tTcgOverview.overlayWorking,
-                    loadError: tTcgOverview.overlayLoadError,
-                    saveError: tTcgOverview.overlaySaveError,
-                    obsHint: tTcgOverview.overlayObsHint,
-                  }}
-                />
-                <TcgOverlayThemeCard
-                  labels={{
-                    heading: tTcgOverview.themeHeading,
-                    subtitle: tTcgOverview.themeSubtitle,
-                    previewTitle: tTcgOverview.themePreviewTitle,
-                    accent: tTcgOverview.themeAccent,
-                    position: tTcgOverview.themePosition,
-                    positionTopLeft: tTcgOverview.themePosTopLeft,
-                    positionTopRight: tTcgOverview.themePosTopRight,
-                    positionBottomLeft: tTcgOverview.themePosBottomLeft,
-                    positionBottomRight: tTcgOverview.themePosBottomRight,
-                    dropLine: tTcgOverview.themeDropLine,
-                    winLine: tTcgOverview.themeWinLine,
-                    linePlaceholder: tTcgOverview.themeLinePlaceholder,
-                    lineHint: tTcgOverview.themeLineHint,
-                    media: tTcgOverview.themeMedia,
-                    mediaHint: tTcgOverview.themeMediaHint,
-                    mediaChoose: tTcgOverview.themeMediaChoose,
-                    mediaRemove: tTcgOverview.themeMediaRemove,
-                    saving: tTcgOverview.themeSaving,
-                    saved: tTcgOverview.themeSaved,
-                    loadError: tTcgOverview.themeLoadError,
-                    saveError: tTcgOverview.themeSaveError,
-                    errUnsupportedType: tTcgOverview.themeErrUnsupportedType,
-                    errTooLarge: tTcgOverview.themeErrTooLarge,
-                    errContentMismatch: tTcgOverview.themeErrContentMismatch,
-                    errInvalidColor: tTcgOverview.themeErrInvalidColor,
-                    previewDropEyebrow: tTcgOverview.themePreviewDropEyebrow,
-                    previewWinEyebrow: tTcgOverview.themePreviewWinEyebrow,
-                    previewDropLine: tTcgOverview.themePreviewDropLine,
-                    previewWinLine: tTcgOverview.themePreviewWinLine,
-                    previewName: tTcgOverview.themePreviewName,
-                  }}
-                />
+                <TcgOverlaySection />
                 <TcgWelcomeGiftCard
                   labels={{
                     heading: tTcgOverview.giftHeading,

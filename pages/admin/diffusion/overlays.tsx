@@ -31,7 +31,13 @@ import { useAdminT } from '@/lib/i18n/useAdminT';
 import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
 import StreamSourcesPanel from '@/components/admin/tournament/StreamSourcesPanel';
 import StreamAlertsPanel from '@/components/admin/tournament/StreamAlertsPanel';
+import { lazyPanel } from '@/components/admin/lazyPanel';
 import nsAdminDiffusionOverlays from '@/lib/i18n/locales/admin-fr/adminDiffusionOverlays';
+
+// Chargée à la demande : seul qui a `manage_tcg` la voit.
+const TcgOverlaySection = lazyPanel(
+  () => import('@/components/admin/tcg/TcgOverlaySection')
+);
 
 type TournamentOption = { id: string; name: string; slug: string | null };
 
@@ -97,6 +103,8 @@ export default function DiffusionOverlaysPage({
     isDefaultTenant &&
     canUseMatchOverlays &&
     (staff?.permissions ?? []).includes('manage_broadcast');
+  // L'overlay TCG : le droit de ses routes (jeton, habillage).
+  const canTuneTcg = (staff?.permissions ?? []).includes('manage_tcg');
 
   const [baseUrl, setBaseUrl] = useState<string>(
     process.env.NEXT_PUBLIC_SITE_URL ?? ''
@@ -118,7 +126,11 @@ export default function DiffusionOverlaysPage({
       title: t.sceneOverlays,
       desc: t.sceneOverlaysDesc,
     },
-    { href: '/admin/tcg', title: t.tcgOverlay, desc: t.tcgOverlayDesc },
+    // Qui a `manage_tcg` règle l'overlay TCG juste au-dessus : le renvoi ne
+    // sert qu'aux autres, pour savoir que la source existe et où elle vit.
+    ...(canTuneTcg
+      ? []
+      : [{ href: '/admin/tcg', title: t.tcgOverlay, desc: t.tcgOverlayDesc }]),
   ];
 
   return (
@@ -173,6 +185,12 @@ export default function DiffusionOverlaysPage({
           {canTuneAlerts && (
             <section className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
               <StreamAlertsPanel />
+            </section>
+          )}
+
+          {canTuneTcg && (
+            <section className="mt-6 space-y-6">
+              <TcgOverlaySection />
             </section>
           )}
 
