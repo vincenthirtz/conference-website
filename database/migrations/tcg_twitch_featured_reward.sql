@@ -23,6 +23,7 @@
 -- CAVEATS:
 --   - Additive et idempotente.
 --   - Rollback : DROP des trois colonnes.
+--   - APPLIQUÉE en production le 2026-09-28.
 
 BEGIN;
 

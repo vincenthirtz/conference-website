@@ -1490,6 +1490,7 @@
     ],
     "tcg_packs": [
       "granted_at",
+      "guaranteed_fanart_id",
       "id",
       "opened_at",
       "source_kind",
@@ -2103,6 +2104,8 @@
       "expires_at",
       "refresh_token_enc",
       "scope",
+      "tcg_featured_fanart_id",
+      "tcg_featured_reward_id",
       "tcg_reward_id",
       "tenant_id",
       "updated_at"
@@ -3054,6 +3057,10 @@
       "source": "tcg_pack_cards",
       "target": "tcg_packs"
     },
+    "tcg_packs_guaranteed_fanart_id_fkey": {
+      "source": "tcg_packs",
+      "target": "tcg_fanart_cards"
+    },
     "tcg_packs_source_match_id_fkey": {
       "source": "tcg_packs",
       "target": "matches"
@@ -3309,6 +3316,10 @@
     "tournaments_tenant_id_fkey": {
       "source": "tournaments",
       "target": "tenants"
+    },
+    "twitch_broadcaster_connections_tcg_featured_fanart_id_fkey": {
+      "source": "twitch_broadcaster_connections",
+      "target": "tcg_fanart_cards"
     },
     "twitch_broadcaster_connections_tenant_id_fkey": {
       "source": "twitch_broadcaster_connections",
