@@ -485,7 +485,10 @@ function CasterScenesPage({ staff }: PageProps) {
 
           {/* Erreur de chargement (bandeau + retry, non bloquant) */}
           {error && (
-            <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-2">
+            <div
+              role="alert"
+              className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-2"
+            >
               <span>{format(t.loadError, { message: error })}</span>
               <button
                 type="button"

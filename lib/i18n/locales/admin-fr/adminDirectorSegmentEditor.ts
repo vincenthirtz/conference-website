@@ -46,4 +46,5 @@ export default adminNs('adminDirectorSegmentEditor', {
     'Aucun item de checklist. Le caster ne verra rien a cocher pour ce segment.',
   labelPlaceholder: 'Libelle visible par le caster',
   deleteAria: 'Supprimer',
+  keyPlaceholder: 'clé (slug)',
 });

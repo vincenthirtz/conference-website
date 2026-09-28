@@ -26,4 +26,7 @@ export default {
   send: 'Send',
   ackNote: 'Ack required — casters will have to click Seen.',
   startNote: 'Start the run to send cues.',
+  heading: 'Cue composer',
+  statusLive: 'Live',
+  statusRun: 'Run: {status}',
 };

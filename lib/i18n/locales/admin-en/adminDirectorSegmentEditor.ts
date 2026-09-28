@@ -46,4 +46,5 @@ export default {
     'No checklist items. The caster will have nothing to check for this segment.',
   labelPlaceholder: 'Label visible to the caster',
   deleteAria: 'Delete',
+  keyPlaceholder: 'key (slug)',
 };

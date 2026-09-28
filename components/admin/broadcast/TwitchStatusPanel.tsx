@@ -213,11 +213,10 @@ export default function TwitchStatusPanel() {
       ) : (
         <>
           {/* Statut compact par chaîne active (info utile au-dessus du player). */}
-          <ul
-            aria-live="polite"
-            aria-label={t.twitchHeading}
-            className="space-y-1.5 mb-3"
-          >
+          {/* La LISTE n'est plus une région live : elle était relue à chaque
+              sondage (60 s), audience comprise. Seul le passage en direct ou
+              hors ligne, ci-dessous, est annoncé. */}
+          <ul aria-label={t.twitchHeading} className="space-y-1.5 mb-3">
             {activeChannels.map((c) => {
               const login = c.channel.trim().toLowerCase();
               const st = statuses[login];
@@ -233,11 +232,19 @@ export default function TwitchStatusPanel() {
                   <span className="font-medium shrink-0">
                     {c.label || login}
                   </span>
-                  {live ? (
-                    <>
-                      <span className="text-xs font-bold text-red-400 shrink-0">
+                  <span aria-live="polite" className="shrink-0 text-xs">
+                    {live ? (
+                      <span className="font-bold text-red-400">
                         {t.twitchLive}
                       </span>
+                    ) : (
+                      <span className="text-neutral-500">
+                        {t.twitchOffline}
+                      </span>
+                    )}
+                  </span>
+                  {live && (
+                    <>
                       {st?.title && (
                         <span className="min-w-0 truncate text-xs text-neutral-400">
                           {st.title}
@@ -251,10 +258,6 @@ export default function TwitchStatusPanel() {
                         </span>
                       )}
                     </>
-                  ) : (
-                    <span className="text-xs text-neutral-500">
-                      {t.twitchOffline}
-                    </span>
                   )}
                 </li>
               );

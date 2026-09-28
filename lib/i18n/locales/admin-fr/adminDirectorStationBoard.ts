@@ -29,4 +29,5 @@ export default adminNs('adminDirectorStationBoard', {
   editStreamPlaceholder: 'URL du stream',
   editNotesPlaceholder: 'Notes',
   save: 'Enregistrer',
+  heading: 'Postes',
 });

@@ -17,6 +17,7 @@
 
 import { memo, useCallback, useRef, useState } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import { runStatusLabel } from '@/utils/eventSegmentLabels';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { logger } from '@/utils/logger';
@@ -131,13 +132,15 @@ function CueComposer({ runId, runStatus, onCueCreated }: Props) {
   return (
     <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-5">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-neutral-200">Cue composer</h3>
+        <h3 className="text-sm font-semibold text-neutral-200">{t.heading}</h3>
         <span
           className={`text-[11px] uppercase tracking-wide font-semibold ${
             isLive ? 'text-emerald-400' : 'text-neutral-500'
           }`}
         >
-          {isLive ? 'Live' : `Run ${runStatus}`}
+          {isLive
+            ? t.statusLive
+            : format(t.statusRun, { status: runStatusLabel(runStatus) })}
         </span>
       </div>
 

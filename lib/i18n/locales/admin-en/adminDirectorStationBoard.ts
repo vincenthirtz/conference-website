@@ -30,4 +30,5 @@ export default {
   editStreamPlaceholder: 'Stream URL',
   editNotesPlaceholder: 'Notes',
   save: 'Save',
+  heading: 'Stations',
 };

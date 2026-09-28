@@ -13,6 +13,7 @@ import { useEventRunRealtime } from '@/hooks/useEventRunRealtime';
 import { useVisiblePoll } from '@/hooks/useVisiblePoll';
 import { useToast } from '@/components/Toast';
 import LiveConsoleHeader from '@/components/admin/broadcast/LiveConsoleHeader';
+import AlertBanner from '@/components/admin/AlertBanner';
 import TwitchStatusPanel from '@/components/admin/broadcast/TwitchStatusPanel';
 import TcgDropHealthCard from '@/components/admin/broadcast/TcgDropHealthCard';
 import TwitchDrivePanels from '@/components/admin/broadcast/TwitchDrivePanels';
@@ -439,11 +440,7 @@ function BroadcastLivePage({ staff }: StaffProps) {
             onRefresh={fetchState}
           />
 
-          {error && (
-            <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
-              {error}
-            </div>
-          )}
+          <AlertBanner message={error} variant="error" className="mb-4" />
 
           {/* Bloc Twitch, INDÉPENDANT du run et ordonné par urgence : la santé
               des drops d'abord (seule panne invisible ailleurs — Twitch coupe

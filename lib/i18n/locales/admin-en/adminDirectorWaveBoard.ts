@@ -35,4 +35,5 @@ export default {
   editTitlePlaceholder: 'Title',
   editDurationPlaceholder: 'Duration (min)',
   save: 'Save',
+  heading: 'Waves',
 };

@@ -29,4 +29,5 @@ export default adminNs('adminDirectorCueFeed', {
   audioBlocked: 'Activer le son',
   audioBlockedHint:
     'Son bloqué : les cues urgents ne joueront aucune alerte sonore.',
+  heading: 'Fil des cues',
 });

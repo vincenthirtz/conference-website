@@ -312,7 +312,9 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
         )}
 
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-neutral-200">Cue feed</h3>
+          <h3 className="text-sm font-semibold text-neutral-200">
+            {t.heading}
+          </h3>
           <button
             type="button"
             onClick={fetchData}

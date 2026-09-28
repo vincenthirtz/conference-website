@@ -303,6 +303,7 @@ export default function SegmentCard({
             onClick={onDelete}
             disabled={busy}
             title={t.deleteTitle}
+            aria-label={t.deleteTitle}
             data-testid={`segment-delete-${segment.id}`}
             className="px-2 py-1 rounded-md text-xs bg-neutral-700/50 hover:bg-red-700/40 text-neutral-300 hover:text-red-200 border border-neutral-600/40 disabled:opacity-50"
           >

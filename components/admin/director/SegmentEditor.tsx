@@ -590,7 +590,7 @@ export default function SegmentEditor({
                   onChange={(e) =>
                     updateChecklistItem(idx, { key: e.target.value })
                   }
-                  placeholder="key (slug)"
+                  placeholder={t.keyPlaceholder}
                   className="w-32 px-2 py-1 rounded bg-neutral-900/80 border border-neutral-700 text-white text-xs font-mono focus:outline-none focus:border-purple-500"
                 />
                 <input

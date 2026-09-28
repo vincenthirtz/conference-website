@@ -189,7 +189,9 @@ export default function WaveBoard({
     <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-neutral-200">Waves</h3>
+          <h3 className="text-sm font-semibold text-neutral-200">
+            {t.heading}
+          </h3>
           <p className="text-xs text-neutral-500">{t.subtitle}</p>
         </div>
         <button

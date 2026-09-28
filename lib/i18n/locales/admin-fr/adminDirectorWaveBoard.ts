@@ -34,4 +34,5 @@ export default adminNs('adminDirectorWaveBoard', {
   editTitlePlaceholder: 'Titre',
   editDurationPlaceholder: 'Duree (min)',
   save: 'Enregistrer',
+  heading: 'Vagues',
 });

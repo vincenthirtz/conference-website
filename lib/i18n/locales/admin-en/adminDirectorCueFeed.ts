@@ -29,4 +29,5 @@ export default {
   retractFailed: 'Could not retract the cue.',
   audioBlocked: 'Enable sound',
   audioBlockedHint: "Sound blocked: urgent cues won't play an audio alert.",
+  heading: 'Cue feed',
 };

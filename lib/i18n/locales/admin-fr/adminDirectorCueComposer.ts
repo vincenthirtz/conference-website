@@ -25,4 +25,7 @@ export default adminNs('adminDirectorCueComposer', {
   send: 'Envoyer',
   ackNote: 'Ack requis — les casters devront cliquer Vu.',
   startNote: 'Demarre le run pour envoyer des cues.',
+  heading: 'Composer une cue',
+  statusLive: 'En direct',
+  statusRun: 'Run : {status}',
 });
