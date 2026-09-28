@@ -18,6 +18,7 @@
 -- CAVEATS:
 --   - Additive et idempotente. RLS activée, service role uniquement.
 --   - Rollback : DROP TABLE public.overlay_heartbeats.
+--   - APPLIQUÉE en production le 2026-09-28.
 
 BEGIN;
 
