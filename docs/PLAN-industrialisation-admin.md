@@ -56,7 +56,7 @@ Côté API : [`demandes/index.ts`](../pages/api/admin/demandes/index.ts) (1 355)
 | Lectures non typées | `select('*')` × **101**, aucun type Supabase généré | une colonne renommée casse en prod, pas au typecheck (cf. mémoire « mock sans validation de colonne ») |
 | Forme d'erreur libre | `{ error: '…' }` × **1 955**, texte français libre | le client ne peut pas réagir à une erreur autrement qu'en l'affichant |
 | Import relatif du logger | **130** routes `../../../../utils/logger` | bruit, déplacements de fichiers cassants |
-| Contrat admin non documenté | **24** routes admin dans `docs/openapi` sur 322 | le drift test ne voit pas l'admin |
+| Contrat admin écrit à la main | 322 fragments, schémas recopiés (corrigé : le « 24 » initial était une erreur de comptage) | la spec dérive du code sans que rien ne le voie |
 | État local éclaté | 12 écrans > 20 `useState` | états incohérents (chargé ≠ édité ≠ sauvé), bugs de brouillon |
 | Kit partagé peu adopté | `DataTable` 12 · `AdminListShell` 9 · `useAdminResource` 25 · `useTableQueryState` **1** | chaque liste refait tri / filtre / pagination |
 | Accès base depuis les pages | **14** pages importent `@/utils/supabase` (SSR) | la page est à la fois vue, contrôleur et repository |
@@ -415,7 +415,7 @@ rarement *de quoi à quoi*.
       désormais 404 au lieu de 500 (l'état d'avant est lu d'abord).
 - [ ] L'historique d'une ÉQUIPE montre « nom : A → B » — quand les équipes migreront (L17).
 
-### L9 · Contrat OpenAPI admin généré — 🟧 / M
+### L9 · Contrat OpenAPI admin généré — ✅ LIVRÉ (2026-09-29)
 
 **Problème.** 24 routes admin documentées sur 322. Le drift test ne protège donc pas l'admin, et
 aucun client typé n'est possible.
@@ -427,8 +427,27 @@ aucun client typé n'est possible.
 - Le test de drift couvre les routes admin migrées.
 
 **Critères d'acceptation**
-- [ ] Toute route migrée apparaît dans la spec sans écriture manuelle.
-- [ ] Modifier un schéma sans regénérer fait échouer `npx vitest run tests/unit/openapi`.
+**Diagnostic corrigé** : les 322 routes admin ONT un fragment (le « 24 » du § 1 était un
+comptage faux). Le vrai trou était ailleurs, et plus grave :
+
+- [x] **Le test de dérive ne voyait plus les routes migrées.** Il devine méthodes et garde en
+      lisant la source du handler ; une route migrée ne fait que réexporter son module, il n'y
+      lisait rien, la classait « pas un handler » et l'ignorait — les 12 routes migrées
+      échappaient au contrôle depuis leur migration. Il suit maintenant le réexport et lit les
+      clés de `defineAdminRoute` ; une route déclarative sans méthode lue fait échouer le test
+      (vérifié : un `DELETE` retiré de la spec est vu).
+- [x] Paramètres et corps des routes migrées **générés depuis leur schéma zod** par le mécanisme
+      existant (`x-zod`, `x-zod-query`), via [`lib/apiContracts/admin/features.ts`](../lib/apiContracts/admin/features.ts).
+      Deux mensonges de spec disparus au passage : un paramètre `limit` documenté que
+      `users/search` n'a jamais lu, un `id` annoncé UUID que `free-players` accepte quelconque.
+- [x] [`adminRouteContracts.test.ts`](../tests/unit/adminRouteContracts.test.ts) : pour chaque
+      route migrée, le schéma cité par le fragment est **le même objet** que celui que la route
+      applique — une route qui valide avec zod ne peut plus être documentée à la main (vérifié
+      par mutation).
+- [x] Les schémas de query `users/search` et `alerts-summary` sont sortis des fichiers de route
+      vers `schemas.ts`, en zod pur : le registre est chargé par le script de build.
+- [ ] Les résumés et descriptions restent écrits à la main dans les fragments — c'est de la
+      doc, pas du contrat.
 
 ---
 

@@ -5,6 +5,7 @@ get:
     - admin/misc
   security:
     - StaffSession: []
+  x-zod-query: admin.twitch-channels.query
   responses:
     '200':
       description: Channels.
@@ -29,8 +30,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.twitchChannels.create
   responses:
     '201':
       description: Created.
@@ -39,6 +39,8 @@ post:
           schema:
             type: object
             additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

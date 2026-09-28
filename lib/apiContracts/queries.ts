@@ -5,6 +5,7 @@
 // utils/openapi/assemble.ts). Les routes bot ont les leurs dans bot/index.ts.
 
 import type { ApiContractEntry } from './index';
+import { ADMIN_FEATURE_QUERY_SCHEMAS } from './admin/features';
 import { querySchema as q0_admin_tcg_overview } from './admin/tcg/overview.query';
 import { querySchema as q1_admin_teams_export } from './admin/teams/export.query';
 import { GetQuerySchema as q2_admin_twitch_channel_points_redemptions } from './admin/twitch/channel-points/redemptions.query';
@@ -41,4 +42,5 @@ export const QUERY_CONTRACT_SCHEMAS: Record<string, ApiContractEntry> = {
     schema: q7_player_follows_index,
     io: 'input',
   },
+  ...ADMIN_FEATURE_QUERY_SCHEMAS,
 };

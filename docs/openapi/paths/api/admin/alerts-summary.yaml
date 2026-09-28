@@ -5,6 +5,7 @@ get:
     - admin/misc
   security:
     - StaffSession: []
+  x-zod-query: admin.alerts-summary.query
   responses:
     '200':
       description: Counters by category.

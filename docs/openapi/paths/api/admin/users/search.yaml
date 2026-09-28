@@ -5,16 +5,7 @@ get:
     - admin/users
   security:
     - StaffSession: []
-  parameters:
-    - in: query
-      name: q
-      schema:
-        type: string
-    - in: query
-      name: limit
-      schema:
-        type: integer
-        default: 20
+  x-zod-query: admin.users/search.query
   responses:
     '200':
       description: Results.

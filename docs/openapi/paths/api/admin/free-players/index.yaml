@@ -35,12 +35,7 @@ delete:
     - admin/users
   security:
     - StaffSession: []
-  parameters:
-    - in: query
-      name: id
-      required: true
-      schema:
-        $ref: '#/components/schemas/Uuid'
+  x-zod-query: admin.free-players.query
   responses:
     '200':
       description: Fiche retiree.
