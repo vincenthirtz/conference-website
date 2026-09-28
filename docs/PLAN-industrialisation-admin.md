@@ -172,7 +172,7 @@ et personne ne le saura. `adminFileSizeGuard` gèle la taille des fichiers, rien
       `/api/admin/` en dur côté UI = **644** (non mesuré au § 1).
 - [x] 0,6 s sur le Mac.
 
-### L2 · Architecture `features/admin` + règles de frontière — 🟥 / M
+### L2 · Architecture `features/admin` + règles de frontière — ✅ LIVRÉ (2026-09-29)
 
 **Problème.** Il n'existe aucun endroit « normal » pour mettre la logique d'un domaine admin :
 elle finit dans la page (UI), dans la route (métier) ou dans `utils/` (188 fichiers à plat).
@@ -187,15 +187,20 @@ elle finit dans la page (UI), dans la route (métier) ou dans `utils/` (188 fich
   pour valider l'arborescence avant d'en faire la norme.
 
 **Critères d'acceptation**
-- [ ] Une violation de frontière dans un fichier non listé fait échouer le test.
-- [ ] Le module pilote respecte les 4 règles et sa page fait < 40 lignes.
-- [ ] `biome check` ne signale rien de nouveau (alias résolu).
+- [x] [ADR 0001](./adr/0001-admin-feature-modules.md) ; alias `@/features/*`.
+- [x] [`adminBoundariesGuard.test.ts`](../tests/unit/adminBoundariesGuard.test.ts) : 5 règles
+      (les 4 du § 2 + « seul le service lit son repository ») et une 6e — une route
+      `pages/api/admin` migrée ne fait que réexporter son module. Aucune exception.
+- [x] Pilote [`features/admin/free-players/`](../features/admin/free-players/) : schemas,
+      repository, service, routes. La **page** reste à migrer avec le client typé (L10) —
+      l'y faire maintenant aurait voulu écrire deux fois la couche de requêtes.
+- [x] `biome check` propre.
 
 ---
 
 ## Phase 1 — Socle serveur
 
-### L3 · `defineAdminRoute` : la route déclarative — 🟥 / L
+### L3 · `defineAdminRoute` : la route déclarative — ✅ SOCLE LIVRÉ (2026-09-29) · migration en cours
 
 **Problème.** 322 routes réécrivent le même squelette : `switch (req.method)`, `withStaffRoute`,
 rate-limit (168 routes), idempotence (74), parse du corps, `try/catch`, log, `res.status().json()`.
@@ -234,12 +239,28 @@ export default defineAdminRoute({
 routes de lecture pour éprouver l'API, puis domaine par domaine (lots 15–20).
 
 **Critères d'acceptation**
-- [ ] Une méthode non déclarée renvoie 405 avec `Allow`.
-- [ ] Une mutation rejouée avec la même clé d'idempotence ne réécrit pas.
-- [ ] La matrice de permissions couvre 100 % des routes migrées.
-- [ ] Temps de réponse inchangé (± 5 ms) sur les 10 routes pilotes.
+- [x] Une méthode non déclarée renvoie 405 avec `Allow` (avant même la garde).
+- [x] Une mutation rejouée avec la même clé d'idempotence ne réécrit pas (en-tête
+      `Idempotency-Replay`).
+- [x] [`adminRoutePermissionMatrix.test.ts`](../tests/unit/adminRoutePermissionMatrix.test.ts)
+      découvre seul les routes migrées ; vérifié par mutation (un rôle autorisé déclaré
+      « refusé » fait échouer le test).
+- [x] `scripts/openapi/infer-responses.cjs` lit les routes déclaratives (retour typé des
+      handlers) : sans ça, migrer une route **effaçait** ses réponses du contrat. Le pilote y
+      gagne en précision (`source: 'web' | 'discord'`, `success: true`).
+- [ ] 10 petites routes de lecture migrées pour éprouver l'API (1/10 : `free-players`).
+- [ ] Temps de réponse inchangé (± 5 ms) sur ces routes.
 
-### L4 · Erreurs typées et enveloppe de réponse — 🟥 / M
+**Choix faits en écrivant le socle** :
+- `read({...})` / `mutate({...})` : sans ces aides, TypeScript ne sait pas inférer les schémas
+  méthode par méthode et `query`/`body` deviennent `any` dans le handler.
+- Le journal est **déclaré** (`audit: 'slug' | false`, obligatoire sur une mutation) et
+  **détaillé** par le handler (`ctx.audit({...})`) — anticipe L8, qui n'aura plus qu'à ajouter
+  le diff avant/après.
+- `ctx` d'un handler **est** un `ServiceContext` : on le passe tel quel au service.
+- Rate-limit par défaut : 120/min en lecture, 60/min en écriture, par IP et par route.
+
+### L4 · Erreurs typées et enveloppe de réponse — 🟨 SOCLE LIVRÉ (2026-09-29)
 
 **Problème.** 1 955 `res.json({ error: '…' })` en français libre, plus 46 `{ success }` et
 13 `{ ok }`. Le client ne peut ni distinguer un conflit d'une validation, ni surligner le champ
@@ -256,9 +277,13 @@ fautif, ni traduire.
 - Toute exception non typée → 500 avec `requestId`, message générique, stack dans le logger.
 
 **Critères d'acceptation**
-- [ ] Aucune route migrée n'écrit `res.status(…).json(…)` à la main.
-- [ ] Un 422 renvoie `fields` et le formulaire (L11) surligne le champ.
-- [ ] Le `requestId` visible dans le toast d'erreur se retrouve dans les logs.
+- [x] [`utils/admin/errors.ts`](../utils/admin/errors.ts) ; aucune route migrée n'écrit
+      `res.status(…).json(…)` à la main.
+- [x] Validation = **400** (et non 422) avec `code: 'validation'` et `fields` : c'est le code que
+      les écrans attendent déjà ; le `code` suffit à distinguer.
+- [ ] Le formulaire (L11) surligne le champ fautif.
+- [x] `requestId` dans l'en-tête `X-Request-Id`, dans le corps d'erreur et dans le log.
+- [ ] Le toast d'erreur côté client affiche le `requestId` (L10).
 
 ### L5 · Types Supabase générés + fin du `select('*')` — 🟥 / L
 

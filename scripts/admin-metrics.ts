@@ -65,7 +65,9 @@ export const DEBT_METRICS: DebtMetric[] = [
     label: 'Routes admin hors defineAdminRoute',
     scope: [API],
     per: 'file',
-    test: (src) => !src.includes('defineAdminRoute('),
+    // Une route migrée réexporte son module `features/admin/<domaine>/routes`.
+    test: (src) =>
+      !src.includes('defineAdminRoute(') && !src.includes('@/features/admin/'),
   },
   {
     key: 'api.manualMethodSwitch',
@@ -177,7 +179,7 @@ export const SIZE_METRICS = [
 
 /** Adoption du socle — affichée, jamais gelée. */
 export const ADOPTION_METRICS: [string, string, string[]][] = [
-  ['adopt.defineAdminRoute', 'defineAdminRoute(', [API]],
+  ['adopt.featureModule', '@/features/admin/', [API]],
   ['adopt.zod', "from 'zod'", [API]],
   ['adopt.idempotency', 'adminIdempotency', [API]],
   ['adopt.dataTable', 'DataTable', [PAGES, COMPONENTS]],

@@ -260,7 +260,8 @@
     "type": "object",
     "properties": {
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      },
      "willReturn": {
       "type": "boolean"
@@ -5451,7 +5452,11 @@
          "type": "string"
         },
         "source": {
-         "type": "string"
+         "type": "string",
+         "enum": [
+          "discord",
+          "web"
+         ]
         },
         "name": {
          "type": [

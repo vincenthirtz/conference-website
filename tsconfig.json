@@ -36,7 +36,8 @@
       "@/config/*": ["./config/*"],
       "@/components/*": ["./components/*"],
       "@/hooks/*": ["./hooks/*"],
-      "@/lib/*": ["./lib/*"]
+      "@/lib/*": ["./lib/*"],
+      "@/features/*": ["./features/*"]
     }
   },
   "exclude": ["node_modules", "vitest.config.ts"],
