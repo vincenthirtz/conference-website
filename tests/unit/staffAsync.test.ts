@@ -353,6 +353,32 @@ describe('withStaffPage', () => {
     expect(result.redirect.destination).toBe('/admin/login');
   });
 
+  it('garde la page demandée en next= pour y revenir après connexion', async () => {
+    setCookieUser(null);
+    const ssr = withStaffPage('caster');
+    const ctx = {
+      req: makeReq(),
+      res: makeRes(),
+      resolvedUrl: '/admin/regie?x=1',
+    } as any;
+    const result = (await ssr(ctx)) as any;
+    expect(result.redirect.destination).toBe(
+      '/admin/login?next=%2Fadmin%2Fregie%3Fx%3D1'
+    );
+  });
+
+  it('ne reprend en next= qu’une URL admin', async () => {
+    setCookieUser(null);
+    const ssr = withStaffPage('caster');
+    const ctx = {
+      req: makeReq(),
+      res: makeRes(),
+      resolvedUrl: '//evil.example',
+    } as any;
+    const result = (await ssr(ctx)) as any;
+    expect(result.redirect.destination).toBe('/admin/login');
+  });
+
   it('redirects to /403 when role is insufficient', async () => {
     setAuthUser({ id: 'user-1' });
     seedStaff([makeStaff({ auth_user_id: 'user-1', role: 'caster' })]);

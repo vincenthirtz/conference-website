@@ -331,3 +331,52 @@ describe('POST /api/admin/broadcast/state', () => {
     expect((res.body as any).state.pip.enabled).toBe(true);
   });
 });
+
+/* -----------------------------------------------------------
+ * Écrire l'état d'antenne suit le DROIT manage_broadcast, pas le rôle
+ * ---------------------------------------------------------*/
+
+describe('POST /api/admin/broadcast/state — droit de piloter', () => {
+  const liveRun = () => {
+    store.event_runs = [
+      {
+        id: RUN_ID,
+        slug: 'r',
+        status: 'live',
+        broadcast_state: {
+          v: 1,
+          on_air: false,
+          lower_third: null,
+          pip: { enabled: false },
+        },
+      },
+    ] as any;
+  };
+
+  it('refuse une casteuse sans le droit', async () => {
+    store.staff = [makeStaffRow('caster')] as any;
+    invalidateStaffCache();
+    liveRun();
+    const res = makeRes();
+    await broadcastHandler(
+      makeReq({ method: 'POST', body: { on_air: true } }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('laisse piloter une casteuse à qui l’on a accordé manage_broadcast', async () => {
+    store.staff = [
+      { ...makeStaffRow('caster'), extra_permissions: ['manage_broadcast'] },
+    ] as any;
+    invalidateStaffCache();
+    liveRun();
+    const res = makeRes();
+    await broadcastHandler(
+      makeReq({ method: 'POST', body: { on_air: true } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).state.on_air).toBe(true);
+  });
+});
