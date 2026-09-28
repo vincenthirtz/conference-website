@@ -10,6 +10,7 @@ import { useToast } from '@/components/Toast';
 import CastMemberStaffPicker from '@/components/admin/CastMemberStaffPicker';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminCastMemberEdit from '@/lib/i18n/locales/admin-fr/adminCastMemberEdit';
+import CastMemberFields from '@/components/admin/cast-members/CastMemberFields';
 import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
 type Props = {
@@ -210,106 +211,7 @@ function AdminCastMemberEditPage(_props: Props) {
                     </div>
                   )}
 
-                  <div className="grid gap-6 md:grid-cols-2">
-                    <div>
-                      <label className="block text-sm text-neutral-300 mb-1">
-                        {t.nameLabel} <span className="text-red-400">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={form.name}
-                        onChange={(e) => updateField('name', e.target.value)}
-                        placeholder="ex: Gwadael"
-                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm text-neutral-300 mb-1">
-                        {t.titleLabel}
-                      </label>
-                      <input
-                        type="text"
-                        value={form.title}
-                        onChange={(e) => updateField('title', e.target.value)}
-                        placeholder="ex: Streameuse Overwatch"
-                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-6 md:grid-cols-2">
-                    <div>
-                      <label className="block text-sm text-neutral-300 mb-1">
-                        {t.cityLabel}
-                      </label>
-                      <input
-                        type="text"
-                        value={form.city}
-                        onChange={(e) => updateField('city', e.target.value)}
-                        placeholder="ex: France, Suisse..."
-                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm text-neutral-300 mb-1">
-                        {t.sortOrderLabel}
-                      </label>
-                      <input
-                        type="number"
-                        value={form.sortOrder}
-                        onChange={(e) =>
-                          updateField('sortOrder', e.target.value)
-                        }
-                        placeholder="0"
-                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                        min="0"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      {t.imageLabel}
-                    </label>
-                    <input
-                      type="text"
-                      value={form.imageUrl}
-                      onChange={(e) => updateField('imageUrl', e.target.value)}
-                      placeholder="/img/speaker-images/nom.jpg ou https://..."
-                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      {t.twitchLabel}
-                    </label>
-                    <input
-                      type="url"
-                      value={form.twitchUrl}
-                      onChange={(e) => updateField('twitchUrl', e.target.value)}
-                      placeholder="https://www.twitch.tv/..."
-                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      {t.descriptionLabel}
-                    </label>
-                    <textarea
-                      value={form.description}
-                      onChange={(e) =>
-                        updateField('description', e.target.value)
-                      }
-                      placeholder={t.descriptionPlaceholder}
-                      rows={3}
-                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm resize-y"
-                    />
-                  </div>
+                  <CastMemberFields form={form} onField={updateField} />
 
                   <CastMemberStaffPicker
                     value={form.authUserId}

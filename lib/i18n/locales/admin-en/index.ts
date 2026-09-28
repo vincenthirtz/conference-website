@@ -106,6 +106,7 @@ import enAdminPoleMemberEdit from './adminPoleMemberEdit';
 import enAdminCastMembersList from './adminCastMembersList';
 import enAdminCastMembersNew from './adminCastMembersNew';
 import enAdminCastMemberEdit from './adminCastMemberEdit';
+import enAdminCastMemberFields from './adminCastMemberFields';
 import enAdminTwitchChannelsList from './adminTwitchChannelsList';
 import enAdminTwitchChannelsNew from './adminTwitchChannelsNew';
 import enAdminTwitchChannelEdit from './adminTwitchChannelEdit';
@@ -308,6 +309,7 @@ const adminEnDict = {
   adminCastMembersList: enAdminCastMembersList,
   adminCastMembersNew: enAdminCastMembersNew,
   adminCastMemberEdit: enAdminCastMemberEdit,
+  adminCastMemberFields: enAdminCastMemberFields,
   adminTwitchChannelsList: enAdminTwitchChannelsList,
   adminTwitchChannelsNew: enAdminTwitchChannelsNew,
   adminTwitchChannelEdit: enAdminTwitchChannelEdit,

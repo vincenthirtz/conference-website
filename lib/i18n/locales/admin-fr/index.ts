@@ -111,6 +111,7 @@ import nsAdminPoleMemberEdit from './adminPoleMemberEdit';
 import nsAdminCastMembersList from './adminCastMembersList';
 import nsAdminCastMembersNew from './adminCastMembersNew';
 import nsAdminCastMemberEdit from './adminCastMemberEdit';
+import nsAdminCastMemberFields from './adminCastMemberFields';
 import nsAdminTwitchChannelsList from './adminTwitchChannelsList';
 import nsAdminTwitchChannelsNew from './adminTwitchChannelsNew';
 import nsAdminTwitchChannelEdit from './adminTwitchChannelEdit';
@@ -313,6 +314,7 @@ export const frDict = {
   adminCastMembersList: nsAdminCastMembersList.fr,
   adminCastMembersNew: nsAdminCastMembersNew.fr,
   adminCastMemberEdit: nsAdminCastMemberEdit.fr,
+  adminCastMemberFields: nsAdminCastMemberFields.fr,
   adminTwitchChannelsList: nsAdminTwitchChannelsList.fr,
   adminTwitchChannelsNew: nsAdminTwitchChannelsNew.fr,
   adminTwitchChannelEdit: nsAdminTwitchChannelEdit.fr,
