@@ -105,7 +105,8 @@ const BASELINE: Record<string, number> = {
   'pages/admin/stages/[stageId]/groups.tsx': 858,
   // 813 : en-tête parti dans `components/admin/broadcast/LiveConsoleHeader.tsx`
   // (onglets « Diffusion »).
-  'pages/admin/broadcast/live.tsx': 813,
+  // 811 : panneaux Twitch d'écriture regroupés (TwitchDrivePanels).
+  'pages/admin/broadcast/live.tsx': 811,
   'pages/admin/leagues/[id].tsx': 827,
   'pages/admin/scrims/plannings/[planningId].tsx': 813,
   // 576 écrites : le sélecteur de journée, la grille, le formulaire d'ajout et

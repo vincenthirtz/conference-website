@@ -14,8 +14,7 @@ import { useToast } from '@/components/Toast';
 import LiveConsoleHeader from '@/components/admin/broadcast/LiveConsoleHeader';
 import TwitchStatusPanel from '@/components/admin/broadcast/TwitchStatusPanel';
 import TcgDropHealthCard from '@/components/admin/broadcast/TcgDropHealthCard';
-import TwitchPredictionsPanel from '@/components/admin/broadcast/TwitchPredictionsPanel';
-import TwitchCommandsPanel from '@/components/admin/broadcast/TwitchCommandsPanel';
+import TwitchDrivePanels from '@/components/admin/broadcast/TwitchDrivePanels';
 import { useRouter } from 'next/router';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Switch from '@/components/ui/Switch';
@@ -467,8 +466,7 @@ function BroadcastLivePage({ staff }: StaffProps) {
               `caster`, plus large que les routes qu'elle appelle. */}
           <TcgDropHealthCard />
           <TwitchStatusPanel />
-          <TwitchPredictionsPanel />
-          <TwitchCommandsPanel />
+          <TwitchDrivePanels />
 
           {loading && !data && (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-10 text-center text-neutral-400">
