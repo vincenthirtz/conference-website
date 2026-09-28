@@ -1439,6 +1439,7 @@
     "tcg_fanart_cards": [
       "artist_name",
       "artist_url",
+      "category",
       "created_at",
       "id",
       "image_path",
@@ -1447,6 +1448,7 @@
       "review_notes",
       "reviewed_at",
       "reviewed_by",
+      "source_ref",
       "status",
       "submitted_by",
       "tenant_id",

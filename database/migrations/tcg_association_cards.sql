@@ -30,6 +30,7 @@
 --   - Additive et idempotente. Les lignes existantes prennent `fanart`.
 --   - Rollback : DROP des deux colonnes et des deux contraintes APRÈS avoir
 --     requalifié ou retiré les cartes `association`, puis rétablir NOT NULL.
+--   - APPLIQUÉE en production le 2026-09-28.
 
 BEGIN;
 
