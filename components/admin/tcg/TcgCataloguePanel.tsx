@@ -55,13 +55,24 @@ type CatalogueResponse = {
 // L'ORDRE EST CELUI DE L'AFFICHAGE, et il décide aussi de ce qui EXISTE :
 // un type absent d'ici n'a pas de groupe, donc ses cartes ne sont rendues
 // nulle part — sans erreur, sans compteur faux, simplement absentes.
-const KIND_ORDER: CatalogueKind[] = [
+//
+// `association` n'est pas un type de carte mais un GROUPE d'affichage : ses
+// cartes sont des `fanart` de catégorie `association` (cf. `groupOf`).
+type CatalogueGroup = CatalogueKind | 'association';
+const KIND_ORDER: CatalogueGroup[] = [
   'player',
   'team',
   'map',
   'fanart',
+  'association',
   'mascot',
 ];
+
+function groupOf(card: { kind: CatalogueKind; category?: string }) {
+  return card.kind === 'fanart' && card.category === 'association'
+    ? 'association'
+    : card.kind;
+}
 
 export default function TcgCataloguePanel() {
   const t = useAdminT(nsAdminTcgPage);
@@ -105,20 +116,22 @@ export default function TcgCataloguePanel() {
     const shown = missingOnly ? cards.filter((c) => !c.owned) : cards;
     return KIND_ORDER.map((kind) => ({
       kind,
-      cards: shown.filter((c) => c.kind === kind),
+      cards: shown.filter((c) => groupOf(c) === kind),
     })).filter((g) => g.cards.length > 0);
   }, [data, missingOnly]);
 
-  const kindLabel = (kind: CatalogueKind): string =>
-    kind === 'player'
-      ? t.catalogueKindPlayers
-      : kind === 'team'
-        ? t.catalogueKindTeams
-        : kind === 'map'
-          ? t.catalogueKindMaps
-          : kind === 'mascot'
-            ? t.catalogueKindMascots
-            : t.catalogueKindFanart;
+  const kindLabel = (kind: CatalogueGroup): string =>
+    kind === 'association'
+      ? t.catalogueKindAssociation
+      : kind === 'player'
+        ? t.catalogueKindPlayers
+        : kind === 'team'
+          ? t.catalogueKindTeams
+          : kind === 'map'
+            ? t.catalogueKindMaps
+            : kind === 'mascot'
+              ? t.catalogueKindMascots
+              : t.catalogueKindFanart;
 
   return (
     <div>

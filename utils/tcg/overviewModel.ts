@@ -128,6 +128,8 @@ export type TcgOverviewSubject = {
   foilCount: Count;
   /** Fiche publique, `null` quand on ne peut pas la construire honnêtement. */
   href: string | null;
+  /** Fan art seulement : `association` = visuel de l'association. */
+  category?: 'fanart' | 'association';
 };
 
 export type TcgOverview = {
@@ -242,6 +244,14 @@ function normalizeSubject(raw: unknown): TcgOverviewSubject | null {
             : teamId,
     name: asText(rec.name),
     imageUrl: asText(rec.imageUrl),
+    ...(kind === 'fanart'
+      ? {
+          category:
+            rec.category === 'association'
+              ? ('association' as const)
+              : ('fanart' as const),
+        }
+      : {}),
     count: asCount(rec.count),
     foilCount: asCount(rec.foilCount),
     href:

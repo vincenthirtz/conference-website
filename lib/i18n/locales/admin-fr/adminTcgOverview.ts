@@ -106,6 +106,7 @@ export default adminNs('adminTcgOverview', {
   kindTeam: 'Équipe',
   kindMap: 'Map',
   kindFanart: 'Fan art',
+  kindAssociation: 'L’association',
   kindMascot: 'Mascotte',
   unknownSubject: 'Sujet inconnu',
 

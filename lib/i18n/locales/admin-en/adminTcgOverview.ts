@@ -89,6 +89,7 @@ export default {
   kindTeam: 'Team',
   kindMap: 'Map',
   kindFanart: 'Fan art',
+  kindAssociation: 'L’association',
   kindMascot: 'Mascot',
   unknownSubject: 'Unknown subject',
 

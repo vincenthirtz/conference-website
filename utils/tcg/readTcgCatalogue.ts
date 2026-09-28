@@ -56,6 +56,12 @@ export type CatalogueCard = {
   id: string;
   /** Ce qu'on lit sur la carte. Jamais vide : repli sur l'identifiant. */
   label: string;
+  /**
+   * Pour une fan art seulement : `association` = visuel de l'association
+   * (logo d'événement, dépôt staff). Même type de carte, autre groupe à
+   * l'écran — sans ce champ, Octobre Rose s'affichait parmi les fan arts.
+   */
+  category?: 'fanart' | 'association';
   imageUrl: string | null;
   /** Toujours `false` quand aucune joueuse n'est demandée. */
   owned: boolean;
@@ -262,6 +268,7 @@ export async function readTcgCatalogue(
       kind: 'fanart',
       id,
       label: face?.title ?? id,
+      category: face?.category ?? 'fanart',
       imageUrl: face?.imageUrl ?? null,
       owned: owns(key),
       holders: holdersOf(key),

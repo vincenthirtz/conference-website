@@ -356,3 +356,33 @@ describe('POST /api/admin/tcg/association — logo par défaut en voxel', () => 
     expect(res.body.voxelLogo.cardId).toBe(rows()[0].id);
   });
 });
+
+describe('vue d’ensemble staff — la catégorie survit à la normalisation', () => {
+  it('garde « association » sur une fan art, et rien sur les autres types', async () => {
+    const { normalizeTcgOverview } = await import(
+      '../../utils/tcg/overviewModel'
+    );
+    const data = normalizeTcgOverview({
+      topSubjects: [
+        {
+          kind: 'fanart',
+          fanartId: ASSO,
+          name: 'Octobre Rose',
+          category: 'association',
+        },
+        { kind: 'fanart', fanartId: FANART, name: 'Hinode en garde' },
+        {
+          kind: 'map',
+          slug: 'hanaoka',
+          name: 'Hanaoka',
+          category: 'association',
+        },
+      ],
+    });
+    expect(data.topSubjects.map((s) => s.category)).toEqual([
+      'association',
+      'fanart',
+      undefined,
+    ]);
+  });
+});

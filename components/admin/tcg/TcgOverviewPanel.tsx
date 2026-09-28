@@ -166,6 +166,7 @@ export type TcgOverviewLabels = {
   kindTeam: string;
   kindMap: string;
   kindFanart: string;
+  kindAssociation: string;
   kindMascot: string;
   unknownSubject: string;
 };
@@ -691,7 +692,9 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
                           : subject.kind === 'map'
                             ? labels.kindMap
                             : subject.kind === 'fanart'
-                              ? labels.kindFanart
+                              ? subject.category === 'association'
+                                ? labels.kindAssociation
+                                : labels.kindFanart
                               : subject.kind === 'mascot'
                                 ? labels.kindMascot
                                 : labels.kindPlayer}

@@ -49,6 +49,7 @@ export default adminNs('adminTcgPage', {
   catalogueKindTeams: 'Équipes',
   catalogueKindMaps: 'Maps',
   catalogueKindFanart: 'Fan art',
+  catalogueKindAssociation: 'L’association',
   catalogueKindMascots: 'Mascottes',
   catalogueHolders: '{count} détentrice(s)',
   catalogueNoHolder: 'jamais tirée',

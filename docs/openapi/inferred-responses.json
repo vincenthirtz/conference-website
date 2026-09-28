@@ -13961,6 +13961,13 @@
         "label": {
          "type": "string"
         },
+        "category": {
+         "type": "string",
+         "enum": [
+          "association",
+          "fanart"
+         ]
+        },
         "imageUrl": {
          "type": [
           "string",

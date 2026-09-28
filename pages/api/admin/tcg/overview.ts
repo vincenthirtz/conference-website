@@ -735,6 +735,7 @@ async function handler(
         fanartId: subject.subjectId,
         name: face?.title ?? null,
         imageUrl: face?.imageUrl ?? null,
+        category: face?.category ?? 'fanart',
         count: subject.count,
         foilCount: subject.foilCount,
       };
