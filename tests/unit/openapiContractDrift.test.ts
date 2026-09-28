@@ -212,7 +212,40 @@ function walkTs(dir: string, out: string[] = []): string[] {
   return out;
 }
 
+/**
+ * Source effective d'un handler. Une route migrée sur `defineAdminRoute`
+ * (docs/PLAN-industrialisation-admin.md) ne fait que RÉEXPORTER son module
+ * `features/admin/<domaine>/routes/…` : lire le seul fichier de `pages/api`
+ * n'y trouvait ni méthode ni garde, et la route sortait du contrôle en
+ * silence (`methods.length === 0` = « pas un handler »). On suit le réexport.
+ */
+function resolveRouteSource(file: string, src: string): string {
+  const m = /export\s*\{\s*default\b[^}]*\}\s*from\s*['"]([^'"]+)['"]/.exec(
+    src
+  );
+  if (!m) return src;
+  const spec = m[1];
+  const base = spec.startsWith('@/')
+    ? path.join(REPO_ROOT, spec.slice(2))
+    : path.resolve(path.dirname(file), spec);
+  for (const candidate of [
+    base,
+    `${base}.ts`,
+    `${base}.tsx`,
+    path.join(base, 'index.ts'),
+  ]) {
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+      return fs.readFileSync(candidate, 'utf8');
+    }
+  }
+  throw new Error(`réexport non résolu : ${spec} (${file})`);
+}
+
+const isDeclarative = (src: string) => /\bdefineAdminRoute\s*\(/.test(src);
+
 function detectAuth(src: string): AuthKind {
+  // Route déclarative : la garde staff est dans `defineAdminRoute`.
+  if (isDeclarative(src)) return 'staff-admin';
   if (/\bwithBotRoute\s*\(/.test(src)) {
     if (/crossTenant\s*:\s*true/.test(src)) return 'bot-crossTenant';
     return 'bot';
@@ -239,6 +272,14 @@ function detectAuth(src: string): AuthKind {
 function detectMethods(src: string): string[] {
   const verbs = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
   const found = new Set<string>();
+
+  // 0. Route déclarative : ses méthodes sont les clés de `defineAdminRoute`.
+  if (isDeclarative(src)) {
+    for (const m of src.matchAll(/^\s+(GET|POST|PUT|PATCH|DELETE)\s*:/gm)) {
+      found.add(m[1]);
+    }
+    return [...found].sort();
+  }
 
   // 1. withBotRoute(_, { methods: ['GET', 'POST'] })
   const botMethods = src.match(/methods\s*:\s*\[([^\]]+)\]/);
@@ -285,7 +326,7 @@ function detectMethods(src: string): string[] {
 
 function listHandlers(): HandlerInfo[] {
   return walkTs(API_ROOT).map((file) => {
-    const src = fs.readFileSync(file, 'utf8');
+    const src = resolveRouteSource(file, fs.readFileSync(file, 'utf8'));
     return {
       file,
       apiPath: fileToApiPath(file),
@@ -486,6 +527,28 @@ describe('OpenAPI ↔ handlers', () => {
       orphans,
       `${orphans.length} fragment(s) without handler file:\n  ${orphans.join('\n  ')}`
     ).toEqual([]);
+  });
+
+  it('aucune route déclarative n’échappe au contrôle (méthodes lues)', () => {
+    // Garde du garde : une route `defineAdminRoute` dont on ne lirait aucune
+    // méthode serait classée « pas un handler » et ignorée par les tests
+    // suivants — c'est exactement ce qui arrivait avant qu'on suive les
+    // réexports.
+    const silent = listHandlers()
+      .filter((h) => {
+        const src = resolveRouteSource(h.file, fs.readFileSync(h.file, 'utf8'));
+        return isDeclarative(src) && h.methods.length === 0;
+      })
+      .map((h) => h.apiPath);
+    expect(silent).toEqual([]);
+    expect(
+      listHandlers().filter(
+        (h) =>
+          isDeclarative(
+            resolveRouteSource(h.file, fs.readFileSync(h.file, 'utf8'))
+          ) && h.methods.length > 0
+      ).length
+    ).toBeGreaterThanOrEqual(12);
   });
 
   it('methods declared in openapi match methods accepted by handler', () => {
