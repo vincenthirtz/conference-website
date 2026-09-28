@@ -593,6 +593,57 @@ describe('/api/admin/twitch-channels/[id]', () => {
     expect((store.twitch_channels[0] as any).is_active).toBe(false);
   });
 
+  it('PATCH journalise CE QUI A CHANGÉ, pas seulement « mise à jour » (lot L8)', async () => {
+    (store as any).staff_logs = [];
+    store.twitch_channels = [
+      { id, channel: 'old', label: 'Old', badge: null, is_active: true },
+    ] as any;
+    const res = makeRes();
+    await twitchChannelByIdHandler(
+      makeReq(
+        {
+          method: 'PATCH',
+          query: { id },
+          body: { label: 'New', badge: 'Cast' },
+        },
+        true
+      ),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const log = (store as any).staff_logs.at(-1);
+    expect(log.action).toBe('update_twitch_channel');
+    expect(log.payload.changes).toEqual({
+      badge: { from: null, to: 'Cast' },
+      label: { from: 'Old', to: 'New' },
+    });
+  });
+
+  it('DELETE garde au journal la photo de ce qui a disparu (lot L8)', async () => {
+    (store as any).staff_logs = [];
+    store.twitch_channels = [{ id, channel: 'foo', label: 'Foo' }] as any;
+    const res = makeRes();
+    await twitchChannelByIdHandler(
+      makeReq({ method: 'DELETE', query: { id } }, true),
+      res
+    );
+    expect(res.statusCode).toBe(204);
+    expect((store as any).staff_logs.at(-1).payload.before).toEqual({
+      channel: 'foo',
+      label: 'Foo',
+    });
+  });
+
+  it('PATCH 404 sur une chaîne inconnue (au lieu d’un 500)', async () => {
+    store.twitch_channels = [];
+    const res = makeRes();
+    await twitchChannelByIdHandler(
+      makeReq({ method: 'PATCH', query: { id }, body: { label: 'X' } }, true),
+      res
+    );
+    expect(res.statusCode).toBe(404);
+  });
+
   it('DELETE 204 removes the row', async () => {
     store.twitch_channels = [{ id, channel: 'foo', label: 'Foo' }] as any;
     const res = makeRes();

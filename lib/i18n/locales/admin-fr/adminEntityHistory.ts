@@ -12,4 +12,11 @@ export default adminNs('adminEntityHistory', {
   error: "L'historique n'a pas pu être chargé.",
   unknownStaff: 'Staff inconnu',
   openHistory: 'Historique',
+  changesTitle: 'Modifications',
+  createdTitle: 'Créé avec',
+  deletedTitle: 'Supprimé — il contenait',
+  emptyValue: '(vide)',
+  yes: 'oui',
+  no: 'non',
+  rawDetails: 'Détails bruts',
 });

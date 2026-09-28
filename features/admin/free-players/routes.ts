@@ -22,6 +22,7 @@ export default defineAdminRoute({
         entity_type: 'free_player',
         entity_id: query.id,
         payload: removed,
+        before: removed,
       });
       return result;
     },

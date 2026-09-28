@@ -51,6 +51,14 @@ import { logger } from '@/utils/logger';
 import type { AuthenticatedStaffContext } from '@/types/staff';
 import { AdminError, type AdminErrorBody, type AdminErrorCode } from './errors';
 import type { AdminDb, ServiceContext } from './serviceContext';
+import { type AuditRecord, auditPayloadFromStates } from './auditDiff';
+
+/** Payload écrit au journal : celui du handler + ce qui a changé. */
+function auditPayload(d: AuditDetails): Record<string, unknown> | null {
+  const states = auditPayloadFromStates(d.before, d.after);
+  if (!d.payload && Object.keys(states).length === 0) return null;
+  return { ...(d.payload ?? {}), ...states };
+}
 
 /* -------------------------------------------------------------------------
  * Types publics
@@ -81,7 +89,21 @@ export type AuditDetails = {
   entity_id?: string | null;
   tournament_id?: string | null;
   payload?: Record<string, unknown> | null;
+  /**
+   * États de l'entité AVANT et APRÈS le geste (lot L8). Le wrapper en tire
+   * `payload.changes` (mise à jour), `payload.after` (création) ou
+   * `payload.before` (suppression) — cf. utils/admin/auditDiff.ts.
+   */
+  before?: AuditRecord | null;
+  after?: AuditRecord | null;
 };
+
+/**
+ * Slug de journal d'une route déclarative. `other` est refusé : c'était le
+ * fourre-tout qui faisait un quart du journal (A6) — une route qui naît
+ * aujourd'hui déclare ce qu'elle fait.
+ */
+export type AdminAuditAction = Exclude<StaffLogAction, 'other'>;
 
 /**
  * Contexte reçu par un handler. C'est un `ServiceContext` (on le passe tel
@@ -150,7 +172,7 @@ export type MutatingMethodSpec<
    * Slug du journal staff. OBLIGATOIRE : `false` pour une mutation qui n'a
    * rien à tracer (prévisualisation, calcul) — l'oubli ne compile pas.
    */
-  audit: StaffLogAction | false;
+  audit: AdminAuditAction | false;
   /** Idempotence `Idempotency-Key` (vrai par défaut). */
   idempotent?: boolean;
 };
@@ -179,7 +201,7 @@ export type AdminRouteMeta = {
       AdminMethod,
       {
         guard: StaffGuard;
-        audit: StaffLogAction | false | null;
+        audit: AdminAuditAction | false | null;
         idempotent: boolean;
         query?: ZodType;
         body?: ZodType;
@@ -394,7 +416,7 @@ export function defineAdminRoute(def: AdminRouteDefinition): AdminRouteHandler {
               entity_type: d.entity_type ?? null,
               entity_id: d.entity_id ?? null,
               tournament_id: d.tournament_id ?? null,
-              payload: d.payload ?? null,
+              payload: auditPayload(d),
               tenant_id: st.tenantId,
               permission: st.permission ?? null,
             });

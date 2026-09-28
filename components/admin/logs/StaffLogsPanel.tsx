@@ -12,6 +12,7 @@ import type { StaffLogAction } from '@/types/staffLogs';
 
 import { logger } from '../../../utils/logger';
 import nsAdminLogs from '@/lib/i18n/locales/admin-fr/adminLogs';
+import AuditChangesView from '@/components/admin/AuditChanges';
 
 /**
  * Shape of a row returned by GET /api/admin/logs. The API selects only these
@@ -597,9 +598,11 @@ export default function StaffLogsPanel() {
                       <summary className="cursor-pointer select-none hover:text-neutral-200 transition-colors">
                         {t.detailsPayload}
                       </summary>
-                      <pre className="mt-2 bg-neutral-900/70 border border-neutral-700/50 rounded-xl p-3 text-[11px] leading-relaxed overflow-auto max-h-64 whitespace-pre-wrap break-words">
-                        {JSON.stringify(log.payload, null, 2)}
-                      </pre>
+                      <div className="mt-2 max-h-64 overflow-auto rounded-xl border border-neutral-700/50">
+                        <AuditChangesView
+                          payload={log.payload as Record<string, unknown>}
+                        />
+                      </div>
                     </details>
                   ) : (
                     <span />

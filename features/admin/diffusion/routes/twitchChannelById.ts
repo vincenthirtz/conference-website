@@ -21,7 +21,7 @@ export default defineAdminRoute({
     body: TwitchChannelPatch,
     audit: 'update_twitch_channel',
     handler: async ({ query, body, ctx }) => {
-      const { row, fields } = await updateTwitchChannelById(
+      const { row, before, fields } = await updateTwitchChannelById(
         ctx,
         query.id,
         body
@@ -30,6 +30,8 @@ export default defineAdminRoute({
         entity_type: 'twitch_channel',
         entity_id: query.id,
         payload: { fields },
+        before,
+        after: row,
       });
       return row;
     },
@@ -39,8 +41,8 @@ export default defineAdminRoute({
     status: 204,
     audit: 'delete_twitch_channel',
     handler: async ({ query, ctx }) => {
-      await deleteTwitchChannelById(ctx, query.id);
-      ctx.audit({ entity_type: 'twitch_channel', entity_id: query.id });
+      const { before } = await deleteTwitchChannelById(ctx, query.id);
+      ctx.audit({ entity_type: 'twitch_channel', entity_id: query.id, before });
     },
   }),
 });

@@ -129,6 +129,10 @@ export async function updateTwitchChannelById(
   if (patch.isActive !== undefined) update.is_active = patch.isActive;
   if (patch.sortOrder !== undefined) update.sort_order = patch.sortOrder;
 
+  // L'état d'avant, pour que le journal dise ce qui a changé (lot L8).
+  const { row: before } = await repo.getTwitchChannel(ctx.db, ctx.tenantId, id);
+  if (!before) throw new NotFoundError('Chaîne introuvable.');
+
   const { row, error } = await repo.updateTwitchChannel(
     ctx.db,
     ctx.tenantId,
@@ -144,10 +148,13 @@ export async function updateTwitchChannelById(
       'Mise à jour de la chaîne impossible.'
     );
   }
-  return { row, fields: Object.keys(update) };
+  return { row, before, fields: Object.keys(update) };
 }
 
 export async function deleteTwitchChannelById(ctx: ServiceContext, id: string) {
+  // Lue avant de disparaître : la photo du journal est tout ce qu'il en
+  // restera. Absente = rien à supprimer, et rien à photographier.
+  const { row: before } = await repo.getTwitchChannel(ctx.db, ctx.tenantId, id);
   const { error } = await repo.deleteTwitchChannel(ctx.db, ctx.tenantId, id);
   if (error) {
     ctx.logger.error('[admin/twitch-channels] delete error', error);
@@ -157,4 +164,5 @@ export async function deleteTwitchChannelById(ctx: ServiceContext, id: string) {
       'Suppression de la chaîne impossible.'
     );
   }
+  return { before };
 }

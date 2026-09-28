@@ -17,6 +17,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminEntityHistory from '@/lib/i18n/locales/admin-fr/adminEntityHistory';
 import type { HistoryEntityType } from '@/pages/api/admin/entity-history';
+import AuditChangesView from './AuditChanges';
 
 type FormattedLog = {
   id: string;
@@ -138,9 +139,7 @@ export default function EntityHistoryDrawer({
                       </span>
                     </button>
                     {isOpen && log.payload && (
-                      <pre className="overflow-x-auto whitespace-pre-wrap break-all border-t border-neutral-800 bg-neutral-950 p-3 text-[10px] text-neutral-300">
-                        {JSON.stringify(log.payload, null, 2)}
-                      </pre>
+                      <AuditChangesView payload={log.payload} />
                     )}
                   </li>
                 );

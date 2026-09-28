@@ -22,7 +22,7 @@ export default defineAdminRoute({
       ctx.audit({
         entity_type: 'twitch_channel',
         entity_id: row.id,
-        payload: { channel: row.channel, label: row.label },
+        after: row,
       });
       return row;
     },

@@ -386,7 +386,7 @@ l'admin, le bot (`/api/bot/v1/*`) et le public — et elles divergent.
 - [ ] Un repository sans `tenantId` ne compile pas.
 - [ ] Cliquet « routes admin qui importent `supabaseAdmin` » : 281 → 0.
 
-### L8 · Journal staff déclaratif (audit avant/après) — 🟧 / M
+### L8 · Journal staff déclaratif (audit avant/après) — ✅ LIVRÉ (2026-09-29)
 
 **Problème.** `logStaffAction` est appelé à la main 612 fois dans l'admin ; un quart du journal
 était `other` (A6 l'a réduit, mais rien n'empêche la rechute). Le journal dit *qui* et *quoi*,
@@ -400,9 +400,20 @@ rarement *de quoi à quoi*.
 - Test : une route mutante migrée sans `audit` ne compile pas (type conditionnel).
 
 **Critères d'acceptation**
-- [ ] 0 appel manuel à `logStaffAction` dans les routes migrées.
-- [ ] Le slug `other` est refusé par le type.
-- [ ] L'historique d'une équipe montre « nom : A → B » et non « équipe mise à jour ».
+- [x] 0 appel manuel à `logStaffAction` dans les routes migrées (déjà acquis par L3).
+- [x] Le slug `other` est refusé par le type (`AdminAuditAction`) sur toute route déclarative.
+- [x] `ctx.audit({ before, after })` → [`utils/admin/auditDiff.ts`](../utils/admin/auditDiff.ts)
+      écrit `payload.changes` (mise à jour : seuls les champs qui ont bougé), `payload.after`
+      (création) ou `payload.before` (suppression — la seule trace qui en restera). Colonnes
+      techniques ignorées ; valeurs sensibles (secret, token, password, api_key…) **jamais**
+      recopiées dans un journal que plusieurs personnes lisent.
+- [x] L'historique montre « label : Old → New » : [`AuditChanges.tsx`](../components/admin/AuditChanges.tsx)
+      dans le tiroir d'historique ET le journal global ; les payloads historiques restent
+      lisibles (JSON déplié).
+- [x] Branché sur les routes migrées qui écrivent : chaînes Twitch (création, modification,
+      suppression), joueuses libres (retrait). Un PATCH sur une chaîne inconnue répond
+      désormais 404 au lieu de 500 (l'état d'avant est lu d'abord).
+- [ ] L'historique d'une ÉQUIPE montre « nom : A → B » — quand les équipes migreront (L17).
 
 ### L9 · Contrat OpenAPI admin généré — 🟧 / M
 
