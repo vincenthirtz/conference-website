@@ -33,6 +33,8 @@ export default adminNs('adminEventsList', {
   colActions: 'Actions',
   openDirector: 'Ouvrir le Director',
   delete: 'Supprimer',
+  deleteLiveBlocked:
+    'Clôturez le run avant de le supprimer : l’antenne le suit.',
   confirmDeleteTitle: 'Supprimer « {name} » ?',
   confirmDeleteSubtitle:
     'Cette action supprimera définitivement le run et tous ses segments. Irréversible.',

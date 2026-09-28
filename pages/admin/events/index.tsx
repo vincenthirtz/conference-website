@@ -293,10 +293,18 @@ function AdminEventsIndexPage(_props: StaffProps) {
                           >
                             {t.openDirector}
                           </Link>
+                          {/* Pas de suppression d'un run EN DIRECT : l'antenne le
+                              suit (l'API refuse aussi, 409). */}
                           <button
                             type="button"
                             onClick={() => handleDelete(r)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-700/50 hover:bg-red-700/40 text-neutral-300 hover:text-red-200 border border-neutral-600/40"
+                            disabled={r.status === 'live'}
+                            title={
+                              r.status === 'live'
+                                ? t.deleteLiveBlocked
+                                : undefined
+                            }
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-700/50 hover:bg-red-700/40 text-neutral-300 hover:text-red-200 border border-neutral-600/40 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-neutral-700/50 disabled:hover:text-neutral-300"
                           >
                             {t.delete}
                           </button>

@@ -33,6 +33,8 @@ export default {
   colActions: 'Actions',
   openDirector: 'Open the Director',
   delete: 'Delete',
+  deleteLiveBlocked:
+    'End the run before deleting it: the broadcast is following it.',
   confirmDeleteTitle: 'Delete « {name} »?',
   confirmDeleteSubtitle:
     'This action will permanently delete the run and all its segments. Irreversible.',

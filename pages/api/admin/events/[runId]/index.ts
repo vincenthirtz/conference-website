@@ -4,7 +4,10 @@
 // GET    : event_run + ses segments tries par ord.
 // PATCH  : update name/slug/description/scheduled_at (statut change uniquement
 //          via /start ou /end).
-// DELETE : suppression hard (CASCADE supprimera les segments).
+// DELETE : suppression hard (CASCADE supprimera les segments). REFUSÉE (409
+//          `run_live`) sur un run EN DIRECT : cockpit, console live et
+//          overlay /overlay/[runId] le suivent, un clic de travers
+//          effaçait l'antenne. Le clore d'abord (POST …/end).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import slugify from 'slugify';
@@ -197,11 +200,31 @@ async function handler(
   }
 
   if (req.method === 'DELETE') {
+    const { data: current, error: readErr } = await admin
+      .from('event_runs')
+      .select('status')
+      .eq('id', runId)
+      .eq('tenant_id', ctx.tenantId)
+      .maybeSingle();
+    if (readErr) {
+      logger.error('[admin/events/[runId]] delete read error', readErr);
+      return res.status(500).json({ error: 'Failed to delete event run.' });
+    }
+    if ((current as { status?: string } | null)?.status === 'live') {
+      return res.status(409).json({
+        error: 'Ce run est en direct : clôturez-le avant de le supprimer.',
+        code: 'run_live',
+      });
+    }
+
+    // `neq('status','live')` ferme la fenêtre entre la lecture et la
+    // suppression : un run démarré entre les deux n'est pas effacé.
     const { error: delErr } = await admin
       .from('event_runs')
       .delete()
       .eq('id', runId)
-      .eq('tenant_id', ctx.tenantId);
+      .eq('tenant_id', ctx.tenantId)
+      .neq('status', 'live');
 
     if (delErr) {
       logger.error('[admin/events/[runId]] delete error', delErr);
