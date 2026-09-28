@@ -13,6 +13,8 @@ import { useEventRunRealtime } from '@/hooks/useEventRunRealtime';
 import { useVisiblePoll } from '@/hooks/useVisiblePoll';
 import { useToast } from '@/components/Toast';
 import LiveConsoleHeader from '@/components/admin/broadcast/LiveConsoleHeader';
+import LiveConsoleHotkeys from '@/components/admin/broadcast/LiveConsoleHotkeys';
+import { LIVE_SCENES, type LiveScene } from '@/utils/broadcast/liveScenes';
 import AlertBanner from '@/components/admin/AlertBanner';
 import TwitchStatusPanel from '@/components/admin/broadcast/TwitchStatusPanel';
 import TcgDropHealthCard from '@/components/admin/broadcast/TcgDropHealthCard';
@@ -25,16 +27,8 @@ import type { EventRun, EventSegment } from '@/types/events';
 import nsAdminBroadcastLive from '@/lib/i18n/locales/admin-fr/adminBroadcastLive';
 import nsAdminTwitchPredictions from '@/lib/i18n/locales/admin-fr/adminTwitchPredictions';
 
-type Scene = 'starting' | 'match' | 'pause' | 'results' | 'end' | 'custom';
-
-const SCENES: Scene[] = [
-  'starting',
-  'match',
-  'pause',
-  'results',
-  'end',
-  'custom',
-];
+type Scene = LiveScene;
+const SCENES = LIVE_SCENES;
 
 type BroadcastStateV1 = {
   v: 1;
@@ -608,6 +602,12 @@ function BroadcastLivePage({ staff }: StaffProps) {
                   />
                 </div>
 
+                <LiveConsoleHotkeys
+                  enabled={canEdit}
+                  onAir={!!state?.on_air}
+                  pipEnabled={!!state?.pip.enabled}
+                  onPatch={applyPatch}
+                />
                 {/* Scene selector */}
                 <div className="mb-4">
                   <div

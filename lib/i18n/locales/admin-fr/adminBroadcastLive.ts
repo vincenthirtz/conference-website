@@ -137,4 +137,9 @@ export default adminNs('adminBroadcastLive', {
   /** Interpole `{count}`. */
   dropHealthyDetail:
     '{count} souscription(s) active(s) — les drops peuvent tomber.',
+  hotkeysToggle: 'Raccourcis clavier',
+  hotkeysScenes: 'Maj+1…{max} : changer de scène',
+  hotkeysAir: 'Maj+A : prendre / rendre l’antenne',
+  hotkeysPip: 'Maj+P : PiP',
+  hotkeysHelp: '? : afficher ou masquer cette aide',
 });

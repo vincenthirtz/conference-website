@@ -127,4 +127,9 @@ export default {
     'No active subscription: Twitch will send no redemption at all.',
   dropSubscriptionAiling: 'Subscription failing: {status}',
   dropHealthyDetail: '{count} active subscription(s) — drops can land.',
+  hotkeysToggle: 'Keyboard shortcuts',
+  hotkeysScenes: 'Shift+1…{max}: switch scene',
+  hotkeysAir: 'Shift+A: go on / off air',
+  hotkeysPip: 'Shift+P: PiP',
+  hotkeysHelp: '?: show or hide this help',
 };
