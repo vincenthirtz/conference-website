@@ -68,8 +68,8 @@ export const ENTITY_ROUTES: {
   },
   { pattern: '/admin/scrims/[id]', list: '/admin/scrims', key: 'scrim' },
   { pattern: '/admin/leagues/[id]', list: '/admin/leagues', key: 'league' },
-  // Déroulé d'émission (run-of-show) : son entrée de menu est la Régie.
-  { pattern: '/admin/events/[runId]', list: '/admin/regie', key: 'event' },
+  // Déroulé d'émission : sa liste est le run-of-show (Diffusion › Run-of-show).
+  { pattern: '/admin/events/[runId]', list: '/admin/events', key: 'event' },
 ];
 
 /**

@@ -21,4 +21,10 @@ export default {
   startRun: 'Start the run',
   endRun: 'End the run',
   runDone: 'Run finished',
+  shortcutsLabel: 'Show screens',
+  shortcutLive: 'Live console',
+  shortcutCockpit: 'Cockpit',
+  overlayCopy: 'Copy overlay URL',
+  overlayCopied: 'Copied',
+  overlayOpen: 'Open overlay',
 };

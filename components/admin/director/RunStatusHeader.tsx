@@ -7,6 +7,8 @@
 // Lot 6 : ajoute une mini-jauge horizontale "planned vs reel" + un delta texte
 // signe/couleur. La jauge n'apparait que si on a un planning calcule.
 
+import { useState } from 'react';
+import Link from 'next/link';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   runStatusBadgeClasses,
@@ -261,6 +263,61 @@ export default function RunStatusHeader({
           )}
         </div>
       </div>
+      <DirectorShortcuts runId={run.id} t={t} />
     </div>
+  );
+}
+
+/**
+ * Les écrans voisins du director, depuis le director.
+ *
+ * C'ÉTAIT UN CUL-DE-SAC : un fil d'Ariane vers le run-of-show, rien d'autre.
+ * Or on conduit un run en regardant la console live, en parlant au cockpit,
+ * et on colle l'URL de CE run dans OBS — trois allers-retours par le menu.
+ * Ici, et pas dans la page : elle est gelée en taille.
+ */
+function DirectorShortcuts({
+  runId,
+  t,
+}: {
+  runId: string;
+  t: typeof nsAdminDirectorRunStatusHeader.fr;
+}) {
+  const [copied, setCopied] = useState(false);
+  const path = `/overlay/${runId}`;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}${path}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Presse-papiers refusé : l'URL reste lisible et sélectionnable.
+    }
+  };
+  const chip =
+    'px-3 py-1.5 rounded-lg border border-neutral-700 bg-neutral-900/60 text-xs font-medium text-neutral-200 hover:border-neutral-500';
+  return (
+    <nav
+      aria-label={t.shortcutsLabel}
+      className="mt-4 flex flex-wrap items-center gap-2 border-t border-neutral-700/50 pt-3"
+    >
+      <Link href="/admin/broadcast/live" className={chip}>
+        {t.shortcutLive}
+      </Link>
+      <Link href="/admin/regie" className={chip}>
+        {t.shortcutCockpit}
+      </Link>
+      <span className="ml-auto flex flex-wrap items-center gap-2 text-xs text-neutral-400">
+        <code className="rounded bg-black/40 px-2 py-1">{path}</code>
+        <button type="button" onClick={() => void copy()} className={chip}>
+          <span aria-live="polite">
+            {copied ? t.overlayCopied : t.overlayCopy}
+          </span>
+        </button>
+        <a href={path} target="_blank" rel="noreferrer" className={chip}>
+          {t.overlayOpen}
+        </a>
+      </span>
+    </nav>
   );
 }

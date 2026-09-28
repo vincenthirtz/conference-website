@@ -20,4 +20,10 @@ export default adminNs('adminDirectorRunStatusHeader', {
   startRun: 'Demarrer le run',
   endRun: 'Terminer le run',
   runDone: 'Run termine',
+  shortcutsLabel: 'Écrans du direct',
+  shortcutLive: 'Console live',
+  shortcutCockpit: 'Cockpit',
+  overlayCopy: 'Copier l’URL de l’overlay',
+  overlayCopied: 'Copiée',
+  overlayOpen: 'Ouvrir l’overlay',
 });
