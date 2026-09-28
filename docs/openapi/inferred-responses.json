@@ -3719,6 +3719,26 @@
     ]
    }
   },
+  "GET /api/admin/diffusion/overlay-presence": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "sources": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "string"
+      }
+     },
+     "now": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "sources",
+     "now"
+    ]
+   }
+  },
   "GET /api/admin/diffusion/twitch-channels": {
    "200": {
     "type": "object",

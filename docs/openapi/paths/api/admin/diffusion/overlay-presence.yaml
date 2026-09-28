@@ -1,0 +1,22 @@
+get:
+  tags:
+    - admin/broadcast
+  summary: Dernier signal de chaque overlay de l'espace (présence dans OBS).
+  description: |
+    Tout le staff (rôle caster et plus), espace du staff.
+    `{ sources: { <source>: <lastSeenAt ISO> }, now }` — `now` est l'heure du
+    serveur, pour ne pas dépendre de l'horloge du poste.
+  operationId: adminDiffusionOverlayPresence
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Dernière vue par source, et l'heure du serveur.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'

@@ -1,0 +1,35 @@
+post:
+  tags:
+    - admin/broadcast
+  summary: Signal de présence d'un overlay OBS (« cet overlay est affiché »).
+  description: |
+    Appelée toutes les 30 s par chaque page `/overlay/*`, sans
+    authentification (les overlays vivent dans OBS). L'espace se résout par
+    `?tenant=<slug>`, sinon l'espace par défaut. Un signal peut être simulé :
+    l'impact se borne à un indicateur trompeur. Limitée en débit.
+  operationId: overlayHeartbeat
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [source]
+          properties:
+            source:
+              type: string
+              pattern: '^[A-Za-z0-9:_-]{1,80}$'
+  responses:
+    '204':
+      description: Signal enregistré.
+    '400':
+      description: '`code: source` — nom de source invalide.'
+    '405':
+      description: Méthode non autorisée.
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+    '503':
+      description: Base indisponible.
