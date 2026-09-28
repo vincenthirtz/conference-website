@@ -140,6 +140,9 @@ export default ns('playerIndex', {
   qaTcgDesc: 'Paquets, pièces et collection',
   qaTcgGuide: 'Comment ça marche',
   qaTcgGuideDesc: 'Gagner, recycler, et ta photo',
+  catPredictions: 'Pronostics',
+  qaPredictions: 'Mes pronostics',
+  qaPredictionsDesc: 'Matchs à pronostiquer, résultats et classement',
 
   // Cadeau d'accueil d'une édition. La carte ne s'affiche QUE si le cadeau
   // existe vraiment : ces textes ne sont donc jamais lus « à vide ».

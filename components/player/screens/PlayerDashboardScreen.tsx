@@ -1159,6 +1159,22 @@ export default function PlayerDashboardScreen() {
             </div>
           </CategorySection>
 
+          {/* ─────────────  Pronostics  ─────────────
+              Leur propre encart, hors de « Ma collection » : ils sont ouverts
+              à tout compte, supportrices comprises, et ne se résument pas au
+              TCG — même si c'est son porte-monnaie qu'un pronostic juste
+              crédite. */}
+          <CategorySection id="predictions" label={t.catPredictions}>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <QuickAction
+                href="/player/pronostics"
+                label={t.qaPredictions}
+                description={t.qaPredictionsDesc}
+                tone="emerald"
+              />
+            </div>
+          </CategorySection>
+
           {/* Rejoindre le cast — flux simple pour les joueuses SANS équipe
               (pas de catégorie forcée). */}
           {!team && (

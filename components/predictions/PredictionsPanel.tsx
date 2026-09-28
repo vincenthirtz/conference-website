@@ -1,12 +1,14 @@
 // components/predictions/PredictionsPanel.tsx
 //
-// Le panneau « Pronostics » de la page TCG : les matchs à venir encore ouverts
-// (pronostic en un clic) et les derniers pronostics avec leur résultat.
+// Le panneau « Pronostics » de `/player/pronostics` : les matchs à venir encore
+// ouverts (pronostic en un clic) et les derniers pronostics avec leur résultat.
 //
-// SE CHARGE LUI-MÊME (`GET /api/player/predictions`), comme `TcgSetsPanel`,
-// plutôt que d'alourdir `pages/player/tcg.tsx`. Un pronostic juste crédite le
-// porte-monnaie au résultat du match, pas au clic : ce panneau ne touche donc
-// jamais au solde affiché par la page.
+// Il vivait sur la page TCG, où il se perdait entre séries et fan art. Sorti
+// VISUELLEMENT seulement : la récompense reste créditée au porte-monnaie TCG.
+//
+// SE CHARGE LUI-MÊME (`GET /api/player/predictions`), comme `TcgSetsPanel`.
+// Un pronostic juste crédite le porte-monnaie au résultat du match, pas au
+// clic : ce panneau ne touche donc jamais à un solde affiché ailleurs.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
@@ -32,8 +34,11 @@ import {
 
 export default function PredictionsPanel({
   className,
+  hideTitle = false,
 }: {
   className?: string;
+  /** La page dédiée porte déjà le titre en `h1` : le `h2` passe alors en sr-only. */
+  hideTitle?: boolean;
 }): JSX.Element {
   const t = useT(nsMatchPrediction);
   const locale = useLocale();
@@ -98,12 +103,17 @@ export default function PredictionsPanel({
       className={`rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-6 ${className ?? ''}`}
       aria-labelledby="tcg-predictions-title"
     >
-      <h2 id="tcg-predictions-title" className="text-lg font-semibold">
+      <h2
+        id="tcg-predictions-title"
+        className={hideTitle ? 'sr-only' : 'text-lg font-semibold'}
+      >
         {t.panelTitle}
       </h2>
       {data && (
         <>
-          <p className="mt-1 max-w-prose text-sm text-gray-400">
+          <p
+            className={`${hideTitle ? '' : 'mt-1 '}max-w-prose text-sm text-gray-400`}
+          >
             {format(t.intro, { coins: data.reward })}
           </p>
           {/* Dit qui peut jouer : une supportrice qui n'est dans aucune équipe

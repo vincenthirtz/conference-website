@@ -134,6 +134,9 @@ export default {
   qaTcgDesc: 'Packs, coins and collection',
   qaTcgGuide: 'How it works',
   qaTcgGuideDesc: 'Earning, recycling, and your photo',
+  catPredictions: 'Predictions',
+  qaPredictions: 'My predictions',
+  qaPredictionsDesc: 'Matches to predict, results and leaderboard',
 
   welcomeGiftTitle: 'Welcome gift',
   welcomeGiftBody:

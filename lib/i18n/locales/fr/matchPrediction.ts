@@ -6,7 +6,7 @@
 //
 // Les PRONOSTICS sur les matchs de tournoi : la carte de la page match
 // (`components/predictions/MatchPredictionCard.tsx`) et le panneau de la page
-// TCG (`components/predictions/PredictionsPanel.tsx`). Vocabulaire du
+// `/player/pronostics` (`components/predictions/PredictionsPanel.tsx`). Vocabulaire du
 // pronostic, JAMAIS du pari : pas de « mise », pas de « parier », pas de
 // « cote ». Aucune piece n'est engagee, et le texte doit le dire.
 
@@ -75,4 +75,15 @@ export default ns('matchPrediction', {
   teamUnknown: 'À déterminer',
   seeMatch: 'Voir le match',
   panelLoadError: 'Impossible de charger les pronostics.',
+  // Page dédiée `/player/pronostics` et son renvoi depuis la page TCG.
+  pageBadge: 'Espace joueuse',
+  pageTitle: 'Pronostics',
+  pageSubtitle:
+    'Choisis qui gagne les prochains matchs, suis tes résultats et ta place au classement. Les pièces gagnées arrivent dans ton porte-monnaie TCG.',
+  backToPlayer: 'Retour à mon espace',
+  toCollection: 'Voir ma collection TCG',
+  tcgTeaserTitle: 'Pronostics',
+  tcgTeaserBody:
+    'Un pronostic juste rapporte des pièces pour ton TCG. Les matchs à pronostiquer et le classement ont leur propre page.',
+  tcgTeaserCta: 'Aller aux pronostics',
 });

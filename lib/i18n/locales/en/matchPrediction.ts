@@ -68,4 +68,14 @@ export default {
   teamUnknown: 'TBD',
   seeMatch: 'See match',
   panelLoadError: 'Couldn’t load predictions.',
+  pageBadge: 'Player space',
+  pageTitle: 'Predictions',
+  pageSubtitle:
+    'Pick who wins the upcoming matches, follow your results and your leaderboard spot. Coins you earn land in your TCG wallet.',
+  backToPlayer: 'Back to my space',
+  toCollection: 'See my TCG collection',
+  tcgTeaserTitle: 'Predictions',
+  tcgTeaserBody:
+    'A correct prediction earns coins for your TCG. Matches to predict and the leaderboard have their own page.',
+  tcgTeaserCta: 'Go to predictions',
 };

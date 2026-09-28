@@ -50,6 +50,7 @@ import type { TcgRarity } from '@/utils/tcg/rarity';
 import type { GameMascotSlug } from '@/utils/tcg/gameMascots';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 import nsTcgTrade from '@/lib/i18n/locales/fr/tcgTrade';
+import nsMatchPrediction from '@/lib/i18n/locales/fr/matchPrediction';
 import { reloadAfterMutation } from '@/utils/tcg/reloadAfterMutation';
 
 /*
@@ -57,8 +58,8 @@ import { reloadAfterMutation } from '@/utils/tcg/reloadAfterMutation';
  * back-office (`components/admin/lazyPanel.tsx`) et les panneaux de
  * `pages/admin/tournament/[id]/bracket.tsx`.
  *
- * Les quatre étaient importés statiquement (~44 Kio de source) alors qu'aucun
- * n'est au-dessus de la ligne de flottaison : pronostics, fan art et vitrine
+ * Ils étaient importés statiquement (~44 Kio de source) alors qu'aucun
+ * n'est au-dessus de la ligne de flottaison : fan art et vitrine
  * sont sous le solde et le porte-monnaie, la révélation n'existe qu'après
  * l'ouverture d'un paquet. Le premier affichage — solde, paquets, bouton
  * « Ouvrir » — ne doit pas les attendre, le jour où tout le monde vient ouvrir
@@ -75,10 +76,6 @@ import { reloadAfterMutation } from '@/utils/tcg/reloadAfterMutation';
  */
 const PanelLoading = () => (
   <Skeleton className="mt-8 h-64 w-full" rounded="rounded-2xl" />
-);
-const PredictionsPanel = dynamic(
-  () => import('@/components/predictions/PredictionsPanel'),
-  { ssr: false, loading: PanelLoading }
 );
 const FanartSubmitPanel = dynamic(
   () => import('@/components/tcg/FanartSubmitPanel'),
@@ -462,6 +459,7 @@ type LoadState = 'loading' | 'ready' | 'error';
 function PlayerTcg() {
   const t = useT(nsPlayerTcg);
   const tTrade = useT(nsTcgTrade);
+  const tp = useT(nsMatchPrediction);
   const { addToast } = useToast();
   usePlayerSession({ redirectTo: '/login?next=/player/tcg' });
   const { adminFetch, adminFetchJson } = useAdminFetch({ loginPath: '/login' });
@@ -1582,8 +1580,31 @@ function PlayerTcg() {
           />
         )}
 
-        {/* Pronostics : composant autonome, gratuit, crédité au résultat. */}
-        {loadState === 'ready' && <PredictionsPanel className="mt-8" />}
+        {/* Pronostics : ils ont leur page (`/player/pronostics`). Sortis
+            d'ici VISUELLEMENT seulement — un pronostic juste crédite toujours
+            ce porte-monnaie — d'où ce renvoi, pour qui les cherchait ici. */}
+        {loadState === 'ready' && (
+          <section
+            className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.06] p-4 sm:p-6"
+            aria-labelledby="tcg-predictions-teaser-title"
+          >
+            <div className="max-w-prose">
+              <h2
+                id="tcg-predictions-teaser-title"
+                className="text-lg font-semibold"
+              >
+                {tp.tcgTeaserTitle}
+              </h2>
+              <p className="mt-1 text-sm text-gray-300">{tp.tcgTeaserBody}</p>
+            </div>
+            <Link
+              href="/player/pronostics"
+              className="inline-flex min-h-11 items-center rounded-xl border border-emerald-400/40 bg-emerald-500/15 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
+            >
+              {tp.tcgTeaserCta}
+            </Link>
+          </section>
+        )}
 
         {/* Fan art : proposer une carte, et suivre ses propositions. */}
         {loadState === 'ready' && <FanartSubmitPanel className="mt-8" />}
