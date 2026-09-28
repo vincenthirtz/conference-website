@@ -71,7 +71,7 @@ Tailles conseillées : bandeau de score 1920×250, maps 600×600, le reste
 
 ## Où on les trouve
 
-Admin → tournoi → **Outils** → « Sources de stream (OBS) ». Le panneau donne
+Admin → **Diffusion › Overlays** (`/admin/diffusion/overlays`, choisir le tournoi) — l'onglet **Outils** d'un tournoi y renvoie depuis le lot 5 (cf. `docs/ADMIN-DIFFUSION.md`) → « Sources de stream (OBS) ». Le panneau donne
 les cinq URLs prêtes à copier. Un espace dont le palier n'ouvre pas la capacité
 y voit l'encart qui nomme l'offre, plutôt qu'un panneau absent.
 

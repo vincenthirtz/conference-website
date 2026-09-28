@@ -58,7 +58,7 @@ export default adminNs('adminDashboard', {
   navCampaignsDesc: 'Envois groupés et suivi des campagnes.',
   navDiffusionTitle: 'Diffusion',
   navDiffusionDesc:
-    'Cockpit, console live et scènes — tout le direct au même endroit.',
+    'Régie, run-of-show, scènes, overlays, casteuses et chaînes Twitch — tout le direct au même endroit.',
   navUsersTitle: 'Utilisateurs',
   navUsersDesc: 'Gestion des comptes staff et adhérents.',
   navStatsTitle: 'Stats',
