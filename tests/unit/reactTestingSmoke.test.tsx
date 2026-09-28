@@ -4,9 +4,15 @@
 // @testing-library/react). Si ce fichier casse, c'est l'environnement de test
 // React qui est cassé, pas un écran.
 
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect } from 'vitest';
 import { useState } from 'react';
-import { act, render, renderHook, screen } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  render,
+  renderHook,
+  screen,
+} from '@testing-library/react';
 
 function Counter() {
   const [n, setN] = useState(0);
@@ -16,6 +22,9 @@ function Counter() {
     </button>
   );
 }
+
+// Sans les globals de vitest, testing-library ne nettoie pas le DOM seul.
+afterEach(cleanup);
 
 describe('outillage de test React', () => {
   it('rend un composant et réagit à un clic', () => {
