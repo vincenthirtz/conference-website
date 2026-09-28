@@ -248,8 +248,30 @@ routes de lecture pour éprouver l'API, puis domaine par domaine (lots 15–20).
 - [x] `scripts/openapi/infer-responses.cjs` lit les routes déclaratives (retour typé des
       handlers) : sans ça, migrer une route **effaçait** ses réponses du contrat. Le pilote y
       gagne en précision (`source: 'web' | 'discord'`, `success: true`).
-- [ ] 10 petites routes de lecture migrées pour éprouver l'API (1/10 : `free-players`).
-- [ ] Temps de réponse inchangé (± 5 ms) sur ces routes.
+- [x] 10 routes migrées pour éprouver l'API : `free-players`, `tenants/accessible`,
+      `pending-guild-links`, `diffusion/{live-status,twitch-channels,overlay-presence}`,
+      `broadcast/subscriptions`, `alerts-summary`, `users/search`, `caster/recent-matches`.
+      Leurs tests existants passent sans modification, à une exception près (ci-dessous).
+- [ ] Temps de réponse inchangé (± 5 ms) — **non mesuré** : demande la prod ; le wrapper
+      n'ajoute aucune requête, seulement la résolution de garde que faisait déjà
+      `withStaffRoute`.
+
+**Ce que les 10 migrations ont appris** :
+- `Cache-Control` était posé à la main, et pas partout. Défaut désormais `private, no-store`
+  (option `cache` par méthode ; `alerts-summary` garde `private, max-age=30`). Seul test
+  retouché : `broadcastSubscriptions` attendait `no-store` et reçoit `private, no-store`,
+  strictement plus fort.
+- Les utils historiques qui renvoient `{ ok: false, status, error }` se branchent par
+  `adminErrorFromStatus` sans être réécrits.
+- Rate-limit : les routes à 60/min passent au préréglage `read` (120/min) — lecture staff
+  authentifiée ; `broadcast/subscriptions` garde 30/min (agrégat sur tous les comptes).
+  `users/search` et `caster/recent-matches` n'en avaient **aucun**.
+- Deux défauts latents corrigés en passant, sans effet en mono-tenant : `alerts-summary`
+  cherchait le tournoi en cours sans le tenant du staff ; 405 sans `Allow` sur trois routes.
+- L'inféreur OpenAPI triait mal : ajouter un module réordonnait les réponses de routes sans
+  rapport. Tri alphabétique (commit séparé) ; `pending-guild-links` gagne des types précis.
+- Un module = un domaine, pas une route : `diffusion/` porte trois routes (`routes/*.ts`),
+  un repository et un service.
 
 **Choix faits en écrivant le socle** :
 - `read({...})` / `mutate({...})` : sans ces aides, TypeScript ne sait pas inférer les schémas

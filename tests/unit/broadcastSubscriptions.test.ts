@@ -281,7 +281,8 @@ describe('broadcast subscriptions endpoint', () => {
     await subscriptionsHandler(makeReq({ method: 'GET' }), res);
 
     expect(res.statusCode).toBe(200);
-    expect(res.headers['Cache-Control']).toBe('no-store');
+    // Défaut de defineAdminRoute : `private` en plus, jamais moins strict.
+    expect(res.headers['Cache-Control']).toBe('private, no-store');
     expect(res.body).toEqual({
       totalConfirmed: 2,
       subscribed: 1,

@@ -116,3 +116,26 @@ export class ServiceUnavailableError extends AdminError {
     this.name = 'ServiceUnavailableError';
   }
 }
+
+const CODE_BY_STATUS: Record<number, AdminErrorCode> = {
+  400: 'validation',
+  401: 'unauthenticated',
+  403: 'forbidden',
+  404: 'not_found',
+  405: 'method_not_allowed',
+  409: 'conflict',
+  429: 'rate_limited',
+  502: 'service_unavailable',
+  503: 'service_unavailable',
+};
+
+/**
+ * Pont avec les utils historiques qui renvoient `{ ok: false, status, error }`
+ * au lieu de lever : on garde leur statut, on type leur erreur.
+ */
+export function adminErrorFromStatus(
+  status: number,
+  message: string
+): AdminError {
+  return new AdminError(status, CODE_BY_STATUS[status] ?? 'internal', message);
+}

@@ -28,6 +28,8 @@
 //   * 405 + `Allow` sur une méthode non déclarée ;
 //   * idempotence (`Idempotency-Key`) PAR DÉFAUT sur POST/PUT/PATCH/DELETE ;
 //   * rate-limit par défaut (lecture 120/min, écriture 60/min par IP) ;
+//   * `Cache-Control: private, no-store` par défaut — une donnée staff n'a
+//     rien à faire dans un cache partagé ;
 //   * une mutation déclare son slug de journal (`audit`) — ou `false`,
 //     explicitement : le type refuse l'oubli ;
 //   * toute erreur sort au format `AdminErrorBody` avec un `requestId`
@@ -67,6 +69,8 @@ export const RATE_LIMIT_PRESETS = {
   heavy: { max: 10, windowMs: 60_000 },
 } as const;
 export type RateLimitPreset = keyof typeof RATE_LIMIT_PRESETS;
+
+export const DEFAULT_CACHE_CONTROL = 'private, no-store';
 type RateLimitSpec =
   | RateLimitPreset
   | { max: number; windowMs: number }
@@ -118,6 +122,11 @@ type MethodSpecBase<
   query?: QS;
   body?: BS;
   rateLimit?: RateLimitSpec;
+  /**
+   * `Cache-Control` de la réponse. Défaut `private, no-store` ; `false` pour
+   * ne rien poser (le handler s'en charge).
+   */
+  cache?: string | false;
   /** Code HTTP de succès (200 par défaut). */
   status?: number;
   handler: (
@@ -289,6 +298,9 @@ export function defineAdminRoute(def: AdminRouteDefinition): AdminRouteHandler {
     }
 
     const methodMeta = meta.methods[method]!;
+    if (spec.cache !== false) {
+      res.setHeader('Cache-Control', spec.cache ?? DEFAULT_CACHE_CONTROL);
+    }
 
     try {
       if (!csrfCheck(req)) {

@@ -9459,10 +9459,24 @@
       "items": {
        "type": "object",
        "properties": {
-        "guild_id": {},
-        "guild_name": {},
-        "owner_discord_id": {},
-        "requested_at": {}
+        "guild_id": {
+         "type": "string"
+        },
+        "guild_name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "owner_discord_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "requested_at": {
+         "type": "string"
+        }
        },
        "required": [
         "guild_id",
