@@ -120,6 +120,7 @@ import nsAdminScrimDetail from './adminScrimDetail';
 import nsAdminDisputes from './adminDisputes';
 import nsAdminBroadcastLive from './adminBroadcastLive';
 import nsAdminDiffusionNav from './adminDiffusionNav';
+import nsAdminDiffusionOverlays from './adminDiffusionOverlays';
 import nsAdminTwitchPredictions from './adminTwitchPredictions';
 import nsAdminTwitchCommands from './adminTwitchCommands';
 import nsAdminEventsList from './adminEventsList';
@@ -321,6 +322,7 @@ export const frDict = {
   adminDisputes: nsAdminDisputes.fr,
   adminBroadcastLive: nsAdminBroadcastLive.fr,
   adminDiffusionNav: nsAdminDiffusionNav.fr,
+  adminDiffusionOverlays: nsAdminDiffusionOverlays.fr,
   adminTwitchPredictions: nsAdminTwitchPredictions.fr,
   adminTwitchCommands: nsAdminTwitchCommands.fr,
   adminEventsList: nsAdminEventsList.fr,

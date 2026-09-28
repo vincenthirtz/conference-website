@@ -381,6 +381,14 @@ export const ADMIN_NAV: AdminNavNode[] = [
         href: '/admin/caster',
         minRole: 'caster',
       },
+      {
+        // Toutes les sources OBS au même endroit (lot 4) : elles vivaient
+        // dans l'onglet Outils de chaque tournoi.
+        id: 'diffusion-overlays',
+        topBarLabel: 'Overlays',
+        href: '/admin/diffusion/overlays',
+        minRole: 'caster',
+      },
     ],
   },
   {

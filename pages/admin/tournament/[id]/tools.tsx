@@ -22,15 +22,10 @@ import StreamSourcesPanel from '@/components/admin/tournament/StreamSourcesPanel
 import StreamAlertsPanel from '@/components/admin/tournament/StreamAlertsPanel';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { logger } from '@/utils/logger';
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import nsAdminTournamentOverview from '@/lib/i18n/locales/admin-fr/adminTournamentOverview';
 import nsAdminTournamentEmbed from '@/lib/i18n/locales/admin-fr/adminTournamentEmbed';
-import {
-  PLAN_LABELS,
-  tenantHasCapability,
-  type PlanStatus,
-  type TenantPlan,
-} from '@/utils/billing/planFeatures';
+import { PLAN_LABELS } from '@/utils/billing/planFeatures';
+import { readOverlayAccess } from '@/utils/admin/overlayAccess';
 
 type TournamentBasics = {
   id: string;
@@ -78,26 +73,9 @@ export const getServerSideProps = withStaffPage<SsrProps>(
       logger.error('tools SSR tournament fetch error:', error);
     }
 
-    const { data: tenantRow } = await supabaseAdmin
-      .from('tenants')
-      .select('plan, plan_status, plan_expires_at')
-      .eq('id', staffCtx.tenantId)
-      .maybeSingle();
-    const planState = {
-      plan: ((tenantRow as { plan?: string | null } | null)?.plan ??
-        'discovery') as TenantPlan,
-      plan_status: ((tenantRow as { plan_status?: string | null } | null)
-        ?.plan_status ?? 'active') as PlanStatus,
-      plan_expires_at:
-        (tenantRow as { plan_expires_at?: string | null } | null)
-          ?.plan_expires_at ?? null,
-    };
-
     return {
       initialTournament: (data as TournamentBasics | null) ?? null,
-      canUseMatchOverlays: tenantHasCapability(planState, 'matchOverlays'),
-      planLabel: PLAN_LABELS[planState.plan] ?? planState.plan,
-      isDefaultTenant: staffCtx.tenantId === DEFAULT_TENANT_ID,
+      ...(await readOverlayAccess(staffCtx.tenantId)),
     };
   }
 );

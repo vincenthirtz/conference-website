@@ -30,7 +30,12 @@ import nsAdminDiffusionNav from '@/lib/i18n/locales/admin-fr/adminDiffusionNav';
 
 type Dict = typeof nsAdminDiffusionNav.fr;
 
-export type DiffusionTabId = 'cockpit' | 'live' | 'runofshow' | 'scenes';
+export type DiffusionTabId =
+  | 'cockpit'
+  | 'live'
+  | 'runofshow'
+  | 'scenes'
+  | 'overlays';
 
 export type DiffusionTab = {
   id: DiffusionTabId;
@@ -54,6 +59,11 @@ export const DIFFUSION_TABS: readonly DiffusionTab[] = [
     permission: 'manage_broadcast',
   },
   { id: 'scenes', href: '/admin/caster', labelKey: 'tabScenes' },
+  {
+    id: 'overlays',
+    href: '/admin/diffusion/overlays',
+    labelKey: 'tabOverlays',
+  },
 ];
 
 /** Les onglets visibles pour ces permissions (`null` = pas encore lues). */

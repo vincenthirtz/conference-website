@@ -115,6 +115,7 @@ import enAdminScrimDetail from './adminScrimDetail';
 import enAdminDisputes from './adminDisputes';
 import enAdminBroadcastLive from './adminBroadcastLive';
 import enAdminDiffusionNav from './adminDiffusionNav';
+import enAdminDiffusionOverlays from './adminDiffusionOverlays';
 import enAdminTwitchPredictions from './adminTwitchPredictions';
 import enAdminTwitchCommands from './adminTwitchCommands';
 import enAdminEventsList from './adminEventsList';
@@ -316,6 +317,7 @@ const adminEnDict = {
   adminDisputes: enAdminDisputes,
   adminBroadcastLive: enAdminBroadcastLive,
   adminDiffusionNav: enAdminDiffusionNav,
+  adminDiffusionOverlays: enAdminDiffusionOverlays,
   adminTwitchPredictions: enAdminTwitchPredictions,
   adminTwitchCommands: enAdminTwitchCommands,
   adminEventsList: enAdminEventsList,

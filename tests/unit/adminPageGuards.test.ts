@@ -45,6 +45,10 @@ const ROLE_GATED_ON_PURPOSE = new Set([
   'regie.tsx',
   'events/[runId]/director.tsx',
   'events/index.tsx',
+  // Diffusion › Overlays : des URL publiques et leur mode d'emploi, ouvertes
+  // au staff de la diffusion comme ses voisines. Les panneaux qui écrivent y
+  // gardent leur contrôle côté API.
+  'diffusion/overlays.tsx',
   // Documentation interne : ouverte à qui a accès au back-office.
   'aide-tournoi.tsx',
   // Hubs à onglets gardés au rôle le PLUS PERMISSIF de leurs onglets, chaque

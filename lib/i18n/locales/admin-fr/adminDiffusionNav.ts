@@ -15,4 +15,5 @@ export default adminNs('adminDiffusionNav', {
   tabRunOfShow: 'Run-of-show',
   tabLive: 'Console live',
   tabScenes: 'Scènes',
+  tabOverlays: 'Overlays',
 });

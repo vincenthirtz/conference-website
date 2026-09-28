@@ -8,4 +8,5 @@ export default {
   tabRunOfShow: 'Run-of-show',
   tabLive: 'Live console',
   tabScenes: 'Scenes',
+  tabOverlays: 'Overlays',
 };
