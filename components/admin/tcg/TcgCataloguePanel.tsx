@@ -183,7 +183,15 @@ export default function TcgCataloguePanel() {
       </div>
 
       {groups.map((group) => (
-        <section key={group.kind} className="mb-7">
+        // `content-visibility: auto` : un groupe hors de l'écran n'est ni mis
+        // en page ni peint. Les 30 maps sont des SVG voxel de 120 à 175 Ko,
+        // coûteux à dessiner, et ils étaient tous rendus d'emblée sous 56
+        // joueuses. La taille intrinsèque évite une barre de défilement qui
+        // saute pendant qu'on descend.
+        <section
+          key={group.kind}
+          className="mb-7 [content-visibility:auto] [contain-intrinsic-size:auto_900px]"
+        >
           <h3 className="mb-2 text-xs uppercase tracking-wide text-neutral-500">
             {kindLabel(group.kind)} · {group.cards.length}
           </h3>
@@ -205,6 +213,8 @@ export default function TcgCataloguePanel() {
                       alt=""
                       fill
                       sizes="(min-width: 1024px) 18vw, 45vw"
+                      loading="lazy"
+                      decoding="async"
                       className="object-cover"
                     />
                   ) : null}
