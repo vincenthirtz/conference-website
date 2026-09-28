@@ -398,6 +398,15 @@ export const ADMIN_NAV: AdminNavNode[] = [
         permission: 'manage_communications',
         minRole: 'caster',
       },
+      {
+        // Rangées sous « Contenu » jusqu'au lot 9 : ce sont les chaînes de
+        // la diffusion (pulse live, embeds), pas un contenu éditorial.
+        id: 'twitch-channels',
+        topBarLabel: 'Chaînes Twitch',
+        href: '/admin/twitch-channels',
+        permission: 'manage_broadcast',
+        minRole: 'admin',
+      },
     ],
   },
   {
@@ -406,13 +415,6 @@ export const ADMIN_NAV: AdminNavNode[] = [
     href: '',
     minRole: 'admin',
     children: [
-      {
-        id: 'twitch-channels',
-        topBarLabel: 'Chaînes Twitch',
-        href: '/admin/twitch-channels',
-        permission: 'manage_broadcast',
-        minRole: 'admin',
-      },
       {
         // Hub « Partenaires » : fusion des ex-pages Partenaires – liste et
         // Demandes de partenariat en une page à onglets (/admin/partners?tab=…).

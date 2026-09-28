@@ -10,5 +10,6 @@ export default {
   tabScenes: 'Scenes',
   tabOverlays: 'Overlays',
   tabCasters: 'Casters',
+  tabTwitch: 'Twitch channels',
   castersPageTitle: 'Casters — Broadcast',
 };

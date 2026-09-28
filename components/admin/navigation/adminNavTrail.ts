@@ -147,7 +147,7 @@ export const ADMIN_NAV_TRAILS: Record<string, NavCrumb[]> = {
     { label: 'Demandes joueurs / équipes', href: '/admin/demandes' },
   ],
   '/admin/twitch-channels': [
-    { label: 'Contenu', href: null },
+    { label: 'Diffusion', href: null },
     { label: 'Chaînes Twitch', href: '/admin/twitch-channels' },
   ],
   '/admin/partners': [

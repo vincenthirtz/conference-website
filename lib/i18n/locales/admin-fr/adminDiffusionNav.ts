@@ -17,6 +17,7 @@ export default adminNs('adminDiffusionNav', {
   tabScenes: 'Scènes',
   tabOverlays: 'Overlays',
   tabCasters: 'Casteuses',
+  tabTwitch: 'Chaînes Twitch',
   // Page Diffusion › Casteuses.
   castersPageTitle: 'Casteuses — Diffusion',
 });

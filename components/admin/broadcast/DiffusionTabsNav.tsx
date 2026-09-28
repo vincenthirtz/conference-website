@@ -36,7 +36,8 @@ export type DiffusionTabId =
   | 'runofshow'
   | 'scenes'
   | 'overlays'
-  | 'casters';
+  | 'casters'
+  | 'twitch';
 
 export type DiffusionTab = {
   id: DiffusionTabId;
@@ -70,6 +71,14 @@ export const DIFFUSION_TABS: readonly DiffusionTab[] = [
     href: '/admin/diffusion/casteuses',
     labelKey: 'tabCasters',
     permission: 'manage_communications',
+  },
+  // Les chaînes que le site suit (pulse live, embeds) : réglées une fois,
+  // relues avant chaque direct.
+  {
+    id: 'twitch',
+    href: '/admin/twitch-channels',
+    labelKey: 'tabTwitch',
+    permission: 'manage_broadcast',
   },
 ];
 
