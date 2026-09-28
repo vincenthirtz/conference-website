@@ -33231,11 +33231,15 @@
      },
      "boards": {
       "type": "number"
+     },
+     "duplicates": {
+      "type": "number"
      }
     },
     "required": [
      "emitted",
-     "boards"
+     "boards",
+     "duplicates"
     ]
    }
   },
@@ -67685,11 +67689,15 @@
      },
      "boards": {
       "type": "number"
+     },
+     "duplicates": {
+      "type": "number"
      }
     },
     "required": [
      "emitted",
-     "boards"
+     "boards",
+     "duplicates"
     ]
    }
   },

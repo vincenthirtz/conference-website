@@ -1,6 +1,6 @@
 // tests/unit/cronTaskBoardDigest.test.ts
 //
-// Cron digest quotidien des boards Kanban. Target :
+// Cron digest hebdomadaire des boards Kanban. Target :
 // pages/api/cron/task-board-digest.ts (runTaskBoardDigest).
 // Vérifie : agrégation par colonne, overdue/dueToday (colonne non terminale),
 // exclusion des cartes supprimées et des boards archivés, émission d'UN
@@ -18,6 +18,7 @@ import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
 import {
   runTaskBoardDigest,
   DIGEST_TASKS_PER_LIST,
+  isoWeek,
 } from '../../pages/api/cron/task-board-digest';
 
 const TENANT = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
@@ -246,5 +247,46 @@ describe('runTaskBoardDigest', () => {
     const b = (evt as any).payload.data.boards[0];
     expect(b.overdueTasks.items).toHaveLength(1);
     expect(b.topTasks.items).toHaveLength(0);
+  });
+
+  it('un second passage la même semaine ne réémet pas le récap (doublon du 2026-09-28)', async () => {
+    store.tasks = [task({ id: 'a', due_date: YESTERDAY })] as any;
+
+    const first = await runTaskBoardDigest();
+    // Relance 20 s plus tard, comme la fonction planifiée coupée puis relancée.
+    vi.setSystemTime(new Date('2026-08-01T12:00:20.000Z'));
+    const second = await runTaskBoardDigest();
+
+    expect(first).toMatchObject({ emitted: 1, duplicates: 0 });
+    expect(second).toMatchObject({ emitted: 0, duplicates: 1 });
+    const digests = (store.bot_event_outbox ?? []).filter(
+      (e: any) => e.event_name === 'task.digest'
+    );
+    expect(digests).toHaveLength(1);
+  });
+
+  it('la semaine suivante, le récap repart', async () => {
+    store.tasks = [task({ id: 'a' })] as any;
+    await runTaskBoardDigest();
+    vi.setSystemTime(new Date('2026-08-08T12:00:00.000Z'));
+    const next = await runTaskBoardDigest();
+    expect(next).toMatchObject({ emitted: 1, duplicates: 0 });
+    expect(
+      (store.bot_event_outbox ?? []).filter(
+        (e: any) => e.event_name === 'task.digest'
+      )
+    ).toHaveLength(2);
+  });
+});
+
+describe('isoWeek', () => {
+  it.each([
+    ['2026-09-28T07:30:00Z', '2026-W40'], // lundi du doublon
+    ['2026-10-04T23:59:59Z', '2026-W40'], // dimanche, même semaine
+    ['2026-10-05T00:00:00Z', '2026-W41'],
+    ['2027-01-01T00:00:00Z', '2026-W53'], // vendredi → encore l'année ISO 2026
+    ['2025-12-29T00:00:00Z', '2026-W01'], // lundi → déjà l'année ISO 2026
+  ])('%s → %s', (iso, expected) => {
+    expect(isoWeek(new Date(iso))).toBe(expected);
   });
 });

@@ -30,6 +30,13 @@
 // Chaque liste porte `omitted` (nombre de cartes non listées) : une troncature
 // est toujours annoncée, jamais silencieuse.
 //
+// UNE FOIS PAR SEMAINE, MÊME SI ON EST APPELÉ DEUX FOIS — le 2026-09-28, le
+// récap est parti deux fois (deux events à 20 s d'écart, soit le délai d'abandon
+// de la fonction planifiée) : le site était lent, l'appel a été coupé puis
+// relancé, et les deux exécutions sont allées au bout côté serveur. L'event
+// porte donc une `idempotencyKey` par tenant et par semaine ISO : un second
+// passage heurte `UNIQUE (event_id)` de l'outbox et ne poste rien.
+//
 // Auth : `Authorization: Bearer <CRON_SECRET>` header OU `?secret=<CRON_SECRET>`
 // query. Même pattern que /api/cron/task-due-reminders. GET + POST.
 
@@ -38,7 +45,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { emitBotEvent } from '@/utils/botEvents';
 import { logger } from '@/utils/logger';
 
-type Counters = { emitted: number; boards: number };
+type Counters = { emitted: number; boards: number; duplicates: number };
 
 function isAuthorized(req: NextApiRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -54,6 +61,21 @@ function isAuthorized(req: NextApiRequest): boolean {
 }
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/** Semaine ISO 8601 (UTC) de `d`, au format 'YYYY-Www'. */
+export function isoWeek(d: Date): string {
+  const t = new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+  );
+  // Le jeudi de la semaine donne l'année ISO (lundi = 1 … dimanche = 7).
+  const day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day);
+  const year = t.getUTCFullYear();
+  const week = Math.ceil(
+    ((t.getTime() - Date.UTC(year, 0, 1)) / 86_400_000 + 1) / 7
+  );
+  return `${year}-W${pad2(week)}`;
+}
 
 /** Date calendaire UTC du jour au format 'YYYY-MM-DD' (colonne `date`). */
 function todayYmd(): string {
@@ -151,14 +173,16 @@ async function fetchStaffNames(
 
 /**
  * Cœur testable : agrège les boards par tenant et émet `task.digest`.
- * Renvoie `{ emitted, boards }` (events émis = nombre de tenants ayant au moins
- * un board non archivé ; boards = nombre total de boards traités).
+ * Renvoie `{ emitted, boards, duplicates }` (events émis = nombre de tenants
+ * ayant au moins un board non archivé ; boards = nombre total de boards
+ * traités ; duplicates = récaps déjà émis cette semaine, donc non repostés).
  */
 export async function runTaskBoardDigest(): Promise<Counters> {
-  const counters: Counters = { emitted: 0, boards: 0 };
+  const counters: Counters = { emitted: 0, boards: 0, duplicates: 0 };
   if (!supabaseAdmin) return counters;
 
   const today = todayYmd();
+  const week = isoWeek(new Date());
 
   const { data: boardData, error } = await supabaseAdmin
     .from('task_boards')
@@ -297,8 +321,14 @@ export async function runTaskBoardDigest(): Promise<Counters> {
 
   for (const [tenantId, boardsForTenant] of boardsByTenant) {
     try {
-      await emitBotEvent('task.digest', { boards: boardsForTenant }, tenantId);
-      counters.emitted += 1;
+      const result = await emitBotEvent(
+        'task.digest',
+        { boards: boardsForTenant },
+        tenantId,
+        { idempotencyKey: `task.digest:${tenantId}:${week}` }
+      );
+      if (result.duplicate) counters.duplicates += 1;
+      else counters.emitted += 1;
     } catch (e) {
       logger.error(
         '[cron/task-board-digest] emit error tenant=%s',
@@ -328,9 +358,10 @@ export default async function handler(
   try {
     const counters = await runTaskBoardDigest();
     logger.info(
-      '[cron/task-board-digest] tick emitted=%d boards=%d',
+      '[cron/task-board-digest] tick emitted=%d boards=%d duplicates=%d',
       counters.emitted,
-      counters.boards
+      counters.boards,
+      counters.duplicates
     );
     return res.status(200).json(counters);
   } catch (err) {

@@ -18,7 +18,7 @@ get:
     - CronSecret: []
   responses:
     '200':
-      description: '`{ emitted, boards }` du tick.'
+      description: '`{ emitted, boards, duplicates }` du tick (duplicates = récaps déjà émis cette semaine ISO, non repostés).'
       content:
         application/json:
           schema:
@@ -38,7 +38,7 @@ post:
     - CronSecret: []
   responses:
     '200':
-      description: '`{ emitted, boards }` du tick.'
+      description: '`{ emitted, boards, duplicates }` du tick (duplicates = récaps déjà émis cette semaine ISO, non repostés).'
       content:
         application/json:
           schema:
