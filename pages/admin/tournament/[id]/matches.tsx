@@ -24,9 +24,9 @@ import type {
 } from '@/types/admin';
 import PrintExportButton from '@/components/PrintExportButton';
 import nsAdminTournamentMatches from '@/lib/i18n/locales/admin-fr/adminTournamentMatches';
+import { buildAdminMatchesQuery } from '@/utils/matches/adminMatchesQuery';
 import {
   csvDateToIso,
-  dayRangeToIsoBounds,
   formatMatchDateTime,
   formatMatchTime,
   groupMatchesByTzDay,
@@ -308,28 +308,21 @@ function AdminTournamentMatchesPage(_props: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const params = new URLSearchParams();
-      params.set('limit', String(limit));
-      params.set('offset', String(offset));
-      params.set('includeStages', '1');
-      params.set('includeTotal', '1');
-      params.set('includeTeams', '1');
-      if (stageFilter) params.set('stageId', stageFilter);
-      if (statusFilter) params.set('status', statusFilter);
-      if (roundFilter) params.set('roundNumber', roundFilter);
-      if (resultFilter) params.set('result', resultFilter);
-      // Jours « du … au … » pris dans le fuseau du tournoi, bornes incluses.
-      const bounds = dayRangeToIsoBounds(
-        dateFromFilter,
-        dateToFilter,
-        timezone
-      );
-      if (bounds.dateFrom) params.set('dateFrom', bounds.dateFrom);
-      if (bounds.dateTo) params.set('dateTo', bounds.dateTo);
-      if (search.trim()) params.set('search', search.trim());
-
+      const query = buildAdminMatchesQuery({
+        view: viewMode,
+        limit,
+        offset,
+        stageId: stageFilter,
+        status: statusFilter,
+        roundNumber: roundFilter,
+        result: resultFilter,
+        dateFrom: dateFromFilter,
+        dateTo: dateToFilter,
+        timezone,
+        search,
+      });
       const json = await adminFetchJson<MatchesApiResponse>(
-        `/api/admin/tournament/${id}/matches?` + params.toString()
+        `/api/admin/tournament/${id}/matches?${query}`
       );
       setTournament(json.tournament);
       setStages(json.stages || []);
@@ -381,6 +374,7 @@ function AdminTournamentMatchesPage(_props: StaffProps) {
     dateFromFilter,
     dateToFilter,
     timezone,
+    viewMode,
   ]);
 
   // Auto-scheduler : simulation, relecture, puis écriture. Le flux vit dans
@@ -1817,8 +1811,8 @@ function AdminTournamentMatchesPage(_props: StaffProps) {
             </section>
           )}
 
-          {/* Pagination */}
-          {matches.length > 0 && (
+          {/* Pagination — liste seulement : le calendrier charge tout. */}
+          {viewMode === 'list' && matches.length > 0 && (
             <div className="flex justify-between items-center mt-6 print:hidden">
               <button
                 type="button"

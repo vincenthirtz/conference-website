@@ -321,8 +321,19 @@ async function handleGet(
 
   let query = applyFilters(supabaseAdmin.from('matches').select(baseSelect));
 
+  // DÉPARTAGE EXPLICITE. Un seul critère laissait Postgres ordonner les
+  // ex æquo à sa guise — deux matchs à la même heure changeaient de place d'un
+  // chargement à l'autre, et d'une page à l'autre (doublon ou trou). Par
+  // horaire : les non programmés À LA FIN, puis tour, création, id.
+  query = query.order(orderField, { ascending, nullsFirst: false });
+  if (orderField !== 'round_number') {
+    query = query.order('round_number', { ascending: true, nullsFirst: false });
+  }
+  if (orderField !== 'created_at') {
+    query = query.order('created_at', { ascending: true });
+  }
   query = query
-    .order(orderField, { ascending })
+    .order('id', { ascending: true })
     .range(offsetNum, offsetNum + limitNum - 1);
 
   const { data, error } = await query;
