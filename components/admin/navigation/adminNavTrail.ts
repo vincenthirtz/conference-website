@@ -54,18 +54,17 @@ export const ADMIN_NAV_TRAILS: Record<string, NavCrumb[]> = {
     { label: 'Tournois', href: null },
     { label: 'Créer un tournoi', href: '/admin/tournaments/create' },
   ],
-  '/admin/broadcast/live': [
-    { label: 'Compétition', href: null },
-    { label: 'Tournois', href: null },
-    { label: 'Broadcast live (cockpit)', href: '/admin/broadcast/live' },
-  ],
   '/admin/regie': [
-    { label: 'Compétition', href: null },
-    { label: 'Tournois', href: null },
+    { label: 'Diffusion', href: null },
+    { label: 'Cockpit', href: '/admin/regie' },
+  ],
+  '/admin/broadcast/live': [
+    { label: 'Diffusion', href: null },
+    { label: 'Console live', href: '/admin/broadcast/live' },
   ],
   '/admin/caster': [
-    { label: 'Compétition', href: null },
-    { label: 'Tournois', href: null },
+    { label: 'Diffusion', href: null },
+    { label: 'Scènes', href: '/admin/caster' },
   ],
   '/admin/quick-bracket': [
     { label: 'Compétition', href: null },

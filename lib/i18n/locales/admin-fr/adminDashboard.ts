@@ -56,13 +56,9 @@ export default adminNs('adminDashboard', {
   navModerationDesc: 'Commentaires et blacklist joueurs.',
   navCampaignsTitle: 'Campagnes emails',
   navCampaignsDesc: 'Envois groupés et suivi des campagnes.',
-  navRunOfShowTitle: 'Run-of-show',
-  navRunOfShowDesc: 'Conduite live : timeline, segments et timing.',
-  navCasterCockpitTitle: 'Cockpit Régie',
-  navCasterCockpitDesc: 'Cues, briefing et présence caster en direct.',
-  navCasterScenesTitle: 'Scènes caster',
-  navCasterScenesDesc:
-    'Scoreboard et overlays du stream — pilotage web en direct.',
+  navDiffusionTitle: 'Diffusion',
+  navDiffusionDesc:
+    'Cockpit, console live et scènes — tout le direct au même endroit.',
   navUsersTitle: 'Utilisateurs',
   navUsersDesc: 'Gestion des comptes staff et adhérents.',
   navStatsTitle: 'Stats',

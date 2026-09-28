@@ -130,53 +130,6 @@ export const ADMIN_NAV: AdminNavNode[] = [
             permission: 'manage_tournaments',
             minRole: 'admin',
           },
-          {
-            id: 'broadcast-live',
-            topBarLabel: 'Broadcast live (cockpit)',
-            href: '/admin/broadcast/live',
-            minRole: 'admin',
-            card: {
-              order: 8,
-              titleKey: 'navRunOfShowTitle',
-              descKey: 'navRunOfShowDesc',
-              icon: 'clock',
-              accent: 'border-pink-500/30 from-pink-500/10 text-pink-300',
-            },
-          },
-          // Régie : page admin /admin/regie (ex-cockpit caster). Ouverte
-          // owner/admin/caster via une fiche cast_members interne
-          // auto-provisionnée pour admin/owner (cf. utils/casterAuth.ts). La
-          // card reste minRole 'admin' (raccourci dashboard) ; les casters
-          // atteignent la régie via leur propre flux.
-          {
-            id: 'caster-cockpit',
-            href: '/admin/regie',
-            minRole: 'admin',
-            card: {
-              order: 8.5,
-              titleKey: 'navCasterCockpitTitle',
-              descKey: 'navCasterCockpitDesc',
-              icon: 'signal',
-              accent: 'border-rose-500/30 from-rose-500/10 text-rose-300',
-            },
-          },
-          // Scènes caster : édition web des scènes de stream (`caster_scenes`,
-          // table partagée avec l'app desktop womenscup-caster — synchro
-          // Realtime bidirectionnelle) + overlays hébergés /overlay/caster/*.
-          // Comme la régie : carte minRole 'admin', page accessible à tout
-          // staff (gate SSR 'caster' + RLS écriture staff actif).
-          {
-            id: 'caster-scenes',
-            href: '/admin/caster',
-            minRole: 'admin',
-            card: {
-              order: 8.7,
-              titleKey: 'navCasterScenesTitle',
-              descKey: 'navCasterScenesDesc',
-              icon: 'signal',
-              accent: 'border-cyan-500/30 from-cyan-500/10 text-cyan-300',
-            },
-          },
           // Dashboard-only (pas d'entrée top-bar historiquement).
           {
             id: 'quick-bracket',
@@ -376,6 +329,48 @@ export const ADMIN_NAV: AdminNavNode[] = [
             },
           },
         ],
+      },
+    ],
+  },
+  {
+    // Espace « Diffusion » : la régie, les casteuses et les overlays, réunis.
+    // Ces écrans servaient la même soirée mais vivaient à sept endroits —
+    // « Broadcast live » rangé dans Tournois, cockpit et scènes seulement en
+    // cartes, run-of-show joignable par un fil d'Ariane. Ils partagent aussi
+    // une barre d'onglets (`DiffusionTabsNav`). UNE carte au tableau de bord :
+    // l'entrée de l'espace, pas un raccourci par écran.
+    //
+    // minRole 'caster' : ces pages admettent le rôle caster (gate SSR), et
+    // c'est lui qui les ouvre le plus un soir de match.
+    id: 'diffusion',
+    topBarLabel: 'Diffusion',
+    href: '',
+    minRole: 'caster',
+    children: [
+      {
+        id: 'caster-cockpit',
+        topBarLabel: 'Cockpit',
+        href: '/admin/regie',
+        minRole: 'caster',
+        card: {
+          order: 8,
+          titleKey: 'navDiffusionTitle',
+          descKey: 'navDiffusionDesc',
+          icon: 'signal',
+          accent: 'border-rose-500/30 from-rose-500/10 text-rose-300',
+        },
+      },
+      {
+        id: 'broadcast-live',
+        topBarLabel: 'Console live',
+        href: '/admin/broadcast/live',
+        minRole: 'caster',
+      },
+      {
+        id: 'caster-scenes',
+        topBarLabel: 'Scènes',
+        href: '/admin/caster',
+        minRole: 'caster',
       },
     ],
   },
