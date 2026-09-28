@@ -11,6 +11,7 @@ import { adminNs } from '../../ns';
 
 export default adminNs('adminDiffusionNav', {
   ariaLabel: 'Écrans de la diffusion',
+  liveNow: 'en direct',
   tabCockpit: 'Cockpit',
   tabRunOfShow: 'Run-of-show',
   tabLive: 'Console live',

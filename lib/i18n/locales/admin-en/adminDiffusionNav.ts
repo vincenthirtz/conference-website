@@ -4,6 +4,7 @@
 
 export default {
   ariaLabel: 'Broadcast screens',
+  liveNow: 'live',
   tabCockpit: 'Cockpit',
   tabRunOfShow: 'Run-of-show',
   tabLive: 'Live console',

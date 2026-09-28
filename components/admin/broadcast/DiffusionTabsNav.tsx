@@ -25,6 +25,7 @@
 
 import Link from 'next/link';
 import { useStaffSession } from '@/hooks/useStaffSession';
+import { useDiffusionLive } from '@/hooks/useDiffusionLive';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminDiffusionNav from '@/lib/i18n/locales/admin-fr/adminDiffusionNav';
 
@@ -82,6 +83,15 @@ export const DIFFUSION_TABS: readonly DiffusionTab[] = [
   },
 ];
 
+/**
+ * Les onglets qui suivent le RUN en direct : c'est sur eux que le point rouge
+ * s'allume. Les autres (overlays, casteuses…) se règlent hors antenne.
+ */
+export const LIVE_TABS: ReadonlySet<DiffusionTabId> = new Set([
+  'cockpit',
+  'live',
+]);
+
 /** Les onglets visibles pour ces permissions (`null` = pas encore lues). */
 export function visibleDiffusionTabs(
   permissions: readonly string[] | null
@@ -102,6 +112,10 @@ export default function DiffusionTabsNav({
   const t = useAdminT(nsAdminDiffusionNav);
   const { staffPermissions, loading } = useStaffSession();
   const tabs = visibleDiffusionTabs(loading ? null : staffPermissions);
+  // Un run en direct se voit depuis N'IMPORTE quel écran de la diffusion :
+  // on préparait les overlays sans savoir que l'antenne avait démarré.
+  const live = useDiffusionLive();
+  const onAir = live?.live === true;
   return (
     <nav
       aria-label={t.ariaLabel}
@@ -121,6 +135,18 @@ export default function DiffusionTabsNav({
             }`}
           >
             {t[tab.labelKey]}
+            {onAir && LIVE_TABS.has(tab.id) && (
+              <>
+                <span
+                  aria-hidden
+                  title={live?.runName ?? undefined}
+                  className="ml-2 inline-block h-2 w-2 animate-pulse rounded-full bg-red-500 align-middle"
+                />
+                <span className="sr-only">
+                  {` — ${t.liveNow}${live?.runName ? ` : ${live.runName}` : ''}`}
+                </span>
+              </>
+            )}
           </Link>
         );
       })}

@@ -3699,6 +3699,26 @@
     ]
    }
   },
+  "GET /api/admin/diffusion/live-status": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "live": {
+      "type": "boolean"
+     },
+     "runName": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "live",
+     "runName"
+    ]
+   }
+  },
   "GET /api/admin/discord-logs": {
    "200": {
     "type": "object",
