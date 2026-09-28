@@ -423,7 +423,7 @@ aucun client typé n'est possible.
 
 ## Phase 2 — Socle client
 
-### L10 · Client API typé + couche de cache — 🟥 / L
+### L10 · Client API typé + couche de cache — 🟨 SOCLE LIVRÉ (2026-09-29) · pilote migré
 
 **Problème.** Les pages appellent `useAdminFetch('/api/admin/…')` avec des chaînes, 24 appels
 seulement sont typés. Après une mutation, chaque écran recharge « à la main » ce qu'il pense
@@ -440,10 +440,23 @@ concerné — d'où les listes périmées après une édition dans un tiroir.
 - `useAdminFetch` / `useAdminResource` deviennent des adaptateurs puis sont dépréciés (cliquet).
 
 **Critères d'acceptation**
-- [ ] Éditer une équipe dans un tiroir met à jour la liste sans rechargement.
-- [ ] Deux panneaux qui lisent la même ressource ne déclenchent qu'une requête.
-- [ ] Aucune URL `/api/admin/…` en dur dans un module migré.
-- [ ] Le bundle public n'embarque pas la librairie (vérifié au build).
+- [x] `@tanstack/react-query` 5.104 installé (seule dépendance ajoutée).
+- [x] [`utils/admin/adminHttp.ts`](../utils/admin/adminHttp.ts) : `adminRequest` hors composant
+      (Bearer, 401 → connexion, `Idempotency-Key` sur les mutations), `AdminHttpError` qui lit
+      `code`/`fields`/`reason`/`requestId`, `adminErrorMessage` → toast « … (réf. abcd1234) ».
+- [x] [`features/admin/_shared/query.tsx`](../features/admin/_shared/query.tsx) :
+      `withAdminQuery(Page)` **par page** et non dans `_app` ; client singleton côté navigateur
+      (cache conservé entre pages admin), neuf par rendu côté serveur ; pas de nouvel essai sur
+      une 4xx.
+- [x] Le bundle public n'embarque pas la librairie — garanti par **test de source**
+      (`adminBoundariesGuard`, vérifié par sonde) plutôt que par un build, trop lourd sur le Mac.
+- [x] Pilote de bout en bout : `/admin/free-players` = page de câblage + `client.ts` +
+      `hooks/useFreePlayers.ts` + `ui/FreePlayersTable.tsx` ; 4 `useState` et 2 URLs en dur de
+      moins. **Non vérifié dans un navigateur** (session staff requise ; e2e jamais contre la prod).
+- [ ] Éditer une équipe dans un tiroir met à jour la liste sans rechargement (L17).
+- [ ] Deux panneaux qui lisent la même ressource ne déclenchent qu'une requête (acquis par
+      construction avec des clés partagées ; à constater sur un écran multi-panneaux).
+- [ ] Aucune URL `/api/admin/…` en dur dans un module migré (cliquet `ui.rawAdminUrl` : 642).
 
 ### L11 · `useAdminForm` : formulaires sur schéma — 🟥 / L
 
