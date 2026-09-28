@@ -414,7 +414,9 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
       kind: 'map',
       id: face.slug,
       name: face.name,
-      imageUrl: face.imageUrl,
+      // La miniature WebP : trente maquettes SVG voxel (3,6 Mo) dessinées
+      // ensemble pesaient sur la première page du jeu (cf. MapFace.thumbUrl).
+      imageUrl: face.thumbUrl ?? face.imageUrl,
       rarity: MAP_CARD_RARITY,
     };
   });
