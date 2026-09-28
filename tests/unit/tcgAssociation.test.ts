@@ -317,3 +317,42 @@ describe('PATCH /api/admin/tcg/association', () => {
     expect(faces.get(FANART)?.category).toBe('fanart');
   });
 });
+
+describe('POST /api/admin/tcg/association — logo par défaut en voxel', () => {
+  it('dépose le SVG du nœud et crée la carte une seule fois', async () => {
+    const res = await call(handler, {
+      method: 'POST',
+      body: { action: 'voxel_logo' },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(storageUploads).toHaveLength(1);
+    expect(storageUploads[0].path).toMatch(
+      /^tcg-association\/noeud-voxel-v\d+-[0-9a-f]+\.svg$/
+    );
+    expect(rows()[0]).toMatchObject({
+      category: 'association',
+      submitted_by: null,
+      status: 'approved',
+      source_ref: expect.stringMatching(/^voxel:noeud:v\d+$/),
+      image_path: storageUploads[0].path,
+    });
+
+    const again = await call(handler, {
+      method: 'POST',
+      body: { action: 'voxel_logo' },
+    });
+    expect(again.statusCode).toBe(409);
+    expect(rows()).toHaveLength(1);
+  });
+
+  it('dit à l’écran si la carte voxel existe déjà', async () => {
+    let res = await call(handler);
+    expect(res.body.voxelLogo).toMatchObject({ cardId: null });
+    expect(res.body.voxelLogo.previewUrl).toMatch(/\/noeud\/[0-9a-f]{6}\.svg$/);
+
+    await call(handler, { method: 'POST', body: { action: 'voxel_logo' } });
+    res = await call(handler);
+    expect(res.body.voxelLogo.cardId).toBe(rows()[0].id);
+  });
+});
