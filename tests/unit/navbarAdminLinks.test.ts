@@ -80,10 +80,22 @@ describe('filterAdminLinks – owner role', () => {
   it('keeps every direct child of "Tournois"', () => {
     const tournois = findByTitle(links, 'Tournois');
     expect(tournois?.children).toBeDefined();
-    // Lot 7 ajoute "Broadcast live (cockpit)". Lot B a retiré "Disputes
-    // ouvertes (board)" d'ici : les litiges vivent désormais dans le hub
-    // "Modération" (onglet Litiges), sous la section Contenu.
-    expect(tournois!.children!).toHaveLength(5);
+    // Lot B a retiré "Disputes ouvertes (board)" d'ici : les litiges vivent
+    // dans le hub "Modération". Diffusion lot 2 en a sorti "Broadcast live
+    // (cockpit)" : il vit dans l'espace "Diffusion".
+    expect(tournois!.children!).toHaveLength(4);
+    expect(tournois!.children!.map((c) => c.title)).not.toContain(
+      'Broadcast live (cockpit)'
+    );
+  });
+
+  it('réunit cockpit, console live et scènes sous "Diffusion"', () => {
+    const diffusion = findByTitle(links, 'Diffusion');
+    expect(diffusion?.children?.map((c) => c.title)).toEqual([
+      'Cockpit',
+      'Console live',
+      'Scènes',
+    ]);
   });
 
   it('keeps admin-only sub-sections of "Contenu" (Twitch, Partenaires, Modération)', () => {
@@ -173,6 +185,15 @@ describe('filterAdminLinks – caster role', () => {
     expect(equipes).toBeDefined();
     const titles = equipes?.children?.map((c) => c.title) ?? [];
     expect(titles).toEqual(['Gérer mon équipe (capitaine)']);
+  });
+
+  it('ouvre "Diffusion" au caster : ce sont ses écrans un soir de match', () => {
+    const diffusion = findByTitle(links, 'Diffusion');
+    expect(diffusion?.children?.map((c) => c.title)).toEqual([
+      'Cockpit',
+      'Console live',
+      'Scènes',
+    ]);
   });
 
   it('drops "Contenu" entirely', () => {
