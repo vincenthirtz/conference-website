@@ -22,6 +22,7 @@
 // composant ne connaît aucune langue, la page hôte lui passe le bloc traduit.
 
 import { useCallback, useEffect, useState } from 'react';
+import { copyText } from '@/utils/clipboard';
 
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
@@ -110,12 +111,11 @@ export default function TcgOverlayCard({ labels }: Props) {
 
   const onCopy = async () => {
     if (!state?.url) return;
-    try {
-      await navigator.clipboard.writeText(state.url);
+    if (await copyText(state.url)) {
       addToast(labels.copied, 'success');
-    } catch {
-      // Presse-papiers refusé (contexte non sécurisé, permission) : on révèle
-      // le lien pour qu'il reste copiable à la main plutôt que d'échouer sec.
+    } else {
+      // Même le repli a échoué : on révèle le lien pour qu'il reste copiable à
+      // la main plutôt que d'échouer sec.
       setRevealed(true);
     }
   };

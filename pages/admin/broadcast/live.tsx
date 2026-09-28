@@ -4,6 +4,7 @@
 // stream URL + overlay state. manage_broadcast edits on_air / lower_third / PiP.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { copyText } from '@/utils/clipboard';
 import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
@@ -391,12 +392,8 @@ function BroadcastLivePage({ staff }: StaffProps) {
 
   async function copyOverlayUrl() {
     if (!overlayUrl) return;
-    try {
-      await navigator.clipboard.writeText(overlayUrl);
-      addToast(t.overlayCopied, 'success');
-    } catch {
-      addToast(t.overlayCopyFailed, 'error');
-    }
+    if (await copyText(overlayUrl)) addToast(t.overlayCopied, 'success');
+    else addToast(t.overlayCopyFailed, 'error');
   }
 
   const state = data?.state;

@@ -16,6 +16,7 @@
 // note le dit), mais ce n'est pas le défaut.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { copyText } from '@/utils/clipboard';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import nsAdminTournamentEmbed from '@/lib/i18n/locales/admin-fr/adminTournamentEmbed';
@@ -192,15 +193,9 @@ export default function StreamSourcesPanel({
     []
   );
   const copy = async (value: string, key: string) => {
-    let ok = true;
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch {
-      // Presse-papiers refusé (contexte non sécurisé, permission) : on le DIT,
-      // l'URL reste sélectionnable à la main. En silence, on croyait avoir
-      // copié et on collait l'ancienne URL dans OBS.
-      ok = false;
-    }
+    // Repli hors contexte sécurisé compris. Un échec est DIT : en silence, on
+    // croyait avoir copié et on collait l'ancienne URL dans OBS.
+    const ok = await copyText(value);
     setCopied(ok ? key : `${key}:failed`);
     if (copyTimer.current) clearTimeout(copyTimer.current);
     copyTimer.current = setTimeout(() => setCopied(null), ok ? 1500 : 4000);

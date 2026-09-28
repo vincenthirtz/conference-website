@@ -26,4 +26,5 @@ export default adminNs('adminDirectorRunStatusHeader', {
   overlayCopy: 'Copier l’URL de l’overlay',
   overlayCopied: 'Copiée',
   overlayOpen: 'Ouvrir l’overlay',
+  overlayCopyFailed: 'Copie impossible',
 });

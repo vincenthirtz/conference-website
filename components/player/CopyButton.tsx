@@ -1,5 +1,6 @@
 import { useEffect, useState, type JSX } from 'react';
 import { useT } from '@/lib/i18n/useT';
+import { copyText } from '@/utils/clipboard';
 import nsCopyButton from '@/lib/i18n/locales/fr/copyButton';
 
 type Props = {
@@ -37,27 +38,9 @@ export default function CopyButton({
 
   const handleClick = async () => {
     if (!value) return;
-    try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(value);
-        setCopied(true);
-        return;
-      }
-      // Fallback for non-secure contexts (no clipboard API).
-      const textarea = document.createElement('textarea');
-      textarea.value = value;
-      textarea.setAttribute('readonly', '');
-      textarea.style.position = 'absolute';
-      textarea.style.left = '-9999px';
-      document.body.appendChild(textarea);
-      textarea.select();
-      const ok = document.execCommand('copy');
-      document.body.removeChild(textarea);
-      if (!ok) throw new Error('execCommand returned false');
-      setCopied(true);
-    } catch {
-      setError(true);
-    }
+    // Repli hors contexte sécurisé compris : cf. `utils/clipboard.ts`.
+    if (await copyText(value)) setCopied(true);
+    else setError(true);
   };
 
   const tooltip = error ? t.error : copied ? t.copied : (label ?? t.copy);

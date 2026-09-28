@@ -8,6 +8,7 @@
 // signe/couleur. La jauge n'apparait que si on a un planning calcule.
 
 import { useState } from 'react';
+import { copyText } from '@/utils/clipboard';
 import Link from 'next/link';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
@@ -283,16 +284,13 @@ function DirectorShortcuts({
   runId: string;
   t: typeof nsAdminDirectorRunStatusHeader.fr;
 }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'ok' | 'failed' | null>(null);
   const path = `/overlay/${runId}`;
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}${path}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Presse-papiers refusé : l'URL reste lisible et sélectionnable.
-    }
+    // Un échec est dit (l'URL reste lisible, à sélectionner à la main).
+    const ok = await copyText(`${window.location.origin}${path}`);
+    setCopied(ok ? 'ok' : 'failed');
+    setTimeout(() => setCopied(null), ok ? 1500 : 4000);
   };
   const chip =
     'px-3 py-1.5 rounded-lg border border-neutral-700 bg-neutral-900/60 text-xs font-medium text-neutral-200 hover:border-neutral-500';
@@ -311,7 +309,11 @@ function DirectorShortcuts({
         <code className="rounded bg-black/40 px-2 py-1">{path}</code>
         <button type="button" onClick={() => void copy()} className={chip}>
           <span aria-live="polite">
-            {copied ? t.overlayCopied : t.overlayCopy}
+            {copied === 'ok'
+              ? t.overlayCopied
+              : copied === 'failed'
+                ? t.overlayCopyFailed
+                : t.overlayCopy}
           </span>
         </button>
         <a href={path} target="_blank" rel="noreferrer" className={chip}>

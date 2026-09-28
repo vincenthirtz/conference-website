@@ -27,4 +27,5 @@ export default {
   overlayCopy: 'Copy overlay URL',
   overlayCopied: 'Copied',
   overlayOpen: 'Open overlay',
+  overlayCopyFailed: 'Copy failed',
 };

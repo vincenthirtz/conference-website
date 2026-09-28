@@ -24,6 +24,7 @@
 // Champs persistés = CameraSceneData EXACTEMENT (types/caster.ts).
 
 import { useEffect, useState, type ReactNode } from 'react';
+import { copyText } from '@/utils/clipboard';
 
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -166,12 +167,8 @@ export default function CameraSceneEditor({ scene, onSave }: Props) {
   };
 
   async function copy(value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-      addToast(t.copied, 'success');
-    } catch {
-      addToast(t.copyFailed, 'error');
-    }
+    if (await copyText(value)) addToast(t.copied, 'success');
+    else addToast(t.copyFailed, 'error');
   }
 
   /** Bloc « lien + Copier » du générateur VDO.Ninja. */

@@ -62,6 +62,7 @@ import {
   useState,
   type ComponentType,
 } from 'react';
+import { copyText } from '@/utils/clipboard';
 import Head from 'next/head';
 import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
 import dynamic from 'next/dynamic';
@@ -418,12 +419,8 @@ function CasterScenesPage({ staff }: PageProps) {
 
   async function copyOverlayUrl() {
     if (!overlayUrl) return;
-    try {
-      await navigator.clipboard.writeText(overlayUrl);
-      addToast(t.copied, 'success');
-    } catch {
-      addToast(t.copyFailed, 'error');
-    }
+    if (await copyText(overlayUrl)) addToast(t.copied, 'success');
+    else addToast(t.copyFailed, 'error');
   }
 
   /* ---------------------------------------------------------------------- *
