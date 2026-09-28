@@ -32,4 +32,5 @@ export default adminNs('adminTwitchChannelsList', {
   errorUpdate: 'Erreur de modification.',
   loadError: 'Impossible de charger les chaînes.',
   retry: 'Réessayer',
+  liveNow: 'En direct',
 });

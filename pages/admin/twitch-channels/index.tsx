@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
+import { useTwitchLiveStatuses } from '@/hooks/useTwitchLiveStatuses';
 import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -81,6 +82,13 @@ function AdminTwitchChannelsPage(_props: Props) {
       params: { includeInactive: true },
       select: (res) => res.items || [],
     }
+  );
+
+  // Qui est en direct MAINTENANT : la liste disait « active / inactive »,
+  // jamais « à l'antenne ». Chaînes actives seulement (les autres ne sont
+  // pas suivies par le site).
+  const { statuses: liveStatuses } = useTwitchLiveStatuses(
+    channels.filter((c) => c.is_active).map((c) => c.channel)
   );
 
   // Deep-link : `?new=1` (ancienne route /new) ouvre la modale de création.
@@ -386,6 +394,15 @@ function AdminTwitchChannelsPage(_props: Props) {
                           <h3 className="font-semibold text-white group-hover:text-purple-400 transition-colors">
                             {c.label}
                           </h3>
+                          {liveStatuses[c.channel.toLowerCase()]?.live && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-300">
+                              <span
+                                aria-hidden
+                                className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500"
+                              />
+                              {t.liveNow}
+                            </span>
+                          )}
                           <span
                             className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
                               c.is_active

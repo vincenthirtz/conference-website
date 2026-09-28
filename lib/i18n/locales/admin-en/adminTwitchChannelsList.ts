@@ -33,4 +33,5 @@ export default {
   errorUpdate: 'Update error.',
   loadError: 'Could not load the channels.',
   retry: 'Retry',
+  liveNow: 'Live',
 };
