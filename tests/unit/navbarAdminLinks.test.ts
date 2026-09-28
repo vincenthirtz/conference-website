@@ -98,13 +98,15 @@ describe('filterAdminLinks – owner role', () => {
       'Scènes',
       'Overlays',
       'Casteuses',
+      'Chaînes Twitch',
     ]);
   });
 
-  it('keeps admin-only sub-sections of "Contenu" (Twitch, Partenaires, Modération)', () => {
+  it('keeps admin-only sub-sections of "Contenu" (Partenaires, Modération)', () => {
     const contenu = findByTitle(links, 'Contenu');
     const childTitles = contenu?.children?.map((c) => c.title) ?? [];
-    expect(childTitles).toContain('Chaînes Twitch');
+    // Diffusion lot 9 : les chaînes Twitch ont rejoint « Diffusion ».
+    expect(childTitles).not.toContain('Chaînes Twitch');
     expect(childTitles).toContain('Partenaires');
     // Lot B : Commentaires / Support / Blacklist fusionnés en un seul
     // hub "Modération" (page à onglets /admin/moderation).
