@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { copyText } from '@/utils/clipboard';
 import Link from 'next/link';
+import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   runStatusBadgeClasses,
@@ -169,103 +170,108 @@ export default function RunStatusHeader({
   }
 
   return (
-    <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/40 px-5 py-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold tracking-tight">{run.name}</h1>
-            <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${runStatusBadgeClasses(
-                run.status
-              )}`}
-            >
+    <>
+      {/* Le director était le seul écran de la diffusion sans ses onglets :
+          montés ici, la page étant gelée en taille. */}
+      <DiffusionTabsNav active="runofshow" />
+      <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/40 px-5 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl font-bold tracking-tight">{run.name}</h1>
               <span
-                className={`w-1.5 h-1.5 rounded-full ${runStatusDotClasses(
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${runStatusBadgeClasses(
                   run.status
                 )}`}
-              />
-              {runStatusLabel(run.status)}
-            </span>
-          </div>
-          <div className="mt-1 text-sm text-neutral-400 flex flex-wrap gap-x-4 gap-y-1">
-            <span>
-              <span className="text-neutral-500">{t.slugLabel}</span>{' '}
-              <code className="text-xs">{run.slug}</code>
-            </span>
-            <span>
-              <span className="text-neutral-500">{t.dateLabel}</span>{' '}
-              {formatDate(run.scheduled_at)}
-            </span>
-            {run.started_at && (
-              <span>
-                <span className="text-neutral-500">{t.startedLabel}</span>{' '}
-                {formatDate(run.started_at)}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${runStatusDotClasses(
+                    run.status
+                  )}`}
+                />
+                {runStatusLabel(run.status)}
               </span>
-            )}
-            {run.ended_at && (
-              <span>
-                <span className="text-neutral-500">{t.endedLabel}</span>{' '}
-                {formatDate(run.ended_at)}
-              </span>
-            )}
-          </div>
-          <div className="mt-2 text-sm text-neutral-300">
-            <span className="font-medium">{doneCount}</span>
-            <span className="text-neutral-500">
-              {' '}
-              / {total} {t.segmentsLabel}
-            </span>
-            <span className="text-neutral-500">
-              {' '}
-              {total > 0 ? t.segmentsDone : ''}
-            </span>
-          </div>
-          {driftGauge && (
-            <div className="mt-3 flex items-center gap-3">
-              {driftGauge}
-              {driftLabel}
             </div>
-          )}
+            <div className="mt-1 text-sm text-neutral-400 flex flex-wrap gap-x-4 gap-y-1">
+              <span>
+                <span className="text-neutral-500">{t.slugLabel}</span>{' '}
+                <code className="text-xs">{run.slug}</code>
+              </span>
+              <span>
+                <span className="text-neutral-500">{t.dateLabel}</span>{' '}
+                {formatDate(run.scheduled_at)}
+              </span>
+              {run.started_at && (
+                <span>
+                  <span className="text-neutral-500">{t.startedLabel}</span>{' '}
+                  {formatDate(run.started_at)}
+                </span>
+              )}
+              {run.ended_at && (
+                <span>
+                  <span className="text-neutral-500">{t.endedLabel}</span>{' '}
+                  {formatDate(run.ended_at)}
+                </span>
+              )}
+            </div>
+            <div className="mt-2 text-sm text-neutral-300">
+              <span className="font-medium">{doneCount}</span>
+              <span className="text-neutral-500">
+                {' '}
+                / {total} {t.segmentsLabel}
+              </span>
+              <span className="text-neutral-500">
+                {' '}
+                {total > 0 ? t.segmentsDone : ''}
+              </span>
+            </div>
+            {driftGauge && (
+              <div className="mt-3 flex items-center gap-3">
+                {driftGauge}
+                {driftLabel}
+              </div>
+            )}
+          </div>
+          <div
+            className="flex items-center gap-2"
+            data-testid="run-status-header-actions"
+            data-run-status={run.status}
+          >
+            {run.status === 'draft' && (
+              <button
+                type="button"
+                onClick={onStartRun}
+                disabled={busy}
+                data-testid="run-start"
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium"
+              >
+                {t.startRun}
+              </button>
+            )}
+            {run.status === 'live' && (
+              <button
+                type="button"
+                onClick={onEndRun}
+                disabled={busy}
+                data-testid="run-end"
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
+              >
+                {t.endRun}
+              </button>
+            )}
+            {run.status === 'done' && (
+              <span
+                className="px-4 py-2 rounded-lg bg-neutral-800 text-sm text-neutral-400 border border-neutral-700"
+                data-testid="run-done-label"
+              >
+                {t.runDone}
+              </span>
+            )}
+          </div>
         </div>
-        <div
-          className="flex items-center gap-2"
-          data-testid="run-status-header-actions"
-          data-run-status={run.status}
-        >
-          {run.status === 'draft' && (
-            <button
-              type="button"
-              onClick={onStartRun}
-              disabled={busy}
-              data-testid="run-start"
-              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium"
-            >
-              {t.startRun}
-            </button>
-          )}
-          {run.status === 'live' && (
-            <button
-              type="button"
-              onClick={onEndRun}
-              disabled={busy}
-              data-testid="run-end"
-              className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
-            >
-              {t.endRun}
-            </button>
-          )}
-          {run.status === 'done' && (
-            <span
-              className="px-4 py-2 rounded-lg bg-neutral-800 text-sm text-neutral-400 border border-neutral-700"
-              data-testid="run-done-label"
-            >
-              {t.runDone}
-            </span>
-          )}
-        </div>
+        <DirectorShortcuts runId={run.id} t={t} />
       </div>
-      <DirectorShortcuts runId={run.id} t={t} />
-    </div>
+    </>
   );
 }
 
