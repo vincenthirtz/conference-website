@@ -89,11 +89,12 @@ describe('filterAdminLinks – owner role', () => {
     );
   });
 
-  it('réunit cockpit, console live et scènes sous "Diffusion"', () => {
+  it('réunit cockpit, console live, run-of-show et scènes sous "Diffusion"', () => {
     const diffusion = findByTitle(links, 'Diffusion');
     expect(diffusion?.children?.map((c) => c.title)).toEqual([
       'Cockpit',
       'Console live',
+      'Run-of-show',
       'Scènes',
     ]);
   });

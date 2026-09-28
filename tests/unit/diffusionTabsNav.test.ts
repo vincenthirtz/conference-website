@@ -15,11 +15,15 @@ const ids = (perms: string[] | null) =>
 
 describe('onglets Diffusion', () => {
   it('commence par le cockpit, dans l’ordre d’une soirée', () => {
-    expect(DIFFUSION_TABS.slice(0, 3).map((t) => t.id)).toEqual([
+    expect(DIFFUSION_TABS.slice(0, 2).map((t) => t.id)).toEqual([
       'cockpit',
       'live',
-      'scenes',
     ]);
+  });
+
+  it('masque le run-of-show sans manage_broadcast, le montre avec', () => {
+    expect(ids(['manage_tcg'])).not.toContain('runofshow');
+    expect(ids(['manage_broadcast'])).toContain('runofshow');
   });
 
   it('montre tout pendant la lecture de la session', () => {
