@@ -5,14 +5,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useEventRunRealtime } from '@/hooks/useEventRunRealtime';
 import { useToast } from '@/components/Toast';
-import RealtimeStatusBadge from '@/components/admin/RealtimeStatusBadge';
+import LiveConsoleHeader from '@/components/admin/broadcast/LiveConsoleHeader';
 import TwitchStatusPanel from '@/components/admin/broadcast/TwitchStatusPanel';
 import TcgDropHealthCard from '@/components/admin/broadcast/TcgDropHealthCard';
 import TwitchPredictionsPanel from '@/components/admin/broadcast/TwitchPredictionsPanel';
@@ -441,40 +440,17 @@ function BroadcastLivePage({ staff }: StaffProps) {
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
-          <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-extrabold tracking-tight">
-                  {t.heading}
-                </h1>
-                <RealtimeStatusBadge
-                  connected={realtimeConnected}
-                  connectedLabel={t.realtimeConnected}
-                  degradedLabel={t.realtimeDegraded}
-                />
-              </div>
-              <p className="text-sm text-neutral-400 mt-1">
-                {format(t.subtitle, { seconds: POLL_MS / 1000 })}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {data?.run && (
-                <Link
-                  href={`/admin/events/${data.run.id}/director`}
-                  className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
-                >
-                  {t.director}
-                </Link>
-              )}
-              <button
-                type="button"
-                onClick={fetchState}
-                className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
-              >
-                {t.refresh}
-              </button>
-            </div>
-          </div>
+          <LiveConsoleHeader
+            heading={t.heading}
+            subtitle={format(t.subtitle, { seconds: POLL_MS / 1000 })}
+            realtimeConnected={realtimeConnected}
+            connectedLabel={t.realtimeConnected}
+            degradedLabel={t.realtimeDegraded}
+            runId={data?.run?.id ?? null}
+            directorLabel={t.director}
+            refreshLabel={t.refresh}
+            onRefresh={fetchState}
+          />
 
           {error && (
             <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">

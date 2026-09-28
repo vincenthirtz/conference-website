@@ -26,7 +26,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import type { GetServerSideProps, GetServerSidePropsContext } from 'next';
 
@@ -62,6 +61,7 @@ import UpcomingAssignments from '@/components/Caster/UpcomingAssignments';
 import CueBanner from '@/components/Caster/CueBanner';
 import CueFeed from '@/components/Caster/CueFeed';
 import UrgentCueModal from '@/components/Caster/UrgentCueModal';
+import RegieHeader, { type Connection } from '@/components/Caster/RegieHeader';
 import nsAdminRegie from '@/lib/i18n/locales/fr/adminRegie';
 import nsRegieStartPrepared from '@/lib/i18n/locales/fr/regieStartPrepared';
 import nsCasterCockpit from '@/lib/i18n/locales/fr/casterCockpit';
@@ -78,50 +78,6 @@ type CurrentRunResponse = {
   run: EventRun | null;
   segments: EventSegment[];
 };
-
-type Connection =
-  | { level: 'online'; seen: boolean }
-  | { level: 'reconnecting'; seen: false }
-  | { level: 'offline'; seen: false };
-
-/**
- * Pastille de connexion (reprise de CockpitHeader) adaptée à la chrome admin :
- * la couleur porte l'info, le label court + aria-live la rendent accessible.
- */
-function ConnectionIndicator({ connection }: { connection: Connection }) {
-  const t = useT(nsAdminRegie);
-  const dot =
-    connection.level === 'online'
-      ? 'bg-emerald-400'
-      : connection.level === 'reconnecting'
-        ? 'bg-amber-400 animate-pulse'
-        : 'bg-red-500';
-  const text =
-    connection.level === 'online'
-      ? 'text-emerald-300'
-      : connection.level === 'reconnecting'
-        ? 'text-amber-300'
-        : 'text-red-300';
-  const label =
-    connection.level === 'offline'
-      ? t.statusOffline
-      : connection.level === 'reconnecting'
-        ? t.statusReconnecting
-        : connection.seen
-          ? t.statusSeen
-          : t.statusOnline;
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      className={`flex items-center gap-1.5 ${text}`}
-      data-testid="regie-connection"
-    >
-      <span aria-hidden className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
-      <span className="text-[11px] font-medium whitespace-nowrap">{label}</span>
-    </div>
-  );
-}
 
 /**
  * Panneau « Nouveau run » — admin/owner uniquement, affiché quand aucun run
@@ -624,51 +580,16 @@ function RegiePage({ staff }: StaffProps) {
 
   // ---- Render ----
 
-  // En-tête admin sobre (titre + connexion + Director + déconnexion), réutilisé
-  // par tous les états de la page pour conserver la chrome admin.
+  // En-tête partagé par tous les états : onglets Diffusion, titre, actions.
   const header = (
-    <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
-      <div>
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-extrabold tracking-tight">
-            {tr.heading}
-          </h1>
-          <ConnectionIndicator connection={connection} />
-        </div>
-        <p className="text-sm text-neutral-400 mt-1">{tr.subtitle}</p>
-      </div>
-      <div className="flex items-center gap-2">
-        {liveRunId && (
-          <Link
-            href={`/admin/events/${liveRunId}/director`}
-            className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
-          >
-            {tr.openDirector}
-          </Link>
-        )}
-        {liveRunId && canStartRun && (
-          <button
-            type="button"
-            onClick={handleEndRun}
-            disabled={endingRun}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-900/20 hover:bg-red-900/40 border border-red-500/30 text-red-200 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            data-testid="regie-end-run"
-          >
-            {endingRun && (
-              <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-red-300/40 border-t-red-200 animate-spin" />
-            )}
-            {endingRun ? tr.ending : tr.endRun}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={handleSignOut}
-          className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
-        >
-          {tr.signOut}
-        </button>
-      </div>
-    </div>
+    <RegieHeader
+      connection={connection}
+      liveRunId={liveRunId}
+      canEndRun={Boolean(liveRunId && canStartRun)}
+      endingRun={endingRun}
+      onEndRun={handleEndRun}
+      onSignOut={handleSignOut}
+    />
   );
 
   // `wide` : le cockpit passe en deux colonnes dès qu'un run est live (voir plus

@@ -65,6 +65,7 @@ import {
   type ComponentType,
 } from 'react';
 import Head from 'next/head';
+import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
 import dynamic from 'next/dynamic';
 import type { GetServerSideProps, GetServerSidePropsContext } from 'next';
 
@@ -463,6 +464,7 @@ function CasterScenesPage({ staff }: PageProps) {
 
       <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12">
+          <DiffusionTabsNav active="scenes" />
           {/* En-tête */}
           <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
             <div>

@@ -65,7 +65,9 @@ const BASELINE: Record<string, number> = {
   'pages/admin/events/[runId]/director.tsx': 1277,
   'components/admin/moderation/SupportPanel.tsx': 1167,
   'components/admin/broadcast/TwitchCommandsPanel.tsx': 1203,
-  'pages/admin/regie.tsx': 1038,
+  // 959 : en-tête et pastille de connexion partis dans
+  // `components/Caster/RegieHeader.tsx` (onglets « Diffusion »).
+  'pages/admin/regie.tsx': 959,
   'pages/admin/users/[userId]/player-view.tsx': 1092,
   // 860 écrites : le panneau « Visuels » (logo, bannière, règlement PDF, et
   // désormais la chaîne de diffusion par défaut) est parti dans
@@ -101,7 +103,9 @@ const BASELINE: Record<string, number> = {
   'components/admin/profile/ProfileModal.tsx': 869,
   'components/admin/navigation/adminNav.ts': 881,
   'pages/admin/stages/[stageId]/groups.tsx': 858,
-  'pages/admin/broadcast/live.tsx': 837,
+  // 813 : en-tête parti dans `components/admin/broadcast/LiveConsoleHeader.tsx`
+  // (onglets « Diffusion »).
+  'pages/admin/broadcast/live.tsx': 813,
   'pages/admin/leagues/[id].tsx': 827,
   'pages/admin/scrims/plannings/[planningId].tsx': 813,
   // 576 écrites : le sélecteur de journée, la grille, le formulaire d'ajout et
