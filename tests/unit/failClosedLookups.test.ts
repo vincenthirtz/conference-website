@@ -26,8 +26,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { db } = vi.hoisted(() => ({
   db: {
-    // Réponse rendue pour chaque table interrogée.
-    byTable: {} as Record<string, { data: unknown; error: unknown }>,
+    // Réponse rendue pour chaque table interrogée. Un TABLEAU est une suite de
+    // réponses consommées appel après appel (la dernière se répète).
+    byTable: {} as Record<
+      string,
+      | { data: unknown; error: unknown }
+      | Array<{ data: unknown; error: unknown }>
+    >,
     calls: [] as string[],
   },
 }));
@@ -35,7 +40,11 @@ const { db } = vi.hoisted(() => ({
 function buildClient() {
   const chain = (table: string) => {
     db.calls.push(table);
-    const result = () => db.byTable[table] ?? { data: null, error: null };
+    const result = () => {
+      const r = db.byTable[table] ?? { data: null, error: null };
+      if (!Array.isArray(r)) return r;
+      return r.length > 1 ? r.shift()! : r[0];
+    };
     const api: Record<string, unknown> = {
       select: () => api,
       eq: () => api,
@@ -62,7 +71,7 @@ import {
   resolveGuildTenant,
   resolveTenantByHostResult,
 } from '../../utils/tenant';
-import { emitBotEvent } from '../../utils/botEvents';
+import { emitBotEvent, eventIdFromKey } from '../../utils/botEvents';
 
 const GUILD = '1486719313116401755';
 const TENANT = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
@@ -161,14 +170,45 @@ describe('emitBotEvent — écriture outbox impossible', () => {
     // 504 est un timeout de passerelle, pas forcément un échec de commit). La
     // ligne existe, l'événement n'est pas perdu.
     vi.stubEnv('BOT_WEBHOOK_URL', '');
+    db.byTable.bot_event_outbox = [
+      { data: null, error: TIMEOUT },
+      { data: null, error: { code: '23505', message: 'duplicate key' } },
+    ];
+
+    const res = await emitBotEvent('social.mirror', { hello: 'world' }, TENANT);
+
+    expect(res.error).not.toMatch(/^event_lost:/);
+    expect(res.duplicate).toBeUndefined();
+    vi.unstubAllEnvs();
+  });
+});
+
+describe('emitBotEvent — idempotencyKey', () => {
+  it('dérive un UUID stable de la clé (la colonne d’ack côté bot est un uuid)', () => {
+    const a = eventIdFromKey('task.digest:t:2026-W40');
+    expect(a).toBe(eventIdFromKey('task.digest:t:2026-W40'));
+    expect(a).not.toBe(eventIdFromKey('task.digest:t:2026-W41'));
+    expect(a).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+    );
+  });
+
+  it('ligne déjà présente dès la 1re tentative → doublon, rien n’est poussé', async () => {
+    vi.stubEnv('BOT_WEBHOOK_URL', 'https://bot.exemple.test/webhook');
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
     db.byTable.bot_event_outbox = {
       data: null,
       error: { code: '23505', message: 'duplicate key' },
     };
 
-    const res = await emitBotEvent('social.mirror', { hello: 'world' }, TENANT);
+    const res = await emitBotEvent('task.digest', { boards: [] }, TENANT, {
+      idempotencyKey: 'task.digest:t:2026-W40',
+    });
 
-    expect(res.error).not.toMatch(/^event_lost:/);
+    expect(res).toEqual({ delivered: false, duplicate: true, attempts: 0 });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
     vi.unstubAllEnvs();
   });
 });

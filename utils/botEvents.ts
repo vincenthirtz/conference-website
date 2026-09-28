@@ -41,7 +41,38 @@ export type EmitResult = {
   status?: number;
   error?: string;
   attempts: number;
+  /**
+   * `true` quand l'`idempotencyKey` avait DÉJÀ produit une ligne d'outbox :
+   * l'événement existe, il n'a pas été réémis (ni réécrit, ni poussé).
+   */
+  duplicate?: boolean;
 };
+
+export type EmitOptions = {
+  /**
+   * Clé logique d'unicité de l'événement (ex. `task.digest:<tenant>:2026-W40`).
+   * L'`id` de l'événement en est dérivé de façon déterministe : un second
+   * appel avec la même clé heurte `UNIQUE (event_id)` de l'outbox et ne part
+   * pas. À utiliser pour tout événement qu'un cron peut émettre deux fois —
+   * une fonction planifiée coupée sur timeout peut être relancée alors que la
+   * première exécution va au bout côté serveur (doublon du récap Kanban du
+   * 2026-09-28, deux events à 20 s d'écart).
+   */
+  idempotencyKey?: string;
+};
+
+/**
+ * UUID déterministe dérivé d'une clé (SHA-256, bits de version 5 / variante
+ * RFC 4122). Doit rester un UUID : le bot le renvoie dans
+ * `discord_event_ack.event_id`, colonne de type `uuid`.
+ */
+export function eventIdFromKey(key: string): string {
+  const h = crypto.createHash('sha256').update(key).digest();
+  h[6] = (h[6] & 0x0f) | 0x50;
+  h[8] = (h[8] & 0x3f) | 0x80;
+  const hex = h.subarray(0, 16).toString('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 
 const MAX_ATTEMPTS = 3;
 const TIMEOUT_MS = 5_000;
@@ -126,7 +157,7 @@ async function resolveWebhookSecret(tenantId: string): Promise<string | null> {
  * abouti : on la traite comme un succès.
  */
 type OutboxWrite =
-  | { ok: true; id: number | null }
+  | { ok: true; id: number | null; duplicate?: boolean }
   | { ok: false; error: string };
 
 const OUTBOX_INSERT_ATTEMPTS = 2;
@@ -161,6 +192,16 @@ async function persistOutbox(params: {
     }
 
     if ((error as { code?: string }).code === PG_UNIQUE_VIOLATION) {
+      // Dès la PREMIÈRE tentative : la ligne existait avant cet appel. Avec un
+      // id aléatoire c'est impossible ; avec un id dérivé d'une
+      // `idempotencyKey`, c'est un rappel du même événement → doublon.
+      if (attempt === 1) {
+        logger.warn(
+          '[botEvents] outbox: événement déjà émis, doublon ignoré (%s)',
+          params.eventId
+        );
+        return { ok: true, id: null, duplicate: true };
+      }
       // La tentative précédente avait bien écrit, malgré son erreur. La ligne
       // existe : l'événement n'est pas perdu. On ne connaît pas son `id`, donc
       // pas de `markDelivered` — la ligne reste `pending` et le bot la
@@ -236,10 +277,11 @@ type FullPayload = {
 function buildFullPayload(
   event: BotEventName,
   data: BotEventPayload,
-  tenantId: string
+  tenantId: string,
+  id: string = crypto.randomUUID()
 ): FullPayload {
   return {
-    id: crypto.randomUUID(),
+    id,
     event,
     tenantId,
     timestamp: new Date().toISOString(),
@@ -250,7 +292,8 @@ function buildFullPayload(
 export async function emitBotEvent(
   event: BotEventName,
   data: BotEventPayload,
-  tenantId: string
+  tenantId: string,
+  options: EmitOptions = {}
 ): Promise<EmitResult> {
   if (!tenantId) {
     logger.error(
@@ -259,7 +302,12 @@ export async function emitBotEvent(
     return { delivered: false, error: 'missing_tenant_id', attempts: 0 };
   }
 
-  const fullPayload = buildFullPayload(event, data, tenantId);
+  const fullPayload = buildFullPayload(
+    event,
+    data,
+    tenantId,
+    options.idempotencyKey ? eventIdFromKey(options.idempotencyKey) : undefined
+  );
 
   // Persist d'abord — meme si le push HTTP rate, l'outbox permettra au bot
   // de rattraper via polling.
@@ -269,6 +317,10 @@ export async function emitBotEvent(
     tenantId,
     payload: fullPayload,
   });
+
+  if (write.ok && write.duplicate) {
+    return { delivered: false, duplicate: true, attempts: 0 };
+  }
 
   if (!write.ok) {
     logger.error(

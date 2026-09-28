@@ -822,6 +822,25 @@ class Builder {
       const items = Array.isArray(this.payload)
         ? (this.payload as Row[])
         : [this.payload as Row];
+      // Contraintes UNIQUE que du code applicatif exploite (23505 attendu).
+      const uniqueCols = UNIQUE_COLUMNS[this.table] ?? [];
+      for (const col of uniqueCols) {
+        const seen = new Set(rows.map((r) => r[col]));
+        for (const item of items) {
+          const v = item[col];
+          if (v === undefined || v === null) continue;
+          if (seen.has(v)) {
+            return {
+              data: null,
+              error: {
+                code: '23505',
+                message: `duplicate key value violates unique constraint (${this.table}.${col})`,
+              },
+            };
+          }
+          seen.add(v);
+        }
+      }
       const inserted: Row[] = [];
       let counter = rows.length + 1;
       for (const item of items) {
@@ -844,6 +863,15 @@ class Builder {
     return { data: [], error: null };
   }
 }
+
+/**
+ * Colonnes UNIQUE appliquées par le mock sur `insert`. Seulement celles dont le
+ * code dépend (la violation y est un signal métier, pas une simple erreur).
+ */
+const UNIQUE_COLUMNS: Record<string, string[]> = {
+  // Dédoublonnage des events à `idempotencyKey` (utils/botEvents.ts).
+  bot_event_outbox: ['event_id'],
+};
 
 /** Écritures refusées par table. Cf. `setTableWriteError`. */
 let _tableWriteErrors: Record<string, { message: string } | null> = {};
