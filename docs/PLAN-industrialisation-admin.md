@@ -147,7 +147,7 @@ parallèle. L12 (UI) et L14 (registre) peuvent démarrer dès la phase 0.
 
 ## Phase 0 — Garde-fous
 
-### L1 · Tableau de bord de dette + cliquets — 🟥 / M
+### L1 · Tableau de bord de dette + cliquets — ✅ LIVRÉ (2026-09-29)
 
 **Problème.** Les chiffres du § 1 ont été obtenus à la main aujourd'hui ; demain ils seront faux
 et personne ne le saura. `adminFileSizeGuard` gèle la taille des fichiers, rien d'autre.
@@ -162,11 +162,15 @@ et personne ne le saura. `adminFileSizeGuard` gèle la taille des fichiers, rien
 - `npm run admin:metrics` pour regeler la baseline après un lot.
 
 **Critères d'acceptation**
-- [ ] Les 13 indicateurs du tableau « symptômes » sont mesurés par le script, pas à la main.
-- [ ] Le cliquet échoue si on ajoute une route sans `withStaffRoute`, un `select('*')` ou un
-      `req.body as` dans `pages/api/admin`.
-- [ ] Les chiffres de la baseline initiale = ceux du § 1 (écart expliqué sinon).
-- [ ] Le script tourne en < 5 s (lecture de source, pas de build) — utilisable sur le Mac.
+- [x] 16 indicateurs gelés (13 symptômes + 3 seuils de taille) et 7 d'adoption affichés :
+      [`scripts/admin-metrics.ts`](../scripts/admin-metrics.ts).
+- [x] Le cliquet échoue si un compteur monte (nouvelle route hors `defineAdminRoute`,
+      `select('*')`, `req.body as`…) **et** s'il descend sans regel.
+- [x] Baseline initiale. Écarts avec le § 1, tous dus au comptage à la main : `.json({ error`
+      = **2 558** (le grep manuel ratait les objets ouverts sur plusieurs lignes), `{ ok|success }`
+      = 105, `logStaffAction(` = 362 appels (612 = mentions, imports compris), URLs
+      `/api/admin/` en dur côté UI = **644** (non mesuré au § 1).
+- [x] 0,6 s sur le Mac.
 
 ### L2 · Architecture `features/admin` + règles de frontière — 🟥 / M
 
@@ -261,6 +265,11 @@ fautif, ni traduire.
 **Problème.** Aucun type de base généré : les lignes sont typées à la main (`types/admin.ts`,
 408 lignes) ou pas du tout. 101 `select('*')` en admin. Une colonne renommée casse en prod — et le
 mock Supabase des tests ne valide pas les colonnes (mémoire « cas mvp-leaderboard »).
+
+**Déjà en place (constaté au démarrage du chantier)** : `database/schema-snapshot.json`
+(`scripts/refresh-schema-snapshot.mjs`) et `tests/unit/supabaseSelectSchema.test.ts` vérifient
+déjà que chaque colonne citée dans un `.select()` existe. Ce qui manque : le **typage** des lignes
+et la validation des colonnes par le mock.
 
 **Livrable.**
 - `types/database.generated.ts` via `generate_typescript_types` (projet `owwomenscup`) +
@@ -363,10 +372,9 @@ concerné — d'où les listes périmées après une édition dans un tiroir.
   (`teamsClient.update(id, patch)`), construites sur `adminFetchJson` (Bearer, 401 → login).
 - Couche de requêtes à **clés** (`['teams', tenantId, id]`) avec déduplication, cache,
   invalidation ciblée après mutation, mises à jour optimistes (reprend `useIdempotentMutation`).
-- **Décision à prendre en début de lot** : TanStack Query (~13 ko gz, éprouvé, devtools) *vs*
-  extension maison de `useAdminResource`. Recommandation : **TanStack Query**, limité au bundle
-  admin — réécrire l'invalidation et la déduplication est exactement le genre de plomberie que ce
-  plan cherche à arrêter de maintenir.
+- **TanStack Query** (~13 ko gz), limité au bundle admin. Exception à la politique zéro
+  dépendance **validée le 2026-09-29** : réécrire l'invalidation et la déduplication est
+  exactement la plomberie que ce plan cherche à arrêter de maintenir.
 - `useAdminFetch` / `useAdminResource` deviennent des adaptateurs puis sont dépréciés (cliquet).
 
 **Critères d'acceptation**

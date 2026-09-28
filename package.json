@@ -11,6 +11,7 @@
     "openapi:responses": "node scripts/openapi/infer-responses.cjs",
     "tcg:audit": "node scripts/tcg-audit.mjs",
     "bundle:budget": "node scripts/bundle-budget.mjs",
+    "admin:metrics": "node --import ./scripts/register-ts.mjs scripts/admin-metrics.ts",
     "start": "next start",
     "format": "biome format --write .",
     "format:check": "biome format .",
