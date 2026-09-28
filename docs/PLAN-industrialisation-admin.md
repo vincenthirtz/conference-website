@@ -458,7 +458,7 @@ concerné — d'où les listes périmées après une édition dans un tiroir.
       construction avec des clés partagées ; à constater sur un écran multi-panneaux).
 - [ ] Aucune URL `/api/admin/…` en dur dans un module migré (cliquet `ui.rawAdminUrl` : 642).
 
-### L11 · `useAdminForm` : formulaires sur schéma — 🟥 / L
+### L11 · `useAdminForm` : formulaires sur schéma — 🟨 SOCLE LIVRÉ (2026-09-29) · pilote Twitch
 
 **Problème.** Les gros formulaires sont des sacs de `useState` : 45 dans l'édition d'équipe, 28
 dans l'édition de match, 33 dans la gestion des utilisateurs. Brouillon, dirty-check, autosave,
@@ -474,9 +474,38 @@ erreurs serveur sont refaits à chaque fois.
   focus sur la première erreur).
 
 **Critères d'acceptation**
-- [ ] Le formulaire d'édition d'équipe passe de 45 `useState` à ≤ 5.
-- [ ] Une erreur 422 du serveur s'affiche sous le bon champ, focus compris.
-- [ ] Quitter une page avec des modifications demande confirmation.
+- [x] [`hooks/admin/useAdminForm.ts`](../hooks/admin/useAdminForm.ts),
+      [`useUnsavedChangesGuard`](../hooks/admin/useUnsavedChangesGuard.ts),
+      [`components/admin/form/FormField.tsx`](../components/admin/form/FormField.tsx).
+- [x] **Deux schémas, une seule fois les règles** : `XxxForm = z.object(champs).transform(…)
+      .pipe(XxxBody)` — le formulaire applique exactement la validation de la route, avec les
+      mêmes noms de champs.
+- [x] Une erreur serveur (`fields`, ici « cette chaîne existe déjà ») s'affiche sous le bon
+      champ, focus compris. (400 + `code: 'validation'`, cf. L4, et non 422.)
+- [x] `isDirty` compare aux valeurs de départ ; quitter une page modifiée demande confirmation
+      (navigation Next **et** fermeture d'onglet).
+- [x] Accessibilité : `<label htmlFor>`, aide et erreur reliées par `aria-describedby`, erreur
+      en `role="alert"`, `aria-required` plutôt que `required` (sinon la bulle native du
+      navigateur passe avant nos messages). Les anciens formulaires Twitch n'avaient **aucun**
+      label relié à son champ.
+- [x] Un nom de champ inconnu ne compile pas (`NoInfer`, vérifié par mutation : « Did you mean
+      "badge" ? »).
+- [x] Testé **rendu** (`@testing-library/react` + happy-dom, politique zéro dépendance levée
+      le 2026-09-29) : 7 tests du hook et du champ.
+- [x] Pilote : chaînes Twitch — routes `twitch-channels` et `twitch-channels/[id]` migrées
+      (tests existants inchangés), modale de création et page d'édition sur un seul
+      composant de champs ; `defineAdminRoute` sait répondre 204.
+- [ ] Le formulaire d'édition d'équipe passe de 45 `useState` à ≤ 5 (L17).
+
+**Ce que le pilote a appris** :
+- Le type `ReturnType<typeof useAdminForm>` ne se passe pas à un composant de champs
+  (contravariance) : les composants reçoivent `AdminFormHandle<noms>`, interface en syntaxe de
+  méthode. Sans `NoInfer` sur `name`, cette même souplesse laissait passer une faute de frappe.
+- La modale n'utilise plus `useIdempotentMutation` : elle perd la **mise en file hors ligne**
+  (`BgSyncQueuedError`) de ce hook. Sans objet pour une création de chaîne, à garder en tête
+  pour les gestes de jour de match (check-in, scores) quand ils migreront.
+- `testing-library` ne nettoie pas le DOM seul sans les globals de vitest :
+  `afterEach(cleanup)` dans chaque `*.test.tsx`.
 
 ### L12 · Kit UI admin + jetons « Le Ruban » — 🟧 / L
 

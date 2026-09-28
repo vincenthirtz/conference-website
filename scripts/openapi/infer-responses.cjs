@@ -416,6 +416,8 @@ function declarativeResponses(obj, checker) {
       ts.isNumericLiteral(statusProp.initializer)
         ? Number(statusProp.initializer.text)
         : 200;
+    // 204 : pas de corps, rien à décrire (comme un `res.status(204).end()`).
+    if (status === 204) continue;
     const handler = propOf(spec, 'handler');
     if (!handler) continue;
     const sig = checker.getTypeAtLocation(handler).getCallSignatures()[0];

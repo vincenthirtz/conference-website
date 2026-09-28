@@ -1,117 +1,113 @@
-import { useCallback, useEffect, useState } from 'react';
+// pages/admin/twitch-channels/[id].tsx — édition d'une chaîne Twitch.
+//
+// Pilote de L11 (docs/PLAN-industrialisation-admin.md) : chargement par hook
+// de requête, formulaire sur schéma (`useAdminForm`), champs partagés avec la
+// modale de création, garde « modifications non enregistrées ».
+
 import Head from 'next/head';
-import Link from 'next/link';
-import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
-import { useRouter } from 'next/router';
 import Image from 'next/image';
-import { withStaffPage } from '@/utils/staff';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
+import { FormError } from '@/components/admin/form/FormField';
 import { useToast } from '@/components/Toast';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useAdminForm } from '@/hooks/admin/useAdminForm';
+import { useUnsavedChangesGuard } from '@/hooks/admin/useUnsavedChangesGuard';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminTwitchChannelEdit from '@/lib/i18n/locales/admin-fr/adminTwitchChannelEdit';
-import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
+import { adminErrorMessage } from '@/utils/admin/adminHttp';
+import { withStaffPage } from '@/utils/staff';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  useTwitchChannel,
+  useUpdateTwitchChannel,
+} from '@/features/admin/diffusion/hooks/useTwitchChannel';
+import {
+  TwitchChannelForm,
+  twitchChannelToForm,
+  type TwitchChannelRow,
+} from '@/features/admin/diffusion/schemas';
+import TwitchChannelFields from '@/features/admin/diffusion/ui/TwitchChannelFields';
 
-type Props = {
-  staff: {
-    id: string;
-    role: string;
-    display_name: string;
-  };
-};
-
-function AdminTwitchChannelEditPage(_props: Props) {
+function EditForm({ channel }: { channel: TwitchChannelRow }) {
   const t = useAdminT(nsAdminTwitchChannelEdit);
   const router = useRouter();
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
-  const { id } = router.query;
-
-  const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({
-    channel: '',
-    label: '',
-    badge: '',
-    description: '',
-    backgroundUrl: '',
-    isActive: true,
-    sortOrder: '',
-  });
-
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchChannel = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
-
-    try {
-      const data = await adminFetchJson<{
-        channel?: string;
-        label?: string;
-        badge?: string;
-        description?: string;
-        background_url?: string;
-        is_active?: boolean;
-        sort_order?: number;
-      }>(`/api/admin/twitch-channels/${id}`);
-
-      setForm({
-        channel: data.channel || '',
-        label: data.label || '',
-        badge: data.badge || '',
-        description: data.description || '',
-        backgroundUrl: data.background_url || '',
-        isActive: data.is_active ?? true,
-        sortOrder: data.sort_order?.toString() || '',
-      });
-    } catch (err: unknown) {
-      setError((err as Error)?.message || t.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [id, adminFetchJson, t]);
-
-  useEffect(() => {
-    fetchChannel();
-  }, [fetchChannel]);
-
-  const updateField = (key: keyof typeof form, value: string | boolean) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!form.channel.trim() || !form.label.trim()) {
-      setError(t.errorRequired);
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const payload = {
-        channel: form.channel.trim(),
-        label: form.label.trim(),
-        badge: form.badge.trim() || null,
-        description: form.description.trim() || null,
-        backgroundUrl: form.backgroundUrl.trim() || null,
-        isActive: form.isActive,
-        sortOrder: form.sortOrder ? parseInt(form.sortOrder, 10) : undefined,
-      };
-
-      await adminFetchJson(`/api/admin/twitch-channels/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(payload),
-      });
+  const update = useUpdateTwitchChannel(channel.id);
+  const form = useAdminForm({
+    schema: TwitchChannelForm,
+    initialValues: twitchChannelToForm(channel),
+    errorFallback: t.errorGeneric,
+    onSubmit: async (body) => {
+      await update.mutateAsync(body);
       addToast(t.updateSuccess, 'success');
-    } catch (err: unknown) {
-      setError((err as Error)?.message || t.errorGeneric);
-    } finally {
-      setSaving(false);
-    }
-  };
+    },
+  });
+  useUnsavedChangesGuard(form.isDirty);
+
+  const { backgroundUrl, label, channel: handle } = form.values;
+
+  return (
+    <form onSubmit={form.handleSubmit} noValidate>
+      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-6 max-w-2xl">
+        <FormError message={form.formError} />
+
+        {backgroundUrl && (
+          <div className="flex items-center gap-4 p-4 bg-neutral-900/50 rounded-xl border border-neutral-700">
+            <Image
+              src={backgroundUrl}
+              alt={label}
+              width={64}
+              height={64}
+              className="w-16 h-16 rounded-xl object-cover"
+            />
+            <div>
+              <div className="font-semibold text-white">
+                {label || t.previewLabelFallback}
+              </div>
+              <div className="text-sm text-neutral-400">
+                twitch.tv/{handle || 'channel'}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <TwitchChannelFields form={form} />
+
+        <div className="flex justify-end gap-3 pt-4 border-t border-neutral-700">
+          <button
+            type="button"
+            onClick={() => router.push('/admin/twitch-channels')}
+            className="px-5 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
+          >
+            {t.cancel}
+          </button>
+          <button
+            type="submit"
+            disabled={form.isSubmitting || !form.isDirty}
+            className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {form.isSubmitting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                {t.saving}
+              </>
+            ) : (
+              t.submit
+            )}
+          </button>
+        </div>
+      </section>
+    </form>
+  );
+}
+
+function AdminTwitchChannelEditPage() {
+  const t = useAdminT(nsAdminTwitchChannelEdit);
+  const router = useRouter();
+  const id = typeof router.query.id === 'string' ? router.query.id : undefined;
+  const query = useTwitchChannel(id);
 
   return (
     <>
@@ -123,7 +119,6 @@ function AdminTwitchChannelEditPage(_props: Props) {
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12">
           <AdminBreadcrumbs />
           <DiffusionTabsNav active="twitch" />
-          {/* Header */}
           <div className="mb-8">
             <Link
               href="/admin/twitch-channels"
@@ -134,6 +129,7 @@ function AdminTwitchChannelEditPage(_props: Props) {
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -144,204 +140,23 @@ function AdminTwitchChannelEditPage(_props: Props) {
               </svg>
               {t.back}
             </Link>
-
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
               {t.heading}
             </h1>
             <p className="text-neutral-400 text-sm mt-1">
-              {form.label || t.loading}
+              {query.data?.label ?? t.loading}
             </p>
           </div>
 
-          {loading ? (
+          {query.isError ? (
+            <FormError message={adminErrorMessage(query.error, t.errorLoad)} />
+          ) : query.data ? (
+            // `key` : une autre chaîne = un autre formulaire, valeurs fraîches.
+            <EditForm key={query.data.id} channel={query.data} />
+          ) : (
             <div className="flex items-center justify-center py-20">
               <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
             </div>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-6 max-w-2xl">
-                {error && (
-                  <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-start gap-3">
-                    <svg
-                      className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    {error}
-                  </div>
-                )}
-
-                {/* Preview */}
-                {form.backgroundUrl && (
-                  <div className="flex items-center gap-4 p-4 bg-neutral-900/50 rounded-xl border border-neutral-700">
-                    <Image
-                      src={form.backgroundUrl}
-                      alt={form.label}
-                      width={64}
-                      height={64}
-                      className="w-16 h-16 rounded-xl object-cover"
-                    />
-                    <div>
-                      <div className="font-semibold text-white">
-                        {form.label || t.previewLabelFallback}
-                      </div>
-                      <div className="text-sm text-neutral-400">
-                        twitch.tv/{form.channel || 'channel'}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      {t.channelLabel} <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={form.channel}
-                      onChange={(e) => updateField('channel', e.target.value)}
-                      placeholder="ex: crocheh"
-                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      {t.labelLabel} <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={form.label}
-                      onChange={(e) => updateField('label', e.target.value)}
-                      placeholder="ex: Crocheh"
-                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      {t.badgeLabel}
-                    </label>
-                    <input
-                      type="text"
-                      value={form.badge}
-                      onChange={(e) => updateField('badge', e.target.value)}
-                      placeholder={t.badgePlaceholder}
-                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-neutral-300 mb-1">
-                      {t.sortOrderLabel}
-                    </label>
-                    <input
-                      type="number"
-                      value={form.sortOrder}
-                      onChange={(e) => updateField('sortOrder', e.target.value)}
-                      placeholder="0"
-                      className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                      min="0"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-neutral-300 mb-1">
-                    {t.avatarLabel}
-                  </label>
-                  <input
-                    type="url"
-                    value={form.backgroundUrl}
-                    onChange={(e) =>
-                      updateField('backgroundUrl', e.target.value)
-                    }
-                    placeholder="https://static-cdn.jtvnw.net/..."
-                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-neutral-300 mb-1">
-                    {t.descriptionLabel}
-                  </label>
-                  <textarea
-                    value={form.description}
-                    onChange={(e) => updateField('description', e.target.value)}
-                    placeholder={t.descriptionPlaceholder}
-                    rows={3}
-                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm resize-y"
-                  />
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.isActive}
-                      onChange={(e) =>
-                        updateField('isActive', e.target.checked)
-                      }
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                  </label>
-                  <span className="text-sm text-neutral-300">
-                    {t.activeLabel}
-                  </span>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4 border-t border-neutral-700">
-                  <button
-                    type="button"
-                    onClick={() => router.push('/admin/twitch-channels')}
-                    className="px-5 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-                  >
-                    {t.cancel}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    {saving ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        {t.saving}
-                      </>
-                    ) : (
-                      <>
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        {t.submit}
-                      </>
-                    )}
-                  </button>
-                </div>
-              </section>
-            </form>
           )}
         </div>
       </div>
@@ -353,4 +168,4 @@ export const getServerSideProps = withStaffPage({
   permission: 'manage_broadcast',
 });
 
-export default AdminTwitchChannelEditPage;
+export default withAdminQuery(AdminTwitchChannelEditPage);

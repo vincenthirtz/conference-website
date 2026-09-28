@@ -23564,7 +23564,78 @@
     "properties": {
      "items": {
       "type": "array",
-      "items": {}
+      "items": {
+       "type": "object",
+       "properties": {
+        "background_url": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "badge": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "channel": {
+         "type": "string"
+        },
+        "created_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "description": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "is_active": {
+         "type": [
+          "boolean",
+          "null"
+         ]
+        },
+        "label": {
+         "type": "string"
+        },
+        "sort_order": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "tenant_id": {
+         "type": "string"
+        },
+        "updated_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "background_url",
+        "badge",
+        "channel",
+        "created_at",
+        "description",
+        "id",
+        "is_active",
+        "label",
+        "sort_order",
+        "tenant_id",
+        "updated_at"
+       ]
+      }
      }
     },
     "required": [
@@ -23573,7 +23644,78 @@
    }
   },
   "GET /api/admin/twitch-channels/{id}": {
-   "200": {}
+   "200": {
+    "type": "object",
+    "properties": {
+     "background_url": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "badge": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "channel": {
+      "type": "string"
+     },
+     "created_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "description": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "id": {
+      "type": "string"
+     },
+     "is_active": {
+      "type": [
+       "boolean",
+       "null"
+      ]
+     },
+     "label": {
+      "type": "string"
+     },
+     "sort_order": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "tenant_id": {
+      "type": "string"
+     },
+     "updated_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "background_url",
+     "badge",
+     "channel",
+     "created_at",
+     "description",
+     "id",
+     "is_active",
+     "label",
+     "sort_order",
+     "tenant_id",
+     "updated_at"
+    ]
+   }
   },
   "GET /api/admin/twitch/channel-points/redemptions": {
    "200": {
@@ -52110,7 +52252,78 @@
    }
   },
   "PATCH /api/admin/twitch-channels/{id}": {
-   "200": {}
+   "200": {
+    "type": "object",
+    "properties": {
+     "background_url": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "badge": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "channel": {
+      "type": "string"
+     },
+     "created_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "description": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "id": {
+      "type": "string"
+     },
+     "is_active": {
+      "type": [
+       "boolean",
+       "null"
+      ]
+     },
+     "label": {
+      "type": "string"
+     },
+     "sort_order": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "tenant_id": {
+      "type": "string"
+     },
+     "updated_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "background_url",
+     "badge",
+     "channel",
+     "created_at",
+     "description",
+     "id",
+     "is_active",
+     "label",
+     "sort_order",
+     "tenant_id",
+     "updated_at"
+    ]
+   }
   },
   "PATCH /api/admin/twitch/channel-points/redemptions": {
    "200": {
@@ -63811,7 +64024,78 @@
    }
   },
   "POST /api/admin/twitch-channels": {
-   "201": {}
+   "201": {
+    "type": "object",
+    "properties": {
+     "background_url": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "badge": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "channel": {
+      "type": "string"
+     },
+     "created_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "description": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "id": {
+      "type": "string"
+     },
+     "is_active": {
+      "type": [
+       "boolean",
+       "null"
+      ]
+     },
+     "label": {
+      "type": "string"
+     },
+     "sort_order": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "tenant_id": {
+      "type": "string"
+     },
+     "updated_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "background_url",
+     "badge",
+     "channel",
+     "created_at",
+     "description",
+     "id",
+     "is_active",
+     "label",
+     "sort_order",
+     "tenant_id",
+     "updated_at"
+    ]
+   }
   },
   "POST /api/admin/twitch/channel-points/rewards": {
    "200": {

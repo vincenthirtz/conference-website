@@ -126,7 +126,7 @@ type MethodSpecBase<
    * ne rien poser (le handler s'en charge).
    */
   cache?: string | false;
-  /** Code HTTP de succès (200 par défaut). */
+  /** Code HTTP de succès (200 par défaut ; 204 répond sans corps). */
   status?: number;
   handler: (
     args: HandlerArgs<
@@ -375,7 +375,10 @@ export function defineAdminRoute(def: AdminRouteDefinition): AdminRouteHandler {
         });
 
         if (result !== RESPONSE_SENT) {
-          rs.status(spec.status ?? 200).json(result ?? null);
+          const status = spec.status ?? 200;
+          // 204 = pas de corps : `.end()` et non `.json(null)`, qui en écrirait un.
+          if (status === 204) rs.status(204).end();
+          else rs.status(status).json(result ?? null);
         }
 
         // Journal APRÈS la réponse réussie : une mutation échouée n'est pas
