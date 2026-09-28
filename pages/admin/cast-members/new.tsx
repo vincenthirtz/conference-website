@@ -1,12 +1,13 @@
 import type { GetServerSideProps } from 'next';
+import { CASTERS_PATH } from '@/utils/castersRedirect';
 
 /**
- * Legacy route shim. La création d'une casteuse se fait désormais dans une
- * modale sur la liste `/admin/cast-members` (`?new=1` l'ouvre). Redirection
- * permanente (308) vers la liste, qui applique le même gate `admin`.
+ * Legacy route shim. La création d'une casteuse se fait dans une modale sur
+ * Diffusion › Casteuses (`?new=1` l'ouvre). Redirection permanente (308), en
+ * UN saut — elle en faisait deux via l'ancienne liste.
  */
 export const getServerSideProps: GetServerSideProps = async () => ({
-  redirect: { destination: '/admin/cast-members?new=1', permanent: true },
+  redirect: { destination: `${CASTERS_PATH}?new=1`, permanent: true },
 });
 
 export default function CastMemberNewRedirect() {

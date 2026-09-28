@@ -74,6 +74,10 @@ export const ADMIN_NAV_TRAILS: Record<string, NavCrumb[]> = {
     { label: 'Diffusion', href: null },
     { label: 'Overlays', href: '/admin/diffusion/overlays' },
   ],
+  '/admin/diffusion/casteuses': [
+    { label: 'Diffusion', href: null },
+    { label: 'Casteuses', href: '/admin/diffusion/casteuses' },
+  ],
   '/admin/quick-bracket': [
     { label: 'Compétition', href: null },
     { label: 'Tournois', href: null },

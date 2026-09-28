@@ -1,4 +1,6 @@
 import Head from 'next/head';
+import type { GetServerSideProps } from 'next';
+import { castersRedirect } from '@/utils/castersRedirect';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import Tabs, {
@@ -6,7 +8,6 @@ import Tabs, {
   tabPanelId,
   tabButtonId,
 } from '@/components/admin/Tabs';
-import CastMembersListPanel from '@/components/admin/association/CastMembersListPanel';
 import type { StaffProps } from '@/types/admin';
 import nsAdminAssociationHub from '@/lib/i18n/locales/admin-fr/adminAssociationHub';
 
@@ -22,27 +23,28 @@ const AdherentsListPanel = lazyPanel(
 
 const ID_BASE = 'admin-association';
 
-// Hub gated at the shared role of the three merged pages: Casteuses, Pôles de
-// l'asso and Adhérents were all admin-gated, so the host is admin-gated too and
-// no per-tab role re-check is needed. The legacy list routes keep 308-redirect
-// shims into the matching tab.
-export const getServerSideProps = withStaffPage({
-  permission: 'manage_communications',
-});
+// Hub gated at the shared role of its pages: Pôles de l'asso and Adhérents are
+// both admin-gated, so the host is too and no per-tab role re-check is needed.
+// The legacy list routes keep 308-redirect shims into the matching tab.
+const guarded = withStaffPage({ permission: 'manage_communications' });
+
+// L'onglet Casteuses est parti dans Diffusion › Casteuses (lot 8) : ses liens
+// et favoris (`?tab=cast`) y sont redirigés AVANT le contrôle d'accès, qui
+// est le même des deux côtés.
+export const getServerSideProps: GetServerSideProps = async (ctx) =>
+  ctx.query.tab === 'cast' ? castersRedirect(ctx.query) : guarded(ctx);
 
 /**
- * Merged association hub. Hosts the former /admin/cast-members,
- * /admin/pole-members and /admin/adherents list pages as deep-linkable tabs
- * (`?tab=cast|poles|adherents`). The old list routes 308-redirect here (see the
- * three shim files). The editors cast-members/new, cast-members/[id],
- * pole-members/new, pole-members/[id], adherents/new and adherents/[id] remain
- * standalone routes. All three tabs are admin-gated.
+ * Merged association hub. Hosts the former /admin/pole-members and
+ * /admin/adherents list pages as deep-linkable tabs (`?tab=poles|adherents`).
+ * The casters list moved to Diffusion › Casteuses (`/admin/diffusion/casteuses`);
+ * `?tab=cast` redirects there. The editors pole-members/new, pole-members/[id],
+ * adherents/new and adherents/[id] remain standalone routes.
  */
 export default function AdminAssociationPage(_props: StaffProps) {
   const t = useAdminT(nsAdminAssociationHub);
 
   const tabs = [
-    { id: 'cast', label: t.tabCast },
     { id: 'poles', label: t.tabPoles },
     { id: 'adherents', label: t.tabAdherents },
   ];
@@ -77,12 +79,10 @@ export default function AdminAssociationPage(_props: StaffProps) {
             id={tabPanelId(ID_BASE, active)}
             aria-labelledby={tabButtonId(ID_BASE, active)}
           >
-            {active === 'poles' ? (
-              <PoleMembersListPanel />
-            ) : active === 'adherents' ? (
+            {active === 'adherents' ? (
               <AdherentsListPanel />
             ) : (
-              <CastMembersListPanel />
+              <PoleMembersListPanel />
             )}
           </div>
         </div>

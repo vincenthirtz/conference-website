@@ -14,7 +14,6 @@ export default {
   heading: 'Association',
   subtitle: 'Casters, association poles and members.',
   tabsAriaLabel: 'Association sections',
-  tabCast: 'Casters',
   tabPoles: 'Association poles',
   tabAdherents: 'Members',
 };

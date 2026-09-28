@@ -10,7 +10,7 @@ import type { ParsedUrlQuery } from 'querystring';
  * `new`/`[id]` routes are NOT shimmed (they remain standalone).
  */
 export function associationRedirect(
-  tab: 'cast' | 'poles' | 'adherents',
+  tab: 'poles' | 'adherents',
   query: ParsedUrlQuery
 ): GetServerSidePropsResult<never> {
   const params = new URLSearchParams();

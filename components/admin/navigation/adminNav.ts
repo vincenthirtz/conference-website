@@ -389,6 +389,15 @@ export const ADMIN_NAV: AdminNavNode[] = [
         href: '/admin/diffusion/overlays',
         minRole: 'caster',
       },
+      {
+        // Le pôle production (lot 8) : vivait dans le hub Association, on
+        // l'ouvre pour préparer un direct. Même droit qu'avant.
+        id: 'diffusion-casteuses',
+        topBarLabel: 'Casteuses',
+        href: '/admin/diffusion/casteuses',
+        permission: 'manage_communications',
+        minRole: 'caster',
+      },
     ],
   },
   {
@@ -515,8 +524,9 @@ export const ADMIN_NAV: AdminNavNode[] = [
     // Section « Staff & Asso » : REGROUPEMENT de navigation des écrans
     // « People/Staff » auparavant dispersés entre Contenu (Casteuses, Pôles) et
     // Configuration (Utilisateurs, Adhérents). Les trois ex-listes Casteuses,
-    // Pôles de l'asso et Adhérents sont désormais FUSIONNÉES dans le hub à
-    // onglets /admin/association?tab=cast|poles|adherents. Comme pour les fusions
+    // Pôles de l'asso et Adhérents ont été FUSIONNÉES dans le hub à onglets
+    // /admin/association?tab=poles|adherents — les Casteuses l'ont quitté pour
+    // Diffusion › Casteuses (lot 8, `?tab=cast` y redirige). Comme pour les fusions
     // Modération / Communication / Partenaires, une SEULE entrée top-bar
     // « Association » pointe vers le hub ; les onglets se découvrent sur la page.
     // Les trois domaines sont admin-gated, d'où un host admin homogène (pas de

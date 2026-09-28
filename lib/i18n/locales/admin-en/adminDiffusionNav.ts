@@ -9,4 +9,6 @@ export default {
   tabLive: 'Live console',
   tabScenes: 'Scenes',
   tabOverlays: 'Overlays',
+  tabCasters: 'Casters',
+  castersPageTitle: 'Casters — Broadcast',
 };

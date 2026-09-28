@@ -13,7 +13,6 @@ export default adminNs('adminAssociationHub', {
   heading: 'Association',
   subtitle: "Casteuses, pôles de l'asso et adhérents.",
   tabsAriaLabel: "Sections de l'association",
-  tabCast: 'Casteuses',
   tabPoles: "Pôles de l'asso",
   tabAdherents: 'Adhérents',
 });

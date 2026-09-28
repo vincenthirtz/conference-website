@@ -16,4 +16,7 @@ export default adminNs('adminDiffusionNav', {
   tabLive: 'Console live',
   tabScenes: 'Scènes',
   tabOverlays: 'Overlays',
+  tabCasters: 'Casteuses',
+  // Page Diffusion › Casteuses.
+  castersPageTitle: 'Casteuses — Diffusion',
 });

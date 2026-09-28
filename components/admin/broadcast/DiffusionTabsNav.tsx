@@ -35,7 +35,8 @@ export type DiffusionTabId =
   | 'live'
   | 'runofshow'
   | 'scenes'
-  | 'overlays';
+  | 'overlays'
+  | 'casters';
 
 export type DiffusionTab = {
   id: DiffusionTabId;
@@ -63,6 +64,12 @@ export const DIFFUSION_TABS: readonly DiffusionTab[] = [
     id: 'overlays',
     href: '/admin/diffusion/overlays',
     labelKey: 'tabOverlays',
+  },
+  {
+    id: 'casters',
+    href: '/admin/diffusion/casteuses',
+    labelKey: 'tabCasters',
+    permission: 'manage_communications',
   },
 ];
 
