@@ -54,6 +54,7 @@ import {
 import { TWITCH_DROP_COINS, getEarnSource } from '../../utils/tcg/earnSources';
 import handler, {
   grantTwitchDrop,
+  matchDropReward,
   resolveSiteUserFromTwitch,
   writeDropEntry,
 } from '../../pages/api/webhooks/twitch/tcg-drop';
@@ -916,5 +917,85 @@ describe('paquet du drop', () => {
     expect((await writeDropEntry(input)).outcome).toBe('replayed');
     expect(entries()).toHaveLength(1);
     expect(packs()).toHaveLength(0);
+  });
+});
+
+/* -----------------------------------------------------------
+ * Récompense « mise en avant » (2026-09-28) — un paquet à carte garantie
+ * ---------------------------------------------------------*/
+
+describe('récompense mise en avant', () => {
+  const FEATURED_REWARD = 'reward-tcg-rose';
+  const ROSE_CARD = '44444444-0000-4000-8000-000000000004';
+  const binding = {
+    rewardId: REWARD_ID,
+    featuredRewardId: FEATURED_REWARD,
+    featuredFanartId: ROSE_CARD,
+  };
+
+  it('reconnaît chaque récompense, avec sa propre limite par direct', () => {
+    expect(matchDropReward(binding, REWARD_ID)).toMatchObject({
+      kind: 'drop',
+      refSuffix: '',
+    });
+    expect(matchDropReward(binding, FEATURED_REWARD)).toMatchObject({
+      kind: 'featured',
+      refSuffix: ':featured',
+      guaranteedFanartId: ROSE_CARD,
+    });
+    expect(matchDropReward(binding, 'autre')).toBeNull();
+    expect(matchDropReward(binding, null)).toBeNull();
+  });
+
+  it('sans carte désignée, la récompense mise en avant n’attribue rien', () => {
+    expect(
+      matchDropReward({ ...binding, featuredFanartId: null }, FEATURED_REWARD)
+    ).toBeNull();
+  });
+
+  it('crédite un paquet qui porte la carte garantie', async () => {
+    seedConnection({
+      tcg_featured_reward_id: FEATURED_REWARD,
+      tcg_featured_fanart_id: ROSE_CARD,
+    });
+    store.user_twitch_links = [
+      {
+        auth_user_id: ALICE,
+        twitch_user_id: VIEWER_TWITCH_ID,
+        twitch_login: 'kirisu',
+      },
+    ] as any;
+
+    const body = redemptionBody({ reward: { id: FEATURED_REWARD } });
+    const res = makeRes();
+    await handler(makeReq({ body, headers: signedHeaders(body) }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as Body).status).toBe('granted');
+    expect(entries()[0].source_ref).toBe(`${LIVE_REF}:featured`);
+    expect(packs()).toHaveLength(1);
+    expect(packs()[0].guaranteed_fanart_id).toBe(ROSE_CARD);
+  });
+
+  it('le drop ordinaire et la mise en avant se réclament TOUS LES DEUX sur un même direct', async () => {
+    await writeDropEntry({
+      tenantId: TENANT,
+      userId: ALICE,
+      sourceRef: LIVE_REF,
+    });
+    const featured = await writeDropEntry({
+      tenantId: TENANT,
+      userId: ALICE,
+      sourceRef: `${LIVE_REF}:featured`,
+      guaranteedFanartId: ROSE_CARD,
+    });
+    expect(featured.outcome).toBe('granted');
+    expect(entries()).toHaveLength(2);
+    // Le paquet du drop ordinaire reste un tirage ordinaire.
+    expect(
+      packs()
+        .map((p) => p.guaranteed_fanart_id ?? null)
+        .sort()
+    ).toEqual([ROSE_CARD, null].sort());
   });
 });

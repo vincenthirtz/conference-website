@@ -398,3 +398,76 @@ describe('POST /api/player/tcg/packs — ouverture', () => {
     expect(res.statusCode).toBe(404);
   });
 });
+
+/* -------------------------------------------------------------------------- */
+/* Paquet à carte garantie (récompense Twitch « mise en avant »)               */
+/* -------------------------------------------------------------------------- */
+
+describe('POST /api/player/tcg/packs — carte garantie', () => {
+  const ROSE = '44444444-0000-4000-8000-000000000004';
+  const OTHER = '44444444-0000-4000-8000-000000000005';
+
+  function seedFanarts(roseStatus = 'approved') {
+    store.tcg_fanart_cards = [
+      {
+        id: ROSE,
+        tenant_id: DEFAULT_TENANT_ID,
+        category: 'association',
+        title: 'Octobre Rose',
+        artist_name: 'L’association',
+        image_path: 'tcg-association/rose.png',
+        status: roseStatus,
+        rarity: 'epic',
+      },
+      {
+        id: OTHER,
+        tenant_id: DEFAULT_TENANT_ID,
+        category: 'fanart',
+        title: 'Autre',
+        artist_name: 'Lya',
+        image_path: 'tcg-fanart/lya.png',
+        status: 'approved',
+        rarity: 'rare',
+      },
+    ] as any;
+  }
+
+  it('sort TOUJOURS la carte garantie, à la place du décor', async () => {
+    // Plusieurs ouvertures : un tirage au hasard qui tomberait parfois dessus
+    // ne suffit pas, la carte doit sortir à chaque fois.
+    for (let i = 0; i < 8; i++) {
+      resetSupabaseMock();
+      setAuthUser({ id: PLAYER });
+      seedPools();
+      seedFanarts();
+      seedPack();
+      (store.tcg_packs as any)[0].guaranteed_fanart_id = ROSE;
+
+      const res = makeRes();
+      await handler(makeReq({ method: 'POST', body: { packId: PACK } }), res);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.cards).toHaveLength(PACK_SIZE);
+      const fanarts = res.body.cards.filter((c: any) => c.kind === 'fanart');
+      expect(fanarts.map((c: any) => c.fanartId)).toEqual([ROSE]);
+      // Jamais à la place d'une joueuse : les trois places restent là.
+      expect(
+        res.body.cards.filter((c: any) => c.kind === 'player').length
+      ).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('une carte garantie RETIRÉE depuis ne sort pas : tirage ordinaire', async () => {
+    seedPools();
+    seedFanarts('revoked');
+    seedPack();
+    (store.tcg_packs as any)[0].guaranteed_fanart_id = ROSE;
+
+    const res = makeRes();
+    await handler(makeReq({ method: 'POST', body: { packId: PACK } }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.cards).toHaveLength(PACK_SIZE);
+    expect(res.body.cards.some((c: any) => c.fanartId === ROSE)).toBe(false);
+  });
+});
