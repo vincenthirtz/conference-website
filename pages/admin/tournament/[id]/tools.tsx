@@ -18,7 +18,6 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
-import StreamSourcesPanel from '@/components/admin/tournament/StreamSourcesPanel';
 import StreamAlertsPanel from '@/components/admin/tournament/StreamAlertsPanel';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { logger } from '@/utils/logger';
@@ -85,7 +84,6 @@ type Props = StaffProps & SsrProps;
 function TournamentToolsPage({
   initialTournament,
   canUseMatchOverlays,
-  planLabel,
   isDefaultTenant,
 }: Props) {
   const router = useRouter();
@@ -541,21 +539,25 @@ function TournamentToolsPage({
                 </div>
               )}
 
-              {/* Sources de stream (OBS). Placées ici, avec les widgets embed :
-                  ce sont les deux façons de sortir le tournoi de la plateforme
-                  — l'une vers un site, l'autre vers un direct. */}
-              <div className="mt-6 border-t border-neutral-700/40 pt-5">
-                <h3 className="mb-3 text-sm font-semibold text-white">
-                  {te.sourcesTitle}
-                </h3>
-                <StreamSourcesPanel
-                  tournamentRef={tournament.slug ?? tournament.id}
-                  tournamentId={tournament.id}
-                  baseUrl={embedBase}
-                  enabled={canUseMatchOverlays}
-                  planLabel={planLabel}
-                  showDonation={isDefaultTenant}
-                />
+              {/* Sources de stream (OBS) : elles ont rejoint Diffusion ›
+                  Overlays (lot 5), où l'on prépare une soirée sans passer par
+                  chaque tournoi. Le renvoi reste ici, là où on les cherchait,
+                  avec CE tournoi présélectionné. */}
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-700/40 pt-5">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">
+                    {te.sourcesTitle}
+                  </h3>
+                  <p className="mt-1 text-xs text-neutral-400">
+                    {te.sourcesMoved}
+                  </p>
+                </div>
+                <Link
+                  href={`/admin/diffusion/overlays?tournament=${tournament.id}`}
+                  className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-100 hover:bg-rose-500/20"
+                >
+                  {te.sourcesMovedCta}
+                </Link>
               </div>
 
               {/* Les réglages de la boîte d'alertes, sous l'URL qu'ils

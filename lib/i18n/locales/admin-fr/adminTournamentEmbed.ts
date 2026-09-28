@@ -40,6 +40,10 @@ export default adminNs('adminTournamentEmbed', {
 
   // Sources de stream (OBS) — cf. components/admin/tournament/StreamSourcesPanel.
   sourcesTitle: 'Sources de stream (OBS)',
+  // Les sources ont rejoint Diffusion › Overlays (lot 5).
+  sourcesMoved:
+    'Les URL à coller dans OBS sont dans Diffusion › Overlays, avec celles des autres tournois.',
+  sourcesMovedCta: 'Ouvrir les overlays de ce tournoi',
   sourcesDescription:
     'Dans OBS, ajoutez une source « Navigateur » et collez l’URL. Elle suit le match du moment : inutile d’y revenir entre deux rencontres.',
   sourcesHint:

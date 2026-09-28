@@ -40,6 +40,9 @@ export default {
   scheduleDesc: 'The schedule of upcoming and completed matches.',
 
   sourcesTitle: 'Stream sources (OBS)',
+  sourcesMoved:
+    'The URLs to paste into OBS now live in Broadcast › Overlays, alongside the other tournaments.',
+  sourcesMovedCta: 'Open this tournament’s overlays',
   sourcesDescription:
     'In OBS, add a “Browser” source and paste the URL. It follows the current match, so you never have to touch it between games.',
   sourcesHint:
