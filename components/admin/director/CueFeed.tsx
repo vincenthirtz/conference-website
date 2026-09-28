@@ -31,6 +31,7 @@ import { playChime, isAudioBlocked, unlockAudio } from '@/utils/playChime';
 import { logger } from '@/utils/logger';
 import type { EventCue, EventCueSeverity } from '@/types/events';
 import nsAdminDirectorCueFeed from '@/lib/i18n/locales/admin-fr/adminDirectorCueFeed';
+import { clockOrDash } from '@/utils/director/clock';
 
 type Dict = typeof nsAdminDirectorCueFeed.fr;
 
@@ -83,17 +84,6 @@ function formatRelative(iso: string, tx: Dict): string {
   if (h < 24) return format(tx.relativeHours, { n: h });
   const d = Math.floor(h / 24);
   return format(tx.relativeDays, { n: d });
-}
-
-function formatTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return '—';
-  }
 }
 
 // Feuille isolant le tick horloge 1s. Le libelle relatif ("il y a 2min") doit
@@ -429,7 +419,7 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
                                 {a.cast_member_name}
                               </span>
                               <span className="text-neutral-500">
-                                {formatTime(a.acked_at)}
+                                {clockOrDash(a.acked_at)}
                               </span>
                             </li>
                           ))}

@@ -27,6 +27,7 @@ import {
 } from '@/utils/eventSegmentLabels';
 import type { EventSegment, EventWave, EventWaveStatus } from '@/types/events';
 import nsAdminDirectorWaveBoard from '@/lib/i18n/locales/admin-fr/adminDirectorWaveBoard';
+import { clockHHMM } from '@/utils/director/clock';
 
 type Dict = typeof nsAdminDirectorWaveBoard.fr;
 
@@ -65,15 +66,6 @@ function localInputToIso(value: string): string | null {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return null;
   return d.toISOString();
-}
-
-function formatHHMM(iso: string | null): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return `${String(d.getHours()).padStart(2, '0')}:${String(
-    d.getMinutes()
-  ).padStart(2, '0')}`;
 }
 
 type EditState = {
@@ -271,7 +263,7 @@ export default function WaveBoard({
         <ul className="space-y-2">
           {sorted.map((w, idx) => {
             const count = segCountByWave.get(w.id) ?? 0;
-            const hhmm = formatHHMM(w.planned_start_at);
+            const hhmm = clockHHMM(w.planned_start_at);
             const isEditing = editingId === w.id;
             return (
               <li

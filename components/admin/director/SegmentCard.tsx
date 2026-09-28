@@ -17,6 +17,7 @@ import {
 } from '@/utils/eventSegmentLabels';
 import type { EventSegment } from '@/types/events';
 import nsAdminDirectorSegmentCard from '@/lib/i18n/locales/admin-fr/adminDirectorSegmentCard';
+import { clockHHMM } from '@/utils/director/clock';
 
 type Props = {
   segment: EventSegment;
@@ -49,17 +50,6 @@ type Props = {
   onDragEnd: () => void;
   onDragLeave: () => void;
 };
-
-function formatHHMM(iso: string | null | undefined): string | null {
-  if (!iso) return null;
-  try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return null;
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  } catch {
-    return null;
-  }
-}
 
 function formatOverrun(sec: number): string {
   const total = Math.max(0, Math.floor(sec));
@@ -106,7 +96,7 @@ export default function SegmentCard({
   const dragOverIndicator = dragOver
     ? 'before:absolute before:inset-x-0 before:-top-1 before:h-0.5 before:bg-purple-400 before:rounded-full'
     : '';
-  const plannedHHMM = formatHHMM(plannedStartAt);
+  const plannedHHMM = clockHHMM(plannedStartAt);
 
   return (
     <div

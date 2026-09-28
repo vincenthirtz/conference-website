@@ -16,21 +16,11 @@ import { memo } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { TeamScheduleConflict } from '@/utils/eventScheduleConflicts';
 import nsAdminEventDirector from '@/lib/i18n/locales/admin-fr/adminEventDirector';
+import { clockOrDash } from '@/utils/director/clock';
 
 type Props = {
   conflicts: TeamScheduleConflict[];
 };
-
-function formatTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return '—';
-  }
-}
 
 function ScheduleConflictsBannerBase({ conflicts }: Props) {
   const t = useAdminT(nsAdminEventDirector);
@@ -73,8 +63,8 @@ function ScheduleConflictsBannerBase({ conflicts }: Props) {
             <span className="text-amber-200/60">
               (
               {format(t.conflictOverlap, {
-                start: formatTime(c.overlapStart),
-                end: formatTime(c.overlapEnd),
+                start: clockOrDash(c.overlapStart),
+                end: clockOrDash(c.overlapEnd),
               })}
               )
             </span>

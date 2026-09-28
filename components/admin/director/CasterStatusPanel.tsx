@@ -18,6 +18,7 @@ import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import { logger } from '@/utils/logger';
 import type { EventSegment } from '@/types/events';
 import nsAdminDirectorCasterStatusPanel from '@/lib/i18n/locales/admin-fr/adminDirectorCasterStatusPanel';
+import { clockOrDash } from '@/utils/director/clock';
 
 type Dict = typeof nsAdminDirectorCasterStatusPanel.fr;
 
@@ -67,18 +68,6 @@ type Props = {
     casters: Array<{ cast_member_id: string; name: string }>
   ) => void;
 };
-
-function formatTime(d: string | null | undefined) {
-  if (!d) return '—';
-  try {
-    return new Date(d).toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return '—';
-  }
-}
 
 function formatRelativeShort(iso: string | null | undefined, tx: Dict): string {
   if (!iso) return tx.unknown;
@@ -353,14 +342,14 @@ function CasterStatusPanel({
                   </div>
                   <div className="text-[11px] text-neutral-400 flex flex-wrap gap-x-3">
                     <span>
-                      {t.brief} {formatTime(a.briefing_at)}
+                      {t.brief} {clockOrDash(a.briefing_at)}
                     </span>
                     {ackedKnown && (
                       <span>
                         {t.ack}{' '}
                         {acked ? (
                           <span className="text-emerald-300">
-                            {formatTime(a.acked_at)}
+                            {clockOrDash(a.acked_at)}
                           </span>
                         ) : (
                           <span className="text-neutral-500">
