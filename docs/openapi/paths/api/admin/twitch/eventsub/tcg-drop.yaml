@@ -70,6 +70,13 @@ post:
             rewardId:
               type: string
               description: Identifiant Twitch de la recompense a ecouter.
+            featuredFanartId:
+              type: string
+              format: uuid
+              description: |
+                Present = recompense « mise en avant » : enregistree dans
+                `tcg_featured_reward_id` avec sa carte garantie ; le drop
+                ordinaire n'est pas touche.
   responses:
     '200':
       description: Abonnement cree (ou deja present).

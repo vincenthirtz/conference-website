@@ -48,6 +48,10 @@ type Subscription = {
 
 type EventSubState = {
   rewardId: string | null;
+  /** Optionnels : une API plus ancienne (déploiement en cours) ne les rend pas. */
+  featuredRewardId?: string | null;
+  featuredFanartId?: string | null;
+  featuredCandidates?: Array<{ id: string; title: string }>;
   callbackUrl: string;
   secretConfigured: boolean;
   hasScope: boolean;
@@ -67,6 +71,9 @@ export default function TcgDropHealthCard() {
     undefined
   );
   const [busy, setBusy] = useState(false);
+  const [featuredCard, setFeaturedCard] = useState('');
+  const [featuredCost, setFeaturedCost] = useState(10_000);
+  const [featuredError, setFeaturedError] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -123,6 +130,40 @@ export default function TcgDropHealthCard() {
       setBusy(false);
     }
   }, [busy, adminFetchJson, load]);
+
+  /**
+   * La récompense MISE EN AVANT : même enchaînement que le drop (récompense,
+   * puis abonnement), avec la carte que son paquet garantit.
+   */
+  const setupFeatured = async (fanartId: string) => {
+    if (busy || !fanartId) return;
+    setBusy(true);
+    setFeaturedError(false);
+    try {
+      const { rewardId } = await adminFetchJson<{ rewardId: string }>(
+        '/api/admin/twitch/tcg-drop/setup',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cost: featuredCost,
+            featuredFanartId: fanartId,
+          }),
+        }
+      );
+      await adminFetchJson('/api/admin/twitch/eventsub/tcg-drop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rewardId, featuredFanartId: fanartId }),
+      });
+    } catch (err) {
+      logger.error('[admin/tcg-drop-health] featured setup error:', err);
+      setFeaturedError(true);
+    } finally {
+      await load();
+      setBusy(false);
+    }
+  };
 
   if (!state) return null;
 
@@ -219,6 +260,108 @@ export default function TcgDropHealthCard() {
           {format(t.dropHealthyDetail, { count: active.length })}
         </p>
       )}
+
+      {state.featuredCandidates && (
+        <FeaturedRewardBlock
+          t={t}
+          state={state}
+          busy={busy}
+          card={featuredCard}
+          cost={featuredCost}
+          error={featuredError}
+          onCard={setFeaturedCard}
+          onCost={setFeaturedCost}
+          onSetup={(id) => void setupFeatured(id)}
+        />
+      )}
     </section>
+  );
+}
+
+/** L'encart de la récompense mise en avant, sous l'état du drop. */
+function FeaturedRewardBlock({
+  t,
+  state,
+  busy,
+  card,
+  cost,
+  error,
+  onCard,
+  onCost,
+  onSetup,
+}: {
+  t: typeof nsAdminBroadcastLive.fr;
+  state: EventSubState;
+  busy: boolean;
+  card: string;
+  cost: number;
+  error: boolean;
+  onCard: (id: string) => void;
+  onCost: (cost: number) => void;
+  onSetup: (id: string) => void;
+}) {
+  const candidates = state.featuredCandidates ?? [];
+  const current = candidates.find((c) => c.id === state.featuredFanartId);
+  const live = Boolean(state.featuredRewardId && current);
+  const selected = card || current?.id || candidates[0]?.id || '';
+  const input =
+    'mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-white';
+
+  return (
+    <div className="mt-4 border-t border-neutral-800 pt-3">
+      <h3 className="text-xs font-semibold text-white">
+        {t.dropFeaturedHeading}
+      </h3>
+      <p className="mt-1 text-[11px] text-neutral-400">{t.dropFeaturedIntro}</p>
+      {live && current && (
+        <p className="mt-2 text-xs text-emerald-200">
+          {format(t.dropFeaturedActive, { title: current.title })}
+        </p>
+      )}
+      {candidates.length === 0 ? (
+        <p className="mt-2 text-xs text-neutral-400">{t.dropFeaturedNone}</p>
+      ) : (
+        <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_10rem_auto] sm:items-end">
+          <label className="block text-[11px] text-neutral-400">
+            {t.dropFeaturedCard}
+            <select
+              value={selected}
+              onChange={(e) => onCard(e.target.value)}
+              className={input}
+            >
+              {candidates.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-[11px] text-neutral-400">
+            {t.dropFeaturedCost}
+            <input
+              type="number"
+              min={1}
+              step={100}
+              value={cost}
+              onChange={(e) => onCost(Number(e.target.value) || 1)}
+              className={input}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={busy || !selected}
+            onClick={() => onSetup(selected)}
+            className="inline-flex min-h-9 items-center justify-center rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-500/30 disabled:opacity-50"
+          >
+            {busy ? t.dropSetupBusy : t.dropFeaturedCta}
+          </button>
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="mt-2 text-xs text-red-200">
+          {t.dropFeaturedError}
+        </p>
+      )}
+    </div>
   );
 }

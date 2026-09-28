@@ -355,7 +355,7 @@ async function openPack(
   //    qu'on ne saurait pas remplir.
   const { data: packRow, error: packError } = await supabaseAdmin!
     .from('tcg_packs')
-    .select('id, opened_at')
+    .select('id, opened_at, guaranteed_fanart_id')
     .eq('tenant_id', tenantId)
     .eq('user_id', userId)
     .eq('id', packId)
@@ -386,6 +386,15 @@ async function openPack(
   }
   const { playerIds, teamIds, fanartIds } = pool.value;
 
+  // LA CARTE GARANTIE (récompense Twitch « mise en avant »). Elle prend
+  // l'emplacement de DÉCOR, jamais celui d'une joueuse : le paquet garde sa
+  // composition. Seulement si elle est ENCORE dans le vivier — une carte
+  // retirée depuis l'attribution ne sort pas, le paquet est tiré normalement.
+  const guaranteed = (packRow as { guaranteed_fanart_id?: string | null })
+    .guaranteed_fanart_id;
+  const forcedFanart =
+    guaranteed && fanartIds.includes(guaranteed) ? guaranteed : null;
+
   const subjects = pickPackSubjects({
     playerIds,
     teamIds,
@@ -396,11 +405,13 @@ async function openPack(
     mapSlugs: MAP_POOL_SLUGS,
     // Fan arts validées : elles partagent l'emplacement de DÉCOR avec les maps
     // (une fois sur deux), jamais celui d'une joueuse.
-    fanartIds,
+    // Carte garantie : seule fan art candidate, et un tirage de décor à 0
+    // (la fan art passe en premier dans `pickDecorKind`).
+    fanartIds: forcedFanart ? [forcedFanart] : fanartIds,
     // Mascottes du jeu : même emplacement de DÉCOR, une fois sur quatre.
     // Registre en mémoire comme les maps — aucune requête de plus.
     mascotSlugs: GAME_MASCOT_SLUGS,
-    decorRoll: Math.random(),
+    decorRoll: forcedFanart ? 0 : Math.random(),
     // Quatre fois la taille du paquet : trois viviers, chacun avec son repli.
     // Un tableau trop court n'échouerait pas — `pickDistinct` retombe sur « le
     // premier disponible » — mais rendrait le tirage discrètement moins

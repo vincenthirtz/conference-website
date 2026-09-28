@@ -55,7 +55,26 @@ const DEFAULT_COST = 1000;
 
 const BodySchema = z.object({
   cost: z.number().int().min(1).max(1_000_000).optional(),
+  /**
+   * Récompense « MISE EN AVANT » : son paquet garantit cette carte (fan art ou
+   * « L'association », publiée). Absent = le drop ordinaire.
+   */
+  featuredFanartId: z.string().uuid().optional(),
 });
+
+/** Plafond Helix sur le titre d'une récompense. */
+const TWITCH_TITLE_MAX = 45;
+
+/**
+ * Titre de la récompense mise en avant : il porte le nom de la carte, et sert
+ * de clé de reprise comme celui du drop. Changer de carte = autre titre =
+ * autre récompense, ce qui est voulu (l'ancienne se retire côté Twitch).
+ */
+export function featuredRewardTitle(cardTitle: string): string {
+  return `${TCG_DROP_REWARD_TITLE} — ${cardTitle}`
+    .slice(0, TWITCH_TITLE_MAX)
+    .trim();
+}
 
 type RewardRow = { id?: string; title?: string };
 
@@ -85,6 +104,33 @@ async function handler(
       .json({ error: 'Coût invalide.', code: 'invalid_body' });
   }
   const cost = parsed.data.cost ?? DEFAULT_COST;
+  const featuredFanartId = parsed.data.featuredFanartId ?? null;
+
+  // La carte garantie doit exister, être PUBLIÉE et appartenir à l'espace :
+  // une récompense qui promet une carte introuvable ferait payer 10 000 points
+  // pour un paquet ordinaire.
+  let rewardTitle = TCG_DROP_REWARD_TITLE;
+  let cardTitle: string | null = null;
+  if (featuredFanartId) {
+    const { data: card } = await supabaseAdmin!
+      .from('tcg_fanart_cards')
+      .select('title')
+      .eq('tenant_id', ctx.tenantId)
+      .eq('id', featuredFanartId)
+      // « L'association » seulement : l'œuvre d'une autrice n'est pas mise aux
+      // enchères de points (même règle que la liste de l'écran).
+      .eq('category', 'association')
+      .eq('status', 'approved')
+      .maybeSingle();
+    cardTitle = (card as { title?: string } | null)?.title ?? null;
+    if (!cardTitle) {
+      return res.status(404).json({
+        error: 'Carte introuvable ou non publiée.',
+        code: 'card_not_found',
+      });
+    }
+    rewardTitle = featuredRewardTitle(cardTitle);
+  }
 
   const token = await getValidBroadcasterToken(supabaseAdmin!, ctx.tenantId);
   if (!token) {
@@ -123,8 +169,7 @@ async function handler(
         data?: RewardRow[];
       } | null;
       rewardId =
-        (json?.data ?? []).find((r) => r.title === TCG_DROP_REWARD_TITLE)?.id ??
-        null;
+        (json?.data ?? []).find((r) => r.title === rewardTitle)?.id ?? null;
     }
     // Une lecture en échec n'interrompt PAS : au pire on crée un doublon, et
     // Twitch refuse lui-même deux récompenses de même titre (400). Refuser ici
@@ -149,10 +194,11 @@ async function handler(
         {
           method: 'POST',
           body: JSON.stringify({
-            title: TCG_DROP_REWARD_TITLE,
+            title: rewardTitle,
             cost,
-            prompt:
-              'Échange tes points contre une carte du TCG. Ton compte Twitch doit être relié à ton espace joueuse.',
+            prompt: cardTitle
+              ? `Un paquet du TCG avec la carte « ${cardTitle} » garantie. Ton compte Twitch doit être relié à ton espace joueuse.`
+              : 'Échange tes points contre une carte du TCG. Ton compte Twitch doit être relié à ton espace joueuse.',
             is_enabled: true,
             // Pas de saisie : on identifie la spectatrice par son compte
             // Twitch, pas par ce qu'elle tape.
@@ -204,11 +250,11 @@ async function handler(
     action: 'settings_update',
     entity_type: 'tenant',
     entity_id: ctx.tenantId,
-    payload: { tcgDropReward: rewardId, reused, cost },
+    payload: { tcgDropReward: rewardId, reused, cost, featuredFanartId },
   });
 
   // 3) L'abonnement reste la route qui le sait faire — et c'est elle qui
   //    persiste `tcg_reward_id`. La rejouer avec la même récompense est sans
   //    effet de bord : elle vérifie l'existence avant de créer.
-  return res.status(200).json({ rewardId, reused, cost });
+  return res.status(200).json({ rewardId, reused, cost, featuredFanartId });
 }

@@ -112,6 +112,16 @@ export default {
   dropRewardMissing:
     'No channel-point reward designated: nothing to listen to.',
   dropSetupCta: 'Set up the drop',
+  dropFeaturedHeading: 'Featured reward',
+  dropFeaturedIntro:
+    'A second, pricier Twitch reward whose pack is guaranteed to contain an association card (the Pink October logo, for instance).',
+  dropFeaturedCard: 'Guaranteed card',
+  dropFeaturedCost: 'Channel points cost',
+  dropFeaturedCta: 'Set up',
+  dropFeaturedActive: 'Live — guaranteed card: {title}',
+  dropFeaturedNone: 'No published association card: create one in Admin → TCG.',
+  dropFeaturedError:
+    'Setup failed. If the reward was created by hand in Twitch, delete it: only a reward created by the site can be fulfilled or refunded.',
   dropSetupBusy: 'Setting up…',
   dropNoSubscription:
     'No active subscription: Twitch will send no redemption at all.',

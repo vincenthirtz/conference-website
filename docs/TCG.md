@@ -674,6 +674,27 @@ L'annonce bot `tcg.drop_granted` porte, **en ajout rétrocompatible**,
 `pack: { id: string } | null` : un bot ancien l'ignore, un bot à jour ne dit
 « un paquet t'attend » que lorsque c'est vrai.
 
+**La récompense « mise en avant »** (2026-09-28). Une seconde récompense
+Twitch, plus chère, dont le paquet **garantit une carte** de « L'association »
+— le logo Octobre Rose en octobre. Même barème que le drop (pièces + un
+paquet), mais le paquet porte `tcg_packs.guaranteed_fanart_id` : à
+l'ouverture, cette carte prend l'emplacement de décor (jamais celui d'une
+joueuse). La garantie voyage avec le paquet, pas avec le réglage : un paquet
+attribué en octobre et ouvert en novembre sort toujours la carte — sauf si
+elle a été retirée entre-temps, auquel cas le tirage est ordinaire.
+
+- Réglage : `twitch_broadcaster_connections.tcg_featured_reward_id` +
+  `tcg_featured_fanart_id` (migration `tcg_twitch_featured_reward.sql`),
+  posés depuis la carte « Drop TCG » de la console régie (`/admin/broadcast/live`).
+- Titre de la récompense `Carte à collectionner — <carte>` : il sert de clé
+  de reprise, comme celui du drop. Elle doit être créée PAR LE SITE — une
+  récompense créée dans la console Twitch ne peut être ni honorée ni
+  remboursée par l'API.
+- Limite : une par direct et par personne (`source_ref = <direct>:featured`),
+  indépendante du drop ordinaire — les deux se réclament sur le même live.
+- Seules les cartes « L'association » publiées peuvent être garanties :
+  l'œuvre d'une autrice n'est pas mise aux enchères de points.
+
 ### Le cadeau de bienvenue
 
 [`utils/tcg/grantWelcomeGift.ts`](../utils/tcg/grantWelcomeGift.ts) offre, une

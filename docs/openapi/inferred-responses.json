@@ -23629,11 +23629,23 @@
    "200": {
     "type": "object",
     "properties": {
-     "rewardId": {
-      "type": [
-       "string",
-       "null"
-      ]
+     "featuredCandidates": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "title": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "id",
+        "title"
+       ]
+      }
      },
      "callbackUrl": {
       "type": "string"
@@ -23677,14 +23689,35 @@
         "rewardId"
        ]
       }
+     },
+     "rewardId": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "featuredRewardId": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "featuredFanartId": {
+      "type": [
+       "string",
+       "null"
+      ]
      }
     },
     "required": [
-     "rewardId",
+     "featuredCandidates",
      "callbackUrl",
      "secretConfigured",
      "hasScope",
-     "subscriptions"
+     "subscriptions",
+     "rewardId",
+     "featuredRewardId",
+     "featuredFanartId"
     ]
    }
   },
@@ -64240,12 +64273,19 @@
      },
      "cost": {
       "type": "number"
+     },
+     "featuredFanartId": {
+      "type": [
+       "string",
+       "null"
+      ]
      }
     },
     "required": [
      "rewardId",
      "reused",
-     "cost"
+     "cost",
+     "featuredFanartId"
     ]
    }
   },

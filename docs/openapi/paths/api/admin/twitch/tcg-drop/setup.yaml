@@ -40,6 +40,13 @@ post:
                 Cost in CHANNEL POINTS — Twitch's currency, not the TCG coin
                 scale. Confusing the two would price the reward at 12 points.
                 Defaults to a deliberately cautious value.
+            featuredFanartId:
+              type: string
+              format: uuid
+              description: |
+                Featured reward: its pack guarantees this card (a published
+                association card). Reward title `Carte a collectionner — <card
+                title>`. 404 `card_not_found` if missing or unpublished.
   responses:
     '200':
       description: Reward created or reused.

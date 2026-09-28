@@ -69,6 +69,12 @@ const REQUIRED_SCOPE = 'channel:read:redemptions';
 const BodySchema = z.object({
   /** Identifiant Twitch de la récompense à écouter. */
   rewardId: z.string().trim().min(1).max(200),
+  /**
+   * Présent = récompense « mise en avant » : elle est enregistrée à part
+   * (`tcg_featured_reward_id`) avec la carte que son paquet garantit, et le
+   * drop ordinaire (`tcg_reward_id`) n'est pas touché.
+   */
+  featuredFanartId: z.string().uuid().optional(),
 });
 
 /** L'URL que Twitch appellera. Publique et HTTPS, sans quoi il refuse. */
@@ -114,14 +120,46 @@ async function listOurSubscriptions(
   }
 }
 
-async function readRewardId(tenantId: string): Promise<string | null> {
+async function readRewardIds(tenantId: string): Promise<{
+  rewardId: string | null;
+  featuredRewardId: string | null;
+  featuredFanartId: string | null;
+}> {
   const { data } = await supabaseAdmin!
     .from(TABLE)
-    .select('tcg_reward_id')
+    .select('tcg_reward_id, tcg_featured_reward_id, tcg_featured_fanart_id')
     .eq('tenant_id', tenantId)
     .maybeSingle();
-  const value = (data as { tcg_reward_id?: unknown } | null)?.tcg_reward_id;
-  return typeof value === 'string' && value.length > 0 ? value : null;
+  const row = (data ?? {}) as Record<string, unknown>;
+  const text = (v: unknown) =>
+    typeof v === 'string' && v.length > 0 ? v : null;
+  return {
+    rewardId: text(row.tcg_reward_id),
+    featuredRewardId: text(row.tcg_featured_reward_id),
+    featuredFanartId: text(row.tcg_featured_fanart_id),
+  };
+}
+
+/**
+ * Les cartes qu'une récompense mise en avant peut garantir : celles de
+ * « L'association » PUBLIÉES. Les fan arts de la communauté n'en sont pas —
+ * mettre l'œuvre d'une autrice aux enchères de points n'est pas notre geste.
+ */
+async function readFeaturedCandidates(
+  tenantId: string
+): Promise<Array<{ id: string; title: string }>> {
+  const { data } = await supabaseAdmin!
+    .from('tcg_fanart_cards')
+    .select('id, title')
+    .eq('tenant_id', tenantId)
+    .eq('category', 'association')
+    .eq('status', 'approved')
+    .order('created_at', { ascending: false })
+    .limit(50);
+  return ((data ?? []) as Array<{ id: string; title: string }>).map((r) => ({
+    id: r.id,
+    title: r.title,
+  }));
 }
 
 async function handler(
@@ -171,8 +209,13 @@ async function handler(
   /* ---------------------------------------------------------------- GET */
   if (req.method === 'GET') {
     const subs = await listOurSubscriptions(appToken, creds.id);
+    const [ids, featuredCandidates] = await Promise.all([
+      readRewardIds(ctx.tenantId),
+      readFeaturedCandidates(ctx.tenantId),
+    ]);
     return res.status(200).json({
-      rewardId: await readRewardId(ctx.tenantId),
+      ...ids,
+      featuredCandidates,
       callbackUrl: callbackUrl(),
       secretConfigured: Boolean(secret),
       hasScope: hasScope(token.scope, REQUIRED_SCOPE),
@@ -195,7 +238,7 @@ async function handler(
         fields: parsed.error.flatten().fieldErrors,
       });
     }
-    const { rewardId } = parsed.data;
+    const { rewardId, featuredFanartId } = parsed.data;
 
     if (!secret) {
       // Sans secret partagé, le récepteur rejetterait chaque livraison en 403 :
@@ -227,7 +270,15 @@ async function handler(
     // actif que le webhook refuserait, faute de récompense désignée.
     const { error: saveErr } = await supabaseAdmin
       .from(TABLE)
-      .update({ tcg_reward_id: rewardId, updated_at: new Date().toISOString() })
+      .update({
+        ...(featuredFanartId
+          ? {
+              tcg_featured_reward_id: rewardId,
+              tcg_featured_fanart_id: featuredFanartId,
+            }
+          : { tcg_reward_id: rewardId }),
+        updated_at: new Date().toISOString(),
+      })
       .eq('tenant_id', ctx.tenantId);
     if (saveErr) {
       logger.error('[eventsub/tcg-drop] récompense non enregistrée', saveErr);
@@ -298,6 +349,7 @@ async function handler(
           payload: {
             action: 'subscribe_tcg_drop',
             reward_id: rewardId,
+            featured_fanart_id: featuredFanartId ?? null,
             already_existed: upstreamStatus === 409,
           },
         });

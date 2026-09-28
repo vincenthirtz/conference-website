@@ -63,6 +63,12 @@ export type CoinsThenPacksGrant = {
   coins: number;
   /** Paquets à accorder si, et seulement si, les pièces ont été écrites. */
   packs: number;
+  /**
+   * Carte garantie dans CHAQUE paquet accordé (`tcg_packs.guaranteed_fanart_id`,
+   * lue à l'ouverture). Absente = tirage ordinaire. Sert la récompense Twitch
+   * « mise en avant ».
+   */
+  guaranteedFanartId?: string;
 };
 
 export type CoinsThenPacksCredit = {
@@ -234,6 +240,11 @@ export async function grantCoinsThenPacks(input: {
         // c'est précisément pourquoi elle ne protège de rien ici.
         source_match_id: null,
         granted_at: nowIso,
+        // Colonne posée SEULEMENT quand elle sert : une insertion qui la
+        // nommerait toujours échouerait tant que la migration n'est pas passée.
+        ...(grant.guaranteedFanartId
+          ? { guaranteed_fanart_id: grant.guaranteedFanartId }
+          : {}),
       }))
     );
     const packsExpected = packRows.length;

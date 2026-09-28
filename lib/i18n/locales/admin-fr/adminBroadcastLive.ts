@@ -117,6 +117,18 @@ export default adminNs('adminBroadcastLive', {
   dropRewardMissing:
     'Aucune récompense de points de chaîne désignée : rien à écouter.',
   dropSetupCta: 'Mettre le drop en service',
+  // Récompense « mise en avant » : un paquet avec une carte garantie.
+  dropFeaturedHeading: 'Récompense mise en avant',
+  dropFeaturedIntro:
+    'Une seconde récompense Twitch, plus chère, dont le paquet contient à coup sûr une carte de « L’association » (le logo Octobre Rose, par exemple).',
+  dropFeaturedCard: 'Carte garantie',
+  dropFeaturedCost: 'Coût en points de chaîne',
+  dropFeaturedCta: 'Mettre en service',
+  dropFeaturedActive: 'En service — carte garantie : {title}',
+  dropFeaturedNone:
+    'Aucune carte « L’association » publiée : créez-en une dans Admin → TCG.',
+  dropFeaturedError:
+    'Mise en service impossible. Si la récompense a été créée à la main dans Twitch, supprimez-la : seule une récompense créée par le site peut être honorée ou remboursée.',
   dropSetupBusy: 'Mise en service…',
   dropNoSubscription:
     'Aucune souscription active : Twitch n’enverra aucun échange.',

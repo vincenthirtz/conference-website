@@ -347,6 +347,8 @@ export async function writeDropEntry(input: {
   tenantId: string;
   userId: string;
   sourceRef: string;
+  /** Récompense « mise en avant » : la carte garantie dans le paquet. */
+  guaranteedFanartId?: string;
 }): Promise<DropGrant> {
   if (!supabaseAdmin) return { outcome: 'error', packId: null, coins: 0 };
 
@@ -363,6 +365,7 @@ export async function writeDropEntry(input: {
         sourceRef: input.sourceRef,
         coins: reward.coins,
         packs: reward.packs,
+        guaranteedFanartId: input.guaranteedFanartId,
       },
     ],
   });
@@ -419,6 +422,7 @@ export async function grantTwitchDrop(input: {
   tenantId: string;
   userId: string;
   sourceRef: string;
+  guaranteedFanartId?: string;
 }): Promise<DropGrant> {
   const source = getEarnSource(EARN_SOURCE_KEY);
   if (!source?.schemaReady) {
@@ -568,7 +572,58 @@ export type BroadcasterBinding = {
    * requêtes séparées pourraient les faire diverger le temps d'une écriture.
    */
   rewardId: string | null;
+  /**
+   * Récompense « MISE EN AVANT » (2026-09-28) : plus chère, son paquet garantit
+   * `featuredFanartId` — le logo Octobre Rose en octobre. `null` si aucune.
+   * Sans carte désignée, elle n'attribue rien (cf. `matchDropReward`).
+   */
+  featuredRewardId: string | null;
+  featuredFanartId: string | null;
 };
+
+/** Ce que l'échange reçu déclenche. */
+export type MatchedDropReward = {
+  kind: 'drop' | 'featured';
+  /** La récompense à honorer ou rembourser. */
+  rewardId: string;
+  /** Suffixe de `source_ref` : chaque récompense a sa limite par direct. */
+  refSuffix: string;
+  guaranteedFanartId?: string;
+};
+
+/**
+ * La récompense de l'échange, si elle est l'une des nôtres.
+ *
+ * DEUX LIMITES DISTINCTES : le drop et la mise en avant se réclament chacun
+ * une fois par direct et par personne. Un même `source_ref` les ferait se
+ * bloquer mutuellement — la seconde réclamée tomberait en `replayed`, points
+ * dépensés et rien reçu.
+ *
+ * Une récompense mise en avant SANS carte désignée ne correspond à rien : elle
+ * donnerait un paquet ordinaire au prix fort, ce qui n'est pas ce qu'elle
+ * promet.
+ */
+export function matchDropReward(
+  binding: Pick<
+    BroadcasterBinding,
+    'rewardId' | 'featuredRewardId' | 'featuredFanartId'
+  >,
+  rewardId: string | null
+): MatchedDropReward | null {
+  if (!rewardId) return null;
+  if (rewardId === binding.rewardId) {
+    return { kind: 'drop', rewardId, refSuffix: '' };
+  }
+  if (rewardId === binding.featuredRewardId && binding.featuredFanartId) {
+    return {
+      kind: 'featured',
+      rewardId,
+      refSuffix: ':featured',
+      guaranteedFanartId: binding.featuredFanartId,
+    };
+  }
+  return null;
+}
 
 /**
  * La chaîne connectée derrière un identifiant Twitch de diffuseuse.
@@ -583,7 +638,9 @@ async function resolveBroadcasterBinding(
   if (!supabaseAdmin) return undefined;
   const { data, error } = await supabaseAdmin
     .from('twitch_broadcaster_connections')
-    .select('tenant_id, tcg_reward_id')
+    .select(
+      'tenant_id, tcg_reward_id, tcg_featured_reward_id, tcg_featured_fanart_id'
+    )
     .eq('broadcaster_id', broadcasterId)
     .maybeSingle();
 
@@ -596,16 +653,22 @@ async function resolveBroadcasterBinding(
   }
   if (!data) return null;
 
-  const row = data as { tenant_id?: unknown; tcg_reward_id?: unknown };
+  const row = data as {
+    tenant_id?: unknown;
+    tcg_reward_id?: unknown;
+    tcg_featured_reward_id?: unknown;
+    tcg_featured_fanart_id?: unknown;
+  };
+  const text = (v: unknown) =>
+    typeof v === 'string' && v.length > 0 ? v : null;
   const tenantId = row.tenant_id;
   if (typeof tenantId !== 'string' || tenantId.length === 0) return undefined;
 
   return {
     tenantId,
-    rewardId:
-      typeof row.tcg_reward_id === 'string' && row.tcg_reward_id.length > 0
-        ? row.tcg_reward_id
-        : null,
+    rewardId: text(row.tcg_reward_id),
+    featuredRewardId: text(row.tcg_featured_reward_id),
+    featuredFanartId: text(row.tcg_featured_fanart_id),
   };
 }
 
@@ -826,7 +889,7 @@ export default async function handler(
   // AUCUNE RÉCOMPENSE DÉSIGNÉE ⇒ ON N'ATTRIBUE RIEN. Le défaut sûr est de ne
   // rien donner ; accepter tout par défaut ferait de l'oubli de configuration
   // une distribution de cartes.
-  if (!binding.rewardId) {
+  if (!binding.rewardId && !binding.featuredRewardId) {
     logger.warn(
       '[twitch/tcg-drop] aucune récompense désignée pour la chaîne %s — rien attribué',
       broadcasterId
@@ -844,7 +907,8 @@ export default async function handler(
     }
     return res.status(200).json({ ok: true, status: 'reward_not_configured' });
   }
-  if (rewardId !== binding.rewardId) {
+  const matched = matchDropReward(binding, rewardId);
+  if (!matched) {
     // Une autre récompense de la chaîne : ce n'est pas une erreur, juste un
     // événement qui ne nous concerne pas. 200, Twitch n'a rien à réessayer.
     return res.status(200).json({ ok: true, status: 'other_reward' });
@@ -874,7 +938,7 @@ export default async function handler(
     // annulé sans explication, et conclut que la récompense est cassée.
     await resolveRedemption({
       tenantId,
-      rewardId: binding.rewardId,
+      rewardId: matched.rewardId,
       redemptionId,
       status: 'CANCELED',
     });
@@ -895,7 +959,7 @@ export default async function handler(
     // préfère ne rien donner plutôt que d'inventer une clé plus permissive.
     await resolveRedemption({
       tenantId,
-      rewardId: binding.rewardId,
+      rewardId: matched.rewardId,
       redemptionId,
       status: 'CANCELED',
     });
@@ -914,7 +978,7 @@ export default async function handler(
     // aucune clé d'unicité stable. Rien n'est attribué → on rend les points.
     await resolveRedemption({
       tenantId,
-      rewardId: binding.rewardId,
+      rewardId: matched.rewardId,
       redemptionId,
       status: 'CANCELED',
     });
@@ -924,7 +988,8 @@ export default async function handler(
   const grant = await grantTwitchDrop({
     tenantId,
     userId: identity.userId,
-    sourceRef: liveRef,
+    sourceRef: `${liveRef}${matched.refSuffix}`,
+    guaranteedFanartId: matched.guaranteedFanartId,
   });
   const outcome = grant.outcome;
 
@@ -949,7 +1014,7 @@ export default async function handler(
     // ni rembourser — ce serait offrir la carte et les points.
     await resolveRedemption({
       tenantId,
-      rewardId: binding.rewardId,
+      rewardId: matched.rewardId,
       redemptionId,
       status: 'FULFILLED',
     });
