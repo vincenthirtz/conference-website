@@ -33,6 +33,11 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTwitchPredictions from '@/lib/i18n/locales/admin-fr/adminTwitchPredictions';
+import {
+  Spinner,
+  adminErrorCode,
+  useBusySet,
+} from '@/components/admin/broadcast/twitchPanelUtils';
 
 // --- Formes du contrat (figées) ---------------------------------------------
 
@@ -68,19 +73,6 @@ const MIN_OUTCOMES = 2;
 const MAX_OUTCOMES = 10;
 const WINDOWS = [30, 60, 90, 120, 300] as const;
 
-// Extrait le `code` machine d'une AdminFetchError (payload.code), sinon null.
-function errorCode(err: unknown): string | null {
-  if (
-    err instanceof AdminFetchError &&
-    err.payload &&
-    typeof err.payload === 'object'
-  ) {
-    const c = (err.payload as { code?: unknown }).code;
-    if (typeof c === 'string') return c;
-  }
-  return null;
-}
-
 export default function TwitchPredictionsPanel() {
   const t = useAdminT(nsAdminTwitchPredictions);
   const { adminFetch, adminFetchJson } = useAdminFetch();
@@ -98,26 +90,8 @@ export default function TwitchPredictionsPanel() {
   const [prediction, setPrediction] = useState<
     TwitchPrediction | null | undefined
   >(undefined);
-  // Busy CIBLÉ par action (create / lock / cancel / resolve:<outcomeId>) pour ne
-  // pas geler tout le panneau pendant un appel réseau.
-  const [busy, setBusy] = useState<Set<string>>(() => new Set());
-  const isBusy = useCallback((id: string) => busy.has(id), [busy]);
-  const withBusy = useCallback(
-    async <T,>(id: string, fn: () => Promise<T>): Promise<T | undefined> => {
-      if (busy.has(id)) return undefined;
-      setBusy((prev) => new Set(prev).add(id));
-      try {
-        return await fn();
-      } finally {
-        setBusy((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      }
-    },
-    [busy]
-  );
+  // Busy CIBLÉ par action (create / lock / cancel / resolve:<outcomeId>).
+  const { isBusy, withBusy } = useBusySet();
 
   const connected = connection?.connected === true;
 
@@ -216,7 +190,7 @@ export default function TwitchPredictionsPanel() {
       }>('/api/admin/twitch/predictions');
       setPrediction(json.prediction ?? null);
     } catch (err) {
-      if (errorCode(err) === 'NOT_CONNECTED') {
+      if (adminErrorCode(err) === 'NOT_CONNECTED') {
         handleNotConnected();
         return;
       }
@@ -255,7 +229,7 @@ export default function TwitchPredictionsPanel() {
   // Traduit une erreur de mutation prediction en toast + effet de bord (409/403).
   const reportMutationError = useCallback(
     (err: unknown) => {
-      const code = errorCode(err);
+      const code = adminErrorCode(err);
       if (code === 'NOT_CONNECTED') {
         handleNotConnected();
         return;
@@ -608,12 +582,6 @@ function Shell({
       </div>
       {children}
     </div>
-  );
-}
-
-function Spinner() {
-  return (
-    <span className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white/30 border-t-white" />
   );
 }
 

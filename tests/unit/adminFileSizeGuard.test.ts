@@ -65,7 +65,8 @@ const BASELINE: Record<string, number> = {
   // 1263 : sondage de secours mutualisé (hooks/useVisiblePoll).
   'pages/admin/events/[runId]/director.tsx': 1263,
   'components/admin/moderation/SupportPanel.tsx': 1167,
-  'components/admin/broadcast/TwitchCommandsPanel.tsx': 1203,
+  // 1172 : errorCode / withBusy / Spinner partagés (twitchPanelUtils).
+  'components/admin/broadcast/TwitchCommandsPanel.tsx': 1172,
   // 959 : en-tête et pastille de connexion partis dans
   // `components/Caster/RegieHeader.tsx` (onglets « Diffusion »).
   // 886 : sondage de secours mutualisé (hooks/useVisiblePoll).

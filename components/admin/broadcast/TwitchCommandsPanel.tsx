@@ -48,6 +48,11 @@ import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Switch from '@/components/ui/Switch';
 import nsAdminTwitchCommands from '@/lib/i18n/locales/admin-fr/adminTwitchCommands';
+import {
+  Spinner,
+  adminErrorCode,
+  useBusySet,
+} from '@/components/admin/broadcast/twitchPanelUtils';
 
 // --- Formes du contrat (figées) ---------------------------------------------
 
@@ -94,19 +99,6 @@ const MAX_MARKER_DESC = 140;
 // Durées de ban proposées ('' = ban permanent, sinon durée en secondes).
 const BAN_DURATIONS = ['', '60', '300', '600', '1800', '3600'] as const;
 
-// Extrait le `code` machine d'une AdminFetchError (payload.code), sinon null.
-function errorCode(err: unknown): string | null {
-  if (
-    err instanceof AdminFetchError &&
-    err.payload &&
-    typeof err.payload === 'object'
-  ) {
-    const c = (err.payload as { code?: unknown }).code;
-    if (typeof c === 'string') return c;
-  }
-  return null;
-}
-
 export default function TwitchCommandsPanel() {
   const t = useAdminT(nsAdminTwitchCommands);
   const { adminFetchJson } = useAdminFetch();
@@ -119,24 +111,7 @@ export default function TwitchCommandsPanel() {
   const [connected, setConnected] = useState<boolean | undefined>(undefined);
 
   // Busy CIBLÉ par action pour ne pas geler tout le panneau pendant un appel.
-  const [busy, setBusy] = useState<Set<string>>(() => new Set());
-  const isBusy = useCallback((id: string) => busy.has(id), [busy]);
-  const withBusy = useCallback(
-    async (id: string, fn: () => Promise<void>): Promise<void> => {
-      if (busy.has(id)) return;
-      setBusy((prev) => new Set(prev).add(id));
-      try {
-        await fn();
-      } finally {
-        setBusy((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      }
-    },
-    [busy]
-  );
+  const { isBusy, withBusy } = useBusySet();
 
   // --- Connexion ------------------------------------------------------------
 
@@ -169,7 +144,7 @@ export default function TwitchCommandsPanel() {
   // Traduit une erreur d'action en toast + effet de bord (409/403).
   const reportError = useCallback(
     (err: unknown) => {
-      const code = errorCode(err);
+      const code = adminErrorCode(err);
       if (code === 'NOT_CONNECTED') {
         handleNotConnected();
         return;
@@ -354,7 +329,7 @@ export default function TwitchCommandsPanel() {
       );
       setRewards(json.rewards ?? []);
     } catch (err) {
-      if (errorCode(err) === 'NOT_CONNECTED') {
+      if (adminErrorCode(err) === 'NOT_CONNECTED') {
         handleNotConnected();
         return;
       }
@@ -378,7 +353,7 @@ export default function TwitchCommandsPanel() {
         );
         setRedemptions(json.redemptions ?? []);
       } catch (err) {
-        if (errorCode(err) === 'NOT_CONNECTED') {
+        if (adminErrorCode(err) === 'NOT_CONNECTED') {
           handleNotConnected();
           return;
         }
@@ -560,7 +535,7 @@ export default function TwitchCommandsPanel() {
         setMarkerDescription('');
       } catch (err) {
         // 409 NOT_LIVE : la chaîne n'est pas en direct → message dédié.
-        if (errorCode(err) === 'NOT_LIVE') {
+        if (adminErrorCode(err) === 'NOT_LIVE') {
           addToast(t.markerNotLive, 'error');
           return;
         }
@@ -1192,11 +1167,5 @@ function Toggle({
       />
       <span className="text-neutral-200">{label}</span>
     </label>
-  );
-}
-
-function Spinner() {
-  return (
-    <span className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white/30 border-t-white" />
   );
 }

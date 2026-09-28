@@ -40,6 +40,7 @@ import {
 } from '@/utils/caster/twitchChatClient';
 import type { ChatEvent, ChatMessage } from '@/utils/caster/twitchProtocol';
 import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
+import { adminErrorCode } from '@/components/admin/broadcast/twitchPanelUtils';
 
 /** Plafond du flux affiché (les plus anciens tombent). */
 export const FEED_MAX = 300;
@@ -61,19 +62,6 @@ type TwitchConnection = {
   connected: boolean;
   broadcaster_login?: string;
 };
-
-/** Extrait le `code` machine d'une AdminFetchError (payload.code), sinon null. */
-function errorCode(err: unknown): string | null {
-  if (
-    err instanceof AdminFetchError &&
-    err.payload &&
-    typeof err.payload === 'object'
-  ) {
-    const c = (err.payload as { code?: unknown }).code;
-    if (typeof c === 'string') return c;
-  }
-  return null;
-}
 
 let itemSeq = 0;
 function nextId(): string {
@@ -390,7 +378,7 @@ export function useTwitchChat() {
   /** Traduit une erreur d'action en toast (codes du contrat backend). */
   const reportError = useCallback(
     (err: unknown) => {
-      const code = errorCode(err);
+      const code = adminErrorCode(err);
       if (code === 'NOT_CONNECTED') {
         setConnection({ connected: false });
         addToast(tRef.current.chatErrorNotConnected, 'error');
