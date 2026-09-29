@@ -69,9 +69,21 @@ export function AdminButtonLink({
   size = 'md',
   className = '',
   children,
-}: Common & { href: string; className?: string }) {
+  title,
+  'data-testid': testId,
+}: Common & {
+  href: string;
+  className?: string;
+  title?: string;
+  'data-testid'?: string;
+}) {
   return (
-    <Link href={href} className={`${classes(variant, size)} ${className}`}>
+    <Link
+      href={href}
+      title={title}
+      data-testid={testId}
+      className={`${classes(variant, size)} ${className}`}
+    >
       {children}
     </Link>
   );

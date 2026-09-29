@@ -600,8 +600,7 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       Faite par trois agents en parallèle sur des fichiers disjoints, vérifiée ensuite (tsc,
       gardes). Le cliquet a refusé 4 `useState` ajoutés pour les dates des fiches : fusionnés
       avec l'état `loading` qu'ils rendaient redondant.
-- [ ] Constat du lot : `Chip` et `AdminButtonLink` n'acceptent ni `title` ni `data-testid` —
-      les écrans les enveloppent d'un `<span>`. À ouvrir dans le kit.
+- [x] Constat du lot 1 corrigé : `Chip` et `AdminButtonLink` acceptent `title` et `data-testid`.
 - [ ] Tableau de bord tournoi à onglets ; les autres listes et fiches : avec les lots de
       découpe L15–L20.
 - [ ] Bouton d'action principal : `AdminButton variant="primary"` (vert feuille, comme les
