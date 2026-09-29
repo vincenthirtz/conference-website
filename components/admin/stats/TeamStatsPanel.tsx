@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { statsClient } from '@/features/admin/stats/client';
+import { useTeamStats } from '@/features/admin/stats/hooks/useStats';
+import { useTournamentOptions } from '@/features/admin/_shared/tournamentOptions';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
@@ -49,16 +51,6 @@ type TeamStatsRow = {
   last_match_at: string | null;
 };
 
-type TeamStatsApiResponse = {
-  stats: TeamStatsRow[];
-  total: number | null;
-};
-
-type TournamentsApiResponse = {
-  tournaments: TournamentMini[];
-  total: number | null;
-};
-
 function formatPercent(v: number | null | undefined) {
   if (v == null) return '—';
   return `${(v * 100).toFixed(1)}%`;
@@ -85,16 +77,6 @@ function formatDateTime(iso: string | null) {
  */
 export default function TeamStatsPanel() {
   const t = useAdminT(nsAdminStatsTeams);
-  const { adminFetch, adminFetchJson } = useAdminFetch();
-
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const [stats, setStats] = useState<TeamStatsRow[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-
-  const [tournaments, setTournaments] = useState<TournamentMini[]>([]);
-  const [loadingTournaments, setLoadingTournaments] = useState(false);
 
   // Filtres
   const [tournamentId, setTournamentId] = useState<string>('');
@@ -106,73 +88,65 @@ export default function TeamStatsPanel() {
   const [limit] = useState(100);
   const [offset, setOffset] = useState(0);
 
-  const fetchTournaments = useCallback(async () => {
-    try {
-      setLoadingTournaments(true);
-      const res = await adminFetch('/api/admin/tournaments?limit=200');
-      if (!res.ok) return;
-      const json: TournamentsApiResponse = await res.json();
-      setTournaments(json.tournaments || []);
-    } catch (err) {
-      logger.error('Failed to load tournaments for stats filters', err);
-    } finally {
-      setLoadingTournaments(false);
-    }
-  }, [adminFetch]);
-
+  const tournamentsQuery = useTournamentOptions();
+  const tournaments: TournamentMini[] =
+    tournamentsQuery.data?.tournaments ?? [];
+  const loadingTournaments = tournamentsQuery.isFetching;
   useEffect(() => {
-    fetchTournaments();
-  }, [fetchTournaments]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: refetch piloté par les seuls filtres/offset listés ; `search` (réactif) est volontairement exclu (appliqué via handleFilterSubmit). adminFetch* est désormais stable mais fetchStats reste hors deps pour ne pas déclencher sur `search`.
-  useEffect(() => {
-    fetchStats();
-  }, [offset, tournamentId, sortBy, sortDir, minMatches]);
-
-  async function fetchStats() {
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(limit));
-      params.set('offset', String(offset));
-      if (tournamentId) params.set('tournamentId', tournamentId);
-      if (search.trim()) params.set('search', search.trim());
-      if (minMatches) params.set('minMatches', minMatches);
-      if (sortBy) params.set('sortBy', sortBy);
-      if (sortDir) params.set('sortDir', sortDir);
-
-      const json = await adminFetchJson<TeamStatsApiResponse>(
-        '/api/admin/stats/teams?' + params.toString()
+    if (tournamentsQuery.error)
+      logger.error(
+        'Failed to load tournaments for stats filters',
+        tournamentsQuery.error
       );
-      setStats(json.stats || []);
-      setTotal(typeof json.total === 'number' ? json.total : null);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }
+  }, [tournamentsQuery.error]);
 
-  function handleFilterSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setOffset(0);
-    fetchStats();
-  }
+  // Paramètres de la requête : figés quand un filtre ou la page change, avec
+  // la recherche telle qu'elle est tapée à cet instant (la saisie seule ne
+  // relance rien ; elle s'applique via « Filtrer »).
+  const [query, setQuery] = useState<string | null>(null);
 
-  function handleExportCsv() {
+  function buildQuery(opts: { offset?: number; csv?: boolean } = {}) {
     const params = new URLSearchParams();
-    params.set('limit', '10000');
-    params.set('offset', '0');
-    params.set('export', 'csv');
+    if (opts.csv) {
+      params.set('limit', '10000');
+      params.set('offset', '0');
+      params.set('export', 'csv');
+    } else {
+      params.set('limit', String(limit));
+      params.set('offset', String(opts.offset ?? offset));
+    }
     if (tournamentId) params.set('tournamentId', tournamentId);
     if (search.trim()) params.set('search', search.trim());
     if (minMatches) params.set('minMatches', minMatches);
     if (sortBy) params.set('sortBy', sortBy);
     if (sortDir) params.set('sortDir', sortDir);
+    return params.toString();
+  }
 
-    window.location.href = '/api/admin/stats/teams?' + params.toString();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: requête figée sur les seuls filtres/offset listés ; `search` (réactif) est volontairement exclu (appliqué via handleFilterSubmit).
+  useEffect(() => {
+    setQuery(buildQuery());
+  }, [offset, tournamentId, sortBy, sortDir, minMatches]);
+
+  const statsQuery = useTeamStats<TeamStatsRow>(query);
+  const stats = statsQuery.data?.stats ?? [];
+  const total =
+    typeof statsQuery.data?.total === 'number' ? statsQuery.data.total : null;
+  const loading = statsQuery.isFetching;
+  const errorMsg = statsQuery.isError
+    ? ((statsQuery.error as Error)?.message ?? t.errorUnexpected)
+    : null;
+
+  function handleFilterSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setOffset(0);
+    const next = buildQuery({ offset: 0 });
+    if (next === query) void statsQuery.refetch();
+    else setQuery(next);
+  }
+
+  function handleExportCsv() {
+    window.location.href = statsClient.teamsCsvUrl(buildQuery({ csv: true }));
   }
 
   // Colonnes déclaratives (lot A5). Le rang dépend de l'offset : il est calculé

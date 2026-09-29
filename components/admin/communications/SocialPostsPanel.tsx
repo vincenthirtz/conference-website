@@ -12,8 +12,15 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  communicationsKeys,
+  useIdempotentCall,
+  useInstagramSetup,
+  useSocialPostsState,
+} from '@/features/admin/communications/hooks/useCommunications';
+import { socialClient } from '@/features/admin/communications/client';
+import type { SocialPreviewTarget as PreviewTarget } from '@/features/admin/communications/clientTypes';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
@@ -22,56 +29,19 @@ import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import MarkdownEditor from '@/components/admin/MarkdownEditor';
 import AlertBanner from '@/components/admin/AlertBanner';
 import { logger } from '@/utils/logger';
-import type {
-  SocialPlatform,
-  SocialPlatformKey,
-} from '@/utils/social/platforms';
-import type { TargetStatus } from '@/components/admin/communications/SocialPostsHistory';
 import { discordMentionIds } from '@/utils/social/markdown';
 import {
   readOauthReturn,
   withoutOauthParams,
 } from '@/utils/social/oauthReturn';
 import HashtagPicker from '@/components/admin/communications/HashtagPicker';
-import SocialPostsHistory, {
-  type HistoryPost,
-} from '@/components/admin/communications/SocialPostsHistory';
+import SocialPostsHistory from '@/components/admin/communications/SocialPostsHistory';
 import TiktokMirrorCard from '@/components/admin/communications/TiktokMirrorCard';
 import PlatformConnectionStatus, {
-  type ConnectionState,
   type SetupState,
 } from '@/components/admin/communications/PlatformConnectionStatus';
 import nsAdminSocialPosts from '@/lib/i18n/locales/admin-fr/adminSocialPosts';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-
-type StateResponse = {
-  platforms: SocialPlatform[];
-  connections: Record<string, ConnectionState>;
-  posts: HistoryPost[];
-  /** Tags déjà employés, du plus fréquent au moins : corpus des suggestions. */
-  knownHashtags?: string[];
-};
-
-type PreviewTarget = {
-  platform: SocialPlatformKey;
-  label: string;
-  text: string;
-  imageUrl: string | null;
-  title: string | null;
-  error: string | null;
-};
-
-type PostResponse = {
-  dryRun: boolean;
-  postId?: string;
-  status?: 'done' | 'partial' | 'failed';
-  targets: Array<
-    PreviewTarget & { status?: TargetStatus; permalink?: string | null }
-  >;
-};
-
-const ENDPOINT = '/api/admin/social-posts';
-const SECRET_ENDPOINT = '/api/admin/instagram/secret';
 
 /** Ce qui manque encore pour qu'Instagram puisse publier. */
 /** Réglages d'une destination dans le formulaire. */
@@ -103,14 +73,15 @@ function makeDraft(over: Partial<TargetDraft> = {}): TargetDraft {
 
 export default function SocialPostsPanel() {
   const t = useAdminT(nsAdminSocialPosts);
-  const { adminFetchJson } = useAdminFetch();
-  const { mutateJson } = useIdempotentMutation();
+  const { run } = useIdempotentCall();
+  const qc = useQueryClient();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { addToast } = useToast();
 
-  const [state, setState] = useState<StateResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const stateQuery = useSocialPostsState();
+  const state = stateQuery.data ?? null;
+  const loading = stateQuery.isPending;
+  const error = stateQuery.isError ? t.loadError : null;
 
   const [baseText, setBaseText] = useState('');
   const [baseImage, setBaseImage] = useState('');
@@ -150,51 +121,59 @@ export default function SocialPostsPanel() {
   // Mise en service Instagram : l'App Secret se pose ICI et pas dans un script
   // local, parce que la clé de chiffrement ne vit qu'en production. Le serveur
   // chiffre là où la clé est déjà.
-  const [setup, setSetup] = useState<SetupState | null>(null);
+  // Best-effort : l'état de mise en service ne doit pas empêcher le composeur
+  // de s'afficher pour les cibles qui, elles, marchent déjà.
+  const setupQuery = useInstagramSetup();
+  const setup = setupQuery.data ?? null;
   const markSecretSet = useCallback(
-    () => setSetup((prev) => (prev ? { ...prev, secretSet: true } : prev)),
-    []
+    () =>
+      qc.setQueryData<SetupState>(
+        communicationsKeys.instagramSetup(),
+        (prev) => (prev ? { ...prev, secretSet: true } : prev)
+      ),
+    [qc]
   );
 
+  // Recharge l'état (et la mise en service) : après publication ou
+  // enregistrement d'identifiants.
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await adminFetchJson<StateResponse>(ENDPOINT);
-      setState(data);
-      // Best-effort : l'état de mise en service ne doit pas empêcher le
-      // composeur de s'afficher pour les cibles qui, elles, marchent déjà.
-      try {
-        setSetup(await adminFetchJson<SetupState>(SECRET_ENDPOINT));
-      } catch (setupErr) {
-        logger.error('[admin/social-posts] setup state error', setupErr);
-      }
-      setDrafts((prev) => {
-        if (Object.keys(prev).length > 0) return prev;
-        return Object.fromEntries(
-          data.platforms.map((p) => [
-            p.key,
-            makeDraft({
-              // Une cible dont le compte n'est pas connecté part décochée :
-              // la cocher ne mènerait qu'à un échec de publication.
-              enabled:
-                !p.needsConnection ||
-                Boolean(data.connections?.[p.key]?.connected),
-            }),
-          ])
-        );
-      });
-    } catch (err) {
-      logger.error('[admin/social-posts] load error', err);
-      setError(t.loadError);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, t.loadError]);
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: communicationsKeys.socialState() }),
+      qc.invalidateQueries({ queryKey: communicationsKeys.instagramSetup() }),
+    ]);
+  }, [qc]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (stateQuery.error) {
+      logger.error('[admin/social-posts] load error', stateQuery.error);
+    }
+  }, [stateQuery.error]);
+  useEffect(() => {
+    if (setupQuery.error) {
+      logger.error('[admin/social-posts] setup state error', setupQuery.error);
+    }
+  }, [setupQuery.error]);
+
+  // Brouillons initialisés au premier chargement seulement.
+  useEffect(() => {
+    const data = stateQuery.data;
+    if (!data) return;
+    setDrafts((prev) => {
+      if (Object.keys(prev).length > 0) return prev;
+      return Object.fromEntries(
+        data.platforms.map((p) => [
+          p.key,
+          makeDraft({
+            // Une cible dont le compte n'est pas connecté part décochée :
+            // la cocher ne mènerait qu'à un échec de publication.
+            enabled:
+              !p.needsConnection ||
+              Boolean(data.connections?.[p.key]?.connected),
+          }),
+        ])
+      );
+    });
+  }, [stateQuery.data]);
 
   // Retour d'un parcours OAuth (callbacks Instagram / TikTok) : le résultat
   // arrive dans l'URL. Personne ne le lisait — une reconnexion ratée ramenait
@@ -270,22 +249,20 @@ export default function SocialPostsPanel() {
   );
 
   const buildBody = useCallback(
-    (dryRun: boolean) =>
-      JSON.stringify({
-        text: baseText,
-        imageUrl: baseImage.trim() || null,
-        targets: selected.map((p) => {
-          const d = drafts[p.key] ?? emptyDraft;
-          return {
-            platform: p.key,
-            textOverride: d.text,
-            imageOverride: d.image?.trim() || null,
-            titleOverride: d.title?.trim() || null,
-            hashtags: d.hashtags,
-          };
-        }),
-        dryRun,
+    () => ({
+      text: baseText,
+      imageUrl: baseImage.trim() || null,
+      targets: selected.map((p) => {
+        const d = drafts[p.key] ?? emptyDraft;
+        return {
+          platform: p.key,
+          textOverride: d.text,
+          imageOverride: d.image?.trim() || null,
+          titleOverride: d.title?.trim() || null,
+          hashtags: d.hashtags,
+        };
       }),
+    }),
     [baseText, baseImage, selected, drafts]
   );
 
@@ -300,11 +277,7 @@ export default function SocialPostsPanel() {
     }
     setBusy(true);
     try {
-      const data = await adminFetchJson<PostResponse>(ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: buildBody(true),
-      });
+      const data = await socialClient.preview(buildBody());
       setPreview(data.targets);
     } catch (err) {
       logger.error('[admin/social-posts] preview error', err);
@@ -312,7 +285,7 @@ export default function SocialPostsPanel() {
     } finally {
       setBusy(false);
     }
-  }, [adminFetchJson, addToast, baseText, buildBody, selected.length, t]);
+  }, [addToast, baseText, buildBody, selected.length, t]);
 
   const blocking = useMemo(
     () => (preview ?? []).filter((p) => p.error),
@@ -332,11 +305,7 @@ export default function SocialPostsPanel() {
 
     setBusy(true);
     try {
-      const data = await mutateJson<PostResponse>(ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: buildBody(false),
-      });
+      const data = await run(socialClient.publish(buildBody()));
 
       const sent = data.targets.filter((x) => x.status === 'sent').length;
       if (data.status === 'done') {
@@ -376,7 +345,7 @@ export default function SocialPostsPanel() {
     buildBody,
     confirm,
     load,
-    mutateJson,
+    run,
     preview,
     selected.length,
     state,

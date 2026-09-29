@@ -29,6 +29,7 @@ import Tabs, {
 } from '@/components/admin/Tabs';
 import type { StaffProps } from '@/types/admin';
 import { lazyPanel } from '@/components/admin/lazyPanel';
+import { withAdminQuery } from '@/features/admin/_shared/query';
 import nsAdminTcgPage from '@/lib/i18n/locales/admin-fr/adminTcgPage';
 import nsAdminTcgOverview from '@/lib/i18n/locales/admin-fr/adminTcgOverview';
 import nsAdminTcgPhotos from '@/lib/i18n/locales/admin-fr/adminTcgPhotos';
@@ -70,7 +71,7 @@ const TcgBattlenetBackfillCard = lazyPanel(
   () => import('@/components/admin/tcg/TcgBattlenetBackfillCard')
 );
 
-export default function AdminTcgPage(_props: StaffProps) {
+function AdminTcgPage(_props: StaffProps) {
   const t = useAdminT(nsAdminTcgPage);
   const tTcgOverview = useAdminT(nsAdminTcgOverview);
   const tTcgPhotos = useAdminT(nsAdminTcgPhotos);
@@ -161,3 +162,5 @@ export default function AdminTcgPage(_props: StaffProps) {
 // sont pas des gestes de caster par défaut, et donner le support ne doit pas
 // les ouvrir.
 export const getServerSideProps = withStaffPage({ permission: 'manage_tcg' });
+
+export default withAdminQuery(AdminTcgPage);

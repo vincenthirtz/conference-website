@@ -2,10 +2,8 @@
 // Admin: liste des partenaires du tenant courant + modale de création.
 // Rendered as the "Partenaires" tab of the /admin/partners hub.
 //
-// Endpoints:
-//   GET    /api/admin/partners?category=&active=&search=  → { items, total }
-//   PATCH  /api/admin/partners/[id]                       → { isActive }
-//   DELETE /api/admin/partners/[id]
+// Données : features/admin/partners (client typé + cache partagé, lot L10) —
+// liste paginée, bascule actif/inactif et suppression invalident la liste.
 //
 // Deep-link `?new=1` (ex-route /admin/partners/new) ouvre la modale de création.
 // minRole 'admin' (miroir des routes API).
@@ -15,8 +13,13 @@ import { useRouter } from 'next/router';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useAdminResource } from '@/hooks/useAdminResource';
+import {
+  useInvalidatePartners,
+  usePartnersList,
+  useRemovePartner,
+  useTogglePartnerActive,
+} from '@/features/admin/partners/hooks/usePartners';
+import type { PartnerListRow } from '@/features/admin/partners/client';
 import PartnerFormModal from '@/components/admin/partners/PartnerFormModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminPartnersList from '@/lib/i18n/locales/admin-fr/adminPartnersList';
@@ -31,24 +34,7 @@ import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type Dict = typeof nsAdminPartnersList.fr;
 
-type PartnerRow = {
-  id: string;
-  name: string;
-  description: string;
-  category: 'super' | 'major' | 'cultural';
-  logo_url: string | null;
-  website_url: string | null;
-  note: string | null;
-  display_order: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
-type PartnersApiResponse = {
-  items: PartnerRow[];
-  total: number | null;
-};
+type PartnerRow = PartnerListRow;
 
 const P_FILTER_KEYS = ['category', 'active', 'search'] as const;
 
@@ -71,7 +57,6 @@ export default function PartnersListPanel() {
   const categoryLabels = getCategoryLabels(tx);
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
   const { filters, setFilters } = useUrlFilters(P_FILTER_KEYS);
@@ -84,26 +69,29 @@ export default function PartnersListPanel() {
   const [searchInput, setSearchInput] = useState(searchFilter);
 
   // Filtres (category/active/search) restent pilotés par l'URL (partage de
-  // lien) et passés en params serveur ; la pagination est détenue par le hook.
-  const {
-    data: partners,
-    total,
-    loading,
-    error: errorMsg,
-    refresh: fetchPartners,
-    offset,
-    resetOffset,
-    setOffset,
-  } = useAdminResource<PartnerRow, PartnersApiResponse>('/api/admin/partners', {
+  // lien) et passés en params serveur ; la pagination reste un état d'UI.
+  const [offset, setOffsetState] = useState(0);
+  const setOffset = useCallback(
+    (next: number) => setOffsetState(Math.max(0, next)),
+    []
+  );
+  const resetOffset = useCallback(() => setOffsetState(0), []);
+  const list = usePartnersList({
     limit: PAGE_LIMIT,
-    params: {
-      category: categoryFilter,
-      active: activeFilter,
-      search: searchFilter,
-    },
-    select: (res) => res.items || [],
-    selectTotal: (res) => (typeof res.total === 'number' ? res.total : null),
+    offset,
+    category: categoryFilter,
+    active: activeFilter,
+    search: searchFilter,
   });
+  const partners: PartnerRow[] = list.data?.items ?? [];
+  const total = list.data?.total ?? null;
+  // `isFetching` et non `isPending` : chaque rechargement repasse par l'état
+  // de chargement, comme avant la migration.
+  const loading = list.isFetching;
+  const errorMsg = list.isError && !list.isFetching ? list.error.message : null;
+  const fetchPartners = useInvalidatePartners();
+  const removePartner = useRemovePartner();
+  const toggleActiveMutation = useTogglePartnerActive();
 
   // Garde le champ local en phase si l'URL change (navigation, partage de lien)
   useEffect(() => {
@@ -152,8 +140,7 @@ export default function PartnersListPanel() {
     });
     if (!ok) return;
     try {
-      await adminFetchJson(`/api/admin/partners/${id}`, { method: 'DELETE' });
-      fetchPartners();
+      await removePartner.mutateAsync(id);
     } catch (err: unknown) {
       addToast((err as Error)?.message || tx.errorDelete, 'error');
     }
@@ -161,11 +148,10 @@ export default function PartnersListPanel() {
 
   const toggleActive = async (partner: PartnerRow) => {
     try {
-      await adminFetchJson(`/api/admin/partners/${partner.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ isActive: !partner.is_active }),
+      await toggleActiveMutation.mutateAsync({
+        id: partner.id,
+        isActive: !partner.is_active,
       });
-      fetchPartners();
     } catch (err: unknown) {
       addToast((err as Error)?.message || tx.errorUpdate, 'error');
     }
@@ -180,7 +166,7 @@ export default function PartnersListPanel() {
       <PartnerFormModal
         open={modalOpen}
         onClose={closeModal}
-        onCreated={fetchPartners}
+        onCreated={() => void fetchPartners()}
       />
 
       {/* Header */}
@@ -354,7 +340,9 @@ export default function PartnersListPanel() {
                     {p.description}
                   </p>
                   <div className="flex items-center gap-3 text-xs text-neutral-500 mt-1">
-                    <span>{format(tx.order, { order: p.display_order })}</span>
+                    <span>
+                      {format(tx.order, { order: String(p.display_order) })}
+                    </span>
                     {p.website_url && (
                       <>
                         <span>•</span>

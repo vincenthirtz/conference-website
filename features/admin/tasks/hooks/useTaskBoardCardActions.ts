@@ -15,9 +15,9 @@ import type {
   TaskActivity,
   TaskComment,
 } from '@/components/admin/tasks/taskBoardModel';
+import { taskBoardUrls, taskBoardClient } from '../client';
 import type {
   AddToast,
-  AdminFetchJson,
   Confirm,
   FetchBoards,
   FetchDetail,
@@ -29,7 +29,6 @@ export type TaskBoardCardActionsDeps = {
   t: Dict;
   addToast: AddToast;
   confirm: Confirm;
-  adminFetchJson: AdminFetchJson;
   cardMutation: Mutation;
   checklistMutation: Mutation;
   commentMutation: Mutation;
@@ -80,7 +79,6 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
     t,
     addToast,
     confirm,
-    adminFetchJson,
     cardMutation,
     checklistMutation,
     commentMutation,
@@ -145,9 +143,7 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
     async (taskId: string) => {
       setActivityLoading(true);
       try {
-        const json = await adminFetchJson<{ activity: TaskActivity[] }>(
-          `/api/admin/tasks/tasks/${encodeURIComponent(taskId)}/activity`
-        );
+        const json = await taskBoardClient.activity(taskId);
         setTaskActivity(json.activity || []);
       } catch (err: unknown) {
         addToast((err as Error)?.message || t.activityLoadError, 'error');
@@ -155,7 +151,7 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
         setActivityLoading(false);
       }
     },
-    [adminFetchJson, addToast, t]
+    [addToast, t]
   );
 
   // Charge checklist + commentaires d'une carte existante (édition).
@@ -164,9 +160,7 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
     async (taskId: string) => {
       setCardDetailLoading(true);
       try {
-        const json = await adminFetchJson<{
-          task: { checklist: ChecklistItem[]; comments: TaskComment[] };
-        }>(`/api/admin/tasks/tasks/${encodeURIComponent(taskId)}`);
+        const json = await taskBoardClient.task(taskId);
         setTaskChecklist(
           (json.task.checklist || [])
             .slice()
@@ -183,7 +177,7 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
         setCardDetailLoading(false);
       }
     },
-    [adminFetchJson, addToast, t]
+    [addToast, t]
   );
 
   function openAddCard(columnId: string) {
@@ -224,7 +218,7 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
     setChecklistAdding(true);
     try {
       const res = await checklistMutation.mutateJson<{ item: ChecklistItem }>(
-        `/api/admin/tasks/tasks/${encodeURIComponent(editingCard.id)}/checklist`,
+        taskBoardUrls.taskChecklist(editingCard.id),
         { method: 'POST', body: JSON.stringify({ label }) }
       );
       setTaskChecklist((prev) =>
@@ -246,10 +240,10 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
       prev.map((it) => (it.id === item.id ? { ...it, isDone: nextDone } : it))
     );
     try {
-      await checklistMutation.mutateJson(
-        `/api/admin/tasks/checklist/${encodeURIComponent(item.id)}`,
-        { method: 'PATCH', body: JSON.stringify({ isDone: nextDone }) }
-      );
+      await checklistMutation.mutateJson(taskBoardUrls.checklistItem(item.id), {
+        method: 'PATCH',
+        body: JSON.stringify({ isDone: nextDone }),
+      });
       if (activeBoardId) void fetchDetail(activeBoardId);
     } catch (err: unknown) {
       // Rollback
@@ -267,10 +261,9 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
     // Optimiste
     setTaskChecklist((prev) => prev.filter((it) => it.id !== item.id));
     try {
-      await checklistMutation.mutateJson(
-        `/api/admin/tasks/checklist/${encodeURIComponent(item.id)}`,
-        { method: 'DELETE' }
-      );
+      await checklistMutation.mutateJson(taskBoardUrls.checklistItem(item.id), {
+        method: 'DELETE',
+      });
       if (activeBoardId) void fetchDetail(activeBoardId);
     } catch (err: unknown) {
       setTaskChecklist(snapshot); // rollback
@@ -288,7 +281,7 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
     setCommentPosting(true);
     try {
       const res = await commentMutation.mutateJson<{ comment: TaskComment }>(
-        `/api/admin/tasks/tasks/${encodeURIComponent(editingCard.id)}/comments`,
+        taskBoardUrls.taskComments(editingCard.id),
         { method: 'POST', body: JSON.stringify({ body }) }
       );
       setTaskComments((prev) => [...prev, res.comment]);
@@ -311,10 +304,9 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
     const snapshot = taskComments;
     setTaskComments((prev) => prev.filter((c) => c.id !== comment.id));
     try {
-      await commentMutation.mutateJson(
-        `/api/admin/tasks/comments/${encodeURIComponent(comment.id)}`,
-        { method: 'DELETE' }
-      );
+      await commentMutation.mutateJson(taskBoardUrls.comment(comment.id), {
+        method: 'DELETE',
+      });
       addToast(t.commentDeleted, 'success');
       if (activeBoardId) void fetchDetail(activeBoardId);
     } catch (err: unknown) {
@@ -334,24 +326,21 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
     const dueDate = cardDue.trim() ? cardDue.trim() : null;
     try {
       if (editingCard) {
-        await cardMutation.mutateJson(
-          `/api/admin/tasks/tasks/${encodeURIComponent(editingCard.id)}`,
-          {
-            method: 'PATCH',
-            body: JSON.stringify({
-              title: cardTitle.trim(),
-              description: cardDesc.trim() || null,
-              priority: cardPriority,
-              dueDate,
-              labels,
-            }),
-          }
-        );
+        await cardMutation.mutateJson(taskBoardUrls.task(editingCard.id), {
+          method: 'PATCH',
+          body: JSON.stringify({
+            title: cardTitle.trim(),
+            description: cardDesc.trim() || null,
+            priority: cardPriority,
+            dueDate,
+            labels,
+          }),
+        });
         // Assignation : endpoint séparé (idempotent), seulement si changé.
         const prev = editingCard.assignee?.staffId ?? '';
         if (prev !== cardAssignee) {
           await cardMutation.mutateJson(
-            `/api/admin/tasks/tasks/${encodeURIComponent(editingCard.id)}/assign`,
+            taskBoardUrls.taskAssign(editingCard.id),
             {
               method: 'PATCH',
               body: JSON.stringify({
@@ -362,7 +351,7 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
         }
         addToast(t.cardUpdated, 'success');
       } else if (cardColumnId) {
-        await cardMutation.mutateJson('/api/admin/tasks/tasks', {
+        await cardMutation.mutateJson(taskBoardUrls.tasks, {
           method: 'POST',
           body: JSON.stringify({
             boardId: activeBoardId,
@@ -397,10 +386,9 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
     if (!ok) return;
     setCardDeleting(true);
     try {
-      await cardMutation.mutateJson(
-        `/api/admin/tasks/tasks/${encodeURIComponent(editingCard.id)}`,
-        { method: 'DELETE' }
-      );
+      await cardMutation.mutateJson(taskBoardUrls.task(editingCard.id), {
+        method: 'DELETE',
+      });
       addToast(t.cardDeleted, 'success');
       setCardModalOpen(false);
       await fetchDetail(activeBoardId);

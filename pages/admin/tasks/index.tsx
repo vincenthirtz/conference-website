@@ -1,8 +1,10 @@
 // pages/admin/tasks/index.tsx
 //
 // Kanban interne staff-only (task_boards / task_columns / tasks).
-// Consomme l'API admin /api/admin/tasks/* (déjà livrée). Aucune écriture DB
-// directe : lectures via useAdminFetch, écritures via useIdempotentMutation.
+// Consomme l'API admin des tâches via features/admin/tasks/client.ts. Aucune
+// écriture DB directe : lectures sur le cache de requêtes (lot L10,
+// hooks/useTaskBoardQueries.ts), écritures via useIdempotentMutation (clé
+// d'idempotence par famille de gestes + file hors ligne).
 //
 // Vue : sélecteur de board (onglets) + actions board (renommer/archiver/
 // supprimer) + colonnes en flex horizontal scrollable, cartes drag & drop
@@ -11,11 +13,18 @@
 // « Le Ruban » (lot 8C) : la page garde l'état, les chargements et les effets ;
 // gestes → features/admin/tasks/hooks/ (corps à l'identique), affichage → ui/.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useQueryClient } from '@tanstack/react-query';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
@@ -42,6 +51,15 @@ import {
   MyTasksView,
   ActivitySection,
 } from '@/components/admin/tasks/TaskBoardParts';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { taskBoardClient } from '@/features/admin/tasks/client';
+import {
+  taskBoardKeys,
+  useMyTasks,
+  useTaskBoardDetail,
+  useTaskBoardStaff,
+  useTaskBoardsList,
+} from '@/features/admin/tasks/hooks/useTaskBoardQueries';
 import { useTaskBoardBoardActions } from '@/features/admin/tasks/hooks/useTaskBoardBoardActions';
 import { useTaskBoardCardActions } from '@/features/admin/tasks/hooks/useTaskBoardCardActions';
 import { useTaskBoardLabelActions } from '@/features/admin/tasks/hooks/useTaskBoardLabelActions';
@@ -78,7 +96,7 @@ export const getServerSideProps = withStaffPage({ permission: 'manage_tasks' });
 function AdminTasksPage({ staff: currentStaff }: StaffProps) {
   const t = useAdminT(nsAdminTaskBoard);
   const locale = useLocale();
-  const { adminFetchJson } = useAdminFetch();
+  const queryClient = useQueryClient();
   const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();
   const { tenant } = useActiveTenant();
@@ -100,24 +118,48 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
   const initialUrlBoardRef = useRef<string | null>(
     typeof router.query.board === 'string' ? router.query.board : null
   );
-  const [boards, setBoards] = useState<BoardListItem[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   // Bascule Board ↔ Mes tâches (vue transverse).
   const [viewMode, setViewMode] = useState<'board' | 'mine'>('board');
-  const [myTasks, setMyTasks] = useState<MyTask[]>([]);
-  const [loadingMy, setLoadingMy] = useState(false);
   // Ouverture différée d'une carte depuis « Mes tâches » : on navigue vers son
   // board puis on ouvre la modale une fois le détail du board chargé.
   const [pendingOpenCardId, setPendingOpenCardId] = useState<string | null>(
     null
   );
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<BoardDetail | null>(null);
-  const [loadingBoards, setLoadingBoards] = useState(true);
-  const [loadingDetail, setLoadingDetail] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [staff, setStaff] = useState<StaffOption[]>([]);
+  // Lectures (cache de requêtes). La liste des boards n'est lue que par
+  // `fetchBoards`, qui choisit ensuite le board actif ; le détail suit
+  // `activeBoardId` (et repart de zéro à chaque changement de board : deux
+  // boards partagent les mêmes noms de colonnes par défaut, un détail périmé
+  // laisserait ajouter une carte dans la colonne d'un autre board → 400).
+  const boardsQuery = useTaskBoardsList();
+  const boards: BoardListItem[] = boardsQuery.data?.boards || [];
+  // Pas encore de réponse = chargement (comme l'état initial d'avant).
+  const loadingBoards =
+    boardsQuery.isFetching || (!boardsQuery.data && !boardsQuery.isError);
+  const detailQuery = useTaskBoardDetail(activeBoardId);
+  const detail: BoardDetail | null = detailQuery.data ?? null;
+  const loadingDetail = detailQuery.isFetching;
+  const myTasksQuery = useMyTasks(viewMode === 'mine');
+  const myTasks: MyTask[] = myTasksQuery.data ?? [];
+  const loadingMy = myTasksQuery.isFetching;
+  const staffQuery = useTaskBoardStaff(tenant?.id);
+  const staff: StaffOption[] = staffQuery.data ?? [];
+
+  // Le glisser-déposer écrit le détail EN PLACE (optimiste + retour arrière) :
+  // même contrat qu'un setter d'état, appliqué à l'entrée du cache.
+  const setDetail = useCallback(
+    (next: SetStateAction<BoardDetail | null>) => {
+      if (!activeBoardId) return;
+      queryClient.setQueryData<BoardDetail | null>(
+        taskBoardKeys.board(activeBoardId),
+        (prev) => (typeof next === 'function' ? next(prev ?? null) : next)
+      );
+    },
+    [queryClient, activeBoardId]
+  );
 
   // Board modale (création / renommage)
   const [boardModalOpen, setBoardModalOpen] = useState(false);
@@ -201,14 +243,14 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
 
   const fetchBoards = useCallback(
     async (opts?: { keepActive?: boolean }) => {
-      setLoadingBoards(true);
       setErrorMsg(null);
       try {
-        const json = await adminFetchJson<{ boards: BoardListItem[] }>(
-          '/api/admin/tasks/boards?includeArchived=1'
-        );
+        const json = await queryClient.fetchQuery({
+          queryKey: taskBoardKeys.boards(),
+          queryFn: taskBoardClient.listBoards,
+          staleTime: 0,
+        });
         const list = json.boards || [];
-        setBoards(list);
         setActiveBoardId((prev) => {
           if (opts?.keepActive && prev && list.some((b) => b.id === prev)) {
             return prev;
@@ -223,66 +265,43 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
         });
       } catch (err: unknown) {
         setErrorMsg((err as Error)?.message || t.errorLoad);
-      } finally {
-        setLoadingBoards(false);
       }
     },
-    [adminFetchJson, showArchived, t]
+    [queryClient, showArchived, t]
   );
 
+  // Relit le détail d'un board ; l'échec est signalé par l'effet ci-dessous.
   const fetchDetail = useCallback(
     async (boardId: string) => {
-      setLoadingDetail(true);
-      try {
-        const json = await adminFetchJson<{ board: BoardDetail }>(
-          `/api/admin/tasks/boards/${encodeURIComponent(boardId)}`
-        );
-        setDetail(json.board);
-      } catch (err: unknown) {
-        addToast((err as Error)?.message || t.errorLoad, 'error');
-      } finally {
-        setLoadingDetail(false);
-      }
+      await queryClient.refetchQueries({
+        queryKey: taskBoardKeys.board(boardId),
+        exact: true,
+      });
     },
-    [adminFetchJson, addToast, t]
+    [queryClient]
   );
 
+  const refetchMyTasks = myTasksQuery.refetch;
   const fetchMyTasks = useCallback(async () => {
-    setLoadingMy(true);
-    try {
-      const json = await adminFetchJson<{ tasks: MyTask[] }>(
-        '/api/admin/tasks/my'
-      );
-      setMyTasks(json.tasks || []);
-    } catch (err: unknown) {
-      addToast((err as Error)?.message || t.myTasksLoadError, 'error');
-    } finally {
-      setLoadingMy(false);
-    }
-  }, [adminFetchJson, addToast, t]);
+    await refetchMyTasks();
+  }, [refetchMyTasks]);
 
   useEffect(() => {
     fetchBoards();
   }, [fetchBoards]);
 
-  // Charge « Mes tâches » à l'entrée dans cette vue.
+  // Échecs de lecture : mêmes toasts qu'avant la migration.
   useEffect(() => {
-    if (viewMode === 'mine') fetchMyTasks();
-  }, [viewMode, fetchMyTasks]);
-
+    if (detailQuery.error)
+      addToast(detailQuery.error.message || t.errorLoad, 'error');
+  }, [detailQuery.error, addToast, t]);
   useEffect(() => {
-    if (activeBoardId) {
-      // Drop any detail from a previously-selected board before the new one
-      // loads. Boards share identical default column names ("À faire", …), so
-      // a lingering stale detail would let a card be added against the wrong
-      // board's column (→ 400 column_not_in_board). Clearing it shows the
-      // loading state until the correct columns arrive.
-      setDetail((prev) => (prev && prev.id === activeBoardId ? prev : null));
-      fetchDetail(activeBoardId);
-    } else {
-      setDetail(null);
-    }
-  }, [activeBoardId, fetchDetail]);
+    if (myTasksQuery.error)
+      addToast(myTasksQuery.error.message || t.myTasksLoadError, 'error');
+  }, [myTasksQuery.error, addToast, t]);
+  useEffect(() => {
+    if (staffQuery.error) addToast(t.staffLoadError, 'error');
+  }, [staffQuery.error, addToast, t]);
 
   // Ouverture différée d'une carte arrivée depuis « Mes tâches » : une fois le
   // détail du board cible chargé, on ouvre la carte correspondante (puis on
@@ -315,36 +334,6 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
       { shallow: true }
     );
   }, [activeBoardId]);
-
-  // Liste du staff (assignation) — via le tenant actif.
-  useEffect(() => {
-    if (!tenant?.id) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const json = await adminFetchJson<{
-          staff: Array<{
-            staff_id: string;
-            display_name: string | null;
-            email: string | null;
-          }>;
-        }>(`/api/admin/tenants/${encodeURIComponent(tenant.id)}/staff`);
-        if (cancelled) return;
-        const opts = (json.staff || [])
-          .map((s) => ({
-            id: s.staff_id,
-            name: s.display_name || s.email || s.staff_id,
-          }))
-          .sort((a, b) => a.name.localeCompare(b.name));
-        setStaff(opts);
-      } catch (err: unknown) {
-        if (!cancelled) addToast(t.staffLoadError, 'error');
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [tenant?.id, adminFetchJson, addToast, t]);
 
   const visibleBoards = useMemo(
     () => boards.filter((b) => showArchived || !b.isArchived),
@@ -399,7 +388,6 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
     t,
     addToast,
     confirm,
-    adminFetchJson,
     boardMutation,
     columnMutation,
     restoreMutation,
@@ -447,7 +435,6 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
     t,
     addToast,
     confirm,
-    adminFetchJson,
     cardMutation,
     checklistMutation,
     commentMutation,
@@ -793,4 +780,4 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
   );
 }
 
-export default AdminTasksPage;
+export default withAdminQuery(AdminTasksPage);

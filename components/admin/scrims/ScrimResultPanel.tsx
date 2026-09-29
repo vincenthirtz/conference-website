@@ -10,6 +10,7 @@
 // Le texte de confirmation dit explicitement ce qu'on écrase : un résultat
 // déjà validé (correction) ou un litige (avec sa raison).
 
+import { scrimsPaths } from '@/features/admin/scrims/client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -137,7 +138,7 @@ export default function ScrimResultPanel({ scrim, onSaved }: Props) {
     setRebuildAdvised(false);
     try {
       const res = await mutateJson<ResultResponse>(
-        `/api/admin/scrims/${scrim.id}/result`,
+        scrimsPaths.result(scrim.id),
         {
           method: 'POST',
           body: JSON.stringify({ team1_score: score1, team2_score: score2 }),
@@ -174,7 +175,7 @@ export default function ScrimResultPanel({ scrim, onSaved }: Props) {
     if (!canLive) return;
     setSavingLive(true);
     try {
-      await mutateJson(`/api/admin/scrims/${scrim.id}/result`, {
+      await mutateJson(scrimsPaths.result(scrim.id), {
         method: 'POST',
         body: JSON.stringify({
           team1_score: score1,

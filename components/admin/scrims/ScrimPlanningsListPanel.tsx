@@ -4,6 +4,7 @@
 // /admin/scrims/plannings/index.tsx pour être hébergé comme onglet de la page
 // /admin/scrims. Auto-suffisant : fetch, filtre, liste et modale de création.
 
+import { scrimsPaths } from '@/features/admin/scrims/client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -162,7 +163,7 @@ export default function ScrimPlanningsListPanel() {
   } = useAdminResource<
     ScrimPlanning,
     { plannings: ScrimPlanning[]; total: number | null }
-  >('/api/admin/scrim-plannings', {
+  >(scrimsPaths.plannings, {
     limit: 25,
     // L'API compte TOUJOURS (`count: 'exact'`) et renvoie ce total : le
     // panneau le jetait, et plafonnait à 50 grilles sans pagination.

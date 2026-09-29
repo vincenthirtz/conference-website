@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import {
+  moderationClient,
+  moderationPaths,
+} from '@/features/admin/moderation/client';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -40,7 +43,6 @@ function formatDate(d: string | null) {
 export default function CommentsPanel() {
   const t = useAdminT(nsAdminCommentsList);
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export default function CommentsPanel() {
     setOffset,
     nextPage,
     prevPage,
-  } = useAdminResource<CommentRow, ApiList>('/api/admin/comments', {
+  } = useAdminResource<CommentRow, ApiList>(moderationPaths.comments, {
     limit: 30,
     query: search,
     select: (res) => res.comments || [],
@@ -81,10 +83,7 @@ export default function CommentsPanel() {
     setDeleting(true);
     setMutationError(null);
     try {
-      await adminFetchJson('/api/admin/comments', {
-        method: 'DELETE',
-        body: JSON.stringify({ id: comment.id }),
-      });
+      await moderationClient.deleteComment(comment.id);
       setDeleteTarget(null);
       addToast(t.toastDeleted, 'success');
       refresh();
@@ -100,10 +99,7 @@ export default function CommentsPanel() {
     setSaving(c.id);
     setMutationError(null);
     try {
-      await adminFetchJson('/api/admin/comments', {
-        method: 'PATCH',
-        body: JSON.stringify({ id: c.id, content: newContent }),
-      });
+      await moderationClient.updateComment(c.id, newContent);
       setEditing((prev) => {
         const next = { ...prev };
         delete next[c.id];

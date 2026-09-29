@@ -11,8 +11,11 @@
 import { useState, useEffect, useId } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useIdempotentCall } from '@/features/admin/communications/hooks/useCommunications';
+import {
+  bodyErrorOr,
+  campaignsClient,
+} from '@/features/admin/communications/client';
 import { useToast } from '@/components/Toast';
 import Modal from '@/components/admin/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -48,8 +51,7 @@ export default function CampaignDrawer({
 }) {
   const t = useAdminT(nsAdminCampaigns);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
-  const { mutateJson } = useIdempotentMutation();
-  const { adminFetch } = useAdminFetch();
+  const { run } = useIdempotentCall();
   const { addToast } = useToast();
 
   const trapRef = useFocusTrap<HTMLDivElement>();
@@ -66,13 +68,7 @@ export default function CampaignDrawer({
 
   // Live HTML preview
   const [previewLabel, setPreviewLabel] = useState('');
-  const previewSrc = `/api/admin/broadcast/${encodeURIComponent(
-    campaign.id
-  )}/preview${
-    previewLabel.trim()
-      ? `?label=${encodeURIComponent(previewLabel.trim())}`
-      : ''
-  }`;
+  const previewSrc = campaignsClient.previewUrl(campaign.id, previewLabel);
 
   // Test send
   const [testTo, setTestTo] = useState('');
@@ -105,19 +101,23 @@ export default function CampaignDrawer({
     return body;
   }
 
+  // Dry-run préalable aux envois ciblés : l'erreur porte le message du
+  // serveur, à défaut le libellé « dry-run échoué » (comme avant).
+  async function dryRunOrThrow(body: Record<string, unknown>) {
+    try {
+      return await campaignsClient.dryRun(campaign.id, body);
+    } catch (err: unknown) {
+      throw new Error(bodyErrorOr(err, t.dryRunFailed));
+    }
+  }
+
   async function runTest() {
     const to = testTo.trim();
     if (!to) return;
     setTestSending(true);
     setTestResult(null);
     try {
-      const json = await mutateJson<{ success?: boolean; error?: string }>(
-        `/api/admin/broadcast/${campaign.id}`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ testTo: to }),
-        }
-      );
+      const json = await run(campaignsClient.sendTest(campaign.id, to));
       if (json.success) {
         const okMsg = format(t.testSentResult, { to });
         setTestResult({ ok: true, msg: okMsg });
@@ -142,14 +142,7 @@ export default function CampaignDrawer({
     setDryRun(null);
     setSendResult(null);
     try {
-      const res = await adminFetch(`/api/admin/broadcast/${campaign.id}`, {
-        method: 'POST',
-        body: JSON.stringify(buildBody({ dryRun: true })),
-      });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || t.dryRunFailed);
-      }
+      const json = await campaignsClient.dryRun(campaign.id, buildBody({}));
       setDryRun({
         totalConfirmedUsers: json.totalConfirmedUsers,
         windowSize: json.windowSize,
@@ -157,7 +150,7 @@ export default function CampaignDrawer({
         withoutLabel: json.withoutLabel,
       });
     } catch (err: unknown) {
-      setActionError((err as Error).message);
+      setActionError(bodyErrorOr(err, t.dryRunFailed));
     } finally {
       setDryRunBusy(false);
     }
@@ -167,13 +160,7 @@ export default function CampaignDrawer({
     setSendBusy(true);
     setActionError(null);
     try {
-      const json = await mutateJson<SendResult & { errors?: string[] }>(
-        `/api/admin/broadcast/${campaign.id}`,
-        {
-          method: 'POST',
-          body: JSON.stringify(buildBody({})),
-        }
-      );
+      const json = await run(campaignsClient.send(campaign.id, buildBody({})));
       setSendResult({
         totalConfirmedUsers: json.totalConfirmedUsers,
         windowSize: json.windowSize,
@@ -203,14 +190,7 @@ export default function CampaignDrawer({
     setSendBusy(true);
     setActionError(null);
     try {
-      const res = await adminFetch(`/api/admin/broadcast/${campaign.id}`, {
-        method: 'POST',
-        body: JSON.stringify({ dryRun: true, onlyNew: true }),
-      });
-      const dry = await res.json();
-      if (!res.ok || dry.error) {
-        throw new Error(dry.error || t.dryRunFailed);
-      }
+      const dry = await dryRunOrThrow({ onlyNew: true });
       const n = Number(dry.newCount ?? 0);
       if (n <= 0) {
         addToast(t.newSubscribersNone, 'info');
@@ -228,12 +208,8 @@ export default function CampaignDrawer({
       });
       if (!ok) return;
 
-      const json = await mutateJson<SendResult & { errors?: string[] }>(
-        `/api/admin/broadcast/${campaign.id}`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ onlyNew: true }),
-        }
+      const json = await run(
+        campaignsClient.send(campaign.id, { onlyNew: true })
       );
       setSendResult({
         totalConfirmedUsers: json.totalConfirmedUsers,
@@ -264,14 +240,7 @@ export default function CampaignDrawer({
     setSendBusy(true);
     setActionError(null);
     try {
-      const res = await adminFetch(`/api/admin/broadcast/${campaign.id}`, {
-        method: 'POST',
-        body: JSON.stringify({ dryRun: true, onlyUnsent: true }),
-      });
-      const dry = await res.json();
-      if (!res.ok || dry.error) {
-        throw new Error(dry.error || t.dryRunFailed);
-      }
+      const dry = await dryRunOrThrow({ onlyUnsent: true });
 
       const n = Number(dry.unsentCount ?? 0);
       if (n <= 0) {
@@ -302,17 +271,13 @@ export default function CampaignDrawer({
       });
       if (!ok) return;
 
-      const json = await mutateJson<SendResult & { errors?: string[] }>(
-        `/api/admin/broadcast/${campaign.id}`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            onlyUnsent: true,
-            // Reprend la reconnaissance donnée dans la boîte de dialogue :
-            // l'API refuse l'envoi sans elle quand la trace manque.
-            acknowledgeUntraced: untraced,
-          }),
-        }
+      const json = await run(
+        campaignsClient.send(campaign.id, {
+          onlyUnsent: true,
+          // Reprend la reconnaissance donnée dans la boîte de dialogue :
+          // l'API refuse l'envoi sans elle quand la trace manque.
+          acknowledgeUntraced: untraced,
+        })
       );
       setSendResult({
         totalConfirmedUsers: json.totalConfirmedUsers,

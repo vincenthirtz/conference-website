@@ -19,7 +19,10 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import {
+  moderationClient,
+  moderationPaths,
+} from '@/features/admin/moderation/client';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useUrlFilters } from '@/utils/useUrlFilters';
@@ -69,7 +72,6 @@ export default function EntityBlacklistPanel() {
   const tx = useAdminT(nsAdminModerationEntityBlacklist);
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson: createMutateJson } = useIdempotentMutation();
   const { filters, setFilters } = useUrlFilters(FILTER_KEYS);
 
@@ -102,7 +104,7 @@ export default function EntityBlacklistPanel() {
   } = useAdminResource<
     EntityBlacklistEntry,
     { items?: EntityBlacklistEntry[]; total?: number | null }
-  >('/api/admin/moderation/entity-blacklist', {
+  >(moderationPaths.entityBlacklist, {
     limit: PAGE_SIZE,
     includeTotal: false,
     params: {
@@ -154,7 +156,7 @@ export default function EntityBlacklistPanel() {
       if (form.reason.trim()) body.reason = form.reason.trim();
       if (form.notes.trim()) body.notes = form.notes.trim();
 
-      await createMutateJson('/api/admin/moderation/entity-blacklist', {
+      await createMutateJson(moderationPaths.entityBlacklist, {
         method: 'POST',
         body: JSON.stringify(body),
       });
@@ -176,13 +178,7 @@ export default function EntityBlacklistPanel() {
   async function toggleActive(entry: EntityBlacklistEntry) {
     setBusyId(entry.id);
     try {
-      await adminFetchJson(
-        `/api/admin/moderation/entity-blacklist/${entry.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ active: !entry.active }),
-        }
-      );
+      await moderationClient.setEntityBlacklistActive(entry.id, !entry.active);
       addToast(
         entry.active ? tx.entryDeactivated : tx.entryReactivated,
         'success'
@@ -221,19 +217,16 @@ export default function EntityBlacklistPanel() {
     }
     setSavingEdit(true);
     try {
-      const json = await adminFetchJson<{
+      const json = await moderationClient.updateEntityBlacklist<{
         entity_type?: EntityType;
         name?: string;
         reason?: string | null;
         notes?: string | null;
-      }>(`/api/admin/moderation/entity-blacklist/${entry.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          entity_type: editType,
-          name: editName.trim(),
-          reason: editReason.trim() || null,
-          notes: editNotes.trim() || null,
-        }),
+      }>(entry.id, {
+        entity_type: editType,
+        name: editName.trim(),
+        reason: editReason.trim() || null,
+        notes: editNotes.trim() || null,
       });
       addToast(tx.entryUpdated, 'success');
       mutateEntries((prev) =>
@@ -270,10 +263,7 @@ export default function EntityBlacklistPanel() {
     try {
       // Le DELETE répond 204 sans body : adminFetchJson tolère le body vide
       // (échec de res.json() → payload null, pas de throw sur 2xx).
-      await adminFetchJson(
-        `/api/admin/moderation/entity-blacklist/${entry.id}`,
-        { method: 'DELETE' }
-      );
+      await moderationClient.deleteEntityBlacklist(entry.id);
       addToast(tx.entryDeleted, 'success');
       // UI optimiste + refetch pour resservir la page (pagination + total).
       mutateEntries((prev) => prev.filter((e) => e.id !== entry.id));

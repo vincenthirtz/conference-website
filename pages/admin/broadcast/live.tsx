@@ -20,6 +20,8 @@ import AlertBanner from '@/components/admin/AlertBanner';
 import TwitchStatusPanel from '@/components/admin/broadcast/TwitchStatusPanel';
 import TcgDropHealthCard from '@/components/admin/broadcast/TcgDropHealthCard';
 import TwitchDrivePanels from '@/components/admin/broadcast/TwitchDrivePanels';
+import { liveUrls } from '@/features/admin/diffusion/liveClient';
+import { withAdminQuery } from '@/features/admin/_shared/query';
 import { useRouter } from 'next/router';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Switch from '@/components/ui/Switch';
@@ -167,9 +169,7 @@ function BroadcastLivePage({ staff }: StaffProps) {
   const fetchState = useCallback(async () => {
     const seq = ++readSeq.current;
     try {
-      const json = await adminFetchJson<LiveResponse>(
-        '/api/admin/broadcast/state'
-      );
+      const json = await adminFetchJson<LiveResponse>(liveUrls.broadcastState);
       if (seq !== readSeq.current) return;
       setError(null);
       setData(json);
@@ -198,7 +198,7 @@ function BroadcastLivePage({ staff }: StaffProps) {
     (async () => {
       try {
         const json = await adminFetchJson<{ segments: EventSegment[] }>(
-          `/api/admin/events/${runId}`
+          liveUrls.eventRun(runId)
         );
         if (!cancelled) setSegments(json.segments ?? []);
       } catch {
@@ -300,13 +300,10 @@ function BroadcastLivePage({ staff }: StaffProps) {
           : prev
       );
       try {
-        const json = await mutateJson<LiveResponse>(
-          '/api/admin/broadcast/state',
-          {
-            method: 'POST',
-            body: JSON.stringify(patch),
-          }
-        );
+        const json = await mutateJson<LiveResponse>(liveUrls.broadcastState, {
+          method: 'POST',
+          body: JSON.stringify(patch),
+        });
         setData(json);
         addToast(t.stateUpdated, 'success');
       } catch (err) {
@@ -368,10 +365,9 @@ function BroadcastLivePage({ staff }: StaffProps) {
 
     setAdvancing(true);
     try {
-      const json = await mutateJson<NextMatchResponse>(
-        '/api/admin/broadcast/next-match',
-        { method: 'POST' }
-      );
+      const json = await mutateJson<NextMatchResponse>(liveUrls.nextMatch, {
+        method: 'POST',
+      });
       addToast(
         json.alreadyStarted
           ? format(t.nextMatchAlready, { title: json.segment.title })
@@ -672,4 +668,6 @@ function BroadcastLivePage({ staff }: StaffProps) {
   );
 }
 
-export default BroadcastLivePage;
+// Cache de requêtes (lot L10) : sert aux seules cartes sans temps réel
+// (chaînes Twitch, santé du drop TCG). Le pupitre, lui, garde son état local.
+export default withAdminQuery(BroadcastLivePage);

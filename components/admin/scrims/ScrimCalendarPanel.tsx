@@ -5,6 +5,7 @@
 // repérer les collisions. Filtres équipe + statut. Auto-suffisant : fetch de la
 // plage visible sur /api/admin/scrims/calendar, PATCH idempotent + toasts.
 
+import { scrimsPaths } from '@/features/admin/scrims/client';
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAdminResource } from '@/hooks/useAdminResource';
@@ -166,15 +167,12 @@ export default function ScrimCalendarPanel() {
     loading,
     error: errorMsg,
     refresh,
-  } = useAdminResource<RawScrim, CalendarPayload>(
-    '/api/admin/scrims/calendar',
-    {
-      includeTotal: false,
-      params: { from: range.from, to: range.to },
-      select: (res) => res.scrims || [],
-      onData: (res) => setRawMatches(res.matches || []),
-    }
-  );
+  } = useAdminResource<RawScrim, CalendarPayload>(scrimsPaths.calendar, {
+    includeTotal: false,
+    params: { from: range.from, to: range.to },
+    select: (res) => res.scrims || [],
+    onData: (res) => setRawMatches(res.matches || []),
+  });
 
   // Un nouveau fetch fait autorité : on purge les overrides optimistes.
   useEffect(() => {
@@ -333,7 +331,7 @@ export default function ScrimCalendarPanel() {
     ) => {
       setOverrides((prev) => ({ ...prev, [id]: { ...prev[id], ...body } }));
       try {
-        const res = await mutateJson<PatchResponse>(`/api/admin/scrims/${id}`, {
+        const res = await mutateJson<PatchResponse>(scrimsPaths.byId(id), {
           method: 'PATCH',
           body: JSON.stringify(body),
         });

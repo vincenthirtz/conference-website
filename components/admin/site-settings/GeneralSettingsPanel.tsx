@@ -1,6 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useToast } from '@/components/Toast';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import type { SiteSetting } from '@/features/admin/site-settings/client';
+import {
+  useSiteSettingsList,
+  useUpsertSiteSetting,
+} from '@/features/admin/site-settings/hooks/useSiteSettings';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
@@ -8,13 +12,6 @@ import nsAdminSiteSettings from '@/lib/i18n/locales/admin-fr/adminSiteSettings';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type Dict = typeof nsAdminSiteSettings.fr;
-
-type SiteSetting = {
-  key: string;
-  value: string;
-  description: string | null;
-  updated_at: string;
-};
 
 function getKnownSettings(t: Dict) {
   return [
@@ -63,62 +60,47 @@ function getKnownSettings(t: Dict) {
 export default function GeneralSettingsPanel() {
   const t = useAdminT(nsAdminSiteSettings);
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
   const KNOWN_SETTINGS = useMemo(() => getKnownSettings(t), [t]);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
-  const [settings, setSettings] = useState<Record<string, SiteSetting>>({});
   const [values, setValues] = useState<Record<string, string>>({});
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const json = await adminFetchJson<{ items?: SiteSetting[] }>(
-        '/api/admin/site-settings'
-      );
+  const query = useSiteSettingsList();
+  const upsert = useUpsertSiteSetting();
+  const loading = query.isFetching;
+  const settings = useMemo(() => {
+    const map: Record<string, SiteSetting> = {};
+    for (const item of query.data?.items || []) map[item.key] = item;
+    return map;
+  }, [query.data]);
 
-      const settingsMap: Record<string, SiteSetting> = {};
-      const valuesMap: Record<string, string> = {};
-
-      for (const item of json.items || []) {
-        settingsMap[item.key] = item;
-        valuesMap[item.key] = item.value;
-      }
-
-      for (const known of KNOWN_SETTINGS) {
-        if (!valuesMap[known.key]) {
-          valuesMap[known.key] = '';
-        }
-      }
-
-      setSettings(settingsMap);
-      setValues(valuesMap);
-    } catch (err) {
-      logger.error('Error fetching site settings', err);
-    } finally {
-      setLoading(false);
+  // Chaque lecture réussie (chargement, rechargement après enregistrement)
+  // remet les champs sur les valeurs serveur, comme l'ancien `fetchData`.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: déclenché par la seule lecture (dataUpdatedAt).
+  useEffect(() => {
+    if (!query.data) return;
+    const valuesMap: Record<string, string> = {};
+    for (const item of query.data.items || []) valuesMap[item.key] = item.value;
+    for (const known of KNOWN_SETTINGS) {
+      if (!valuesMap[known.key]) valuesMap[known.key] = '';
     }
-  }, [adminFetchJson, KNOWN_SETTINGS]);
+    setValues(valuesMap);
+  }, [query.dataUpdatedAt]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (query.error) logger.error('Error fetching site settings', query.error);
+  }, [query.error]);
 
   const saveSetting = async (key: string) => {
     setSaving(key);
 
     try {
       const known = KNOWN_SETTINGS.find((s) => s.key === key);
-      await adminFetchJson('/api/admin/site-settings', {
-        method: 'POST',
-        body: JSON.stringify({
-          key,
-          value: values[key] || '',
-          description: known?.description || null,
-        }),
+      await upsert.mutateAsync({
+        key,
+        value: values[key] || '',
+        description: known?.description || null,
       });
       addToast(t.saveSuccess, 'success');
-      fetchData();
     } catch (err: unknown) {
       addToast((err as Error)?.message || t.saveError, 'error');
     } finally {

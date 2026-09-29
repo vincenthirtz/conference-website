@@ -5,11 +5,27 @@ import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  type TeamOption,
+  useActiveTeamOptions,
+} from '@/features/admin/_shared/teamOptions';
+import {
+  type ScrimMatch,
+  type ScrimWithTeams,
+  scrimsPaths,
+} from '@/features/admin/scrims/client';
+import {
+  useDeleteScrim,
+  useReloadScrim,
+  useScrim,
+  useScrimMatches,
+  useUpdateScrim,
+} from '@/features/admin/scrims/hooks/useScrimDetail';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import type { StaffProps, Scrim } from '@/types/admin';
+import type { StaffProps } from '@/types/admin';
 import nsAdminScrimDetail from '@/lib/i18n/locales/admin-fr/adminScrimDetail';
 import ScrimTeamField, {
   scrimTeamBody,
@@ -29,34 +45,6 @@ import {
 } from '@/features/admin/_shared/ui/Fiche';
 
 const NO_EXTERNAL = { external: false, externalName: '' };
-
-type TeamOption = { id: string; name: string; short_name: string | null };
-
-type ScrimWithTeams = Scrim & {
-  // Résultat (colonnes lues par le GET admin, cf. add_scrim_results.sql).
-  team1_score?: number | null;
-  team2_score?: number | null;
-  winner_team_id?: string | null;
-  dispute_reason?: string | null;
-  team1?: { id: string; name: string; logo_url: string | null } | null;
-  team2?: { id: string; name: string; logo_url: string | null } | null;
-};
-
-type ScrimMatch = {
-  id: string;
-  status: string;
-  best_of: number | null;
-  match_format: string | null;
-  team1_id: string | null;
-  team2_id: string | null;
-  team1_score: number | null;
-  team2_score: number | null;
-  winner_team_id: string | null;
-  scheduled_at: string | null;
-  lobby_code: string | null;
-  team1?: { id: string; name: string; logo_url: string | null } | null;
-  team2?: { id: string; name: string; logo_url: string | null } | null;
-};
 
 export const getServerSideProps = withStaffPage({ permission: 'manage_teams' });
 
@@ -85,7 +73,6 @@ function AdminScrimEditPage(_props: StaffProps) {
   const t = useAdminT(nsAdminScrimDetail);
   const tf = useAdminT(nsAdminFiche);
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const id = typeof router.query.id === 'string' ? router.query.id : '';
 
@@ -94,45 +81,50 @@ function AdminScrimEditPage(_props: StaffProps) {
   // Sinon enregistrer le nom d'un scrim `disputed` renvoyait ce statut, que le
   // PATCH refuse (il n'est posé que par les reports divergents) → 400.
   const [loadedStatus, setLoadedStatus] = useState<string | null>(null);
-  const [matches, setMatches] = useState<ScrimMatch[]>([]);
-  const [teams, setTeams] = useState<TeamOption[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Erreurs d'action (enregistrement, ajout de match, suppression) ; la
+  // lecture a la sienne, affichée au même endroit.
+  const [actionError, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [creatingMatch, setCreatingMatch] = useState(false);
   // Équipe extérieure (saisie libre) en cours, par côté.
   const [ext1, setExt1] = useState(NO_EXTERNAL);
   const [ext2, setExt2] = useState(NO_EXTERNAL);
 
-  const fetchAll = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const [s, m, teamsRes] = await Promise.all([
-        adminFetchJson<{ scrim: ScrimWithTeams }>(`/api/admin/scrims/${id}`),
-        adminFetchJson<{ matches: ScrimMatch[] }>(
-          `/api/admin/scrims/${id}/matches`
-        ),
-        adminFetchJson<{ teams: TeamOption[] }>(
-          '/api/admin/teams?limit=200&isActive=true'
-        ),
-      ]);
-      setScrim(s.scrim);
-      setLoadedStatus(s.scrim?.status ?? null);
-      setMatches(m.matches || []);
-      setTeams(teamsRes.teams || []);
-    } catch (err) {
-      setError((err as Error)?.message || t.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, id, t.errorLoad]);
+  const scrimQuery = useScrim(id);
+  const matchesQuery = useScrimMatches(id);
+  const teamsQuery = useActiveTeamOptions(!!id);
+  const updateScrim = useUpdateScrim(id);
+  const deleteScrimMutation = useDeleteScrim(id);
+  const reloadScrim = useReloadScrim(id);
+  const matches: ScrimMatch[] = matchesQuery.data?.matches || [];
+  const teams: TeamOption[] = teamsQuery.data?.teams || [];
+  // Pendant chaque (re)lecture, la fiche cède la place à l'écran de
+  // chargement — comme l'ancien `fetchAll`.
+  const loading =
+    !id ||
+    scrimQuery.isFetching ||
+    matchesQuery.isFetching ||
+    teamsQuery.isFetching;
+  const loadError = [scrimQuery, matchesQuery, teamsQuery].find(
+    (q) => q.isError
+  )?.error;
+  const error =
+    actionError ??
+    (loadError ? (loadError as Error)?.message || t.errorLoad : null);
 
+  // Chaque lecture réussie remet le formulaire sur le serveur.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: déclenché par la seule lecture (dataUpdatedAt).
   useEffect(() => {
-    if (!router.isReady) return;
-    fetchAll();
-  }, [fetchAll, router.isReady]);
+    const data = scrimQuery.data;
+    if (!data) return;
+    setScrim(data.scrim);
+    setLoadedStatus(data.scrim?.status ?? null);
+  }, [scrimQuery.dataUpdatedAt]);
+
+  const fetchAll = useCallback(async () => {
+    setError(null);
+    await reloadScrim();
+  }, [reloadScrim]);
 
   async function save() {
     if (!scrim) return;
@@ -157,10 +149,7 @@ function AdminScrimEditPage(_props: StaffProps) {
         stream_url: scrim.stream_url,
         game: scrim.game,
       };
-      await adminFetchJson(`/api/admin/scrims/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(body),
-      });
+      await updateScrim.mutateAsync(body);
       setExt1(NO_EXTERNAL);
       setExt2(NO_EXTERNAL);
       await fetchAll();
@@ -175,7 +164,7 @@ function AdminScrimEditPage(_props: StaffProps) {
     setCreatingMatch(true);
     setError(null);
     try {
-      await mutateJson(`/api/admin/scrims/${id}/matches`, {
+      await mutateJson(scrimsPaths.matches(id), {
         method: 'POST',
         body: JSON.stringify({ match: { best_of: 1 } }),
       });
@@ -190,7 +179,7 @@ function AdminScrimEditPage(_props: StaffProps) {
   // Confirmation portée par la DangerZone (saisie du nom du scrim).
   async function deleteScrim() {
     try {
-      await adminFetchJson(`/api/admin/scrims/${id}`, { method: 'DELETE' });
+      await deleteScrimMutation.mutateAsync();
       router.push('/admin/scrims');
     } catch (err) {
       setError((err as Error)?.message || t.errorDelete);
@@ -507,4 +496,4 @@ function AdminScrimEditPage(_props: StaffProps) {
   );
 }
 
-export default AdminScrimEditPage;
+export default withAdminQuery(AdminScrimEditPage);

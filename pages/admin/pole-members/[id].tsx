@@ -1,8 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
+import {
+  usePoleMember,
+  useUpdatePoleMember,
+} from '@/features/admin/pole-members/hooks/usePoleMember';
 import { useToast } from '@/components/Toast';
 import { POLE_KEYS, POLE_LABELS, type PoleKey } from '@/utils/associationPoles';
 import { useAdminT } from '@/lib/i18n/useAdminT';
@@ -41,7 +46,9 @@ function AdminPoleMemberEditPage(_props: Props) {
   const router = useRouter();
   const { id } = router.query;
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
+  const memberId = typeof id === 'string' ? id : null;
+  const member = usePoleMember(memberId);
+  const update = useUpdatePoleMember(memberId);
 
   const [form, setForm] = useState({
     poleKey: 'direction' as PoleKey,
@@ -54,48 +61,35 @@ function AdminPoleMemberEditPage(_props: Props) {
     sortOrder: '',
   });
 
-  const [saving, setSaving] = useState(false);
+  const saving = update.isPending;
   const [error, setError] = useState<string | null>(null);
-  // Chargement ET horodatages de la fiche, en UN état : « en cours », puis
-  // les dates lues dans la même réponse (null si le chargement a échoué).
-  // Un `loading` à part ne disait rien de plus que « pas encore de réponse ».
-  const [stamps, setStamps] = useState<
-    { createdAt: string | null; updatedAt: string | null } | 'loading' | null
-  >('loading');
-  const loading = stamps === 'loading';
-  const meta = stamps === 'loading' ? null : stamps;
 
-  const fetchMember = useCallback(async () => {
-    if (!id) return;
-    setStamps('loading');
-    setError(null);
-
-    try {
-      const data = await adminFetchJson<any>(`/api/admin/pole-members/${id}`);
-      setForm({
-        poleKey: (data.pole_key as PoleKey) || 'direction',
-        name: data.name || '',
-        title: data.title || '',
-        description: data.description || '',
-        imageUrl: data.image_url || '',
-        linkUrl: data.link_url || '',
-        isActive: data.is_active ?? true,
-        sortOrder: data.sort_order?.toString() || '',
-      });
-      setStamps({
-        createdAt: data.created_at ?? null,
-        updatedAt: data.updated_at ?? null,
-      });
-    } catch (err: unknown) {
-      setError((err as Error)?.message || t.errorLoad);
-    } finally {
-      setStamps((prev) => (prev === 'loading' ? null : prev));
-    }
-  }, [id, adminFetchJson, t]);
+  // Formulaire copié UNE fois de la fiche (jamais réécrit sous la saisie).
+  const hydrated = useHydrateOnce(memberId, member.data, (data) =>
+    setForm({
+      poleKey: (data.pole_key as PoleKey) || 'direction',
+      name: data.name || '',
+      title: data.title || '',
+      description: data.description || '',
+      imageUrl: data.image_url || '',
+      linkUrl: data.link_url || '',
+      isActive: data.is_active ?? true,
+      sortOrder: data.sort_order?.toString() || '',
+    })
+  );
+  // Chargement puis horodatages lus dans la même réponse (null si échec).
+  const loading = !member.isError && !hydrated;
+  const meta =
+    hydrated && member.data
+      ? {
+          createdAt: member.data.created_at ?? null,
+          updatedAt: member.data.updated_at ?? null,
+        }
+      : null;
 
   useEffect(() => {
-    fetchMember();
-  }, [fetchMember]);
+    if (member.error) setError(member.error.message || t.errorLoad);
+  }, [member.error, t]);
 
   const updateField = (key: keyof typeof form, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -110,7 +104,6 @@ function AdminPoleMemberEditPage(_props: Props) {
       return;
     }
 
-    setSaving(true);
     try {
       const payload = {
         poleKey: form.poleKey,
@@ -123,20 +116,14 @@ function AdminPoleMemberEditPage(_props: Props) {
         sortOrder: form.sortOrder ? parseInt(form.sortOrder, 10) : undefined,
       };
 
-      await adminFetchJson(`/api/admin/pole-members/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(payload),
-      });
+      await update.mutateAsync(payload);
 
       addToast(t.updateSuccess, 'success');
     } catch (err: unknown) {
       setError((err as Error)?.message || t.errorGeneric);
-    } finally {
-      setSaving(false);
     }
   };
 
-  const memberId = typeof id === 'string' ? id : null;
   const formId = 'pole-member-edit-form';
 
   return (
@@ -362,4 +349,4 @@ export const getServerSideProps = withStaffPage({
   permission: 'manage_communications',
 });
 
-export default AdminPoleMemberEditPage;
+export default withAdminQuery(AdminPoleMemberEditPage);

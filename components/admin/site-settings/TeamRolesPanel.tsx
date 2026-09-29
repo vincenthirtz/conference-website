@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import {
+  useSaveTeamRoles,
+  useTeamRolesSetting,
+} from '@/features/admin/site-settings/hooks/useSiteSettings';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   DEFAULT_TEAM_ROLES,
@@ -33,33 +36,27 @@ export default function TeamRolesPanel() {
   const t = useAdminT(nsAdminSiteSettingsTeamRoles);
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
-  const { adminFetchJson } = useAdminFetch();
 
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Erreur de validation / d'enregistrement (la lecture a la sienne).
+  const [localError, setErrorMsg] = useState<string | null>(null);
   const [savedRoles, setSavedRoles] = useState<TeamRole[]>([]);
   const [drafts, setDrafts] = useState<DraftRole[]>([]);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const json = await adminFetchJson<{ roles: TeamRole[] }>(
-        '/api/admin/site-settings/team-roles'
-      );
-      setSavedRoles(json.roles);
-      setDrafts(toDrafts(json.roles));
-    } catch (err) {
-      setErrorMsg((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson]);
+  const query = useTeamRolesSetting();
+  const saveRoles = useSaveTeamRoles();
+  const loading = query.isPending || query.isFetching;
+  const errorMsg =
+    localError ?? (query.isError ? (query.error as Error).message : null);
 
+  // Chaque lecture réussie (ou réponse d'enregistrement posée dans le cache)
+  // remet la référence et les brouillons sur le serveur.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: déclenché par la seule lecture (dataUpdatedAt).
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (!query.data) return;
+    setSavedRoles(query.data.roles);
+    setDrafts(toDrafts(query.data.roles));
+  }, [query.dataUpdatedAt]);
 
   const updateDraft = (key: string, field: 'value' | 'label', val: string) => {
     setDrafts((prev) =>
@@ -175,15 +172,7 @@ export default function TeamRolesPanel() {
     }
     setSaving(true);
     try {
-      const json = await adminFetchJson<{ roles?: TeamRole[] }>(
-        '/api/admin/site-settings/team-roles',
-        {
-          method: 'PUT',
-          body: JSON.stringify({ roles: v.roles }),
-        }
-      );
-      setSavedRoles(json.roles || v.roles);
-      setDrafts(toDrafts(json.roles || v.roles));
+      await saveRoles.mutateAsync(v.roles);
       addToast(t.saveSuccess, 'success');
     } catch (err) {
       setErrorMsg((err as Error).message);

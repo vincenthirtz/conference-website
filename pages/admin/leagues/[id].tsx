@@ -3,8 +3,15 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
+import {
+  useLeague,
+  useLeagueActions,
+  useLeagueStandings,
+  useLeagueTournamentOptions,
+} from '@/features/admin/leagues/hooks/useLeagues';
+import type { LeagueTournamentOption } from '@/features/admin/leagues/client';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
@@ -14,8 +21,6 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
 import type {
   League,
-  LeagueStandingsResponse,
-  LeagueStandingPublic,
   LeagueStatus,
   LeagueTournamentRef,
 } from '@/types/leagues';
@@ -50,16 +55,7 @@ function getStatusOptions(t: Dict): { value: LeagueStatus; label: string }[] {
   ];
 }
 
-type TournamentOption = {
-  id: string;
-  name: string;
-  slug: string | null;
-};
-
-type AdminTournamentsResponse = {
-  tournaments: TournamentOption[];
-  total: number | null;
-};
+type TournamentOption = LeagueTournamentOption;
 
 const inputCls = LEAGUE_INPUT;
 const labelCls = LEAGUE_LABEL;
@@ -79,15 +75,16 @@ function AdminLeagueDetailPage(_props: StaffProps) {
   const router = useRouter();
   const leagueId = typeof router.query.id === 'string' ? router.query.id : '';
 
-  const { adminFetchJson } = useAdminFetch();
-  const { mutate, mutateJson } = useIdempotentMutation();
-  const recompute = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();
 
-  const [loading, setLoading] = useState(true);
+  const leagueQuery = useLeague(leagueId);
+  const standingsQuery = useLeagueStandings(leagueId);
+  const optionsQuery = useLeagueTournamentOptions();
+  const actions = useLeagueActions(leagueId);
+
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [league, setLeague] = useState<League | null>(null);
+  const league: League | null = leagueQuery.data ?? null;
 
   // Champs éditables.
   const [name, setName] = useState('');
@@ -101,23 +98,20 @@ function AdminLeagueDetailPage(_props: StaffProps) {
   const [pointsRows, setPointsRows] = useState<
     { rank: string; points: number }[]
   >([]);
-  const [saving, setSaving] = useState(false);
+  const saving = actions.save.isPending;
 
-  // Tournois liés / standings (lus via l'endpoint public par slug).
-  const [tournaments, setTournaments] = useState<LeagueTournamentRef[]>([]);
-  const [standings, setStandings] = useState<LeagueStandingPublic[]>([]);
-  const [recomputing, setRecomputing] = useState(false);
+  // Tournois liés / standings (endpoint admin, scopé tenant+id).
+  const tournaments = standingsQuery.data?.tournaments ?? [];
+  const standings = standingsQuery.data?.standings ?? [];
+  const recomputing = actions.recompute.isPending;
 
   // Sélecteur d'ajout de tournoi.
-  const [tournamentOptions, setTournamentOptions] = useState<
-    TournamentOption[]
-  >([]);
+  const tournamentOptions: TournamentOption[] = optionsQuery.data ?? [];
   const [selectedTournament, setSelectedTournament] = useState('');
   const [linkWeight, setLinkWeight] = useState('1');
-  const [linking, setLinking] = useState(false);
+  const linking = actions.link.isPending;
 
   const hydrateFromLeague = useCallback((l: League) => {
-    setLeague(l);
     setName(l.name);
     setSlug(l.slug);
     setDescription(l.description ?? '');
@@ -129,61 +123,32 @@ function AdminLeagueDetailPage(_props: StaffProps) {
     setPointsRows(tableToRows(l.points_table ?? {}));
   }, []);
 
-  // Charge les standings + tournois liés via l'endpoint ADMIN (scopé tenant+id,
-  // visible même pour une league draft/privée — contrairement à l'endpoint
-  // public par slug).
-  const loadDetail = useCallback(async () => {
-    if (!leagueId) return;
-    try {
-      const detail = await adminFetchJson<LeagueStandingsResponse>(
-        `/api/admin/leagues/${leagueId}/standings`
-      );
-      setTournaments(detail.tournaments ?? []);
-      setStandings(detail.standings ?? []);
-    } catch (err: unknown) {
-      logger.error('load league standings error', err);
-      setTournaments([]);
-      setStandings([]);
-    }
-  }, [leagueId, adminFetchJson]);
+  // Formulaire copié UNE fois de la ligue chargée ; après un enregistrement,
+  // `handleSave` le recopie de la réponse, comme avant.
+  const hydrated = useHydrateOnce(
+    leagueId,
+    leagueQuery.data,
+    hydrateFromLeague
+  );
+  // Squelette jusqu'à la ligue ET ses standings (premier chargement ou
+  // « Réessayer ») ; un échec de la ligue bascule sur l'écran d'erreur.
+  const loading = !hydrated
+    ? !leagueQuery.isError || leagueQuery.isFetching
+    : standingsQuery.isPending;
 
-  const load = useCallback(async () => {
-    if (!leagueId) return;
-    setLoading(true);
+  useEffect(() => {
+    if (leagueQuery.error) {
+      logger.error('load league error', leagueQuery.error);
+      setErrorMsg(leagueQuery.error.message || t.errLoad);
+    }
+  }, [leagueQuery.error, t.errLoad]);
+
+  const load = () => {
     setErrorMsg(null);
-    try {
-      const l = await adminFetchJson<League>(`/api/admin/leagues/${leagueId}`);
-      hydrateFromLeague(l);
-      await loadDetail();
-    } catch (err: unknown) {
-      logger.error('load league error', err);
-      setErrorMsg((err as Error)?.message || t.errLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [leagueId, adminFetchJson, hydrateFromLeague, loadDetail, t.errLoad]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  // Liste des tournois du tenant pour le sélecteur.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await adminFetchJson<AdminTournamentsResponse>(
-          '/api/admin/tournaments?limit=200'
-        );
-        if (!cancelled) setTournamentOptions(data.tournaments ?? []);
-      } catch (err: unknown) {
-        logger.error('load tournament options error', err);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [adminFetchJson]);
+    void leagueQuery.refetch();
+    void standingsQuery.refetch();
+  };
+  const loadDetail = actions.refreshStandings;
 
   const linkedIds = useMemo(
     () => new Set(tournaments.map((tm) => tm.id)),
@@ -254,25 +219,18 @@ function AdminLeagueDetailPage(_props: StaffProps) {
       return;
     }
 
-    setSaving(true);
     try {
-      const updated = await mutateJson<League>(
-        `/api/admin/leagues/${league.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            name: name.trim(),
-            slug,
-            description: description.trim() || null,
-            game: game.trim() || null,
-            status,
-            start_date: startDate || null,
-            end_date: endDate || null,
-            points_table: pointsTable,
-            is_public: isPublic,
-          }),
-        }
-      );
+      const updated = await actions.save.mutateAsync({
+        name: name.trim(),
+        slug,
+        description: description.trim() || null,
+        game: game.trim() || null,
+        status,
+        start_date: startDate || null,
+        end_date: endDate || null,
+        points_table: pointsTable,
+        is_public: isPublic,
+      });
       hydrateFromLeague(updated);
       addToast(t.toastSaved, 'success');
       await loadDetail();
@@ -284,8 +242,6 @@ function AdminLeagueDetailPage(_props: StaffProps) {
         setErrorMsg((err as Error)?.message || t.errSave);
       }
       logger.error('save league error', err);
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -301,9 +257,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
     });
     if (!ok) return;
     try {
-      const res = await mutate(`/api/admin/leagues/${league.id}`, {
-        method: 'DELETE',
-      });
+      const res = await actions.remove.mutateAsync();
       if (!res.ok && res.status !== 204) {
         throw new Error(format(t.errDeleteStatus, { status: res.status }));
       }
@@ -321,14 +275,10 @@ function AdminLeagueDetailPage(_props: StaffProps) {
     e.preventDefault();
     if (!league || !selectedTournament) return;
     const weight = Number(linkWeight) || 1;
-    setLinking(true);
     try {
-      await mutateJson(`/api/admin/leagues/${league.id}/tournaments`, {
-        method: 'POST',
-        body: JSON.stringify({
-          tournament_id: selectedTournament,
-          weight,
-        }),
+      await actions.link.mutateAsync({
+        tournament_id: selectedTournament,
+        weight,
       });
       addToast(t.toastLinked, 'success');
       setSelectedTournament('');
@@ -342,8 +292,6 @@ function AdminLeagueDetailPage(_props: StaffProps) {
         addToast((err as Error)?.message || t.errLink, 'error');
       }
       logger.error('link tournament error', err);
-    } finally {
-      setLinking(false);
     }
   }
 
@@ -357,10 +305,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
     });
     if (!ok) return;
     try {
-      const res = await mutate(
-        `/api/admin/leagues/${league.id}/tournaments/${tm.id}`,
-        { method: 'DELETE' }
-      );
+      const res = await actions.unlink.mutateAsync(tm.id);
       if (!res.ok && res.status !== 204) {
         throw new Error(format(t.errUnlinkStatus, { status: res.status }));
       }
@@ -376,12 +321,8 @@ function AdminLeagueDetailPage(_props: StaffProps) {
 
   async function handleRecompute() {
     if (!league) return;
-    setRecomputing(true);
     try {
-      const result = await recompute.mutateJson<{ standings_count: number }>(
-        `/api/admin/leagues/${league.id}/recompute`,
-        { method: 'POST' }
-      );
+      const result = await actions.recompute.mutateAsync();
       addToast(
         format(
           result.standings_count > 1
@@ -395,8 +336,6 @@ function AdminLeagueDetailPage(_props: StaffProps) {
     } catch (err: unknown) {
       logger.error('recompute standings error', err);
       addToast((err as Error)?.message || t.errRecompute, 'error');
-    } finally {
-      setRecomputing(false);
     }
   }
 
@@ -727,4 +666,4 @@ function AdminLeagueDetailPage(_props: StaffProps) {
   );
 }
 
-export default AdminLeagueDetailPage;
+export default withAdminQuery(AdminLeagueDetailPage);

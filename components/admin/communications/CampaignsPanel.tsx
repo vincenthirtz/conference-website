@@ -8,9 +8,13 @@
 import { useState, useCallback, useEffect, useId } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useAdminResource } from '@/hooks/useAdminResource';
+import {
+  useCampaignSubscriptions,
+  useCampaignsPage,
+  useIdempotentCall,
+  useRefreshCampaigns,
+} from '@/features/admin/communications/hooks/useCommunications';
+import { campaignsClient } from '@/features/admin/communications/client';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminCampaigns from '@/lib/i18n/locales/admin-fr/adminCampaigns';
@@ -24,18 +28,8 @@ import {
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
-type UnsubscribedUser = {
-  email: string;
-  label: string | null;
-  unsubscribedAt: string | null;
-};
-
-type SubscriptionsSummary = {
-  totalConfirmed: number;
-  subscribed: number;
-  unsubscribed: number;
-  unsubscribedUsers: UnsubscribedUser[];
-};
+const CAMPAIGNS_PAGE_SIZE = 25;
+const EMPTY_CAMPAIGNS: CampaignSummary[] = [];
 
 function getStatusStyles(
   t: Dict
@@ -89,30 +83,20 @@ export default function CampaignsPanel() {
   );
 
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
-  const { mutateJson } = useIdempotentMutation();
+  const { run } = useIdempotentCall();
   const { addToast } = useToast();
 
-  // Liste paginée. `limit: 25` réplique le défaut de /api/admin/broadcast
-  // (parsePagination limit:25). `total` revient toujours dans le payload (non
-  // conditionné par includeTotal), donc includeTotal:false garde la requête
-  // identique (?limit=25&offset=0). `refresh` remplace l'ancien fetchCampaigns.
-  const {
-    data: campaigns,
-    total,
-    loading,
-    error: errorMsg,
-    offset,
-    limit,
-    setOffset,
-    refresh: fetchCampaigns,
-  } = useAdminResource<
-    CampaignSummary,
-    { campaigns?: CampaignSummary[]; total?: number }
-  >('/api/admin/broadcast', {
-    limit: 25,
-    includeTotal: false,
-    select: (res) => res.campaigns || [],
-  });
+  // Liste paginée. `limit: 25` réplique le défaut de la route (parsePagination
+  // limit:25) ; la requête reste `?limit=25&offset=N`. `total` revient
+  // toujours dans le payload.
+  const limit = CAMPAIGNS_PAGE_SIZE;
+  const [offset, setOffset] = useState(0);
+  const page = useCampaignsPage(limit, offset);
+  const campaigns = page.data?.campaigns ?? EMPTY_CAMPAIGNS;
+  const total = typeof page.data?.total === 'number' ? page.data.total : null;
+  const loading = page.isPending;
+  const errorMsg = page.error ? page.error.message : null;
+  const fetchCampaigns = useRefreshCampaigns();
 
   const activeCampaign = campaigns.find((c) => c.id === activeId) ?? null;
 
@@ -127,9 +111,7 @@ export default function CampaignsPanel() {
       });
       if (!ok) return;
       try {
-        await mutateJson(`/api/admin/broadcast/${campaign.id}`, {
-          method: 'DELETE',
-        });
+        await run(campaignsClient.remove(campaign.id));
         addToast(format(t.campaignDeleted, { name: campaign.name }), 'success');
         // La campagne supprimée peut être celle ouverte dans le tiroir : sans
         // ça, le tiroir reste affiché sur une campagne qui n'existe plus (il
@@ -140,7 +122,7 @@ export default function CampaignsPanel() {
         addToast((err as Error)?.message || t.deleteFailed, 'error');
       }
     },
-    [confirm, mutateJson, addToast, fetchCampaigns, t]
+    [confirm, run, addToast, fetchCampaigns, t]
   );
 
   const duplicateCampaign = useCallback(
@@ -153,16 +135,14 @@ export default function CampaignsPanel() {
       });
       if (!ok) return;
       try {
-        await mutateJson(`/api/admin/broadcast/${campaign.id}/duplicate`, {
-          method: 'POST',
-        });
+        await run(campaignsClient.duplicate(campaign.id));
         addToast(t.campaignDuplicated, 'success');
         await fetchCampaigns();
       } catch (err: unknown) {
         addToast((err as Error)?.message || t.duplicateFailed, 'error');
       }
     },
-    [confirm, mutateJson, addToast, fetchCampaigns, t]
+    [confirm, run, addToast, fetchCampaigns, t]
   );
 
   return (
@@ -561,32 +541,14 @@ function Stat({ label, value }: { label: string; value: string }) {
  */
 function SubscriptionsCard() {
   const t = useAdminT(nsAdminCampaigns);
-  const { adminFetchJson } = useAdminFetch();
-
-  const [data, setData] = useState<SubscriptionsSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const subs = useCampaignSubscriptions();
+  const data = subs.data ?? null;
+  // Un nouvel essai réaffiche le spinner, comme l'ancien `load()`.
+  const loading = subs.isPending || (subs.isError && subs.isFetching);
+  const error = subs.error ? subs.error.message || t.subsError : null;
+  const load = subs.refetch;
   const [expanded, setExpanded] = useState(false);
   const listId = useId();
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const json = await adminFetchJson<SubscriptionsSummary>(
-        '/api/admin/broadcast/subscriptions'
-      );
-      setData(json);
-    } catch (err: unknown) {
-      setError((err as Error)?.message || t.subsError);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, t]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   const users = data?.unsubscribedUsers ?? [];
   const unsubCount = data?.unsubscribed ?? users.length;
@@ -726,7 +688,7 @@ function CampaignFormModal({
 }) {
   const t = useAdminT(nsAdminCampaigns);
   const isEdit = campaign !== null;
-  const { mutateJson } = useIdempotentMutation();
+  const { run } = useIdempotentCall();
   const { addToast } = useToast();
 
   const trapRef = useFocusTrap<HTMLDivElement>();
@@ -832,16 +794,10 @@ function CampaignFormModal({
     setSubmitting(true);
     try {
       if (isEdit && campaign) {
-        await mutateJson(`/api/admin/broadcast/${campaign.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify(payload),
-        });
+        await run(campaignsClient.update(campaign.id, payload));
         addToast(format(t.campaignUpdated, { name: name.trim() }), 'success');
       } else {
-        await mutateJson('/api/admin/broadcast', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
+        await run(campaignsClient.create(payload));
         addToast(format(t.campaignCreated, { name: name.trim() }), 'success');
       }
       await onSaved();

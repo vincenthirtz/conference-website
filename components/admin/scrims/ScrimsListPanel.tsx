@@ -4,6 +4,7 @@
 // onglet de la page /admin/scrims. Auto-suffisant : fetch, filtre, liste et
 // modale de création. Conserve le deep-link `?new=1` (ancienne route /create).
 
+import { scrimsPaths } from '@/features/admin/scrims/client';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -150,7 +151,7 @@ export default function ScrimsListPanel() {
     prevPage,
     resetOffset,
     hasMore,
-  } = useAdminResource<ScrimRow, { scrims: ScrimRow[] }>('/api/admin/scrims', {
+  } = useAdminResource<ScrimRow, { scrims: ScrimRow[] }>(scrimsPaths.list, {
     limit: 25,
     // La liste plafonnait à 50 sans total ni pagination : au-delà, les scrims
     // les plus anciens disparaissaient sans que rien ne l'indique.

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { statsClient } from '@/features/admin/stats/client';
+import { useMapStats } from '@/features/admin/stats/hooks/useStats';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
@@ -20,11 +21,6 @@ type MapStatsRow = {
   match_winrate_attack?: number | null;
   match_winrate_defense?: number | null;
   avg_total_rounds?: number | null;
-};
-
-type MapStatsApiResponse = {
-  stats: MapStatsRow[];
-  total: number | null;
 };
 
 function formatPercent(v: number | null | undefined) {
@@ -53,13 +49,6 @@ function rankBadge(rank: number) {
  */
 export default function MapStatsPanel() {
   const t = useAdminT(nsAdminStatsMaps);
-  const { adminFetchJson } = useAdminFetch();
-
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const [stats, setStats] = useState<MapStatsRow[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
 
   // Filtres
   const [searchMap, setSearchMap] = useState<string>('');
@@ -70,53 +59,52 @@ export default function MapStatsPanel() {
   const [limit] = useState(100);
   const [offset, setOffset] = useState(0);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: refetch piloté par les seuls filtres/offset listés ; `searchMap` (réactif) est volontairement exclu (appliqué via handleFilterSubmit). adminFetch* est désormais stable mais fetchStats reste hors deps pour ne pas déclencher sur `searchMap`.
-  useEffect(() => {
-    fetchStats();
-  }, [offset, sortBy, sortDir, minMatches]);
+  // Paramètres de la requête : figés quand un filtre ou la page change, avec
+  // la recherche telle qu'elle est tapée à cet instant (la saisie seule ne
+  // relance rien ; elle s'applique via « Filtrer »).
+  const [query, setQuery] = useState<string | null>(null);
 
-  async function fetchStats() {
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(limit));
-      params.set('offset', String(offset));
-      if (searchMap.trim()) params.set('search', searchMap.trim());
-      if (minMatches) params.set('minMatches', minMatches);
-      if (sortBy) params.set('sortBy', sortBy);
-      if (sortDir) params.set('sortDir', sortDir);
-
-      const json = await adminFetchJson<MapStatsApiResponse>(
-        '/api/admin/stats/maps?' + params.toString()
-      );
-      setStats(json.stats || []);
-      setTotal(typeof json.total === 'number' ? json.total : null);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function handleFilterSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setOffset(0);
-    fetchStats();
-  }
-
-  function handleExportCsv() {
+  function buildQuery(opts: { offset?: number; csv?: boolean } = {}) {
     const params = new URLSearchParams();
-    params.set('limit', '10000');
-    params.set('offset', '0');
-    params.set('export', 'csv');
+    if (opts.csv) {
+      params.set('limit', '10000');
+      params.set('offset', '0');
+      params.set('export', 'csv');
+    } else {
+      params.set('limit', String(limit));
+      params.set('offset', String(opts.offset ?? offset));
+    }
     if (searchMap.trim()) params.set('search', searchMap.trim());
     if (minMatches) params.set('minMatches', minMatches);
     if (sortBy) params.set('sortBy', sortBy);
     if (sortDir) params.set('sortDir', sortDir);
+    return params.toString();
+  }
 
-    window.location.href = '/api/admin/stats/maps?' + params.toString();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: requête figée sur les seuls filtres/offset listés ; `searchMap` (réactif) est volontairement exclu (appliqué via handleFilterSubmit).
+  useEffect(() => {
+    setQuery(buildQuery());
+  }, [offset, sortBy, sortDir, minMatches]);
+
+  const statsQuery = useMapStats<MapStatsRow>(query);
+  const stats = statsQuery.data?.stats ?? [];
+  const total =
+    typeof statsQuery.data?.total === 'number' ? statsQuery.data.total : null;
+  const loading = statsQuery.isFetching;
+  const errorMsg = statsQuery.isError
+    ? ((statsQuery.error as Error)?.message ?? t.errorUnexpected)
+    : null;
+
+  function handleFilterSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setOffset(0);
+    const next = buildQuery({ offset: 0 });
+    if (next === query) void statsQuery.refetch();
+    else setQuery(next);
+  }
+
+  function handleExportCsv() {
+    window.location.href = statsClient.mapsCsvUrl(buildQuery({ csv: true }));
   }
 
   const columns: DataTableColumn<MapStatsRow>[] = [

@@ -17,6 +17,7 @@ import type { StaffProps } from '@/types/admin';
 import nsAdminModeration from '@/lib/i18n/locales/admin-fr/adminModeration';
 
 import { lazyPanel } from '@/components/admin/lazyPanel';
+import { withAdminQuery } from '@/features/admin/_shared/query';
 
 // Onglets secondaires : chargés au clic (cf. components/admin/lazyPanel).
 const BlacklistPanel = lazyPanel(
@@ -61,7 +62,7 @@ export const getServerSideProps = withStaffPage('caster');
  *   - Blacklist   → manager+
  *   - Support     → manager+
  */
-export default function AdminModerationPage({ staff }: StaffProps) {
+function AdminModerationPage({ staff }: StaffProps) {
   const t = useAdminT(nsAdminModeration);
   const isManager = hasAtLeastRole(staff.role as StaffRole, 'admin');
   // Les onglets TCG suivent la PERMISSION de leurs routes (`manage_tcg` pour
@@ -162,3 +163,5 @@ export default function AdminModerationPage({ staff }: StaffProps) {
     </>
   );
 }
+
+export default withAdminQuery(AdminModerationPage);

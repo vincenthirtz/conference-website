@@ -7,7 +7,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
+import { AdminFetchError } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { scrimsPaths } from '@/features/admin/scrims/client';
+import {
+  useMyPlanningSlots,
+  usePlanningConflicts,
+  useReloadPlanning,
+  useScrimPlanning,
+} from '@/features/admin/scrims/hooks/useScrimDetail';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
@@ -58,62 +66,49 @@ export const getServerSideProps = withStaffPage({ permission: 'manage_teams' });
 function AdminScrimPlanningDetailPage(_props: StaffProps) {
   const t = useAdminT(nsAdminScrimPlanningsDetail);
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();
   const id =
     typeof router.query.planningId === 'string' ? router.query.planningId : '';
 
-  const [planning, setPlanning] = useState<ScrimPlanning | null>(null);
-  const [availabilities, setAvailabilities] = useState<
-    ScrimPlanningAvailability[]
-  >([]);
-  const [apiHeatmap, setApiHeatmap] = useState<Heatmap | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Erreurs d'action ; la lecture a la sienne, affichée au même endroit.
+  const [actionError, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   // Mes propres dispos staff sur cette grille (party='staff', peinture perso).
   const [mySlots, setMySlots] = useState<string[]>([]);
   const [savingAvail, setSavingAvail] = useState(false);
 
-  const fetchAll = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
-    try {
-      // Les équipes sont embarquées dans la réponse (relation to-one) : plus
-      // d'appel séparé à /api/admin/teams pour traduire deux ids en noms.
-      const detail = await adminFetchJson<{
-        planning: ScrimPlanning;
-        availabilities: ScrimPlanningAvailability[];
-        heatmap: Heatmap;
-      }>(`/api/admin/scrim-plannings/${id}`);
-      setPlanning(detail.planning);
-      setAvailabilities(detail.availabilities || []);
-      setApiHeatmap(detail.heatmap || null);
-      // Récupère mes propres créneaux staff (peinture perso) sur cette grille.
-      try {
-        const mine = await adminFetchJson<{ slots: string[] }>(
-          `/api/admin/scrim-plannings/${id}/availability`
-        );
-        setMySlots(mine.slots || []);
-      } catch {
-        // Non-bloquant : la peinture perso reste vide si l'appel échoue.
-        setMySlots([]);
-      }
-    } catch (err) {
-      setError((err as Error)?.message || t.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, id, t.errorLoad]);
+  // Les équipes sont embarquées dans la réponse (relation to-one) : pas
+  // d'appel séparé aux équipes pour traduire deux ids en noms.
+  const detailQuery = useScrimPlanning(id);
+  // Mes créneaux staff : non bloquant, la peinture perso reste vide en cas
+  // d'échec.
+  const mineQuery = useMyPlanningSlots(id);
+  const reloadPlanning = useReloadPlanning(id);
+  const planning: ScrimPlanning | null = detailQuery.data?.planning ?? null;
+  const availabilities: ScrimPlanningAvailability[] =
+    detailQuery.data?.availabilities || [];
+  const apiHeatmap: Heatmap | null = detailQuery.data?.heatmap || null;
+  // Chaque (re)lecture affiche l'écran de chargement, comme l'ancien fetchAll.
+  const loading = !id || detailQuery.isFetching || mineQuery.isFetching;
+  const error =
+    actionError ??
+    (detailQuery.isError
+      ? (detailQuery.error as Error)?.message || t.errorLoad
+      : null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: déclenché par la seule lecture (dataUpdatedAt / échec).
   useEffect(() => {
-    if (!router.isReady) return;
-    fetchAll();
-  }, [fetchAll, router.isReady]);
+    if (mineQuery.isError) setMySlots([]);
+    else if (mineQuery.data) setMySlots(mineQuery.data.slots || []);
+  }, [mineQuery.dataUpdatedAt, mineQuery.errorUpdatedAt]);
+
+  const fetchAll = useCallback(async () => {
+    setError(null);
+    await reloadPlanning();
+  }, [reloadPlanning]);
 
   const config = useMemo(
     () => (planning ? planningConfigFromRow(planning) : null),
@@ -204,44 +199,25 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
   // Aperçu des conflits (double-booking) des meilleurs créneaux, AVANT clic :
   // mêmes conflits que le 409 de la validation (endpoint dédié réutilisant
   // findScrimConflicts). Évite à l'admin de valider un créneau déjà pris.
-  const [conflictsBySlot, setConflictsBySlot] = useState<
-    Record<string, SlotConflict[]>
-  >({});
-
   const canValidatePlanning =
     planning?.status === 'open' && !planning?.validated_slot;
 
-  useEffect(() => {
-    if (!id || !canValidatePlanning) {
-      setConflictsBySlot({});
-      return;
-    }
-    const slots = ranked.slice(0, 16).map((r) => r.slot);
-    if (slots.length === 0) {
-      setConflictsBySlot({});
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await adminFetchJson<{
-          conflicts: Record<string, SlotConflict[]>;
-        }>(`/api/admin/scrim-plannings/${id}/conflicts`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slots }),
-        });
-        if (!cancelled) setConflictsBySlot(res.conflicts || {});
-      } catch {
-        // Non-bloquant : l'aperçu reste vide, la validation reste protégée par
-        // le 409 côté serveur.
-        if (!cancelled) setConflictsBySlot({});
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [id, canValidatePlanning, ranked, adminFetchJson]);
+  const conflictSlots = useMemo(
+    () => ranked.slice(0, 16).map((r) => r.slot),
+    [ranked]
+  );
+  const conflictsQuery = usePlanningConflicts(
+    id,
+    conflictSlots,
+    detailQuery.dataUpdatedAt,
+    canValidatePlanning
+  );
+  // Non bloquant : en cas d'échec l'aperçu reste vide, la validation reste
+  // protégée par le 409 côté serveur.
+  const conflictsBySlot: Record<string, SlotConflict[]> =
+    canValidatePlanning && conflictSlots.length > 0 && !conflictsQuery.isError
+      ? (conflictsQuery.data?.conflicts ?? {})
+      : {};
 
   const runValidate = useCallback(
     async (planningId: string, slot: string, force: boolean) => {
@@ -252,7 +228,7 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
           scrim: { id: string };
           planning: ScrimPlanning;
           warning?: string;
-        }>(`/api/admin/scrim-plannings/${planningId}/validate`, {
+        }>(scrimsPaths.planningValidate(planningId), {
           method: 'POST',
           body: JSON.stringify(force ? { slot, force: true } : { slot }),
         });
@@ -349,7 +325,7 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
     setBusy(true);
     setError(null);
     try {
-      await mutateJson(`/api/admin/scrim-plannings/${planning.id}`, {
+      await mutateJson(scrimsPaths.planning(planning.id), {
         method: 'PATCH',
         body: JSON.stringify({ status }),
       });
@@ -376,7 +352,7 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
     setBusy(true);
     setError(null);
     try {
-      await mutateJson(`/api/admin/scrim-plannings/${planning.id}`, {
+      await mutateJson(scrimsPaths.planning(planning.id), {
         method: 'PATCH',
         body: JSON.stringify({
           horizon_days: planning.horizon_days + 7,
@@ -400,7 +376,7 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
     setError(null);
     try {
       const res = await mutateJson<{ success: boolean; slots: string[] }>(
-        `/api/admin/scrim-plannings/${planning.id}/availability`,
+        scrimsPaths.planningAvailability(planning.id),
         {
           method: 'PUT',
           body: JSON.stringify({ slots: mySlots }),
@@ -627,4 +603,4 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
   );
 }
 
-export default AdminScrimPlanningDetailPage;
+export default withAdminQuery(AdminScrimPlanningDetailPage);

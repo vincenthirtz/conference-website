@@ -31,7 +31,8 @@
 // chaîne à l'antenne prend le ton `live` (la lueur), hors ligne reste neutre.
 
 import { useEffect, useMemo, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useActiveTwitchChannels } from '@/features/admin/diffusion/hooks/useBroadcastCards';
+import type { TwitchChannelRow } from '@/features/admin/diffusion/liveClient';
 import { useTwitchLiveStatuses } from '@/hooks/useTwitchLiveStatuses';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminBroadcastLive from '@/lib/i18n/locales/admin-fr/adminBroadcastLive';
@@ -39,14 +40,21 @@ import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import { rubanCard, rubanEyebrow } from '@/features/admin/_shared/ui/ruban';
 
-type TwitchChannelRow = { channel: string; label: string | null };
+const EMPTY_CHANNELS: TwitchChannelRow[] = [];
 
 export default function TwitchStatusPanel() {
   const t = useAdminT(nsAdminBroadcastLive);
-  const { adminFetchJson } = useAdminFetch();
-
+  // 1) Chaînes actives de l'espace (une seule fois), par la route LECTURE
+  //    SEULE de la diffusion : la route d'édition exigeait manage_broadcast,
+  //    et le panneau se masquait pour les casteuses, celles qui sont à
+  //    l'antenne. En cas d'échec : « aucune chaîne » (masqué), jamais de crash.
   // channels === null : chargement en cours. [] : aucune chaîne active (masqué).
-  const [channels, setChannels] = useState<TwitchChannelRow[] | null>(null);
+  const channelsQuery = useActiveTwitchChannels();
+  const channels: TwitchChannelRow[] | null = channelsQuery.isError
+    ? EMPTY_CHANNELS
+    : channelsQuery.data
+      ? (channelsQuery.data.items ?? EMPTY_CHANNELS)
+      : null;
   // `parent` du player Twitch : indisponible côté SSR, récupéré après hydratation
   // (comme LiveTwitchSection). Sans lui, Twitch refuse l'embed.
   const [parent, setParent] = useState<string | null>(null);
@@ -60,28 +68,6 @@ export default function TwitchStatusPanel() {
     () => (channels ?? []).filter((c) => c.channel),
     [channels]
   );
-
-  // 1) Chaînes actives de l'espace (une seule fois), par la route LECTURE
-  //    SEULE de la diffusion : la route d'édition exigeait manage_broadcast,
-  //    et le panneau se masquait pour les casteuses, celles qui sont à
-  //    l'antenne. En cas d'échec : « aucune chaîne » (masqué), jamais de crash.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const json = await adminFetchJson<{ items: TwitchChannelRow[] }>(
-          '/api/admin/diffusion/twitch-channels',
-          { skipAuthRedirect: true }
-        );
-        if (!cancelled) setChannels(json.items ?? []);
-      } catch {
-        if (!cancelled) setChannels([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [adminFetchJson]);
 
   // 2) Statuts live : le hook partagé (60 s onglet visible, relecture au
   //    retour, 503 = « non configuré », erreur = dernier statut conservé).

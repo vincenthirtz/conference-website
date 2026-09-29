@@ -14,62 +14,48 @@
 // L'espace historique, lui, envoie via les variables d'environnement de la
 // plateforme : on le dit, et on ne propose rien à remplir.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/components/Toast';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import {
+  useClearEmailSender,
+  useEmailSender,
+  useSaveEmailSender,
+} from '@/features/admin/site-settings/hooks/useSiteSettings';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminSiteSettings from '@/lib/i18n/locales/admin-fr/adminSiteSettings';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
-type State = {
-  usesPlatformAccount: boolean;
-  configured: boolean;
-  fromEmail: string | null;
-  fromName: string | null;
-  encryptionReady: boolean;
-};
-
 export default function EmailSenderPanel() {
   const t = useAdminT(nsAdminSiteSettings);
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
 
-  const [state, setState] = useState<State | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [fromEmail, setFromEmail] = useState('');
   const [fromName, setFromName] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await adminFetchJson<State>('/api/admin/email/credentials');
-      setState(data);
-      setFromEmail(data.fromEmail ?? '');
-      setFromName(data.fromName ?? '');
-    } catch {
-      setState(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson]);
+  const query = useEmailSender();
+  const saveMutation = useSaveEmailSender();
+  const clearMutation = useClearEmailSender();
+  // Une erreur de lecture affiche le message d'échec (ancien `setState(null)`).
+  const state = query.isError ? null : (query.data ?? null);
+  const loading = query.isPending || query.isFetching;
 
+  // Chaque lecture réussie recale les champs sur le serveur (ancien `load`).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: déclenché par la seule lecture (dataUpdatedAt).
   useEffect(() => {
-    void load();
-  }, [load]);
+    const data = query.data;
+    if (!data) return;
+    setFromEmail(data.fromEmail ?? '');
+    setFromName(data.fromName ?? '');
+  }, [query.dataUpdatedAt]);
 
   async function save() {
     setSaving(true);
     try {
-      await adminFetchJson('/api/admin/email/credentials', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey, fromEmail, fromName }),
-      });
+      await saveMutation.mutateAsync({ apiKey, fromEmail, fromName });
       setApiKey('');
       addToast(t.emailSenderSaved, 'success');
-      await load();
     } catch (err) {
       addToast(
         err instanceof Error ? err.message : t.emailSenderSaveError,
@@ -83,11 +69,8 @@ export default function EmailSenderPanel() {
   async function clear() {
     setSaving(true);
     try {
-      await adminFetchJson('/api/admin/email/credentials', {
-        method: 'DELETE',
-      });
+      await clearMutation.mutateAsync(undefined);
       addToast(t.emailSenderCleared, 'success');
-      await load();
     } catch (err) {
       addToast(
         err instanceof Error ? err.message : t.emailSenderSaveError,

@@ -13,8 +13,11 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useAdminResource } from '@/hooks/useAdminResource';
+import {
+  usePartnershipRequestsList,
+  useRemovePartnershipRequest,
+} from '@/features/admin/partners/hooks/usePartners';
+import type { PartnershipRequestListRow } from '@/features/admin/partners/client';
 import AdminListShell from '@/components/admin/AdminListShell';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminPartnershipRequestsList from '@/lib/i18n/locales/admin-fr/adminPartnershipRequestsList';
@@ -28,18 +31,7 @@ import ListToolbar, {
 import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type Dict = typeof nsAdminPartnershipRequestsList.fr;
-type RequestRow = {
-  id: string;
-  company_name: string;
-  contact_name: string;
-  email: string;
-  phone: string | null;
-  category: 'super' | 'major' | 'cultural' | 'other';
-  message: string;
-  budget_range: string | null;
-  status: string;
-  created_at: string;
-};
+type RequestRow = PartnershipRequestListRow;
 
 const PAGE_SIZE = 50;
 
@@ -93,47 +85,47 @@ export default function PartnershipRequestsPanel() {
   const t = useAdminT(nsAdminPartnershipRequestsList);
   const statusLabels = getStatusLabels(t);
   const categoryLabels = getCategoryLabels(t);
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
-  const [counts, setCounts] = useState<Record<string, number>>({});
+
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [offset, setOffsetState] = useState(0);
+  const setOffset = (next: number) => setOffsetState(Math.max(0, next));
 
-  // Filtres status/category → params serveur ; recherche → `query` (debounce
-  // 350ms + reset d'offset gérés par le hook). Les compteurs par statut
-  // reviennent dans le même payload → captés via `onData` (pas de 2e requête).
-  const {
-    data: requests,
-    total,
-    loading,
-    refresh: fetchData,
-    offset,
-    setOffset,
-    resetOffset,
-  } = useAdminResource<
-    RequestRow,
-    {
-      items?: RequestRow[];
-      counts?: Record<string, number>;
-      total?: number | null;
-    }
-  >('/api/admin/partnership-requests', {
-    limit: PAGE_SIZE,
-    query: search,
-    debounceMs: 350,
-    params: { status: statusFilter, category: categoryFilter },
-    select: (res) => res.items || [],
-    selectTotal: (res) => (typeof res.total === 'number' ? res.total : null),
-    onData: (res) => setCounts(res.counts || {}),
-  });
-
-  // Le changement de filtre revient à la première page (le reset lié à la
-  // recherche est déjà géré par le hook via `query`).
+  // Recherche : debounce 350 ms, et une nouvelle recherche revient à la
+  // première page (ce que faisait `useAdminResource` via `query`).
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   useEffect(() => {
-    resetOffset();
-  }, [statusFilter, categoryFilter, resetOffset]);
+    const handle = setTimeout(() => {
+      setDebouncedSearch((prev) => {
+        if (prev !== search) setOffsetState(0);
+        return search;
+      });
+    }, 350);
+    return () => clearTimeout(handle);
+  }, [search]);
+
+  // Filtres status/category → params serveur. Les compteurs par statut
+  // reviennent dans le même payload (pas de 2e requête).
+  const list = usePartnershipRequestsList({
+    limit: PAGE_SIZE,
+    offset,
+    search: debouncedSearch,
+    status: statusFilter,
+    category: categoryFilter,
+  });
+  const requests: RequestRow[] = list.data?.items ?? [];
+  const total = list.data?.total ?? null;
+  const counts: Record<string, number> = list.data?.counts ?? {};
+  const loading = list.isFetching;
+  const removeRequest = useRemovePartnershipRequest();
+
+  // Le changement de filtre revient à la première page.
+  useEffect(() => {
+    setOffsetState(0);
+  }, [statusFilter, categoryFilter]);
 
   const onDelete = async (id: string) => {
     const ok = await confirm({
@@ -143,10 +135,7 @@ export default function PartnershipRequestsPanel() {
     });
     if (!ok) return;
     try {
-      await adminFetchJson(`/api/admin/partnership-requests/${id}`, {
-        method: 'DELETE',
-      });
-      fetchData();
+      await removeRequest.mutateAsync(id);
     } catch (err: unknown) {
       addToast((err as Error)?.message || t.errorDelete, 'error');
     }
@@ -330,8 +319,8 @@ export default function PartnershipRequestsPanel() {
                       <h3 className="font-semibold text-white">
                         {r.company_name}
                       </h3>
-                      <Chip tone={statusTones[r.status]}>
-                        {statusLabels[r.status]}
+                      <Chip tone={statusTones[r.status ?? '']}>
+                        {statusLabels[r.status ?? '']}
                       </Chip>
                       <Chip>{categoryLabels[r.category]}</Chip>
                     </div>

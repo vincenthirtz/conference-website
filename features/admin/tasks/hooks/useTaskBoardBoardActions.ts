@@ -14,9 +14,9 @@ import type {
   DeletedTask,
   Dict,
 } from '@/components/admin/tasks/taskBoardModel';
+import { taskBoardUrls, taskBoardClient } from '../client';
 import type {
   AddToast,
-  AdminFetchJson,
   Confirm,
   FetchBoards,
   FetchDetail,
@@ -28,7 +28,6 @@ export type TaskBoardBoardActionsDeps = {
   t: Dict;
   addToast: AddToast;
   confirm: Confirm;
-  adminFetchJson: AdminFetchJson;
   boardMutation: Mutation;
   columnMutation: Mutation;
   restoreMutation: Mutation;
@@ -70,7 +69,6 @@ export function useTaskBoardBoardActions(deps: TaskBoardBoardActionsDeps) {
     t,
     addToast,
     confirm,
-    adminFetchJson,
     boardMutation,
     columnMutation,
     restoreMutation,
@@ -113,16 +111,14 @@ export function useTaskBoardBoardActions(deps: TaskBoardBoardActionsDeps) {
     }
     setDeletedLoading(true);
     try {
-      const json = await adminFetchJson<{ tasks: DeletedTask[] }>(
-        `/api/admin/tasks/deleted?boardId=${encodeURIComponent(activeBoardId)}`
-      );
+      const json = await taskBoardClient.deleted(activeBoardId);
       setDeletedTasks(json.tasks || []);
     } catch (err: unknown) {
       addToast((err as Error)?.message || t.trashLoadError, 'error');
     } finally {
       setDeletedLoading(false);
     }
-  }, [activeBoardId, adminFetchJson, addToast, t]);
+  }, [activeBoardId, addToast, t]);
 
   function openTrash() {
     setTrashOpen(true);
@@ -135,10 +131,9 @@ export function useTaskBoardBoardActions(deps: TaskBoardBoardActionsDeps) {
   async function handleRestoreTask(task: DeletedTask) {
     setRestoringId(task.id);
     try {
-      await restoreMutation.mutateJson(
-        `/api/admin/tasks/tasks/${encodeURIComponent(task.id)}/restore`,
-        { method: 'PATCH' }
-      );
+      await restoreMutation.mutateJson(taskBoardUrls.taskRestore(task.id), {
+        method: 'PATCH',
+      });
       addToast(t.trashRestored, 'success');
       setDeletedTasks((prev) => prev.filter((d) => d.id !== task.id));
       if (activeBoardId) void fetchDetail(activeBoardId);
@@ -189,7 +184,7 @@ export function useTaskBoardBoardActions(deps: TaskBoardBoardActionsDeps) {
     try {
       if (boardModalMode === 'create') {
         const res = await boardMutation.mutateJson<{ board: { id: string } }>(
-          '/api/admin/tasks/boards',
+          taskBoardUrls.boards,
           {
             method: 'POST',
             body: JSON.stringify({
@@ -203,16 +198,13 @@ export function useTaskBoardBoardActions(deps: TaskBoardBoardActionsDeps) {
         await fetchBoards();
         setActiveBoardId(res.board.id);
       } else if (activeBoardId) {
-        await boardMutation.mutateJson(
-          `/api/admin/tasks/boards/${encodeURIComponent(activeBoardId)}`,
-          {
-            method: 'PATCH',
-            body: JSON.stringify({
-              name: boardFormName.trim(),
-              description: boardFormDesc.trim() || null,
-            }),
-          }
-        );
+        await boardMutation.mutateJson(taskBoardUrls.board(activeBoardId), {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: boardFormName.trim(),
+            description: boardFormDesc.trim() || null,
+          }),
+        });
         addToast(t.boardRenamed, 'success');
         setBoardModalOpen(false);
         await fetchBoards({ keepActive: true });
@@ -228,13 +220,10 @@ export function useTaskBoardBoardActions(deps: TaskBoardBoardActionsDeps) {
     if (!activeBoard) return;
     const next = !activeBoard.isArchived;
     try {
-      await boardMutation.mutateJson(
-        `/api/admin/tasks/boards/${encodeURIComponent(activeBoard.id)}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ is_archived: next }),
-        }
-      );
+      await boardMutation.mutateJson(taskBoardUrls.board(activeBoard.id), {
+        method: 'PATCH',
+        body: JSON.stringify({ is_archived: next }),
+      });
       addToast(next ? t.boardArchived : t.boardUnarchived, 'success');
       await fetchBoards();
     } catch (err: unknown) {
@@ -251,10 +240,9 @@ export function useTaskBoardBoardActions(deps: TaskBoardBoardActionsDeps) {
     });
     if (!ok) return;
     try {
-      await boardMutation.mutateJson(
-        `/api/admin/tasks/boards/${encodeURIComponent(activeBoard.id)}`,
-        { method: 'DELETE' }
-      );
+      await boardMutation.mutateJson(taskBoardUrls.board(activeBoard.id), {
+        method: 'DELETE',
+      });
       addToast(t.boardDeleted, 'success');
       setActiveBoardId(null);
       await fetchBoards();
@@ -296,20 +284,17 @@ export function useTaskBoardBoardActions(deps: TaskBoardBoardActionsDeps) {
     setColSaving(true);
     try {
       if (editingColumnId) {
-        await columnMutation.mutateJson(
-          `/api/admin/tasks/columns/${encodeURIComponent(editingColumnId)}`,
-          {
-            method: 'PATCH',
-            body: JSON.stringify({
-              name: colFormName.trim(),
-              wipLimit,
-              isDone: colFormDone,
-            }),
-          }
-        );
+        await columnMutation.mutateJson(taskBoardUrls.column(editingColumnId), {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: colFormName.trim(),
+            wipLimit,
+            isDone: colFormDone,
+          }),
+        });
         addToast(t.columnUpdated, 'success');
       } else {
-        await columnMutation.mutateJson('/api/admin/tasks/columns', {
+        await columnMutation.mutateJson(taskBoardUrls.columns, {
           method: 'POST',
           body: JSON.stringify({
             boardId: activeBoardId,
@@ -338,10 +323,9 @@ export function useTaskBoardBoardActions(deps: TaskBoardBoardActionsDeps) {
     });
     if (!ok || !activeBoardId) return;
     try {
-      await columnMutation.mutateJson(
-        `/api/admin/tasks/columns/${encodeURIComponent(col.id)}`,
-        { method: 'DELETE' }
-      );
+      await columnMutation.mutateJson(taskBoardUrls.column(col.id), {
+        method: 'DELETE',
+      });
       addToast(t.columnDeleted, 'success');
       await fetchDetail(activeBoardId);
       await fetchBoards({ keepActive: true });
@@ -364,14 +348,14 @@ export function useTaskBoardBoardActions(deps: TaskBoardBoardActionsDeps) {
     const b = cols[target];
     try {
       await Promise.all([
-        columnMutation.mutateJson(
-          `/api/admin/tasks/columns/${encodeURIComponent(a.id)}`,
-          { method: 'PATCH', body: JSON.stringify({ position: b.position }) }
-        ),
-        columnMutation.mutateJson(
-          `/api/admin/tasks/columns/${encodeURIComponent(b.id)}`,
-          { method: 'PATCH', body: JSON.stringify({ position: a.position }) }
-        ),
+        columnMutation.mutateJson(taskBoardUrls.column(a.id), {
+          method: 'PATCH',
+          body: JSON.stringify({ position: b.position }),
+        }),
+        columnMutation.mutateJson(taskBoardUrls.column(b.id), {
+          method: 'PATCH',
+          body: JSON.stringify({ position: a.position }),
+        }),
       ]);
       addToast(t.columnReordered, 'success');
       await fetchDetail(activeBoardId);

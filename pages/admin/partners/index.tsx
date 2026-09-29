@@ -10,6 +10,7 @@ import Tabs, {
 import PartnersListPanel from '@/components/admin/partners/PartnersListPanel';
 import PartnershipRequestsPanel from '@/components/admin/partners/PartnershipRequestsPanel';
 import type { StaffProps } from '@/types/admin';
+import { withAdminQuery } from '@/features/admin/_shared/query';
 import nsAdminPartnersHub from '@/lib/i18n/locales/admin-fr/adminPartnersHub';
 
 const ID_BASE = 'admin-partners';
@@ -28,7 +29,7 @@ export const getServerSideProps = withStaffPage({
  * `?new=1` (ex-route /admin/partners/new) ouvre la modale de création dans
  * l'onglet « Partenaires » — les query params `tab` et `new` coexistent.
  */
-export default function AdminPartnersHubPage(_props: StaffProps) {
+function AdminPartnersHubPage(_props: StaffProps) {
   const t = useAdminT(nsAdminPartnersHub);
 
   const tabs = [
@@ -70,3 +71,5 @@ export default function AdminPartnersHubPage(_props: StaffProps) {
     </>
   );
 }
+
+export default withAdminQuery(AdminPartnersHubPage);

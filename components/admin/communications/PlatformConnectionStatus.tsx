@@ -11,7 +11,7 @@
 // secret, seulement à se recharger quand un identifiant a été enregistré.
 
 import { useCallback, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { socialClient } from '@/features/admin/communications/client';
 import { useToast } from '@/components/Toast';
 import { format } from '@/lib/i18n/useT';
 import { logger } from '@/utils/logger';
@@ -35,12 +35,10 @@ export type SetupState = {
   encryptionReady: boolean;
 };
 
-const SECRET_ENDPOINT = '/api/admin/instagram/secret';
-const BLUESKY_ENDPOINT = '/api/admin/bluesky/credentials';
 // Navigation de document volontaire, pas un <Link> : cette route répond par une
 // redirection 302 vers l'écran de consentement Meta. Une navigation côté client
 // de Next resterait dans l'app et n'irait nulle part.
-const INSTAGRAM_AUTHORIZE = '/api/admin/instagram/authorize';
+const INSTAGRAM_AUTHORIZE = socialClient.instagramAuthorizeUrl;
 
 const INPUT_CLASS =
   'rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-[var(--or,#b467d1)] focus:outline-none';
@@ -64,7 +62,6 @@ export default function PlatformConnectionStatus({
   /** Le secret Instagram vient d'être posé. */
   onSecretSaved: () => void;
 }) {
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
   const [busy, setBusy] = useState(false);
   const [appSecret, setAppSecret] = useState('');
@@ -75,11 +72,7 @@ export default function PlatformConnectionStatus({
   const saveSecret = useCallback(async () => {
     setBusy(true);
     try {
-      await adminFetchJson(SECRET_ENDPOINT, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appSecret: appSecret.trim() }),
-      });
+      await socialClient.saveInstagramSecret(appSecret.trim());
       // La valeur ne sert plus à rien côté client : on l'oublie tout de suite.
       setAppSecret('');
       setEditingSecret(false);
@@ -91,26 +84,12 @@ export default function PlatformConnectionStatus({
     } finally {
       setBusy(false);
     }
-  }, [
-    adminFetchJson,
-    addToast,
-    appSecret,
-    onSecretSaved,
-    t.secretError,
-    t.secretSaved,
-  ]);
+  }, [addToast, appSecret, onSecretSaved, t.secretError, t.secretSaved]);
 
   const saveBluesky = useCallback(async () => {
     setBusy(true);
     try {
-      await adminFetchJson(BLUESKY_ENDPOINT, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          handle: bskyHandle.trim(),
-          appPassword: bskyPassword.trim(),
-        }),
-      });
+      await socialClient.saveBluesky(bskyHandle.trim(), bskyPassword.trim());
       setBskyPassword('');
       addToast(t.blueskySaved, 'success');
       await onChanged();
@@ -123,7 +102,7 @@ export default function PlatformConnectionStatus({
     } finally {
       setBusy(false);
     }
-  }, [adminFetchJson, addToast, bskyHandle, bskyPassword, onChanged, t]);
+  }, [addToast, bskyHandle, bskyPassword, onChanged, t]);
 
   if (conn?.connected) {
     return (

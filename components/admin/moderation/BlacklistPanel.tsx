@@ -10,10 +10,14 @@
 //
 // minRole 'manager' (miroir des routes API).
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import {
+  moderationClient,
+  moderationPaths,
+} from '@/features/admin/moderation/client';
+import { useBlacklistAlerts } from '@/features/admin/moderation/hooks/useBlacklistAlerts';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useUrlFilters } from '@/utils/useUrlFilters';
@@ -86,7 +90,6 @@ export default function BlacklistPanel() {
   const tx = useAdminT(nsAdminModerationBlacklist);
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson: createMutateJson } = useIdempotentMutation();
   const { filters, setFilters } = useUrlFilters(FILTER_KEYS);
 
@@ -127,7 +130,7 @@ export default function BlacklistPanel() {
   } = useAdminResource<
     BlacklistEntry,
     { items?: BlacklistEntry[]; total?: number }
-  >('/api/admin/moderation/blacklist', {
+  >(moderationPaths.blacklist, {
     limit: 50,
     includeTotal: false,
     params: { search: searchFilter, active: activeFilter },
@@ -155,49 +158,24 @@ export default function BlacklistPanel() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   // Historique des détections (alertes blacklist).
-  const [alerts, setAlerts] = useState<BlacklistAlert[]>([]);
-  const [alertsLoading, setAlertsLoading] = useState(true);
-  const [alertsLoadingMore, setAlertsLoadingMore] = useState(false);
-  const [alertsError, setAlertsError] = useState<string | null>(null);
-  const [alertsCursor, setAlertsCursor] = useState<string | null>(null);
   const [alertStrength, setAlertStrength] = useState<'' | AlertStrength>('');
   const [alertSource, setAlertSource] = useState<'' | AlertSource>('');
-
-  const fetchAlerts = useCallback(
-    async (cursor: string | null) => {
-      const isMore = cursor !== null;
-      if (isMore) setAlertsLoadingMore(true);
-      else setAlertsLoading(true);
-      setAlertsError(null);
-
-      const params = new URLSearchParams();
-      params.set('limit', String(ALERTS_PAGE_SIZE));
-      if (cursor) params.set('before', cursor);
-      if (alertStrength) params.set('strength', alertStrength);
-      if (alertSource) params.set('source', alertSource);
-
-      try {
-        const json = await adminFetchJson<{
-          alerts?: BlacklistAlert[];
-          nextCursor?: string | null;
-        }>(`/api/admin/moderation/blacklist/alerts?${params.toString()}`);
-        const page: BlacklistAlert[] = json.alerts || [];
-        setAlerts((prev) => (isMore ? [...prev, ...page] : page));
-        setAlertsCursor(json.nextCursor ?? null);
-      } catch (err) {
-        setAlertsError((err as Error).message);
-      } finally {
-        if (isMore) setAlertsLoadingMore(false);
-        else setAlertsLoading(false);
-      }
-    },
-    [alertStrength, alertSource, adminFetchJson]
-  );
-
-  // Recharge depuis le début quand un filtre d'alerte change.
-  useEffect(() => {
-    fetchAlerts(null);
-  }, [fetchAlerts]);
+  const { query: alertsQuery, reload: reloadAlerts } =
+    useBlacklistAlerts<BlacklistAlert>({
+      pageSize: ALERTS_PAGE_SIZE,
+      strength: alertStrength,
+      source: alertSource,
+    });
+  const alerts: BlacklistAlert[] =
+    alertsQuery.data?.pages.flatMap((page) => page.alerts || []) ?? [];
+  const alertsCursor = alertsQuery.hasNextPage
+    ? (alertsQuery.data?.pages.at(-1)?.nextCursor ?? null)
+    : null;
+  const alertsLoading = alertsQuery.isPending && alertsQuery.isFetching;
+  const alertsLoadingMore = alertsQuery.isFetchingNextPage;
+  const alertsError = alertsQuery.error
+    ? (alertsQuery.error as Error).message
+    : null;
 
   function submitSearch() {
     setFilters({ search: searchInput.trim() || null });
@@ -227,7 +205,7 @@ export default function BlacklistPanel() {
       if (form.reason.trim()) body.reason = form.reason.trim();
       if (form.notes.trim()) body.notes = form.notes.trim();
 
-      await createMutateJson('/api/admin/moderation/blacklist', {
+      await createMutateJson(moderationPaths.blacklist, {
         method: 'POST',
         body: JSON.stringify(body),
       });
@@ -250,10 +228,7 @@ export default function BlacklistPanel() {
   async function toggleActive(entry: BlacklistEntry) {
     setBusyId(entry.id);
     try {
-      await adminFetchJson(`/api/admin/moderation/blacklist/${entry.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ active: !entry.active }),
-      });
+      await moderationClient.setBlacklistActive(entry.id, !entry.active);
       addToast(
         entry.active ? tx.entryDeactivated : tx.entryReactivated,
         'success'
@@ -285,15 +260,9 @@ export default function BlacklistPanel() {
   async function saveEdit(entry: BlacklistEntry) {
     setSavingEdit(true);
     try {
-      const json = await adminFetchJson<{
-        reason?: string | null;
-        notes?: string | null;
-      }>(`/api/admin/moderation/blacklist/${entry.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          reason: editReason.trim() || null,
-          notes: editNotes.trim() || null,
-        }),
+      const json = await moderationClient.updateBlacklistNotes(entry.id, {
+        reason: editReason.trim() || null,
+        notes: editNotes.trim() || null,
       });
       addToast(tx.entryUpdated, 'success');
       mutateEntries((prev) =>
@@ -331,9 +300,7 @@ export default function BlacklistPanel() {
 
     setBusyId(entry.id);
     try {
-      await adminFetchJson(`/api/admin/moderation/blacklist/${entry.id}`, {
-        method: 'DELETE',
-      });
+      await moderationClient.deleteBlacklist(entry.id);
       addToast(tx.entryDeleted, 'success');
       mutateEntries((prev) => prev.filter((e) => e.id !== entry.id));
       setTotal((t) => (typeof t === 'number' ? Math.max(0, t - 1) : t));
@@ -651,7 +618,7 @@ export default function BlacklistPanel() {
         <AdminButton
           variant="ghost"
           size="sm"
-          onClick={() => fetchAlerts(null)}
+          onClick={() => void reloadAlerts()}
         >
           {tx.refresh}
         </AdminButton>
@@ -732,7 +699,7 @@ export default function BlacklistPanel() {
               <AdminButton
                 variant="ghost"
                 size="sm"
-                onClick={() => fetchAlerts(alertsCursor)}
+                onClick={() => void alertsQuery.fetchNextPage()}
                 disabled={alertsLoadingMore}
               >
                 {alertsLoadingMore ? tx.loadingMore : tx.loadMore}

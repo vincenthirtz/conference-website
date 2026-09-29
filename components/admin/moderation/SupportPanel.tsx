@@ -2,7 +2,7 @@
 // Admin: list + manage support tickets (litiges, comportement, technique, autre).
 // Rendered as the "Support" tab of the /admin/moderation hub.
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useToast } from '@/components/Toast';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
@@ -16,7 +16,18 @@ import {
 import EmptyState from '@/components/admin/EmptyState';
 import Modal from '@/components/admin/Modal';
 import { useUrlFilters } from '@/utils/useUrlFilters';
-import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
+import { AdminFetchError } from '@/hooks/useAdminFetch';
+import {
+  type ConvertBlacklistResponse,
+  moderationPaths,
+  type SupportTicket,
+  type TicketStatus,
+} from '@/features/admin/moderation/client';
+import {
+  usePatchSupportTickets,
+  useSupportTickets,
+  useUpdateSupportTicket,
+} from '@/features/admin/moderation/hooks/useSupportTickets';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminSupport from '@/lib/i18n/locales/admin-fr/adminSupport';
@@ -24,45 +35,12 @@ import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import StatTile from '@/features/admin/_shared/ui/StatTile';
 
-type Severity = 'low' | 'medium' | 'high';
-type Category = 'dispute' | 'behavior' | 'technical' | 'other';
-type Status = 'open' | 'in_progress' | 'resolved' | 'closed';
-type Source = 'web' | 'discord_bot';
-type ReportedTargetType = 'player' | 'team' | 'org';
+type Status = TicketStatus;
 // Kind UI du formulaire de conversion : 'player' → blacklist joueurs ;
 // 'team' / 'org' → blacklist entités (kind API 'entity' + entity_type).
 type ConvertKind = 'player' | 'team' | 'org';
 
-type Ticket = {
-  id: string;
-  tournament_id: string | null;
-  reporter_name: string | null;
-  reporter_email: string | null;
-  is_anonymous: boolean;
-  category: Category;
-  severity: Severity;
-  subject: string | null;
-  message: string;
-  status: Status;
-  resolved_at: string | null;
-  resolution_note: string | null;
-  source: Source | null;
-  discord_user_id: string | null;
-  discord_username: string | null;
-  reported_target_type: ReportedTargetType | null;
-  reported_target_name: string | null;
-  reported_battle_tag: string | null;
-  converted_player_blacklist_id: string | null;
-  converted_entity_blacklist_id: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-type ConvertBlacklistResponse = {
-  kind: 'player' | 'entity';
-  entry: { id: string };
-  ticket_id: string;
-};
+type Ticket = SupportTicket;
 
 // Aggregate counts computed server-side over the WHOLE filtered set (not just
 // the current page) so the dashboard cards stay accurate beyond 50 tickets.
@@ -77,38 +55,19 @@ const FILTER_KEYS = ['status', 'severity', 'category', 'search'] as const;
 
 const PAGE_SIZE = 50;
 
-type TicketsResponse = {
-  tickets?: Ticket[];
-  total?: number;
-  counts?: {
-    total?: number | string;
-    open?: number | string;
-    high_severity?: number | string;
-    resolved?: number | string;
-  };
-};
-
-type TicketUpdateResponse = { ticket: Ticket };
-
 export default function SupportPanel() {
   const tx = useAdminT(nsAdminSupport);
   const categoryLabels = getCategoryLabels(tx);
   const statusLabels = getStatusLabels(tx);
   const { addToast } = useToast();
   const { filters, setFilters } = useUrlFilters(FILTER_KEYS);
-  const { adminFetchJson } = useAdminFetch();
   const { mutate: blacklistMutate, regenerate: regenerateBlacklistKey } =
     useIdempotentMutation({ autoRegenerateOnSuccess: false });
   // Conversion signalement → blacklist : une clé par intention, régénérée
   // après chaque 2xx (défaut) pour pouvoir enchaîner joueur puis entité.
   const { mutateJson: convertMutateJson } = useIdempotentMutation();
 
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [counts, setCounts] = useState<TicketCounts | null>(null);
   const [offset, setOffset] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selected, setSelected] = useState<Ticket | null>(null);
   const [resolutionNote, setResolutionNote] = useState('');
   const [updating, setUpdating] = useState(false);
@@ -157,16 +116,10 @@ export default function SupportPanel() {
     setOffset(0);
   }, [status, severity, category, search]);
 
-  // Guard de séquence : le reset d'offset (effet ci-dessus) et le changement
-  // de filtre déclenchent deux fetchs successifs dans le même commit ; seule
-  // la dernière requête lancée peut appliquer sa réponse (sinon une réponse
-  // périmée — ancien offset — peut revenir après la bonne et l'écraser).
-  const fetchSeqRef = useRef(0);
-
-  const fetchTickets = useCallback(async () => {
-    const seq = ++fetchSeqRef.current;
-    setLoading(true);
-    setErrorMsg(null);
+  // Requête par clé (filtres + offset) : le reset d'offset ci-dessus et le
+  // changement de filtre produisent deux clés successives, et seule la clé
+  // COURANTE s'affiche — l'ancien garde de séquence n'a plus lieu d'être.
+  const ticketsQueryString = (() => {
     const params = new URLSearchParams();
     if (status) params.set('status', status);
     if (severity) params.set('severity', severity);
@@ -174,34 +127,34 @@ export default function SupportPanel() {
     if (search) params.set('search', search);
     params.set('limit', String(PAGE_SIZE));
     params.set('offset', String(offset));
-    try {
-      const json = await adminFetchJson<TicketsResponse>(
-        `/api/admin/support/tickets?${params.toString()}`
-      );
-      if (seq !== fetchSeqRef.current) return; // réponse périmée
-      setTickets(json.tickets || []);
-      setTotal(typeof json.total === 'number' ? json.total : null);
-      setCounts(
-        json.counts && typeof json.counts === 'object'
-          ? {
-              total: Number(json.counts.total) || 0,
-              open: Number(json.counts.open) || 0,
-              high_severity: Number(json.counts.high_severity) || 0,
-              resolved: Number(json.counts.resolved) || 0,
-            }
-          : null
-      );
-    } catch (err) {
-      if (seq !== fetchSeqRef.current) return;
-      setErrorMsg((err as Error).message);
-    } finally {
-      if (seq === fetchSeqRef.current) setLoading(false);
-    }
-  }, [status, severity, category, search, offset, adminFetchJson]);
-
-  useEffect(() => {
-    fetchTickets();
-  }, [fetchTickets]);
+    return params.toString();
+  })();
+  const ticketsQuery = useSupportTickets(ticketsQueryString);
+  const patchTickets = usePatchSupportTickets(ticketsQueryString);
+  const tickets: Ticket[] = ticketsQuery.data?.tickets || [];
+  const total =
+    typeof ticketsQuery.data?.total === 'number'
+      ? ticketsQuery.data.total
+      : null;
+  const rawCounts = ticketsQuery.data?.counts;
+  const counts: TicketCounts | null =
+    rawCounts && typeof rawCounts === 'object'
+      ? {
+          total: Number(rawCounts.total) || 0,
+          open: Number(rawCounts.open) || 0,
+          high_severity: Number(rawCounts.high_severity) || 0,
+          resolved: Number(rawCounts.resolved) || 0,
+        }
+      : null;
+  const loading = ticketsQuery.isFetching;
+  const errorMsg = ticketsQuery.isError
+    ? (ticketsQuery.error as Error).message
+    : null;
+  const fetchTickets = useCallback(
+    () => ticketsQuery.refetch(),
+    [ticketsQuery.refetch]
+  );
+  const updateTicket = useUpdateSupportTicket();
 
   function openDetail(t: Ticket) {
     setSelected(t);
@@ -289,7 +242,7 @@ export default function SupportPanel() {
       if (convertForm.notes.trim()) body.notes = convertForm.notes.trim();
 
       const json = await convertMutateJson<ConvertBlacklistResponse>(
-        `/api/admin/support/tickets/${selected.id}/convert-blacklist`,
+        moderationPaths.convertTicket(selected.id),
         { method: 'POST', body: JSON.stringify(body) }
       );
 
@@ -304,7 +257,7 @@ export default function SupportPanel() {
           ? { converted_player_blacklist_id: json.entry.id }
           : { converted_entity_blacklist_id: json.entry.id };
       setSelected((prev) => (prev ? { ...prev, ...patch } : prev));
-      setTickets((prev) =>
+      patchTickets((prev) =>
         prev.map((tk) => (tk.id === selected.id ? { ...tk, ...patch } : tk))
       );
       setConvertOpen(false);
@@ -364,17 +317,14 @@ export default function SupportPanel() {
             // One idempotency key per pseudo so a transparent network retry
             // can't double-insert the same blacklist entry.
             const idempotencyKey = regenerateBlacklistKey();
-            const res = await blacklistMutate(
-              '/api/admin/moderation/blacklist',
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Idempotency-Key': idempotencyKey,
-                },
-                body: JSON.stringify(body),
-              }
-            );
+            const res = await blacklistMutate(moderationPaths.blacklist, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Idempotency-Key': idempotencyKey,
+              },
+              body: JSON.stringify(body),
+            });
             return res.ok;
           } catch {
             return false;
@@ -407,18 +357,13 @@ export default function SupportPanel() {
     if (!selected) return;
     setUpdating(true);
     try {
-      const body: Record<string, unknown> = { status: newStatus };
+      const body: { status: Status; resolution_note?: string } = {
+        status: newStatus,
+      };
       if (note !== undefined) body.resolution_note = note;
-      const json = await adminFetchJson<TicketUpdateResponse>(
-        `/api/admin/support/tickets/${selected.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify(body),
-        }
-      );
+      const json = await updateTicket.mutateAsync({ id: selected.id, body });
       addToast(tx.ticketUpdated, 'success');
       setSelected(json.ticket);
-      await fetchTickets();
     } catch (err) {
       addToast((err as Error).message, 'error');
     } finally {

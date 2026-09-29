@@ -3,8 +3,12 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminResource } from '@/hooks/useAdminResource';
-import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  useCreateLeague,
+  useDeleteLeagueFromList,
+  useLeaguesList,
+} from '@/features/admin/leagues/hooks/useLeagues';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import Breadcrumb from '@/components/admin/Breadcrumb';
@@ -17,11 +21,7 @@ import AdminButton, {
 } from '@/features/admin/_shared/ui/AdminButton';
 import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 import type { StaffProps } from '@/types/admin';
-import type {
-  League,
-  LeagueStatus,
-  LeaguesListResponse,
-} from '@/types/leagues';
+import type { League, LeagueStatus } from '@/types/leagues';
 
 import { logger } from '../../../utils/logger';
 import nsAdminLeaguesList from '@/lib/i18n/locales/admin-fr/adminLeaguesList';
@@ -104,7 +104,7 @@ type CreateFormProps = {
 
 function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
   const t = useAdminT(nsAdminLeaguesList);
-  const { mutateJson } = useIdempotentMutation();
+  const create = useCreateLeague();
   const { addToast } = useToast();
 
   const [name, setName] = useState('');
@@ -118,7 +118,7 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
   const [pointsJson, setPointsJson] = useState(
     JSON.stringify(DEFAULT_POINTS_TABLE, null, 2)
   );
-  const [submitting, setSubmitting] = useState(false);
+  const submitting = create.isPending;
   const [error, setError] = useState<string | null>(null);
 
   function handleNameChange(value: string) {
@@ -159,20 +159,16 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
       }
     }
 
-    setSubmitting(true);
     try {
-      const league = await mutateJson<League>('/api/admin/leagues', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: name.trim(),
-          slug,
-          description: description.trim() || undefined,
-          game: game.trim() || undefined,
-          start_date: startDate || undefined,
-          end_date: endDate || undefined,
-          points_table: pointsTable,
-          is_public: isPublic,
-        }),
+      const league = await create.mutateAsync({
+        name: name.trim(),
+        slug,
+        description: description.trim() || undefined,
+        game: game.trim() || undefined,
+        start_date: startDate || undefined,
+        end_date: endDate || undefined,
+        points_table: pointsTable,
+        is_public: isPublic,
       });
       addToast(t.toastCreated, 'success');
       onCreated(league);
@@ -184,8 +180,6 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
         setError((err as Error)?.message || t.errCreate);
       }
       logger.error('create league error', err);
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -335,26 +329,20 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
 function AdminLeaguesPage(_props: StaffProps) {
   const t = useAdminT(nsAdminLeaguesList);
   const router = useRouter();
-  const { mutate } = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();
 
   const [showCreate, setShowCreate] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Liste complète des leagues du tenant : l'endpoint ne pagine pas
-  // (aucun total ni filtre serveur), d'où `includeTotal: false`. Le patch
-  // local `mutateLeagues` sert à la suppression optimiste.
-  const {
-    data: leagues,
-    loading,
-    error: errorMsg,
-    refresh: load,
-    mutate: mutateLeagues,
-  } = useAdminResource<League, LeaguesListResponse>('/api/admin/leagues', {
-    includeTotal: false,
-    select: (res) => res.leagues ?? [],
-  });
+  // Liste complète des leagues du tenant : l'endpoint ne pagine pas.
+  const list = useLeaguesList();
+  const leagues: League[] = list.data?.leagues ?? [];
+  // Chaque (re)chargement repasse par l'état de chargement, comme avant.
+  const loading = list.isFetching;
+  const errorMsg = list.isError && !list.isFetching ? list.error.message : null;
+  const load = () => void list.refetch();
+  const removeLeague = useDeleteLeagueFromList();
 
   async function handleDelete(league: League) {
     const ok = await confirm({
@@ -367,13 +355,11 @@ function AdminLeaguesPage(_props: StaffProps) {
 
     setDeletingId(league.id);
     try {
-      const res = await mutate(`/api/admin/leagues/${league.id}`, {
-        method: 'DELETE',
-      });
+      // Retire la ligne du cache quand la réponse est un succès.
+      const res = await removeLeague.mutateAsync(league.id);
       if (!res.ok && res.status !== 204) {
         throw new Error(format(t.errDeleteStatus, { status: res.status }));
       }
-      mutateLeagues((prev) => prev.filter((l) => l.id !== league.id));
       addToast(t.toastDeleted, 'success');
     } catch (err: unknown) {
       logger.error('delete league error', err);
@@ -540,4 +526,4 @@ function AdminLeaguesPage(_props: StaffProps) {
   );
 }
 
-export default AdminLeaguesPage;
+export default withAdminQuery(AdminLeaguesPage);

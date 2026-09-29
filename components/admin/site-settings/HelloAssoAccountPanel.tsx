@@ -15,68 +15,52 @@
 // HelloAsso encaisse mais la jauge ne bouge jamais. Elle est donc affichée ici,
 // prête à copier, avec le jeton propre à cet espace.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/components/Toast';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import {
+  useClearHelloAsso,
+  useHelloAssoAccount,
+  useSaveHelloAsso,
+} from '@/features/admin/site-settings/hooks/useSiteSettings';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminSiteSettings from '@/lib/i18n/locales/admin-fr/adminSiteSettings';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
-type State = {
-  usesPlatformAccount: boolean;
-  connected: boolean;
-  organizationSlug: string | null;
-  notificationUrl: string | null;
-  encryptionReady: boolean;
-};
-
 export default function HelloAssoAccountPanel() {
   const t = useAdminT(nsAdminSiteSettings);
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
 
-  const [state, setState] = useState<State | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [orgSlug, setOrgSlug] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await adminFetchJson<State>(
-        '/api/admin/helloasso/credentials'
-      );
-      setState(data);
-      setOrgSlug(data.organizationSlug ?? '');
-    } catch {
-      setState(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson]);
+  const query = useHelloAssoAccount();
+  const saveMutation = useSaveHelloAsso();
+  const clearMutation = useClearHelloAsso();
+  // Une erreur de lecture affiche le message d'échec (ancien `setState(null)`).
+  const state = query.isError ? null : (query.data ?? null);
+  const loading = query.isPending || query.isFetching;
 
+  // Chaque lecture réussie recale les champs sur le serveur (ancien `load`).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: déclenché par la seule lecture (dataUpdatedAt).
   useEffect(() => {
-    void load();
-  }, [load]);
+    const data = query.data;
+    if (!data) return;
+    setOrgSlug(data.organizationSlug ?? '');
+  }, [query.dataUpdatedAt]);
 
   async function save() {
     setSaving(true);
     try {
-      await adminFetchJson('/api/admin/helloasso/credentials', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clientId,
-          clientSecret,
-          organizationSlug: orgSlug,
-        }),
+      await saveMutation.mutateAsync({
+        clientId,
+        clientSecret,
+        organizationSlug: orgSlug,
       });
       setClientId('');
       setClientSecret('');
       addToast(t.helloassoSaved, 'success');
-      await load();
     } catch (err) {
       addToast(
         err instanceof Error ? err.message : t.helloassoSaveError,
@@ -90,11 +74,8 @@ export default function HelloAssoAccountPanel() {
   async function clear() {
     setSaving(true);
     try {
-      await adminFetchJson('/api/admin/helloasso/credentials', {
-        method: 'DELETE',
-      });
+      await clearMutation.mutateAsync(undefined);
       addToast(t.helloassoCleared, 'success');
-      await load();
     } catch (err) {
       addToast(
         err instanceof Error ? err.message : t.helloassoSaveError,

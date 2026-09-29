@@ -14,64 +14,38 @@
 // L'ÉCRAN MONTRE L'ŒUVRE ET SON CRÉDIT, pas l'identité du compte qui l'a
 // déposée : on modère une image et un nom d'artiste.
 
-import { useCallback, useEffect, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useCallback, useState } from 'react';
+import type { FanartItem, FanartStatus } from '@/features/admin/tcg/client';
+import {
+  useDecideTcgFanart,
+  useTcgFanart,
+} from '@/features/admin/tcg/hooks/useTcgModeration';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTcgFanart from '@/lib/i18n/locales/admin-fr/adminTcgFanart';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
-type Status = 'pending' | 'approved' | 'rejected' | 'revoked';
-
-type Item = {
-  id: string;
-  title: string;
-  artistName: string;
-  artistUrl: string | null;
-  imageUrl: string | null;
-  status: Status;
-  rarity: string | null;
-  reviewNotes: string | null;
-  createdAt: string;
-};
-
-type Response = {
-  items: Item[];
-  status: Status;
-  rarities: string[];
-  defaultRarity: string;
-};
+type Status = FanartStatus;
+type Item = FanartItem;
 
 const STATUSES: Status[] = ['pending', 'approved', 'rejected', 'revoked'];
 
 export default function TcgFanartPanel() {
   const t = useAdminT(nsAdminTcgFanart);
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
 
   const [status, setStatus] = useState<Status>('pending');
-  const [data, setData] = useState<Response | null>(null);
-  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const list = useTcgFanart(status);
+  const decideMutation = useDecideTcgFanart();
+  const data = list.data ?? null;
+  const state: 'loading' | 'ready' | 'error' = list.isFetching
+    ? 'loading'
+    : list.isError
+      ? 'error'
+      : 'ready';
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [rarities, setRarities] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setState('loading');
-    try {
-      const res = await adminFetchJson<Response>(
-        `/api/admin/tcg/fanart?status=${status}`
-      );
-      setData(res);
-      setState('ready');
-    } catch {
-      setState('error');
-    }
-  }, [adminFetchJson, status]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const decide = useCallback(
     async (item: Item, action: 'approve' | 'reject' | 'revoke') => {
@@ -82,17 +56,13 @@ export default function TcgFanartPanel() {
       }
       setBusy(item.id);
       try {
-        await adminFetchJson('/api/admin/tcg/fanart', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action,
-            id: item.id,
-            ...(action === 'approve'
-              ? { rarity: rarities[item.id] ?? data?.defaultRarity }
-              : {}),
-            ...(note ? { notes: note } : {}),
-          }),
+        await decideMutation.mutateAsync({
+          action,
+          id: item.id,
+          ...(action === 'approve'
+            ? { rarity: rarities[item.id] ?? data?.defaultRarity }
+            : {}),
+          ...(note ? { notes: note } : {}),
         });
         addToast(
           action === 'approve'
@@ -102,14 +72,13 @@ export default function TcgFanartPanel() {
               : t.toastRevoked,
           'success'
         );
-        await load();
       } catch (err) {
         addToast(err instanceof Error ? err.message : t.toastError, 'error');
       } finally {
         setBusy(null);
       }
     },
-    [adminFetchJson, addToast, data?.defaultRarity, load, notes, rarities, t]
+    [decideMutation, addToast, data?.defaultRarity, notes, rarities, t]
   );
 
   const statusLabel: Record<Status, string> = {

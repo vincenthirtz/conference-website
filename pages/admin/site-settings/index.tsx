@@ -12,6 +12,7 @@ import type { StaffProps } from '@/types/admin';
 import nsAdminSiteSettings from '@/lib/i18n/locales/admin-fr/adminSiteSettings';
 
 import { lazyPanel } from '@/components/admin/lazyPanel';
+import { withAdminQuery } from '@/features/admin/_shared/query';
 
 // Onglets secondaires : chargés au clic (cf. components/admin/lazyPanel).
 const DiscordWebhooksPanel = lazyPanel(
@@ -43,7 +44,7 @@ export const getServerSideProps = withStaffPage({
  * discord.tsx & team-roles.tsx shims). Whole page is admin-gated, matching the
  * strictest of the three former pages.
  */
-export default function AdminSiteSettingsPage(_: StaffProps) {
+function AdminSiteSettingsPage(_: StaffProps) {
   const t = useAdminT(nsAdminSiteSettings);
   const tabs = [
     { id: 'general', label: t.tabGeneral },
@@ -96,3 +97,5 @@ export default function AdminSiteSettingsPage(_: StaffProps) {
     </>
   );
 }
+
+export default withAdminQuery(AdminSiteSettingsPage);

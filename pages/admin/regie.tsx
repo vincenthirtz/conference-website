@@ -61,6 +61,7 @@ import UrgentCueModal from '@/components/Caster/UrgentCueModal';
 import RegieHeader, { type Connection } from '@/components/Caster/RegieHeader';
 import nsAdminRegie from '@/lib/i18n/locales/fr/adminRegie';
 import nsCasterCockpit from '@/lib/i18n/locales/fr/casterCockpit';
+import { liveUrls } from '@/features/admin/diffusion/liveClient';
 
 // PushOptIn est dynamic (no-SSR) : il depend de Notification / serviceWorker.
 const PushOptIn = dynamic(() => import('@/components/shared/PushOptIn'), {
@@ -338,7 +339,7 @@ function RegiePage({ staff }: StaffProps) {
     if (!ok) return;
     setEndingRun(true);
     try {
-      await mutateJson(`/api/admin/events/${liveRunId}/end`, {
+      await mutateJson(liveUrls.endRun(liveRunId), {
         method: 'POST',
       });
       addToast(tr.endRunSuccess, 'success');
@@ -368,10 +369,9 @@ function RegiePage({ staff }: StaffProps) {
     if (!ok) return;
     setSegAction('end');
     try {
-      await mutateJson(
-        `/api/admin/events/${liveRunId}/segments/${currentSegment.id}/end`,
-        { method: 'POST' }
-      );
+      await mutateJson(liveUrls.endSegment(liveRunId, currentSegment.id), {
+        method: 'POST',
+      });
       addToast(tr.endSegmentSuccess, 'success');
       await fetchRun();
     } catch (err) {
@@ -402,10 +402,9 @@ function RegiePage({ staff }: StaffProps) {
     if (!liveRunId || !nextSegment || segAction) return;
     setSegAction('startNext');
     try {
-      await mutateJson(
-        `/api/admin/events/${liveRunId}/segments/${nextSegment.id}/start`,
-        { method: 'POST' }
-      );
+      await mutateJson(liveUrls.startSegment(liveRunId, nextSegment.id), {
+        method: 'POST',
+      });
       addToast(tr.startNextSuccess, 'success');
       await fetchRun();
     } catch (err) {

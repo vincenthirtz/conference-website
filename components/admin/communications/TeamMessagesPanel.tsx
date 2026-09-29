@@ -15,8 +15,15 @@
 // de chaque équipe) ou un gabarit libre à variables ({equipe}, {titulaires}…).
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import {
+  useIdempotentCall,
+  useTeamMessagesState,
+} from '@/features/admin/communications/hooks/useCommunications';
+import { teamMessagesClient } from '@/features/admin/communications/client';
+import type {
+  RosterKind,
+  TeamPreviewMessage as PreviewMessage,
+} from '@/features/admin/communications/clientTypes';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -27,55 +34,7 @@ import nsAdminTeamMessages from '@/lib/i18n/locales/admin-fr/adminTeamMessages';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
-type RosterKind = 'incomplete' | 'complete_with_warnings' | 'complete';
-
-type TeamRow = {
-  teamId: string;
-  teamName: string;
-  discordChannelId: string | null;
-  discordRoleId: string | null;
-  starters: number;
-  substitutes: number;
-  missingStarters: number;
-  missingBattleTags: number;
-  neverLoggedIn: number;
-  kind: RosterKind;
-};
-
-type TournamentInfo = {
-  id: string;
-  name: string;
-  minPlayers: number;
-  startDate: string | null;
-  deadline: string | null;
-};
-
-type StateResponse = {
-  tournament: TournamentInfo | null;
-  teams: TeamRow[];
-  variables: string[];
-  maxLength: number;
-};
-
-type PreviewMessage = {
-  teamId: string;
-  teamName: string;
-  kind: RosterKind | 'custom';
-  deliverable: boolean;
-  content: string;
-};
-
-type PostResponse = {
-  dryRun: boolean;
-  messages: PreviewMessage[];
-  sent?: number;
-  skipped?: number;
-  teams?: Array<{ teamId: string; teamName: string; status: string }>;
-};
-
 type Dict = typeof nsAdminTeamMessages.fr;
-
-const ENDPOINT = '/api/admin/team-messages';
 
 function kindBadge(
   kind: RosterKind | 'custom',
@@ -107,14 +66,14 @@ function kindBadge(
 
 export default function TeamMessagesPanel() {
   const t = useAdminT(nsAdminTeamMessages);
-  const { adminFetchJson } = useAdminFetch();
-  const { mutateJson, regenerate } = useIdempotentMutation();
+  const { run, regenerate } = useIdempotentCall();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { addToast } = useToast();
 
-  const [state, setState] = useState<StateResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useTeamMessagesState();
+  const state = query.data ?? null;
+  const loading = query.isPending;
+  const error = query.isError ? t.loadError : null;
 
   const [preset, setPreset] = useState<'roster-reminder' | 'custom'>(
     'roster-reminder'
@@ -129,24 +88,21 @@ export default function TeamMessagesPanel() {
   const [preview, setPreview] = useState<PreviewMessage[] | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await adminFetchJson<StateResponse>(ENDPOINT);
-      setState(data);
-      setSelected(new Set(data.teams.map((team) => team.teamId)));
-    } catch (err) {
-      logger.error('[admin/team-messages] load error', err);
-      setError(t.loadError);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, t.loadError]);
+  // Chaque chargement réussi coche toutes les équipes, comme avant.
+  // `loadedAt` change à chaque chargement réussi ; relire `query.data` à
+  // chaque rendu re-cocherait tout à chaque clic.
+  const loadedAt = query.dataUpdatedAt;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: déclenché par loadedAt seul
+  useEffect(() => {
+    if (!query.data) return;
+    setSelected(new Set(query.data.teams.map((team) => team.teamId)));
+  }, [loadedAt]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (query.error) {
+      logger.error('[admin/team-messages] load error', query.error);
+    }
+  }, [query.error]);
 
   // Toute modification du ciblage ou du contenu périme l'aperçu : le bouton
   // d'envoi se re-verrouille tant qu'on n'a pas relu le nouveau rendu.
@@ -155,15 +111,13 @@ export default function TeamMessagesPanel() {
   const targetIds = useMemo(() => Array.from(selected), [selected]);
 
   const buildBody = useCallback(
-    (dryRun: boolean) =>
-      JSON.stringify({
-        preset,
-        template: preset === 'custom' ? template : undefined,
-        teamIds: targetIds,
-        mention,
-        only,
-        dryRun,
-      }),
+    () => ({
+      preset,
+      template: preset === 'custom' ? template : undefined,
+      teamIds: targetIds,
+      mention,
+      only,
+    }),
     [preset, template, targetIds, mention, only]
   );
 
@@ -178,11 +132,7 @@ export default function TeamMessagesPanel() {
     }
     setBusy(true);
     try {
-      const data = await adminFetchJson<PostResponse>(ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: buildBody(true),
-      });
+      const data = await teamMessagesClient.preview(buildBody());
       setPreview(data.messages);
       if (data.messages.length === 0) addToast(t.previewEmpty, 'info');
     } catch (err) {
@@ -192,7 +142,6 @@ export default function TeamMessagesPanel() {
       setBusy(false);
     }
   }, [
-    adminFetchJson,
     addToast,
     buildBody,
     preset,
@@ -219,11 +168,7 @@ export default function TeamMessagesPanel() {
     if (!ok) return;
     setBusy(true);
     try {
-      const data = await mutateJson<PostResponse>(ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: buildBody(false),
-      });
+      const data = await run(teamMessagesClient.send(buildBody()));
       addToast(
         format(t.sendSuccess, {
           sent: String(data.sent ?? 0),
@@ -243,7 +188,7 @@ export default function TeamMessagesPanel() {
     addToast,
     buildBody,
     confirm,
-    mutateJson,
+    run,
     preview,
     regenerate,
     t.confirmSend,

@@ -3,6 +3,7 @@ import Modal from '@/components/admin/Modal';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import { rubanErrBox } from '@/features/admin/_shared/ui/ruban';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { castMembersClient } from '@/features/admin/cast-members/client';
 import CastMemberStaffPicker from '@/components/admin/CastMemberStaffPicker';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminCastMembersNew from '@/lib/i18n/locales/admin-fr/adminCastMembersNew';
@@ -86,7 +87,9 @@ export default function CastMemberFormModal({
         authUserId: form.authUserId,
       };
 
-      await mutateJson('/api/admin/cast-members', {
+      // Reste sur `useIdempotentMutation` : garde la file hors ligne (et la
+      // modale vit aussi sur des pages hors du cache de requêtes).
+      await mutateJson(castMembersClient.createUrl, {
         method: 'POST',
         body: JSON.stringify(payload),
       });

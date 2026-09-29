@@ -14,7 +14,7 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/router';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { newsListClient } from '@/features/admin/communications/client';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminNewsList from '@/lib/i18n/locales/admin-fr/adminNewsList';
@@ -72,7 +72,6 @@ export default function NewsListPanel({
 }: Props) {
   const t = useAdminT(nsAdminNewsList);
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
   const { filters, setFilter, setFilters } = useUrlFilters(N_FILTER_KEYS);
 
   const search = filters.search ?? '';
@@ -100,9 +99,7 @@ export default function NewsListPanel({
     setDeleting(true);
     setErrorMsg(null);
     try {
-      await adminFetchJson(`/api/admin/news/${item.id}`, {
-        method: 'DELETE',
-      });
+      await newsListClient.remove(item.id);
       setDeleteTarget(null);
       fetchData();
     } catch (err: unknown) {

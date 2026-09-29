@@ -8,10 +8,14 @@
 // filters client-side; it requests one page at a time and lets the API count
 // the classification breakdown.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { moderationPaths } from '@/features/admin/moderation/client';
+import {
+  type TournamentOption,
+  useTournamentOptions,
+} from '@/features/admin/_shared/tournamentOptions';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import AdminListShell from '@/components/admin/AdminListShell';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -48,23 +52,13 @@ type ApiResponse = {
   total: number | null;
 };
 
-type TournamentMini = {
-  id: string;
-  name: string;
-  slug: string | null;
-};
-
-type TournamentsApiResponse = {
-  tournaments: TournamentMini[];
-  total: number | null;
-};
+type TournamentMini = TournamentOption;
 
 const PAGE_SIZE = 50;
 
 export default function DisputesPanel() {
   const t = useAdminT(nsAdminDisputes);
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
 
   // Breakdown agrégé (Stat cards) capté dans le même payload que la page via
   // `onData` ; sert aussi de sentinelle « premier chargement » (null tant
@@ -80,18 +74,11 @@ export default function DisputesPanel() {
       : '';
   const [tournamentFilter, setTournamentFilter] = useState(initialTournament);
 
-  const [tournaments, setTournaments] = useState<TournamentMini[]>([]);
-
-  const fetchTournaments = useCallback(async () => {
-    try {
-      const json = await adminFetchJson<TournamentsApiResponse>(
-        '/api/admin/tournaments?limit=200'
-      );
-      setTournaments(json.tournaments || []);
-    } catch {
-      // Non-blocking: the dropdown just stays empty.
-    }
-  }, [adminFetchJson]);
+  // Liste du filtre « tournoi » : non bloquante, le menu reste vide en cas
+  // d'échec (erreur de lecture ignorée).
+  const tournamentsQuery = useTournamentOptions();
+  const tournaments: TournamentMini[] =
+    tournamentsQuery.data?.tournaments || [];
 
   // Filtres classification/tournoi → params serveur ; pagination détenue par le
   // hook. `limit: PAGE_SIZE` (=50) réplique le défaut de l'endpoint.
@@ -104,7 +91,7 @@ export default function DisputesPanel() {
     offset,
     setOffset,
     resetOffset,
-  } = useAdminResource<DisputeRow, ApiResponse>('/api/admin/disputes', {
+  } = useAdminResource<DisputeRow, ApiResponse>(moderationPaths.disputes, {
     limit: PAGE_SIZE,
     params: {
       status: filter === 'all' ? undefined : filter,
@@ -114,10 +101,6 @@ export default function DisputesPanel() {
     selectTotal: (res) => res.total ?? null,
     onData: (res) => setCounts(res.counts),
   });
-
-  useEffect(() => {
-    fetchTournaments();
-  }, [fetchTournaments]);
 
   // Auto-refresh 1 min : rejoue la requête courante (mêmes filtres/offset).
   useEffect(() => {

@@ -3,7 +3,13 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
+import {
+  usePartner,
+  useUpdatePartner,
+} from '@/features/admin/partners/hooks/usePartners';
+import type { PartnerPayload } from '@/features/admin/partners/schemas';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminPartnerEdit from '@/lib/i18n/locales/admin-fr/adminPartnerEdit';
 import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
@@ -52,19 +58,21 @@ function AdminEditPartnerPage(_props: Props) {
   const tf = useAdminT(nsAdminFiche);
   const router = useRouter();
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
+  const partnerId = typeof id === 'string' ? id : null;
+  const partner = usePartner(partnerId);
+  const update = useUpdatePartner(partnerId);
 
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Chargement ET horodatages de la fiche, en UN état : « en cours », puis
-  // les dates lues dans la même réponse (null si le chargement a échoué).
-  // Un `loading` à part ne disait rien de plus que « pas encore de réponse ».
-  const [stamps, setStamps] = useState<
-    { createdAt: string | null; updatedAt: string | null } | 'loading' | null
-  >('loading');
-  const loading = stamps === 'loading';
-  const meta = stamps === 'loading' ? null : stamps;
+  // Horodatages de la fiche lus dans la même réponse (null si le chargement
+  // a échoué).
+  const meta = partner.data
+    ? {
+        createdAt: partner.data.created_at ?? null,
+        updatedAt: partner.data.updated_at ?? null,
+      }
+    : null;
+  const saving = update.isPending;
 
   const [form, setForm] = useState<FormData>({
     name: '',
@@ -77,50 +85,25 @@ function AdminEditPartnerPage(_props: Props) {
     isActive: true,
   });
 
+  // Hydrate le formulaire UNE fois par fiche : une relecture ne doit jamais
+  // écraser une saisie en cours.
+  const hydrated = useHydrateOnce(partnerId, partner.data, (json) =>
+    setForm({
+      name: json.name || '',
+      description: json.description || '',
+      category: (json.category as FormData['category']) || '',
+      logoUrl: json.logo_url || '',
+      websiteUrl: json.website_url || '',
+      note: json.note || '',
+      displayOrder: json.display_order || 0,
+      isActive: json.is_active ?? true,
+    })
+  );
+  const loading = !partner.isError && !hydrated;
+
   useEffect(() => {
-    if (!id || typeof id !== 'string') return;
-
-    async function fetchPartner() {
-      setStamps('loading');
-      try {
-        const json = await adminFetchJson<{
-          name?: string;
-          description?: string;
-          category?: FormData['category'];
-          logo_url?: string;
-          website_url?: string;
-          note?: string;
-          display_order?: number;
-          is_active?: boolean;
-          created_at?: string | null;
-          updated_at?: string | null;
-        }>(`/api/admin/partners/${id}`);
-
-        setForm({
-          name: json.name || '',
-          description: json.description || '',
-          category: json.category || '',
-          logoUrl: json.logo_url || '',
-          websiteUrl: json.website_url || '',
-          note: json.note || '',
-          displayOrder: json.display_order || 0,
-          isActive: json.is_active ?? true,
-        });
-        setStamps({
-          createdAt: json.created_at ?? null,
-          updatedAt: json.updated_at ?? null,
-        });
-      } catch (err: unknown) {
-        setError((err as Error).message || t.errorLoad);
-      } finally {
-        setStamps((prev) => (prev === 'loading' ? null : prev));
-      }
-    }
-
-    fetchPartner();
-    // adminFetchJson et t sont désormais stables : l'effet ne se relance qu'au
-    // changement d'id de route, sans refetch parasite.
-  }, [id, adminFetchJson, t]);
+    if (partner.error) setError(partner.error.message || t.errorLoad);
+  }, [partner.error, t]);
 
   const updateField = <K extends keyof FormData>(
     field: K,
@@ -147,22 +130,14 @@ function AdminEditPartnerPage(_props: Props) {
       return;
     }
 
-    setSaving(true);
-
     try {
-      await adminFetchJson(`/api/admin/partners/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(form),
-      });
+      await update.mutateAsync(form as PartnerPayload);
       addToast(t.updateSuccess, 'success');
     } catch (err: unknown) {
       setError((err as Error).message || t.errorGeneric);
-    } finally {
-      setSaving(false);
     }
   };
 
-  const partnerId = typeof id === 'string' ? id : null;
   const formId = 'partner-edit-form';
 
   if (loading) {
@@ -397,4 +372,4 @@ export const getServerSideProps = withStaffPage({
   permission: 'manage_communications',
 });
 
-export default AdminEditPartnerPage;
+export default withAdminQuery(AdminEditPartnerPage);

@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import Modal from '@/components/admin/Modal';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { partnersClient } from '@/features/admin/partners/client';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminPartnersNew from '@/lib/i18n/locales/admin-fr/adminPartnersNew';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
@@ -87,7 +88,8 @@ export default function PartnerFormModal({
 
     setSaving(true);
     try {
-      await mutateJson('/api/admin/partners', {
+      // Reste sur `useIdempotentMutation` : garde la file hors ligne.
+      await mutateJson(partnersClient.createUrl, {
         method: 'POST',
         body: JSON.stringify(form),
       });

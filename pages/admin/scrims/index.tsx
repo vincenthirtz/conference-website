@@ -19,6 +19,7 @@ import type { StaffProps } from '@/types/admin';
 import nsAdminScrimsList from '@/lib/i18n/locales/admin-fr/adminScrimsList';
 
 import { lazyPanel } from '@/components/admin/lazyPanel';
+import { withAdminQuery } from '@/features/admin/_shared/query';
 
 // Onglets secondaires : chargés au clic (cf. components/admin/lazyPanel).
 const ScrimPlanningsListPanel = lazyPanel(
@@ -73,4 +74,4 @@ function AdminScrimsPage(_props: StaffProps) {
   );
 }
 
-export default AdminScrimsPage;
+export default withAdminQuery(AdminScrimsPage);

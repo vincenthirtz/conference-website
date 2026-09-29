@@ -2,11 +2,17 @@
 // webhook configured for a given channel. Rendered as the "Discord" tab of the
 // merged /admin/site-settings page.
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import type { GlobalWebhooksResponse } from '@/features/admin/site-settings/client';
+import {
+  useDeleteDiscordWebhook,
+  useGlobalDiscordWebhooks,
+  useSaveDiscordWebhook,
+  useTestDiscordWebhook,
+} from '@/features/admin/site-settings/hooks/useSiteSettings';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   DISCORD_CHANNEL_TYPES,
@@ -17,21 +23,7 @@ import nsAdminSiteSettingsDiscord from '@/lib/i18n/locales/admin-fr/adminSiteSet
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 
-type WebhookRow = {
-  id: string;
-  tournament_id: string | null;
-  channel_type: DiscordChannelType;
-  webhook_url: string;
-  role_mention: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
-type ApiResponse = {
-  channelTypes: readonly DiscordChannelType[];
-  globals: WebhookRow[];
-};
+type ApiResponse = GlobalWebhooksResponse;
 
 type DraftMap = Record<
   DiscordChannelType,
@@ -57,46 +49,38 @@ export default function DiscordWebhooksPanel() {
   const t = useAdminT(nsAdminSiteSettingsDiscord);
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
-  const { adminFetchJson } = useAdminFetch();
 
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<ApiResponse | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<DraftMap>(emptyDrafts());
   const [saving, setSaving] = useState<Record<DiscordChannelType, boolean>>(
     emptySaving()
   );
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const json = await adminFetchJson<ApiResponse>(
-        '/api/admin/site-settings/discord-webhooks'
-      );
-      setData(json);
+  const query = useGlobalDiscordWebhooks();
+  const saveWebhook = useSaveDiscordWebhook();
+  const deleteWebhook = useDeleteDiscordWebhook();
+  const testWebhook = useTestDiscordWebhook();
+  const loading = query.isPending || query.isFetching;
+  // Comme l'ancien état local : données gardées, masquées pendant un chargement.
+  const data: ApiResponse | null = query.data ?? null;
+  const errorMsg = query.isError ? (query.error as Error).message : null;
 
-      setDrafts((prev) => {
-        const next = { ...prev };
-        for (const w of json.globals) {
-          next[w.channel_type] = {
-            webhookUrl: w.webhook_url,
-            roleMention: w.role_mention || '',
-            isActive: w.is_active,
-          };
-        }
-        return next;
-      });
-    } catch (err) {
-      setErrorMsg((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson]);
-
+  // Chaque lecture réussie recopie les webhooks enregistrés dans les brouillons.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: déclenché par la seule lecture (dataUpdatedAt).
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    const json = query.data;
+    if (!json) return;
+    setDrafts((prev) => {
+      const next = { ...prev };
+      for (const w of json.globals) {
+        next[w.channel_type] = {
+          webhookUrl: w.webhook_url,
+          roleMention: w.role_mention || '',
+          isActive: w.is_active,
+        };
+      }
+      return next;
+    });
+  }, [query.dataUpdatedAt]);
 
   async function save(channelType: DiscordChannelType) {
     const draft = drafts[channelType];
@@ -107,17 +91,13 @@ export default function DiscordWebhooksPanel() {
 
     setSaving((s) => ({ ...s, [channelType]: true }));
     try {
-      await adminFetchJson('/api/admin/site-settings/discord-webhooks', {
-        method: 'PUT',
-        body: JSON.stringify({
-          channelType,
-          webhookUrl: draft.webhookUrl.trim(),
-          roleMention: draft.roleMention.trim() || null,
-          isActive: draft.isActive,
-        }),
+      await saveWebhook.mutateAsync({
+        channelType,
+        webhookUrl: draft.webhookUrl.trim(),
+        roleMention: draft.roleMention.trim() || null,
+        isActive: draft.isActive,
       });
       addToast(t.saveSuccess, 'success');
-      await fetchData();
     } catch (err) {
       addToast((err as Error).message, 'error');
     } finally {
@@ -138,16 +118,12 @@ export default function DiscordWebhooksPanel() {
 
     setSaving((s) => ({ ...s, [channelType]: true }));
     try {
-      await adminFetchJson(
-        `/api/admin/site-settings/discord-webhooks?channelType=${channelType}`,
-        { method: 'DELETE' }
-      );
+      await deleteWebhook.mutateAsync(channelType);
       addToast(t.deleteSuccess, 'success');
       setDrafts((d) => ({
         ...d,
         [channelType]: { webhookUrl: '', roleMention: '', isActive: true },
       }));
-      await fetchData();
     } catch (err) {
       addToast((err as Error).message, 'error');
     } finally {
@@ -157,10 +133,7 @@ export default function DiscordWebhooksPanel() {
 
   async function test(channelType: DiscordChannelType) {
     try {
-      await adminFetchJson('/api/admin/site-settings/discord-test', {
-        method: 'POST',
-        body: JSON.stringify({ channelType }),
-      });
+      await testWebhook.mutateAsync(channelType);
       addToast(t.testSuccess, 'success');
     } catch (err) {
       addToast((err as Error).message, 'error');

@@ -1,10 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
+import {
+  useCastMember,
+  useUpdateCastMember,
+} from '@/features/admin/cast-members/hooks/useCastMember';
 import { useToast } from '@/components/Toast';
 import CastMemberStaffPicker from '@/components/admin/CastMemberStaffPicker';
 import { useAdminT } from '@/lib/i18n/useAdminT';
@@ -44,7 +49,9 @@ function AdminCastMemberEditPage(_props: Props) {
   const router = useRouter();
   const { id } = router.query;
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
+  const memberId = typeof id === 'string' ? id : null;
+  const member = useCastMember(memberId);
+  const update = useUpdateCastMember(memberId);
 
   const [form, setForm] = useState({
     name: '',
@@ -59,51 +66,37 @@ function AdminCastMemberEditPage(_props: Props) {
     authUserId: null as string | null,
   });
 
-  const [saving, setSaving] = useState(false);
+  const saving = update.isPending;
   const [error, setError] = useState<string | null>(null);
-  // Chargement ET horodatages de la fiche, en UN état : « en cours », puis
-  // les dates lues dans la même réponse (null si le chargement a échoué).
-  // Un `loading` à part ne disait rien de plus que « pas encore de réponse ».
-  const [stamps, setStamps] = useState<
-    { createdAt: string | null; updatedAt: string | null } | 'loading' | null
-  >('loading');
-  const loading = stamps === 'loading';
-  const meta = stamps === 'loading' ? null : stamps;
 
-  const fetchMember = useCallback(async () => {
-    if (!id) return;
-    setStamps('loading');
-    setError(null);
-
-    try {
-      const data = await adminFetchJson<any>(`/api/admin/cast-members/${id}`);
-
-      setForm({
-        name: data.name || '',
-        title: data.title || '',
-        description: data.description || '',
-        imageUrl: data.image_url || '',
-        twitchUrl: data.twitch_url || '',
-        city: data.city || '',
-        isActive: data.is_active ?? true,
-        isPromo: data.is_promo ?? false,
-        sortOrder: data.sort_order?.toString() || '',
-        authUserId: data.auth_user_id ?? null,
-      });
-      setStamps({
-        createdAt: data.created_at ?? null,
-        updatedAt: data.updated_at ?? null,
-      });
-    } catch (err: unknown) {
-      setError((err as Error)?.message || t.errorLoad);
-    } finally {
-      setStamps((prev) => (prev === 'loading' ? null : prev));
-    }
-  }, [id, adminFetchJson, t]);
+  // Formulaire copié UNE fois de la fiche (jamais réécrit sous la saisie).
+  const hydrated = useHydrateOnce(memberId, member.data, (data) =>
+    setForm({
+      name: data.name || '',
+      title: data.title || '',
+      description: data.description || '',
+      imageUrl: data.image_url || '',
+      twitchUrl: data.twitch_url || '',
+      city: data.city || '',
+      isActive: data.is_active ?? true,
+      isPromo: data.is_promo ?? false,
+      sortOrder: data.sort_order?.toString() || '',
+      authUserId: data.auth_user_id ?? null,
+    })
+  );
+  // Chargement puis horodatages lus dans la même réponse (null si échec).
+  const loading = !member.isError && !hydrated;
+  const meta =
+    hydrated && member.data
+      ? {
+          createdAt: member.data.created_at ?? null,
+          updatedAt: member.data.updated_at ?? null,
+        }
+      : null;
 
   useEffect(() => {
-    fetchMember();
-  }, [fetchMember]);
+    if (member.error) setError(member.error.message || t.errorLoad);
+  }, [member.error, t]);
 
   const updateField = (
     key: keyof typeof form,
@@ -121,7 +114,6 @@ function AdminCastMemberEditPage(_props: Props) {
       return;
     }
 
-    setSaving(true);
     try {
       const payload = {
         name: form.name.trim(),
@@ -136,20 +128,14 @@ function AdminCastMemberEditPage(_props: Props) {
         authUserId: form.authUserId,
       };
 
-      await adminFetchJson(`/api/admin/cast-members/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(payload),
-      });
+      await update.mutateAsync(payload);
 
       addToast(t.updateSuccess, 'success');
     } catch (err: unknown) {
       setError((err as Error)?.message || t.errorGeneric);
-    } finally {
-      setSaving(false);
     }
   };
 
-  const memberId = typeof id === 'string' ? id : null;
   const formId = 'cast-member-edit-form';
 
   return (
@@ -322,4 +308,4 @@ export const getServerSideProps = withStaffPage({
   permission: 'manage_communications',
 });
 
-export default AdminCastMemberEditPage;
+export default withAdminQuery(AdminCastMemberEditPage);

@@ -4,16 +4,24 @@
 // l'onglet « À traiter » de /admin/onboarding.
 //
 // Endpoints :
-//   GET   /api/admin/circuit-partners?status=  → { items, counts }
-//   PATCH /api/admin/circuit-partners/[id]     → review | reject | approve
+//   voir features/admin/circuit-partners/client.ts (liste + décision)
 //
 // ACCORDER POSE UN PLAN SUR UN ESPACE : l'action demande le slug (prérempli
 // avec celui que le circuit a indiqué) et une confirmation qui le répète. Le
 // serveur refuse de rétrograder un espace déjà mieux couvert et ne laisse
 // passer qu'une décision.
 
-import { useCallback, useEffect, useState } from 'react';
-import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
+import { useCallback, useState } from 'react';
+import type {
+  CircuitApplication,
+  CircuitApplicationList,
+  CircuitApplicationStatus,
+  CircuitDecision,
+} from '@/features/admin/circuit-partners/client';
+import {
+  useCircuitApplications,
+  useDecideCircuitApplication,
+} from '@/features/admin/circuit-partners/hooks/useCircuitPartners';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminCircuitPartners from '@/lib/i18n/locales/admin-fr/adminCircuitPartners';
@@ -22,36 +30,9 @@ import { PLAN_LABELS } from '@/utils/billing/planFeatures';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
-type Status = 'new' | 'reviewing' | 'approved' | 'rejected';
-
-export type CircuitApplication = {
-  id: string;
-  created_at: string;
-  organization_name: string;
-  contact_name: string;
-  email: string;
-  game: string;
-  format: 'feminin' | 'mixte';
-  season_start: string | null;
-  expected_teams: number | null;
-  website: string | null;
-  community_url: string | null;
-  existing_tenant_slug: string | null;
-  message: string;
-  commits_code_of_conduct: boolean;
-  commits_safety_lead: boolean;
-  status: Status;
-  admin_notes: string | null;
-  granted_tenant_id: string | null;
-  granted_tenant_slug: string | null;
-  granted_plan: string | null;
-  granted_until: string | null;
-};
-
-type ListResponse = {
-  items: CircuitApplication[];
-  counts: Record<Status, number>;
-};
+type Status = CircuitApplicationStatus;
+type ListResponse = CircuitApplicationList;
+export type { CircuitApplication };
 
 const STATUS_TONE: Record<Status, ChipTone> = {
   new: 'brand',
@@ -74,12 +55,17 @@ function formatDate(iso: string | null): string {
 
 export default function CircuitPartnersPanel() {
   const t = useAdminT(nsAdminCircuitPartners);
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
 
   const [filter, setFilter] = useState<Status | 'all'>('new');
-  const [data, setData] = useState<ListResponse | null>(null);
-  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const list = useCircuitApplications(filter);
+  const decideMutation = useDecideCircuitApplication();
+  const data: ListResponse | null = list.data ?? null;
+  const state: 'loading' | 'ready' | 'error' = list.isFetching
+    ? 'loading'
+    : list.isError
+      ? 'error'
+      : 'ready';
 
   const statusLabel: Record<Status, string> = {
     new: t.statusNew,
@@ -88,24 +74,6 @@ export default function CircuitPartnersPanel() {
     rejected: t.statusRejected,
   };
 
-  const load = useCallback(async () => {
-    setState('loading');
-    try {
-      const query = filter === 'all' ? '' : `?status=${filter}`;
-      const res = await adminFetchJson<ListResponse>(
-        `/api/admin/circuit-partners${query}`
-      );
-      setData(res);
-      setState('ready');
-    } catch {
-      setState('error');
-    }
-  }, [adminFetchJson, filter]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   const decide = useCallback(
     async (
       id: string,
@@ -113,22 +81,19 @@ export default function CircuitPartnersPanel() {
       success: string
     ): Promise<boolean> => {
       try {
-        await adminFetchJson(`/api/admin/circuit-partners/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+        await decideMutation.mutateAsync({
+          id,
+          body: body as CircuitDecision,
         });
         addToast(success, 'success');
-        void load();
         return true;
       } catch (err) {
-        const message =
-          err instanceof AdminFetchError ? err.message : String(err);
+        const message = err instanceof Error ? err.message : String(err);
         addToast(format(t.toastError, { error: message }), 'error');
         return false;
       }
     },
-    [adminFetchJson, addToast, load, t]
+    [decideMutation, addToast, t]
   );
 
   const filters: Array<Status | 'all'> = [
@@ -175,7 +140,7 @@ export default function CircuitPartnersPanel() {
           {t.loadError}{' '}
           <button
             type="button"
-            onClick={() => void load()}
+            onClick={() => void list.refetch()}
             className="underline"
           >
             {t.retry}

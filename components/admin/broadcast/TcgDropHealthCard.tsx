@@ -35,7 +35,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import {
+  useReloadTcgDropState,
+  useTcgDropState,
+} from '@/features/admin/diffusion/hooks/useBroadcastCards';
+import {
+  broadcastCardsClient,
+  type TcgDropEventSubState as EventSubState,
+} from '@/features/admin/diffusion/liveClient';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { logger } from '../../../utils/logger';
 import nsAdminBroadcastLive from '@/lib/i18n/locales/admin-fr/adminBroadcastLive';
@@ -43,59 +50,29 @@ import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import { rubanEyebrow, rubanInput } from '@/features/admin/_shared/ui/ruban';
 
-type Subscription = {
-  id: string | null;
-  status: string | null;
-  rewardId: string | null;
-};
-
-type EventSubState = {
-  rewardId: string | null;
-  /** Optionnels : une API plus ancienne (déploiement en cours) ne les rend pas. */
-  featuredRewardId?: string | null;
-  featuredFanartId?: string | null;
-  featuredCandidates?: Array<{ id: string; title: string }>;
-  callbackUrl: string;
-  secretConfigured: boolean;
-  hasScope: boolean;
-  subscriptions: Subscription[] | null;
-};
-
 /** Le seul état où les drops tombent réellement. */
 const HEALTHY = 'enabled';
 
 export default function TcgDropHealthCard() {
   const t = useAdminT(nsAdminBroadcastLive);
-  const { adminFetchJson } = useAdminFetch();
-
-  // `undefined` = pas encore lu ; `null` = illisible (droits insuffisants,
-  // panne) → la carte se retire.
-  const [state, setState] = useState<EventSubState | null | undefined>(
-    undefined
-  );
+  // Absente tant qu'elle n'est pas lue, et si elle est illisible (droits
+  // insuffisants, panne) → la carte se retire. Un 403 est le cas NORMAL pour
+  // une casteuse : on n'en fait pas une erreur visible, seulement une carte
+  // absente.
+  const stateQuery = useTcgDropState();
+  const state: EventSubState | null = stateQuery.isError
+    ? null
+    : (stateQuery.data ?? null);
+  const load = useReloadTcgDropState();
+  useEffect(() => {
+    if (stateQuery.error) {
+      logger.error('[admin/tcg-drop-health] load error:', stateQuery.error);
+    }
+  }, [stateQuery.error]);
   const [busy, setBusy] = useState(false);
   const [featuredCard, setFeaturedCard] = useState('');
   const [featuredCost, setFeaturedCost] = useState(10_000);
   const [featuredError, setFeaturedError] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      setState(
-        await adminFetchJson<EventSubState>(
-          '/api/admin/twitch/eventsub/tcg-drop'
-        )
-      );
-    } catch (err) {
-      // Un 403 est le cas NORMAL pour une casteuse : on n'en fait pas une
-      // erreur visible, seulement une carte absente.
-      logger.error('[admin/tcg-drop-health] load error:', err);
-      setState(null);
-    }
-  }, [adminFetchJson]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   /**
    * Met le drop en service : la récompense, puis l'abonnement.
@@ -110,19 +87,8 @@ export default function TcgDropHealthCard() {
     if (busy) return;
     setBusy(true);
     try {
-      const { rewardId } = await adminFetchJson<{ rewardId: string }>(
-        '/api/admin/twitch/tcg-drop/setup',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: '{}',
-        }
-      );
-      await adminFetchJson('/api/admin/twitch/eventsub/tcg-drop', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rewardId }),
-      });
+      const { rewardId } = await broadcastCardsClient.tcgDropSetupReward();
+      await broadcastCardsClient.tcgDropSubscribe({ rewardId });
       await load();
     } catch (err) {
       logger.error('[admin/tcg-drop-health] setup error:', err);
@@ -132,7 +98,7 @@ export default function TcgDropHealthCard() {
     } finally {
       setBusy(false);
     }
-  }, [busy, adminFetchJson, load]);
+  }, [busy, load]);
 
   /**
    * La récompense MISE EN AVANT : même enchaînement que le drop (récompense,
@@ -143,21 +109,13 @@ export default function TcgDropHealthCard() {
     setBusy(true);
     setFeaturedError(false);
     try {
-      const { rewardId } = await adminFetchJson<{ rewardId: string }>(
-        '/api/admin/twitch/tcg-drop/setup',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            cost: featuredCost,
-            featuredFanartId: fanartId,
-          }),
-        }
-      );
-      await adminFetchJson('/api/admin/twitch/eventsub/tcg-drop', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rewardId, featuredFanartId: fanartId }),
+      const { rewardId } = await broadcastCardsClient.tcgDropSetupReward({
+        cost: featuredCost,
+        featuredFanartId: fanartId,
+      });
+      await broadcastCardsClient.tcgDropSubscribe({
+        rewardId,
+        featuredFanartId: fanartId,
       });
     } catch (err) {
       logger.error('[admin/tcg-drop-health] featured setup error:', err);

@@ -598,6 +598,17 @@ concerné — d'où les listes périmées après une édition dans un tiroir.
 - [x] Pilote de bout en bout : `/admin/free-players` = page de câblage + `client.ts` +
       `hooks/useFreePlayers.ts` + `ui/FreePlayersTable.tsx` ; 4 `useState` et 2 URLs en dur de
       moins. **Non vérifié dans un navigateur** (session staff requise ; e2e jamais contre la prod).
+- [x] **Vague client 1 (2026-09-29)** : `client.ts` + hooks TanStack pour tasks, leagues, news,
+      partners, pole-members, cast-members, communications, ratings, stats, site-settings,
+      circuit-partners, moderation, tcg (files de modération), scrims ; cartes de diagnostic
+      de la console live. URLs en dur côté UI 564 → 411, `useState` 1 723 → 1 631.
+      Conservés volontairement : Director et pupitre live (temps réel + sondage + anti-course),
+      commandes/prédictions Twitch, file hors ligne `useIdempotentMutation` sur les gestes qui
+      l'avaient (scores, grilles, blacklist, campagnes, Kanban…), `useAdminResource` pour les
+      listes paginées optimistes. Aucun formulaire passé sur `useAdminForm` (jamais un
+      remplacement direct : rendu et cibles e2e changeraient). Outils : `EDITOR_QUERY_OPTIONS`,
+      `useHydrateOnce`, `_shared/{tournamentOptions,teamOptions}.ts`. Suite complète verte
+      (734 fichiers, 11 194 tests) — non vérifié dans un navigateur.
 - [ ] Éditer une équipe dans un tiroir met à jour la liste sans rechargement (L17).
 - [ ] Deux panneaux qui lisent la même ressource ne déclenchent qu'une requête (acquis par
       construction avec des clés partagées ; à constater sur un écran multi-panneaux).

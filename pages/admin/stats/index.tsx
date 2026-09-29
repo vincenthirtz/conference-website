@@ -12,6 +12,7 @@ import type { StaffProps } from '@/types/admin';
 import nsAdminStats from '@/lib/i18n/locales/admin-fr/adminStats';
 
 import { lazyPanel } from '@/components/admin/lazyPanel';
+import { withAdminQuery } from '@/features/admin/_shared/query';
 
 // Onglets secondaires : chargés au clic (cf. components/admin/lazyPanel).
 const MapStatsPanel = lazyPanel(
@@ -29,7 +30,7 @@ export const getServerSideProps = withStaffPage({
  * /admin/stats/maps as deep-linkable tabs (`?tab=teams|maps`). The old routes
  * redirect here (see stats/teams.tsx & stats/maps.tsx shims).
  */
-export default function AdminStatsPage(_: StaffProps) {
+function AdminStatsPage(_: StaffProps) {
   const t = useAdminT(nsAdminStats);
   const tabs = [
     { id: 'teams', label: t.tabTeams },
@@ -66,3 +67,5 @@ export default function AdminStatsPage(_: StaffProps) {
     </>
   );
 }
+
+export default withAdminQuery(AdminStatsPage);

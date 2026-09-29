@@ -13,7 +13,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import LogoUpload from '@/components/admin/LogoUpload';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import type { SeasonalLogosPayload } from '@/features/admin/site-settings/client';
+import {
+  useSaveSeasonalLogos,
+  useSeasonalLogos,
+} from '@/features/admin/site-settings/hooks/useSiteSettings';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminSiteSettings from '@/lib/i18n/locales/admin-fr/adminSiteSettings';
 import {
@@ -25,11 +29,7 @@ import {
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
-type Payload = {
-  logos: SeasonalLogo[];
-  activeId: string | null;
-  today: string;
-};
+type Payload = SeasonalLogosPayload;
 
 const STATUS_TONE: Record<SeasonalLogoStatus, ChipTone> = {
   active: 'ok',
@@ -44,14 +44,11 @@ function newId(): string {
 
 export default function SeasonalLogosPanel() {
   const t = useAdminT(nsAdminSiteSettings);
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
 
   const [logos, setLogos] = useState<SeasonalLogo[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [today, setToday] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
@@ -62,23 +59,17 @@ export default function SeasonalLogosPanel() {
     setDirty(false);
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      apply(
-        await adminFetchJson<Payload>('/api/admin/site-settings/seasonal-logos')
-      );
-      setLoadError(false);
-    } catch {
-      setLoadError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, apply]);
+  const query = useSeasonalLogos();
+  const saveMutation = useSaveSeasonalLogos();
+  const loading = query.isPending || query.isFetching;
+  const loadError = query.isError;
 
+  // Chaque lecture (ou réponse d'enregistrement posée dans le cache) remplace
+  // l'état édité, comme l'ancien `apply`.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: déclenché par la seule lecture (dataUpdatedAt).
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (query.data) apply(query.data);
+  }, [query.dataUpdatedAt]);
 
   function update(id: string, patch: Partial<SeasonalLogo>) {
     setLogos((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
@@ -108,16 +99,7 @@ export default function SeasonalLogosPanel() {
   async function save() {
     setSaving(true);
     try {
-      apply(
-        await adminFetchJson<Payload>(
-          '/api/admin/site-settings/seasonal-logos',
-          {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ logos }),
-          }
-        )
-      );
+      await saveMutation.mutateAsync(logos);
       addToast(t.seasonalSaved, 'success');
     } catch (err) {
       addToast(

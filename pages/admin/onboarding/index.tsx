@@ -47,6 +47,8 @@ import type { StaffProps } from '@/types/admin';
 import nsAdminOnboarding from '@/lib/i18n/locales/admin-fr/adminOnboarding';
 
 import { lazyPanel } from '@/components/admin/lazyPanel';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { circuitPartnersClient } from '@/features/admin/circuit-partners/client';
 import TenantFormModal from '@/components/admin/tenants/TenantFormModal';
 
 // Le panneau par défaut reste statique ; les autres arrivent au clic
@@ -110,9 +112,9 @@ function useInboxCount(): number | null {
           ),
           // Candidatures des circuits partenaires : seules les NOUVELLES
           // attendent une première lecture.
-          adminFetchJson<{ counts: Record<string, number> }>(
-            '/api/admin/circuit-partners?status=new'
-          ).catch(() => ({ counts: {} as Record<string, number> })),
+          circuitPartnersClient
+            .list('new')
+            .catch(() => ({ counts: {} as Record<string, number> })),
         ]);
         if (cancelled) return;
         setCount(
@@ -134,7 +136,7 @@ function useInboxCount(): number | null {
   return count;
 }
 
-export default function AdminOnboardingPage({ currentStaffDiscordId }: Props) {
+function AdminOnboardingPage({ currentStaffDiscordId }: Props) {
   const t = useAdminT(nsAdminOnboarding);
   const router = useRouter();
   const inbox = useInboxCount();
@@ -292,3 +294,5 @@ export const getServerSideProps = withStaffPage<{
     return { currentStaffDiscordId: discordId };
   }
 );
+
+export default withAdminQuery(AdminOnboardingPage);

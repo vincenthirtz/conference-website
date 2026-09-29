@@ -3,6 +3,7 @@ import Modal from '@/components/admin/Modal';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import { rubanErrBox } from '@/features/admin/_shared/ui/ruban';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { poleMembersClient } from '@/features/admin/pole-members/client';
 import { POLE_KEYS, POLE_LABELS, type PoleKey } from '@/utils/associationPoles';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminPoleMembersNew from '@/lib/i18n/locales/admin-fr/adminPoleMembersNew';
@@ -87,7 +88,9 @@ export default function PoleMemberFormModal({
         sortOrder: form.sortOrder ? parseInt(form.sortOrder, 10) : undefined,
       };
 
-      await mutateJson('/api/admin/pole-members', {
+      // Reste sur `useIdempotentMutation` : garde la file hors ligne (et la
+      // modale vit aussi sur des pages hors du cache de requêtes).
+      await mutateJson(poleMembersClient.createUrl, {
         method: 'POST',
         body: JSON.stringify(payload),
       });

@@ -3,7 +3,12 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import slugify from 'slugify';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
+import {
+  useNewsItem,
+  useUpdateNews,
+} from '@/features/admin/news/hooks/useNews';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import LogoUpload from '@/components/admin/LogoUpload';
 import { useAdminT } from '@/lib/i18n/useAdminT';
@@ -47,78 +52,53 @@ const day = (iso: string | null | undefined) =>
       })
     : '—';
 
-export default function AdminNewsEdit() {
+function AdminNewsEdit() {
   const t = useAdminT(nsAdminNewsEdit);
   const tf = useAdminT(nsAdminFiche);
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
+  const newsId = typeof id === 'string' ? id : null;
+  const item = useNewsItem(newsId);
+  const update = useUpdateNews(newsId);
 
   const [form, setForm] = useState<FormState | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  // Chargement ET horodatages de la fiche, en UN état : « en cours », puis
-  // les dates lues dans la même réponse (null si le chargement a échoué).
-  // Un `loading` à part ne disait rien de plus que « pas encore de réponse ».
-  const [stamps, setStamps] = useState<
-    { createdAt: string | null; updatedAt: string | null } | 'loading' | null
-  >('loading');
-  const loading = stamps === 'loading';
-  const meta = stamps === 'loading' ? null : stamps;
-
   const updateField = (key: keyof FormState, value: string) =>
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
 
-  useEffect(() => {
-    const fetchItem = async () => {
-      if (!id) return;
-      setStamps('loading');
-      setError(null);
-      try {
-        const json = await adminFetchJson<{
-          title?: string;
-          slug?: string;
-          tag?: string;
-          excerpt?: string;
-          image_url?: string;
-          content?: string;
-          status?: 'draft' | 'published';
-          published_at?: string | null;
-          created_at?: string | null;
-          updated_at?: string | null;
-        }>(`/api/admin/news/${id}`);
+  // Formulaire copié UNE fois de la fiche (jamais réécrit sous la saisie).
+  const hydrated = useHydrateOnce(newsId, item.data, (json) =>
+    setForm({
+      title: json.title || '',
+      slug: json.slug || '',
+      tag: json.tag || 'general',
+      excerpt: json.excerpt || '',
+      imageUrl: json.image_url || '',
+      content: json.content || '',
+      status: (json.status as FormState['status']) || 'draft',
+      publishedAt: json.published_at
+        ? new Date(json.published_at).toISOString().slice(0, 16)
+        : '',
+    })
+  );
+  // Chargement puis horodatages lus dans la même réponse (null si échec).
+  const loading = !item.isError && !hydrated;
+  const meta =
+    hydrated && item.data
+      ? {
+          createdAt: item.data.created_at ?? null,
+          updatedAt: item.data.updated_at ?? null,
+        }
+      : null;
+  const saving = update.isPending;
 
-        setForm({
-          title: json.title || '',
-          slug: json.slug || '',
-          tag: json.tag || 'general',
-          excerpt: json.excerpt || '',
-          imageUrl: json.image_url || '',
-          content: json.content || '',
-          status: json.status || 'draft',
-          publishedAt: json.published_at
-            ? new Date(json.published_at).toISOString().slice(0, 16)
-            : '',
-        });
-        setStamps({
-          createdAt: json.created_at ?? null,
-          updatedAt: json.updated_at ?? null,
-        });
-      } catch (err: unknown) {
-        setError((err as Error)?.message || t.errorGeneric);
-      } finally {
-        setStamps((prev) => (prev === 'loading' ? null : prev));
-      }
-    };
-    fetchItem();
-    // adminFetchJson et t sont désormais stables : l'effet ne se relance qu'au
-    // changement d'id de route, sans refetch parasite.
-  }, [id, adminFetchJson, t]);
+  useEffect(() => {
+    if (item.error) setError(item.error.message || t.errorGeneric);
+  }, [item.error, t]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form) return;
-    setSaving(true);
     setError(null);
     try {
       const payload = {
@@ -126,19 +106,13 @@ export default function AdminNewsEdit() {
         slug: form.slug || slugifyValue(form.title),
       };
 
-      await adminFetchJson(`/api/admin/news/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload),
-      });
+      await update.mutateAsync(payload);
       router.push('/admin/news');
     } catch (err: unknown) {
       setError((err as Error)?.message || t.errorGeneric);
-    } finally {
-      setSaving(false);
     }
   };
 
-  const newsId = typeof id === 'string' ? id : null;
   const formId = 'news-edit-form';
 
   return (
@@ -359,3 +333,5 @@ function Field({
     </div>
   );
 }
+
+export default withAdminQuery(AdminNewsEdit);

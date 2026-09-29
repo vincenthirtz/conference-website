@@ -1,15 +1,18 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
+import { scrimsPaths } from '@/features/admin/scrims/client';
 import { useRouter } from 'next/router';
 import Modal from '@/components/admin/Modal';
-import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
+import { AdminFetchError } from '@/hooks/useAdminFetch';
+import {
+  type TeamOption,
+  useActiveTeamOptions,
+} from '@/features/admin/_shared/teamOptions';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { ScrimPlanning } from '@/types/admin';
 import nsAdminScrimPlanningsCreate from '@/lib/i18n/locales/admin-fr/adminScrimPlanningsCreate';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-
-type TeamOption = { id: string; name: string; short_name: string | null };
 
 type PlanningFormModalProps = {
   open: boolean;
@@ -109,12 +112,10 @@ export default function PlanningFormModal({
 }: PlanningFormModalProps) {
   const t = useAdminT(nsAdminScrimPlanningsCreate);
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
   const formId = useId();
 
-  const [teams, setTeams] = useState<TeamOption[]>([]);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -138,20 +139,8 @@ export default function PlanningFormModal({
   // elle était pourtant rechargée à chaque ouverture ET à chaque changement de
   // ligne d'origine. Une seule fois par montage du panneau suffit — la modale
   // reste montée entre deux ouvertures.
-  const teamsLoadedRef = useRef(false);
-  useEffect(() => {
-    if (!open || teamsLoadedRef.current) return;
-    teamsLoadedRef.current = true;
-    adminFetchJson<{ teams: TeamOption[] }>(
-      '/api/admin/teams?limit=200&isActive=true'
-    )
-      .then((json) => setTeams(json.teams || []))
-      .catch(() => {
-        setTeams([]);
-        // Échec : nouvelle tentative autorisée à la prochaine ouverture.
-        teamsLoadedRef.current = false;
-      });
-  }, [open, adminFetchJson]);
+  const teamsQuery = useActiveTeamOptions(open);
+  const teams: TeamOption[] = teamsQuery.data?.teams || [];
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -191,7 +180,7 @@ export default function PlanningFormModal({
         ...(scrimId ? { scrim_id: scrimId } : {}),
       };
       const { planning } = await mutateJson<{ planning: ScrimPlanning }>(
-        '/api/admin/scrim-plannings',
+        scrimsPaths.plannings,
         {
           method: 'POST',
           body: JSON.stringify(body),

@@ -4,7 +4,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
+import {
+  usePartnershipRequest,
+  useUpdatePartnershipRequest,
+} from '@/features/admin/partners/hooks/usePartners';
+import type { PartnershipRequest } from '@/features/admin/partners/client';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminPartnershipRequestDetail from '@/lib/i18n/locales/admin-fr/adminPartnershipRequestDetail';
 import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
@@ -30,25 +36,7 @@ type Props = {
   };
 };
 
-type RequestData = {
-  id: string;
-  company_name: string;
-  contact_name: string;
-  email: string;
-  phone: string | null;
-  website: string | null;
-  category: 'super' | 'major' | 'cultural' | 'other';
-  message: string;
-  budget_range: string | null;
-  status: string;
-  admin_notes: string | null;
-  ip_address: string | null;
-  user_agent: string | null;
-  created_at: string;
-  updated_at: string;
-  read_at: string | null;
-  contacted_at: string | null;
-};
+type RequestData = PartnershipRequest;
 
 function getStatusLabels(t: Dict): Record<string, string> {
   return {
@@ -94,58 +82,35 @@ function AdminPartnershipRequestDetailPage(_props: Props) {
   const router = useRouter();
   const { id } = router.query;
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
-
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [request, setRequest] = useState<RequestData | null>(null);
+  const requestId = typeof id === 'string' ? id : null;
+  const query = usePartnershipRequest(requestId);
+  const update = useUpdatePartnershipRequest(requestId);
+  const request: RequestData | null = query.data ?? null;
+  const saving = update.isPending;
   const [error, setError] = useState<string | null>(null);
 
   const [status, setStatus] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
 
+  // Statut et notes copiés UNE fois de la fiche : l'enregistrement met la
+  // fiche à jour sans réécrire la saisie.
+  const hydrated = useHydrateOnce(requestId, query.data, (json) => {
+    setStatus(json.status);
+    setAdminNotes(json.admin_notes || '');
+  });
+  const loading = !query.isError && !hydrated;
+
   useEffect(() => {
-    if (!id || typeof id !== 'string') return;
-
-    async function fetchRequest() {
-      setLoading(true);
-      try {
-        const json = await adminFetchJson<RequestData>(
-          `/api/admin/partnership-requests/${id}`
-        );
-        setRequest(json);
-        setStatus(json.status);
-        setAdminNotes(json.admin_notes || '');
-      } catch (err: unknown) {
-        setError((err as Error).message || t.errorLoad);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchRequest();
-    // adminFetchJson et t sont désormais stables : l'effet ne se relance qu'au
-    // changement d'id de route, sans refetch parasite.
-  }, [id, adminFetchJson, t]);
+    if (query.error) setError(query.error.message || t.errorLoad);
+  }, [query.error, t]);
 
   const handleUpdate = async () => {
     setError(null);
-    setSaving(true);
-
     try {
-      const json = await adminFetchJson<RequestData>(
-        `/api/admin/partnership-requests/${id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ status, adminNotes }),
-        }
-      );
-      setRequest(json);
+      await update.mutateAsync({ status, adminNotes });
       addToast(t.toastUpdated, 'success');
     } catch (err: unknown) {
       setError((err as Error).message || t.errorGeneric);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -416,4 +381,4 @@ export const getServerSideProps = withStaffPage({
   permission: 'manage_communications',
 });
 
-export default AdminPartnershipRequestDetailPage;
+export default withAdminQuery(AdminPartnershipRequestDetailPage);

@@ -14,64 +14,52 @@
 // la première cause d'échec du parcours OAuth.
 
 import { useCallback, useEffect, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useQueryClient } from '@tanstack/react-query';
+import { socialClient } from '@/features/admin/communications/client';
+import {
+  communicationsKeys,
+  useTiktokCredentials,
+} from '@/features/admin/communications/hooks/useCommunications';
 import { useToast } from '@/components/Toast';
 import { format } from '@/lib/i18n/useT';
 import { logger } from '@/utils/logger';
 import type nsAdminSocialPosts from '@/lib/i18n/locales/admin-fr/adminSocialPosts';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
-const ENDPOINT = '/api/admin/tiktok/credentials';
-
 type Dict = typeof nsAdminSocialPosts.fr;
-
-type CredentialsState = {
-  clientKeySet: boolean;
-  clientSecretSet: boolean;
-  encryptionReady: boolean;
-  connected: boolean;
-  handle: string | null;
-  redirectUri: string;
-};
 
 const inputClass =
   'w-64 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 export default function TiktokMirrorCard({ t }: { t: Dict }) {
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
+  const qc = useQueryClient();
 
-  const [state, setState] = useState<CredentialsState | null>(null);
+  // Une carte de mise en service qui ne charge pas ne doit pas faire tomber
+  // l'onglet de publication : on la laisse simplement absente.
+  const query = useTiktokCredentials();
+  const state = query.data ?? null;
   const [clientKey, setClientKey] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      setState(await adminFetchJson<CredentialsState>(ENDPOINT));
-    } catch (err) {
-      // Une carte de mise en service qui ne charge pas ne doit pas faire
-      // tomber l'onglet de publication : on la laisse simplement absente.
-      logger.error('[admin/tiktok] state load error', err);
-    }
-  }, [adminFetchJson]);
-
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (query.error)
+      logger.error('[admin/tiktok] state load error', query.error);
+  }, [query.error]);
+  const load = useCallback(
+    () => qc.invalidateQueries({ queryKey: communicationsKeys.tiktok() }),
+    [qc]
+  );
 
   const save = useCallback(async () => {
     setBusy(true);
     try {
-      await adminFetchJson(ENDPOINT, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clientKey: clientKey.trim(),
-          clientSecret: clientSecret.trim(),
-        }),
-      });
+      await socialClient.saveTiktokCredentials(
+        clientKey.trim(),
+        clientSecret.trim()
+      );
       // Les valeurs ne servent plus à rien côté client : on les oublie tout de
       // suite.
       setClientKey('');
@@ -85,7 +73,7 @@ export default function TiktokMirrorCard({ t }: { t: Dict }) {
     } finally {
       setBusy(false);
     }
-  }, [adminFetchJson, addToast, clientKey, clientSecret, load, t]);
+  }, [addToast, clientKey, clientSecret, load, t]);
 
   if (!state) return null;
 
@@ -110,7 +98,7 @@ export default function TiktokMirrorCard({ t }: { t: Dict }) {
               l'échéance du jeton (cf. Instagram, 2026-09-11). */}
           {' · '}
           <a
-            href="/api/admin/tiktok/authorize"
+            href={socialClient.tiktokAuthorizeUrl}
             className="text-neutral-400 underline underline-offset-2 hover:text-neutral-200"
           >
             {t.reconnectCta}
@@ -126,7 +114,7 @@ export default function TiktokMirrorCard({ t }: { t: Dict }) {
                   TikTok. Une navigation côté client de Next resterait dans
                   l'app et n'irait nulle part. */}
               <a
-                href="/api/admin/tiktok/authorize"
+                href={socialClient.tiktokAuthorizeUrl}
                 className="underline underline-offset-2"
               >
                 {t.tiktokConnectCta}

@@ -11,7 +11,8 @@
 
 import { useState } from 'react';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useIdempotentCall } from '@/features/admin/communications/hooks/useCommunications';
+import { campaignsClient } from '@/features/admin/communications/client';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminCampaigns from '@/lib/i18n/locales/admin-fr/adminCampaigns';
@@ -28,7 +29,7 @@ export default function CampaignScheduleSection({
 }) {
   const t = useAdminT(nsAdminCampaigns);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
-  const { mutateJson } = useIdempotentMutation();
+  const { run } = useIdempotentCall();
   const { addToast } = useToast();
 
   const schedule = campaign.schedule;
@@ -68,13 +69,7 @@ export default function CampaignScheduleSection({
     setScheduleError(null);
     setScheduleNotice(null);
     try {
-      const json = await mutateJson<{ totalRecipients: number }>(
-        `/api/admin/broadcast/${campaign.id}/schedule`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ waveSize: wave }),
-        }
-      );
+      const json = await run(campaignsClient.schedule(campaign.id, wave));
       setScheduleNotice(
         format(t.scheduleSavedNotice, {
           count: json.totalRecipients,
@@ -118,13 +113,7 @@ export default function CampaignScheduleSection({
     setScheduleError(null);
     setScheduleNotice(null);
     try {
-      const json = await mutateJson<{
-        sent: number;
-        failed: number;
-        remainingPending: number;
-      }>(`/api/admin/broadcast/${campaign.id}/wave`, {
-        method: 'POST',
-      });
+      const json = await run(campaignsClient.waveNow(campaign.id));
       setScheduleNotice(
         format(t.waveSentNotice, {
           sent: json.sent,
@@ -159,9 +148,7 @@ export default function CampaignScheduleSection({
     setScheduleError(null);
     setScheduleNotice(null);
     try {
-      await mutateJson(`/api/admin/broadcast/${campaign.id}/schedule`, {
-        method: 'DELETE',
-      });
+      await run(campaignsClient.cancelSchedule(campaign.id));
       setScheduleNotice(t.scheduleCancelledNotice);
       addToast(t.scheduleCancelledNotice, 'success');
       await onRefresh();

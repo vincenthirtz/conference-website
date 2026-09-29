@@ -11,6 +11,7 @@ import {
   type Dict,
   DEFAULT_LABEL_COLORS,
 } from '@/components/admin/tasks/taskBoardModel';
+import { taskBoardUrls } from '../client';
 import type {
   AddToast,
   Confirm,
@@ -78,7 +79,7 @@ export function useTaskBoardLabelActions(deps: TaskBoardLabelActionsDeps) {
     if (!activeBoardId) return null;
     try {
       const res = await labelMutation.mutateJson<{ label: BoardLabel }>(
-        '/api/admin/tasks/labels',
+        taskBoardUrls.labels,
         {
           method: 'POST',
           body: JSON.stringify({ boardId: activeBoardId, name, color }),
@@ -142,10 +143,10 @@ export function useTaskBoardLabelActions(deps: TaskBoardLabelActionsDeps) {
     if (!activeBoardId) return;
     setLabelBusy(true);
     try {
-      await labelMutation.mutateJson(
-        `/api/admin/tasks/labels/${encodeURIComponent(id)}`,
-        { method: 'PATCH', body: JSON.stringify(patch) }
-      );
+      await labelMutation.mutateJson(taskBoardUrls.label(id), {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
+      });
       addToast(t.labelUpdated, 'success');
       await fetchDetail(activeBoardId);
     } catch (err: unknown) {
@@ -169,10 +170,9 @@ export function useTaskBoardLabelActions(deps: TaskBoardLabelActionsDeps) {
     if (!ok || !activeBoardId) return;
     setLabelBusy(true);
     try {
-      await labelMutation.mutateJson(
-        `/api/admin/tasks/labels/${encodeURIComponent(label.id)}`,
-        { method: 'DELETE' }
-      );
+      await labelMutation.mutateJson(taskBoardUrls.label(label.id), {
+        method: 'DELETE',
+      });
       addToast(t.labelDeleted, 'success');
       await fetchDetail(activeBoardId);
     } catch (err: unknown) {

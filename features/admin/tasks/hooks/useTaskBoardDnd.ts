@@ -13,6 +13,7 @@ import type {
   BoardTask,
   Dict,
 } from '@/components/admin/tasks/taskBoardModel';
+import { taskBoardUrls } from '../client';
 import type {
   AddToast,
   FetchBoards,
@@ -103,16 +104,13 @@ export function useTaskBoardDnd(deps: TaskBoardDndDeps) {
       setDetail({ ...detail, columns: nextColumns });
 
       try {
-        await moveMutation.mutateJson(
-          `/api/admin/tasks/tasks/${encodeURIComponent(taskId)}/move`,
-          {
-            method: 'PATCH',
-            body: JSON.stringify({
-              columnId: toColumnId,
-              ...(position != null ? { position } : {}),
-            }),
-          }
-        );
+        await moveMutation.mutateJson(taskBoardUrls.taskMove(taskId), {
+          method: 'PATCH',
+          body: JSON.stringify({
+            columnId: toColumnId,
+            ...(position != null ? { position } : {}),
+          }),
+        });
         addToast(t.cardMoved, 'success');
         // Rafraîchit les compteurs de colonnes (badge WIP).
         await fetchBoards({ keepActive: true });

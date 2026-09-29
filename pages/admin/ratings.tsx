@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
@@ -11,8 +10,17 @@ import Th from '@/components/admin/Th';
 import EmptyState from '@/components/admin/EmptyState';
 import { Skeleton } from '@/components/admin/Skeleton';
 import type { StaffProps } from '@/types/admin';
-import type { LeaderboardPlayer, LeaderboardResponse } from '@/types/rating';
-import type { RatingCoverageResponse } from '../api/admin/ratings/coverage';
+import type { LeaderboardPlayer } from '@/types/rating';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  ratingsPaths,
+  type RatingsRebuildResult,
+} from '@/features/admin/ratings/client';
+import {
+  useLeaderboardTop,
+  useRatingCoverage,
+  useRefreshRatings,
+} from '@/features/admin/ratings/hooks/useRatings';
 
 import { logger } from '../../utils/logger';
 import nsAdminRatings from '@/lib/i18n/locales/admin-fr/adminRatings';
@@ -34,11 +42,9 @@ export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
 });
 
-type RebuildResult = { players: number; matches: number };
-type RatingCoverage = RatingCoverageResponse;
+type RebuildResult = RatingsRebuildResult;
 
 function AdminRatingsPage(_props: StaffProps) {
-  const { adminFetchJson } = useAdminFetch();
   const rebuild = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();
@@ -51,51 +57,29 @@ function AdminRatingsPage(_props: StaffProps) {
   const [rebuilding, setRebuilding] = useState(false);
   const [lastResult, setLastResult] = useState<RebuildResult | null>(null);
 
-  const [players, setPlayers] = useState<LeaderboardPlayer[]>([]);
-  const [loadingBoard, setLoadingBoard] = useState(true);
-  const [boardError, setBoardError] = useState<string | null>(null);
+  const board = useLeaderboardTop();
+  const players: LeaderboardPlayer[] = board.data?.players ?? [];
+  // Squelette aussi pendant « Réessayer » (comme l'ancien chargement manuel).
+  const loadingBoard = board.isPending || (board.isError && board.isFetching);
+  const boardError = board.isError
+    ? (board.error as Error)?.message || t.errorLoadBoard
+    : null;
 
   // Couverture : combien de matchs terminés produisent réellement un rating.
   // Un match peut rester non noté SANS erreur (roster non rattaché à des
   // comptes) — c'est invisible partout ailleurs.
-  const [coverage, setCoverage] = useState<RatingCoverage | null>(null);
-  const [loadingCoverage, setLoadingCoverage] = useState(true);
-
-  const loadCoverage = useCallback(async () => {
-    setLoadingCoverage(true);
-    try {
-      const data = await adminFetchJson<RatingCoverage>(
-        '/api/admin/ratings/coverage'
-      );
-      setCoverage(data);
-    } catch (err: unknown) {
-      logger.error('load ratings coverage error', err);
-      setCoverage(null);
-    } finally {
-      setLoadingCoverage(false);
-    }
-  }, [adminFetchJson]);
-
-  const loadBoard = useCallback(async () => {
-    setLoadingBoard(true);
-    setBoardError(null);
-    try {
-      const data = await adminFetchJson<LeaderboardResponse>(
-        '/api/players/leaderboard?limit=10'
-      );
-      setPlayers(data.players ?? []);
-    } catch (err: unknown) {
-      logger.error('load leaderboard error', err);
-      setBoardError((err as Error)?.message || t.errorLoadBoard);
-    } finally {
-      setLoadingBoard(false);
-    }
-  }, [adminFetchJson, t]);
+  const coverageQuery = useRatingCoverage();
+  const coverage = coverageQuery.data ?? null;
+  const loadingCoverage = coverageQuery.isPending;
+  const refreshRatings = useRefreshRatings();
 
   useEffect(() => {
-    loadBoard();
-    loadCoverage();
-  }, [loadBoard, loadCoverage]);
+    if (board.error) logger.error('load leaderboard error', board.error);
+  }, [board.error]);
+  useEffect(() => {
+    if (coverageQuery.error)
+      logger.error('load ratings coverage error', coverageQuery.error);
+  }, [coverageQuery.error]);
 
   async function handleRebuild() {
     const ok = await confirm({
@@ -109,7 +93,7 @@ function AdminRatingsPage(_props: StaffProps) {
     setRebuilding(true);
     try {
       const result = await rebuild.mutateJson<RebuildResult>(
-        '/api/admin/ratings/rebuild',
+        ratingsPaths.rebuild,
         { method: 'POST' }
       );
       setLastResult(result);
@@ -120,7 +104,7 @@ function AdminRatingsPage(_props: StaffProps) {
         }),
         'success'
       );
-      await Promise.all([loadBoard(), loadCoverage()]);
+      await refreshRatings();
     } catch (err: unknown) {
       logger.error('rebuild ratings error', err);
       addToast((err as Error)?.message || t.errorRebuild, 'error');
@@ -290,7 +274,7 @@ function AdminRatingsPage(_props: StaffProps) {
                 <AdminButton
                   size="xs"
                   variant="danger"
-                  onClick={() => loadBoard()}
+                  onClick={() => void board.refetch()}
                 >
                   {t.retry}
                 </AdminButton>
@@ -353,4 +337,4 @@ function AdminRatingsPage(_props: StaffProps) {
   );
 }
 
-export default AdminRatingsPage;
+export default withAdminQuery(AdminRatingsPage);

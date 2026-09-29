@@ -4,7 +4,9 @@ import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import slugify from 'slugify';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useCreateNews } from '@/features/admin/news/hooks/useNews';
+import type { NewsPayload } from '@/features/admin/news/schemas';
 import { useAutoSave } from '@/utils/useAutoSave';
 import DraftBanner from '@/components/admin/DraftBanner';
 import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
@@ -23,10 +25,10 @@ export const getServerSideProps = withStaffPage({
 const slugifyValue = (value: string) =>
   slugify(value, { lower: true, strict: true });
 
-export default function AdminNewsCreate() {
+function AdminNewsCreate() {
   const t = useAdminT(nsAdminNewsNew);
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
+  const create = useCreateNews();
   const [form, setForm] = useState({
     title: '',
     slug: '',
@@ -37,7 +39,6 @@ export default function AdminNewsCreate() {
     status: 'draft',
     publishedAt: '',
   });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
   // Fallback d'aperçu géré par état (réarmé à chaque changement d'URL).
@@ -63,7 +64,6 @@ export default function AdminNewsCreate() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
 
     try {
@@ -72,18 +72,14 @@ export default function AdminNewsCreate() {
         slug: form.slug || slugifyValue(form.title),
       };
 
-      const json = await adminFetchJson<{ id: string }>('/api/admin/news', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
+      const json = await create.mutateAsync(payload as NewsPayload);
       clearDraft();
       router.push(`/admin/news/${json.id}`);
     } catch (err: unknown) {
       setError((err as Error)?.message || t.errorGeneric);
-    } finally {
-      setLoading(false);
     }
   };
+  const loading = create.isPending;
 
   const formId = 'news-new-form';
   const inputClass =
@@ -343,3 +339,5 @@ export default function AdminNewsCreate() {
     </>
   );
 }
+
+export default withAdminQuery(AdminNewsCreate);

@@ -1,6 +1,10 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
+import { scrimsPaths } from '@/features/admin/scrims/client';
 import Modal from '@/components/admin/Modal';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import {
+  type TeamOption,
+  useActiveTeamOptions,
+} from '@/features/admin/_shared/teamOptions';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { Scrim } from '@/types/admin';
@@ -12,8 +16,6 @@ import ScrimTeamField, {
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 const NO_EXTERNAL = { external: false, externalName: '' };
-
-type TeamOption = { id: string; name: string; short_name: string | null };
 
 type ScrimFormModalProps = {
   open: boolean;
@@ -50,11 +52,9 @@ export default function ScrimFormModal({
   defaults,
 }: ScrimFormModalProps) {
   const t = useAdminT(nsAdminScrimsCreate);
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const formId = useId();
 
-  const [teams, setTeams] = useState<TeamOption[]>([]);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   // Équipe extérieure (saisie libre) par côté ; l'id reste dans `form`.
   const [ext1, setExt1] = useState(NO_EXTERNAL);
@@ -82,20 +82,8 @@ export default function ScrimFormModal({
   // bouge pas — et l'utilisateur revoyait un menu vide le temps du trajet.
   // Le garde est un ref, pas un state : le remettre à false n'a de sens qu'au
   // remontage du panneau, où le ref repart naturellement à zéro.
-  const teamsLoadedRef = useRef(false);
-  useEffect(() => {
-    if (!open || teamsLoadedRef.current) return;
-    teamsLoadedRef.current = true;
-    adminFetchJson<{ teams: TeamOption[] }>(
-      '/api/admin/teams?limit=200&isActive=true'
-    )
-      .then((json) => setTeams(json.teams || []))
-      .catch(() => {
-        setTeams([]);
-        // Échec : on autorise une nouvelle tentative à la prochaine ouverture.
-        teamsLoadedRef.current = false;
-      });
-  }, [open, adminFetchJson]);
+  const teamsQuery = useActiveTeamOptions(open);
+  const teams: TeamOption[] = teamsQuery.data?.teams || [];
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -139,7 +127,7 @@ export default function ScrimFormModal({
         description: form.description.trim() || null,
         stream_url: form.stream_url.trim() || null,
       };
-      await mutateJson<{ scrim: Scrim }>('/api/admin/scrims', {
+      await mutateJson<{ scrim: Scrim }>(scrimsPaths.list, {
         method: 'POST',
         body: JSON.stringify(body),
       });

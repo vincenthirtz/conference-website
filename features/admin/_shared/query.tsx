@@ -62,3 +62,18 @@ export function withAdminQuery<P extends object>(
 export function adminKey(...parts: unknown[]): QueryKey {
   return ['admin', ...parts];
 }
+
+/**
+ * Options d'une lecture qui HYDRATE UN FORMULAIRE d'édition (fiche `[id]`).
+ *
+ * Un rafraîchissement automatique (focus de l'onglet, reconnexion) écraserait
+ * la saisie en cours : on ne relit qu'à l'ouverture de la fiche, comme avant
+ * la migration. `gcTime: 0` jette la donnée en quittant la page — rouvrir la
+ * fiche la relit du serveur, jamais d'une copie vieille de plusieurs minutes.
+ */
+export const EDITOR_QUERY_OPTIONS = {
+  staleTime: 0,
+  gcTime: 0,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+} as const;

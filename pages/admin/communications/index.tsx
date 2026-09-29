@@ -15,6 +15,7 @@ import NewsListPanel, {
   type NewsRow,
 } from '@/components/admin/communications/NewsListPanel';
 import { lazyPanel } from '@/components/admin/lazyPanel';
+import { withAdminQuery } from '@/features/admin/_shared/query';
 import type { StaffProps } from '@/types/admin';
 import { logger } from '@/utils/logger';
 import nsAdminCommunicationsHub from '@/lib/i18n/locales/admin-fr/adminCommunicationsHub';
@@ -114,7 +115,7 @@ export const getServerSideProps = withStaffPage<{
  *   - Réseaux       → admin+ (post multi-cibles : site + salon d'annonces)
  *   - Équipes       → admin+ (messages vers les salons Discord d'équipe)
  */
-export default function AdminCommunicationsPage({
+function AdminCommunicationsPage({
   staff,
   news,
   newsTotal,
@@ -175,3 +176,6 @@ export default function AdminCommunicationsPage({
     </>
   );
 }
+
+// Cache de requêtes des onglets (lot L10) : chargé par cette page seule.
+export default withAdminQuery(AdminCommunicationsPage);

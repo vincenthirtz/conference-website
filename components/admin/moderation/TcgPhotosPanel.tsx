@@ -25,10 +25,14 @@
 // serveur refuse de trancher sur un autre fichier : on ne peut approuver que ce
 // qu'on a vu. On rafraîchit alors la liste au lieu d'insister.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { AdminHttpError } from '@/utils/admin/adminHttp';
+import {
+  useDecideTcgPhoto,
+  useTcgPendingPhotos,
+} from '@/features/admin/tcg/hooks/useTcgModeration';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import AlertBanner from '@/components/admin/AlertBanner';
@@ -63,33 +67,27 @@ export default function TcgPhotosPanel() {
   const t = useAdminT(nsAdminTcgPhotos);
   const locale = useLocale();
   const { addToast } = useToast();
-  const { adminFetch, adminFetchJson } = useAdminFetch();
   const { confirm, dialog } = useConfirmDialog();
 
   // `null` = jamais chargée. Distinct de `[]` (chargée, vide) ET de l'échec,
-  // porté à part par `loadFailed` : cf. l'en-tête.
-  const [photos, setPhotos] = useState<PendingPhoto[] | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [reloading, setReloading] = useState(false);
+  // porté à part par `loadFailed` : cf. l'en-tête. Une relecture en échec
+  // garde la dernière file (le cache conserve ses données).
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
 
+  const query = useTcgPendingPhotos();
+  const decideMutation = useDecideTcgPhoto();
+  const photos: PendingPhoto[] | null = useMemo(
+    () =>
+      query.data === undefined ? null : normalizePendingPhotos(query.data),
+    [query.data]
+  );
+  const loadFailed = query.isError;
+  const reloading = query.isFetching;
+  const { refetch } = query;
   const load = useCallback(async () => {
-    setReloading(true);
-    try {
-      const data = await adminFetchJson<unknown>('/api/admin/tcg/photos');
-      setPhotos(normalizePendingPhotos(data));
-      setLoadFailed(false);
-    } catch {
-      setLoadFailed(true);
-    } finally {
-      setReloading(false);
-    }
-  }, [adminFetchJson]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+    await refetch();
+  }, [refetch]);
 
   const decide = useCallback(
     async (photo: PendingPhoto, decision: 'approve' | 'reject') => {
@@ -123,23 +121,19 @@ export default function TcgPhotosPanel() {
 
       setBusy(userId);
       try {
-        const res = await adminFetch('/api/admin/tcg/photos', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        try {
+          await decideMutation.mutateAsync({
             userId,
             photoPath,
             decision,
             reason: decision === 'reject' ? reason : null,
-          }),
-        });
-
-        if (res.status === 409) {
-          addToast(t.conflict, 'info');
-          await load();
-          return;
-        }
-        if (!res.ok) {
+          });
+        } catch (err) {
+          if (err instanceof AdminHttpError && err.status === 409) {
+            addToast(t.conflict, 'info');
+            await load();
+            return;
+          }
           addToast(t.error, 'error');
           return;
         }
@@ -156,7 +150,7 @@ export default function TcgPhotosPanel() {
         setBusy(null);
       }
     },
-    [adminFetch, addToast, confirm, load, reasons, t]
+    [decideMutation, addToast, confirm, load, reasons, t]
   );
 
   return (

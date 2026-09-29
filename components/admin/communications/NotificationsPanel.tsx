@@ -15,7 +15,13 @@
 // par le host via `hasAtLeastRole`).
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { staffNotificationsClient } from '@/features/admin/communications/client';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  communicationsKeys,
+  useNotificationPrefs,
+} from '@/features/admin/communications/hooks/useCommunications';
+import type { NotificationPrefRow as PrefRow } from '@/features/admin/communications/clientTypes';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
@@ -33,14 +39,6 @@ import {
 import nsAdminNotifications from '@/lib/i18n/locales/admin-fr/adminNotifications';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
-
-type PrefRow = { event_type: WebPushEventType; enabled: boolean };
-type PrefsResponse = { prefs: PrefRow[] };
-type TestResponse = {
-  sent: number;
-  expired_removed: number;
-  failed: number;
-};
 
 type Dict = typeof nsAdminNotifications.fr;
 
@@ -184,11 +182,14 @@ function formatStatusLabel(
 
 export default function NotificationsPanel() {
   const t = useAdminT(nsAdminNotifications);
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
 
+  // Copie éditable des préférences : les bascules restent locales jusqu'à
+  // « Enregistrer ». La requête ne fait que la remplir au chargement.
+  const prefsQuery = useNotificationPrefs();
+  const qc = useQueryClient();
   const [prefs, setPrefs] = useState<PrefRow[] | null>(null);
-  const [loadingPrefs, setLoadingPrefs] = useState(true);
+  const loadingPrefs = prefsQuery.isPending;
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [prefsError, setPrefsError] = useState<string | null>(null);
 
@@ -245,9 +246,7 @@ export default function NotificationsPanel() {
     let cancelled = false;
     (async () => {
       try {
-        await adminFetchJson('/api/admin/notifications/ack-all', {
-          method: 'POST',
-        });
+        await staffNotificationsClient.ackAll();
       } catch {
         // Erreur réseau ou auth → on tente quand même le clear local du SW.
       }
@@ -263,31 +262,20 @@ export default function NotificationsPanel() {
     return () => {
       cancelled = true;
     };
-  }, [adminFetchJson]);
+  }, []);
 
   // ----- Chargement des prefs ----------------------------------------------
   useEffect(() => {
-    let cancelled = false;
-    setLoadingPrefs(true);
-    adminFetchJson<PrefsResponse>('/api/admin/notifications/prefs')
-      .then((res) => {
-        if (cancelled) return;
-        setPrefs(res.prefs);
-        setPrefsError(null);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        logger.error('[admin/notifications] load prefs', err);
-        setPrefsError((err as Error)?.message || t.errorLoadPrefs);
-      })
-      .finally(() => {
-        if (cancelled) return;
-        setLoadingPrefs(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [adminFetchJson, t.errorLoadPrefs]);
+    if (prefsQuery.data) {
+      setPrefs(prefsQuery.data.prefs);
+      setPrefsError(null);
+    }
+  }, [prefsQuery.data]);
+  useEffect(() => {
+    if (!prefsQuery.error) return;
+    logger.error('[admin/notifications] load prefs', prefsQuery.error);
+    setPrefsError(prefsQuery.error.message || t.errorLoadPrefs);
+  }, [prefsQuery.error, t.errorLoadPrefs]);
 
   const prefsMap = useMemo(() => {
     const m = new Map<string, boolean>();
@@ -309,13 +297,8 @@ export default function NotificationsPanel() {
     setSavingPrefs(true);
     setPrefsError(null);
     try {
-      const res = await adminFetchJson<PrefsResponse>(
-        '/api/admin/notifications/prefs',
-        {
-          method: 'PUT',
-          body: JSON.stringify({ prefs }),
-        }
-      );
+      const res = await staffNotificationsClient.savePrefs(prefs);
+      qc.setQueryData(communicationsKeys.notificationPrefs(), res);
       setPrefs(res.prefs);
       addToast(t.prefsSaved, 'success');
     } catch (err) {
@@ -326,7 +309,7 @@ export default function NotificationsPanel() {
     } finally {
       setSavingPrefs(false);
     }
-  }, [adminFetchJson, addToast, prefs, savingPrefs, t.prefsSaved, t.errorSave]);
+  }, [addToast, qc, prefs, savingPrefs, t.prefsSaved, t.errorSave]);
 
   // ----- Subscribe / unsubscribe ce device ---------------------------------
   const handleSubscribe = useCallback(async () => {
@@ -355,13 +338,10 @@ export default function NotificationsPanel() {
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
 
-      await adminFetchJson('/api/admin/notifications/subscribe', {
-        method: 'POST',
-        body: JSON.stringify({
-          subscription: subscription.toJSON(),
-          user_agent: navigator.userAgent,
-        }),
-      });
+      await staffNotificationsClient.subscribe(
+        subscription.toJSON(),
+        navigator.userAgent
+      );
 
       addToast(t.deviceSubscribed, 'success');
       await refreshSubStatus();
@@ -372,7 +352,6 @@ export default function NotificationsPanel() {
       setSubBusy(false);
     }
   }, [
-    adminFetchJson,
     addToast,
     refreshSubStatus,
     subBusy,
@@ -405,10 +384,7 @@ export default function NotificationsPanel() {
 
       // 2) Purge la row côté serveur. Tolère 404 (la row n'existait déjà
       //    plus, l'opération est idempotente côté client).
-      await adminFetchJson('/api/admin/notifications/unsubscribe', {
-        method: 'DELETE',
-        body: JSON.stringify({ endpoint }),
-      }).catch((err) => {
+      await staffNotificationsClient.unsubscribe(endpoint).catch((err) => {
         // Tolère 404 : la row n'existait déjà plus, c'est ok.
         const status = (err as { status?: number })?.status;
         if (status !== 404) throw err;
@@ -423,7 +399,6 @@ export default function NotificationsPanel() {
       setSubBusy(false);
     }
   }, [
-    adminFetchJson,
     addToast,
     refreshSubStatus,
     subBusy,
@@ -437,10 +412,7 @@ export default function NotificationsPanel() {
     if (testing) return;
     setTesting(true);
     try {
-      const res = await adminFetchJson<TestResponse>(
-        '/api/admin/notifications/test',
-        { method: 'POST' }
-      );
+      const res = await staffNotificationsClient.sendTest();
       const { sent, expired_removed, failed } = res;
       const parts = [format(t.testSent, { count: sent })];
       if (expired_removed > 0)
@@ -457,7 +429,6 @@ export default function NotificationsPanel() {
       setTesting(false);
     }
   }, [
-    adminFetchJson,
     addToast,
     testing,
     t.testSent,
