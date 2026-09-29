@@ -634,6 +634,65 @@ describe('/api/admin/adherents', () => {
     expect(logStaffActionMock).toHaveBeenCalledOnce();
   });
 
+  it('GET cherche par email (points compris), trie et pagine côté serveur (lot L13)', async () => {
+    store.adherents = [
+      {
+        id: 'a1',
+        first_name: 'Ann',
+        last_name: 'Zed',
+        email: 'ann.z@x.fr',
+        is_active: true,
+      },
+      {
+        id: 'a2',
+        first_name: 'Bob',
+        last_name: 'Alpha',
+        email: 'bob@y.fr',
+        is_active: true,
+      },
+      {
+        id: 'a3',
+        first_name: 'Cy',
+        last_name: 'Moss',
+        email: 'cy@x.fr',
+        is_active: true,
+      },
+    ] as any;
+
+    const search = makeRes();
+    await adherentsHandler(
+      makeReq({ method: 'GET', query: { q: 'ann.z@x.fr' } }, true),
+      search
+    );
+    expect((search.body as any).items.map((i: any) => i.id)).toEqual(['a1']);
+    expect((search.body as any).total).toBe(1);
+
+    const page2 = makeRes();
+    await adherentsHandler(
+      makeReq(
+        {
+          method: 'GET',
+          query: { sort: 'last_name', dir: 'desc', page: '2', pageSize: '2' },
+        },
+        true
+      ),
+      page2
+    );
+    expect(page2.statusCode).toBe(200);
+    expect((page2.body as any).items.map((i: any) => i.id)).toEqual(['a2']);
+    expect((page2.body as any).total).toBe(3);
+  });
+
+  it('GET 400 sur un tri hors liste fermée', async () => {
+    const res = makeRes();
+    await adherentsHandler(
+      makeReq({ method: 'GET', query: { sort: 'notes' } }, true),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect((res.body as any).code).toBe('validation');
+  });
+
   it('returns 405 on unsupported method', async () => {
     const res = makeRes();
     await adherentsHandler(makeReq({ method: 'PATCH' }, true), res);

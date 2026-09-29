@@ -2094,21 +2094,75 @@
       "items": {
        "type": "object",
        "properties": {
-        "created_at": {},
-        "current_year": {},
-        "email": {},
-        "first_name": {},
-        "id": {},
-        "is_active": {},
-        "join_date": {},
-        "last_name": {},
-        "member_number": {},
-        "payment_amount": {},
-        "payment_date": {},
-        "payment_method": {},
-        "payment_status": {},
-        "phone": {},
-        "role": {}
+        "created_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "current_year": {
+         "type": "number"
+        },
+        "email": {
+         "type": "string"
+        },
+        "first_name": {
+         "type": "string"
+        },
+        "id": {
+         "type": "string"
+        },
+        "is_active": {
+         "type": [
+          "boolean",
+          "null"
+         ]
+        },
+        "join_date": {
+         "type": "string"
+        },
+        "last_name": {
+         "type": "string"
+        },
+        "member_number": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "payment_amount": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "payment_date": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "payment_method": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "payment_status": {
+         "type": "string"
+        },
+        "phone": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "role": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
        },
        "required": [
         "created_at",
@@ -2157,10 +2211,7 @@
       ]
      },
      "total": {
-      "type": [
-       "number",
-       "null"
-      ]
+      "type": "number"
      }
     },
     "required": [
@@ -4586,6 +4637,7 @@
           "connect_social_account",
           "connect_twitch_broadcaster",
           "create",
+          "create_adherent",
           "create_announcement",
           "create_api_token",
           "create_cast_assignment",
@@ -5941,6 +5993,7 @@
           "connect_social_account",
           "connect_twitch_broadcaster",
           "create",
+          "create_adherent",
           "create_announcement",
           "create_api_token",
           "create_cast_assignment",
@@ -7902,6 +7955,7 @@
           "connect_social_account",
           "connect_twitch_broadcaster",
           "create",
+          "create_adherent",
           "create_announcement",
           "create_api_token",
           "create_cast_assignment",
@@ -11034,6 +11088,7 @@
           "connect_social_account",
           "connect_twitch_broadcaster",
           "create",
+          "create_adherent",
           "create_announcement",
           "create_api_token",
           "create_cast_assignment",
@@ -16437,6 +16492,7 @@
           "connect_social_account",
           "connect_twitch_broadcaster",
           "create",
+          "create_adherent",
           "create_announcement",
           "create_api_token",
           "create_cast_assignment",
@@ -20851,6 +20907,7 @@
           "connect_social_account",
           "connect_twitch_broadcaster",
           "create",
+          "create_adherent",
           "create_announcement",
           "create_api_token",
           "create_cast_assignment",
@@ -53562,7 +53619,181 @@
    }
   },
   "POST /api/admin/adherents": {
-   "201": {}
+   "201": {
+    "type": "object",
+    "properties": {
+     "address": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "auth_user_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "birth_date": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "city": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "country": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "created_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "created_by": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "current_year": {
+      "type": "number"
+     },
+     "deleted_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "email": {
+      "type": "string"
+     },
+     "first_name": {
+      "type": "string"
+     },
+     "id": {
+      "type": "string"
+     },
+     "is_active": {
+      "type": [
+       "boolean",
+       "null"
+      ]
+     },
+     "join_date": {
+      "type": "string"
+     },
+     "last_name": {
+      "type": "string"
+     },
+     "member_number": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "notes": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "payment_amount": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "payment_date": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "payment_method": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "payment_reference": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "payment_status": {
+      "type": "string"
+     },
+     "phone": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "postal_code": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "role": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "updated_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "updated_by": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "address",
+     "auth_user_id",
+     "birth_date",
+     "city",
+     "country",
+     "created_at",
+     "created_by",
+     "current_year",
+     "deleted_at",
+     "email",
+     "first_name",
+     "id",
+     "is_active",
+     "join_date",
+     "last_name",
+     "member_number",
+     "notes",
+     "payment_amount",
+     "payment_date",
+     "payment_method",
+     "payment_reference",
+     "payment_status",
+     "phone",
+     "postal_code",
+     "role",
+     "updated_at",
+     "updated_by"
+    ]
+   }
   },
   "POST /api/admin/api-tokens": {
    "201": {

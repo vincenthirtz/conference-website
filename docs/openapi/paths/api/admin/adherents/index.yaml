@@ -1,31 +1,16 @@
 get:
-  summary: List adherents (active memberships).
-  description: Requires `admin` role.
+  summary: Liste paginée des adhérents, avec les compteurs du bandeau.
+  description: >
+    Contrat de liste admin (recherche `q` sur nom, prénom, email et n°
+    d'adhérent ; tri sur une liste fermée de colonnes ; `page`/`pageSize`).
+    Réponse `{ items, total, stats }`. Permission `manage_communications`,
+    rôle global (donnée d'association).
   operationId: adminListAdherents
   tags:
     - admin/misc
   security:
     - StaffSession: []
-  parameters:
-    - in: query
-      name: q
-      schema:
-        type: string
-      description: Free-text search
-    - in: query
-      name: status
-      schema:
-        type: string
-    - in: query
-      name: limit
-      schema:
-        type: integer
-        default: 50
-    - in: query
-      name: offset
-      schema:
-        type: integer
-        default: 0
+  x-zod-query: admin.adherents.query
   responses:
     '200':
       description: List of adherents.
@@ -36,8 +21,10 @@ get:
     '403':
       $ref: '#/components/responses/Forbidden'
 post:
-  summary: Create an adherent manually.
-  description: Requires `admin` role.
+  summary: Crée un adhérent à la main (hors synchro HelloAsso).
+  description: >
+    Email unique (insensible à la casse) : un doublon répond 400 avec
+    `fields.email`.
   operationId: adminCreateAdherent
   tags:
     - admin/misc
@@ -48,8 +35,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.adherents.create
   responses:
     '201':
       description: Adherent created.

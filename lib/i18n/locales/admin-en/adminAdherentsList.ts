@@ -26,6 +26,7 @@ export default {
   errorDeleteFailed: 'Deletion failed',
   errorDelete: 'Deletion error.',
   errorUpdateFailed: 'Update failed',
+  errorLoad: 'Members could not be loaded.',
   errorUpdate: 'Update error.',
   syncOk:
     'Sync OK: {created} created, {updated} updated, {skipped} already synced.',

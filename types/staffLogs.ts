@@ -170,6 +170,8 @@ export type StaffLogAction =
   | 'delete_pole_member'
   // Marché des joueuses libres (lot 1 acquisition)
   | 'delete_free_player'
+  // Adhérents de l'association (création manuelle ; la synchro HelloAsso a la sienne)
+  | 'create_adherent'
   // --- Contenu éditorial ---
   | 'publish_news'
   | 'publish_social_post'

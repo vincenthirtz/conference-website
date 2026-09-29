@@ -26,6 +26,7 @@ export default adminNs('adminAdherentsList', {
   errorDelete: 'Erreur de suppression.',
   errorUpdateFailed: 'Modification impossible',
   errorUpdate: 'Erreur de modification.',
+  errorLoad: 'Les adhérents n’ont pas pu être chargés.',
   syncOk:
     'Sync OK : {created} créé(s), {updated} mis à jour, {skipped} déjà sync.',
   syncError: 'Erreur : {message}',

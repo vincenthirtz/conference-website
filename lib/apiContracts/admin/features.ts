@@ -19,10 +19,15 @@ import {
 import { RemoveFreePlayerQuery } from '../../../features/admin/free-players/schemas';
 import { UserSearchQuery } from '../../../features/admin/users/schemas';
 import { AlertsSummaryQuery } from '../../../features/admin/dashboard/schemas';
+import {
+  AdherentCreateBody,
+  AdherentListQuery,
+} from '../../../features/admin/adherents/schemas';
 
 export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   'admin.twitchChannels.create': { schema: TwitchChannelBody, io: 'input' },
   'admin.twitchChannels.update': { schema: TwitchChannelPatch, io: 'input' },
+  'admin.adherents.create': { schema: AdherentCreateBody, io: 'input' },
 };
 
 export const ADMIN_FEATURE_QUERY_SCHEMAS: Record<string, ApiContractEntry> = {
@@ -37,4 +42,5 @@ export const ADMIN_FEATURE_QUERY_SCHEMAS: Record<string, ApiContractEntry> = {
   },
   'admin.users/search.query': { schema: UserSearchQuery, io: 'input' },
   'admin.alerts-summary.query': { schema: AlertsSummaryQuery, io: 'input' },
+  'admin.adherents.query': { schema: AdherentListQuery, io: 'input' },
 };

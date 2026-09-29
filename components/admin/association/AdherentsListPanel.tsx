@@ -3,7 +3,8 @@
 // HelloAsso). Rendered as the "Adhérents" tab of the /admin/association hub.
 //
 // Endpoints:
-//   GET    /api/admin/adherents?paymentStatus=&year=&role=&active=&q=  → { items, stats, total }
+//   GET    /api/admin/adherents?q=&sort=&dir=&page=&pageSize=&paymentStatus=&year=&role=&active=
+//          → { items, total, stats }   (contrat de liste admin, lot L13)
 //   PATCH  /api/admin/adherents/[id]     → { paymentStatus, paymentAmount, paymentDate }
 //   DELETE /api/admin/adherents/[id]
 //   POST   /api/admin/helloasso/sync?formSlug=…
@@ -17,11 +18,13 @@ import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useAdminResource } from '@/hooks/useAdminResource';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import { logger } from '@/utils/logger';
 import nsAdminAdherentsList from '@/lib/i18n/locales/admin-fr/adminAdherentsList';
+import { useQueryClient } from '@tanstack/react-query';
+import { adminKey, withAdminQuery } from '@/features/admin/_shared/query';
+import { useAdminList } from '@/features/admin/_shared/list';
 
 type Dict = typeof nsAdminAdherentsList.fr;
 type AdherentRow = {
@@ -79,18 +82,10 @@ function getRoleLabels(t: Dict): Record<string, string> {
   };
 }
 
-export default function AdherentsListPanel() {
+function AdherentsListPanel() {
   const t = useAdminT(nsAdminAdherentsList);
   const paymentStatusLabels = getPaymentStatusLabels(t);
   const roleLabels = getRoleLabels(t);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [search, setSearch] = useState('');
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string | null>(
-    null
-  );
-  const [yearFilter, setYearFilter] = useState<string | null>(null);
-  const [roleFilter, setRoleFilter] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [cotisationAmount, setCotisationAmount] = useState<number>(0);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
@@ -100,40 +95,25 @@ export default function AdherentsListPanel() {
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 
-  // Liste paginée + filtrée côté serveur. `limit: 50` réplique le défaut de
-  // /api/admin/adherents (parsePagination limit:50). Les stats agrégées
-  // reviennent dans le même payload → captées via `onData` (pas de 2e requête).
-  // Le hook gère le debounce recherche + reset d'offset via `query`.
-  const {
-    data: adherents,
-    total,
-    loading,
-    offset,
-    limit,
-    setOffset,
-    refresh: fetchData,
-    resetOffset,
-  } = useAdminResource<
-    AdherentRow,
-    { items?: AdherentRow[]; stats?: Stats; total?: number | null }
-  >('/api/admin/adherents', {
-    limit: 50,
-    query: search,
-    params: {
-      paymentStatus: paymentStatusFilter,
-      year: yearFilter,
-      role: roleFilter,
-      active: activeFilter,
-    },
-    select: (res) => res.items || [],
-    onData: (res) => setStats(res.stats || null),
+  // Liste paginée, filtrée ET triée côté serveur (lot L13) : recherche, tri,
+  // page et filtres vivent dans l'URL — une vue filtrée se partage par lien.
+  const list = useAdminList<
+    { items: AdherentRow[]; total: number; stats: Stats },
+    'paymentStatus' | 'year' | 'role' | 'active'
+  >({
+    key: 'adherents',
+    url: '/api/admin/adherents',
+    filterKeys: ['paymentStatus', 'year', 'role', 'active'],
+    pageSize: 50,
   });
-
-  // Le changement de filtre repart de la première page (le reset lié à la
-  // recherche est déjà géré par le hook via `query`).
-  useEffect(() => {
-    resetOffset();
-  }, [paymentStatusFilter, yearFilter, roleFilter, activeFilter, resetOffset]);
+  const adherents = list.items;
+  const stats = list.data?.stats ?? null;
+  const total = list.total;
+  const queryClient = useQueryClient();
+  // Après un geste (retrait, paiement, synchro) : toutes les pages et tous
+  // les filtres de la liste sont périmés, pas seulement la page affichée.
+  const fetchData = () =>
+    void queryClient.invalidateQueries({ queryKey: adminKey('adherents') });
 
   // Montant de cotisation : endpoint distinct (site-settings), hors périmètre
   // du hook liste — chargé une fois au montage.
@@ -245,12 +225,14 @@ export default function AdherentsListPanel() {
   const columns: DataTableColumn<AdherentRow>[] = [
     {
       key: 'member_number',
+      sortable: true,
       header: t.colMemberNumber,
       value: (a) => a.member_number ?? '',
       className: 'font-mono text-neutral-300',
     },
     {
-      key: 'name',
+      key: 'last_name',
+      sortable: true,
       header: t.colName,
       value: (a) => `${a.last_name} ${a.first_name}`,
       render: (a) => (
@@ -274,18 +256,21 @@ export default function AdherentsListPanel() {
     },
     {
       key: 'role',
+      sortable: true,
       header: t.colRole,
       value: (a) => roleLabels[a.role] || a.role,
       className: 'text-neutral-300',
     },
     {
-      key: 'year',
+      key: 'current_year',
+      sortable: true,
       header: t.colYear,
       value: (a) => a.current_year ?? '',
       className: 'text-neutral-300',
     },
     {
-      key: 'payment',
+      key: 'payment_status',
+      sortable: true,
       header: t.colPayment,
       value: (a) => paymentStatusLabels[a.payment_status],
       render: (a) => (
@@ -299,7 +284,8 @@ export default function AdherentsListPanel() {
       ),
     },
     {
-      key: 'amount',
+      key: 'payment_amount',
+      sortable: true,
       header: t.colAmount,
       value: (a) => a.payment_amount,
       render: (a) => (
@@ -473,8 +459,8 @@ export default function AdherentsListPanel() {
             <input
               type="text"
               placeholder={t.searchPlaceholder}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={list.search}
+              onChange={(e) => list.setSearch(e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -485,8 +471,10 @@ export default function AdherentsListPanel() {
             </label>
             <select
               className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={paymentStatusFilter || ''}
-              onChange={(e) => setPaymentStatusFilter(e.target.value || null)}
+              value={list.filters.paymentStatus ?? ''}
+              onChange={(e) =>
+                list.setFilter('paymentStatus', e.target.value || null)
+              }
             >
               <option value="">{t.paymentStatusAll}</option>
               <option value="pending">{t.statusPending}</option>
@@ -503,8 +491,8 @@ export default function AdherentsListPanel() {
             </label>
             <select
               className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={yearFilter || ''}
-              onChange={(e) => setYearFilter(e.target.value || null)}
+              value={list.filters.year ?? ''}
+              onChange={(e) => list.setFilter('year', e.target.value || null)}
             >
               <option value="">{t.yearAll}</option>
               {[currentYear, currentYear - 1, currentYear - 2].map((y) => (
@@ -521,8 +509,8 @@ export default function AdherentsListPanel() {
             </label>
             <select
               className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={roleFilter || ''}
-              onChange={(e) => setRoleFilter(e.target.value || null)}
+              value={list.filters.role ?? ''}
+              onChange={(e) => list.setFilter('role', e.target.value || null)}
             >
               <option value="">{t.roleAll}</option>
               <option value="member">{t.roleMember}</option>
@@ -540,8 +528,8 @@ export default function AdherentsListPanel() {
             </label>
             <select
               className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={activeFilter || ''}
-              onChange={(e) => setActiveFilter(e.target.value || null)}
+              value={list.filters.active ?? ''}
+              onChange={(e) => list.setFilter('active', e.target.value || null)}
             >
               <option value="">{t.activeAll}</option>
               <option value="true">{t.activeYes}</option>
@@ -551,26 +539,28 @@ export default function AdherentsListPanel() {
         </div>
       </section>
 
-      {/* Liste — kit partagé (lot A5). L'écran garde ses filtres (au-dessus) et
-          sa pagination serveur ; la table apporte les colonnes déclaratives,
-          l'export CSV et les en-têtes accessibles. */}
+      {/* Liste — kit partagé en mode SERVEUR (lot L13) : la table lit tri et
+          page dans l'URL, le serveur les applique. Colonnes triables = celles
+          que le serveur accepte (`sortable: true`, clé = nom de colonne). */}
       <section className="overflow-hidden rounded-2xl border border-neutral-700/50 bg-neutral-800/50 p-4 backdrop-blur">
         <DataTable<AdherentRow>
           rows={adherents}
           columns={columns}
           rowKey={(a) => a.id}
-          loading={loading}
-          error={null}
+          loading={list.isPending}
+          error={list.isError ? t.errorLoad : null}
+          onRetry={() => void list.refetch()}
           emptyTitle={t.empty}
           exportFilename="adherents"
-          serverPagination={{
-            offset,
-            limit,
+          server={{
             total,
-            onOffsetChange: setOffset,
+            pageSize: list.pageSize,
+            fetching: list.isFetching && !list.isPending,
           }}
         />
       </section>
     </>
   );
 }
+
+export default withAdminQuery(AdherentsListPanel);

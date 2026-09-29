@@ -558,7 +558,7 @@ actions, sections, statistiques.
 - [ ] Captures Playwright de référence du kit en CI.
 - [ ] Contraste AA vérifié sur les jetons.
 
-### L13 · DataTable v2 : pagination serveur, vues, virtualisation — 🟧 / L
+### L13 · DataTable v2 : pagination serveur, vues, virtualisation — 🟨 SOCLE LIVRÉ (2026-09-29) · pilote adhérents
 
 **Problème.** `DataTable` existe (A5) mais pagine surtout côté client, et `useTableQueryState`
 n'est utilisé qu'une fois. Les grosses listes (équipes, utilisateurs, demandes, matchs du tournoi)
@@ -576,9 +576,31 @@ restent faites main.
 - Export CSV côté serveur pour les grosses listes (streaming).
 
 **Critères d'acceptation**
-- [ ] Les 4 grosses listes (équipes, utilisateurs, demandes, matchs) sur `DataTable` v2.
-- [ ] 5 000 lignes simulées restent fluides (< 16 ms par frame au défilement).
-- [ ] Un lien copié rouvre la même vue (filtres, tri, page).
+- [x] Contrat de liste [`utils/admin/listQuery.ts`](../utils/admin/listQuery.ts) : `q`, `sort`
+      (**liste fermée** de colonnes), `dir`, `page`, `pageSize` (≤ 100) + filtres de l'écran →
+      `{ items, total }`. Mêmes noms que l'état d'URL de la table.
+- [x] [`useAdminList`](../features/admin/_shared/list.ts) : recherche, tri, page ET filtres dans
+      l'URL, devenus clé de requête TanStack ; recherche temporisée (250 ms) ; la page précédente
+      reste affichée, estompée, pendant que la suivante charge.
+- [x] `DataTable` mode `server` : la table écrit tri et page dans l'URL, le serveur les applique ;
+      seules les colonnes `sortable: true` (acceptées par le serveur) sont triables. L'ancien
+      `serverPagination` reste pour les 4 écrans qui l'utilisent.
+- [x] **Un lien copié rouvre la même vue** (filtres, tri, page) — par construction : tout est
+      dans l'URL.
+- [x] Pilote : adhérents. La route migrée sur `defineAdminRoute` + contrat de liste ; le panneau
+      passe de 7 à 3 `useState` et gagne le **tri serveur** (6 colonnes), qu'il n'avait pas.
+- [x] Défauts corrigés au passage :
+  - la recherche des adhérents **supprimait les points** (`escapePostgrestValue`) : un email ne
+    pouvait jamais être trouvé. Valeur désormais citée (`col.ilike."%…%"`) ;
+  - la spec documentait `q` et `status` quand la route lisait `search` et `paymentStatus` ;
+  - la création journalisait sous le slug `other` → `create_adherent`, et le journal ne garde
+    que nom + email (pas les coordonnées).
+- [x] Le mock Supabase lit les valeurs citées de `.or()` comme PostgREST.
+- [ ] Les 4 grosses listes (équipes, utilisateurs, demandes, matchs) — avec leurs lots de
+      découpe (L16–L18).
+- [ ] Vues enregistrées par staff, virtualisation (> 200 lignes), export CSV **serveur** : en
+      mode serveur, l'export ne sort encore que la page affichée (comme avant). À faire quand une
+      liste migrée le demande — aucune ne dépasse aujourd'hui quelques centaines de lignes.
 
 ### L14 · Registre de modules (nav, gating, fil d'Ariane, palette) — ✅ LIVRÉ (2026-09-29), plan révisé
 

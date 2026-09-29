@@ -159,6 +159,8 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   delete_pole_member: 'Suppression membre de pôle',
   // Joueuses libres
   delete_free_player: 'Retrait fiche joueuse libre',
+  // Adhérents
+  create_adherent: 'Création adhérent',
   // Contenu éditorial
   publish_news: 'Publication actualité',
   publish_social_post: 'Publication post multi-réseaux',
