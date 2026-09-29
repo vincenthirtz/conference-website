@@ -346,15 +346,21 @@ function readColumn(row: Row, col: string): unknown {
   return obj ? obj[key] : undefined;
 }
 
-/** Découpe une expression PostgREST au niveau des virgules NON parenthésées. */
+/**
+ * Découpe une expression PostgREST au niveau des virgules NON parenthésées et
+ * hors guillemets : `col.ilike."%a,b.c%"` est UNE clause (valeur citée, comme
+ * PostgREST la lit — c'est ce qui permet de chercher un email à points).
+ */
 function splitTopLevel(expr: string): string[] {
   const out: string[] = [];
   let depth = 0;
+  let quoted = false;
   let current = '';
   for (const ch of expr) {
-    if (ch === '(') depth += 1;
-    if (ch === ')') depth -= 1;
-    if (ch === ',' && depth === 0) {
+    if (ch === '"') quoted = !quoted;
+    if (!quoted && ch === '(') depth += 1;
+    if (!quoted && ch === ')') depth -= 1;
+    if (ch === ',' && depth === 0 && !quoted) {
       out.push(current.trim());
       current = '';
       continue;
@@ -378,7 +384,11 @@ function clausePredicate(clause: string): (row: Row) => boolean {
   const parts = clause.split('.');
   const col = parts[0];
   const op = parts[1];
-  const raw = parts.slice(2).join('.');
+  const joined = parts.slice(2).join('.');
+  // Valeur citée : guillemets retirés, `\"` et `\\` déséchappés.
+  const raw = /^".*"$/s.test(joined)
+    ? joined.slice(1, -1).replace(/\\(["\\])/g, '$1')
+    : joined;
   const value = (row: Row) => readColumn(row, col);
 
   if (op === 'eq') return (row) => String(value(row) ?? '') === raw;

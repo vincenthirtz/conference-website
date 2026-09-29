@@ -97,6 +97,23 @@ export type DataTableProps<T> = {
     total: number | null;
     onOffsetChange: (offset: number) => void;
   };
+  /**
+   * Liste SERVEUR pilotée par l'URL (lot L13, docs/PLAN-industrialisation-admin.md) :
+   * recherche, tri et page restent ceux de la table (`useTableQueryState`),
+   * mais c'est le SERVEUR qui les applique — l'écran lit le même état via
+   * `useAdminList` et en fait sa requête. La table ne filtre ni ne trie
+   * localement ; seules les colonnes `sortable: true` sont triables (le
+   * serveur n'accepte qu'une liste fermée de colonnes).
+   *
+   * À préférer à `serverPagination`, qui laisse l'écran recâbler recherche et
+   * tri à la main.
+   */
+  server?: {
+    total: number | null;
+    pageSize: number;
+    /** Une nouvelle page charge : la précédente reste affichée, estompée. */
+    fetching?: boolean;
+  };
   /** Nom du fichier CSV. Absent = pas d'export. */
   exportFilename?: string;
   selection?: {
@@ -147,6 +164,7 @@ export default function DataTable<T>({
   pageSize = 25,
   exportFilename,
   serverPagination,
+  server,
   selection,
   labels: labelOverrides,
 }: DataTableProps<T>) {
@@ -163,7 +181,7 @@ export default function DataTable<T>({
   const filtered = useMemo(() => {
     // Mode serveur : `rows` EST la page. Filtrer ici ne filtrerait que ce qui
     // est déjà à l'écran.
-    if (serverPagination) return rows;
+    if (serverPagination || server) return rows;
     const needle = q.trim().toLowerCase();
     if (!needle) return rows;
     return rows.filter((row) =>
@@ -173,10 +191,10 @@ export default function DataTable<T>({
           .includes(needle)
       )
     );
-  }, [rows, q, searchable, serverPagination]);
+  }, [rows, q, searchable, serverPagination, server]);
 
   const sorted = useMemo(() => {
-    if (serverPagination) return filtered;
+    if (serverPagination || server) return filtered;
     if (!sort) return filtered;
     const column = columns.find((c) => c.key === sort);
     if (!column?.value) return filtered;
@@ -196,22 +214,32 @@ export default function DataTable<T>({
         }) * factor
       );
     });
-  }, [filtered, sort, dir, columns, serverPagination]);
+  }, [filtered, sort, dir, columns, serverPagination, server]);
 
-  const pageCount = serverPagination
+  const pageCount = server
     ? Math.max(
         1,
-        serverPagination.total !== null
-          ? Math.ceil(serverPagination.total / serverPagination.limit)
-          : serverPagination.offset / serverPagination.limit + 2
+        server.total !== null
+          ? Math.ceil(server.total / server.pageSize)
+          : page + (rows.length === server.pageSize ? 1 : 0)
       )
-    : Math.max(1, Math.ceil(sorted.length / pageSize));
-  const current = serverPagination
-    ? Math.floor(serverPagination.offset / serverPagination.limit) + 1
-    : Math.min(page, pageCount);
-  const visible = serverPagination
-    ? sorted
-    : sorted.slice((current - 1) * pageSize, current * pageSize);
+    : serverPagination
+      ? Math.max(
+          1,
+          serverPagination.total !== null
+            ? Math.ceil(serverPagination.total / serverPagination.limit)
+            : serverPagination.offset / serverPagination.limit + 2
+        )
+      : Math.max(1, Math.ceil(sorted.length / pageSize));
+  const current = server
+    ? page
+    : serverPagination
+      ? Math.floor(serverPagination.offset / serverPagination.limit) + 1
+      : Math.min(page, pageCount);
+  const visible =
+    serverPagination || server
+      ? sorted
+      : sorted.slice((current - 1) * pageSize, current * pageSize);
 
   const goToPage = (next: number) => {
     if (serverPagination) {
@@ -319,7 +347,10 @@ export default function DataTable<T>({
         emptyTitle={emptyTitle ?? labels.empty}
         emptyMessage={emptyMessage}
       >
-        <div className="overflow-x-auto">
+        <div
+          className={`overflow-x-auto transition-opacity ${server?.fetching ? 'opacity-60' : ''}`}
+          aria-busy={server?.fetching || undefined}
+        >
           <table className="w-full text-left text-sm">
             <thead className="text-xs uppercase tracking-wide text-neutral-400">
               <tr>
@@ -342,8 +373,9 @@ export default function DataTable<T>({
                 )}
                 {columns.map((c) => {
                   const isSorted = sort === c.key;
-                  const canSort =
-                    !serverPagination && c.sortable !== false && !!c.value;
+                  const canSort = server
+                    ? c.sortable === true
+                    : !serverPagination && c.sortable !== false && !!c.value;
                   return (
                     <Th
                       key={c.key}
