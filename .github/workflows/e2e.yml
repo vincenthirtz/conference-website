@@ -70,8 +70,10 @@ jobs:
       - name: Relever l'URL et les clés de l'instance
         id: sb
         run: |
-          # `supabase status -o env` rend des KEY="value" directement utilisables.
-          supabase status -o env >> "$GITHUB_ENV"
+          # `supabase status -o env` rend des KEY="value" ; $GITHUB_ENV ne retire
+          # PAS les guillemets — ils finiraient DANS la valeur, et supabase-js
+          # rejetterait `"http://127.0.0.1:54321"` (« Invalid supabaseUrl »).
+          supabase status -o env | sed -E 's/^([A-Za-z_][A-Za-z0-9_]*)="(.*)"$/\1=\2/' >> "$GITHUB_ENV"
 
       - name: Installer les dépendances
         run: npm ci
