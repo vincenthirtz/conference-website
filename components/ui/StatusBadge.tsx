@@ -16,6 +16,9 @@ export default function StatusBadge({ status, size = 'sm' }: StatusBadgeProps) {
 
   return (
     <span
+      // Repère de style : dans l'admin, styles/admin-ruban.css en fait une
+      // puce Le Ruban (rectangulaire, capitales étroites) ; ailleurs, rien.
+      data-chip
       className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium border ${textSize} ${cfg.bg}`}
     >
       <span className={`${dotSize} rounded-full ${cfg.dot}`} />

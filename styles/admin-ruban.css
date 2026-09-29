@@ -1,0 +1,343 @@
+/* ─────────────────────────────────────────────────────────────────────────
+ * styles/admin-ruban.css — l'espace admin en « Le Ruban »
+ *
+ * Identité verrouillée le 2026-09-05 (canvas « Le Ruban », 28 planches) ;
+ * pose décidée le 2026-09-29 (docs/PLAN-industrialisation-admin.md, L12).
+ * Les valeurs ci-dessous sont celles de la planche « Du dessin au code »,
+ * recopiées telles quelles — aucune n'est estimée.
+ *
+ * PORTÉE : uniquement quand la page porte un `[data-surface="admin"]`
+ * (posé par pages/_app.tsx sur les routes /admin). `:root:has(…)` et non le
+ * seul conteneur : les modales et menus rendus en portail, hors du conteneur,
+ * doivent voir les mêmes jetons. Le site public ne bouge pas.
+ *
+ * COMPROMIS ASSUMÉ (validé le 2026-09-29) : la planche demande de cesser de
+ * détourner les rampes Tailwind. Pour que les 133 écrans changent d'un coup,
+ * l'admin redéfinit ici ses gris (→ encre) et ses violets (→ orchidée). Un
+ * écran migré sur ses archétypes (lots L15–L20) passe aux jetons nommés
+ * (`var(--s1)`, `var(--or)`…) et n'a plus besoin de ce pont.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+:root:has([data-surface="admin"]) {
+  color-scheme: dark;
+
+  /* Encre — neutre teinté à la teinte du violet du logo (h 316) */
+  --ink-1000: #030104;
+  --ink-975: #07030a;
+  --ink-950: #100812;
+  --ink-900: #1d1520;
+  --ink-800: #2f2732;
+  --ink-700: #453d48;
+  --ink-600: #5f5763;
+  --ink-500: #807984;
+  --ink-400: #a39ba6;
+  --ink-300: #c7bfca;
+  --ink-200: #e2dbe5;
+  --ink-100: #f4edf7;
+  --ink-50: #fdf8ff;
+  /* Orchidée — violet du logo */
+  --or-100: #f6e1ff;
+  --or-200: #eec4ff;
+  --or-300: #dea3f6;
+  --or-400: #ca85e6;
+  --or: #b467d1;
+  --or-600: #9e4dbb;
+  --or-700: #81309d;
+  --or-800: #63157c;
+  --or-900: #47005c;
+  /* Feuille — vert du logo */
+  --lf-100: #d4f5c9;
+  --lf-200: #b3e7a3;
+  --lf-300: #8ed377;
+  --lf: #7fca65;
+  --lf-500: #4ca722;
+  --lf-600: #368c00;
+  --lf-700: #286e00;
+  --lf-800: #1b5100;
+  --lf-900: #0f3700;
+  /* Ardoise du logo : LE TRAIT, jamais un aplat ni du texte */
+  --sl-200-rgb: 194, 196, 201;
+  --slate: #4b4c50;
+  /* Surfaces */
+  --canvas: #07030a;
+  --s1: #100812;
+  --s2: #1d1520;
+  --s3: #2f2732;
+  --line: rgba(var(--sl-200-rgb), 0.12);
+  --line2: rgba(var(--sl-200-rgb), 0.2);
+  --line-strong: var(--slate);
+  /* Texte — quatre niveaux, tous ≥ 4,8:1 */
+  --t1: #f4edf7;
+  --t2: #c7bfca;
+  --t3: #a39ba6;
+  --t4: #807984;
+  /* Sémantique — découplée de la marque */
+  --ok: #30d07e;
+  --warn: #f5a524;
+  --err: #ff6b6b;
+  /* Forme */
+  --r-ctrl: 4px;
+  --r-card: 14px;
+  --sh1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --sh2:
+    0 10px 28px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(194, 196, 201, 0.08);
+  --sh3:
+    0 28px 64px -24px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(194, 196, 201, 0.1);
+  /* La SEULE lueur de la plateforme : l'état EN DIRECT. */
+  --glow-live:
+    0 0 0 1px rgba(127, 202, 101, 0.55), 0 0 26px -6px rgba(127, 202, 101, 0.6);
+  --fd:
+    var(--font-archivo, "Archivo"), "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  --fu:
+    var(--font-instrument, "Instrument Sans"), ui-sans-serif, system-ui,
+    "Helvetica Neue", Arial, sans-serif;
+  /* Coquille (features/admin/_shared/shell) */
+  --admin-sidebar-w: 236px;
+
+  /* ── Pont Tailwind (cf. COMPROMIS en tête) ─────────────────────────── */
+  /* Gris de structure → encre, pas pour pas. */
+  --color-neutral-50: var(--ink-50);
+  --color-neutral-100: var(--ink-100);
+  --color-neutral-200: var(--ink-200);
+  --color-neutral-300: var(--ink-300);
+  --color-neutral-400: var(--ink-400);
+  --color-neutral-500: var(--ink-500);
+  --color-neutral-600: var(--ink-600);
+  --color-neutral-700: var(--ink-700);
+  --color-neutral-800: var(--ink-800);
+  --color-neutral-900: var(--ink-900);
+  --color-neutral-950: var(--ink-950);
+  --color-gray-50: var(--ink-50);
+  --color-gray-100: var(--ink-100);
+  --color-gray-200: var(--ink-200);
+  --color-gray-300: var(--ink-300);
+  --color-gray-400: var(--ink-400);
+  --color-gray-500: var(--ink-500);
+  --color-gray-600: var(--ink-600);
+  --color-gray-700: var(--ink-700);
+  --color-gray-800: var(--ink-800);
+  --color-gray-900: var(--ink-900);
+  --color-gray-950: var(--ink-950);
+  --color-zinc-400: var(--ink-400);
+  --color-zinc-500: var(--ink-500);
+  --color-zinc-700: var(--ink-700);
+  --color-zinc-800: var(--ink-800);
+  --color-zinc-900: var(--ink-900);
+  --color-slate-400: var(--ink-400);
+  --color-slate-500: var(--ink-500);
+  --color-slate-700: var(--ink-700);
+  --color-slate-800: var(--ink-800);
+  --color-slate-900: var(--ink-900);
+  /* Violets (déjà détournés vers un violet ESTIMÉ) → orchidée EXACTE. */
+  --color-purple-50: var(--or-100);
+  --color-purple-100: var(--or-100);
+  --color-purple-200: var(--or-200);
+  --color-purple-300: var(--or-300);
+  --color-purple-400: var(--or-400);
+  --color-purple-500: var(--or);
+  --color-purple-600: var(--or-600);
+  --color-purple-700: var(--or-700);
+  --color-purple-800: var(--or-800);
+  --color-purple-900: var(--or-900);
+  --color-purple-950: var(--or-900);
+  --color-violet-50: var(--or-100);
+  --color-violet-100: var(--or-100);
+  --color-violet-200: var(--or-200);
+  --color-violet-300: var(--or-300);
+  --color-violet-400: var(--or-400);
+  --color-violet-500: var(--or);
+  --color-violet-600: var(--or-600);
+  --color-violet-700: var(--or-700);
+  --color-violet-800: var(--or-800);
+  --color-violet-900: var(--or-900);
+  --color-violet-950: var(--or-900);
+  --color-indigo-50: var(--or-100);
+  --color-indigo-100: var(--or-100);
+  --color-indigo-200: var(--or-200);
+  --color-indigo-300: var(--or-300);
+  --color-indigo-400: var(--or-400);
+  --color-indigo-500: var(--or);
+  --color-indigo-600: var(--or-600);
+  --color-indigo-700: var(--or-700);
+  --color-indigo-800: var(--or-800);
+  --color-indigo-900: var(--or-900);
+  --color-indigo-950: var(--or-900);
+  --color-blue-50: var(--or-100);
+  --color-blue-100: var(--or-100);
+  --color-blue-200: var(--or-200);
+  --color-blue-300: var(--or-300);
+  --color-blue-400: var(--or-400);
+  --color-blue-500: var(--or);
+  --color-blue-600: var(--or-600);
+  --color-blue-700: var(--or-700);
+  --color-blue-800: var(--or-800);
+  --color-blue-900: var(--or-900);
+  --color-blue-950: var(--or-900);
+  /* « Pas de jaune de marque » : les rampes détournées vers le jaune
+   * redeviennent orchidée dans l'admin. */
+  --color-pink-300: var(--or-300);
+  --color-pink-400: var(--or-400);
+  --color-pink-500: var(--or);
+  --color-pink-600: var(--or-600);
+  --color-rose-300: var(--or-300);
+  --color-rose-400: var(--or-400);
+  --color-rose-500: var(--or);
+  --color-rose-600: var(--or-600);
+  --color-fuchsia-300: var(--or-300);
+  --color-fuchsia-400: var(--or-400);
+  --color-fuchsia-500: var(--or);
+  --color-fuchsia-600: var(--or-600);
+  --color-orange-300: var(--or-300);
+  --color-orange-400: var(--or-400);
+  --color-orange-500: var(--or);
+  --color-orange-600: var(--or-600);
+  /* Froids (déjà détournés vers un vert estimé) → feuille exacte. */
+  --color-cyan-300: var(--lf-300);
+  --color-cyan-400: var(--lf);
+  --color-cyan-500: var(--lf-500);
+  --color-cyan-600: var(--lf-600);
+  --color-sky-300: var(--lf-300);
+  --color-sky-400: var(--lf);
+  --color-sky-500: var(--lf-500);
+  --color-sky-600: var(--lf-600);
+  --color-teal-300: var(--lf-300);
+  --color-teal-400: var(--lf);
+  --color-teal-500: var(--lf-500);
+  --color-teal-600: var(--lf-600);
+  /* Deux rayons : 4 px (contrôles), 14 px (cartes). */
+  --radius-sm: var(--r-ctrl);
+  --radius-md: var(--r-ctrl);
+  --radius-lg: var(--r-ctrl);
+  --radius-xl: var(--r-ctrl);
+  --radius-2xl: var(--r-card);
+  --radius-3xl: var(--r-card);
+}
+
+/* ── Le fond, le texte, la police ──────────────────────────────────────── */
+:root:has([data-surface="admin"]) body {
+  background: var(--canvas);
+}
+[data-surface="admin"] {
+  background: var(--canvas);
+  color: var(--t1);
+  font-family: var(--fu);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Typographie des écrans (planches Admin*) ──────────────────────────── */
+/* Titre de page : Archivo large, capitales. */
+[data-surface="admin"] main h1 {
+  font-family: var(--fd);
+  font-stretch: 125%;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.022em;
+  line-height: 0.95;
+  text-wrap: balance;
+}
+/* Titres de cartes et de sections. */
+[data-surface="admin"] main :is(h2, h3) {
+  font-family: var(--fd);
+  font-stretch: 112%;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+}
+/* En-têtes de table : « eyebrow » Archivo étroit, espacé. */
+[data-surface="admin"] main th {
+  font-family: var(--fd);
+  font-stretch: 75%;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+/* Boutons d'action : capitales, Archivo — la voix des planches (« OUVRIR LA
+ * RÉGIE », « EXPORTER EN CSV »). `data-case="normal"` pour s'en exclure. */
+[data-surface="admin"] main button:not([data-case="normal"]) {
+  font-family: var(--fd);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Onglets (components/ui/Tabs et toute barre en role="tab") : capitales,
+ * soulignement orchidée sous l'onglet actif. */
+[data-surface="admin"] [role="tablist"] {
+  border-bottom: 1px solid var(--line);
+}
+[data-surface="admin"] [role="tab"] {
+  font-family: var(--fd);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 0;
+}
+[data-surface="admin"] [role="tab"][aria-selected="true"] {
+  color: var(--t1);
+  box-shadow: inset 0 -2px 0 var(--or);
+}
+
+/* Puces d'état (components/ui/StatusBadge → `data-chip`) : rectangulaires,
+ * capitales étroites, comme « EN DIRECT » / « LITIGE » des planches. */
+[data-surface="admin"] [data-chip] {
+  border-radius: var(--r-ctrl);
+  font-family: var(--fd);
+  font-stretch: 75%;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Un en-tête triable est un bouton : il doit garder l'allure de l'en-tête
+ * (le reset de Tailwind remet les boutons en casse et police normales). */
+[data-surface="admin"] main th :is(button, a) {
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+}
+/* Chasse tabulaire OBLIGATOIRE sur toute donnée de compétition. */
+[data-surface="admin"] :is(table, output, time, [data-numeric], .font-mono) {
+  font-variant-numeric: tabular-nums;
+}
+[data-surface="admin"] main table td {
+  border-color: var(--line);
+}
+
+/* ── Contrôles ─────────────────────────────────────────────────────────── */
+[data-surface="admin"] :focus-visible {
+  outline: 2px solid var(--or-400);
+  outline-offset: 2px;
+}
+[data-surface="admin"] :is(input, select, textarea)::placeholder {
+  color: var(--t4);
+}
+[data-surface="admin"] input[type="checkbox"],
+[data-surface="admin"] input[type="radio"] {
+  accent-color: var(--or);
+}
+
+/* ── Défilement fin, discret ───────────────────────────────────────────── */
+[data-surface="admin"] * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-700) transparent;
+}
+
+/* ── Place de la barre latérale (features/admin/_shared/shell) ───────────────── */
+@media (min-width: 1024px) {
+  [data-surface="admin"] main#main-content {
+    padding-left: var(--admin-sidebar-w);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-surface="admin"] * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

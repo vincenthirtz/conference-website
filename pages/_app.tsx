@@ -2,7 +2,7 @@ import '@/styles/globals.css';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
 import { useEffect } from 'react';
-import { Work_Sans } from 'next/font/google';
+import { Archivo, Instrument_Sans, Work_Sans } from 'next/font/google';
 import Footer from '@/components/Footer/footer';
 import Navbar from '@/components/Navbar/navbar';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -22,6 +22,22 @@ const workSans = Work_Sans({
   weight: ['400', '500', '600', '700'],
   variable: '--font-sans',
   display: 'swap',
+});
+// Polices « Le Ruban » de l'espace admin (styles/admin-ruban.css). Pas de
+// préchargement : les pages publiques ne s'en servent pas encore, elles ne
+// doivent pas payer leur téléchargement.
+const archivo = Archivo({
+  subsets: ['latin'],
+  axes: ['wdth'],
+  variable: '--font-archivo',
+  display: 'swap',
+  preload: false,
+});
+const instrumentSans = Instrument_Sans({
+  subsets: ['latin'],
+  variable: '--font-instrument',
+  display: 'swap',
+  preload: false,
 });
 const BackToTopButton = dynamic(
   () => import('@/components/Buttons/BackToTopButton'),
@@ -119,7 +135,11 @@ function MyApp({ Component, pageProps, router, branding }: AppPropsWithSeo) {
                 monde — le contexte est inerte. */}
             <ActiveTeamProvider>
               <ToastProvider>
-                <div className={workSans.variable}>
+                <div
+                  className={`${workSans.variable} ${archivo.variable} ${instrumentSans.variable}`}
+                  // Espace admin en Le Ruban (styles/admin-ruban.css).
+                  data-surface={isAdmin ? 'admin' : undefined}
+                >
                   <Head>
                     <link key="manifest" rel="manifest" href={manifestHref} />
                     {isAppScope && (

@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Espace admin en « Le Ruban » — portée [data-surface="admin"] seulement. */
+@import "./admin-ruban.css";
 
 /* ─────────────────────────────────────────────────────────
  * Tailwind v4 theme — neon palette + animations exposed as
