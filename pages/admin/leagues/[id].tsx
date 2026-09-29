@@ -7,7 +7,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
-import Breadcrumb from '@/components/admin/Breadcrumb';
+import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 import EmptyState from '@/components/admin/EmptyState';
 import { Skeleton } from '@/components/admin/Skeleton';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -22,6 +22,18 @@ import type {
 
 import { logger } from '../../../utils/logger';
 import nsAdminLeagueDetail from '@/lib/i18n/locales/admin-fr/adminLeagueDetail';
+import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import {
+  LEAGUE_CARD,
+  LEAGUE_CARD_TITLE,
+  LEAGUE_ERROR,
+  LEAGUE_INPUT,
+  LEAGUE_LABEL,
+  LeagueStandingsTable,
+  LeagueStatusChip,
+  LinkedTournamentsList,
+} from '@/features/admin/leagues/ui/LeagueParts';
 
 export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
@@ -49,9 +61,8 @@ type AdminTournamentsResponse = {
   total: number | null;
 };
 
-const inputCls =
-  'w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500';
-const labelCls = 'block text-sm text-neutral-400 mb-1';
+const inputCls = LEAGUE_INPUT;
+const labelCls = LEAGUE_LABEL;
 
 /** Convertit une points_table objet en paires triées par rang numérique. */
 function tableToRows(
@@ -391,10 +402,12 @@ function AdminLeagueDetailPage(_props: StaffProps) {
 
   /* ---------------- Render ---------------- */
 
+  const WRAP = 'min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]';
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pt-header pb-12 space-y-4">
+      <div className={WRAP}>
+        <div className="max-w-5xl space-y-4">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-64 w-full" rounded="rounded-2xl" />
           <Skeleton className="h-40 w-full" rounded="rounded-2xl" />
@@ -405,25 +418,13 @@ function AdminLeagueDetailPage(_props: StaffProps) {
 
   if (errorMsg && !league) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          <Breadcrumb
-            items={[
-              { label: t.breadcrumbAdmin, href: '/admin' },
-              { label: t.breadcrumbLeagues, href: '/admin/leagues' },
-              { label: t.breadcrumbError },
-            ]}
-          />
-          <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-3">
-            <span className="flex-1">{errorMsg}</span>
-            <button
-              type="button"
-              onClick={() => load()}
-              className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
-            >
-              {t.retry}
-            </button>
-          </div>
+      <div className={WRAP}>
+        <AdminBreadcrumbs />
+        <div className={`flex items-center gap-3 ${LEAGUE_ERROR}`}>
+          <span className="flex-1">{errorMsg}</span>
+          <AdminButton variant="danger" size="xs" onClick={() => load()}>
+            {t.retry}
+          </AdminButton>
         </div>
       </div>
     );
@@ -437,43 +438,37 @@ function AdminLeagueDetailPage(_props: StaffProps) {
         </title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pt-header pb-12 space-y-6">
-          <Breadcrumb
-            items={[
-              { label: t.breadcrumbAdmin, href: '/admin' },
-              { label: t.breadcrumbLeagues, href: '/admin/leagues' },
-              { label: league?.name ?? t.leagueFallback },
-            ]}
+      <div className={WRAP}>
+        <AdminBreadcrumbs />
+        <div className="max-w-5xl space-y-6">
+          <EntityHeader
+            title={league?.name}
+            meta={league?.slug ? `/${league.slug}` : undefined}
+            status={
+              league && (
+                <LeagueStatusChip
+                  status={league.status}
+                  label={
+                    statusOptions.find((o) => o.value === league.status)
+                      ?.label ?? league.status
+                  }
+                />
+              )
+            }
+            actions={
+              <AdminButton variant="danger" size="sm" onClick={handleDelete}>
+                {t.deleteLeague}
+              </AdminButton>
+            }
           />
 
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              {league?.name}
-            </h1>
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="px-4 py-2.5 rounded-xl bg-red-900/40 hover:bg-red-800/60 border border-red-500/40 text-sm font-medium text-red-200 transition-colors"
-            >
-              {t.deleteLeague}
-            </button>
-          </div>
-
-          {errorMsg && (
-            <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
-              {errorMsg}
-            </div>
-          )}
+          {errorMsg && <div className={LEAGUE_ERROR}>{errorMsg}</div>}
 
           {/* --- Édition --- */}
-          <form
-            onSubmit={handleSave}
-            className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4"
-          >
-            <h2 className="text-lg font-semibold">{t.infoTitle}</h2>
+          <form onSubmit={handleSave} className={LEAGUE_CARD}>
+            <h2 className={LEAGUE_CARD_TITLE}>{t.infoTitle}</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <label className={labelCls} htmlFor="d-name">
                   {t.nameLabel}
@@ -512,7 +507,7 @@ function AdminLeagueDetailPage(_props: StaffProps) {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
               <div>
                 <label className={labelCls} htmlFor="d-game">
                   {t.gameLabel}
@@ -573,7 +568,9 @@ function AdminLeagueDetailPage(_props: StaffProps) {
               <label className={labelCls}>{t.pointsLabel}</label>
               <div className="space-y-2">
                 {pointsRows.length === 0 && (
-                  <p className="text-sm text-neutral-500">{t.noPointsRows}</p>
+                  <p className="text-sm text-[var(--t3,#a39ba6)]">
+                    {t.noPointsRows}
+                  </p>
                 )}
                 {pointsRows.map((row, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -581,47 +578,39 @@ function AdminLeagueDetailPage(_props: StaffProps) {
                       type="text"
                       inputMode="numeric"
                       aria-label={format(t.rankAria, { n: i + 1 })}
-                      className={`${inputCls} w-24 font-mono`}
+                      className={`${inputCls} !w-24 font-mono`}
                       value={row.rank}
                       onChange={(e) =>
                         updatePointRow(i, 'rank', e.target.value)
                       }
                       placeholder={t.rankPlaceholder}
                     />
-                    <span className="text-neutral-500">→</span>
+                    <span className="text-[var(--t4,#807984)]">→</span>
                     <input
                       type="number"
                       aria-label={format(t.rankPointsAria, { n: i + 1 })}
-                      className={`${inputCls} w-32`}
+                      className={`${inputCls} !w-32`}
                       value={row.points}
                       onChange={(e) =>
                         updatePointRow(i, 'points', e.target.value)
                       }
                       placeholder={t.pointsPlaceholder}
                     />
-                    <button
-                      type="button"
-                      onClick={() => removePointRow(i)}
-                      className="px-3 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-xs transition-colors"
-                    >
+                    <AdminButton size="xs" onClick={() => removePointRow(i)}>
                       {t.removeRow}
-                    </button>
+                    </AdminButton>
                   </div>
                 ))}
               </div>
-              <button
-                type="button"
-                onClick={addPointRow}
-                className="mt-2 px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-xs font-medium transition-colors"
-              >
+              <AdminButton size="xs" className="mt-2" onClick={addPointRow}>
                 {t.addRow}
-              </button>
+              </AdminButton>
             </div>
 
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--t2,#c7bfca)]">
               <input
                 type="checkbox"
-                className="h-4 w-4 rounded border-neutral-600 bg-neutral-900"
+                className="h-4 w-4"
                 checked={isPublic}
                 onChange={(e) => setIsPublic(e.target.checked)}
               />
@@ -629,27 +618,21 @@ function AdminLeagueDetailPage(_props: StaffProps) {
             </label>
 
             <div className="pt-2">
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
-              >
+              <AdminButton variant="primary" type="submit" disabled={saving}>
                 {saving ? t.saving : t.save}
-              </button>
+              </AdminButton>
             </div>
           </form>
 
           {/* --- Tournois liés --- */}
-          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold">
-              {t.linkedTournamentsTitle}
-            </h2>
+          <section className={LEAGUE_CARD}>
+            <h2 className={LEAGUE_CARD_TITLE}>{t.linkedTournamentsTitle}</h2>
 
             <form
               onSubmit={handleLink}
               className="flex flex-wrap items-end gap-3"
             >
-              <div className="flex-1 min-w-[220px]">
+              <div className="min-w-[220px] flex-1">
                 <label className={labelCls} htmlFor="link-tournament">
                   {t.tournamentLabel}
                 </label>
@@ -682,13 +665,13 @@ function AdminLeagueDetailPage(_props: StaffProps) {
                   onChange={(e) => setLinkWeight(e.target.value)}
                 />
               </div>
-              <button
+              <AdminButton
+                variant="secondary"
                 type="submit"
                 disabled={!selectedTournament || linking}
-                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {linking ? t.linking : t.link}
-              </button>
+              </AdminButton>
             </form>
 
             {tournaments.length === 0 ? (
@@ -697,64 +680,26 @@ function AdminLeagueDetailPage(_props: StaffProps) {
                 description={t.emptyTournamentsDescription}
               />
             ) : (
-              <div className="divide-y divide-neutral-700/50 border border-neutral-700/50 rounded-xl overflow-hidden">
-                {tournaments.map((tm) => (
-                  <div
-                    key={tm.id}
-                    className="flex items-center gap-3 p-3 hover:bg-neutral-700/20 transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium truncate">
-                        {tm.name ?? tm.id}
-                      </span>
-                      {tm.slug && (
-                        <span className="ml-2 font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
-                          /{tm.slug}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-sm text-neutral-400">
-                      {format(t.weightPrefix, { weight: tm.weight })}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleUnlink(tm)}
-                      className="px-3 py-1.5 rounded-lg bg-red-900/40 hover:bg-red-800/60 border border-red-500/40 text-xs font-medium text-red-200 transition-colors"
-                    >
-                      {t.unlink}
-                    </button>
-                  </div>
-                ))}
-              </div>
+              <LinkedTournamentsList
+                tournaments={tournaments}
+                onUnlink={handleUnlink}
+                t={t}
+              />
             )}
           </section>
 
           {/* --- Standings --- */}
-          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
+          <section className={LEAGUE_CARD}>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">{t.standingsTitle}</h2>
-              <button
-                type="button"
+              <h2 className={LEAGUE_CARD_TITLE}>{t.standingsTitle}</h2>
+              <AdminButton
+                variant="secondary"
+                size="sm"
                 onClick={handleRecompute}
                 disabled={recomputing}
-                className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
                 {recomputing ? t.recomputing : t.recompute}
-              </button>
+              </AdminButton>
             </div>
 
             {standings.length === 0 ? (
@@ -763,55 +708,14 @@ function AdminLeagueDetailPage(_props: StaffProps) {
                 description={t.emptyStandingsDescription}
               />
             ) : (
-              <div className="overflow-x-auto border border-neutral-700/50 rounded-xl">
-                <table className="w-full text-sm">
-                  <thead className="bg-neutral-900/50 text-neutral-400">
-                    <tr>
-                      <th scope="col" className="text-left px-4 py-2.5 w-16">
-                        {t.thRank}
-                      </th>
-                      <th scope="col" className="text-left px-4 py-2.5">
-                        {t.thTeam}
-                      </th>
-                      <th scope="col" className="text-right px-4 py-2.5">
-                        {t.thPoints}
-                      </th>
-                      <th scope="col" className="text-right px-4 py-2.5">
-                        {t.thTournaments}
-                      </th>
-                      <th scope="col" className="text-right px-4 py-2.5">
-                        {t.thBestRank}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-700/50">
-                    {standings.map((s) => (
-                      <tr key={s.teamId} className="hover:bg-neutral-700/20">
-                        <td className="px-4 py-2.5 font-semibold">{s.rank}</td>
-                        <td className="px-4 py-2.5">
-                          {s.teamName ?? s.teamId}
-                        </td>
-                        <td className="px-4 py-2.5 text-right font-medium">
-                          {s.points}
-                        </td>
-                        <td className="px-4 py-2.5 text-right text-neutral-400">
-                          {s.tournamentsCounted}
-                        </td>
-                        <td className="px-4 py-2.5 text-right text-neutral-400">
-                          {s.bestRank ?? '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <LeagueStandingsTable standings={standings} t={t} />
             )}
           </section>
 
           <div>
             <Link
               href="/admin/leagues"
-              className="text-sm text-neutral-400 hover:text-white transition-colors"
+              className="text-sm text-[var(--t3,#a39ba6)] transition-colors hover:text-[var(--t1,#f4edf7)]"
             >
               {t.backToLeagues}
             </Link>

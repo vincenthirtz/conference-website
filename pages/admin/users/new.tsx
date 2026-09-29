@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import Button from '@/components/Buttons/button';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
@@ -21,9 +19,16 @@ import {
 
 import { logger } from '../../../utils/logger';
 import nsAdminUsersNew from '@/lib/i18n/locales/admin-fr/adminUsersNew';
-import TeamAssignmentSummary, {
-  type AddMemberResponse,
-} from '@/components/admin/users/TeamAssignmentSummary';
+import type { AddMemberResponse } from '@/components/admin/users/TeamAssignmentSummary';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import { FicheLayout, FicheSection } from '@/features/admin/_shared/ui/Fiche';
+import {
+  CreateUserInfoAside,
+  CreateUserSuccess,
+} from '@/features/admin/users/ui/CreateUserBlocks';
 
 type Dict = typeof nsAdminUsersNew.fr;
 
@@ -73,7 +78,12 @@ const ERROR_CODE_KEYS: Record<string, keyof Dict> = {
 const MIN_PASSWORD_LENGTH = 6;
 
 const INPUT_CLASS =
-  'w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500';
+  'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2.5 text-sm text-[var(--t1,#f4edf7)] focus:outline-none focus:ring-2 focus:ring-[var(--or,#b467d1)]';
+const LABEL_CLASS = 'mb-1 block text-sm text-[var(--t3,#a39ba6)]';
+const HELP_CLASS = 'mt-1 text-xs text-[var(--t4,#807984)]';
+const REQUIRED_CLASS = 'text-[var(--err,#ff6b6b)]';
+const SECTION_CLASS = 'mb-4 text-[15px] font-semibold text-[var(--t1,#f4edf7)]';
+const CHECKBOX_CLASS = 'h-4 w-4 accent-[var(--lf,#7fca65)]';
 
 function roleLabel(t: Dict, role: string) {
   switch (role) {
@@ -331,236 +341,101 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
         <title>{t.headTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  {t.heading}
-                </h1>
-                <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
-              </div>
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <AdminPageHeader
+          title={t.heading}
+          subtitle={t.subtitle}
+          actions={
+            <AdminButtonLink href="/admin/users/manage" size="sm">
+              {t.backToList}
+            </AdminButtonLink>
+          }
+        />
 
-              <Link
-                href="/admin/users/manage"
-                className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors flex items-center gap-2"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-                {t.backToList}
-              </Link>
-            </div>
+        {success && (
+          <CreateUserSuccess
+            user={success.user}
+            teamAssignment={success.teamAssignment}
+            teamName={selectedTeamName}
+            teamRoles={teamRoles}
+            staffRoleLabel={
+              success.user.staffRoleGranted
+                ? roleLabel(t, success.user.staffRoleGranted)
+                : null
+            }
+            resending={resending}
+            onResend={() => handleResendCredentials(success.user.userId)}
+            onCreateAnother={() => {
+              setSuccess(null);
+              emailInputRef.current?.focus();
+            }}
+          />
+        )}
+
+        {errorMsg && (
+          <div
+            role="alert"
+            className="mb-6 rounded-[var(--r-ctrl,4px)] border border-[rgba(255,107,107,.4)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-sm text-[#ffc2c2]"
+          >
+            {errorMsg}
           </div>
+        )}
 
-          {/* Success Message */}
-          {success && (
-            <div
-              role="status"
-              aria-live="polite"
-              className="mb-6 rounded-xl bg-emerald-900/40 border border-emerald-500/50 px-4 py-4"
-            >
-              <div className="flex items-start gap-3">
-                <svg
-                  className="w-6 h-6 text-emerald-400 flex-shrink-0 mt-0.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <div className="space-y-3 flex-1">
-                  <p className="font-semibold text-white">{t.successTitle}</p>
-                  <div className="text-sm text-neutral-300 space-y-1">
-                    <p>
-                      {t.userIdLabel}{' '}
-                      <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
-                        {success.user.userId}
-                      </span>
-                    </p>
-                    <p>
-                      {t.emailLabel}{' '}
-                      <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
-                        {success.user.email}
-                      </span>
-                    </p>
-                    {success.user.passwordSentByEmail ? (
-                      <p className="text-emerald-300 text-xs">
-                        {t.passwordSentByEmail}
-                      </p>
-                    ) : (
-                      <div className="rounded-lg bg-amber-900/30 border border-amber-500/40 px-3 py-2">
-                        <p className="text-amber-300 text-xs">
-                          {t.emailNotSent}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleResendCredentials(success.user.userId)
-                          }
-                          disabled={resending}
-                          className="mt-2 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {resending ? t.resending : t.resendCredentials}
-                        </button>
-                      </div>
-                    )}
-                    {success.user.staffRoleGranted ? (
-                      <p className="text-xs text-blue-300">
-                        {format(t.staffAccessGranted, {
-                          role: roleLabel(t, success.user.staffRoleGranted),
-                        })}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="flex flex-wrap gap-3 text-sm">
-                    <Link
-                      href={`/admin/users/${success.user.userId}/player-view`}
-                      className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
-                    >
-                      {t.openUserSpace}
-                    </Link>
-                    {success.teamAssignment && (
-                      <Link
-                        href={`/admin/teams/${success.teamAssignment.teamId}`}
-                        className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
-                      >
-                        {t.openTeam}
-                      </Link>
-                    )}
-                  </div>
-
-                  {success.teamAssignment && (
-                    <TeamAssignmentSummary
-                      assignment={success.teamAssignment}
-                      teamName={selectedTeamName}
-                      teamRoles={teamRoles}
-                    />
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSuccess(null);
-                      emailInputRef.current?.focus();
-                    }}
-                    className="mt-2 text-sm text-emerald-400 hover:text-emerald-300"
-                  >
-                    {t.createAnother}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Error Message */}
-          {errorMsg && (
-            <div
-              role="alert"
-              className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2"
-            >
-              <svg
-                className="w-5 h-5 text-red-400 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {errorMsg}
-            </div>
-          )}
-
-          <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-            {/* Form */}
-            <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+        <FicheLayout
+          main={
+            <FicheSection title={t.sectionLogin}>
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Informations de connexion */}
-                <div>
-                  <h2 className="font-semibold text-lg mb-4">
-                    {t.sectionLogin}
-                  </h2>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label
-                        htmlFor="new-user-email"
-                        className="block text-sm text-neutral-400 mb-1"
-                      >
-                        {t.emailField} <span className="text-red-400">*</span>
-                      </label>
-                      <input
-                        id="new-user-email"
-                        ref={emailInputRef}
-                        type="email"
-                        required
-                        autoComplete="off"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className={INPUT_CLASS}
-                        placeholder="player@email.tld"
-                      />
-                    </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label htmlFor="new-user-email" className={LABEL_CLASS}>
+                      {t.emailField} <span className={REQUIRED_CLASS}>*</span>
+                    </label>
+                    <input
+                      id="new-user-email"
+                      ref={emailInputRef}
+                      type="email"
+                      required
+                      autoComplete="off"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className={INPUT_CLASS}
+                      placeholder="player@email.tld"
+                    />
+                  </div>
 
-                    <div>
-                      <label
-                        htmlFor="new-user-password"
-                        className="block text-sm text-neutral-400 mb-1"
-                      >
-                        {t.passwordField}
-                      </label>
-                      {/* Champ volontairement en clair (l'admin dicte le mot
-                          de passe) : `autoComplete=off` empêche le navigateur
-                          d'y injecter les identifiants enregistrés. */}
-                      <input
-                        id="new-user-password"
-                        type="text"
-                        autoComplete="off"
-                        minLength={MIN_PASSWORD_LENGTH}
-                        aria-describedby="new-user-password-help"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className={INPUT_CLASS}
-                        placeholder={t.passwordPlaceholder}
-                      />
-                      <p
-                        id="new-user-password-help"
-                        className="text-xs text-neutral-500 mt-1"
-                      >
-                        {format(t.passwordHelp, { min: MIN_PASSWORD_LENGTH })}
-                      </p>
-                    </div>
+                  <div>
+                    <label htmlFor="new-user-password" className={LABEL_CLASS}>
+                      {t.passwordField}
+                    </label>
+                    {/* Champ volontairement en clair (l'admin dicte le mot
+                        de passe) : `autoComplete=off` empêche le navigateur
+                        d'y injecter les identifiants enregistrés. */}
+                    <input
+                      id="new-user-password"
+                      type="text"
+                      autoComplete="off"
+                      minLength={MIN_PASSWORD_LENGTH}
+                      aria-describedby="new-user-password-help"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className={INPUT_CLASS}
+                      placeholder={t.passwordPlaceholder}
+                    />
+                    <p id="new-user-password-help" className={HELP_CLASS}>
+                      {format(t.passwordHelp, { min: MIN_PASSWORD_LENGTH })}
+                    </p>
                   </div>
                 </div>
 
                 {/* Profil */}
-                <div>
-                  <h2 className="font-semibold text-lg mb-4">
-                    {t.sectionProfil}
-                  </h2>
+                <div className="border-t border-[var(--line,rgba(194,196,201,.12))] pt-6">
+                  <h2 className={SECTION_CLASS}>{t.sectionProfil}</h2>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label
                         htmlFor="new-user-display-name"
-                        className="block text-sm text-neutral-400 mb-1"
+                        className={LABEL_CLASS}
                       >
                         {t.displayNameField}
                       </label>
@@ -575,10 +450,7 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
                     </div>
 
                     <div>
-                      <label
-                        htmlFor="new-user-role"
-                        className="block text-sm text-neutral-400 mb-1"
-                      >
+                      <label htmlFor="new-user-role" className={LABEL_CLASS}>
                         {t.systemRoleField}
                       </label>
                       <select
@@ -601,7 +473,7 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
                       {grantsBackOfficeAccess && (
                         <p
                           id="new-user-role-warning"
-                          className="text-xs text-amber-300 mt-1"
+                          className="mt-1 text-xs text-[var(--warn,#f5a524)]"
                         >
                           {format(t.staffRoleWarning, {
                             role: roleLabel(t, role),
@@ -613,32 +485,34 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
                 </div>
 
                 {/* Team Assignment */}
-                <div className="border-t border-neutral-700/50 pt-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-semibold text-lg">
+                <div className="border-t border-[var(--line,rgba(194,196,201,.12))] pt-6">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-[15px] font-semibold text-[var(--t1,#f4edf7)]">
                       {t.sectionAttachTeam}
                     </h2>
-                    <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
+                    <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
                       <input
                         type="checkbox"
                         checked={assignToTeam}
                         onChange={(e) => setAssignToTeam(e.target.checked)}
-                        className="rounded border-neutral-500 bg-neutral-700 h-4 w-4"
+                        className={CHECKBOX_CLASS}
                       />
-                      <span className="text-neutral-300">{t.enable}</span>
+                      <span className="text-[var(--t2,#c7bfca)]">
+                        {t.enable}
+                      </span>
                     </label>
                   </div>
 
                   {assignToTeam && (
-                    <div className="space-y-4 bg-neutral-900/30 rounded-xl p-4 border border-neutral-700/50">
+                    <div className="space-y-4 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-4">
                       <div className="grid gap-4 md:grid-cols-2">
                         <div>
                           <label
                             htmlFor="new-user-team"
-                            className="block text-sm text-neutral-400 mb-1"
+                            className={LABEL_CLASS}
                           >
                             {t.teamField}{' '}
-                            <span className="text-red-400">*</span>
+                            <span className={REQUIRED_CLASS}>*</span>
                           </label>
                           <select
                             id="new-user-team"
@@ -659,13 +533,13 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
                           {teamsError && (
                             <p
                               role="alert"
-                              className="text-xs text-red-300 mt-1 flex items-center gap-2"
+                              className="mt-1 flex items-center gap-2 text-xs text-[var(--err,#ff6b6b)]"
                             >
                               {teamsError}
                               <button
                                 type="button"
                                 onClick={loadTeams}
-                                className="underline underline-offset-2 hover:text-red-200"
+                                className="underline underline-offset-2 hover:text-[var(--t1,#f4edf7)]"
                               >
                                 {t.retry}
                               </button>
@@ -676,11 +550,11 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
                         <div>
                           <label
                             htmlFor="new-user-battle-tag"
-                            className="block text-sm text-neutral-400 mb-1"
+                            className={LABEL_CLASS}
                           >
                             {t.battleTagField}{' '}
                             {roleRequiresBattleTag(teamRole) && (
-                              <span className="text-red-400">*</span>
+                              <span className={REQUIRED_CLASS}>*</span>
                             )}
                           </label>
                           <input
@@ -694,18 +568,18 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
                           />
                           <p
                             id="new-user-battle-tag-help"
-                            className="text-xs text-neutral-500 mt-1"
+                            className={HELP_CLASS}
                           >
                             {t.battleTagHelp}
                           </p>
                         </div>
                       </div>
 
-                      <div className="grid gap-4 md:grid-cols-2 items-end">
+                      <div className="grid items-end gap-4 md:grid-cols-2">
                         <div>
                           <label
                             htmlFor="new-user-team-role"
-                            className="block text-sm text-neutral-400 mb-1"
+                            className={LABEL_CLASS}
                           >
                             {t.teamRoleField}
                           </label>
@@ -723,14 +597,14 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
                           </select>
                         </div>
 
-                        <label className="inline-flex items-center gap-2 text-sm cursor-pointer pb-2.5">
+                        <label className="inline-flex cursor-pointer items-center gap-2 pb-2.5 text-sm">
                           <input
                             type="checkbox"
                             checked={setCaptain}
                             onChange={(e) => setSetCaptain(e.target.checked)}
-                            className="rounded border-neutral-500 bg-neutral-700 h-4 w-4"
+                            className={CHECKBOX_CLASS}
                           />
-                          <span className="text-neutral-300">
+                          <span className="text-[var(--t2,#c7bfca)]">
                             {t.setCaptain}
                           </span>
                         </label>
@@ -740,160 +614,28 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
                 </div>
 
                 {/* Actions */}
-                <div className="flex justify-between items-center pt-4 border-t border-neutral-700/50">
-                  <Button
-                    type="button"
-                    size="compact"
-                    className="px-4 py-2.5"
+                <div className="flex items-center justify-between border-t border-[var(--line,rgba(194,196,201,.12))] pt-4">
+                  <AdminButton
+                    size="sm"
                     onClick={() => router.push('/admin/users/manage')}
                     disabled={loading}
                   >
                     {t.cancel}
-                  </Button>
+                  </AdminButton>
 
-                  <Button
+                  <AdminButton
                     type="submit"
-                    size="compact"
+                    variant="primary"
                     disabled={loading}
-                    className="px-5 py-2.5 font-semibold bg-emerald-600 hover:bg-emerald-700"
                   >
                     {loading ? t.creating : t.submit}
-                  </Button>
+                  </AdminButton>
                 </div>
               </form>
-            </section>
-
-            {/* Info sidebar */}
-            <aside className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-              <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                <svg
-                  className="w-5 h-5 text-neutral-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                {t.infoTitle}
-              </h2>
-              <ul className="space-y-3 text-sm text-neutral-300">
-                <li className="flex items-start gap-2">
-                  <svg
-                    className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  {t.infoServiceRole}
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg
-                    className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  {t.infoEmailConfirmed}
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg
-                    className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  {t.infoPasswordGenerated}
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg
-                    className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  {t.infoStaffRole}
-                </li>
-              </ul>
-
-              {assignToTeam && (
-                <div className="mt-6 pt-4 border-t border-neutral-700/50">
-                  <h3 className="font-medium text-sm mb-3 text-neutral-200">
-                    {t.teamAttachTitle}
-                  </h3>
-                  <ul className="space-y-2 text-sm text-neutral-400">
-                    <li className="flex items-start gap-2">
-                      <svg
-                        className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      {t.teamInfoBattleTag}
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <svg
-                        className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      {t.teamInfoAddedMembers}
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <svg
-                        className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      {t.teamInfoCaptain}
-                    </li>
-                  </ul>
-                </div>
-              )}
-            </aside>
-          </div>
-        </div>
+            </FicheSection>
+          }
+          aside={<CreateUserInfoAside assignToTeam={assignToTeam} />}
+        />
       </div>
     </>
   );

@@ -6,12 +6,17 @@
 //
 // Sorti de la page, qui est gelée en taille (`adminFileSizeGuard`) : c'est ce
 // qui a permis d'y monter la barre d'onglets commune sans la faire grossir.
-// Rendu À L'IDENTIQUE — mêmes classes, même `data-testid`, mêmes libellés.
+// Passe « Le Ruban » (lot 5C) : AdminPageHeader, AdminButton, puce `live`
+// quand un run est à l'antenne. Mêmes `data-testid`, mêmes gestes, même ordre.
 
-import Link from 'next/link';
 import { useStaffSession } from '@/hooks/useStaffSession';
 import { useT } from '@/lib/i18n/useT';
 import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import Chip from '@/features/admin/_shared/ui/Chip';
 import nsAdminRegie from '@/lib/i18n/locales/fr/adminRegie';
 
 export type Connection =
@@ -27,16 +32,16 @@ function ConnectionIndicator({ connection }: { connection: Connection }) {
   const t = useT(nsAdminRegie);
   const dot =
     connection.level === 'online'
-      ? 'bg-emerald-400'
+      ? 'bg-[var(--ok,#30d07e)]'
       : connection.level === 'reconnecting'
-        ? 'bg-amber-400 animate-pulse'
-        : 'bg-red-500';
+        ? 'bg-[var(--warn,#f5a524)] animate-pulse'
+        : 'bg-[var(--err,#ff6b6b)]';
   const text =
     connection.level === 'online'
-      ? 'text-emerald-300'
+      ? 'text-[var(--ok,#30d07e)]'
       : connection.level === 'reconnecting'
-        ? 'text-amber-300'
-        : 'text-red-300';
+        ? 'text-[var(--warn,#f5a524)]'
+        : 'text-[var(--err,#ff6b6b)]';
   const label =
     connection.level === 'offline'
       ? t.statusOffline
@@ -53,7 +58,9 @@ function ConnectionIndicator({ connection }: { connection: Connection }) {
       data-testid="regie-connection"
     >
       <span aria-hidden className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
-      <span className="text-[11px] font-medium whitespace-nowrap">{label}</span>
+      <span className="whitespace-nowrap font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.12em] [font-stretch:75%]">
+        {label}
+      </span>
     </div>
   );
 }
@@ -84,48 +91,51 @@ export default function RegieHeader({
   return (
     <>
       <DiffusionTabsNav active="cockpit" />
-      <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-extrabold tracking-tight">
-              {tr.heading}
-            </h1>
+      <AdminPageHeader
+        title={tr.heading}
+        badge={
+          <>
+            {/* L'état en direct, seule lueur de la plateforme : lisible de
+                loin, avant même la pastille de connexion. */}
+            {liveRunId && (
+              <Chip tone="live" data-testid="regie-live-chip">
+                {tr.liveChip}
+              </Chip>
+            )}
             <ConnectionIndicator connection={connection} />
-          </div>
-          <p className="text-sm text-neutral-400 mt-1">{tr.subtitle}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {liveRunId && canOpenDirector && (
-            <Link
-              href={`/admin/events/${liveRunId}/director`}
-              className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
-            >
-              {tr.openDirector}
-            </Link>
-          )}
-          {canEndRun && (
-            <button
-              type="button"
-              onClick={onEndRun}
-              disabled={endingRun}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-900/20 hover:bg-red-900/40 border border-red-500/30 text-red-200 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              data-testid="regie-end-run"
-            >
-              {endingRun && (
-                <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-red-300/40 border-t-red-200 animate-spin" />
-              )}
-              {endingRun ? tr.ending : tr.endRun}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onSignOut}
-            className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
-          >
-            {tr.signOut}
-          </button>
-        </div>
-      </div>
+          </>
+        }
+        subtitle={tr.subtitle}
+        actions={
+          <>
+            {liveRunId && canOpenDirector && (
+              <AdminButtonLink
+                href={`/admin/events/${liveRunId}/director`}
+                size="sm"
+              >
+                {tr.openDirector}
+              </AdminButtonLink>
+            )}
+            {canEndRun && (
+              <AdminButton
+                variant="danger"
+                size="sm"
+                onClick={onEndRun}
+                disabled={endingRun}
+                data-testid="regie-end-run"
+              >
+                {endingRun && (
+                  <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                )}
+                {endingRun ? tr.ending : tr.endRun}
+              </AdminButton>
+            )}
+            <AdminButton size="sm" onClick={onSignOut}>
+              {tr.signOut}
+            </AdminButton>
+          </>
+        }
+      />
     </>
   );
 }

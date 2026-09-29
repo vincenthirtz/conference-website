@@ -38,7 +38,7 @@ const StandingRow = React.memo(function StandingRow({
     <tr
       onClick={() => onToggle(s.teamId)}
       className={`cursor-pointer transition-colors ${
-        selected ? 'bg-emerald-900/30' : 'hover:bg-neutral-700/50'
+        selected ? 'bg-[rgba(127,202,101,.1)]' : 'hover:bg-[var(--s2,#1d1520)]'
       }`}
     >
       <td className="px-3 py-2">
@@ -46,18 +46,27 @@ const StandingRow = React.memo(function StandingRow({
           type="checkbox"
           checked={selected}
           onChange={() => onToggle(s.teamId)}
-          className="rounded border-neutral-500 bg-neutral-700"
         />
       </td>
-      <td className="px-3 py-2 text-neutral-500 font-mono text-xs">{s.rank}</td>
-      <td className="px-3 py-2 font-medium">
+      <td className="px-3 py-2 font-mono text-xs text-[var(--t4,#807984)]">
+        {s.rank}
+      </td>
+      <td className="px-3 py-2 font-medium text-[var(--t1,#f4edf7)]">
         {s.teamName || s.teamId.slice(0, 8)}
       </td>
-      <td className="px-3 py-2 text-center text-emerald-400">{s.wins}</td>
-      <td className="px-3 py-2 text-center text-red-400">{s.losses}</td>
-      <td className="px-3 py-2 text-center text-neutral-400">{s.draws}</td>
-      <td className="px-3 py-2 text-right font-semibold">{s.score}</td>
-      <td className="px-3 py-2 text-right text-xs text-neutral-500">
+      <td className="px-3 py-2 text-center font-mono text-[var(--lf,#7fca65)]">
+        {s.wins}
+      </td>
+      <td className="px-3 py-2 text-center font-mono text-[var(--err,#ff6b6b)]">
+        {s.losses}
+      </td>
+      <td className="px-3 py-2 text-center font-mono text-[var(--t3,#a39ba6)]">
+        {s.draws}
+      </td>
+      <td className="px-3 py-2 text-right font-mono font-semibold">
+        {s.score}
+      </td>
+      <td className="px-3 py-2 text-right text-xs text-[var(--t3,#a39ba6)]">
         {tiebreakLabel ?? '—'}
       </td>
     </tr>
@@ -101,16 +110,15 @@ function AdvanceStandingsTable({
   t,
 }: Props) {
   return (
-    <div className="border border-neutral-700 rounded-xl overflow-hidden">
+    <div className="overflow-hidden rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))]">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-neutral-900/80 text-neutral-400 text-xs uppercase tracking-wider">
+          <tr className="bg-[var(--s2,#1d1520)]">
             <th scope="col" className="px-3 py-2 text-left w-10">
               <input
                 type="checkbox"
                 checked={allSelected}
                 onChange={onToggleAll}
-                className="rounded border-neutral-500 bg-neutral-700"
               />
             </th>
             <th scope="col" className="px-3 py-2 text-left">

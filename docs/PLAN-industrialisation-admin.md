@@ -621,6 +621,16 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       `matches/ui/MatchDetailBlocks.tsx`, `billing/ui/PlanCapabilities.tsx`) : édition du
       tournoi 773 → 624 lignes. Aucun appel réseau, `data-testid` ni confirmation perdu (diff
       comparé) ; cliquet inchangé.
+- [x] **Passe visuelle, lot 5 (12 écrans, 770–1 100 lignes)** : fiche, poules et seeding d'une
+      phase, ligue, création de tournoi ; création de compte, vue joueuse, fiche d'une demande,
+      grille de scrim ; régie, console live, Director (états live en `Chip` ton `live` et
+      `--glow-live`). Extractions présentationnelles dans `stages/ui`, `leagues/ui`,
+      `tournaments/ui`, `users/ui`, `demandes/ui`, `scrims/ui`, `diffusion/ui`, `events/ui`.
+      Pages > 800 lignes : 20 → 14 ; gels de taille abaissés (demande 923 → 443, création de
+      tournoi 801 → 573…) ; `useState` −4. Restent hors Ruban : composants partagés du Director
+      (TimelineBuilder, WaveBoard…), `StageTabsNav`, `Modal`, `RealtimeStatusBadge`.
+- [ ] Code mort laissé par le lot 5 : `stageTypeBadgeClass`, `runStatusBadgeClasses` /
+      `runStatusDotClasses`, clés i18n `breadcrumb*` des fiches phase et ligue.
 - [ ] À trancher : « Notifier les capitaines » (outils du tournoi) est un envoi en masse sans
       confirmation — désormais en rouge ; faut-il ajouter une confirmation ?
 - [ ] L'archivage d'un espace reste un bouton rouge (data-testid, confirm, blocage de l'espace

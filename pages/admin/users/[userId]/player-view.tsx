@@ -26,7 +26,6 @@ import Tabs from '@/components/ui/Tabs';
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import {
@@ -37,19 +36,27 @@ import {
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
-import {
-  formatDate,
-  getDemandeTypeLabels,
-  initials,
-  roleTone,
-} from '@/components/admin/users/playerViewDisplay';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Modal from '@/components/ui/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import EmptyState from '@/components/ui/EmptyState';
-import Badge from '@/components/ui/Badge';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import {
+  InspectionFrame,
+  MODAL_FIELD_CLASS,
+  MODAL_LABEL_CLASS,
+  ModalActions,
+  PanelHeading,
+  PendingDemandesList,
+  PlayerIdentitySummary,
+  PlayerProfileFacts,
+  PlayerViewBanner,
+  roleChipTone,
+} from '@/features/admin/users/ui/PlayerViewBlocks';
 import { lazyPanel } from '@/components/admin/lazyPanel';
-import { PlayerAreaProvider } from '@/components/player/PlayerAreaContext';
 // Les trois écrans de l'espace joueur sont montés UN À LA FOIS, et jamais sur
 // l'onglet par défaut ('profil') : les importer statiquement faisait de cette
 // page le plus gros bundle admin après /admin/logs. Chargement à l'ouverture
@@ -140,39 +147,7 @@ type PendingDemande = {
 };
 
 function RoleBadge({ t, role }: { t: Dict; role: string | null }) {
-  return <Badge tone={roleTone(role)}>{roleLabel(t, role)}</Badge>;
-}
-
-/**
- * Cadre d'inspection : le vrai écran joueur, rendu tel quel.
- *
- * Les écrans posent leur propre fond plein écran (c'est le décor de l'espace
- * joueur) ; on les enferme dans un conteneur pour que la page admin garde ses
- * marges et que la frontière « ici c'est SA page » reste visible.
- */
-function InspectionFrame({
-  t,
-  userId,
-  userName,
-  children,
-}: {
-  t: Dict;
-  userId: string;
-  userName: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section role="tabpanel">
-      <p className="mb-3 text-xs text-neutral-500">
-        {format(t.inspectionNotice, { name: userName })}
-      </p>
-      <div className="overflow-hidden rounded-2xl border border-neutral-700/50">
-        <PlayerAreaProvider subjectId={userId} subjectName={userName}>
-          {children}
-        </PlayerAreaProvider>
-      </div>
-    </section>
-  );
+  return <Chip tone={roleChipTone(role)}>{roleLabel(t, role)}</Chip>;
 }
 
 function PlayerViewPage({ staff }: { staff: StaffShape }) {
@@ -531,14 +506,14 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
         <title>{format(t.headTitle, { name: headerName })}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <div className="mx-auto w-full max-w-5xl">
           <AdminBreadcrumbs />
           {/* Back link + cross-link to the captain view */}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <Link
               href="/admin/users/manage"
-              className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 text-sm text-[var(--t3,#a39ba6)] transition-colors hover:text-[var(--t1,#f4edf7)]"
             >
               <svg
                 className="w-4 h-4"
@@ -556,115 +531,39 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
               {t.backLink}
             </Link>
             {userId && (
-              <Link
+              <AdminButtonLink
                 href={`/admin/users/${encodeURIComponent(userId)}/captain-view`}
-                className="inline-flex items-center gap-2 rounded-xl border border-neutral-700/60 bg-neutral-800/60 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-700/60 hover:text-white transition-colors"
+                size="sm"
               >
                 {t.viewCaptainLink}
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </Link>
+              </AdminButtonLink>
             )}
           </div>
 
           {/* Admin command-center banner */}
-          <div
-            role="status"
-            className="mb-8 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-5 py-4"
-          >
-            <div className="flex items-start gap-3">
-              <svg
-                className="w-6 h-6 text-emerald-300 flex-shrink-0 mt-0.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <div>
-                <h1 className="text-lg md:text-xl font-bold text-emerald-100">
-                  {format(t.bannerTitle, { name: headerName })}
-                </h1>
-                <p className="text-sm text-emerald-100/80 mt-1">
-                  {t.bannerDescBefore}
-                  <strong>{t.bannerDescStrong}</strong>
-                  {t.bannerDescAfter}
-                </p>
-              </div>
-            </div>
-          </div>
+          <PlayerViewBanner name={headerName} />
 
           {/* States */}
           {loading ? (
             <div className="space-y-4">
-              <div className="h-12 rounded-xl bg-neutral-800/60 animate-pulse" />
-              <div className="h-40 rounded-2xl bg-neutral-800/60 animate-pulse" />
-              <div className="h-40 rounded-2xl bg-neutral-800/60 animate-pulse" />
+              <div className="h-12 animate-pulse rounded-[var(--r-card,14px)] bg-[var(--s2,#1d1520)]" />
+              <div className="h-40 animate-pulse rounded-[var(--r-card,14px)] bg-[var(--s2,#1d1520)]" />
+              <div className="h-40 animate-pulse rounded-[var(--r-card,14px)] bg-[var(--s2,#1d1520)]" />
             </div>
           ) : notFound ? (
             <EmptyState title={t.notFoundTitle} description={t.notFoundDesc} />
           ) : error ? (
-            <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-5 py-4 text-sm text-red-100">
+            <div className="rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.4)] bg-[rgba(255,107,107,.08)] px-5 py-4 text-sm text-[#ffc2c2]">
               {error}
             </div>
           ) : profile && userId ? (
             <>
               {/* Identity summary — quick glance, visible on every tab */}
-              <div
-                aria-label={t.identitySummaryLabel}
-                className="mb-6 rounded-2xl border border-neutral-700/60 bg-neutral-800/40 p-4 sm:p-5"
-              >
-                <div className="flex flex-wrap items-center gap-4">
-                  {profile.user.avatarUrl ? (
-                    <Image
-                      src={profile.user.avatarUrl}
-                      alt=""
-                      width={48}
-                      height={48}
-                      className="w-12 h-12 rounded-xl object-cover border border-neutral-700"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center font-bold text-emerald-200">
-                      {initials(profile.user.displayName, profile.user.email)}
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold text-white truncate">
-                        {profile.user.displayName || t.noName}
-                      </span>
-                      <RoleBadge t={t} role={profile.user.role} />
-                    </div>
-                    {profile.team && (
-                      <p className="mt-1 text-sm text-neutral-400">
-                        {profile.team.name}
-                        {profile.team.role === 'captain' && (
-                          <Badge tone="emerald" className="ml-2">
-                            {t.teamRoleCaptain}
-                          </Badge>
-                        )}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <PlayerIdentitySummary
+                profile={profile}
+                roleBadge={<RoleBadge t={t} role={profile.user.role} />}
+                captainBadge={<Chip tone="ok">{t.teamRoleCaptain}</Chip>}
+              />
 
               {/* ONGLETS — la primitive partagée. La version précédente
                   déclarait `role="tablist"` et `role="tab"` sans fournir ce
@@ -681,9 +580,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                     tab_.key === 'profil' && pendingDemandes.length > 0 ? (
                       <span className="flex items-center gap-2">
                         {tab_.label}
-                        <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-amber-500 text-[10px] font-bold text-neutral-900">
-                          {pendingDemandes.length}
-                        </span>
+                        <Chip tone="warn">{pendingDemandes.length}</Chip>
                       </span>
                     ) : (
                       tab_.label
@@ -700,128 +597,86 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
               {tab === 'profil' && (
                 <section
                   role="tabpanel"
-                  className="rounded-2xl border border-neutral-700/50 bg-neutral-800/40 p-6"
+                  className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6"
                 >
-                  <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-                    <div>
-                      <dt className="text-xs uppercase tracking-wide text-neutral-500">
-                        {t.fieldEmail}
-                      </dt>
-                      <dd className="text-sm text-white break-all">
-                        {profile.user.email || '—'}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs uppercase tracking-wide text-neutral-500">
-                        {t.fieldRole}
-                      </dt>
-                      <dd className="mt-1">
-                        <RoleBadge t={t} role={profile.user.role} />
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs uppercase tracking-wide text-neutral-500">
-                        {t.fieldBattleTag}
-                      </dt>
-                      <dd className="text-sm text-white font-mono">
-                        {profile.user.battleTag || '—'}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs uppercase tracking-wide text-neutral-500">
-                        {t.fieldRegisteredOn}
-                      </dt>
-                      <dd className="text-sm text-white">
-                        {formatDate(profile.user.createdAt)}
-                      </dd>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <dt className="text-xs uppercase tracking-wide text-neutral-500">
-                        {t.fieldId}
-                      </dt>
-                      <dd className="text-xs text-neutral-400 font-mono break-all">
-                        {profile.user.id}
-                      </dd>
-                    </div>
-                  </dl>
+                  <PlayerProfileFacts
+                    profile={profile}
+                    roleBadge={<RoleBadge t={t} role={profile.user.role} />}
+                  />
 
                   {/* Actions staff */}
-                  <div className="mt-6 pt-6 border-t border-neutral-700/50">
-                    <h3 className="text-xs uppercase tracking-wide text-neutral-500 mb-3">
-                      {t.actionsTitle}
-                    </h3>
+                  <div className="mt-6 border-t border-[var(--line,rgba(194,196,201,.12))] pt-6">
+                    <PanelHeading>{t.actionsTitle}</PanelHeading>
                     <div className="flex flex-wrap gap-2">
                       {/* Lot A6 : l'historique se lit SUR la fiche. */}
                       {userId && (
                         <EntityHistoryButton
                           entityType="user"
                           entityId={userId}
-                          className="px-3 py-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-sm font-medium transition-colors"
+                          className="inline-flex h-[38px] items-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-[14px] text-[12px] font-bold uppercase text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]"
                         />
                       )}
 
-                      <button
-                        type="button"
+                      <AdminButton
+                        size="sm"
                         onClick={() => {
                           setNameDraft(profile.user.displayName || '');
                           setEditingName(true);
                         }}
-                        className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
                       >
                         {t.editDisplayName}
-                      </button>
+                      </AdminButton>
 
-                      <button
-                        type="button"
+                      <AdminButton
+                        size="sm"
+                        variant="secondary"
                         onClick={resendCredentials}
                         disabled={!profile.user.email || busy === 'resend'}
-                        className="px-3 py-2 rounded-xl bg-amber-600/80 hover:bg-amber-600 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {busy === 'resend' ? t.sending : t.resendCredentials}
-                      </button>
+                      </AdminButton>
 
                       {profile.team && (
                         <>
-                          <button
-                            type="button"
+                          <AdminButton
+                            size="sm"
                             onClick={() => {
                               setTagDraft(profile.user.battleTag || '');
                               setTagError(null);
                               setEditingTag(true);
                             }}
-                            className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
                           >
                             {t.editBattleTag}
-                          </button>
+                          </AdminButton>
 
                           {profile.team.role !== 'captain' && (
-                            <button
-                              type="button"
+                            <AdminButton
+                              size="sm"
+                              variant="secondary"
                               onClick={assignCaptain}
                               disabled={busy === 'captain'}
-                              className="px-3 py-2 rounded-xl bg-emerald-700/80 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               {busy === 'captain'
                                 ? t.assigning
                                 : t.assignCaptainBtn}
-                            </button>
+                            </AdminButton>
                           )}
                         </>
                       )}
 
-                      <button
-                        type="button"
+                      <AdminButton
+                        size="sm"
+                        variant="secondary"
                         onClick={openTransfer}
-                        className="px-3 py-2 rounded-xl bg-blue-700/80 hover:bg-blue-700 text-sm font-medium transition-colors"
                       >
                         {t.transferBtn}
-                      </button>
+                      </AdminButton>
                     </div>
 
                     {/* Role change — admin+ only, mirrors manage.tsx guards */}
                     {isAdmin && (
                       <div className="mt-4">
-                        <label className="block text-xs uppercase tracking-wide text-neutral-500 mb-1">
+                        <label className={MODAL_LABEL_CLASS}>
                           {t.fieldRole}
                         </label>
                         {(() => {
@@ -837,7 +692,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                               onChange={(e) => changeRole(e.target.value)}
                               disabled={busy === 'role' || targetLocked}
                               title={targetLocked ? t.errOwnerOnly : undefined}
-                              className="px-3 py-2 rounded-xl bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className={`${MODAL_FIELD_CLASS} sm:w-auto`}
                             >
                               {ROLE_OPTIONS.map((r) => {
                                 const grantable =
@@ -865,83 +720,32 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
 
                   {/* Demandes en attente — modération (geste staff, pas une
                       lecture de l'espace joueur). */}
-                  <div className="mt-6 pt-6 border-t border-neutral-700/50">
-                    <h3 className="text-xs uppercase tracking-wide text-neutral-500 mb-3">
-                      {t.pillPendingRequests}
-                    </h3>
-                    {pendingDemandes.length === 0 ? (
-                      <p className="text-sm text-neutral-500">
-                        {t.noDemandeDesc}
-                      </p>
-                    ) : (
-                      <div className="rounded-xl border border-neutral-700/50 divide-y divide-neutral-700/40">
-                        {pendingDemandes.map((d) => {
-                          const typeLabels = getDemandeTypeLabels(t);
-                          return (
-                            <div
-                              key={d.id}
-                              className="flex flex-wrap items-center justify-between gap-3 p-3"
-                            >
-                              <div className="min-w-0">
-                                <p className="text-sm text-white">
-                                  {typeLabels[d.type] || t.demandeTypeOther}
-                                  {d.team?.name && (
-                                    <span className="text-neutral-400">
-                                      {' · '}
-                                      {d.team.name}
-                                    </span>
-                                  )}
-                                </p>
-                                <p className="text-xs text-neutral-500">
-                                  {formatDate(d.created_at)}
-                                </p>
-                              </div>
-                              <div className="flex gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    processDemande(d.id, 'approved')
-                                  }
-                                  disabled={busy === `demande-${d.id}`}
-                                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold transition-colors disabled:opacity-50"
-                                >
-                                  {t.approve}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    processDemande(d.id, 'rejected')
-                                  }
-                                  disabled={busy === `demande-${d.id}`}
-                                  className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-semibold transition-colors disabled:opacity-50"
-                                >
-                                  {t.reject}
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                  <div className="mt-6 border-t border-[var(--line,rgba(194,196,201,.12))] pt-6">
+                    <PanelHeading>{t.pillPendingRequests}</PanelHeading>
+                    <PendingDemandesList
+                      demandes={pendingDemandes}
+                      busy={busy}
+                      onProcess={processDemande}
+                    />
                   </div>
                 </section>
               )}
 
               {/* Espace joueur — l'écran réel, en lecture seule */}
               {tab === 'espace' && (
-                <InspectionFrame t={t} userId={userId} userName={headerName}>
+                <InspectionFrame userId={userId} userName={headerName}>
                   <PlayerDashboardScreen />
                 </InspectionFrame>
               )}
 
               {tab === 'matchs' && (
-                <InspectionFrame t={t} userId={userId} userName={headerName}>
+                <InspectionFrame userId={userId} userName={headerName}>
                   <PlayerMatchesScreen />
                 </InspectionFrame>
               )}
 
               {tab === 'notifications' && (
-                <InspectionFrame t={t} userId={userId} userName={headerName}>
+                <InspectionFrame userId={userId} userName={headerName}>
                   <PlayerNotificationsScreen />
                 </InspectionFrame>
               )}
@@ -956,33 +760,21 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
         onClose={() => setEditingName(false)}
         title={t.editDisplayName}
         footer={
-          <>
-            <button
-              type="button"
-              onClick={() => setEditingName(false)}
-              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-            >
-              {t.cancel}
-            </button>
-            <button
-              type="button"
-              onClick={saveName}
-              disabled={busy === 'name'}
-              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {busy === 'name' ? t.saving : t.save}
-            </button>
-          </>
+          <ModalActions
+            cancelLabel={t.cancel}
+            confirmLabel={busy === 'name' ? t.saving : t.save}
+            onCancel={() => setEditingName(false)}
+            onConfirm={saveName}
+            disabled={busy === 'name'}
+          />
         }
       >
-        <label className="block text-sm text-neutral-400 mb-1">
-          {t.displayNameLabel}
-        </label>
+        <label className={MODAL_LABEL_CLASS}>{t.displayNameLabel}</label>
         <input
           type="text"
           value={nameDraft}
           onChange={(e) => setNameDraft(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+          className={MODAL_FIELD_CLASS}
           placeholder={t.displayNamePlaceholder}
         />
       </Modal>
@@ -993,38 +785,28 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
         onClose={() => setEditingTag(false)}
         title={t.editBattleTag}
         footer={
-          <>
-            <button
-              type="button"
-              onClick={() => setEditingTag(false)}
-              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-            >
-              {t.cancel}
-            </button>
-            <button
-              type="button"
-              onClick={saveBattleTag}
-              disabled={busy === 'tag'}
-              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {busy === 'tag' ? t.saving : t.save}
-            </button>
-          </>
+          <ModalActions
+            cancelLabel={t.cancel}
+            confirmLabel={busy === 'tag' ? t.saving : t.save}
+            onCancel={() => setEditingTag(false)}
+            onConfirm={saveBattleTag}
+            disabled={busy === 'tag'}
+          />
         }
       >
-        <label className="block text-sm text-neutral-400 mb-1">
-          {t.battleTagLabel}
-        </label>
+        <label className={MODAL_LABEL_CLASS}>{t.battleTagLabel}</label>
         <input
           type="text"
           value={tagDraft}
           onChange={(e) => setTagDraft(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+          className={MODAL_FIELD_CLASS}
           placeholder={t.battleTagPlaceholder}
         />
-        <p className="text-xs text-neutral-500 mt-1">{t.battleTagHelp}</p>
+        <p className="mt-1 text-xs text-[var(--t4,#807984)]">
+          {t.battleTagHelp}
+        </p>
         {tagError && (
-          <div className="mt-3 rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm text-red-200">
+          <div className="mt-3 rounded-[var(--r-ctrl,4px)] border border-[rgba(255,107,107,.4)] bg-[rgba(255,107,107,.08)] px-3 py-2 text-sm text-[#ffc2c2]">
             {tagError}
           </div>
         )}
@@ -1036,41 +818,33 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
         onClose={() => setTransferOpen(false)}
         title={t.transferModalTitle}
         footer={
-          <>
-            <button
-              type="button"
-              onClick={() => setTransferOpen(false)}
-              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-            >
-              {t.cancel}
-            </button>
-            <button
-              type="button"
-              onClick={transferTeam}
-              disabled={busy === 'transfer' || !transferTeamId}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {busy === 'transfer' ? t.transferring : t.transferConfirmBtn}
-            </button>
-          </>
+          <ModalActions
+            cancelLabel={t.cancel}
+            confirmLabel={
+              busy === 'transfer' ? t.transferring : t.transferConfirmBtn
+            }
+            onCancel={() => setTransferOpen(false)}
+            onConfirm={transferTeam}
+            disabled={busy === 'transfer' || !transferTeamId}
+          />
         }
       >
-        <label className="block text-sm text-neutral-400 mb-1">
-          {t.destTeamLabel}
-        </label>
+        <label className={MODAL_LABEL_CLASS}>{t.destTeamLabel}</label>
         {teamsLoading ? (
-          <div className="flex items-center gap-2 text-sm text-neutral-400 py-2">
-            <div className="w-4 h-4 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+          <div className="flex items-center gap-2 py-2 text-sm text-[var(--t3,#a39ba6)]">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--t1,#f4edf7)]" />
             {t.loadingTeams}
           </div>
         ) : teamOptions.length === 0 ? (
-          <p className="text-sm text-neutral-500 py-2">{t.noOtherTeam}</p>
+          <p className="py-2 text-sm text-[var(--t4,#807984)]">
+            {t.noOtherTeam}
+          </p>
         ) : (
           <select
             aria-label={t.destTeamLabel}
             value={transferTeamId}
             onChange={(e) => setTransferTeamId(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+            className={MODAL_FIELD_CLASS}
           >
             <option value="">{t.selectTeam}</option>
             {teamOptions.map((team) => (

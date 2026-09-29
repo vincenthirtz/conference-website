@@ -3,6 +3,12 @@ import React from 'react';
 import AdvancementRulesEditor from '@/components/admin/AdvancementRulesEditor';
 import type { AdvancementRules } from '@/components/admin/AdvancementRulesEditor';
 import type { StageType } from '@/types/admin';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import {
+  CARD,
+  CARD_TITLE,
+  MUTED,
+} from '@/features/admin/stages/ui/rubanClasses';
 import type { Dict } from './stageDisplay';
 
 type Props = {
@@ -30,24 +36,9 @@ function AdvancementRulesSection({
   t,
 }: Props) {
   return (
-    <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-      <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
-        <svg
-          className="w-5 h-5 text-neutral-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M13 7l5 5m0 0l-5 5m5-5H6"
-          />
-        </svg>
-        {t.advancementRulesTitle}
-      </h2>
-      <p className="text-xs text-neutral-500 mb-4">{t.advancementRulesDesc}</p>
+    <section className={CARD}>
+      <h2 className={`${CARD_TITLE} mb-2`}>{t.advancementRulesTitle}</h2>
+      <p className={`mb-4 text-xs ${MUTED}`}>{t.advancementRulesDesc}</p>
 
       <AdvancementRulesEditor
         value={value}
@@ -58,18 +49,14 @@ function AdvancementRulesSection({
       />
 
       <div className="mt-4 flex justify-end">
-        <button
-          type="button"
+        <AdminButton
+          variant="primary"
+          size="sm"
           disabled={saving}
           onClick={onSave}
-          className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-            saving
-              ? 'bg-blue-800 cursor-wait text-blue-200'
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
-          }`}
         >
           {saving ? t.advancementSaving : t.advancementSave}
-        </button>
+        </AdminButton>
       </div>
     </section>
   );

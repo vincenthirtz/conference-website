@@ -35,27 +35,23 @@ import type {
   ScrimPlanningAvailability,
 } from '@/types/admin';
 import nsAdminScrimPlanningsDetail from '@/lib/i18n/locales/admin-fr/adminScrimPlanningsDetail';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
+import { FicheSection } from '@/features/admin/_shared/ui/Fiche';
+import {
+  BestSlotsSection,
+  formatDate,
+  ParticipationSection,
+  PlanningConfigSummary,
+  ValidateHint,
+  ViewToggle,
+} from '@/features/admin/scrims/ui/PlanningDetailBlocks';
 
-function formatDate(d: string | null) {
-  if (!d) return '—';
-  try {
-    return new Date(d).toLocaleString('fr-FR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return d;
-  }
-}
-
-function minutesToTime(min: number): string {
-  const hh = String(Math.floor(min / 60)).padStart(2, '0');
-  const mm = String(min % 60).padStart(2, '0');
-  return `${hh}:${mm}`;
-}
+const ERROR_BOX =
+  'rounded-[var(--r-ctrl,4px)] border border-[rgba(255,107,107,.4)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-sm text-[#ffc2c2]';
 
 export const getServerSideProps = withStaffPage({ permission: 'manage_teams' });
 
@@ -426,16 +422,12 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
 
   if (loading || !planning || !config) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white">
-        <div className="max-w-3xl mx-auto px-4 pt-header pb-12">
-          {error ? (
-            <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
-              {error}
-            </div>
-          ) : (
-            <div className="text-neutral-400 text-sm">{t.loading}</div>
-          )}
-        </div>
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        {error ? (
+          <div className={ERROR_BOX}>{error}</div>
+        ) : (
+          <div className="text-sm text-[var(--t3,#a39ba6)]">{t.loading}</div>
+        )}
       </div>
     );
   }
@@ -449,360 +441,186 @@ function AdminScrimPlanningDetailPage(_props: StaffProps) {
           {format(t.headTitle, { title: planning.title || t.untitled })}
         </title>
       </Head>
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12 space-y-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <Link
-                href="/admin/scrims/plannings"
-                className="text-sm text-neutral-400 hover:text-white"
-              >
-                {t.backAll}
-              </Link>
-              <h1 className="text-3xl font-bold mt-1">
-                {planning.title || t.untitled}
-              </h1>
-              <p className="mt-1 text-sm text-neutral-300">
+      <div className="min-h-screen space-y-6 px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <div>
+          <Link
+            href="/admin/scrims/plannings"
+            className="mb-3 inline-block text-sm text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]"
+          >
+            {t.backAll}
+          </Link>
+          <EntityHeader
+            title={planning.title || t.untitled}
+            meta={
+              <>
                 {format(t.teamsVs, {
                   team1: planning.team1?.name || '—',
                   team2: planning.team2?.name || '—',
                 })}
-                {planning.game ? (
-                  <span className="ml-2 text-neutral-500">{planning.game}</span>
-                ) : null}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {planning.status === 'open' && (
-                <>
-                  <button
-                    onClick={() => extendHorizon()}
-                    disabled={busy}
-                    className="px-3 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 text-xs"
+                {planning.game ? ` · ${planning.game}` : null}
+              </>
+            }
+            actions={
+              <>
+                {planning.status === 'open' && (
+                  <>
+                    <AdminButton
+                      size="sm"
+                      onClick={() => extendHorizon()}
+                      disabled={busy}
+                    >
+                      {t.extendWeek}
+                    </AdminButton>
+                    <AdminButton
+                      size="sm"
+                      onClick={() => patchStatus('closed')}
+                      disabled={busy}
+                    >
+                      {t.actionClose}
+                    </AdminButton>
+                    <AdminButton
+                      size="sm"
+                      variant="danger"
+                      onClick={() => patchStatus('cancelled')}
+                      disabled={busy}
+                    >
+                      {t.actionCancel}
+                    </AdminButton>
+                  </>
+                )}
+                {planning.scrim_id && (
+                  <AdminButtonLink
+                    href={`/admin/scrims/${planning.scrim_id}`}
+                    size="sm"
+                    variant="secondary"
                   >
-                    {t.extendWeek}
-                  </button>
-                  <button
-                    onClick={() => patchStatus('closed')}
-                    disabled={busy}
-                    className="px-3 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 text-xs"
-                  >
-                    {t.actionClose}
-                  </button>
-                  <button
-                    onClick={() => patchStatus('cancelled')}
-                    disabled={busy}
-                    className="px-3 py-2 rounded-lg bg-red-700 hover:bg-red-600 disabled:opacity-50 text-xs"
-                  >
-                    {t.actionCancel}
-                  </button>
-                </>
-              )}
-              {planning.scrim_id && (
-                <Link
-                  href={`/admin/scrims/${planning.scrim_id}`}
-                  className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs"
-                >
-                  {t.openScrim}
-                </Link>
-              )}
-            </div>
+                    {t.openScrim}
+                  </AdminButtonLink>
+                )}
+              </>
+            }
+          />
+        </div>
+
+        {error && <div className={ERROR_BOX}>{error}</div>}
+
+        {planning.validated_slot && (
+          <div className="rounded-[var(--r-ctrl,4px)] border border-[rgba(127,202,101,.36)] bg-[rgba(127,202,101,.06)] px-4 py-3 text-sm text-[var(--lf-200,#b3e7a3)]">
+            {format(t.validatedBanner, {
+              when: formatDate(planning.validated_slot),
+            })}
+          </div>
+        )}
+
+        {/* Résumé de la configuration */}
+        <PlanningConfigSummary planning={planning} />
+
+        {/* Suivi de participation (P2-8) */}
+        <ParticipationSection participation={participation} />
+
+        {/* Meilleur créneau suggéré (P2-6) */}
+        {canValidate && (
+          <BestSlotsSection
+            ranked={ranked}
+            conflictsBySlot={conflictsBySlot}
+            busy={busy}
+            onValidate={(slot) => runValidate(planning.id, slot, false)}
+          />
+        )}
+
+        {/* Grille heatmap */}
+        <FicheSection
+          title={
+            <span className="flex items-center gap-2">
+              {t.gridHeading}
+              {requireStaff && <Chip tone="warn">{t.staffRequiredBadge}</Chip>}
+            </span>
+          }
+          aside={
+            <span className="flex flex-wrap gap-4 text-xs text-[var(--t3,#a39ba6)]">
+              <span>
+                {format(t.statValidatable, { count: validatableCount })}
+              </span>
+              <span>
+                {format(t.statFullOverlap, { count: fullOverlapCount })}
+              </span>
+            </span>
+          }
+        >
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <ValidateHint canValidate={canValidate} />
+            <ViewToggle view={view} onChange={setView} />
           </div>
 
-          {error && (
-            <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
-              {error}
-            </div>
+          {view === 'calendar' ? (
+            <AvailabilityCalendar
+              config={config}
+              mode="heatmap"
+              labels={calendarLabels}
+              accent="emerald"
+              heatmap={heatmap}
+              maxParties={3}
+              requireStaff={requireStaff}
+              onSlotClick={canValidate ? onSlotClick : undefined}
+              selectedSlot={null}
+              disabled={!canValidate || busy}
+            />
+          ) : (
+            <AvailabilityGrid
+              config={config}
+              mode="heatmap"
+              labels={gridLabels}
+              accent="emerald"
+              heatmap={heatmap}
+              maxParties={3}
+              requireStaff={requireStaff}
+              onSlotClick={canValidate ? onSlotClick : undefined}
+              disabled={!canValidate || busy}
+            />
           )}
+        </FicheSection>
 
-          {planning.validated_slot && (
-            <div className="rounded-xl bg-emerald-900/30 border border-emerald-500/40 px-4 py-3 text-sm text-emerald-200">
-              {format(t.validatedBanner, {
-                when: formatDate(planning.validated_slot),
-              })}
-            </div>
-          )}
-
-          {/* Résumé de la configuration */}
-          <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-4 py-3">
-              <div className="text-xs text-neutral-500">{t.cfgHorizon}</div>
-              <div className="text-sm font-medium">
-                {format(t.cfgHorizonValue, {
-                  start: planning.horizon_start,
-                  days: planning.horizon_days,
-                })}
-              </div>
-            </div>
-            <div className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-4 py-3">
-              <div className="text-xs text-neutral-500">{t.cfgBand}</div>
-              <div className="text-sm font-medium">
-                {minutesToTime(planning.day_start_min)} –{' '}
-                {minutesToTime(planning.day_end_min)}
-              </div>
-            </div>
-            <div className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-4 py-3">
-              <div className="text-xs text-neutral-500">{t.cfgSlot}</div>
-              <div className="text-sm font-medium">
-                {format(t.cfgSlotValue, { minutes: planning.slot_minutes })}
-              </div>
-            </div>
-            <div className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-4 py-3">
-              <div className="text-xs text-neutral-500">{t.cfgTimezone}</div>
-              <div className="text-sm font-medium">{planning.timezone}</div>
-            </div>
-          </section>
-
-          {/* Suivi de participation (P2-8) */}
-          <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold">{t.participationHeading}</h2>
-            <div className="flex flex-wrap gap-2">
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
-                  participation.team1
-                    ? 'bg-emerald-900/40 border border-emerald-500/40 text-emerald-200'
-                    : 'bg-neutral-800/70 border border-neutral-700 text-neutral-500'
-                }`}
-              >
-                {t.partyTeam1} {participation.team1 ? t.painted : t.notPainted}
-              </span>
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
-                  participation.team2
-                    ? 'bg-emerald-900/40 border border-emerald-500/40 text-emerald-200'
-                    : 'bg-neutral-800/70 border border-neutral-700 text-neutral-500'
-                }`}
-              >
-                {t.partyTeam2} {participation.team2 ? t.painted : t.notPainted}
-              </span>
-              <span
-                title={participation.staffNames.join(', ')}
-                className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
-                  participation.staffCount > 0
-                    ? 'bg-emerald-900/40 border border-emerald-500/40 text-emerald-200'
-                    : 'bg-neutral-800/70 border border-neutral-700 text-neutral-500'
-                }`}
-              >
-                {format(t.partyStaff, { count: participation.staffCount })}
-                {participation.staffCount > 0 && (
-                  <span className="truncate text-emerald-300/70">
-                    · {participation.staffNames.join(', ')}
-                  </span>
-                )}
-              </span>
-            </div>
-          </section>
-
-          {/* Meilleur créneau suggéré (P2-6) */}
-          {canValidate && ranked.length > 0 && (
-            <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold">{t.bestSlotHeading}</h2>
-                <button
-                  onClick={() =>
-                    runValidate(planning.id, ranked[0].slot, false)
-                  }
-                  disabled={busy}
-                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-semibold"
-                >
-                  {t.bestSlotValidateBest}
-                </button>
-              </div>
-              <ul className="space-y-2">
-                {ranked.slice(0, 3).map((r) => (
-                  <li
-                    key={r.slot}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-neutral-900/50 border border-neutral-700/50 px-4 py-3"
-                  >
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="text-sm font-medium">
-                        {formatDate(r.slot)}
-                      </span>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          r.full
-                            ? 'bg-emerald-900/40 border border-emerald-500/40 text-emerald-200'
-                            : 'bg-amber-900/30 border border-amber-500/40 text-amber-200'
-                        }`}
-                      >
-                        {r.full ? t.bestSlotFull : t.bestSlotPartial}
-                      </span>
-                      {(conflictsBySlot[r.slot]?.length ?? 0) > 0 && (
-                        <span
-                          className="inline-flex items-center gap-1 rounded-full bg-red-900/40 border border-red-500/50 px-2.5 py-0.5 text-xs font-medium text-red-200"
-                          title={t.conflictBadgeTitle}
-                        >
-                          <svg
-                            className="h-3 w-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            strokeWidth={2}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                          >
-                            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                            <line x1="12" y1="9" x2="12" y2="13" />
-                            <line x1="12" y1="17" x2="12.01" y2="17" />
-                          </svg>
-                          {format(t.conflictBadge, {
-                            count: conflictsBySlot[r.slot]!.length,
-                          })}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => runValidate(planning.id, r.slot, false)}
-                      disabled={busy}
-                      className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 text-xs"
-                    >
-                      {t.bestSlotValidate}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-          {canValidate && ranked.length === 0 && (
-            <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6">
-              <h2 className="text-lg font-semibold mb-2">
-                {t.bestSlotHeading}
-              </h2>
-              <p className="text-sm text-neutral-500">{t.noValidatableSlot}</p>
-            </section>
-          )}
-
-          {/* Grille heatmap */}
-          <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold">{t.gridHeading}</h2>
-                {requireStaff && (
-                  <span className="inline-flex items-center rounded-full bg-amber-900/30 border border-amber-500/40 px-2.5 py-0.5 text-xs font-medium text-amber-200">
-                    {t.staffRequiredBadge}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-4 text-xs text-neutral-400">
-                <span>
-                  {format(t.statValidatable, { count: validatableCount })}
-                </span>
-                <span>
-                  {format(t.statFullOverlap, { count: fullOverlapCount })}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              {canValidate ? (
-                // Callout de validation toujours visible : le swatch reproduit
-                // exactement le rendu d'une cellule planifiable (fond vert +
-                // soulignement) pour ancrer visuellement l'affordance de clic.
-                <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-100">
-                  <span
-                    className="relative inline-block h-4 w-5 flex-shrink-0 rounded border border-emerald-300/40 bg-emerald-500/30 after:absolute after:inset-x-1 after:bottom-0.5 after:h-0.5 after:rounded-full after:bg-emerald-200/80 after:content-['']"
-                    aria-hidden="true"
-                  />
-                  <span>{t.validateHint}</span>
-                </div>
-              ) : (
-                <p className="text-xs text-neutral-500">{t.readOnlyHint}</p>
-              )}
-              <div className="inline-flex rounded-xl border border-neutral-700 bg-neutral-900/50 p-1 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setView('calendar')}
-                  className={`rounded-lg px-3 py-1.5 font-medium transition ${
-                    view === 'calendar'
-                      ? 'bg-neutral-700 text-white'
-                      : 'text-neutral-400 hover:text-white'
-                  }`}
-                >
-                  {t.viewCalendar}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setView('grid')}
-                  className={`rounded-lg px-3 py-1.5 font-medium transition ${
-                    view === 'grid'
-                      ? 'bg-neutral-700 text-white'
-                      : 'text-neutral-400 hover:text-white'
-                  }`}
-                >
-                  {t.viewGrid}
-                </button>
-              </div>
-            </div>
-
-            {view === 'calendar' ? (
+        {/* Mes disponibilités staff (peinture perso, party='staff') */}
+        <FicheSection
+          title={t.myAvailHeading}
+          aside={
+            <Chip tone="brand">
+              {format(t.myAvailCount, { count: mySlots.length })}
+            </Chip>
+          }
+        >
+          <p className="-mt-3 mb-4 text-xs text-[var(--t3,#a39ba6)]">
+            {t.myAvailHelp}
+          </p>
+          {planning.status === 'open' ? (
+            <>
               <AvailabilityCalendar
                 config={config}
-                mode="heatmap"
+                mode="paint"
                 labels={calendarLabels}
-                accent="emerald"
-                heatmap={heatmap}
-                maxParties={3}
+                accent="purple"
+                value={mySlots}
+                onChange={setMySlots}
                 requireStaff={requireStaff}
-                onSlotClick={canValidate ? onSlotClick : undefined}
-                selectedSlot={null}
-                disabled={!canValidate || busy}
+                disabled={savingAvail}
               />
-            ) : (
-              <AvailabilityGrid
-                config={config}
-                mode="heatmap"
-                labels={gridLabels}
-                accent="emerald"
-                heatmap={heatmap}
-                maxParties={3}
-                requireStaff={requireStaff}
-                onSlotClick={canValidate ? onSlotClick : undefined}
-                disabled={!canValidate || busy}
-              />
-            )}
-          </section>
-
-          {/* Mes disponibilités staff (peinture perso, party='staff') */}
-          <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">{t.myAvailHeading}</h2>
-                <p className="mt-1 text-xs text-neutral-400">{t.myAvailHelp}</p>
-              </div>
-              <span className="inline-flex items-center rounded-full bg-purple-900/30 border border-purple-500/40 px-2.5 py-0.5 text-xs font-medium text-purple-200">
-                {format(t.myAvailCount, { count: mySlots.length })}
-              </span>
-            </div>
-
-            {planning.status === 'open' ? (
-              <>
-                <AvailabilityCalendar
-                  config={config}
-                  mode="paint"
-                  labels={calendarLabels}
-                  accent="purple"
-                  value={mySlots}
-                  onChange={setMySlots}
-                  requireStaff={requireStaff}
+              <div className="mt-4 flex justify-end">
+                <AdminButton
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => saveMyAvailability()}
                   disabled={savingAvail}
-                />
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => saveMyAvailability()}
-                    disabled={savingAvail}
-                    className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-xs font-semibold"
-                  >
-                    {savingAvail ? t.myAvailSaving : t.myAvailSave}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-neutral-500">{t.myAvailClosed}</p>
-            )}
-          </section>
-        </div>
+                >
+                  {savingAvail ? t.myAvailSaving : t.myAvailSave}
+                </AdminButton>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-[var(--t4,#807984)]">
+              {t.myAvailClosed}
+            </p>
+          )}
+        </FicheSection>
       </div>
       {dialog}
     </>

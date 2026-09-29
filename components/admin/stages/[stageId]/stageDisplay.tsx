@@ -2,7 +2,7 @@
 //
 // Helpers d'affichage PARTAGÉS par les sous-composants de la page
 // `pages/admin/stages/[stageId].tsx` (extraction perf P2-5). Purement
-// présentationnels / sans état : label, couleur, icône d'un type de phase,
+// présentationnels / sans état : label, icône d'un type de phase,
 // formatage de date. Déplacés hors de la page pour que chaque section
 // mémoïsée puisse les réutiliser sans dupliquer la logique.
 
@@ -44,25 +44,6 @@ export function stageTypeLabel(type: StageType | null, t: Dict) {
       return t.typeOther;
     default:
       return t.typeUndefined;
-  }
-}
-
-export function stageTypeColor(type: StageType | null) {
-  switch (type) {
-    case 'bracket':
-      return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
-    case 'swiss':
-      return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
-    case 'group':
-      return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-    case 'round_robin':
-      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
-    case 'showmatch':
-      return 'bg-pink-500/20 text-pink-300 border-pink-500/30';
-    case 'ffa':
-      return 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30';
-    default:
-      return 'bg-neutral-500/20 text-neutral-300 border-neutral-500/30';
   }
 }
 

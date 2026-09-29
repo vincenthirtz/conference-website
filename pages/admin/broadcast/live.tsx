@@ -23,6 +23,13 @@ import TwitchDrivePanels from '@/components/admin/broadcast/TwitchDrivePanels';
 import { useRouter } from 'next/router';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Switch from '@/components/ui/Switch';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import {
+  LiveHud,
+  LiveSection,
+  SceneButton,
+  liveInputClass,
+} from '@/features/admin/diffusion/ui/LiveConsoleBlocks';
 import type { StaffProps } from '@/types/admin';
 import type { EventRun, EventSegment } from '@/types/events';
 import nsAdminBroadcastLive from '@/lib/i18n/locales/admin-fr/adminBroadcastLive';
@@ -417,7 +424,7 @@ function BroadcastLivePage({ staff }: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
+      <div className="min-h-screen text-[var(--t1,#f4edf7)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-8">
           <LiveConsoleHeader
             heading={t.heading}
@@ -445,13 +452,13 @@ function BroadcastLivePage({ staff }: StaffProps) {
           <TwitchDrivePanels />
 
           {loading && !data && (
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-10 text-center text-neutral-400">
+            <div className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] px-4 py-10 text-center text-[var(--t3,#a39ba6)]">
               {t.loading}
             </div>
           )}
 
           {!loading && !data?.run && (
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 px-4 py-10 text-center text-sm text-neutral-500">
+            <div className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] px-4 py-10 text-center text-sm text-[var(--t3,#a39ba6)]">
               {t.noRunPrefix} <span className="font-mono">live</span>{' '}
               {t.noRunSuffix}
             </div>
@@ -459,127 +466,24 @@ function BroadcastLivePage({ staff }: StaffProps) {
 
           {data?.run && (
             <>
-              {/* HUD : on-air + segment + match */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-                <div
-                  className={`rounded-2xl border px-4 py-4 ${
-                    state?.on_air
-                      ? 'border-red-500/50 bg-red-900/30'
-                      : 'border-neutral-800 bg-neutral-900/60'
-                  }`}
-                >
-                  <div className="text-xs uppercase tracking-widest text-neutral-300">
-                    {t.onAir}
-                  </div>
-                  <div className="text-3xl font-extrabold mt-1">
-                    {state?.on_air ? t.live : t.off}
-                  </div>
-                  <div className="text-xs text-neutral-400 mt-1">
-                    {t.runLabel}{' '}
-                    <span className="font-mono">{data.run.slug}</span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 px-4 py-4">
-                  <div className="text-xs uppercase tracking-widest text-neutral-300">
-                    {t.segmentHeading}
-                  </div>
-                  {data.currentSegment ? (
-                    <>
-                      <div className="text-lg font-bold mt-1">
-                        #{data.currentSegment.ord} · {data.currentSegment.title}
-                      </div>
-                      <div className="text-xs text-neutral-400 mt-1">
-                        {format(t.segmentType, {
-                          type: data.currentSegment.type,
-                          min: data.currentSegment.duration_min ?? '?',
-                        })}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-sm text-neutral-500 mt-1 italic">
-                      {t.segmentNone}
-                    </div>
-                  )}
-                </div>
-
-                <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 px-4 py-4">
-                  <div className="text-xs uppercase tracking-widest text-neutral-300">
-                    {t.matchHeading}
-                  </div>
-                  {data.match ? (
-                    <>
-                      <div className="text-base font-semibold mt-1">
-                        {data.match.team1?.name ?? '?'}{' '}
-                        <span className="text-neutral-500">
-                          {data.match.team1Score ?? '–'} ·{' '}
-                          {data.match.team2Score ?? '–'}
-                        </span>{' '}
-                        {data.match.team2?.name ?? '?'}
-                      </div>
-                      {data.match.streamUrl ? (
-                        <a
-                          href={data.match.streamUrl}
-                          target="_blank"
-                          rel="noopener"
-                          className="text-xs text-purple-300 hover:underline mt-1 inline-block"
-                        >
-                          {t.stream}
-                        </a>
-                      ) : (
-                        <div className="text-xs text-neutral-500 mt-1">
-                          {t.noStream}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="text-sm text-neutral-500 mt-1 italic">
-                      {t.segmentNonMatch}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Casters */}
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-4 py-3 mb-6">
-                <div className="text-xs uppercase tracking-widest text-neutral-400 mb-2">
-                  {t.castersHeading}
-                </div>
-                {data.casters.length === 0 ? (
-                  <div className="text-sm text-neutral-500 italic">
-                    {t.castersEmpty}
-                  </div>
-                ) : (
-                  <ul className="text-sm space-y-1">
-                    {data.casters.map((c) => (
-                      <li key={c.castMemberId}>
-                        <span className="font-medium">
-                          {c.displayName ?? t.casterNoName}
-                        </span>
-                        {c.discordUserId && (
-                          <span className="ml-2 text-xs text-neutral-500 font-mono">
-                            {c.discordUserId}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+              {/* HUD : on-air + segment + match, puis les casteuses */}
+              <LiveHud
+                onAir={!!state?.on_air}
+                runSlug={data.run.slug}
+                segment={data.currentSegment}
+                match={data.match}
+                casters={data.casters}
+              />
 
               {/* Automatisation : régie auto + scènes + prochain match */}
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-4 py-4 mb-6">
-                <div className="text-xs uppercase tracking-widest text-neutral-400 mb-3">
-                  {t.autoHeading}
-                </div>
-
+              <LiveSection title={t.autoHeading}>
                 {/* Auto-director switch */}
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <div>
                     <div className="text-sm font-semibold">
                       {t.autoDirectorLabel}
                     </div>
-                    <div className="text-xs text-neutral-400 mt-0.5 max-w-xl">
+                    <div className="text-xs text-[var(--t3,#a39ba6)] mt-0.5 max-w-xl">
                       {autoDirector
                         ? t.autoDirectorOnHint
                         : t.autoDirectorOffHint}
@@ -608,7 +512,7 @@ function BroadcastLivePage({ staff }: StaffProps) {
                 {/* Scene selector */}
                 <div className="mb-4">
                   <div
-                    className="text-xs text-neutral-400 mb-2"
+                    className="text-xs text-[var(--t3,#a39ba6)] mb-2"
                     id="scene-selector-label"
                   >
                     {t.sceneLabel}
@@ -618,102 +522,81 @@ function BroadcastLivePage({ staff }: StaffProps) {
                     aria-labelledby="scene-selector-label"
                     className="flex flex-wrap gap-2"
                   >
-                    {SCENES.map((s) => {
-                      const active = currentScene === s;
-                      return (
-                        <button
-                          key={s}
-                          type="button"
-                          aria-pressed={active}
-                          disabled={isPending(`scene:${s}`) || !canEdit}
-                          onClick={() => applyPatch({ scene: s }, `scene:${s}`)}
-                          className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                            active
-                              ? 'bg-purple-600 border-purple-500 text-white'
-                              : 'bg-neutral-800 border-neutral-700 hover:bg-neutral-700 text-neutral-200'
-                          }`}
-                        >
-                          {sceneLabels[s]}
-                        </button>
-                      );
-                    })}
+                    {SCENES.map((s) => (
+                      <SceneButton
+                        key={s}
+                        active={currentScene === s}
+                        disabled={isPending(`scene:${s}`) || !canEdit}
+                        onClick={() => applyPatch({ scene: s }, `scene:${s}`)}
+                      >
+                        {sceneLabels[s]}
+                      </SceneButton>
+                    ))}
                   </div>
-                  <div className="text-xs text-neutral-500 mt-2">
+                  <div className="text-xs text-[var(--t4,#807984)] mt-2">
                     {t.sceneHint}
                   </div>
                 </div>
 
                 {/* Prochain match */}
                 <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
+                  <AdminButton
+                    variant="secondary"
                     disabled={advancing || !canEdit}
                     onClick={goNextMatch}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {advancing && (
-                      <span className="inline-block h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                     )}
                     {advancing ? t.nextMatchLoading : t.nextMatch}
-                  </button>
-                  <span className="text-xs text-neutral-500">
+                  </AdminButton>
+                  <span className="text-xs text-[var(--t4,#807984)]">
                     {t.nextMatchHint}
                   </span>
                 </div>
-              </div>
+              </LiveSection>
 
               {/* Overlay OBS : URL source navigateur */}
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-4 py-4 mb-6">
-                <div className="text-xs uppercase tracking-widest text-neutral-400 mb-3">
-                  {t.overlayUrlHeading}
-                </div>
+              <LiveSection title={t.overlayUrlHeading}>
                 <div className="flex flex-wrap items-center gap-2">
                   <input
                     type="text"
                     readOnly
                     value={overlayUrl}
                     aria-label={t.overlayUrlHeading}
-                    className="flex-1 min-w-0 rounded-md bg-neutral-950 border border-neutral-700 px-2 py-2 text-sm font-mono text-neutral-200"
+                    className={`${liveInputClass} font-mono`}
                   />
-                  <button
-                    type="button"
+                  <AdminButton
+                    size="sm"
                     disabled={!overlayUrl}
                     onClick={copyOverlayUrl}
-                    className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {t.overlayCopy}
-                  </button>
+                  </AdminButton>
                 </div>
-                <div className="text-xs text-neutral-500 mt-2">
+                <div className="text-xs text-[var(--t4,#807984)] mt-2">
                   {t.overlayUrlHint}
                 </div>
-              </div>
+              </LiveSection>
 
               {/* Controls */}
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-4 py-4 mb-6">
-                <div className="text-xs uppercase tracking-widest text-neutral-400 mb-3">
-                  {t.overlaysHeading}
-                </div>
-
+              <LiveSection title={t.overlaysHeading}>
                 <div className="flex flex-wrap items-center gap-3 mb-4">
-                  <button
-                    type="button"
+                  {/* Prendre l'antenne = l'action verte ; la rendre = danger. */}
+                  <AdminButton
+                    variant={state?.on_air ? 'danger' : 'primary'}
                     disabled={isPending('on_air') || !canEdit}
                     onClick={() =>
                       applyPatch({ on_air: !state?.on_air }, 'on_air')
                     }
-                    className={`px-4 py-2 rounded-lg text-sm font-bold ${
-                      state?.on_air
-                        ? 'bg-red-600 hover:bg-red-500'
-                        : 'bg-emerald-600 hover:bg-emerald-500'
-                    } disabled:opacity-40 disabled:cursor-not-allowed`}
                   >
                     {state?.on_air ? t.goOffAir : t.goOnAir}
-                  </button>
+                  </AdminButton>
 
-                  <label className="inline-flex items-center gap-2 text-sm">
+                  <label className="inline-flex items-center gap-2 text-sm text-[var(--t2,#c7bfca)]">
                     <input
                       type="checkbox"
+                      className="accent-[var(--or,#b467d1)]"
                       checked={!!state?.pip.enabled}
                       disabled={isPending('pip') || !canEdit}
                       onChange={(e) =>
@@ -728,7 +611,7 @@ function BroadcastLivePage({ staff }: StaffProps) {
                 </div>
 
                 <div>
-                  <label className="block text-xs text-neutral-400 mb-1">
+                  <label className="block text-xs text-[var(--t3,#a39ba6)] mb-1">
                     {t.lowerThirdLabel}
                   </label>
                   <div className="flex gap-2">
@@ -739,10 +622,10 @@ function BroadcastLivePage({ staff }: StaffProps) {
                       disabled={!canEdit}
                       maxLength={500}
                       placeholder={t.lowerThirdPlaceholder}
-                      className="flex-1 rounded-md bg-neutral-950 border border-neutral-700 px-2 py-2 text-sm disabled:opacity-50"
+                      className={liveInputClass}
                     />
-                    <button
-                      type="button"
+                    <AdminButton
+                      size="sm"
                       disabled={isPending('lower_third') || !canEdit}
                       onClick={() =>
                         applyPatch(
@@ -752,33 +635,33 @@ function BroadcastLivePage({ staff }: StaffProps) {
                           'lower_third'
                         )
                       }
-                      className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-sm font-medium disabled:opacity-40"
                     >
                       {t.push}
-                    </button>
-                    <button
-                      type="button"
+                    </AdminButton>
+                    <AdminButton
+                      size="sm"
                       disabled={isPending('lower_third') || !canEdit}
                       onClick={() => {
                         setLowerDraft('');
                         applyPatch({ lower_third: null }, 'lower_third');
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium disabled:opacity-40"
                     >
                       {t.clear}
-                    </button>
+                    </AdminButton>
                   </div>
                   {state?.lower_third && (
-                    <div className="mt-2 text-xs text-emerald-300">
+                    <div className="mt-2 text-xs text-[var(--lf-200,#b3e7a3)]">
                       {t.currentOnScreen}{' '}
                       <span className="italic">{state.lower_third}</span>
                     </div>
                   )}
                 </div>
-              </div>
+              </LiveSection>
 
               {!canEdit && (
-                <div className="text-xs text-neutral-500">{t.readOnly}</div>
+                <div className="text-xs text-[var(--t4,#807984)]">
+                  {t.readOnly}
+                </div>
               )}
             </>
           )}

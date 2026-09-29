@@ -32,17 +32,19 @@ export default function SoloModeCheckbox({
 }: Props): JSX.Element {
   return (
     <label
-      className={`flex items-start gap-3 rounded-xl border border-neutral-700/60 bg-neutral-900/40 p-3 text-sm cursor-pointer ${className}`}
+      className={`flex cursor-pointer items-start gap-3 rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-3 text-sm text-[var(--t2,#c7bfca)] ${className}`}
     >
       <input
         type="checkbox"
-        className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-900"
+        className="mt-0.5 h-4 w-4"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
       />
       <span>
-        <span className="font-medium">{label}</span>
-        <span className="mt-1 block text-xs text-neutral-400">{help}</span>
+        <span className="font-medium text-[var(--t1,#f4edf7)]">{label}</span>
+        <span className="mt-1 block text-xs text-[var(--t3,#a39ba6)]">
+          {help}
+        </span>
       </span>
     </label>
   );

@@ -14,6 +14,7 @@ export default ns('adminRegie', {
   subtitle:
     'Pupitre régie en temps réel : segment en cours, cues, briefings et checklist.',
   openDirector: 'Ouvrir le Director',
+  liveChip: 'En direct',
   signOut: 'Se déconnecter',
   statusOnline: 'En ligne',
   statusReconnecting: 'Reconnexion…',

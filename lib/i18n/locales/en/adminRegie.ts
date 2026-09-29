@@ -15,6 +15,7 @@ export default {
   subtitle:
     'Real-time control desk: live segment, cues, briefings and checklist.',
   openDirector: 'Open the Director',
+  liveChip: 'On air',
   signOut: 'Sign out',
   statusOnline: 'Online',
   statusReconnecting: 'Reconnecting…',

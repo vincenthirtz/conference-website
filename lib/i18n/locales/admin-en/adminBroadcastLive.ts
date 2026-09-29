@@ -21,6 +21,7 @@ export default {
   noRunPrefix: 'No event_run in status',
   noRunSuffix: 'for this tenant. Start a run from the Director.',
   onAir: 'On-air',
+  onAirChip: 'On air',
   live: '🔴 LIVE',
   off: 'OFF',
   runLabel: 'Run:',

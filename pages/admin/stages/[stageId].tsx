@@ -7,7 +7,6 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
-import Breadcrumb from '@/components/admin/Breadcrumb';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import type { StaffProps, Stage, Tournament } from '@/types/admin';
 import type { AdvancementRules } from '@/components/admin/AdvancementRulesEditor';
@@ -43,6 +42,7 @@ import type { AdvanceStanding } from '@/components/admin/stages/[stageId]/Advanc
 import { logger } from '../../../utils/logger';
 import nsAdminStageDetail from '@/lib/i18n/locales/admin-fr/adminStageDetail';
 import type { StageOption, TournamentOption } from '@/utils/stages/stageOption';
+import { ERROR_BOX, SPINNER } from '@/features/admin/stages/ui/rubanClasses';
 
 type StageApiResponse = {
   stage: Stage;
@@ -747,63 +747,32 @@ function AdminStagePage(_props: StaffProps) {
         </title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          {/* Header */}
-          <div className="mb-8">
-            <Breadcrumb
-              items={[
-                {
-                  label: t.breadcrumbStages,
-                  href: tournament
-                    ? `/admin/tournament/${tournament.id}/stages`
-                    : '/admin/tournaments',
-                },
-                { label: stage?.name || t.stageFallback },
-              ]}
-            />
-            <StageTabsNav
-              stageId={String(stageId ?? '')}
-              active="overview"
-              stageType={stage?.stage_type}
-              tournamentId={stage?.tournament_id ?? tournament?.id}
-              tournamentName={tournament?.name}
-            />
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <div>
+          <StageTabsNav
+            stageId={String(stageId ?? '')}
+            active="overview"
+            stageType={stage?.stage_type}
+            tournamentId={stage?.tournament_id ?? tournament?.id}
+            tournamentName={tournament?.name}
+          />
+          <StageHeaderTitle
+            stage={stage}
+            tournament={tournament}
+            tournamentDashboardUrl={tournamentDashboardUrl}
+            t={t}
+          />
 
-            <StageHeaderTitle
-              stage={stage}
-              tournament={tournament}
-              tournamentDashboardUrl={tournamentDashboardUrl}
-              t={t}
-            />
-          </div>
-
-          {/* Messages */}
-          {errorMsg && (
-            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-red-400 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {errorMsg}
-            </div>
-          )}
+          {errorMsg && <div className={`mb-6 ${ERROR_BOX}`}>{errorMsg}</div>}
 
           {loading && !stage && (
             <div className="flex items-center justify-center py-20">
-              <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+              <div className={SPINNER} />
             </div>
           )}
 
           {!loading && !stage && !errorMsg && (
-            <div className="text-center py-20 text-neutral-400">
+            <div className="py-20 text-center text-[var(--t3,#a39ba6)]">
               {t.stageNotFound}
             </div>
           )}

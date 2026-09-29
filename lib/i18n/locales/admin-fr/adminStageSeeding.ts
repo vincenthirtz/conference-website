@@ -40,6 +40,7 @@ export default adminNs('adminStageSeeding', {
   heading: 'Seeding comparator',
   subtitle: '{stage} · {slots} slots round 1',
   refresh: 'Rafraîchir',
+  lockedChip: 'Verrouillé',
   lockNoticeSuffix:
     'Toute action de seeding est bloquée tant que ces matchs ne sont pas réinitialisés.',
   sourceStageLabel: 'Stage source (classement)',

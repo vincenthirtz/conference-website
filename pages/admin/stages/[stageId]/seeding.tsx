@@ -21,13 +21,33 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import type { StaffProps } from '@/types/admin';
 import nsAdminStageSeeding from '@/lib/i18n/locales/admin-fr/adminStageSeeding';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import {
+  DraftSelect,
+  RatingRow,
+  type RatingBreakdownRow,
+  SEED_SELECT,
+  SeedColumn,
+  SlotRow,
+  type TeamLite,
+} from '@/features/admin/stages/ui/SeedingParts';
+import {
+  ERROR_BOX,
+  MUTED,
+  TILE,
+  WARN_BOX,
+} from '@/features/admin/stages/ui/rubanClasses';
 
-type TeamLite = {
-  id: string;
-  name: string;
-  short_name: string | null;
-  logo_url: string | null;
-};
+const FIELD_LABEL = 'mb-1 block text-xs text-[var(--t3,#a39ba6)]';
+const MATCH_LABEL = 'text-xs text-[var(--t4,#807984)]';
+const EMPTY = 'px-4 py-8 text-center text-sm text-[var(--t3,#a39ba6)]';
+const DIVIDED = 'divide-y divide-[var(--line,rgba(194,196,201,.12))]';
+const SECTION_ROW =
+  'border-b border-[var(--line2,rgba(194,196,201,.2))] px-4 py-3';
+const INLINE_LINK =
+  'text-[var(--or-200,#eec4ff)] underline hover:text-[var(--t1,#f4edf7)]';
 
 type ProposedSlot = {
   matchId: string;
@@ -70,19 +90,6 @@ type Pattern = 'standard' | 'sequential';
 // --- Seed par rating (Glicko + SoS) -----------------------------------------
 
 type RatingMethod = 'rating' | 'rating_sos';
-
-type RatingBreakdownRow = {
-  teamId: string;
-  teamName: string | null;
-  shortName: string | null;
-  logoUrl: string | null;
-  rating: number;
-  rd: number | null;
-  sos: number;
-  score: number;
-  rank: number;
-  provisional: boolean;
-};
 
 type RatingPreviewResponse = {
   proposed: { matchId: string; slot: 1 | 2; teamId: string; seed: number }[];
@@ -435,521 +442,354 @@ function SeedingComparatorPage(_: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          <StageTabsNav
-            stageId={String(id ?? '')}
-            active="seeding"
-            stageType="bracket"
-            tournamentId={data?.stage.tournament_id}
-          />
-
-          <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">{t.heading}</h1>
-              <p className="text-sm text-neutral-400 mt-1">
-                {format(t.subtitle, {
-                  stage: data?.stage.name ?? '…',
-                  slots: data?.bracketSize ?? 0,
-                })}
-              </p>
-            </div>
-            <button
-              type="button"
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <StageTabsNav
+          stageId={String(id ?? '')}
+          active="seeding"
+          stageType="bracket"
+          tournamentId={data?.stage.tournament_id}
+        />
+        <AdminPageHeader
+          title={t.heading}
+          subtitle={format(t.subtitle, {
+            stage: data?.stage.name ?? '…',
+            slots: data?.bracketSize ?? 0,
+          })}
+          badge={locked ? <Chip tone="err">{t.lockedChip}</Chip> : undefined}
+          actions={
+            <AdminButton
+              size="sm"
               onClick={() => fetchPreview(sourceStageId || null)}
-              className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
             >
               {t.refresh}
-            </button>
+            </AdminButton>
+          }
+        />
+
+        {locked && data && (
+          <div className={`mb-6 ${ERROR_BOX}`}>
+            {data.lock.reason} {t.lockNoticeSuffix}
           </div>
+        )}
 
-          {locked && data && (
-            <div className="mb-6 rounded-xl border border-red-500/50 bg-red-900/30 px-4 py-3 text-sm">
-              {data.lock.reason} {t.lockNoticeSuffix}
+        {error && <div className={`mb-4 ${ERROR_BOX}`}>{error}</div>}
+
+        {!loading && data && (
+          <>
+            <div
+              className={`${TILE} mb-6 grid grid-cols-1 gap-3 px-4 py-3 md:grid-cols-3`}
+            >
+              <label className="text-sm">
+                <span className={FIELD_LABEL}>{t.sourceStageLabel}</span>
+                <select
+                  value={sourceStageId}
+                  onChange={(e) => {
+                    setSourceStageId(e.target.value);
+                  }}
+                  disabled={locked || submitting}
+                  className={SEED_SELECT}
+                >
+                  {data.sources.length === 0 && (
+                    <option value="">{t.noSourceStage}</option>
+                  )}
+                  {data.sources.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.stage_type ?? '?'})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm">
+                <span className={FIELD_LABEL}>{t.patternLabel}</span>
+                <select
+                  value={pattern}
+                  onChange={(e) => setPattern(e.target.value as Pattern)}
+                  disabled={locked || submitting}
+                  className={SEED_SELECT}
+                >
+                  <option value="standard">{t.patternStandard}</option>
+                  <option value="sequential">{t.patternSequential}</option>
+                </select>
+              </label>
+              <div className="flex items-end gap-2">
+                <AdminButton
+                  size="xs"
+                  onClick={copyProposedToDraft}
+                  disabled={locked || submitting || data.proposed.length === 0}
+                >
+                  {t.copyAutoToManual}
+                </AdminButton>
+                <AdminButton
+                  size="xs"
+                  onClick={clearDraft}
+                  disabled={locked || submitting}
+                >
+                  {t.clearDraft}
+                </AdminButton>
+              </div>
             </div>
-          )}
 
-          {error && (
-            <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
-              {error}
-            </div>
-          )}
-
-          {!loading && data && (
-            <>
-              <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-3 rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-3">
-                <label className="text-sm">
-                  <span className="block text-neutral-400 text-xs mb-1">
-                    {t.sourceStageLabel}
-                  </span>
-                  <select
-                    value={sourceStageId}
-                    onChange={(e) => {
-                      setSourceStageId(e.target.value);
-                    }}
-                    disabled={locked || submitting}
-                    className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1.5 text-sm"
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/* Colonne AUTO */}
+              <SeedColumn
+                title={t.autoTitle}
+                count={format(t.slotCount, { count: data.proposed.length })}
+                footer={
+                  <AdminButton
+                    variant="secondary"
+                    className="w-full"
+                    onClick={onApplyAuto}
+                    disabled={
+                      locked ||
+                      submitting ||
+                      !sourceStageId ||
+                      data.proposed.length === 0
+                    }
                   >
-                    {data.sources.length === 0 && (
-                      <option value="">{t.noSourceStage}</option>
-                    )}
-                    {data.sources.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.stage_type ?? '?'})
-                      </option>
-                    ))}
+                    {submitting ? t.applying : t.applyAuto}
+                  </AdminButton>
+                }
+              >
+                <div className={DIVIDED}>
+                  {matches.map((m, idx) => {
+                    const p1 = proposedByKey.get(`${m.matchId}:1`);
+                    const p2 = proposedByKey.get(`${m.matchId}:2`);
+                    return (
+                      <div key={m.matchId} className="px-4 py-3">
+                        <div className={`mb-1 ${MATCH_LABEL}`}>
+                          {format(t.matchLabel, { n: idx + 1 })}
+                        </div>
+                        <SlotRow
+                          label="A"
+                          seed={p1?.seed ?? null}
+                          team={p1?.team ?? null}
+                        />
+                        <SlotRow
+                          label="B"
+                          seed={p2?.seed ?? null}
+                          team={p2?.team ?? null}
+                        />
+                      </div>
+                    );
+                  })}
+                  {matches.length === 0 && (
+                    <div className={EMPTY}>{t.noRound1Matches}</div>
+                  )}
+                </div>
+              </SeedColumn>
+
+              {/* Colonne MANUEL */}
+              <SeedColumn
+                title={t.manualTitle}
+                count={format(t.draftSlotCount, { count: draft.size })}
+                footer={
+                  <AdminButton
+                    variant="secondary"
+                    className="w-full"
+                    onClick={onApplyManual}
+                    disabled={locked || submitting || draft.size === 0}
+                  >
+                    {submitting ? t.applying : t.applyManual}
+                  </AdminButton>
+                }
+              >
+                <div className={DIVIDED}>
+                  {matches.map((m, idx) => {
+                    return (
+                      <div key={m.matchId} className="space-y-2 px-4 py-3">
+                        <div className={MATCH_LABEL}>
+                          {format(t.matchLabel, { n: idx + 1 })}
+                        </div>
+                        <DraftSelect
+                          label="A"
+                          value={draft.get(`${m.matchId}:1`) ?? ''}
+                          pool={teamPool}
+                          disabled={locked || submitting}
+                          onChange={(v) => setSlot(m.matchId, 1, v)}
+                        />
+                        <DraftSelect
+                          label="B"
+                          value={draft.get(`${m.matchId}:2`) ?? ''}
+                          pool={teamPool}
+                          disabled={locked || submitting}
+                          onChange={(v) => setSlot(m.matchId, 2, v)}
+                        />
+                      </div>
+                    );
+                  })}
+                  {matches.length === 0 && (
+                    <div className={EMPTY}>{t.noRound1}</div>
+                  )}
+                </div>
+              </SeedColumn>
+            </div>
+
+            {/* Section SEED PAR RATING (Glicko + SoS) */}
+            <SeedColumn
+              className="mt-6"
+              title={t.ratingTitle}
+              count={format(t.ratingRankedCount, {
+                count: ratingData?.breakdown.length ?? 0,
+              })}
+              footer={
+                <AdminButton
+                  variant="primary"
+                  className="w-full"
+                  onClick={onApplyRating}
+                  disabled={
+                    submitting ||
+                    ratingLoading ||
+                    ratingLocked ||
+                    ratingNoBracket ||
+                    ratingEmpty ||
+                    !ratingData
+                  }
+                >
+                  {submitting ? t.applying : t.applyRating}
+                </AdminButton>
+              }
+            >
+              <div
+                className={`${SECTION_ROW} text-xs leading-relaxed ${MUTED}`}
+              >
+                {t.ratingIntroBefore}{' '}
+                <Link href="/admin/ratings" className={INLINE_LINK}>
+                  {t.ratingIntroLink}
+                </Link>{' '}
+                {t.ratingIntroAfter}
+              </div>
+
+              {/* Contrôles */}
+              <div
+                className={`${SECTION_ROW} grid grid-cols-1 gap-3 md:grid-cols-3`}
+              >
+                <label className="text-sm">
+                  <span className={FIELD_LABEL}>{t.methodLabel}</span>
+                  <select
+                    value={ratingMethod}
+                    onChange={(e) =>
+                      setRatingMethod(e.target.value as RatingMethod)
+                    }
+                    disabled={submitting}
+                    className={SEED_SELECT}
+                  >
+                    <option value="rating_sos">{t.methodRatingSos}</option>
+                    <option value="rating">{t.methodRating}</option>
                   </select>
                 </label>
                 <label className="text-sm">
-                  <span className="block text-neutral-400 text-xs mb-1">
-                    {t.patternLabel}
-                  </span>
+                  <span className={FIELD_LABEL}>{t.patternLabel}</span>
                   <select
-                    value={pattern}
-                    onChange={(e) => setPattern(e.target.value as Pattern)}
-                    disabled={locked || submitting}
-                    className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1.5 text-sm"
+                    value={ratingPattern}
+                    onChange={(e) =>
+                      setRatingPattern(e.target.value as Pattern)
+                    }
+                    disabled={submitting}
+                    className={SEED_SELECT}
                   >
                     <option value="standard">{t.patternStandard}</option>
                     <option value="sequential">{t.patternSequential}</option>
                   </select>
                 </label>
-                <div className="flex items-end gap-2">
-                  <button
-                    type="button"
-                    onClick={copyProposedToDraft}
-                    disabled={
-                      locked || submitting || data.proposed.length === 0
-                    }
-                    className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium disabled:opacity-40"
-                  >
-                    {t.copyAutoToManual}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={clearDraft}
-                    disabled={locked || submitting}
-                    className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium disabled:opacity-40"
-                  >
-                    {t.clearDraft}
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Colonne AUTO */}
-                <section className="rounded-xl border border-neutral-800 bg-neutral-900/40">
-                  <header className="px-4 py-3 border-b border-neutral-800 flex items-center justify-between">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-300">
-                      {t.autoTitle}
-                    </h2>
-                    <span className="text-xs text-neutral-500">
-                      {format(t.slotCount, { count: data.proposed.length })}
+                <label className="text-sm">
+                  <span className={FIELD_LABEL}>
+                    {t.sosWeightLabel}{' '}
+                    <span className="text-[var(--t4,#807984)]">
+                      {t.sosWeightHint}
                     </span>
-                  </header>
-                  <div className="divide-y divide-neutral-800/60">
-                    {matches.map((m, idx) => {
-                      const p1 = proposedByKey.get(`${m.matchId}:1`);
-                      const p2 = proposedByKey.get(`${m.matchId}:2`);
-                      return (
-                        <div key={m.matchId} className="px-4 py-3">
-                          <div className="text-xs text-neutral-500 mb-1">
-                            {format(t.matchLabel, { n: idx + 1 })}
-                          </div>
-                          <SlotRow
-                            label="A"
-                            seed={p1?.seed ?? null}
-                            team={p1?.team ?? null}
-                          />
-                          <SlotRow
-                            label="B"
-                            seed={p2?.seed ?? null}
-                            team={p2?.team ?? null}
-                          />
-                        </div>
-                      );
-                    })}
-                    {matches.length === 0 && (
-                      <div className="px-4 py-8 text-center text-sm text-neutral-500">
-                        {t.noRound1Matches}
-                      </div>
-                    )}
-                  </div>
-                  <footer className="px-4 py-3 border-t border-neutral-800">
-                    <button
-                      type="button"
-                      onClick={onApplyAuto}
-                      disabled={
-                        locked ||
-                        submitting ||
-                        !sourceStageId ||
-                        data.proposed.length === 0
-                      }
-                      className="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-                    >
-                      {submitting ? t.applying : t.applyAuto}
-                    </button>
-                  </footer>
-                </section>
-
-                {/* Colonne MANUEL */}
-                <section className="rounded-xl border border-neutral-800 bg-neutral-900/40">
-                  <header className="px-4 py-3 border-b border-neutral-800 flex items-center justify-between">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-300">
-                      {t.manualTitle}
-                    </h2>
-                    <span className="text-xs text-neutral-500">
-                      {format(t.draftSlotCount, { count: draft.size })}
-                    </span>
-                  </header>
-                  <div className="divide-y divide-neutral-800/60">
-                    {matches.map((m, idx) => {
-                      return (
-                        <div key={m.matchId} className="px-4 py-3 space-y-2">
-                          <div className="text-xs text-neutral-500">
-                            {format(t.matchLabel, { n: idx + 1 })}
-                          </div>
-                          <DraftSelect
-                            label="A"
-                            value={draft.get(`${m.matchId}:1`) ?? ''}
-                            pool={teamPool}
-                            disabled={locked || submitting}
-                            onChange={(v) => setSlot(m.matchId, 1, v)}
-                          />
-                          <DraftSelect
-                            label="B"
-                            value={draft.get(`${m.matchId}:2`) ?? ''}
-                            pool={teamPool}
-                            disabled={locked || submitting}
-                            onChange={(v) => setSlot(m.matchId, 2, v)}
-                          />
-                        </div>
-                      );
-                    })}
-                    {matches.length === 0 && (
-                      <div className="px-4 py-8 text-center text-sm text-neutral-500">
-                        {t.noRound1}
-                      </div>
-                    )}
-                  </div>
-                  <footer className="px-4 py-3 border-t border-neutral-800">
-                    <button
-                      type="button"
-                      onClick={onApplyManual}
-                      disabled={locked || submitting || draft.size === 0}
-                      className="w-full px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-                    >
-                      {submitting ? t.applying : t.applyManual}
-                    </button>
-                  </footer>
-                </section>
-              </div>
-
-              {/* Section SEED PAR RATING (Glicko + SoS) */}
-              <section className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/40">
-                <header className="px-4 py-3 border-b border-neutral-800 flex items-center justify-between">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-300">
-                    {t.ratingTitle}
-                  </h2>
-                  <span className="text-xs text-neutral-500">
-                    {format(t.ratingRankedCount, {
-                      count: ratingData?.breakdown.length ?? 0,
-                    })}
                   </span>
-                </header>
+                  <input
+                    type="number"
+                    step="0.1"
+                    inputMode="decimal"
+                    value={sosWeight}
+                    onChange={(e) => setSosWeight(e.target.value)}
+                    disabled={submitting || ratingMethod === 'rating'}
+                    placeholder={t.sosWeightPlaceholder}
+                    className={SEED_SELECT}
+                  />
+                </label>
+              </div>
 
-                <div className="px-4 py-3 border-b border-neutral-800 text-xs text-neutral-400 leading-relaxed">
-                  {t.ratingIntroBefore}{' '}
-                  <Link
-                    href="/admin/ratings"
-                    className="text-blue-400 hover:text-blue-300 underline"
-                  >
-                    {t.ratingIntroLink}
-                  </Link>{' '}
-                  {t.ratingIntroAfter}
+              {/* Lock / garde-fous */}
+              {ratingData && ratingLocked && (
+                <div className={`mx-4 mt-3 !text-xs ${ERROR_BOX}`}>
+                  {ratingData.lock.reasons.length > 0
+                    ? ratingData.lock.reasons.join(' ')
+                    : t.ratingLockReason}
                 </div>
-
-                {/* Contrôles */}
-                <div className="px-4 py-3 border-b border-neutral-800 grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <label className="text-sm">
-                    <span className="block text-neutral-400 text-xs mb-1">
-                      {t.methodLabel}
-                    </span>
-                    <select
-                      value={ratingMethod}
-                      onChange={(e) =>
-                        setRatingMethod(e.target.value as RatingMethod)
-                      }
-                      disabled={submitting}
-                      className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1.5 text-sm"
-                    >
-                      <option value="rating_sos">{t.methodRatingSos}</option>
-                      <option value="rating">{t.methodRating}</option>
-                    </select>
-                  </label>
-                  <label className="text-sm">
-                    <span className="block text-neutral-400 text-xs mb-1">
-                      {t.patternLabel}
-                    </span>
-                    <select
-                      value={ratingPattern}
-                      onChange={(e) =>
-                        setRatingPattern(e.target.value as Pattern)
-                      }
-                      disabled={submitting}
-                      className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1.5 text-sm"
-                    >
-                      <option value="standard">{t.patternStandard}</option>
-                      <option value="sequential">{t.patternSequential}</option>
-                    </select>
-                  </label>
-                  <label className="text-sm">
-                    <span className="block text-neutral-400 text-xs mb-1">
-                      {t.sosWeightLabel}{' '}
-                      <span className="text-neutral-600">
-                        {t.sosWeightHint}
-                      </span>
-                    </span>
-                    <input
-                      type="number"
-                      step="0.1"
-                      inputMode="decimal"
-                      value={sosWeight}
-                      onChange={(e) => setSosWeight(e.target.value)}
-                      disabled={submitting || ratingMethod === 'rating'}
-                      placeholder={t.sosWeightPlaceholder}
-                      className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1.5 text-sm disabled:opacity-40"
-                    />
-                  </label>
+              )}
+              {ratingData && !ratingLocked && ratingNoBracket && (
+                <div className={`mx-4 mt-3 !text-xs ${WARN_BOX}`}>
+                  {t.ratingNoBracketNotice}
                 </div>
+              )}
 
-                {/* Lock / garde-fous */}
-                {ratingData && ratingLocked && (
-                  <div className="mx-4 mt-3 rounded-lg border border-red-500/50 bg-red-900/30 px-3 py-2 text-xs text-red-200">
-                    {ratingData.lock.reasons.length > 0
-                      ? ratingData.lock.reasons.join(' ')
-                      : t.ratingLockReason}
-                  </div>
+              {/* Tableau breakdown */}
+              <div className="px-4 py-3">
+                {ratingLoading && <div className={EMPTY}>{t.loadingShort}</div>}
+
+                {!ratingLoading && ratingError && (
+                  <div className={ERROR_BOX}>{ratingError}</div>
                 )}
-                {ratingData && !ratingLocked && ratingNoBracket && (
-                  <div className="mx-4 mt-3 rounded-lg border border-amber-500/50 bg-amber-900/30 px-3 py-2 text-xs text-amber-200">
-                    {t.ratingNoBracketNotice}
+
+                {!ratingLoading && !ratingError && ratingEmpty && (
+                  <div className={EMPTY}>
+                    {t.ratingEmptyBefore}{' '}
+                    <button
+                      type="button"
+                      data-case="normal"
+                      onClick={() => router.push(`/admin/stages/${id}`)}
+                      className={INLINE_LINK}
+                    >
+                      {t.ratingEmptyLink}
+                    </button>
+                    .
                   </div>
                 )}
 
-                {/* Tableau breakdown */}
-                <div className="px-4 py-3">
-                  {ratingLoading && (
-                    <div className="py-8 text-center text-sm text-neutral-400">
-                      {t.loadingShort}
+                {!ratingLoading &&
+                  !ratingError &&
+                  ratingData &&
+                  !ratingEmpty && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-[var(--line2,rgba(194,196,201,.2))] text-left">
+                            <th scope="col" className="py-2 pr-3">
+                              {t.thRank}
+                            </th>
+                            <th scope="col" className="py-2 pr-3">
+                              {t.thTeam}
+                            </th>
+                            <th scope="col" className="py-2 pr-3 text-right">
+                              {t.thRating}
+                            </th>
+                            <th scope="col" className="py-2 pr-3 text-right">
+                              {t.thSos}
+                            </th>
+                            <th scope="col" className="py-2 pr-3 text-right">
+                              {t.thScore}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
+                          {ratingData.breakdown.map((row) => (
+                            <RatingRow key={row.teamId} row={row} />
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
+              </div>
+            </SeedColumn>
+          </>
+        )}
 
-                  {!ratingLoading && ratingError && (
-                    <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm">
-                      {ratingError}
-                    </div>
-                  )}
-
-                  {!ratingLoading && !ratingError && ratingEmpty && (
-                    <div className="py-8 text-center text-sm text-neutral-500">
-                      {t.ratingEmptyBefore}{' '}
-                      <button
-                        type="button"
-                        onClick={() => router.push(`/admin/stages/${id}`)}
-                        className="text-blue-400 hover:text-blue-300 underline"
-                      >
-                        {t.ratingEmptyLink}
-                      </button>
-                      .
-                    </div>
-                  )}
-
-                  {!ratingLoading &&
-                    !ratingError &&
-                    ratingData &&
-                    !ratingEmpty && (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="text-left text-[11px] uppercase tracking-wider text-neutral-500 border-b border-neutral-800">
-                              <th scope="col" className="py-2 pr-3 font-medium">
-                                {t.thRank}
-                              </th>
-                              <th scope="col" className="py-2 pr-3 font-medium">
-                                {t.thTeam}
-                              </th>
-                              <th
-                                scope="col"
-                                className="py-2 pr-3 font-medium text-right"
-                              >
-                                {t.thRating}
-                              </th>
-                              <th
-                                scope="col"
-                                className="py-2 pr-3 font-medium text-right"
-                              >
-                                {t.thSos}
-                              </th>
-                              <th
-                                scope="col"
-                                className="py-2 pr-3 font-medium text-right"
-                              >
-                                {t.thScore}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-neutral-800/60">
-                            {ratingData.breakdown.map((row) => (
-                              <RatingRow key={row.teamId} row={row} />
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                </div>
-
-                <footer className="px-4 py-3 border-t border-neutral-800">
-                  <button
-                    type="button"
-                    onClick={onApplyRating}
-                    disabled={
-                      submitting ||
-                      ratingLoading ||
-                      ratingLocked ||
-                      ratingNoBracket ||
-                      ratingEmpty ||
-                      !ratingData
-                    }
-                    className="w-full px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-                  >
-                    {submitting ? t.applying : t.applyRating}
-                  </button>
-                </footer>
-              </section>
-            </>
-          )}
-
-          {loading && (
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-8 text-center text-sm text-neutral-400">
-              {t.loadingShort}
-            </div>
-          )}
-        </div>
+        {loading && <div className={`${TILE} ${EMPTY}`}>{t.loadingShort}</div>}
       </div>
       {dialog}
     </>
-  );
-}
-
-function SlotRow({
-  label,
-  seed,
-  team,
-}: {
-  label: string;
-  seed: number | null;
-  team: TeamLite | null;
-}) {
-  const t = useAdminT(nsAdminStageSeeding);
-  return (
-    <div className="flex items-center gap-2 py-1 text-sm">
-      <span className="w-5 text-neutral-500">{label}</span>
-      {seed != null && (
-        <span className="px-1.5 py-0.5 text-[10px] rounded bg-neutral-800 text-neutral-300 font-mono">
-          #{seed}
-        </span>
-      )}
-      <span className={team ? '' : 'text-neutral-600 italic'}>
-        {team?.name ?? t.slotEmpty}
-      </span>
-    </div>
-  );
-}
-
-function DraftSelect({
-  label,
-  value,
-  pool,
-  disabled,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  pool: TeamLite[];
-  disabled: boolean;
-  onChange: (v: string) => void;
-}) {
-  const t = useAdminT(nsAdminStageSeeding);
-  return (
-    <label className="flex items-center gap-2 text-sm">
-      <span className="w-5 text-neutral-500">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        className="flex-1 rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1 text-sm"
-      >
-        <option value="">{t.slotEmpty}</option>
-        {pool.map((team) => (
-          <option key={team.id} value={team.id}>
-            {team.name}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function RatingRow({ row }: { row: RatingBreakdownRow }) {
-  const t = useAdminT(nsAdminStageSeeding);
-  const label = row.teamName ?? row.shortName ?? t.teamUnknown;
-  return (
-    <tr className="text-neutral-200">
-      <td className="py-2 pr-3">
-        <span className="px-1.5 py-0.5 text-[11px] rounded bg-neutral-800 text-neutral-300 font-mono">
-          #{row.rank}
-        </span>
-      </td>
-      <td className="py-2 pr-3">
-        <div className="flex items-center gap-2">
-          {row.logoUrl ? (
-            // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
-            <img
-              src={row.logoUrl}
-              alt=""
-              className="w-6 h-6 rounded object-cover bg-neutral-800 shrink-0"
-            />
-          ) : (
-            <span className="w-6 h-6 rounded bg-neutral-800 shrink-0" />
-          )}
-          <span className="truncate">{label}</span>
-          {row.provisional && (
-            <span
-              title={t.provisionalTitle}
-              className="px-1.5 py-0.5 text-[10px] rounded bg-amber-900/40 border border-amber-500/40 text-amber-300"
-            >
-              {t.provisionalBadge}
-            </span>
-          )}
-        </div>
-      </td>
-      <td className="py-2 pr-3 text-right font-mono tabular-nums">
-        {Math.round(row.rating)}
-        {row.rd != null && (
-          <span className="text-neutral-500 text-xs">
-            {' '}
-            ± {Math.round(row.rd)}
-          </span>
-        )}
-      </td>
-      <td className="py-2 pr-3 text-right font-mono tabular-nums text-neutral-400">
-        {row.sos.toFixed(1)}
-      </td>
-      <td className="py-2 pr-3 text-right font-mono tabular-nums">
-        {row.score.toFixed(1)}
-      </td>
-    </tr>
   );
 }
 

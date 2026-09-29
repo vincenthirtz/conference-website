@@ -35,7 +35,7 @@ import { useCockpitHeartbeat } from '@/hooks/useCockpitHeartbeat';
 import { useCueStream } from '@/hooks/useCueStream';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
-import { AdminFetchError, useAdminFetch } from '@/hooks/useAdminFetch';
+import type { AdminFetchError } from '@/hooks/useAdminFetch';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { logger } from '@/utils/logger';
 import { unlockAudio } from '@/utils/playChime';
@@ -45,9 +45,11 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { computeRunSchedule } from '@/utils/eventSchedule';
 import { useT, format } from '@/lib/i18n/useT';
 import { withStaffPage } from '@/utils/staff';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 import LiveSegmentBlock from '@/components/Caster/LiveSegmentBlock';
 import NewRunPanel from '@/components/Caster/NewRunPanel';
+import StartPreparedPanel from '@/features/admin/diffusion/StartPreparedPanel';
 import ObsSegmentBridge from '@/components/Caster/ObsSegmentBridge';
 import CockpitChecklist from '@/components/Caster/CockpitChecklist';
 import CockpitHotkeys from '@/components/Caster/CockpitHotkeys';
@@ -58,7 +60,6 @@ import CueFeed from '@/components/Caster/CueFeed';
 import UrgentCueModal from '@/components/Caster/UrgentCueModal';
 import RegieHeader, { type Connection } from '@/components/Caster/RegieHeader';
 import nsAdminRegie from '@/lib/i18n/locales/fr/adminRegie';
-import nsRegieStartPrepared from '@/lib/i18n/locales/fr/regieStartPrepared';
 import nsCasterCockpit from '@/lib/i18n/locales/fr/casterCockpit';
 
 // PushOptIn est dynamic (no-SSR) : il depend de Notification / serviceWorker.
@@ -80,147 +81,6 @@ type CurrentRunResponse = {
  * démarre via POST /api/admin/events/{id}/start (rôle 'admin'). Tournoi
  * optionnel : un run peut être 100 % libre, l'endpoint ne demande pas de lien.
  */
-
-/** Un draft d'event_run tel que renvoyé par GET /api/admin/events?status=draft. */
-type DraftRun = {
-  id: string;
-  name: string;
-  scheduled_at: string | null;
-  status: string;
-};
-
-/**
- * Panneau « Démarrer un run préparé » — admin/owner, affiché quand aucun run
- * n'est live ET qu'au moins un run draft existe. Complète NewRunPanel (créer à
- * blanc) : ici on lance un run déjà construit (avec ses segments montés dans le
- * Director) via POST /api/admin/events/{id}/start (rôle 'admin'). Si aucun
- * draft, le composant ne rend rien (pas de bruit visuel).
- */
-function StartPreparedPanel({ onStarted }: { onStarted: () => Promise<void> }) {
-  const t = useT(nsRegieStartPrepared);
-  const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
-  const { mutateJson } = useIdempotentMutation();
-
-  const [drafts, setDrafts] = useState<DraftRun[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  // Busy ciblé par ligne (id du draft en cours de démarrage).
-  const [startingId, setStartingId] = useState<string | null>(null);
-
-  const loadDrafts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const json = await adminFetchJson<{ items: DraftRun[] }>(
-        '/api/admin/events?status=draft&limit=50'
-      );
-      setDrafts(json.items ?? []);
-      setError(null);
-    } catch (err) {
-      setError((err as AdminFetchError)?.message || t.loadError);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, t.loadError]);
-
-  useEffect(() => {
-    void loadDrafts();
-  }, [loadDrafts]);
-
-  async function handleStart(id: string) {
-    if (startingId) return;
-    setStartingId(id);
-    try {
-      await mutateJson(`/api/admin/events/${id}/start`, { method: 'POST' });
-      addToast(t.startSuccess, 'success');
-      await onStarted();
-    } catch (err) {
-      const e2 = err as AdminFetchError;
-      const payloadError =
-        typeof e2.payload === 'object' && e2.payload && 'error' in e2.payload
-          ? String((e2.payload as { error: string }).error)
-          : null;
-      addToast(payloadError || e2.message || t.startError, 'error');
-      setStartingId(null);
-    }
-  }
-
-  // État de chargement discret pour éviter un flash.
-  if (loading) {
-    return (
-      <div
-        className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4 text-xs text-neutral-500"
-        data-testid="regie-start-prepared-loading"
-      >
-        {t.loading}
-      </div>
-    );
-  }
-
-  // Erreur (rare) : petit encart, on ne bloque pas la création à blanc.
-  if (error) {
-    return (
-      <div className="rounded-2xl border border-red-500/30 bg-red-900/15 p-3 text-xs text-red-100">
-        {error}
-      </div>
-    );
-  }
-
-  // Aucun draft : on n'affiche rien (NewRunPanel reste seul à l'écran).
-  if (drafts.length === 0) return null;
-
-  const formatDate = (iso: string | null) => {
-    if (!iso) return t.noSchedule;
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? t.noSchedule : d.toLocaleString();
-  };
-
-  return (
-    <div
-      className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4 space-y-3"
-      data-testid="regie-start-prepared"
-    >
-      <div>
-        <h2 className="text-sm font-semibold text-white">{t.title}</h2>
-        <p className="text-xs text-neutral-400 mt-1">{t.description}</p>
-        <p className="text-[11px] text-neutral-500 mt-1">{t.directorHint}</p>
-      </div>
-
-      <ul className="space-y-2">
-        {drafts.map((d) => {
-          const busy = startingId === d.id;
-          return (
-            <li
-              key={d.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-neutral-800 bg-neutral-950/60 px-3 py-2"
-              data-testid="regie-draft-row"
-            >
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-white truncate">
-                  {d.name}
-                </p>
-                <p className="text-[11px] text-neutral-500">
-                  {formatDate(d.scheduled_at)}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleStart(d.id)}
-                disabled={!!startingId}
-                className="inline-flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {busy && (
-                  <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-                )}
-                {busy ? t.starting : t.start}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
 
 function RegiePage({ staff }: StaffProps) {
   const router = useRouter();
@@ -583,7 +443,7 @@ function RegiePage({ staff }: StaffProps) {
       <Head>
         <title>{tr.docTitle}</title>
       </Head>
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
+      <div className="min-h-screen text-[var(--t1,#f4edf7)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
           {children}
         </div>
@@ -593,8 +453,8 @@ function RegiePage({ staff }: StaffProps) {
 
   if (session.loading) {
     return shell(
-      <div className="max-w-2xl rounded-2xl border border-neutral-800 bg-neutral-900/50 p-10 text-center text-sm text-neutral-400 flex flex-col items-center gap-3">
-        <div className="w-10 h-10 border-2 border-neutral-700 border-t-purple-400 rounded-full animate-spin" />
+      <div className="max-w-2xl rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-10 text-center text-sm text-[var(--t3,#a39ba6)] flex flex-col items-center gap-3">
+        <div className="w-10 h-10 border-2 border-[var(--s3,#2f2732)] border-t-[var(--or,#b467d1)] rounded-full animate-spin" />
         {t.connecting}
       </div>
     );
@@ -604,16 +464,14 @@ function RegiePage({ staff }: StaffProps) {
     return shell(
       <>
         {header}
-        <div className="max-w-2xl rounded-2xl border border-neutral-800 bg-neutral-900/50 p-6 text-center space-y-4">
-          <h2 className="text-lg font-semibold">{t.accessInactiveTitle}</h2>
-          <p className="text-sm text-neutral-300">{t.accessInactiveBody}</p>
-          <button
-            type="button"
-            onClick={() => session.signOut()}
-            className="px-4 py-2 rounded-md border border-white/15 text-sm hover:bg-white/10 transition"
-          >
+        <div className="max-w-2xl rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6 text-center space-y-4">
+          <h2 className="text-[19px]">{t.accessInactiveTitle}</h2>
+          <p className="text-sm text-[var(--t2,#c7bfca)]">
+            {t.accessInactiveBody}
+          </p>
+          <AdminButton size="sm" onClick={() => session.signOut()}>
             {t.signOut}
-          </button>
+          </AdminButton>
         </div>
       </>
     );
@@ -623,16 +481,18 @@ function RegiePage({ staff }: StaffProps) {
     return shell(
       <>
         {header}
-        <div className="max-w-2xl rounded-2xl border border-neutral-800 bg-neutral-900/50 p-6 text-center space-y-4">
-          <h2 className="text-lg font-semibold">{t.connectionErrorTitle}</h2>
-          <p className="text-sm text-neutral-300">{t.connectionErrorBody}</p>
-          <button
-            type="button"
+        <div className="max-w-2xl rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6 text-center space-y-4">
+          <h2 className="text-[19px]">{t.connectionErrorTitle}</h2>
+          <p className="text-sm text-[var(--t2,#c7bfca)]">
+            {t.connectionErrorBody}
+          </p>
+          <AdminButton
+            variant="primary"
+            size="sm"
             onClick={() => session.refresh()}
-            className="px-4 py-2 rounded-md bg-purple-500 hover:bg-purple-400 text-sm font-semibold transition"
           >
             {t.retry}
-          </button>
+          </AdminButton>
         </div>
       </>
     );
@@ -645,7 +505,7 @@ function RegiePage({ staff }: StaffProps) {
       <div className={liveRunId ? 'space-y-4' : 'max-w-2xl space-y-4'}>
         {/* Rappel discret : le navigateur ne peut pas garder l'ecran eveille. */}
         {!wakeLockSupported && (
-          <p className="flex items-center gap-1.5 text-[11px] text-neutral-500 px-1">
+          <p className="flex items-center gap-1.5 text-[11px] text-[var(--t4,#807984)] px-1">
             <svg
               className="w-3.5 h-3.5 shrink-0"
               fill="none"
@@ -669,22 +529,22 @@ function RegiePage({ staff }: StaffProps) {
           <div
             role="status"
             aria-live="polite"
-            className="rounded-2xl border border-amber-500/30 bg-amber-900/15 p-3 text-xs text-amber-100 flex items-center gap-2"
+            className="rounded-[var(--r-card,14px)] border border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.1)] p-3 text-xs text-[#ffd9a3] flex items-center gap-2"
           >
             <span
               aria-hidden="true"
-              className="w-3.5 h-3.5 border-2 border-amber-300/40 border-t-amber-200 rounded-full animate-spin shrink-0"
+              className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0"
             />
             {t.sessionExpired}
           </div>
         )}
 
         {loadingRun ? (
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-6 text-center text-xs text-neutral-400">
+          <div className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6 text-center text-xs text-[var(--t3,#a39ba6)]">
             {t.loadingRun}
           </div>
         ) : errorRun ? (
-          <div className="rounded-2xl border border-red-500/30 bg-red-900/15 p-4 text-xs text-red-100">
+          <div className="rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] p-4 text-xs text-[#ffc2c2]">
             {errorRun}
           </div>
         ) : null}
@@ -734,32 +594,31 @@ function RegiePage({ staff }: StaffProps) {
                 data-testid="regie-segment-actions"
               >
                 {currentSegment && (
-                  <button
-                    type="button"
+                  <AdminButton
+                    size="sm"
                     onClick={handleEndSegment}
                     disabled={!!segAction}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed"
                     data-testid="regie-end-segment"
                   >
                     {segAction === 'end' && (
-                      <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                      <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                     )}
                     {segAction === 'end' ? tr.endingSegment : tr.endSegment}
-                  </button>
+                  </AdminButton>
                 )}
                 {nextSegment && (
-                  <button
-                    type="button"
+                  <AdminButton
+                    variant="secondary"
+                    size="sm"
                     onClick={handleStartNext}
                     disabled={!!segAction}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/90 hover:bg-indigo-500 border border-indigo-500/40 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
                     data-testid="regie-start-next"
                   >
                     {segAction === 'startNext' && (
-                      <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                      <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                     )}
                     {segAction === 'startNext' ? tr.startingNext : tr.startNext}
-                  </button>
+                  </AdminButton>
                 )}
               </div>
             )}

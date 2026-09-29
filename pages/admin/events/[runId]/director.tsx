@@ -32,6 +32,7 @@ import StationBoard, {
 } from '@/components/admin/director/StationBoard';
 import ScheduleConflictsBanner from '@/components/admin/director/ScheduleConflictsBanner';
 import RealtimeStatusBadge from '@/components/admin/RealtimeStatusBadge';
+import DirectorSectionTitle from '@/features/admin/events/ui/DirectorSectionTitle';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -1074,7 +1075,7 @@ function DirectorPage(_props: StaffProps) {
             : t.pageTitleNoRun}
         </title>
       </Head>
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
+      <div className="min-h-screen text-[var(--t1,#f4edf7)]">
         <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12 max-w-[1600px] mx-auto">
           <Breadcrumb
             items={[
@@ -1103,7 +1104,7 @@ function DirectorPage(_props: StaffProps) {
                   <EntityHistoryButton
                     entityType="event_run"
                     entityId={runId}
-                    className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10"
+                    className="inline-flex h-[30px] items-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]"
                   />
                 )}
                 <RealtimeStatusBadge
@@ -1142,14 +1143,9 @@ function DirectorPage(_props: StaffProps) {
               <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
                 {/* Gauche : Timeline (40%) */}
                 <div className="lg:col-span-4 order-1">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-sm font-semibold text-neutral-300 uppercase tracking-wide">
-                      {t.timelineHeading}
-                    </h2>
-                    <span className="text-xs text-neutral-500">
-                      {t.dragToReorder}
-                    </span>
-                  </div>
+                  <DirectorSectionTitle note={t.dragToReorder}>
+                    {t.timelineHeading}
+                  </DirectorSectionTitle>
                   <TimelineBuilder
                     segments={segments}
                     selectedId={selectedId}
@@ -1168,9 +1164,9 @@ function DirectorPage(_props: StaffProps) {
                 {/* Centre : Editor + Casters (30%) */}
                 <div className="lg:col-span-3 space-y-6 order-2 lg:order-2">
                   <div>
-                    <h2 className="mb-3 text-sm font-semibold text-neutral-300 uppercase tracking-wide">
+                    <DirectorSectionTitle>
                       {t.editionHeading}
-                    </h2>
+                    </DirectorSectionTitle>
                     <SegmentEditorMemo
                       segment={selectedSegment}
                       run={run}
@@ -1182,9 +1178,9 @@ function DirectorPage(_props: StaffProps) {
                     />
                   </div>
                   <div className="order-4 lg:order-none">
-                    <h2 className="mb-3 text-sm font-semibold text-neutral-300 uppercase tracking-wide">
+                    <DirectorSectionTitle>
                       {t.castersHeading}
-                    </h2>
+                    </DirectorSectionTitle>
                     <CasterStatusPanel
                       segments={segments}
                       runId={runId ?? ''}
@@ -1196,9 +1192,9 @@ function DirectorPage(_props: StaffProps) {
                 {/* Droite : Comms (30%) — composer sticky + feed scrollable */}
                 <div className="lg:col-span-3 space-y-6 order-3 lg:order-3">
                   <div>
-                    <h2 className="mb-3 text-sm font-semibold text-neutral-300 uppercase tracking-wide">
+                    <DirectorSectionTitle>
                       {t.commsHeading}
-                    </h2>
+                    </DirectorSectionTitle>
                     <div className="lg:sticky lg:top-20">
                       <CueComposer
                         runId={runId ?? ''}
@@ -1217,9 +1213,9 @@ function DirectorPage(_props: StaffProps) {
 
               {/* Waves + Stations — regroupements logiques et postes de prod. */}
               <div>
-                <h2 className="mb-3 text-sm font-semibold text-neutral-300 uppercase tracking-wide">
+                <DirectorSectionTitle>
                   {t.wavesStationsHeading}
-                </h2>
+                </DirectorSectionTitle>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <WaveBoardMemo
                     waves={waves}

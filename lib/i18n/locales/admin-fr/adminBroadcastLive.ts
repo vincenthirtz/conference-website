@@ -20,6 +20,7 @@ export default adminNs('adminBroadcastLive', {
   noRunPrefix: 'Aucun event_run en statut',
   noRunSuffix: 'pour ce tenant. Démarre un run via le Director.',
   onAir: 'On-air',
+  onAirChip: 'À l’antenne',
   live: '🔴 LIVE',
   off: 'OFF',
   runLabel: 'Run :',

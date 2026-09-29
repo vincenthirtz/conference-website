@@ -1,6 +1,8 @@
 // components/admin/stages/[stageId]/EditStageModal.tsx
 import React from 'react';
 import Modal from '@/components/admin/Modal';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { INPUT, LABEL } from '@/features/admin/stages/ui/rubanClasses';
 import type { Dict } from './stageDisplay';
 
 export type EditForm = {
@@ -44,43 +46,37 @@ function EditStageModal({
       title={t.editModalTitle}
       footer={
         <>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-          >
+          <AdminButton size="sm" onClick={onClose}>
             {t.cancel}
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
+            variant="primary"
+            size="sm"
             onClick={onSave}
             disabled={saving || !editForm.name.trim()}
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? t.saving : t.save}
-          </button>
+          </AdminButton>
         </>
       }
     >
       <div className="space-y-4">
         <div>
-          <label className="block text-sm text-neutral-400 mb-1">
-            {t.editNameLabel}
-          </label>
+          <label className={LABEL}>{t.editNameLabel}</label>
           <input
             type="text"
             value={editForm.name}
             onChange={(e) => onChange({ name: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={INPUT}
           />
         </div>
 
         <div>
-          <label className="block text-sm text-neutral-400 mb-1">
-            {t.editTournamentLabel}
-          </label>
+          <label className={LABEL}>{t.editTournamentLabel}</label>
           <select
             value={editForm.tournament_id}
             onChange={(e) => onChange({ tournament_id: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={INPUT}
           >
             <option value="">{t.editNoTournament}</option>
             {allTournaments.map((tm) => (
@@ -92,22 +88,20 @@ function EditStageModal({
         </div>
 
         <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--t2,#c7bfca)]">
             <input
               type="checkbox"
               checked={editForm.is_active}
               onChange={(e) => onChange({ is_active: e.target.checked })}
-              className="rounded border-neutral-500 bg-neutral-700"
             />
             <span>{t.editActiveLabel}</span>
           </label>
 
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--t2,#c7bfca)]">
             <input
               type="checkbox"
               checked={editForm.is_public}
               onChange={(e) => onChange({ is_public: e.target.checked })}
-              className="rounded border-neutral-500 bg-neutral-700"
             />
             <span>{t.editPublicLabel}</span>
           </label>

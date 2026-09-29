@@ -15,12 +15,16 @@
 
 import type { JSX } from 'react';
 import type { TournamentTemplate } from '@/config/tournament-templates';
-import { stageTypeBadgeClass } from '@/utils/admin/tournamentTemplateForm';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
-const CARD_BASE = 'p-4 rounded-xl border text-left transition-all';
-const CARD_ON = 'bg-blue-600/20 border-blue-500/50 ring-1 ring-blue-500/30';
+const CARD_BASE =
+  'rounded-[var(--r-ctrl,4px)] border p-4 text-left transition-colors';
+const CARD_ON =
+  'border-[var(--or,#b467d1)] bg-[rgba(180,103,209,.1)] shadow-[inset_3px_0_0_var(--or,#b467d1)]';
 const CARD_OFF =
-  'bg-neutral-900/50 border-neutral-700 hover:bg-neutral-800 hover:border-neutral-600';
+  'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] hover:border-[var(--t4,#807984)]';
+const NAME = 'text-sm font-medium text-[var(--t1,#f4edf7)]';
+const DESC = 'mt-1 text-xs text-[var(--t3,#a39ba6)]';
 
 type Props = {
   templates: TournamentTemplate[];
@@ -41,41 +45,36 @@ export default function TemplatePicker({
   labels,
 }: Props): JSX.Element {
   return (
-    <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-      <h2 className="text-lg font-semibold">{labels.title}</h2>
-      <p className="text-xs text-neutral-400">{labels.help}</p>
+    <section className="space-y-4 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6">
+      <h2 className="text-[19px] text-[var(--t1,#f4edf7)]">{labels.title}</h2>
+      <p className="text-xs text-[var(--t3,#a39ba6)]">{labels.help}</p>
 
       <div className="grid gap-3 md:grid-cols-2">
         <button
           type="button"
+          data-case="normal"
           onClick={() => onSelect(null)}
           className={`${CARD_BASE} ${!selected ? CARD_ON : CARD_OFF}`}
         >
-          <div className="font-medium text-sm">{labels.noTemplate}</div>
-          <div className="text-xs text-neutral-400 mt-1">
-            {labels.noTemplateDesc}
-          </div>
+          <div className={NAME}>{labels.noTemplate}</div>
+          <div className={DESC}>{labels.noTemplateDesc}</div>
         </button>
 
         {templates.map((tpl) => (
           <button
             key={tpl.id}
             type="button"
+            data-case="normal"
             onClick={() => onSelect(tpl)}
             className={`${CARD_BASE} ${selected?.id === tpl.id ? CARD_ON : CARD_OFF}`}
           >
-            <div className="font-medium text-sm">{tpl.name}</div>
-            <div className="text-xs text-neutral-400 mt-1">
-              {tpl.description}
-            </div>
+            <div className={NAME}>{tpl.name}</div>
+            <div className={DESC}>{tpl.description}</div>
             <div className="flex flex-wrap gap-1.5 mt-2">
               {tpl.stages.map((s, i) => (
-                <span
-                  key={i}
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${stageTypeBadgeClass(s.stage_type)}`}
-                >
+                <Chip key={i} tone="brand">
                   {s.name}
-                </span>
+                </Chip>
               ))}
             </div>
           </button>

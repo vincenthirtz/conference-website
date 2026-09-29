@@ -4,14 +4,19 @@
 // « Diffusion », titre, état du temps réel, lien director et rafraîchissement.
 //
 // Sorti de la page, gelée en taille (`adminFileSizeGuard`), pour y monter la
-// barre d'onglets commune sans la faire grossir. Rendu À L'IDENTIQUE.
+// barre d'onglets commune sans la faire grossir. Passe « Le Ruban » (lot 5C) :
+// AdminPageHeader, AdminButton, puce d'overlay en Chip — mêmes gestes.
 
-import Link from 'next/link';
 import { useStaffSession } from '@/hooks/useStaffSession';
 import RealtimeStatusBadge from '@/components/admin/RealtimeStatusBadge';
 import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
 import { useOverlayPresence } from '@/hooks/useOverlayPresence';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import Chip from '@/features/admin/_shared/ui/Chip';
 import nsAdminBroadcastLive from '@/lib/i18n/locales/admin-fr/adminBroadcastLive';
 
 export default function LiveConsoleHeader({
@@ -46,12 +51,10 @@ export default function LiveConsoleHeader({
   return (
     <>
       <DiffusionTabsNav active="live" />
-      <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-extrabold tracking-tight">
-              {heading}
-            </h1>
+      <AdminPageHeader
+        title={heading}
+        badge={
+          <>
             <RealtimeStatusBadge
               connected={realtimeConnected}
               connectedLabel={connectedLabel}
@@ -60,37 +63,29 @@ export default function LiveConsoleHeader({
             {runId && presence && (
               // L'overlay du run est-il dans OBS ? Sans lui, on pilotait
               // scènes et bandeaux… que personne ne voyait.
-              <span
-                className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                  presence.isLive('run')
-                    ? 'bg-emerald-500/15 text-emerald-300'
-                    : 'bg-amber-500/15 text-amber-200'
-                }`}
-              >
+              <Chip tone={presence.isLive('run') ? 'ok' : 'warn'}>
                 {presence.isLive('run') ? tl.overlayShown : tl.overlayNotShown}
-              </span>
+              </Chip>
             )}
-          </div>
-          <p className="text-sm text-neutral-400 mt-1">{subtitle}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {runId && canOpenDirector && (
-            <Link
-              href={`/admin/events/${runId}/director`}
-              className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
-            >
-              {directorLabel}
-            </Link>
-          )}
-          <button
-            type="button"
-            onClick={onRefresh}
-            className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
-          >
-            {refreshLabel}
-          </button>
-        </div>
-      </div>
+          </>
+        }
+        subtitle={subtitle}
+        actions={
+          <>
+            {runId && canOpenDirector && (
+              <AdminButtonLink
+                href={`/admin/events/${runId}/director`}
+                size="sm"
+              >
+                {directorLabel}
+              </AdminButtonLink>
+            )}
+            <AdminButton size="sm" onClick={onRefresh}>
+              {refreshLabel}
+            </AdminButton>
+          </>
+        }
+      />
     </>
   );
 }

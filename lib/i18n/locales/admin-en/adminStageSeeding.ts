@@ -40,6 +40,7 @@ export default {
   heading: 'Seeding comparator',
   subtitle: '{stage} · {slots} round 1 slots',
   refresh: 'Refresh',
+  lockedChip: 'Locked',
   lockNoticeSuffix:
     'All seeding actions are blocked until these matches are reset.',
   sourceStageLabel: 'Source stage (standings)',
