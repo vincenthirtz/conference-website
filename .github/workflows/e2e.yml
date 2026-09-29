@@ -8,18 +8,16 @@
 # aucune jouée. Un runner GitHub règle les deux à la fois : il est froid, et sa
 # Supabase est locale au job, créée puis détruite avec lui.
 #
-# CE QUI MANQUE ENCORE, ET IL FAUT LE SAVOIR AVANT DE LANCER.
-# `database/migrations/` contient 340 fichiers SANS horodatage, nommés par
-# sujet. Leur ordre alphabétique n'est PAS leur ordre chronologique, et elles
-# dépendent les unes des autres — les rejouer dans cet ordre échoue. Il faut
-# donc un SOCLE : un dump de schéma de la production, figé une fois, sur lequel
-# les migrations futures (horodatées) s'empilent. La marche à suivre est dans
-# docs/E2E-LOCAL-SUPABASE.md ; elle demande le mot de passe base, que seul un
-# humain a.
+# LE SOCLE.
+# `database/migrations/` contient 340 fichiers SANS horodatage, non rejouables
+# dans l'ordre. `supabase start` applique donc un SOCLE unique,
+# supabase/migrations/00000000000000_baseline.sql (schéma public de prod,
+# reconstruit par introspection du catalogue, sans aucune donnée), puis
+# supabase/seed.sql (tenant par défaut). Voir docs/E2E-LOCAL-SUPABASE.md.
+# Si le socle manque, le job échoue AVEC UN MESSAGE explicite.
 #
-# Tant que le socle n'est pas là, le job échoue AVEC UN MESSAGE explicite
-# plutôt que de partir dans un `db reset` qui casserait au 40e fichier sans
-# qu'on comprenne pourquoi.
+# QUATRE TRANCHES en parallèle, chacune avec sa Supabase ; un job final
+# fusionne leurs rapports en un seul rapport HTML (artefact playwright-report).
 #
 # DÉCLENCHEMENT MANUEL ET NOCTURNE, pas à chaque push : la suite est longue, et
 # la CI rapide (typecheck + unitaires) reste le filet du quotidien.
@@ -31,8 +29,10 @@ on:
   # `workflow_dispatch` n'est déclenchable que si le fichier existe sur la
   # branche PAR DÉFAUT (master), ce qui n'est pas le cas : un push sur la
   # branche de validation dédiée le déclenche donc aussi. Jamais `work`.
+  # `e2e-baseline` = code de prod + infra e2e seule : la référence qui
+  # départage régressions d'un chantier et échecs préexistants.
   push:
-    branches: [admin-industrialisation]
+    branches: [admin-industrialisation, e2e-baseline]
   schedule:
     # 04:12 UTC — tôt, et pas à l'heure pile, pour éviter la cohue des runners.
     - cron: '12 4 * * *'
@@ -131,10 +131,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ env.SERVICE_ROLE_KEY }}
           JWT_SECRET: e2e-jwt-secret-not-a-real-one
           NODE_ENV: test
-        # `testDir: './tests'` inclut tests/unit/*.test.ts (Vitest), que
-        # Playwright tente de charger et sur lesquels il s'arrête avant la
-        # première spec : on restreint explicitement aux e2e.
-        run: npx playwright test tests/e2e/ --shard=${{ matrix.shard }}/4 --reporter=blob
+        run: npx playwright test --shard=${{ matrix.shard }}/4 --reporter=blob
 
       - name: Conserver le rapport de la tranche
         if: always()
