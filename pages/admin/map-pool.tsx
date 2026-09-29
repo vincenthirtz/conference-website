@@ -21,6 +21,9 @@ import Tabs, {
 import { listGames } from '@/config/games';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminMapPool from '@/lib/i18n/locales/admin-fr/adminMapPool';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 type Dict = typeof nsAdminMapPool.fr;
 
@@ -51,6 +54,14 @@ type GameMapsResponse = {
 };
 
 const ID_BASE = 'map-pool';
+
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4';
+const EYEBROW =
+  'mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
+const LABEL = 'mb-2 block text-sm text-[var(--t3,#a39ba6)]';
+const INPUT =
+  'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 function typeLabel(t: Dict, type: string | null | undefined) {
   if (!type) return '—';
@@ -280,23 +291,18 @@ function AdminMapPoolPage(_: StaffProps) {
       <Head>
         <title>{t.headTitle}</title>
       </Head>
-      <div className="min-h-screen bg-neutral-950 text-white pt-header">
-        <div className="max-w-6xl mx-auto px-6 py-10">
-          <div className="flex items-start justify-between gap-4 mb-6">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-                {t.eyebrow}
-              </p>
-              <h1 className="text-2xl font-semibold">{t.pageTitle}</h1>
-              <p className="text-sm text-gray-400 mt-1">{t.subtitle}</p>
-            </div>
-            <button
-              onClick={() => fetchMaps()}
-              className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm hover:bg-white/10 flex-shrink-0"
-            >
-              {t.refresh}
-            </button>
-          </div>
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <div>
+          <p className={EYEBROW}>{t.eyebrow}</p>
+          <AdminPageHeader
+            title={t.pageTitle}
+            subtitle={t.subtitle}
+            actions={
+              <AdminButton size="sm" onClick={() => fetchMaps()}>
+                {t.refresh}
+              </AdminButton>
+            }
+          />
 
           <Tabs
             tabs={tabs}
@@ -313,46 +319,50 @@ function AdminMapPoolPage(_: StaffProps) {
             aria-labelledby={tabButtonId(ID_BASE, activeGame)}
           >
             {/* Barre d'actions */}
-            <div className="flex flex-wrap items-center gap-2 mb-6">
-              <button
-                onClick={openAdd}
-                className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm transition-colors"
-              >
+            <div className="mb-6 flex flex-wrap items-center gap-2">
+              <AdminButton variant="primary" size="sm" onClick={openAdd}>
                 {t.addMapButton}
-              </button>
-              <button
+              </AdminButton>
+              <AdminButton
+                size="sm"
                 onClick={handleImport}
                 disabled={importing}
-                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
               >
                 {importing ? t.importing : t.importDefaults}
-              </button>
-              <span
-                className="ml-auto px-2 py-0.5 rounded-full text-xs border border-purple-400/40 bg-purple-500/10 text-purple-200"
-                title={format(t.gameBadge, {
-                  game: activeGameDef?.label ?? activeGame,
-                })}
-              >
-                {format(t.mapCount, { count: maps.length })}
+              </AdminButton>
+              <span className="ml-auto">
+                <Chip
+                  tone="brand"
+                  title={format(t.gameBadge, {
+                    game: activeGameDef?.label ?? activeGame,
+                  })}
+                >
+                  {format(t.mapCount, { count: maps.length })}
+                </Chip>
               </span>
             </div>
 
             {loading && (
-              <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+              <div className={`${CARD} text-sm text-[var(--t3,#a39ba6)]`}>
                 {t.loading}
               </div>
             )}
 
             {errorMsg && !loading && (
-              <div className="p-4 rounded-lg bg-red-900/60 border border-red-500/40 text-red-100">
+              <div
+                role="alert"
+                className="rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] p-4 text-sm text-[#ffc2c2]"
+              >
                 {errorMsg}
               </div>
             )}
 
             {!loading && !errorMsg && maps.length === 0 && (
-              <div className="p-6 rounded-lg bg-white/5 border border-white/10 text-center">
-                <p className="text-sm text-gray-200">{t.empty}</p>
-                <p className="text-xs text-gray-400 mt-1">{t.emptyHint}</p>
+              <div className={`${CARD} p-6 text-center`}>
+                <p className="text-sm text-[var(--t1,#f4edf7)]">{t.empty}</p>
+                <p className="mt-1 text-xs text-[var(--t3,#a39ba6)]">
+                  {t.emptyHint}
+                </p>
               </div>
             )}
 
@@ -363,10 +373,10 @@ function AdminMapPoolPage(_: StaffProps) {
                   return (
                     <div
                       key={m.id}
-                      className="rounded-xl bg-white/5 border border-white/10 overflow-hidden relative group"
+                      className="group relative overflow-hidden rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]"
                     >
                       {/* Image / fallback géré par état React (pas de mutation DOM) */}
-                      <div className="relative w-full h-40 bg-gradient-to-b from-purple-900/20 to-transparent flex items-center justify-center">
+                      <div className="relative flex h-40 w-full items-center justify-center bg-[var(--s2,#1d1520)]">
                         {showImage ? (
                           <img
                             src={m.image_url as string}
@@ -377,7 +387,7 @@ function AdminMapPoolPage(_: StaffProps) {
                             onError={() => markImageBroken(m.id)}
                           />
                         ) : (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-[var(--t4,#807984)]">
                             {t.imageFallback}
                           </span>
                         )}
@@ -386,31 +396,32 @@ function AdminMapPoolPage(_: StaffProps) {
                       <div className="p-4">
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold truncate">
+                            <p className="truncate text-sm font-semibold text-[var(--t1,#f4edf7)]">
                               {m.map_name}
                             </p>
-                            <p className="text-xs text-gray-400">
+                            <p className="text-xs text-[var(--t3,#a39ba6)]">
                               {typeLabel(t, m.map_type)}
                             </p>
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
-                            <button
+                            <AdminButton
+                              size="xs"
                               onClick={() => openEdit(m)}
-                              className="px-2 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 text-blue-200 text-xs transition-colors"
                               title={t.editTitle}
                               aria-label={t.editTitle}
                             >
                               ✎
-                            </button>
-                            <button
+                            </AdminButton>
+                            <AdminButton
+                              size="xs"
+                              variant="danger"
                               onClick={() => handleDelete(m)}
                               disabled={deletingId === m.id}
-                              className="px-2 py-1 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 text-red-200 text-xs transition-colors disabled:opacity-50"
                               title={t.deleteTitle}
                               aria-label={t.deleteTitle}
                             >
                               {deletingId === m.id ? '…' : '✕'}
-                            </button>
+                            </AdminButton>
                           </div>
                         </div>
 
@@ -424,21 +435,26 @@ function AdminMapPoolPage(_: StaffProps) {
                             })}
                             onClick={() => handleToggle(m)}
                             disabled={togglingId === m.id}
-                            className={`inline-flex items-center gap-2 px-2 py-0.5 rounded-full text-xs border transition-colors disabled:opacity-50 ${
+                            className={`inline-flex h-[22px] items-center gap-1.5 rounded-[3px] border px-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.12em] transition-colors [font-stretch:75%] disabled:opacity-50 ${
                               m.enabled
-                                ? 'border-emerald-400/50 text-emerald-200 bg-emerald-500/10'
-                                : 'border-gray-500/50 text-gray-300 bg-white/5'
+                                ? 'border-[rgba(127,202,101,.36)] bg-[rgba(127,202,101,.13)] text-[var(--lf-200,#b3e7a3)]'
+                                : 'border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t3,#a39ba6)]'
                             }`}
                           >
                             <span
                               aria-hidden="true"
-                              className={`w-2 h-2 rounded-full ${
-                                m.enabled ? 'bg-emerald-400' : 'bg-gray-500'
+                              className={`h-2 w-2 rounded-full ${
+                                m.enabled
+                                  ? 'bg-[var(--lf,#7fca65)]'
+                                  : 'bg-[var(--t4,#807984)]'
                               }`}
                             />
                             {m.enabled ? t.enabled : t.disabled}
                           </button>
-                          <span className="text-xs text-gray-400">
+                          <span
+                            className="text-xs text-[var(--t3,#a39ba6)]"
+                            data-numeric
+                          >
                             {format(t.orderLabel, {
                               order: m.order_index ?? '—',
                             })}
@@ -457,25 +473,23 @@ function AdminMapPoolPage(_: StaffProps) {
             open={modalOpen}
             onClose={() => setModalOpen(false)}
             title={
-              <h2 className="text-xl font-semibold">
+              <h2 className="font-[family-name:var(--fd)] text-xl font-extrabold uppercase text-[var(--t1,#f4edf7)]">
                 {editingId ? t.editMapTitle : t.addMapTitle}
               </h2>
             }
             size="2xl"
             backdropClassName="bg-black/50 backdrop-blur-sm"
-            panelChromeClassName="bg-neutral-900 rounded-xl border border-white/10"
+            panelChromeClassName="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]"
             footer={
               <>
-                <button
-                  onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white text-sm transition-colors"
-                >
+                <AdminButton size="sm" onClick={() => setModalOpen(false)}>
                   {t.cancel}
-                </button>
-                <button
+                </AdminButton>
+                <AdminButton
+                  size="sm"
+                  variant="primary"
                   onClick={handleSave}
                   disabled={saving}
-                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
                 >
                   {saving
                     ? editingId
@@ -484,16 +498,13 @@ function AdminMapPoolPage(_: StaffProps) {
                     : editingId
                       ? t.save
                       : t.add}
-                </button>
+                </AdminButton>
               </>
             }
           >
             <div className="space-y-4">
               <div>
-                <label
-                  htmlFor="map-pool-name"
-                  className="block text-sm text-gray-300 mb-2"
-                >
+                <label htmlFor="map-pool-name" className={LABEL}>
                   {t.mapNameLabel}
                 </label>
                 <input
@@ -502,16 +513,13 @@ function AdminMapPoolPage(_: StaffProps) {
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   aria-label={t.mapNameLabel}
-                  className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
+                  className={INPUT}
                   placeholder={t.mapNamePlaceholder}
                 />
               </div>
 
               <div>
-                <label
-                  htmlFor="map-pool-type"
-                  className="block text-sm text-gray-300 mb-2"
-                >
+                <label htmlFor="map-pool-type" className={LABEL}>
                   {t.mapTypeLabel}
                 </label>
                 <input
@@ -520,16 +528,13 @@ function AdminMapPoolPage(_: StaffProps) {
                   value={formType}
                   onChange={(e) => setFormType(e.target.value)}
                   aria-label={t.mapTypeLabel}
-                  className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
+                  className={INPUT}
                   placeholder={t.mapTypePlaceholder}
                 />
               </div>
 
               <div>
-                <label
-                  htmlFor="map-pool-image"
-                  className="block text-sm text-gray-300 mb-2"
-                >
+                <label htmlFor="map-pool-image" className={LABEL}>
                   {t.imageUrlLabel}
                 </label>
                 <input
@@ -538,17 +543,15 @@ function AdminMapPoolPage(_: StaffProps) {
                   value={formImage}
                   onChange={(e) => setFormImage(e.target.value)}
                   aria-label={t.imageUrlLabel}
-                  className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
+                  className={INPUT}
                   placeholder={t.imageUrlPlaceholder}
                 />
               </div>
 
               {formImage.trim() && (
                 <div>
-                  <p className="block text-sm text-gray-300 mb-2">
-                    {t.imagePreviewLabel}
-                  </p>
-                  <div className="relative w-full h-48 rounded-lg overflow-hidden bg-gradient-to-b from-purple-900/20 to-transparent flex items-center justify-center">
+                  <p className={LABEL}>{t.imagePreviewLabel}</p>
+                  <div className="relative flex h-48 w-full items-center justify-center overflow-hidden rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)]">
                     <img
                       src={formImage.trim()}
                       alt={t.previewAlt}

@@ -11,7 +11,7 @@ import { adminNs } from '../../ns';
 export default adminNs('adminAssociationHub', {
   pageTitle: 'Admin – Association',
   heading: 'Association',
-  subtitle: "Casteuses, pôles de l'asso et adhérents.",
+  subtitle: "Pôles de l'asso et adhérents.",
   tabsAriaLabel: "Sections de l'association",
   tabPoles: "Pôles de l'asso",
   tabAdherents: 'Adhérents',

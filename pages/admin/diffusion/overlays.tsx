@@ -28,6 +28,7 @@ import {
   type OverlayAccess,
 } from '@/utils/admin/overlayAccess';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
 import StreamSourcesPanel from '@/components/admin/tournament/StreamSourcesPanel';
 import StreamAlertsPanel from '@/components/admin/tournament/StreamAlertsPanel';
@@ -152,115 +153,112 @@ export default function DiffusionOverlaysPage({
       <Head>
         <title>{t.pageTitle}</title>
       </Head>
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          <DiffusionTabsNav active="overlays" />
-          <h1 className="text-3xl font-extrabold tracking-tight">
-            {t.heading}
-          </h1>
-          <p className="mt-1 max-w-3xl text-sm text-neutral-400">
-            {t.subtitle}
-          </p>
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <DiffusionTabsNav active="overlays" />
+        <AdminPageHeader title={t.heading} subtitle={t.subtitle} />
 
-          <section className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
-            {tournaments.length === 0 ? (
-              <p className="text-sm text-neutral-400">{t.noTournament}</p>
-            ) : (
-              <label className="block max-w-md text-xs text-neutral-400">
-                {t.tournamentLabel}
-                <select
-                  value={selectedId}
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    setSelectedId(id);
-                    // Dans l'URL : un rechargement (ou un lien partagé à la
-                    // régie) rouvre CE tournoi, pas le plus récent.
-                    void router.replace(
-                      {
-                        pathname: router.pathname,
-                        query: { ...router.query, tournament: id },
-                      },
-                      undefined,
-                      { shallow: true }
-                    );
-                  }}
-                  className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
-                >
-                  {tournaments.map((x) => (
-                    <option key={x.id} value={x.id}>
-                      {x.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {selected && (
-              <div className="mt-4">
-                <StreamSourcesPanel
-                  key={selected.id}
-                  tournamentRef={selected.slug ?? selected.id}
-                  tournamentId={canForceDay ? selected.id : undefined}
-                  baseUrl={baseUrl}
-                  enabled={canUseMatchOverlays}
-                  planLabel={planLabel}
-                  showDonation={isDefaultTenant}
-                  presence={presence}
-                />
-              </div>
-            )}
+        <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
+          {tournaments.length === 0 ? (
+            <p className="text-sm text-[var(--t3,#a39ba6)]">{t.noTournament}</p>
+          ) : (
+            <label className="block max-w-md text-xs text-[var(--t3,#a39ba6)]">
+              {t.tournamentLabel}
+              <select
+                value={selectedId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setSelectedId(id);
+                  // Dans l'URL : un rechargement (ou un lien partagé à la
+                  // régie) rouvre CE tournoi, pas le plus récent.
+                  void router.replace(
+                    {
+                      pathname: router.pathname,
+                      query: { ...router.query, tournament: id },
+                    },
+                    undefined,
+                    { shallow: true }
+                  );
+                }}
+                className="mt-1 h-[38px] w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 text-sm text-[var(--t1,#f4edf7)]"
+              >
+                {tournaments.map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {selected && (
+            <div className="mt-4">
+              <StreamSourcesPanel
+                key={selected.id}
+                tournamentRef={selected.slug ?? selected.id}
+                tournamentId={canForceDay ? selected.id : undefined}
+                baseUrl={baseUrl}
+                enabled={canUseMatchOverlays}
+                planLabel={planLabel}
+                showDonation={isDefaultTenant}
+                presence={presence}
+              />
+            </div>
+          )}
+        </section>
+
+        {canTuneAlerts && (
+          <section className="mt-6 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
+            <StreamAlertsPanel />
           </section>
+        )}
 
-          {canTuneAlerts && (
-            <section className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
-              <StreamAlertsPanel />
-            </section>
-          )}
+        {canTuneTcg && (
+          <section className="mt-6 space-y-6">
+            <TcgOverlaySection />
+          </section>
+        )}
 
-          {canTuneTcg && (
-            <section className="mt-6 space-y-6">
-              <TcgOverlaySection />
-            </section>
-          )}
-
-          <section className="mt-8">
-            <h2 className="text-lg font-semibold">{t.elsewhereTitle}</h2>
-            <p className="mt-1 text-sm text-neutral-400">{t.elsewhereIntro}</p>
-            <ul className="mt-3 grid gap-3 sm:grid-cols-3">
-              {elsewhere.map((item) =>
-                item.href ? (
-                  <li key={item.title}>
-                    <Link
-                      href={item.href}
-                      className="block h-full rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 transition hover:border-rose-500/40"
-                    >
-                      <span className="block text-sm font-semibold text-white">
-                        {item.title}
-                      </span>
-                      <span className="mt-1 block text-xs text-neutral-400">
-                        {item.desc}
-                      </span>
-                      <span className="mt-2 inline-block text-xs text-rose-300">
-                        {t.open} →
-                      </span>
-                    </Link>
-                  </li>
-                ) : (
-                  <li
-                    key={item.title}
-                    className="h-full rounded-xl border border-neutral-800 bg-neutral-900/40 p-4"
+        <section className="mt-8">
+          <h2 className="font-[family-name:var(--fd)] text-lg font-bold uppercase tracking-[0.02em] text-[var(--t1,#f4edf7)]">
+            {t.elsewhereTitle}
+          </h2>
+          <p className="mt-1 text-sm text-[var(--t3,#a39ba6)]">
+            {t.elsewhereIntro}
+          </p>
+          <ul className="mt-3 grid gap-3 sm:grid-cols-3">
+            {elsewhere.map((item) =>
+              item.href ? (
+                <li key={item.title}>
+                  <Link
+                    href={item.href}
+                    className="block h-full rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 transition-colors hover:border-[rgba(180,103,209,.45)]"
                   >
-                    <span className="block text-sm font-semibold text-white">
+                    <span className="block text-sm font-semibold text-[var(--t1,#f4edf7)]">
                       {item.title}
                     </span>
-                    <span className="mt-1 block text-xs text-neutral-400">
+                    <span className="mt-1 block text-xs text-[var(--t3,#a39ba6)]">
                       {item.desc}
                     </span>
-                  </li>
-                )
-              )}
-            </ul>
-          </section>
-        </div>
+                    <span className="mt-2 inline-block text-xs text-[var(--or-200,#eec4ff)]">
+                      {t.open} →
+                    </span>
+                  </Link>
+                </li>
+              ) : (
+                <li
+                  key={item.title}
+                  className="h-full rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 opacity-80"
+                >
+                  <span className="block text-sm font-semibold text-[var(--t1,#f4edf7)]">
+                    {item.title}
+                  </span>
+                  <span className="mt-1 block text-xs text-[var(--t3,#a39ba6)]">
+                    {item.desc}
+                  </span>
+                </li>
+              )
+            )}
+          </ul>
+        </section>
       </div>
     </>
   );

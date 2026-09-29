@@ -7,6 +7,15 @@ import { withStaffPage } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
+import ListToolbar, {
+  FilterSelect,
+  ListSearch,
+} from '@/features/admin/_shared/ui/ListToolbar';
 import type { StaffProps, Tournament } from '@/types/admin';
 
 import { logger } from '../../../utils/logger';
@@ -37,22 +46,25 @@ function statusLabel(tx: Dict, status: string | null) {
   }
 }
 
-function statusColor(status: string | null) {
+function statusTone(status: string | null): ChipTone {
   switch (status) {
     case 'draft':
-      return 'bg-neutral-600 text-neutral-100';
+      return 'warn';
     case 'published':
-      return 'bg-blue-600 text-white';
+      return 'brand';
     case 'running':
-      return 'bg-emerald-600 text-white';
-    case 'completed':
-      return 'bg-purple-600 text-white';
-    case 'archived':
-      return 'bg-neutral-700 text-neutral-300';
+      return 'ok';
     default:
-      return 'bg-neutral-700 text-neutral-200';
+      return 'neutral';
   }
 }
+
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]';
+const FIELD =
+  'h-[38px] rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 text-[13px] text-[var(--t1,#f4edf7)] outline-none focus-visible:border-[var(--or,#b467d1)]';
+const FIELD_LABEL =
+  'flex items-center gap-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
 
 function formatLabel(tx: Dict, formatType: string | null) {
   switch (formatType) {
@@ -129,403 +141,332 @@ function AdminTournamentsPage({
         <title>{tx.headTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  {tx.pageTitle}
-                </h1>
-                <p className="text-neutral-400 text-sm mt-1">
-                  {total !== null
-                    ? format(
-                        total > 1
-                          ? tx.tournamentCount_other
-                          : tx.tournamentCount_one,
-                        {
-                          count: total,
-                        }
-                      )
-                    : tx.loading}
-                </p>
-              </div>
-
-              <div className="flex gap-2">
-                <Link
-                  href="/admin/quick-bracket"
-                  className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors flex items-center gap-2"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                    />
-                  </svg>
-                  {tqb.navCta}
-                </Link>
-                <Link
-                  href="/admin/tournament-simulator"
-                  className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors flex items-center gap-2"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                    />
-                  </svg>
-                  {tx.simulator}
-                </Link>
-                <Link
-                  href="/admin/tournaments/create"
-                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-2"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  {tx.newTournament}
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Filters */}
-          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
-            <form
-              onSubmit={handleSearchSubmit}
-              className="flex gap-4 flex-wrap items-end"
-            >
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-sm text-neutral-400 mb-1">
-                  {tx.searchLabel}
-                </label>
-                <div className="relative">
-                  <svg
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                  <input
-                    type="text"
-                    aria-label={tx.searchPlaceholder}
-                    placeholder={tx.searchPlaceholder}
-                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="min-w-[160px]">
-                <label className="block text-sm text-neutral-400 mb-1">
-                  {tx.statusLabel}
-                </label>
-                <select
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={status || ''}
-                  onChange={(e) =>
-                    setFilters({ status: e.target.value || null, offset: null })
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <AdminPageHeader
+          title={tx.pageTitle}
+          subtitle={
+            total !== null
+              ? format(
+                  total > 1 ? tx.tournamentCount_other : tx.tournamentCount_one,
+                  {
+                    count: total,
                   }
-                >
-                  <option value="">{tx.allStatuses}</option>
-                  <option value="draft">{tx.statusDraft}</option>
-                  <option value="published">{tx.statusPublished}</option>
-                  <option value="running">{tx.statusRunning}</option>
-                  <option value="completed">{tx.statusCompleted}</option>
-                  <option value="archived">{tx.statusArchived}</option>
-                </select>
-              </div>
-
-              <div className="min-w-[150px]">
-                <label className="block text-sm text-neutral-400 mb-1">
-                  {tx.dateFromLabel}
-                </label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={dateFrom}
-                  onChange={(e) => {
-                    setFilters({
-                      dateFrom: e.target.value || null,
-                      offset: null,
-                    });
-                  }}
-                />
-              </div>
-
-              <div className="min-w-[150px]">
-                <label className="block text-sm text-neutral-400 mb-1">
-                  {tx.dateToLabel}
-                </label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={dateTo}
-                  onChange={(e) => {
-                    setFilters({
-                      dateTo: e.target.value || null,
-                      offset: null,
-                    });
-                  }}
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"
-              >
+                )
+              : tx.loading
+          }
+          actions={
+            <>
+              <AdminButtonLink href="/admin/quick-bracket" variant="ghost">
                 <svg
-                  className="w-4 h-4"
+                  className="h-4 w-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
                   />
                 </svg>
-                {tx.searchButton}
-              </button>
-            </form>
-          </section>
+                {tqb.navCta}
+              </AdminButtonLink>
+              <AdminButtonLink
+                href="/admin/tournament-simulator"
+                variant="ghost"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+                {tx.simulator}
+              </AdminButtonLink>
+              <AdminButtonLink
+                href="/admin/tournaments/create"
+                variant="primary"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                {tx.newTournament}
+              </AdminButtonLink>
+            </>
+          }
+        />
 
-          {/* Error Message */}
-          {errorMsg && (
-            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+        {/* Filters */}
+        <form onSubmit={handleSearchSubmit}>
+          <ListToolbar
+            search={
+              <ListSearch
+                value={searchInput}
+                onChange={setSearchInput}
+                placeholder={tx.searchPlaceholder}
+                label={tx.searchLabel}
+              />
+            }
+            filters={
+              <>
+                <FilterSelect
+                  label={tx.statusLabel}
+                  allLabel={tx.allStatuses}
+                  value={status}
+                  onChange={(v) => setFilters({ status: v, offset: null })}
+                  options={[
+                    { value: 'draft', label: tx.statusDraft },
+                    { value: 'published', label: tx.statusPublished },
+                    { value: 'running', label: tx.statusRunning },
+                    { value: 'completed', label: tx.statusCompleted },
+                    { value: 'archived', label: tx.statusArchived },
+                  ]}
+                />
+                <label className={FIELD_LABEL}>
+                  {tx.dateFromLabel}
+                  <input
+                    type="date"
+                    className={FIELD}
+                    value={dateFrom}
+                    onChange={(e) => {
+                      setFilters({
+                        dateFrom: e.target.value || null,
+                        offset: null,
+                      });
+                    }}
+                  />
+                </label>
+                <label className={FIELD_LABEL}>
+                  {tx.dateToLabel}
+                  <input
+                    type="date"
+                    className={FIELD}
+                    value={dateTo}
+                    onChange={(e) => {
+                      setFilters({
+                        dateTo: e.target.value || null,
+                        offset: null,
+                      });
+                    }}
+                  />
+                </label>
+                <AdminButton type="submit" variant="ghost" size="sm">
+                  {tx.searchButton}
+                </AdminButton>
+              </>
+            }
+          />
+        </form>
+
+        {/* Error Message */}
+        {errorMsg && (
+          <div className="mb-6 flex items-center gap-2 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.4)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-sm text-[#ffc2c2]">
+            <svg
+              className="h-5 w-5 flex-shrink-0 text-[var(--err,#ff6b6b)]"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <span className="flex-1">{errorMsg}</span>
+            <AdminButton variant="danger" size="xs" onClick={() => fetchData()}>
+              {tx.retry}
+            </AdminButton>
+          </div>
+        )}
+
+        {/* Tournaments Grid/List */}
+        <section className={`${CARD} overflow-hidden`}>
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--t1,#f4edf7)]" />
+            </div>
+          ) : tournaments.length === 0 ? (
+            <div className="py-20 text-center text-[var(--t3,#a39ba6)]">
               <svg
-                className="w-5 h-5 text-red-400 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
+                className="mx-auto mb-4 h-12 w-12 text-[var(--t4,#807984)]"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
                 <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
                 />
               </svg>
-              <span className="flex-1">{errorMsg}</span>
-              <button
-                type="button"
-                onClick={() => fetchData()}
-                className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
-              >
-                {tx.retry}
-              </button>
+              {tx.emptyTournaments}
             </div>
-          )}
-
-          {/* Tournaments Grid/List */}
-          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-            {loading ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-              </div>
-            ) : tournaments.length === 0 ? (
-              <div className="text-center py-20 text-neutral-400">
-                <svg
-                  className="w-12 h-12 mx-auto mb-4 text-neutral-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+          ) : (
+            <div className="divide-y divide-[var(--line2,rgba(194,196,201,.2))]">
+              {tournaments.map((tourn) => (
+                <Link
+                  key={tourn.id}
+                  href={`/admin/tournament/${tourn.id}/dashboard`}
+                  className="group flex flex-col gap-3 p-4 transition-colors hover:bg-[var(--s2,#1d1520)] sm:flex-row sm:items-center sm:gap-4"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                  />
-                </svg>
-                {tx.emptyTournaments}
-              </div>
-            ) : (
-              <div className="divide-y divide-neutral-700/50">
-                {tournaments.map((tourn) => (
-                  <Link
-                    key={tourn.id}
-                    href={`/admin/tournament/${tourn.id}/dashboard`}
-                    className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 hover:bg-neutral-700/30 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                      {/* Logo */}
-                      <div className="flex-shrink-0">
-                        {tourn.logo_url ? (
-                          <Image
-                            src={tourn.logo_url}
-                            alt={tourn.name}
-                            width={48}
-                            height={48}
-                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover border border-neutral-700"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-neutral-700/50 flex items-center justify-center border border-neutral-700">
-                            <svg
-                              className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-500"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                              />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors truncate">
-                            {tourn.name}
-                          </h3>
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
-                              tourn.status
-                            )}`}
+                  <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                    {/* Logo */}
+                    <div className="flex-shrink-0">
+                      {tourn.logo_url ? (
+                        <Image
+                          src={tourn.logo_url}
+                          alt={tourn.name}
+                          width={48}
+                          height={48}
+                          className="h-10 w-10 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] object-cover sm:h-12 sm:w-12"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] sm:h-12 sm:w-12">
+                          <svg
+                            className="h-5 w-5 text-[var(--t4,#807984)] sm:h-6 sm:w-6"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
                           >
-                            {statusLabel(tx, tourn.status)}
-                          </span>
-                          {tourn.is_public && (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                              {tx.badgePublic}
-                            </span>
-                          )}
-                          {tourn.is_featured && (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30">
-                              {tx.badgeFeatured}
-                            </span>
-                          )}
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                            />
+                          </svg>
                         </div>
-                        <div className="flex items-center gap-2 sm:gap-3 text-sm text-neutral-400 flex-wrap">
-                          {tourn.slug && (
-                            <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
-                              /{tourn.slug}
-                            </span>
-                          )}
-                          {tourn.game && <span>{tourn.game}</span>}
-                          <span className="hidden sm:inline">•</span>
-                          <span>{formatLabel(tx, tourn.format_type)}</span>
-                          <span className="hidden sm:inline">•</span>
-                          <span>{formatDate(tourn.start_date)}</span>
-                        </div>
-                      </div>
+                      )}
                     </div>
 
-                    {/* Arrow */}
-                    <svg
-                      className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors flex-shrink-0 hidden sm:block"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="truncate font-semibold text-[var(--t1,#f4edf7)] transition-colors group-hover:text-[var(--or-200,#eec4ff)]">
+                          {tourn.name}
+                        </h3>
+                        <Chip tone={statusTone(tourn.status)}>
+                          {statusLabel(tx, tourn.status)}
+                        </Chip>
+                        {tourn.is_public && (
+                          <Chip tone="neutral">{tx.badgePublic}</Chip>
+                        )}
+                        {tourn.is_featured && (
+                          <Chip tone="brand">{tx.badgeFeatured}</Chip>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--t3,#a39ba6)] sm:gap-3">
+                        {tourn.slug && (
+                          <span className="rounded-[3px] bg-[var(--s2,#1d1520)] px-2 py-0.5 font-mono text-xs">
+                            /{tourn.slug}
+                          </span>
+                        )}
+                        {tourn.game && <span>{tourn.game}</span>}
+                        <span className="hidden sm:inline">•</span>
+                        <span>{formatLabel(tx, tourn.format_type)}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span>{formatDate(tourn.start_date)}</span>
+                      </div>
+                    </div>
+                  </div>
 
-          {/* Pagination */}
-          <div className="flex justify-between items-center mt-6">
-            <button
-              type="button"
-              disabled={offset === 0}
-              onClick={() =>
-                setFilter('offset', String(Math.max(0, offset - LIMIT)) || null)
-              }
-              className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  {/* Arrow */}
+                  <svg
+                    className="hidden h-5 w-5 flex-shrink-0 text-[var(--t4,#807984)] transition-colors group-hover:text-[var(--t1,#f4edf7)] sm:block"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Pagination */}
+        <div className="flex justify-between items-center mt-6">
+          <AdminButton
+            variant="ghost"
+            size="sm"
+            disabled={offset === 0}
+            onClick={() =>
+              setFilter('offset', String(Math.max(0, offset - LIMIT)) || null)
+            }
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              {tx.previous}
-            </button>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            {tx.previous}
+          </AdminButton>
 
-            <span className="text-neutral-400 text-sm">
-              {format(tx.paginationRange, {
-                from: offset + 1,
-                to: offset + tournaments.length,
-              })}
-              {total ? format(tx.paginationOf, { total }) : ''}
-            </span>
+          <span className="text-sm text-[var(--t3,#a39ba6)]" data-numeric>
+            {format(tx.paginationRange, {
+              from: offset + 1,
+              to: offset + tournaments.length,
+            })}
+            {total ? format(tx.paginationOf, { total }) : ''}
+          </span>
 
-            <button
-              type="button"
-              disabled={total !== null && offset + LIMIT >= total}
-              onClick={() => setFilter('offset', String(offset + LIMIT))}
-              className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          <AdminButton
+            variant="ghost"
+            size="sm"
+            disabled={total !== null && offset + LIMIT >= total}
+            onClick={() => setFilter('offset', String(offset + LIMIT))}
+          >
+            {tx.next}
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              {tx.next}
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          </div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </AdminButton>
         </div>
       </div>
     </>

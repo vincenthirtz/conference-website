@@ -36,6 +36,8 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Tabs, {
   useQueryTab,
   tabPanelId,
@@ -176,64 +178,59 @@ export default function AdminOnboardingPage({ currentStaffDiscordId }: Props) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          <Breadcrumb
-            items={[
-              { label: t.breadcrumbAdmin, href: '/admin' },
-              { label: t.breadcrumbCurrent },
-            ]}
-          />
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <Breadcrumb
+          items={[
+            { label: t.breadcrumbAdmin, href: '/admin' },
+            { label: t.breadcrumbCurrent },
+          ]}
+        />
 
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-sm text-neutral-400">{t.subtitle}</p>
-              <h1 className="mt-1 text-3xl md:text-4xl font-bold tracking-tight">
-                {t.heading}
-              </h1>
-            </div>
-            <button
-              type="button"
+        <AdminPageHeader
+          title={t.heading}
+          subtitle={t.subtitle}
+          actions={
+            <AdminButton
+              variant="primary"
               onClick={() => setCreateOpen(true)}
-              className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-violet-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
               data-testid="onboarding-create-tenant"
             >
               {t.createTenantCta}
-            </button>
-          </div>
+            </AdminButton>
+          }
+        />
 
-          <Tabs
-            tabs={tabs}
-            active={effective}
-            onChange={setActive}
-            ariaLabel={t.tabsAriaLabel}
-            idBase={ID_BASE}
-            className="mb-8"
-          />
+        <Tabs
+          tabs={tabs}
+          active={effective}
+          onChange={setActive}
+          ariaLabel={t.tabsAriaLabel}
+          idBase={ID_BASE}
+          className="mb-8"
+        />
 
-          <div
-            role="tabpanel"
-            id={tabPanelId(ID_BASE, effective)}
-            aria-labelledby={tabButtonId(ID_BASE, effective)}
-          >
-            {effective === TAB_API_KEYS ? (
-              <ApiKeysPanel />
-            ) : effective === TAB_INBOX ? (
-              // Les deux boîtes d'entrée l'une sous l'autre : ce sont deux
-              // objets distincts (une demande d'espace, un serveur qui a invité
-              // le bot sans espace), mais une seule question — « qu'est-ce qui
-              // attend à la porte ? ».
-              <div className="flex flex-col gap-10">
-                <TenantRequestsPanel
-                  currentStaffDiscordId={currentStaffDiscordId}
-                />
-                <GuildLinksPanel />
-                <CircuitPartnersPanel />
-              </div>
-            ) : (
-              <TenantReadinessPanel />
-            )}
-          </div>
+        <div
+          role="tabpanel"
+          id={tabPanelId(ID_BASE, effective)}
+          aria-labelledby={tabButtonId(ID_BASE, effective)}
+        >
+          {effective === TAB_API_KEYS ? (
+            <ApiKeysPanel />
+          ) : effective === TAB_INBOX ? (
+            // Les deux boîtes d'entrée l'une sous l'autre : ce sont deux
+            // objets distincts (une demande d'espace, un serveur qui a invité
+            // le bot sans espace), mais une seule question — « qu'est-ce qui
+            // attend à la porte ? ».
+            <div className="flex flex-col gap-10">
+              <TenantRequestsPanel
+                currentStaffDiscordId={currentStaffDiscordId}
+              />
+              <GuildLinksPanel />
+              <CircuitPartnersPanel />
+            </div>
+          ) : (
+            <TenantReadinessPanel />
+          )}
         </div>
       </div>
 

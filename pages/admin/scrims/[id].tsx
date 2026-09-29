@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
-import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, Scrim } from '@/types/admin';
@@ -17,6 +16,17 @@ import ScrimTeamField, {
 } from '@/components/admin/scrims/ScrimTeamField';
 import ScrimResultPanel from '@/components/admin/scrims/ScrimResultPanel';
 import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
+import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
+import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import DangerZone from '@/features/admin/_shared/ui/DangerZone';
+import {
+  FicheLayout,
+  FicheSection,
+  MetaList,
+} from '@/features/admin/_shared/ui/Fiche';
 
 const NO_EXTERNAL = { external: false, externalName: '' };
 
@@ -50,6 +60,15 @@ type ScrimMatch = {
 
 export const getServerSideProps = withStaffPage({ permission: 'manage_teams' });
 
+const day = (iso: string | null | undefined) =>
+  iso
+    ? new Date(iso).toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : '—';
+
 function toLocalInput(iso: string | null): string {
   if (!iso) return '';
   try {
@@ -64,9 +83,9 @@ function toLocalInput(iso: string | null): string {
 
 function AdminScrimEditPage(_props: StaffProps) {
   const t = useAdminT(nsAdminScrimDetail);
+  const tf = useAdminT(nsAdminFiche);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
-  const { confirm, dialog } = useConfirmDialog();
   const { mutateJson } = useIdempotentMutation();
   const id = typeof router.query.id === 'string' ? router.query.id : '';
 
@@ -168,9 +187,8 @@ function AdminScrimEditPage(_props: StaffProps) {
     }
   }
 
+  // Confirmation portée par la DangerZone (saisie du nom du scrim).
   async function deleteScrim() {
-    const ok = await confirm({ title: t.confirmDelete, variant: 'danger' });
-    if (!ok) return;
     try {
       await adminFetchJson(`/api/admin/scrims/${id}`, { method: 'DELETE' });
       router.push('/admin/scrims');
@@ -181,271 +199,309 @@ function AdminScrimEditPage(_props: StaffProps) {
 
   if (loading || !scrim) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white">
-        <div className="max-w-3xl mx-auto px-4 pt-header pb-12">
-          <AdminBreadcrumbs />
-          {error ? (
-            <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
-              {error}
-            </div>
-          ) : (
-            <div className="text-neutral-400 text-sm">{t.loading}</div>
-          )}
-        </div>
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <AdminBreadcrumbs />
+        {error ? (
+          <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm text-[var(--t1,#f4edf7)]">
+            {error}
+          </div>
+        ) : (
+          <div className="text-sm text-[var(--t3,#a39ba6)]">{t.loading}</div>
+        )}
       </div>
     );
   }
 
+  const inputClass =
+    'w-full px-3 py-2.5 rounded-lg bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t1,#f4edf7)]';
+  const labelClass = 'block text-sm text-[var(--t3,#a39ba6)] mb-1';
+
   return (
     <>
-      {dialog}
       <Head>
         <title>{format(t.headTitle, { name: scrim.name })}</title>
       </Head>
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12 space-y-6">
-          <AdminBreadcrumbs />
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <Link
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <AdminBreadcrumbs />
+        <Link
+          href="/admin/scrims"
+          className="mb-3 inline-block text-sm text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]"
+        >
+          {t.backAll}
+        </Link>
+
+        <EntityHeader
+          crest={
+            scrim.logo_url ? (
+              // biome-ignore lint/performance/noImgElement: free-form URL, outside next/image remotePatterns
+              <img
+                src={scrim.logo_url}
+                alt={scrim.name}
+                className="h-full w-full object-contain p-1"
+              />
+            ) : scrim.name ? (
+              scrim.name.slice(0, 3).toUpperCase()
+            ) : undefined
+          }
+          title={scrim.name}
+          meta={format(t.slug, { slug: scrim.slug || '—' })}
+          actions={
+            <>
+              <AdminButtonLink
                 href="/admin/scrims"
-                className="text-sm text-neutral-400 hover:text-white"
+                className={saving ? 'pointer-events-none opacity-50' : ''}
               >
-                {t.backAll}
-              </Link>
-              <h1 className="text-3xl font-bold mt-1">{scrim.name}</h1>
-              <p className="text-xs text-neutral-500 mt-1">
-                {format(t.slug, { slug: scrim.slug || '—' })}
-              </p>
-            </div>
-            <button
-              onClick={deleteScrim}
-              className="px-3 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-xs"
-            >
-              {t.delete}
-            </button>
+                {tf.cancel}
+              </AdminButtonLink>
+              <AdminButton variant="primary" onClick={save} disabled={saving}>
+                {saving ? tf.saving : tf.save}
+              </AdminButton>
+            </>
+          }
+        />
+
+        {error && (
+          <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm text-[var(--t1,#f4edf7)]">
+            {error}
           </div>
+        )}
 
-          {error && (
-            <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
-              {error}
-            </div>
-          )}
+        <FicheLayout
+          main={
+            <>
+              <FicheSection title={t.infoHeading}>
+                <div className="space-y-4">
+                  <div>
+                    <label className={labelClass}>{t.nameLabel}</label>
+                    <input
+                      value={scrim.name}
+                      onChange={(e) =>
+                        setScrim({ ...scrim, name: e.target.value })
+                      }
+                      className={inputClass}
+                    />
+                  </div>
 
-          <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold">{t.infoHeading}</h2>
+                  <div className="grid grid-cols-2 gap-4">
+                    <ScrimTeamField
+                      label={t.team1Label}
+                      noneLabel={t.teamNone}
+                      externalOptionLabel={t.teamExternalOption}
+                      externalPlaceholder={t.teamExternalPlaceholder}
+                      externalHint={t.teamExternalHint}
+                      teams={teams}
+                      currentTeam={scrim.team1}
+                      value={{ teamId: scrim.team1_id || '', ...ext1 }}
+                      onChange={(v) => {
+                        setScrim({ ...scrim, team1_id: v.teamId || null });
+                        setExt1({
+                          external: v.external,
+                          externalName: v.externalName,
+                        });
+                      }}
+                    />
+                    <ScrimTeamField
+                      label={t.team2Label}
+                      noneLabel={t.teamNone}
+                      externalOptionLabel={t.teamExternalOption}
+                      externalPlaceholder={t.teamExternalPlaceholder}
+                      externalHint={t.teamExternalHint}
+                      teams={teams}
+                      currentTeam={scrim.team2}
+                      value={{ teamId: scrim.team2_id || '', ...ext2 }}
+                      onChange={(v) => {
+                        setScrim({ ...scrim, team2_id: v.teamId || null });
+                        setExt2({
+                          external: v.external,
+                          externalName: v.externalName,
+                        });
+                      }}
+                    />
+                  </div>
 
-            <div>
-              <label className="block text-sm text-neutral-400 mb-1">
-                {t.nameLabel}
-              </label>
-              <input
-                value={scrim.name}
-                onChange={(e) => setScrim({ ...scrim, name: e.target.value })}
-                className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <ScrimTeamField
-                label={t.team1Label}
-                noneLabel={t.teamNone}
-                externalOptionLabel={t.teamExternalOption}
-                externalPlaceholder={t.teamExternalPlaceholder}
-                externalHint={t.teamExternalHint}
-                teams={teams}
-                currentTeam={scrim.team1}
-                value={{ teamId: scrim.team1_id || '', ...ext1 }}
-                onChange={(v) => {
-                  setScrim({ ...scrim, team1_id: v.teamId || null });
-                  setExt1({
-                    external: v.external,
-                    externalName: v.externalName,
-                  });
-                }}
-              />
-              <ScrimTeamField
-                label={t.team2Label}
-                noneLabel={t.teamNone}
-                externalOptionLabel={t.teamExternalOption}
-                externalPlaceholder={t.teamExternalPlaceholder}
-                externalHint={t.teamExternalHint}
-                teams={teams}
-                currentTeam={scrim.team2}
-                value={{ teamId: scrim.team2_id || '', ...ext2 }}
-                onChange={(v) => {
-                  setScrim({ ...scrim, team2_id: v.teamId || null });
-                  setExt2({
-                    external: v.external,
-                    externalName: v.externalName,
-                  });
-                }}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  {t.scheduledLabel}
-                </label>
-                <input
-                  type="datetime-local"
-                  value={toLocalInput(scrim.scheduled_date)}
-                  onChange={(e) =>
-                    setScrim({
-                      ...scrim,
-                      scheduled_date: e.target.value
-                        ? new Date(e.target.value).toISOString()
-                        : null,
-                    })
-                  }
-                  className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
-                />
-                {/* La grille de disponibilités est complète (heatmap, conflits,
-                    rappels) mais vivait dans un onglet que personne n'ouvrait :
-                    zéro grille en production. On la propose là où la question
-                    « quand joue-t-on ? » se pose vraiment. */}
-                {!scrim.scheduled_date && scrim.team1_id && scrim.team2_id && (
-                  <p className="mt-2 text-xs text-neutral-400">
-                    {t.noDateHint}{' '}
-                    <Link
-                      href={`/admin/scrims?tab=plannings&new=1&team1=${scrim.team1_id}&team2=${scrim.team2_id}&forScrim=${scrim.id}`}
-                      className="text-blue-400 hover:underline"
-                    >
-                      {t.openPlanning}
-                    </Link>
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  {t.statusLabel}
-                </label>
-                <select
-                  value={scrim.status}
-                  onChange={(e) =>
-                    setScrim({ ...scrim, status: e.target.value })
-                  }
-                  className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
-                >
-                  <option value="draft">{t.statusDraft}</option>
-                  <option value="scheduled">{t.statusScheduled}</option>
-                  <option value="running">{t.statusRunning}</option>
-                  <option value="completed">{t.statusCompleted}</option>
-                  <option value="cancelled">{t.statusCancelled}</option>
-                  {/* Affiché pour qu'un scrim en litige ne s'affiche pas
-                      « Brouillon » ; non sélectionnable (posé par des reports
-                      divergents, tranché dans la section Résultat). */}
-                  {loadedStatus === 'disputed' && (
-                    <option value="disputed" disabled>
-                      {t.statusDisputed}
-                    </option>
-                  )}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm text-neutral-400 mb-1">
-                {t.streamUrlLabel}
-              </label>
-              <input
-                value={scrim.stream_url || ''}
-                onChange={(e) =>
-                  setScrim({ ...scrim, stream_url: e.target.value })
-                }
-                className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm text-neutral-400 mb-1">
-                {t.descriptionLabel}
-              </label>
-              <textarea
-                value={scrim.description || ''}
-                onChange={(e) =>
-                  setScrim({ ...scrim, description: e.target.value })
-                }
-                rows={3}
-                className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
-              />
-            </div>
-
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={scrim.is_public}
-                onChange={(e) =>
-                  setScrim({ ...scrim, is_public: e.target.checked })
-                }
-              />
-              {t.isPublicLabel}
-            </label>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={save}
-                disabled={saving}
-                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium"
-              >
-                {saving ? t.saving : t.save}
-              </button>
-            </div>
-          </section>
-
-          <ScrimResultPanel scrim={scrim} onSaved={fetchAll} />
-
-          <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">
-                {format(t.matchesHeading, { count: matches.length })}
-              </h2>
-              <button
-                onClick={addMatch}
-                disabled={creatingMatch}
-                className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-xs font-medium"
-              >
-                {t.addMatch}
-              </button>
-            </div>
-
-            {matches.length === 0 ? (
-              <p className="text-sm text-neutral-400">{t.matchesEmpty}</p>
-            ) : (
-              <ul className="space-y-2">
-                {matches.map((m, i) => (
-                  <li
-                    key={m.id}
-                    className="flex flex-wrap items-center justify-between gap-2 bg-neutral-900/50 border border-neutral-700/50 rounded-lg px-4 py-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-neutral-500">#{i + 1}</span>
-                      <span className="text-sm">
-                        {format(t.matchTeamsVs, {
-                          team1: m.team1?.name || t.defaultTeam1,
-                          team2: m.team2?.name || t.defaultTeam2,
-                        })}
-                      </span>
-                      <span className="text-xs text-neutral-400">
-                        {m.team1_score ?? '—'} – {m.team2_score ?? '—'}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md text-xs bg-neutral-700">
-                        {m.status}
-                      </span>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>{t.scheduledLabel}</label>
+                      <input
+                        type="datetime-local"
+                        value={toLocalInput(scrim.scheduled_date)}
+                        onChange={(e) =>
+                          setScrim({
+                            ...scrim,
+                            scheduled_date: e.target.value
+                              ? new Date(e.target.value).toISOString()
+                              : null,
+                          })
+                        }
+                        className={inputClass}
+                      />
+                      {/* La grille de disponibilités est complète (heatmap, conflits,
+                          rappels) mais vivait dans un onglet que personne n'ouvrait :
+                          zéro grille en production. On la propose là où la question
+                          « quand joue-t-on ? » se pose vraiment. */}
+                      {!scrim.scheduled_date &&
+                        scrim.team1_id &&
+                        scrim.team2_id && (
+                          <p className="mt-2 text-xs text-[var(--t3,#a39ba6)]">
+                            {t.noDateHint}{' '}
+                            <Link
+                              href={`/admin/scrims?tab=plannings&new=1&team1=${scrim.team1_id}&team2=${scrim.team2_id}&forScrim=${scrim.id}`}
+                              className="text-[var(--or-200,#eec4ff)] hover:underline"
+                            >
+                              {t.openPlanning}
+                            </Link>
+                          </p>
+                        )}
                     </div>
-                    <Link
-                      href={`/admin/matches/${m.id}/edit`}
-                      className="text-xs text-blue-400 hover:underline"
-                    >
-                      {t.edit}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </div>
+                    <div>
+                      <label className={labelClass}>{t.statusLabel}</label>
+                      <select
+                        value={scrim.status}
+                        onChange={(e) =>
+                          setScrim({ ...scrim, status: e.target.value })
+                        }
+                        className={inputClass}
+                      >
+                        <option value="draft">{t.statusDraft}</option>
+                        <option value="scheduled">{t.statusScheduled}</option>
+                        <option value="running">{t.statusRunning}</option>
+                        <option value="completed">{t.statusCompleted}</option>
+                        <option value="cancelled">{t.statusCancelled}</option>
+                        {/* Affiché pour qu'un scrim en litige ne s'affiche pas
+                            « Brouillon » ; non sélectionnable (posé par des reports
+                            divergents, tranché dans la section Résultat). */}
+                        {loadedStatus === 'disputed' && (
+                          <option value="disputed" disabled>
+                            {t.statusDisputed}
+                          </option>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>{t.streamUrlLabel}</label>
+                    <input
+                      value={scrim.stream_url || ''}
+                      onChange={(e) =>
+                        setScrim({ ...scrim, stream_url: e.target.value })
+                      }
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>{t.descriptionLabel}</label>
+                    <textarea
+                      value={scrim.description || ''}
+                      onChange={(e) =>
+                        setScrim({ ...scrim, description: e.target.value })
+                      }
+                      rows={3}
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2 text-sm text-[var(--t2,#c7bfca)]">
+                    <input
+                      type="checkbox"
+                      checked={scrim.is_public}
+                      onChange={(e) =>
+                        setScrim({ ...scrim, is_public: e.target.checked })
+                      }
+                    />
+                    {t.isPublicLabel}
+                  </label>
+                </div>
+              </FicheSection>
+
+              <ScrimResultPanel scrim={scrim} onSaved={fetchAll} />
+
+              <FicheSection
+                title={format(t.matchesHeading, { count: matches.length })}
+                aside={
+                  <AdminButton
+                    variant="secondary"
+                    size="xs"
+                    onClick={addMatch}
+                    disabled={creatingMatch}
+                  >
+                    {t.addMatch}
+                  </AdminButton>
+                }
+              >
+                {matches.length === 0 ? (
+                  <p className="text-sm text-[var(--t3,#a39ba6)]">
+                    {t.matchesEmpty}
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {matches.map((m, i) => (
+                      <li
+                        key={m.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-4 py-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-[var(--t3,#a39ba6)]">
+                            #{i + 1}
+                          </span>
+                          <span className="text-sm text-[var(--t1,#f4edf7)]">
+                            {format(t.matchTeamsVs, {
+                              team1: m.team1?.name || t.defaultTeam1,
+                              team2: m.team2?.name || t.defaultTeam2,
+                            })}
+                          </span>
+                          <span className="text-xs text-[var(--t3,#a39ba6)]">
+                            {m.team1_score ?? '—'} – {m.team2_score ?? '—'}
+                          </span>
+                          <span className="rounded-md bg-[var(--s3,#2f2732)] px-2 py-0.5 text-xs text-[var(--t2,#c7bfca)]">
+                            {m.status}
+                          </span>
+                        </div>
+                        <Link
+                          href={`/admin/matches/${m.id}/edit`}
+                          className="text-xs text-[var(--or-200,#eec4ff)] hover:underline"
+                        >
+                          {t.edit}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </FicheSection>
+
+              <DangerZone
+                confirmName={scrim.name}
+                labels={{
+                  title: tf.dangerTitle,
+                  intro: tf.dangerIntro,
+                  typeToConfirm: tf.typeToConfirm,
+                  cancel: tf.cancel,
+                }}
+                actions={[
+                  {
+                    id: 'delete',
+                    title: t.dangerDeleteTitle,
+                    description: t.dangerDeleteDesc,
+                    actionLabel: tf.execute,
+                    onConfirm: deleteScrim,
+                  },
+                ]}
+              />
+            </>
+          }
+          aside={
+            <FicheSection eyebrow title={tf.metaTitle}>
+              <MetaList
+                items={[
+                  { label: tf.metaId, value: `${scrim.id.slice(0, 8)}…` },
+                  { label: tf.metaCreated, value: day(scrim.created_at) },
+                  { label: tf.metaUpdated, value: day(scrim.updated_at) },
+                ]}
+              />
+            </FicheSection>
+          }
+        />
       </div>
     </>
   );

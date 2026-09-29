@@ -5,6 +5,7 @@ import { withStaffPage } from '@/utils/staff';
 import { hasAtLeastRole } from '@/utils/staffRoles';
 import type { StaffRole } from '@/utils/staff';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import Tabs, {
   useQueryTab,
   tabPanelId,
@@ -110,59 +111,52 @@ export default function AdminModerationPage({ staff }: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          <div className="mb-6">
-            <p className="text-sm text-neutral-400">{t.subtitle}</p>
-            <h1 className="mt-1 text-3xl md:text-4xl font-bold tracking-tight">
-              {t.heading}
-            </h1>
-          </div>
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <AdminPageHeader title={t.heading} subtitle={t.subtitle} />
 
-          <Tabs
-            tabs={tabs}
-            active={active}
-            onChange={setActive}
-            ariaLabel={t.tabsAriaLabel}
-            idBase={ID_BASE}
-            className="mb-8"
-          />
+        <Tabs
+          tabs={tabs}
+          active={active}
+          onChange={setActive}
+          ariaLabel={t.tabsAriaLabel}
+          idBase={ID_BASE}
+          className="mb-8"
+        />
 
-          <div
-            role="tabpanel"
-            id={tabPanelId(ID_BASE, active)}
-            aria-labelledby={tabButtonId(ID_BASE, active)}
-          >
-            {active === 'comments' && isManager ? (
-              <CommentsPanel />
-            ) : active === 'blacklist' && isManager ? (
-              <>
-                <Tabs
-                  tabs={blSubTabs}
-                  active={blActive}
-                  onChange={setBlActive}
-                  ariaLabel={t.blSubTabsAriaLabel}
-                  idBase={`${ID_BASE}-bl`}
-                  className="mb-6"
-                />
-                <div
-                  role="tabpanel"
-                  id={tabPanelId(`${ID_BASE}-bl`, blActive)}
-                  aria-labelledby={tabButtonId(`${ID_BASE}-bl`, blActive)}
-                >
-                  {blActive === 'entities' ? (
-                    <EntityBlacklistPanel />
-                  ) : (
-                    <BlacklistPanel />
-                  )}
-                </div>
-              </>
-            ) : active === 'support' && isManager ? (
-              <SupportPanel />
-            ) : (
-              <DisputesPanel />
-            )}
-          </div>
+        <div
+          role="tabpanel"
+          id={tabPanelId(ID_BASE, active)}
+          aria-labelledby={tabButtonId(ID_BASE, active)}
+        >
+          {active === 'comments' && isManager ? (
+            <CommentsPanel />
+          ) : active === 'blacklist' && isManager ? (
+            <>
+              <Tabs
+                tabs={blSubTabs}
+                active={blActive}
+                onChange={setBlActive}
+                ariaLabel={t.blSubTabsAriaLabel}
+                idBase={`${ID_BASE}-bl`}
+                className="mb-6"
+              />
+              <div
+                role="tabpanel"
+                id={tabPanelId(`${ID_BASE}-bl`, blActive)}
+                aria-labelledby={tabButtonId(`${ID_BASE}-bl`, blActive)}
+              >
+                {blActive === 'entities' ? (
+                  <EntityBlacklistPanel />
+                ) : (
+                  <BlacklistPanel />
+                )}
+              </div>
+            </>
+          ) : active === 'support' && isManager ? (
+            <SupportPanel />
+          ) : (
+            <DisputesPanel />
+          )}
         </div>
       </div>
     </>

@@ -25,6 +25,7 @@ export default {
     'Deactivated or cancelled items. Restore them to bring them back into service.',
   countInBin_one: '{count} item in the recycle bin.',
   countInBin_other: '{count} items in the recycle bin.',
+  filterTypeLabel: 'Type',
   filterAll: 'All types',
   filterStages: 'Stages',
   filterTeams: 'Teams',

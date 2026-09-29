@@ -87,4 +87,7 @@ export default adminNs('adminScrimDetail', {
   resultErrorChanged:
     'Le scrim a changé entre-temps : il a été rechargé, vérifie avant de réenregistrer.',
   resultError: "Erreur d'enregistrement du résultat.",
+  dangerDeleteTitle: 'Supprimer le scrim',
+  dangerDeleteDesc:
+    'Le scrim et tous ses matchs sont supprimés définitivement.',
 });

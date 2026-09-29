@@ -24,6 +24,7 @@ export default adminNs('adminRecycleBin', {
     'Elements desactives ou annules. Restaurez-les pour les remettre en service.',
   countInBin_one: '{count} element dans la corbeille.',
   countInBin_other: '{count} elements dans la corbeille.',
+  filterTypeLabel: 'Type',
   filterAll: 'Tous les types',
   filterStages: 'Phases',
   filterTeams: 'Equipes',

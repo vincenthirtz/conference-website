@@ -11,6 +11,11 @@ import Breadcrumb from '@/components/admin/Breadcrumb';
 import EmptyState from '@/components/admin/EmptyState';
 import { Skeleton } from '@/components/admin/Skeleton';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 import type { StaffProps } from '@/types/admin';
 import type {
   League,
@@ -46,18 +51,14 @@ function statusLabel(status: LeagueStatus, t: Dict): string {
   }
 }
 
-function statusColor(status: LeagueStatus): string {
+function statusTone(status: LeagueStatus): ChipTone {
   switch (status) {
-    case 'draft':
-      return 'bg-neutral-600 text-neutral-100';
     case 'active':
-      return 'bg-emerald-600 text-white';
+      return 'ok';
     case 'finished':
-      return 'bg-purple-600 text-white';
-    case 'archived':
-      return 'bg-neutral-700 text-neutral-300';
+      return 'brand';
     default:
-      return 'bg-neutral-700 text-neutral-200';
+      return 'neutral';
   }
 }
 
@@ -189,18 +190,23 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
   }
 
   const inputCls =
-    'w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500';
-  const labelCls = 'block text-sm text-neutral-400 mb-1';
+    'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
+  const labelCls = 'mb-1 block text-sm text-[var(--t3,#a39ba6)]';
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6 space-y-4"
+      className="mb-6 space-y-4 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4"
     >
-      <h2 className="text-lg font-semibold">{t.formTitle}</h2>
+      <h2 className="font-[family-name:var(--fd)] text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--t1,#f4edf7)] [font-stretch:75%]">
+        {t.formTitle}
+      </h2>
 
       {error && (
-        <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
+        <div
+          role="alert"
+          className="rounded-[var(--r-ctrl,4px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-sm text-[#ffc2c2]"
+        >
           {error}
         </div>
       )}
@@ -299,13 +305,13 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
           value={pointsJson}
           onChange={(e) => setPointsJson(e.target.value)}
         />
-        <p className="text-xs text-neutral-500 mt-1">{t.pointsHelp}</p>
+        <p className="mt-1 text-xs text-[var(--t4,#807984)]">{t.pointsHelp}</p>
       </div>
 
-      <label className="flex items-center gap-2 text-sm cursor-pointer">
+      <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--t2,#c7bfca)]">
         <input
           type="checkbox"
-          className="h-4 w-4 rounded border-neutral-600 bg-neutral-900"
+          className="h-4 w-4 accent-[var(--or,#b467d1)]"
           checked={isPublic}
           onChange={(e) => setIsPublic(e.target.checked)}
         />
@@ -313,20 +319,10 @@ function CreateLeagueForm({ onCreated, onCancel }: CreateFormProps) {
       </label>
 
       <div className="flex gap-3 pt-2">
-        <button
-          type="submit"
-          disabled={submitting}
-          className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
-        >
+        <AdminButton type="submit" variant="primary" disabled={submitting}>
           {submitting ? t.creating : t.submit}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-5 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors"
-        >
-          {t.cancel}
-        </button>
+        </AdminButton>
+        <AdminButton onClick={onCancel}>{t.cancel}</AdminButton>
       </div>
     </form>
   );
@@ -393,45 +389,36 @@ function AdminLeaguesPage(_props: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          <Breadcrumb
-            items={[
-              { label: t.breadcrumbAdmin, href: '/admin' },
-              { label: t.breadcrumbLeagues },
-            ]}
-          />
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <Breadcrumb
+          items={[
+            { label: t.breadcrumbAdmin, href: '/admin' },
+            { label: t.breadcrumbLeagues },
+          ]}
+        />
 
-          <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                {t.heading}
-              </h1>
-              <p className="text-neutral-400 text-sm mt-1">
-                {loading
-                  ? t.loading
-                  : format(
-                      leagues.length > 1
-                        ? t.leagueCount_other
-                        : t.leagueCount_one,
-                      { count: leagues.length }
-                    )}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Link
-                href="/admin/ratings"
-                className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors"
-              >
+        {/* Formulaire ouvert : son bouton « Créer » devient l'action principale. */}
+        <AdminPageHeader
+          title={t.heading}
+          subtitle={
+            loading
+              ? t.loading
+              : format(
+                  leagues.length > 1 ? t.leagueCount_other : t.leagueCount_one,
+                  { count: leagues.length }
+                )
+          }
+          actions={
+            <>
+              <AdminButtonLink href="/admin/ratings">
                 {t.ratingsLink}
-              </Link>
-              <button
-                type="button"
+              </AdminButtonLink>
+              <AdminButton
+                variant={showCreate ? 'ghost' : 'primary'}
                 onClick={() => setShowCreate((s) => !s)}
-                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-2"
               >
                 <svg
-                  className="w-5 h-5"
+                  className="h-4 w-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -445,120 +432,108 @@ function AdminLeaguesPage(_props: StaffProps) {
                   />
                 </svg>
                 {t.newLeague}
-              </button>
-            </div>
+              </AdminButton>
+            </>
+          }
+        />
+
+        {showCreate && (
+          <CreateLeagueForm
+            onCancel={() => setShowCreate(false)}
+            onCreated={(league) => {
+              setShowCreate(false);
+              router.push(`/admin/leagues/${league.id}`);
+            }}
+          />
+        )}
+
+        {errorMsg && (
+          <div
+            role="alert"
+            className="mb-6 flex items-center gap-3 rounded-[var(--r-ctrl,4px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-sm text-[#ffc2c2]"
+          >
+            <span className="flex-1">{errorMsg}</span>
+            <AdminButton size="xs" variant="danger" onClick={() => load()}>
+              {t.retry}
+            </AdminButton>
           </div>
+        )}
 
-          {showCreate && (
-            <CreateLeagueForm
-              onCancel={() => setShowCreate(false)}
-              onCreated={(league) => {
-                setShowCreate(false);
-                router.push(`/admin/leagues/${league.id}`);
-              }}
+        <section className="overflow-hidden rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]">
+          {loading ? (
+            <div className="space-y-3 p-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton
+                  key={i}
+                  className="h-16 w-full"
+                  rounded="rounded-xl"
+                />
+              ))}
+            </div>
+          ) : leagues.length === 0 ? (
+            <EmptyState
+              title={t.emptyTitle}
+              description={t.emptyDescription}
+              action={
+                <AdminButton
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setShowCreate(true)}
+                >
+                  {t.newLeague}
+                </AdminButton>
+              }
             />
-          )}
+          ) : (
+            <div className="divide-y divide-[var(--line2,rgba(194,196,201,.2))]">
+              {leagues.map((l) => (
+                <div
+                  key={l.id}
+                  className="flex flex-col gap-3 p-4 transition-colors hover:bg-[var(--s2,#1d1520)] sm:flex-row sm:items-center sm:gap-4"
+                >
+                  <Link
+                    href={`/admin/leagues/${l.id}`}
+                    className="group min-w-0 flex-1"
+                  >
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                      <h3 className="truncate font-semibold text-[var(--t1,#f4edf7)] transition-colors group-hover:text-[var(--or-200,#eec4ff)]">
+                        {l.name}
+                      </h3>
+                      <Chip tone={statusTone(l.status)}>
+                        {statusLabel(l.status, t)}
+                      </Chip>
+                      {l.is_public && <Chip tone="ok">{t.publicBadge}</Chip>}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--t3,#a39ba6)] sm:gap-3">
+                      <span className="rounded-[3px] bg-[var(--s2,#1d1520)] px-2 py-0.5 font-mono text-xs">
+                        /{l.slug}
+                      </span>
+                      {l.game && <span>{l.game}</span>}
+                      <span className="hidden sm:inline">•</span>
+                      <span data-numeric>
+                        {formatDate(l.start_date)} → {formatDate(l.end_date)}
+                      </span>
+                    </div>
+                  </Link>
 
-          {errorMsg && (
-            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-3">
-              <span className="flex-1">{errorMsg}</span>
-              <button
-                type="button"
-                onClick={() => load()}
-                className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
-              >
-                {t.retry}
-              </button>
+                  <div className="flex flex-shrink-0 items-center gap-2">
+                    <AdminButtonLink size="sm" href={`/admin/leagues/${l.id}`}>
+                      {t.edit}
+                    </AdminButtonLink>
+                    <AdminButton
+                      size="sm"
+                      variant="danger"
+                      onClick={() => handleDelete(l)}
+                      disabled={deletingId === l.id}
+                    >
+                      {deletingId === l.id ? '…' : t.delete}
+                    </AdminButton>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
-
-          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-            {loading ? (
-              <div className="p-4 space-y-3">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton
-                    key={i}
-                    className="h-16 w-full"
-                    rounded="rounded-xl"
-                  />
-                ))}
-              </div>
-            ) : leagues.length === 0 ? (
-              <EmptyState
-                title={t.emptyTitle}
-                description={t.emptyDescription}
-                action={
-                  <button
-                    type="button"
-                    onClick={() => setShowCreate(true)}
-                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-                  >
-                    {t.newLeague}
-                  </button>
-                }
-              />
-            ) : (
-              <div className="divide-y divide-neutral-700/50">
-                {leagues.map((l) => (
-                  <div
-                    key={l.id}
-                    className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 hover:bg-neutral-700/30 transition-colors"
-                  >
-                    <Link
-                      href={`/admin/leagues/${l.id}`}
-                      className="flex-1 min-w-0 group"
-                    >
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors truncate">
-                          {l.name}
-                        </h3>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
-                            l.status
-                          )}`}
-                        >
-                          {statusLabel(l.status, t)}
-                        </span>
-                        {l.is_public && (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                            {t.publicBadge}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 sm:gap-3 text-sm text-neutral-400 flex-wrap">
-                        <span className="font-mono text-xs bg-neutral-800 px-2 py-0.5 rounded">
-                          /{l.slug}
-                        </span>
-                        {l.game && <span>{l.game}</span>}
-                        <span className="hidden sm:inline">•</span>
-                        <span>
-                          {formatDate(l.start_date)} → {formatDate(l.end_date)}
-                        </span>
-                      </div>
-                    </Link>
-
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <Link
-                        href={`/admin/leagues/${l.id}`}
-                        className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-xs font-medium transition-colors"
-                      >
-                        {t.edit}
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(l)}
-                        disabled={deletingId === l.id}
-                        className="px-3 py-1.5 rounded-lg bg-red-900/40 hover:bg-red-800/60 border border-red-500/40 text-xs font-medium text-red-200 transition-colors disabled:opacity-50"
-                      >
-                        {deletingId === l.id ? '…' : t.delete}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
+        </section>
       </div>
       {dialog}
     </>

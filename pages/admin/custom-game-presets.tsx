@@ -28,6 +28,9 @@ import Tabs, {
 } from '@/components/admin/Tabs';
 import { listGames } from '@/config/games';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 import { presetScope, type PresetScope } from '@/utils/customGamePresets';
 import nsAdminCustomGamePresets from '@/lib/i18n/locales/admin-fr/adminCustomGamePresets';
 
@@ -62,11 +65,18 @@ function scopeLabel(t: Dict, scope: PresetScope): string {
   return t.scopeTenant;
 }
 
-const SCOPE_BADGE: Record<PresetScope, string> = {
-  tenant: 'border-white/20 bg-white/5 text-gray-200',
-  tournament: 'border-purple-400/40 bg-purple-500/10 text-purple-200',
-  stage: 'border-amber-400/40 bg-amber-500/10 text-amber-200',
+const SCOPE_TONE: Record<PresetScope, ChipTone> = {
+  tenant: 'neutral',
+  tournament: 'brand',
+  stage: 'warn',
 };
+
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4';
+const FIELD =
+  'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] outline-none focus-visible:border-[var(--or,#b467d1)]';
+const FIELD_LABEL = 'mb-1 block text-xs text-[var(--t3,#a39ba6)]';
+const FIELD_HINT = 'mt-1 text-[11px] text-[var(--t4,#807984)]';
 
 /** Textarea (une carte par ligne) ⇄ tableau envoyé à l'API. */
 function linesToArray(value: string): string[] {
@@ -329,171 +339,163 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
       <Head>
         <title>{t.headTitle}</title>
       </Head>
-      <div className="min-h-screen bg-neutral-950 text-white pt-header">
-        <div className="max-w-5xl mx-auto px-6 py-10">
-          <div className="flex items-start justify-between gap-4 mb-6">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-amber-200/80">
-                {t.eyebrow}
-              </p>
-              <h1 className="text-2xl font-semibold">{t.pageTitle}</h1>
-              <p className="text-sm text-gray-400 mt-1">{t.subtitle}</p>
-            </div>
-            <button
-              onClick={() => fetchPresets()}
-              className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm hover:bg-white/10 flex-shrink-0"
-            >
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <p className="mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
+          {t.eyebrow}
+        </p>
+        <AdminPageHeader
+          title={t.pageTitle}
+          subtitle={t.subtitle}
+          actions={
+            <AdminButton variant="ghost" onClick={() => fetchPresets()}>
               {t.refresh}
-            </button>
-          </div>
+            </AdminButton>
+          }
+        />
 
-          <Tabs
-            tabs={tabs}
-            active={activeGame}
-            onChange={setActiveGame}
-            ariaLabel={t.tablistLabel}
-            idBase={ID_BASE}
-            className="mb-6"
-          />
+        <Tabs
+          tabs={tabs}
+          active={activeGame}
+          onChange={setActiveGame}
+          ariaLabel={t.tablistLabel}
+          idBase={ID_BASE}
+          className="mb-6"
+        />
 
-          <div
-            role="tabpanel"
-            id={tabPanelId(ID_BASE, activeGame)}
-            aria-labelledby={tabButtonId(ID_BASE, activeGame)}
-          >
-            <div className="flex flex-wrap items-center gap-2 mb-4">
-              <button
-                onClick={openCreate}
-                className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-medium text-sm transition-colors"
-              >
-                {t.addButton}
-              </button>
-              <span className="ml-auto px-2 py-0.5 rounded-full text-xs border border-amber-400/40 bg-amber-500/10 text-amber-200">
+        <div
+          role="tabpanel"
+          id={tabPanelId(ID_BASE, activeGame)}
+          aria-labelledby={tabButtonId(ID_BASE, activeGame)}
+        >
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <AdminButton variant="primary" onClick={openCreate}>
+              {t.addButton}
+            </AdminButton>
+            <span className="ml-auto" data-numeric>
+              <Chip tone="neutral">
                 {format(t.presetCount, { count: presets.length })}
-              </span>
-            </div>
-
-            <p className="text-xs text-gray-400 mb-6">{t.scopeHint}</p>
-
-            {loading && (
-              <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-                {t.loading}
-              </div>
-            )}
-
-            {errorMsg && !loading && (
-              <div className="p-4 rounded-lg bg-red-900/60 border border-red-500/40 text-red-100">
-                {errorMsg}
-              </div>
-            )}
-
-            {!loading && !errorMsg && presets.length === 0 && (
-              <div className="p-6 rounded-lg bg-white/5 border border-white/10 text-center">
-                <p className="text-sm text-gray-200">{t.empty}</p>
-                <p className="text-xs text-gray-400 mt-1">{t.emptyHint}</p>
-              </div>
-            )}
-
-            {!loading && !errorMsg && presets.length > 0 && (
-              <ul className="space-y-3">
-                {presets.map((p) => {
-                  const scope = presetScope(p);
-                  const maps = Array.isArray(p.map_pool)
-                    ? (p.map_pool as unknown[]).filter(
-                        (v): v is string => typeof v === 'string'
-                      )
-                    : [];
-                  return (
-                    <li
-                      key={p.id}
-                      className={`rounded-xl border p-4 ${
-                        p.enabled
-                          ? 'bg-white/5 border-white/10'
-                          : 'bg-white/[0.02] border-white/5 opacity-70'
-                      }`}
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[11px] border ${SCOPE_BADGE[scope]}`}
-                            >
-                              {scopeLabel(t, scope)}
-                            </span>
-                            <span className="text-sm font-semibold truncate">
-                              {p.name}
-                            </span>
-                            {!p.enabled && (
-                              <span className="px-2 py-0.5 rounded-full text-[11px] border border-red-400/30 bg-red-500/10 text-red-200">
-                                {t.disabledBadge}
-                              </span>
-                            )}
-                          </div>
-
-                          {scope !== 'tenant' && (
-                            <p className="text-xs text-gray-400 mt-1">
-                              {tournamentName(p.tournament_id)}
-                              {p.stage_id ? ` · ${t.scopeStage}` : ''}
-                            </p>
-                          )}
-
-                          <div className="flex items-center gap-2 mt-3">
-                            <code className="px-2 py-1 rounded-lg bg-black/40 border border-white/10 text-amber-200 text-sm tracking-widest">
-                              {p.import_code}
-                            </code>
-                            <button
-                              onClick={() => handleCopy(p)}
-                              className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-xs hover:bg-white/10"
-                            >
-                              {copiedId === p.id ? t.copied : t.copyCode}
-                            </button>
-                          </div>
-
-                          {p.description && (
-                            <p className="text-xs text-gray-300 mt-2 whitespace-pre-line">
-                              {p.description}
-                            </p>
-                          )}
-
-                          {maps.length > 0 && (
-                            <p className="text-xs text-gray-400 mt-2">
-                              🗺️ {maps.join(' · ')}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <button
-                            onClick={() => openEdit(p)}
-                            disabled={busyId === p.id}
-                            className="px-2 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 text-blue-200 text-xs transition-colors disabled:opacity-50"
-                          >
-                            {t.edit}
-                          </button>
-                          <button
-                            onClick={() => handleToggle(p)}
-                            disabled={busyId === p.id}
-                            className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs transition-colors disabled:opacity-50"
-                          >
-                            {p.enabled ? t.disable : t.enable}
-                          </button>
-                          <button
-                            onClick={() => handleDelete(p)}
-                            disabled={busyId === p.id}
-                            className="px-2 py-1 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 text-red-200 text-xs transition-colors disabled:opacity-50"
-                          >
-                            {t.delete}
-                          </button>
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-
-            <p className="text-xs text-gray-500 mt-6">{t.howTo}</p>
+              </Chip>
+            </span>
           </div>
+
+          <p className="mb-6 text-xs text-[var(--t3,#a39ba6)]">{t.scopeHint}</p>
+
+          {loading && (
+            <div className={`${CARD} text-sm text-[var(--t3,#a39ba6)]`}>
+              {t.loading}
+            </div>
+          )}
+
+          {errorMsg && !loading && (
+            <div className="rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.4)] bg-[rgba(255,107,107,.08)] p-4 text-sm text-[#ffc2c2]">
+              {errorMsg}
+            </div>
+          )}
+
+          {!loading && !errorMsg && presets.length === 0 && (
+            <div className={`${CARD} py-6 text-center`}>
+              <p className="text-sm text-[var(--t1,#f4edf7)]">{t.empty}</p>
+              <p className="mt-1 text-xs text-[var(--t3,#a39ba6)]">
+                {t.emptyHint}
+              </p>
+            </div>
+          )}
+
+          {!loading && !errorMsg && presets.length > 0 && (
+            <ul className="space-y-3">
+              {presets.map((p) => {
+                const scope = presetScope(p);
+                const maps = Array.isArray(p.map_pool)
+                  ? (p.map_pool as unknown[]).filter(
+                      (v): v is string => typeof v === 'string'
+                    )
+                  : [];
+                return (
+                  <li
+                    key={p.id}
+                    className={`${CARD} ${p.enabled ? '' : 'opacity-70'}`}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Chip tone={SCOPE_TONE[scope]}>
+                            {scopeLabel(t, scope)}
+                          </Chip>
+                          <span className="truncate text-sm font-semibold text-[var(--t1,#f4edf7)]">
+                            {p.name}
+                          </span>
+                          {!p.enabled && (
+                            <Chip tone="warn">{t.disabledBadge}</Chip>
+                          )}
+                        </div>
+
+                        {scope !== 'tenant' && (
+                          <p className="mt-1 text-xs text-[var(--t3,#a39ba6)]">
+                            {tournamentName(p.tournament_id)}
+                            {p.stage_id ? ` · ${t.scopeStage}` : ''}
+                          </p>
+                        )}
+
+                        <div className="flex items-center gap-2 mt-3">
+                          <code className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2 py-1 text-sm tracking-widest text-[var(--t1,#f4edf7)]">
+                            {p.import_code}
+                          </code>
+                          <AdminButton
+                            variant="ghost"
+                            size="xs"
+                            onClick={() => handleCopy(p)}
+                          >
+                            {copiedId === p.id ? t.copied : t.copyCode}
+                          </AdminButton>
+                        </div>
+
+                        {p.description && (
+                          <p className="mt-2 whitespace-pre-line text-xs text-[var(--t2,#c7bfca)]">
+                            {p.description}
+                          </p>
+                        )}
+
+                        {maps.length > 0 && (
+                          <p className="mt-2 text-xs text-[var(--t3,#a39ba6)]">
+                            🗺️ {maps.join(' · ')}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-shrink-0 items-center gap-1.5">
+                        <AdminButton
+                          variant="secondary"
+                          size="xs"
+                          onClick={() => openEdit(p)}
+                          disabled={busyId === p.id}
+                        >
+                          {t.edit}
+                        </AdminButton>
+                        <AdminButton
+                          variant="ghost"
+                          size="xs"
+                          onClick={() => handleToggle(p)}
+                          disabled={busyId === p.id}
+                        >
+                          {p.enabled ? t.disable : t.enable}
+                        </AdminButton>
+                        <AdminButton
+                          variant="danger"
+                          size="xs"
+                          onClick={() => handleDelete(p)}
+                          disabled={busyId === p.id}
+                        >
+                          {t.delete}
+                        </AdminButton>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          <p className="mt-6 text-xs text-[var(--t4,#807984)]">{t.howTo}</p>
         </div>
       </div>
 
@@ -504,19 +506,21 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
         size="lg"
         footer={
           <div className="flex justify-end gap-2">
-            <button
+            <AdminButton
+              variant="ghost"
+              size="sm"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm hover:bg-white/10"
             >
               {t.cancel}
-            </button>
-            <button
+            </AdminButton>
+            <AdminButton
+              variant="primary"
+              size="sm"
               onClick={handleSave}
               disabled={saving}
-              className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 disabled:bg-gray-600 text-white text-sm font-medium"
             >
               {saving ? t.saving : t.save}
-            </button>
+            </AdminButton>
           </div>
         }
       >
@@ -525,10 +529,7 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
               pourrait heurter l'index unique de scope). */}
           {!editing ? (
             <div>
-              <label
-                htmlFor="preset-scope"
-                className="block text-xs text-gray-400 mb-1"
-              >
+              <label htmlFor="preset-scope" className={FIELD_LABEL}>
                 {t.fieldScope}
               </label>
               <select
@@ -543,7 +544,7 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
                   }
                   if (next === 'tournament') setFormStageId('');
                 }}
-                className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-white/10 text-sm"
+                className={FIELD}
               >
                 <option value="tenant">{t.scopeTenant}</option>
                 <option value="tournament">{t.scopeTournament}</option>
@@ -551,17 +552,14 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
               </select>
             </div>
           ) : (
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-[var(--t3,#a39ba6)]">
               {scopeLabel(t, presetScope(editing))} — {t.scopeLocked}
             </p>
           )}
 
           {!editing && formScope !== 'tenant' && (
             <div>
-              <label
-                htmlFor="preset-tournament"
-                className="block text-xs text-gray-400 mb-1"
-              >
+              <label htmlFor="preset-tournament" className={FIELD_LABEL}>
                 {t.fieldTournament}
               </label>
               <select
@@ -571,7 +569,7 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
                   setFormTournamentId(e.target.value);
                   setFormStageId('');
                 }}
-                className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-white/10 text-sm"
+                className={FIELD}
               >
                 <option value="">{t.selectTournamentPlaceholder}</option>
                 {tournaments.map((tr) => (
@@ -585,10 +583,7 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
 
           {!editing && formScope === 'stage' && (
             <div>
-              <label
-                htmlFor="preset-stage"
-                className="block text-xs text-gray-400 mb-1"
-              >
+              <label htmlFor="preset-stage" className={FIELD_LABEL}>
                 {t.fieldStage}
               </label>
               <select
@@ -596,7 +591,7 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
                 value={formStageId}
                 onChange={(e) => setFormStageId(e.target.value)}
                 disabled={!formTournamentId}
-                className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-white/10 text-sm disabled:opacity-50"
+                className={`${FIELD} disabled:opacity-50`}
               >
                 <option value="">{t.selectStageAll}</option>
                 {stages.map((s) => (
@@ -609,10 +604,7 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
           )}
 
           <div>
-            <label
-              htmlFor="preset-name"
-              className="block text-xs text-gray-400 mb-1"
-            >
+            <label htmlFor="preset-name" className={FIELD_LABEL}>
               {t.fieldName}
             </label>
             <input
@@ -620,15 +612,12 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               placeholder={t.fieldNamePlaceholder}
-              className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-white/10 text-sm"
+              className={FIELD}
             />
           </div>
 
           <div>
-            <label
-              htmlFor="preset-code"
-              className="block text-xs text-gray-400 mb-1"
-            >
+            <label htmlFor="preset-code" className={FIELD_LABEL}>
               {t.fieldImportCode}
             </label>
             <input
@@ -636,18 +625,13 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
               value={formCode}
               onChange={(e) => setFormCode(e.target.value)}
               placeholder={t.fieldImportCodePlaceholder}
-              className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-white/10 text-sm tracking-widest uppercase"
+              className={`${FIELD} uppercase tracking-widest`}
             />
-            <p className="text-[11px] text-gray-500 mt-1">
-              {t.fieldImportCodeHint}
-            </p>
+            <p className={FIELD_HINT}>{t.fieldImportCodeHint}</p>
           </div>
 
           <div>
-            <label
-              htmlFor="preset-description"
-              className="block text-xs text-gray-400 mb-1"
-            >
+            <label htmlFor="preset-description" className={FIELD_LABEL}>
               {t.fieldDescription}
             </label>
             <textarea
@@ -656,15 +640,12 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
               onChange={(e) => setFormDescription(e.target.value)}
               placeholder={t.fieldDescriptionPlaceholder}
               rows={3}
-              className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-white/10 text-sm"
+              className={FIELD}
             />
           </div>
 
           <div>
-            <label
-              htmlFor="preset-maps"
-              className="block text-xs text-gray-400 mb-1"
-            >
+            <label htmlFor="preset-maps" className={FIELD_LABEL}>
               {t.fieldMapPool}
             </label>
             <textarea
@@ -673,11 +654,9 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
               onChange={(e) => setFormMapPool(e.target.value)}
               placeholder={t.fieldMapPoolPlaceholder}
               rows={4}
-              className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-white/10 text-sm"
+              className={FIELD}
             />
-            <p className="text-[11px] text-gray-500 mt-1">
-              {t.fieldMapPoolHint}
-            </p>
+            <p className={FIELD_HINT}>{t.fieldMapPoolHint}</p>
           </div>
 
           <label className="flex items-center gap-2 text-sm">

@@ -86,4 +86,6 @@ export default {
   resultErrorChanged:
     'The scrim changed in the meantime: it has been reloaded, check before saving again.',
   resultError: 'Error saving the result.',
+  dangerDeleteTitle: 'Delete the scrim',
+  dangerDeleteDesc: 'The scrim and all its matches are permanently deleted.',
 };

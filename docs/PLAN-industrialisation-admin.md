@@ -600,6 +600,12 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       Faite par trois agents en parallèle sur des fichiers disjoints, vérifiée ensuite (tsc,
       gardes). Le cliquet a refusé 4 `useState` ajoutés pour les dates des fiches : fusionnés
       avec l'état `loading` qu'ils rendaient redondant.
+- [x] **Passe visuelle, lot 2 (18 écrans)** : fiches scrim, demande de partenariat, adhérent
+      (fiche + création), nouvelle actualité ; listes chaînes Twitch, ligues, pool de maps,
+      modèles de tournoi, corbeille, tournois, presets de partie ; onboarding, overlays ; en-têtes
+      des hubs Association, Modération, Communications, TCG. Consigne « aucun nouvel état »
+      tenue (cliquet à zéro), aucun appel / navigation / `data-testid` perdu (vérifié au diff).
+      La suppression d'un scrim passe de `confirm()` à la zone sensible (saisie du nom).
 - [x] Constat du lot 1 corrigé : `Chip` et `AdminButtonLink` acceptent `title` et `data-testid`.
 - [ ] Tableau de bord tournoi à onglets ; les autres listes et fiches : avec les lots de
       découpe L15–L20.

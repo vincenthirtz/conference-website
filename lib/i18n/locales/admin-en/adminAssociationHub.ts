@@ -12,7 +12,7 @@
 export default {
   pageTitle: 'Admin – Association',
   heading: 'Association',
-  subtitle: 'Casters, association poles and members.',
+  subtitle: 'Association poles and members.',
   tabsAriaLabel: 'Association sections',
   tabPoles: 'Association poles',
   tabAdherents: 'Members',
