@@ -107,7 +107,11 @@ défaut fait échouer la connexion en 429 — que la page `/login` affiche comme
 
 Le workflow [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml) :
 
-- **Huit tranches** parallèles (`--shard=N/8`), chacune avec **sa propre**
+- **Huit tranches** parallèles, réparties par **durée mesurée** et non par
+  nombre de tests ([`scripts/e2e-shard.mjs`](../scripts/e2e-shard.mjs) +
+  [`tests/e2e/shard-durations.json`](../tests/e2e/shard-durations.json) ; à
+  rafraîchir depuis l'artefact `e2e-durations` quand les tranches se
+  déséquilibrent). Chacune a **sa propre**
   Supabase — les specs sèment et nettoient, deux tranches sur une même base se
   marcheraient dessus. Deux workers par tranche, pas plus : 59 fichiers sont
   en mode `serial` et toutes les specs partagent la base de leur tranche.
@@ -122,7 +126,8 @@ Le workflow [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml) :
 - **Sur push : projet `chromium` seul.** Le projet `mobile` (Pixel 7) tourne
   la nuit, et en manuel si la case `mobile` est cochée.
 - Réglages CI de Playwright : timeout 60 s par test (les tests verts vont
-  jusqu'à ~48 s, p95 ≈ 7 s), actions et navigations 15 s, `expect` 10 s,
+  jusqu'à ~48 s, p95 ≈ 7 s), actions 15 s, `expect` 10 s (pas de
+  `navigationTimeout` : 15 s coupait des tests verts qui attendent `networkidle`),
   `retries: 0` (un second essai doublerait le coût des échecs connus),
   trace conservée à l'échec, pas de vidéo, `forbidOnly`.
 - Rapports : `blob` par tranche + annotations `github` ; un job

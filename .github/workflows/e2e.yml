@@ -206,9 +206,22 @@ jobs:
           # serveur chargerait la variante DÉVELOPPEMENT de React face à un
           # bundle client de production. On sert donc l'app comme en prod.
           E2E_SERVER: start
+        # Répartition par DURÉE mesurée (scripts/e2e-shard.mjs +
+        # tests/e2e/shard-durations.json), pas par nombre de tests comme
+        # `--shard` : au premier run en 8 tranches, celui-ci donnait de 0 à
+        # 416 s de tests selon la tranche.
         # blob → fusion en fin de run ; github → annotations des échecs sur
         # le commit / la PR.
-        run: npx playwright test $PW_PROJECTS --shard=${{ matrix.shard }}/${{ env.SHARDS }} --reporter=blob,github
+        run: |
+          FILES=$(node scripts/e2e-shard.mjs ${{ matrix.shard }} "$SHARDS")
+          npx playwright test $PW_PROJECTS $FILES --reporter=blob,github
+
+      # Sans `--shard`, chaque tranche nomme son blob `report.zip` : on le
+      # renomme, sinon la fusion des artefacts les écraserait.
+      - name: Nommer le rapport de la tranche
+        if: always()
+        run: |
+          for f in blob-report/*.zip; do [ -f "$f" ] && mv "$f" "blob-report/report-${{ matrix.shard }}.zip"; done; true
 
       - name: Conserver le rapport de la tranche
         if: always()
@@ -245,6 +258,20 @@ jobs:
 
       - name: Fusionner en un rapport HTML
         run: npx playwright merge-reports --reporter html ./all-blob-reports
+
+      # Durées par fichier de CE run, prêtes à remplacer
+      # tests/e2e/shard-durations.json quand la répartition se dégrade.
+      - name: Mesurer les durées par spec
+        run: |
+          PLAYWRIGHT_JSON_OUTPUT_NAME=merged.json npx playwright merge-reports --reporter json ./all-blob-reports
+          node scripts/e2e-shard.mjs --durations merged.json > shard-durations.json
+
+      - name: Conserver les durées
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-durations
+          path: shard-durations.json
+          retention-days: 30
 
       - name: Conserver le rapport
         uses: actions/upload-artifact@v4
