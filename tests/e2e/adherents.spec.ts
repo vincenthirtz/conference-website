@@ -386,16 +386,15 @@ test.describe('Adherent payment history (supabase)', () => {
         year: currentYear,
         amount: 25.0,
         payment_method: 'card',
-        status: 'paid',
-        paid_at: new Date().toISOString(),
+        payment_date: new Date().toISOString().slice(0, 10),
       })
-      .select('id, year, amount, status')
+      .select('id, year, amount, payment_date')
       .maybeSingle();
 
     expect(paymentErr).toBeNull();
     expect(payment?.id).toBeTruthy();
     expect(payment?.year).toBe(currentYear);
-    expect(payment?.status).toBe('paid');
+    expect(payment?.payment_date).toBeTruthy();
 
     // Cleanup - delete payment first (foreign key)
     if (payment?.id) {
@@ -443,8 +442,7 @@ test.describe('Adherent payment history (supabase)', () => {
           year,
           amount: 25.0,
           payment_method: 'card',
-          status: 'paid',
-          paid_at: new Date().toISOString(),
+          payment_date: new Date().toISOString().slice(0, 10),
         })
         .select('id')
         .maybeSingle();
