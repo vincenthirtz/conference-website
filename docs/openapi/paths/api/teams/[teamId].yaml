@@ -3,7 +3,12 @@ parameters:
 get:
   tags:
     - public/teams
-  summary: Detail public d'une equipe (toutes colonnes du tenant).
+  summary: Fiche publique d'une equipe (colonnes publiques explicites).
+  description: >-
+    Ne renvoie QUE les colonnes publiques listees ci-dessous (celles de la
+    fiche `/team/[slug]`) : ni capitaine, ni identifiants Discord internes,
+    ni `deleted_at` / `is_active` / `tenant_id`. Une equipe supprimee ou
+    desactivee repond 404, comme une equipe inexistante. Cache CDN 5 min.
   operationId: getPublicTeamById
   security: []
   responses:
@@ -18,7 +23,73 @@ get:
             properties:
               team:
                 type: object
-                additionalProperties: true
+                additionalProperties: false
+                required:
+                  - id
+                  - name
+                  - short_name
+                  - slug
+                  - logo_url
+                  - logo_credit_name
+                  - logo_credit_url
+                  - banner_url
+                  - banner_focal
+                  - banner_overlay
+                  - accent_color
+                  - secondary_color
+                  - country
+                  - description
+                  - achievements
+                  - public_content
+                  - sponsors
+                  - embed_provider
+                  - embed_id
+                  - pinned_announcement
+                  - pinned_announcement_until
+                  - skill_rating
+                  - is_joinable
+                  - open_for_scrim
+                  - discord
+                  - twitter
+                  - twitch
+                  - youtube
+                  - instagram
+                  - tiktok
+                  - website
+                  - created_at
+                properties:
+                  id: {}
+                  name: {}
+                  short_name: {}
+                  slug: {}
+                  logo_url: {}
+                  logo_credit_name: {}
+                  logo_credit_url: {}
+                  banner_url: {}
+                  banner_focal: {}
+                  banner_overlay: {}
+                  accent_color: {}
+                  secondary_color: {}
+                  country: {}
+                  description: {}
+                  achievements: {}
+                  public_content: {}
+                  sponsors: {}
+                  embed_provider: {}
+                  embed_id: {}
+                  pinned_announcement: {}
+                  pinned_announcement_until: {}
+                  skill_rating: {}
+                  is_joinable: {}
+                  open_for_scrim: {}
+                  discord: {}
+                  twitter: {}
+                  twitch: {}
+                  youtube: {}
+                  instagram: {}
+                  tiktok: {}
+                  website: {}
+                  created_at: {}
     '400':
       $ref: '#/components/responses/BadRequest'
     '404':

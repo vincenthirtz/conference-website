@@ -248,7 +248,7 @@ describe('permission', () => {
     expect(res.statusCode).toBe(403);
   });
 
-  it('a staff admin can edit any member even without team membership', async () => {
+  it('a staff admin WITHOUT team rights is rejected (P0 · S1, no staff bypass)', async () => {
     const ADMIN_USER = '77777777-7777-7777-7777-777777777777';
     setAuthUser({ id: ADMIN_USER });
     store.staff = [
@@ -270,14 +270,14 @@ describe('permission', () => {
       }),
       res
     );
-    expect(res.statusCode).toBe(200);
+    expect(res.statusCode).toBe(403);
     expect(
       (store.team_members as any[]).find((m) => m.id === MEMBER_OTHER)
         .display_name
-    ).toBe('AdminEdit');
+    ).not.toBe('AdminEdit');
   });
 
-  it('a staff admin can flip is_substitute on any member', async () => {
+  it('a staff admin WITHOUT team rights cannot flip is_substitute (P0 · S1)', async () => {
     const ADMIN_USER = '88888888-8888-8888-8888-888888888888';
     setAuthUser({ id: ADMIN_USER });
     store.staff = [
@@ -299,11 +299,11 @@ describe('permission', () => {
       }),
       res
     );
-    expect(res.statusCode).toBe(200);
+    expect(res.statusCode).toBe(403);
     expect(
       (store.team_members as any[]).find((m) => m.id === MEMBER_OTHER)
         .is_substitute
-    ).toBe(true);
+    ).not.toBe(true);
   });
 });
 

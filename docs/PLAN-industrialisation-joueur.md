@@ -335,13 +335,51 @@ sujet, surcharges J3) ; le bypass staff passe par l'act-as (journalisé) ou disp
 non-régression par constat.
 
 **Critères d'acceptation**
-- [ ] Test : un staff admin global **sans** act-as reçoit 403 sur les 5 routes pour une équipe
+- [x] Test : un staff admin global **sans** act-as reçoit 403 sur les 5 routes pour une équipe
       d'un autre tenant ; avec act-as, l'écriture est journalisée `act_as_player`.
-- [ ] Test : la config de rôles du tenant B est appliquée à une équipe du tenant B.
-- [ ] Test : `GET /api/teams/[id]` ne renvoie aucune des colonnes S3 et 404 sur équipe supprimée ;
+      *(2026-09-29 — `tests/unit/playerSecurityP0.test.ts` : 403 sur `public-page`, `upload-image`,
+      `tcg-image`, 403/404 sur `members/[memberId]/profile`, `canAnnounce: false` sur
+      `player/team-rhythm`, redirection du SSR `team/[slug]/edit` — y compris sur une équipe de son
+      propre tenant où il n'a pas le droit d'équipe. **Volet act-as non applicable** : aucune de ces
+      routes n'est `allowActAs` (5 × `withAuthRoute`, `team-rhythm` refuse `?as=` en écriture) ;
+      l'ouvrir est hors P0, à décider en P10.)*
+- [x] Test : la config de rôles du tenant B est appliquée à une équipe du tenant B.
+      *(`hasTeamPermission` = adaptateur de `getManagedTeam` + `assertTeamPermission` sur le tenant
+      de l'équipe ; `getManagedTeams` charge désormais les rôles de SON tenant ; surcharges J3
+      honorées.)*
+- [x] Test : `GET /api/teams/[id]` ne renvoie aucune des colonnes S3 et 404 sur équipe supprimée ;
       fragment OpenAPI mis à jour, drift test vert, consommateurs (bot, pages) relus.
-- [ ] Liste S4 : chaque test `captain_id` classé « capitanat voulu » (transfert, capitanat) ou
+      *(Aucun consommateur : ni page, ni composant, ni le bot — qui lit `/api/bot/v1/teams/{id}`.)*
+- [x] Liste S4 : chaque test `captain_id` classé « capitanat voulu » (transfert, capitanat) ou
       « permission » (migré en P10/P12).
+
+**Classement S4** (2026-09-29, lecture seule — rien de migré ; `report-score` laissé à P12 : aucune
+permission `report_score` n'existe au catalogue, la créer touche `utils/teamRoles.ts`, l'écran de
+délégation et le pendant bot `/api/bot/v1/matches/[matchId]/report`) :
+
+| Fichier:ligne (`pages/api/…`) | Classe | Justification |
+|---|---|---|
+| `player/matches/[matchId]/report-score.ts:181-182` | permission (P12) | Rapporter le score est un geste délégable ; une délégation J3 n'y est pas honorée. |
+| `player/matches.ts:126-127` | permission (P12) | `isCaptain` n'y sert qu'à afficher « Rapporter le score » : suit `report-score`. |
+| `player/matches/[matchId].ts:250-251` | permission (P12) | `reportScore: isCaptain` — même cause, même lot. |
+| `admin/me.ts:211` | permission (P10) | Ouvre l'accès « capitaine » au seul `captain_id` ; un manager/délégué n'y est pas vu — aligner sur `getManagedTeams`. |
+| `teams/transfer-captain.ts:156` | capitanat voulu | Seule la capitaine transmet son propre rôle. |
+| `teams/transfer-captain.ts:192` | capitanat voulu | Lit la capitaine courante pour la désignation par un manager (`manage_roster` déjà exigé). |
+| `teams/update-member-role.ts:150` | capitanat voulu | Protège la ligne de la capitaine contre un manager. |
+| `teams/update-member-specialty.ts:119` | capitanat voulu | Idem, sur la spécialité. |
+| `teams/[teamId]/members.ts:92` | capitanat voulu | La capitaine ne peut pas être retirée du roster. |
+| `teams/leave.ts:73` | capitanat voulu | Départ de la capitaine = transfert préalable ou dissolution. |
+| `demandes/transfer.ts:276` | capitanat voulu | La capitaine ne demande pas de transfert sans céder son rôle. |
+| `teams/invitations/index.ts:233` | capitanat voulu | On ne désigne une capitaine que s'il n'y en a pas. |
+| `teams/member-permissions.ts:150` | capitanat voulu | Affiche que la capitaine a déjà tout (aucune délégation utile). |
+| `teams/create-with-member.ts:898` | capitanat voulu | Écriture : la créatrice devient capitaine. |
+| `player/team-health.ts:314` | capitanat voulu | Diagnostic « équipe sans capitaine ». |
+| `teams/invite-links/by-token.ts:273` | capitanat voulu | Repli de l'inviteur affiché, pas un droit. |
+| `teams/invite-free-player.ts:106` | lecture sans décision | Colonne lue, jamais testée (garde = `manage_roster`) — à retirer du select en P4. |
+| `teams/invite-links/index.ts:219` | lecture sans décision | Idem. |
+| `demandes/register-team.ts:336` | lecture sans décision | Idem (garde = `getManagedTeamForRequest`). |
+| `admin/teams/my.ts:171` | lecture sans décision | Idem (garde = `manage_team_info`). |
+| `player/messages.ts:58`, `player/messages/[conversationId].ts:51` | lecture sans décision | Type `CaptainTeam` seulement ; garde = `send_captain_messages`. |
 
 ### P1 · Cliquet de dette joueuse — 🟥 / M
 

@@ -5,8 +5,7 @@
 //
 // Ce qui est vérifié, au-delà du chemin heureux :
 //   - la garde est `manage_team_info` : une joueuse du roster n'y touche pas,
-//     la capitaine oui, et le staff `>= admin` passe sur n'importe quelle équipe
-//     (c'est ce qui fait tenir « capitaine OU staff » sur une seule route) ;
+//     la capitaine oui ; le staff `>= admin` n'a PLUS de passe-droit (P0 · S1) ;
 //   - un remplacement SUPPRIME le fichier précédent — sans quoi le bucket
 //     accumule des orphelins que plus rien ne référence ;
 //   - une écriture en base qui échoue ne laisse pas derrière elle le fichier
@@ -121,9 +120,9 @@ describe('garde', () => {
     expect(res.statusCode).toBe(200);
   });
 
-  it('accepte le staff sur une équipe dont il n’est pas membre', async () => {
-    // C'est le bypass de `hasTeamPermission` qui fait tenir « capitaine OU
-    // staff » sur une seule route, sans handler d'administration parallèle.
+  it('refuse le staff sur une équipe dont il n’est pas membre (P0 · S1)', async () => {
+    // Le passe-droit staff de `hasTeamPermission` a disparu : sans droit
+    // d'équipe, un admin global est un compte comme un autre.
     const STAFF_AUTH = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
     store.staff = [
       {
@@ -137,7 +136,8 @@ describe('garde', () => {
 
     const res = makeRes();
     await handler(makeReq(), res);
-    expect(res.statusCode).toBe(200);
+    expect(res.statusCode).toBe(403);
+    expect(storageUploads).toHaveLength(0);
   });
 });
 

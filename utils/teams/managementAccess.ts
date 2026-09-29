@@ -152,7 +152,9 @@ export async function getManagedTeams(
 
   const [captainRes, roles] = await Promise.all([
     captainQuery,
-    loadTeamRolesFromSupabase(supabaseAdmin),
+    // Config de rôles DU TENANT (P0 · S2) : sans l'argument, c'était celle du
+    // tenant par défaut qui s'appliquait aux équipes de tous les tenants.
+    loadTeamRolesFromSupabase(supabaseAdmin, tenantId),
   ]);
 
   if (captainRes.error) {

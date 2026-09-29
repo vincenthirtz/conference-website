@@ -156,7 +156,7 @@ describe('permission', () => {
     expect((store.teams as any[])[0].description).toBeNull();
   });
 
-  it('a staff admin can edit any team even without team membership', async () => {
+  it('a staff admin WITHOUT team rights is rejected (P0 · S1, no staff bypass)', async () => {
     const ADMIN_USER = '55555555-5555-5555-5555-555555555555';
     setAuthUser({ id: ADMIN_USER });
     store.staff = [
@@ -172,8 +172,8 @@ describe('permission', () => {
     ] as any;
     const res = makeRes();
     await handler(makeReq({ body: { description: 'edited by staff' } }), res);
-    expect(res.statusCode).toBe(200);
-    expect((store.teams as any[])[0].description).toBe('edited by staff');
+    expect(res.statusCode).toBe(403);
+    expect((store.teams as any[])[0].description).not.toBe('edited by staff');
   });
 
   it('a staff caster (lower than admin) is still rejected', async () => {

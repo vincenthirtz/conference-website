@@ -6,10 +6,9 @@
 //   DELETE                    → retire l'image ; la carte retombe sur le logo
 //
 // Qui a le droit : quiconque porte `manage_team_info` sur CETTE équipe —
-// capitaine, rôle d'équipe habilité, et le staff `>= admin`, que
-// `hasTeamPermission` laisse passer sur toutes les équipes. Une seule garde
-// couvre donc « capitaine ou staff » sans route d'administration parallèle,
-// dont la seconde implémentation finirait par diverger de la première.
+// capitaine, rôle d'équipe habilité, délégation J3. Le staff n'a PLUS de
+// passe-droit ici (lot P0 · S1, docs/PLAN-industrialisation-joueur.md) : un
+// compte staff sans droit d'équipe reçoit 403 comme n'importe qui.
 //
 // `manage_team_info` plutôt que `edit_public_page` (la permission retenue par
 // upload-image.ts) : cette image n'habille pas la page publique, elle EST
