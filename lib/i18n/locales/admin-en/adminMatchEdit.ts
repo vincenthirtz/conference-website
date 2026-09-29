@@ -22,6 +22,7 @@ export default {
   breadcrumbEdit: 'Edit match',
   backToMatch: '← Back to match (admin)',
   heading: 'Edit match',
+  kicker: 'Admin · Match',
   matchWord: 'Match',
   tournamentBullet: '• Tournament',
   phaseBullet: '• Phase',

@@ -93,14 +93,18 @@ export default function TeamRosterLockPanel({ teamId }: { teamId: string }) {
 
   return (
     <section
-      className="rounded-2xl border border-neutral-700/50 bg-neutral-800/40 p-4"
+      className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6"
       data-testid="team-roster-lock"
     >
-      <h3 className="text-sm font-semibold text-white">{t.rosterLockTitle}</h3>
-      <p className="mt-1 text-xs text-neutral-400">{t.rosterLockIntro}</p>
+      <h3 className="text-[19px] text-[var(--t1,#f4edf7)]">
+        {t.rosterLockTitle}
+      </h3>
+      <p className="mt-1 text-xs text-[var(--t3,#a39ba6)]">
+        {t.rosterLockIntro}
+      </p>
 
       {error && (
-        <p className="mt-2 text-xs text-red-300" role="alert">
+        <p className="mt-2 text-xs text-[var(--err,#ff6b6b)]" role="alert">
           {error}
         </p>
       )}
@@ -114,18 +118,18 @@ export default function TeamRosterLockPanel({ teamId }: { teamId: string }) {
           return (
             <li
               key={r.tournamentId}
-              className={`rounded-xl border p-3 ${
+              className={`rounded-[var(--r-ctrl,4px)] border p-3 ${
                 r.locks
-                  ? 'border-amber-500/40 bg-amber-500/10'
-                  : 'border-emerald-500/40 bg-emerald-500/10'
+                  ? 'border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.08)]'
+                  : 'border-[rgba(127,202,101,.36)] bg-[rgba(127,202,101,.08)]'
               }`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium text-white">
+                  <p className="text-sm font-medium text-[var(--t1,#f4edf7)]">
                     {r.tournamentName ?? r.tournamentId.slice(0, 8)}
                   </p>
-                  <p className="mt-0.5 text-xs text-neutral-300">
+                  <p className="mt-0.5 text-xs text-[var(--t2,#c7bfca)]">
                     {r.locks
                       ? t.rosterLockLocked
                       : openByTeam
@@ -146,7 +150,7 @@ export default function TeamRosterLockPanel({ teamId }: { teamId: string }) {
                       type="button"
                       onClick={() => void act(r.tournamentId, null)}
                       disabled={working}
-                      className="rounded-lg border border-neutral-500/60 px-3 py-1.5 text-xs text-neutral-100 hover:border-neutral-300 disabled:opacity-50"
+                      className="inline-flex h-[30px] items-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)] disabled:opacity-50"
                       data-testid={`team-roster-relock-${r.tournamentId}`}
                     >
                       {t.rosterLockRelock}
@@ -154,7 +158,7 @@ export default function TeamRosterLockPanel({ teamId }: { teamId: string }) {
                   ) : openByTournament ? (
                     // Déjà ouvert pour tout le monde : rien à rouvrir. On le
                     // dit plutôt que d'offrir un bouton sans effet.
-                    <span className="text-xs text-neutral-400">
+                    <span className="text-xs text-[var(--t3,#a39ba6)]">
                       {t.rosterLockAlreadyOpen}
                     </span>
                   ) : (
@@ -164,7 +168,7 @@ export default function TeamRosterLockPanel({ teamId }: { teamId: string }) {
                         type="button"
                         onClick={() => void act(r.tournamentId, m)}
                         disabled={working}
-                        className="rounded-lg bg-amber-500/80 px-3 py-1.5 text-xs font-semibold text-neutral-950 hover:bg-amber-400 disabled:opacity-50"
+                        className="inline-flex h-[30px] items-center rounded-[var(--r-ctrl,4px)] border border-[rgba(245,165,36,.45)] px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase text-[#ffd9a3] transition-colors hover:bg-[rgba(245,165,36,.12)] disabled:opacity-50"
                         data-testid={`team-roster-unlock-${m}`}
                       >
                         {m < 60

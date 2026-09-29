@@ -47,12 +47,12 @@ function Row({
       href={href}
       target={external ? '_blank' : undefined}
       data-testid={testId}
-      className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-neutral-900/50 hover:bg-neutral-700/50 transition-colors group"
+      className="group flex items-center justify-between gap-3 rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-4 py-3 transition-colors hover:border-[var(--line2,rgba(194,196,201,.2))]"
     >
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center">
+        <div className="flex h-8 w-8 items-center justify-center rounded-[var(--r-ctrl,4px)] bg-[var(--s3,#2f2732)]">
           <svg
-            className="w-4 h-4 text-blue-400"
+            className="w-4 h-4 text-[var(--or-200,#eec4ff)]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -66,10 +66,10 @@ function Row({
             />
           </svg>
         </div>
-        <span className="text-sm">{label}</span>
+        <span className="text-sm text-[var(--t1,#f4edf7)]">{label}</span>
       </div>
       <svg
-        className="w-4 h-4 text-neutral-500 group-hover:text-white transition-colors"
+        className="w-4 h-4 text-[var(--t4,#807984)] transition-colors group-hover:text-[var(--t1,#f4edf7)]"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -90,8 +90,8 @@ export default function TeamQuickLinks({ teamId, slug, captainUserId }: Props) {
   const t = useAdminT(nsAdminTeamEdit);
 
   return (
-    <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-      <h2 className="text-sm font-semibold text-neutral-400 mb-3">
+    <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6">
+      <h2 className="mb-3 font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
         {t.quickLinksTitle}
       </h2>
       <div className="space-y-2">

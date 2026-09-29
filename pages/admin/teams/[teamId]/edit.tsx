@@ -1,14 +1,12 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
 import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import Breadcrumb from '@/components/admin/Breadcrumb';
 import LogoUpload from '@/components/admin/LogoUpload';
 import MembersSection from '@/components/admin/teams/MembersSection';
 import AddMemberModal from '@/components/admin/teams/AddMemberModal';
@@ -32,7 +30,7 @@ import {
   type TeamRole,
 } from '@/utils/teamRoles';
 import type { StaffProps, TeamRow, TeamMemberRow } from '@/types/admin';
-import TeamLogoCreditFields, {
+import {
   EMPTY_LOGO_CREDIT,
   logoCreditDraftFromRow,
   logoCreditPayload,
@@ -46,11 +44,17 @@ import nsAdminTeamEdit from '@/lib/i18n/locales/admin-fr/adminTeamEdit';
 import TeamRosterLockPanel from '@/components/admin/teams/TeamRosterLockPanel';
 import TeamHistoryPanel from '@/components/admin/teams/TeamHistoryPanel';
 import TeamQuickLinks from '@/components/admin/teams/TeamQuickLinks';
-import TeamCommsFields, {
-  type TeamLocaleValue,
-} from '@/components/admin/teams/TeamCommsFields';
+import type { TeamLocaleValue } from '@/components/admin/teams/TeamCommsFields';
+import { FicheLayout } from '@/features/admin/_shared/ui/Fiche';
+import TeamEditHeader, {
+  TEAM_EDIT_GHOST_SM,
+  TeamEditSystemCards,
+} from '@/features/admin/teams/ui/TeamEditHeader';
+import TeamEditInfoForm from '@/features/admin/teams/ui/TeamEditInfoForm';
+import TeamEditTournamentsSection from '@/features/admin/teams/ui/TeamEditTournamentsSection';
 
 const BATTLE_TAG_RE = BATTLE_TAG_REGEX;
+const FORM_ID = 'team-edit-form';
 
 export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
   { permission: 'manage_teams' },
@@ -905,350 +909,73 @@ function AdminEditTeamPage({
         </title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        {/* Banner */}
-        {team?.banner_url && (
-          <div className="relative h-48 md:h-56 w-full overflow-hidden">
-            <Image
-              src={team.banner_url}
-              alt=""
-              fill
-              className="object-cover opacity-40"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/60 to-transparent" />
-          </div>
-        )}
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <TeamEditHeader
+          team={team}
+          teamId={teamId}
+          formId={FORM_ID}
+          saving={saving}
+          loading={loading}
+          errorMsg={errorMsg}
+          onBack={() => router.push('/admin/teams')}
+          historySlot={
+            team && (
+              // Lot A6 : l'historique se lit SUR la fiche, sans quitter l'écran.
+              <EntityHistoryButton
+                entityType="team"
+                entityId={team.id}
+                className={TEAM_EDIT_GHOST_SM}
+              />
+            )
+          }
+        />
 
-        <div
-          className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${
-            team?.banner_url ? '-mt-20 relative z-10' : 'pt-20'
-          } pb-12`}
-        >
-          {/* Header */}
-          <div className="mb-8">
-            <Breadcrumb
-              items={[
-                { label: t.breadcrumbTeams, href: '/admin/teams' },
-                {
-                  label: team?.name || t.breadcrumbTeam,
-                  href: `/admin/teams/${teamId}`,
-                },
-                { label: t.breadcrumbEdit },
-              ]}
-            />
-            <button
-              type="button"
-              onClick={() => router.push('/admin/teams')}
-              className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              {t.backToList}
-            </button>
-
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="flex items-center gap-4">
-                {team?.logo_url && (
-                  <Image
-                    src={team.logo_url}
-                    alt={team.name}
-                    width={64}
-                    height={64}
-                    className="w-16 h-16 rounded-xl object-cover border-2 border-neutral-700 shadow-lg"
-                  />
-                )}
-                <div>
-                  <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                    {team?.name || t.loading}
-                  </h1>
-                  {team?.short_name && (
-                    <p className="text-sm text-neutral-400 mt-1">
-                      <span className="font-mono text-xs bg-neutral-800/80 px-2 py-0.5 rounded">
-                        {team.short_name}
-                      </span>
-                      {team.country && (
-                        <span className="ml-2">{team.country}</span>
-                      )}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {team && (
-                <div className="flex items-center gap-2">
-                  {/* Lot A6 : l'historique se lit SUR la fiche. Aller le
-                      chercher dans le journal global obligeait à quitter
-                      l'écran et à reconstruire le contexte de tête. */}
-                  <EntityHistoryButton
-                    entityType="team"
-                    entityId={team.id}
-                    className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-white/10"
-                  />
-                  {team.is_active ? (
-                    <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                      {t.active}
-                    </span>
-                  ) : (
-                    <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-neutral-600/20 text-neutral-300 border border-neutral-500/30">
-                      {t.inactive}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Messages */}
-          {errorMsg && (
-            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-red-400 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {errorMsg}
-            </div>
-          )}
-          {loading && !team && (
-            <div className="flex items-center justify-center py-20">
-              <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-            </div>
-          )}
-
-          {team && (
-            <div className="grid gap-6 lg:grid-cols-3">
-              {/* Left Column - Edit Form */}
-              <div className="lg:col-span-2 space-y-6">
-                {/* Team Info Form */}
-                <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <svg
-                      className="w-5 h-5 text-neutral-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
-                    {t.generalInfo}
-                  </h2>
-
-                  <form onSubmit={handleSubmit} className="space-y-5">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="block text-sm text-neutral-400 mb-1">
-                          {t.nameLabel}
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                          placeholder={t.namePlaceholder}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-neutral-400 mb-1">
-                          {t.shortNameLabel}
-                        </label>
-                        <input
-                          type="text"
-                          value={shortName}
-                          onChange={(e) => setShortName(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                          placeholder="PHX"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <LogoUpload
-                        value={logoUrl}
-                        onChange={setLogoUrl}
-                        label={t.logoLabel}
-                      />
-                      <div>
-                        <label className="block text-sm text-neutral-400 mb-1">
-                          {t.bannerLabel}
-                        </label>
-                        <input
-                          type="text"
-                          value={bannerUrl}
-                          onChange={(e) => setBannerUrl(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
-                          placeholder="https://..."
-                        />
-                      </div>
-                    </div>
-
-                    <TeamLogoCreditFields
-                      value={logoCredit}
-                      onChange={setLogoCredit}
+        {team && (
+          <FicheLayout
+            main={
+              <>
+                <TeamEditInfoForm
+                  formId={FORM_ID}
+                  onSubmit={handleSubmit}
+                  values={{
+                    name,
+                    shortName,
+                    logoCredit,
+                    bannerUrl,
+                    country,
+                    description,
+                    twitter,
+                    discord,
+                    discordRoleId,
+                    preferredLocale,
+                    website,
+                    isActive,
+                    skillRating,
+                  }}
+                  setters={{
+                    setName,
+                    setShortName,
+                    setLogoCredit,
+                    setBannerUrl,
+                    setCountry,
+                    setDescription,
+                    setTwitter,
+                    setDiscord,
+                    setDiscordRoleId,
+                    setPreferredLocale,
+                    setWebsite,
+                    setIsActive,
+                    setSkillRating,
+                  }}
+                  logoSlot={
+                    <LogoUpload
+                      value={logoUrl}
+                      onChange={setLogoUrl}
+                      label={t.logoLabel}
                     />
+                  }
+                />
 
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="block text-sm text-neutral-400 mb-1">
-                          {t.countryLabel}
-                        </label>
-                        <input
-                          type="text"
-                          value={country}
-                          onChange={(e) => setCountry(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                          placeholder="FR"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2 mt-6">
-                        <input
-                          id="active"
-                          type="checkbox"
-                          checked={isActive}
-                          onChange={(e) => setIsActive(e.target.checked)}
-                          className="h-4 w-4 rounded border-neutral-600 bg-neutral-700"
-                        />
-                        <label
-                          htmlFor="active"
-                          className="text-sm text-neutral-300"
-                        >
-                          {t.teamActive}
-                        </label>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm text-neutral-400 mb-1">
-                        {t.descriptionLabel}
-                      </label>
-                      <textarea
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-h-[100px] resize-y"
-                        placeholder={t.descriptionPlaceholder}
-                      />
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-3">
-                      <div>
-                        <label className="block text-sm text-neutral-400 mb-1">
-                          {t.twitterLabel}
-                        </label>
-                        <input
-                          type="text"
-                          value={twitter}
-                          onChange={(e) => setTwitter(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                          placeholder="@team"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-neutral-400 mb-1">
-                          {t.discordLabel}
-                        </label>
-                        <input
-                          type="text"
-                          value={discord}
-                          onChange={(e) => setDiscord(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                          placeholder="discord.gg/..."
-                        />
-                      </div>
-                      <TeamCommsFields
-                        discordRoleId={discordRoleId}
-                        onDiscordRoleIdChange={setDiscordRoleId}
-                        locale={preferredLocale}
-                        onLocaleChange={setPreferredLocale}
-                        t={t as unknown as Record<string, string>}
-                      />
-                      <div>
-                        <label className="block text-sm text-neutral-400 mb-1">
-                          {t.websiteLabel}
-                        </label>
-                        <input
-                          type="text"
-                          value={website}
-                          onChange={(e) => setWebsite(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                          placeholder="https://..."
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-neutral-400 mb-1">
-                          {t.skillRatingLabel}
-                        </label>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          min={0}
-                          max={5000}
-                          step={50}
-                          value={skillRating}
-                          onChange={(e) => setSkillRating(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                          placeholder="3500"
-                        />
-                        <p className="mt-1 text-xs text-neutral-500">
-                          {t.skillRatingHint}
-                        </p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2"
-                    >
-                      {saving ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          {t.saving}
-                        </>
-                      ) : (
-                        <>
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                          {t.save}
-                        </>
-                      )}
-                    </button>
-                  </form>
-                </section>
-
-                {/* Members Section */}
                 <MembersSection
                   membersCount={members.length}
                   membersLoading={membersLoading}
@@ -1279,161 +1006,26 @@ function AdminEditTeamPage({
                   onDeleteMember={handleDeleteMember}
                 />
 
-                {/* Tournaments Section */}
-                <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <svg
-                      className="w-5 h-5 text-neutral-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-                      />
-                    </svg>
-                    {t.tournamentsTitle}
-                  </h2>
-
-                  {tournamentsLoading ? (
-                    <div className="text-neutral-400 text-sm py-4">
-                      {t.loading}
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {tournamentError && (
-                        <div
-                          role="alert"
-                          className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm text-red-100"
-                        >
-                          {tournamentError}
-                        </div>
-                      )}
-
-                      {/* Registered tournaments */}
-                      <div>
-                        <h3 className="text-sm font-semibold text-neutral-400 mb-2">
-                          {format(t.registeredTitle, {
-                            count: registeredTournaments.length,
-                          })}
-                        </h3>
-                        {registeredTournaments.length === 0 ? (
-                          <div className="text-sm text-neutral-500 py-4 text-center bg-neutral-900/30 rounded-xl">
-                            {t.noRegistration}
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {registeredTournaments.map((tourn) => (
-                              <div
-                                key={tourn.id}
-                                className="flex items-center justify-between gap-3 bg-neutral-900/50 rounded-xl px-4 py-3"
-                              >
-                                <div>
-                                  <div className="font-medium text-sm">
-                                    {tourn.name}
-                                  </div>
-                                  <div className="text-xs text-neutral-500 mt-0.5">
-                                    {tourn.game} • {tourn.status}
-                                  </div>
-                                  {/* L'alerte d'effectif n'existait qu'AVANT
-                                      l'inscription. Or un roster passe sous le
-                                      minimum après coup — départ, exclusion —
-                                      et plus rien ne le disait. */}
-                                  {Number(tourn.min_players) > 0 &&
-                                    playingCount <
-                                      Number(tourn.min_players) && (
-                                      <div className="text-xs text-amber-300 mt-1">
-                                        {format(t.registeredRosterGap, {
-                                          count: playingCount,
-                                          min: Number(tourn.min_players),
-                                        })}
-                                      </div>
-                                    )}
-                                </div>
-                                <button
-                                  onClick={() =>
-                                    handleUnregisterFromTournament(tourn.id)
-                                  }
-                                  className="px-3 py-1 rounded-lg text-xs font-medium bg-red-900/40 hover:bg-red-900/60 text-red-300 border border-red-700/50 transition-colors"
-                                >
-                                  {t.unregister}
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Register to new tournament */}
-                      {availableTournaments.length > 0 && (
-                        <div className="pt-4 border-t border-neutral-700">
-                          <h3 className="text-sm font-semibold text-neutral-400 mb-2">
-                            {t.registerToTournament}
-                          </h3>
-                          <div className="flex gap-2">
-                            <select
-                              value={selectedTournamentId}
-                              onChange={(e) =>
-                                setSelectedTournamentId(e.target.value)
-                              }
-                              className="flex-1 px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                            >
-                              <option value="">{t.selectTournament}</option>
-                              {availableTournaments.map((tourn) => (
-                                <option key={tourn.id} value={tourn.id}>
-                                  {tourn.name} ({tourn.game})
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              onClick={handleRegisterToTournament}
-                              disabled={
-                                !selectedTournamentId || tournamentsLoading
-                              }
-                              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-                            >
-                              {t.register}
-                            </button>
-                          </div>
-                          {/* Avertissement, pas blocage : le bouton reste
-                              actif, la confirmation se fait au clic. */}
-                          {selectedRosterGap > 0 && (
-                            <p className="mt-2 text-xs text-amber-300">
-                              {format(t.rosterGapWarning, {
-                                count: playingCount,
-                                min: selectedMinPlayers,
-                              })}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </section>
+                <TeamEditTournamentsSection
+                  loading={tournamentsLoading}
+                  error={tournamentError}
+                  registered={registeredTournaments}
+                  available={availableTournaments}
+                  playingCount={playingCount}
+                  selectedTournamentId={selectedTournamentId}
+                  onSelectTournament={setSelectedTournamentId}
+                  onRegister={handleRegisterToTournament}
+                  onUnregister={handleUnregisterFromTournament}
+                  selectedRosterGap={selectedRosterGap}
+                  selectedMinPlayers={selectedMinPlayers}
+                />
 
                 <TeamRosterLockPanel teamId={String(teamId ?? '')} />
-              </div>
-
-              {/* Right Column - Quick Info */}
-              <div className="space-y-6">
-                <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                  <h2 className="text-sm font-semibold text-neutral-400 mb-3">
-                    {t.systemInfoTitle}
-                  </h2>
-                  <div className="space-y-3 text-sm">
-                    <div>
-                      <div className="text-xs text-neutral-500 mb-1">
-                        {t.teamIdLabel}
-                      </div>
-                      <div className="font-mono text-xs bg-neutral-900 px-3 py-2 rounded-lg border border-neutral-700 break-all">
-                        {team.id}
-                      </div>
-                    </div>
-                  </div>
-                </section>
+              </>
+            }
+            aside={
+              <>
+                <TeamEditSystemCards team={team} />
 
                 <TeamQuickLinks
                   teamId={team.id}
@@ -1442,13 +1034,12 @@ function AdminEditTeamPage({
                 />
 
                 <TeamHistoryPanel teamId={team.id} />
-              </div>
-            </div>
-          )}
-        </div>
+              </>
+            }
+          />
+        )}
       </div>
 
-      {/* Add Member Modal */}
       <AddMemberModal
         open={showAddMemberModal}
         onClose={closeAddMemberModal}
@@ -1466,7 +1057,6 @@ function AdminEditTeamPage({
         onSubmit={handleAddMember}
       />
 
-      {/* Edit Member Modal */}
       <EditMemberModal
         open={Boolean(showEditMemberModal && editingMember)}
         onClose={closeEditMemberModal}
@@ -1479,7 +1069,6 @@ function AdminEditTeamPage({
         onSubmit={handleEditMember}
       />
 
-      {/* Import BattleTags Modal */}
       <ImportBattleTagsModal
         open={showImportModal}
         onClose={closeImportModal}

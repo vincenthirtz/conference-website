@@ -14,7 +14,7 @@
     "ui.useState": 1735,
     "ui.inlineStyle": 73,
     "ui.rawAdminUrl": 637,
-    "size.pagesOver800": 14,
+    "size.pagesOver800": 12,
     "size.componentsOver600": 27,
     "size.apiOver500": 14
   }

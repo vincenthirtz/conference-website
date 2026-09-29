@@ -91,6 +91,7 @@ export default adminNs('adminTeamEdit', {
   selectTournament: 'Sélectionner un tournoi...',
   register: 'Inscrire',
   systemInfoTitle: 'Informations système',
+  bannerPreviewTitle: 'Bannière',
   teamIdLabel: "ID de l'équipe",
   quickLinksTitle: 'Liens rapides',
   publicPage: 'Page publique',

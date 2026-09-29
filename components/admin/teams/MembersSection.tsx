@@ -3,6 +3,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { TeamMemberRow } from '@/types/admin';
 import type { TeamRole } from '@/utils/teamRoles';
 import MemberRow from './MemberRow';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import nsAdminTeamsMembersSection from '@/lib/i18n/locales/admin-fr/adminTeamsMembersSection';
 
 type MembersSectionProps = {
@@ -71,11 +72,11 @@ function MembersSectionComponent({
   const canSwapSub = rosterMembers.length > 0;
 
   return (
-    <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
+    <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-[19px] text-[var(--t1,#f4edf7)]">
           <svg
-            className="w-5 h-5 text-neutral-400"
+            className="w-5 h-5 text-[var(--t3,#a39ba6)]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -91,16 +92,13 @@ function MembersSectionComponent({
         </h2>
         <div className="flex items-center gap-2">
           {swapSource && (
-            <button
-              onClick={onCancelSwap}
-              className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-            >
+            <AdminButton size="sm" onClick={onCancelSwap}>
               {t.cancelSwap}
-            </button>
+            </AdminButton>
           )}
-          <button
+          <AdminButton
+            size="sm"
             onClick={onOpenImport}
-            className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors flex items-center gap-1.5"
             data-testid="open-import-modal"
           >
             <svg
@@ -117,11 +115,8 @@ function MembersSectionComponent({
               />
             </svg>
             {t.importBattleTags}
-          </button>
-          <button
-            onClick={onOpenAddMember}
-            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-1.5"
-          >
+          </AdminButton>
+          <AdminButton variant="secondary" size="sm" onClick={onOpenAddMember}>
             <svg
               className="w-4 h-4"
               fill="none"
@@ -136,14 +131,14 @@ function MembersSectionComponent({
               />
             </svg>
             {t.add}
-          </button>
+          </AdminButton>
         </div>
       </div>
 
       {swapSource && (
-        <div className="mb-4 rounded-xl bg-blue-900/30 border border-blue-500/40 px-4 py-3 text-sm flex items-center gap-2">
+        <div className="mb-4 flex items-center gap-2 rounded-[var(--r-ctrl,4px)] border border-[rgba(180,103,209,.4)] bg-[rgba(180,103,209,.1)] px-4 py-3 text-sm text-[var(--t1,#f4edf7)]">
           <svg
-            className="w-5 h-5 text-blue-400 flex-shrink-0"
+            className="w-5 h-5 flex-shrink-0 text-[var(--or-200,#eec4ff)]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -164,11 +159,11 @@ function MembersSectionComponent({
       {/* Bulk actions toolbar */}
       {!swapSource && !membersLoading && membersCount > 0 && (
         <div
-          className="mb-4 rounded-xl bg-neutral-900/50 border border-neutral-700/60 px-4 py-3"
+          className="mb-4 rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-4 py-3"
           data-testid="bulk-toolbar"
         >
           <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-            <label className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer select-none">
+            <label className="flex cursor-pointer select-none items-center gap-2 text-sm text-[var(--t2,#c7bfca)]">
               <input
                 type="checkbox"
                 data-testid="select-all-members"
@@ -179,7 +174,7 @@ function MembersSectionComponent({
                       selectedIds.size > 0 && selectedIds.size < membersCount;
                 }}
                 onChange={(e) => onSelectAll(e.target.checked)}
-                className="h-4 w-4 rounded border-neutral-600 bg-neutral-700"
+                className="h-4 w-4 accent-[var(--or,#b467d1)]"
               />
               <span data-testid="selection-count">
                 {selectedIds.size > 0
@@ -197,7 +192,7 @@ function MembersSectionComponent({
                     onChange={(e) => onBulkRoleChange(e.target.value)}
                     disabled={bulkBusy}
                     data-testid="bulk-role-select"
-                    className="px-2.5 py-1.5 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="h-[30px] rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] px-2.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                   >
                     <option value="">{t.rolePlaceholder}</option>
                     {teamRoles.map((r) => (
@@ -206,48 +201,50 @@ function MembersSectionComponent({
                       </option>
                     ))}
                   </select>
-                  <button
+                  <AdminButton
+                    variant="secondary"
+                    size="xs"
                     onClick={onBulkSetRole}
                     disabled={!bulkRole || bulkBusy}
                     data-testid="bulk-role-apply"
-                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                   >
                     {t.apply}
-                  </button>
+                  </AdminButton>
                 </div>
 
                 {/* Bulk substitute */}
-                <button
+                <AdminButton
+                  size="xs"
                   onClick={() => onBulkSetSubstitute(true)}
                   disabled={bulkBusy}
                   data-testid="bulk-mark-sub"
-                  className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 text-sm font-medium transition-colors"
                 >
                   {t.markSub}
-                </button>
-                <button
+                </AdminButton>
+                <AdminButton
+                  size="xs"
                   onClick={() => onBulkSetSubstitute(false)}
                   disabled={bulkBusy}
                   data-testid="bulk-unmark-sub"
-                  className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 text-sm font-medium transition-colors"
                 >
                   {t.unmarkSub}
-                </button>
+                </AdminButton>
 
                 {/* Bulk remove */}
-                <button
+                <AdminButton
+                  variant="danger"
+                  size="xs"
                   onClick={onBulkRemove}
                   disabled={bulkBusy}
                   data-testid="bulk-remove"
-                  className="px-3 py-1.5 rounded-lg bg-red-900/50 hover:bg-red-900/70 text-red-200 border border-red-700/50 disabled:opacity-50 text-sm font-medium transition-colors"
                 >
                   {t.removeFromTeam}
-                </button>
+                </AdminButton>
 
                 <button
                   onClick={onClearSelection}
                   disabled={bulkBusy}
-                  className="px-2.5 py-1.5 rounded-lg text-neutral-400 hover:text-white text-sm transition-colors"
+                  className="px-2.5 py-1.5 text-sm text-[var(--t3,#a39ba6)] transition-colors hover:text-[var(--t1,#f4edf7)]"
                 >
                   {t.deselect}
                 </button>
@@ -255,7 +252,7 @@ function MembersSectionComponent({
             )}
           </div>
           {selectionHasCaptain && (
-            <p className="mt-2 text-xs text-amber-300/90 flex items-center gap-1.5">
+            <p className="mt-2 flex items-center gap-1.5 text-xs text-[var(--warn,#f5a524)]">
               <svg
                 className="w-3.5 h-3.5 flex-shrink-0"
                 fill="currentColor"
@@ -274,20 +271,20 @@ function MembersSectionComponent({
       )}
 
       {membersLoading ? (
-        <div className="text-neutral-400 text-sm py-4">{t.loading}</div>
+        <div className="py-4 text-sm text-[var(--t3,#a39ba6)]">{t.loading}</div>
       ) : membersCount === 0 ? (
-        <div className="text-neutral-400 text-sm py-8 text-center bg-neutral-900/30 rounded-xl">
+        <div className="rounded-[var(--r-ctrl,4px)] border border-dashed border-[var(--line2,rgba(194,196,201,.2))] py-8 text-center text-sm text-[var(--t3,#a39ba6)]">
           {t.emptyTeam}
         </div>
       ) : (
         <div className="space-y-6">
           {/* Roster (active members) */}
           <div>
-            <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-2">
+            <h3 className="mb-2 font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.22em] [font-stretch:75%] text-[var(--t3,#a39ba6)]">
               {format(t.rosterTitle, { count: rosterMembers.length })}
             </h3>
             {rosterMembers.length === 0 ? (
-              <div className="text-neutral-500 text-sm py-4 text-center bg-neutral-900/30 rounded-xl">
+              <div className="rounded-[var(--r-ctrl,4px)] border border-dashed border-[var(--line2,rgba(194,196,201,.2))] py-4 text-center text-sm text-[var(--t3,#a39ba6)]">
                 {t.noActivePlayer}
               </div>
             ) : (
@@ -317,11 +314,11 @@ function MembersSectionComponent({
 
           {/* Substitutes */}
           <div>
-            <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-2">
+            <h3 className="mb-2 font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.22em] [font-stretch:75%] text-[var(--t3,#a39ba6)]">
               {format(t.subsTitle, { count: subMembers.length })}
             </h3>
             {subMembers.length === 0 ? (
-              <div className="text-neutral-500 text-sm py-4 text-center bg-neutral-900/30 rounded-xl">
+              <div className="rounded-[var(--r-ctrl,4px)] border border-dashed border-[var(--line2,rgba(194,196,201,.2))] py-4 text-center text-sm text-[var(--t3,#a39ba6)]">
                 {t.noSub}
               </div>
             ) : (
@@ -353,11 +350,11 @@ function MembersSectionComponent({
               comptent ni dans l'effectif, ni dans les échanges titulaire ↔
               remplaçante, et n'ont pas forcément de BattleTag. */}
           <div data-testid="team-staff-section">
-            <h3 className="text-sm font-semibold text-violet-300/80 uppercase tracking-wide mb-2">
+            <h3 className="mb-2 font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.22em] [font-stretch:75%] text-[var(--or-200,#eec4ff)]">
               {format(t.staffTitle, { count: staffMembers.length })}
             </h3>
             {staffMembers.length === 0 ? (
-              <div className="text-neutral-500 text-sm py-4 text-center bg-neutral-900/30 rounded-xl">
+              <div className="rounded-[var(--r-ctrl,4px)] border border-dashed border-[var(--line2,rgba(194,196,201,.2))] py-4 text-center text-sm text-[var(--t3,#a39ba6)]">
                 {t.noStaff}
               </div>
             ) : (

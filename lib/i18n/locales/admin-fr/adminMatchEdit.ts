@@ -21,6 +21,7 @@ export default adminNs('adminMatchEdit', {
   breadcrumbEdit: 'Modifier match',
   backToMatch: '← Retour au match (admin)',
   heading: 'Éditer le match',
+  kicker: 'Admin · Match',
   matchWord: 'Match',
   tournamentBullet: '• Tournoi',
   phaseBullet: '• Phase',

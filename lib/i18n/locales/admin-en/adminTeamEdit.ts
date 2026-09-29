@@ -92,6 +92,7 @@ export default {
   selectTournament: 'Select a tournament...',
   register: 'Register',
   systemInfoTitle: 'System information',
+  bannerPreviewTitle: 'Banner',
   teamIdLabel: 'Team ID',
   quickLinksTitle: 'Quick links',
   publicPage: 'Public page',

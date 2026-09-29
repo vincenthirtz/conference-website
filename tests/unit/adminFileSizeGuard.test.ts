@@ -59,9 +59,9 @@ const BASELINE: Record<string, number> = {
   // 2026-09-22, +1 : `hasAtLeastRole` importé de `utils/staffRoles` et non plus
   // de `utils/staff`, qui embarquait le client Supabase serveur (lot 8).
   'pages/admin/tournament/[id]/dashboard.tsx': 1615,
-  'pages/admin/teams/[teamId]/edit.tsx': 1503,
-  'pages/admin/matches/[matchId]/edit.tsx': 1315,
-  'pages/admin/teams/index.tsx': 1445,
+  'pages/admin/teams/[teamId]/edit.tsx': 1087,
+  'pages/admin/matches/[matchId]/edit.tsx': 705,
+  'pages/admin/teams/index.tsx': 653,
   // 1263 : sondage de secours mutualisé (hooks/useVisiblePoll).
   // 1259 : passe « Le Ruban » (lot 5C) — les titres de colonne sont partis
   // dans features/admin/events/ui/DirectorSectionTitle.tsx.

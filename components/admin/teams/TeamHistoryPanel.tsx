@@ -56,7 +56,7 @@ export default function TeamHistoryPanel({ teamId }: { teamId: string }) {
 
   return (
     <section
-      className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6"
+      className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6"
       data-testid="team-history"
     >
       <button
@@ -65,10 +65,10 @@ export default function TeamHistoryPanel({ teamId }: { teamId: string }) {
         aria-expanded={open}
         className="flex w-full items-center justify-between gap-3 text-left"
       >
-        <h2 className="text-sm font-semibold text-neutral-400">
+        <h2 className="font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
           {t.historyTitle}
         </h2>
-        <span className="text-xs text-neutral-500" aria-hidden>
+        <span className="text-xs text-[var(--t4,#807984)]" aria-hidden>
           {open ? '▾' : '▸'}
         </span>
       </button>
@@ -76,23 +76,27 @@ export default function TeamHistoryPanel({ teamId }: { teamId: string }) {
       {open && (
         <div className="mt-3">
           {error && (
-            <p className="text-xs text-red-300" role="alert">
+            <p className="text-xs text-[var(--err,#ff6b6b)]" role="alert">
               {error}
             </p>
           )}
           {logs === null ? (
-            <p className="text-xs text-neutral-500">{t.historyLoading}</p>
+            <p className="text-xs text-[var(--t3,#a39ba6)]">
+              {t.historyLoading}
+            </p>
           ) : logs.length === 0 ? (
-            <p className="text-xs text-neutral-500">{t.historyEmpty}</p>
+            <p className="text-xs text-[var(--t3,#a39ba6)]">{t.historyEmpty}</p>
           ) : (
             <ul className="space-y-2">
               {logs.map((l) => (
                 <li
                   key={l.id}
-                  className="rounded-lg bg-neutral-900/50 px-3 py-2 text-xs"
+                  className="rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] px-3 py-2 text-xs"
                 >
-                  <div className="text-neutral-200">{l.readableAction}</div>
-                  <div className="mt-0.5 text-neutral-500">
+                  <div className="text-[var(--t1,#f4edf7)]">
+                    {l.readableAction}
+                  </div>
+                  <div className="mt-0.5 text-[var(--t3,#a39ba6)]">
                     {l.date}
                     {l.readableEntity ? ` • ${l.readableEntity}` : ''}
                   </div>
@@ -101,7 +105,7 @@ export default function TeamHistoryPanel({ teamId }: { teamId: string }) {
             </ul>
           )}
           {logs !== null && logs.length >= PAGE_SIZE && (
-            <p className="mt-2 text-[11px] text-neutral-500">
+            <p className="mt-2 text-[11px] text-[var(--t4,#807984)]">
               {format(t.historyTruncated, { count: PAGE_SIZE })}
             </p>
           )}

@@ -3,8 +3,6 @@
 import { useEffect, useCallback, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import Link from 'next/link';
-import Image from 'next/image';
 import { withStaffPage } from '@/utils/staff';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
@@ -24,14 +22,31 @@ import MatchGamesPanel, {
 import type {
   StaffProps,
   Match,
-  MatchStatus,
   TournamentMini,
   StageMini,
   TeamMini,
 } from '@/types/admin';
 import nsAdminMatchEdit from '@/lib/i18n/locales/admin-fr/adminMatchEdit';
+import { FicheLayout, FicheSection } from '@/features/admin/_shared/ui/Fiche';
+import {
+  MatchEditHeader,
+  MatchEditNotices,
+} from '@/features/admin/matches/ui/MatchEditHeader';
+import {
+  MatchEditFields,
+  MatchEditNotesActions,
+  matchEditStatusLabel as statusLabel,
+  type MatchEditFormState,
+} from '@/features/admin/matches/ui/MatchEditForm';
+import {
+  MatchEditMvpCard,
+  MatchEditSummary,
+  type MvpPollData,
+} from '@/features/admin/matches/ui/MatchEditAside';
 
-type Dict = typeof nsAdminMatchEdit.fr;
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6';
+const DIALOG_TEXT = 'text-sm text-[var(--t2,#c7bfca)]';
 
 const STATUS_ORDER: Record<string, number> = {
   pending: 0,
@@ -56,57 +71,6 @@ type ApiResponse = {
 export const getServerSideProps = withStaffPage({
   permission: 'arbitrate_matches',
 });
-
-function formatDateTimeNice(iso: string | null): string {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
-}
-
-function statusLabel(status: MatchStatus, t: Dict) {
-  switch (status) {
-    case 'pending':
-      return t.statusPending;
-    case 'ongoing':
-      return t.statusOngoing;
-    case 'finished':
-      return t.statusFinished;
-    case 'cancelled':
-      return t.statusCancelled;
-    case 'postponed':
-      return t.statusPostponed;
-    case 'disputed':
-      return t.statusDisputed;
-    case 'walkover':
-      return t.statusWalkover;
-    default:
-      return status;
-  }
-}
-
-function statusColor(status: MatchStatus) {
-  switch (status) {
-    case 'pending':
-      return 'bg-neutral-700 text-neutral-100';
-    case 'ongoing':
-      return 'bg-amber-600/80 text-neutral-900';
-    case 'finished':
-      return 'bg-emerald-600/80 text-white';
-    case 'cancelled':
-      return 'bg-red-700/80 text-white';
-    case 'postponed':
-      return 'bg-blue-600/80 text-white';
-    case 'disputed':
-      return 'bg-orange-600/80 text-white';
-    case 'walkover':
-      return 'bg-purple-600/80 text-white';
-    default:
-      return 'bg-neutral-700 text-neutral-100';
-  }
-}
 
 function AdminMatchEditPage(_props: StaffProps) {
   const t = useAdminT(nsAdminMatchEdit);
@@ -156,16 +120,7 @@ function AdminMatchEditPage(_props: StaffProps) {
   // tapés à la main.
   const [vetoComplete, setVetoComplete] = useState<boolean | null>(null);
 
-  const [form, setForm] = useState<{
-    status: MatchStatus;
-    best_of: string;
-    round_number: string;
-    scheduled_at: string;
-    stream_url: string;
-    notes: string;
-    team1_score: string;
-    team2_score: string;
-  }>({
+  const [form, setForm] = useState<MatchEditFormState>({
     status: 'pending',
     best_of: '',
     round_number: '',
@@ -465,508 +420,131 @@ function AdminMatchEditPage(_props: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-header">
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
         <Breadcrumb
           items={[
             { label: t.breadcrumbMatches, href: '/admin/matches' },
             { label: t.breadcrumbEdit },
           ]}
         />
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <div>
-            <button
-              type="button"
-              onClick={() => router.push(backAdminUrl)}
-              className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
-            >
-              {t.backToMatch}
-            </button>
-            <h1 className="text-3xl font-bold">{t.heading}</h1>
+        <MatchEditHeader
+          match={match}
+          tournament={tournament}
+          stage={stage}
+          tournamentHref={backTournamentUrl}
+          onBack={() => router.push(backAdminUrl)}
+        />
 
-            {match && (
-              <p className="text-neutral-400 text-sm mt-1">
-                {t.matchWord}{' '}
-                <span className="font-mono bg-neutral-800 border border-neutral-700 px-2 py-0.5 rounded text-xs">
-                  #{match.id.slice(0, 8)}
-                </span>{' '}
-                {tournament && (
-                  <>
-                    {t.tournamentBullet}{' '}
-                    <Link
-                      href={backTournamentUrl}
-                      className="font-semibold hover:underline"
-                    >
-                      {tournament.name}
-                    </Link>
-                  </>
-                )}
-                {stage && (
-                  <>
-                    {' '}
-                    {t.phaseBullet}{' '}
-                    <Link
-                      href={`/admin/stages/${stage.id}`}
-                      className="hover:underline"
-                    >
-                      {stage.name}
-                    </Link>
-                  </>
-                )}
-              </p>
-            )}
-          </div>
-
-          {match && (
-            <a
-              href={`/cast/${match.id}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-sm font-medium transition-colors"
-              title={t.casterViewTitle}
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                />
-              </svg>
-              {t.casterView}
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                />
-              </svg>
-            </a>
-          )}
-        </div>
-
-        {/* Messages */}
-        {conflictMsg && (
-          <div className="mb-4 rounded bg-amber-900/60 border border-amber-500 px-4 py-3 text-sm flex items-start gap-3">
-            <span className="text-amber-400 text-lg leading-none mt-0.5">
-              &#9888;
-            </span>
-            <div>
-              <p className="font-semibold text-amber-200 mb-1">
-                {t.conflictTitle}
-              </p>
-              <p className="text-amber-100/80">{conflictMsg}</p>
-              {conflictServerTime && (
-                <p className="text-amber-100/60 text-xs mt-1">
-                  {t.lastServerEditPrefix}{' '}
-                  {new Date(conflictServerTime).toLocaleString('fr-FR')}
-                </p>
-              )}
-              <p className="text-amber-100/60 text-xs mt-1">
-                {t.conflictReloadedNote}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setConflictMsg(null);
-                  setConflictServerTime(null);
-                  fetchMatch();
-                }}
-                className="mt-2 px-3 py-1 rounded bg-amber-700/50 hover:bg-amber-700/80 text-amber-100 text-xs font-medium transition-colors"
-              >
-                {t.closeAndReload}
-              </button>
-            </div>
-          </div>
-        )}
-        {errorMsg && (
-          <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
-            {errorMsg}
-          </div>
-        )}
-        {warningMsgs.length > 0 && (
-          <div className="mb-4 rounded bg-amber-900/40 border border-amber-600/60 px-4 py-3 text-sm text-amber-200">
-            <p className="font-semibold mb-1">{t.warningsTitle}</p>
-            <ul className="list-disc list-inside space-y-0.5">
-              {warningMsgs.map((w, i) => (
-                <li key={i}>{w}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <MatchEditNotices
+          conflictMsg={conflictMsg}
+          conflictServerTime={conflictServerTime}
+          onCloseConflict={() => {
+            setConflictMsg(null);
+            setConflictServerTime(null);
+            fetchMatch();
+          }}
+          errorMsg={errorMsg}
+          warningMsgs={warningMsgs}
+        />
 
         {loading && !match && (
-          <div className="text-neutral-300">{t.loadingMatch}</div>
+          <div className="flex items-center gap-3 py-10 text-sm text-[var(--t3,#a39ba6)]">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--or,#b467d1)]" />
+            {t.loadingMatch}
+          </div>
         )}
 
         {!loading && !match && !errorMsg && (
-          <div className="text-neutral-300">{t.matchNotFound}</div>
+          <div className={`${CARD} text-sm text-[var(--t3,#a39ba6)]`}>
+            {t.matchNotFound}
+          </div>
         )}
 
         {!loading && match && (
-          <div className="grid gap-6 pt-20 lg:grid-cols-[2fr_1.3fr]">
-            {/* Formulaire principal */}
-            <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-6 pt-20">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Statut & round */}
-                <section className="space-y-4">
-                  <h2 className="font-semibold text-lg">
-                    {t.statusRoundHeading}
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm mb-1 text-neutral-300">
-                        {t.statusFieldLabel}
-                      </label>
-                      <select
-                        className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={form.status}
-                        onChange={(e) =>
-                          updateField('status', e.target.value as MatchStatus)
-                        }
-                      >
-                        <option value="pending">{t.statusPending}</option>
-                        <option value="ongoing">{t.statusOngoing}</option>
-                        <option value="finished">{t.statusFinished}</option>
-                        <option value="cancelled">{t.statusCancelled}</option>
-                        <option value="postponed">{t.statusPostponed}</option>
-                        <option value="disputed">{t.statusDisputed}</option>
-                        <option value="walkover">{t.statusWalkover}</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm mb-1 text-neutral-300">
-                        {t.roundHashLabel}
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={form.round_number}
-                        onChange={(e) =>
-                          updateField('round_number', e.target.value)
-                        }
-                        placeholder="1"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm mb-1 text-neutral-300">
-                        {t.formatBoLabel}
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={form.best_of}
-                        onChange={(e) => updateField('best_of', e.target.value)}
-                        placeholder="3, 5…"
-                      />
-                    </div>
-                  </div>
-                </section>
-
-                {/* Planning & stream */}
-                <section className="space-y-4">
-                  <h2 className="font-semibold text-lg">
-                    {t.planningStreamHeading}
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm mb-1 text-neutral-300">
-                        {t.scheduledLabel}
-                      </label>
-                      <input
-                        type="datetime-local"
-                        className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={form.scheduled_at}
-                        onChange={(e) =>
-                          updateField('scheduled_at', e.target.value)
-                        }
-                      />
-                      <p className="text-xs text-neutral-500 mt-1">
-                        {t.scheduledHint}
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm mb-1 text-neutral-300">
-                        {t.streamUrlLabel}
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={form.stream_url}
-                        onChange={(e) =>
-                          updateField('stream_url', e.target.value)
-                        }
-                        placeholder="https://twitch.tv/..."
-                      />
-                    </div>
-                  </div>
-                </section>
-
-                {/* Score */}
-                <section className="space-y-4">
-                  <h2 className="font-semibold text-lg">{t.scoreHeading}</h2>
-                  <div className="flex items-center gap-4">
-                    <div className="flex-1">
-                      <label className="block text-sm mb-1 text-neutral-300">
-                        {team1?.name || t.team1Fallback}
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={form.team1_score}
-                        onChange={(e) =>
-                          updateField('team1_score', e.target.value)
-                        }
-                        placeholder="0"
-                      />
-                    </div>
-                    <span className="text-xl font-bold text-neutral-400 pt-6">
-                      —
-                    </span>
-                    <div className="flex-1">
-                      <label className="block text-sm mb-1 text-neutral-300">
-                        {team2?.name || t.team2Fallback}
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={form.team2_score}
-                        onChange={(e) =>
-                          updateField('team2_score', e.target.value)
-                        }
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-xs text-neutral-500">{t.scoreHint}</p>
-                </section>
-
-                {/* Forfait / No-show */}
-                {match.team1_id &&
-                  match.team2_id &&
-                  match.status !== 'finished' && (
-                    <section className="space-y-4">
-                      <h2 className="font-semibold text-lg">
-                        {t.forfeitHeading}
-                      </h2>
-                      <p className="text-xs text-neutral-500">
-                        {t.forfeitHint}
-                      </p>
-                      <div className="flex gap-3">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setForfeitTeamId(match.team1_id);
-                            setForfeitError(null);
-                            setShowForfeitDialog(true);
-                          }}
-                          className="flex-1 px-3 py-2 rounded bg-red-900/40 border border-red-700/60 text-red-300 hover:bg-red-900/60 text-sm font-medium transition-colors"
-                        >
-                          {format(t.forfeitTeam, {
-                            team: team1?.name || t.team1Fallback,
-                          })}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setForfeitTeamId(match.team2_id);
-                            setForfeitError(null);
-                            setShowForfeitDialog(true);
-                          }}
-                          className="flex-1 px-3 py-2 rounded bg-red-900/40 border border-red-700/60 text-red-300 hover:bg-red-900/60 text-sm font-medium transition-colors"
-                        >
-                          {format(t.forfeitTeam, {
-                            team: team2?.name || t.team2Fallback,
-                          })}
-                        </button>
-                      </div>
-                    </section>
-                  )}
-
-                {/* Parties (maps) — panneau extrait, cf. lot A7. */}
-                <MatchGamesPanel
-                  games={games}
-                  setGames={setGames}
-                  mapPool={mapPool}
-                  team1={team1}
-                  team2={team2}
-                  vetoComplete={vetoComplete}
-                  showPickBans={tournament?.game === 'overwatch'}
-                  vetoHref={
-                    match?.tournament_id
-                      ? `/admin/tournament/${match.tournament_id}/bracket?tab=veto&match=${matchId}`
-                      : null
-                  }
-                  t={t as unknown as Record<string, string>}
-                />
-
-                {/* Notes internes */}
-                <section className="space-y-3">
-                  <h2 className="font-semibold text-lg">{t.notesHeading}</h2>
-                  <textarea
-                    className="w-full min-h-[120px] px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={form.notes}
-                    onChange={(e) => updateField('notes', e.target.value)}
-                    placeholder={t.notesPlaceholder}
-                  />
-                </section>
-
-                {/* Actions */}
-                <div className="flex justify-between items-center pt-2">
-                  <button
-                    type="button"
-                    className="px-4 py-2 rounded border border-neutral-600 text-neutral-200 hover:bg-neutral-800 text-sm"
-                    onClick={() => router.push(backAdminUrl)}
-                    disabled={saving}
-                  >
-                    {t.cancel}
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className={`px-5 py-2 rounded font-semibold text-sm ${
-                      saving
-                        ? 'bg-blue-800 cursor-wait'
-                        : 'bg-blue-600 hover:bg-blue-700'
-                    }`}
-                  >
-                    {saving ? t.saving : t.saveChanges}
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            {/* Résumé match / équipes */}
-            <aside className="space-y-4">
-              <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-3">
-                <h2 className="text-lg font-semibold mb-1">
-                  {t.summaryHeading}
-                </h2>
-                <div className="text-sm space-y-1">
-                  <div className="flex justify-between gap-4">
-                    <span className="text-neutral-400">{t.currentStatus}</span>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColor(
-                        match.status
-                      )}`}
-                    >
-                      {statusLabel(match.status, t)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-neutral-400">{t.roundLabel}</span>
-                    <span className="text-neutral-200">
-                      {match.round_number ?? '—'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-neutral-400">{t.formatLabel}</span>
-                    <span className="text-neutral-200">
-                      {match.best_of ? `BO${match.best_of}` : '—'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-neutral-400">
-                      {t.scheduledSummary}
-                    </span>
-                    <span className="text-neutral-200">
-                      {formatDateTimeNice(match.scheduled_at)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-4 text-xs">
-                    <span className="text-neutral-500">{t.startedLabel}</span>
-                    <span className="text-neutral-300">
-                      {formatDateTimeNice(match.started_at)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-4 text-xs">
-                    <span className="text-neutral-500">{t.finishedLabel}</span>
-                    <span className="text-neutral-300">
-                      {formatDateTimeNice(match.completed_at)}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-3 pt-3 border-t border-neutral-700 text-xs text-neutral-500">
-                  {t.fullIdLabel}{' '}
-                  <span className="font-mono bg-neutral-900 px-2 py-1 rounded border border-neutral-700">
-                    {match.id}
-                  </span>
-                </div>
-              </section>
-
-              <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-4">
-                <h2 className="text-lg font-semibold">{t.teamsHeading}</h2>
-
-                <TeamSummaryCard
-                  label={t.team1Fallback}
-                  team={team1}
-                  teamId={match.team1_id}
-                  score={match.team1_score}
-                  isWinner={match.winner_team_id === match.team1_id}
-                />
-
-                <TeamSummaryCard
-                  label={t.team2Fallback}
-                  team={team2}
-                  teamId={match.team2_id}
-                  score={match.team2_score}
-                  isWinner={match.winner_team_id === match.team2_id}
-                />
-
-                <div className="mt-3 pt-3 border-t border-neutral-700 text-xs text-neutral-400 space-y-1">
-                  <p>{t.summaryNote}</p>
-                  <Link
-                    href={backAdminUrl}
-                    className="inline-flex items-center gap-1 text-blue-300 hover:underline"
-                  >
-                    {t.viewDetail}
-                  </Link>
-                </div>
-              </section>
-
-              {match.status !== 'finished' && match.status !== 'walkover' && (
-                <MatchReadinessChecklist
-                  match={match}
+          <FicheLayout
+            main={
+              <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                <MatchEditFields
+                  form={form}
+                  updateField={updateField}
                   team1Name={team1?.name ?? null}
                   team2Name={team2?.name ?? null}
-                  tournamentStatus={tournament?.status ?? null}
-                  stageActive={stage?.is_active ?? null}
+                  forfeit={
+                    match.team1_id &&
+                    match.team2_id &&
+                    match.status !== 'finished'
+                      ? {
+                          team1Id: match.team1_id,
+                          team2Id: match.team2_id,
+                          onPick: (id) => {
+                            setForfeitTeamId(id);
+                            setForfeitError(null);
+                            setShowForfeitDialog(true);
+                          },
+                        }
+                      : null
+                  }
                 />
-              )}
 
-              {(match.status === 'finished' || match.status === 'walkover') && (
-                <MvpSection matchId={match.id} />
-              )}
+                {/* Parties (maps) — panneau extrait, cf. lot A7. */}
+                <div className={CARD}>
+                  <MatchGamesPanel
+                    games={games}
+                    setGames={setGames}
+                    mapPool={mapPool}
+                    team1={team1}
+                    team2={team2}
+                    vetoComplete={vetoComplete}
+                    showPickBans={tournament?.game === 'overwatch'}
+                    vetoHref={
+                      match?.tournament_id
+                        ? `/admin/tournament/${match.tournament_id}/bracket?tab=veto&match=${matchId}`
+                        : null
+                    }
+                    t={t as unknown as Record<string, string>}
+                  />
+                </div>
 
-              <MatchCastAssignments matchId={match.id} />
+                <MatchEditNotesActions
+                  notes={form.notes}
+                  onNotesChange={(v) => updateField('notes', v)}
+                  saving={saving}
+                  onCancel={() => router.push(backAdminUrl)}
+                />
+              </form>
+            }
+            aside={
+              <>
+                <MatchEditSummary
+                  match={match}
+                  team1={team1}
+                  team2={team2}
+                  detailHref={backAdminUrl}
+                />
 
-              <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
-                <h2 className="text-lg font-semibold mb-3">
-                  {t.historyHeading}
-                </h2>
-                <MatchTimeline matchId={match.id} />
-              </section>
-            </aside>
-          </div>
+                {match.status !== 'finished' && match.status !== 'walkover' && (
+                  <MatchReadinessChecklist
+                    match={match}
+                    team1Name={team1?.name ?? null}
+                    team2Name={team2?.name ?? null}
+                    tournamentStatus={tournament?.status ?? null}
+                    stageActive={stage?.is_active ?? null}
+                  />
+                )}
+
+                {(match.status === 'finished' ||
+                  match.status === 'walkover') && (
+                  <MvpSection matchId={match.id} />
+                )}
+
+                <MatchCastAssignments matchId={match.id} />
+
+                <FicheSection title={t.historyHeading} eyebrow>
+                  <MatchTimeline matchId={match.id} />
+                </FicheSection>
+              </>
+            }
+          />
         )}
       </div>
 
@@ -994,7 +572,7 @@ function AdminMatchEditPage(_props: StaffProps) {
             }
           }}
         >
-          <p className="text-sm text-neutral-300">{t.statusRegressionBody}</p>
+          <p className={DIALOG_TEXT}>{t.statusRegressionBody}</p>
         </ConfirmDialog>
       )}
 
@@ -1020,7 +598,7 @@ function AdminMatchEditPage(_props: StaffProps) {
           }}
           onConfirm={handleForfeitConfirm}
         >
-          <p className="text-sm text-neutral-300">
+          <p className={DIALOG_TEXT}>
             {t.forfeitBodyPrefix}{' '}
             <strong>
               {forfeitTeamId === match!.team1_id
@@ -1035,89 +613,10 @@ function AdminMatchEditPage(_props: StaffProps) {
   );
 }
 
-type TeamSummaryProps = {
-  label: string;
-  team: TeamMini | null;
-  teamId: string | null;
-  score: number | null;
-  isWinner: boolean;
-};
-
-function TeamSummaryCard({
-  label,
-  team,
-  teamId,
-  score,
-  isWinner,
-}: TeamSummaryProps) {
-  const t = useAdminT(nsAdminMatchEdit);
-  const displayName = team?.name || teamId || t.tbd;
-
-  return (
-    <div className="flex items-center gap-3">
-      {team?.logo_url && (
-        <Image
-          src={team.logo_url}
-          alt={team.name}
-          width={32}
-          height={32}
-          className="w-8 h-8 rounded object-cover border border-neutral-700"
-        />
-      )}
-      <div className="flex-1">
-        <div className="flex justify-between items-center gap-2">
-          <div>
-            <div
-              className={`font-semibold ${
-                isWinner ? 'text-emerald-300' : 'text-neutral-100'
-              }`}
-            >
-              {displayName}
-            </div>
-            <div className="text-[11px] text-neutral-500">{label}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs text-neutral-400">{t.scoreLabelShort}</div>
-            <div className="text-lg font-semibold">
-              {score != null ? score : '—'}
-            </div>
-          </div>
-        </div>
-        {team?.short_name && (
-          <div className="text-[11px] text-neutral-400 mt-0.5">
-            {team.short_name}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /* -----------------------------------------------------------
- * MVP poll section — shows poll status and allows manual import of winner
+ * MVP poll section — shows poll status and allows manual import of winner.
+ * Rendu dans features/admin/matches/ui/MatchEditAside.tsx (MatchEditMvpCard).
  * ---------------------------------------------------------*/
-
-type MvpCandidate = {
-  id: string;
-  teamId: string;
-  teamName: string | null;
-  battleTag: string | null;
-  isSubstitute: boolean;
-};
-
-type MvpPollData = {
-  matchId: string;
-  matchStatus: string;
-  poll: {
-    id: string;
-    posted_at: string | null;
-    duration_hours: number;
-    winner_member_id: string | null;
-    winner_battle_tag: string | null;
-    winner_imported_at: string | null;
-  } | null;
-  candidates: MvpCandidate[];
-};
 
 function MvpSection({ matchId }: { matchId: string }) {
   const t = useAdminT(nsAdminMatchEdit);
@@ -1185,126 +684,19 @@ function MvpSection({ matchId }: { matchId: string }) {
     }
   }
 
-  const poll = data?.poll;
-  const winnerMember = data?.candidates.find(
-    (c) => c.id === poll?.winner_member_id
-  );
-
-  // Group candidates by team for the dropdown
-  const grouped: Record<string, MvpCandidate[]> = {};
-  for (const c of data?.candidates || []) {
-    if (c.isSubstitute) continue;
-    const k = c.teamName || c.teamId;
-    if (!grouped[k]) grouped[k] = [];
-    grouped[k].push(c);
-  }
-
   return (
     <>
       {dialog}
-      <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
-        <h2 className="text-lg font-semibold mb-3">{t.mvpHeading}</h2>
-
-        {loading ? (
-          <div className="text-sm text-neutral-400">{t.mvpLoading}</div>
-        ) : (
-          <div className="space-y-3">
-            <div className="text-xs text-neutral-400">
-              {poll?.posted_at ? (
-                <>
-                  {t.mvpPollPostedPrefix}{' '}
-                  <span className="text-neutral-200">
-                    {new Date(poll.posted_at).toLocaleString('fr-FR', {
-                      day: '2-digit',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      timeZone: 'Europe/Paris',
-                    })}
-                  </span>{' '}
-                  {format(t.mvpPollDuration, { hours: poll.duration_hours })}
-                </>
-              ) : (
-                <span>{t.mvpNoPoll}</span>
-              )}
-            </div>
-
-            {poll?.winner_member_id && winnerMember ? (
-              <div className="rounded-xl bg-amber-900/30 border border-amber-500/40 p-3 flex items-center gap-3">
-                <span className="text-2xl">🏅</span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs text-amber-300 uppercase tracking-wide">
-                    {t.mvpRegistered}
-                  </div>
-                  <div className="text-sm font-semibold text-white">
-                    {winnerMember.battleTag || '—'}
-                  </div>
-                  <div className="text-xs text-amber-200/70">
-                    {winnerMember.teamName || ''}{' '}
-                    {poll.winner_imported_at && (
-                      <>
-                        {t.mvpImportedPrefix}{' '}
-                        {new Date(poll.winner_imported_at).toLocaleString(
-                          'fr-FR',
-                          { day: '2-digit', month: 'short' }
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={clear}
-                  disabled={saving}
-                  className="px-3 py-1.5 rounded-lg text-xs bg-neutral-700 hover:bg-neutral-600 transition-colors disabled:opacity-50"
-                >
-                  {t.clearBtn}
-                </button>
-              </div>
-            ) : null}
-
-            <div>
-              <label className="block text-xs text-neutral-400 mb-1">
-                {t.mvpSelectLabel}
-              </label>
-              <select
-                value={selected}
-                onChange={(e) => setSelected(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
-              >
-                <option value="">{t.mvpSelectPlaceholder}</option>
-                {Object.entries(grouped).map(([teamName, members]) => (
-                  <optgroup key={teamName} label={teamName}>
-                    {members.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.battleTag ||
-                          format(t.mvpMemberFallback, { id: m.id.slice(0, 6) })}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
-
-            {err && (
-              <div className="text-xs rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2">
-                {err}
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={save}
-              disabled={
-                saving || !selected || selected === poll?.winner_member_id
-              }
-              className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              {saving ? t.mvpSaving : t.mvpSave}
-            </button>
-          </div>
-        )}
-      </section>
+      <MatchEditMvpCard
+        data={data}
+        loading={loading}
+        selected={selected}
+        onSelect={setSelected}
+        saving={saving}
+        err={err}
+        onSave={save}
+        onClear={clear}
+      />
     </>
   );
 }

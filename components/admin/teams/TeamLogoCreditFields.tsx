@@ -39,7 +39,7 @@ export function logoCreditPayload(draft: LogoCreditDraft) {
 }
 
 const INPUT =
-  'w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm';
+  'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 export default function TeamLogoCreditFields({
   value,
@@ -57,7 +57,7 @@ export default function TeamLogoCreditFields({
       <div>
         <label
           htmlFor="logo-credit-name"
-          className="block text-sm text-neutral-400 mb-1"
+          className="mb-1 block text-sm text-[var(--t2,#c7bfca)]"
         >
           {t.logoCreditNameLabel}
         </label>
@@ -71,12 +71,14 @@ export default function TeamLogoCreditFields({
           className={INPUT}
           placeholder={t.logoCreditNamePlaceholder}
         />
-        <p className="text-xs text-neutral-500 mt-1">{t.logoCreditHelp}</p>
+        <p className="mt-1 text-xs text-[var(--t3,#a39ba6)]">
+          {t.logoCreditHelp}
+        </p>
       </div>
       <div>
         <label
           htmlFor="logo-credit-url"
-          className="block text-sm text-neutral-400 mb-1"
+          className="mb-1 block text-sm text-[var(--t2,#c7bfca)]"
         >
           {t.logoCreditUrlLabel}
         </label>

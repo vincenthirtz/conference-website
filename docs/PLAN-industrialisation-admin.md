@@ -629,6 +629,13 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       Pages > 800 lignes : 20 → 14 ; gels de taille abaissés (demande 923 → 443, création de
       tournoi 801 → 573…) ; `useState` −4. Restent hors Ruban : composants partagés du Director
       (TimelineBuilder, WaveBoard…), `StageTabsNav`, `Modal`, `RealtimeStatusBadge`.
+- [x] **Passe visuelle, lot 6 (3 écrans de 1 200 à 1 500 lignes, avec découpe)** : liste des
+      équipes 1 208 → 653 (`teams/ui/TeamsList*`), édition d'un match 1 313 → 705
+      (`matches/ui/MatchEdit*`), édition d'une équipe 1 498 → 1 087 (`teams/ui/TeamEdit*`, et
+      roster `components/admin/teams/*` aux jetons ; « Enregistrer » monte dans l'en-tête,
+      relié par `form=`). Pages > 800 lignes : 14 → 12. Restent à l'ancienne palette :
+      `MatchGamesPanel`, `MatchReadinessChecklist`, `MatchCastAssignments`, `ConfirmDialog`,
+      `LogoUpload`, modales de membre, `EntityHistoryDrawer`.
 - [ ] Code mort laissé par le lot 5 : `stageTypeBadgeClass`, `runStatusBadgeClasses` /
       `runStatusDotClasses`, clés i18n `breadcrumb*` des fiches phase et ligue.
 - [ ] À trancher : « Notifier les capitaines » (outils du tournoi) est un envoi en masse sans
