@@ -36,52 +36,95 @@ rejouerait dans le désordre et casserait tôt.
 
 ## La sortie : un socle, une fois
 
-On fige l'état actuel de la production en **un seul fichier de socle**, et les
-migrations futures s'empilent dessus avec un horodatage. Les 340 fichiers
-existants restent où ils sont, comme archive de ce qui a été fait.
+On fige l'état actuel de la production en **un seul fichier de socle**,
+[`supabase/migrations/00000000000000_baseline.sql`](../supabase/migrations/00000000000000_baseline.sql),
+et les migrations futures s'empilent dessus avec un horodatage. Les 340
+fichiers existants restent où ils sont, comme archive de ce qui a été fait.
 
-### L'étape manuelle (mot de passe base requis)
+### D'où vient le socle
 
-Le mot de passe se trouve dans la console Supabase, *Project Settings →
-Database → Connection string*. Il n'est pas dans le dépôt, et ne doit pas y
-entrer.
+Le chemin « officiel » (`supabase db dump`) demande la CLI, Docker et le mot de
+passe base. Le socle a été **reconstruit par introspection du catalogue** de la
+production (projet `owwomenscup`, ref `yhfdhpqgmazfxyyklomp`, le 2026-09-29) :
+des `SELECT` en lecture seule sur `pg_catalog`, `pg_policies` et
+`pg_publication_tables`, au moyen de `pg_get_functiondef`,
+`pg_get_constraintdef`, `pg_get_indexdef`, `pg_get_viewdef`,
+`pg_get_triggerdef` et `format_type`. **Aucune donnée applicative n'est lue ni
+copiée.**
 
-Prérequis : **Docker Desktop démarré** — `db dump` exécute `pg_dump` dans un
-conteneur. Sans `link` préalable, `db dump` échoue sur « Cannot find project
-ref ».
+Contenu, dans cet ordre (l'ordre évite les problèmes de dépendances) :
+extensions (`uuid-ossp`, `pgcrypto` dans `extensions` ; `unaccent`, `pg_trgm`
+dans `public`), séquences, fonctions (`check_function_bodies = off`), tables,
+PK/UNIQUE/CHECK, index, vues, **clés étrangères en dernier**, triggers, RLS,
+policies, droits (`PUBLIC`, `anon`, `authenticated`, `service_role`),
+publication `supabase_realtime`, buckets `teams-images` (public) et
+`match-evidence` (privé). Ni `OWNER TO`, ni `COMMENT` ; `auth` et `storage`
+viennent de `supabase start`. `pg_stat_statements`, `supabase_vault` et
+`pg_graphql` ne sont pas recréés : aucun objet de `public` n'en dépend.
 
-```bash
-npx supabase login                      # jeton d'accès, via le navigateur
-npx supabase init                       # crée supabase/config.toml si absent
-npx supabase link --project-ref yhfdhpqgmazfxyyklomp
+### Régénérer le socle
 
-mkdir -p supabase/migrations
-npx supabase db dump \
-  --schema public,auth,storage \
-  -f supabase/migrations/00000000000000_baseline.sql
-```
+Quand la prod a beaucoup dérivé du socle (nouvelles tables appliquées hors de
+`supabase/migrations/`), deux voies :
 
-Relisez le fichier obtenu avant de le committer : un dump embarque parfois des
-`OWNER TO` ou des extensions qui n'ont pas de sens hors du projet hébergé, et
-qui font échouer le `db reset` local.
+1. **Avec la CLI** (mot de passe base requis, Docker démarré) :
 
-Vérifiez qu'il se rejoue :
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref yhfdhpqgmazfxyyklomp
+   npx supabase db dump --schema public \
+     -f supabase/migrations/00000000000000_baseline.sql
+   ```
 
-```bash
-npx supabase start
-npx supabase db reset       # rejoue le socle sur une base vierge
-```
+   Relire le fichier : retirer les `OWNER TO` et les extensions propres à
+   l'hébergé.
 
-### Ensuite
+2. **Par introspection** (comme la première fois) : les mêmes requêtes de
+   catalogue, lancées en lecture seule (connecteur Supabase ou `psql`), avec
+   `SET search_path = ''` pour obtenir des noms entièrement qualifiés, puis
+   assemblées dans l'ordre ci-dessus. Aucune requête ne doit lire une table
+   de `public`, `auth` ou `storage`.
 
-Le workflow [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml) prend le
-relais. Il refuse de démarrer tant que `supabase/migrations/` est vide, avec le
-message qui renvoie ici — plutôt que de partir dans un `db reset` qui casserait
-sans qu'on comprenne pourquoi.
+Dans les deux cas, reprendre l'en-tête de provenance, puis chercher e-mails,
+jetons et URL avant de committer.
 
-Déclenchement : manuel (*Actions → e2e → Run workflow*) et une fois par nuit.
-Pas à chaque push — la suite est longue, et la CI rapide (typecheck +
-unitaires) reste le filet du quotidien.
+## Le seed
+
+[`supabase/seed.sql`](../supabase/seed.sql), appliqué après le socle
+(`[db.seed]` dans [`supabase/config.toml`](../supabase/config.toml)). Il ne
+contient que des données de TEST inventées : le **tenant par défaut**
+(`ce69a726-…`, constante de `utils/tenantId.ts`, plan `foundation`), sans
+lequel toute écriture portant un `tenant_id` échoue sur sa clé étrangère.
+Les comptes (joueuses, staff) sont créés par les specs elles-mêmes via
+`tests/utils/supabaseTestClient.ts`, pas par le seed.
+
+`config.toml` relève aussi les plafonds de GoTrue (`[auth.rate_limit]`) : la
+suite ouvre des centaines de sessions depuis 127.0.0.1, et le plafond par
+défaut fait échouer la connexion en 429 — que la page `/login` affiche comme
+« Email ou mot de passe incorrect ».
+
+## Dans la CI
+
+Le workflow [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml)
+découpe la suite en **quatre tranches** parallèles
+(`--shard=N/4 --reporter=blob`). Chacune a **sa propre** Supabase — les specs
+sèment et nettoient, deux tranches sur une même base se marcheraient dessus.
+Un job `merge-reports` fusionne les rapports en un seul rapport HTML
+(artefact `playwright-report`), même quand des tranches échouent. Les
+navigateurs Playwright sont en cache (clé : version de `@playwright/test`).
+
+Il refuse de démarrer tant que `supabase/migrations/` est vide, avec un message
+qui renvoie ici.
+
+Déclenchement : manuel (*Actions → e2e → Run workflow*, une fois le workflow
+présent sur la branche par défaut), une fois par nuit, et à chaque push sur
+les branches de validation `admin-industrialisation` et `e2e-baseline` (code de
+prod + infra e2e seule : la référence qui départage régressions et échecs
+préexistants). Pas à chaque push sur `work` — la suite est longue, et la CI
+rapide (typecheck + unitaires) reste le filet du quotidien.
+
+Playwright ne cherche que dans `tests/e2e/` (`testDir`) : avec `./tests`, il
+ramassait les `*.test.ts` de Vitest et s'arrêtait à la collecte.
 
 ## Toute nouvelle migration, à partir de là
 
