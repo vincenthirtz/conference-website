@@ -1,0 +1,55 @@
+// lib/i18n/locales/admin-fr/adminPilotage.ts
+//
+// Traductions FRANCAISES du namespace `adminPilotage` — SOURCE DE VERITE.
+// Le pendant anglais vit dans `../admin-en/adminPilotage.ts` ; le garde-fou
+// `../admin-parity.ts` casse le typecheck si les cles divergent.
+
+import { adminNs } from '../../ns';
+
+export default adminNs('adminPilotage', {
+  headTitle: 'Admin – Pilotage du jour',
+  title: 'Pilotage du jour',
+  subtitle: '{date} · {live} en direct · {toPlay} à jouer',
+  openRegie: 'Ouvrir la régie',
+  openDashboard: 'Tableau de bord',
+  tileCheckin: 'Check-in (24 h)',
+  tileCheckinHint: '{missing} sans check-in complet',
+  tileLive: 'Matchs en cours',
+  tileLiveHint: 'sur {toPlay} à jouer',
+  tileDisputes: 'À arbitrer',
+  tileDisputesHintNone: 'aucun litige ouvert',
+  tileDisputesHint: 'litige(s) ouvert(s)',
+  tileProgress: 'Avancement',
+  tileProgressHint: '{percent} % des matchs joués',
+  queueTitle: 'File d’attente',
+  queueNote: 'Triée par urgence, pas par heure',
+  colMatch: 'Match',
+  colPoster: 'Affiche',
+  colState: 'État',
+  colDetail: 'Détail',
+  colAction: 'Action',
+  versus: 'contre',
+  stateDispute: 'Litige',
+  stateLive: 'En direct',
+  stateLate: 'En retard',
+  stateSoon: 'Imminent',
+  statePlanned: 'Planifié',
+  actionArbitrate: 'Arbitrer',
+  actionFollow: 'Suivre',
+  actionOpen: 'Ouvrir',
+  detailAt: 'prévu à {time}',
+  queueEmpty: 'Rien à traiter pour l’instant.',
+  journalTitle: 'Journal du staff',
+  journalAll: 'Tout voir',
+  journalEmpty: 'Aucune action récente.',
+  quickTitle: 'Actions rapides',
+  quickCheckin: 'Ouvrir le check-in',
+  quickMatches: 'Tous les matchs du tournoi',
+  quickRegie: 'Basculer vers la régie',
+  quickDashboard: 'Tableau de bord du tournoi',
+  noTournamentTitle: 'Aucun tournoi en cours',
+  noTournamentBody: 'Le pilotage du jour suit le tournoi en cours de l’espace.',
+  noTournamentCta: 'Voir les tournois',
+  loadError: 'Le pilotage n’a pas pu être chargé.',
+  updatedAt: 'Mis à jour à {time}',
+});

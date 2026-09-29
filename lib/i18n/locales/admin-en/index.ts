@@ -213,6 +213,7 @@ import enAdminDocuments from './adminDocuments';
 import enAdminStaffPermissions from './adminStaffPermissions';
 import enAdminStaffView from './adminStaffView';
 import enAdminFreePlayers from './adminFreePlayers';
+import enAdminPilotage from './adminPilotage';
 
 const adminEnDict = {
   adminQuickBracket: enAdminQuickBracket,
@@ -416,6 +417,7 @@ const adminEnDict = {
   adminStaffPermissions: enAdminStaffPermissions,
   adminStaffView: enAdminStaffView,
   adminFreePlayers: enAdminFreePlayers,
+  adminPilotage: enAdminPilotage,
   adminNetworkFunnel: enAdminNetworkFunnel,
   adminTcgPhotos: enAdminTcgPhotos,
   adminTcgOverview: enAdminTcgOverview,

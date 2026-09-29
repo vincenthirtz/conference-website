@@ -60,6 +60,15 @@ export const ADMIN_NAV: AdminNavNode[] = [
     minRole: 'caster',
     children: [
       {
+        // Pilotage du jour (planche « Admin », Le Ruban) : la file d'attente
+        // du tournoi en cours, triée par urgence — l'écran d'arrivée d'un soir
+        // de match. Même droit que le tableau de bord dont il lit les données.
+        id: 'pilotage',
+        topBarLabel: 'Pilotage du jour',
+        href: '/admin/pilotage',
+        permission: 'manage_tournaments',
+      },
+      {
         // Porte du check-in : la seule entrée de menu d'un bénévole, dont
         // c'est l'unique permission. La cible réelle est une route dynamique
         // (`/admin/tournament/[id]/checkin`), donc invisible du menu — d'où ce

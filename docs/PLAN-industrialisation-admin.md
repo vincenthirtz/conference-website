@@ -575,6 +575,15 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       direct). `DataTable` : bandeau de sélection orchidée, pied « 8 sur 12 · page 1 sur 2 » +
       pages numérotées (`pageWindow`), état vide hachuré (`data-empty`). Vérifié en capture.
 - [x] Premier écran sur l'archétype : adhérents (en-tête, tuiles, filtres en puces dans l'URL).
+- [x] **Pilotage du jour** (planche « Admin ») : nouvel écran [`/admin/pilotage`](../pages/admin/pilotage.tsx),
+      module [`features/admin/pilotage`](../features/admin/pilotage/), en tête de la section
+      Compétition. Lit le tournoi en cours via `fetchDashboardData` (aucune requête nouvelle) ;
+      file d'attente **triée par urgence** — litige, en direct, en retard, imminent (< 2 h),
+      planifié — dans une fonction pure testée ([`build.ts`](../features/admin/pilotage/build.ts)) ;
+      tuiles check-in 24 h / en cours / à arbitrer / avancement ; journal du staff ; actions
+      rapides ; rafraîchi toutes les 30 s ; tuiles sur 2 colonnes dès le téléphone. Vérifié en
+      capture (vraie vue, vraie file, données d'exemple). Limite : un litige n'affiche pas son
+      numéro de manche (absent de `disputesOpen`).
 - [ ] Archétypes Fiche, pilotage du jour, tableau de bord tournoi ; les 23 autres listes : avec
       les lots de découpe L15–L20.
 - [ ] Bouton d'action principal : `AdminButton variant="primary"` (vert feuille, comme les

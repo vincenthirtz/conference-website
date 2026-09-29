@@ -36,6 +36,10 @@ export type NavCrumb = { label: string; href: string | null };
  */
 export const ADMIN_NAV_TRAILS: Record<string, NavCrumb[]> = {
   '/admin': [{ label: 'Dashboard', href: '/admin' }],
+  '/admin/pilotage': [
+    { label: 'Compétition', href: null },
+    { label: 'Pilotage du jour', href: '/admin/pilotage' },
+  ],
   '/admin/checkin': [
     { label: 'Compétition', href: null },
     { label: 'Check-in', href: '/admin/checkin' },

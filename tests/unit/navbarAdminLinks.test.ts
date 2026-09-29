@@ -55,12 +55,13 @@ describe('filterAdminLinks – static structure invariants', () => {
   // « Check-in » s'ajoute en tête depuis le lot A2 : c'est la porte d'entrée
   // du bénévole, dont c'est l'unique permission (la cible réelle est une route
   // dynamique, donc invisible du menu).
-  it('groups Check-in, Tournoi en cours, Tournois, Scrims, Équipes sous "Compétition"', () => {
+  it('groups Pilotage du jour, Check-in, Tournoi en cours, Tournois, Scrims, Équipes sous "Compétition"', () => {
     const competition = filterAdminLinks('owner').find(
       (l) => l.title === 'Compétition'
     );
     expect(competition).toBeDefined();
     expect(competition?.children?.map((c) => c.title)).toEqual([
+      'Pilotage du jour',
       'Check-in',
       'Tournoi en cours',
       'Tournois',

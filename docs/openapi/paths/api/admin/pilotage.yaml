@@ -1,0 +1,20 @@
+get:
+  summary: Pilotage du jour du tournoi en cours.
+  description: >
+    Tuiles (check-in 24 h, matchs en cours, litiges, avancement), file
+    d'attente triée par urgence (litige, en direct, en retard, imminent,
+    planifié) et journal récent du staff, pour le tournoi en cours de l'espace
+    du staff. Sans tournoi en cours : `tournament`, `tiles` à null et file
+    vide. Permission `manage_tournaments`.
+  operationId: adminGetPilotage
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Pilotage du jour.
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

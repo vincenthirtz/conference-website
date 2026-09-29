@@ -9543,6 +9543,201 @@
     ]
    }
   },
+  "GET /api/admin/pilotage": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "activity": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "action": {
+         "type": "string"
+        },
+        "at": {
+         "type": "string"
+        },
+        "id": {
+         "type": "string"
+        },
+        "staffName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "action",
+        "at",
+        "id",
+        "staffName"
+       ]
+      }
+     },
+     "generatedAt": {
+      "type": "string"
+     },
+     "queue": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "detail": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "matchId": {
+         "type": "string"
+        },
+        "roundName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "scheduledAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "score": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "state": {
+         "type": "string",
+         "enum": [
+          "dispute",
+          "late",
+          "live",
+          "planned",
+          "soon"
+         ]
+        },
+        "team1": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team2": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "detail",
+        "matchId",
+        "roundName",
+        "scheduledAt",
+        "score",
+        "state",
+        "team1",
+        "team2"
+       ]
+      }
+     },
+     "tiles": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "checkin": {
+        "type": "object",
+        "properties": {
+         "checkedIn": {
+          "type": "number"
+         },
+         "missing": {
+          "type": "number"
+         },
+         "upcoming": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "checkedIn",
+         "missing",
+         "upcoming"
+        ]
+       },
+       "disputes": {
+        "type": "number"
+       },
+       "finished": {
+        "type": "number"
+       },
+       "ongoing": {
+        "type": "number"
+       },
+       "toPlay": {
+        "type": "number"
+       },
+       "total": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "checkin",
+       "disputes",
+       "finished",
+       "ongoing",
+       "toPlay",
+       "total"
+      ]
+     },
+     "tournament": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "endDate": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "startDate": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "endDate",
+       "id",
+       "name",
+       "startDate"
+      ]
+     }
+    },
+    "required": [
+     "activity",
+     "generatedAt",
+     "queue",
+     "tiles",
+     "tournament"
+    ]
+   }
+  },
   "GET /api/admin/pole-members": {
    "200": {
     "type": "object",

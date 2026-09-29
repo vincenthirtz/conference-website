@@ -120,6 +120,8 @@ describe('frontières des modules features/admin', () => {
     expect(v).toEqual([]);
   });
 
+  // `_shared` est le kit commun (coquille, briques d'archétype, cache) : il
+  // est FAIT pour être importé par tous les modules.
   it('4. un module n’entre pas dans l’ui/ ni le repository d’un autre', () => {
     const v = violations(({ rel, src }) => {
       const own = moduleOf(rel);
@@ -127,7 +129,10 @@ describe('frontières des modules features/admin', () => {
         .map((spec) => ({ spec, t: featureTarget(rel, spec) }))
         .filter(
           ({ t }) =>
-            t && t.module !== own && /^(ui|repository)(\/|$)/.test(t.rest)
+            t &&
+            t.module !== own &&
+            t.module !== '_shared' &&
+            /^(ui|repository)(\/|$)/.test(t.rest)
         )
         .map(({ spec }) => `importe ${spec} (module ${own})`);
     });

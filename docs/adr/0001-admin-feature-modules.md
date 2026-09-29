@@ -39,6 +39,8 @@ Vérifiées par [`tests/unit/adminBoundariesGuard.test.ts`](../../tests/unit/adm
 2. `service` et `repository` n'importent pas `next` et ne mentionnent pas `NextApiRequest/Response`.
 3. La base est **reçue** (`ctx.db`), jamais importée, hors `ui/`.
 4. Un module n'importe pas l'`ui/` ni le `repository` d'un autre module (son `service`, oui).
+   Exception : `features/admin/_shared/` (coquille, briques d'archétype Le Ruban, cache de
+   requêtes) est le kit commun, importable par tous.
 5. Seul le service d'un module lit son repository.
 6. Une route `pages/api/admin` migrée tient en ≤ 5 lignes de code (réexport).
 
