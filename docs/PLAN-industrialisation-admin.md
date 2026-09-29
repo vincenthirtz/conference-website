@@ -612,7 +612,7 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       phase, fiche d'un espace et sa configuration Discord. Écrans d'opérations : confirmations,
       garde-fous et ordre des étapes inchangés. Le garde de taille a refusé la croissance de la
       configuration Discord (fichier gelé) : la rangée de champs est sortie
-      (`features/admin/tenants/ui/SnowflakeField.tsx`), gel abaissé 693 → 689.
+      (`features/admin/tenants/ui/SnowflakeField.tsx`), gel abaissé 693 → 690.
 - [ ] À trancher : « Notifier les capitaines » (outils du tournoi) est un envoi en masse sans
       confirmation — désormais en rouge ; faut-il ajouter une confirmation ?
 - [ ] L'archivage d'un espace reste un bouton rouge (data-testid, confirm, blocage de l'espace

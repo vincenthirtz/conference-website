@@ -95,9 +95,9 @@ const BASELINE: Record<string, number> = {
   // 2026-09-23 : +1 pour `mvp_results_channel_id` (annonce de la MVP à la
   // clôture d'un vote). Le prochain annoncé plus haut, donc — même ligne, même
   // objet de repli, et toujours rien de neuf à l'écran.
-  // 689 : passe « Le Ruban » (2026-09-29) — la rangée de champs Discord est
+  // 690 : passe « Le Ruban » (2026-09-29) — la rangée de champs Discord est
   // partie dans features/admin/tenants/ui/SnowflakeField.tsx.
-  'pages/admin/tenants/[id]/discord-config/[guildId].tsx': 689,
+  'pages/admin/tenants/[id]/discord-config/[guildId].tsx': 690,
   // 2026-09-21 : de 952 à 969 en typant quatre lectures, puis RAMENÉ à 953 en
   // sortant `StageOption` dans `utils/stages/stageOption.ts` (règle A7).
   'pages/admin/stages/[stageId].tsx': 953,
