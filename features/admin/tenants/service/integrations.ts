@@ -23,7 +23,12 @@ import {
 import type { Audited } from '../../_shared/audited';
 import * as repo from '../repository/integrations';
 import * as tenantsRepo from '../repository/tenants';
-import { type StaffScope, requireUuid, serverError } from './scope';
+import {
+  type StaffScope,
+  assertTenantInScope,
+  requireUuid,
+  serverError,
+} from './scope';
 
 /* ------------------------------ clés d'API ----------------------------- */
 
@@ -461,8 +466,15 @@ function rotationReason(body: unknown): string | null {
   return typeof raw === 'string' ? raw.trim().slice(0, 500) : null;
 }
 
-async function requireTenantForSecrets(ctx: ServiceContext, rawId: unknown) {
+async function requireTenantForSecrets(
+  ctx: ServiceContext,
+  scope: StaffScope,
+  rawId: unknown
+) {
   const id = requireUuid(rawId, 'Invalid tenant id.', 'INVALID_TENANT_ID');
+  // Avant toute lecture : les secrets du bot d'un espace hors périmètre ne
+  // se rotent pas (et leur clair ne se lit pas).
+  await assertTenantInScope(scope, id);
   const { row, error } = await tenantsRepo.getTenantIdentity(ctx.db, id);
   if (error) {
     ctx.logger.error(
@@ -486,11 +498,12 @@ async function requireTenantForSecrets(ctx: ServiceContext, rawId: unknown) {
  */
 export async function rotateBotSecrets(
   ctx: ServiceContext,
+  scope: StaffScope,
   rawId: unknown,
   body: unknown
 ) {
   const reason = rotationReason(body);
-  const tenant = await requireTenantForSecrets(ctx, rawId);
+  const tenant = await requireTenantForSecrets(ctx, scope, rawId);
   const id = tenant.id;
 
   const previousKeyHash = await repo.getCurrentBotKeyHash(ctx.db, id);
@@ -545,11 +558,12 @@ export async function rotateBotSecrets(
 /** DELETE /api/admin/tenants/[id]/rotate-secrets — révoque la clé précédente MAINTENANT. */
 export async function revokePreviousBotKey(
   ctx: ServiceContext,
+  scope: StaffScope,
   rawId: unknown,
   body: unknown
 ) {
   const reason = rotationReason(body);
-  const tenant = await requireTenantForSecrets(ctx, rawId);
+  const tenant = await requireTenantForSecrets(ctx, scope, rawId);
   const id = tenant.id;
   const { error } = await repo.clearPreviousBotKey(ctx.db, id);
   if (error) {

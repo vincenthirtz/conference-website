@@ -8,7 +8,7 @@
 //  - 405 méthode non-POST
 //  - 400 VALIDATION (orgName court / password < 8 / email invalide)
 //  - 400 CAPTCHA (Turnstile invalide)
-//  - 200 succès + provisioning (tenant kind='developer', staff owner,
+//  - 200 succès + provisioning (tenant kind='developer', staff caster global,
 //    tenant_staff owner)
 //  - 200 { alreadyExists:true } sans provisioning quand l'email est déjà pris
 //  - collision de slug → suffixe -2
@@ -148,7 +148,7 @@ describe('/api/developers/register', () => {
     expect(store.tenants ?? []).toHaveLength(0);
   });
 
-  it('200 succès + provisionne tenant developer / staff owner / tenant_staff owner', async () => {
+  it('200 succès + provisionne tenant developer / staff caster global / tenant_staff owner', async () => {
     const res = makeRes();
     await registerHandler(makeReq({ body: validBody }), res);
 
@@ -165,11 +165,16 @@ describe('/api/developers/register', () => {
     expect(typeof tenant.slug).toBe('string');
     expect(tenant.slug.length).toBeGreaterThanOrEqual(2);
 
-    // 2) staff role 'owner' rattaché au compte auth créé + email normalisé.
+    // 2) staff rattaché au compte auth créé + email normalisé. Rôle GLOBAL
+    // minimal (`caster`), JAMAIS `owner` : un owner global passait toutes les
+    // gardes de plateforme depuis une inscription anonyme. Les droits du compte
+    // viennent de `tenant_staff.role = 'owner'` sur SON espace (point 3).
     const staff = (store.staff ?? []).find(
-      (s: any) => s.role === 'owner'
+      (s: any) => s.auth_user_id === 'gen-user'
     ) as any;
     expect(staff).toBeTruthy();
+    expect(staff.role).toBe('caster');
+    expect(staff.role).not.toBe('owner');
     expect(staff.auth_user_id).toBe('gen-user');
     expect(staff.email).toBe('founder@gmail.com');
     expect(staff.display_name).toBe('Acme Corp');

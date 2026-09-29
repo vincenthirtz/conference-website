@@ -594,6 +594,9 @@ function makeStaff(role: 'owner' | 'admin') {
       is_pole_admin: false,
     },
   ] as any;
+  // Membre de l'espace facturé : la règle de périmètre (membre ou pôle-admin)
+  // ne connaît plus d'exception « owner global ».
+  store.tenant_staff = [{ tenant_id: TENANT, staff_id: STAFF_1, role }] as any;
 }
 
 function adminReq(over: Partial<any> = {}): any {

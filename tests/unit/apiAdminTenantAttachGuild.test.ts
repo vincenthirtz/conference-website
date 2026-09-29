@@ -62,6 +62,9 @@ function seedStaff(role: string, tenantRole: string | null = null) {
       auth_user_id: 'user-1',
       email: 'a@a.com',
       role,
+      // Owner de PLATEFORME = pôle-admin : la règle de périmètre (membre de
+      // l'espace ou pôle-admin) ne connaît plus d'exception « owner global ».
+      is_pole_admin: role === 'owner' && !tenantRole,
       is_active: true,
       deleted_at: null,
     },

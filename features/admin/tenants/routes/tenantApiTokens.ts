@@ -13,15 +13,22 @@ import {
   mintApiToken,
   revokeNamedTenantApiToken,
 } from '../service/integrations';
-import { assertOwner, requireUuid, staffScope } from '../service/scope';
+import {
+  assertOwner,
+  assertTenantInScope,
+  requireUuid,
+  staffScope,
+} from '../service/scope';
 import type { AdminRouteContext } from '@/utils/admin/defineAdminRoute';
 
 const LIMIT = { max: 20, windowMs: 60_000 };
 
-function ownerTenant(ctx: AdminRouteContext, rawId: unknown) {
+async function ownerTenant(ctx: AdminRouteContext, rawId: unknown) {
   const id = requireUuid(rawId, 'Invalid tenant id.');
   const scope = staffScope(ctx.staff);
   assertOwner(scope);
+  // Membre de CET espace ou pôle-admin, avant toute lecture.
+  await assertTenantInScope(scope, id);
   return { id, scope };
 }
 
@@ -31,8 +38,8 @@ export default defineAdminRoute({
   GET: read({
     query: IdQuery,
     rateLimit: LIMIT,
-    handler: ({ ctx, req }) =>
-      listNamedTenantApiTokens(ctx, ownerTenant(ctx, req.query.id).id),
+    handler: async ({ ctx, req }) =>
+      listNamedTenantApiTokens(ctx, (await ownerTenant(ctx, req.query.id)).id),
   }),
   POST: mutate({
     query: IdQuery,
@@ -42,8 +49,8 @@ export default defineAdminRoute({
     idempotent: false,
     // Journalisé par `mintTenantApiToken` (`create_api_token`, espace de la CLÉ).
     audit: false,
-    handler: ({ ctx, req }) => {
-      const { id, scope } = ownerTenant(ctx, req.query.id);
+    handler: async ({ ctx, req }) => {
+      const { id, scope } = await ownerTenant(ctx, req.query.id);
       return mintApiToken(scope, id, req.body);
     },
   }),
@@ -51,14 +58,12 @@ export default defineAdminRoute({
     query: TenantApiTokensQuery,
     rateLimit: LIMIT,
     audit: 'revoke_api_token',
-    handler: ({ ctx, req }) =>
-      audited(
+    handler: async ({ ctx, req }) => {
+      const { id } = await ownerTenant(ctx, req.query.id);
+      return audited(
         ctx,
-        revokeNamedTenantApiToken(
-          ctx,
-          ownerTenant(ctx, req.query.id).id,
-          req.query.tokenId
-        )
-      ),
+        revokeNamedTenantApiToken(ctx, id, req.query.tokenId)
+      );
+    },
   }),
 });

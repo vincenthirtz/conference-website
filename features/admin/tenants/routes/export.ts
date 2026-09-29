@@ -1,8 +1,9 @@
 // features/admin/tenants/routes/export.ts — POST /api/admin/tenants/[id]/export
 // Toutes les données d'un espace en une archive JSON (secrets exclus).
 //
-// Garde CONSERVÉE à l'identique (`manage_tenant`, portée tenant, + owner
-// effectif) — cf. rapport de migration.
+// Garde de rôle inchangée, PLUS le périmètre : l'espace de l'URL doit être
+// un espace dont le staff est membre, ou pôle-admin (assertTenantInScope,
+// 403 `TENANT_OUT_OF_SCOPE`).
 
 import { defineAdminRoute, mutate } from '@/utils/admin/defineAdminRoute';
 import { IdQuery } from '../schemas';

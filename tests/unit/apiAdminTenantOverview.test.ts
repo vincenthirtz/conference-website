@@ -178,8 +178,9 @@ describe('GET /api/admin/tenants/[id]/overview', () => {
     store.discord_guilds = [] as any;
     store.tenant_staff = [] as any;
     store.integration_secrets = [] as any;
-    // Le staff reste owner GLOBAL, donc l'accès à la fiche ne dépend pas du
-    // rattachement qu'on vient de retirer.
+    // Sans rattachement, seul un pôle-admin entre encore (règle de périmètre :
+    // membre de l'espace ou pôle-admin, plus d'exception « owner global »).
+    (store.staff as any[])[0].is_pole_admin = true;
 
     const res = makeRes();
     await handler(makeReq(), res);
@@ -212,6 +213,9 @@ describe('GET /api/admin/tenants/[id]/overview', () => {
   });
 
   it('404 sur un espace inexistant', async () => {
+    // Seul un pôle-admin peut constater qu'un espace n'existe pas : pour un
+    // non-membre, le refus de périmètre (403) passe avant toute lecture.
+    (store.staff as any[])[0].is_pole_admin = true;
     const res = makeRes();
     await handler(
       makeReq({ query: { id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' } }),

@@ -17,7 +17,7 @@ import type { Audited } from '../../_shared/audited';
 import * as repo from '../repository/tenants';
 import {
   type StaffScope,
-  assertAdminOrTenantMember,
+  assertTenantInScope,
   requireUuid,
   serverError,
 } from './scope';
@@ -35,7 +35,7 @@ export async function listTenantStaff(
   rawId: unknown
 ) {
   const id = requireUuid(rawId, 'Invalid tenant id.');
-  await assertAdminOrTenantMember(scope, id);
+  await assertTenantInScope(scope, id);
   const { rows, error } = await repo.listTenantStaff(ctx.db, id);
   if (error) {
     ctx.logger.error('[admin/tenants/[id]/staff] list error', error);
@@ -58,6 +58,7 @@ export async function addTenantStaff(
   if (!hasAtLeastRole(scope.role, 'owner')) {
     throw new LegacyAdminError(403, 'Forbidden.');
   }
+  await assertTenantInScope(scope, id);
   const b = (body ?? {}) as Record<string, unknown>;
   const staffIdInput = typeof b.staff_id === 'string' ? b.staff_id.trim() : '';
   const emailInput =
@@ -120,6 +121,7 @@ export async function removeTenantStaff(
   }
   const id = requireUuid(rawId, 'Invalid tenant id.');
   const staffId = requireUuid(rawStaffId, 'Invalid staff id.');
+  await assertTenantInScope(scope, id);
   const { rows: all, error } = await repo.listTenantStaffRoles(ctx.db, id);
   if (error) {
     ctx.logger.error('[admin/tenants/[id]/staff/[staffId]] list error', error);
@@ -166,7 +168,7 @@ const sha256 = (v: string) =>
 
 async function invitationTenant(scope: StaffScope, rawId: unknown) {
   const id = requireUuid(rawId, 'Invalid tenant id.', 'INVALID_TENANT_ID');
-  await assertAdminOrTenantMember(scope, id);
+  await assertTenantInScope(scope, id);
   return id;
 }
 
@@ -306,7 +308,7 @@ export async function revokeInvitation(
     throw new LegacyAdminError(400, 'Invalid ids.', { code: 'INVALID_IDS' });
   }
   const id = rawId;
-  await assertAdminOrTenantMember(scope, id);
+  await assertTenantInScope(scope, id);
   // Filtre AUSSI sur l'espace : sinon un id suffirait chez le voisin.
   const { row, error } = await repo.revokeInvitation(
     ctx.db,

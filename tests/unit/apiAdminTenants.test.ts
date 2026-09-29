@@ -57,6 +57,19 @@ function makeStaffRow(
   };
 }
 
+/**
+ * Rend STAFF_1 membre de l'espace visé : depuis la règle de périmètre (membre
+ * ou pôle-admin, sans exception « owner global »), un owner n'agit plus sur un
+ * espace dont il n'est pas membre.
+ */
+function joinTenant(tenantId: string) {
+  (store.tenant_staff as any[]).push({
+    tenant_id: tenantId,
+    staff_id: STAFF_1,
+    role: 'owner',
+  });
+}
+
 function makeReq(over: Partial<any> = {}): any {
   return {
     method: 'GET',
@@ -389,6 +402,7 @@ describe('/api/admin/tenants/[id]', () => {
   });
 
   it('DELETE 200 soft-delete (is_active=false)', async () => {
+    joinTenant(TENANT_B);
     const res = makeRes();
     await detailHandler(
       makeReq({ method: 'DELETE', query: { id: TENANT_B } }),
@@ -702,6 +716,7 @@ describe('/api/admin/tenants/[id]/staff', () => {
   });
 
   it('POST 200 ajoute un staff au tenant', async () => {
+    joinTenant(TENANT_B);
     const res = makeRes();
     await staffList(
       makeReq({
@@ -719,6 +734,7 @@ describe('/api/admin/tenants/[id]/staff', () => {
   });
 
   it('POST 400 si role hors nomenclature (INVALID_ROLE)', async () => {
+    joinTenant(TENANT_B);
     const res = makeRes();
     await staffList(
       makeReq({
@@ -737,6 +753,7 @@ describe('/api/admin/tenants/[id]/staff', () => {
   });
 
   it('POST 200 sans role → défaut admin', async () => {
+    joinTenant(TENANT_B);
     const res = makeRes();
     await staffList(
       makeReq({
@@ -754,6 +771,7 @@ describe('/api/admin/tenants/[id]/staff', () => {
   });
 
   it('POST 200 avec un role valide de la nomenclature (caster)', async () => {
+    joinTenant(TENANT_B);
     const res = makeRes();
     await staffList(
       makeReq({

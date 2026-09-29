@@ -108,8 +108,11 @@ beforeEach(() => {
     },
     { id: TENANT_B, slug: 'beta', name: 'Beta', is_active: true },
   ] as any;
+  // Membre de A (espace actif) ET de B : la règle de périmètre exige d'être
+  // membre de l'espace visé (ou pôle-admin).
   store.tenant_staff = [
     { tenant_id: TENANT_A, staff_id: 'staff-1', role: 'owner' },
+    { tenant_id: TENANT_B, staff_id: 'staff-1', role: 'owner' },
   ] as any;
 });
 
@@ -122,6 +125,9 @@ describe('GET /api/admin/tenants/[id]/bot-invite', () => {
   });
 
   it('404 UNKNOWN_TENANT sur un espace inconnu', async () => {
+    // Seul un pôle-admin constate qu'un espace n'existe pas (sinon : 403 de
+    // périmètre avant toute lecture).
+    (store.staff as any[])[0].is_pole_admin = true;
     const res = makeRes();
     await botInviteHandler(makeReq({ query: { id: UNKNOWN } }), res);
     expect(res.statusCode).toBe(404);
@@ -168,6 +174,9 @@ describe('GET /api/admin/tenants/[id]/domain', () => {
   });
 
   it('404 UNKNOWN_TENANT', async () => {
+    // Seul un pôle-admin constate qu'un espace n'existe pas (sinon : 403 de
+    // périmètre avant toute lecture).
+    (store.staff as any[])[0].is_pole_admin = true;
     const res = makeRes();
     await domainHandler(makeReq({ query: { id: UNKNOWN } }), res);
     expect(res.statusCode).toBe(404);

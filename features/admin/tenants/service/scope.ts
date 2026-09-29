@@ -57,24 +57,35 @@ export function requireUuid(
   return value;
 }
 
+export const TENANT_OUT_OF_SCOPE =
+  'Cet espace ne fait pas partie de votre périmètre.';
+
 /**
- * « admin+ (rôle effectif), sinon staff rattaché à CET espace ou pôle-admin » —
- * règle de la fiche d'un espace et de ses vues.
+ * RÈGLE UNIQUE des routes qui agissent sur un espace DÉSIGNÉ PAR L'URL
+ * (`tenants/[id]/*`) : membre de l'espace (`tenant_staff`) ou pôle-admin.
+ * Aucune exception par rôle — ni owner global, ni admin : un rôle dit ce
+ * qu'on peut faire, pas OÙ. Sans cette règle, le propriétaire de l'espace A
+ * (élevé owner chez lui par `tenant_staff`) visait l'espace B par son id :
+ * rotation des secrets du bot, ajout de soi en owner, export, fermeture.
+ *
+ * À appeler AVANT toute lecture/écriture de l'espace ; les contrôles de rôle
+ * (owner/admin effectif) s'ajoutent, ils ne remplacent pas celui-ci.
  */
-export async function assertAdminOrTenantMember(
+export async function assertTenantInScope(
   scope: StaffScope,
   tenantId: string
 ): Promise<void> {
-  if (hasAtLeastRole(scope.role, 'admin')) return;
   const allowed = await canAccessTenant(scope.staffId, tenantId, {
     isPoleAdmin: scope.isPoleAdmin,
   });
   if (!allowed) {
-    throw new LegacyAdminError(403, 'No access to this tenant.');
+    throw new LegacyAdminError(403, TENANT_OUT_OF_SCOPE, {
+      code: 'TENANT_OUT_OF_SCOPE',
+    });
   }
 }
 
-/** « admin+ (rôle effectif) ET rattaché à CET espace (ou pôle-admin) ». */
+/** « admin+ (rôle effectif) » ET espace dans le périmètre. */
 export async function assertAdminOfTenant(
   scope: StaffScope,
   tenantId: string
@@ -82,12 +93,7 @@ export async function assertAdminOfTenant(
   if (!hasAtLeastRole(scope.role, 'admin')) {
     throw new LegacyAdminError(403, 'Forbidden.');
   }
-  const allowed = await canAccessTenant(scope.staffId, tenantId, {
-    isPoleAdmin: scope.isPoleAdmin,
-  });
-  if (!allowed) {
-    throw new LegacyAdminError(403, 'No access to this tenant.');
-  }
+  await assertTenantInScope(scope, tenantId);
 }
 
 /** Espace ACTIF seulement, sauf pôle-admin : 403 `TENANT_SCOPE`. */

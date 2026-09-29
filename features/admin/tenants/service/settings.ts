@@ -6,8 +6,6 @@ import { z } from 'zod';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { LegacyAdminError } from '@/utils/admin/errors';
 import type { Database } from '@/types/database.generated';
-import { canAccessTenant } from '@/utils/adminTenants';
-import { hasAtLeastRole } from '@/utils/staffRoles';
 import { formatZodError } from '@/utils/validation';
 import { CGV_VERSION } from '@/utils/billing/cgv';
 import { createCheckoutIntent } from '@/utils/helloasso';
@@ -44,7 +42,7 @@ import {
   type StaffScope,
   assertActiveTenant,
   assertAdminOfTenant,
-  assertAdminOrTenantMember,
+  assertTenantInScope,
   requireUuid,
   serverError,
 } from './scope';
@@ -64,6 +62,7 @@ export async function getBilling(
   rawId: unknown
 ) {
   const id = tenantIdOf(rawId);
+  await assertTenantInScope(scope, id);
   assertActiveTenant(scope, id);
   const { row: t, error } = await repo.getTenantBilling(ctx.db, id);
   if (error) {
@@ -164,19 +163,9 @@ export async function createPlanCheckout(
   origin: string
 ) {
   const id = tenantIdOf(rawId);
-  if (!hasAtLeastRole(scope.globalRole, 'owner')) {
-    if (
-      !(await canAccessTenant(scope.staffId, id, {
-        isPoleAdmin: scope.isPoleAdmin,
-      }))
-    ) {
-      throw new LegacyAdminError(
-        403,
-        'Cet espace ne fait pas partie de votre périmètre.',
-        { code: 'TENANT_OUT_OF_SCOPE' }
-      );
-    }
-  }
+  // Périmètre (T10), sans exception : plus d'« owner global » qui passe
+  // partout — membre de l'espace ou pôle-admin.
+  await assertTenantInScope(scope, id);
   const parsed = checkoutSchema.safeParse(body);
   if (!parsed.success) {
     throw new LegacyAdminError(400, formatZodError(parsed.error), {
@@ -324,8 +313,9 @@ export type NonprofitRnaResponse =
     }
   | { removed: true };
 
-function rnaTenant(scope: StaffScope, rawId: unknown): string {
+async function rnaTenant(scope: StaffScope, rawId: unknown): Promise<string> {
   const id = tenantIdOf(rawId);
+  await assertTenantInScope(scope, id);
   assertActiveTenant(scope, id);
   return id;
 }
@@ -341,7 +331,7 @@ export async function declareRna(
   rawId: unknown,
   body: unknown
 ): Promise<Audited<NonprofitRnaResponse>> {
-  const tenantId = rnaTenant(scope, rawId);
+  const tenantId = await rnaTenant(scope, rawId);
   const rna = parseRna((body as { rna?: unknown } | undefined)?.rna);
   if (!rna) {
     throw new LegacyAdminError(
@@ -409,7 +399,7 @@ export async function removeRna(
   scope: StaffScope,
   rawId: unknown
 ): Promise<Audited<NonprofitRnaResponse>> {
-  const tenantId = rnaTenant(scope, rawId);
+  const tenantId = await rnaTenant(scope, rawId);
   const current = await repo.getNonprofitVia(ctx.db, tenantId);
   const patch: TenantUpdate = {
     nonprofit_rna: null,
@@ -447,7 +437,7 @@ async function loadDomain(
   rawId: unknown
 ) {
   const id = tenantIdOf(rawId);
-  await assertAdminOrTenantMember(scope, id);
+  await assertTenantInScope(scope, id);
   const { row, error } = await repo.getTenantDomain(ctx.db, id);
   if (error) {
     ctx.logger.error('[admin/tenant-domain] load error', error);

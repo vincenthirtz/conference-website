@@ -5,7 +5,7 @@
 //   - crée un compte auth AUTO-CONFIRMÉ (pas de round-trip email : le dev doit
 //     pouvoir se connecter immédiatement, comme le flux d'onboarding tenant),
 //   - provisionne un tenant marqué `kind='developer'` (tenants → staff →
-//     tenant_staff owner), sans Discord / tenant_secrets (≠ auto-claim
+//     tenant_staff owner — rôle GLOBAL minimal `caster`), sans Discord / tenant_secrets (≠ auto-claim
 //     link-guild.ts qui, lui, part d'une invitation bot).
 //
 // Anti-énumération : un email déjà pris renvoie un 200 neutre
@@ -35,6 +35,20 @@ import { isReservedSlug } from '@/utils/onboard';
 import { buildTrialFields } from '@/utils/billing/trial';
 import { CGV_VERSION } from '@/utils/billing/cgv';
 import { logger } from '@/utils/logger';
+
+/**
+ * Rôle GLOBAL d'un compte développeur : `caster`, le plancher historique d'un
+ * compte staff (en dessous, `referee`/`helper` ne passent plus les gardes
+ * `caster` des pages admin communes). Ses droits réels viennent de
+ * `tenant_staff.role = 'owner'` sur SON espace, qui élève le rôle effectif
+ * sur l'espace actif : facturation, clés, webhooks, lien de paiement.
+ *
+ * Il était `owner` GLOBAL : une inscription anonyme et auto-approuvée passait
+ * alors toutes les gardes de PLATEFORME (`scope: 'platform'`, rôle global) —
+ * rotation des secrets bot, export, cycle de vie, staff de n'importe quel
+ * espace. Comptes existants : database/migrations/20260929_demote_developer_global_owner.sql.
+ */
+const DEVELOPER_GLOBAL_ROLE = 'caster';
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -322,14 +336,16 @@ export default async function handler(
     });
   }
 
-  // 2c) staff (role 'owner' global — confiné à ce tenant via tenant_staff).
+  // 2c) staff : rôle GLOBAL minimal (`DEVELOPER_GLOBAL_ROLE`). Le compte est
+  // owner de SON espace par `tenant_staff` (2d), qui élève son rôle effectif
+  // sur l'espace actif — tout ce que la console développeur demande.
   const { data: insertedStaff, error: staffErr } = await supabaseAdmin
     .from('staff')
     .insert({
       auth_user_id: newUser.id,
       display_name: orgName,
       email,
-      role: 'owner',
+      role: DEVELOPER_GLOBAL_ROLE,
     })
     .select('id')
     .single();

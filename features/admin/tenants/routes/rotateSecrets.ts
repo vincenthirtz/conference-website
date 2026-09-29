@@ -6,12 +6,13 @@
 // Idempotence DÉSACTIVÉE : le cache d'idempotence stocke le corps de la
 // réponse en base — la clé en clair n'y a rien à faire.
 //
-// Garde CONSERVÉE à l'identique (`manage_tenant`, portée TENANT) — cf. rapport
-// de migration : un propriétaire d'espace peut viser un AUTRE espace par son id.
+// Garde `manage_tenant` (portée tenant) + périmètre : l'espace de l'URL doit
+// être un espace dont le staff est membre, ou pôle-admin (assertTenantInScope).
 
 import { defineAdminRoute, mutate } from '@/utils/admin/defineAdminRoute';
 import { audited } from '../../_shared/audited';
 import { IdQuery, RotateSecretsDoc } from '../schemas';
+import { staffScope } from '../service/scope';
 import {
   revokePreviousBotKey,
   rotateBotSecrets,
@@ -29,7 +30,10 @@ export default defineAdminRoute({
     idempotent: false,
     audit: 'rotate_bot_secrets',
     handler: ({ ctx, req }) =>
-      audited(ctx, rotateBotSecrets(ctx, req.query.id, req.body)),
+      audited(
+        ctx,
+        rotateBotSecrets(ctx, staffScope(ctx.staff), req.query.id, req.body)
+      ),
   }),
   DELETE: mutate({
     query: IdQuery,
@@ -38,6 +42,9 @@ export default defineAdminRoute({
     idempotent: false,
     audit: 'revoke_previous_bot_key',
     handler: ({ ctx, req }) =>
-      audited(ctx, revokePreviousBotKey(ctx, req.query.id, req.body)),
+      audited(
+        ctx,
+        revokePreviousBotKey(ctx, staffScope(ctx.staff), req.query.id, req.body)
+      ),
   }),
 });

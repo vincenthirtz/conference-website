@@ -80,6 +80,10 @@ beforeEach(() => {
       auth_user_id: 'user-1',
       email: 'a@a.com',
       role: 'owner',
+      // Opérateur de plateforme : depuis la règle de périmètre (membre de
+      // l'espace ou pôle-admin, sans exception « owner global »), c'est le
+      // pôle-admin qui agit sur un espace dont il n'est pas membre.
+      is_pole_admin: true,
       is_active: true,
       deleted_at: null,
     },

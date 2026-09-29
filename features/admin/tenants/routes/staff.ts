@@ -2,9 +2,9 @@
 //   GET  : staff de l'espace (admin+ effectif ou rattaché).
 //   POST : rattache un staff EXISTANT (owner effectif).
 //
-// Garde CONSERVÉE à l'identique (`caster` + owner EFFECTIF, id libre) — cf.
-// rapport de migration : un propriétaire d'espace peut se rattacher à un
-// AUTRE espace.
+// Garde de rôle inchangée, PLUS le périmètre : l'espace de l'URL doit être
+// un espace dont le staff est membre, ou pôle-admin (assertTenantInScope,
+// 403 `TENANT_OUT_OF_SCOPE`).
 
 import { defineAdminRoute, mutate, read } from '@/utils/admin/defineAdminRoute';
 import { audited } from '../../_shared/audited';

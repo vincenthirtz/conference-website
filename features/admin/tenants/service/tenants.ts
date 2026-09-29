@@ -54,7 +54,7 @@ import type { Audited } from '../../_shared/audited';
 import * as repo from '../repository/tenants';
 import {
   type StaffScope,
-  assertAdminOrTenantMember,
+  assertTenantInScope,
   assertOwner,
   requireUuid,
   serverError,
@@ -250,7 +250,7 @@ export async function getTenantDetail(
   rawId: unknown
 ) {
   const id = detailId(rawId);
-  await assertAdminOrTenantMember(scope, id);
+  await assertTenantInScope(scope, id);
   const { row: tenant, error } = await repo.getTenantDetail(ctx.db, id);
   if (error || !tenant) throw new LegacyAdminError(404, 'Tenant not found.');
   const [{ rows: guilds }, { rows: links }] = await Promise.all([
@@ -292,6 +292,7 @@ export async function updateTenant(
 ) {
   const id = detailId(rawId);
   assertOwner(scope);
+  await assertTenantInScope(scope, id);
   const b = (body ?? {}) as Record<string, unknown>;
   const update: TenantUpdate = {};
 
@@ -485,6 +486,7 @@ export async function deactivateTenant(
 ) {
   const id = detailId(rawId);
   assertOwner(scope);
+  await assertTenantInScope(scope, id);
   const { row: existing, error } = await repo.getTenantDetail(ctx.db, id);
   if (error || !existing) throw new LegacyAdminError(404, 'Tenant not found.');
   if (PROTECTED_TENANT_SLUGS.has(existing.slug)) {
@@ -539,6 +541,7 @@ export async function changeLifecycle(
 ) {
   assertOwner(scope);
   const id = tenantIdOf(rawId);
+  await assertTenantInScope(scope, id);
   const parsed = lifecycleSchema.safeParse(body ?? {});
   if (!parsed.success) {
     throw new LegacyAdminError(400, 'Invalid body', {
@@ -628,6 +631,7 @@ export async function exportTenant(
 ) {
   assertOwner(scope);
   const id = tenantIdOf(rawId);
+  await assertTenantInScope(scope, id);
   const tenant = await repo.getTenantForExport(ctx.db, id);
   if (!tenant) {
     throw new LegacyAdminError(404, 'Tenant not found.', {
@@ -698,6 +702,7 @@ export async function getBotInvite(
   rawGuildId: unknown
 ) {
   const id = tenantIdOf(rawId);
+  await assertTenantInScope(scope, id);
   const guildRaw = typeof rawGuildId === 'string' ? rawGuildId.trim() : '';
   const guildId = GUILD_ID_RE.test(guildRaw) ? guildRaw : null;
   const { row: tenant, error } = await repo.getTenantIdentity(ctx.db, id);
@@ -724,10 +729,12 @@ export async function getBotInvite(
  */
 export async function attachGuild(
   _ctx: ServiceContext,
+  scope: StaffScope,
   rawId: unknown,
   body: unknown
 ) {
   const id = tenantIdOf(rawId);
+  await assertTenantInScope(scope, id);
   const b = (body ?? {}) as Record<string, unknown>;
   const guildId = typeof b.guild_id === 'string' ? b.guild_id : '';
   const result = await attachGuildToTenant(id, guildId);
@@ -1057,7 +1064,7 @@ export async function tenantOverview(
   rawId: unknown
 ): Promise<TenantOverview> {
   const id = tenantIdOf(rawId);
-  await assertAdminOrTenantMember(scope, id);
+  await assertTenantInScope(scope, id);
   const { row: t, error } = await repo.getTenantForOverview(ctx.db, id);
   if (error) {
     ctx.logger.error('[admin/tenant-overview] tenant load error', error);

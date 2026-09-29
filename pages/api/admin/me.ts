@@ -8,7 +8,9 @@ import { effectiveStaffPermissions } from '@/utils/staffPermissions';
 import {
   resolveActiveTenant,
   readActiveTenantCookie,
+  readTenantStaffRole,
 } from '@/utils/adminTenants';
+import { STAFF_ROLE_RANK } from '@/utils/staffRoles';
 import { getTenantKind, type TenantKind } from '@/utils/tenantKind';
 
 const patchProfileSchema = z.object({
@@ -242,6 +244,12 @@ export default withAuthRoute(async function handler(
   } & Record<string, unknown>;
 
   let active_tenant_kind: TenantKind = 'organizer';
+  // Rôle de l'espace ACTIF (`tenant_staff.role`), qui élève le rôle global —
+  // exactement comme `requireStaffRoleFromRequest` / `withStaffPage`. Sans ça,
+  // la navbar filtrait sur le rôle GLOBAL : un propriétaire d'espace (rôle
+  // global minimal, owner chez lui — cas des comptes développeur et de
+  // l'onboarding self-service) ne voyait pas les entrées qu'il peut ouvrir.
+  let activeTenantRole: StaffRole | null = null;
   try {
     const cookieTenantId = readActiveTenantCookie(req.cookies);
     const { tenantId } = await resolveActiveTenant(
@@ -250,6 +258,9 @@ export default withAuthRoute(async function handler(
       { isPoleAdmin: staffRow.is_pole_admin === true }
     );
     active_tenant_kind = await getTenantKind(tenantId);
+    if (staffRow.is_pole_admin !== true) {
+      activeTenantRole = await readTenantStaffRole(staffRow.id, tenantId);
+    }
   } catch (e) {
     logger.error('[/api/admin/me] active_tenant_kind resolution error:', e);
   }
@@ -257,11 +268,18 @@ export default withAuthRoute(async function handler(
   // Permissions EFFECTIVES : la navbar filtre dessus. Le rôle seul ne suffit
   // plus depuis que des droits s'accordent à l'unité — sans ça, une personne à
   // qui on a confié une tâche ne verrait pas l'entrée de menu correspondante.
-  const role = (STAFF_ROLES as readonly string[]).includes(
+  const globalRole = (STAFF_ROLES as readonly string[]).includes(
     String(staffRow.role)
   )
     ? (staffRow.role as StaffRole)
     : null;
+  // Maximum, jamais remplacement : le rôle d'espace ne peut qu'élever.
+  const role =
+    globalRole &&
+    activeTenantRole &&
+    STAFF_ROLE_RANK[activeTenantRole] > STAFF_ROLE_RANK[globalRole]
+      ? activeTenantRole
+      : globalRole;
   const permissions = effectiveStaffPermissions(
     role,
     staffRow.extra_permissions
@@ -270,6 +288,9 @@ export default withAuthRoute(async function handler(
   // OK : renvoyer les infos staff (c'est ce que tu consommeras côté front)
   return res.status(200).json({
     ...staffRow,
+    // `role` = rôle EFFECTIF sur l'espace actif ; `global_role` = `staff.role`.
+    role: role ?? staffRow.role,
+    global_role: staffRow.role,
     active_tenant_kind,
     permissions,
   } as unknown as MeResponse);

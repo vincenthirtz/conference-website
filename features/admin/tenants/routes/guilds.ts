@@ -8,6 +8,7 @@ import {
   RESPONSE_SENT,
 } from '@/utils/admin/defineAdminRoute';
 import { AttachGuildDoc, IdQuery } from '../schemas';
+import { staffScope } from '../service/scope';
 import { attachGuild } from '../service/tenants';
 
 export default defineAdminRoute({
@@ -21,6 +22,7 @@ export default defineAdminRoute({
     handler: async ({ ctx, req, res }) => {
       const { status, result, audit } = await attachGuild(
         ctx,
+        staffScope(ctx.staff),
         req.query.id,
         req.body
       );

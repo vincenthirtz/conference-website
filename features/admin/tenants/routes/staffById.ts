@@ -2,8 +2,9 @@
 // DELETE /api/admin/tenants/[id]/staff/[staffId] — retire un staff de
 // l'espace ; jamais le dernier admin.
 //
-// Garde CONSERVÉE à l'identique (`manage_tenant`, portée tenant, + owner
-// effectif) — cf. rapport de migration.
+// Garde de rôle inchangée, PLUS le périmètre : l'espace de l'URL doit être
+// un espace dont le staff est membre, ou pôle-admin (assertTenantInScope,
+// 403 `TENANT_OUT_OF_SCOPE`).
 
 import { defineAdminRoute, mutate } from '@/utils/admin/defineAdminRoute';
 import { audited } from '../../_shared/audited';
