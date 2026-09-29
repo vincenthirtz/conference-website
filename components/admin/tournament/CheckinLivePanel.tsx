@@ -9,6 +9,10 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import {
+  tournamentMatchUrls,
+  tournamentUrls,
+} from '@/features/admin/tournaments/client';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentCheckinLive from '@/lib/i18n/locales/admin-fr/adminTournamentCheckinLive';
@@ -71,7 +75,7 @@ export default function CheckinLivePanel() {
     if (!tournamentId) return;
     try {
       const json = await adminFetchJson<ApiResponse>(
-        `/api/admin/tournament/${tournamentId}/checkin`
+        tournamentUrls.checkin(tournamentId)
       );
       setRows(json.matches ?? []);
       // `now` sert au fenetrage (windowedRows) et aux comptes a rebours
@@ -156,7 +160,7 @@ export default function CheckinLivePanel() {
       const json = await mutateJson<{
         success: boolean;
         nudgedSides: TeamSide[];
-      }>(`/api/admin/matches/${matchId}/checkin-nudge`, {
+      }>(tournamentMatchUrls.checkinNudge(matchId), {
         method: 'POST',
         body: JSON.stringify({ teamSide: side }),
       });

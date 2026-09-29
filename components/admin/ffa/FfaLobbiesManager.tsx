@@ -9,7 +9,9 @@
 // /api/admin/lobbies/[lobbyId]/*).
 
 import { memo, useCallback, useEffect, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { lobbyUrls, stageUrls } from '@/features/admin/stages/client';
+import { useStageRead } from '@/features/admin/stages/hooks/useStage';
+import { useTournamentTeams } from '@/features/admin/tournaments/hooks/useTournamentTeams';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -74,9 +76,7 @@ type RegisteredTeam = {
   team: { id: string; name: string | null; logo_url: string | null } | null;
 };
 
-type TournamentTeamsResponse = {
-  teams: RegisteredTeam[];
-};
+const NO_TEAMS: RegisteredTeam[] = [];
 
 type DraftEntry = {
   teamId: string;
@@ -120,15 +120,22 @@ function FfaLobbiesManager({
   tournamentId: string;
 }) {
   const t = useAdminT(nsAdminFfa);
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 
-  const [data, setData] = useState<LobbiesResponse | null>(null);
-  const [registeredTeams, setRegisteredTeams] = useState<RegisteredTeam[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const lobbiesQuery = useStageRead<LobbiesResponse>(
+    stageId,
+    'lobbies',
+    stageUrls.lobbies,
+    { rehydrate: true }
+  );
+  const teamsQuery = useTournamentTeams<RegisteredTeam>(tournamentId);
+  const data = lobbiesQuery.data ?? null;
+  const registeredTeams = teamsQuery.data ?? NO_TEAMS;
+  const loading = lobbiesQuery.isFetching;
+  const loadErr = lobbiesQuery.error ?? teamsQuery.error;
+  const error = loadErr ? (loadErr.message ?? t.errLoad) : null;
   const [creating, setCreating] = useState(false);
   const [savingLobbyId, setSavingLobbyId] = useState<string | null>(null);
 
@@ -156,29 +163,17 @@ function FfaLobbiesManager({
     setStatusDrafts(nextStatus);
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [lobbiesJson, teamsJson] = await Promise.all([
-        adminFetchJson<LobbiesResponse>(`/api/admin/stages/${stageId}/lobbies`),
-        adminFetchJson<TournamentTeamsResponse>(
-          `/api/admin/tournament/${tournamentId}/teams`
-        ),
-      ]);
-      setData(lobbiesJson);
-      initDrafts(lobbiesJson.lobbies);
-      setRegisteredTeams(teamsJson.teams || []);
-    } catch (err: unknown) {
-      setError((err as Error)?.message ?? t.errLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, stageId, tournamentId, initDrafts, t.errLoad]);
-
+  // Chaque lecture réinitialise la copie de travail (ouverture, après
+  // chaque geste) — comme avant.
   useEffect(() => {
-    load();
-  }, [load]);
+    if (data) initDrafts(data.lobbies);
+  }, [data, initDrafts]);
+
+  const { refetch: refetchLobbies } = lobbiesQuery;
+  const { refetch: refetchTeams } = teamsQuery;
+  const load = useCallback(async () => {
+    await Promise.all([refetchLobbies(), refetchTeams()]);
+  }, [refetchLobbies, refetchTeams]);
 
   async function handleCreateLobby() {
     setCreating(true);
@@ -189,7 +184,7 @@ function FfaLobbiesManager({
         const rn = Number(newLobbyRound);
         if (Number.isInteger(rn) && rn >= 1) body.round_number = rn;
       }
-      await mutateJson(`/api/admin/stages/${stageId}/lobbies`, {
+      await mutateJson(stageUrls.lobbies(stageId), {
         method: 'POST',
         body: JSON.stringify(body),
       });
@@ -213,7 +208,7 @@ function FfaLobbiesManager({
     });
     if (!ok) return;
     try {
-      await mutateJson(`/api/admin/lobbies/${lobby.id}`, { method: 'DELETE' });
+      await mutateJson(lobbyUrls.byId(lobby.id), { method: 'DELETE' });
       addToast(t.toastLobbyDeleted, 'success');
       await load();
     } catch (err: unknown) {
@@ -288,7 +283,7 @@ function FfaLobbiesManager({
 
     setSavingLobbyId(lobbyId);
     try {
-      await mutateJson(`/api/admin/lobbies/${lobbyId}/placements`, {
+      await mutateJson(lobbyUrls.placements(lobbyId), {
         method: 'PUT',
         body: JSON.stringify({
           entries,

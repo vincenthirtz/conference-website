@@ -29,7 +29,20 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { hasAtLeastRole, type StaffRole } from '@/utils/staffRoles';
-import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
+import { useQueryClient } from '@tanstack/react-query';
+import { AdminHttpError } from '@/utils/admin/adminHttp';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useTeamOptions } from '@/features/admin/teams/hooks/useTeamsQueries';
+import { usersClient } from '@/features/admin/users/client';
+import {
+  usersKeys,
+  useUserProfile,
+} from '@/features/admin/users/hooks/useUsersQueries';
+import { demandesClient } from '@/features/admin/demandes/client';
+import {
+  useDemandesList,
+  useInvalidateDemandes,
+} from '@/features/admin/demandes/hooks/useDemandesQueries';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -95,14 +108,40 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
   const rawUserId = router.query.userId;
   const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
 
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
-  const [profile, setProfile] = useState<AdminUserProfilePayload | null>(null);
-  const [pendingDemandes, setPendingDemandes] = useState<PendingDemande[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notFound, setNotFound] = useState(false);
+  // Les deux lectures ne dépendent que de `userId` : en parallèle. Les
+  // demandes restent BEST-EFFORT (leur échec ne casse pas la page) ; un
+  // profil introuvable, lui, rend l'écran « introuvable ».
+  const ready = router.isReady && !!userId;
+  const profileQuery = useUserProfile(ready ? userId : undefined);
+  // Demandes en attente de CETTE joueuse — endpoint admin filtrant, pas un
+  // snapshot dédié : la modération reste un geste staff.
+  const demandesQuery = useDemandesList<PendingDemande>(
+    { userId, status: 'pending', includeTeam: true, limit: 20 },
+    ready
+  );
+  const profile: AdminUserProfilePayload | null = profileQuery.data ?? null;
+  const pendingDemandes: PendingDemande[] = demandesQuery.isError
+    ? []
+    : (demandesQuery.data ?? []);
+  const profileError = profileQuery.error;
+  const notFound =
+    profileError instanceof AdminHttpError && profileError.status === 404;
+  const error = profileError && !notFound ? t.loadError : null;
+  const loading =
+    !profileError && (profileQuery.isPending || demandesQuery.isPending);
+  useEffect(() => {
+    if (profileError)
+      logger.error('[admin/player-view] load error:', profileError);
+  }, [profileError]);
+  useEffect(() => {
+    if (demandesQuery.error)
+      logger.error(
+        '[admin/player-view] demandes load error:',
+        demandesQuery.error
+      );
+  }, [demandesQuery.error]);
   const [tab, setTab] = useState<TabKey>('profil');
 
   // Per-action busy flags (keep buttons from double-submitting).
@@ -119,56 +158,30 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
 
   // Transfer-to-team modal.
   const [transferOpen, setTransferOpen] = useState(false);
-  const [teamOptions, setTeamOptions] = useState<
-    Array<{ id: string; name: string }>
-  >([]);
-  const [teamsLoading, setTeamsLoading] = useState(false);
+  // Liste d'équipes chargée paresseusement à l'ouverture, en cache partagé.
+  const teamsQuery = useTeamOptions(500, transferOpen);
+  const teamsLoading = teamsQuery.isFetching;
+  const teamOptions = (teamsQuery.data?.teams ?? [])
+    .filter((team) => team.id !== profile?.team?.id)
+    .map((team) => ({ id: team.id, name: team.name }));
+  const teamsError = teamsQuery.error;
+  useEffect(() => {
+    if (teamsError) addToast(teamsError.message || t.errLoadTeams, 'error');
+  }, [teamsError, addToast, t.errLoadTeams]);
   const [transferTeamId, setTransferTeamId] = useState('');
 
   const isAdmin = hasAtLeastRole(staff.role as StaffRole, 'admin');
 
+  const qc = useQueryClient();
+  const invalidateDemandes = useInvalidateDemandes();
+  /** Relit la fiche après un geste (profil + demandes). */
   const load = useCallback(async () => {
     if (!userId) return;
-    setLoading(true);
-    setError(null);
-    setNotFound(false);
-    try {
-      // Les deux lectures ne dépendent que de `userId` : les enchaîner faisait
-      // payer deux allers-retours au chargement de la fiche. En parallèle.
-      // Les demandes restent BEST-EFFORT (leur échec ne casse pas la page),
-      // d'où le `.catch` sur la seule promesse concernée plutôt qu'un
-      // `Promise.allSettled` qui masquerait aussi un profil introuvable.
-      const [json, demandes] = await Promise.all([
-        adminFetchJson<AdminUserProfilePayload>(
-          `/api/admin/users/${encodeURIComponent(userId)}/profile`
-        ),
-        // Demandes en attente de CETTE joueuse — endpoint admin filtrant, pas
-        // un snapshot dédié : la modération reste un geste staff.
-        adminFetchJson<{ demandes: PendingDemande[] }>(
-          `/api/admin/demandes?userId=${encodeURIComponent(userId)}&status=pending&includeTeam=1&limit=20`
-        ).catch((demandeErr) => {
-          logger.error('[admin/player-view] demandes load error:', demandeErr);
-          return { demandes: [] as PendingDemande[] };
-        }),
-      ]);
-      setProfile(json);
-      setPendingDemandes(demandes.demandes || []);
-    } catch (err) {
-      logger.error('[admin/player-view] load error:', err);
-      if (err instanceof AdminFetchError && err.status === 404) {
-        setNotFound(true);
-      } else {
-        setError(t.loadError);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [userId, adminFetchJson, t]);
-
-  useEffect(() => {
-    if (!router.isReady) return;
-    load();
-  }, [router.isReady, load]);
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: usersKeys.profile(userId) }),
+      invalidateDemandes(),
+    ]);
+  }, [qc, userId, invalidateDemandes]);
 
   const headerName =
     profile?.user.displayName || profile?.user.email || t.defaultUser;
@@ -182,10 +195,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
     if (!userId) return;
     setBusy('name');
     try {
-      await adminFetchJson('/api/admin/users/manage', {
-        method: 'PATCH',
-        body: JSON.stringify({ userId, display_name: nameDraft.trim() }),
-      });
+      await usersClient.patch({ userId, display_name: nameDraft.trim() });
       setEditingName(false);
       addToast(t.toastNameUpdated, 'success');
       await load();
@@ -194,7 +204,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
     } finally {
       setBusy(null);
     }
-  }, [userId, nameDraft, adminFetchJson, addToast, load, t]);
+  }, [userId, nameDraft, addToast, load, t]);
 
   // PATCH /api/admin/users/manage — resend_credentials.
   const resendCredentials = useCallback(async () => {
@@ -208,13 +218,10 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
     if (!ok) return;
     setBusy('resend');
     try {
-      const json = await adminFetchJson<{ warning?: string }>(
-        '/api/admin/users/manage',
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ userId, action: 'resend_credentials' }),
-        }
-      );
+      const json = await usersClient.patch<{ warning?: string }>({
+        userId,
+        action: 'resend_credentials',
+      });
       if (json.warning) addToast(json.warning, 'warning');
       else
         addToast(
@@ -226,7 +233,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
     } finally {
       setBusy(null);
     }
-  }, [userId, profile?.user.email, confirm, adminFetchJson, addToast, t]);
+  }, [userId, profile?.user.email, confirm, addToast, t]);
 
   // PATCH /api/admin/users/manage — role.
   const changeRole = useCallback(
@@ -257,10 +264,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
 
       setBusy('role');
       try {
-        await adminFetchJson('/api/admin/users/manage', {
-          method: 'PATCH',
-          body: JSON.stringify({ userId, role }),
-        });
+        await usersClient.patch({ userId, role });
         addToast(t.toastRoleUpdated, 'success');
         await load();
       } catch (err) {
@@ -269,7 +273,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
         setBusy(null);
       }
     },
-    [userId, profile, staff.role, confirm, adminFetchJson, addToast, load, t]
+    [userId, profile, staff.role, confirm, addToast, load, t]
   );
 
   // PATCH /api/admin/users/manage — battle_tag (scoped to the player's team).
@@ -278,13 +282,10 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
     setBusy('tag');
     setTagError(null);
     try {
-      await adminFetchJson('/api/admin/users/manage', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          userId,
-          teamId: profile.team.id,
-          battleTag: tagDraft.trim(),
-        }),
+      await usersClient.patch({
+        userId,
+        teamId: profile.team.id,
+        battleTag: tagDraft.trim(),
       });
       setEditingTag(false);
       addToast(t.toastBattleTagUpdated, 'success');
@@ -294,7 +295,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
     } finally {
       setBusy(null);
     }
-  }, [userId, profile?.team, tagDraft, adminFetchJson, addToast, load, t]);
+  }, [userId, profile?.team, tagDraft, addToast, load, t]);
 
   // POST /api/admin/users/[userId]/actions — assign_captain.
   const assignCaptain = useCallback(async () => {
@@ -311,13 +312,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
     if (!ok) return;
     setBusy('captain');
     try {
-      await adminFetchJson(
-        `/api/admin/users/${encodeURIComponent(userId)}/actions`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ action: 'assign_captain' }),
-        }
-      );
+      await usersClient.action(userId, { action: 'assign_captain' });
       addToast(t.toastCaptainTransferred, 'success');
       await load();
     } catch (err) {
@@ -325,36 +320,13 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
     } finally {
       setBusy(null);
     }
-  }, [
-    userId,
-    profile?.team,
-    headerName,
-    confirm,
-    adminFetchJson,
-    addToast,
-    load,
-    t,
-  ]);
+  }, [userId, profile?.team, headerName, confirm, addToast, load, t]);
 
   // Ouvre la modale de transfert — chargement paresseux de la liste d'équipes.
-  const openTransfer = useCallback(async () => {
+  const openTransfer = useCallback(() => {
     setTransferOpen(true);
     setTransferTeamId('');
-    setTeamsLoading(true);
-    try {
-      const json = await adminFetchJson<{
-        teams: Array<{ id: string; name: string }>;
-      }>('/api/admin/teams?limit=500');
-      const list = (json.teams || [])
-        .filter((team) => team.id !== profile?.team?.id)
-        .map((team) => ({ id: team.id, name: team.name }));
-      setTeamOptions(list);
-    } catch (err) {
-      addToast((err as Error)?.message || t.errLoadTeams, 'error');
-    } finally {
-      setTeamsLoading(false);
-    }
-  }, [adminFetchJson, addToast, profile?.team?.id, t]);
+  }, []);
 
   // POST /api/admin/users/[userId]/actions — transfer_team.
   const transferTeam = useCallback(async () => {
@@ -372,16 +344,10 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
     if (!ok) return;
     setBusy('transfer');
     try {
-      await adminFetchJson(
-        `/api/admin/users/${encodeURIComponent(userId)}/actions`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            action: 'transfer_team',
-            teamId: transferTeamId,
-          }),
-        }
-      );
+      await usersClient.action(userId, {
+        action: 'transfer_team',
+        teamId: transferTeamId,
+      });
       setTransferOpen(false);
       addToast(t.toastPlayerTransferred, 'success');
       await load();
@@ -396,7 +362,6 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
     teamOptions,
     headerName,
     confirm,
-    adminFetchJson,
     addToast,
     load,
     t,
@@ -414,14 +379,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
       if (!ok) return;
       setBusy(`demande-${demandeId}`);
       try {
-        await adminFetchJson('/api/admin/demandes', {
-          method: 'POST',
-          body: JSON.stringify({
-            action: 'updateStatus',
-            demandeIds: [demandeId],
-            newStatus,
-          }),
-        });
+        await demandesClient.updateStatus({ ids: [demandeId], newStatus });
         addToast(
           newStatus === 'approved'
             ? t.toastDemandeApproved
@@ -435,7 +393,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
         setBusy(null);
       }
     },
-    [confirm, adminFetchJson, addToast, load, t]
+    [confirm, addToast, load, t]
   );
 
   return (
@@ -631,4 +589,4 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
   );
 }
 
-export default PlayerViewPage;
+export default withAdminQuery(PlayerViewPage);

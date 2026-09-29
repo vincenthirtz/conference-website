@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tournamentsUrls } from '@/features/admin/tournaments/client';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminStreamAlerts from '@/lib/i18n/locales/admin-fr/adminStreamAlerts';
@@ -27,7 +28,7 @@ import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import { rubanErrBox, rubanMuted } from '@/features/admin/_shared/ui/ruban';
 
-const ENDPOINT = '/api/admin/twitch/eventsub/alerts';
+const ENDPOINT = tournamentsUrls.twitchEventsubAlerts;
 
 type SubState = {
   type: string;

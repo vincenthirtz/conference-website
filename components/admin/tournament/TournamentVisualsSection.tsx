@@ -16,6 +16,7 @@
 import { useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { tournamentsUrls } from '@/features/admin/tournaments/client';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentEdit from '@/lib/i18n/locales/admin-fr/adminTournamentEdit';
 import {
@@ -71,7 +72,7 @@ export default function TournamentVisualsSection({ form, updateField }: Props) {
         reader.readAsDataURL(file);
       });
 
-      const res = await uploadRules('/api/admin/upload', {
+      const res = await uploadRules(tournamentsUrls.upload, {
         method: 'POST',
         body: JSON.stringify({
           data: dataUrl,

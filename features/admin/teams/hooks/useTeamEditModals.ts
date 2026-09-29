@@ -9,15 +9,11 @@
 
 import { useCallback } from 'react';
 import { format } from '@/lib/i18n/useAdminT';
+import { teamsClient } from '../client';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 import type { ImportLine } from '@/components/admin/teams/types';
 import type { TeamMemberRow } from '@/types/admin';
-import type {
-  AddToast,
-  AdminFetchJson,
-  Dict,
-  Setter,
-} from './teamEditHookTypes';
+import type { AddToast, Dict, Setter } from './teamEditHookTypes';
 
 const BATTLE_TAG_RE = BATTLE_TAG_REGEX;
 
@@ -35,7 +31,6 @@ export type UseTeamEditModalsDeps = {
   setShowEditMemberModal: Setter<boolean>;
   setEditingMember: Setter<TeamMemberRow | null>;
   setErrorMsg: Setter<string | null>;
-  adminFetchJson: AdminFetchJson;
   addToast: AddToast;
   fetchMembers: () => Promise<void>;
 };
@@ -55,7 +50,6 @@ export function useTeamEditModals(deps: UseTeamEditModalsDeps) {
     setShowEditMemberModal,
     setEditingMember,
     setErrorMsg,
-    adminFetchJson,
     addToast,
     fetchMembers,
   } = deps;
@@ -113,12 +107,9 @@ export function useTeamEditModals(deps: UseTeamEditModalsDeps) {
     setImportBusy(true);
     setErrorMsg(null);
     try {
-      const json = await adminFetchJson<{
-        successCount?: number;
-        failureCount?: number;
-      }>(`/api/admin/teams/${teamId}/roster-bulk`, {
-        method: 'POST',
-        body: JSON.stringify({ operation: 'import_battle_tags', items }),
+      const json = await teamsClient.rosterBulk(teamId, {
+        operation: 'import_battle_tags',
+        items,
       });
       const { successCount = 0, failureCount = 0 } = json;
       addToast(
@@ -139,7 +130,7 @@ export function useTeamEditModals(deps: UseTeamEditModalsDeps) {
     } finally {
       setImportBusy(false);
     }
-  }, [teamId, importPreview, adminFetchJson, addToast, fetchMembers, t]);
+  }, [teamId, importPreview, addToast, fetchMembers, t]);
 
   // Ouverture / fermeture des modales (handlers stables pour les React.memo).
   // biome-ignore lint/correctness/useExhaustiveDependencies: deps d'origine conservées (setters et refs stables reçus en paramètre)

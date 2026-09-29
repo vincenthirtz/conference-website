@@ -15,6 +15,13 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAutoSchedule } from '@/hooks/useAutoSchedule';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { stageUrls } from '@/features/admin/stages/client';
+import {
+  tournamentMatchUrls,
+  tournamentUrls,
+} from '@/features/admin/tournaments/client';
+import { useTournamentDetail } from '@/features/admin/tournaments/hooks/useTournamentDetail';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -75,20 +82,13 @@ function AdminTournamentMatchesPage(_props: StaffProps) {
     useState<MatchesApiResponse['tournament']>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Fuseau du tournoi pour tous les jours/heures de l'écran (cf.
-  // utils/matches/adminMatchesTz). L'API des matchs ne le renvoie pas encore :
-  // on le lit sur la fiche tournoi ; un arbitre sans `manage_tournaments` (403)
-  // reste sur le repli Europe/Paris — jamais sur le fuseau du navigateur.
-  const [tournamentTz, setTournamentTz] = useState<string | null>(null);
+  // Fuseau du tournoi (cf. utils/matches/adminMatchesTz), lu sur la fiche : un
+  // arbitre sans `manage_tournaments` (403) reste sur Europe/Paris.
+  const tzQuery = useTournamentDetail<{ timezone?: string | null }>(
+    String(id ?? '')
+  );
+  const tournamentTz = tzQuery.data?.tournament?.timezone ?? null;
   const timezone = resolveTournamentTz(tournament?.timezone ?? tournamentTz);
-  useEffect(() => {
-    if (!id) return;
-    adminFetchJson<{ tournament?: { timezone?: string | null } }>(
-      `/api/admin/tournament/${id}`
-    )
-      .then((j) => setTournamentTz(j.tournament?.timezone ?? null))
-      .catch(() => setTournamentTz(null));
-  }, [adminFetchJson, id]);
 
   // filters
   // stageFilter est hydraté depuis l'URL (?stageId=...) une fois le router
@@ -188,7 +188,7 @@ function AdminTournamentMatchesPage(_props: StaffProps) {
         search,
       });
       const json = await adminFetchJson<MatchesApiResponse>(
-        `/api/admin/tournament/${id}/matches?${query}`
+        tournamentUrls.matches(String(id), query)
       );
       setTournament(json.tournament);
       setStages(json.stages || []);
@@ -279,7 +279,7 @@ function AdminTournamentMatchesPage(_props: StaffProps) {
       setErrorMsg(null);
 
       try {
-        await adminFetchJson(`/api/admin/matches/${matchId}`, {
+        await adminFetchJson(tournamentMatchUrls.byId(matchId), {
           method: 'PUT',
           body: JSON.stringify({
             mode: 'score',
@@ -375,13 +375,10 @@ function AdminTournamentMatchesPage(_props: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await mutateIdempotent(
-        `/api/admin/stages/${stageFilter}/bulk-matches`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ schedules }),
-        }
-      );
+      const res = await mutateIdempotent(stageUrls.bulkMatches(stageFilter), {
+        method: 'PATCH',
+        body: JSON.stringify({ schedules }),
+      });
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -429,16 +426,13 @@ function AdminTournamentMatchesPage(_props: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await mutateIdempotent(
-        `/api/admin/stages/${stageFilter}/bulk-matches`,
-        {
-          method: 'DELETE',
-          body: JSON.stringify({
-            matchIds: Array.from(selectedMatchIds),
-            hard,
-          }),
-        }
-      );
+      const res = await mutateIdempotent(stageUrls.bulkMatches(stageFilter), {
+        method: 'DELETE',
+        body: JSON.stringify({
+          matchIds: Array.from(selectedMatchIds),
+          hard,
+        }),
+      });
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -486,16 +480,13 @@ function AdminTournamentMatchesPage(_props: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await mutateIdempotent(
-        `/api/admin/stages/${stageFilter}/bulk-matches`,
-        {
-          method: 'PUT',
-          body: JSON.stringify({
-            matchIds: Array.from(selectedMatchIds),
-            fields,
-          }),
-        }
-      );
+      const res = await mutateIdempotent(stageUrls.bulkMatches(stageFilter), {
+        method: 'PUT',
+        body: JSON.stringify({
+          matchIds: Array.from(selectedMatchIds),
+          fields,
+        }),
+      });
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -759,4 +750,4 @@ function AdminTournamentMatchesPage(_props: StaffProps) {
   );
 }
 
-export default AdminTournamentMatchesPage;
+export default withAdminQuery(AdminTournamentMatchesPage);

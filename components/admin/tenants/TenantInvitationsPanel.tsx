@@ -12,8 +12,16 @@
 // annulée, expirée) : pas de colonne à tenir à jour, pas de cron à écrire pour
 // une information qu'une date suffit à donner.
 
-import { useCallback, useEffect, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  type TenantInvitation,
+  tenantsPaths,
+} from '@/features/admin/tenants/client';
+import {
+  tenantsKeys,
+  useTenantInvitations,
+} from '@/features/admin/tenants/hooks/useTenants';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -21,14 +29,7 @@ import nsAdminTenantDetail from '@/lib/i18n/locales/admin-fr/adminTenantDetail';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 
-type Invitation = {
-  id: string;
-  email: string;
-  role: string;
-  status: 'pending' | 'accepted' | 'revoked' | 'expired';
-  expires_at: string;
-  created_at: string;
-};
+type Invitation = TenantInvitation;
 
 export default function TenantInvitationsPanel({
   tenantId,
@@ -39,29 +40,21 @@ export default function TenantInvitationsPanel({
   onAccepted?: () => void;
 }) {
   const t = useAdminT(nsAdminTenantDetail);
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
+  const qc = useQueryClient();
   const { addToast } = useToast();
 
-  const [rows, setRows] = useState<Invitation[] | null>(null);
+  // Lecture en échec : liste vide (comme avant), pas d'erreur affichée.
+  const invitations = useTenantInvitations(tenantId);
+  const rows: Invitation[] | null = invitations.isPending
+    ? null
+    : (invitations.data ?? []);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('caster');
   const [busy, setBusy] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const data = await adminFetchJson<{ invitations: Invitation[] }>(
-        `/api/admin/tenants/${tenantId}/invitations`
-      );
-      setRows(data.invitations ?? []);
-    } catch {
-      setRows([]);
-    }
-  }, [adminFetchJson, tenantId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const load = () =>
+    qc.invalidateQueries({ queryKey: tenantsKeys.invitations(tenantId) });
 
   const invite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +62,7 @@ export default function TenantInvitationsPanel({
     setBusy(true);
     try {
       const resp = await mutateJson<{ emailSent: boolean }>(
-        `/api/admin/tenants/${tenantId}/invitations`,
+        tenantsPaths.invitations(tenantId),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -93,7 +86,7 @@ export default function TenantInvitationsPanel({
 
   const revoke = async (row: Invitation) => {
     try {
-      await mutateJson(`/api/admin/tenants/${tenantId}/invitations/${row.id}`, {
+      await mutateJson(tenantsPaths.invitation(tenantId, row.id), {
         method: 'DELETE',
       });
       addToast(t.inviteRevoked, 'success');

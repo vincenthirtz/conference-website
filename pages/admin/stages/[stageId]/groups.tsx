@@ -2,12 +2,17 @@
 // Admin page for managing group/pool assignments in group or round_robin stages.
 // Supports drag & drop between groups + auto-distribution.
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
+import { stageUrls } from '@/features/admin/stages/client';
+import { useStage, useStageRead } from '@/features/admin/stages/hooks/useStage';
+import { useTournamentDetail } from '@/features/admin/tournaments/hooks/useTournamentDetail';
 import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -45,6 +50,18 @@ type TeamInfo = {
   seed: number | null;
 };
 
+type GroupStanding = {
+  teamId: string;
+  teamName: string | null;
+  rank: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  score: number;
+};
+
+const NO_STANDINGS: Record<string, GroupStanding[]> = {};
+
 type GroupsApiResponse = {
   stageId: string;
   groups: Record<string, TeamInfo[]>;
@@ -61,17 +78,32 @@ function AdminStageGroupsPage(_props: StaffProps) {
   const { stageId } = router.query;
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
-  const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { adminFetchJson } = useAdminFetch();
+  const sid = String(stageId ?? '');
   const { mutate: mutateIdempotent } = useIdempotentMutation();
 
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [actionError, setErrorMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const [stageName, setStageName] = useState('');
-  const [stageType, setStageType] = useState<StageType | null>(null);
-  const [tournamentId, setTournamentId] = useState('');
-  const [tournamentName, setTournamentName] = useState('');
+  const groupsQuery = useStageRead<GroupsApiResponse>(
+    sid,
+    'groups',
+    stageUrls.groups
+  );
+  const stageInfo = useStage<{
+    name?: string | null;
+    stage_type?: StageType | null;
+    tournament_id?: string | null;
+  }>(sid).data?.stage;
+  const stageName = stageInfo?.name || '';
+  const stageType = stageInfo?.stage_type ?? null;
+  const tournamentId = stageInfo?.tournament_id || '';
+  const tournamentName =
+    useTournamentDetail<{ name?: string | null }>(tournamentId).data?.tournament
+      ?.name || '';
+  const errorMsg =
+    actionError ??
+    (groupsQuery.error ? (groupsQuery.error.message ?? t.errUnexpected) : null);
 
   const [groups, setGroups] = useState<Record<string, TeamInfo[]>>({});
   const [unassigned, setUnassigned] = useState<TeamInfo[]>([]);
@@ -90,77 +122,20 @@ function AdminStageGroupsPage(_props: StaffProps) {
   const [genMatchFormat, setGenMatchFormat] = useState('bo3');
   const [generating, setGenerating] = useState(false);
 
-  // Per-group standings
-  type GroupStanding = {
-    teamId: string;
-    teamName: string | null;
-    rank: number;
-    wins: number;
-    losses: number;
-    draws: number;
-    score: number;
-  };
-  const [perGroupStandings, setPerGroupStandings] = useState<
-    Record<string, GroupStanding[]>
-  >({});
+  // Per-group standings (best-effort, sans toast)
+  const standingsQuery = useStageRead<{
+    grouped?: { groups?: Record<string, GroupStanding[]> };
+  }>(sid, 'standings', stageUrls.standings);
+  const perGroupStandings =
+    standingsQuery.data?.grouped?.groups ?? NO_STANDINGS;
+  const fetchStandings = () => standingsQuery.refetch();
 
-  const fetchGroups = useCallback(async () => {
-    if (!stageId) return;
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const json = await adminFetchJson<GroupsApiResponse>(
-        `/api/admin/stages/${stageId}/groups`
-      );
-      setGroups(json.groups);
-      setUnassigned(json.unassigned);
-
-      // Fetch stage info
-      const stageRes = await adminFetch(`/api/admin/stages/${stageId}`);
-      if (stageRes.ok) {
-        const stageJson = await stageRes.json();
-        setStageName(stageJson.stage?.name || '');
-        setStageType(stageJson.stage?.stage_type ?? null);
-        setTournamentId(stageJson.stage?.tournament_id || '');
-        if (stageJson.stage?.tournament_id) {
-          const tRes = await adminFetch(
-            `/api/admin/tournament/${stageJson.stage.tournament_id}`
-          );
-          if (tRes.ok) {
-            const tJson = await tRes.json();
-            setTournamentName(tJson.tournament?.name || '');
-          }
-        }
-      }
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }, [stageId, adminFetch, adminFetchJson, t.errUnexpected]);
-
-  useEffect(() => {
-    if (stageId) fetchGroups();
-  }, [stageId, fetchGroups]);
-
-  const fetchStandings = useCallback(async () => {
-    if (!stageId) return;
-    try {
-      const res = await adminFetch(`/api/admin/stages/${stageId}/standings`);
-      if (!res.ok) return;
-      const json = await res.json();
-      if (json.grouped?.groups) {
-        setPerGroupStandings(json.grouped.groups);
-      }
-    } catch {
-      // best-effort, no toast
-    }
-  }, [stageId, adminFetch]);
-
-  useEffect(() => {
-    if (stageId) fetchStandings();
-  }, [stageId, fetchStandings]);
+  // Répartition éditée localement (glisser-déposer) : hydratée UNE fois.
+  const groupsReady = useHydrateOnce(sid || null, groupsQuery.data, (json) => {
+    setGroups(json.groups);
+    setUnassigned(json.unassigned);
+  });
+  const loading = !groupsReady && !groupsQuery.error;
 
   async function handleGenerateMatches() {
     if (!stageId) return;
@@ -175,16 +150,13 @@ function AdminStageGroupsPage(_props: StaffProps) {
     setGenerating(true);
     setErrorMsg(null);
     try {
-      const res = await mutateIdempotent(
-        `/api/admin/stages/${stageId}/generate-group-matches`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            rounds: genRounds,
-            matchFormat: genMatchFormat,
-          }),
-        }
-      );
+      const res = await mutateIdempotent(stageUrls.generateGroupMatches(sid), {
+        method: 'POST',
+        body: JSON.stringify({
+          rounds: genRounds,
+          matchFormat: genMatchFormat,
+        }),
+      });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || t.errGenerate);
       addToast(
@@ -297,7 +269,7 @@ function AdminStageGroupsPage(_props: StaffProps) {
         assignments.push({ teamId: team.teamId, groupKey: null });
       }
 
-      await adminFetchJson(`/api/admin/stages/${stageId}/groups`, {
+      await adminFetchJson(stageUrls.groups(sid), {
         method: 'PUT',
         body: JSON.stringify({ assignments }),
       });
@@ -318,7 +290,7 @@ function AdminStageGroupsPage(_props: StaffProps) {
 
     try {
       const json = await adminFetchJson<GroupsApiResponse>(
-        `/api/admin/stages/${stageId}/groups`,
+        stageUrls.groups(sid),
         {
           method: 'POST',
           body: JSON.stringify({ numGroups, method: distMethod }),
@@ -604,4 +576,4 @@ function AdminStageGroupsPage(_props: StaffProps) {
   );
 }
 
-export default AdminStageGroupsPage;
+export default withAdminQuery(AdminStageGroupsPage);

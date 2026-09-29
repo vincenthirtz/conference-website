@@ -19,6 +19,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { copyText } from '@/utils/clipboard';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tournamentUrls } from '@/features/admin/tournaments/client';
 import nsAdminTournamentEmbed from '@/lib/i18n/locales/admin-fr/adminTournamentEmbed';
 import type { OverlayPresence } from '@/hooks/useOverlayPresence';
 import AdminButton, {
@@ -181,7 +182,7 @@ export default function StreamSourcesPanel({
   const [sendError, setSendError] = useState<string | null>(null);
 
   const overlayDayUrl = tournamentId
-    ? `/api/admin/tournament/${tournamentId}/overlay-day`
+    ? tournamentUrls.overlayDay(tournamentId)
     : null;
 
   useEffect(() => {

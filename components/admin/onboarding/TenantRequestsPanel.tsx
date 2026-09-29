@@ -18,7 +18,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tenantsPaths } from '@/features/admin/tenants/client';
+import { useTenantRequests } from '@/features/admin/tenants/hooks/useTenants';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import AlertBanner from '@/components/admin/AlertBanner';
@@ -134,15 +135,25 @@ export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
   const t = useAdminT(nsAdminTenantRequestsList);
   const STATUS_TABS = getStatusTabs(t);
   const STATUS_BADGE = getStatusBadge(t);
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson, regenerate } = useIdempotentMutation();
   const { addToast } = useToast();
 
-  const [data, setData] = useState<ListResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusFilter>('all');
   const [offset, setOffset] = useState(0);
-  const [refreshing, setRefreshing] = useState(false);
+  const query = new URLSearchParams({
+    status,
+    limit: String(PAGE_SIZE),
+    offset: String(offset),
+  }).toString();
+  const list = useTenantRequests<ListResponse>(query);
+  const data: ListResponse | null = list.data ?? null;
+  const refreshing = list.isFetching;
+  const error = list.error ? list.error.message || t.errorLoad : null;
+  useEffect(() => {
+    if (list.error) {
+      logger.error('AdminTenantRequestsPage: fetch error', list.error);
+    }
+  }, [list.error]);
 
   // Reject modal state.
   const [rejectTarget, setRejectTarget] = useState<TenantRequestRow | null>(
@@ -159,30 +170,10 @@ export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
   const [expireError, setExpireError] = useState<string | null>(null);
   const [expireLoading, setExpireLoading] = useState(false);
 
+  const { refetch } = list;
   const fetchPage = useCallback(async () => {
-    setRefreshing(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({
-        status,
-        limit: String(PAGE_SIZE),
-        offset: String(offset),
-      });
-      const json = await adminFetchJson<ListResponse>(
-        `/api/admin/tenant-requests?${params.toString()}`
-      );
-      setData(json);
-    } catch (err) {
-      logger.error('AdminTenantRequestsPage: fetch error', err);
-      setError((err as Error)?.message || t.errorLoad);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [adminFetchJson, status, offset, t]);
-
-  useEffect(() => {
-    fetchPage();
-  }, [fetchPage]);
+    await refetch();
+  }, [refetch]);
 
   // Reset offset when status filter changes.
   const onChangeStatus = useCallback((next: StatusFilter) => {
@@ -222,7 +213,7 @@ export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
     setRejectLoading(true);
     setRejectError(null);
     try {
-      await mutateJson(`/api/admin/tenant-requests/${rejectTarget.id}/reject`, {
+      await mutateJson(tenantsPaths.rejectRequest(rejectTarget.id), {
         method: 'POST',
         body: JSON.stringify({ reason: trimmed }),
       });
@@ -258,7 +249,7 @@ export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
     setExpireLoading(true);
     setExpireError(null);
     try {
-      await mutateJson(`/api/admin/tenant-requests/${expireTarget.id}/expire`, {
+      await mutateJson(tenantsPaths.expireRequest(expireTarget.id), {
         method: 'POST',
         body: JSON.stringify({}),
       });

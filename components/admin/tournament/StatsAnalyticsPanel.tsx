@@ -17,9 +17,9 @@
 // MASQUE plutot qu'affiche a « — » ou « 0 % » : un 0 % non saisi se lit comme
 // un vrai 0 %.
 
-import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tournamentUrls } from '@/features/admin/tournaments/client';
+import { useTournamentRead } from '@/features/admin/tournaments/hooks/useTournamentRead';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type {
   HeroCount,
@@ -66,34 +66,20 @@ function fmtMin(min: number): string {
 
 export default function StatsAnalyticsPanel() {
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
   const t = useAdminT(nsAdminTournamentAnalytics);
 
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [data, setData] = useState<AnalyticsResponse | null>(null);
-
-  const fetchAnalytics = useCallback(async () => {
-    if (!id || Array.isArray(id)) return;
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const json = await adminFetchJson<AnalyticsResponse>(
-        `/api/admin/tournament/${id}/analytics`
-      );
-      setData(json);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }, [id, adminFetchJson, t]);
-
-  useEffect(() => {
-    if (!id) return;
-    fetchAnalytics();
-  }, [id, fetchAnalytics]);
+  const query = useTournamentRead<AnalyticsResponse>(
+    String(id ?? ''),
+    'analytics',
+    tournamentUrls.analytics
+  );
+  const loading = query.isFetching;
+  const errorMsg = query.error
+    ? (query.error.message ?? t.errorUnexpected)
+    : null;
+  const data = query.data ?? null;
+  const fetchAnalytics = () => void query.refetch();
 
   const analytics = data?.analytics ?? null;
   const isEmpty =

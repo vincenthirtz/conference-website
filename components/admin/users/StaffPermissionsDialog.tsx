@@ -11,22 +11,19 @@
 //   - HORS DE PORTÉE      : désactivé, avec la raison. Masquer un droit qu'on
 //     ne peut pas donner ferait croire qu'il n'existe pas.
 
-import { useCallback, useEffect, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { usersClient } from '@/features/admin/users/client';
+import {
+  usersKeys,
+  useStaffPermissions,
+} from '@/features/admin/users/hooks/useUsersQueries';
+import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminStaffPermissions from '@/lib/i18n/locales/admin-fr/adminStaffPermissions';
 import { STAFF_PERMISSION_CATALOG } from '@/utils/staffPermissions';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-
-type Payload = {
-  displayName: string | null;
-  email: string | null;
-  role: string;
-  rolePermissions: string[];
-  extraPermissions: string[];
-  grantable: string[];
-};
 
 export default function StaffPermissionsDialog({
   userId,
@@ -40,46 +37,25 @@ export default function StaffPermissionsDialog({
   onSaved?: () => void;
 }) {
   const t = useAdminT(nsAdminStaffPermissions);
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
+  const qc = useQueryClient();
 
-  const [data, setData] = useState<Payload | null>(null);
+  // Même clé que la fiche staff : un enregistrement ici la met à jour.
+  const query = useStaffPermissions(userId, { editor: true });
   const [selected, setSelected] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const hydrated = useHydrateOnce(userId, query.data, (payload) =>
+    setSelected(payload.extraPermissions ?? [])
+  );
+  const data = hydrated ? (query.data ?? null) : null;
+  const error = query.error ? query.error.message || t.loadError : null;
+  const loading = !error && !hydrated;
   const [saving, setSaving] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const payload = await adminFetchJson<Payload>(
-        `/api/admin/users/${encodeURIComponent(userId)}/permissions`
-      );
-      setData(payload);
-      setSelected(payload.extraPermissions ?? []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t.loadError);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, userId, t.loadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const save = async () => {
     setSaving(true);
     try {
-      await adminFetchJson(
-        `/api/admin/users/${encodeURIComponent(userId)}/permissions`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ extraPermissions: selected }),
-        }
-      );
+      await usersClient.savePermissions(userId, selected);
+      void qc.invalidateQueries({ queryKey: usersKeys.permissions(userId) });
       addToast(format(t.saved, { name: userName }), 'success');
       onSaved?.();
       onClose();

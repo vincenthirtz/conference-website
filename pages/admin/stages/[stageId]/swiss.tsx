@@ -1,12 +1,14 @@
 // pages/admin/stages/[stageId]/swiss.tsx
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { stageUrls } from '@/features/admin/stages/client';
+import { useStageRead } from '@/features/admin/stages/hooks/useStage';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
@@ -93,17 +95,23 @@ function AdminSwissStagePage(_props: StaffProps) {
   const router = useRouter();
   const { stageId } = router.query;
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { mutate: mutateIdempotent } = useIdempotentMutation();
 
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const [stage, setStage] = useState<StageMini | null>(null);
-  const [tournament, setTournament] = useState<TournamentMini | null>(null);
-  const [standings, setStandings] = useState<SwissStanding[]>([]);
-  const [rounds, setRounds] = useState<SwissRound[]>([]);
+  const swissQuery = useStageRead<SwissApiResponse>(
+    String(stageId ?? ''),
+    'swiss',
+    stageUrls.swiss
+  );
+  const loading = swissQuery.isFetching;
+  const [actionError, setErrorMsg] = useState<string | null>(null);
+  const errorMsg =
+    actionError ??
+    (swissQuery.error ? (swissQuery.error.message ?? t.errUnexpected) : null);
+  const stage: StageMini | null = swissQuery.data?.stage ?? null;
+  const tournament: TournamentMini | null = swissQuery.data?.tournament ?? null;
+  const standings: SwissStanding[] = swissQuery.data?.standings || [];
+  const rounds: SwissRound[] = swissQuery.data?.rounds || [];
 
   const [loadingGenerate, setLoadingGenerate] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -120,34 +128,10 @@ function AdminSwissStagePage(_props: StaffProps) {
   const [previewRound, setPreviewRound] = useState<number | null>(null);
   const [previewHasRematches, setPreviewHasRematches] = useState(false);
 
-  const fetchSwissData = useCallback(async () => {
-    if (!stageId) return;
-    setLoading(true);
+  const fetchSwissData = () => {
     setErrorMsg(null);
-
-    try {
-      // Endpoint Swiss global (standings + rounds)
-      // Adapte si tu as choisi un autre nom : /swiss, /standings, etc.
-      const json = await adminFetchJson<SwissApiResponse>(
-        `/api/admin/stages/${stageId}/swiss`
-      );
-      setStage(json.stage);
-      setTournament(json.tournament ?? null);
-      setStandings(json.standings || []);
-      setRounds(json.rounds || []);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }, [stageId, adminFetchJson, t]);
-
-  useEffect(() => {
-    if (!stageId) return;
-    fetchSwissData();
-    // adminFetchJson et t sont désormais stables : fetchSwissData ne varie
-    // qu'avec stageId → un seul chargement par stageId, sans refetch parasite.
-  }, [stageId, fetchSwissData]);
+    void swissQuery.refetch();
+  };
 
   function currentRoundNumber() {
     if (!rounds.length) return 0;
@@ -162,7 +146,7 @@ function AdminSwissStagePage(_props: StaffProps) {
 
     try {
       const res = await mutateIdempotent(
-        `/api/admin/stages/${stageId}/generate-swiss-round`,
+        stageUrls.generateSwissRound(String(stageId)),
         {
           method: 'POST',
           body: JSON.stringify({ dryRun: true }),
@@ -205,7 +189,7 @@ function AdminSwissStagePage(_props: StaffProps) {
 
     try {
       const res = await mutateIdempotent(
-        `/api/admin/stages/${stageId}/generate-swiss-round`,
+        stageUrls.generateSwissRound(String(stageId)),
         {
           method: 'POST',
           body: JSON.stringify({
@@ -242,7 +226,7 @@ function AdminSwissStagePage(_props: StaffProps) {
 
   function handleExportCsv() {
     if (!stageId) return;
-    window.open(`/api/admin/stages/${stageId}/standings?export=csv`, '_blank');
+    window.open(stageUrls.standingsCsv(String(stageId)), '_blank');
   }
 
   const backTournamentUrl = tournament?.id
@@ -570,4 +554,4 @@ function AdminSwissStagePage(_props: StaffProps) {
   );
 }
 
-export default AdminSwissStagePage;
+export default withAdminQuery(AdminSwissStagePage);

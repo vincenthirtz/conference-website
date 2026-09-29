@@ -13,6 +13,7 @@ import type { useAdminFetch } from '@/hooks/useAdminFetch';
 import type { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import type { useToast } from '@/components/Toast';
 import { csvDateToIso } from '@/utils/matches/adminMatchesTz';
+import { tournamentUrls } from '../client';
 import type { CsvPreviewRow } from '@/features/admin/tournaments/ui/TournamentMatchesCsvPanel';
 import type nsAdminTournamentMatches from '@/lib/i18n/locales/admin-fr/adminTournamentMatches';
 
@@ -92,7 +93,7 @@ export function useTournamentMatchesCsvImport({
 
     try {
       // Resolve team names to IDs
-      const teamsRes = await adminFetch(`/api/admin/tournament/${id}/teams`);
+      const teamsRes = await adminFetch(tournamentUrls.teams(String(id)));
       if (!teamsRes.ok) throw new Error(t.errorTeamsLoad);
       const teamsJson = await teamsRes.json();
       const teams: Array<{
@@ -142,7 +143,7 @@ export function useTournamentMatchesCsvImport({
         );
       }
 
-      const res = await csvImportMutate(`/api/admin/tournament/${id}/matches`, {
+      const res = await csvImportMutate(tournamentUrls.matches(String(id)), {
         method: 'POST',
         body: JSON.stringify({ matches: matchPayloads }),
       });

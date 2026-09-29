@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tenantsClient } from '@/features/admin/tenants/client';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
@@ -63,7 +63,6 @@ export default function GrantAccessModal({
 }: Props) {
   const trapRef = useFocusTrap<HTMLDivElement>();
   const t = useAdminT(nsAdminOnboarding);
-  const { adminFetchJson } = useAdminFetch();
 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<string>(DEFAULT_ROLE);
@@ -94,10 +93,7 @@ export default function GrantAccessModal({
       try {
         // 1) La personne a-t-elle déjà un compte ? Si oui, le rattachement est
         //    immédiat et elle n'a rien à faire.
-        await adminFetchJson(`/api/admin/tenants/${tenantId}/staff`, {
-          method: 'POST',
-          body: JSON.stringify({ email: address, role }),
-        });
+        await tenantsClient.addStaff(tenantId, { email: address, role });
         setOutcome({ kind: 'attached', email: address, role });
         onDone();
         return;
@@ -112,10 +108,7 @@ export default function GrantAccessModal({
 
       try {
         // 2) Pas de compte : invitation nominative, valable 14 jours.
-        await adminFetchJson(`/api/admin/tenants/${tenantId}/invitations`, {
-          method: 'POST',
-          body: JSON.stringify({ email: address, role }),
-        });
+        await tenantsClient.invite(tenantId, { email: address, role });
         setOutcome({ kind: 'invited', email: address, role });
         onDone();
       } catch (err) {
@@ -125,7 +118,6 @@ export default function GrantAccessModal({
       }
     },
     [
-      adminFetchJson,
       email,
       onDone,
       role,

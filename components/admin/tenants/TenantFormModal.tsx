@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import Modal from '@/components/admin/Modal';
 import AlertBanner from '@/components/admin/AlertBanner';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { tenantsPaths } from '@/features/admin/tenants/client';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTenantsNew from '@/lib/i18n/locales/admin-fr/adminTenantsNew';
@@ -84,17 +85,14 @@ export default function TenantFormModal({
 
     setSaving(true);
     try {
-      const json = await mutateJson<CreateTenantResponse>(
-        '/api/admin/tenants',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            slug: finalSlug,
-            name: name.trim(),
-            default_locale: defaultLocale || undefined,
-          }),
-        }
-      );
+      const json = await mutateJson<CreateTenantResponse>(tenantsPaths.list, {
+        method: 'POST',
+        body: JSON.stringify({
+          slug: finalSlug,
+          name: name.trim(),
+          default_locale: defaultLocale || undefined,
+        }),
+      });
       addToast(format(t.toastCreated, { slug: json.tenant.slug }), 'success');
       onCreated();
       onClose();

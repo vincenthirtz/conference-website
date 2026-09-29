@@ -33,4 +33,8 @@ export const castMembersClient = {
     }),
   /** URL de création, pour la modale restée sur `useIdempotentMutation`. */
   createUrl: BASE,
+  /** URL de la liste paginée (`useAdminResource`, UI optimiste). */
+  listUrl: BASE,
+  remove: (id: string) =>
+    adminRequest(byId(id), { method: 'DELETE', idempotent: true }),
 };

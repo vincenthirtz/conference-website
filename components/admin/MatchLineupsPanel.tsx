@@ -18,10 +18,12 @@
 // qui ne s'est pas présentée n'aurait aucun sens, c'est le forfait qui répond
 // à ce cas.
 
-import { useCallback, useEffect, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useState } from 'react';
+import {
+  useMatchLineupAction,
+  useMatchLineups,
+} from '@/features/admin/matches/hooks/useMatch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import { logger } from '../../utils/logger';
 import nsAdminMatchLineups from '@/lib/i18n/locales/admin-fr/adminMatchLineups';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
@@ -31,60 +33,23 @@ import {
   rubanInset,
 } from '@/features/admin/_shared/ui/ruban';
 
-type LineupPlayer = {
-  team_id: string;
-  user_id: string | null;
-  battle_tag: string | null;
-  role: string | null;
-  is_substitute: boolean;
-};
-
-type TeamLineup = {
-  teamId: string;
-  teamName: string | null;
-  open: boolean;
-  closedReason: 'not_in_match' | 'match_over' | 'awaiting_checkin' | null;
-  status: 'draft' | 'validated';
-  validatedAt: string | null;
-  validatedByKind: 'team' | 'admin' | null;
-  players: LineupPlayer[];
-};
-
 export default function MatchLineupsPanel({ matchId }: { matchId: string }) {
   const t = useAdminT(nsAdminMatchLineups);
-  const { adminFetchJson } = useAdminFetch();
-  const [lineups, setLineups] = useState<TeamLineup[] | null>(null);
+  const { data: lineups } = useMatchLineups(matchId);
+  const lineupAction = useMatchLineupAction(matchId);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      const payload = await adminFetchJson<{ lineups: TeamLineup[] }>(
-        `/api/admin/matches/${matchId}/lineup`
-      );
-      setLineups(payload.lineups || []);
-    } catch (err) {
-      logger.error('[MatchLineupsPanel] load', err);
-      setLineups([]);
-    }
-  }, [adminFetchJson, matchId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  // Un match sans équipes (bye, bracket non résolu) n'a pas de feuille.
+  // Un match sans équipes (bye, bracket non résolu) n'a pas de feuille —
+  // ni une lecture en échec : le panneau ne s'affiche simplement pas.
   if (!lineups || lineups.length === 0) return null;
 
   async function act(teamId: string, body: Record<string, unknown>) {
     setBusy(teamId);
     setError(null);
     try {
-      await adminFetchJson(`/api/admin/matches/${matchId}/lineup`, {
-        method: 'POST',
-        body: JSON.stringify({ teamId, ...body }),
-      });
-      await load();
+      // Relit les feuilles avant de rendre la main (comme avant).
+      await lineupAction.mutateAsync({ teamId, ...body });
     } catch (err) {
       setError((err as Error).message);
     } finally {

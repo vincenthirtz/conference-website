@@ -1,10 +1,12 @@
 // pages/admin/tournament/[id]/history.tsx
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useTournamentHistory } from '@/features/admin/tournaments/hooks/useTournamentHistory';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
@@ -48,11 +50,6 @@ type FormattedStaffLog = {
   message?: string;
 };
 
-type ApiResponse = {
-  tournamentId: string;
-  logs: FormattedStaffLog[];
-};
-
 const CARD =
   'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]';
 const LABEL = 'text-xs text-[var(--t3,#a39ba6)]';
@@ -76,55 +73,35 @@ function AdminTournamentHistoryPage(_props: StaffProps) {
   const { id } = router.query;
   const t = useAdminT(nsAdminTournamentHistory);
 
-  const [logs, setLogs] = useState<FormattedStaffLog[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
   // filtres
   const [entityType, setEntityType] = useState('');
   const [action, setAction] = useState('');
   const [limit, setLimit] = useState(100);
+  // Filtres appliqués seulement au clic « Filtrer » (pas à chaque frappe).
+  const [applied, setApplied] = useState({ entityType: '', action: '' });
 
-  async function fetchLogs() {
-    if (!id) return;
-
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(limit));
-
-      if (entityType.trim()) params.set('entityType', entityType.trim());
-      if (action.trim()) params.set('action', action.trim());
-
-      const res = await fetch(
-        `/api/admin/tournament/${id}/history?` + params.toString()
-      );
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || t.errorLoad);
-      }
-
-      const json: ApiResponse = await res.json();
-      setLogs(json.logs || []);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errorUnknown);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: GARDÉ : exclusion INTENTIONNELLE de entityType/action, appliqués seulement au clic « Filtrer » (fetchLogs les lit via closure au submit) ; les lister rechargerait à chaque frappe. (fetchLogs utilise `fetch` brut, pas adminFetch* : la stabilisation du hook ne change rien ici.)
-  useEffect(() => {
-    if (!id) return;
-    fetchLogs();
-  }, [id, limit]);
+  const historyQuery = useTournamentHistory<FormattedStaffLog>(
+    String(id ?? ''),
+    { limit, ...applied },
+    t.errorLoad
+  );
+  const logs = historyQuery.data ?? [];
+  const loading = historyQuery.isFetching;
+  const errorMsg = historyQuery.error
+    ? (historyQuery.error.message ?? t.errorUnknown)
+    : null;
 
   function handleFilterSubmit(e: React.FormEvent) {
     e.preventDefault();
-    fetchLogs();
+    const next = { entityType: entityType.trim(), action: action.trim() };
+    if (
+      next.entityType === applied.entityType &&
+      next.action === applied.action
+    ) {
+      void historyQuery.refetch();
+    } else {
+      setApplied(next);
+    }
   }
 
   return (
@@ -313,4 +290,4 @@ function shortId(id: string) {
   return id.slice(0, 4) + '…' + id.slice(-3);
 }
 
-export default AdminTournamentHistoryPage;
+export default withAdminQuery(AdminTournamentHistoryPage);

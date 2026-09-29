@@ -24,7 +24,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useToast } from '@/components/Toast';
-import { AdminFetchError, useAdminFetch } from '@/hooks/useAdminFetch';
+import { AdminFetchError } from '@/hooks/useAdminFetch';
+import { casterClient, casterPaths } from '@/features/admin/caster/client';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
@@ -72,7 +73,6 @@ function nextId(): string {
 export function useTwitchChat() {
   const t = useAdminT(nsAdminCasterScenes);
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
 
   // Clients stables pour la vie du composant (initialiseurs lazy : pas d'accès
@@ -269,9 +269,7 @@ export function useTwitchChat() {
 
   const loadConnection = useCallback(async () => {
     try {
-      const json = await adminFetchJson<TwitchConnection>(
-        '/api/admin/twitch/connection'
-      );
+      const json = await casterClient.twitchConnection<TwitchConnection>();
       if (!alive.current) return json;
       setConnection(json);
       if (json.connected && json.broadcaster_login) {
@@ -283,7 +281,7 @@ export function useTwitchChat() {
       if (alive.current) setConnection({ connected: false });
       return { connected: false } as TwitchConnection;
     }
-  }, [adminFetchJson]);
+  }, []);
 
   // --- Connexion ------------------------------------------------------------
 
@@ -340,10 +338,10 @@ export function useTwitchChat() {
   // Assignée à chaque render (comme tRef) : le client garde une indirection
   // stable et appelle toujours la dernière version de mutateJson.
   subscribeRef.current = (sessionId: string) =>
-    mutateJson<EventSubSubscribeResult>(
-      '/api/admin/twitch/eventsub/subscribe',
-      { method: 'POST', body: JSON.stringify({ session_id: sessionId }) }
-    );
+    mutateJson<EventSubSubscribeResult>(casterPaths.eventSubSubscribe, {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    });
 
   useEffect(() => {
     const offs = [
@@ -404,7 +402,7 @@ export function useTwitchChat() {
       if (!message) return false;
       setSending(true);
       try {
-        await mutateJson('/api/admin/twitch/chat', {
+        await mutateJson(casterPaths.chat, {
           method: 'POST',
           body: JSON.stringify({ message }),
         });
@@ -429,7 +427,7 @@ export function useTwitchChat() {
       const body: { login: string; duration?: number } = { login: target };
       if (typeof duration === 'number') body.duration = duration;
       try {
-        await mutateJson('/api/admin/twitch/moderation/ban', {
+        await mutateJson(casterPaths.ban, {
           method: 'POST',
           body: JSON.stringify(body),
         });
@@ -453,7 +451,7 @@ export function useTwitchChat() {
 
   const clearRemoteChat = useCallback(async (): Promise<boolean> => {
     try {
-      await mutateJson('/api/admin/twitch/moderation/clear', {
+      await mutateJson(casterPaths.clearChat, {
         method: 'POST',
       });
       addToast(tRef.current.chatClearRemoteSuccess, 'success');

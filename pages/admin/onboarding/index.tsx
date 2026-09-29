@@ -28,13 +28,12 @@
 // email ou posé dans la doc atterrirait silencieusement sur le premier onglet.
 
 import Head from 'next/head';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
@@ -47,8 +46,10 @@ import type { StaffProps } from '@/types/admin';
 import nsAdminOnboarding from '@/lib/i18n/locales/admin-fr/adminOnboarding';
 
 import { lazyPanel } from '@/components/admin/lazyPanel';
-import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useQuery } from '@tanstack/react-query';
+import { adminKey, withAdminQuery } from '@/features/admin/_shared/query';
 import { circuitPartnersClient } from '@/features/admin/circuit-partners/client';
+import { tenantsClient } from '@/features/admin/tenants/client';
 import TenantFormModal from '@/components/admin/tenants/TenantFormModal';
 
 // Le panneau par défaut reste statique ; les autres arrivent au clic
@@ -96,44 +97,31 @@ type Props = StaffProps & {
  * vol : une demande aboutie il y a trois semaines n'est pas « à traiter ».
  */
 function useInboxCount(): number | null {
-  const { adminFetchJson } = useAdminFetch();
-  const [count, setCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [requests, guilds, circuits] = await Promise.all([
-          adminFetchJson<{ total: number }>(
-            '/api/admin/tenant-requests?status=pending&limit=1'
-          ),
-          adminFetchJson<{ links: unknown[] }>(
-            '/api/admin/pending-guild-links'
-          ),
-          // Candidatures des circuits partenaires : seules les NOUVELLES
-          // attendent une première lecture.
-          circuitPartnersClient
-            .list('new')
-            .catch(() => ({ counts: {} as Record<string, number> })),
-        ]);
-        if (cancelled) return;
-        setCount(
-          (requests.total ?? 0) +
-            (guilds.links?.length ?? 0) +
-            (circuits.counts?.new ?? 0)
-        );
-      } catch {
-        // Un compteur indisponible ne doit pas priver du hub : on n'affiche
-        // simplement pas de badge.
-        if (!cancelled) setCount(null);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [adminFetchJson]);
-
-  return count;
+  const { data } = useQuery({
+    queryKey: adminKey('onboarding', 'inbox-count'),
+    queryFn: async () => {
+      const [requests, guilds, circuits] = await Promise.all([
+        tenantsClient.tenantRequests<{ total?: number }>(
+          'status=pending&limit=1'
+        ),
+        tenantsClient.pendingGuildLinks(),
+        // Candidatures des circuits partenaires : seules les NOUVELLES
+        // attendent une première lecture.
+        circuitPartnersClient
+          .list('new')
+          .catch(() => ({ counts: {} as Record<string, number> })),
+      ]);
+      return (
+        (requests.total ?? 0) +
+        (guilds.links?.length ?? 0) +
+        (circuits.counts?.new ?? 0)
+      );
+    },
+    // Un compteur indisponible ne doit pas priver du hub : pas de badge,
+    // et pas d'insistance.
+    retry: false,
+  });
+  return data ?? null;
 }
 
 function AdminOnboardingPage({ currentStaffDiscordId }: Props) {

@@ -1,13 +1,21 @@
 // pages/admin/demandes/[id].tsx
 // Page de détail d'une demande admin (tous types)
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
+import { useActiveTeamOptions } from '@/features/admin/_shared/teamOptions';
+import { demandesClient } from '@/features/admin/demandes/client';
+import {
+  useDemande,
+  useDemandeTournamentFields,
+  useInvalidateDemandes,
+} from '@/features/admin/demandes/hooks/useDemandesQueries';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { RegistrationField } from '@/utils/registrationFields';
 import nsAdminDemandeDetail from '@/lib/i18n/locales/admin-fr/adminDemandeDetail';
@@ -48,107 +56,69 @@ function AdminDemandeDetailPage() {
   const t = useAdminT(nsAdminDemandeDetail);
   const router = useRouter();
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
   const id = typeof router.query.id === 'string' ? router.query.id : null;
+  const invalidateDemandes = useInvalidateDemandes();
 
-  const [loading, setLoading] = useState(true);
-  const [demande, setDemande] = useState<Demande | null>(null);
-  const [tournamentFields, setTournamentFields] = useState<RegistrationField[]>(
-    []
+  const demandeQuery = useDemande<Demande>(id);
+  const demande = demandeQuery.data?.demande ?? null;
+  // Best-effort: load the tournament's field definitions so submitted
+  // answers can be rendered by label. Silently ignored if unavailable
+  // (e.g. caster role can't read the tournament endpoint).
+  const fieldsQuery = useDemandeTournamentFields(
+    demande?.tournament_id,
+    demande?.type === 'team_registration' && !!demande?.payload?.field_values
   );
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const tournamentFields: RegistrationField[] = fieldsQuery.data ?? [];
+  const loading =
+    demandeQuery.isFetching || (fieldsQuery.isFetching && !fieldsQuery.data);
+  const [actionError, setErrorMsg] = useState<string | null>(null);
+  const errorMsg =
+    actionError ??
+    (demandeQuery.error
+      ? (demandeQuery.error.message ?? t.errorUnexpected)
+      : null);
   const [staffNote, setStaffNote] = useState('');
+  useHydrateOnce(id, demande ?? undefined, (d) =>
+    setStaffNote(d.staff_note || '')
+  );
   const [processing, setProcessing] = useState(false);
   const [forwardOpen, setForwardOpen] = useState(false);
-  const [forwardTeams, setForwardTeams] = useState<ForwardCandidate[]>([]);
   const [forwardTargetId, setForwardTargetId] = useState('');
   const [forwarding, setForwarding] = useState(false);
 
-  const fetchDemande = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const json = await adminFetchJson<{ demande: Demande }>(
-        `/api/admin/demandes/${id}`
-      );
-      setDemande(json.demande);
-      setStaffNote(json.demande?.staff_note || '');
-
-      // Best-effort: load the tournament's field definitions so submitted
-      // answers can be rendered by label. Silently ignored if unavailable
-      // (e.g. caster role can't read the tournament endpoint).
-      const tournamentId = json.demande?.tournament_id;
-      if (
-        json.demande?.type === 'team_registration' &&
-        tournamentId &&
-        json.demande?.payload?.field_values
-      ) {
-        try {
-          const tj = await adminFetchJson<{
-            tournament?: { registration_fields?: RegistrationField[] | null };
-          }>(`/api/admin/tournament/${tournamentId}`);
-          setTournamentFields(tj.tournament?.registration_fields ?? []);
-        } catch {
-          setTournamentFields([]);
-        }
-      } else {
-        setTournamentFields([]);
-      }
-    } catch (err) {
-      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }, [id, adminFetchJson, t]);
-
+  // Équipes actives, en cache partagé avec les modales de scrim ; chargées à
+  // la première ouverture du panneau.
+  const forwardTeamsQuery = useActiveTeamOptions(forwardOpen);
+  const forwardTeams: ForwardCandidate[] = (forwardTeamsQuery.data?.teams ?? [])
+    .map((team) => ({
+      id: team.id,
+      name: team.name,
+      short_name: team.short_name ?? null,
+    }))
+    .filter((team) => team.id !== demande?.team_id)
+    .sort((x, y) => x.name.localeCompare(y.name));
+  const forwardTeamsError = forwardTeamsQuery.error;
   useEffect(() => {
-    if (!id) return;
-    fetchDemande();
-    // adminFetchJson et t sont désormais stables : fetchDemande ne varie qu'avec
-    // l'id de route → un seul chargement par id, sans refetch parasite.
-  }, [id, fetchDemande]);
+    if (forwardTeamsError)
+      addToast(forwardTeamsError.message || t.errorLoadTeams, 'error');
+  }, [forwardTeamsError, addToast, t.errorLoadTeams]);
 
-  async function openForwardPanel() {
+  /** Relit la fiche après un geste (et les vues qui listent des demandes). */
+  async function fetchDemande() {
+    setErrorMsg(null);
+    await Promise.all([demandeQuery.refetch(), invalidateDemandes()]);
+  }
+
+  function openForwardPanel() {
     setForwardOpen(true);
     setForwardTargetId('');
-    if (forwardTeams.length > 0) return;
-    try {
-      const json = await adminFetchJson<{
-        teams?: ForwardCandidate[];
-        data?: ForwardCandidate[];
-      }>('/api/admin/teams?limit=200&isActive=true&includeTotal=0');
-      const teams = (json.teams || json.data || []).map((t) => ({
-        id: t.id,
-        name: t.name,
-        short_name: t.short_name ?? null,
-      }));
-      setForwardTeams(
-        teams
-          .filter((t: ForwardCandidate) => t.id !== demande?.team_id)
-          .sort((a: ForwardCandidate, b: ForwardCandidate) =>
-            a.name.localeCompare(b.name)
-          )
-      );
-    } catch (err) {
-      addToast((err as Error)?.message || t.errorLoadTeams, 'error');
-    }
   }
 
   async function submitForward() {
     if (!id || !forwardTargetId) return;
     setForwarding(true);
     try {
-      const json = await adminFetchJson<{ targetTeam?: { name?: string } }>(
-        '/api/admin/scrims/forward',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            demandeId: id,
-            targetTeamId: forwardTargetId,
-          }),
-        }
-      );
+      const json = await demandesClient.forwardScrim(id, forwardTargetId);
       addToast(
         format(t.toastForwarded, {
           team: json.targetTeam?.name || t.fallbackTeam,
@@ -169,14 +139,10 @@ function AdminDemandeDetailPage() {
     setProcessing(true);
     setErrorMsg(null);
     try {
-      await adminFetchJson('/api/admin/demandes', {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'updateStatus',
-          demandeIds: [id],
-          newStatus,
-          staffComment: staffNote.trim() || null,
-        }),
+      await demandesClient.updateStatus({
+        ids: [id],
+        newStatus,
+        staffComment: staffNote.trim() || null,
       });
       addToast(
         newStatus === 'approved' ? t.toastApproved : t.toastRejected,
@@ -439,4 +405,4 @@ function AdminDemandeDetailPage() {
   );
 }
 
-export default AdminDemandeDetailPage;
+export default withAdminQuery(AdminDemandeDetailPage);

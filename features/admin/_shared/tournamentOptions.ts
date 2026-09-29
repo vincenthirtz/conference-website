@@ -22,9 +22,11 @@ export const tournamentOptionsKey = adminKey('tournaments', 'options');
 export const fetchTournamentOptions = () =>
   adminRequest<TournamentOptionsResponse>('/api/admin/tournaments?limit=200');
 
-export function useTournamentOptions() {
+/** `enabled` : ne charger qu'à l'ouverture d'un formulaire, par exemple. */
+export function useTournamentOptions(enabled = true) {
   return useQuery({
     queryKey: tournamentOptionsKey,
     queryFn: fetchTournamentOptions,
+    enabled,
   });
 }

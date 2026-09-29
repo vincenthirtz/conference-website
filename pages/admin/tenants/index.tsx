@@ -5,7 +5,16 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { hasAtLeastRole } from '@/utils/staffRoles';
 import type { StaffRole } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useQueryClient } from '@tanstack/react-query';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  type PendingGuildLink,
+  tenantsPaths,
+} from '@/features/admin/tenants/client';
+import {
+  tenantsKeys,
+  usePendingGuildLinksSoft,
+} from '@/features/admin/tenants/hooks/useTenants';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import AlertBanner from '@/components/admin/AlertBanner';
 import Breadcrumb from '@/components/admin/Breadcrumb';
@@ -45,14 +54,7 @@ type TenantsResponse = {
   tenants: TenantRow[];
 };
 
-type PendingLink = {
-  guild_id: string;
-  guild_name: string | null;
-};
-
-type PendingLinksResponse = {
-  links: PendingLink[];
-};
+const EMPTY_PENDING: PendingGuildLink[] = [];
 
 type Props = {
   staff: {
@@ -112,8 +114,7 @@ const GHOST_LINK_MD =
 function AdminTenantsListPage({ staff }: Props) {
   const t = useAdminT(nsAdminTenantsList);
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
-  const [pending, setPending] = useState<PendingLink[]>([]);
+  const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'active' | 'archived'>('all');
   const [modalOpen, setModalOpen] = useState(false);
@@ -132,30 +133,21 @@ function AdminTenantsListPage({ staff }: Props) {
     loading,
     error,
     refresh: refreshTenants,
-  } = useAdminResource<TenantRow, TenantsResponse>('/api/admin/tenants', {
+  } = useAdminResource<TenantRow, TenantsResponse>(tenantsPaths.list, {
     includeTotal: false,
     select: (res) => res.tenants || [],
   });
 
   // Les liens Discord en attente vivent sur un endpoint distinct (owner-only) ;
   // chargé en parallèle et dégradé silencieusement (403 manager → 0 lien).
-  const fetchPending = useCallback(async () => {
-    const p = await adminFetchJson<PendingLinksResponse>(
-      '/api/admin/pending-guild-links'
-    ).catch(() => ({ links: [] }) as PendingLinksResponse);
-    setPending(p.links || []);
-  }, [adminFetchJson]);
-
-  useEffect(() => {
-    void fetchPending();
-  }, [fetchPending]);
+  const { data: pending = EMPTY_PENDING } = usePendingGuildLinksSoft();
 
   // Après création d'un tenant : rafraîchir la liste ET la file d'attente
   // (une création peut consommer un lien en attente).
   const refreshAll = useCallback(() => {
     refreshTenants();
-    void fetchPending();
-  }, [refreshTenants, fetchPending]);
+    void qc.invalidateQueries({ queryKey: tenantsKeys.pendingGuildLinks });
+  }, [refreshTenants, qc]);
 
   // Deep-link : `?new=1` (ancienne route /new) ouvre la modale de création.
   useEffect(() => {
@@ -433,4 +425,4 @@ export const getServerSideProps = withStaffPage({
   permission: 'manage_settings',
 });
 
-export default AdminTenantsListPage;
+export default withAdminQuery(AdminTenantsListPage);

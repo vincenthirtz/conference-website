@@ -12,10 +12,22 @@
 // Un seul preset par périmètre (index unique DB) → la résolution est
 // déterministe et l'UI n'a pas à arbitrer.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useQueryClient } from '@tanstack/react-query';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useTournamentOptions } from '@/features/admin/_shared/tournamentOptions';
+import {
+  type CustomGamePreset,
+  type PresetStageOption,
+  presetsPaths,
+} from '@/features/admin/custom-game-presets/client';
+import {
+  presetsKeys,
+  usePresetTournamentStages,
+  usePresets,
+} from '@/features/admin/custom-game-presets/hooks/usePresets';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
@@ -39,23 +51,14 @@ type Dict = typeof nsAdminCustomGamePresets.fr;
 type StaffShape = { id: string; role: string; display_name: string | null };
 type StaffProps = { staff: StaffShape };
 
-type PresetRow = {
-  id: string;
-  tenant_id: string;
-  game: string;
-  tournament_id: string | null;
-  stage_id: string | null;
-  name: string;
-  import_code: string;
-  description: string | null;
-  map_pool: unknown;
-  enabled: boolean;
-  created_at?: string;
-  updated_at?: string;
-};
+type PresetRow = CustomGamePreset;
 
 type TournamentOption = { id: string; name: string; game?: string | null };
-type StageOption = { id: string; name: string };
+type StageOption = PresetStageOption;
+
+const EMPTY_PRESETS: PresetRow[] = [];
+const EMPTY_TOURNAMENTS: TournamentOption[] = [];
+const EMPTY_STAGES: StageOption[] = [];
 
 const ID_BASE = 'custom-game-presets';
 
@@ -98,7 +101,7 @@ export const getServerSideProps = withStaffPage({
 
 function AdminCustomGamePresetsPage(_: StaffProps) {
   const t = useAdminT(nsAdminCustomGamePresets);
-  const { adminFetchJson } = useAdminFetch();
+  const qc = useQueryClient();
   const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();
 
@@ -111,11 +114,17 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
   const tabs: TabItem[] = games.map((g) => ({ id: g.slug, label: g.label }));
   const [activeGame, setActiveGame] = useQueryTab(tabs, 'game');
 
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [presets, setPresets] = useState<PresetRow[]>([]);
-  const [tournaments, setTournaments] = useState<TournamentOption[]>([]);
-  const [stages, setStages] = useState<StageOption[]>([]);
+  const presetsQuery = usePresets(activeGame);
+  const loading = presetsQuery.isFetching || presetsQuery.isPending;
+  const errorMsg = presetsQuery.error
+    ? presetsQuery.error.message || t.errorLoad
+    : null;
+  const presets: PresetRow[] = presetsQuery.data ?? EMPTY_PRESETS;
+  // Tournois : uniquement pour le sélecteur de périmètre (cache partagé).
+  // Échec silencieux — sans eux on gère encore le preset par défaut.
+  const tournamentOptions = useTournamentOptions();
+  const tournaments: TournamentOption[] =
+    tournamentOptions.data?.tournaments ?? EMPTY_TOURNAMENTS;
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -130,68 +139,16 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
   const [formScope, setFormScope] = useState<PresetScope>('tenant');
   const [formTournamentId, setFormTournamentId] = useState('');
   const [formStageId, setFormStageId] = useState('');
+  // Phases du tournoi choisi dans la modale (vide sans tournoi / en échec).
+  const stagesQuery = usePresetTournamentStages(formTournamentId);
+  const stages: StageOption[] =
+    (formTournamentId ? stagesQuery.data : undefined) ?? EMPTY_STAGES;
   const [saving, setSaving] = useState(false);
 
-  const fetchPresets = useCallback(async () => {
-    if (!activeGame) return;
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const json = await adminFetchJson<{ presets: PresetRow[] }>(
-        `/api/admin/custom-game-presets?game=${encodeURIComponent(activeGame)}`
-      );
-      setPresets(json.presets || []);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || t.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [activeGame, adminFetchJson, t]);
-
-  useEffect(() => {
-    fetchPresets();
-  }, [fetchPresets]);
-
-  // Liste des tournois : uniquement pour peupler le sélecteur de périmètre.
-  // Échec silencieux — sans elle on peut encore gérer le preset par défaut.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const json = await adminFetchJson<{ tournaments: TournamentOption[] }>(
-          '/api/admin/tournaments?limit=100'
-        );
-        if (!cancelled) setTournaments(json.tournaments || []);
-      } catch {
-        if (!cancelled) setTournaments([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [adminFetchJson]);
-
-  // Phases du tournoi choisi dans la modale.
-  useEffect(() => {
-    let cancelled = false;
-    if (!formTournamentId) {
-      setStages([]);
-      return;
-    }
-    (async () => {
-      try {
-        const json = await adminFetchJson<{ stages?: StageOption[] }>(
-          `/api/admin/tournament/${encodeURIComponent(formTournamentId)}/stages`
-        );
-        if (!cancelled) setStages(json.stages || []);
-      } catch {
-        if (!cancelled) setStages([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [formTournamentId, adminFetchJson]);
+  const fetchPresets = useCallback(
+    () => qc.invalidateQueries({ queryKey: presetsKeys.game(activeGame) }),
+    [qc, activeGame]
+  );
 
   function openCreate() {
     setEditing(null);
@@ -237,22 +194,19 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
     setSaving(true);
     try {
       if (editing) {
-        await editMutation.mutateJson(
-          `/api/admin/custom-game-presets/${encodeURIComponent(editing.id)}`,
-          {
-            method: 'PATCH',
-            body: JSON.stringify({
-              name: formName.trim(),
-              import_code: formCode.trim(),
-              description: formDescription.trim() || null,
-              map_pool: linesToArray(formMapPool),
-              enabled: formEnabled,
-            }),
-          }
-        );
+        await editMutation.mutateJson(presetsPaths.byId(editing.id), {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: formName.trim(),
+            import_code: formCode.trim(),
+            description: formDescription.trim() || null,
+            map_pool: linesToArray(formMapPool),
+            enabled: formEnabled,
+          }),
+        });
         addToast(t.toastUpdated, 'success');
       } else {
-        await createMutation.mutateJson('/api/admin/custom-game-presets', {
+        await createMutation.mutateJson(presetsPaths.list, {
           method: 'POST',
           body: JSON.stringify({
             game: activeGame,
@@ -280,11 +234,11 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
     setBusyId(p.id);
     try {
       const res = await toggleMutation.mutateJson<{ preset: PresetRow }>(
-        `/api/admin/custom-game-presets/${encodeURIComponent(p.id)}`,
+        presetsPaths.byId(p.id),
         { method: 'PATCH', body: JSON.stringify({ enabled: !p.enabled }) }
       );
-      setPresets((prev) =>
-        prev.map((row) => (row.id === p.id ? res.preset : row))
+      qc.setQueryData<PresetRow[]>(presetsKeys.game(activeGame), (prev) =>
+        prev?.map((row) => (row.id === p.id ? res.preset : row))
       );
       addToast(!p.enabled ? t.toastEnabled : t.toastDisabled, 'success');
     } catch (err: unknown) {
@@ -303,10 +257,9 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
     if (!ok) return;
     setBusyId(p.id);
     try {
-      await deleteMutation.mutateJson(
-        `/api/admin/custom-game-presets/${encodeURIComponent(p.id)}`,
-        { method: 'DELETE' }
-      );
+      await deleteMutation.mutateJson(presetsPaths.byId(p.id), {
+        method: 'DELETE',
+      });
       addToast(t.toastDeleted, 'success');
       await fetchPresets();
     } catch (err: unknown) {
@@ -676,4 +629,4 @@ function AdminCustomGamePresetsPage(_: StaffProps) {
   );
 }
 
-export default AdminCustomGamePresetsPage;
+export default withAdminQuery(AdminCustomGamePresetsPage);

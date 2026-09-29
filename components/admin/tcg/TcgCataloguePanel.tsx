@@ -17,9 +17,9 @@
 // (`manage_tcg`), même recherche cantonnée à l'espace. En écrire un second
 // aurait fait diverger deux fois la même précaution.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Image from 'next/image';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useTcgCatalogue } from '@/features/admin/tcg/hooks/useTcgAdmin';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
@@ -83,39 +83,17 @@ function groupOf(card: { kind: CatalogueKind; category?: string }) {
 export default function TcgCataloguePanel() {
   const t = useAdminT(nsAdminTcgPage);
   const tGrant = useAdminT(nsAdminTcgGrant);
-  const { adminFetchJson } = useAdminFetch();
 
   const [user, setUser] = useState<PickedUser | null>(null);
-  const [data, setData] = useState<CatalogueResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const catalogue = useTcgCatalogue<CatalogueResponse>(user?.id ?? null);
+  const data: CatalogueResponse | null = catalogue.data ?? null;
+  const error = catalogue.error
+    ? catalogue.error.message || t.catalogueError
+    : null;
+  const busy = catalogue.isFetching;
   // `true` masque les cartes déjà possédées : la question « que lui manque-t-il »
   // se pose plus souvent que « qu'a-t-elle déjà ».
   const [missingOnly, setMissingOnly] = useState(false);
-
-  const load = useCallback(
-    async (userId: string | null) => {
-      setBusy(true);
-      setError(null);
-      try {
-        const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
-        const res = await adminFetchJson<CatalogueResponse>(
-          `/api/admin/tcg/catalogue${query}`
-        );
-        setData(res);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : t.catalogueError);
-        setData(null);
-      } finally {
-        setBusy(false);
-      }
-    },
-    [adminFetchJson, t.catalogueError]
-  );
-
-  useEffect(() => {
-    void load(user?.id ?? null);
-  }, [load, user]);
 
   const groups = useMemo(() => {
     const cards = data?.cards ?? [];

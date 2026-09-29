@@ -1,11 +1,16 @@
 // pages/admin/tournament/[id]/edit.tsx
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
+import {
+  useTournamentDetail,
+  useUpdateTournament,
+} from '@/features/admin/tournaments/hooks/useTournamentDetail';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import RegistrationFieldsEditor, {
   hasRegistrationFieldErrors,
@@ -38,10 +43,6 @@ const INPUT =
 const TOGGLE =
   'flex cursor-pointer items-center gap-3 rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-3 transition-colors hover:border-[var(--line2,rgba(194,196,201,.2))]';
 
-type ApiResponse = {
-  tournament: Tournament;
-};
-
 // Convertit un ISO en valeur pour <input type="datetime-local"> (heure locale).
 // Fonction pure sans closure sur l'état → définie au niveau module pour une
 // identité stable, ce qui permet de mémoïser `fetchTournament` sans casse.
@@ -68,16 +69,17 @@ function AdminTournamentEditPage(_props: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
 
-  const [loading, setLoading] = useState(true);
+  const tournamentId = String(id ?? '');
   const [saving, setSaving] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [actionError, setErrorMsg] = useState<string | null>(null);
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
+  const detail = useTournamentDetail<Tournament>(tournamentId, {
+    editor: true,
+  });
+  const saveTournament = useUpdateTournament(tournamentId, 'PUT');
   const t = useAdminT(nsAdminTournamentEdit);
   const tf = useAdminT(nsAdminRegistrationFields);
   const tFiche = useAdminT(nsAdminFiche);
-
-  const [formReady, setFormReady] = useState(false);
 
   const [registrationFields, setRegistrationFields] = useState<
     RegistrationField[]
@@ -156,67 +158,52 @@ function AdminTournamentEditPage(_props: StaffProps) {
     [gameConfig]
   );
 
-  // Chargement initial mémoïsé : deps toutes stables (id ; adminFetchJson figé
-  // par le hook ; t figé au niveau module par useAdminT). `toLocalInputValue`
-  // est désormais au niveau module, donc plus aucune closure instable ici.
-  const fetchTournament = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    setErrorMsg(null);
+  // Pré-remplissage du formulaire depuis la fiche serveur : à l'ouverture
+  // (une fois), puis après chaque enregistrement.
+  const hydrateForm = useCallback((tour: Tournament) => {
+    // Pré-remplir le formulaire
+    setForm({
+      name: tour.name || '',
+      slug: tour.slug || '',
+      game: tour.game || '',
+      status: tour.status || 'draft',
+      start_date: tour.start_date ? toLocalInputValue(tour.start_date) : '',
+      end_date: tour.end_date ? toLocalInputValue(tour.end_date) : '',
+      roster_locked_at: tour.roster_locked_at
+        ? toLocalInputValue(tour.roster_locked_at)
+        : '',
+      timezone: tour.timezone || 'Europe/Paris',
+      format: tour.format || '',
+      format_type: tour.format_type || '',
+      max_teams: tour.max_teams ? String(tour.max_teams) : '',
+      min_players: tour.min_players ? String(tour.min_players) : '',
+      solo_mode: tour.solo_mode === true,
+      pooled_teams: tour.pooled_teams === true,
+      max_players: tour.max_players ? String(tour.max_players) : '',
+      is_public: tour.is_public,
+      is_featured: tour.is_featured,
+      logo_url: tour.logo_url || '',
+      banner_url: tour.banner_url || '',
+      rules_url: tour.rules_url || '',
+      default_stream_url: tour.default_stream_url || '',
+      description_info: tour.description_info || '',
+      schedule_details: tour.schedule_details || '',
+      schedule_rules: tour.schedule_rules || '',
+      format_details: tour.format_details || '',
+    });
 
-    try {
-      const json = await adminFetchJson<ApiResponse>(
-        `/api/admin/tournament/${id}`
-      );
-      const tour = json.tournament;
+    setRegistrationFields(
+      Array.isArray(tour.registration_fields) ? tour.registration_fields : []
+    );
+  }, []);
 
-      // Pré-remplir le formulaire
-      setForm({
-        name: tour.name || '',
-        slug: tour.slug || '',
-        game: tour.game || '',
-        status: tour.status || 'draft',
-        start_date: tour.start_date ? toLocalInputValue(tour.start_date) : '',
-        end_date: tour.end_date ? toLocalInputValue(tour.end_date) : '',
-        roster_locked_at: tour.roster_locked_at
-          ? toLocalInputValue(tour.roster_locked_at)
-          : '',
-        timezone: tour.timezone || 'Europe/Paris',
-        format: tour.format || '',
-        format_type: tour.format_type || '',
-        max_teams: tour.max_teams ? String(tour.max_teams) : '',
-        min_players: tour.min_players ? String(tour.min_players) : '',
-        solo_mode: tour.solo_mode === true,
-        pooled_teams: tour.pooled_teams === true,
-        max_players: tour.max_players ? String(tour.max_players) : '',
-        is_public: tour.is_public,
-        is_featured: tour.is_featured,
-        logo_url: tour.logo_url || '',
-        banner_url: tour.banner_url || '',
-        rules_url: tour.rules_url || '',
-        default_stream_url: tour.default_stream_url || '',
-        description_info: tour.description_info || '',
-        schedule_details: tour.schedule_details || '',
-        schedule_rules: tour.schedule_rules || '',
-        format_details: tour.format_details || '',
-      });
-
-      setRegistrationFields(
-        Array.isArray(tour.registration_fields) ? tour.registration_fields : []
-      );
-
-      setFormReady(true);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [id, adminFetchJson, t]);
-
-  useEffect(() => {
-    if (!id) return;
-    fetchTournament();
-  }, [id, fetchTournament]);
+  const formReady = useHydrateOnce(tournamentId || null, detail.data, (d) => {
+    if (d.tournament) hydrateForm(d.tournament);
+  });
+  const loading = detail.isFetching;
+  const errorMsg =
+    actionError ??
+    (detail.error ? (detail.error.message ?? t.errorLoad) : null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -279,14 +266,12 @@ function AdminTournamentEditPage(_props: StaffProps) {
     };
 
     try {
-      await adminFetchJson(`/api/admin/tournament/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload),
-      });
+      await saveTournament.mutateAsync(payload);
 
       addToast(t.toastUpdated, 'success');
-      // On peut éventuellement recharger les données
-      fetchTournament();
+      // Relecture de la fiche, formulaire réhydraté (comme avant).
+      const { data } = await detail.refetch();
+      if (data?.tournament) hydrateForm(data.tournament);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? t.errorUpdate);
     } finally {
@@ -621,4 +606,4 @@ function AdminTournamentEditPage(_props: StaffProps) {
   );
 }
 
-export default AdminTournamentEditPage;
+export default withAdminQuery(AdminTournamentEditPage);

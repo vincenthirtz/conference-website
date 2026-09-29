@@ -1,16 +1,30 @@
 import TeamImportModal from '@/components/admin/teams/TeamImportModal';
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useAdminResource } from '@/hooks/useAdminResource';
 import {
   useIdempotentMutation,
   BgSyncQueuedError,
 } from '@/hooks/useIdempotentMutation';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  fetchTournamentOptions,
+  tournamentOptionsKey,
+} from '@/features/admin/_shared/tournamentOptions';
+import {
+  type TeamListParams,
+  teamsClient,
+  teamsPaths,
+} from '@/features/admin/teams/client';
+import {
+  useFetchImportApiKeys,
+  useInvalidateTeamLists,
+  useTeamsList,
+} from '@/features/admin/teams/hooks/useTeamsQueries';
 import TeamExportActions from '@/components/admin/teams/TeamExportActions';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { escapePostgrestValue, sanitizeSearch } from '@/utils/apiHelpers';
@@ -32,6 +46,8 @@ import {
 
 import { logger } from '../../../utils/logger';
 import nsAdminTeamsList from '@/lib/i18n/locales/admin-fr/adminTeamsList';
+const EMPTY_TEAMS: TeamRow[] = [];
+
 type AdminTeamsProps = {
   staff: {
     id: string | null;
@@ -40,20 +56,27 @@ type AdminTeamsProps = {
   };
   // SSR first-paint hydration — seeds the shared read hook so the list shows
   // instantly (no flash, gating/SEO preserved) while pagination/filters/search
-  // are then driven CLIENT-side by useAdminResource.
+  // are then driven CLIENT-side by the cached list query (useTeamsList).
   initialTeams: TeamRow[];
   initialTotal: number | null;
   initialOffset: number;
   errorMsg: string | null;
 };
 
-type TeamsApiResponse = { teams: TeamRow[]; total: number | null };
-
 // Filters (search / isActive / tournamentId) stay URL-driven for deep-linking
 // and are passed as server params; pagination is owned by the hook (offset is
 // no longer synced to the URL — mirrors PartnersListPanel).
 const FILTER_KEYS = ['search', 'isActive', 'tournamentId'] as const;
 const LIMIT = 25;
+
+function listParams(
+  offset: number,
+  isActive: string,
+  tournamentId: string,
+  search: string
+): TeamListParams {
+  return { limit: LIMIT, offset, isActive, tournamentId, search };
+}
 
 function AdminTeamsListPage({
   initialTeams,
@@ -67,39 +90,39 @@ function AdminTeamsListPage({
   const { mutateJson: mutateDelete } = useIdempotentMutation();
   const { mutateJson: mutateBulk } = useIdempotentMutation();
   const { mutate: mutateImport } = useIdempotentMutation();
-  const { adminFetch, adminFetchJson } = useAdminFetch();
+  const invalidateTeamLists = useInvalidateTeamLists();
+  const fetchImportApiKeys = useFetchImportApiKeys();
   const { filters, setFilters } = useUrlFilters(FILTER_KEYS);
 
   const search = filters.search ?? '';
   const activeFilter = filters.isActive ?? '';
   const tournamentFilter = filters.tournamentId ?? '';
 
-  // Client-side reads via the shared hook, seeded from SSR for the first paint.
-  // Params mirror EXACTLY the SSR loader (isActive / tournamentId filters +
-  // name/slug/short_name search + created_at desc order + limit 25) so the
-  // hydrated page matches what the hook would fetch — no flash / incoherence.
-  const {
-    data: teams,
-    total,
-    loading,
-    error: hookError,
-    refresh: fetchTeams,
-    offset,
-    setOffset,
-    resetOffset,
-  } = useAdminResource<TeamRow, TeamsApiResponse>('/api/admin/teams', {
-    limit: LIMIT,
-    initialData: initialTeams,
-    initialTotal,
-    initialOffset,
-    params: {
-      isActive: activeFilter,
-      tournamentId: tournamentFilter,
-      search,
-    },
-    select: (res) => res.teams || [],
-    selectTotal: (res) => (typeof res.total === 'number' ? res.total : null),
-  });
+  // Client-side reads via the cached list query, seeded from SSR for the first
+  // paint. Params mirror EXACTLY the SSR loader (isActive / tournamentId
+  // filters + name/slug/short_name search + created_at desc order + limit 25)
+  // so the hydrated page matches what the query would fetch. Every team write
+  // (here, on the fiche or in the editor) invalidates these lists.
+  const [offset, setOffsetState] = useState(initialOffset);
+  const setOffset = useCallback(
+    (next: number) => setOffsetState(Math.max(0, next)),
+    []
+  );
+  const resetOffset = useCallback(() => setOffsetState(0), []);
+  const [ssrSeed] = useState(() => ({
+    params: listParams(initialOffset, activeFilter, tournamentFilter, search),
+    data: { teams: initialTeams, total: initialTotal },
+  }));
+  const listQuery = useTeamsList(
+    listParams(offset, activeFilter, tournamentFilter, search),
+    ssrError ? undefined : ssrSeed
+  );
+  const teams = listQuery.data?.teams ?? EMPTY_TEAMS;
+  const total =
+    typeof listQuery.data?.total === 'number' ? listQuery.data.total : null;
+  const loading = listQuery.isFetching;
+  const hookError = listQuery.error ? listQuery.error.message : null;
+  const fetchTeams = invalidateTeamLists;
 
   // Any server-filter change returns to the first page — but NOT on the very
   // first render (that would clobber a deep-linked SSR offset before the
@@ -119,32 +142,19 @@ function AdminTeamsListPage({
 
   // Tournament dropdown is loaded lazily on first focus (saves 200-row query
   // on every page load when filters aren't used).
-  const [tournamentOptions, setTournamentOptions] = useState<
-    { id: string; name: string }[]
-  >([]);
-  const [tournamentsLoaded, setTournamentsLoaded] = useState(false);
-
-  const loadTournaments = useCallback(async () => {
-    if (tournamentsLoaded) return;
-    try {
-      const res = await adminFetch('/api/admin/tournaments?limit=200');
-      if (res.ok) {
-        const json = await res.json();
-        setTournamentOptions(
-          ((json.tournaments || []) as { id: string; name: string }[]).map(
-            (tour) => ({
-              id: tour.id,
-              name: tour.name,
-            })
-          )
-        );
-      }
-    } catch {
-      // ignore
-    } finally {
-      setTournamentsLoaded(true);
-    }
-  }, [tournamentsLoaded, adminFetch]);
+  // Cache partagé avec les autres filtres « tournoi » de l'admin ; une erreur
+  // laisse simplement la liste vide.
+  const [tournamentsRequested, setTournamentsRequested] = useState(false);
+  const tournamentsQuery = useQuery({
+    queryKey: tournamentOptionsKey,
+    queryFn: fetchTournamentOptions,
+    enabled: tournamentsRequested,
+    retry: false,
+  });
+  const tournamentOptions = (tournamentsQuery.data?.tournaments ?? []).map(
+    (tour) => ({ id: tour.id, name: tour.name })
+  );
+  const loadTournaments = useCallback(() => setTournamentsRequested(true), []);
 
   // Bulk selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -190,7 +200,7 @@ function AdminTeamsListPage({
       // Idempotency-Key : un re-clic après timeout ne relance pas la
       // suppression (l'endpoint rejoue la 1ère réponse).
       const json = await mutateDelete<{ error?: string }>(
-        `/api/admin/teams/${team.id}`,
+        teamsPaths.byId(team.id),
         { method: 'DELETE' }
       );
       if (json?.error) {
@@ -273,13 +283,10 @@ function AdminTeamsListPage({
 
       // Idempotency-Key : un re-clic après timeout ne relance pas la
       // suppression/désactivation en masse (l'endpoint rejoue la 1ère réponse).
-      const json = await mutateBulk<{ count: number }>(
-        '/api/admin/teams/bulk',
-        {
-          method: 'POST',
-          body: JSON.stringify(body),
-        }
-      );
+      const json = await mutateBulk<{ count: number }>(teamsPaths.bulk, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
 
       const labels: Record<string, string> = {
         delete: t.bulkLabelDeleted,
@@ -322,7 +329,7 @@ function AdminTeamsListPage({
           setImporting(false);
           return;
         }
-        res = await mutateImport('/api/admin/teams/import-csv', {
+        res = await mutateImport(teamsPaths.importCsv, {
           method: 'POST',
           body: JSON.stringify({
             csv: csvText,
@@ -334,7 +341,7 @@ function AdminTeamsListPage({
           setImporting(false);
           return;
         }
-        res = await mutateImport('/api/admin/teams/import-platform', {
+        res = await mutateImport(teamsPaths.importPlatform, {
           method: 'POST',
           body: JSON.stringify({
             source: activeTab,
@@ -373,23 +380,7 @@ function AdminTeamsListPage({
   async function loadApiKeys() {
     setApiKeysLoading(true);
     try {
-      const keys = [
-        'toornament_api_key',
-        'challonge_api_key',
-        'startgg_api_key',
-      ];
-      const fetched = await Promise.all(
-        keys.map((k) =>
-          adminFetch(`/api/admin/site-settings/${k}`)
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null)
-        )
-      );
-      setApiKeys({
-        toornament: fetched[0]?.value ?? '',
-        challonge: fetched[1]?.value ?? '',
-        startgg: fetched[2]?.value ?? '',
-      });
+      setApiKeys(await fetchImportApiKeys());
     } finally {
       setApiKeysLoading(false);
     }
@@ -418,10 +409,7 @@ function AdminTeamsListPage({
       ];
 
       for (const entry of entries) {
-        await adminFetchJson('/api/admin/site-settings', {
-          method: 'POST',
-          body: JSON.stringify(entry),
-        });
+        await teamsClient.saveImportApiKey(entry);
       }
       addToast(t.toastApiKeysSaved, 'success');
       setShowApiKeysModal(false);
@@ -649,4 +637,4 @@ export const getServerSideProps = withStaffPage(
   }
 );
 
-export default AdminTeamsListPage;
+export default withAdminQuery(AdminTeamsListPage);

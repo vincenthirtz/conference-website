@@ -16,9 +16,8 @@
 // et `0` (il n'y a rien) ne sont pas la même information, et confondre les deux
 // sur un écran de supervision, c'est annoncer un espace mort qui va très bien.
 
-import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useTenantOverview } from '@/features/admin/tenants/hooks/useTenants';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
 import nsAdminTenantDetail from '@/lib/i18n/locales/admin-fr/adminTenantDetail';
@@ -138,26 +137,11 @@ export default function TenantOverviewPanel({
   onOpenTab?: (tab: string) => void;
 }) {
   const t = useAdminT(nsAdminTenantDetail);
-  const { adminFetchJson } = useAdminFetch();
-
-  const [data, setData] = useState<Overview | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      setData(
-        await adminFetchJson<Overview>(
-          `/api/admin/tenants/${tenantId}/overview`
-        )
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t.overviewLoadError);
-    }
-  }, [adminFetchJson, tenantId, t.overviewLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const overview = useTenantOverview<Overview>(tenantId);
+  const data = overview.data ?? null;
+  const error = overview.error
+    ? overview.error.message || t.overviewLoadError
+    : null;
 
   if (error) return <AlertBanner message={error} />;
   if (!data) {

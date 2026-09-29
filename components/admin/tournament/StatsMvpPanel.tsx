@@ -14,7 +14,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
-import { useAdminFetch, type AdminFetchError } from '@/hooks/useAdminFetch';
+import type { AdminFetchError } from '@/hooks/useAdminFetch';
+import { adminRequest } from '@/utils/admin/adminHttp';
+import {
+  tournamentMatchUrls,
+  tournamentUrls,
+} from '@/features/admin/tournaments/client';
+import { useTournamentRead } from '@/features/admin/tournaments/hooks/useTournamentRead';
 import { useToast } from '@/components/Toast';
 import { useDocumentVisible } from '@/hooks/useDocumentVisible';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -102,41 +108,32 @@ export default function StatsMvpPanel({
   const t = useAdminT(nsAdminTournamentMvpVotes);
   const locale = useLocale();
   const visible = useDocumentVisible();
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
 
-  const [data, setData] = useState<Response | null>(null);
+  const segment = kind === 'public' ? 'mvp-public-votes' : 'mvp-votes';
+  const votesQuery = useTournamentRead<Response>(
+    tournamentId ?? '',
+    segment,
+    (tid) => tournamentUrls.sub(tid, segment)
+  );
+  const data = votesQuery.data ?? null;
   const [openMatchId, setOpenMatchId] = useState('');
   const [minutes, setMinutes] = useState(String(DEFAULT_PUBLIC_MINUTES));
   const [busy, setBusy] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const loading = votesQuery.isPending;
+  const error = votesQuery.error
+    ? (votesQuery.error as AdminFetchError).message || t.errorLoad
+    : null;
   const [filter, setFilter] = useState<Filter>('all');
 
+  // Relecture silencieuse (sondage, après un geste) : la donnée reste.
+  const { refetch } = votesQuery;
   const load = useCallback(
-    async (quiet = false) => {
-      if (!tournamentId) return;
-      if (!quiet) setLoading(true);
-      try {
-        const json = await adminFetchJson<Response>(
-          `/api/admin/tournament/${tournamentId}/${
-            kind === 'public' ? 'mvp-public-votes' : 'mvp-votes'
-          }`
-        );
-        setData(json);
-        setError(null);
-      } catch (err) {
-        setError((err as AdminFetchError).message || t.errorLoad);
-      } finally {
-        if (!quiet) setLoading(false);
-      }
+    async (_quiet = false) => {
+      await refetch();
     },
-    [tournamentId, kind, adminFetchJson, t.errorLoad]
+    [refetch]
   );
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const hasOpen = (data?.totals.openPolls ?? 0) > 0;
   const refreshSeconds =
@@ -167,10 +164,9 @@ export default function StatsMvpPanel({
     ) => {
       setBusy(true);
       try {
-        await adminFetchJson(`/api/admin/matches/${matchId}/mvp-public`, {
+        await adminRequest(tournamentMatchUrls.mvpPublic(matchId), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+          json: body,
         });
         addToast(body.action === 'open' ? t.openDone : t.closeDone, 'success');
         if (body.action === 'open') setOpenMatchId('');
@@ -181,7 +177,7 @@ export default function StatsMvpPanel({
         setBusy(false);
       }
     },
-    [adminFetchJson, addToast, load, t.openDone, t.closeDone, t.actionError]
+    [addToast, load, t.openDone, t.closeDone, t.actionError]
   );
 
   const shown = useMemo(() => {

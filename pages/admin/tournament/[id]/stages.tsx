@@ -1,13 +1,22 @@
 // pages/admin/tournament/[id]/stages.tsx
 // Liste des phases (stages) d'un tournoi pour le staff
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { tournamentUrls } from '@/features/admin/tournaments/client';
+import { useTournamentDetail } from '@/features/admin/tournaments/hooks/useTournamentDetail';
+import {
+  tournamentStagesKey,
+  useReorderTournamentStages,
+  useTournamentStages,
+} from '@/features/admin/tournaments/hooks/useTournamentStages';
+import { useTournamentTemplates } from '@/features/admin/tournaments/hooks/useTournamentTemplates';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import Modal from '@/components/admin/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -56,62 +65,45 @@ function StagesPage(_: StaffProps) {
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
   const { mutate: mutateIdempotent } = useIdempotentMutation();
-  const { adminFetch, adminFetchJson } = useAdminFetch();
   const t = useAdminT(nsAdminTournamentStagesList);
-
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [stages, setStages] = useState<StageSummary[]>([]);
-  const [tournamentName, setTournamentName] = useState<string>(
-    t.defaultTournamentName
+  const qc = useQueryClient();
+  const stagesQuery = useTournamentStages(tournamentId ?? '');
+  const detail = useTournamentDetail<{ name?: string | null }>(
+    tournamentId ?? ''
   );
+  const reorder = useReorderTournamentStages(tournamentId ?? '');
+
+  const loading = stagesQuery.isFetching;
+  const [actionError, setErrorMsg] = useState<string | null>(null);
+  const errorMsg =
+    actionError ??
+    (stagesQuery.error ? stagesQuery.error.message || t.errorLoad : null);
+  // Ordre en cours d'édition (mode réordonnancement), sinon la liste serveur.
+  const [localStages, setStages] = useState<StageSummary[] | null>(null);
+  const stages = localStages ?? stagesQuery.data ?? [];
+  const tournamentName = detail.data
+    ? detail.data.tournament?.name || tournamentId || t.defaultTournamentName
+    : t.defaultTournamentName;
   const [reorderMode, setReorderMode] = useState(false);
   const [reordering, setReordering] = useState(false);
   const [orderChanged, setOrderChanged] = useState(false);
 
   // Template append
   const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>(
-    []
-  );
+  const templatesQuery = useTournamentTemplates(showTemplateModal);
+  const customTemplates = templatesQuery.data ?? [];
   const [selectedTemplate, setSelectedTemplate] =
     useState<TournamentTemplate | null>(null);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
   const { addToast } = useToast();
 
-  const fetchStages = useCallback(async () => {
-    setLoading(true);
+  // Relire la liste serveur (abandonne un ordre local non enregistré).
+  function fetchStages() {
     setErrorMsg(null);
-    try {
-      // Fetch stages
-      const stagesJson = await adminFetchJson<{ stages?: typeof stages }>(
-        `/api/admin/tournament/${tournamentId}/stages`
-      );
-      setStages(stagesJson.stages || []);
-
-      // Fetch tournament name
-      const tournamentRes = await adminFetch(
-        `/api/admin/tournament/${tournamentId}`
-      );
-      if (tournamentRes.ok) {
-        const tournamentJson = await tournamentRes.json();
-        setTournamentName(
-          tournamentJson.tournament?.name ||
-            tournamentId ||
-            t.defaultTournamentName
-        );
-      }
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || t.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [tournamentId, adminFetchJson, adminFetch, t]);
-
-  useEffect(() => {
-    if (!tournamentId) return;
-    fetchStages();
-  }, [tournamentId, fetchStages]);
+    setStages(null);
+    void stagesQuery.refetch();
+    void detail.refetch();
+  }
 
   function getSortedStages() {
     return [...stages].sort(
@@ -146,14 +138,8 @@ function StagesPage(_: StaffProps) {
         id: s.id,
         order_index: s.order_index ?? 0,
       }));
-      const json = await adminFetchJson<{ stages?: typeof stages }>(
-        `/api/admin/tournament/${tournamentId}/stages`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ stages: payload }),
-        }
-      );
-      setStages(json.stages || []);
+      await reorder.mutateAsync(payload);
+      setStages(null);
       setOrderChanged(false);
       setReorderMode(false);
     } catch (err: unknown) {
@@ -163,18 +149,11 @@ function StagesPage(_: StaffProps) {
     }
   }
 
-  async function openTemplateModal() {
+  function openTemplateModal() {
+    // Modèles chargés (ou relus s'ils datent) à l'ouverture ; un échec
+    // laisse la liste des modèles perso vide, comme avant.
     setShowTemplateModal(true);
     setSelectedTemplate(null);
-    try {
-      const res = await adminFetch('/api/admin/tournament-templates');
-      if (res.ok) {
-        const json = await res.json();
-        setCustomTemplates(json.templates || []);
-      }
-    } catch {
-      // ignore
-    }
   }
 
   async function handleAppendTemplate() {
@@ -183,7 +162,7 @@ function StagesPage(_: StaffProps) {
     setErrorMsg(null);
     try {
       const res = await mutateIdempotent(
-        `/api/admin/tournament/${tournamentId}/apply-template`,
+        tournamentUrls.applyTemplate(tournamentId),
         {
           method: 'POST',
           body: JSON.stringify({
@@ -202,7 +181,9 @@ function StagesPage(_: StaffProps) {
         format(t.toastTemplateAdded, { name: selectedTemplate.name }),
         'success'
       );
-      fetchStages();
+      void qc.invalidateQueries({
+        queryKey: tournamentStagesKey(tournamentId),
+      });
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message || t.errorApplyTemplateGeneric);
     } finally {
@@ -486,4 +467,4 @@ function StagesPage(_: StaffProps) {
   );
 }
 
-export default StagesPage;
+export default withAdminQuery(StagesPage);

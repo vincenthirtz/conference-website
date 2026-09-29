@@ -3,6 +3,7 @@
 // données, export et rafraîchissement. Purement présentationnel : le
 // rafraîchissement est une callback de la page.
 
+import { tournamentUrls } from '../client';
 import type nsAdminTournamentDashboard from '@/lib/i18n/locales/admin-fr/adminTournamentDashboard';
 import { format } from '@/lib/i18n/useAdminT';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
@@ -144,13 +145,16 @@ export default function TournamentDashboardHeader({
             </AdminButton>
             <div className="invisible absolute right-0 z-10 mt-1 w-48 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] py-1 shadow-lg group-focus-within:visible group-hover:visible">
               <a
-                href={`/api/admin/tournament/${tournamentId}/export-results?format=csv`}
+                href={tournamentUrls.exportResults(String(tournamentId), 'csv')}
                 className={MENU_ITEM}
               >
                 {tx.resultsCsv}
               </a>
               <a
-                href={`/api/admin/tournament/${tournamentId}/export-results?format=json`}
+                href={tournamentUrls.exportResults(
+                  String(tournamentId),
+                  'json'
+                )}
                 className={MENU_ITEM}
               >
                 {tx.resultsJson}

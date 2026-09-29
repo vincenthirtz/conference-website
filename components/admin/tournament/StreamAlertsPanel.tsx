@@ -25,6 +25,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { tournamentsUrls } from '@/features/admin/tournaments/client';
 import { useToast } from '@/components/Toast';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import StreamAlertsMediaFields, {
@@ -49,7 +50,7 @@ import { logger } from '@/utils/logger';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import { rubanErrBox, rubanMuted } from '@/features/admin/_shared/ui/ruban';
 
-const ENDPOINT = '/api/admin/stream-alerts';
+const ENDPOINT = tournamentsUrls.streamAlerts;
 
 /**
  * Les types qui portent une quantité, donc les seuls à mériter un seuil. Un

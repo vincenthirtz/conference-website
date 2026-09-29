@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { tenantsPaths } from '@/features/admin/tenants/client';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import AlertBanner from '@/components/admin/AlertBanner';
@@ -76,7 +77,7 @@ export default function GuildLinksPanel() {
     error,
     refresh: fetchData,
   } = useAdminResource<PendingLink, PendingLinksResponse>(
-    '/api/admin/pending-guild-links',
+    tenantsPaths.pendingGuildLinks,
     {
       includeTotal: false,
       select: (res) => res.links || [],
@@ -134,13 +135,10 @@ export default function GuildLinksPanel() {
         }
         body = { new_tenant: { slug, name } };
       }
-      await mutateJson(
-        `/api/admin/pending-guild-links/${modal.guild.guild_id}/claim`,
-        {
-          method: 'POST',
-          body: JSON.stringify(body),
-        }
-      );
+      await mutateJson(tenantsPaths.claimGuildLink(modal.guild.guild_id), {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
       addToast(t.toastAssigned, 'success');
       closeModal();
       fetchData();
@@ -168,7 +166,7 @@ export default function GuildLinksPanel() {
     });
     if (!ok) return;
     try {
-      await mutateJson(`/api/admin/pending-guild-links/${guild.guild_id}`, {
+      await mutateJson(tenantsPaths.pendingGuildLink(guild.guild_id), {
         method: 'DELETE',
       });
       addToast(t.toastRejected, 'success');

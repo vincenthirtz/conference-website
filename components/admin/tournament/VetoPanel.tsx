@@ -9,6 +9,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import {
+  tournamentMatchUrls,
+  tournamentUrls,
+} from '@/features/admin/tournaments/client';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useStaffSession } from '@/hooks/useStaffSession';
@@ -177,7 +181,7 @@ export default function VetoPanel() {
 
       // Fetch matches (pending or ongoing, with both teams assigned)
       const matchesRes = await adminFetch(
-        `/api/admin/tournament/${tournamentId}/matches?limit=100`
+        tournamentUrls.matches(String(tournamentId), { limit: 100 })
       );
       if (matchesRes.ok) {
         // Recopie des champs réellement lus plus bas. `any` laissait passer
@@ -217,7 +221,7 @@ export default function VetoPanel() {
   const fetchVetoState = useCallback(
     async (matchId: string) => {
       try {
-        const res = await adminFetch(`/api/admin/matches/${matchId}/veto`);
+        const res = await adminFetch(tournamentMatchUrls.veto(matchId));
         if (!res.ok) {
           const json = await res.json().catch(() => ({}));
           throw new Error(json.error || t.errorLoadVeto);
@@ -273,7 +277,7 @@ export default function VetoPanel() {
 
       try {
         const res = await adminFetch(
-          `/api/admin/matches/${selectedMatchId}/veto`,
+          tournamentMatchUrls.veto(selectedMatchId),
           {
             method: 'POST',
             body: JSON.stringify({
@@ -334,12 +338,9 @@ export default function VetoPanel() {
     setErrorMsg(null);
 
     try {
-      const res = await adminFetch(
-        `/api/admin/matches/${selectedMatchId}/veto`,
-        {
-          method: 'DELETE',
-        }
-      );
+      const res = await adminFetch(tournamentMatchUrls.veto(selectedMatchId), {
+        method: 'DELETE',
+      });
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -376,13 +377,10 @@ export default function VetoPanel() {
     setSubmitting(true);
     setErrorMsg(null);
     try {
-      const res = await adminFetch(
-        `/api/admin/matches/${selectedMatchId}/veto`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ unlock: true, reason: reason || undefined }),
-        }
-      );
+      const res = await adminFetch(tournamentMatchUrls.veto(selectedMatchId), {
+        method: 'PATCH',
+        body: JSON.stringify({ unlock: true, reason: reason || undefined }),
+      });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || t.errorUnlock);

@@ -59,12 +59,12 @@
 //   topSubjects: [{ kind, userId|teamId, slug?, name, imageUrl, count, foilCount }]
 //   generatedAt
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { JSX } from 'react';
 
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useTcgOverviewRaw } from '@/features/admin/tcg/hooks/useTcgAdmin';
 import { format } from '@/lib/i18n/useT';
 import AlertBanner from '@/components/admin/AlertBanner';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
@@ -289,30 +289,18 @@ type Props = {
 };
 
 export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
-  const { adminFetchJson } = useAdminFetch();
-
-  const [data, setData] = useState<TcgOverview | null>(null);
-  const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const raw = await adminFetchJson<unknown>('/api/admin/tcg/overview');
-      setData(normalizeTcgOverview(raw));
-    } catch {
-      // On garde le relevé précédent si on en avait un : un rafraîchissement
-      // raté ne doit pas vider un tableau de bord déjà lisible.
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const overview = useTcgOverviewRaw();
+  // Relevé précédent conservé si une relecture échoue : un rafraîchissement
+  // raté ne vide pas un tableau de bord déjà lisible.
+  const data = useMemo<TcgOverview | null>(
+    () =>
+      overview.data === undefined ? null : normalizeTcgOverview(overview.data),
+    [overview.data]
+  );
+  const error = !!overview.error;
+  const loading = overview.isFetching;
+  const { refetch } = overview;
+  const load = useCallback(() => refetch(), [refetch]);
 
   const rarityTotal = RARITY_ORDER.reduce(
     (sum, rarity) => sum + (data?.cards.byRarity[rarity] ?? 0),

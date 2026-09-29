@@ -23,12 +23,16 @@
 // déjà écrits, gardés et audités ; les dupliquer ici ferait deux chemins pour
 // le même pouvoir.
 
-import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  useStaffLogs,
+  useStaffPermissions,
+  useStaffRecord,
+} from '@/features/admin/users/hooks/useUsersQueries';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
 import Breadcrumb from '@/components/admin/Breadcrumb';
@@ -82,6 +86,9 @@ type LogRow = {
   created_at: string;
 };
 
+const EMPTY_SPACES: SpaceRow[] = [];
+const EMPTY_LOGS: LogRow[] = [];
+
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
   const ms = Date.parse(iso);
@@ -93,62 +100,37 @@ function formatDate(iso: string | null): string {
   });
 }
 
-export default function AdminStaffViewPage(_props: StaffProps) {
+function AdminStaffViewPage(_props: StaffProps) {
   const t = useAdminT(nsAdminStaffView);
   const tRoles = useAdminT(nsAdminUsersManage);
   const tf = useAdminT(nsAdminFiche);
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
 
   const userId = Array.isArray(router.query.userId)
     ? router.query.userId[0]
     : router.query.userId;
 
-  const [record, setRecord] = useState<StaffRecord | null>(null);
-  const [spaces, setSpaces] = useState<SpaceRow[]>([]);
-  const [perms, setPerms] = useState<PermissionsPayload | null>(null);
-  const [logs, setLogs] = useState<LogRow[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(
-    async (id: string) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const fiche = await adminFetchJson<{
-          staff: StaffRecord;
-          spaces: SpaceRow[];
-        }>(`/api/admin/users/${id}/staff`);
-        setRecord(fiche.staff);
-        setSpaces(fiche.spaces);
-
-        // Les deux compléments ne doivent pas faire échouer la fiche : une
-        // permission illisible ou un journal indisponible laissent la page
-        // utile, un écran vide ne l'est pas.
-        const [p, l] = await Promise.allSettled([
-          adminFetchJson<PermissionsPayload>(
-            `/api/admin/users/${id}/permissions`
-          ),
-          adminFetchJson<{ logs: LogRow[] }>(
-            `/api/admin/logs?staffId=${encodeURIComponent(fiche.staff.id)}&limit=15`
-          ),
-        ]);
-        if (p.status === 'fulfilled') setPerms(p.value);
-        if (l.status === 'fulfilled') setLogs(l.value.logs ?? []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : t.loadError);
-        setRecord(null);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [adminFetchJson, t.loadError]
+  const ficheQuery = useStaffRecord<StaffRecord, SpaceRow>(
+    typeof userId === 'string' && userId ? userId : undefined
   );
-
-  useEffect(() => {
-    if (typeof userId === 'string' && userId) void load(userId);
-  }, [load, userId]);
+  const record = ficheQuery.data?.staff ?? null;
+  const spaces = ficheQuery.data?.spaces ?? EMPTY_SPACES;
+  // Les deux compléments ne font pas échouer la fiche : une permission
+  // illisible ou un journal indisponible laissent la page utile, un écran
+  // vide ne l'est pas. Ils partent une fois la fiche lue (comme avant).
+  const permsQuery = useStaffPermissions(
+    typeof userId === 'string' && userId ? userId : undefined,
+    { enabled: !!record }
+  );
+  const logsQuery = useStaffLogs(record?.id, 15);
+  const perms: PermissionsPayload | null = permsQuery.data ?? null;
+  const logs: LogRow[] = logsQuery.data?.logs ?? EMPTY_LOGS;
+  const error = ficheQuery.error
+    ? ficheQuery.error.message || t.loadError
+    : null;
+  const loading =
+    ficheQuery.isPending ||
+    (!!record && (permsQuery.isPending || logsQuery.isPending));
 
   const name = record?.displayName || record?.email || t.unnamed;
 
@@ -368,3 +350,5 @@ export const getServerSideProps = withStaffPage({
   permission: 'manage_staff',
   scope: 'platform',
 });
+
+export default withAdminQuery(AdminStaffViewPage);

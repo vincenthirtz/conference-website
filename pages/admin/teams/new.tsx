@@ -7,6 +7,9 @@ import { withStaffPage } from '@/utils/staff';
 import LogoUpload from '@/components/admin/LogoUpload';
 import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { teamsPaths } from '@/features/admin/teams/client';
+import { useInvalidateTeamLists } from '@/features/admin/teams/hooks/useTeamsQueries';
 import { supabaseAdmin } from '@/utils/supabase';
 import {
   loadTeamRolesFromSupabase,
@@ -61,6 +64,7 @@ function AdminNewTeamPage({ teamRoles }: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
   const { mutateJson } = useIdempotentMutation();
+  const invalidateTeamLists = useInvalidateTeamLists();
 
   // Infos equipe
   const [name, setName] = useState('');
@@ -124,11 +128,12 @@ function AdminNewTeamPage({ teamRoles }: StaffProps) {
           })),
       };
 
-      const json = await mutateJson<CreateTeamResponse>('/api/admin/teams', {
+      const json = await mutateJson<CreateTeamResponse>(teamsPaths.list, {
         method: 'POST',
         body: JSON.stringify(payload),
       });
       addToast(t.toastCreated, 'success');
+      void invalidateTeamLists();
 
       if (json.team?.id) {
         router.push(`/admin/teams/${json.team.id}`);
@@ -420,4 +425,4 @@ function AdminNewTeamPage({ teamRoles }: StaffProps) {
   );
 }
 
-export default AdminNewTeamPage;
+export default withAdminQuery(AdminNewTeamPage);

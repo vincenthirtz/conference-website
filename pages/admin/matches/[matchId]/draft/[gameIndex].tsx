@@ -22,6 +22,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
 import { AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { matchesPaths } from '@/features/admin/matches/client';
 import { useToast } from '@/components/Toast/ToastContext';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useDraftState } from '@/hooks/useDraftState';
@@ -134,13 +135,10 @@ function AdminDraftPageContent() {
     if (busy || !validIds) return;
     setBusy(true);
     try {
-      await initMut.mutateJson(
-        `/api/admin/matches/${encodeURIComponent(matchId)}/drafts`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ gameIndex }),
-        }
-      );
+      await initMut.mutateJson(matchesPaths.drafts(matchId), {
+        method: 'POST',
+        body: JSON.stringify({ gameIndex }),
+      });
       addToast('Draft initialised.', 'success');
       await refresh();
     } catch (err) {
@@ -155,7 +153,7 @@ function AdminDraftPageContent() {
     setBusy(true);
     try {
       await sideMut.mutateJson(
-        `/api/admin/matches/${encodeURIComponent(matchId)}/drafts/${gameIndex}/side`,
+        matchesPaths.draftStep(matchId, gameIndex, 'side'),
         {
           method: 'PATCH',
           body: JSON.stringify({ team1Side, team2Side }),
@@ -175,7 +173,7 @@ function AdminDraftPageContent() {
     setBusy(true);
     try {
       await startMut.mutateJson(
-        `/api/admin/matches/${encodeURIComponent(matchId)}/drafts/${gameIndex}/start`,
+        matchesPaths.draftStep(matchId, gameIndex, 'start'),
         { method: 'POST', body: '{}' }
       );
       addToast('Draft started — timer armed.', 'success');
@@ -193,7 +191,7 @@ function AdminDraftPageContent() {
     setBusy(true);
     try {
       await commitMut.mutateJson(
-        `/api/admin/matches/${encodeURIComponent(matchId)}/drafts/${gameIndex}/commit`,
+        matchesPaths.draftStep(matchId, gameIndex, 'commit'),
         {
           method: 'POST',
           body: JSON.stringify({ stepNumber, heroId }),
@@ -216,10 +214,10 @@ function AdminDraftPageContent() {
       const data = await autoPickMut.mutateJson<{
         autoPicked: boolean;
         stepNumber?: number;
-      }>(
-        `/api/admin/matches/${encodeURIComponent(matchId)}/drafts/${gameIndex}/auto-pick`,
-        { method: 'POST', body: '{}' }
-      );
+      }>(matchesPaths.draftStep(matchId, gameIndex, 'auto-pick'), {
+        method: 'POST',
+        body: '{}',
+      });
       if (data.autoPicked) {
         addToast(`Auto-picked step ${data.stepNumber}.`, 'success');
       } else {

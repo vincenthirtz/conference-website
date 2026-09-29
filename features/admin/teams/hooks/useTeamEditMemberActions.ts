@@ -21,10 +21,9 @@ import type {
   SearchResult,
 } from '@/components/admin/teams/types';
 import type { TeamRow, TeamMemberRow } from '@/types/admin';
+import { teamsClient, teamsPaths } from '../client';
 import type {
   AddToast,
-  AdminFetch,
-  AdminFetchJson,
   Confirm,
   Dict,
   Mutate,
@@ -37,8 +36,6 @@ export type UseTeamEditMemberActionsDeps = {
   memberForm: MemberFormState;
   editingMember: TeamMemberRow | null;
   swapSource: TeamMemberRow | null;
-  adminFetch: AdminFetch;
-  adminFetchJson: AdminFetchJson;
   addMemberMutate: Mutate;
   addToast: AddToast;
   confirm: Confirm;
@@ -56,7 +53,8 @@ export type UseTeamEditMemberActionsDeps = {
   setShowAddMemberModal: Setter<boolean>;
   setShowEditMemberModal: Setter<boolean>;
   setEditingMember: Setter<TeamMemberRow | null>;
-  setTeam: Setter<TeamRow | null>;
+  /** Pose l'équipe renvoyée par le PATCH (cache + listes). */
+  setTeam: (team: TeamRow) => void;
   setErrorMsg: Setter<string | null>;
   setSwapSource: Setter<TeamMemberRow | null>;
 };
@@ -68,8 +66,6 @@ export function useTeamEditMemberActions(deps: UseTeamEditMemberActionsDeps) {
     memberForm,
     editingMember,
     swapSource,
-    adminFetch,
-    adminFetchJson,
     addMemberMutate,
     addToast,
     confirm,
@@ -125,12 +121,8 @@ export function useTeamEditMemberActions(deps: UseTeamEditMemberActionsDeps) {
     setSearchLoading(true);
     setShowSearchResults(true);
     try {
-      const res = await fetch(
-        `/api/admin/users/search?q=${encodeURIComponent(query)}`,
-        { signal: controller.signal }
-      );
-      const json = await res.json();
-      if (res.ok && json.players) {
+      const json = await teamsClient.searchUsers(query, controller.signal);
+      if (json.players) {
         setSearchResults(json.players);
       } else {
         setSearchResults([]);
@@ -209,7 +201,7 @@ export function useTeamEditMemberActions(deps: UseTeamEditMemberActionsDeps) {
     setMemberSaving(true);
     setMemberError(null);
     try {
-      const res = await addMemberMutate(`/api/admin/teams/${teamId}/members`, {
+      const res = await addMemberMutate(teamsPaths.members(teamId), {
         method: 'POST',
         body: buildAddMemberBody(memberForm),
       });
@@ -235,19 +227,16 @@ export function useTeamEditMemberActions(deps: UseTeamEditMemberActionsDeps) {
     setMemberError(null);
 
     try {
-      await adminFetchJson(`/api/admin/teams/${teamId}/members`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          memberId: editingMember.id,
-          role: memberForm.role.trim() || 'player',
-          battleTag: memberForm.battleTag.trim() || null,
-          // Chaîne vide = effacer le poste (validateSpecialty la rend null).
-          specialty: memberForm.specialty,
-          // Champ vide = effacer, pas « ne rien changer » : c'est la seule
-          // façon de retirer un SR devenu faux depuis l'écran staff.
-          skillRating: memberForm.skillRating.trim() || null,
-          isSubstitute: memberForm.isSubstitute,
-        }),
+      await teamsClient.updateMember(teamId, {
+        memberId: editingMember.id,
+        role: memberForm.role.trim() || 'player',
+        battleTag: memberForm.battleTag.trim() || null,
+        // Chaîne vide = effacer le poste (validateSpecialty la rend null).
+        specialty: memberForm.specialty,
+        // Champ vide = effacer, pas « ne rien changer » : c'est la seule
+        // façon de retirer un SR devenu faux depuis l'écran staff.
+        skillRating: memberForm.skillRating.trim() || null,
+        isSubstitute: memberForm.isSubstitute,
       });
 
       setShowEditMemberModal(false);
@@ -259,15 +248,7 @@ export function useTeamEditMemberActions(deps: UseTeamEditMemberActionsDeps) {
     } finally {
       setMemberSaving(false);
     }
-  }, [
-    teamId,
-    editingMember,
-    memberForm,
-    adminFetchJson,
-    addToast,
-    fetchMembers,
-    t,
-  ]);
+  }, [teamId, editingMember, memberForm, addToast, fetchMembers, t]);
 
   const handleDeleteMember = useCallback(
     async (member: TeamMemberRow) => {
@@ -281,21 +262,15 @@ export function useTeamEditMemberActions(deps: UseTeamEditMemberActionsDeps) {
       if (!ok) return;
 
       try {
-        const res = await adminFetch(`/api/admin/teams/${teamId}/members`, {
-          method: 'DELETE',
-          body: JSON.stringify({ memberId: member.id }),
-        });
-
-        if (res.ok) {
-          addToast(t.toastMemberRemoved, 'success');
-          await fetchMembers();
-          await fetchTeam();
-        }
+        await teamsClient.removeMember(teamId, member.id);
+        addToast(t.toastMemberRemoved, 'success');
+        await fetchMembers();
+        await fetchTeam();
       } catch {
         // Silently fail
       }
     },
-    [teamId, adminFetch, addToast, fetchMembers, fetchTeam, confirm, t]
+    [teamId, addToast, fetchMembers, fetchTeam, confirm, t]
   );
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: deps d'origine conservées (setters et refs stables reçus en paramètre)
@@ -311,13 +286,9 @@ export function useTeamEditMemberActions(deps: UseTeamEditMemberActionsDeps) {
       if (!ok) return;
 
       try {
-        const json = await adminFetchJson<{ team: TeamRow }>(
-          `/api/admin/teams/${teamId}`,
-          {
-            method: 'PATCH',
-            body: JSON.stringify({ captain_id: member.user_id }),
-          }
-        );
+        const json = await teamsClient.update(teamId, {
+          captain_id: member.user_id,
+        });
 
         setTeam(json.team);
         addToast(t.toastCaptainSet, 'success');
@@ -325,7 +296,7 @@ export function useTeamEditMemberActions(deps: UseTeamEditMemberActionsDeps) {
         setErrorMsg((err as Error)?.message ?? t.errUnexpected);
       }
     },
-    [teamId, adminFetchJson, addToast, confirm, t]
+    [teamId, addToast, confirm, t]
   );
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: deps d'origine conservées (setters et refs stables reçus en paramètre)
@@ -334,12 +305,9 @@ export function useTeamEditMemberActions(deps: UseTeamEditMemberActionsDeps) {
       if (!teamId) return;
 
       try {
-        await adminFetchJson(`/api/admin/teams/${teamId}/members`, {
-          method: 'PATCH',
-          body: JSON.stringify({
-            memberId: memberA.id,
-            swapWithMemberId: memberB.id,
-          }),
+        await teamsClient.updateMember(teamId, {
+          memberId: memberA.id,
+          swapWithMemberId: memberB.id,
         });
 
         setSwapSource(null);
@@ -349,7 +317,7 @@ export function useTeamEditMemberActions(deps: UseTeamEditMemberActionsDeps) {
         setErrorMsg((err as Error)?.message ?? t.errUnexpected);
       }
     },
-    [teamId, adminFetchJson, addToast, fetchMembers, t]
+    [teamId, addToast, fetchMembers, t]
   );
 
   // Amorce d'un échange depuis une ligne (bouton "Échanger").

@@ -18,7 +18,16 @@ import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
 import { hasAtLeastRole } from '@/utils/staffRoles';
 import type { StaffRole } from '@/utils/staff';
-import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
+import { AdminFetchError } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  type ApiTokenListRow,
+  integrationsPaths,
+} from '@/features/admin/integrations/client';
+import {
+  useApiTokens,
+  useReloadIntegrations,
+} from '@/features/admin/integrations/hooks/useIntegrations';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -45,22 +54,8 @@ const LABEL = 'mb-1 block text-sm text-[var(--t3,#a39ba6)]';
 const INPUT =
   'rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 
-type ApiTokenRow = {
-  id: string;
-  name: string;
-  token_prefix: string;
-  scopes: string[];
-  created_at: string;
-  last_used_at: string | null;
-  revoked_at: string | null;
-  expires_at?: string | null;
-  created_by?: string | null;
-  created_by_name?: string | null;
-  comp?: boolean | null;
-  comp_note?: string | null;
-};
+type ApiTokenRow = ApiTokenListRow;
 
-type ListResponse = { tokens: ApiTokenRow[] };
 type CreateResponse = {
   token: string;
   tokenMeta: {
@@ -132,13 +127,19 @@ function AdminApiTokensPage({ staff }: Props) {
   const isOwner = hasAtLeastRole(staff.role as StaffRole, 'owner');
 
   const t = useAdminT(nsAdminApiTokens);
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 
-  const [tokens, setTokens] = useState<ApiTokenRow[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const list = useApiTokens();
+  const reload = useReloadIntegrations();
+  const tokens: ApiTokenRow[] | null = list.error ? [] : (list.data ?? null);
+  // Bandeau refermable : l'erreur fermée reste fermée jusqu'à la suivante.
+  const [dismissedError, setDismissedError] = useState<unknown>(null);
+  const loadError =
+    list.error && list.error !== dismissedError
+      ? list.error.message || t.errorLoad
+      : null;
 
   const [name, setName] = useState('');
   const [selectedScopes, setSelectedScopes] = useState<Set<string>>(new Set());
@@ -152,21 +153,11 @@ function AdminApiTokensPage({ staff }: Props) {
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [togglingCompId, setTogglingCompId] = useState<string | null>(null);
 
-  const fetchTokens = useCallback(async () => {
-    setLoadError(null);
-    try {
-      const res = await adminFetchJson<ListResponse>('/api/admin/api-tokens');
-      setTokens(res.tokens ?? []);
-    } catch (err) {
-      logger.error('[admin/api-tokens] load error', err);
-      setTokens([]);
-      setLoadError((err as Error)?.message || t.errorLoad);
-    }
-  }, [adminFetchJson, t.errorLoad]);
-
   useEffect(() => {
-    fetchTokens();
-  }, [fetchTokens]);
+    if (list.error) logger.error('[admin/api-tokens] load error', list.error);
+  }, [list.error]);
+
+  const fetchTokens = useCallback(() => reload('apiTokens'), [reload]);
 
   const toggleScope = useCallback((scope: string) => {
     setSelectedScopes((prev) => {
@@ -201,16 +192,19 @@ function AdminApiTokensPage({ staff }: Props) {
 
       setCreating(true);
       try {
-        const res = await mutateJson<CreateResponse>('/api/admin/api-tokens', {
-          method: 'POST',
-          body: JSON.stringify({
-            name: trimmedName,
-            scopes: [...selectedScopes],
-            comp: wantsComp,
-            ...(wantsComp && trimmedNote ? { comp_note: trimmedNote } : {}),
-            ...(ttlDays > 0 ? { expires_in_days: ttlDays } : {}),
-          }),
-        });
+        const res = await mutateJson<CreateResponse>(
+          integrationsPaths.apiTokens,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              name: trimmedName,
+              scopes: [...selectedScopes],
+              comp: wantsComp,
+              ...(wantsComp && trimmedNote ? { comp_note: trimmedNote } : {}),
+              ...(ttlDays > 0 ? { expires_in_days: ttlDays } : {}),
+            }),
+          }
+        );
         addToast(t.toastCreated, 'success');
         setName('');
         setSelectedScopes(new Set());
@@ -261,7 +255,7 @@ function AdminApiTokensPage({ staff }: Props) {
 
       setRevokingId(token.id);
       try {
-        await mutateJson(`/api/admin/api-tokens/${token.id}`, {
+        await mutateJson(integrationsPaths.apiToken(token.id), {
           method: 'DELETE',
         });
         addToast(t.toastRevoked, 'success');
@@ -307,7 +301,7 @@ function AdminApiTokensPage({ staff }: Props) {
 
       setTogglingCompId(token.id);
       try {
-        await mutateJson(`/api/admin/api-tokens/${token.id}`, {
+        await mutateJson(integrationsPaths.apiToken(token.id), {
           method: 'PATCH',
           body: JSON.stringify({ comp: nextComp }),
         });
@@ -693,7 +687,7 @@ function AdminApiTokensPage({ staff }: Props) {
               message={loadError}
               variant="error"
               className="mb-4"
-              onDismiss={() => setLoadError(null)}
+              onDismiss={() => setDismissedError(list.error)}
             />
 
             <DataTable<ApiTokenRow>
@@ -717,4 +711,4 @@ function AdminApiTokensPage({ staff }: Props) {
 
 AdminApiTokensPage.displayName = 'AdminApiTokensPage';
 
-export default AdminApiTokensPage;
+export default withAdminQuery(AdminApiTokensPage);

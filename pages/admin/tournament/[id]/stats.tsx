@@ -21,6 +21,7 @@ import StatsPodiumPanel from '@/components/admin/tournament/StatsPodiumPanel';
 import StatsMvpPanel from '@/components/admin/tournament/StatsMvpPanel';
 import SessionEntryPanel from '@/components/admin/tournament/SessionEntryPanel';
 import type { StaffProps } from '@/types/admin';
+import { withAdminQuery } from '@/features/admin/_shared/query';
 import nsAdminTournamentNav from '@/lib/i18n/locales/admin-fr/adminTournamentNav';
 
 const ID_BASE = 'admin-tournament-stats';
@@ -29,7 +30,9 @@ export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
 });
 
-export default function AdminTournamentStatsPage(_: StaffProps) {
+export default withAdminQuery(AdminTournamentStatsPage);
+
+function AdminTournamentStatsPage(_: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : (id ?? '');

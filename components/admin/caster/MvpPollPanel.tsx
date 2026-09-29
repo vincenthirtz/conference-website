@@ -32,7 +32,7 @@ import {
   resolveVoteTarget,
 } from '@/utils/caster/mvpTally';
 import { useMvpPublicRelay } from '@/hooks/useMvpPublicRelay';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { casterClient } from '@/features/admin/caster/client';
 import type { CasterRecentMatch } from '@/pages/api/admin/caster/recent-matches';
 import {
   MIN_CANDIDATES,
@@ -102,7 +102,6 @@ export default function MvpPollPanel({
       ? rawData.matchId
       : null;
   const relay = useMvpPublicRelay(matchId);
-  const { adminFetch } = useAdminFetch();
 
   // Les derniers matchs terminés, pour rattacher le scrutin. Chargés une fois :
   // une soirée en produit quelques-uns, pas assez pour justifier un rafraîchi
@@ -114,9 +113,7 @@ export default function MvpPollPanel({
     let annule = false;
     void (async () => {
       try {
-        const res = await adminFetch('/api/admin/caster/recent-matches');
-        if (!res.ok) return;
-        const json = await res.json();
+        const json = await casterClient.recentMatches();
         if (!annule) setMatches(json?.matches ?? []);
       } catch {
         // Silencieux : ne pas pouvoir proposer la liste n'empêche pas de tenir
@@ -127,7 +124,7 @@ export default function MvpPollPanel({
     return () => {
       annule = true;
     };
-  }, [adminFetch]);
+  }, []);
 
   // Signature stable de la liste : évite de re-synchroniser (et de republier) à
   // chaque écho Realtime qui recrée un tableau identique.
@@ -284,9 +281,7 @@ export default function MvpPollPanel({
         addToast(t.mvpPollUnlinked, 'info');
         return;
       }
-      const res = await adminFetch(`/api/admin/matches/${id}/mvp-public`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
+      const json = await casterClient.mvpPublic(id);
       const cands = (json?.candidates ?? []).map(
         (c: { label: string; memberId: string }, i: number) => ({
           id: String(i + 1),

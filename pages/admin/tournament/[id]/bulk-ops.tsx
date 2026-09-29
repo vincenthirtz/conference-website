@@ -3,7 +3,7 @@
 // - Decaler tout un round (offset en minutes)
 // - Reassigner des matchs vers un autre stage
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
@@ -11,7 +11,13 @@ import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import type { StaffProps, StageSummary, TournamentMini } from '@/types/admin';
+import type { StaffProps } from '@/types/admin';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  useBulkMatchesAction,
+  useBulkOpsOverview,
+  useBulkOpsStageMatches,
+} from '@/features/admin/tournaments/hooks/useTournamentBulkOps';
 import nsAdminTournamentBulkOps from '@/lib/i18n/locales/admin-fr/adminTournamentBulkOps';
 import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import AdminButton, {
@@ -30,19 +36,9 @@ const LABEL = 'mb-1 block text-xs text-[var(--t3,#a39ba6)]';
 const INPUT =
   'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none disabled:opacity-50';
 
-/** Un match tel que l'écran d'opérations groupées le liste. */
-type BulkMatchRow = {
-  id: string;
-  round_name: string | null;
-  round_number: number | null;
-  status: string;
-};
-
 export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
 });
-
-type RoundOption = { stageId: string; roundNumber: number; matchCount: number };
 
 function BulkOpsPage(_: StaffProps) {
   const t = useAdminT(nsAdminTournamentBulkOps);
@@ -52,11 +48,15 @@ function BulkOpsPage(_: StaffProps) {
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [tournament, setTournament] = useState<TournamentMini | null>(null);
-  const [stages, setStages] = useState<StageSummary[]>([]);
-  const [roundOptions, setRoundOptions] = useState<RoundOption[]>([]);
+  const overview = useBulkOpsOverview(tournamentId ?? '', t.errorLoad);
+  const bulkAction = useBulkMatchesAction(tournamentId ?? '');
+  const loading = overview.isPending;
+  const errorMsg = overview.error
+    ? overview.error.message || t.errorGeneric
+    : null;
+  const tournament = overview.data?.tournament ?? null;
+  const stages = overview.data?.stages ?? [];
+  const roundOptions = overview.data?.roundOptions ?? [];
 
   // Shift round form
   const [shiftStageId, setShiftStageId] = useState('');
@@ -67,99 +67,22 @@ function BulkOpsPage(_: StaffProps) {
   // Reassign form
   const [reassignSourceStageId, setReassignSourceStageId] = useState('');
   const [reassignTargetStageId, setReassignTargetStageId] = useState('');
-  const [reassignMatches, setReassignMatches] = useState<
-    {
-      id: string;
-      round_name: string | null;
-      round_number: number | null;
-      status: string;
-    }[]
-  >([]);
+  const reassignQuery = useBulkOpsStageMatches(
+    tournamentId ?? '',
+    reassignSourceStageId
+  );
+  const reassignMatches = reassignSourceStageId
+    ? (reassignQuery.data ?? [])
+    : [];
   const [reassignSelected, setReassignSelected] = useState<Set<string>>(
     new Set()
   );
   const [reassignBusy, setReassignBusy] = useState(false);
 
-  const loadStages = useCallback(async () => {
-    if (!tournamentId) return;
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const res = await fetch(
-        `/api/admin/tournament/${tournamentId}/matches?limit=1000`
-      );
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || t.errorLoad);
-      }
-      const json = await res.json();
-      setTournament(json.tournament || null);
-      setStages(json.stages || []);
-
-      // Compute round options from matches
-      const buckets = new Map<string, RoundOption>();
-      for (const m of json.matches || []) {
-        if (!m.stage_id || m.round_number === null) continue;
-        const key = `${m.stage_id}:${m.round_number}`;
-        const cur = buckets.get(key);
-        if (cur) cur.matchCount += 1;
-        else
-          buckets.set(key, {
-            stageId: m.stage_id,
-            roundNumber: m.round_number,
-            matchCount: 1,
-          });
-      }
-      setRoundOptions(
-        Array.from(buckets.values()).sort((a, b) => {
-          if (a.stageId !== b.stageId)
-            return a.stageId.localeCompare(b.stageId);
-          return a.roundNumber - b.roundNumber;
-        })
-      );
-    } catch (err: unknown) {
-      setErrorMsg((err as Error).message || t.errorGeneric);
-    } finally {
-      setLoading(false);
-    }
-  }, [tournamentId, t]);
-
+  // Changer de phase source vide la sélection.
   useEffect(() => {
-    if (tournamentId) loadStages();
-  }, [tournamentId, loadStages]);
-
-  // Load matches of source stage for reassign form
-  useEffect(() => {
-    if (!reassignSourceStageId || !tournamentId) {
-      setReassignMatches([]);
-      setReassignSelected(new Set());
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(
-          `/api/admin/tournament/${tournamentId}/matches?stageId=${reassignSourceStageId}&limit=500`
-        );
-        if (!res.ok) return;
-        const json = await res.json();
-        if (cancelled) return;
-        const list = ((json.matches || []) as BulkMatchRow[]).map((m) => ({
-          id: m.id,
-          round_name: m.round_name,
-          round_number: m.round_number,
-          status: m.status,
-        }));
-        setReassignMatches(list);
-        setReassignSelected(new Set());
-      } catch {
-        // ignore
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [reassignSourceStageId, tournamentId]);
+    setReassignSelected(new Set());
+  }, [reassignSourceStageId]);
 
   async function submitShift() {
     if (!tournamentId) return;
@@ -181,21 +104,12 @@ function BulkOpsPage(_: StaffProps) {
     if (!okShift) return;
     setShiftBusy(true);
     try {
-      const res = await fetch(
-        `/api/admin/tournament/${tournamentId}/bulk-matches`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            mode: 'shift_round',
-            stageId: shiftStageId,
-            roundNumber: Number(shiftRoundNumber),
-            offsetMinutes: offset,
-          }),
-        }
-      );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || t.errorGeneric);
+      const json = await bulkAction.mutateAsync({
+        mode: 'shift_round',
+        stageId: shiftStageId,
+        roundNumber: Number(shiftRoundNumber),
+        offsetMinutes: offset,
+      });
       addToast(
         format(t.toastShifted, {
           shifted: json.shifted,
@@ -203,7 +117,6 @@ function BulkOpsPage(_: StaffProps) {
         }),
         'success'
       );
-      await loadStages();
     } catch (e: unknown) {
       addToast((e as Error).message || t.errorGeneric, 'error');
     } finally {
@@ -232,23 +145,12 @@ function BulkOpsPage(_: StaffProps) {
     if (!okReassign) return;
     setReassignBusy(true);
     try {
-      const res = await fetch(
-        `/api/admin/tournament/${tournamentId}/bulk-matches`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            mode: 'reassign_stage',
-            matchIds: Array.from(reassignSelected),
-            targetStageId: reassignTargetStageId,
-          }),
-        }
-      );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || t.errorGeneric);
-      const skippedReasons = (
-        (json.skipped || []) as { matchId: string; reason: string }[]
-      )
+      const json = await bulkAction.mutateAsync({
+        mode: 'reassign_stage',
+        matchIds: Array.from(reassignSelected),
+        targetStageId: reassignTargetStageId,
+      });
+      const skippedReasons = (json.skipped || [])
         .map((s) => `${s.matchId.slice(0, 6)}: ${s.reason}`)
         .join(', ');
       addToast(
@@ -258,22 +160,8 @@ function BulkOpsPage(_: StaffProps) {
             : ''),
         json.moved.length > 0 ? 'success' : 'error'
       );
-      // Refresh
+      // Refresh (la liste source est relue par l'invalidation du cache)
       setReassignSelected(new Set());
-      const refreshed = await fetch(
-        `/api/admin/tournament/${tournamentId}/matches?stageId=${reassignSourceStageId}&limit=500`
-      );
-      if (refreshed.ok) {
-        const j = await refreshed.json();
-        setReassignMatches(
-          ((j.matches || []) as BulkMatchRow[]).map((m) => ({
-            id: m.id,
-            round_name: m.round_name,
-            round_number: m.round_number,
-            status: m.status,
-          }))
-        );
-      }
     } catch (e: unknown) {
       addToast((e as Error).message || t.errorGeneric, 'error');
     } finally {
@@ -546,4 +434,4 @@ function BulkOpsPage(_: StaffProps) {
   );
 }
 
-export default BulkOpsPage;
+export default withAdminQuery(BulkOpsPage);

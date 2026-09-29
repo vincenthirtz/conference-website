@@ -12,24 +12,19 @@
 // cours, pour que l'admin ne rouvre pas ce qui est déjà ouvert — et comprenne
 // pourquoi le roster passe alors qu'il n'a rien fait.
 
-import { useCallback, useEffect, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { teamsPaths } from '@/features/admin/teams/client';
+import {
+  teamsKeys,
+  useTeamRosterLock,
+} from '@/features/admin/teams/hooks/useTeamsQueries';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTeamEdit from '@/lib/i18n/locales/admin-fr/adminTeamEdit';
 
 /** Mêmes durées que la fenêtre collective : le geste doit se décider vite. */
 const PRESETS = [30, 120, 24 * 60] as const;
-
-type Row = {
-  tournamentId: string;
-  tournamentName: string | null;
-  rosterLockedAt: string | null;
-  lockApplies: boolean;
-  tournamentUnlockedUntil: string | null;
-  teamUnlockedUntil: string | null;
-  locks: boolean;
-};
 
 function shortTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('fr-FR', {
@@ -40,34 +35,25 @@ function shortTime(iso: string): string {
 
 export default function TeamRosterLockPanel({ teamId }: { teamId: string }) {
   const t = useAdminT(nsAdminTeamEdit);
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
+  const qc = useQueryClient();
+  const lockQuery = useTeamRosterLock(teamId);
 
-  const [rows, setRows] = useState<Row[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      const data = await adminFetchJson<{ tournaments: Row[] }>(
-        `/api/admin/teams/${teamId}/roster-lock`
-      );
-      setRows(data.tournaments ?? []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t.rosterLockLoadError);
-      setRows([]);
-    }
-  }, [adminFetchJson, teamId, t.rosterLockLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const rows = lockQuery.isError ? [] : (lockQuery.data ?? null);
+  const loadError = lockQuery.error
+    ? lockQuery.error.message || t.rosterLockLoadError
+    : null;
+  const error = actionError ?? loadError;
+  const load = () =>
+    qc.invalidateQueries({ queryKey: teamsKeys.rosterLock(teamId) });
 
   const act = async (tournamentId: string, minutes: number | null) => {
     setBusy(tournamentId);
-    setError(null);
+    setActionError(null);
     try {
-      await mutateJson(`/api/admin/teams/${teamId}/roster-lock`, {
+      await mutateJson(teamsPaths.rosterLock(teamId), {
         method: minutes === null ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
@@ -76,7 +62,9 @@ export default function TeamRosterLockPanel({ teamId }: { teamId: string }) {
       });
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t.rosterLockActionError);
+      setActionError(
+        err instanceof Error ? err.message : t.rosterLockActionError
+      );
     } finally {
       setBusy(null);
     }

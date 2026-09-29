@@ -52,3 +52,52 @@ export const tcgModerationClient = {
   decidePhoto: (body: PhotoDecision) =>
     adminRequest(PHOTOS, { method: 'PATCH', json: body, idempotent: true }),
 };
+
+// --- Autres écrans TCG (vague client 2). Les formes de réponse sont
+// décrites par les panneaux qui les affichent (génériques), les réponses
+// brutes sont normalisées par leur écran.
+
+const TCG = '/api/admin/tcg';
+
+export const tcgPaths = {
+  battlenetBackfill: `${TCG}/battlenet-backfill`,
+  grant: `${TCG}/grant`,
+  welcomeGift: `${TCG}/welcome-gift`,
+} as const;
+
+export type TcgAssociationWrite = {
+  method: 'POST' | 'PATCH';
+  json: Record<string, unknown>;
+};
+
+export const tcgAdminClient = {
+  overview: () => adminRequest<unknown>(`${TCG}/overview`),
+  catalogue: <T>(userId: string | null) =>
+    adminRequest<T>(
+      `${TCG}/catalogue${userId ? `?userId=${encodeURIComponent(userId)}` : ''}`
+    ),
+  engagement: <T>(weeks: number) =>
+    adminRequest<T>(`${TCG}/engagement?weeks=${weeks}`),
+  association: <T>() => adminRequest<T>(`${TCG}/association`),
+  associationWrite: ({ method, json }: TcgAssociationWrite) =>
+    adminRequest(`${TCG}/association`, { method, json, idempotent: true }),
+  /** Recherche de joueuses (garde `manage_tcg`). */
+  players: <T>(q: string, init?: { signal?: AbortSignal }) =>
+    adminRequest<T>(`${TCG}/players?q=${encodeURIComponent(q)}`, init),
+  battlenetBackfill: () => adminRequest<unknown>(tcgPaths.battlenetBackfill),
+  welcomeGift: <T>() => adminRequest<T>(tcgPaths.welcomeGift),
+  /**
+   * Jeton d'overlay OBS : jamais mis en cache de requêtes (il donne accès à
+   * l'overlay) — lu et gardé en état local par sa carte.
+   */
+  overlayToken: <T>() => adminRequest<T>(`${TCG}/overlay-token`),
+  rotateOverlayToken: <T>(init: { method: 'POST' | 'DELETE' }) =>
+    adminRequest<T>(`${TCG}/overlay-token`, { ...init, idempotent: true }),
+  overlayTheme: <T>() => adminRequest<T>(`${TCG}/overlay-theme`),
+  saveOverlayTheme: <T>(json: unknown) =>
+    adminRequest<T>(`${TCG}/overlay-theme`, {
+      method: 'PUT',
+      json,
+      idempotent: true,
+    }),
+};

@@ -3,7 +3,13 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useQueryClient } from '@tanstack/react-query';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { adherentsClient } from '@/features/admin/adherents/client';
+import {
+  adherentsKeys,
+  useCotisationAmount,
+} from '@/features/admin/adherents/hooks/useAdherents';
 import { useAutoSave } from '@/utils/useAutoSave';
 import DraftBanner from '@/components/admin/DraftBanner';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -13,7 +19,6 @@ import AdminButton, {
 } from '@/features/admin/_shared/ui/AdminButton';
 import { FicheLayout, FicheSection } from '@/features/admin/_shared/ui/Fiche';
 
-import { logger } from '../../../utils/logger';
 import nsAdminAdherentsNew from '@/lib/i18n/locales/admin-fr/adminAdherentsNew';
 type Props = {
   staff: {
@@ -61,10 +66,11 @@ type FormData = {
 function AdminNewAdherentPage(_props: Props) {
   const t = useAdminT(nsAdminAdherentsNew);
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cotisationAmount, setCotisationAmount] = useState<number>(0);
+  // Réglage indisponible : montant 0, la saisie reste possible.
+  const { data: cotisationAmount = 0 } = useCotisationAmount();
   const [showDraftBanner, setShowDraftBanner] = useState(false);
 
   const currentYear = new Date().getFullYear();
@@ -103,25 +109,6 @@ function AdminNewAdherentPage(_props: Props) {
     if (draftRestored) setShowDraftBanner(true);
   }, [draftRestored]);
 
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const json = await adminFetchJson<{
-          items?: { key: string; value: string }[];
-        }>('/api/admin/site-settings');
-        const cotisation = json.items?.find(
-          (s: { key: string }) => s.key === 'cotisation_amount'
-        );
-        if (cotisation?.value) {
-          setCotisationAmount(parseFloat(cotisation.value) || 0);
-        }
-      } catch (err) {
-        logger.error('Error fetching settings', err);
-      }
-    };
-    fetchSettings();
-  }, [adminFetchJson]);
-
   const updateField = <K extends keyof FormData>(
     field: K,
     value: FormData[K]
@@ -150,13 +137,12 @@ function AdminNewAdherentPage(_props: Props) {
     setSaving(true);
 
     try {
-      await adminFetchJson('/api/admin/adherents', {
-        method: 'POST',
-        body: JSON.stringify({
-          ...form,
-          paymentMethod: form.paymentMethod || null,
-        }),
+      await adherentsClient.create({
+        ...form,
+        paymentMethod: form.paymentMethod || null,
       });
+      // La liste (cache partagé) est périmée : relue au retour.
+      void queryClient.invalidateQueries({ queryKey: adherentsKeys.all });
 
       clearDraft();
       router.push('/admin/adherents');
@@ -553,4 +539,4 @@ export const getServerSideProps = withStaffPage({
   permission: 'manage_communications',
 });
 
-export default AdminNewAdherentPage;
+export default withAdminQuery(AdminNewAdherentPage);

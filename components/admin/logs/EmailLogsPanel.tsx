@@ -1,7 +1,8 @@
 import Tabs from '@/components/ui/Tabs';
 import { useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
+import { logsClient, logsPaths } from '@/features/admin/logs/client';
+import { AdminHttpError } from '@/utils/admin/adminHttp';
 import AdminListShell from '@/components/admin/AdminListShell';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminEmailLogs from '@/lib/i18n/locales/admin-fr/adminEmailLogs';
@@ -159,7 +160,6 @@ function groupByMessage(events: BrevoEvent[]): EmailMessage[] {
  * admin or above (see the tabbed page).
  */
 export default function EmailLogsPanel() {
-  const { adminFetch } = useAdminFetch();
   const t = useAdminT(nsAdminEmailLogs);
   const eventLabels = getEventLabels(t);
 
@@ -195,7 +195,7 @@ export default function EmailLogsPanel() {
     resetOffset,
     nextPage,
     prevPage,
-  } = useAdminResource<BrevoEvent, EmailLogsResponse>('/api/admin/email-logs', {
+  } = useAdminResource<BrevoEvent, EmailLogsResponse>(logsPaths.email, {
     limit: PAGE_LIMIT,
     includeTotal: false,
     params: {
@@ -225,11 +225,16 @@ export default function EmailLogsPanel() {
     setTestResult(null);
 
     try {
-      const res = await adminFetch('/api/admin/test-email', {
-        method: 'POST',
-        body: JSON.stringify({ to: testTo.trim() }),
-      });
-      const json: TestEmailResponse = await res.json();
+      // Un refus du serveur porte son message ; seule une coupure réseau
+      // tombe sur « erreur réseau » (inchangé).
+      const json: TestEmailResponse = await logsClient
+        .sendTestEmail(testTo.trim())
+        .catch((err: unknown) => {
+          if (err instanceof AdminHttpError) {
+            return err.payload as TestEmailResponse;
+          }
+          throw err;
+        });
       if (json.success) {
         setTestResult({
           ok: true,

@@ -12,11 +12,11 @@
 // écran. Un plan sans quota ne s'affiche pas en « 0 % » — il n'a pas de mur, et
 // le dire par un zéro serait un contresens.
 
-import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useTenantsUsage } from '@/features/admin/tenants/hooks/useTenants';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import AlertBanner from '@/components/admin/AlertBanner';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
@@ -51,29 +51,13 @@ function barClass(percent: number | null): string {
 
 function AdminTenantsUsagePage() {
   const t = useAdminT(nsAdminTenantsUsage);
-  const { adminFetchJson } = useAdminFetch();
-  const [data, setData] = useState<{
-    rows: UsageRow[];
-    windowKey: string;
-  } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      setData(
-        await adminFetchJson<{ rows: UsageRow[]; windowKey: string }>(
-          '/api/admin/tenants/usage'
-        )
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur de chargement');
-      setData({ rows: [], windowKey: '' });
-    }
-  }, [adminFetchJson]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const usage = useTenantsUsage<{ rows: UsageRow[]; windowKey: string }>();
+  const error = usage.error
+    ? usage.error.message || 'Erreur de chargement'
+    : null;
+  const data = usage.error
+    ? { rows: [] as UsageRow[], windowKey: '' }
+    : (usage.data ?? null);
 
   const loading = data === null;
   const rows = data?.rows ?? [];
@@ -233,7 +217,7 @@ function AdminTenantsUsagePage() {
   );
 }
 
-export default AdminTenantsUsagePage;
+export default withAdminQuery(AdminTenantsUsagePage);
 
 // Vue transverse : elle montre la consommation de TOUS les espaces, donc elle
 // est réservée à l'owner de la plateforme — `manage_tenant` n'est portée que

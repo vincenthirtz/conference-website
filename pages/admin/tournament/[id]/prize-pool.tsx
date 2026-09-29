@@ -3,11 +3,17 @@
 // « Profondeur de la monétisation ». Config (seed / objectif / ouverture) +
 // vue des contributions collectées.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
+import { tournamentUrls } from '@/features/admin/tournaments/client';
+import {
+  type PrizePool,
+  useTournamentPrizePool,
+} from '@/features/admin/tournaments/hooks/useTournamentPrizePool';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
@@ -28,38 +34,6 @@ const LABEL = 'mb-1 block text-sm font-medium text-[var(--t2,#c7bfca)]';
 const INPUT =
   'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 const HINT = 'mt-1 text-xs text-[var(--t4,#807984)]';
-
-type PrizePool = {
-  id: string;
-  tournament_id: string;
-  tenant_id: string;
-  title: string | null;
-  currency: string;
-  goal_amount_cents: number | null;
-  base_amount_cents: number;
-  raised_amount_cents: number;
-  is_open: boolean;
-  total_cents: number;
-  created_at: string;
-  updated_at: string;
-};
-
-type Contribution = {
-  id: string;
-  amount_cents: number;
-  contributor_name: string | null;
-  is_anonymous: boolean;
-  message: string | null;
-  helloasso_payment_id: string | null;
-  checkout_intent_id: string | null;
-  created_at: string;
-};
-
-type ApiResponse = {
-  pool: PrizePool | null;
-  contributions: Contribution[];
-  contributorCount: number;
-};
 
 /**
  * Convertit une saisie euros (chaîne, virgule ou point acceptés) en centimes
@@ -87,15 +61,15 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
 
-  const { adminFetchJson } = useAdminFetch();
   const { mutate: saveMutate } = useIdempotentMutation();
   const { addToast } = useToast();
 
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [pool, setPool] = useState<PrizePool | null>(null);
-  const [contributions, setContributions] = useState<Contribution[]>([]);
-  const [contributorCount, setContributorCount] = useState(0);
+  const poolQuery = useTournamentPrizePool(tournamentId ?? '', t.errorLoad);
+  const [actionError, setErrorMsg] = useState<string | null>(null);
+  const { refetch: refetchPool } = poolQuery;
+  const pool = poolQuery.data?.pool ?? null;
+  const contributions = poolQuery.data?.contributions || [];
+  const contributorCount = poolQuery.data?.contributorCount || 0;
 
   // État du formulaire (euros en chaîne pour la config, converti en centimes
   // à l'enregistrement).
@@ -135,29 +109,22 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
     setIsOpen(p?.is_open ?? false);
   }, []);
 
-  const fetchPool = useCallback(async () => {
-    if (!tournamentId) return;
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const json = await adminFetchJson<ApiResponse>(
-        `/api/admin/tournaments/${tournamentId}/prize-pool`
-      );
-      setPool(json.pool);
-      setContributions(json.contributions || []);
-      setContributorCount(json.contributorCount || 0);
-      hydrateForm(json.pool);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || t.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [tournamentId, adminFetchJson, hydrateForm, t]);
+  const hydrated = useHydrateOnce(tournamentId ?? null, poolQuery.data, (d) =>
+    hydrateForm(d.pool)
+  );
+  const loading =
+    poolQuery.isFetching || (!hydrated && !poolQuery.error && !!tournamentId);
+  const errorMsg =
+    actionError ??
+    (poolQuery.error ? poolQuery.error.message || t.errorLoad : null);
 
-  useEffect(() => {
-    if (!tournamentId) return;
-    fetchPool();
-  }, [tournamentId, fetchPool]);
+  // Relire ET réhydrater le formulaire (bouton « rafraîchir », après
+  // enregistrement) — comme avant.
+  const fetchPool = useCallback(async () => {
+    setErrorMsg(null);
+    const { data } = await refetchPool();
+    if (data) hydrateForm(data.pool);
+  }, [refetchPool, hydrateForm]);
 
   async function handleSave() {
     if (!tournamentId) return;
@@ -190,18 +157,15 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
     setSaving(true);
     setErrorMsg(null);
     try {
-      const res = await saveMutate(
-        `/api/admin/tournaments/${tournamentId}/prize-pool`,
-        {
-          method: 'PUT',
-          body: JSON.stringify({
-            title: titleInput.trim() || null,
-            base_amount_cents: base,
-            goal_amount_cents: goalCents,
-            is_open: isOpen,
-          }),
-        }
-      );
+      const res = await saveMutate(tournamentUrls.prizePool(tournamentId), {
+        method: 'PUT',
+        body: JSON.stringify({
+          title: titleInput.trim() || null,
+          base_amount_cents: base,
+          goal_amount_cents: goalCents,
+          is_open: isOpen,
+        }),
+      });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || t.errorSave);
@@ -500,4 +464,4 @@ export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
 });
 
-export default AdminTournamentPrizePoolPage;
+export default withAdminQuery(AdminTournamentPrizePoolPage);

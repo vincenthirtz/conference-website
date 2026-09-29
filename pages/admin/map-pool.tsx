@@ -7,7 +7,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useQueryClient } from '@tanstack/react-query';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  type MapPoolEntry,
+  mapPoolPaths,
+} from '@/features/admin/map-pool/client';
+import {
+  mapPoolKeys,
+  useMapPool,
+} from '@/features/admin/map-pool/hooks/useMapPool';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
@@ -35,23 +44,9 @@ type StaffShape = {
 
 type StaffProps = { staff: StaffShape };
 
-type MapPoolRow = {
-  id: string;
-  tenant_id: string;
-  game: string;
-  map_name: string;
-  map_type: string | null;
-  image_url: string | null;
-  enabled: boolean;
-  order_index: number | null;
-  created_at?: string;
-  updated_at?: string;
-};
+type MapPoolRow = MapPoolEntry;
 
-type GameMapsResponse = {
-  game: string;
-  maps: MapPoolRow[];
-};
+const EMPTY_MAPS: MapPoolRow[] = [];
 
 const ID_BASE = 'map-pool';
 
@@ -84,7 +79,7 @@ export const getServerSideProps = withStaffPage({
 
 function AdminMapPoolPage(_: StaffProps) {
   const t = useAdminT(nsAdminMapPool);
-  const { adminFetchJson } = useAdminFetch();
+  const qc = useQueryClient();
   const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();
 
@@ -103,9 +98,12 @@ function AdminMapPoolPage(_: StaffProps) {
   const [activeGame, setActiveGame] = useQueryTab(tabs, 'game');
   const activeGameDef = listGames().find((g) => g.slug === activeGame) ?? null;
 
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [maps, setMaps] = useState<MapPoolRow[]>([]);
+  const mapsQuery = useMapPool(activeGame);
+  const loading = mapsQuery.isFetching || mapsQuery.isPending;
+  const errorMsg = mapsQuery.error
+    ? mapsQuery.error.message || t.errorLoad
+    : null;
+  const maps: MapPoolRow[] = mapsQuery.data ?? EMPTY_MAPS;
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
 
   const [importing, setImporting] = useState(false);
@@ -120,26 +118,15 @@ function AdminMapPoolPage(_: StaffProps) {
   const [formImage, setFormImage] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const fetchMaps = useCallback(async () => {
-    if (!activeGame) return;
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const json = await adminFetchJson<GameMapsResponse>(
-        `/api/admin/map-pool?game=${encodeURIComponent(activeGame)}`
-      );
-      setMaps(json.maps || []);
-      setBrokenImages(new Set());
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || t.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [activeGame, adminFetchJson, t]);
-
+  // Chaque relecture repart d'images saines (une URL corrigée se réessaie).
   useEffect(() => {
-    fetchMaps();
-  }, [fetchMaps]);
+    setBrokenImages(new Set());
+  }, [mapsQuery.dataUpdatedAt]);
+
+  const fetchMaps = useCallback(
+    () => qc.invalidateQueries({ queryKey: mapPoolKeys.game(activeGame) }),
+    [qc, activeGame]
+  );
 
   function markImageBroken(id: string) {
     setBrokenImages((prev) => {
@@ -174,20 +161,17 @@ function AdminMapPoolPage(_: StaffProps) {
     setSaving(true);
     try {
       if (editingId) {
-        await editMutation.mutateJson(
-          `/api/admin/map-pool/${encodeURIComponent(editingId)}`,
-          {
-            method: 'PATCH',
-            body: JSON.stringify({
-              map_name: formName.trim(),
-              map_type: formType.trim() || null,
-              image_url: formImage.trim() || null,
-            }),
-          }
-        );
+        await editMutation.mutateJson(mapPoolPaths.byId(editingId), {
+          method: 'PATCH',
+          body: JSON.stringify({
+            map_name: formName.trim(),
+            map_type: formType.trim() || null,
+            image_url: formImage.trim() || null,
+          }),
+        });
         addToast(t.toastUpdated, 'success');
       } else {
-        await addMutation.mutateJson('/api/admin/map-pool', {
+        await addMutation.mutateJson(mapPoolPaths.list, {
           method: 'POST',
           body: JSON.stringify({
             game: activeGame,
@@ -215,13 +199,15 @@ function AdminMapPoolPage(_: StaffProps) {
     setTogglingId(m.id);
     try {
       const res = await toggleMutation.mutateJson<{ map: MapPoolRow }>(
-        `/api/admin/map-pool/${encodeURIComponent(m.id)}`,
+        mapPoolPaths.byId(m.id),
         {
           method: 'PATCH',
           body: JSON.stringify({ enabled: !m.enabled }),
         }
       );
-      setMaps((prev) => prev.map((row) => (row.id === m.id ? res.map : row)));
+      qc.setQueryData<MapPoolRow[]>(mapPoolKeys.game(activeGame), (prev) =>
+        prev?.map((row) => (row.id === m.id ? res.map : row))
+      );
       addToast(!m.enabled ? t.toastEnabled : t.toastDisabled, 'success');
     } catch (err: unknown) {
       addToast((err as Error)?.message || t.errorToggle, 'error');
@@ -239,10 +225,9 @@ function AdminMapPoolPage(_: StaffProps) {
     if (!ok) return;
     setDeletingId(m.id);
     try {
-      await deleteMutation.mutateJson(
-        `/api/admin/map-pool/${encodeURIComponent(m.id)}`,
-        { method: 'DELETE' }
-      );
+      await deleteMutation.mutateJson(mapPoolPaths.byId(m.id), {
+        method: 'DELETE',
+      });
       addToast(t.toastDeleted, 'success');
       await fetchMaps();
     } catch (err: unknown) {
@@ -258,7 +243,7 @@ function AdminMapPoolPage(_: StaffProps) {
       const res = await importMutation.mutateJson<{
         imported: number;
         skipped: number;
-      }>('/api/admin/map-pool/import-defaults', {
+      }>(mapPoolPaths.importDefaults, {
         method: 'POST',
         body: JSON.stringify({ game: activeGame }),
       });
@@ -572,4 +557,4 @@ function AdminMapPoolPage(_: StaffProps) {
   );
 }
 
-export default AdminMapPoolPage;
+export default withAdminQuery(AdminMapPoolPage);

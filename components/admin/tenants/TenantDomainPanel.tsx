@@ -12,8 +12,16 @@
 // possession ; le CNAME ne prouve rien mais sans lui rien n'arrive — d'où
 // l'avertissement séparé quand la preuve passe et le routage non.
 
-import { useCallback, useEffect, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  type TenantDomainState,
+  tenantsPaths,
+} from '@/features/admin/tenants/client';
+import {
+  tenantsKeys,
+  useTenantDomain,
+} from '@/features/admin/tenants/hooks/useTenants';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -21,54 +29,26 @@ import nsAdminTenantDetail from '@/lib/i18n/locales/admin-fr/adminTenantDetail';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
-type DomainRecord = {
-  type: string;
-  name: string;
-  value: string;
-  why: string;
-};
-
-type DomainState = {
-  domain: string | null;
-  state: 'pending' | 'verified' | 'failed' | null;
-  checkedAt: string | null;
-  error: string | null;
-  records: DomainRecord[];
-};
+type DomainState = TenantDomainState;
 
 export default function TenantDomainPanel({ tenantId }: { tenantId: string }) {
   const t = useAdminT(nsAdminTenantDetail);
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
+  const qc = useQueryClient();
   const { addToast } = useToast();
 
-  const [data, setData] = useState<DomainState | null>(null);
+  // Lecture en échec : panneau masqué, comme sans domaine.
+  const { data = null } = useTenantDomain(tenantId);
   const [busy, setBusy] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      setData(
-        await adminFetchJson<DomainState>(
-          `/api/admin/tenants/${tenantId}/domain`
-        )
-      );
-    } catch {
-      setData(null);
-    }
-  }, [adminFetchJson, tenantId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const verify = async () => {
     setBusy(true);
     try {
       const resp = await mutateJson<DomainState>(
-        `/api/admin/tenants/${tenantId}/domain`,
+        tenantsPaths.domain(tenantId),
         { method: 'POST' }
       );
-      setData(resp);
+      qc.setQueryData(tenantsKeys.domain(tenantId), resp);
       addToast(
         resp.state === 'verified' ? t.domainVerified : t.domainFailed,
         resp.state === 'verified' ? 'success' : 'error'

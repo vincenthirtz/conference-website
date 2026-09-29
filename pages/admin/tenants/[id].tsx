@@ -3,7 +3,16 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import type { GetServerSidePropsContext } from 'next';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
+import {
+  type TenantDetail,
+  tenantsPaths,
+} from '@/features/admin/tenants/client';
+import {
+  useReloadTenant,
+  useTenantDetail,
+} from '@/features/admin/tenants/hooks/useTenants';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -45,41 +54,9 @@ import {
 import TenantNetworkSection from '@/components/admin/tenants/TenantNetworkSection';
 import TenantBrandingSection from '@/components/admin/tenants/TenantBrandingSection';
 
-type Tenant = {
-  id: string;
-  slug: string;
-  name: string;
-  is_active: boolean;
-  default_locale: string | null;
-  network_share_scrims?: boolean | null;
-  network_share_recruitment?: boolean | null;
-  logo_url: string | null;
-  primary_color: string | null;
-  accent_color: string | null;
-  custom_domain: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-type GuildRow = {
-  guild_id: string;
-  guild_name: string | null;
-  joined_at: string | null;
-};
-
-type StaffRow = {
-  staff_id: string;
-  display_name: string | null;
-  email: string | null;
-  role: string;
-  added_at: string | null;
-};
-
-type TenantDetailResponse = {
-  tenant: Tenant;
-  guilds: GuildRow[];
-  staff: StaffRow[];
-};
+type TenantDetailResponse = TenantDetail;
+type StaffRow = TenantDetail['staff'][number];
+type GuildRow = TenantDetail['guilds'][number];
 
 type Props = {
   staff: {
@@ -117,13 +94,15 @@ function AdminTenantDetailPage({ tenantId }: Props) {
   const tf = useAdminT(nsAdminFiche);
   const router = useRouter();
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
 
   const [tab, setTab] = useState<Tab>('overview');
-  const [data, setData] = useState<TenantDetailResponse | null>(null);
+  const detail = useTenantDetail(tenantId);
+  const reloadTenant = useReloadTenant(tenantId);
+  const data: TenantDetailResponse | null = detail.data ?? null;
   const [error, setError] = useState<string | null>(null);
+  const loadError = detail.error ? detail.error.message || t.errorLoad : null;
   const [saving, setSaving] = useState(false);
   const [archiving, setArchiving] = useState(false);
 
@@ -149,31 +128,30 @@ function AdminTenantDetailPage({ tenantId }: Props) {
 
   // Bot secrets rotation
 
-  const fetchData = useCallback(async () => {
-    setError(null);
-    try {
-      const json = await adminFetchJson<TenantDetailResponse>(
-        `/api/admin/tenants/${tenantId}`
-      );
-      setData(json);
-      setEditName(json.tenant.name);
-      setEditLocale(json.tenant.default_locale ?? 'fr');
-      setEditActive(json.tenant.is_active);
-      setEditLogoUrl(json.tenant.logo_url ?? '');
-      setEditPrimaryColor(json.tenant.primary_color ?? '');
-      setEditAccentColor(json.tenant.accent_color ?? '');
-      setEditCustomDomain(json.tenant.custom_domain ?? '');
-      setEditShareScrims(json.tenant.network_share_scrims === true);
-      setEditShareRecruitment(json.tenant.network_share_recruitment === true);
-    } catch (err) {
-      logger.error('AdminTenantDetailPage: fetch error', err);
-      setError((err as Error)?.message || t.errorLoad);
-    }
-  }, [adminFetchJson, tenantId, t]);
+  const hydrate = useCallback((json: TenantDetailResponse) => {
+    setEditName(json.tenant.name);
+    setEditLocale(json.tenant.default_locale ?? 'fr');
+    setEditActive(json.tenant.is_active);
+    setEditLogoUrl(json.tenant.logo_url ?? '');
+    setEditPrimaryColor(json.tenant.primary_color ?? '');
+    setEditAccentColor(json.tenant.accent_color ?? '');
+    setEditCustomDomain(json.tenant.custom_domain ?? '');
+    setEditShareScrims(json.tenant.network_share_scrims === true);
+    setEditShareRecruitment(json.tenant.network_share_recruitment === true);
+  }, []);
+  useHydrateOnce(tenantId, detail.data, hydrate);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (detail.error) {
+      logger.error('AdminTenantDetailPage: fetch error', detail.error);
+    }
+  }, [detail.error]);
+
+  /** Relit la fiche ; le formulaire « Général » garde la saisie. */
+  const fetchData = useCallback(async () => {
+    setError(null);
+    await reloadTenant();
+  }, [reloadTenant]);
 
   const handleSaveGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,7 +159,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
     setSaving(true);
     setError(null);
     try {
-      await mutateJson(`/api/admin/tenants/${tenantId}`, {
+      await mutateJson(tenantsPaths.byId(tenantId), {
         method: 'PATCH',
         body: JSON.stringify({
           name: editName.trim(),
@@ -219,7 +197,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
     if (!ok) return;
     setArchiving(true);
     try {
-      await mutateJson(`/api/admin/tenants/${tenantId}`, {
+      await mutateJson(tenantsPaths.byId(tenantId), {
         method: 'DELETE',
       });
       addToast(t.toastArchived, 'success');
@@ -236,7 +214,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
     if (!staffIdToAdd.trim()) return;
     setAddingStaff(true);
     try {
-      await mutateJson(`/api/admin/tenants/${tenantId}/staff`, {
+      await mutateJson(tenantsPaths.staff(tenantId), {
         method: 'POST',
         body: JSON.stringify({
           staff_id: staffIdToAdd.trim(),
@@ -264,7 +242,7 @@ function AdminTenantDetailPage({ tenantId }: Props) {
     });
     if (!ok) return;
     try {
-      await mutateJson(`/api/admin/tenants/${tenantId}/staff/${row.staff_id}`, {
+      await mutateJson(tenantsPaths.staffMember(tenantId, row.staff_id), {
         method: 'DELETE',
       });
       addToast(t.toastStaffRemoved, 'success');
@@ -308,13 +286,13 @@ function AdminTenantDetailPage({ tenantId }: Props) {
           ]}
         />
 
-        {data === null && error === null && (
+        {data === null && error === null && loadError === null && (
           <div className="py-16">
             <LoadingSpinner label={t.loading} />
           </div>
         )}
 
-        <AlertBanner message={error} className="mb-4" />
+        <AlertBanner message={error ?? loadError} className="mb-4" />
 
         {data && (
           <>
@@ -690,4 +668,4 @@ export const getServerSideProps = withStaffPage<{ tenantId: string }>(
   }
 );
 
-export default AdminTenantDetailPage;
+export default withAdminQuery(AdminTenantDetailPage);

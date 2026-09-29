@@ -18,21 +18,24 @@
 
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import { format as fmt } from '@/lib/i18n/useT';
-import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
+import { AdminHttpError } from '@/utils/admin/adminHttp';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  type PoolAction,
+  useTournamentPool,
+  useTournamentPoolAction,
+} from '@/features/admin/tournaments/hooks/useTournamentPool';
 import { useToast } from '@/components/Toast';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import type { StaffProps } from '@/types/admin';
-import type {
-  AdminPoolEntry,
-  AdminPoolView,
-} from '@/pages/api/admin/tournament/[id]/pool';
+import type { AdminPoolEntry } from '@/pages/api/admin/tournament/[id]/pool';
 import nsAdminTournamentPool from '@/lib/i18n/locales/admin-fr/adminTournamentPool';
 
 export const getServerSideProps = withStaffPage({
@@ -51,64 +54,44 @@ const input =
 
 const NEW_TEAM = '__new__';
 
-type Action =
-  | { action: 'place'; entryIds: string[]; teamId: string }
-  | { action: 'place-new'; entryIds: string[]; teamName: string }
-  | { action: 'unplace'; entryId: string };
+type Action = PoolAction;
 
-export default function AdminTournamentPoolPage(_: StaffProps) {
+export default withAdminQuery(AdminTournamentPoolPage);
+
+function AdminTournamentPoolPage(_: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : (id ?? '');
   const t = useAdminT(nsAdminTournamentPool);
-  const { adminFetchJson } = useAdminFetch();
+  const poolQuery = useTournamentPool(tournamentId);
+  const poolAction = useTournamentPoolAction(tournamentId);
   const { addToast } = useToast();
 
-  const [view, setView] = useState<AdminPoolView | null>(null);
-  const [state, setState] = useState<
-    'loading' | 'ready' | 'notPooled' | 'error'
-  >('loading');
+  const view = poolQuery.data ?? null;
+  const state: 'loading' | 'ready' | 'notPooled' | 'error' = poolQuery.error
+    ? poolQuery.error instanceof AdminHttpError &&
+      poolQuery.error.status === 409
+      ? 'notPooled'
+      : 'error'
+    : poolQuery.isPending
+      ? 'loading'
+      : 'ready';
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [target, setTarget] = useState(NEW_TEAM);
   const [newName, setNewName] = useState('');
   const [mixedNames, setMixedNames] = useState<Record<number, string>>({});
 
-  const endpoint = `/api/admin/tournament/${tournamentId}/pool`;
-
-  const load = useCallback(async () => {
-    if (!tournamentId) return;
-    try {
-      setView(await adminFetchJson<AdminPoolView>(endpoint));
-      setState('ready');
-    } catch (err) {
-      setState(
-        err instanceof AdminFetchError && err.status === 409
-          ? 'notPooled'
-          : 'error'
-      );
-    }
-  }, [adminFetchJson, endpoint, tournamentId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   async function run(body: Action) {
     setBusy(true);
     try {
-      const next = await adminFetchJson<AdminPoolView>(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      setView(next);
+      await poolAction.mutateAsync(body);
       setSelected(new Set());
       setMixedNames({});
       addToast(t.done, 'success');
     } catch (err) {
       const code =
-        err instanceof AdminFetchError
+        err instanceof AdminHttpError
           ? (err.payload as { code?: string } | null)?.code
           : undefined;
       addToast(
@@ -119,7 +102,7 @@ export default function AdminTournamentPoolPage(_: StaffProps) {
             : t.errGeneric,
         'error'
       );
-      await load();
+      await poolQuery.refetch();
     } finally {
       setBusy(false);
     }
@@ -203,7 +186,11 @@ export default function AdminTournamentPoolPage(_: StaffProps) {
         title={t.title}
         subtitle={<span className="block max-w-3xl">{t.subtitle}</span>}
         actions={
-          <AdminButton size="sm" onClick={() => void load()} disabled={busy}>
+          <AdminButton
+            size="sm"
+            onClick={() => void poolQuery.refetch()}
+            disabled={busy}
+          >
             {t.refresh}
           </AdminButton>
         }

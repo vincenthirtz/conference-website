@@ -15,6 +15,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import {
+  tournamentMatchUrls,
+  tournamentUrls,
+} from '@/features/admin/tournaments/client';
+import { useTournamentDetail } from '@/features/admin/tournaments/hooks/useTournamentDetail';
+import { useTournamentRead } from '@/features/admin/tournaments/hooks/useTournamentRead';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { useToast } from '@/components/Toast';
@@ -98,13 +104,30 @@ export default function SessionEntryPanel() {
     : router.query.id;
   const t = useAdminT(nsAdminTournamentAnalytics);
   const tMatch = useAdminT(nsAdminMatchEdit);
-  const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { adminFetch } = useAdminFetch();
   const { addToast } = useToast();
   const locale = useLocale();
 
-  const [matches, setMatches] = useState<EntryMatch[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [game, setGame] = useState<string | null>(null);
+  const matchesQuery = useTournamentRead<{ matches: EntryMatch[] }>(
+    tournamentId ?? '',
+    'session-entry',
+    (tid) =>
+      tournamentUrls.matches(tid, {
+        includeTeams: 1,
+        includeGames: 1,
+        orderBy: 'scheduled_at',
+        orderDir: 'asc',
+        limit: 512,
+      })
+  );
+  const matches = matchesQuery.data ? (matchesQuery.data.matches ?? []) : null;
+  const loadError = matchesQuery.error
+    ? (matchesQuery.error.message ?? t.entryLoadError)
+    : null;
+  // Jeu du tournoi : les bans de héros n'ont de sens qu'en Overwatch.
+  const game =
+    useTournamentDetail<{ game?: string | null }>(tournamentId ?? '').data
+      ?.tournament?.game ?? null;
   const [day, setDay] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, MatchGameInput[]>>({});
   const [dirty, setDirty] = useState<Set<string>>(new Set());
@@ -114,32 +137,10 @@ export default function SessionEntryPanel() {
 
   const todayKey = parisDayKey(new Date().toISOString()) ?? '';
 
+  const { refetch: refetchMatches } = matchesQuery;
   const load = useCallback(async () => {
-    if (!tournamentId) return;
-    setLoadError(null);
-    try {
-      const json = await adminFetchJson<{ matches: EntryMatch[] }>(
-        `/api/admin/tournament/${tournamentId}/matches?includeTeams=1&includeGames=1&orderBy=scheduled_at&orderDir=asc&limit=512`
-      );
-      setMatches(json.matches ?? []);
-    } catch (err) {
-      setLoadError((err as Error)?.message ?? t.entryLoadError);
-    }
-  }, [tournamentId, adminFetchJson, t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  // Jeu du tournoi : les bans de héros n'ont de sens qu'en Overwatch.
-  useEffect(() => {
-    if (!tournamentId) return;
-    adminFetchJson<{ tournament?: { game?: string | null } }>(
-      `/api/admin/tournament/${tournamentId}`
-    )
-      .then((json) => setGame(json.tournament?.game ?? null))
-      .catch(() => setGame(null));
-  }, [tournamentId, adminFetchJson]);
+    await refetchMatches();
+  }, [refetchMatches]);
 
   const days = useMemo(
     () => (matches ? groupMatchesByDay(matches, todayKey) : []),
@@ -185,7 +186,7 @@ export default function SessionEntryPanel() {
     if (!current) return;
     for (const m of current.matches) {
       if (pools[m.id]) continue;
-      adminFetch(`/api/admin/matches/${m.id}/map-pool`)
+      adminFetch(tournamentMatchUrls.mapPool(m.id))
         .then((res) => (res.ok ? res.json() : null))
         .then((json: { maps?: { name: string }[] } | null) => {
           if (!json) return;

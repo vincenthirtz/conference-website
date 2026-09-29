@@ -1,8 +1,16 @@
 // components/admin/MatchCastAssignments.tsx
 // Sidebar card on the match-edit page: list & manage cast assignments.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  useCastAssignmentMutations,
+  useCastMemberOptions,
+  useMatchCastAssignments,
+} from '@/features/admin/matches/hooks/useMatch';
+import type {
+  CastAssignment,
+  CastMemberLite,
+} from '@/features/admin/matches/client';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -11,28 +19,8 @@ import nsAdminMatchCastAssignments from '@/lib/i18n/locales/admin-fr/adminMatchC
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import { rubanCardPadded, rubanInset } from '@/features/admin/_shared/ui/ruban';
 
-type CastMember = {
-  id: string;
-  name: string;
-  auth_user_id: string | null;
-  image_url: string | null;
-};
-
-/** Les trois formes que `/api/admin/cast-members` a portées selon les versions. */
-type CastMembersResponse =
-  | { items?: CastMember[]; castMembers?: CastMember[] }
-  | CastMember[]
-  | null;
-
-type Assignment = {
-  id: string;
-  match_id: string;
-  cast_member_id: string;
-  briefing_at: string;
-  briefing_reminder_sent_at: string | null;
-  created_at: string;
-  cast_member: CastMember | null;
-};
+const EMPTY_ASSIGNMENTS: CastAssignment[] = [];
+const EMPTY_CASTERS: CastMemberLite[] = [];
 
 type Props = {
   matchId: string;
@@ -62,50 +50,31 @@ function fmt(iso: string): string {
 }
 
 export default function MatchCastAssignments({ matchId }: Props) {
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
   const t = useAdminT(nsAdminMatchCastAssignments);
 
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [casters, setCasters] = useState<CastMember[]>([]);
-  const [loading, setLoading] = useState(true);
+  const assignmentsQuery = useMatchCastAssignments(matchId);
+  const castersQuery = useCastMemberOptions();
+  const mutations = useCastAssignmentMutations(matchId);
+  const assignments = assignmentsQuery.data ?? EMPTY_ASSIGNMENTS;
+  const casters = castersQuery.data ?? EMPTY_CASTERS;
+  const loading = assignmentsQuery.isPending || castersQuery.isPending;
+
+  const loadFailed = !!assignmentsQuery.error || !!castersQuery.error;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: un toast par échec, pas par rendu
+  useEffect(() => {
+    if (!loadFailed) return;
+    logger.error('[MatchCastAssignments] load', {
+      assignments: assignmentsQuery.error,
+      casters: castersQuery.error,
+    });
+    addToast(t.loadError, 'error');
+  }, [loadFailed]);
 
   const [castMemberId, setCastMemberId] = useState('');
   const [briefingAt, setBriefingAt] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [a, c] = await Promise.all([
-        adminFetchJson<{ assignments: Assignment[] }>(
-          `/api/admin/matches/${matchId}/cast-assignments`
-        ),
-        // Les trois formes réellement rencontrées sont déclarées ici plutôt
-        // que rattrapées par un cast : `as any` masquait le fait qu'un tableau
-        // nu est une réponse possible, et le jour où une quatrième forme
-        // apparaîtra, c'est la compilation qui le dira.
-        adminFetchJson<CastMembersResponse>(
-          '/api/admin/cast-members?limit=200&includeInactive=true'
-        ),
-      ]);
-      setAssignments(a?.assignments ?? []);
-      // The cast-members endpoint returns rows under different keys depending
-      // on version; accept both.
-      const list = Array.isArray(c) ? c : (c?.castMembers ?? c?.items ?? []);
-      setCasters(list);
-    } catch (e) {
-      logger.error('[MatchCastAssignments] load', e);
-      addToast(t.loadError, 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, addToast, matchId, t]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   const assignedIds = useMemo(
     () => new Set(assignments.map((a) => a.cast_member_id)),
@@ -124,17 +93,13 @@ export default function MatchCastAssignments({ matchId }: Props) {
     }
     setSubmitting(true);
     try {
-      await adminFetchJson(`/api/admin/matches/${matchId}/cast-assignments`, {
-        method: 'POST',
-        body: JSON.stringify({
-          castMemberId,
-          briefingAt: new Date(briefingAt).toISOString(),
-        }),
+      await mutations.add.mutateAsync({
+        castMemberId,
+        briefingAt: new Date(briefingAt).toISOString(),
       });
       addToast(t.assigned, 'success');
       setCastMemberId('');
       setBriefingAt('');
-      await load();
     } catch (err) {
       addToast((err as Error).message || t.genericError, 'error');
     } finally {
@@ -146,12 +111,8 @@ export default function MatchCastAssignments({ matchId }: Props) {
     const ok = await confirm({ title: t.confirmRemove, variant: 'danger' });
     if (!ok) return;
     try {
-      await adminFetchJson(
-        `/api/admin/matches/${matchId}/cast-assignments/${assignmentId}`,
-        { method: 'DELETE' }
-      );
+      await mutations.remove.mutateAsync(assignmentId);
       addToast(t.assignmentDeleted, 'success');
-      await load();
     } catch (err) {
       addToast((err as Error).message || t.genericError, 'error');
     }
@@ -159,17 +120,11 @@ export default function MatchCastAssignments({ matchId }: Props) {
 
   async function handleReschedule(assignmentId: string, isoLocal: string) {
     try {
-      await adminFetchJson(
-        `/api/admin/matches/${matchId}/cast-assignments/${assignmentId}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            briefingAt: new Date(isoLocal).toISOString(),
-          }),
-        }
-      );
+      await mutations.reschedule.mutateAsync({
+        assignmentId,
+        briefingAt: new Date(isoLocal).toISOString(),
+      });
       addToast(t.rescheduled, 'success');
-      await load();
     } catch (err) {
       addToast((err as Error).message || t.genericError, 'error');
     }

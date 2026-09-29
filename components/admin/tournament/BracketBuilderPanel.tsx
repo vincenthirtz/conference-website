@@ -10,6 +10,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tournamentUrls } from '@/features/admin/tournaments/client';
+import { useTournamentRead } from '@/features/admin/tournaments/hooks/useTournamentRead';
+import { useTournamentTeams } from '@/features/admin/tournaments/hooks/useTournamentTeams';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { formatDateHeader } from '@/utils/dateFormatters';
@@ -41,6 +44,8 @@ import {
 
 type ViewMode = 'planning' | 'list' | 'bracket';
 
+const NO_TEAMS: TournamentTeam[] = [];
+
 type ApiResponse = {
   tournament: { id: string; name: string; slug: string | null } | null;
   matches: ScheduleMatch[];
@@ -55,59 +60,49 @@ export default function BracketBuilderPanel() {
   const { id } = router.query;
   const t = useAdminT(nsAdminTournamentBracketBuilder);
 
-  const [loading, setLoading] = useState(true);
+  const tid = String(id ?? '');
   const [saving, setSaving] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [actionError, setErrorMsg] = useState<string | null>(null);
   const { addToast } = useToast();
   const { adminFetch } = useAdminFetch();
-  const [tournament, setTournament] = useState<ApiResponse['tournament']>(null);
+  // `includeTeams=1` : sans lui, la réponse ne porte que `team1_id` /
+  // `team2_id`, et chaque carte s'affichait SANS NOM D'ÉQUIPE — trente cartes
+  // vides sur un tournoi dont les trente matchs sont pourtant appariés.
+  const matchesQuery = useTournamentRead<ApiResponse>(
+    tid,
+    'builder',
+    (i) => tournamentUrls.matches(i, { includeTeams: 1, limit: 512 }),
+    { rehydrate: true }
+  );
+  const teamsQuery = useTournamentTeams<TournamentTeam>(tid);
+  const loading = matchesQuery.isFetching;
+  const errorMsg =
+    actionError ??
+    (matchesQuery.error ? matchesQuery.error.message || t.errorLoad : null);
+  const tournament = matchesQuery.data?.tournament ?? null;
+  const tournamentTeams = teamsQuery.data ?? NO_TEAMS;
+  // Grille éditée localement (glisser-déposer) : chaque lecture la remplace
+  // et remet « modifié » à zéro — comme avant.
   const [matches, setMatches] = useState<ScheduleMatch[]>([]);
   const [dirty, setDirty] = useState(false);
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('planning');
-  const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>([]);
   const printRef = useRef<HTMLDivElement>(null);
 
-  const fetchData = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    setErrorMsg(null);
-    setDirty(false);
-    try {
-      const [matchRes, teamsRes] = await Promise.all([
-        adminFetch(
-          // `includeTeams=1` : sans lui, la réponse ne porte que `team1_id` /
-          // `team2_id`, et chaque carte s'affichait SANS NOM D'ÉQUIPE — trente
-          // cartes vides sur un tournoi dont les trente matchs sont pourtant
-          // appariés. Les deux paramètres qui étaient là avant
-          // (`layout=bracket`, `includeGraph=1`) ne sont lus par aucun endpoint.
-          `/api/admin/tournament/${id}/matches?includeTeams=1&limit=512`
-        ),
-        adminFetch(`/api/admin/tournament/${id}/teams`),
-      ]);
-      if (!matchRes.ok) {
-        const json = await matchRes.json().catch(() => ({}));
-        throw new Error(json.error || t.errorLoad);
-      }
-      const json: ApiResponse = await matchRes.json();
-      setTournament(json.tournament);
-      setMatches(json.matches || []);
-
-      if (teamsRes.ok) {
-        const teamsJson = await teamsRes.json();
-        setTournamentTeams(teamsJson.teams || []);
-      }
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }, [id, adminFetch, t]);
-
+  const serverMatches = matchesQuery.data;
   useEffect(() => {
-    if (!id) return;
-    fetchData();
-  }, [id, fetchData]);
+    if (!serverMatches) return;
+    setMatches(serverMatches.matches || []);
+    setDirty(false);
+  }, [serverMatches]);
+
+  const { refetch: refetchMatches } = matchesQuery;
+  const { refetch: refetchTeams } = teamsQuery;
+  const fetchData = useCallback(() => {
+    setErrorMsg(null);
+    void refetchMatches();
+    void refetchTeams();
+  }, [refetchMatches, refetchTeams]);
 
   /** Teams already placed in a match slot — exclude from picker */
   const assignedTeamIds = useMemo(() => {
@@ -495,7 +490,7 @@ ${day.matches
     setSaving(true);
     setErrorMsg(null);
     try {
-      const res = await adminFetch(`/api/admin/tournament/${id}/bracket`, {
+      const res = await adminFetch(tournamentUrls.bracket(tid), {
         method: 'POST',
         body: JSON.stringify({
           action: 'save',

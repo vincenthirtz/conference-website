@@ -10,6 +10,10 @@
 
 import { useCallback, type RefObject } from 'react';
 import { format } from '@/lib/i18n/useAdminT';
+import {
+  tournamentsUrls,
+  tournamentUrls,
+} from '@/features/admin/tournaments/client';
 import type { MatchStatus } from '@/types/admin';
 import {
   bracketSeedOrder,
@@ -296,7 +300,7 @@ export function useSimulatorSessionActions(deps: SimulatorSessionActionsDeps) {
       });
 
       // Step 1: Create tournament
-      const tRes = await simMutate('/api/admin/tournaments', {
+      const tRes = await simMutate(tournamentsUrls.collection, {
         method: 'POST',
         body: JSON.stringify({
           name: tournamentName,
@@ -322,7 +326,7 @@ export function useSimulatorSessionActions(deps: SimulatorSessionActionsDeps) {
       // Step 2: Register teams (only real teams with valid UUIDs)
       const realTeamIds = teams.filter((t) => !t.id.startsWith('sim-'));
       for (const t of realTeamIds) {
-        await simMutate(`/api/admin/tournament/${tournamentId}/teams`, {
+        await simMutate(tournamentUrls.teams(tournamentId), {
           method: 'POST',
           body: JSON.stringify({ team_id: t.id, seed: t.seed }),
         });
@@ -331,19 +335,16 @@ export function useSimulatorSessionActions(deps: SimulatorSessionActionsDeps) {
       // Step 3: Create stages
       for (let sIdx = 0; sIdx < stages.length; sIdx++) {
         const simStage = stages[sIdx];
-        const stageRes = await simMutate(
-          `/api/admin/tournament/${tournamentId}/stages`,
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              name: simStage.name,
-              stage_type: simStage.stage_type,
-              order_index: sIdx,
-              is_active: sIdx === 0,
-              is_public: false,
-            }),
-          }
-        );
+        const stageRes = await simMutate(tournamentUrls.stages(tournamentId), {
+          method: 'POST',
+          body: JSON.stringify({
+            name: simStage.name,
+            stage_type: simStage.stage_type,
+            order_index: sIdx,
+            is_active: sIdx === 0,
+            is_public: false,
+          }),
+        });
         if (!stageRes.ok) continue;
         const createdStage = await stageRes.json();
         const stageId = createdStage.id;
@@ -366,7 +367,7 @@ export function useSimulatorSessionActions(deps: SimulatorSessionActionsDeps) {
         }));
 
         if (matchPayloads.length > 0) {
-          await simMutate(`/api/admin/tournament/${tournamentId}/matches`, {
+          await simMutate(tournamentUrls.matches(tournamentId), {
             method: 'POST',
             body: JSON.stringify({ matches: matchPayloads }),
           });

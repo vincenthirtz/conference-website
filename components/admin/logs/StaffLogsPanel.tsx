@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
+import { logsPaths } from '@/features/admin/logs/client';
+import { useTournamentOptions } from '@/features/admin/_shared/tournamentOptions';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import {
@@ -47,10 +49,7 @@ type TournamentMini = {
   slug: string | null;
 };
 
-type TournamentsApiResponse = {
-  tournaments: TournamentMini[];
-  total: number | null;
-};
+const EMPTY_TOURNAMENTS: TournamentMini[] = [];
 
 // BCP-47 locale for the active app language (dates render in the user's own
 // timezone automatically — `Intl` defaults to the runtime zone).
@@ -104,8 +103,11 @@ export default function StaffLogsPanel() {
   const { lang } = useLang();
   const dateLocale = DATE_LOCALE[lang];
 
-  const [tournaments, setTournaments] = useState<TournamentMini[]>([]);
-  const [loadingTournaments, setLoadingTournaments] = useState(false);
+  // Liste courte des tournois (cache partagé avec les autres filtres).
+  const tournamentOptions = useTournamentOptions();
+  const tournaments: TournamentMini[] =
+    tournamentOptions.data?.tournaments ?? EMPTY_TOURNAMENTS;
+  const loadingTournaments = tournamentOptions.isPending;
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -142,7 +144,7 @@ export default function StaffLogsPanel() {
     limit,
     setOffset,
     resetOffset,
-  } = useAdminResource<StaffLog, LogsApiResponse>('/api/admin/logs', {
+  } = useAdminResource<StaffLog, LogsApiResponse>(logsPaths.staff, {
     limit: 100,
     params: {
       entityType: entityType.trim(),
@@ -159,26 +161,14 @@ export default function StaffLogsPanel() {
     select: (res) => res.logs || [],
   });
 
-  // Dropdown tournois : endpoint distinct, chargé une fois au montage.
   useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        setLoadingTournaments(true);
-        const res = await adminFetch('/api/admin/tournaments?limit=200');
-        if (!res.ok) return;
-        const json: TournamentsApiResponse = await res.json();
-        if (active) setTournaments(json.tournaments || []);
-      } catch (e) {
-        logger.error('Failed to load tournaments for logs filter', e);
-      } finally {
-        if (active) setLoadingTournaments(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [adminFetch]);
+    if (tournamentOptions.error) {
+      logger.error(
+        'Failed to load tournaments for logs filter',
+        tournamentOptions.error
+      );
+    }
+  }, [tournamentOptions.error]);
 
   function handleFilterSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -225,15 +215,10 @@ export default function StaffLogsPanel() {
     setExportError(null);
     setExporting(true);
 
-    const params = new URLSearchParams();
-    params.set('format', 'csv');
-    for (const [key, value] of Object.entries(currentFilters)) {
-      if (value) params.set(key, value);
-    }
-
-    const url = `/api/admin/logs?${params.toString()}`;
     try {
-      const res = await adminFetch(url);
+      const res = await adminFetch(
+        logsPaths.csv(logsPaths.staff, currentFilters)
+      );
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }

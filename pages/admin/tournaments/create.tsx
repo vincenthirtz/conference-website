@@ -10,7 +10,12 @@ import { applyTemplateDefaults } from '@/utils/admin/tournamentTemplateForm';
 import SoloModeCheckbox from '@/components/admin/tournaments/SoloModeCheckbox';
 import TemplatePicker from '@/components/admin/tournaments/TemplatePicker';
 import { useAutoSave } from '@/utils/useAutoSave';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  tournamentsUrls,
+  tournamentUrls,
+} from '@/features/admin/tournaments/client';
+import { useTournamentTemplates } from '@/features/admin/tournaments/hooks/useTournamentTemplates';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import DraftBanner from '@/components/admin/DraftBanner';
 import AutoSaveIndicator from '@/components/admin/AutoSaveIndicator';
@@ -63,32 +68,19 @@ export const getServerSideProps = withStaffPage({
 function AdminTournamentCreatePage(_props: Props) {
   const t = useAdminT(nsAdminTournamentsCreate);
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
   const { mutate: mutateIdempotent } = useIdempotentMutation();
   const { mutate: createTournament } = useIdempotentMutation();
-  const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>(
-    []
-  );
+  const templatesQuery = useTournamentTemplates();
+  const customTemplates = templatesQuery.data ?? [];
+  const templatesError = templatesQuery.error;
 
   useEffect(() => {
-    let cancelled = false;
-    adminFetchJson<{ templates?: TournamentTemplate[] }>(
-      '/api/admin/tournament-templates'
-    )
-      .then((json) => {
-        if (!cancelled) setCustomTemplates(json.templates || []);
-      })
-      .catch((err) => {
-        // Échec non bloquant : le reste de la page (templates prédéfinis,
-        // formulaire) reste utilisable. On informe juste l'utilisateur.
-        if (cancelled) return;
-        logger.error('load custom templates error', err);
-        setErrorMsg(t.errorTemplatesLoad);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [adminFetchJson, t.errorTemplatesLoad]);
+    // Échec non bloquant : le reste de la page (templates prédéfinis,
+    // formulaire) reste utilisable. On informe juste l'utilisateur.
+    if (!templatesError) return;
+    logger.error('load custom templates error', templatesError);
+    setErrorMsg(t.errorTemplatesLoad);
+  }, [templatesError, t.errorTemplatesLoad]);
 
   const [form, setForm] = useState<{
     name: string;
@@ -206,7 +198,7 @@ function AdminTournamentCreatePage(_props: Props) {
     };
 
     try {
-      const res = await createTournament('/api/admin/tournaments', {
+      const res = await createTournament(tournamentsUrls.collection, {
         method: 'POST',
         body: JSON.stringify(payload),
       });
@@ -225,7 +217,7 @@ function AdminTournamentCreatePage(_props: Props) {
         if (selectedTemplate) {
           try {
             const tplRes = await mutateIdempotent(
-              `/api/admin/tournament/${created.id}/apply-template`,
+              tournamentUrls.applyTemplate(created.id),
               {
                 method: 'POST',
                 body: JSON.stringify({ templateId: selectedTemplate.id }),
@@ -569,4 +561,4 @@ function AdminTournamentCreatePage(_props: Props) {
   );
 }
 
-export default AdminTournamentCreatePage;
+export default withAdminQuery(AdminTournamentCreatePage);

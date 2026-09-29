@@ -1,9 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
+import {
+  type AdherentRecord,
+  adherentsClient,
+} from '@/features/admin/adherents/client';
+import {
+  adherentsKeys,
+  useAdherent,
+  useCotisationAmount,
+} from '@/features/admin/adherents/hooks/useAdherents';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminAdherentDetail from '@/lib/i18n/locales/admin-fr/adminAdherentDetail';
 import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
@@ -62,44 +73,20 @@ type FormData = {
   notes: string;
 };
 
-type AdherentData = {
-  id: string;
-  member_number: string | null;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string | null;
-  birth_date: string | null;
-  address: string | null;
-  city: string | null;
-  postal_code: string | null;
-  country: string | null;
-  join_date: string;
-  current_year: number;
-  payment_status: string;
-  payment_amount: number;
-  payment_date: string | null;
-  payment_method: string | null;
-  payment_reference: string | null;
-  is_active: boolean;
-  role: string;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-};
+type AdherentData = AdherentRecord;
 
 function AdminEditAdherentPage(_props: Props) {
   const t = useAdminT(nsAdminAdherentDetail);
   const tf = useAdminT(nsAdminFiche);
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
+  const idStr = typeof id === 'string' ? id : undefined;
 
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [adherent, setAdherent] = useState<AdherentData | null>(null);
-  const [cotisationAmount, setCotisationAmount] = useState<number>(0);
+  const queryClient = useQueryClient();
+  const detail = useAdherent(idStr);
+  const { data: cotisationAmount = 0 } = useCotisationAmount();
 
   const currentYear = new Date().getFullYear();
   const today = new Date().toISOString().split('T')[0];
@@ -126,58 +113,33 @@ function AdminEditAdherentPage(_props: Props) {
     notes: '',
   });
 
-  const fetchAdherent = useCallback(async () => {
-    if (!id || typeof id !== 'string') return;
-
-    setLoading(true);
-    try {
-      const data = await adminFetchJson<AdherentData>(
-        `/api/admin/adherents/${id}`
-      );
-      setAdherent(data);
-
-      setForm({
-        firstName: data.first_name,
-        lastName: data.last_name,
-        email: data.email,
-        phone: data.phone || '',
-        birthDate: data.birth_date || '',
-        address: data.address || '',
-        city: data.city || '',
-        postalCode: data.postal_code || '',
-        country: data.country || 'France',
-        joinDate: data.join_date,
-        currentYear: data.current_year,
-        paymentStatus: data.payment_status as FormData['paymentStatus'],
-        paymentAmount: data.payment_amount,
-        paymentDate: data.payment_date || '',
-        paymentMethod: (data.payment_method || '') as FormData['paymentMethod'],
-        paymentReference: data.payment_reference || '',
-        isActive: data.is_active,
-        role: data.role as FormData['role'],
-        notes: data.notes || '',
-      });
-
-      // Récupérer le montant de cotisation
-      const settingsJson = await adminFetchJson<{
-        items?: { key: string; value: string }[];
-      }>('/api/admin/site-settings');
-      const cotisation = settingsJson.items?.find(
-        (s: { key: string }) => s.key === 'cotisation_amount'
-      );
-      if (cotisation?.value) {
-        setCotisationAmount(parseFloat(cotisation.value) || 0);
-      }
-    } catch (err: unknown) {
-      setError((err as Error).message || t.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [id, adminFetchJson, t]);
-
-  useEffect(() => {
-    fetchAdherent();
-  }, [fetchAdherent]);
+  const hydrate = useCallback((data: AdherentData) => {
+    setForm({
+      firstName: data.first_name,
+      lastName: data.last_name,
+      email: data.email,
+      phone: data.phone || '',
+      birthDate: data.birth_date || '',
+      address: data.address || '',
+      city: data.city || '',
+      postalCode: data.postal_code || '',
+      country: data.country || 'France',
+      joinDate: data.join_date,
+      currentYear: data.current_year,
+      paymentStatus: data.payment_status as FormData['paymentStatus'],
+      paymentAmount: data.payment_amount,
+      paymentDate: data.payment_date || '',
+      paymentMethod: (data.payment_method || '') as FormData['paymentMethod'],
+      paymentReference: data.payment_reference || '',
+      isActive: data.is_active,
+      role: data.role as FormData['role'],
+      notes: data.notes || '',
+    });
+  }, []);
+  const hydrated = useHydrateOnce(idStr ?? null, detail.data, hydrate);
+  // Lecture en échec : écran « introuvable », comme avant.
+  const loading = !detail.error && !hydrated;
+  const adherent: AdherentData | null = hydrated ? (detail.data ?? null) : null;
 
   const updateField = <K extends keyof FormData>(
     field: K,
@@ -207,13 +169,12 @@ function AdminEditAdherentPage(_props: Props) {
     setSaving(true);
 
     try {
-      await adminFetchJson(`/api/admin/adherents/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          ...form,
-          paymentMethod: form.paymentMethod || null,
-        }),
+      await adherentsClient.update(idStr as string, {
+        ...form,
+        paymentMethod: form.paymentMethod || null,
       });
+      // La liste (cache partagé) est périmée : relue au retour.
+      void queryClient.invalidateQueries({ queryKey: adherentsKeys.all });
 
       router.push('/admin/adherents');
     } catch (err: unknown) {
@@ -649,4 +610,4 @@ export const getServerSideProps = withStaffPage({
   permission: 'manage_communications',
 });
 
-export default AdminEditAdherentPage;
+export default withAdminQuery(AdminEditAdherentPage);

@@ -18,14 +18,20 @@
 // nettes dans le journal staff là où une édition silencieuse en laisserait une
 // ambiguë.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminTeamAvailability from '@/lib/i18n/locales/admin-fr/adminTeamAvailability';
+import { teamsPaths } from '@/features/admin/teams/client';
+import {
+  teamsKeys,
+  useTeamAvailability,
+  useTeamTournaments,
+} from '@/features/admin/teams/hooks/useTeamsQueries';
 import { TOURNAMENT_TIMEZONES } from '@/utils/timezone';
 import { describeConstraint } from '@/utils/matches/availabilityRows';
 import type {
@@ -44,18 +50,15 @@ const KINDS: AvailabilityConstraintKind[] = [
 
 export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
   const t = useAdminT(nsAdminTeamAvailability);
-  const { adminFetchJson } = useAdminFetch();
   const { mutate } = useIdempotentMutation();
+  const qc = useQueryClient();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 
-  const [constraints, setConstraints] = useState<AvailabilityConstraint[]>([]);
-  const [tournaments, setTournaments] = useState<TournamentOption[]>([]);
-  const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // État du formulaire. Un seul objet plutôt qu'un state par champ : la nature
   // pilote quels champs comptent, et les remettre à plat à chaque bascule
@@ -83,48 +86,28 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
     [t]
   );
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await adminFetchJson<{
-        constraints: AvailabilityConstraint[];
-      }>(`/api/admin/teams/${teamId}/availability`);
-      setConstraints(data.constraints ?? []);
-      setError(null);
-    } catch {
-      setError(t.errorGeneric);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, teamId, t.errorGeneric]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const availabilityQuery = useTeamAvailability(teamId);
+  const constraints: AvailabilityConstraint[] = availabilityQuery.data ?? [];
+  const loading = availabilityQuery.isPending;
+  // Erreur de lecture OU d'enregistrement, rendue au même endroit.
+  const error =
+    formError ?? (availabilityQuery.isError ? t.errorGeneric : null);
+  const load = () =>
+    qc.invalidateQueries({ queryKey: teamsKeys.availability(teamId) });
 
   // La liste des tournois n'est chargée qu'à l'ouverture du formulaire : elle ne
   // sert qu'à choisir une portée, et la fiche équipe se lit bien plus souvent
-  // qu'elle ne se modifie.
-  useEffect(() => {
-    if (!formOpen || tournaments.length > 0) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const data = await adminFetchJson<{
-          registered?: TournamentOption[];
-          available?: TournamentOption[];
-        }>(`/api/admin/teams/${teamId}/tournaments`);
-        if (cancelled) return;
-        setTournaments([...(data.registered ?? []), ...(data.available ?? [])]);
-      } catch {
-        // La portée « tous les tournois » reste disponible : une liste de
-        // tournois indisponible ne doit pas empêcher de noter une contrainte.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [formOpen, tournaments.length, adminFetchJson, teamId]);
+  // qu'elle ne se modifie. Même clé que la section Tournois de l'édition : une
+  // seule requête pour les deux. En échec, la portée « tous les tournois »
+  // reste disponible.
+  const tournamentsQuery = useTeamTournaments(teamId, formOpen);
+  const tournaments = useMemo<TournamentOption[]>(
+    () => [
+      ...(tournamentsQuery.data?.registered ?? []),
+      ...(tournamentsQuery.data?.available ?? []),
+    ],
+    [tournamentsQuery.data]
+  );
 
   function resetForm() {
     setKind('blackout');
@@ -135,7 +118,7 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
     setTimezone('Europe/Paris');
     setScope('');
     setNote('');
-    setError(null);
+    setFormError(null);
   }
 
   const kindLabel = (k: AvailabilityConstraintKind): string =>
@@ -159,12 +142,12 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
     if (!canSubmit || busy) return;
 
     if (kind === 'blackout' && endsOn < startsOn) {
-      setError(t.errorRange);
+      setFormError(t.errorRange);
       return;
     }
 
     setBusy(true);
-    setError(null);
+    setFormError(null);
     try {
       const body: Record<string, unknown> = {
         kind,
@@ -181,13 +164,13 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
         body.time_of_day = timeOfDay;
       }
 
-      const res = await mutate(`/api/admin/teams/${teamId}/availability`, {
+      const res = await mutate(teamsPaths.availability(teamId), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        setError(t.errorGeneric);
+        setFormError(t.errorGeneric);
         return;
       }
       addToast(t.addedToast, 'success');
@@ -195,7 +178,7 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
       resetForm();
       await load();
     } catch {
-      setError(t.errorGeneric);
+      setFormError(t.errorGeneric);
     } finally {
       setBusy(false);
     }
@@ -213,10 +196,9 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
 
     setBusyId(c.id);
     try {
-      const res = await mutate(
-        `/api/admin/teams/${teamId}/availability?id=${c.id}`,
-        { method: 'DELETE' }
-      );
+      const res = await mutate(teamsPaths.availabilityItem(teamId, c.id), {
+        method: 'DELETE',
+      });
       if (!res.ok) {
         addToast(t.errorGeneric, 'error');
         return;

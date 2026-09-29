@@ -11,8 +11,16 @@
 // client recevra (« Espace suspendu. Motif : … »). Écrire « test » là-dedans se
 // paie en appel au support la semaine suivante.
 
-import { useCallback, useEffect, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  type TenantDetail,
+  tenantsPaths,
+} from '@/features/admin/tenants/client';
+import {
+  tenantsKeys,
+  useTenantDetail,
+} from '@/features/admin/tenants/hooks/useTenants';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -44,29 +52,16 @@ export default function TenantLifecyclePanel({
   onChanged?: () => void;
 }) {
   const t = useAdminT(nsAdminTenantDetail);
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
+  const qc = useQueryClient();
   const { addToast } = useToast();
 
-  const [state, setState] = useState<Tenant | null>(null);
+  // Même clé que la fiche : une seule requête pour les deux.
+  const { data: detail } = useTenantDetail(tenantId);
+  const state: Tenant | null = detail?.tenant ?? null;
   const [target, setTarget] = useState<State>('suspended');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      const data = await adminFetchJson<{ tenant: Tenant }>(
-        `/api/admin/tenants/${tenantId}`
-      );
-      setState(data.tenant);
-    } catch {
-      setState(null);
-    }
-  }, [adminFetchJson, tenantId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const current = state?.lifecycle_state ?? 'active';
 
@@ -74,7 +69,7 @@ export default function TenantLifecyclePanel({
     setBusy(true);
     try {
       const resp = await mutateJson<{ tenant: Tenant }>(
-        `/api/admin/tenants/${tenantId}/lifecycle`,
+        tenantsPaths.lifecycle(tenantId),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -84,7 +79,9 @@ export default function TenantLifecyclePanel({
           }),
         }
       );
-      setState(resp.tenant);
+      qc.setQueryData<TenantDetail>(tenantsKeys.detail(tenantId), (prev) =>
+        prev ? { ...prev, tenant: { ...prev.tenant, ...resp.tenant } } : prev
+      );
       setReason('');
       addToast(t.lifecycleChanged, 'success');
       onChanged?.();

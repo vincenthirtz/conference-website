@@ -11,7 +11,7 @@ import {
   useIdempotentMutation,
   BgSyncQueuedError,
 } from '@/hooks/useIdempotentMutation';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { matchesClient, matchesPaths } from '@/features/admin/matches/client';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import nsAdminDashboardDisputeResolveModal from '@/lib/i18n/locales/admin-fr/adminDashboardDisputeResolveModal';
@@ -89,7 +89,7 @@ export default function DisputeResolveModal({
       }
       // mutateJson injecte l'Idempotency-Key : un retry réseau ne re-propage
       // pas l'avancement du bracket (l'endpoint rejoue la 1ère réponse).
-      await mutateJson(`/api/admin/matches/${matchId}/dispute`, {
+      await mutateJson(matchesPaths.dispute(matchId), {
         method: 'PATCH',
         body: JSON.stringify(body),
       });
@@ -318,7 +318,6 @@ function EvidenceSection({
 }) {
   const t = useAdminT(nsAdminDashboardDisputeResolveModal);
   const { lang } = useLang();
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
 
   const [items, setItems] = useState<EvidenceItem[] | null>(null);
@@ -335,9 +334,7 @@ function EvidenceSection({
     setLoading(true);
     setLoadError(null);
     try {
-      const json = await adminFetchJson<EvidenceResponse>(
-        `/api/admin/matches/${matchId}/evidence`
-      );
+      const json = await matchesClient.evidence<EvidenceResponse>(matchId);
       setItems(json.evidence ?? []);
     } catch (e: unknown) {
       setLoadError((e as Error)?.message ?? t.evidenceError);
@@ -345,7 +342,7 @@ function EvidenceSection({
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, matchId, t.evidenceError]);
+  }, [matchId, t.evidenceError]);
 
   useEffect(() => {
     if (matchId) load();
@@ -365,7 +362,7 @@ function EvidenceSection({
     setAddError(null);
     setAdded(false);
     try {
-      await mutateJson(`/api/admin/matches/${matchId}/evidence`, {
+      await mutateJson(matchesPaths.evidence(matchId), {
         method: 'POST',
         body: JSON.stringify(body),
       });

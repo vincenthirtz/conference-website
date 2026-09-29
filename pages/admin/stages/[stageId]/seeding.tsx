@@ -8,11 +8,17 @@
 // - Garde-fou : si un match round 1 est ongoing/finished/walkover, tout le
 //   formulaire est désactivé (lock) et l'API refuserait aussi.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { stageUrls } from '@/features/admin/stages/client';
+import {
+  useInvalidateSeeding,
+  useRatingSeedingPreview,
+  useSeedingPreview,
+} from '@/features/admin/stages/hooks/useStageSeeding';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -102,13 +108,9 @@ function SeedingComparatorPage(_: StaffProps) {
   const id = Array.isArray(stageId) ? stageId[0] : stageId;
 
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
 
-  const [data, setData] = useState<PreviewResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [sourceStageId, setSourceStageId] = useState<string>('');
   const [pattern, setPattern] = useState<Pattern>('standard');
   const [draft, setDraft] = useState<Map<string, string>>(new Map()); // key=`${matchId}:${slot}` -> teamId
@@ -118,89 +120,46 @@ function SeedingComparatorPage(_: StaffProps) {
   const [ratingMethod, setRatingMethod] = useState<RatingMethod>('rating_sos');
   const [ratingPattern, setRatingPattern] = useState<Pattern>('standard');
   const [sosWeight, setSosWeight] = useState<string>('');
-  const [ratingData, setRatingData] = useState<RatingPreviewResponse | null>(
-    null
+
+  const previewQuery = useSeedingPreview<PreviewResponse>(
+    id ?? '',
+    sourceStageId,
+    pattern
   );
-  const [ratingLoading, setRatingLoading] = useState(false);
-  const [ratingError, setRatingError] = useState<string | null>(null);
-
-  const fetchPreview = useCallback(
-    async (src: string | null) => {
-      if (!id) return;
-      setLoading(true);
-      setError(null);
-      try {
-        const params = new URLSearchParams();
-        if (src) params.set('sourceStageId', src);
-        params.set('pattern', pattern);
-        const qs = params.toString();
-        const json = await adminFetchJson<PreviewResponse>(
-          `/api/admin/stages/${id}/seeding-preview${qs ? `?${qs}` : ''}`
-        );
-        setData(json);
-        if (!src && json.sources.length > 0) {
-          setSourceStageId(json.sources[0].id);
-        }
-        // Initialise/refresh le draft sur l'état actuel (sans écraser
-        // une saisie en cours si l'utilisateur a déjà bougé des slots).
-        setDraft((prev) => {
-          if (prev.size > 0) return prev;
-          const m = new Map<string, string>();
-          for (const c of json.current) {
-            if (c.teamId) m.set(`${c.matchId}:${c.slot}`, c.teamId);
-          }
-          return m;
-        });
-      } catch (err) {
-        const e = err as AdminFetchError;
-        setError(e.message || t.errLoad);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [adminFetchJson, id, pattern, t.errLoad]
-  );
-
-  useEffect(() => {
-    fetchPreview(sourceStageId || null);
-  }, [fetchPreview, sourceStageId]);
-
-  const fetchRatingPreview = useCallback(async () => {
-    if (!id) return;
-    setRatingLoading(true);
-    setRatingError(null);
-    try {
-      const params = new URLSearchParams();
-      params.set('method', ratingMethod);
-      params.set('pattern', ratingPattern);
-      const w = Number(sosWeight);
-      if (sosWeight.trim() !== '' && Number.isFinite(w)) {
-        params.set('sosWeight', String(w));
-      }
-      const json = await adminFetchJson<RatingPreviewResponse>(
-        `/api/admin/stages/${id}/rating-seeding-preview?${params.toString()}`
-      );
-      setRatingData(json);
-    } catch (err) {
-      const e = err as AdminFetchError;
-      setRatingError(extractErr(e, t.errFallback) || t.errLoad);
-      setRatingData(null);
-    } finally {
-      setRatingLoading(false);
-    }
-  }, [
-    adminFetchJson,
-    id,
+  const data = previewQuery.data ?? null;
+  const loading = previewQuery.isFetching;
+  const error = previewQuery.error
+    ? previewQuery.error.message || t.errLoad
+    : null;
+  const ratingQuery = useRatingSeedingPreview<RatingPreviewResponse>(
+    id ?? '',
     ratingMethod,
     ratingPattern,
-    sosWeight,
-    t.errFallback,
-    t.errLoad,
-  ]);
+    sosWeight
+  );
+  const ratingData = ratingQuery.error ? null : (ratingQuery.data ?? null);
+  const ratingLoading = ratingQuery.isFetching;
+  const ratingError = ratingQuery.error
+    ? extractErr(ratingQuery.error, t.errFallback) || t.errLoad
+    : null;
+  const invalidateSeeding = useInvalidateSeeding(id ?? '');
 
+  // Première lecture : la source par défaut est la première proposée. Le
+  // draft s'initialise sur l'état actuel sans écraser une saisie en cours.
   useEffect(() => {
-    fetchRatingPreview();
-  }, [fetchRatingPreview]);
+    if (!data) return;
+    if (!sourceStageId && data.sources.length > 0) {
+      setSourceStageId(data.sources[0].id);
+    }
+    setDraft((prev) => {
+      if (prev.size > 0) return prev;
+      const m = new Map<string, string>();
+      for (const c of data.current) {
+        if (c.teamId) m.set(`${c.matchId}:${c.slot}`, c.teamId);
+      }
+      return m;
+    });
+  }, [data, sourceStageId]);
 
   const locked = data?.lock.locked ?? false;
   const matches = useMemo(() => {
@@ -284,7 +243,7 @@ function SeedingComparatorPage(_: StaffProps) {
 
     setSubmitting(true);
     try {
-      await mutateJson(`/api/admin/stages/${id}/auto-seed`, {
+      await mutateJson(stageUrls.autoSeed(id), {
         method: 'POST',
         body: JSON.stringify({
           sourceStageId,
@@ -293,7 +252,7 @@ function SeedingComparatorPage(_: StaffProps) {
       });
       addToast(t.toastAutoApplied, 'success');
       setDraft(new Map()); // reset pour refléter la nouvelle baseline
-      await fetchPreview(sourceStageId);
+      await invalidateSeeding();
     } catch (err) {
       addToast(extractErr(err, t.errFallback), 'error');
     } finally {
@@ -343,13 +302,13 @@ function SeedingComparatorPage(_: StaffProps) {
 
     setSubmitting(true);
     try {
-      await mutateJson(`/api/admin/stages/${id}/manual-seed`, {
+      await mutateJson(stageUrls.manualSeed(id), {
         method: 'POST',
         body: JSON.stringify({ assignments, replaceExisting: true }),
       });
       addToast(t.toastManualApplied, 'success');
       setDraft(new Map());
-      await fetchPreview(sourceStageId || null);
+      await invalidateSeeding();
     } catch (err) {
       addToast(extractErr(err, t.errFallback), 'error');
     } finally {
@@ -391,7 +350,7 @@ function SeedingComparatorPage(_: StaffProps) {
         body.sosWeight = w;
       }
       const json = await mutateJson<RatingSeedResponse>(
-        `/api/admin/stages/${id}/rating-seed`,
+        stageUrls.ratingSeed(id),
         {
           method: 'POST',
           body: JSON.stringify(body),
@@ -402,10 +361,7 @@ function SeedingComparatorPage(_: StaffProps) {
         'success'
       );
       setDraft(new Map());
-      await Promise.all([
-        fetchPreview(sourceStageId || null),
-        fetchRatingPreview(),
-      ]);
+      await invalidateSeeding();
     } catch (err) {
       const status = (err as { status?: number }).status;
       if (status === 409) {
@@ -439,10 +395,7 @@ function SeedingComparatorPage(_: StaffProps) {
           })}
           badge={locked ? <Chip tone="err">{t.lockedChip}</Chip> : undefined}
           actions={
-            <AdminButton
-              size="sm"
-              onClick={() => fetchPreview(sourceStageId || null)}
-            >
+            <AdminButton size="sm" onClick={() => void previewQuery.refetch()}>
               {t.refresh}
             </AdminButton>
           }
@@ -645,4 +598,4 @@ function extractErr(err: unknown, fallback: string): string {
   return fallback;
 }
 
-export default SeedingComparatorPage;
+export default withAdminQuery(SeedingComparatorPage);

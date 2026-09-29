@@ -13,9 +13,13 @@
 // renvoie déjà dans cet ordre) : un espace sans serveur Discord ne fait rien du
 // tout, un espace sans compte d'envoi fait presque tout.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  tenantsKeys,
+  useTenantsReadiness,
+} from '@/features/admin/tenants/hooks/useTenants';
 import Link from 'next/link';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
 import AttachGuildModal from '@/components/admin/onboarding/AttachGuildModal';
@@ -123,11 +127,19 @@ function Pill({
 
 export default function TenantReadinessPanel() {
   const t = useAdminT(nsAdminOnboarding);
-  const { adminFetchJson } = useAdminFetch();
-
-  const [rows, setRows] = useState<TenantReadiness[] | null>(null);
-  const [botInviteUrl, setBotInviteUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const qc = useQueryClient();
+  // Même lecture que le panneau « Clés API » : une requête pour les deux.
+  const readiness = useTenantsReadiness<{
+    tenants: TenantReadiness[];
+    botInviteUrl: string | null;
+  }>();
+  const rows: TenantReadiness[] | null = readiness.error
+    ? []
+    : (readiness.data?.tenants ?? null);
+  const botInviteUrl = readiness.data?.botInviteUrl ?? null;
+  const error = readiness.error
+    ? readiness.error.message || t.readinessLoadError
+    : null;
   const [onlyBlocked, setOnlyBlocked] = useState(false);
   // Espace en cours de rattachement — porte aussi l'ouverture de la modale.
   const [attachTo, setAttachTo] = useState<{
@@ -147,24 +159,10 @@ export default function TenantReadinessPanel() {
     name: string;
   } | null>(null);
 
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const data = await adminFetchJson<{
-        tenants: TenantReadiness[];
-        botInviteUrl: string | null;
-      }>('/api/admin/tenants/readiness');
-      setRows(data.tenants);
-      setBotInviteUrl(data.botInviteUrl ?? null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t.readinessLoadError);
-      setRows([]);
-    }
-  }, [adminFetchJson, t.readinessLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const load = useCallback(
+    () => qc.invalidateQueries({ queryKey: tenantsKeys.readiness }),
+    [qc]
+  );
 
   const shown = useMemo(
     () => (rows ?? []).filter((r) => !onlyBlocked || r.blockers.length > 0),

@@ -1,8 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Head from 'next/head';
 import type { GetServerSidePropsContext } from 'next';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useQueryClient } from '@tanstack/react-query';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
+import { tenantsPaths } from '@/features/admin/tenants/client';
+import {
+  effectiveConfig,
+  tenantsKeys,
+  useDiscordInventory,
+  useTenantDiscordConfigs,
+} from '@/features/admin/tenants/hooks/useTenants';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -10,7 +19,6 @@ import AlertBanner from '@/components/admin/AlertBanner';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 
-import { logger } from '../../../../../utils/logger';
 import nsAdminTenantDiscordConfig from '@/lib/i18n/locales/admin-fr/adminTenantDiscordConfig';
 import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
 import SnowflakeField from '@/features/admin/tenants/ui/SnowflakeField';
@@ -40,10 +48,6 @@ import {
 } from '@/utils/discord/discordConfigFields';
 
 const SNOWFLAKE_RE = /^\d{15,21}$/;
-
-type DiscordConfigResponse = {
-  configs: DiscordConfig[];
-};
 
 type Props = {
   staff: { id: string; role: string; display_name: string };
@@ -86,12 +90,20 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
   const tf = useAdminT(nsAdminFiche);
   const FIELDS = useMemo(() => getDiscordConfigFields(t), [t]);
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
+  const queryClient = useQueryClient();
 
-  const [loading, setLoading] = useState(true);
+  const configsQuery = useTenantDiscordConfigs(tenantId);
+  const loading = configsQuery.isPending || configsQuery.isFetching;
   const [error, setError] = useState<string | null>(null);
-  const [config, setConfig] = useState<DiscordConfig | null>(null);
+  const loadError = configsQuery.error
+    ? configsQuery.error.message || t.errorLoad
+    : null;
+  const config = useMemo(
+    () =>
+      configsQuery.data ? effectiveConfig(configsQuery.data, guildId) : null,
+    [configsQuery.data, guildId]
+  );
   const [saving, setSaving] = useState(false);
   // Form state — string for inputs (snowflakes or space-separated lists).
   const [form, setForm] = useState<Record<string, string>>({});
@@ -103,25 +115,23 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
   const [welcomeDmMessage, setWelcomeDmMessage] = useState('');
   // Inventaire salons/rôles du serveur (chargé à la demande via le bot) pour
   // remplacer la saisie de snowflakes par des sélecteurs.
-  const [inventory, setInventory] = useState<Inventory | null>(null);
-  const [inventoryLoading, setInventoryLoading] = useState(false);
-  const [inventoryError, setInventoryError] = useState<string | null>(null);
-
-  const loadInventory = useCallback(async () => {
-    setInventoryLoading(true);
-    setInventoryError(null);
-    try {
-      const json = await adminFetchJson<Inventory>(
-        `/api/admin/tenants/${tenantId}/discord-config/${guildId}/channels`
-      );
-      setInventory(json);
-    } catch (err) {
-      logger.error('AdminDiscordConfigPage: inventory error', err);
-      setInventoryError((err as Error)?.message || t.inventoryError);
-    } finally {
-      setInventoryLoading(false);
-    }
-  }, [adminFetchJson, tenantId, guildId, t]);
+  // Inventaire chargé à la demande (bouton), puis relu à chaque clic.
+  const [inventoryRequested, setInventoryRequested] = useState(false);
+  const inventoryQuery = useDiscordInventory(
+    tenantId,
+    guildId,
+    inventoryRequested
+  );
+  const inventory: Inventory | null = inventoryQuery.data ?? null;
+  const inventoryLoading = inventoryQuery.isFetching;
+  const inventoryError = inventoryQuery.error
+    ? inventoryQuery.error.message || t.inventoryError
+    : null;
+  const { refetch: refetchInventory } = inventoryQuery;
+  const loadInventory = useCallback(() => {
+    if (inventoryRequested) void refetchInventory();
+    else setInventoryRequested(true);
+  }, [inventoryRequested, refetchInventory]);
 
   // Options de <select> pour un champ donné, à partir de l'inventaire chargé.
   // Rôles (section 'roles') triés par position décroissante ; salons filtrés
@@ -157,43 +167,9 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
     [inventory, t]
   );
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const json = await adminFetchJson<DiscordConfigResponse>(
-        `/api/admin/tenants/${tenantId}/discord-config`
-      );
-      const found = (json.configs ?? []).find(
-        (c) => String(c.guild_id) === String(guildId)
-      );
-      const effective: DiscordConfig = found ?? {
-        guild_id: guildId,
-        staff_log_channel_id: null,
-        matches_live_channel_id: null,
-        disputes_forum_channel_id: null,
-        news_ingest_channel_id: null,
-        scrims_announce_channel_id: null,
-        free_players_channel_id: null,
-        team_openings_channel_id: null,
-        mvp_results_channel_id: null,
-        teams_voice_category_id: null,
-        captain_role_id: null,
-        substitute_role_id: null,
-        staff_role_owner_id: null,
-        staff_role_admin_id: null,
-        staff_role_caster_id: null,
-        disputes_forum_tag_open_id: null,
-        disputes_forum_tag_pending_id: null,
-        disputes_forum_tag_resolved_id: null,
-        member_leave_channel_id: null,
-        welcome_enabled: false,
-        welcome_channel_id: null,
-        welcome_message: null,
-        welcome_dm_message: null,
-        placement_roles: null,
-      };
-      setConfig(effective);
+  // Copie la configuration du serveur dans le formulaire.
+  const hydrate = useCallback(
+    (effective: DiscordConfig) => {
       const next: Record<string, string> = {};
       for (const f of FIELDS) {
         const v = effective[f.key];
@@ -221,17 +197,22 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
           ? effective.welcome_dm_message
           : ''
       );
-    } catch (err) {
-      logger.error('AdminDiscordConfigPage: fetch error', err);
-      setError((err as Error)?.message || t.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, tenantId, guildId, FIELDS, t]);
+    },
+    [FIELDS]
+  );
+  useHydrateOnce(config ? guildId : null, config ?? undefined, hydrate);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  /** Relit la configuration et RÉ-HYDRATE le formulaire (après enregistrement). */
+  const fetchData = useCallback(async () => {
+    setError(null);
+    await queryClient.invalidateQueries({
+      queryKey: tenantsKeys.discordConfigs(tenantId),
+    });
+    const fresh = queryClient.getQueryData<DiscordConfig[]>(
+      tenantsKeys.discordConfigs(tenantId)
+    );
+    if (fresh) hydrate(effectiveConfig(fresh, guildId));
+  }, [queryClient, tenantId, guildId, hydrate]);
 
   const invalid = useMemo(() => {
     const errs: Record<string, string> = {};
@@ -291,13 +272,10 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
       // Les règles incomplètes (rôle vide) ne partent pas : elles sont en cours
       // de saisie, et le serveur refuserait la liste entière.
       body.placement_roles = placementRules.filter((r) => r.roleId.trim());
-      await mutateJson(
-        `/api/admin/tenants/${tenantId}/discord-config/${guildId}`,
-        {
-          method: 'PUT',
-          body: JSON.stringify(body),
-        }
-      );
+      await mutateJson(tenantsPaths.discordConfigGuild(tenantId, guildId), {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      });
       addToast(t.saveSuccess, 'success');
       await fetchData();
     } catch (err) {
@@ -398,7 +376,7 @@ function AdminDiscordConfigPage({ tenantId, guildId }: Props) {
           </div>
         )}
 
-        <AlertBanner message={error} className="mb-4" />
+        <AlertBanner message={error ?? loadError} className="mb-4" />
 
         {!loading && config && (
           <form id={formId} onSubmit={handleSubmit}>
@@ -686,4 +664,4 @@ export const getServerSideProps = withStaffPage<{
   }
 );
 
-export default AdminDiscordConfigPage;
+export default withAdminQuery(AdminDiscordConfigPage);

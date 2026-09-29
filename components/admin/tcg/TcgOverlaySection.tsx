@@ -9,7 +9,7 @@
 // deux fois, c'était la certitude qu'un libellé ajouté ici manque là.
 //
 // Droit `manage_tcg` : c'est celui des routes appelées
-// (`/api/admin/tcg/overlay-token`, `overlay-theme`). L'appelant décide
+// (routes /api/admin/tcg/overlay-token et overlay-theme). L'appelant décide
 // d'afficher la section ; les routes gardent leur contrôle.
 
 import { useAdminT } from '@/lib/i18n/useAdminT';

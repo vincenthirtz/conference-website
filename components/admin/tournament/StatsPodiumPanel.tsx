@@ -8,9 +8,11 @@
 // Extracted from the former /admin/tournament/[id]/podium page; now the
 // `podium` sub-tab of the merged stats route.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
-import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
+import type { AdminFetchError } from '@/hooks/useAdminFetch';
+import { tournamentUrls } from '@/features/admin/tournaments/client';
+import { useTournamentRead } from '@/features/admin/tournaments/hooks/useTournamentRead';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -71,40 +73,31 @@ export default function StatsPodiumPanel() {
   const tournamentId = Array.isArray(id) ? id[0] : id;
 
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
   const t = useAdminT(nsAdminTournamentPodium);
 
-  const [data, setData] = useState<PreviewResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const previewQuery = useTournamentRead<PreviewResponse>(
+    tournamentId ?? '',
+    'podium-preview',
+    tournamentUrls.podiumPreview,
+    { rehydrate: true }
+  );
+  const data = previewQuery.data ?? null;
+  const loading = previewQuery.isFetching;
+  const error = previewQuery.error
+    ? previewQuery.error.message || t.errorLoad
+    : null;
   const [rows, setRows] = useState<RowDraft[]>([]);
   const [forceMode, setForceMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchPreview = useCallback(async () => {
-    if (!tournamentId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const json = await adminFetchJson<PreviewResponse>(
-        `/api/admin/tournament/${tournamentId}/podium-preview`
-      );
-      setData(json);
-      const seed = seedRowsFrom(json);
-      setRows(seed);
-    } catch (err) {
-      const e = err as AdminFetchError;
-      setError(e.message || t.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, tournamentId, t]);
-
+  // Chaque lecture ré-amorce les lignes éditables (ouverture, après
+  // finalisation) — comme avant.
   useEffect(() => {
-    fetchPreview();
-  }, [fetchPreview]);
+    if (data) setRows(seedRowsFrom(data));
+  }, [data]);
+  const fetchPreview = () => previewQuery.refetch();
 
   const isFinalized = (data?.existing.length ?? 0) > 0;
   const tournamentStatus = data?.tournament.status ?? 'draft';
@@ -168,7 +161,7 @@ export default function StatsPodiumPanel() {
 
     setSubmitting(true);
     try {
-      await mutateJson(`/api/admin/tournament/${tournamentId}/finalize`, {
+      await mutateJson(tournamentUrls.finalize(tournamentId), {
         method: 'POST',
         body: JSON.stringify({ rankings, force: forceMode }),
       });

@@ -3,7 +3,6 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -23,12 +22,7 @@ import {
   DEFAULT_TEAM_ROLES,
   type TeamRole,
 } from '@/utils/teamRoles';
-import type { StaffProps, TeamRow, TeamMemberRow } from '@/types/admin';
-import {
-  EMPTY_LOGO_CREDIT,
-  logoCreditDraftFromRow,
-  logoCreditPayload,
-} from '@/components/admin/teams/TeamLogoCreditFields';
+import type { StaffProps, TeamMemberRow } from '@/types/admin';
 import type {
   TournamentRow,
   TournamentRegistration,
@@ -38,7 +32,6 @@ import nsAdminTeamEdit from '@/lib/i18n/locales/admin-fr/adminTeamEdit';
 import TeamRosterLockPanel from '@/components/admin/teams/TeamRosterLockPanel';
 import TeamHistoryPanel from '@/components/admin/teams/TeamHistoryPanel';
 import TeamQuickLinks from '@/components/admin/teams/TeamQuickLinks';
-import type { TeamLocaleValue } from '@/components/admin/teams/TeamCommsFields';
 import { FicheLayout } from '@/features/admin/_shared/ui/Fiche';
 import TeamEditHeader, {
   TEAM_EDIT_GHOST_SM,
@@ -49,8 +42,25 @@ import TeamEditTournamentsSection from '@/features/admin/teams/ui/TeamEditTourna
 import { useTeamEditMemberActions } from '@/features/admin/teams/hooks/useTeamEditMemberActions';
 import { useTeamEditRosterBulk } from '@/features/admin/teams/hooks/useTeamEditRosterBulk';
 import { useTeamEditModals } from '@/features/admin/teams/hooks/useTeamEditModals';
+import {
+  teamPayloadFromForm,
+  useTeamEditForm,
+} from '@/features/admin/teams/hooks/useTeamEditForm';
+import {
+  useTeamCache,
+  useTeamForEdit,
+  useTeamMembers,
+  useTeamTournaments,
+} from '@/features/admin/teams/hooks/useTeamsQueries';
+import { teamsClient, teamsPaths } from '@/features/admin/teams/client';
+import { withAdminQuery } from '@/features/admin/_shared/query';
 
 const FORM_ID = 'team-edit-form';
+
+// Tableaux vides STABLES : les hooks de roster mémorisent sur `members`.
+const EMPTY_MEMBERS: TeamMemberRow[] = [];
+const EMPTY_REGISTERED: TournamentRegistration[] = [];
+const EMPTY_AVAILABLE: TournamentRow[] = [];
 
 export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
   { permission: 'manage_teams' },
@@ -69,27 +79,40 @@ function AdminEditTeamPage({
   const router = useRouter();
   const { teamId } = router.query as { teamId?: string };
 
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
-  const { adminFetch, adminFetchJson } = useAdminFetch();
   const { mutate: addMemberMutate } = useIdempotentMutation();
   const { mutate: registerTournamentMutate } = useIdempotentMutation();
 
-  const [team, setTeam] = useState<TeamRow | null>(null);
-  const [members, setMembers] = useState<TeamMemberRow[]>([]);
-  const [membersLoading, setMembersLoading] = useState(false);
+  // Lectures en cache partagé (lot L10) : la fiche, la liste et le panneau de
+  // disponibilités lisent les mêmes clés ; chaque écriture ci-dessous les
+  // invalide, la liste /admin/teams comprise.
+  const teamQuery = useTeamForEdit(teamId);
+  const membersQuery = useTeamMembers(teamId);
+  const tournamentsQuery = useTeamTournaments(teamId);
+  const {
+    setTeam,
+    refetchTeam: fetchTeam,
+    refetchMembers: fetchMembers,
+    refetchTournaments: fetchTournaments,
+  } = useTeamCache(teamId);
 
-  const [registeredTournaments, setRegisteredTournaments] = useState<
-    TournamentRegistration[]
-  >([]);
-  const [availableTournaments, setAvailableTournaments] = useState<
-    TournamentRow[]
-  >([]);
+  const team = teamQuery.data?.team ?? null;
+  const loading = teamQuery.isFetching;
+  const members = membersQuery.data ?? EMPTY_MEMBERS;
+  const membersLoading = membersQuery.isFetching;
+  const registeredTournaments =
+    tournamentsQuery.data?.registered ?? EMPTY_REGISTERED;
+  const availableTournaments =
+    tournamentsQuery.data?.available ?? EMPTY_AVAILABLE;
   /** Effectif JOUANT (coachs/managers exclus), renvoyé par le GET. */
-  const [playingCount, setPlayingCount] = useState(0);
+  const playingCount = Number(tournamentsQuery.data?.playerCount) || 0;
+  const teamLoadError = teamQuery.error
+    ? (teamQuery.error.message ?? t.errUnexpected)
+    : null;
+
   /**
    * Erreur de la section Tournois, rendue DANS la section.
    *
@@ -98,26 +121,14 @@ function AdminEditTeamPage({
    * « le formulaire ne fait rien ».
    */
   const [tournamentError, setTournamentError] = useState<string | null>(null);
-  const [tournamentsLoading, setTournamentsLoading] = useState(false);
+  const [tournamentsBusy, setTournamentsBusy] = useState(false);
+  const tournamentsLoading = tournamentsBusy || tournamentsQuery.isFetching;
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>('');
 
-  // Form state
-  const [name, setName] = useState('');
-  const [shortName, setShortName] = useState('');
-  const [logoUrl, setLogoUrl] = useState('');
-  const [logoCredit, setLogoCredit] = useState(EMPTY_LOGO_CREDIT);
-  const [bannerUrl, setBannerUrl] = useState('');
-  const [country, setCountry] = useState('');
-  const [description, setDescription] = useState('');
-  const [twitter, setTwitter] = useState('');
-  const [discord, setDiscord] = useState('');
-  const [discordRoleId, setDiscordRoleId] = useState('');
-  const [preferredLocale, setPreferredLocale] = useState<TeamLocaleValue>('');
-  const [website, setWebsite] = useState('');
-  const [isActive, setIsActive] = useState(true);
-  // SR d'ensemble déclaré : saisi en chaîne (champ de formulaire), '' = effacer
-  // la déclaration et rendre la main à la moyenne des fiches.
-  const [skillRating, setSkillRating] = useState('');
+  // Formulaire « infos » : un objet, hydraté une fois par fiche.
+  const { form, setters } = useTeamEditForm(teamId, team);
+  const { logoUrl, ...infoFormValues } = form;
+  const { setLogoUrl, ...infoFormSetters } = setters;
 
   // Member modals
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -174,82 +185,6 @@ function AdminEditTeamPage({
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchAbortRef = useRef<AbortController | null>(null);
 
-  const fetchTeam = useCallback(async () => {
-    if (!teamId) return;
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const json = await adminFetchJson<{ team: TeamRow }>(
-        `/api/admin/teams/${teamId}`
-      );
-
-      const row: TeamRow = json.team;
-      setTeam(row);
-      setName(row.name || '');
-      setShortName(row.short_name || '');
-      setLogoUrl(row.logo_url || '');
-      setLogoCredit(logoCreditDraftFromRow(row));
-      setBannerUrl(row.banner_url || '');
-      setCountry(row.country || '');
-      setDescription(row.description || '');
-      setTwitter(row.twitter || '');
-      setDiscord(row.discord || '');
-      setDiscordRoleId(row.discord_role_id || '');
-      setPreferredLocale((row.preferred_locale as TeamLocaleValue) || '');
-      setWebsite(row.website || '');
-      setSkillRating(row.skill_rating != null ? String(row.skill_rating) : '');
-      setIsActive(row.is_active !== false);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }, [teamId, adminFetchJson, t]);
-
-  const fetchMembers = useCallback(async () => {
-    if (!teamId) return;
-    setMembersLoading(true);
-    try {
-      const res = await adminFetch(`/api/admin/teams/${teamId}/members`);
-      const json = await res.json();
-      if (res.ok && !json.error) {
-        setMembers(json.members || []);
-      }
-    } catch {
-      // Silently fail
-    } finally {
-      setMembersLoading(false);
-    }
-  }, [teamId, adminFetch]);
-
-  const fetchTournaments = useCallback(async () => {
-    if (!teamId) return;
-    setTournamentsLoading(true);
-    try {
-      const res = await adminFetch(`/api/admin/teams/${teamId}/tournaments`);
-      const json = await res.json();
-      if (res.ok && !json.error) {
-        setRegisteredTournaments(json.registered || []);
-        setAvailableTournaments(json.available || []);
-        setPlayingCount(Number(json.playerCount) || 0);
-      }
-    } catch {
-      // Silently fail
-    } finally {
-      setTournamentsLoading(false);
-    }
-  }, [teamId, adminFetch]);
-
-  useEffect(() => {
-    if (!teamId) return;
-    fetchTeam();
-    fetchMembers();
-    fetchTournaments();
-    // adminFetch/adminFetchJson et t sont désormais stables : les fetchers ne
-    // varient que via teamId → un seul chargement par teamId, sans vagues parasites.
-  }, [teamId, fetchTeam, fetchMembers, fetchTournaments]);
-
   // Nettoie le timer de debounce + toute recherche en vol au démontage.
   useEffect(() => {
     return () => {
@@ -265,35 +200,11 @@ function AdminEditTeamPage({
     setErrorMsg(null);
 
     try {
-      const payload: Partial<TeamRow> = {
-        name,
-        short_name: shortName || null,
-        logo_url: logoUrl || null,
-        ...logoCreditPayload(logoCredit),
-        banner_url: bannerUrl || null,
-        country: country || null,
-        description: description || null,
-        twitter: twitter || null,
-        discord: discord || null,
-        discord_role_id: discordRoleId.trim() || null,
-        preferred_locale: preferredLocale || null,
-        website: website || null,
-        is_active: isActive,
-        // Chaîne vide = effacer, pas « ne rien changer » : c'est la seule façon
-        // de retirer une déclaration devenue fausse depuis l'écran staff.
-        // Converti ici plutôt qu'envoyé en chaîne — l'API revalide de son côté.
-        skill_rating: skillRating.trim() ? Number(skillRating.trim()) : null,
-      };
-
-      const json = await adminFetchJson<{ team: TeamRow }>(
-        `/api/admin/teams/${teamId}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify(payload),
-        }
-      );
+      const json = await teamsClient.update(teamId, teamPayloadFromForm(form));
 
       addToast(t.toastTeamUpdated, 'success');
+      // Fiche à jour + listes invalidées : /admin/teams montre la ligne
+      // modifiée sans rechargement.
       setTeam(json.team);
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? t.errUnexpected);
@@ -324,11 +235,11 @@ function AdminEditTeamPage({
       if (!ok) return;
     }
 
-    setTournamentsLoading(true);
+    setTournamentsBusy(true);
 
     try {
       const res = await registerTournamentMutate(
-        `/api/admin/teams/${teamId}/tournaments`,
+        teamsPaths.tournaments(teamId),
         {
           method: 'POST',
           body: JSON.stringify({ tournamentId: selectedTournamentId }),
@@ -349,7 +260,7 @@ function AdminEditTeamPage({
       setTournamentError(msg);
       addToast(msg, 'error');
     } finally {
-      setTournamentsLoading(false);
+      setTournamentsBusy(false);
     }
   }
 
@@ -361,18 +272,10 @@ function AdminEditTeamPage({
     });
     if (!ok) return;
 
-    setTournamentsLoading(true);
+    setTournamentsBusy(true);
     setTournamentError(null);
     try {
-      const res = await adminFetch(`/api/admin/teams/${teamId}/tournaments`, {
-        method: 'DELETE',
-        body: JSON.stringify({ tournamentId }),
-      });
-      const json = await res.json().catch(() => ({}));
-
-      if (!res.ok || json.error) {
-        throw new Error(json.error || t.errUnexpected);
-      }
+      await teamsClient.unregisterTournament(teamId, tournamentId);
 
       await fetchTournaments();
       addToast(t.toastUnregistered, 'success');
@@ -383,7 +286,7 @@ function AdminEditTeamPage({
       setTournamentError(msg);
       addToast(msg, 'error');
     } finally {
-      setTournamentsLoading(false);
+      setTournamentsBusy(false);
     }
   }
 
@@ -417,8 +320,6 @@ function AdminEditTeamPage({
     memberForm,
     editingMember,
     swapSource,
-    adminFetch,
-    adminFetchJson,
     addMemberMutate,
     addToast,
     confirm,
@@ -481,7 +382,6 @@ function AdminEditTeamPage({
     setBulkRole,
     setBulkBusy,
     setErrorMsg,
-    adminFetchJson,
     addToast,
     confirm,
     clearSelection,
@@ -513,7 +413,6 @@ function AdminEditTeamPage({
     setShowEditMemberModal,
     setEditingMember,
     setErrorMsg,
-    adminFetchJson,
     addToast,
     fetchMembers,
   });
@@ -536,7 +435,7 @@ function AdminEditTeamPage({
           formId={FORM_ID}
           saving={saving}
           loading={loading}
-          errorMsg={errorMsg}
+          errorMsg={errorMsg ?? teamLoadError}
           onBack={() => router.push('/admin/teams')}
           historySlot={
             team && (
@@ -557,36 +456,8 @@ function AdminEditTeamPage({
                 <TeamEditInfoForm
                   formId={FORM_ID}
                   onSubmit={handleSubmit}
-                  values={{
-                    name,
-                    shortName,
-                    logoCredit,
-                    bannerUrl,
-                    country,
-                    description,
-                    twitter,
-                    discord,
-                    discordRoleId,
-                    preferredLocale,
-                    website,
-                    isActive,
-                    skillRating,
-                  }}
-                  setters={{
-                    setName,
-                    setShortName,
-                    setLogoCredit,
-                    setBannerUrl,
-                    setCountry,
-                    setDescription,
-                    setTwitter,
-                    setDiscord,
-                    setDiscordRoleId,
-                    setPreferredLocale,
-                    setWebsite,
-                    setIsActive,
-                    setSkillRating,
-                  }}
+                  values={infoFormValues}
+                  setters={infoFormSetters}
                   logoSlot={
                     <LogoUpload
                       value={logoUrl}
@@ -703,4 +574,4 @@ function AdminEditTeamPage({
   );
 }
 
-export default AdminEditTeamPage;
+export default withAdminQuery(AdminEditTeamPage);

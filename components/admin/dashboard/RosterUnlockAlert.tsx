@@ -17,6 +17,7 @@
 
 import { useState } from 'react';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { dashboardPaths } from '@/features/admin/dashboard/client';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentDashboard from '@/lib/i18n/locales/admin-fr/adminTournamentDashboard';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
@@ -63,7 +64,7 @@ export default function RosterUnlockAlert({
     setBusy(true);
     setError(null);
     try {
-      await mutateJson(`/api/admin/tournament/${tournamentId}/roster-unlock`, {
+      await mutateJson(dashboardPaths.rosterUnlock(tournamentId), {
         method: minutes === null ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         ...(minutes === null ? {} : { body: JSON.stringify({ minutes }) }),

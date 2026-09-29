@@ -6,7 +6,10 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import {
+  recycleBinClient,
+  recycleBinPaths,
+} from '@/features/admin/recycle-bin/client';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminRecycleBin from '@/lib/i18n/locales/admin-fr/adminRecycleBin';
@@ -122,7 +125,6 @@ function AdminRecycleBinPage(_props: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
-  const { adminFetchJson } = useAdminFetch();
   const t = useAdminT(nsAdminRecycleBin);
 
   const [typeFilter, setTypeFilter] = useState<string>('');
@@ -143,15 +145,12 @@ function AdminRecycleBinPage(_props: StaffProps) {
     setOffset,
     resetOffset,
     refresh: fetchItems,
-  } = useAdminResource<DeletedItem, RecycleBinResponse>(
-    '/api/admin/recycle-bin',
-    {
-      limit: PAGE_SIZE,
-      includeTotal: false,
-      params: { type: typeFilter },
-      select: (res) => res.items || [],
-    }
-  );
+  } = useAdminResource<DeletedItem, RecycleBinResponse>(recycleBinPaths.list, {
+    limit: PAGE_SIZE,
+    includeTotal: false,
+    params: { type: typeFilter },
+    select: (res) => res.items || [],
+  });
 
   const errorMsg = restoreError ?? fetchError;
 
@@ -170,10 +169,7 @@ function AdminRecycleBinPage(_props: StaffProps) {
     setRestoreError(null);
 
     try {
-      await adminFetchJson('/api/admin/recycle-bin', {
-        method: 'PATCH',
-        body: JSON.stringify({ id: item.id, type: item.type }),
-      });
+      await recycleBinClient.restore({ id: item.id, type: item.type });
 
       addToast(
         format(t.toastRestored, {

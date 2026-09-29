@@ -10,15 +10,10 @@
 
 import { useCallback, useMemo } from 'react';
 import { format } from '@/lib/i18n/useAdminT';
+import { teamsClient } from '../client';
 import { isNonPlayingTeamRole } from '@/utils/teams/roleKind';
 import type { TeamRow, TeamMemberRow } from '@/types/admin';
-import type {
-  AddToast,
-  AdminFetchJson,
-  Confirm,
-  Dict,
-  Setter,
-} from './teamEditHookTypes';
+import type { AddToast, Confirm, Dict, Setter } from './teamEditHookTypes';
 
 export type UseTeamEditRosterBulkDeps = {
   t: Dict;
@@ -31,7 +26,6 @@ export type UseTeamEditRosterBulkDeps = {
   setBulkRole: Setter<string>;
   setBulkBusy: Setter<boolean>;
   setErrorMsg: Setter<string | null>;
-  adminFetchJson: AdminFetchJson;
   addToast: AddToast;
   confirm: Confirm;
   clearSelection: () => void;
@@ -51,7 +45,6 @@ export function useTeamEditRosterBulk(deps: UseTeamEditRosterBulkDeps) {
     setBulkRole,
     setBulkBusy,
     setErrorMsg,
-    adminFetchJson,
     addToast,
     confirm,
     clearSelection,
@@ -99,16 +92,10 @@ export function useTeamEditRosterBulk(deps: UseTeamEditRosterBulkDeps) {
       setBulkBusy(true);
       setErrorMsg(null);
       try {
-        const json = await adminFetchJson<{
-          successCount?: number;
-          failureCount?: number;
-        }>(`/api/admin/teams/${teamId}/roster-bulk`, {
-          method: 'POST',
-          body: JSON.stringify({
-            operation,
-            memberIds: Array.from(selectedIds),
-            ...extra,
-          }),
+        const json = await teamsClient.rosterBulk(teamId, {
+          operation,
+          memberIds: Array.from(selectedIds),
+          ...extra,
         });
         const { successCount = 0, failureCount = 0 } = json;
         addToast(
@@ -130,16 +117,7 @@ export function useTeamEditRosterBulk(deps: UseTeamEditRosterBulkDeps) {
         setBulkBusy(false);
       }
     },
-    [
-      teamId,
-      selectedIds,
-      adminFetchJson,
-      addToast,
-      clearSelection,
-      fetchMembers,
-      fetchTeam,
-      t,
-    ]
+    [teamId, selectedIds, addToast, clearSelection, fetchMembers, fetchTeam, t]
   );
 
   const handleBulkRemove = useCallback(async () => {

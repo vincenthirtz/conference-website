@@ -10,6 +10,7 @@
 
 import { useCallback, type RefObject } from 'react';
 import { format } from '@/lib/i18n/useAdminT';
+import { tournamentsUrls } from '@/features/admin/tournaments/client';
 import {
   simulateMatch,
   resolveByes,
@@ -429,9 +430,7 @@ export function useSimulatorBuild(deps: SimulatorBuildDeps) {
     setLoadingRealTeams(true);
     setRealTeamsError(null);
     try {
-      const res = await fetch(
-        `/api/admin/teams?limit=${config.teamCount}&isActive=true`
-      );
+      const res = await fetch(tournamentsUrls.activeTeams(config.teamCount));
       if (!res.ok)
         throw new Error(format(tx.errorHttp, { status: res.status }));
       const data = await res.json();

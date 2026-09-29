@@ -10,6 +10,8 @@
 
 import { type Dispatch, type SetStateAction, useCallback } from 'react';
 import { format } from '@/lib/i18n/useAdminT';
+import { tournamentUrls } from '@/features/admin/tournaments/client';
+import { stageUrls } from '../client';
 import type { useAdminFetch } from '@/hooks/useAdminFetch';
 import type { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import type { useToast } from '@/components/Toast';
@@ -89,8 +91,8 @@ export function useStageAdvanceActions(deps: StageAdvanceActionsDeps) {
     try {
       // Fetch standings and other stages in parallel
       const [standingsRes, stagesRes] = await Promise.all([
-        adminFetch(`/api/admin/stages/${stageId}/standings`),
-        adminFetch(`/api/admin/tournament/${stage.tournament_id}/stages`),
+        adminFetch(stageUrls.standings(String(stageId))),
+        adminFetch(tournamentUrls.stages(stage.tournament_id)),
       ]);
 
       if (standingsRes.ok) {
@@ -204,7 +206,7 @@ export function useStageAdvanceActions(deps: StageAdvanceActionsDeps) {
       .map((s) => s.teamId);
 
     try {
-      const res = await advanceMutate(`/api/admin/stages/${stageId}/advance`, {
+      const res = await advanceMutate(stageUrls.advance(String(stageId)), {
         method: 'POST',
         body: JSON.stringify({
           targetStageId: advanceTargetStageId,

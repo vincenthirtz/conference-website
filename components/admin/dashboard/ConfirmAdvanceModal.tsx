@@ -7,6 +7,7 @@ import {
   useIdempotentMutation,
   BgSyncQueuedError,
 } from '@/hooks/useIdempotentMutation';
+import { dashboardPaths } from '@/features/admin/dashboard/client';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminDashboardConfirmAdvanceModal from '@/lib/i18n/locales/admin-fr/adminDashboardConfirmAdvanceModal';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
@@ -53,7 +54,7 @@ export default function ConfirmAdvanceModal({
       // pas un second avancement (l'endpoint rejoue la 1ère réponse une fois
       // qu'il honore le header).
       const json = await mutateJson<{ advanced?: unknown }>(
-        `/api/admin/stages/${stageId}/advance`,
+        dashboardPaths.stageAdvance(stageId),
         {
           method: 'POST',
           body: JSON.stringify({ auto: true }),

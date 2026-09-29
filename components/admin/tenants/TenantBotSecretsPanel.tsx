@@ -15,6 +15,7 @@
 
 import { useState } from 'react';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { tenantsPaths } from '@/features/admin/tenants/client';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import BotSecretsRevealModal from '@/components/admin/BotSecretsRevealModal';
@@ -59,7 +60,7 @@ export default function TenantBotSecretsPanel({
     setRotating(true);
     try {
       const resp = await mutateJson<RotateSecretsResponse>(
-        `/api/admin/tenants/${tenantId}/rotate-secrets`,
+        tenantsPaths.rotateSecrets(tenantId),
         { method: 'POST', body: JSON.stringify({}) }
       );
       // Montrées une seule fois : jamais stockées, jamais journalisées.
@@ -86,7 +87,7 @@ export default function TenantBotSecretsPanel({
     });
     if (!ok) return;
     try {
-      await mutateJson(`/api/admin/tenants/${tenantId}/rotate-secrets`, {
+      await mutateJson(tenantsPaths.rotateSecrets(tenantId), {
         method: 'DELETE',
       });
       setPreviousKeyUntil(null);

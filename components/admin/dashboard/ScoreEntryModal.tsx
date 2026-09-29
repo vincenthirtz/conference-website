@@ -7,6 +7,7 @@ import {
   useIdempotentMutation,
   BgSyncQueuedError,
 } from '@/hooks/useIdempotentMutation';
+import { matchesPaths } from '@/features/admin/matches/client';
 import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminDashboardScoreEntryModal from '@/lib/i18n/locales/admin-fr/adminDashboardScoreEntryModal';
@@ -76,7 +77,7 @@ export default function ScoreEntryModal({
     try {
       // mutateJson injecte l'Idempotency-Key : un retry réseau ne re-propage
       // pas l'avancement du bracket (l'endpoint rejoue la 1ère réponse).
-      await mutateJson(`/api/admin/matches/${matchId}`, {
+      await mutateJson(matchesPaths.byId(matchId), {
         method: 'PATCH',
         body: JSON.stringify({
           team1Score: t1,

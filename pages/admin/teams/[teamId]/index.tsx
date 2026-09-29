@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  useTeam,
+  useTeamMembers,
+} from '@/features/admin/teams/hooks/useTeamsQueries';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { isNonPlayingTeamRole, splitTeamMembers } from '@/utils/teams/roleKind';
@@ -27,21 +30,6 @@ type StaffShape = {
 
 type StaffProps = {
   staff: StaffShape;
-};
-
-type TeamRow = {
-  id: string;
-  name: string;
-  short_name?: string | null;
-  logo_url?: string | null;
-  banner_url?: string | null;
-  country?: string | null;
-  description?: string | null;
-  twitter?: string | null;
-  discord?: string | null;
-  website?: string | null;
-  is_active?: boolean;
-  captain_id?: string | null;
 };
 
 type TeamMemberRow = {
@@ -72,63 +60,32 @@ function formatVerifiedDate(d: string | null | undefined): string {
 
 export const getServerSideProps = withStaffPage({ permission: 'manage_teams' });
 
+const EMPTY_MEMBERS: TeamMemberRow[] = [];
+
 function AdminTeamDetailPage(_props: StaffProps) {
   const t = useAdminT(nsAdminTeamDetail);
   const router = useRouter();
   const { teamId } = router.query as { teamId?: string };
-  const { adminFetchJson } = useAdminFetch();
-
-  const [team, setTeam] = useState<TeamRow | null>(null);
-  const [members, setMembers] = useState<TeamMemberRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [membersLoading, setMembersLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [membersError, setMembersError] = useState<string | null>(null);
+  // Mêmes clés que l'édition (lot L10) : revenir de l'édition montre la
+  // fiche à jour, relue en arrière-plan.
+  const teamQuery = useTeam(teamId);
+  const membersQuery = useTeamMembers(teamId);
+  const team = teamQuery.data?.team ?? null;
+  const members = membersQuery.data ?? EMPTY_MEMBERS;
+  const loading = teamQuery.isPending && !!teamId;
+  const membersLoading = membersQuery.isPending && !!teamId;
+  const errorMsg = teamQuery.error
+    ? teamQuery.error.message || t.errUnexpected
+    : null;
+  const membersError = membersQuery.error
+    ? membersQuery.error.message || t.errUnexpected
+    : null;
 
   // Joueuses d'abord, encadrement ensuite — cohérent avec /edit.
   const orderedMembers = (() => {
     const { roster, subs, staff } = splitTeamMembers(members);
     return [...roster, ...subs, ...staff];
   })();
-
-  const fetchTeam = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const json = await adminFetchJson<{ team: TeamRow | null }>(
-        `/api/admin/teams/${teamId}`
-      );
-      setTeam(json.team);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }, [teamId, adminFetchJson, t]);
-
-  const fetchMembers = useCallback(async () => {
-    if (!teamId) return;
-    setMembersLoading(true);
-    setMembersError(null);
-    try {
-      const json = await adminFetchJson<{ members?: TeamMemberRow[] }>(
-        `/api/admin/teams/${teamId}/members`
-      );
-      setMembers(json.members || []);
-    } catch (err: unknown) {
-      setMembersError((err as Error)?.message ?? t.errUnexpected);
-    } finally {
-      setMembersLoading(false);
-    }
-  }, [teamId, adminFetchJson, t]);
-
-  useEffect(() => {
-    if (!teamId) return;
-    fetchTeam();
-    fetchMembers();
-    // adminFetchJson et t sont désormais stables ; fetchTeam/fetchMembers ne
-    // changent qu'avec teamId → un seul chargement par teamId, sans refetch parasite.
-  }, [teamId, fetchTeam, fetchMembers]);
 
   const backUrl = '/admin/teams';
 
@@ -398,4 +355,4 @@ function AdminTeamDetailPage(_props: StaffProps) {
   );
 }
 
-export default AdminTeamDetailPage;
+export default withAdminQuery(AdminTeamDetailPage);

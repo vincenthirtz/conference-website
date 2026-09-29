@@ -1,7 +1,7 @@
 // pages/admin/tournament/[id]/discord.tsx
 // Configuration des webhooks Discord par type de channel pour un tournoi.
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -19,6 +19,11 @@ import {
   type DiscordChannelType,
 } from '@/utils/discord/channels';
 import type { StaffProps } from '@/types/admin';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  useTournamentDiscordActions,
+  useTournamentDiscordWebhooks,
+} from '@/features/admin/tournaments/hooks/useTournamentDiscord';
 import nsAdminTournamentDiscord from '@/lib/i18n/locales/admin-fr/adminTournamentDiscord';
 
 type ChannelType = DiscordChannelType;
@@ -26,23 +31,6 @@ type ChannelType = DiscordChannelType;
 const LABEL = 'mb-1 block text-xs text-[var(--t3,#a39ba6)]';
 const INPUT =
   'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 font-mono text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
-
-type WebhookRow = {
-  id: string;
-  tournament_id: string | null;
-  channel_type: ChannelType;
-  webhook_url: string;
-  role_mention: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
-type ApiResponse = {
-  channelTypes: ChannelType[];
-  scoped: WebhookRow[];
-  globals: WebhookRow[];
-};
 
 export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
@@ -56,9 +44,18 @@ function DiscordConfigPage(_: StaffProps) {
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const t = useAdminT(nsAdminTournamentDiscord);
 
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<ApiResponse | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const webhooksQuery = useTournamentDiscordWebhooks(
+    tournamentId ?? '',
+    t.errorLoad
+  );
+  const actions = useTournamentDiscordActions(tournamentId ?? '', {
+    save: t.errorSave,
+    remove: t.errorDelete,
+    test: t.errorTest,
+  });
+  const loading = webhooksQuery.isPending;
+  const data = webhooksQuery.data ?? null;
+  const errorMsg = webhooksQuery.error?.message ?? null;
 
   // Per-channel form state — initialise une entree par DISCORD_CHANNEL_TYPES.
   const emptyDrafts = () =>
@@ -79,45 +76,22 @@ function DiscordConfigPage(_: StaffProps) {
   const [drafts, setDrafts] = useState(emptyDrafts);
   const [saving, setSaving] = useState(emptySaving);
 
-  const fetchData = useCallback(async () => {
-    if (!tournamentId) return;
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const res = await fetch(
-        `/api/admin/tournament/${tournamentId}/discord-webhooks`
-      );
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || t.errorLoad);
-      }
-      const json: ApiResponse = await res.json();
-      setData(json);
-
-      // Hydrate drafts from scoped webhooks. Updater fonctionnel : on repart
-      // du dernier état connu sans capturer `drafts` (sinon fetchData serait
-      // recréé à chaque frappe et l'effet [fetchData] rechargerait en boucle).
-      setDrafts((prev) => {
-        const next = { ...prev };
-        for (const w of json.scoped) {
-          next[w.channel_type] = {
-            webhookUrl: w.webhook_url,
-            roleMention: w.role_mention || '',
-            isActive: w.is_active,
-          };
-        }
-        return next;
-      });
-    } catch (err) {
-      setErrorMsg((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [tournamentId, t]);
-
+  // Hydrate drafts from scoped webhooks, à chaque lecture (ouverture, puis
+  // après un enregistrement / une suppression) — comme avant.
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (!data) return;
+    setDrafts((prev) => {
+      const next = { ...prev };
+      for (const w of data.scoped) {
+        next[w.channel_type] = {
+          webhookUrl: w.webhook_url,
+          roleMention: w.role_mention || '',
+          isActive: w.is_active,
+        };
+      }
+      return next;
+    });
+  }, [data]);
 
   async function save(channelType: ChannelType) {
     if (!tournamentId) return;
@@ -129,23 +103,13 @@ function DiscordConfigPage(_: StaffProps) {
 
     setSaving((s) => ({ ...s, [channelType]: true }));
     try {
-      const res = await fetch(
-        `/api/admin/tournament/${tournamentId}/discord-webhooks`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            channelType,
-            webhookUrl: draft.webhookUrl.trim(),
-            roleMention: draft.roleMention.trim() || null,
-            isActive: draft.isActive,
-          }),
-        }
-      );
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || t.errorSave);
+      await actions.save.mutateAsync({
+        channelType,
+        webhookUrl: draft.webhookUrl.trim(),
+        roleMention: draft.roleMention.trim() || null,
+        isActive: draft.isActive,
+      });
       addToast(t.toastSaved, 'success');
-      await fetchData();
     } catch (err) {
       addToast((err as Error).message, 'error');
     } finally {
@@ -167,20 +131,12 @@ function DiscordConfigPage(_: StaffProps) {
 
     setSaving((s) => ({ ...s, [channelType]: true }));
     try {
-      const res = await fetch(
-        `/api/admin/tournament/${tournamentId}/discord-webhooks?channelType=${channelType}`,
-        { method: 'DELETE' }
-      );
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || t.errorDelete);
-      }
+      await actions.remove.mutateAsync(channelType);
       addToast(t.toastDeleted, 'success');
       setDrafts((d) => ({
         ...d,
         [channelType]: { webhookUrl: '', roleMention: '', isActive: true },
       }));
-      await fetchData();
     } catch (err) {
       addToast((err as Error).message, 'error');
     } finally {
@@ -191,16 +147,7 @@ function DiscordConfigPage(_: StaffProps) {
   async function test(channelType: ChannelType) {
     if (!tournamentId) return;
     try {
-      const res = await fetch(
-        `/api/admin/tournament/${tournamentId}/discord-test`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ channelType }),
-        }
-      );
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || t.errorTest);
+      await actions.test.mutateAsync(channelType);
       addToast(t.toastTestSent, 'success');
     } catch (err) {
       addToast((err as Error).message, 'error');
@@ -424,4 +371,4 @@ function DiscordConfigPage(_: StaffProps) {
   );
 }
 
-export default DiscordConfigPage;
+export default withAdminQuery(DiscordConfigPage);

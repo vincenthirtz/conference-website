@@ -1,10 +1,10 @@
 // components/admin/MatchHistoryDrawer.tsx
 // Drawer reutilisable affichant l'historique staff d'un match.
-// S'appuie sur GET /api/admin/matches/[matchId]/history.
+// S'appuie sur l'historique du match (useMatchHistory, cache partagé avec la frise).
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useMatchHistory } from '@/features/admin/matches/hooks/useMatch';
 import nsAdminMatchHistoryDrawer from '@/lib/i18n/locales/admin-fr/adminMatchHistoryDrawer';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
@@ -35,33 +35,13 @@ type Props = {
 
 export default function MatchHistoryDrawer({ matchId, open, onClose }: Props) {
   const t = useAdminT(nsAdminMatchHistoryDrawer);
-  const { adminFetch } = useAdminFetch();
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [logs, setLogs] = useState<FormattedLog[]>([]);
+  const history = useMatchHistory(matchId, open);
+  const loading = history.isFetching;
+  const errorMsg = history.error
+    ? history.error.message || t.errorHistory
+    : null;
+  const logs = (history.data ?? []) as FormattedLog[];
   const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open || !matchId) return;
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setErrorMsg(null);
-      try {
-        const res = await adminFetch(`/api/admin/matches/${matchId}/history`);
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || t.errorHistory);
-        if (!cancelled) setLogs(json.logs || []);
-      } catch (e: unknown) {
-        if (!cancelled) setErrorMsg((e as Error).message || t.errorHistory);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, matchId, t, adminFetch]);
 
   if (!open) return null;
 

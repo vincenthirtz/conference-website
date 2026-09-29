@@ -1,11 +1,10 @@
 // pages/admin/matches/[matchId]/index.tsx
 // Vue détaillée d'un match (lecture seule) pour le staff
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -29,6 +28,14 @@ import {
   matchStatusTone,
   type MatchRow,
 } from '@/features/admin/matches/ui/MatchDetailBlocks';
+import { matchesPaths } from '@/features/admin/matches/client';
+import {
+  useCancelMatchDispute,
+  useInvalidateMatch,
+  useMatchDetail,
+  useResolveMatchDispute,
+} from '@/features/admin/matches/hooks/useMatch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
 
 const MODAL_CHROME =
   'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] shadow-2xl';
@@ -54,13 +61,16 @@ function MatchViewPage(_: StaffProps) {
   const router = useRouter();
   const { matchId } = router.query;
   const matchIdStr = Array.isArray(matchId) ? matchId[0] : matchId;
-  const { adminFetchJson } = useAdminFetch();
   const { confirm, dialog } = useConfirmDialog();
   const { mutateJson: openDisputeMutate } = useIdempotentMutation();
 
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [match, setMatch] = useState<MatchRow | null>(null);
+  const detail = useMatchDetail(matchIdStr);
+  const resolveDisputeMut = useResolveMatchDispute(matchIdStr ?? '');
+  const cancelDisputeMut = useCancelMatchDispute(matchIdStr ?? '');
+  const fetchMatch = useInvalidateMatch(matchIdStr);
+  const loading = detail.isPending;
+  const errorMsg = detail.error ? detail.error.message || t.errorLoad : null;
+  const match = (detail.data?.match ?? null) as MatchRow | null;
 
   // History drawer
   const [showHistory, setShowHistory] = useState(false);
@@ -86,7 +96,7 @@ function MatchViewPage(_: StaffProps) {
     setDisputeBusy(true);
     setDisputeMsg(null);
     try {
-      await openDisputeMutate(`/api/admin/matches/${matchIdStr}/dispute`, {
+      await openDisputeMutate(matchesPaths.dispute(matchIdStr), {
         method: 'POST',
         body: JSON.stringify({ reason: disputeReason.trim() }),
       });
@@ -122,10 +132,7 @@ function MatchViewPage(_: StaffProps) {
         body.team1Score = Number(resolveTeam1Score);
         body.team2Score = Number(resolveTeam2Score);
       }
-      await adminFetchJson(`/api/admin/matches/${matchIdStr}/dispute`, {
-        method: 'PATCH',
-        body: JSON.stringify(body),
-      });
+      await resolveDisputeMut.mutateAsync(body);
       setShowResolveDispute(false);
       setResolveText('');
       setResolveTeam1Score('');
@@ -148,10 +155,7 @@ function MatchViewPage(_: StaffProps) {
     setDisputeBusy(true);
     setDisputeMsg(null);
     try {
-      await adminFetchJson(
-        `/api/admin/matches/${matchIdStr}/dispute?resumeStatus=pending`,
-        { method: 'DELETE' }
-      );
+      await cancelDisputeMut.mutateAsync();
       await fetchMatch();
     } catch (e: unknown) {
       setDisputeMsg((e as Error).message || t.errorCancel);
@@ -159,27 +163,6 @@ function MatchViewPage(_: StaffProps) {
       setDisputeBusy(false);
     }
   }
-
-  const fetchMatch = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      if (!matchIdStr) throw new Error(t.errorMatchIdMissing);
-      const json = await adminFetchJson<{ match: MatchRow }>(
-        `/api/admin/matches/${matchIdStr}?includeGames=1`
-      );
-      setMatch(json.match as MatchRow);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || t.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [matchIdStr, adminFetchJson, t]);
-
-  useEffect(() => {
-    if (!matchIdStr) return;
-    fetchMatch();
-  }, [matchIdStr, fetchMatch]);
 
   return (
     <>
@@ -474,4 +457,4 @@ function MatchViewPage(_: StaffProps) {
   );
 }
 
-export default MatchViewPage;
+export default withAdminQuery(MatchViewPage);

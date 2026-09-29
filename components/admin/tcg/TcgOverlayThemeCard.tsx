@@ -23,7 +23,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tcgAdminClient } from '@/features/admin/tcg/client';
 import { useToast } from '@/components/Toast';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
@@ -85,7 +85,6 @@ type ThemeState = { theme: OverlayTheme };
 const ACCEPT = 'image/png,image/jpeg,image/webp,video/mp4,video/webm';
 
 export default function TcgOverlayThemeCard({ labels }: Props) {
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -96,15 +95,13 @@ export default function TcgOverlayThemeCard({ labels }: Props) {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const json = await adminFetchJson<ThemeState>(
-        '/api/admin/tcg/overlay-theme'
-      );
+      const json = await tcgAdminClient.overlayTheme<ThemeState>();
       setTheme(json.theme ?? DEFAULT_OVERLAY_THEME);
     } catch (err) {
       logger.error('[admin/tcg/overlay-theme] load error:', err);
       setError(labels.loadError);
     }
-  }, [adminFetchJson, labels]);
+  }, [labels]);
 
   useEffect(() => {
     void load();
@@ -127,10 +124,7 @@ export default function TcgOverlayThemeCard({ labels }: Props) {
     async (patch: Record<string, unknown>) => {
       setBusy(true);
       try {
-        const json = await adminFetchJson<ThemeState>(
-          '/api/admin/tcg/overlay-theme',
-          { method: 'PUT', body: JSON.stringify(patch) }
-        );
+        const json = await tcgAdminClient.saveOverlayTheme<ThemeState>(patch);
         setTheme(json.theme ?? DEFAULT_OVERLAY_THEME);
         addToast(labels.saved, 'success');
       } catch (err) {
@@ -140,7 +134,7 @@ export default function TcgOverlayThemeCard({ labels }: Props) {
         setBusy(false);
       }
     },
-    [adminFetchJson, addToast, labels, messageFor]
+    [addToast, labels, messageFor]
   );
 
   /**

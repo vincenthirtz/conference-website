@@ -8,7 +8,8 @@
 
 import type { Dispatch, SetStateAction } from 'react';
 import { format } from '@/lib/i18n/useAdminT';
-import { AdminFetchError, type useAdminFetch } from '@/hooks/useAdminFetch';
+import { AdminHttpError } from '@/utils/admin/adminHttp';
+import { usersClient } from '../client';
 import type { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import type { useToast } from '@/components/Toast';
 import { csvCell, isSuspended } from '@/components/admin/users/manageFormat';
@@ -41,7 +42,6 @@ type Deps = {
   quickFilters: QuickFilter[];
   sortField: SortField;
   sortDir: SortDir;
-  adminFetchJson: ReturnType<typeof useAdminFetch>['adminFetchJson'];
   addToast: ReturnType<typeof useToast>['addToast'];
   confirm: ReturnType<typeof useConfirmDialog>['confirm'];
   refresh: () => void;
@@ -61,7 +61,6 @@ export function useUsersManageBulk({
   quickFilters,
   sortField,
   sortDir,
-  adminFetchJson,
   addToast,
   confirm,
   refresh,
@@ -142,10 +141,7 @@ export function useUsersManageBulk({
     setBulkBusy(true);
     try {
       const res = await runBulk(eligible, (u) =>
-        adminFetchJson('/api/admin/users/manage', {
-          method: 'PATCH',
-          body: JSON.stringify({ userId: u.id, role }),
-        })
+        usersClient.patch<void>({ userId: u.id, role })
       );
       reportBulk(res, skipped);
       setSelectedRows(new Map());
@@ -176,10 +172,7 @@ export function useUsersManageBulk({
     setBulkBusy(true);
     try {
       const res = await runBulk(eligible, (u) =>
-        adminFetchJson('/api/admin/users/manage', {
-          method: 'DELETE',
-          body: JSON.stringify({ userId: u.id }),
-        })
+        usersClient.remove(u.id).then(() => undefined)
       );
       reportBulk(res, skipped);
       setSelectedRows(new Map());
@@ -213,13 +206,13 @@ export function useUsersManageBulk({
         let items: UserLite[] | null = null;
         for (let attempt = 0; attempt < 3 && items === null; attempt += 1) {
           try {
-            const json = await adminFetchJson<ApiResponse>(
-              `/api/admin/users/manage?${qs.toString()}`
+            const json = await usersClient.managePage<ApiResponse>(
+              qs.toString()
             );
             items = json.items || [];
           } catch (err: unknown) {
             const rateLimited =
-              err instanceof AdminFetchError && err.status === 429;
+              err instanceof AdminHttpError && err.status === 429;
             if (!rateLimited || attempt === 2) {
               if (collected.length === 0) throw err;
               truncated = true;

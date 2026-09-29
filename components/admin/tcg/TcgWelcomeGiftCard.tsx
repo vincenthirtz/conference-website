@@ -25,9 +25,14 @@
 //
 // LES LIBELLÉS ARRIVENT PAR PROP : le composant ne connaît aucune langue.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useQueryClient } from '@tanstack/react-query';
+import { tcgPaths } from '@/features/admin/tcg/client';
+import {
+  tcgAdminKeys,
+  useTcgWelcomeGift,
+} from '@/features/admin/tcg/hooks/useTcgAdmin';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
@@ -75,14 +80,13 @@ type State = {
   reward: { coins: number; packs: number };
 };
 
-const ROUTE = '/api/admin/tcg/welcome-gift';
+const ROUTE = tcgPaths.welcomeGift;
 
 export default function TcgWelcomeGiftCard({
   labels,
 }: {
   labels: TcgWelcomeGiftLabels;
 }) {
-  const { adminFetchJson } = useAdminFetch();
   // Cf. l'en-tête : la clé NE se régénère PAS après un succès.
   const { mutateJson } = useIdempotentMutation({
     autoRegenerateOnSuccess: false,
@@ -90,23 +94,15 @@ export default function TcgWelcomeGiftCard({
   const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();
 
-  const [state, setState] = useState<State | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const gift = useTcgWelcomeGift<State>();
+  const qc = useQueryClient();
+  const state: State | null = gift.data ?? null;
+  const error = gift.error ? labels.loadError : null;
   const [busy, setBusy] = useState(false);
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      setState(await adminFetchJson<State>(ROUTE));
-    } catch (err) {
-      logger.error('[admin/tcg/welcome-gift] load error:', err);
-      setError(labels.loadError);
-    }
-  }, [adminFetchJson, labels]);
-
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (gift.error)
+      logger.error('[admin/tcg/welcome-gift] load error:', gift.error);
+  }, [gift.error]);
 
   const onGrant = async () => {
     if (!state) return;
@@ -124,7 +120,7 @@ export default function TcgWelcomeGiftCard({
     setBusy(true);
     try {
       const next = await mutateJson<State>(ROUTE, { method: 'POST' });
-      setState(next);
+      qc.setQueryData(tcgAdminKeys.welcomeGift, next);
       // UN SUCCÈS N'EN EST PAS UN SI LES PAQUETS MANQUENT, et cet écran l'a
       // appris à ses dépens. Le 2026-09-14, il a affiché « 58 compte(s)
       // crédité(s) » en vert alors que `packsGranted` valait 0 : la contrainte

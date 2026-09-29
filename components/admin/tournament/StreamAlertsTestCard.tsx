@@ -11,6 +11,7 @@
 import { useState } from 'react';
 
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tournamentsUrls } from '@/features/admin/tournaments/client';
 import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminStreamAlerts from '@/lib/i18n/locales/admin-fr/adminStreamAlerts';
@@ -29,7 +30,7 @@ export default function StreamAlertsTestCard() {
   const fire = async () => {
     setBusy(true);
     try {
-      const res = await adminFetch('/api/admin/stream-alert-test', {
+      const res = await adminFetch(tournamentsUrls.streamAlertTest, {
         method: 'POST',
         body: JSON.stringify({ kind }),
       });

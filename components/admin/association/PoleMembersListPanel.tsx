@@ -15,7 +15,8 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { poleMembersClient } from '@/features/admin/pole-members/client';
+import { serverErrorText } from '@/features/admin/_shared/serverErrorText';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import PoleMemberFormModal from '@/components/admin/pole-members/PoleMemberFormModal';
 import { POLE_KEYS, POLE_LABELS, type PoleKey } from '@/utils/associationPoles';
@@ -54,7 +55,6 @@ export default function PoleMembersListPanel() {
   const [modalOpen, setModalOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [poleFilter, setPoleFilter] = useState<'all' | PoleKey>('all');
-  const { adminFetch } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 
@@ -66,7 +66,7 @@ export default function PoleMembersListPanel() {
     data: members,
     loading,
     refresh: fetchData,
-  } = useAdminResource<PoleMemberRow, ApiResponse>('/api/admin/pole-members', {
+  } = useAdminResource<PoleMemberRow, ApiResponse>(poleMembersClient.listUrl, {
     limit: 200,
     includeTotal: false,
     params: { includeInactive: true },
@@ -108,13 +108,9 @@ export default function PoleMembersListPanel() {
     });
     if (!ok) return;
     try {
-      const res = await adminFetch(`/api/admin/pole-members/${id}`, {
-        method: 'DELETE',
+      await poleMembersClient.remove(id).catch((err: unknown) => {
+        throw new Error(serverErrorText(err) || t.errorDeleteFailed);
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.error || t.errorDeleteFailed);
-      }
       fetchData();
     } catch (err: unknown) {
       addToast((err as Error)?.message || t.errorDelete, 'error');
@@ -123,14 +119,11 @@ export default function PoleMembersListPanel() {
 
   const onToggleActive = async (member: PoleMemberRow) => {
     try {
-      const res = await adminFetch(`/api/admin/pole-members/${member.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ isActive: !member.is_active }),
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.error || t.errorUpdateFailed);
-      }
+      await poleMembersClient
+        .update(member.id, { isActive: !member.is_active })
+        .catch((err: unknown) => {
+          throw new Error(serverErrorText(err) || t.errorUpdateFailed);
+        });
       fetchData();
     } catch (err: unknown) {
       addToast((err as Error)?.message || t.errorUpdate, 'error');

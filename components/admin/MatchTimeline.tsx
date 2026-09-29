@@ -1,10 +1,10 @@
 // components/admin/MatchTimeline.tsx
 // Timeline visuelle des actions staff sur un match,
-// alimentée par l'API /api/admin/matches/[matchId]/history.
+// alimentée par l'historique du match (useMatchHistory, cache partagé).
 
-import { useEffect, useState, useCallback } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useMatchHistory } from '@/features/admin/matches/hooks/useMatch';
+import { AdminHttpError } from '@/utils/admin/adminHttp';
 import nsAdminMatchTimeline from '@/lib/i18n/locales/admin-fr/adminMatchTimeline';
 
 type Dict = typeof nsAdminMatchTimeline.fr;
@@ -64,35 +64,16 @@ function summarize(log: HistoryLog, t: Dict): string {
 
 export default function MatchTimeline({ matchId }: Props) {
   const t = useAdminT(nsAdminMatchTimeline);
-  const { adminFetch } = useAdminFetch();
-  const [logs, setLogs] = useState<HistoryLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchHistory = useCallback(async () => {
-    // Réarmer loading/error à chaque (re)fetch : sinon, après une erreur
-    // transitoire, un refetch réussi continue d'afficher l'erreur, et un
-    // changement de matchId montre les logs de l'ancien match sans loading.
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await adminFetch(`/api/admin/matches/${matchId}/history`);
-      if (!res.ok) {
-        setError(t.errorLoad);
-        return;
-      }
-      const json = await res.json();
-      setLogs(json.logs || []);
-    } catch {
-      setError(t.errorNetwork);
-    } finally {
-      setLoading(false);
-    }
-  }, [matchId, t, adminFetch]);
-
-  useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+  const history = useMatchHistory(matchId);
+  // Réarmé à chaque (re)lecture : une erreur transitoire suivie d'une relecture
+  // réussie n'affiche plus l'erreur ; un autre match repasse par le chargement.
+  const loading = history.isFetching;
+  const error = history.error
+    ? history.error instanceof AdminHttpError
+      ? t.errorLoad
+      : t.errorNetwork
+    : null;
+  const logs = (history.data ?? []) as HistoryLog[];
 
   if (loading) {
     return (

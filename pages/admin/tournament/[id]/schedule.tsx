@@ -12,25 +12,23 @@
 // geste est le lot 5, parce qu'un déplacement mérite d'abord son aperçu
 // d'impact.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { tournamentUrls } from '@/features/admin/tournaments/client';
+import { useScheduleDiagnostics } from '@/features/admin/tournaments/hooks/useTournamentSchedule';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import nsAdminTournamentSchedule from '@/lib/i18n/locales/admin-fr/adminTournamentSchedule';
-import ScheduleMonthCalendar, {
-  type CalendarMatch,
-} from '@/components/admin/tournament/ScheduleMonthCalendar';
-import type { AvailabilityConstraint } from '@/utils/matches/availability';
+import ScheduleMonthCalendar from '@/components/admin/tournament/ScheduleMonthCalendar';
 import type {
   MoveImpact,
-  ScheduleAnomaly,
   ScheduleAnomalyKind,
   ScheduleAnomalySeverity,
   ScheduleSuggestion,
@@ -38,24 +36,6 @@ import type {
 import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import StatTile, { type StatTone } from '@/features/admin/_shared/ui/StatTile';
-
-type DiagnosticsResponse = {
-  tournament: {
-    id: string;
-    name: string | null;
-    startDate: string | null;
-    endDate: string | null;
-    timezone: string;
-  };
-  counts: Record<ScheduleAnomalySeverity, number>;
-  anomalies: ScheduleAnomaly[];
-  slotGrid: string[];
-  constraintCount: number;
-  matchCount: number;
-  matches: CalendarMatch[];
-  constraints: AvailabilityConstraint[];
-  teamNames: Record<string, string>;
-};
 
 const SEVERITIES: ScheduleAnomalySeverity[] = ['blocking', 'warning', 'info'];
 
@@ -90,42 +70,24 @@ export const getServerSideProps = withStaffPage(
   async () => ({})
 );
 
-export default function TournamentSchedulePage() {
+export default withAdminQuery(TournamentSchedulePage);
+
+function TournamentSchedulePage() {
   const t = useAdminT(nsAdminTournamentSchedule);
   const router = useRouter();
   const { id } = router.query as { id?: string };
-  const { adminFetchJson } = useAdminFetch();
-
-  const [data, setData] = useState<DiagnosticsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [rest, setRest] = useState(30);
   const [concurrent, setConcurrent] = useState(1);
   const [view, setView] = useState<'list' | 'month'>('month');
   const [movingId, setMovingId] = useState<string | null>(null);
+  const diagnostics = useScheduleDiagnostics(id ?? '', rest, concurrent);
+  const data = diagnostics.data ?? null;
+  const loading = diagnostics.isFetching;
+  const error = diagnostics.error ? t.loadError : null;
+  const load = diagnostics.refetch;
   const { mutateJson } = useIdempotentMutation();
   const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();
-
-  const load = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    try {
-      const json = await adminFetchJson<DiagnosticsResponse>(
-        `/api/admin/tournament/${id}/schedule-diagnostics?rest=${rest}&concurrent=${concurrent}`
-      );
-      setData(json);
-      setError(null);
-    } catch {
-      setError(t.loadError);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, id, rest, concurrent, t.loadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   /**
    * La gravité la plus haute retenue contre chaque match. Le calendrier n'a pas
@@ -169,7 +131,7 @@ export default function TournamentSchedulePage() {
         { matchId: suggestion.matchId, scheduledAt: suggestion.moveTo },
       ];
       const preview = await mutateJson<{ impact: MoveImpact }>(
-        `/api/admin/tournament/${id}/schedule-move`,
+        tournamentUrls.scheduleMove(id),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -216,7 +178,7 @@ export default function TournamentSchedulePage() {
       });
       if (!ok) return;
 
-      await mutateJson(`/api/admin/tournament/${id}/schedule-move`, {
+      await mutateJson(tournamentUrls.scheduleMove(id), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ moves, apply: true, rest, concurrent }),

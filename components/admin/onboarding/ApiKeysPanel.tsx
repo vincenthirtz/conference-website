@@ -15,8 +15,16 @@
 // et un appel par espace au chargement serait un N+1 pour une information que
 // personne ne lit d'un bloc.
 
-import { useCallback, useEffect, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useCallback, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  type ApiTokenRow,
+  tenantsClient,
+} from '@/features/admin/tenants/client';
+import {
+  tenantsKeys,
+  useTenantsReadiness,
+} from '@/features/admin/tenants/hooks/useTenants';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
 import ApiTokenRevealModal from '@/components/admin/ApiTokenRevealModal';
@@ -33,18 +41,7 @@ type TenantRow = {
   apiTokenSoonestExpiry: string | null;
 };
 
-type TokenRow = {
-  id: string;
-  name: string;
-  token_prefix: string;
-  scopes: string[];
-  created_at: string;
-  last_used_at: string | null;
-  revoked_at: string | null;
-  expires_at: string | null;
-  comp: boolean;
-  comp_note: string | null;
-};
+type TokenRow = ApiTokenRow;
 
 /** Une échéance en deçà de ce seuil mérite d'être vue avant, pas après. */
 const EXPIRY_WARN_DAYS = 30;
@@ -58,48 +55,40 @@ function daysUntil(iso: string | null): number | null {
 
 export default function ApiKeysPanel() {
   const t = useAdminT(nsAdminOnboarding);
-  const { adminFetchJson } = useAdminFetch();
-
-  const [tenants, setTenants] = useState<TenantRow[] | null>(null);
+  const qc = useQueryClient();
+  // Même lecture que le panneau « Préparation » : une requête pour les deux.
+  const readiness = useTenantsReadiness<{ tenants: TenantRow[] }>();
+  const tenants: TenantRow[] | null = readiness.error
+    ? []
+    : (readiness.data?.tenants ?? null);
   const [error, setError] = useState<string | null>(null);
+  const loadError = readiness.error
+    ? readiness.error.message || t.apiKeysLoadError
+    : null;
   const [openId, setOpenId] = useState<string | null>(null);
   const [tokens, setTokens] = useState<Record<string, TokenRow[]>>({});
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [mintFor, setMintFor] = useState<TenantRow | null>(null);
   const [revealed, setRevealed] = useState<string | null>(null);
 
-  const loadTenants = useCallback(async () => {
+  const loadTenants = useCallback(() => {
     setError(null);
-    try {
-      const data = await adminFetchJson<{ tenants: TenantRow[] }>(
-        '/api/admin/tenants/readiness'
-      );
-      setTenants(data.tenants);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t.apiKeysLoadError);
-      setTenants([]);
-    }
-  }, [adminFetchJson, t.apiKeysLoadError]);
-
-  useEffect(() => {
-    void loadTenants();
-  }, [loadTenants]);
+    return qc.invalidateQueries({ queryKey: tenantsKeys.readiness });
+  }, [qc]);
 
   const loadTokens = useCallback(
     async (tenantId: string) => {
       setLoadingId(tenantId);
       try {
-        const data = await adminFetchJson<{ tokens: TokenRow[] }>(
-          `/api/admin/tenants/${tenantId}/api-tokens`
-        );
-        setTokens((prev) => ({ ...prev, [tenantId]: data.tokens }));
+        const data = await tenantsClient.apiTokens(tenantId);
+        setTokens((prev) => ({ ...prev, [tenantId]: data.tokens ?? [] }));
       } catch (err) {
         setError(err instanceof Error ? err.message : t.apiKeysLoadError);
       } finally {
         setLoadingId(null);
       }
     },
-    [adminFetchJson, t.apiKeysLoadError]
+    [t.apiKeysLoadError]
   );
 
   const toggle = useCallback(
@@ -119,23 +108,14 @@ export default function ApiKeysPanel() {
         return;
       }
       try {
-        await adminFetchJson(
-          `/api/admin/tenants/${tenantId}/api-tokens?tokenId=${encodeURIComponent(token.id)}`,
-          { method: 'DELETE' }
-        );
+        await tenantsClient.revokeApiToken(tenantId, token.id);
         await loadTokens(tenantId);
         await loadTenants();
       } catch (err) {
         setError(err instanceof Error ? err.message : t.apiKeysRevokeError);
       }
     },
-    [
-      adminFetchJson,
-      loadTenants,
-      loadTokens,
-      t.apiKeysRevokeConfirm,
-      t.apiKeysRevokeError,
-    ]
+    [loadTenants, loadTokens, t.apiKeysRevokeConfirm, t.apiKeysRevokeError]
   );
 
   if (tenants === null) {
@@ -144,7 +124,11 @@ export default function ApiKeysPanel() {
 
   return (
     <div>
-      <AlertBanner message={error} variant="error" className="mb-4" />
+      <AlertBanner
+        message={error ?? loadError}
+        variant="error"
+        className="mb-4"
+      />
       <p className="mb-4 text-sm text-neutral-400">{t.apiKeysIntro}</p>
 
       <ul className="space-y-3">

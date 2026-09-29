@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  useStage,
+  useStageHistory,
+} from '@/features/admin/stages/hooks/useStage';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StageType } from '@/types/admin';
@@ -47,11 +51,6 @@ type FormattedStaffLog = {
   message?: string;
 };
 
-type ApiResponse = {
-  stageId: string;
-  logs: FormattedStaffLog[];
-};
-
 export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
 });
@@ -73,82 +72,45 @@ function AdminStageHistoryPage(_props: StaffProps) {
   const t = useAdminT(nsAdminStageHistory);
   const router = useRouter();
   const { stageId } = router.query;
-  const { adminFetch } = useAdminFetch();
-
-  const [logs, setLogs] = useState<FormattedStaffLog[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Contexte de la phase, uniquement pour la barre d'onglets (gating + retour).
-  const [stageType, setStageType] = useState<StageType | null>(null);
-  const [tournamentId, setTournamentId] = useState<string | null>(null);
+  // Best-effort : la barre reste utilisable sans ces infos.
+  const stageQuery = useStage<{
+    stage_type?: StageType | null;
+    tournament_id?: string | null;
+  }>(String(stageId ?? ''));
+  const stageType = stageQuery.data?.stage?.stage_type ?? null;
+  const tournamentId = stageQuery.data?.stage?.tournament_id ?? null;
 
   // filtres
   const [entityType, setEntityType] = useState('');
   const [action, setAction] = useState('');
   const [limit, setLimit] = useState(100);
+  // Filtres appliqués seulement au clic « Filtrer » (pas à chaque frappe).
+  const [applied, setApplied] = useState({ entityType: '', action: '' });
 
-  async function fetchLogs() {
-    if (!stageId) return;
-
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(limit));
-
-      if (entityType.trim()) params.set('entityType', entityType.trim());
-      if (action.trim()) params.set('action', action.trim());
-
-      const res = await fetch(
-        `/api/admin/stages/${stageId}/history?` + params.toString()
-      );
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || t.errLoadHistory);
-      }
-
-      const json: ApiResponse = await res.json();
-      setLogs(json.logs || []);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errUnknown);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
-  useEffect(() => {
-    if (!stageId) return;
-    fetchLogs();
-    // Rechargement volontairement piloté par stageId/limit seuls ; fetchLogs lit aussi les filtres (entityType/action) appliqués via un bouton dédié, pas en réactif.
-  }, [stageId, limit]);
-
-  // Charge le type de phase + le tournoi parent pour la barre d'onglets.
-  useEffect(() => {
-    if (!stageId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await adminFetch(`/api/admin/stages/${stageId}`);
-        if (!res.ok || cancelled) return;
-        const json = await res.json();
-        setStageType(json.stage?.stage_type ?? null);
-        setTournamentId(json.stage?.tournament_id ?? null);
-      } catch {
-        // best-effort : la barre reste utilisable sans ces infos.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [stageId, adminFetch]);
+  const historyQuery = useStageHistory<FormattedStaffLog>(
+    String(stageId ?? ''),
+    { limit, ...applied },
+    t.errLoadHistory
+  );
+  const logs = historyQuery.data ?? [];
+  const loading = historyQuery.isFetching;
+  const errorMsg = historyQuery.error
+    ? (historyQuery.error.message ?? t.errUnknown)
+    : null;
 
   function handleFilterSubmit(e: React.FormEvent) {
     e.preventDefault();
-    fetchLogs();
+    const next = { entityType: entityType.trim(), action: action.trim() };
+    if (
+      next.entityType === applied.entityType &&
+      next.action === applied.action
+    ) {
+      void historyQuery.refetch();
+    } else {
+      setApplied(next);
+    }
   }
 
   const filterLabelClass = 'text-xs text-[var(--t3,#a39ba6)]';
@@ -349,4 +311,4 @@ function AdminStageHistoryPage(_props: StaffProps) {
   );
 }
 
-export default AdminStageHistoryPage;
+export default withAdminQuery(AdminStageHistoryPage);

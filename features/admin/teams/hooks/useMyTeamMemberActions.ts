@@ -14,6 +14,7 @@ import type { useToast } from '@/components/Toast';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 import { isValidSkillRating } from '@/utils/overwatchRank';
 import { logger } from '@/utils/logger';
+import { captainTeamPaths, teamsPaths } from '../client';
 import type { Member } from '@/components/admin/teams/my/types';
 import type nsAdminTeamsMy from '@/lib/i18n/locales/admin-fr/adminTeamsMy';
 
@@ -96,8 +97,8 @@ export function useMyTeamMemberActions({
         // faite par un admin depuis cet écran.
         const isAdminPath = Boolean(isStaffAdmin && selectedTeamId);
         const url = isAdminPath
-          ? `/api/admin/teams/${selectedTeamId}/members`
-          : '/api/teams/update-member';
+          ? teamsPaths.members(selectedTeamId)
+          : captainTeamPaths.updateMember;
         const res = await adminFetch(scopeToTeam(url), {
           method: 'PATCH',
           body: JSON.stringify(
@@ -177,8 +178,8 @@ export function useMyTeamMemberActions({
         // admin, `skill_rating` côté capitaine.
         const isAdminPath = Boolean(isStaffAdmin && selectedTeamId);
         const url = isAdminPath
-          ? `/api/admin/teams/${selectedTeamId}/members`
-          : '/api/teams/update-member';
+          ? teamsPaths.members(selectedTeamId)
+          : captainTeamPaths.updateMember;
         const res = await adminFetch(scopeToTeam(url), {
           method: 'PATCH',
           body: JSON.stringify(
@@ -224,8 +225,8 @@ export function useMyTeamMemberActions({
         // `isSubstitute` côté admin, `is_substitute` côté capitaine.
         const isAdminPath = Boolean(isStaffAdmin && selectedTeamId);
         const url = isAdminPath
-          ? `/api/admin/teams/${selectedTeamId}/members`
-          : '/api/teams/update-member';
+          ? teamsPaths.members(selectedTeamId)
+          : captainTeamPaths.updateMember;
         const res = await adminFetch(url, {
           method: 'PATCH',
           body: JSON.stringify(
@@ -264,16 +265,13 @@ export function useMyTeamMemberActions({
       try {
         if (isStaffAdmin && selectedTeamId) {
           // Admin path: dedicated swap endpoint (atomic) owned by the api agent.
-          const res = await adminFetch(
-            `/api/admin/teams/${selectedTeamId}/members`,
-            {
-              method: 'PATCH',
-              body: JSON.stringify({
-                memberId: source.id,
-                swapWithMemberId: target.id,
-              }),
-            }
-          );
+          const res = await adminFetch(teamsPaths.members(selectedTeamId), {
+            method: 'PATCH',
+            body: JSON.stringify({
+              memberId: source.id,
+              swapWithMemberId: target.id,
+            }),
+          });
           const json = await res.json().catch(() => ({}));
           if (!res.ok) {
             addToast(json?.error || t.errSwap, 'error');
@@ -285,14 +283,14 @@ export function useMyTeamMemberActions({
           // divisée par 2, P3-10). L'ordre de vérification des erreurs est
           // conservé : échec du premier → errSwap, échec du second → swapPartial.
           const [r1, r2] = await Promise.all([
-            adminFetch(scopeToTeam('/api/teams/update-member'), {
+            adminFetch(scopeToTeam(captainTeamPaths.updateMember), {
               method: 'PATCH',
               body: JSON.stringify({
                 memberId: source.id,
                 is_substitute: !(source.is_substitute ?? false),
               }),
             }),
-            adminFetch(scopeToTeam('/api/teams/update-member'), {
+            adminFetch(scopeToTeam(captainTeamPaths.updateMember), {
               method: 'PATCH',
               body: JSON.stringify({
                 memberId: target.id,
@@ -354,7 +352,7 @@ export function useMyTeamMemberActions({
       try {
         if (isStaffAdmin && selectedTeamId) {
           // Admin path: set captain_id directly on the team (api agent endpoint).
-          const res = await adminFetch(`/api/admin/teams/${selectedTeamId}`, {
+          const res = await adminFetch(teamsPaths.byId(selectedTeamId), {
             method: 'PATCH',
             body: JSON.stringify({ captain_id: m.user_id }),
           });
@@ -365,7 +363,7 @@ export function useMyTeamMemberActions({
           }
         } else {
           const res = await adminFetch(
-            scopeToTeam('/api/teams/transfer-captain'),
+            scopeToTeam(captainTeamPaths.transferCaptain),
             {
               method: 'PATCH',
               body: JSON.stringify({ newCaptainUserId: m.user_id }),

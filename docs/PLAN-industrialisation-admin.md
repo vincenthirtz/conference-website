@@ -609,7 +609,20 @@ concerné — d'où les listes périmées après une édition dans un tiroir.
       remplacement direct : rendu et cibles e2e changeraient). Outils : `EDITOR_QUERY_OPTIONS`,
       `useHydrateOnce`, `_shared/{tournamentOptions,teamOptions}.ts`. Suite complète verte
       (734 fichiers, 11 194 tests) — non vérifié dans un navigateur.
-- [ ] Éditer une équipe dans un tiroir met à jour la liste sans rechargement (L17).
+- [x] **Vague client 2 (2026-09-29)** : tournoi + phases, équipes + comptes + demandes, matchs,
+      espaces/onboarding/intégrations, adhérents, journaux, accueil, TCG, map-pool, presets,
+      corbeille, caster. URLs en dur côté UI 411 → 61 (4 en commentaires), `useState` 1 631 → 1 385 ;
+      édition d'équipe 44 → 23 `useState`. Éditer une équipe met à jour `/admin/teams` sans
+      rechargement (invalidation des listes). Conservés : hub du tournoi (SSR + sondage 90 s +
+      temps réel), liste des matchs du tournoi, veto, check-in live, chat Twitch, scrutin MVP,
+      état du draft ; aucun secret en cache (rotation, clés, webhooks, jeton d'overlay).
+      Corrections au passage : recherche de joueuse (modale d'ajout), bulk-ops, historiques,
+      Discord et thème d'overlay TCG appelaient l'API SANS jeton ou lisaient mal le `code` —
+      probablement cassés en prod (non vérifié). À rapprocher : chemins match dupliqués entre
+      `tournaments/client` (`tournamentMatchUrls`) et `matches/client`, `dashboardPaths`.
+      Candidats `useAdminForm` listés (édition de tournoi, création, cagnotte, Discord…).
+- [x] Éditer une équipe met à jour la liste sans rechargement (vague client 2).
+
 - [ ] Deux panneaux qui lisent la même ressource ne déclenchent qu'une requête (acquis par
       construction avec des clés partagées ; à constater sur un écran multi-panneaux).
 - [ ] Aucune URL `/api/admin/…` en dur dans un module migré (cliquet `ui.rawAdminUrl` : 642).

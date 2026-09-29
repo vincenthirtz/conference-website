@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
+import { logsPaths } from '@/features/admin/logs/client';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import {
@@ -149,7 +150,7 @@ export default function DiscordLogsPanel() {
     setOffset,
     resetOffset,
   } = useAdminResource<DiscordLogRow, DiscordLogsApiResponse>(
-    '/api/admin/discord-logs',
+    logsPaths.discord,
     {
       limit: 100,
       params: currentFilters,
@@ -185,15 +186,9 @@ export default function DiscordLogsPanel() {
     setExportError(null);
     setExporting(true);
 
-    const params = new URLSearchParams();
-    params.set('format', 'csv');
-    for (const [key, value] of Object.entries(currentFilters)) {
-      if (value) params.set(key, value);
-    }
-
     try {
       const res = await adminFetch(
-        `/api/admin/discord-logs?${params.toString()}`
+        logsPaths.csv(logsPaths.discord, currentFilters)
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();

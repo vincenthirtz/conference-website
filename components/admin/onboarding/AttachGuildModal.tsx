@@ -27,7 +27,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Modal from '@/components/ui/Modal';
 import AlertBanner from '@/components/admin/AlertBanner';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tenantsClient, tenantsPaths } from '@/features/admin/tenants/client';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -67,7 +67,6 @@ export default function AttachGuildModal({
   botInviteUrl,
 }: AttachGuildModalProps) {
   const t = useAdminT(nsAdminOnboarding);
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
 
@@ -90,9 +89,8 @@ export default function AttachGuildModal({
   const loadPending = useCallback(async () => {
     setRefreshing(true);
     try {
-      const data = await adminFetchJson<{ links: PendingLink[] }>(
-        '/api/admin/pending-guild-links'
-      );
+      // Relue à chaque ouverture, hors cache : l'attente a pu bouger.
+      const data = await tenantsClient.pendingGuildLinks();
       setPending(data.links ?? []);
     } catch {
       // L'attente est une commodité : si elle ne charge pas, la saisie
@@ -101,7 +99,7 @@ export default function AttachGuildModal({
     } finally {
       setRefreshing(false);
     }
-  }, [adminFetchJson]);
+  }, []);
 
   // Repart d'un formulaire vierge à chaque ouverture, et recharge l'attente :
   // elle a pu bouger depuis le dernier affichage.
@@ -121,10 +119,7 @@ export default function AttachGuildModal({
     let cancelled = false;
     (async () => {
       try {
-        const data = await adminFetchJson<{
-          url: string | null;
-          mode: 'direct' | 'manual';
-        }>(`/api/admin/tenants/${tenant.id}/bot-invite`);
+        const data = await tenantsClient.botInvite(tenant.id);
         if (cancelled) return;
         setInviteUrl(data.url ?? botInviteUrl);
         setInviteMode(data.mode ?? 'manual');
@@ -140,7 +135,7 @@ export default function AttachGuildModal({
     return () => {
       cancelled = true;
     };
-  }, [open, tenant, adminFetchJson, botInviteUrl]);
+  }, [open, tenant, botInviteUrl]);
 
   const guildId = choice || manualId.trim();
 
@@ -153,7 +148,7 @@ export default function AttachGuildModal({
     setSaving(true);
     setError(null);
     try {
-      await mutateJson(`/api/admin/tenants/${tenant.id}/guilds`, {
+      await mutateJson(tenantsPaths.guilds(tenant.id), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ guild_id: guildId }),

@@ -9,12 +9,14 @@
 // feuille (TeamExportSheet). `?autoprint=1` — posé par le bouton « Exporter
 // PDF » — ouvre l'impression dès que les données ET les logos sont là.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { adminKey, withAdminQuery } from '@/features/admin/_shared/query';
+import { adminRequest } from '@/utils/admin/adminHttp';
 import PrintExportButton from '@/components/PrintExportButton';
 import AlertBanner from '@/components/admin/AlertBanner';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
@@ -66,7 +68,6 @@ function waitForImages(
 function AdminTeamsPrintPage() {
   const t = useAdminT(nsAdminTeamExport);
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
 
   const target = useMemo(
     () => (router.isReady ? parseTeamExportTarget(router.query) : null),
@@ -75,30 +76,29 @@ function AdminTeamsPrintPage() {
   const apiUrl = target ? buildTeamExportApiUrl(target, 'json') : null;
   const autoprint = router.isReady && isAutoprintRequested(router.query);
 
-  const [data, setData] = useState<TeamExportPayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Instantané pour impression : lu à l'ouverture, jamais relu en tâche de
+  // fond (une relecture pendant la boîte d'impression changerait la feuille).
+  const exportQuery = useQuery({
+    queryKey: adminKey('teams', 'export', apiUrl),
+    queryFn: async () =>
+      normalizeTeamExportPayload(await adminRequest<unknown>(apiUrl as string)),
+    enabled: !!apiUrl,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
+  });
+  const data: TeamExportPayload | null = exportQuery.isError
+    ? null
+    : (exportQuery.data ?? null);
+  const loading = exportQuery.isPending || exportQuery.isFetching;
+  const error: string | null = exportQuery.error
+    ? (exportQuery.error.message ?? '')
+    : null;
+  const load = () => void exportQuery.refetch();
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const printedRef = useRef(false);
-
-  const load = useCallback(async () => {
-    if (!apiUrl) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const json = await adminFetchJson<unknown>(apiUrl);
-      setData(normalizeTeamExportPayload(json));
-    } catch (err: unknown) {
-      setData(null);
-      setError((err as Error)?.message ?? '');
-    } finally {
-      setLoading(false);
-    }
-  }, [apiUrl, adminFetchJson]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   useEffect(() => {
     if (!autoprint || !data || data.teams.length === 0) return;
@@ -195,4 +195,4 @@ function AdminTeamsPrintPage() {
   );
 }
 
-export default AdminTeamsPrintPage;
+export default withAdminQuery(AdminTeamsPrintPage);

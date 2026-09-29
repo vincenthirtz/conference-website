@@ -10,7 +10,9 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { usersClient, usersPaths } from '@/features/admin/users/client';
+import { useAccountLogs } from '@/features/admin/users/hooks/useUsersQueries';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { roleLabel } from '@/components/admin/users/roleDisplay';
@@ -56,7 +58,7 @@ import {
 
 export const getServerSideProps = withStaffPage({ permission: 'manage_staff' });
 
-export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
+function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const t = useAdminT(nsAdminUsersManage);
   const { lang } = useLang();
   const [total, setTotal] = useState<number | null>(null);
@@ -96,7 +98,6 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   const selfId = staff.auth_user_id;
 
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const {
@@ -109,7 +110,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     mutate,
     refresh,
     error: loadError,
-  } = useAdminResource<UserLite, ApiResponse>('/api/admin/users/manage', {
+  } = useAdminResource<UserLite, ApiResponse>(usersPaths.manage, {
     limit: 20,
     initialOffset: initialView.offset,
     includeTotal: false,
@@ -208,29 +209,21 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
   // Répond à « qui a changé ça, et quand ? » sans quitter la liste ni aller
   // fouiller /admin/logs à la main.
   const [logsUser, setLogsUser] = useState<UserLite | null>(null);
-  const [logs, setLogs] = useState<AccountLog[] | null>(null);
-  const [logsError, setLogsError] = useState<string | null>(null);
+  const logsQuery = useAccountLogs(logsUser?.id ?? null, 25);
+  const logs: AccountLog[] | null = logsQuery.isFetching
+    ? null
+    : logsQuery.isError
+      ? null
+      : (logsQuery.data?.logs ?? null);
+  const logsError = logsQuery.error
+    ? logsQuery.error.message || t.errLogs
+    : null;
 
   // Permissions accordées à l'unité : la boîte vit dans son propre composant
   // (lot A7), la page n'en garde que la cible ouverte.
   const [permissionsUser, setPermissionsUser] = useState<UserLite | null>(null);
 
-  const openLogs = useCallback(
-    async (user: UserLite) => {
-      setLogsUser(user);
-      setLogs(null);
-      setLogsError(null);
-      try {
-        const json = await adminFetchJson<{ logs: AccountLog[] }>(
-          `/api/admin/logs?userId=${encodeURIComponent(user.id)}&limit=25`
-        );
-        setLogs(json.logs || []);
-      } catch (err: unknown) {
-        setLogsError((err as Error)?.message || t.errLogs);
-      }
-    },
-    [adminFetchJson, t]
-  );
+  const openLogs = useCallback((user: UserLite) => setLogsUser(user), []);
 
   // Suspension (alternative à la suppression : le compte et ses rosters
   // restent intacts, seule la connexion est refusée).
@@ -251,13 +244,10 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     setSuspendSaving(true);
     setSuspendError(null);
     try {
-      await adminFetchJson('/api/admin/users/manage', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          userId: suspendingUser.id,
-          action: 'suspend',
-          duration: suspendDuration,
-        }),
+      await usersClient.patch({
+        userId: suspendingUser.id,
+        action: 'suspend',
+        duration: suspendDuration,
       });
       setSuspendingUser(null);
       addToast(t.toastSuspended, 'success');
@@ -283,10 +273,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
       });
       if (!ok) return;
       try {
-        await adminFetchJson('/api/admin/users/manage', {
-          method: 'PATCH',
-          body: JSON.stringify({ userId: user.id, action: 'unsuspend' }),
-        });
+        await usersClient.patch({ userId: user.id, action: 'unsuspend' });
         mutate((prev) =>
           prev.map((u) => (u.id === user.id ? { ...u, banned_until: null } : u))
         );
@@ -295,7 +282,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         addToast((err as Error)?.message || t.errSuspend, 'error');
       }
     },
-    [confirm, adminFetchJson, mutate, addToast, t]
+    [confirm, mutate, addToast, t]
   );
 
   const handleSort = useCallback((field: SortField) => {
@@ -349,10 +336,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
       setUpdating(targetUser.id);
       try {
-        await adminFetchJson('/api/admin/users/manage', {
-          method: 'PATCH',
-          body: JSON.stringify({ userId: targetUser.id, role }),
-        });
+        await usersClient.patch({ userId: targetUser.id, role });
         mutate((prev) =>
           prev.map((u) => (u.id === targetUser.id ? { ...u, role } : u))
         );
@@ -363,7 +347,7 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         setUpdating(null);
       }
     },
-    [staff.role, confirm, adminFetchJson, mutate, addToast, t]
+    [staff.role, confirm, mutate, addToast, t]
   );
 
   const openBattleTagEdit = useCallback(
@@ -397,19 +381,16 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     setBattleTagSaving(true);
     setBattleTagError(null);
     try {
-      const json = await adminFetchJson<{
+      const json = await usersClient.patch<{
         membership?: {
           battle_tag: string | null;
           battle_tag_verified_at: string | null;
           battle_tag_mismatch: boolean;
         };
-      }>('/api/admin/users/manage', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          userId: editingBattleTag.userId,
-          teamId: editingBattleTag.teamId,
-          battleTag: trimmed,
-        }),
+      }>({
+        userId: editingBattleTag.userId,
+        teamId: editingBattleTag.teamId,
+        battleTag: trimmed,
       });
       // Le serveur invalide la vérification Battle.net quand le tag change :
       // on reprend SON état plutôt que de deviner, sinon la pastille
@@ -457,12 +438,9 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     setEditSaving(true);
     setEditError(null);
     try {
-      await adminFetchJson('/api/admin/users/manage', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          userId: editingUser.id,
-          display_name: editDisplayName.trim(),
-        }),
+      await usersClient.patch({
+        userId: editingUser.id,
+        display_name: editDisplayName.trim(),
       });
       mutate((prev) =>
         prev.map((u) =>
@@ -493,16 +471,10 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
 
       setResendingUser(user.id);
       try {
-        const json = await adminFetchJson<{ warning?: string }>(
-          '/api/admin/users/manage',
-          {
-            method: 'PATCH',
-            body: JSON.stringify({
-              userId: user.id,
-              action: 'resend_credentials',
-            }),
-          }
-        );
+        const json = await usersClient.patch<{ warning?: string }>({
+          userId: user.id,
+          action: 'resend_credentials',
+        });
         if (json.warning) {
           addToast(json.warning, 'warning');
         } else {
@@ -517,17 +489,14 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
         setResendingUser(null);
       }
     },
-    [confirm, adminFetchJson, addToast, t]
+    [confirm, addToast, t]
   );
 
   const deleteUser = async () => {
     if (!deletingUser) return;
     setDeleteLoading(true);
     try {
-      await adminFetchJson('/api/admin/users/manage', {
-        method: 'DELETE',
-        body: JSON.stringify({ userId: deletingUser.id }),
-      });
+      await usersClient.remove(deletingUser.id);
       mutate((prev) => prev.filter((u) => u.id !== deletingUser!.id));
       setTotal((prev) => (prev !== null ? prev - 1 : prev));
       setDeletingUser(null);
@@ -586,7 +555,6 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     quickFilters,
     sortField,
     sortDir,
-    adminFetchJson,
     addToast,
     confirm,
     refresh,
@@ -794,3 +762,5 @@ export default function ManageUsersPage({ staff }: { staff: StaffShape }) {
     </>
   );
 }
+
+export default withAdminQuery(ManageUsersPage);

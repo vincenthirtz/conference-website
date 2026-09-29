@@ -3,10 +3,11 @@
 // Extracted from the former /admin/tournament/[id]/checkin page; now hosted as
 // the `settings` sub-tab of the merged check-in route.
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tournamentUrls } from '@/features/admin/tournaments/client';
+import { useTournamentRead } from '@/features/admin/tournaments/hooks/useTournamentRead';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import Modal from '@/components/admin/Modal';
@@ -126,75 +127,58 @@ function statusBadge(
   }
 }
 
+const NO_REASONS: Record<string, string> = {};
+
 export default function CheckinSettingsPanel() {
   const t = useAdminT(nsAdminTournamentCheckin);
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
   const { mutate: processCheckin } = useIdempotentMutation();
 
   const { mutate: saveSettings } = useIdempotentMutation();
 
-  const [rows, setRows] = useState<CheckinRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const checkinQuery = useTournamentRead<ApiResponse>(
+    tournamentId ?? '',
+    'checkin',
+    tournamentUrls.checkin
+  );
+  const rows: CheckinRow[] = checkinQuery.data?.matches || [];
+  const loading = checkinQuery.isFetching;
+  const errorMsg = checkinQuery.error?.message ?? null;
   const [processing, setProcessing] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [filter, setFilter] = useState<'upcoming' | 'all'>('upcoming');
 
   const [graceMinutes, setGraceMinutes] = useState<number>(
     DEFAULT_GRACE_MINUTES
   );
-  const [noShowReasons, setNoShowReasons] = useState<Record<string, string>>(
-    {}
+  // Réglages auxiliaires : un échec garde les défauts, sans casser la page.
+  const settingsQuery = useTournamentRead<SettingsResponse>(
+    tournamentId ?? '',
+    'checkin-settings',
+    tournamentUrls.checkinSettings
   );
+  const noShowReasons: Record<string, string> =
+    settingsQuery.data?.noShowReasons || NO_REASONS;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [graceDraft, setGraceDraft] = useState<string>(
     String(DEFAULT_GRACE_MINUTES)
   );
   const [savingSettings, setSavingSettings] = useState(false);
 
-  const fetchSettings = useCallback(async () => {
-    if (!tournamentId) return;
-    try {
-      const json = await adminFetchJson<SettingsResponse>(
-        `/api/admin/tournament/${tournamentId}/checkin-settings`
-      );
-      const minutes =
-        typeof json.checkinGraceMinutes === 'number'
-          ? json.checkinGraceMinutes
-          : DEFAULT_GRACE_MINUTES;
-      setGraceMinutes(minutes);
-      setGraceDraft(String(minutes));
-      setNoShowReasons(json.noShowReasons || {});
-    } catch {
-      // Non-blocking: settings are auxiliary. Keep defaults, never break the page.
-      setGraceMinutes(DEFAULT_GRACE_MINUTES);
-      setNoShowReasons({});
-    }
-  }, [tournamentId, adminFetchJson]);
-
-  const fetchData = useCallback(async () => {
-    if (!tournamentId) return;
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const json = await adminFetchJson<ApiResponse>(
-        `/api/admin/tournament/${tournamentId}/checkin`
-      );
-      setRows(json.matches || []);
-    } catch (err) {
-      setErrorMsg((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [tournamentId, adminFetchJson]);
-
+  const settings = settingsQuery.data;
   useEffect(() => {
-    fetchData();
-    fetchSettings();
-  }, [fetchData, fetchSettings]);
+    if (!settings) return;
+    const minutes =
+      typeof settings.checkinGraceMinutes === 'number'
+        ? settings.checkinGraceMinutes
+        : DEFAULT_GRACE_MINUTES;
+    setGraceMinutes(minutes);
+    setGraceDraft(String(minutes));
+  }, [settings]);
+
+  const fetchData = () => checkinQuery.refetch();
 
   async function handleSaveSettings() {
     if (!tournamentId) return;
@@ -206,7 +190,7 @@ export default function CheckinSettingsPanel() {
     setSavingSettings(true);
     try {
       const res = await saveSettings(
-        `/api/admin/tournament/${tournamentId}/checkin-settings`,
+        tournamentUrls.checkinSettings(tournamentId),
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -234,10 +218,9 @@ export default function CheckinSettingsPanel() {
     if (!tournamentId) return;
     setProcessing(true);
     try {
-      const res = await processCheckin(
-        `/api/admin/tournament/${tournamentId}/checkin`,
-        { method: 'POST' }
-      );
+      const res = await processCheckin(tournamentUrls.checkin(tournamentId), {
+        method: 'POST',
+      });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || t.errorGeneric);
       addToast(

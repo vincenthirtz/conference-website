@@ -43,6 +43,7 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import nsAdminTcgGrant from '@/lib/i18n/locales/admin-fr/adminTcgGrant';
 import { logger } from '../../../utils/logger';
 import TcgPlayerPicker, { type PickedUser } from './TcgPlayerPicker';
+import { tcgPaths } from '@/features/admin/tcg/client';
 import {
   GRANT_MAX_ABS_AMOUNT,
   GRANT_REASON_MAX,
@@ -59,7 +60,7 @@ import {
   validateGrantForm,
 } from './tcgGrantForm';
 
-const ROUTE = '/api/admin/tcg/grant';
+const ROUTE = tcgPaths.grant;
 
 type Labels = typeof nsAdminTcgGrant.fr;
 

@@ -17,7 +17,8 @@ import { useRouter } from 'next/router';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { castMembersClient } from '@/features/admin/cast-members/client';
+import { serverErrorText } from '@/features/admin/_shared/serverErrorText';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import CastMemberFormModal from '@/components/admin/cast-members/CastMemberFormModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -70,7 +71,6 @@ export default function CastMembersListPanel() {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
-  const { adminFetch } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 
@@ -97,7 +97,7 @@ export default function CastMembersListPanel() {
     refresh: fetchData,
     mutate,
     resetOffset,
-  } = useAdminResource<CastMemberRow, ApiResponse>('/api/admin/cast-members', {
+  } = useAdminResource<CastMemberRow, ApiResponse>(castMembersClient.listUrl, {
     limit: PAGE_SIZE,
     query: debouncedSearch,
     debounceMs: 0,
@@ -145,13 +145,9 @@ export default function CastMembersListPanel() {
     });
     if (!ok) return;
     try {
-      const res = await adminFetch(`/api/admin/cast-members/${id}`, {
-        method: 'DELETE',
+      await castMembersClient.remove(id).catch((err: unknown) => {
+        throw new Error(serverErrorText(err) || tx.errorDeleteFailed);
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.error || tx.errorDeleteFailed);
-      }
       fetchData();
     } catch (err: unknown) {
       addToast((err as Error)?.message || tx.errorDelete, 'error');
@@ -160,14 +156,11 @@ export default function CastMembersListPanel() {
 
   const onToggleActive = async (member: CastMemberRow) => {
     try {
-      const res = await adminFetch(`/api/admin/cast-members/${member.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ isActive: !member.is_active }),
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.error || tx.errorUpdateFailed);
-      }
+      await castMembersClient
+        .update(member.id, { isActive: !member.is_active })
+        .catch((err: unknown) => {
+          throw new Error(serverErrorText(err) || tx.errorUpdateFailed);
+        });
       fetchData();
     } catch (err: unknown) {
       addToast((err as Error)?.message || tx.errorUpdate, 'error');
@@ -198,18 +191,14 @@ export default function CastMembersListPanel() {
 
       setSaving(true);
       try {
-        const results = await Promise.all(
+        // Chaque écriture est vérifiée : un 403/409/500 laisserait sinon
+        // l'ordre optimiste affiché sans persistance (ni toast ni resync).
+        const results = await Promise.allSettled(
           updates.map((u) =>
-            adminFetch(`/api/admin/cast-members/${u.id}`, {
-              method: 'PATCH',
-              body: JSON.stringify({ sortOrder: u.sortOrder }),
-            })
+            castMembersClient.update(u.id, { sortOrder: u.sortOrder })
           )
         );
-        // fetch ne rejette pas sur un statut HTTP d'erreur : vérifier chaque
-        // réponse, sinon un 403/409/500 laisserait l'ordre optimiste affiché
-        // sans persistance (ni toast ni resync).
-        const failed = results.filter((res) => !res.ok);
+        const failed = results.filter((res) => res.status === 'rejected');
         if (failed.length > 0) {
           throw new Error(
             format(
@@ -227,7 +216,7 @@ export default function CastMembersListPanel() {
         setSaving(false);
       }
     },
-    [members, fetchData, mutate, adminFetch, addToast, tx]
+    [members, fetchData, mutate, addToast, tx]
   );
 
   return (

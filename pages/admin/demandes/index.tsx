@@ -13,6 +13,12 @@ import { withStaffPage } from '@/utils/staff';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  demandesClient,
+  demandesPaths,
+} from '@/features/admin/demandes/client';
+import { useInvalidateDemandes } from '@/features/admin/demandes/hooks/useDemandesQueries';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
@@ -278,7 +284,8 @@ function AdminDemandesPage({
 }: Props) {
   const t = useAdminT(nsAdminDemandesList);
   const { addToast } = useToast();
-  const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { adminFetch } = useAdminFetch();
+  const invalidateDemandes = useInvalidateDemandes();
   const router = useRouter();
   const { filters } = useUrlFilters(D_FILTER_KEYS);
 
@@ -352,6 +359,8 @@ function AdminDemandesPage({
   }
 
   async function refresh() {
+    // Les vues joueuse / capitaine et les fiches en cache se relisent aussi.
+    void invalidateDemandes();
     await router.replace(router.asPath, undefined, { scroll: false });
   }
 
@@ -377,16 +386,10 @@ function AdminDemandesPage({
     newStatus: 'approved' | 'rejected',
     battleTagOverrides?: Record<string, string>
   ) {
-    return adminFetchJson<{ updatedCount: number }>('/api/admin/demandes', {
-      method: 'POST',
-      body: JSON.stringify({
-        action: 'updateStatus',
-        demandeIds: ids,
-        newStatus,
-        ...(battleTagOverrides && Object.keys(battleTagOverrides).length > 0
-          ? { battleTagOverrides }
-          : {}),
-      }),
+    return demandesClient.updateStatus({
+      ids,
+      newStatus,
+      battleTagOverrides,
     });
   }
 
@@ -426,10 +429,7 @@ function AdminDemandesPage({
     setSingleProcessing(id);
     setErrorMsg(null);
     try {
-      const json = await adminFetchJson<{ message?: string }>(
-        `/api/admin/demandes/${id}/notify-captains`,
-        { method: 'POST' }
-      );
+      const json = await demandesClient.notifyCaptains(id);
       addToast(json?.message || t.notifyCaptainsDone, 'success');
     } catch (err) {
       const msg = (err as Error)?.message || t.notifyCaptainsFailed;
@@ -522,14 +522,7 @@ function AdminDemandesPage({
     }
     setInfoProcessing(true);
     try {
-      await adminFetchJson('/api/admin/demandes', {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'requestMoreInfo',
-          demandeId: infoModal.demande.id,
-          note,
-        }),
-      });
+      await demandesClient.requestMoreInfo(infoModal.demande.id, note);
       addToast(t.toastNoteSaved, 'success');
       setInfoModal(null);
       refresh();
@@ -563,7 +556,7 @@ function AdminDemandesPage({
     if (dateFrom) params.set('dateFrom', dateFrom);
     if (dateTo) params.set('dateTo', dateTo);
 
-    const url = '/api/admin/demandes?' + params.toString();
+    const url = demandesPaths.csv(params);
     try {
       const res = await adminFetch(url);
       const blob = await res.blob();
@@ -752,4 +745,4 @@ function AdminDemandesPage({
   );
 }
 
-export default AdminDemandesPage;
+export default withAdminQuery(AdminDemandesPage);

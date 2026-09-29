@@ -15,7 +15,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  integrationsPaths,
+  type WebhookDelivery,
+  type WebhookSubscription,
+} from '@/features/admin/integrations/client';
+import {
+  useReloadIntegrations,
+  useWebhookDeliveries,
+  useWebhooks,
+} from '@/features/admin/integrations/hooks/useIntegrations';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -42,34 +52,10 @@ const LABEL = 'mb-1 block text-sm text-[var(--t3,#a39ba6)]';
 const INPUT =
   'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 
-type Subscription = {
-  id: string;
-  url: string;
-  event_types: string[];
-  description: string | null;
-  enabled: boolean;
-  consecutive_failures: number;
-  disabled_at: string | null;
-  last_delivery_at: string | null;
-  last_error: string | null;
-  created_at: string;
-};
+type Subscription = WebhookSubscription;
+type Delivery = WebhookDelivery;
 
-type Delivery = {
-  id: string;
-  event_name: string;
-  status: string;
-  attempts: number;
-  response_status: number | null;
-  last_error: string | null;
-  delivered_at: string | null;
-  created_at: string;
-};
-
-type ListResponse = {
-  subscriptions: Subscription[];
-  availableEvents: string[];
-};
+const EMPTY_EVENTS: string[] = [];
 type CreateResponse = { secret: string; subscription: Subscription };
 
 function formatDate(s: string | null, fallback: string): string {
@@ -92,14 +78,22 @@ export const getServerSideProps = withStaffPage({
 
 function AdminWebhooksPage() {
   const t = useAdminT(nsAdminWebhooks);
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 
-  const [subs, setSubs] = useState<Subscription[] | null>(null);
-  const [available, setAvailable] = useState<string[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const list = useWebhooks();
+  const reload = useReloadIntegrations();
+  const subs: Subscription[] | null = list.error
+    ? []
+    : (list.data?.subscriptions ?? null);
+  const available = list.data?.availableEvents ?? EMPTY_EVENTS;
+  // Bandeau refermable : l'erreur fermée reste fermée jusqu'à la suivante.
+  const [dismissedError, setDismissedError] = useState<unknown>(null);
+  const loadError =
+    list.error && list.error !== dismissedError
+      ? list.error.message || t.errorLoad
+      : null;
 
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
@@ -109,25 +103,22 @@ function AdminWebhooksPage() {
   const [revealed, setRevealed] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const [deliveries, setDeliveries] = useState<Record<string, Delivery[]>>({});
   const [openId, setOpenId] = useState<string | null>(null);
-
-  const fetchSubs = useCallback(async () => {
-    setLoadError(null);
-    try {
-      const res = await adminFetchJson<ListResponse>('/api/admin/webhooks');
-      setSubs(res.subscriptions ?? []);
-      setAvailable(res.availableEvents ?? []);
-    } catch (err) {
-      logger.error('[admin/webhooks] load error', err);
-      setSubs([]);
-      setLoadError((err as Error)?.message || t.errorLoad);
-    }
-  }, [adminFetchJson, t.errorLoad]);
+  const deliveriesQuery = useWebhookDeliveries(openId);
+  const openDeliveries: Delivery[] | undefined = deliveriesQuery.data;
 
   useEffect(() => {
-    fetchSubs();
-  }, [fetchSubs]);
+    if (list.error) logger.error('[admin/webhooks] load error', list.error);
+  }, [list.error]);
+
+  const fetchSubs = useCallback(() => reload('webhooks'), [reload]);
+
+  // Livraisons illisibles : toast, le volet reste en chargement (inchangé).
+  useEffect(() => {
+    if (deliveriesQuery.error) {
+      addToast(deliveriesQuery.error.message || t.errorGeneric, 'error');
+    }
+  }, [deliveriesQuery.error, addToast, t.errorGeneric]);
 
   const toggleEvent = useCallback((ev: string) => {
     setSelected((prev) => {
@@ -153,14 +144,19 @@ function AdminWebhooksPage() {
       }
       setCreating(true);
       try {
-        const res = await mutateJson<CreateResponse>('/api/admin/webhooks', {
-          method: 'POST',
-          body: JSON.stringify({
-            url: url.trim(),
-            event_types: [...selected],
-            ...(description.trim() ? { description: description.trim() } : {}),
-          }),
-        });
+        const res = await mutateJson<CreateResponse>(
+          integrationsPaths.webhooks,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              url: url.trim(),
+              event_types: [...selected],
+              ...(description.trim()
+                ? { description: description.trim() }
+                : {}),
+            }),
+          }
+        );
         addToast(t.toastCreated, 'success');
         setUrl('');
         setDescription('');
@@ -195,7 +191,7 @@ function AdminWebhooksPage() {
     async (sub: Subscription) => {
       setBusyId(sub.id);
       try {
-        await mutateJson(`/api/admin/webhooks/${sub.id}`, {
+        await mutateJson(integrationsPaths.webhook(sub.id), {
           method: 'PATCH',
           body: JSON.stringify({ enabled: !sub.enabled }),
         });
@@ -228,7 +224,9 @@ function AdminWebhooksPage() {
       if (!ok) return;
       setBusyId(sub.id);
       try {
-        await mutateJson(`/api/admin/webhooks/${sub.id}`, { method: 'DELETE' });
+        await mutateJson(integrationsPaths.webhook(sub.id), {
+          method: 'DELETE',
+        });
         addToast(t.toastDeleted, 'success');
         await fetchSubs();
       } catch (err) {
@@ -250,25 +248,9 @@ function AdminWebhooksPage() {
     ]
   );
 
-  const toggleDeliveries = useCallback(
-    async (sub: Subscription) => {
-      if (openId === sub.id) {
-        setOpenId(null);
-        return;
-      }
-      setOpenId(sub.id);
-      if (deliveries[sub.id]) return;
-      try {
-        const res = await adminFetchJson<{ deliveries: Delivery[] }>(
-          `/api/admin/webhooks/${sub.id}/deliveries`
-        );
-        setDeliveries((prev) => ({ ...prev, [sub.id]: res.deliveries ?? [] }));
-      } catch (err) {
-        addToast((err as Error)?.message || t.errorGeneric, 'error');
-      }
-    },
-    [openId, deliveries, adminFetchJson, addToast, t.errorGeneric]
-  );
+  const toggleDeliveries = useCallback((sub: Subscription) => {
+    setOpenId((prev) => (prev === sub.id ? null : sub.id));
+  }, []);
 
   return (
     <>
@@ -393,7 +375,7 @@ function AdminWebhooksPage() {
             message={loadError}
             variant="error"
             className="my-4"
-            onDismiss={() => setLoadError(null)}
+            onDismiss={() => setDismissedError(list.error)}
           />
 
           {subs === null ? (
@@ -481,9 +463,9 @@ function AdminWebhooksPage() {
 
                   {openId === sub.id && (
                     <div className="mt-4 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-3">
-                      {!deliveries[sub.id] ? (
+                      {!openDeliveries ? (
                         <LoadingSpinner label={t.loading} className="py-4" />
-                      ) : deliveries[sub.id].length === 0 ? (
+                      ) : openDeliveries.length === 0 ? (
                         <p className="py-2 text-xs text-[var(--t4,#807984)]">
                           {t.noDeliveries}
                         </p>
@@ -510,7 +492,7 @@ function AdminWebhooksPage() {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--line2,rgba(194,196,201,.2))]">
-                              {deliveries[sub.id].map((d) => (
+                              {openDeliveries.map((d) => (
                                 <tr key={d.id}>
                                   <td className="py-1.5 pr-3 font-mono text-[var(--t2,#c7bfca)]">
                                     {d.event_name}
@@ -560,4 +542,4 @@ function AdminWebhooksPage() {
 
 AdminWebhooksPage.displayName = 'AdminWebhooksPage';
 
-export default AdminWebhooksPage;
+export default withAdminQuery(AdminWebhooksPage);

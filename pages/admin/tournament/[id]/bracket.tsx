@@ -17,6 +17,7 @@ import Tabs, {
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import type { StaffProps } from '@/types/admin';
+import { withAdminQuery } from '@/features/admin/_shared/query';
 import nsAdminTournamentNav from '@/lib/i18n/locales/admin-fr/adminTournamentNav';
 
 // Placeholder de chargement partagé par les panels code-splittés.
@@ -52,7 +53,9 @@ export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
 });
 
-export default function AdminTournamentBracketPage(_: StaffProps) {
+export default withAdminQuery(AdminTournamentBracketPage);
+
+function AdminTournamentBracketPage(_: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : (id ?? '');

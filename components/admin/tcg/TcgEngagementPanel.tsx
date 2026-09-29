@@ -14,9 +14,9 @@
 // l'une n'a peut-être jamais su que le TCG existait, l'autre connaît et a remis
 // à plus tard. On ne leur parle pas pareil.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useTcgEngagement } from '@/features/admin/tcg/hooks/useTcgAdmin';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
 import nsAdminTcgPage from '@/lib/i18n/locales/admin-fr/adminTcgPage';
@@ -64,26 +64,11 @@ function shortDate(iso: string): string {
 
 export default function TcgEngagementPanel() {
   const t = useAdminT(nsAdminTcgPage);
-  const { adminFetchJson } = useAdminFetch();
-
-  const [data, setData] = useState<Payload | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      setData(
-        await adminFetchJson<Payload>('/api/admin/tcg/engagement?weeks=8')
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t.engagementError);
-      setData(null);
-    }
-  }, [adminFetchJson, t.engagementError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const engagement = useTcgEngagement<Payload>(8);
+  const data: Payload | null = engagement.data ?? null;
+  const error = engagement.error
+    ? engagement.error.message || t.engagementError
+    : null;
 
   // Échelle commune aux deux séries : deux barres qui ne se comparent pas
   // racontent n'importe quoi.

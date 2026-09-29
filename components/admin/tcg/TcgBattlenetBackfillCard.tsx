@@ -20,9 +20,14 @@
 // d'ajustement de solde. Les valeurs arrivent de l'API : la carte ne connaît
 // aucun montant.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tcgPaths } from '@/features/admin/tcg/client';
+import {
+  tcgAdminKeys,
+  useReloadTcg,
+  useTcgBattlenetBackfill,
+} from '@/features/admin/tcg/hooks/useTcgAdmin';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
@@ -46,7 +51,7 @@ import {
 } from '../../../utils/tcg/battlenetBackfillModel';
 import { logger } from '../../../utils/logger';
 
-const ROUTE = '/api/admin/tcg/battlenet-backfill';
+const ROUTE = tcgPaths.battlenetBackfill;
 
 type Result =
   | { kind: 'report'; report: BackfillReport }
@@ -54,34 +59,36 @@ type Result =
 
 export default function TcgBattlenetBackfillCard() {
   const t = useAdminT(nsAdminTcgBattlenetBackfill);
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation({
     autoRegenerateOnSuccess: false,
   });
   const { confirm, dialog } = useConfirmDialog();
 
-  const [sim, setSim] = useState<BackfillSimulation | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const simQuery = useTcgBattlenetBackfill();
+  const reloadTcg = useReloadTcg();
+  // Une forme inattendue est un échec de lecture, pas « rien à faire ».
+  const sim: BackfillSimulation | null = useMemo(
+    () =>
+      simQuery.data === undefined || simQuery.error
+        ? null
+        : normalizeBackfillSimulation(simQuery.data),
+    [simQuery.data, simQuery.error]
+  );
+  const loadFailed = !!simQuery.error || (simQuery.isSuccess && !sim);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
-
-  const load = useCallback(async () => {
-    setLoadFailed(false);
-    try {
-      const next = normalizeBackfillSimulation(await adminFetchJson(ROUTE));
-      setSim(next);
-      // Une forme inattendue est un échec de lecture, pas « rien à faire ».
-      if (!next) setLoadFailed(true);
-    } catch (err) {
-      logger.error('[admin/tcg/battlenet-backfill] load error:', err);
-      setSim(null);
-      setLoadFailed(true);
-    }
-  }, [adminFetchJson]);
-
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (simQuery.error) {
+      logger.error(
+        '[admin/tcg/battlenet-backfill] load error:',
+        simQuery.error
+      );
+    }
+  }, [simQuery.error]);
+  const load = useCallback(
+    () => reloadTcg(tcgAdminKeys.battlenetBackfill),
+    [reloadTcg]
+  );
 
   const onGrant = async () => {
     if (!sim || !canDistribute(sim)) return;

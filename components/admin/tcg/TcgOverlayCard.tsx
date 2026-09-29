@@ -24,7 +24,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { copyText } from '@/utils/clipboard';
 
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tcgAdminClient } from '@/features/admin/tcg/client';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
@@ -66,7 +66,6 @@ export type TcgOverlayLabels = {
 type Props = { labels: TcgOverlayLabels };
 
 export default function TcgOverlayCard({ labels }: Props) {
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 
@@ -79,16 +78,14 @@ export default function TcgOverlayCard({ labels }: Props) {
   const load = useCallback(async () => {
     setError(null);
     try {
-      setState(
-        await adminFetchJson<TcgOverlayTokenState>(
-          '/api/admin/tcg/overlay-token'
-        )
-      );
+      // Lecture directe, hors cache de requêtes : le lien donne accès à
+      // l'overlay.
+      setState(await tcgAdminClient.overlayToken<TcgOverlayTokenState>());
     } catch (err) {
       logger.error('[admin/tcg/overlay] load error:', err);
       setError(labels.loadError);
     }
-  }, [adminFetchJson, labels]);
+  }, [labels]);
 
   useEffect(() => {
     void load();
@@ -97,10 +94,10 @@ export default function TcgOverlayCard({ labels }: Props) {
   const mutate = async (method: 'POST' | 'DELETE') => {
     setBusy(true);
     try {
-      const next = await adminFetchJson<TcgOverlayTokenState>(
-        '/api/admin/tcg/overlay-token',
-        { method }
-      );
+      const next =
+        await tcgAdminClient.rotateOverlayToken<TcgOverlayTokenState>({
+          method,
+        });
       setState(next);
       setRevealed(false);
     } catch (err) {

@@ -7,7 +7,7 @@
 // la page, avec l'état du formulaire d'équipe. `MatchPicker` et `TeamPicker`
 // cherchent d'autres entités. Ce composant interroge
 // `GET /api/admin/tcg/players`, gardée par le MÊME droit que la correction
-// (`manage_tcg`) — et non `/api/admin/users/search`, gardée par `manage_staff` :
+// (`manage_tcg`) — et non la route /api/admin/users/search, gardée par `manage_staff` :
 // trouver une joueuse ne doit pas exiger le pouvoir de gérer le staff. Motif
 // ARIA repris de `MatchPicker`.
 //
@@ -31,7 +31,8 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tcgAdminClient } from '@/features/admin/tcg/client';
+import { AdminHttpError } from '@/utils/admin/adminHttp';
 import { useDebounce } from '@/hooks/useDebounce';
 import { format } from '@/lib/i18n/useAdminT';
 import type nsAdminTcgGrant from '@/lib/i18n/locales/admin-fr/adminTcgGrant';
@@ -49,7 +50,7 @@ export type PickedUser = {
   teamName: string | null;
 };
 
-/** Forme rendue par `/api/admin/tcg/players` (snake_case côté route). */
+/** Forme rendue par la route /api/admin/tcg/players (snake_case côté route). */
 type SearchRow = {
   id: string;
   email: string | null;
@@ -91,7 +92,6 @@ export default function TcgPlayerPicker({
   errorId,
   invalid = false,
 }: Props) {
-  const { adminFetch } = useAdminFetch();
   const baseId = useId();
   const listboxId = `${baseId}-listbox`;
   const hintId = `${baseId}-hint`;
@@ -137,23 +137,26 @@ export default function TcgPlayerPicker({
     setStatus('loading');
     void (async () => {
       try {
-        const res = await adminFetch(
-          `/api/admin/tcg/players?q=${encodeURIComponent(debouncedQuery)}`,
-          { signal: controller.signal }
-        );
+        const json = await tcgAdminClient
+          .players<{ players?: SearchRow[] }>(debouncedQuery, {
+            signal: controller.signal,
+          })
+          .catch((err: unknown) => {
+            if (err instanceof AdminHttpError) return err;
+            throw err;
+          });
         if (controller.signal.aborted) return;
-        if (res.status === 403) {
-          forbiddenRef.current = true;
-          setResults([]);
-          setStatus('forbidden');
-          return;
-        }
-        if (!res.ok) {
+        if (json instanceof AdminHttpError) {
+          if (json.status === 403) {
+            forbiddenRef.current = true;
+            setResults([]);
+            setStatus('forbidden');
+            return;
+          }
           setResults([]);
           setStatus('error');
           return;
         }
-        const json = (await res.json()) as { players?: SearchRow[] };
         if (controller.signal.aborted) return;
         setResults((json.players ?? []).map(toPicked));
         setActiveIndex(0);
@@ -165,7 +168,7 @@ export default function TcgPlayerPicker({
       }
     })();
     return () => controller.abort();
-  }, [debouncedQuery, adminFetch]);
+  }, [debouncedQuery]);
 
   // Fermer au clic extérieur.
   useEffect(() => {

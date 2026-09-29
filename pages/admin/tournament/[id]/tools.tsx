@@ -12,7 +12,12 @@ import type { StaffProps } from '@/types/admin';
 import { supabaseAdmin } from '@/utils/supabase';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import {
+  tournamentsUrls,
+  tournamentUrls,
+} from '@/features/admin/tournaments/client';
+import { useUpdateTournament } from '@/features/admin/tournaments/hooks/useTournamentDetail';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
@@ -83,7 +88,7 @@ function TournamentToolsPage({ initialTournament }: Props) {
   const tov = useAdminT(nsAdminTournamentOverview);
   const te = useAdminT(nsAdminTournamentEmbed);
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
+  const updateTournament = useUpdateTournament<TournamentBasics>(tournamentId);
   const { mutate: mutateIdempotent } = useIdempotentMutation();
   const { mutate: notifyMutate } = useIdempotentMutation();
 
@@ -126,7 +131,7 @@ function TournamentToolsPage({ initialTournament }: Props) {
     if (!tournamentId || notifyingCaptains) return;
     setNotifyingCaptains(true);
     try {
-      const res = await notifyMutate('/api/admin/tournaments/notify-captains', {
+      const res = await notifyMutate(tournamentsUrls.notifyCaptains, {
         method: 'POST',
         body: JSON.stringify({ tournamentId }),
       });
@@ -161,10 +166,10 @@ function TournamentToolsPage({ initialTournament }: Props) {
     setCloning(true);
     setActionError(null);
     try {
-      const res = await mutateIdempotent(
-        `/api/admin/tournament/${tournamentId}/clone`,
-        { method: 'POST', body: JSON.stringify({}) }
-      );
+      const res = await mutateIdempotent(tournamentUrls.clone(tournamentId), {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || tov.errorClone);
@@ -186,13 +191,9 @@ function TournamentToolsPage({ initialTournament }: Props) {
     setConvertingQuickBracket(true);
     setActionError(null);
     try {
-      const json = await adminFetchJson<{ tournament: TournamentBasics }>(
-        `/api/admin/tournament/${tournamentId}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ description_info: null }),
-        }
-      );
+      const json = await updateTournament.mutateAsync({
+        description_info: null,
+      });
       // Refetch local : le tournoi n'est plus un quick-bracket.
       setTournament((prev) =>
         prev
@@ -556,4 +557,4 @@ function TournamentToolsPage({ initialTournament }: Props) {
   );
 }
 
-export default TournamentToolsPage;
+export default withAdminQuery(TournamentToolsPage);

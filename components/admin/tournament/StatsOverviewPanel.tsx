@@ -3,11 +3,11 @@
 // from the former /admin/tournament/[id]/stats page; now the `overview` sub-tab
 // of the merged stats route.
 
-import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tournamentUrls } from '@/features/admin/tournaments/client';
+import { useTournamentRead } from '@/features/admin/tournaments/hooks/useTournamentRead';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentStats from '@/lib/i18n/locales/admin-fr/adminTournamentStats';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
@@ -84,36 +84,20 @@ type TournamentStats = {
 
 export default function StatsOverviewPanel() {
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
   const t = useAdminT(nsAdminTournamentStats);
 
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [stats, setStats] = useState<TournamentStats | null>(null);
-
-  const fetchStats = useCallback(async () => {
-    if (!id) return;
-
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const json = await adminFetchJson<TournamentStats>(
-        `/api/admin/tournament/${id}/stats`
-      );
-      setStats(json);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errorUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }, [id, adminFetchJson, t]);
-
-  useEffect(() => {
-    if (!id) return;
-    fetchStats();
-  }, [id, fetchStats]);
+  const query = useTournamentRead<TournamentStats>(
+    String(id ?? ''),
+    'stats',
+    tournamentUrls.stats
+  );
+  const loading = query.isFetching;
+  const errorMsg = query.error
+    ? (query.error.message ?? t.errorUnexpected)
+    : null;
+  const stats = query.data ?? null;
+  const fetchStats = () => void query.refetch();
 
   return (
     <>

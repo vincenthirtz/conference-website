@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -10,6 +10,10 @@ import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { stageUrls } from '@/features/admin/stages/client';
+import { useStageTeams } from '@/features/admin/stages/hooks/useStageTeams';
+import { useTournamentTeams } from '@/features/admin/tournaments/hooks/useTournamentTeams';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
@@ -86,10 +90,8 @@ type TournamentTeam = {
   logo_url: string | null;
 };
 
-type TournamentTeamsApiResponse = {
-  tournamentId: string;
-  teams: TournamentTeam[];
-};
+const EMPTY_STAGE_TEAMS: StageTeam[] = [];
+const EMPTY_TOURNAMENT_TEAMS: TournamentTeam[] = [];
 
 export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
@@ -104,18 +106,24 @@ function AdminStageTeamsPage(_props: StaffProps) {
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson: addTeamMutate } = useIdempotentMutation();
 
-  const [loading, setLoading] = useState(true);
-  const [loadingTeams, setLoadingTeams] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const [stage, setStage] = useState<StageTeamsApiResponse['stage'] | null>(
-    null
+  const stageTeamsQuery = useStageTeams<StageTeamsApiResponse>(
+    String(stageId ?? '')
   );
-  const [tournament, setTournament] = useState<
-    StageTeamsApiResponse['tournament'] | null
-  >(null);
-  const [stageTeams, setStageTeams] = useState<StageTeam[]>([]);
-  const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>([]);
+  const stage = stageTeamsQuery.data?.stage ?? null;
+  const tournament = stageTeamsQuery.data?.tournament ?? null;
+  const stageTeams = stageTeamsQuery.data?.teams ?? EMPTY_STAGE_TEAMS;
+  const tournamentTeamsQuery = useTournamentTeams<TournamentTeam>(
+    stage?.tournament_id ?? ''
+  );
+  const tournamentTeams = tournamentTeamsQuery.data ?? EMPTY_TOURNAMENT_TEAMS;
+  const loading = stageTeamsQuery.isFetching;
+  const loadingTeams = tournamentTeamsQuery.isFetching;
+  const [actionError, setErrorMsg] = useState<string | null>(null);
+  const errorMsg =
+    actionError ??
+    (stageTeamsQuery.error
+      ? (stageTeamsQuery.error.message ?? t.errUnexpected)
+      : null);
 
   // Ajout
   const [addTeamId, setAddTeamId] = useState('');
@@ -138,61 +146,28 @@ function AdminStageTeamsPage(_props: StaffProps) {
   );
   const [bulkRemoving, setBulkRemoving] = useState(false);
 
-  const fetchTournamentTeams = useCallback(
-    async (tournamentId: string) => {
-      setLoadingTeams(true);
-      try {
-        const json = await adminFetchJson<TournamentTeamsApiResponse>(
-          `/api/admin/tournament/${tournamentId}/teams`
-        );
-        setTournamentTeams(json.teams || []);
-      } catch (err) {
-        logger.error('fetchTournamentTeams error', err);
-      } finally {
-        setLoadingTeams(false);
-      }
-    },
-    [adminFetchJson]
-  );
-
-  const fetchStageTeams = useCallback(async () => {
-    if (!stageId) return;
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const json = await adminFetchJson<StageTeamsApiResponse>(
-        `/api/admin/stages/${stageId}/teams`
-      );
-      setStage(json.stage);
-      setTournament(json.tournament);
-      setStageTeams(json.teams || []);
-
-      // Init des seeds dans les inputs
-      const seedMap: Record<string, string> = {};
-      (json.teams || []).forEach((st) => {
-        seedMap[st.team_id] = st.seed != null ? String(st.seed) : '';
-      });
-      setSeedInputs(seedMap);
-      setSelectedTeamIds(new Set());
-
-      // Charger les équipes du tournoi parent
-      if (json.stage?.tournament_id) {
-        fetchTournamentTeams(json.stage.tournament_id);
-      }
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }, [stageId, adminFetchJson, t, fetchTournamentTeams]);
-
+  // Chaque lecture de la phase réinitialise les seeds saisis et la sélection
+  // (ouverture, puis après chaque geste) — comme avant.
+  const stageTeamsData = stageTeamsQuery.data;
   useEffect(() => {
-    if (!stageId) return;
-    fetchStageTeams();
-    // adminFetchJson et t sont désormais stables : fetchStageTeams ne varie
-    // qu'avec stageId → un seul chargement par stageId, sans refetch parasite.
-  }, [stageId, fetchStageTeams]);
+    if (!stageTeamsData) return;
+    const seedMap: Record<string, string> = {};
+    (stageTeamsData.teams || []).forEach((st) => {
+      seedMap[st.team_id] = st.seed != null ? String(st.seed) : '';
+    });
+    setSeedInputs(seedMap);
+    setSelectedTeamIds(new Set());
+  }, [stageTeamsData]);
+
+  const { error: tournamentTeamsError } = tournamentTeamsQuery;
+  useEffect(() => {
+    if (tournamentTeamsError)
+      logger.error('fetchTournamentTeams error', tournamentTeamsError);
+  }, [tournamentTeamsError]);
+
+  const fetchStageTeams = () => {
+    void stageTeamsQuery.refetch();
+  };
 
   const availableTeamsForAdd = useMemo(() => {
     const inStageIds = new Set(stageTeams.map((st) => st.team_id));
@@ -213,7 +188,7 @@ function AdminStageTeamsPage(_props: StaffProps) {
     const seed = addSeed.trim() !== '' ? Number(addSeed) : null;
 
     try {
-      await addTeamMutate(`/api/admin/stages/${stageId}/teams`, {
+      await addTeamMutate(stageUrls.teams(String(stageId)), {
         method: 'POST',
         body: JSON.stringify({
           teamId: addTeamId,
@@ -238,7 +213,7 @@ function AdminStageTeamsPage(_props: StaffProps) {
     setErrorMsg(null);
 
     try {
-      await adminFetchJson(`/api/admin/stages/${stageId}/teams`, {
+      await adminFetchJson(stageUrls.teams(String(stageId)), {
         method: 'DELETE',
         body: JSON.stringify({ teamId }),
       });
@@ -267,7 +242,7 @@ function AdminStageTeamsPage(_props: StaffProps) {
     setErrorMsg(null);
 
     try {
-      await adminFetchJson(`/api/admin/stages/${stageId}/teams`, {
+      await adminFetchJson(stageUrls.teams(String(stageId)), {
         method: 'PATCH',
         body: JSON.stringify({
           teamId,
@@ -301,7 +276,7 @@ function AdminStageTeamsPage(_props: StaffProps) {
     try {
       const json = await adminFetchJson<{
         results?: { success?: boolean }[];
-      }>(`/api/admin/stages/${stageId}/teams`, {
+      }>(stageUrls.teams(String(stageId)), {
         method: 'PATCH',
         body: JSON.stringify({ seeds }),
       });
@@ -351,7 +326,7 @@ function AdminStageTeamsPage(_props: StaffProps) {
     setErrorMsg(null);
 
     try {
-      await adminFetchJson(`/api/admin/stages/${stageId}/teams`, {
+      await adminFetchJson(stageUrls.teams(String(stageId)), {
         method: 'DELETE',
         body: JSON.stringify({ teamIds: Array.from(selectedTeamIds) }),
       });
@@ -686,4 +661,4 @@ function AdminStageTeamsPage(_props: StaffProps) {
   );
 }
 
-export default AdminStageTeamsPage;
+export default withAdminQuery(AdminStageTeamsPage);

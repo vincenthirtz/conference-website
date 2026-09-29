@@ -10,14 +10,29 @@ import MatchReadinessChecklist from '@/components/admin/MatchReadinessChecklist'
 import MatchTimeline from '@/components/admin/MatchTimeline';
 import MatchCastAssignments from '@/components/admin/MatchCastAssignments';
 import { useToast } from '@/components/Toast';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useQueryClient } from '@tanstack/react-query';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
+import {
+  type MatchDetail,
+  type MatchUpdateResponse,
+  matchesClient,
+} from '@/features/admin/matches/client';
+import {
+  matchesKeys,
+  useInvalidateMatch,
+  useMatchEditor,
+  useMatchMapPool,
+  useMatchMvp,
+  useMatchVeto,
+} from '@/features/admin/matches/hooks/useMatch';
+import { AdminHttpError } from '@/utils/admin/adminHttp';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { isoToLocalInput } from '@/utils/dateFormatters';
 import MatchGamesPanel, {
   gamesFromRows,
   type MatchGameInput,
-  type MatchGameRow,
 } from '@/components/admin/matches/MatchGamesPanel';
 import type {
   StaffProps,
@@ -58,15 +73,26 @@ const STATUS_ORDER: Record<string, number> = {
   cancelled: 4,
 };
 
-type MatchWithGames = Match & { games?: MatchGameRow[] | null };
+const EMPTY_POOL: string[] = [];
 
-type ApiResponse = {
-  match: MatchWithGames;
-  tournament: TournamentMini | null;
-  stage: StageMini | null;
-  team1: TeamMini | null;
-  team2: TeamMini | null;
+type ErrorBody = {
+  error?: string;
+  code?: string;
+  server_updated_at?: string | null;
 };
+
+/** Corps d'erreur d'une réponse HTTP ; une coupure réseau est relancée telle quelle. */
+function errorPayload(err: unknown): ErrorBody {
+  if (!(err instanceof AdminHttpError)) throw err;
+  return (err.payload ?? {}) as ErrorBody;
+}
+
+function isConflict(err: unknown): boolean {
+  return (
+    err instanceof AdminHttpError &&
+    (err.status === 409 || errorPayload(err).code === 'CONFLICT')
+  );
+}
 
 export const getServerSideProps = withStaffPage({
   permission: 'arbitrate_matches',
@@ -77,18 +103,25 @@ function AdminMatchEditPage(_props: StaffProps) {
   const router = useRouter();
   const { matchId } = router.query;
   const { addToast } = useToast();
-  const { adminFetch } = useAdminFetch();
+  const queryClient = useQueryClient();
+  const id = typeof matchId === 'string' ? matchId : undefined;
 
-  const [loading, setLoading] = useState(true);
+  const detail = useMatchEditor(id);
+  const { data: mapPoolData } = useMatchMapPool(id);
+  const { data: vetoData } = useMatchVeto(id);
+  const invalidateMatch = useInvalidateMatch(id);
+  const loading = detail.isPending || detail.isFetching;
+  const match: Match | null = detail.data?.match ?? null;
+  const tournament: TournamentMini | null = detail.data?.tournament ?? null;
+  const stage: StageMini | null = detail.data?.stage ?? null;
+  const team1: TeamMini | null = detail.data?.team1 ?? null;
+  const team2: TeamMini | null = detail.data?.team2 ?? null;
+
   const [saving, setSaving] = useState(false);
-
-  const [match, setMatch] = useState<Match | null>(null);
-  const [tournament, setTournament] = useState<TournamentMini | null>(null);
-  const [stage, setStage] = useState<StageMini | null>(null);
-  const [team1, setTeam1] = useState<TeamMini | null>(null);
-  const [team2, setTeam2] = useState<TeamMini | null>(null);
-
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const loadErrorMsg = detail.error
+    ? detail.error.message || t.errorLoadUnexpected
+    : null;
   const [conflictMsg, setConflictMsg] = useState<string | null>(null);
   const [conflictServerTime, setConflictServerTime] = useState<string | null>(
     null
@@ -108,17 +141,17 @@ function AdminMatchEditPage(_props: StaffProps) {
   // Games (maps) state — le rendu vit dans MatchGamesPanel (lot A7).
   type GameInput = MatchGameInput;
   const [games, setGames] = useState<GameInput[]>([]);
-  const [gamesLoaded, setGamesLoaded] = useState(false);
+  const gamesLoaded = !!detail.data;
   // Pool de cartes applicable au match (cartes du tournoi, sinon pool du
   // tenant, sinon catalogue du jeu). Alimente les suggestions du champ carte :
   // il était en texte libre, et la production n'a récolté que « Map 1 »,
   // « Map 2 »… au lieu des trente cartes du pool.
-  const [mapPool, setMapPool] = useState<string[]>([]);
+  const mapPool = mapPoolData ?? EMPTY_POOL;
   // Veto du match : sert à dire d'où viennent les cartes, et à proposer d'aller
   // le faire quand il n'a pas eu lieu. Sans ce rappel ici, le veto restait un
   // sous-onglet du tournoi que personne n'ouvrait — d'où des noms de cartes
   // tapés à la main.
-  const [vetoComplete, setVetoComplete] = useState<boolean | null>(null);
+  const vetoComplete = vetoData ?? null;
 
   const [form, setForm] = useState<MatchEditFormState>({
     status: 'pending',
@@ -138,88 +171,35 @@ function AdminMatchEditPage(_props: StaffProps) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  // Copie la réponse du serveur dans le formulaire et les parties.
+  const hydrate = useCallback((json: MatchDetail) => {
+    const m = json.match;
+    setGames(m.games && Array.isArray(m.games) ? gamesFromRows(m.games) : []);
+    setForm({
+      status: m.status || 'pending',
+      best_of: m.best_of ? String(m.best_of) : '',
+      round_number: m.round_number ? String(m.round_number) : '',
+      scheduled_at: isoToLocalInput(m.scheduled_at),
+      stream_url: m.stream_url || '',
+      notes: m.notes || '',
+      team1_score: m.team1_score != null ? String(m.team1_score) : '',
+      team2_score: m.team2_score != null ? String(m.team2_score) : '',
+    });
+  }, []);
+  useHydrateOnce(id ?? null, detail.data, hydrate);
+
+  /**
+   * Relit la fiche (et son historique) puis RÉ-HYDRATE le formulaire : après
+   * un enregistrement ou un conflit, la fiche repart des valeurs du serveur,
+   * comme avant la migration.
+   */
   const fetchMatch = useCallback(async () => {
-    if (!matchId) return;
-    setLoading(true);
+    if (!id) return;
     setErrorMsg(null);
-
-    try {
-      const res = await adminFetch(
-        `/api/admin/matches/${matchId}?includeGames=1`
-      );
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || t.errorLoadMatch);
-      }
-
-      const json: ApiResponse = await res.json();
-      const m = json.match;
-
-      // Load games
-      const matchGames = m.games;
-      if (matchGames && Array.isArray(matchGames)) {
-        setGames(gamesFromRows(matchGames));
-      } else {
-        setGames([]);
-      }
-      setGamesLoaded(true);
-
-      setMatch(m);
-      setTournament(json.tournament ?? null);
-      setStage(json.stage ?? null);
-      setTeam1(json.team1 ?? null);
-      setTeam2(json.team2 ?? null);
-
-      setForm({
-        status: m.status || 'pending',
-        best_of: m.best_of ? String(m.best_of) : '',
-        round_number: m.round_number ? String(m.round_number) : '',
-        scheduled_at: isoToLocalInput(m.scheduled_at),
-        stream_url: m.stream_url || '',
-        notes: m.notes || '',
-        team1_score: m.team1_score != null ? String(m.team1_score) : '',
-        team2_score: m.team2_score != null ? String(m.team2_score) : '',
-      });
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errorLoadUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }, [matchId, adminFetch, t]);
-
-  useEffect(() => {
-    if (!matchId) return;
-    fetchMatch();
-  }, [matchId, fetchMatch]);
-
-  // Best-effort : sans pool, le champ reste libre — on ne bloque jamais la
-  // saisie d'un score parce que la liste de cartes n'a pas pu être chargée.
-  useEffect(() => {
-    if (!matchId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await adminFetch(`/api/admin/matches/${matchId}/map-pool`);
-        if (!res.ok) return;
-        const json = (await res.json()) as { maps?: { name: string }[] };
-        if (cancelled) return;
-        setMapPool((json.maps ?? []).map((m) => m.name).filter(Boolean));
-      } catch {
-        /* pool indisponible : on garde la saisie libre */
-      }
-      try {
-        const res = await adminFetch(`/api/admin/matches/${matchId}/veto`);
-        if (!res.ok) return;
-        const json = (await res.json()) as { isComplete?: boolean };
-        if (!cancelled) setVetoComplete(Boolean(json.isComplete));
-      } catch {
-        /* veto indisponible : le bandeau ne s'affiche simplement pas */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [matchId, adminFetch]);
+    await invalidateMatch();
+    const fresh = queryClient.getQueryData<MatchDetail>(matchesKeys.detail(id));
+    if (fresh) hydrate(fresh);
+  }, [id, invalidateMatch, queryClient, hydrate]);
 
   const doSubmit = useCallback(async () => {
     if (!matchId || !match) return;
@@ -243,31 +223,25 @@ function AdminMatchEditPage(_props: StaffProps) {
           expected_updated_at: match.updated_at ?? null,
         };
 
-      const metaRes = await adminFetch(`/api/admin/matches/${matchId}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload),
-      });
-
-      if (!metaRes.ok) {
-        const json = await metaRes.json().catch(() => ({}));
-        if (metaRes.status === 409 || json.code === 'CONFLICT') {
+      let metaJson: MatchUpdateResponse;
+      try {
+        metaJson = await matchesClient.update(id as string, payload);
+      } catch (err) {
+        const json = errorPayload(err);
+        if (isConflict(err)) {
           setConflictMsg(json.error || t.conflictMsg);
           setConflictServerTime(json.server_updated_at ?? null);
           await fetchMatch();
           return;
         }
         if (json.code === 'TOURNAMENT_COMPLETED') {
-          setErrorMsg(json.error);
+          setErrorMsg(json.error ?? null);
           return;
         }
         throw new Error(json.error || t.errorUpdateMatch);
       }
 
       // Check for warnings (e.g., scheduled outside tournament dates)
-      const metaJson: {
-        match?: { updated_at?: string | null };
-        warnings?: string[];
-      } = await metaRes.json().catch(() => ({}));
       if (metaJson.warnings && Array.isArray(metaJson.warnings)) {
         setWarningMsgs(metaJson.warnings);
       } else {
@@ -277,33 +251,31 @@ function AdminMatchEditPage(_props: StaffProps) {
       // Le PUT méta vient de bumper updated_at côté serveur : réutiliser
       // l'ancien match.updated_at pour le PUT score partirait systématiquement
       // en 409. On récupère le nouvel updated_at renvoyé par l'API
-      // ({ match: updated }) ; à défaut on refetch le match.
+      // ({ match: updated }) ; à défaut on relit le match.
       let expectedUpdatedAt: string | null = metaJson.match?.updated_at ?? null;
       if (!expectedUpdatedAt) {
-        const refetchRes = await adminFetch(`/api/admin/matches/${matchId}`);
-        const refetchJson: { match?: { updated_at?: string | null } } =
-          await refetchRes.json().catch(() => ({}));
+        const refetchJson = await matchesClient
+          .meta(id as string)
+          .catch(() => ({}) as { match?: { updated_at?: string | null } });
         expectedUpdatedAt = refetchJson.match?.updated_at ?? null;
       }
 
       // 2) Save score if provided
       const hasScore = form.team1_score !== '' && form.team2_score !== '';
       if (hasScore) {
-        const scoreRes = await adminFetch(`/api/admin/matches/${matchId}`, {
-          method: 'PUT',
-          body: JSON.stringify({
+        let scoreJson: MatchUpdateResponse;
+        try {
+          scoreJson = await matchesClient.update(id as string, {
             mode: 'score',
             team1Score: Number(form.team1_score),
             team2Score: Number(form.team2_score),
             status: form.status,
             propagate: true,
             expected_updated_at: expectedUpdatedAt,
-          }),
-        });
-
-        if (!scoreRes.ok) {
-          const json = await scoreRes.json().catch(() => ({}));
-          if (scoreRes.status === 409 || json.code === 'CONFLICT') {
+          });
+        } catch (err) {
+          const json = errorPayload(err);
+          if (isConflict(err)) {
             setConflictMsg(json.error || t.conflictMsg);
             setConflictServerTime(json.server_updated_at ?? null);
             await fetchMatch();
@@ -313,7 +285,6 @@ function AdminMatchEditPage(_props: StaffProps) {
         }
         // Score partiel : le match reste « en cours » pour ne pas fermer la
         // feuille de match. Le dire, sinon l'arbitre croit avoir clos le match.
-        const scoreJson = await scoreRes.json().catch(() => ({}));
         if (scoreJson?.keptOngoing) {
           setWarningMsgs((prev) => [...prev, t.scoreKeptOngoing]);
         }
@@ -321,19 +292,15 @@ function AdminMatchEditPage(_props: StaffProps) {
 
       // 3) Save games if any were edited
       if (games.length > 0 || gamesLoaded) {
-        const gamesRes = await adminFetch(`/api/matches/${matchId}/games`, {
-          method: 'PUT',
-          body: JSON.stringify({
+        try {
+          await matchesClient.saveGames(id as string, {
             games: games,
             // Score global saisi → il fait foi ('none'). Sinon, on laisse
             // l'API recalculer le score de série depuis les maps.
             recomputeMode: hasScore ? 'none' : 'from_games',
-          }),
-        });
-
-        if (!gamesRes.ok) {
-          const json = await gamesRes.json().catch(() => ({}));
-          throw new Error(json.error || t.errorSaveMaps);
+          });
+        } catch (err) {
+          throw new Error(errorPayload(err).error || t.errorSaveMaps);
         }
       }
 
@@ -346,17 +313,7 @@ function AdminMatchEditPage(_props: StaffProps) {
     } finally {
       setSaving(false);
     }
-  }, [
-    matchId,
-    match,
-    form,
-    games,
-    gamesLoaded,
-    adminFetch,
-    fetchMatch,
-    t,
-    addToast,
-  ]);
+  }, [matchId, match, form, games, gamesLoaded, id, fetchMatch, t, addToast]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -384,18 +341,14 @@ function AdminMatchEditPage(_props: StaffProps) {
 
     try {
       // Scores auto-calculated server-side based on match format
-      const res = await adminFetch(`/api/admin/matches/${matchId}`, {
-        method: 'PUT',
-        body: JSON.stringify({
+      try {
+        await matchesClient.update(matchId as string, {
           mode: 'score',
           forfeit_team_id: forfeitTeamId,
           propagate: true,
-        }),
-      });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || t.errorForfeit);
+        });
+      } catch (err) {
+        throw new Error(errorPayload(err).error || t.errorForfeit);
       }
 
       setShowForfeitDialog(false);
@@ -443,7 +396,7 @@ function AdminMatchEditPage(_props: StaffProps) {
             setConflictServerTime(null);
             fetchMatch();
           }}
-          errorMsg={errorMsg}
+          errorMsg={errorMsg ?? loadErrorMsg}
           warningMsgs={warningMsgs}
         />
 
@@ -454,7 +407,7 @@ function AdminMatchEditPage(_props: StaffProps) {
           </div>
         )}
 
-        {!loading && !match && !errorMsg && (
+        {!loading && !match && !errorMsg && !loadErrorMsg && (
           <div className={`${CARD} text-sm text-[var(--t3,#a39ba6)]`}>
             {t.matchNotFound}
           </div>
@@ -620,45 +573,33 @@ function AdminMatchEditPage(_props: StaffProps) {
 
 function MvpSection({ matchId }: { matchId: string }) {
   const t = useAdminT(nsAdminMatchEdit);
-  const { adminFetchJson } = useAdminFetch();
   const { confirm, dialog } = useConfirmDialog();
-  const [data, setData] = useState<MvpPollData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const mvp = useMatchMvp(matchId);
+  const data: MvpPollData | null = mvp.data ?? null;
+  const loading = mvp.isFetching;
   const [selected, setSelected] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const loadErr = mvp.error ? mvp.error.message : null;
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setErr(null);
-    try {
-      const json = await adminFetchJson<
-        MvpPollData & { poll?: { winner_member_id?: string } }
-      >(`/api/admin/matches/${matchId}/mvp`);
-      setData(json);
-      if (json.poll?.winner_member_id) {
-        setSelected(json.poll.winner_member_id);
-      }
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [matchId, adminFetchJson]);
-
+  // Chaque lecture (ouverture, après un geste) présélectionne le gagnant.
+  const winner = mvp.data?.poll?.winner_member_id;
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (winner) setSelected(winner);
+  }, [winner]);
+
+  const { refetch } = mvp;
+  const fetchData = useCallback(async () => {
+    setErr(null);
+    await refetch();
+  }, [refetch]);
 
   async function save() {
     if (!selected) return;
     setSaving(true);
     setErr(null);
     try {
-      await adminFetchJson(`/api/admin/matches/${matchId}/mvp`, {
-        method: 'POST',
-        body: JSON.stringify({ winnerMemberId: selected }),
-      });
+      await matchesClient.setMvp(matchId, selected);
       await fetchData();
     } catch (e) {
       setErr((e as Error).message);
@@ -672,9 +613,7 @@ function MvpSection({ matchId }: { matchId: string }) {
     if (!ok) return;
     setSaving(true);
     try {
-      await adminFetchJson(`/api/admin/matches/${matchId}/mvp`, {
-        method: 'DELETE',
-      });
+      await matchesClient.clearMvp(matchId);
       setSelected('');
       await fetchData();
     } catch (e) {
@@ -693,7 +632,7 @@ function MvpSection({ matchId }: { matchId: string }) {
         selected={selected}
         onSelect={setSelected}
         saving={saving}
-        err={err}
+        err={err ?? loadErr}
         onSave={save}
         onClear={clear}
       />
@@ -701,4 +640,4 @@ function MvpSection({ matchId }: { matchId: string }) {
   );
 }
 
-export default AdminMatchEditPage;
+export default withAdminQuery(AdminMatchEditPage);

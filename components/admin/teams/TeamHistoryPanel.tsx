@@ -2,7 +2,7 @@
 //
 // Historique staff d'une équipe.
 //
-// L'endpoint `/api/admin/teams/[teamId]/history` existait déjà — et n'était
+// L'endpoint GET /api/admin/teams/[teamId]/history existait déjà — et n'était
 // appelé par personne. Il agrège pourtant ce qu'on cherche en premier quand un
 // roster paraît faux : qui a touché à cette équipe, quand, et pour quoi faire.
 // Sans lui, la réponse se cherchait dans `/admin/logs` en filtrant à la main.
@@ -11,47 +11,29 @@
 // ouverture de la fiche, et l'écran est déjà dense. Le chargement n'a lieu qu'au
 // dépliage — un historique que personne n'ouvre ne doit rien coûter.
 
-import { useCallback, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useState } from 'react';
+import { useTeamHistory } from '@/features/admin/teams/hooks/useTeamsQueries';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTeamEdit from '@/lib/i18n/locales/admin-fr/adminTeamEdit';
-
-type LogRow = {
-  id: string;
-  readableAction: string;
-  readableEntity: string | null;
-  date: string;
-  staff_id?: string | null;
-  payload?: Record<string, unknown> | null;
-};
 
 const PAGE_SIZE = 20;
 
 export default function TeamHistoryPanel({ teamId }: { teamId: string }) {
   const t = useAdminT(nsAdminTeamEdit);
-  const { adminFetchJson } = useAdminFetch();
 
   const [open, setOpen] = useState(false);
-  const [logs, setLogs] = useState<LogRow[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const data = await adminFetchJson<{ logs: LogRow[] }>(
-        `/api/admin/teams/${teamId}/history?limit=${PAGE_SIZE}`
-      );
-      setLogs(data.logs ?? []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t.historyLoadError);
-      setLogs([]);
-    }
-  }, [adminFetchJson, teamId, t.historyLoadError]);
+  // Chargé au premier dépliage seulement ; ensuite, gardé en cache.
+  const [requested, setRequested] = useState(false);
+  const historyQuery = useTeamHistory(teamId, PAGE_SIZE, requested);
+  const logs = historyQuery.isError ? [] : (historyQuery.data ?? null);
+  const error = historyQuery.error
+    ? historyQuery.error.message || t.historyLoadError
+    : null;
 
   const toggle = () => {
     const next = !open;
     setOpen(next);
-    if (next && logs === null) void load();
+    if (next) setRequested(true);
   };
 
   return (

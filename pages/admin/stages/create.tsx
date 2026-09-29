@@ -1,11 +1,13 @@
 // pages/admin/stages/create.tsx
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useTournamentOptions } from '@/features/admin/_shared/tournamentOptions';
+import { tournamentUrls } from '@/features/admin/tournaments/client';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminStagesCreate from '@/lib/i18n/locales/admin-fr/adminStagesCreate';
@@ -47,17 +49,6 @@ const FFA_DEFAULT_POINTS_ROWS: FfaPointsRow[] = [
   { rank: '8', points: '10' },
 ];
 
-type Tournament = {
-  id: string;
-  name: string;
-  slug: string | null;
-};
-
-type TournamentsApiResponse = {
-  tournaments: Tournament[];
-  total: number | null;
-};
-
 type CreateStageBody = {
   name: string;
   slug?: string | null;
@@ -89,12 +80,17 @@ function AdminStageCreatePage(_props: StaffProps) {
   const tf = useAdminT(nsAdminFfa);
   const router = useRouter();
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
   const { mutateJson } = useIdempotentMutation();
 
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [loadingTournaments, setLoadingTournaments] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const tournamentsQuery = useTournamentOptions();
+  const tournaments = tournamentsQuery.data?.tournaments || [];
+  const loadingTournaments = tournamentsQuery.isPending;
+  const [actionError, setErrorMsg] = useState<string | null>(null);
+  const errorMsg =
+    actionError ??
+    (tournamentsQuery.error
+      ? (tournamentsQuery.error.message ?? t.errLoadTournaments)
+      : null);
   const [submitting, setSubmitting] = useState(false);
   const [dateError, setDateError] = useState<string | null>(null);
 
@@ -174,25 +170,6 @@ function AdminStageCreatePage(_props: StaffProps) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  const fetchTournaments = useCallback(async () => {
-    setLoadingTournaments(true);
-    setErrorMsg(null);
-    try {
-      const json = await adminFetchJson<TournamentsApiResponse>(
-        '/api/admin/tournaments?limit=200'
-      );
-      setTournaments(json.tournaments || []);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errLoadTournaments);
-    } finally {
-      setLoadingTournaments(false);
-    }
-  }, [adminFetchJson, t]);
-
-  useEffect(() => {
-    fetchTournaments();
-  }, [fetchTournaments]);
-
   function parseSettings(): unknown {
     const raw = form.settingsRaw.trim();
     if (!raw) return null;
@@ -271,7 +248,7 @@ function AdminStageCreatePage(_props: StaffProps) {
       // On s'aligne sur le pattern utilisé côté API:
       // POST /api/admin/tournament/[id]/stages
       const json = await mutateJson<CreateStageResponse>(
-        `/api/admin/tournament/${form.tournamentId}/stages`,
+        tournamentUrls.stages(form.tournamentId),
         {
           method: 'POST',
           body: JSON.stringify({ stage: payload }),
@@ -641,4 +618,4 @@ function AdminStageCreatePage(_props: StaffProps) {
   );
 }
 
-export default AdminStageCreatePage;
+export default withAdminQuery(AdminStageCreatePage);

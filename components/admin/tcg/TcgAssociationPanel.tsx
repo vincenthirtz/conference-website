@@ -8,8 +8,16 @@
 // (cf. `pages/api/admin/tcg/association.ts`). Retirer n'est pas supprimer — les
 // exemplaires déjà tirés restent dans les collections, face neutre.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { useCallback, useRef, useState } from 'react';
+import {
+  type TcgAssociationWrite,
+  tcgAdminClient,
+} from '@/features/admin/tcg/client';
+import {
+  tcgAdminKeys,
+  useReloadTcg,
+  useTcgAssociation,
+} from '@/features/admin/tcg/hooks/useTcgAdmin';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTcgAssociation from '@/lib/i18n/locales/admin-fr/adminTcgAssociation';
@@ -57,11 +65,16 @@ const INPUT =
 
 export default function TcgAssociationPanel() {
   const t = useAdminT(nsAdminTcgAssociation);
-  const { adminFetchJson } = useAdminFetch();
+  const association = useTcgAssociation<Response>();
+  const reloadTcg = useReloadTcg();
   const { addToast } = useToast();
 
-  const [data, setData] = useState<Response | null>(null);
-  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const data: Response | null = association.data ?? null;
+  const state: 'loading' | 'ready' | 'error' = association.isPending
+    ? 'loading'
+    : association.error
+      ? 'error'
+      : 'ready';
   const [busy, setBusy] = useState<string | null>(null);
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -72,28 +85,16 @@ export default function TcgAssociationPanel() {
     Record<string, { title?: string; credit?: string; rarity?: string }>
   >({});
 
-  const load = useCallback(async () => {
-    try {
-      const res = await adminFetchJson<Response>('/api/admin/tcg/association');
-      setData(res);
-      setState('ready');
-    } catch {
-      setState('error');
-    }
-  }, [adminFetchJson]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const load = useCallback(
+    () => reloadTcg(tcgAdminKeys.association),
+    [reloadTcg]
+  );
 
   const run = useCallback(
-    async (key: string, init: RequestInit, success: string) => {
+    async (key: string, init: TcgAssociationWrite, success: string) => {
       setBusy(key);
       try {
-        await adminFetchJson('/api/admin/tcg/association', {
-          ...init,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        await tcgAdminClient.associationWrite(init);
         addToast(success, 'success');
         await load();
         return true;
@@ -104,7 +105,7 @@ export default function TcgAssociationPanel() {
         setBusy(null);
       }
     },
-    [adminFetchJson, addToast, load, t.toastError]
+    [addToast, load, t.toastError]
   );
 
   const importLogo = (logo: EventLogo) =>
@@ -112,11 +113,11 @@ export default function TcgAssociationPanel() {
       `logo:${logo.id}`,
       {
         method: 'POST',
-        body: JSON.stringify({
+        json: {
           action: 'import_logo',
           logoId: logo.id,
           rarity: data?.defaultRarity,
-        }),
+        },
       },
       t.toastImported
     );
@@ -126,10 +127,10 @@ export default function TcgAssociationPanel() {
       'voxel',
       {
         method: 'POST',
-        body: JSON.stringify({
+        json: {
           action: 'voxel_logo',
           rarity: data?.defaultRarity,
-        }),
+        },
       },
       t.toastVoxelCreated
     );
@@ -159,14 +160,14 @@ export default function TcgAssociationPanel() {
       'upload',
       {
         method: 'POST',
-        body: JSON.stringify({
+        json: {
           action: 'upload',
           data: payload,
           mimeType: file.type,
           title: cleanTitle,
           ...(credit.trim() ? { credit: credit.trim() } : {}),
           rarity: rarity || data?.defaultRarity,
-        }),
+        },
       },
       t.toastCreated
     );
@@ -183,13 +184,13 @@ export default function TcgAssociationPanel() {
       `edit:${item.id}`,
       {
         method: 'PATCH',
-        body: JSON.stringify({
+        json: {
           action: 'update',
           id: item.id,
           ...(edit.title?.trim() ? { title: edit.title.trim() } : {}),
           ...(edit.credit?.trim() ? { credit: edit.credit.trim() } : {}),
           ...(edit.rarity ? { rarity: edit.rarity } : {}),
-        }),
+        },
       },
       t.toastSaved
     );
@@ -200,10 +201,10 @@ export default function TcgAssociationPanel() {
       `status:${item.id}`,
       {
         method: 'PATCH',
-        body: JSON.stringify({
+        json: {
           action: item.status === 'approved' ? 'revoke' : 'restore',
           id: item.id,
-        }),
+        },
       },
       item.status === 'approved' ? t.toastRevoked : t.toastRestored
     );

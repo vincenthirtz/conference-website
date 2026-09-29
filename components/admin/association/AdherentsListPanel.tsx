@@ -13,13 +13,17 @@
 // L'éditeur (adherents/new, adherents/[id]) reste une route à part.
 // minRole 'admin' (miroir des routes API + host).
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { serverErrorText } from '@/features/admin/_shared/serverErrorText';
+import {
+  adherentsClient,
+  adherentsPaths,
+} from '@/features/admin/adherents/client';
+import { useCotisationAmount } from '@/features/admin/adherents/hooks/useAdherents';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
-import { logger } from '@/utils/logger';
 import nsAdminAdherentsList from '@/lib/i18n/locales/admin-fr/adminAdherentsList';
 import { useQueryClient } from '@tanstack/react-query';
 import { adminKey, withAdminQuery } from '@/features/admin/_shared/query';
@@ -95,12 +99,10 @@ function AdherentsListPanel() {
   const t = useAdminT(nsAdminAdherentsList);
   const paymentStatusLabels = getPaymentStatusLabels(t);
   const roleLabels = getRoleLabels(t);
-  const [cotisationAmount, setCotisationAmount] = useState<number>(0);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
 
   const currentYear = new Date().getFullYear();
-  const { adminFetch, adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 
@@ -111,7 +113,7 @@ function AdherentsListPanel() {
     'paymentStatus' | 'year' | 'role' | 'active'
   >({
     key: 'adherents',
-    url: '/api/admin/adherents',
+    url: adherentsPaths.list,
     filterKeys: ['paymentStatus', 'year', 'role', 'active'],
     pageSize: 50,
   });
@@ -124,30 +126,9 @@ function AdherentsListPanel() {
   const fetchData = () =>
     void queryClient.invalidateQueries({ queryKey: adminKey('adherents') });
 
-  // Montant de cotisation : endpoint distinct (site-settings), hors périmètre
-  // du hook liste — chargé une fois au montage.
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const settingsJson = await adminFetchJson<{
-          items?: { key: string; value: string }[];
-        }>('/api/admin/site-settings');
-        if (!active) return;
-        const cotisation = settingsJson.items?.find(
-          (s: { key: string }) => s.key === 'cotisation_amount'
-        );
-        if (cotisation?.value) {
-          setCotisationAmount(parseFloat(cotisation.value) || 0);
-        }
-      } catch (err) {
-        logger.error('Error fetching site settings', err);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [adminFetchJson]);
+  // Montant de cotisation : réglage distinct (site-settings), lu une fois ;
+  // indisponible → 0, comme avant.
+  const { data: cotisationAmount = 0 } = useCotisationAmount();
 
   const onDelete = async (id: string, name: string) => {
     const ok = await confirm({
@@ -157,13 +138,9 @@ function AdherentsListPanel() {
     });
     if (!ok) return;
     try {
-      const res = await adminFetch(`/api/admin/adherents/${id}`, {
-        method: 'DELETE',
+      await adherentsClient.remove(id).catch((err: unknown) => {
+        throw new Error(serverErrorText(err) || t.errorDeleteFailed);
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.error || t.errorDeleteFailed);
-      }
       fetchData();
     } catch (err: unknown) {
       addToast((err as Error)?.message || t.errorDelete, 'error');
@@ -185,14 +162,9 @@ function AdherentsListPanel() {
         payload.paymentDate = new Date().toISOString().split('T')[0];
       }
 
-      const res = await adminFetch(`/api/admin/adherents/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(payload),
+      await adherentsClient.update(id, payload).catch((err: unknown) => {
+        throw new Error(serverErrorText(err) || t.errorUpdateFailed);
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.error || t.errorUpdateFailed);
-      }
       fetchData();
     } catch (err: unknown) {
       addToast((err as Error)?.message || t.errorUpdate, 'error');
@@ -203,13 +175,9 @@ function AdherentsListPanel() {
     setSyncing(true);
     setSyncResult(null);
     try {
-      const json = await adminFetchJson<{
-        created: number;
-        updated: number;
-        skipped: number;
-      }>('/api/admin/helloasso/sync?formSlug=adhesion-2026-2027-women-s-cup', {
-        method: 'POST',
-      });
+      const json = await adherentsClient.syncHelloAsso(
+        'adhesion-2026-2027-women-s-cup'
+      );
 
       setSyncResult(
         format(t.syncOk, {

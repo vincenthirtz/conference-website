@@ -11,6 +11,7 @@ import Tabs, {
 } from '@/components/admin/Tabs';
 import StaffLogsPanel from '@/components/admin/logs/StaffLogsPanel';
 import { lazyPanel } from '@/components/admin/lazyPanel';
+import { withAdminQuery } from '@/features/admin/_shared/query';
 import type { StaffProps } from '@/types/admin';
 import nsAdminJournals from '@/lib/i18n/locales/admin-fr/adminJournals';
 
@@ -37,7 +38,7 @@ export const getServerSideProps = withStaffPage({
  * rendered for admin+ staff (their endpoints are admin-gated too), and the
  * legacy /admin/email-logs route remains admin-gated via its redirect shim.
  */
-export default function AdminJournalsPage({ staff }: StaffProps) {
+function AdminJournalsPage({ staff }: StaffProps) {
   const t = useAdminT(nsAdminJournals);
   // Emails (Brevo) et Discord (IDs Discord des joueuses) exposent des données
   // plus sensibles que l'audit staff : mêmes gardes que leurs endpoints.
@@ -89,3 +90,5 @@ export default function AdminJournalsPage({ staff }: StaffProps) {
     </>
   );
 }
+
+export default withAdminQuery(AdminJournalsPage);

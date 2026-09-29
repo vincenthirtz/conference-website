@@ -14,6 +14,16 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { tournamentUrls } from '@/features/admin/tournaments/client';
+import {
+  useTournamentDetail,
+  useUpdateTournament,
+} from '@/features/admin/tournaments/hooks/useTournamentDetail';
+import {
+  useTenantTeamsForEntry,
+  useTournamentTeams,
+} from '@/features/admin/tournaments/hooks/useTournamentTeams';
 import { useToast } from '@/components/Toast';
 import TournamentAlerts from '@/components/admin/dashboard/TournamentAlerts';
 import TournamentDashboardMatchModals from '@/features/admin/tournaments/TournamentDashboardMatchModals';
@@ -75,6 +85,8 @@ const REFRESH_INTERVAL_MS = 90_000;
 // scheduled_at…) : on regroupe les notifications realtime rapprochées en un
 // seul refetch du payload dashboard.
 const REALTIME_DEBOUNCE_MS = 400;
+const EMPTY_TEAMS: TournamentTeam[] = [];
+const EMPTY_ALL_TEAMS: Team[] = [];
 
 // Ordre de progression du workflow — sert à détecter une régression de statut
 // (retour en arrière) qui déclenche la confirmation.
@@ -126,7 +138,8 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
   const STAGE_TYPE_OPTIONS = getStageTypeOptions(tov);
 
   const { addToast } = useToast();
-  const { adminFetch, adminFetchJson } = useAdminFetch();
+  const { adminFetchJson } = useAdminFetch();
+  const updateTournament = useUpdateTournament(tournamentId ?? '');
   const { mutate: addTeamMutate } = useIdempotentMutation();
   const { mutate: createStageMutate } = useIdempotentMutation();
 
@@ -158,20 +171,27 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
    * ---------------------------------------------------------*/
 
   // registration_fields absent du payload dashboard : nécessaire pour les
-  // colonnes des cartes équipe (TeamRow). Chargé via une meta séparée.
-  const [registrationFieldsMeta, setRegistrationFieldsMeta] = useState<
-    RegistrationField[] | null
-  >(null);
+  // colonnes des cartes équipe (TeamRow). Lu sur la fiche (silencieux).
+  const detailQuery = useTournamentDetail<{
+    registration_fields: RegistrationField[] | null;
+  }>(tournamentId ?? '');
+  const registrationFieldsMeta =
+    detailQuery.data?.tournament?.registration_fields ?? null;
 
   // Erreur inline pour les actions statut/équipes (bannière rouge locale).
   const [actionError, setActionError] = useState<string | null>(null);
 
   // Gestion d'équipes
-  const [tournamentTeams, setTournamentTeams] = useState<TournamentTeam[]>([]);
-  const [loadingTeams, setLoadingTeams] = useState(false);
-  const [allTeams, setAllTeams] = useState<Team[]>([]);
   const [showAddTeamModal, setShowAddTeamModal] = useState(false);
   const [showBulkAddModal, setShowBulkAddModal] = useState(false);
+  // Échecs silencieux (la liste précédente reste), comme avant.
+  const teamsQuery = useTournamentTeams(tournamentId ?? '');
+  const tournamentTeams = teamsQuery.data ?? EMPTY_TEAMS;
+  const loadingTeams = teamsQuery.isFetching;
+  const fetchTournamentTeams = teamsQuery.refetch;
+  const allTeams =
+    useTenantTeamsForEntry(showAddTeamModal || showBulkAddModal).data ??
+    EMPTY_ALL_TEAMS;
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [pendingRemoveTeamId, setPendingRemoveTeamId] = useState<string | null>(
     null
@@ -190,9 +210,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
   const fetchDashboard = useCallback(async () => {
     if (!tournamentId) return;
     try {
-      const res = await fetch(
-        `/api/admin/tournament/${tournamentId}/dashboard`
-      );
+      const res = await fetch(tournamentUrls.dashboard(tournamentId));
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || tx.errorLoad);
@@ -272,64 +290,6 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
   }, []);
 
   /* -----------------------------------------------------------
-   * Fetchers des sections gérées ici (registration_fields + équipes)
-   * ---------------------------------------------------------*/
-
-  // registration_fields absent du payload dashboard : requis pour les colonnes
-  // des cartes équipe (TeamRow).
-  const fetchRegistrationFields = useCallback(async () => {
-    if (!tournamentId) return;
-    try {
-      const json = await adminFetchJson<{
-        tournament: { registration_fields: RegistrationField[] | null };
-      }>(`/api/admin/tournament/${tournamentId}`);
-      setRegistrationFieldsMeta(json.tournament.registration_fields ?? null);
-    } catch {
-      // Silencieux : complément non bloquant pour le dashboard.
-    }
-  }, [tournamentId, adminFetchJson]);
-
-  const fetchTournamentTeams = useCallback(async () => {
-    if (!tournamentId) return;
-    setLoadingTeams(true);
-    try {
-      const res = await adminFetch(
-        `/api/admin/tournament/${tournamentId}/teams`
-      );
-      if (res.ok) {
-        const json = await res.json();
-        setTournamentTeams(json.teams || []);
-      }
-    } catch {
-      // Silencieux.
-    } finally {
-      setLoadingTeams(false);
-    }
-  }, [tournamentId, adminFetch]);
-
-  const fetchAllTeams = useCallback(async () => {
-    try {
-      const res = await adminFetch('/api/admin/teams?limit=200');
-      if (res.ok) {
-        const json = await res.json();
-        setAllTeams(json.teams || []);
-      }
-    } catch {
-      // Silencieux.
-    }
-  }, [adminFetch]);
-
-  // Chargement mono-shot des colonnes d'inscription + des équipes (le payload
-  // dashboard ne les porte pas). Borné à [tournamentId] : les fetchers sont
-  // stables (adminFetch* à identité figée), aucun state mutable listé.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: chargement initial mono-shot borné à [tournamentId]
-  useEffect(() => {
-    if (!tournamentId) return;
-    fetchRegistrationFields();
-    fetchTournamentTeams();
-  }, [tournamentId]);
-
-  /* -----------------------------------------------------------
    * Handlers : statut, équipes, phase
    * ---------------------------------------------------------*/
 
@@ -338,10 +298,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
     setUpdatingStatus(true);
     setActionError(null);
     try {
-      await adminFetchJson(`/api/admin/tournament/${tournamentId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: newStatus }),
-      });
+      await updateTournament.mutateAsync({ status: newStatus });
       addToast(
         format(tov.toastStatusChanged, {
           status: STATUS_LABEL[newStatus] ?? newStatus,
@@ -376,13 +333,10 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
       if (!tournamentId) return false;
       setActionError(null);
       try {
-        const res = await addTeamMutate(
-          `/api/admin/tournament/${tournamentId}/teams`,
-          {
-            method: 'POST',
-            body: JSON.stringify({ team_id: teamId, seed }),
-          }
-        );
+        const res = await addTeamMutate(tournamentUrls.teams(tournamentId), {
+          method: 'POST',
+          body: JSON.stringify({ team_id: teamId, seed }),
+        });
         if (!res.ok) {
           const json = await res.json().catch(() => ({}));
           throw new Error(json.error || tov.errorAddTeam);
@@ -408,13 +362,10 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
       let failCount = 0;
       for (let i = 0; i < teamIds.length; i++) {
         try {
-          const res = await addTeamMutate(
-            `/api/admin/tournament/${tournamentId}/teams`,
-            {
-              method: 'POST',
-              body: JSON.stringify({ team_id: teamIds[i] }),
-            }
-          );
+          const res = await addTeamMutate(tournamentUrls.teams(tournamentId), {
+            method: 'POST',
+            body: JSON.stringify({ team_id: teamIds[i] }),
+          });
           if (!res.ok) failCount++;
         } catch {
           failCount++;
@@ -450,7 +401,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
     if (!pendingRemoveTeamId || !tournamentId) return;
     try {
       await adminFetchJson(
-        `/api/admin/tournament/${tournamentId}/teams/${pendingRemoveTeamId}`,
+        tournamentUrls.team(tournamentId, pendingRemoveTeamId),
         { method: 'DELETE' }
       );
       addToast(tov.toastTeamRemoved, 'success');
@@ -469,7 +420,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
       setActionError(null);
       try {
         const res = await createStageMutate(
-          `/api/admin/tournament/${tournamentId}/stages`,
+          tournamentUrls.stages(tournamentId),
           {
             method: 'POST',
             body: JSON.stringify({
@@ -608,14 +559,14 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                 nowMs={nowMs}
                 onNudgeAllCheckins={async () => {
                   const json = await adminFetchJson<{ nudged: number }>(
-                    `/api/admin/tournament/${tournamentId}/checkin-nudge-all`,
+                    tournamentUrls.checkinNudgeAll(String(tournamentId)),
                     { method: 'POST' }
                   );
                   return json?.nudged ?? 0;
                 }}
                 onRunCheckinProcessor={async () => {
                   await adminFetchJson(
-                    `/api/admin/tournament/${tournamentId}/checkin`,
+                    tournamentUrls.checkin(String(tournamentId)),
                     { method: 'POST' }
                   );
                 }}
@@ -655,14 +606,8 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                     loadingTeams={loadingTeams}
                     tournamentTeams={tournamentTeams}
                     registrationFields={registrationFields}
-                    onAdd={() => {
-                      setShowAddTeamModal(true);
-                      fetchAllTeams();
-                    }}
-                    onBulkAdd={() => {
-                      setShowBulkAddModal(true);
-                      fetchAllTeams();
-                    }}
+                    onAdd={() => setShowAddTeamModal(true)}
+                    onBulkAdd={() => setShowBulkAddModal(true)}
                     onRemove={handleRemoveTeam}
                   />
 
@@ -795,4 +740,4 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
   );
 }
 
-export default MegaDashboardPage;
+export default withAdminQuery(MegaDashboardPage);

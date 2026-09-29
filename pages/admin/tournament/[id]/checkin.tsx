@@ -16,6 +16,7 @@ import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import CheckinSettingsPanel from '@/components/admin/tournament/CheckinSettingsPanel';
 import CheckinLivePanel from '@/components/admin/tournament/CheckinLivePanel';
 import type { StaffProps } from '@/types/admin';
+import { withAdminQuery } from '@/features/admin/_shared/query';
 import nsAdminTournamentCheckin from '@/lib/i18n/locales/admin-fr/adminTournamentCheckin';
 import nsAdminTournamentNav from '@/lib/i18n/locales/admin-fr/adminTournamentNav';
 
@@ -25,7 +26,9 @@ const ID_BASE = 'admin-tournament-checkin';
 // elle qui rend un bénévole possible (`helper` n'a que `run_checkin`).
 export const getServerSideProps = withStaffPage({ permission: 'run_checkin' });
 
-export default function AdminTournamentCheckinPage(_: StaffProps) {
+export default withAdminQuery(AdminTournamentCheckinPage);
+
+function AdminTournamentCheckinPage(_: StaffProps) {
   const router = useRouter();
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : (id ?? '');

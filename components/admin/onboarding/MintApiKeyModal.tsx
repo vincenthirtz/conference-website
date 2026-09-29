@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tenantsClient } from '@/features/admin/tenants/client';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
 import { ALL_SCOPES } from '@/utils/apiScopes';
@@ -46,7 +46,6 @@ export default function MintApiKeyModal({
 }: Props) {
   const trapRef = useFocusTrap<HTMLDivElement>();
   const t = useAdminT(nsAdminOnboarding);
-  const { adminFetchJson } = useAdminFetch();
 
   const sortedScopes = useMemo(() => [...ALL_SCOPES].sort(), []);
 
@@ -91,21 +90,14 @@ export default function MintApiKeyModal({
       const days = Number.parseInt(expiryDays, 10);
       setBusy(true);
       try {
-        const res = await adminFetchJson<{ token: string }>(
-          `/api/admin/tenants/${tenantId}/api-tokens`,
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              name: name.trim() || tenantName,
-              scopes,
-              comp,
-              ...(comp && compNote.trim()
-                ? { comp_note: compNote.trim() }
-                : {}),
-              expires_in_days: Number.isFinite(days) && days > 0 ? days : null,
-            }),
-          }
-        );
+        // Appel direct, hors cache de requêtes : le clair n'existe qu'ici.
+        const res = await tenantsClient.mintApiToken(tenantId, {
+          name: name.trim() || tenantName,
+          scopes,
+          comp,
+          ...(comp && compNote.trim() ? { comp_note: compNote.trim() } : {}),
+          expires_in_days: Number.isFinite(days) && days > 0 ? days : null,
+        });
         onMinted(res.token);
       } catch (err) {
         setError(err instanceof Error ? err.message : t.mintKeyError);
@@ -114,7 +106,6 @@ export default function MintApiKeyModal({
       }
     },
     [
-      adminFetchJson,
       compNote,
       comp,
       expiryDays,

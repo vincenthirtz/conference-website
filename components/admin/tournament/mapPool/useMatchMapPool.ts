@@ -12,6 +12,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tournamentMatchUrls } from '@/features/admin/tournaments/client';
 
 export type MatchPoolRow = {
   id: string;
@@ -39,7 +40,7 @@ export function useMatchMapPool(
     setRows(null);
     if (!matchId) return;
     let cancelled = false;
-    adminFetch(`/api/admin/matches/${matchId}/map-pool`)
+    adminFetch(tournamentMatchUrls.mapPool(matchId))
       .then((res) => (res.ok ? (res.json() as Promise<PoolResponse>) : null))
       .then((json) => {
         if (cancelled || !json?.maps?.length) return;

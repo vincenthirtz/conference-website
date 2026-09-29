@@ -1,12 +1,13 @@
 import Head from 'next/head';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { withStaffPage } from '@/utils/staff';
 import { hasAtLeastRole, getRoleLabel } from '@/utils/staffRoles';
 import type { StaffRole } from '@/utils/staff';
 import type { TenantKind } from '@/utils/tenantKind';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useDashboardSummary } from '@/features/admin/dashboard/hooks/useDashboardSummary';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import { AdminButtonLink } from '@/features/admin/_shared/ui/AdminButton';
@@ -347,63 +348,31 @@ function buildAlerts(summary: AlertsSummary | null, t: Dict) {
 }
 
 function AdminDashboardPage({ staff, activeTenantKind }: Props) {
-  const { adminFetchJson } = useAdminFetch();
   const t = useAdminT(nsAdminDashboard);
-
-  const [alertsSummary, setAlertsSummary] = useState<AlertsSummary | null>(
-    null
-  );
-  const [kpis, setKpis] = useState<Kpis>({
-    tournamentsActive: null,
-    teams: null,
-    demandesPending: null,
-    supportOpen: null,
-    supportHigh: null,
-    disputesOpen: null,
-  });
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const canManage = hasAtLeastRole(staff.role, 'admin');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      // Les deux agrégats sont indépendants → on les lance en parallèle pour
-      // ne pas empiler les latences (alertes = source partagée avec le badge
-      // navbar ; KPI globaux = managers+ uniquement, l'endpoint exige ce rôle).
-      // Chaque endpoint renvoie 200 même en dégradation partielle (clé à null).
-      const [alerts, summary] = await Promise.all([
-        adminFetchJson<AlertsSummary>('/api/admin/alerts-summary'),
-        canManage
-          ? adminFetchJson<Kpis>('/api/admin/overview-summary')
-          : Promise.resolve(null),
-      ]);
-
-      setAlertsSummary(alerts);
-
-      if (summary) {
-        setKpis({
-          tournamentsActive: summary.tournamentsActive ?? null,
-          teams: summary.teams ?? null,
-          demandesPending: summary.demandesPending ?? null,
-          supportOpen: summary.supportOpen ?? null,
-          supportHigh: summary.supportHigh ?? null,
-          disputesOpen: summary.disputesOpen ?? null,
-        });
-      }
-    } catch (err: unknown) {
-      logger.error('AdminDashboardPage: load error', err);
-      setErrorMsg((err as Error)?.message || t.errorUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, canManage, t]);
-
+  // Chaque endpoint renvoie 200 même en dégradation partielle (clé à null).
+  const dashboard = useDashboardSummary(canManage);
+  const loading = dashboard.isPending;
+  const errorMsg = dashboard.error
+    ? dashboard.error.message || t.errorUnexpected
+    : null;
   useEffect(() => {
-    load();
-  }, [load]);
+    if (dashboard.error) {
+      logger.error('AdminDashboardPage: load error', dashboard.error);
+    }
+  }, [dashboard.error]);
+  const alertsSummary: AlertsSummary | null = dashboard.data?.alerts ?? null;
+  const summary = dashboard.data?.summary ?? null;
+  const kpis: Kpis = {
+    tournamentsActive: summary?.tournamentsActive ?? null,
+    teams: summary?.teams ?? null,
+    demandesPending: summary?.demandesPending ?? null,
+    supportOpen: summary?.supportOpen ?? null,
+    supportHigh: summary?.supportHigh ?? null,
+    disputesOpen: summary?.disputesOpen ?? null,
+  };
 
   const alerts = buildAlerts(alertsSummary, t);
   // Cartes groupées par catégorie top-level. Le gating par rôle et le filtre
@@ -648,4 +617,4 @@ function AdminDashboardPage({ staff, activeTenantKind }: Props) {
   );
 }
 
-export default AdminDashboardPage;
+export default withAdminQuery(AdminDashboardPage);

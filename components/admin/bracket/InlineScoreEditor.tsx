@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { tournamentMatchUrls } from '@/features/admin/tournaments/client';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminBracketTreeView from '@/lib/i18n/locales/admin-fr/adminBracketTreeView';
 
@@ -45,7 +46,7 @@ export default function InlineScoreEditor({
     }
     setSaving(true);
     try {
-      const res = await mutate(`/api/admin/matches/${matchId}`, {
+      const res = await mutate(tournamentMatchUrls.byId(matchId), {
         method: 'PATCH',
         body: JSON.stringify({
           mode: 'score',

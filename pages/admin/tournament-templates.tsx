@@ -1,14 +1,17 @@
 // pages/admin/tournament-templates.tsx
 // UI pour creer et gerer des templates de tournoi personnalises.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import {
+  useTournamentTemplateActions,
+  useTournamentTemplates,
+} from '@/features/admin/tournaments/hooks/useTournamentTemplates';
+import { withAdminQuery } from '@/features/admin/_shared/query';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   TOURNAMENT_TEMPLATES,
@@ -76,14 +79,18 @@ function AdminTournamentTemplatesPage(_props: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
-  const { adminFetchJson } = useAdminFetch();
-  const { mutateJson: createTemplate } = useIdempotentMutation();
+  const templatesQuery = useTournamentTemplates();
+  const { create: createTemplate, remove: removeTemplate } =
+    useTournamentTemplateActions();
 
-  const [customTemplates, setCustomTemplates] = useState<TournamentTemplate[]>(
-    []
-  );
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const customTemplates = templatesQuery.data ?? [];
+  const loading = templatesQuery.isPending;
+  const [actionError, setErrorMsg] = useState<string | null>(null);
+  const errorMsg =
+    actionError ??
+    (templatesQuery.error
+      ? templatesQuery.error.message || t.errorUnexpected
+      : null);
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
@@ -94,25 +101,6 @@ function AdminTournamentTemplatesPage(_props: StaffProps) {
   ]);
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const fetchCustomTemplates = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const json = await adminFetchJson<{ templates?: TournamentTemplate[] }>(
-        '/api/admin/tournament-templates'
-      );
-      setCustomTemplates(json.templates || []);
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message || t.errorUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, t]);
-
-  useEffect(() => {
-    fetchCustomTemplates();
-  }, [fetchCustomTemplates]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -131,13 +119,10 @@ function AdminTournamentTemplatesPage(_props: StaffProps) {
 
     setCreating(true);
     try {
-      await createTemplate('/api/admin/tournament-templates', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: newName.trim(),
-          description: newDesc.trim(),
-          stages: validStages,
-        }),
+      await createTemplate.mutateAsync({
+        name: newName.trim(),
+        description: newDesc.trim(),
+        stages: validStages,
       });
 
       addToast(t.createSuccess, 'success');
@@ -145,7 +130,6 @@ function AdminTournamentTemplatesPage(_props: StaffProps) {
       setNewDesc('');
       setNewStages([{ name: '', stage_type: 'bracket' }]);
       setShowCreate(false);
-      fetchCustomTemplates();
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message || t.errorUnexpected);
     } finally {
@@ -165,13 +149,9 @@ function AdminTournamentTemplatesPage(_props: StaffProps) {
     setErrorMsg(null);
 
     try {
-      await adminFetchJson('/api/admin/tournament-templates', {
-        method: 'DELETE',
-        body: JSON.stringify({ templateId }),
-      });
+      await removeTemplate.mutateAsync(templateId);
 
       addToast(t.deleteSuccess, 'success');
-      fetchCustomTemplates();
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message || t.errorUnexpected);
     } finally {
@@ -522,4 +502,4 @@ function AdminTournamentTemplatesPage(_props: StaffProps) {
   );
 }
 
-export default AdminTournamentTemplatesPage;
+export default withAdminQuery(AdminTournamentTemplatesPage);

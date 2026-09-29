@@ -5,11 +5,12 @@
 // id from the router and fetches its own data (no gssp, no <Head>, no page
 // wrapper, no TournamentTabsNav — the host route provides those).
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tournamentUrls } from '@/features/admin/tournaments/client';
+import { useTournamentRead } from '@/features/admin/tournaments/hooks/useTournamentRead';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentBracket from '@/lib/i18n/locales/admin-fr/adminTournamentBracket';
@@ -32,9 +33,6 @@ export default function BracketPanel() {
   const { id } = router.query;
   const tournamentId = Array.isArray(id) ? id[0] : id;
 
-  const [hasMatches, setHasMatches] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(true);
-
   // Formulaire de création
   const [bracketType, setBracketType] = useState<'single' | 'double'>('single');
   const [size, setSize] = useState(8);
@@ -45,27 +43,26 @@ export default function BracketPanel() {
   const [generating, setGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const { mutate: generateBracket } = useIdempotentMutation();
   const t = useAdminT(nsAdminTournamentBracket);
 
-  // Vérifier s'il y a déjà des matchs bracket
-  useEffect(() => {
-    if (!tournamentId) return;
-    setLoading(true);
-    // `useAdminFetch` et non un `fetch` brut : il porte le jeton et renvoie à la
-    // connexion sur 401. Le repli cookie sauvait la mise ici, mais une session
-    // expirée aurait fait répondre « aucun match » — et ce panneau propose
-    // ALORS de générer un bracket, sur un tournoi qui en a déjà un.
-    // `layout=bracket` retiré : aucun endpoint ne lit ce paramètre.
-    adminFetchJson<{ matches?: unknown[] }>(
-      `/api/admin/tournament/${tournamentId}/matches?limit=1`
-    )
-      .then((json) => setHasMatches((json.matches || []).length > 0))
-      .catch(() => setHasMatches(false))
-      .finally(() => setLoading(false));
-  }, [tournamentId, adminFetchJson]);
+  // Vérifier s'il y a déjà des matchs bracket. Requête AUTHENTIFIÉE (jeton,
+  // renvoi à la connexion sur 401) : une session expirée ferait répondre
+  // « aucun match » — et ce panneau proposerait ALORS de générer un bracket,
+  // sur un tournoi qui en a déjà un. Un échec vaut « aucun match », comme
+  // avant.
+  const existing = useTournamentRead<{ matches?: unknown[] }>(
+    tournamentId ?? '',
+    'has-bracket-matches',
+    (tid) => tournamentUrls.matches(tid, { limit: 1 })
+  );
+  const loading = existing.isPending;
+  const hasMatches: boolean | null = existing.error
+    ? false
+    : existing.data
+      ? (existing.data.matches || []).length > 0
+      : null;
 
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();
@@ -96,21 +93,18 @@ export default function BracketPanel() {
     setErrorMsg(null);
 
     try {
-      const res = await generateBracket(
-        `/api/admin/tournament/${tournamentId}/bracket`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            action:
-              bracketType === 'double' ? 'generate_double_elim' : 'generate',
-            size,
-            bestOf,
-            startDate: startDate || undefined,
-            intervalMinutes,
-            ...(bracketType === 'double' ? { grandFinalReset } : {}),
-          }),
-        }
-      );
+      const res = await generateBracket(tournamentUrls.bracket(tournamentId), {
+        method: 'POST',
+        body: JSON.stringify({
+          action:
+            bracketType === 'double' ? 'generate_double_elim' : 'generate',
+          size,
+          bestOf,
+          startDate: startDate || undefined,
+          intervalMinutes,
+          ...(bracketType === 'double' ? { grandFinalReset } : {}),
+        }),
+      });
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));

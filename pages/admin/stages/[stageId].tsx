@@ -1,12 +1,27 @@
 // pages/admin/stages/[stageId].tsx
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
+import { useTournamentOptions } from '@/features/admin/_shared/tournamentOptions';
+import { stageUrls } from '@/features/admin/stages/client';
+import {
+  stageDetailKey,
+  useStage,
+  useStageRead,
+} from '@/features/admin/stages/hooks/useStage';
+import { useTournamentDetail } from '@/features/admin/tournaments/hooks/useTournamentDetail';
+import {
+  fetchTournamentStages,
+  useTournamentStages,
+} from '@/features/admin/tournaments/hooks/useTournamentStages';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
 import type { StaffProps, Stage, Tournament } from '@/types/admin';
 import type { AdvancementRules } from '@/components/admin/AdvancementRulesEditor';
@@ -49,9 +64,7 @@ type StageApiResponse = {
   stage: Stage;
 };
 
-type TournamentApiResponse = {
-  tournament: Tournament;
-};
+const NO_OPTIONS: TournamentOption[] = [];
 
 export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
@@ -65,13 +78,22 @@ function AdminStagePage(_props: StaffProps) {
   const { mutate: autoByesMutate } = useIdempotentMutation();
   const { mutate: advanceMutate } = useIdempotentMutation();
   const { adminFetch, adminFetchJson } = useAdminFetch();
+  const sid = String(stageId ?? '');
+  const qc = useQueryClient();
 
-  const [stage, setStage] = useState<Stage | null>(null);
-  const [tournament, setTournament] = useState<Tournament | null>(null);
+  const stageQuery = useStage<Stage>(sid, { editor: true });
+  const { refetch: refetchStage } = stageQuery;
+  const stage = stageQuery.data?.stage ?? null;
+  const tournament =
+    useTournamentDetail<Tournament>(stage?.tournament_id ?? '').data
+      ?.tournament ?? null;
 
-  const [loading, setLoading] = useState(true);
+  const loading = stageQuery.isPending || stageQuery.isFetching;
   const [loadingActions, setLoadingActions] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [actionError, setErrorMsg] = useState<string | null>(null);
+  const errorMsg =
+    actionError ??
+    (stageQuery.error ? (stageQuery.error.message ?? t.errUnexpected) : null);
   const { addToast } = useToast();
 
   // Advance modal state
@@ -110,12 +132,23 @@ function AdminStagePage(_props: StaffProps) {
   // Clone state
   const [cloning, setCloning] = useState(false);
 
-  // Swiss status state
-  const [swissStatus, setSwissStatus] = useState<SwissStatus | null>(null);
-
-  // Completion status state
-  const [completionStatus, setCompletionStatus] =
-    useState<CompletionStatus | null>(null);
+  // Swiss status + completion status, lus une fois la phase chargée.
+  const swissQuery = useStageRead<SwissStatus>(
+    sid,
+    'swiss-status',
+    stageUrls.swissStatus,
+    {
+      enabled: stage?.stage_type === 'swiss',
+    }
+  );
+  const swissStatus = swissQuery.data ?? null;
+  const completionQuery = useStageRead<CompletionStatus>(
+    sid,
+    'completion-status',
+    stageUrls.completionStatus,
+    { enabled: !!stage }
+  );
+  const completionStatus = completionQuery.data ?? null;
 
   // Editing state
   const [isEditing, setIsEditing] = useState(false);
@@ -126,146 +159,43 @@ function AdminStagePage(_props: StaffProps) {
     is_public: false,
   });
   const [saving, setSaving] = useState(false);
-  const [allTournaments, setAllTournaments] = useState<
-    { id: string; name: string }[]
-  >([]);
+  const allTournaments =
+    useTournamentOptions(isEditing).data?.tournaments ?? NO_OPTIONS;
 
   // Advancement rules editor state
   const [advancementRulesDraft, setAdvancementRulesDraft] =
     useState<AdvancementRules | null>(null);
-  const [advancementSiblingStages, setAdvancementSiblingStages] = useState<
-    { id: string; name: string; stage_type: string | null }[]
-  >([]);
+  const siblingsQuery = useTournamentStages(stage?.tournament_id ?? '');
+  const advancementSiblingStages = useMemo(
+    () =>
+      ((siblingsQuery.data ?? []) as StageOption[])
+        .filter((st) => st.id !== stage?.id)
+        .map((st) => ({ id: st.id, name: st.name, stage_type: st.stage_type })),
+    [siblingsQuery.data, stage?.id]
+  );
   const [advancementSaving, setAdvancementSaving] = useState(false);
 
+  // Formulaire d'édition + brouillon des règles d'avancement : hydratés à
+  // l'ouverture, puis après l'enregistrement des règles (comme avant).
+  const hydrateFromStage = useCallback((s: Stage) => {
+    setEditForm({
+      name: s.name || '',
+      tournament_id: s.tournament_id || '',
+      is_active: s.is_active || false,
+      is_public: s.is_public || false,
+    });
+    setAdvancementRulesDraft(s.settings?.advancement_rules ?? null);
+  }, []);
+  useHydrateOnce(sid || null, stageQuery.data, (d) => {
+    if (d.stage) hydrateFromStage(d.stage);
+  });
   const fetchStage = useCallback(async () => {
-    if (!stageId) return;
-    setLoading(true);
     setErrorMsg(null);
-
-    try {
-      const json = await adminFetchJson<StageApiResponse>(
-        `/api/admin/stages/${stageId}`
-      );
-      const s = json.stage;
-      setStage(s);
-      setEditForm({
-        name: s.name || '',
-        tournament_id: s.tournament_id || '',
-        is_active: s.is_active || false,
-        is_public: s.is_public || false,
-      });
-
-      // Init advancement rules draft from settings
-      setAdvancementRulesDraft(s.settings?.advancement_rules ?? null);
-
-      // Charger le tournoi parent + sibling stages. Ces deux lectures ne
-      // dependent que de tournament_id (connu apres l'etape 1) : on les lance
-      // en parallele. Chaque branche garde sa propre gestion d'erreur pour
-      // rester independante (l'une peut echouer sans casser l'autre).
-      if (s.tournament_id) {
-        await Promise.all([
-          (async () => {
-            try {
-              const res2 = await adminFetch(
-                `/api/admin/tournament/${s.tournament_id}`
-              );
-              if (res2.ok) {
-                const json2: TournamentApiResponse = await res2.json();
-                setTournament(json2.tournament);
-              }
-            } catch (e) {
-              logger.error('fetch parent tournament error', e);
-            }
-          })(),
-          (async () => {
-            // Fetch sibling stages for advancement target dropdown
-            try {
-              const stagesRes = await adminFetch(
-                `/api/admin/tournament/${s.tournament_id}/stages`
-              );
-              if (stagesRes.ok) {
-                const stagesJson = await stagesRes.json();
-                const siblings = ((stagesJson.stages || []) as StageOption[])
-                  .filter((st) => st.id !== s.id)
-                  .map((st) => ({
-                    id: st.id,
-                    name: st.name,
-                    stage_type: st.stage_type,
-                  }));
-                setAdvancementSiblingStages(siblings);
-              }
-            } catch (e) {
-              logger.error('fetch sibling stages error', e);
-            }
-          })(),
-        ]);
-      }
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
-    } finally {
-      setLoading(false);
-    }
-  }, [stageId, adminFetch, adminFetchJson, t.errUnexpected]);
-
-  const fetchSwissStatus = useCallback(async () => {
-    if (!stageId) return;
-    try {
-      const res = await adminFetch(`/api/admin/stages/${stageId}/swiss-status`);
-      if (res.ok) {
-        const json = await res.json();
-        setSwissStatus(json);
-      }
-    } catch (e) {
-      logger.error('fetchSwissStatus error', e);
-    }
-  }, [stageId, adminFetch]);
-
-  const fetchCompletionStatus = useCallback(async () => {
-    if (!stageId) return;
-    try {
-      const res = await adminFetch(
-        `/api/admin/stages/${stageId}/completion-status`
-      );
-      if (res.ok) {
-        const json = await res.json();
-        setCompletionStatus(json);
-      }
-    } catch (e) {
-      logger.error('fetchCompletionStatus error', e);
-    }
-  }, [stageId, adminFetch]);
-
-  useEffect(() => {
-    if (!stageId) return;
-    fetchStage();
-  }, [stageId, fetchStage]);
-
-  // Fetch Swiss status and completion status after stage is loaded
-  useEffect(() => {
-    if (!stage) return;
-    fetchCompletionStatus();
-    if (stage.stage_type === 'swiss') {
-      fetchSwissStatus();
-    }
-  }, [stage, fetchCompletionStatus, fetchSwissStatus]);
-
-  const fetchTournaments = useCallback(async () => {
-    try {
-      const res = await adminFetch('/api/admin/tournaments?limit=100');
-      if (res.ok) {
-        const json = await res.json();
-        setAllTournaments(
-          ((json.tournaments || []) as TournamentOption[]).map((tm) => ({
-            id: tm.id,
-            name: tm.name,
-          }))
-        );
-      }
-    } catch (e) {
-      logger.error('fetch tournaments error', e);
-    }
-  }, [adminFetch]);
+    const { data } = await refetchStage();
+    if (data?.stage) hydrateFromStage(data.stage);
+  }, [refetchStage, hydrateFromStage]);
+  const fetchSwissStatus = swissQuery.refetch;
+  const fetchCompletionStatus = completionQuery.refetch;
 
   const handleSaveEdit = useCallback(async () => {
     if (!stageId || !stage) return;
@@ -273,37 +203,20 @@ function AdminStagePage(_props: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const json = await adminFetchJson<StageApiResponse>(
-        `/api/admin/stages/${stageId}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify(editForm),
-        }
-      );
-      setStage(json.stage);
+      const json = await adminFetchJson<StageApiResponse>(stageUrls.byId(sid), {
+        method: 'PATCH',
+        body: JSON.stringify(editForm),
+      });
+      // Le tournoi parent suit `stage.tournament_id` (relu s'il a changé).
+      qc.setQueryData(stageDetailKey(sid), json);
       setIsEditing(false);
       addToast(t.toastStageUpdated, 'success');
-
-      // Recharger le tournoi parent si changé
-      if (json.stage.tournament_id !== stage.tournament_id) {
-        try {
-          const res2 = await adminFetch(
-            `/api/admin/tournament/${json.stage.tournament_id}`
-          );
-          if (res2.ok) {
-            const json2 = await res2.json();
-            setTournament(json2.tournament);
-          }
-        } catch (e) {
-          logger.error('fetch updated tournament error', e);
-        }
-      }
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setSaving(false);
     }
-  }, [stageId, stage, editForm, adminFetch, adminFetchJson, addToast, t]);
+  }, [stageId, stage, sid, qc, editForm, adminFetchJson, addToast, t]);
 
   const handleAutoByes = useCallback(async () => {
     if (!stageId) return;
@@ -311,13 +224,10 @@ function AdminStagePage(_props: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await autoByesMutate(
-        `/api/admin/stages/${stageId}/auto-byes`,
-        {
-          method: 'POST',
-          body: JSON.stringify({}),
-        }
-      );
+      const res = await autoByesMutate(stageUrls.autoByes(sid), {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -336,7 +246,7 @@ function AdminStagePage(_props: StaffProps) {
     } finally {
       setLoadingActions(false);
     }
-  }, [stageId, autoByesMutate, addToast, t]);
+  }, [stageId, autoByesMutate, addToast, t, sid]);
 
   const handleGenerateSwissRound = useCallback(async () => {
     if (!stageId || stage?.stage_type !== 'swiss') return;
@@ -344,13 +254,10 @@ function AdminStagePage(_props: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await mutateIdempotent(
-        `/api/admin/stages/${stageId}/generate-swiss-round`,
-        {
-          method: 'POST',
-          body: JSON.stringify({}),
-        }
-      );
+      const res = await mutateIdempotent(stageUrls.generateSwissRound(sid), {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -381,6 +288,7 @@ function AdminStagePage(_props: StaffProps) {
     t,
     fetchSwissStatus,
     fetchCompletionStatus,
+    sid,
   ]);
 
   const {
@@ -424,31 +332,28 @@ function AdminStagePage(_props: StaffProps) {
     setAutoSeedPattern('standard');
 
     try {
-      const stagesRes = await adminFetch(
-        `/api/admin/tournament/${stage.tournament_id}/stages`
+      const json = await fetchTournamentStages<StageOption>(
+        stage.tournament_id
       );
-      if (stagesRes.ok) {
-        const json = await stagesRes.json();
-        const sources = ((json.stages || []) as StageOption[])
-          .filter(
-            (s) =>
-              s.id !== stageId &&
-              ['swiss', 'group', 'round_robin'].includes(s.stage_type ?? '')
-          )
-          .map((s) => ({
-            id: s.id,
-            name: s.name,
-            stage_type: s.stage_type,
-          }));
-        setAutoSeedOtherStages(sources);
-        if (sources.length > 0) setAutoSeedSourceStageId(sources[0].id);
-      }
+      const sources = (json.stages || [])
+        .filter(
+          (s) =>
+            s.id !== stageId &&
+            ['swiss', 'group', 'round_robin'].includes(s.stage_type ?? '')
+        )
+        .map((s) => ({
+          id: s.id,
+          name: s.name,
+          stage_type: s.stage_type,
+        }));
+      setAutoSeedOtherStages(sources);
+      if (sources.length > 0) setAutoSeedSourceStageId(sources[0].id);
     } catch (err) {
       logger.error('openAutoSeedModal error:', err);
     } finally {
       setAutoSeedLoading(false);
     }
-  }, [stageId, stage, adminFetch]);
+  }, [stageId, stage]);
 
   const handleAutoSeedSubmit = useCallback(async () => {
     if (!stageId || !autoSeedSourceStageId) return;
@@ -456,16 +361,13 @@ function AdminStagePage(_props: StaffProps) {
     setErrorMsg(null);
 
     try {
-      const res = await mutateIdempotent(
-        `/api/admin/stages/${stageId}/auto-seed`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            sourceStageId: autoSeedSourceStageId,
-            seedingPattern: autoSeedPattern,
-          }),
-        }
-      );
+      const res = await mutateIdempotent(stageUrls.autoSeed(sid), {
+        method: 'POST',
+        body: JSON.stringify({
+          sourceStageId: autoSeedSourceStageId,
+          seedingPattern: autoSeedPattern,
+        }),
+      });
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -493,6 +395,7 @@ function AdminStagePage(_props: StaffProps) {
     mutateIdempotent,
     addToast,
     t,
+    sid,
   ]);
 
   const handleClone = useCallback(
@@ -502,13 +405,10 @@ function AdminStagePage(_props: StaffProps) {
       setErrorMsg(null);
 
       try {
-        const res = await mutateIdempotent(
-          `/api/admin/stages/${stageId}/clone`,
-          {
-            method: 'POST',
-            body: JSON.stringify({ includeMatches }),
-          }
-        );
+        const res = await mutateIdempotent(stageUrls.clone(sid), {
+          method: 'POST',
+          body: JSON.stringify({ includeMatches }),
+        });
 
         if (!res.ok) {
           const json = await res.json().catch(() => ({}));
@@ -537,7 +437,7 @@ function AdminStagePage(_props: StaffProps) {
         setCloning(false);
       }
     },
-    [stageId, stage, mutateIdempotent, addToast, t, router]
+    [stageId, stage, mutateIdempotent, addToast, t, router, sid]
   );
 
   const handleSaveAdvancementRules = useCallback(async () => {
@@ -552,7 +452,7 @@ function AdminStagePage(_props: StaffProps) {
       } else {
         delete newSettings.advancement_rules;
       }
-      await adminFetchJson(`/api/admin/stages/${stageId}`, {
+      await adminFetchJson(stageUrls.byId(sid), {
         method: 'PATCH',
         body: JSON.stringify({ settings: newSettings }),
       });
@@ -571,12 +471,11 @@ function AdminStagePage(_props: StaffProps) {
     addToast,
     t,
     fetchStage,
+    sid,
   ]);
 
-  const handleEdit = useCallback(() => {
-    setIsEditing(true);
-    fetchTournaments();
-  }, [fetchTournaments]);
+  // Liste des tournois chargée à la première ouverture de l'édition.
+  const handleEdit = useCallback(() => setIsEditing(true), []);
 
   const handleEditFormChange = useCallback((patch: Partial<EditForm>) => {
     setEditForm((prev) => ({ ...prev, ...patch }));
@@ -788,4 +687,4 @@ function AdminStagePage(_props: StaffProps) {
   );
 }
 
-export default AdminStagePage;
+export default withAdminQuery(AdminStagePage);

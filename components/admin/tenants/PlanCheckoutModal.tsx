@@ -15,6 +15,7 @@
 import { useCallback, useState } from 'react';
 import Modal from '@/components/admin/Modal';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { tenantsPaths } from '@/features/admin/tenants/client';
 import { AdminFetchError } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
@@ -62,7 +63,7 @@ export default function PlanCheckoutModal({ tenant, onClose }: Props) {
     setGenerating(true);
     try {
       const res = await mutateJson<CheckoutResponse>(
-        `/api/admin/tenants/${tenant.id}/plan-checkout`,
+        tenantsPaths.planCheckout(tenant.id),
         { method: 'POST', body: JSON.stringify({ plan }) }
       );
       setResult(res);

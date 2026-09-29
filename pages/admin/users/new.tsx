@@ -1,9 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { withAdminQuery } from '@/features/admin/_shared/query';
+import { teamsPaths } from '@/features/admin/teams/client';
+import {
+  useInvalidateTeamLists,
+  useTeamOptions,
+} from '@/features/admin/teams/hooks/useTeamsQueries';
+import { usersClient, usersPaths } from '@/features/admin/users/client';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { supabaseAdmin } from '@/utils/supabase';
 import {
@@ -116,7 +122,7 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
   const t = useAdminT(nsAdminUsersNew);
   const router = useRouter();
   const { addToast } = useToast();
-  const { adminFetch } = useAdminFetch();
+  const invalidateTeamLists = useInvalidateTeamLists();
   const { mutate: createUserMutate } = useIdempotentMutation();
   const { mutate: addMemberMutate } = useIdempotentMutation();
 
@@ -128,8 +134,10 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
 
   // Team assignment fields
   const [assignToTeam, setAssignToTeam] = useState(false);
-  const [teams, setTeams] = useState<TeamOption[]>([]);
-  const [loadingTeams, setLoadingTeams] = useState(false);
+  // Chargée à la première activation de l'affectation, en cache partagé.
+  const teamsQuery = useTeamOptions(200, assignToTeam);
+  const teams = (teamsQuery.data?.teams ?? []) as TeamOption[];
+  const loadingTeams = teamsQuery.isFetching;
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [battleTag, setBattleTag] = useState('');
   const [teamRole, setTeamRole] = useState(
@@ -139,7 +147,10 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [teamsError, setTeamsError] = useState<string | null>(null);
+  // Avant, l'échec était seulement loggé : la liste restait vide sans que
+  // rien ne l'explique, et « Équipe » paraissait simplement dépeuplé.
+  const teamsError =
+    teamsQuery.isError && !loadingTeams ? t.errLoadTeams : null;
   const [resending, setResending] = useState(false);
   const [success, setSuccess] = useState<{
     user: CreateUserResponse;
@@ -150,29 +161,11 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
   // roster à la main) : on redonne le focus au champ email après chaque succès.
   const emailInputRef = useRef<HTMLInputElement>(null);
 
-  const loadTeams = useCallback(async () => {
-    setLoadingTeams(true);
-    setTeamsError(null);
-    try {
-      const res = await adminFetch('/api/admin/teams?limit=200&includeTotal=0');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      setTeams(json.teams || []);
-    } catch (e) {
-      // Avant, l'échec était seulement loggé : la liste restait vide sans que
-      // rien ne l'explique, et « Équipe » paraissait simplement dépeuplé.
-      logger.error('Failed to load teams list', e);
-      setTeamsError(t.errLoadTeams);
-    } finally {
-      setLoadingTeams(false);
-    }
-  }, [adminFetch, t]);
-
   useEffect(() => {
-    if (assignToTeam && teams.length === 0) {
-      loadTeams();
-    }
-  }, [assignToTeam, teams.length, loadTeams]);
+    if (teamsQuery.error)
+      logger.error('Failed to load teams list', teamsQuery.error);
+  }, [teamsQuery.error]);
+  const loadTeams = () => void teamsQuery.refetch();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -214,7 +207,7 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
       };
       if (password.trim()) userPayload.password = password.trim();
 
-      const userRes = await createUserMutate('/api/admin/users', {
+      const userRes = await createUserMutate(usersPaths.create, {
         method: 'POST',
         body: JSON.stringify(userPayload),
       });
@@ -247,7 +240,7 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
           setCaptain,
         };
 
-        const teamRes = await addMemberMutate('/api/admin/teams/add-member', {
+        const teamRes = await addMemberMutate(teamsPaths.addMember, {
           method: 'POST',
           body: JSON.stringify(teamPayload),
         });
@@ -264,6 +257,8 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
         }
 
         teamAssignment = teamJson;
+        // Le roster (et le compteur de membres) de l'équipe a changé.
+        void invalidateTeamLists();
       }
 
       setSuccess({ user: userJson, teamAssignment });
@@ -301,18 +296,7 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
     if (resending) return;
     setResending(true);
     try {
-      const res = await adminFetch('/api/admin/users/manage', {
-        method: 'PATCH',
-        body: JSON.stringify({ userId, action: 'resend_credentials' }),
-      });
-      const json = (await res.json()) as {
-        success?: boolean;
-        warning?: string;
-        error?: string;
-      };
-      if (!res.ok || json.error) {
-        throw new Error(json.error || t.errResend);
-      }
+      const json = await usersClient.resendCredentials(userId);
       if (json.warning) {
         addToast(json.warning, 'warning');
         return;
@@ -641,4 +625,4 @@ function AdminCreateUserPage({ teamRoles }: PageProps) {
   );
 }
 
-export default AdminCreateUserPage;
+export default withAdminQuery(AdminCreateUserPage);

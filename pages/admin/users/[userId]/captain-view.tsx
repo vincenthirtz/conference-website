@@ -21,7 +21,20 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { AdminHttpError, adminRequest } from '@/utils/admin/adminHttp';
+import { adminKey, withAdminQuery } from '@/features/admin/_shared/query';
+import { teamsPaths } from '@/features/admin/teams/client';
+import { usersClient } from '@/features/admin/users/client';
+import {
+  usersKeys,
+  useUserProfile,
+} from '@/features/admin/users/hooks/useUsersQueries';
+import { demandesClient } from '@/features/admin/demandes/client';
+import {
+  useDemandesList,
+  useInvalidateDemandes,
+} from '@/features/admin/demandes/hooks/useDemandesQueries';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -101,76 +114,81 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
   const rawUserId = router.query.userId;
   const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
 
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
-  const [profile, setProfile] = useState<AdminUserProfilePayload | null>(null);
-  const [managed, setManaged] = useState<ManagedTeamPayload | null>(null);
-  const [joinRequests, setJoinRequests] = useState<PendingDemande[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notFound, setNotFound] = useState(false);
+  // Profil et tranche d'équipe ne dépendent tous deux que de `userId` : en
+  // parallèle. Seules les demandes ont besoin du résultat (l'id de
+  // l'équipe), et restent donc chaînées.
+  const ready = router.isReady && !!userId;
+  const profileQuery = useUserProfile(ready ? userId : undefined);
+  // Tranche d'équipe gérée par la CIBLE — même endpoint que son écran, lu via
+  // `?as=`. Sert uniquement à alimenter les actions staff (promotion) ;
+  // l'affichage du roster, lui, vient de l'écran réel monté plus bas. Un échec
+  // n'empêche pas la page : pas de tranche, pas d'actions.
+  const managedQuery = useQuery({
+    queryKey: adminKey('teams', 'managed-by', userId ?? ''),
+    queryFn: () =>
+      adminRequest<ManagedTeamPayload>(
+        withSubjectParam(teamsPaths.my, userId as string)
+      ).catch((err) => {
+        logger.error('[admin/captain-view] managed team error:', err);
+        return null;
+      }),
+    enabled: ready,
+  });
+  const managed = managedQuery.data ?? null;
+  const managedTeamId = managed?.team?.id;
+  const demandesQuery = useDemandesList<PendingDemande>(
+    {
+      teamId: managedTeamId,
+      type: 'join',
+      status: 'pending',
+      limit: 20,
+    },
+    !!managedTeamId
+  );
+  const joinRequests: PendingDemande[] = demandesQuery.isError
+    ? []
+    : (demandesQuery.data ?? []);
+  const profile: AdminUserProfilePayload | null = profileQuery.data ?? null;
+  const profileError = profileQuery.error;
+  const notFound =
+    profileError instanceof AdminHttpError && profileError.status === 404;
+  const error = profileError && !notFound ? t.loadError : null;
+  const loading =
+    !profileError &&
+    (profileQuery.isPending ||
+      managedQuery.isPending ||
+      (!!managedTeamId && demandesQuery.isPending));
+  useEffect(() => {
+    if (profileError)
+      logger.error('[admin/captain-view] load error:', profileError);
+  }, [profileError]);
+  useEffect(() => {
+    if (demandesQuery.error)
+      logger.error('[admin/captain-view] demandes error:', demandesQuery.error);
+  }, [demandesQuery.error]);
+
+  const qc = useQueryClient();
+  const invalidateDemandes = useInvalidateDemandes();
+  /** Relit la vue après un geste (profil, tranche, demandes). */
+  const load = useCallback(async () => {
+    if (!userId) return;
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: usersKeys.profile(userId) }),
+      qc.invalidateQueries({
+        queryKey: adminKey('teams', 'managed-by', userId),
+      }),
+      invalidateDemandes(),
+    ]);
+  }, [qc, userId, invalidateDemandes]);
+
   const [busy, setBusy] = useState<string | null>(null);
   // Agir à la place de la capitaine (S4). Volontairement NON persisté et
   // remis à false à chaque arrivée sur la page : ouvrir les écritures doit
   // rester un geste conscient, pas un état qu'on retrouve par surprise.
   const [actAs, setActAs] = useState(false);
-
-  const load = useCallback(async () => {
-    if (!userId) return;
-    setLoading(true);
-    setError(null);
-    setNotFound(false);
-    try {
-      // Profil et tranche d'équipe ne dépendent tous deux que de `userId` :
-      // en parallèle. Seules les demandes ci-dessous ont besoin du résultat
-      // (l'id de l'équipe), et restent donc chaînées.
-      const [json, slice] = await Promise.all([
-        adminFetchJson<AdminUserProfilePayload>(
-          `/api/admin/users/${encodeURIComponent(userId)}/profile`
-        ),
-        // Tranche d'équipe gérée par la CIBLE — même endpoint que son écran,
-        // lu via `?as=`. Sert uniquement à alimenter les actions staff
-        // (promotion) ; l'affichage du roster, lui, vient de l'écran réel
-        // monté plus bas.
-        adminFetchJson<ManagedTeamPayload>(
-          withSubjectParam('/api/admin/teams/my', userId)
-        ).catch((err) => {
-          logger.error('[admin/captain-view] managed team error:', err);
-          return null;
-        }),
-      ]);
-      setProfile(json);
-      setManaged(slice);
-
-      if (slice?.team?.id) {
-        const demandes = await adminFetchJson<{ demandes: PendingDemande[] }>(
-          `/api/admin/demandes?teamId=${encodeURIComponent(slice.team.id)}&type=join&status=pending&limit=20`
-        ).catch((err) => {
-          logger.error('[admin/captain-view] demandes error:', err);
-          return { demandes: [] };
-        });
-        setJoinRequests(demandes.demandes || []);
-      } else {
-        setJoinRequests([]);
-      }
-    } catch (err) {
-      logger.error('[admin/captain-view] load error:', err);
-      if (err instanceof AdminFetchError && err.status === 404) {
-        setNotFound(true);
-      } else {
-        setError(t.loadError);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [userId, adminFetchJson, t]);
-
-  useEffect(() => {
-    if (!router.isReady) return;
-    load();
-  }, [router.isReady, load]);
 
   const headerName =
     profile?.user.displayName || profile?.user.email || t.defaultUser;
@@ -193,13 +211,9 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
       if (!ok) return;
       setBusy(`captain-${member.id}`);
       try {
-        await adminFetchJson(
-          `/api/admin/users/${encodeURIComponent(member.user_id)}/actions`,
-          {
-            method: 'POST',
-            body: JSON.stringify({ action: 'assign_captain' }),
-          }
-        );
+        await usersClient.action(member.user_id, {
+          action: 'assign_captain',
+        });
         addToast(t.toastCaptainTransferred, 'success');
         await load();
       } catch (err) {
@@ -208,7 +222,7 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
         setBusy(null);
       }
     },
-    [managed?.team, confirm, adminFetchJson, addToast, load, t]
+    [managed?.team, confirm, addToast, load, t]
   );
 
   // POST /api/admin/demandes — approve / reject.
@@ -223,14 +237,7 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
       if (!ok) return;
       setBusy(`demande-${demandeId}`);
       try {
-        await adminFetchJson('/api/admin/demandes', {
-          method: 'POST',
-          body: JSON.stringify({
-            action: 'updateStatus',
-            demandeIds: [demandeId],
-            newStatus,
-          }),
-        });
+        await demandesClient.updateStatus({ ids: [demandeId], newStatus });
         addToast(
           newStatus === 'approved'
             ? t.toastDemandeApproved
@@ -244,7 +251,7 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
         setBusy(null);
       }
     },
-    [confirm, adminFetchJson, addToast, load, t]
+    [confirm, addToast, load, t]
   );
 
   const promotableMembers = (managed?.members ?? []).filter(
@@ -536,4 +543,4 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
   );
 }
 
-export default CaptainViewPage;
+export default withAdminQuery(CaptainViewPage);
