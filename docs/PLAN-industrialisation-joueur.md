@@ -390,14 +390,14 @@ délégation et le pendant bot `/api/bot/v1/matches/[matchId]/report`) :
 `npm run player:metrics [-- --write]`.
 
 **Critères d'acceptation**
-- [ ] Indicateurs gelés : LOC et fichiers > seuil (pages 800 / composants 600 / routes 500),
+- [x] Indicateurs gelés : LOC et fichiers > seuil (pages 800 / composants 600 / routes 500),
       `useState`, `req.method` à la main, `withAuthRoute`, `withSubjectRoute`, `hasTeamPermission`,
       `captain_id` à la main, routes sans zod lisant `req.body`, `req.body as`, `select('*')`,
       `supabaseAdmin` direct, `.json({ error`, `useAdminFetch`, URLs `/api/` en dur,
       `import type … '@/pages/api'`, classes de couleur en dur, `style={{`.
-- [ ] Adoption affichée : `defineSubjectRoute`, `playerHttp`, `useSchemaForm`, archétypes.
-- [ ] Rouge si un compteur monte ; message « baisse la baseline à N » s'il descend sans regel.
-- [ ] Chiffres de départ = ceux du § 1 (écarts expliqués dans la baseline) ; < 1 s sur le Mac.
+- [x] Adoption affichée : `defineSubjectRoute`, `playerHttp`, `useSchemaForm`, archétypes.
+- [x] Rouge si un compteur monte ; message « baisse la baseline à N » s'il descend sans regel.
+- [x] Chiffres de départ = ceux du § 1 (écarts expliqués dans la baseline) ; < 1 s sur le Mac.
 
 ### P2 · `features/player` + gardes de taille et de frontière — 🟥 / M
 
@@ -411,9 +411,12 @@ nommées et gelées) ; module pilote **`features/player/notifications/`** (petit
 route 319, prefs push) — route + client + écran.
 
 **Critères d'acceptation**
-- [ ] ADR 0002 accepté ; alias `@/features/*` réutilisé.
-- [ ] Garde de taille : un fichier gelé ne grossit jamais ; un nouveau fichier ne dépasse pas.
-- [ ] Garde de frontière : règles 7–10 gelées à 13 / 4 / 1 / 0.
+- [x] ADR 0002 accepté ; alias `@/features/*` réutilisé.
+- [x] Garde de taille : un fichier gelé ne grossit jamais ; un nouveau fichier ne dépasse pas.
+- [x] Garde de frontière : règles 7–10 gelées à 13 / 4 / 1 / 0.
+      *Gel réel : **22 / 3 / 1 / 0** — règle 7 compte aussi les imports relatifs
+      (`../../pages/api`, `../api`), règle 8 ignore l'occurrence en commentaire. + garde « iso »
+      et « pas de `features/admin` dans le bundle joueuse » (ADR 0002).*
 - [ ] Pilote notifications vert (unit + `player-notifications.spec.ts` en base locale).
 
 ---

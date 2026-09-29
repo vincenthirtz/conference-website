@@ -1,0 +1,38 @@
+{
+  "measuredAt": "2026-09-29",
+  "notes": {
+    "perimetre": "Espace joueuse/capitaine/manager/coach/supportrice (§ 1 du plan). Site public hors périmètre : pages/player/[userId].tsx exclue.",
+    "ecarts": [
+      "Pages : 27 fichiers / 14 293 lignes (plan : 28 / 14 295) — la 28e page du comptage manuel n'est pas identifiable ; les 6 pages > 800 sont les mêmes.",
+      "api.manualCaptainCheck = 19 (plan : 20) : fichiers qui citent captain_id HORS commentaire.",
+      "api.reqBodyWithoutZod = 42 (plan : 35) : toute route lisant req.body sans importer zod, y compris celles qui valident à la main.",
+      "api.selectStar = 27 (plan : 29) : compte '*' et '*, relation(…)'.",
+      "api.freeErrorJson = 882 (plan : 881), ui.useState = 565 (plan : 571), ui.rawApiUrl = 207 (plan : 209), ui.useAdminFetch = 58 (plan : 57) : regex du script vs comptage du jour.",
+      "ui.tailwindColor = 4020 (plan : 3 963) : famille-couleur Tailwind (bg|text|border|ring|from|via|to|…-<palette>), white/black inclus.",
+      "ui.importFromApi = 22 fichiers (plan : 13) : le plan ne comptait que l'alias '@/pages/api' ; le script compte aussi les imports relatifs ('../../pages/api', '../api' depuis une page).",
+      "size.apiOver500 = 7 : 5 player + teams/create-with-member + demandes/register-team, comme le plan."
+    ]
+  },
+  "debt": {
+    "api.routesNotDeclarative": 113,
+    "api.manualMethodSwitch": 113,
+    "api.withAuthRoute": 69,
+    "api.withSubjectRoute": 33,
+    "api.hasTeamPermission": 5,
+    "api.manualCaptainCheck": 19,
+    "api.reqBodyWithoutZod": 42,
+    "api.reqBodyCast": 5,
+    "api.directSupabaseAdmin": 97,
+    "api.selectStar": 27,
+    "api.freeErrorJson": 882,
+    "ui.useState": 565,
+    "ui.useAdminFetch": 58,
+    "ui.rawApiUrl": 207,
+    "ui.importFromApi": 22,
+    "ui.tailwindColor": 4020,
+    "ui.inlineStyle": 30,
+    "size.pagesOver800": 6,
+    "size.componentsOver600": 3,
+    "size.apiOver500": 7
+  }
+}
