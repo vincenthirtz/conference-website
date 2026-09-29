@@ -3,6 +3,7 @@ parameters:
 get:
   summary: Team detail.
   operationId: adminGetTeam
+  x-zod-query: admin.teams/[teamId].query
   tags:
     - admin/teams
   security:
@@ -21,6 +22,7 @@ get:
 patch:
   summary: Patch team fields.
   operationId: adminPatchTeam
+  x-zod-query: admin.teams/[teamId].id.query
   tags:
     - admin/teams
   security:
@@ -30,8 +32,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.teams/[teamId].update
   responses:
     '200':
       description: Updated.
@@ -44,6 +45,7 @@ patch:
 put:
   summary: Replace a team.
   operationId: adminReplaceTeam
+  x-zod-query: admin.teams/[teamId].id.query
   tags:
     - admin/teams
   security:
@@ -53,15 +55,12 @@ put:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.teams/[teamId].update
   responses:
     '200':
       description: Replaced.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Team'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -69,6 +68,7 @@ put:
 delete:
   summary: Soft-delete a team.
   operationId: adminDeleteTeam
+  x-zod-query: admin.teams/[teamId].delete.query
   tags:
     - admin/teams
   security:

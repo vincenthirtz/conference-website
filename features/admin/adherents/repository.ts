@@ -4,9 +4,15 @@
 import type { AdminDb } from '../../../utils/admin/serviceContext';
 import type { Database } from '../../../types/database.generated';
 import { listRange, searchOrFilter } from '../../../utils/admin/listQuery';
-import { ADHERENT_LIST_COLUMNS, type AdherentListQuery } from './schemas';
+import {
+  ADHERENT_COLUMNS,
+  ADHERENT_LIST_COLUMNS,
+  ADHERENT_PAYMENT_COLUMNS,
+  type AdherentListQuery,
+} from './schemas';
 
 type AdherentInsert = Database['public']['Tables']['adherents']['Insert'];
+type AdherentUpdate = Database['public']['Tables']['adherents']['Update'];
 
 const SEARCH_COLUMNS = [
   'last_name',
@@ -67,4 +73,90 @@ export async function insertAdherent(db: AdminDb, row: AdherentInsert) {
     .select()
     .single();
   return { row: data ?? null, error };
+}
+
+/* --------------------------- Fiche adhérent ------------------------------ */
+
+export async function findAdherent(db: AdminDb, id: string) {
+  const { data, error } = await db
+    .from('adherents')
+    .select(ADHERENT_COLUMNS)
+    .eq('id', id)
+    .single();
+  return { row: data, error };
+}
+
+export async function listAdherentPayments(db: AdminDb, adherentId: string) {
+  const { data } = await db
+    .from('adherent_payments')
+    .select(ADHERENT_PAYMENT_COLUMNS)
+    .eq('adherent_id', adherentId)
+    .order('year', { ascending: false });
+  return data ?? [];
+}
+
+export async function emailTakenByOther(
+  db: AdminDb,
+  email: string,
+  id: string
+): Promise<boolean> {
+  const { data } = await db
+    .from('adherents')
+    .select('id')
+    .eq('email', email)
+    .neq('id', id)
+    .maybeSingle();
+  return Boolean(data);
+}
+
+export async function updateAdherent(
+  db: AdminDb,
+  id: string,
+  updates: AdherentUpdate
+) {
+  const { data, error } = await db
+    .from('adherents')
+    .update(updates)
+    .eq('id', id)
+    .select(ADHERENT_COLUMNS)
+    .single();
+  return { row: data, error };
+}
+
+export async function findAdherentIdentity(db: AdminDb, id: string) {
+  const { data } = await db
+    .from('adherents')
+    .select('id, first_name, last_name, email')
+    .eq('id', id)
+    .single();
+  return data;
+}
+
+export async function deleteAdherent(db: AdminDb, id: string) {
+  const { error } = await db.from('adherents').delete().eq('id', id);
+  return { error };
+}
+
+/* --------------------------- Synchro HelloAsso --------------------------- */
+
+export async function findAdherentsByEmails(db: AdminDb, emails: string[]) {
+  const { data } = await db
+    .from('adherents')
+    .select('id, email, payment_reference')
+    .in('email', emails);
+  return data ?? [];
+}
+
+export async function updateAdherentPayment(
+  db: AdminDb,
+  id: string,
+  updates: AdherentUpdate
+) {
+  const { error } = await db.from('adherents').update(updates).eq('id', id);
+  return { error };
+}
+
+export async function insertAdherentRow(db: AdminDb, row: AdherentInsert) {
+  const { error } = await db.from('adherents').insert(row);
+  return { error };
 }

@@ -31,22 +31,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            cost:
-              type: integer
-              minimum: 1
-              description: |
-                Cost in CHANNEL POINTS — Twitch's currency, not the TCG coin
-                scale. Confusing the two would price the reward at 12 points.
-                Defaults to a deliberately cautious value.
-            featuredFanartId:
-              type: string
-              format: uuid
-              description: |
-                Featured reward: its pack guarantees this card (a published
-                association card). Reward title `Carte a collectionner — <card
-                title>`. 404 `card_not_found` if missing or unpublished.
+          x-zod: admin.twitch/tcg-drop/setup.body
   responses:
     '200':
       description: Reward created or reused.

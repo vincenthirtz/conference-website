@@ -11,6 +11,22 @@
 
 import type { ApiContractEntry } from '../index';
 import {
+  BanDoc,
+  ChatSettingsDoc,
+  CreatePredictionDoc,
+  CreateRewardDoc,
+  MarkerDoc,
+  PatchPredictionDoc,
+  PatchRedemptionsDoc,
+  RewardsListQuery,
+  SendChatDoc,
+  SubscribeDoc,
+  TcgDropSetupDoc,
+  TcgDropSubscribeDoc,
+  TwitchIdQuery,
+  UpdateRewardDoc,
+} from '../../../features/admin/twitch/schemas';
+import {
   RatingSeedBody,
   RatingSeedingPreviewQuery,
   SeedingPreviewQuery,
@@ -36,6 +52,7 @@ import {
   TiebreakerOverrideBody,
 } from '../../../features/admin/stages/schemas';
 import {
+  StreamAlertTestDoc,
   TwitchChannelBody,
   TwitchChannelIdQuery,
   TwitchChannelListQuery,
@@ -43,10 +60,17 @@ import {
 } from '../../../features/admin/diffusion/schemas';
 import { RemoveFreePlayerQuery } from '../../../features/admin/free-players/schemas';
 import { UserSearchQuery } from '../../../features/admin/users/schemas';
-import { AlertsSummaryQuery } from '../../../features/admin/dashboard/schemas';
+import {
+  AdminSearchQuery,
+  AlertsSummaryQuery,
+} from '../../../features/admin/dashboard/schemas';
 import {
   AdherentCreateBody,
+  AdherentIdQuery,
   AdherentListQuery,
+  AdherentPatchDoc,
+  HelloAssoMembershipsQuery,
+  HelloAssoSyncQuery,
 } from '../../../features/admin/adherents/schemas';
 import {
   LeagueIdQuery,
@@ -57,7 +81,12 @@ import {
   DiscordWebhookDeleteQuery,
   SiteSettingKeyQuery,
 } from '../../../features/admin/site-settings/schemas';
-import { NewsIdQuery } from '../../../features/admin/news/schemas';
+import {
+  CommentDeleteDoc,
+  CommentListQuery,
+  CommentPatchDoc,
+  NewsIdQuery,
+} from '../../../features/admin/news/schemas';
 import { PartnerIdQuery } from '../../../features/admin/partners/schemas';
 import { PoleMemberIdQuery } from '../../../features/admin/pole-members/schemas';
 import { CastMemberIdQuery } from '../../../features/admin/cast-members/schemas';
@@ -156,6 +185,11 @@ import {
   CampaignPreviewQuery,
   CampaignScheduleDoc,
   CampaignSendDoc,
+  EmailCredentialsDoc,
+  EmailLogsQuery,
+  TeamMessagesDoc,
+  TeamMessagesQuery,
+  TestEmailDoc,
 } from '../../../features/admin/communications/schemas';
 import {
   MapPoolCreateDoc,
@@ -175,7 +209,10 @@ import {
   PlacementsDoc,
 } from '../../../features/admin/lobbies/schemas';
 import {
+  BlueskyCredentialsDoc,
   InstagramSecretDoc,
+  SocialPostDoc,
+  SocialPostListQuery,
   TiktokCredentialsDoc,
 } from '../../../features/admin/social/schemas';
 import {
@@ -202,12 +239,18 @@ import {
   ApiTokenPatchDoc,
   AttachGuildDoc,
   DiscordConfigDoc,
+  GuildClaimDoc,
+  HelloAssoCredentialsDoc,
   IdQuery as TenantsIdQuery,
   InvitationCreateDoc,
   LifecycleDoc,
   NonprofitRnaDoc,
+  OpenApiSpecQuery,
+  PendingGuildIdQuery,
   PlanCheckoutDoc,
   RotateSecretsDoc,
+  StaffIdQuery,
+  TeamChannelActionDoc,
   TenantApiTokensQuery,
   TenantCreateDoc,
   TenantGuildQuery,
@@ -224,6 +267,7 @@ import {
 
 import {
   CheckinNudgeBody,
+  DisputeBoardQuery,
   DisputeOpenBody,
   DisputeResolveBody,
   DraftCommitBody,
@@ -264,6 +308,7 @@ import {
   OverlayDayBody,
   PoolLooseBody,
   PrizePoolLooseBody,
+  QuickBracketDoc,
   RosterUnlockBody,
   ScheduleDiagnosticsQuery,
   ScheduleMoveLooseBody,
@@ -282,7 +327,43 @@ import {
   TournamentTeamEntryQuery,
   TournamentTeamPatchBody,
   TournamentTeamsQuery,
+  TournamentTemplateCreateDoc,
+  TournamentTemplateDeleteDoc,
 } from '../../../features/admin/tournaments/schemas';
+
+import {
+  TeamAddMemberBody,
+  TeamAvailabilityBody,
+  TeamAvailabilityQuery,
+  TeamBulkBody,
+  TeamDeleteQuery,
+  TeamDetailQuery,
+  TeamHistoryQuery,
+  TeamIdQuery,
+  TeamImportCsvBody,
+  TeamImportPlatformBody,
+  TeamListQuery,
+  TeamPatchBody,
+  TeamRosterBulkBody,
+  TeamRosterLockBody,
+  TeamRosterLockQuery,
+  TeamTournamentBody,
+  TeamTournamentsQuery,
+} from '../../../features/admin/teams/schemas';
+import {
+  DemandeIdQuery,
+  DemandeNotifyQuery,
+} from '../../../features/admin/demandes/schemas';
+import {
+  DiscordLogsQuery,
+  EntityHistoryQuery,
+  StaffLogsQuery,
+} from '../../../features/admin/logs/schemas';
+import { CasterAuditDoc } from '../../../features/admin/caster/schemas';
+import {
+  RecycleBinQuery,
+  RecycleBinRestoreDoc,
+} from '../../../features/admin/recycle-bin/schemas';
 
 export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   // Tournoi : hub, structure, équipes, matchs, planning, exploitation
@@ -671,6 +752,72 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
     schema: CheckinNudgeBody,
     io: 'input',
   },
+  // Équipes (features/admin/teams, vague serveur 4). Corps « historiques »
+  // en `looseBody` : champs nommés, validés par le service.
+  'admin.teams/[teamId].update': { schema: TeamPatchBody, io: 'input' },
+  'admin.teams/bulk.body': { schema: TeamBulkBody, io: 'input' },
+  'admin.teams/[teamId]/roster-lock.body': {
+    schema: TeamRosterLockBody,
+    io: 'input',
+  },
+  'admin.teams/[teamId]/roster-bulk.body': {
+    schema: TeamRosterBulkBody,
+    io: 'input',
+  },
+  'admin.teams/[teamId]/availability.body': {
+    schema: TeamAvailabilityBody,
+    io: 'input',
+  },
+  'admin.teams/[teamId]/tournaments.body': {
+    schema: TeamTournamentBody,
+    io: 'input',
+  },
+  'admin.teams/add-member.body': { schema: TeamAddMemberBody, io: 'input' },
+  'admin.teams/import-csv.body': { schema: TeamImportCsvBody, io: 'input' },
+  'admin.teams/import-platform.body': {
+    schema: TeamImportPlatformBody,
+    io: 'input',
+  },
+  // Vague serveur 4 (routes isolées) : corps « historiques » (`looseBody`),
+  // validés par le service.
+  'admin.test-email.body': { schema: TestEmailDoc, io: 'input' },
+  'admin.email/credentials.update': {
+    schema: EmailCredentialsDoc,
+    io: 'input',
+  },
+  'admin.adherents/[id].update': { schema: AdherentPatchDoc, io: 'input' },
+  'admin.pending-guild-links/[guildId]/claim.body': {
+    schema: GuildClaimDoc,
+    io: 'input',
+  },
+  'admin.helloasso/credentials.update': {
+    schema: HelloAssoCredentialsDoc,
+    io: 'input',
+  },
+  'admin.stream-alert-test.body': { schema: StreamAlertTestDoc, io: 'input' },
+  'admin.caster/audit.body': { schema: CasterAuditDoc, io: 'input' },
+  'admin.comments.update': { schema: CommentPatchDoc, io: 'input' },
+  'admin.comments.delete.body': { schema: CommentDeleteDoc, io: 'input' },
+  'admin.bluesky/credentials.update': {
+    schema: BlueskyCredentialsDoc,
+    io: 'input',
+  },
+  'admin.social-posts.body': { schema: SocialPostDoc, io: 'input' },
+  'admin.quick-bracket.body': { schema: QuickBracketDoc, io: 'input' },
+  'admin.tournament-templates.create': {
+    schema: TournamentTemplateCreateDoc,
+    io: 'input',
+  },
+  'admin.tournament-templates.delete.body': {
+    schema: TournamentTemplateDeleteDoc,
+    io: 'input',
+  },
+  'admin.team-messages.body': { schema: TeamMessagesDoc, io: 'input' },
+  'admin.recycle-bin.update': { schema: RecycleBinRestoreDoc, io: 'input' },
+  'admin.discord/team-channels.body': {
+    schema: TeamChannelActionDoc,
+    io: 'input',
+  },
 };
 
 export const ADMIN_FEATURE_QUERY_SCHEMAS: Record<string, ApiContractEntry> = {
@@ -958,4 +1105,109 @@ export const ADMIN_FEATURE_QUERY_SCHEMAS: Record<string, ApiContractEntry> = {
     io: 'input',
   },
   'admin.matches/search.query': { schema: MatchSearchQuery, io: 'input' },
+  // Actions Twitch de la régie (features/admin/twitch). Les corps sont les
+  // schémas stricts rendus non bloquants (`documented`) : la validation (et
+  // son 400 INVALID_PAYLOAD historique) reste dans le service.
+  'admin.twitch/chat.body': { schema: SendChatDoc, io: 'input' },
+  'admin.twitch/marker.body': { schema: MarkerDoc, io: 'input' },
+  'admin.twitch/moderation/ban.body': { schema: BanDoc, io: 'input' },
+  'admin.twitch/moderation/chat-settings.body': {
+    schema: ChatSettingsDoc,
+    io: 'input',
+  },
+  'admin.twitch/predictions.create': {
+    schema: CreatePredictionDoc,
+    io: 'input',
+  },
+  'admin.twitch/[id].query': { schema: TwitchIdQuery, io: 'input' },
+  'admin.twitch/predictions/[id].update': {
+    schema: PatchPredictionDoc,
+    io: 'input',
+  },
+  'admin.twitch/channel-points/rewards.query': {
+    schema: RewardsListQuery,
+    io: 'input',
+  },
+  'admin.twitch/channel-points/rewards.create': {
+    schema: CreateRewardDoc,
+    io: 'input',
+  },
+  'admin.twitch/channel-points/rewards/[id].update': {
+    schema: UpdateRewardDoc,
+    io: 'input',
+  },
+  'admin.twitch/channel-points/redemptions.update': {
+    schema: PatchRedemptionsDoc,
+    io: 'input',
+  },
+  'admin.twitch/eventsub/subscribe.body': {
+    schema: SubscribeDoc,
+    io: 'input',
+  },
+  'admin.twitch/eventsub/tcg-drop.create': {
+    schema: TcgDropSubscribeDoc,
+    io: 'input',
+  },
+  'admin.twitch/tcg-drop/setup.body': {
+    schema: TcgDropSetupDoc,
+    io: 'input',
+  },
+  // Équipes et demandes (features/admin/{teams,demandes}, vague serveur 4).
+  // `roster-lock` et `availability` : ids validés par le service (codes
+  // `INVALID_TEAM_ID`, `INVALID_ID`…).
+  'admin.teams.query': { schema: TeamListQuery, io: 'input' },
+  'admin.teams/[teamId].query': { schema: TeamDetailQuery, io: 'input' },
+  'admin.teams/[teamId].id.query': { schema: TeamIdQuery, io: 'input' },
+  'admin.teams/[teamId].delete.query': {
+    schema: TeamDeleteQuery,
+    io: 'input',
+  },
+  'admin.teams/[teamId]/history.query': {
+    schema: TeamHistoryQuery,
+    io: 'input',
+  },
+  'admin.teams/[teamId]/roster-lock.query': {
+    schema: TeamRosterLockQuery,
+    io: 'input',
+  },
+  'admin.teams/[teamId]/availability.query': {
+    schema: TeamAvailabilityQuery,
+    io: 'input',
+  },
+  'admin.teams/[teamId]/tournaments.query': {
+    schema: TeamTournamentsQuery,
+    io: 'input',
+  },
+  'admin.demandes/[id].query': { schema: DemandeIdQuery, io: 'input' },
+  'admin.demandes/[id]/notify-captains.query': {
+    schema: DemandeNotifyQuery,
+    io: 'input',
+  },
+  // Vague serveur 4 (routes isolées) : filtres « historiques » (`looseQuery`),
+  // lus par le service.
+  'admin.email-logs.query': { schema: EmailLogsQuery, io: 'input' },
+  'admin.adherents/[id].query': { schema: AdherentIdQuery, io: 'input' },
+  'admin.helloasso/memberships.query': {
+    schema: HelloAssoMembershipsQuery,
+    io: 'input',
+  },
+  'admin.helloasso/sync.query': { schema: HelloAssoSyncQuery, io: 'input' },
+  'admin.pending-guild-links/[guildId].query': {
+    schema: PendingGuildIdQuery,
+    io: 'input',
+  },
+  'admin.staff/[staffId]/pole-admin.query': {
+    schema: StaffIdQuery,
+    io: 'input',
+  },
+  'admin.logs.query': { schema: StaffLogsQuery, io: 'input' },
+  'admin.discord-logs.query': { schema: DiscordLogsQuery, io: 'input' },
+  'admin.entity-history.query': { schema: EntityHistoryQuery, io: 'input' },
+  'admin.search.query': { schema: AdminSearchQuery, io: 'input' },
+  'admin.comments.query': { schema: CommentListQuery, io: 'input' },
+  'admin.social-posts.query': { schema: SocialPostListQuery, io: 'input' },
+  'admin.disputes.query': { schema: DisputeBoardQuery, io: 'input' },
+  'admin.team-messages.query': { schema: TeamMessagesQuery, io: 'input' },
+  'admin.recycle-bin.query': { schema: RecycleBinQuery, io: 'input' },
+  'admin.docs/openapi.query': { schema: OpenApiSpecQuery, io: 'input' },
 };

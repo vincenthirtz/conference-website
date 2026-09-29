@@ -19,6 +19,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.stream-alert-test.body
           type: object
           required:
             - kind

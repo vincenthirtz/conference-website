@@ -185,6 +185,8 @@ export type StaffLogAction =
   | 'delete_free_player'
   // Adhérents de l'association (création manuelle ; la synchro HelloAsso a la sienne)
   | 'create_adherent'
+  | 'update_adherent'
+  | 'delete_adherent'
   // --- Contenu éditorial ---
   | 'publish_news'
   | 'publish_social_post'
@@ -357,6 +359,10 @@ export type StaffLogAction =
   | 'twitch_ban'
   | 'twitch_clear_chat'
   | 'twitch_chat_settings'
+  | 'subscribe_twitch_eventsub'
+  | 'subscribe_twitch_alerts'
+  | 'subscribe_twitch_tcg_drop'
+  | 'unsubscribe_twitch_tcg_drop'
   // --- Prize pool / paiements ---
   | 'create_prize_pool'
   | 'update_prize_pool'
@@ -394,6 +400,8 @@ export type StaffLogAction =
   | 'task_update'
   | 'task_delete'
   | 'task_restore'
+  // Corbeille (ex-`other` + `payload.action_label: 'restore_item'`, conservé).
+  | 'restore_deleted_item'
   | 'task_move'
   | 'task_assign'
   | 'task_comment_create'

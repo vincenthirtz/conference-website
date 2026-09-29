@@ -16,6 +16,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.quick-bracket.body
           type: object
           required:
             - name

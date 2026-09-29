@@ -51,3 +51,41 @@ export const CampaignSendDoc = looseBody([
 
 /** Programmation par vagues (POST …/schedule). */
 export const CampaignScheduleDoc = looseBody(['waveSize']);
+
+/* ---------------- Compte d'envoi, journal Brevo, email de test ---------------- */
+
+/** POST /api/admin/test-email — destinataire, validé par le service. */
+export const TestEmailDoc = looseBody(['to']);
+
+/** GET /api/admin/email-logs — filtres relayés à Brevo. */
+export const EmailLogsQuery = looseQuery([
+  'limit',
+  'offset',
+  'email',
+  'event',
+  'startDate',
+  'endDate',
+]);
+
+/** PUT /api/admin/email/credentials — clé Brevo + adresse d'expédition. */
+export const EmailCredentialsDoc = looseBody([
+  'apiKey',
+  'fromEmail',
+  'fromName',
+]);
+
+/* ------------------- Messages aux salons Discord des équipes ------------------ */
+
+/** GET /api/admin/team-messages?tournamentId= (défaut : tournoi en cours). */
+export const TeamMessagesQuery = looseQuery(['tournamentId']);
+
+/** POST /api/admin/team-messages — validé par le service (400 + `details`). */
+export const TeamMessagesDoc = looseBody([
+  'preset',
+  'template',
+  'teamIds',
+  'mention',
+  'only',
+  'tournamentId',
+  'dryRun',
+]);

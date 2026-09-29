@@ -9,6 +9,7 @@ delete:
   summary: Revoke a pending guild link.
   description: Requires `owner` role.
   operationId: adminDeletePendingGuildLink
+  x-zod-query: admin.pending-guild-links/[guildId].query
   tags:
     - admin/tenants
   security:

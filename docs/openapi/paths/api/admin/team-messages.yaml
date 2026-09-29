@@ -1,6 +1,7 @@
 get:
   summary: Etat roster des equipes inscrites + capacite de livraison Discord.
   operationId: adminGetTeamMessagesState
+  x-zod-query: admin.team-messages.query
   tags:
     - admin/teams
   description: |
@@ -46,6 +47,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.team-messages.body
           type: object
           properties:
             preset:

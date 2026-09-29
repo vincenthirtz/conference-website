@@ -9,10 +9,13 @@ import slugify from 'slugify';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import {
   AdminError,
+  LegacyAdminError,
   NotFoundError,
   ValidationError,
 } from '@/utils/admin/errors';
 import { emitBotEvent } from '@/utils/botEvents';
+import { escapePostgrestValue, sanitizeSearch } from '@/utils/apiHelpers';
+import type { Audited } from '../_shared/audited';
 import * as repo from './repository';
 import type { NewsPayload } from './schemas';
 
@@ -193,4 +196,99 @@ export async function deleteNews(ctx: ServiceContext, id: string) {
     throw new AdminError(500, 'internal', 'Failed to delete the article.');
   }
   return slug;
+}
+
+/* ------------------------- Commentaires d'actualités ------------------------ */
+
+type CommentRow = {
+  id: string;
+  news_id: string;
+  author_name: string | null;
+  content: string;
+  created_at: string;
+  news?: { id: string; title: string | null; slug: string | null } | null;
+};
+
+export async function listComments(
+  ctx: ServiceContext,
+  q: Record<string, unknown>,
+  page: { limit: number; offset: number }
+) {
+  const search = sanitizeSearch(q.search as string | string[] | undefined);
+  const newsId = String(q.newsId || '').trim();
+  const pattern = search ? `%${escapePostgrestValue(search)}%` : '';
+
+  const { rows, error, count } = await repo.listComments(ctx.db, ctx.tenantId, {
+    ...page,
+    orClause: search
+      ? `content.ilike.${pattern},author_name.ilike.${pattern}`
+      : undefined,
+    newsId: newsId || undefined,
+  });
+  if (error) {
+    ctx.logger.error('admin comments GET error:', error);
+    throw new LegacyAdminError(500, 'Failed to fetch comments');
+  }
+  return {
+    comments: rows as unknown as CommentRow[],
+    total: typeof count === 'number' ? count : null,
+  };
+}
+
+export async function updateComment(
+  ctx: ServiceContext,
+  body: Record<string, unknown>
+): Promise<Audited<{ comment: CommentRow }>> {
+  const { id, content, author_name } = body;
+  if (!id || typeof id !== 'string') {
+    throw new LegacyAdminError(400, 'id is required');
+  }
+  if (content && `${content}`.trim().length < 3) {
+    throw new LegacyAdminError(
+      400,
+      'content must contain at least 3 characters'
+    );
+  }
+  // Deux champs nommés, rien d'autre ne passe.
+  const patch: { content?: string; author_name?: string } = {};
+  if (typeof content === 'string') patch.content = content.trim();
+  if (typeof author_name === 'string') patch.author_name = author_name.trim();
+
+  const { row, error } = await repo.updateComment(
+    ctx.db,
+    ctx.tenantId,
+    id,
+    patch
+  );
+  if (error) {
+    ctx.logger.error('admin comments PATCH error:', error);
+    throw new LegacyAdminError(500, 'Failed to update comment');
+  }
+  return {
+    result: { comment: row as unknown as CommentRow },
+    audit: {
+      entity_type: 'comment',
+      entity_id: id,
+      payload: { fields: Object.keys(patch) },
+    },
+  };
+}
+
+export async function deleteComment(
+  ctx: ServiceContext,
+  body: Record<string, unknown>
+): Promise<Audited<{ deleted: true }>> {
+  const { id } = body;
+  if (!id || typeof id !== 'string') {
+    throw new LegacyAdminError(400, 'id is required');
+  }
+  const { error } = await repo.deleteComment(ctx.db, ctx.tenantId, id);
+  if (error) {
+    ctx.logger.error('admin comments DELETE error:', error);
+    throw new LegacyAdminError(500, 'Failed to delete comment');
+  }
+  return {
+    result: { deleted: true },
+    audit: { entity_type: 'comment', entity_id: id },
+  };
 }

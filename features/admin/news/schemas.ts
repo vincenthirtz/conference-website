@@ -5,7 +5,11 @@
 
 import { z } from 'zod';
 // Imports relatifs : ces schémas sont lus par l'assemblage OpenAPI (Node seul).
-import { uuidPathParam } from '../../../utils/admin/pathParams';
+import {
+  looseBody,
+  looseQuery,
+  uuidPathParam,
+} from '../../../utils/admin/pathParams';
 
 const INVALID_ID = 'Missing or invalid ID.';
 
@@ -29,3 +33,28 @@ export type NewsPayload = {
 /** Toutes les colonnes de `news` : ce que renvoyait le `select('*')`. */
 export const NEWS_COLUMNS =
   'id, tenant_id, team_id, title, slug, tag, excerpt, content, image_url, status, published_at, author_id, created_at, updated_at' as const;
+
+/* ------------------------- Commentaires d'actualités ------------------------ */
+
+/** GET /api/admin/comments — pagination, recherche, filtre par article. */
+export const CommentListQuery = looseQuery([
+  'limit',
+  'offset',
+  'search',
+  'newsId',
+]);
+
+/** PATCH /api/admin/comments — `id` requis, contenu (≥ 3 car.) et/ou auteur. */
+export const CommentPatchDoc = looseBody(['id', 'content', 'author_name']);
+
+/** DELETE /api/admin/comments — `id` dans le corps (contrat historique). */
+export const CommentDeleteDoc = looseBody(['id']);
+
+export const COMMENT_COLUMNS = `
+        id,
+        news_id,
+        author_name,
+        content,
+        created_at,
+        news:news(id, title, slug)
+      ` as const;

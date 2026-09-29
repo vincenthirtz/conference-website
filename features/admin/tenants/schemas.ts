@@ -9,7 +9,7 @@
 // Zod seul, imports RELATIFS : lu par l'assemblage OpenAPI (Node sans `@/`).
 
 import { z } from 'zod';
-import { looseBody } from '../../../utils/admin/pathParams';
+import { looseBody, looseQuery } from '../../../utils/admin/pathParams';
 
 /** Même motif que `isValidUUID` (utils/apiHelpers). */
 const UUID_RE =
@@ -165,3 +165,37 @@ export const TENANT_REQUEST_COLUMNS =
 /** Toutes les colonnes de `tenant_discord_config` (ce que rendait le `select('*')`). */
 export const DISCORD_CONFIG_COLUMNS =
   'guild_id, staff_log_channel_id, matches_live_channel_id, disputes_forum_channel_id, news_ingest_channel_id, scrims_announce_channel_id, free_players_channel_id, team_openings_channel_id, mvp_results_channel_id, captain_role_id, substitute_role_id, staff_role_owner_id, staff_role_admin_id, staff_role_caster_id, teams_voice_category_id, disputes_forum_tag_open_id, disputes_forum_tag_pending_id, disputes_forum_tag_resolved_id, welcome_enabled, welcome_channel_id, welcome_message, welcome_dm_message, member_leave_channel_id, placement_roles, extras, created_at, updated_at' as const;
+
+/* ------------- File d'onboarding Discord : rejet / rattachement ------------- */
+
+/** `/pending-guild-links/[guildId]/*` — snowflake vérifié par le service (`INVALID_GUILD_ID`). */
+export const PendingGuildIdQuery = z.looseObject({ guildId: stringParam() });
+
+/** POST `…/claim` : espace existant (`tenant_id`) OU à créer (`new_tenant`). */
+export const GuildClaimDoc = looseBody(['tenant_id', 'new_tenant']);
+
+/** `/staff/[staffId]/pole-admin` — UUID vérifié par le service (`INVALID_STAFF_ID`). */
+export const StaffIdQuery = z.looseObject({ staffId: uuidParam() });
+
+/** PUT `/helloasso/credentials` : identifiants API de l'association. */
+export const HelloAssoCredentialsDoc = looseBody([
+  'clientId',
+  'clientSecret',
+  'organizationSlug',
+]);
+
+/**
+ * POST /api/admin/discord/team-channels — UNE action nommée (`refresh`,
+ * `provision`, `repair`, `delete-channel`, `delete-role`, `grant-access`,
+ * `revoke-access`, `grant-role`, `revoke-role`), validée par le service
+ * (400 `INVALID_BODY`).
+ */
+export const TeamChannelActionDoc = looseBody([
+  'action',
+  'teamId',
+  'channel',
+  'discordUserId',
+]);
+
+/** GET /api/admin/docs/openapi?format=json|yaml (défaut YAML). */
+export const OpenApiSpecQuery = looseQuery(['format']);

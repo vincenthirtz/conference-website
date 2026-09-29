@@ -1,6 +1,7 @@
 get:
   summary: List user comments awaiting moderation.
   operationId: adminListComments
+  x-zod-query: admin.comments.query
   tags:
     - admin/content
   security:
@@ -29,6 +30,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.comments.update
           type: object
           additionalProperties: true
   responses:
@@ -50,6 +52,13 @@ delete:
     - admin/content
   security:
     - StaffSession: []
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          x-zod: admin.comments.delete.body
+          type: object
   responses:
     '200':
       description: Deleted.

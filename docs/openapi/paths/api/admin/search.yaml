@@ -13,6 +13,7 @@ get:
     Bornee a 5 resultats par famille, scopee au tenant actif, jamais mise en
     cache (`private, no-store`).
   operationId: adminGlobalSearch
+  x-zod-query: admin.search.query
   security:
     - StaffSession: []
   parameters:

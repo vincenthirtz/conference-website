@@ -2,7 +2,7 @@
 
 import type { AdminDb } from '@/utils/admin/serviceContext';
 import type { Database } from '@/types/database.generated';
-import { NEWS_COLUMNS } from './schemas';
+import { COMMENT_COLUMNS, NEWS_COLUMNS } from './schemas';
 
 type NewsInsert = Database['public']['Tables']['news']['Insert'];
 type NewsUpdate = Database['public']['Tables']['news']['Update'];
@@ -80,4 +80,48 @@ export async function deleteNews(db: AdminDb, tenantId: string, id: string) {
     .select('slug')
     .maybeSingle();
   return { slug: data?.slug ?? null, error };
+}
+
+/* ------------------------- Commentaires d'actualités ------------------------ */
+
+export async function listComments(
+  db: AdminDb,
+  tenantId: string,
+  f: { limit: number; offset: number; orClause?: string; newsId?: string }
+) {
+  let query = db
+    .from('news_comments')
+    .select(COMMENT_COLUMNS, { count: 'exact' })
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false })
+    .range(f.offset, f.offset + f.limit - 1);
+  if (f.orClause) query = query.or(f.orClause);
+  if (f.newsId) query = query.eq('news_id', f.newsId);
+  const { data, error, count } = await query;
+  return { rows: data ?? [], error, count };
+}
+
+export async function updateComment(
+  db: AdminDb,
+  tenantId: string,
+  id: string,
+  patch: { content?: string; author_name?: string }
+) {
+  const { data, error } = await db
+    .from('news_comments')
+    .update(patch)
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+    .select(COMMENT_COLUMNS)
+    .maybeSingle();
+  return { row: data, error };
+}
+
+export async function deleteComment(db: AdminDb, tenantId: string, id: string) {
+  const { error } = await db
+    .from('news_comments')
+    .delete()
+    .eq('id', id)
+    .eq('tenant_id', tenantId);
+  return { error };
 }

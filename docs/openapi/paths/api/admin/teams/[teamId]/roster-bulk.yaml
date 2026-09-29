@@ -8,6 +8,7 @@ post:
     `import_battle_tags`. The captain can never be removed or marked
     substitute via bulk.
   operationId: adminTeamRosterBulk
+  x-zod-query: admin.teams/[teamId].id.query
   tags:
     - admin/teams
   security:
@@ -17,40 +18,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - operation
-          properties:
-            operation:
-              type: string
-              enum:
-                - set_role
-                - set_substitute
-                - remove
-                - import_battle_tags
-            memberIds:
-              type: array
-              items:
-                type: string
-                format: uuid
-              description: Member ids for set_role / set_substitute / remove.
-            role:
-              type: string
-              description: Required when operation = set_role.
-            isSubstitute:
-              type: boolean
-              description: Required when operation = set_substitute.
-            items:
-              type: array
-              description: Required when operation = import_battle_tags.
-              items:
-                type: object
-                properties:
-                  memberId:
-                    type: string
-                    format: uuid
-                  battleTag:
-                    type: string
+          x-zod: admin.teams/[teamId]/roster-bulk.body
   responses:
     '200':
       description: Per-member results.

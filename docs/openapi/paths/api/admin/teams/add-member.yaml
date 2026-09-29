@@ -24,17 +24,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
-          properties:
-            mode:
-              type: string
-              enum: [invite, direct]
-              default: invite
-            reason:
-              type: string
-              minLength: 5
-              maxLength: 500
+          x-zod: admin.teams/add-member.body
   responses:
     '200':
       description: 'Member added directly (`mode: direct`).'

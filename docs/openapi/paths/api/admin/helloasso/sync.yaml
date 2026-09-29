@@ -1,6 +1,7 @@
 post:
   summary: Force a HelloAsso sync (returns pending diff before applying).
   operationId: adminTriggerHelloAssoSync
+  x-zod-query: admin.helloasso/sync.query
   tags:
     - admin/misc
   security:

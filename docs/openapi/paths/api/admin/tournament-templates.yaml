@@ -29,6 +29,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.tournament-templates.create
           type: object
           additionalProperties: true
   responses:
@@ -56,6 +57,13 @@ delete:
       schema:
         type: string
         format: uuid
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          x-zod: admin.tournament-templates.delete.body
+          type: object
   responses:
     '204':
       description: Deleted.

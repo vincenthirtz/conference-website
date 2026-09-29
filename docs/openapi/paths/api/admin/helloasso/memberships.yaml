@@ -1,6 +1,7 @@
 get:
   summary: List HelloAsso memberships pulled by the sync job.
   operationId: adminListHelloAssoMemberships
+  x-zod-query: admin.helloasso/memberships.query
   tags:
     - admin/misc
   security:

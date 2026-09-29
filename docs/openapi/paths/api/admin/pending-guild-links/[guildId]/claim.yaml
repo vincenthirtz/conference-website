@@ -9,6 +9,7 @@ post:
   summary: Claim ownership of a pending guild link.
   description: Requires `owner` role.
   operationId: adminClaimPendingGuildLink
+  x-zod-query: admin.pending-guild-links/[guildId].query
   tags:
     - admin/tenants
   security:
@@ -18,6 +19,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.pending-guild-links/[guildId]/claim.body
           type: object
           additionalProperties: true
   responses:

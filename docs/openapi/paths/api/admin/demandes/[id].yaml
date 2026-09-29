@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Demande detail.
   operationId: adminGetDemande
+  x-zod-query: admin.demandes/[id].query
   tags:
     - admin/misc
   security:

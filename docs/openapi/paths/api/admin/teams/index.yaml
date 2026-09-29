@@ -1,25 +1,11 @@
 get:
   summary: List teams of the active tenant.
   operationId: adminListTeams
+  x-zod-query: admin.teams.query
   tags:
     - admin/teams
   security:
     - StaffSession: []
-  parameters:
-    - in: query
-      name: q
-      schema:
-        type: string
-    - in: query
-      name: limit
-      schema:
-        type: integer
-        default: 50
-    - in: query
-      name: offset
-      schema:
-        type: integer
-        default: 0
   responses:
     '200':
       description: Teams.

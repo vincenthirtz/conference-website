@@ -5,7 +5,8 @@
     "type": "object",
     "properties": {
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -90,7 +91,8 @@
     "type": "object",
     "properties": {
      "configured": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": false
      }
     },
     "required": [
@@ -248,7 +250,8 @@
     "type": "object",
     "properties": {
      "connected": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": false
      }
     },
     "required": [
@@ -395,7 +398,8 @@
     "type": "object",
     "properties": {
      "deleted": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      },
      "guild_id": {
       "type": "string"
@@ -637,14 +641,58 @@
       "type": "object",
       "properties": {
        "hardDeleted": {
-        "type": "boolean"
+        "type": "boolean",
+        "const": false
        },
        "success": {
-        "type": "boolean"
+        "type": "boolean",
+        "const": true
        },
        "team": {
         "type": "object",
         "properties": {
+         "accent_color": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "achievements": {
+          "anyOf": [
+           {
+            "type": "boolean"
+           },
+           {
+            "type": "string"
+           },
+           {
+            "type": "number"
+           },
+           {
+            "type": "object",
+            "additionalProperties": {}
+           },
+           {
+            "type": "array",
+            "items": {}
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "banner_focal": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "banner_overlay": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "banner_url": {
           "type": [
            "string",
@@ -664,7 +712,16 @@
           ]
          },
          "created_at": {
-          "type": "string"
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "deleted_at": {
+          "type": [
+           "string",
+           "null"
+          ]
          },
          "description": {
           "type": [
@@ -696,10 +753,34 @@
            "null"
           ]
          },
+         "embed_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "embed_provider": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "id": {
           "type": "string"
          },
+         "instagram": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "is_active": {
+          "type": [
+           "boolean",
+           "null"
+          ]
+         },
+         "is_joinable": {
           "type": "boolean"
          },
          "logo_credit_name": {
@@ -723,7 +804,34 @@
          "name": {
           "type": "string"
          },
+         "open_for_scrim": {
+          "type": "boolean"
+         },
+         "pinned_announcement": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "pinned_announcement_until": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "preferred_locale": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "public_content": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "secondary_color": {
           "type": [
            "string",
            "null"
@@ -747,6 +855,51 @@
            "null"
           ]
          },
+         "sponsors": {
+          "anyOf": [
+           {
+            "type": "boolean"
+           },
+           {
+            "type": "string"
+           },
+           {
+            "type": "number"
+           },
+           {
+            "type": "object",
+            "additionalProperties": {}
+           },
+           {
+            "type": "array",
+            "items": {}
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "tcg_image_path": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "tenant_id": {
+          "type": "string"
+         },
+         "tiktok": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "twitch": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "twitter": {
           "type": [
            "string",
@@ -764,31 +917,57 @@
            "string",
            "null"
           ]
+         },
+         "youtube": {
+          "type": [
+           "string",
+           "null"
+          ]
          }
         },
         "required": [
+         "accent_color",
+         "achievements",
+         "banner_focal",
+         "banner_overlay",
          "banner_url",
          "captain_id",
          "country",
          "created_at",
+         "deleted_at",
          "description",
          "discord",
          "discord_channel_id",
          "discord_role_id",
          "discord_voice_channel_id",
+         "embed_id",
+         "embed_provider",
          "id",
+         "instagram",
          "is_active",
+         "is_joinable",
          "logo_credit_name",
          "logo_credit_url",
          "logo_url",
          "name",
+         "open_for_scrim",
+         "pinned_announcement",
+         "pinned_announcement_until",
          "preferred_locale",
+         "public_content",
+         "secondary_color",
          "short_name",
          "skill_rating",
          "slug",
+         "sponsors",
+         "tcg_image_path",
+         "tenant_id",
+         "tiktok",
+         "twitch",
          "twitter",
          "updated_at",
-         "website"
+         "website",
+         "youtube"
         ]
        }
       },
@@ -802,10 +981,12 @@
       "type": "object",
       "properties": {
        "hardDeleted": {
-        "type": "boolean"
+        "type": "boolean",
+        "const": true
        },
        "success": {
-        "type": "boolean"
+        "type": "boolean",
+        "const": true
        }
       },
       "required": [
@@ -859,7 +1040,8 @@
       "type": "string"
      },
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -1124,7 +1306,8 @@
     "type": "object",
     "properties": {
      "ok": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -1137,7 +1320,8 @@
     "type": "object",
     "properties": {
      "connected": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": false
      }
     },
     "required": [
@@ -1150,7 +1334,8 @@
     "type": "object",
     "properties": {
      "ok": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      },
      "removed": {
       "type": "number"
@@ -1976,7 +2161,247 @@
    }
   },
   "GET /api/admin/adherents/{id}": {
-   "200": {}
+   "200": {
+    "type": "object",
+    "properties": {
+     "address": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "auth_user_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "birth_date": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "city": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "country": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "created_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "created_by": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "current_year": {
+      "type": "number"
+     },
+     "deleted_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "email": {
+      "type": "string"
+     },
+     "first_name": {
+      "type": "string"
+     },
+     "id": {
+      "type": "string"
+     },
+     "is_active": {
+      "type": [
+       "boolean",
+       "null"
+      ]
+     },
+     "join_date": {
+      "type": "string"
+     },
+     "last_name": {
+      "type": "string"
+     },
+     "member_number": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "notes": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "payment_amount": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "payment_date": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "payment_method": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "payment_reference": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "payment_status": {
+      "type": "string"
+     },
+     "payments": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "adherent_id": {
+         "type": "string"
+        },
+        "amount": {
+         "type": "number"
+        },
+        "created_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "created_by": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "notes": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "payment_date": {
+         "type": "string"
+        },
+        "payment_method": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "payment_reference": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "year": {
+         "type": "number"
+        }
+       },
+       "required": [
+        "adherent_id",
+        "amount",
+        "created_at",
+        "created_by",
+        "id",
+        "notes",
+        "payment_date",
+        "payment_method",
+        "payment_reference",
+        "year"
+       ]
+      }
+     },
+     "phone": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "postal_code": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "role": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "updated_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "updated_by": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "address",
+     "auth_user_id",
+     "birth_date",
+     "city",
+     "country",
+     "created_at",
+     "created_by",
+     "current_year",
+     "deleted_at",
+     "email",
+     "first_name",
+     "id",
+     "is_active",
+     "join_date",
+     "last_name",
+     "member_number",
+     "notes",
+     "payment_amount",
+     "payment_date",
+     "payment_method",
+     "payment_reference",
+     "payment_status",
+     "payments",
+     "phone",
+     "postal_code",
+     "role",
+     "updated_at",
+     "updated_by"
+    ]
+   }
   },
   "GET /api/admin/alerts-summary": {
    "200": {
@@ -4787,6 +5212,7 @@
           "deactivate",
           "deactivate_tenant",
           "delete",
+          "delete_adherent",
           "delete_announcement",
           "delete_cast_assignment",
           "delete_cast_member",
@@ -4892,6 +5318,7 @@
           "resend_credentials",
           "resolve_match_dispute",
           "restore_bracket_snapshot",
+          "restore_deleted_item",
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
@@ -4913,6 +5340,9 @@
           "start_event_segment",
           "store_drive_credentials",
           "store_social_credentials",
+          "subscribe_twitch_alerts",
+          "subscribe_twitch_eventsub",
+          "subscribe_twitch_tcg_drop",
           "support_ticket_convert_blacklist",
           "suspend_user",
           "task_assign",
@@ -4957,9 +5387,11 @@
           "undo",
           "unfinalize_tournament",
           "unlink_league_tournament",
+          "unsubscribe_twitch_tcg_drop",
           "unsuspend_user",
           "update",
           "updateStatus",
+          "update_adherent",
           "update_announcement",
           "update_api_token_comp",
           "update_bracket",
@@ -6109,70 +6541,36 @@
   },
   "GET /api/admin/helloasso/credentials": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "connected": {
-        "type": "boolean"
-       },
-       "encryptionReady": {
-        "type": "boolean"
-       },
-       "notificationUrl": {
-        "type": "null"
-       },
-       "organizationSlug": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "usesPlatformAccount": {
-        "type": "boolean"
-       }
-      },
-      "required": [
-       "connected",
-       "encryptionReady",
-       "notificationUrl",
-       "organizationSlug",
-       "usesPlatformAccount"
+    "type": "object",
+    "properties": {
+     "connected": {
+      "type": "boolean"
+     },
+     "encryptionReady": {
+      "type": "boolean"
+     },
+     "notificationUrl": {
+      "type": [
+       "string",
+       "null"
       ]
      },
-     {
-      "type": "object",
-      "properties": {
-       "connected": {
-        "type": "boolean"
-       },
-       "encryptionReady": {
-        "type": "boolean"
-       },
-       "notificationUrl": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "organizationSlug": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "usesPlatformAccount": {
-        "type": "boolean"
-       }
-      },
-      "required": [
-       "connected",
-       "encryptionReady",
-       "notificationUrl",
-       "organizationSlug",
-       "usesPlatformAccount"
+     "organizationSlug": {
+      "type": [
+       "string",
+       "null"
       ]
+     },
+     "usesPlatformAccount": {
+      "type": "boolean"
      }
+    },
+    "required": [
+     "connected",
+     "encryptionReady",
+     "notificationUrl",
+     "organizationSlug",
+     "usesPlatformAccount"
     ]
    }
   },
@@ -6730,6 +7128,7 @@
           "deactivate",
           "deactivate_tenant",
           "delete",
+          "delete_adherent",
           "delete_announcement",
           "delete_cast_assignment",
           "delete_cast_member",
@@ -6835,6 +7234,7 @@
           "resend_credentials",
           "resolve_match_dispute",
           "restore_bracket_snapshot",
+          "restore_deleted_item",
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
@@ -6856,6 +7256,9 @@
           "start_event_segment",
           "store_drive_credentials",
           "store_social_credentials",
+          "subscribe_twitch_alerts",
+          "subscribe_twitch_eventsub",
+          "subscribe_twitch_tcg_drop",
           "support_ticket_convert_blacklist",
           "suspend_user",
           "task_assign",
@@ -6900,9 +7303,11 @@
           "undo",
           "unfinalize_tournament",
           "unlink_league_tournament",
+          "unsubscribe_twitch_tcg_drop",
           "unsuspend_user",
           "update",
           "updateStatus",
+          "update_adherent",
           "update_announcement",
           "update_api_token_comp",
           "update_bracket",
@@ -8766,6 +9171,7 @@
           "deactivate",
           "deactivate_tenant",
           "delete",
+          "delete_adherent",
           "delete_announcement",
           "delete_cast_assignment",
           "delete_cast_member",
@@ -8871,6 +9277,7 @@
           "resend_credentials",
           "resolve_match_dispute",
           "restore_bracket_snapshot",
+          "restore_deleted_item",
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
@@ -8892,6 +9299,9 @@
           "start_event_segment",
           "store_drive_credentials",
           "store_social_credentials",
+          "subscribe_twitch_alerts",
+          "subscribe_twitch_eventsub",
+          "subscribe_twitch_tcg_drop",
           "support_ticket_convert_blacklist",
           "suspend_user",
           "task_assign",
@@ -8936,9 +9346,11 @@
           "undo",
           "unfinalize_tournament",
           "unlink_league_tournament",
+          "unsubscribe_twitch_tcg_drop",
           "unsuspend_user",
           "update",
           "updateStatus",
+          "update_adherent",
           "update_announcement",
           "update_api_token_comp",
           "update_bracket",
@@ -12798,67 +13210,51 @@
   },
   "GET /api/admin/search": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "hits": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "href": {
-           "type": "string"
-          },
-          "id": {
-           "type": "string"
-          },
-          "kind": {
-           "type": "string",
-           "enum": [
-            "match",
-            "task",
-            "team",
-            "ticket",
-            "tournament"
-           ]
-          },
-          "subtitle": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "title": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "href",
-          "id",
-          "kind",
-          "subtitle",
-          "title"
+    "type": "object",
+    "properties": {
+     "hits": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "href": {
+         "type": "string"
+        },
+        "id": {
+         "type": "string"
+        },
+        "kind": {
+         "type": "string",
+         "enum": [
+          "match",
+          "task",
+          "team",
+          "ticket",
+          "tournament"
          ]
+        },
+        "subtitle": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "title": {
+         "type": "string"
         }
-       }
-      },
-      "required": [
-       "hits"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "hits": {
-        "type": "array",
-        "items": {}
-       }
-      },
-      "required": [
-       "hits"
-      ]
+       },
+       "required": [
+        "href",
+        "id",
+        "kind",
+        "subtitle",
+        "title"
+       ]
+      }
      }
+    },
+    "required": [
+     "hits"
     ]
    }
   },
@@ -13294,22 +13690,7 @@
      },
      "posts": {
       "type": "array",
-      "items": {
-       "type": "object",
-       "properties": {
-        "error": {
-         "type": "boolean",
-         "const": true
-        },
-        "length": {
-         "type": "number"
-        }
-       },
-       "required": [
-        "error",
-        "length"
-       ]
-      }
+      "items": {}
      }
     },
     "required": [
@@ -13778,6 +14159,7 @@
           "deactivate",
           "deactivate_tenant",
           "delete",
+          "delete_adherent",
           "delete_announcement",
           "delete_cast_assignment",
           "delete_cast_member",
@@ -13883,6 +14265,7 @@
           "resend_credentials",
           "resolve_match_dispute",
           "restore_bracket_snapshot",
+          "restore_deleted_item",
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
@@ -13904,6 +14287,9 @@
           "start_event_segment",
           "store_drive_credentials",
           "store_social_credentials",
+          "subscribe_twitch_alerts",
+          "subscribe_twitch_eventsub",
+          "subscribe_twitch_tcg_drop",
           "support_ticket_convert_blacklist",
           "suspend_user",
           "task_assign",
@@ -13948,9 +14334,11 @@
           "undo",
           "unfinalize_tournament",
           "unlink_league_tournament",
+          "unsubscribe_twitch_tcg_drop",
           "unsuspend_user",
           "update",
           "updateStatus",
+          "update_adherent",
           "update_announcement",
           "update_api_token_comp",
           "update_bracket",
@@ -18265,57 +18653,343 @@
   },
   "GET /api/admin/teams": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "teams": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "id": {
+    "type": "object",
+    "properties": {
+     "teams": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "accent_color": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "achievements": {
+         "anyOf": [
+          {
+           "type": "boolean"
+          },
+          {
            "type": "string"
           },
-          "name": {
-           "type": "string"
+          {
+           "type": "number"
+          },
+          {
+           "type": "object",
+           "additionalProperties": {}
+          },
+          {
+           "type": "array",
+           "items": {}
+          },
+          {
+           "type": "null"
           }
-         },
-         "required": [
-          "id",
-          "name"
-         ],
-         "additionalProperties": {}
+         ]
+        },
+        "banner_focal": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "banner_overlay": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "banner_url": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "captain_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "country": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "created_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "deleted_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "description": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "discord": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "discord_channel_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "discord_role_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "discord_voice_channel_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "embed_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "embed_provider": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "instagram": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "is_active": {
+         "type": [
+          "boolean",
+          "null"
+         ]
+        },
+        "is_joinable": {
+         "type": "boolean"
+        },
+        "logo_credit_name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "logo_credit_url": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "logo_url": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "name": {
+         "type": "string"
+        },
+        "open_for_scrim": {
+         "type": "boolean"
+        },
+        "pinned_announcement": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "pinned_announcement_until": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "preferred_locale": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "public_content": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "secondary_color": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "short_name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "skill_rating": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "slug": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "sponsors": {
+         "anyOf": [
+          {
+           "type": "boolean"
+          },
+          {
+           "type": "string"
+          },
+          {
+           "type": "number"
+          },
+          {
+           "type": "object",
+           "additionalProperties": {}
+          },
+          {
+           "type": "array",
+           "items": {}
+          },
+          {
+           "type": "null"
+          }
+         ]
+        },
+        "tcg_image_path": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "tenant_id": {
+         "type": "string"
+        },
+        "tiktok": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "twitch": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "twitter": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "updated_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "website": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "youtube": {
+         "type": [
+          "string",
+          "null"
+         ]
         }
        },
-       "total": {
-        "type": [
-         "number",
-         "null"
-        ]
-       }
-      },
-      "required": [
-       "teams",
-       "total"
-      ]
+       "required": [
+        "accent_color",
+        "achievements",
+        "banner_focal",
+        "banner_overlay",
+        "banner_url",
+        "captain_id",
+        "country",
+        "created_at",
+        "deleted_at",
+        "description",
+        "discord",
+        "discord_channel_id",
+        "discord_role_id",
+        "discord_voice_channel_id",
+        "embed_id",
+        "embed_provider",
+        "id",
+        "instagram",
+        "is_active",
+        "is_joinable",
+        "logo_credit_name",
+        "logo_credit_url",
+        "logo_url",
+        "name",
+        "open_for_scrim",
+        "pinned_announcement",
+        "pinned_announcement_until",
+        "preferred_locale",
+        "public_content",
+        "secondary_color",
+        "short_name",
+        "skill_rating",
+        "slug",
+        "sponsors",
+        "tcg_image_path",
+        "tenant_id",
+        "tiktok",
+        "twitch",
+        "twitter",
+        "updated_at",
+        "website",
+        "youtube"
+       ]
+      }
      },
-     {
-      "type": "object",
-      "properties": {
-       "teams": {
-        "type": "array",
-        "items": {}
-       },
-       "total": {
-        "type": "number"
-       }
-      },
-      "required": [
-       "teams",
-       "total"
+     "total": {
+      "type": [
+       "number",
+       "null"
       ]
      }
+    },
+    "required": [
+     "teams",
+     "total"
     ]
    }
   },
@@ -18855,16 +19529,10 @@
            "type": "boolean"
           },
           "role": {
-           "type": [
-            "string",
-            "null"
-           ]
+           "type": "string"
           },
           "user_id": {
-           "type": [
-            "string",
-            "null"
-           ]
+           "type": "string"
           }
          },
          "required": [
@@ -18880,6 +19548,48 @@
        "team": {
         "type": "object",
         "properties": {
+         "accent_color": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "achievements": {
+          "anyOf": [
+           {
+            "type": "boolean"
+           },
+           {
+            "type": "string"
+           },
+           {
+            "type": "number"
+           },
+           {
+            "type": "object",
+            "additionalProperties": {}
+           },
+           {
+            "type": "array",
+            "items": {}
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "banner_focal": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "banner_overlay": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "banner_url": {
           "type": [
            "string",
@@ -18899,7 +19609,16 @@
           ]
          },
          "created_at": {
-          "type": "string"
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "deleted_at": {
+          "type": [
+           "string",
+           "null"
+          ]
          },
          "description": {
           "type": [
@@ -18931,10 +19650,34 @@
            "null"
           ]
          },
+         "embed_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "embed_provider": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "id": {
           "type": "string"
          },
+         "instagram": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "is_active": {
+          "type": [
+           "boolean",
+           "null"
+          ]
+         },
+         "is_joinable": {
           "type": "boolean"
          },
          "logo_credit_name": {
@@ -18958,7 +19701,34 @@
          "name": {
           "type": "string"
          },
+         "open_for_scrim": {
+          "type": "boolean"
+         },
+         "pinned_announcement": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "pinned_announcement_until": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "preferred_locale": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "public_content": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "secondary_color": {
           "type": [
            "string",
            "null"
@@ -18982,6 +19752,51 @@
            "null"
           ]
          },
+         "sponsors": {
+          "anyOf": [
+           {
+            "type": "boolean"
+           },
+           {
+            "type": "string"
+           },
+           {
+            "type": "number"
+           },
+           {
+            "type": "object",
+            "additionalProperties": {}
+           },
+           {
+            "type": "array",
+            "items": {}
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "tcg_image_path": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "tenant_id": {
+          "type": "string"
+         },
+         "tiktok": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "twitch": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "twitter": {
           "type": [
            "string",
@@ -18999,31 +19814,57 @@
            "string",
            "null"
           ]
+         },
+         "youtube": {
+          "type": [
+           "string",
+           "null"
+          ]
          }
         },
         "required": [
+         "accent_color",
+         "achievements",
+         "banner_focal",
+         "banner_overlay",
          "banner_url",
          "captain_id",
          "country",
          "created_at",
+         "deleted_at",
          "description",
          "discord",
          "discord_channel_id",
          "discord_role_id",
          "discord_voice_channel_id",
+         "embed_id",
+         "embed_provider",
          "id",
+         "instagram",
          "is_active",
+         "is_joinable",
          "logo_credit_name",
          "logo_credit_url",
          "logo_url",
          "name",
+         "open_for_scrim",
+         "pinned_announcement",
+         "pinned_announcement_until",
          "preferred_locale",
+         "public_content",
+         "secondary_color",
          "short_name",
          "skill_rating",
          "slug",
+         "sponsors",
+         "tcg_image_path",
+         "tenant_id",
+         "tiktok",
+         "twitch",
          "twitter",
          "updated_at",
-         "website"
+         "website",
+         "youtube"
         ]
        }
       },
@@ -19035,9 +19876,52 @@
      {
       "type": "object",
       "properties": {
+       "members": {},
        "team": {
         "type": "object",
         "properties": {
+         "accent_color": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "achievements": {
+          "anyOf": [
+           {
+            "type": "boolean"
+           },
+           {
+            "type": "string"
+           },
+           {
+            "type": "number"
+           },
+           {
+            "type": "object",
+            "additionalProperties": {}
+           },
+           {
+            "type": "array",
+            "items": {}
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "banner_focal": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "banner_overlay": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "banner_url": {
           "type": [
            "string",
@@ -19057,7 +19941,16 @@
           ]
          },
          "created_at": {
-          "type": "string"
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "deleted_at": {
+          "type": [
+           "string",
+           "null"
+          ]
          },
          "description": {
           "type": [
@@ -19089,10 +19982,34 @@
            "null"
           ]
          },
+         "embed_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "embed_provider": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "id": {
           "type": "string"
          },
+         "instagram": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "is_active": {
+          "type": [
+           "boolean",
+           "null"
+          ]
+         },
+         "is_joinable": {
           "type": "boolean"
          },
          "logo_credit_name": {
@@ -19116,7 +20033,34 @@
          "name": {
           "type": "string"
          },
+         "open_for_scrim": {
+          "type": "boolean"
+         },
+         "pinned_announcement": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "pinned_announcement_until": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "preferred_locale": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "public_content": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "secondary_color": {
           "type": [
            "string",
            "null"
@@ -19140,6 +20084,51 @@
            "null"
           ]
          },
+         "sponsors": {
+          "anyOf": [
+           {
+            "type": "boolean"
+           },
+           {
+            "type": "string"
+           },
+           {
+            "type": "number"
+           },
+           {
+            "type": "object",
+            "additionalProperties": {}
+           },
+           {
+            "type": "array",
+            "items": {}
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "tcg_image_path": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "tenant_id": {
+          "type": "string"
+         },
+         "tiktok": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "twitch": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "twitter": {
           "type": [
            "string",
@@ -19157,31 +20146,57 @@
            "string",
            "null"
           ]
+         },
+         "youtube": {
+          "type": [
+           "string",
+           "null"
+          ]
          }
         },
         "required": [
+         "accent_color",
+         "achievements",
+         "banner_focal",
+         "banner_overlay",
          "banner_url",
          "captain_id",
          "country",
          "created_at",
+         "deleted_at",
          "description",
          "discord",
          "discord_channel_id",
          "discord_role_id",
          "discord_voice_channel_id",
+         "embed_id",
+         "embed_provider",
          "id",
+         "instagram",
          "is_active",
+         "is_joinable",
          "logo_credit_name",
          "logo_credit_url",
          "logo_url",
          "name",
+         "open_for_scrim",
+         "pinned_announcement",
+         "pinned_announcement_until",
          "preferred_locale",
+         "public_content",
+         "secondary_color",
          "short_name",
          "skill_rating",
          "slug",
+         "sponsors",
+         "tcg_image_path",
+         "tenant_id",
+         "tiktok",
+         "twitch",
          "twitter",
          "updated_at",
-         "website"
+         "website",
+         "youtube"
         ]
        }
       },
@@ -19386,6 +20401,7 @@
           "deactivate",
           "deactivate_tenant",
           "delete",
+          "delete_adherent",
           "delete_announcement",
           "delete_cast_assignment",
           "delete_cast_member",
@@ -19491,6 +20507,7 @@
           "resend_credentials",
           "resolve_match_dispute",
           "restore_bracket_snapshot",
+          "restore_deleted_item",
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
@@ -19512,6 +20529,9 @@
           "start_event_segment",
           "store_drive_credentials",
           "store_social_credentials",
+          "subscribe_twitch_alerts",
+          "subscribe_twitch_eventsub",
+          "subscribe_twitch_tcg_drop",
           "support_ticket_convert_blacklist",
           "suspend_user",
           "task_assign",
@@ -19556,9 +20576,11 @@
           "undo",
           "unfinalize_tournament",
           "unlink_league_tournament",
+          "unsubscribe_twitch_tcg_drop",
           "unsuspend_user",
           "update",
           "updateStatus",
+          "update_adherent",
           "update_announcement",
           "update_api_token_comp",
           "update_bracket",
@@ -19811,84 +20833,68 @@
   },
   "GET /api/admin/teams/{teamId}/roster-lock": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "tournaments": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "lockApplies": {
-           "type": "boolean"
-          },
-          "locks": {
-           "type": "boolean"
-          },
-          "rosterLockedAt": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "status": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "teamUnlockedUntil": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "tournamentId": {
-           "type": "string"
-          },
-          "tournamentName": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "tournamentUnlockedUntil": {
-           "type": [
-            "string",
-            "null"
-           ]
-          }
-         },
-         "required": [
-          "lockApplies",
-          "locks",
-          "rosterLockedAt",
-          "status",
-          "teamUnlockedUntil",
-          "tournamentId",
-          "tournamentName",
-          "tournamentUnlockedUntil"
+    "type": "object",
+    "properties": {
+     "tournaments": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "lockApplies": {
+         "type": "boolean"
+        },
+        "locks": {
+         "type": "boolean"
+        },
+        "rosterLockedAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "teamUnlockedUntil": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "tournamentId": {
+         "type": "string"
+        },
+        "tournamentName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "tournamentUnlockedUntil": {
+         "type": [
+          "string",
+          "null"
          ]
         }
-       }
-      },
-      "required": [
-       "tournaments"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "tournaments": {
-        "type": "array",
-        "items": {}
-       }
-      },
-      "required": [
-       "tournaments"
-      ]
+       },
+       "required": [
+        "lockApplies",
+        "locks",
+        "rosterLockedAt",
+        "status",
+        "teamUnlockedUntil",
+        "tournamentId",
+        "tournamentName",
+        "tournamentUnlockedUntil"
+       ]
+      }
      }
+    },
+    "required": [
+     "tournaments"
     ]
    }
   },
@@ -19901,15 +20907,51 @@
       "items": {
        "type": "object",
        "properties": {
-        "end_date": {},
-        "game": {},
-        "id": {},
-        "max_teams": {},
-        "min_players": {},
-        "name": {},
-        "slug": {},
-        "start_date": {},
-        "status": {}
+        "end_date": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "game": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "max_teams": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "min_players": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "name": {
+         "type": "string"
+        },
+        "slug": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "start_date": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": "string"
+        }
        },
        "required": [
         "end_date",
@@ -19932,13 +20974,42 @@
       "items": {
        "type": "object",
        "properties": {
-        "end_date": {},
-        "game": {},
-        "id": {},
-        "max_teams": {},
-        "min_players": {},
-        "name": {},
-        "slug": {},
+        "end_date": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "game": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "max_teams": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "min_players": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "name": {
+         "type": "string"
+        },
+        "slug": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "stages": {
          "type": "array",
          "items": {
@@ -19962,8 +21033,15 @@
           ]
          }
         },
-        "start_date": {},
-        "status": {}
+        "start_date": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": "string"
+        }
        },
        "required": [
         "end_date",
@@ -23955,6 +25033,7 @@
           "deactivate",
           "deactivate_tenant",
           "delete",
+          "delete_adherent",
           "delete_announcement",
           "delete_cast_assignment",
           "delete_cast_member",
@@ -24060,6 +25139,7 @@
           "resend_credentials",
           "resolve_match_dispute",
           "restore_bracket_snapshot",
+          "restore_deleted_item",
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
@@ -24081,6 +25161,9 @@
           "start_event_segment",
           "store_drive_credentials",
           "store_social_credentials",
+          "subscribe_twitch_alerts",
+          "subscribe_twitch_eventsub",
+          "subscribe_twitch_tcg_drop",
           "support_ticket_convert_blacklist",
           "suspend_user",
           "task_assign",
@@ -24125,9 +25208,11 @@
           "undo",
           "unfinalize_tournament",
           "unlink_league_tournament",
+          "unsubscribe_twitch_tcg_drop",
           "unsuspend_user",
           "update",
           "updateStatus",
+          "update_adherent",
           "update_announcement",
           "update_api_token_comp",
           "update_bracket",
@@ -26687,12 +27772,22 @@
      {
       "type": "object",
       "properties": {
-       "broadcaster_login": {},
-       "connected": {
-        "type": "boolean"
+       "broadcaster_login": {
+        "type": "string"
        },
-       "expires_at": {},
-       "scope": {}
+       "connected": {
+        "type": "boolean",
+        "const": true
+       },
+       "expires_at": {
+        "type": "string"
+       },
+       "scope": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       }
       },
       "required": [
        "broadcaster_login",
@@ -26705,7 +27800,8 @@
       "type": "object",
       "properties": {
        "connected": {
-        "type": "boolean"
+        "type": "boolean",
+        "const": false
        }
       },
       "required": [
@@ -26877,12 +27973,7 @@
    "200": {
     "type": "object",
     "properties": {
-     "prediction": {
-      "type": [
-       "object",
-       "null"
-      ]
-     }
+     "prediction": {}
     },
     "required": [
      "prediction"
@@ -52449,7 +53540,181 @@
    }
   },
   "PATCH /api/admin/adherents/{id}": {
-   "200": {}
+   "200": {
+    "type": "object",
+    "properties": {
+     "address": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "auth_user_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "birth_date": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "city": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "country": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "created_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "created_by": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "current_year": {
+      "type": "number"
+     },
+     "deleted_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "email": {
+      "type": "string"
+     },
+     "first_name": {
+      "type": "string"
+     },
+     "id": {
+      "type": "string"
+     },
+     "is_active": {
+      "type": [
+       "boolean",
+       "null"
+      ]
+     },
+     "join_date": {
+      "type": "string"
+     },
+     "last_name": {
+      "type": "string"
+     },
+     "member_number": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "notes": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "payment_amount": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "payment_date": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "payment_method": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "payment_reference": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "payment_status": {
+      "type": "string"
+     },
+     "phone": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "postal_code": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "role": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "updated_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "updated_by": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "address",
+     "auth_user_id",
+     "birth_date",
+     "city",
+     "country",
+     "created_at",
+     "created_by",
+     "current_year",
+     "deleted_at",
+     "email",
+     "first_name",
+     "id",
+     "is_active",
+     "join_date",
+     "last_name",
+     "member_number",
+     "notes",
+     "payment_amount",
+     "payment_date",
+     "payment_method",
+     "payment_reference",
+     "payment_status",
+     "phone",
+     "postal_code",
+     "role",
+     "updated_at",
+     "updated_by"
+    ]
+   }
   },
   "PATCH /api/admin/api-tokens/{id}": {
    "200": {
@@ -54365,12 +55630,16 @@
    "200": {
     "type": "object",
     "properties": {
-     "id": {},
+     "id": {
+      "type": "string"
+     },
      "restored": {
       "type": "boolean",
       "const": true
      },
-     "type": {}
+     "type": {
+      "type": "string"
+     }
     },
     "required": [
      "id",
@@ -55680,6 +56949,48 @@
      "team": {
       "type": "object",
       "properties": {
+       "accent_color": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "achievements": {
+        "anyOf": [
+         {
+          "type": "boolean"
+         },
+         {
+          "type": "string"
+         },
+         {
+          "type": "number"
+         },
+         {
+          "type": "object",
+          "additionalProperties": {}
+         },
+         {
+          "type": "array",
+          "items": {}
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "banner_focal": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "banner_overlay": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "banner_url": {
         "type": [
          "string",
@@ -55699,7 +57010,16 @@
         ]
        },
        "created_at": {
-        "type": "string"
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "deleted_at": {
+        "type": [
+         "string",
+         "null"
+        ]
        },
        "description": {
         "type": [
@@ -55731,10 +57051,34 @@
          "null"
         ]
        },
+       "embed_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "embed_provider": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "id": {
         "type": "string"
        },
+       "instagram": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "is_active": {
+        "type": [
+         "boolean",
+         "null"
+        ]
+       },
+       "is_joinable": {
         "type": "boolean"
        },
        "logo_credit_name": {
@@ -55758,7 +57102,34 @@
        "name": {
         "type": "string"
        },
+       "open_for_scrim": {
+        "type": "boolean"
+       },
+       "pinned_announcement": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "pinned_announcement_until": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "preferred_locale": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "public_content": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "secondary_color": {
         "type": [
          "string",
          "null"
@@ -55782,6 +57153,51 @@
          "null"
         ]
        },
+       "sponsors": {
+        "anyOf": [
+         {
+          "type": "boolean"
+         },
+         {
+          "type": "string"
+         },
+         {
+          "type": "number"
+         },
+         {
+          "type": "object",
+          "additionalProperties": {}
+         },
+         {
+          "type": "array",
+          "items": {}
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "tcg_image_path": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "tenant_id": {
+        "type": "string"
+       },
+       "tiktok": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "twitch": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "twitter": {
         "type": [
          "string",
@@ -55799,31 +57215,57 @@
          "string",
          "null"
         ]
+       },
+       "youtube": {
+        "type": [
+         "string",
+         "null"
+        ]
        }
       },
       "required": [
+       "accent_color",
+       "achievements",
+       "banner_focal",
+       "banner_overlay",
        "banner_url",
        "captain_id",
        "country",
        "created_at",
+       "deleted_at",
        "description",
        "discord",
        "discord_channel_id",
        "discord_role_id",
        "discord_voice_channel_id",
+       "embed_id",
+       "embed_provider",
        "id",
+       "instagram",
        "is_active",
+       "is_joinable",
        "logo_credit_name",
        "logo_credit_url",
        "logo_url",
        "name",
+       "open_for_scrim",
+       "pinned_announcement",
+       "pinned_announcement_until",
        "preferred_locale",
+       "public_content",
+       "secondary_color",
        "short_name",
        "skill_rating",
        "slug",
+       "sponsors",
+       "tcg_image_path",
+       "tenant_id",
+       "tiktok",
+       "twitch",
        "twitter",
        "updated_at",
-       "website"
+       "website",
+       "youtube"
       ]
      }
     },
@@ -56682,12 +58124,7 @@
    "200": {
     "type": "object",
     "properties": {
-     "settings": {
-      "type": [
-       "object",
-       "null"
-      ]
-     }
+     "settings": {}
     },
     "required": [
      "settings"
@@ -56698,12 +58135,7 @@
    "200": {
     "type": "object",
     "properties": {
-     "prediction": {
-      "type": [
-       "object",
-       "null"
-      ]
-     }
+     "prediction": {}
     },
     "required": [
      "prediction"
@@ -58378,7 +59810,8 @@
     "type": "object",
     "properties": {
      "ok": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -58550,7 +59983,8 @@
       "type": "string"
      },
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -58564,7 +59998,8 @@
     "type": "object",
     "properties": {
      "accepted": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      },
      "action": {
       "type": "string",
@@ -60254,7 +61689,8 @@
       "type": "number"
      },
      "ok": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      },
      "skipped": {
       "type": "number"
@@ -65235,138 +66671,16 @@
     "type": "object",
     "properties": {
      "dryRun": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      },
      "targets": {
       "type": "array",
-      "items": {
-       "type": "object",
-       "properties": {
-        "error": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "imageUrl": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "label": {
-         "type": "string"
-        },
-        "platform": {
-         "type": "string",
-         "enum": [
-          "bluesky",
-          "discord_announce",
-          "instagram",
-          "site_news"
-         ]
-        },
-        "text": {
-         "type": "string"
-        },
-        "title": {
-         "type": [
-          "string",
-          "null"
-         ]
-        }
-       },
-       "required": [
-        "error",
-        "imageUrl",
-        "label",
-        "platform",
-        "text",
-        "title"
-       ]
-      }
+      "items": {}
      }
     },
     "required": [
      "dryRun",
-     "targets"
-    ]
-   },
-   "201": {
-    "type": "object",
-    "properties": {
-     "dryRun": {
-      "type": "boolean"
-     },
-     "postId": {
-      "type": "string"
-     },
-     "status": {
-      "type": "string",
-      "enum": [
-       "done",
-       "failed",
-       "partial"
-      ]
-     },
-     "targets": {
-      "type": "array",
-      "items": {
-       "type": "object",
-       "properties": {
-        "error": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "externalId": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "label": {
-         "type": "string"
-        },
-        "permalink": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "platform": {
-         "type": "string",
-         "enum": [
-          "bluesky",
-          "discord_announce",
-          "instagram",
-          "site_news"
-         ]
-        },
-        "status": {
-         "type": "string",
-         "enum": [
-          "failed",
-          "sent"
-         ]
-        }
-       },
-       "required": [
-        "error",
-        "externalId",
-        "label",
-        "permalink",
-        "platform",
-        "status"
-       ]
-      }
-     }
-    },
-    "required": [
-     "dryRun",
-     "postId",
-     "status",
      "targets"
     ]
    }
@@ -65740,7 +67054,8 @@
       ]
      },
      "ok": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -66253,327 +67568,25 @@
   },
   "POST /api/admin/team-messages": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "dryRun": {
-        "type": "boolean"
-       },
-       "messages": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "content": {
-           "type": "string"
-          },
-          "deliverable": {
-           "type": "boolean"
-          },
-          "kind": {
-           "type": "string",
-           "enum": [
-            "complete",
-            "complete_with_warnings",
-            "custom",
-            "incomplete"
-           ]
-          },
-          "missingBattleTags": {
-           "type": "number"
-          },
-          "missingStarters": {
-           "type": "number"
-          },
-          "neverLoggedIn": {
-           "type": "number"
-          },
-          "starters": {
-           "type": "number"
-          },
-          "substitutes": {
-           "type": "number"
-          },
-          "teamId": {
-           "type": "string"
-          },
-          "teamName": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "content",
-          "deliverable",
-          "kind",
-          "missingBattleTags",
-          "missingStarters",
-          "neverLoggedIn",
-          "starters",
-          "substitutes",
-          "teamId",
-          "teamName"
-         ]
-        }
-       },
-       "sent": {
-        "type": "number"
-       },
-       "skipped": {
-        "type": "number"
-       },
-       "teams": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "error": {
-           "type": "string"
-          },
-          "status": {
-           "type": "string",
-           "enum": [
-            "error",
-            "sent",
-            "skipped_no_channel"
-           ]
-          },
-          "teamId": {
-           "type": "string"
-          },
-          "teamName": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "status",
-          "teamId",
-          "teamName"
-         ]
-        }
-       },
-       "tournament": {
-        "type": "object",
-        "properties": {
-         "id": {
-          "type": "string"
-         },
-         "name": {
-          "type": "string"
-         }
-        },
-        "required": [
-         "id",
-         "name"
-        ]
-       }
-      },
-      "required": [
-       "dryRun",
-       "messages",
-       "sent",
-       "skipped",
-       "teams",
-       "tournament"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "dryRun": {
-        "type": "boolean"
-       },
-       "messages": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "content": {
-           "type": "string"
-          },
-          "deliverable": {
-           "type": "boolean"
-          },
-          "kind": {
-           "type": "string",
-           "enum": [
-            "complete",
-            "complete_with_warnings",
-            "custom",
-            "incomplete"
-           ]
-          },
-          "missingBattleTags": {
-           "type": "number"
-          },
-          "missingStarters": {
-           "type": "number"
-          },
-          "neverLoggedIn": {
-           "type": "number"
-          },
-          "starters": {
-           "type": "number"
-          },
-          "substitutes": {
-           "type": "number"
-          },
-          "teamId": {
-           "type": "string"
-          },
-          "teamName": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "content",
-          "deliverable",
-          "kind",
-          "missingBattleTags",
-          "missingStarters",
-          "neverLoggedIn",
-          "starters",
-          "substitutes",
-          "teamId",
-          "teamName"
-         ]
-        }
-       },
-       "tournament": {
-        "type": "object",
-        "properties": {
-         "id": {
-          "type": "string"
-         },
-         "name": {
-          "type": "string"
-         }
-        },
-        "required": [
-         "id",
-         "name"
-        ]
-       }
-      },
-      "required": [
-       "dryRun",
-       "messages",
-       "tournament"
-      ]
-     }
-    ]
+    "type": "object",
+    "additionalProperties": {}
    }
   },
   "POST /api/admin/teams/add-member": {
-   "200": {
-    "type": "object",
-    "properties": {
-     "battle_tag": {
-      "type": [
-       "string",
-       "null"
-      ]
-     },
-     "captainSet": {
-      "type": "boolean"
-     },
-     "emailSent": {
-      "type": "boolean"
-     },
-     "info": {
-      "type": "string"
-     },
-     "role": {
-      "type": "string"
-     },
-     "teamId": {
-      "type": "string"
-     },
-     "teamMemberId": {
-      "type": "string"
-     },
-     "userId": {
-      "type": "string"
-     }
-    },
-    "required": [
-     "battle_tag",
-     "captainSet",
-     "emailSent",
-     "info",
-     "role",
-     "teamId",
-     "userId"
-    ]
-   },
-   "202": {
-    "type": "object",
-    "properties": {
-     "captainSet": {
-      "type": "boolean",
-      "const": false
-     },
-     "emailSent": {
-      "type": "boolean"
-     },
-     "expiresAt": {
-      "type": [
-       "string",
-       "null"
-      ]
-     },
-     "invitationId": {
-      "type": "string"
-     },
-     "inviteUrl": {
-      "type": "string"
-     },
-     "invited": {
-      "type": "boolean",
-      "const": true
-     },
-     "role": {
-      "type": "string"
-     },
-     "teamId": {
-      "type": "string"
-     },
-     "userId": {
-      "type": "string"
-     }
-    },
-    "required": [
-     "captainSet",
-     "emailSent",
-     "expiresAt",
-     "invitationId",
-     "inviteUrl",
-     "invited",
-     "role",
-     "teamId",
-     "userId"
-    ]
-   }
+   "200": {}
   },
   "POST /api/admin/teams/bulk": {
    "200": {
     "type": "object",
     "properties": {
      "action": {
-      "type": "string",
-      "enum": [
-       "activate",
-       "assign",
-       "deactivate",
-       "delete"
-      ]
+      "type": "string"
      },
      "count": {
       "type": "number"
      },
      "success": {
-      "type": "boolean",
-      "const": true
+      "type": "boolean"
      }
     },
     "required": [
@@ -66640,99 +67653,56 @@
   },
   "POST /api/admin/teams/import-platform": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "created": {
-        "type": "number"
-       },
-       "errors": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "message": {
-           "type": "string"
-          },
-          "row": {
-           "type": "number"
-          }
-         },
-         "required": [
-          "message",
-          "row"
-         ]
-        }
-       },
-       "skipped": {
-        "type": "number"
-       },
-       "teams": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "id": {
-           "type": "string"
-          },
-          "name": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "id",
-          "name"
-         ]
-        }
-       }
-      },
-      "required": [
-       "created",
-       "errors",
-       "skipped",
-       "teams"
-      ]
+    "type": "object",
+    "properties": {
+     "created": {
+      "type": "number"
      },
-     {
-      "type": "object",
-      "properties": {
-       "created": {
-        "type": "number"
-       },
-       "errors": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "message": {
-           "type": "string"
-          },
-          "row": {
-           "type": "number"
-          }
-         },
-         "required": [
-          "message",
-          "row"
-         ]
+     "errors": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "message": {
+         "type": "string"
+        },
+        "row": {
+         "type": "number"
         }
        },
-       "skipped": {
-        "type": "number"
+       "required": [
+        "message",
+        "row"
+       ]
+      }
+     },
+     "skipped": {
+      "type": "number"
+     },
+     "teams": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "name": {
+         "type": "string"
+        }
        },
-       "teams": {
-        "type": "array",
-        "items": {}
-       }
-      },
-      "required": [
-       "created",
-       "errors",
-       "skipped",
-       "teams"
-      ]
+       "required": [
+        "id",
+        "name"
+       ]
+      }
      }
+    },
+    "required": [
+     "created",
+     "errors",
+     "skipped",
+     "teams"
     ]
    }
   },
@@ -67020,11 +67990,55 @@
       "type": "string"
      },
      "registrations": {
-      "type": "array",
-      "items": {}
+      "type": [
+       "array",
+       "null"
+      ],
+      "items": {
+       "type": "object",
+       "properties": {
+        "created_at": {
+         "type": "string"
+        },
+        "is_substitute": {
+         "type": "boolean"
+        },
+        "notes": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "seed": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "stage_id": {
+         "type": "string"
+        },
+        "team_id": {
+         "type": "string"
+        },
+        "tenant_id": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "created_at",
+        "is_substitute",
+        "notes",
+        "seed",
+        "stage_id",
+        "team_id",
+        "tenant_id"
+       ]
+      }
      },
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -67532,6 +68546,25 @@
     },
     "required": [
      "staff"
+    ]
+   }
+  },
+  "POST /api/admin/test-email": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "error": {
+      "type": "string"
+     },
+     "id": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "success"
     ]
    }
   },
@@ -70480,12 +71513,7 @@
    "200": {
     "type": "object",
     "properties": {
-     "result": {
-      "type": [
-       "object",
-       "null"
-      ]
-     }
+     "result": {}
     },
     "required": [
      "result"
@@ -70716,12 +71744,7 @@
    "200": {
     "type": "object",
     "properties": {
-     "result": {
-      "type": [
-       "object",
-       "null"
-      ]
-     }
+     "result": {}
     },
     "required": [
      "result"
@@ -70733,7 +71756,8 @@
     "type": "object",
     "properties": {
      "cleared": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -70745,12 +71769,7 @@
    "201": {
     "type": "object",
     "properties": {
-     "prediction": {
-      "type": [
-       "object",
-       "null"
-      ]
-     }
+     "prediction": {}
     },
     "required": [
      "prediction"
@@ -77774,13 +78793,15 @@
     "type": "object",
     "properties": {
      "configured": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      },
      "handle": {
       "type": "string"
      },
      "ok": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -77808,7 +78829,8 @@
     "type": "object",
     "properties": {
      "configured": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      },
      "fromEmail": {
       "type": "string"
@@ -79089,6 +80111,338 @@
      "lineMax",
      "positions",
      "theme"
+    ]
+   }
+  },
+  "PUT /api/admin/teams/{teamId}": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "team": {
+      "type": "object",
+      "properties": {
+       "accent_color": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "achievements": {
+        "anyOf": [
+         {
+          "type": "boolean"
+         },
+         {
+          "type": "string"
+         },
+         {
+          "type": "number"
+         },
+         {
+          "type": "object",
+          "additionalProperties": {}
+         },
+         {
+          "type": "array",
+          "items": {}
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "banner_focal": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "banner_overlay": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "banner_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "captain_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "country": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "created_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "deleted_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "description": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "discord": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "discord_channel_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "discord_role_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "discord_voice_channel_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "embed_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "embed_provider": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "instagram": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "is_active": {
+        "type": [
+         "boolean",
+         "null"
+        ]
+       },
+       "is_joinable": {
+        "type": "boolean"
+       },
+       "logo_credit_name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "logo_credit_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "logo_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "name": {
+        "type": "string"
+       },
+       "open_for_scrim": {
+        "type": "boolean"
+       },
+       "pinned_announcement": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "pinned_announcement_until": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "preferred_locale": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "public_content": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "secondary_color": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "short_name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "skill_rating": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "slug": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "sponsors": {
+        "anyOf": [
+         {
+          "type": "boolean"
+         },
+         {
+          "type": "string"
+         },
+         {
+          "type": "number"
+         },
+         {
+          "type": "object",
+          "additionalProperties": {}
+         },
+         {
+          "type": "array",
+          "items": {}
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "tcg_image_path": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "tenant_id": {
+        "type": "string"
+       },
+       "tiktok": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "twitch": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "twitter": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "updated_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "website": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "youtube": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "accent_color",
+       "achievements",
+       "banner_focal",
+       "banner_overlay",
+       "banner_url",
+       "captain_id",
+       "country",
+       "created_at",
+       "deleted_at",
+       "description",
+       "discord",
+       "discord_channel_id",
+       "discord_role_id",
+       "discord_voice_channel_id",
+       "embed_id",
+       "embed_provider",
+       "id",
+       "instagram",
+       "is_active",
+       "is_joinable",
+       "logo_credit_name",
+       "logo_credit_url",
+       "logo_url",
+       "name",
+       "open_for_scrim",
+       "pinned_announcement",
+       "pinned_announcement_until",
+       "preferred_locale",
+       "public_content",
+       "secondary_color",
+       "short_name",
+       "skill_rating",
+       "slug",
+       "sponsors",
+       "tcg_image_path",
+       "tenant_id",
+       "tiktok",
+       "twitch",
+       "twitter",
+       "updated_at",
+       "website",
+       "youtube"
+      ]
+     }
+    },
+    "required": [
+     "team"
     ]
    }
   },

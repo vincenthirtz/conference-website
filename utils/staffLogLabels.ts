@@ -172,6 +172,8 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   delete_free_player: 'Retrait fiche joueuse libre',
   // Adhérents
   create_adherent: 'Création adhérent',
+  update_adherent: 'Modification adhérent',
+  delete_adherent: 'Suppression adhérent',
   // Contenu éditorial
   publish_news: 'Publication actualité',
   publish_social_post: 'Publication post multi-réseaux',
@@ -316,6 +318,10 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   twitch_ban: 'Bannissement Twitch',
   twitch_clear_chat: 'Chat Twitch effacé',
   twitch_chat_settings: 'Paramètres chat Twitch',
+  subscribe_twitch_eventsub: 'Abonnement EventSub régie (Twitch)',
+  subscribe_twitch_alerts: 'Abonnement alertes Twitch (EventSub)',
+  subscribe_twitch_tcg_drop: 'Abonnement drop TCG Twitch (EventSub)',
+  unsubscribe_twitch_tcg_drop: 'Désabonnement drop TCG Twitch (EventSub)',
   // Prize pool / paiements
   create_prize_pool: 'Création cagnotte',
   update_prize_pool: 'Modification cagnotte',
@@ -348,6 +354,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   task_update: 'Modification tâche',
   task_delete: 'Suppression tâche',
   task_restore: 'Restauration tâche',
+  restore_deleted_item: 'Restauration depuis la corbeille',
   task_move: 'Déplacement tâche',
   task_assign: 'Assignation tâche',
   task_comment_create: 'Commentaire de tâche ajouté',

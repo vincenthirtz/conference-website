@@ -20,3 +20,8 @@ export const AlertsSummaryQuery = z.object({
         'Tournoi visé ; absent = le tournoi en cours de l’espace du staff.',
     }),
 });
+
+/** GET /api/admin/search?q= — texte cherché (2 caractères utiles minimum). */
+export const AdminSearchQuery = z.looseObject({
+  q: z.unknown().optional(),
+});

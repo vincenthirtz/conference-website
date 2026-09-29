@@ -1,6 +1,7 @@
 get:
   summary: Read staff_logs (audit trail).
   operationId: adminListStaffLogs
+  x-zod-query: admin.logs.query
   tags:
     - admin/misc
   security:
@@ -10,7 +11,7 @@ get:
       name: limit
       schema:
         type: integer
-        default: 50
+        default: 100
     - in: query
       name: offset
       schema:
@@ -21,7 +22,7 @@ get:
       schema:
         type: string
     - in: query
-      name: entity_type
+      name: entityType
       schema:
         type: string
   responses:

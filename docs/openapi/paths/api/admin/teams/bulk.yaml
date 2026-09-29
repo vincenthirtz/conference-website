@@ -10,8 +10,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.teams/bulk.body
   responses:
     '200':
       description: Result.

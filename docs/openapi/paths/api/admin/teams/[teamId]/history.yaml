@@ -3,6 +3,7 @@ parameters:
 get:
   summary: Team audit history.
   operationId: adminGetTeamHistory
+  x-zod-query: admin.teams/[teamId]/history.query
   tags:
     - admin/teams
   security:

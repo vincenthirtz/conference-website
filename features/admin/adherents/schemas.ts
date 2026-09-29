@@ -3,6 +3,11 @@
 
 import { z } from 'zod';
 import { adminListQuery } from '../../../utils/admin/listQuery';
+import {
+  looseBody,
+  looseQuery,
+  uuidPathParam,
+} from '../../../utils/admin/pathParams';
 
 export const ADHERENT_PAYMENT_STATUSES = [
   'pending',
@@ -115,3 +120,51 @@ export type AdherentStats = {
   pending: number;
   overdue: number;
 };
+
+/* ------------------- Fiche adhérent, synchro HelloAsso ------------------- */
+
+/** `/api/admin/adherents/[id]` — message historique de la route. */
+export const AdherentIdQuery = z.object({
+  id: uuidPathParam('Member ID required.'),
+});
+
+/** PATCH `/adherents/[id]` : champs nommés, appliqués tels quels par le service. */
+export const AdherentPatchDoc = looseBody([
+  'firstName',
+  'lastName',
+  'email',
+  'phone',
+  'birthDate',
+  'address',
+  'city',
+  'postalCode',
+  'country',
+  'joinDate',
+  'currentYear',
+  'paymentStatus',
+  'paymentAmount',
+  'paymentDate',
+  'paymentMethod',
+  'paymentReference',
+  'isActive',
+  'role',
+  'notes',
+]);
+
+/** Toutes les colonnes de `adherents` : ce que renvoyait le `select('*')`. */
+export const ADHERENT_COLUMNS =
+  'id, member_number, auth_user_id, first_name, last_name, email, phone, birth_date, address, city, postal_code, country, join_date, current_year, payment_status, payment_amount, payment_date, payment_method, payment_reference, is_active, role, notes, created_at, created_by, updated_at, updated_by, deleted_at' as const;
+
+/** Toutes les colonnes de `adherent_payments` (ex-`select('*')`). */
+export const ADHERENT_PAYMENT_COLUMNS =
+  'id, adherent_id, year, amount, payment_date, payment_method, payment_reference, notes, created_at, created_by' as const;
+
+/** GET /api/admin/helloasso/memberships — formulaire auto-détecté si absent. */
+export const HelloAssoMembershipsQuery = looseQuery([
+  'formSlug',
+  'page',
+  'pageSize',
+]);
+
+/** POST /api/admin/helloasso/sync — formulaire auto-détecté si absent. */
+export const HelloAssoSyncQuery = looseQuery(['formSlug']);

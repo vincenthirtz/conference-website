@@ -9,6 +9,7 @@ get:
   summary: Adherent detail.
   description: Requires `admin` role.
   operationId: adminGetAdherent
+  x-zod-query: admin.adherents/[id].query
   tags:
     - admin/misc
   security:
@@ -31,6 +32,7 @@ patch:
   summary: Update adherent fields.
   description: Requires `admin` role.
   operationId: adminUpdateAdherent
+  x-zod-query: admin.adherents/[id].query
   tags:
     - admin/misc
   security:
@@ -40,6 +42,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.adherents/[id].update
           type: object
           additionalProperties: true
   responses:
@@ -58,6 +61,7 @@ delete:
   summary: Soft-delete adherent.
   description: Requires `admin` role.
   operationId: adminDeleteAdherent
+  x-zod-query: admin.adherents/[id].query
   tags:
     - admin/misc
   security:

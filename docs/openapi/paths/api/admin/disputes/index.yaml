@@ -1,6 +1,7 @@
 get:
   summary: List open match disputes across the tenant.
   operationId: adminListDisputes
+  x-zod-query: admin.disputes.query
   tags:
     - admin/matches
   security:

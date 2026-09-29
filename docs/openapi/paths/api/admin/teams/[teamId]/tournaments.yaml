@@ -3,6 +3,7 @@ parameters:
 get:
   summary: List tournaments the team is enrolled in.
   operationId: adminListTeamTournaments
+  x-zod-query: admin.teams/[teamId]/tournaments.query
   tags:
     - admin/teams
   security:
@@ -22,6 +23,7 @@ get:
 post:
   summary: Enroll a team into a tournament.
   operationId: adminEnrollTeamInTournament
+  x-zod-query: admin.teams/[teamId]/tournaments.query
   tags:
     - admin/teams
   security:
@@ -31,8 +33,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.teams/[teamId]/tournaments.body
   responses:
     '201':
       description: Enrolled.
@@ -48,16 +49,11 @@ post:
 delete:
   summary: Unenroll a team from a tournament.
   operationId: adminUnenrollTeamFromTournament
+  x-zod-query: admin.teams/[teamId]/tournaments.query
   tags:
     - admin/teams
   security:
     - StaffSession: []
-  parameters:
-    - in: query
-      name: tournamentId
-      schema:
-        type: string
-        format: uuid
   responses:
     '204':
       description: Unenrolled.
@@ -65,3 +61,9 @@ delete:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.teams/[teamId]/tournaments.body

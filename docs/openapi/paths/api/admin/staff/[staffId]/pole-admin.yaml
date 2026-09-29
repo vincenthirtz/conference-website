@@ -9,6 +9,7 @@ post:
   summary: Grant pole-admin role to a staff member.
   description: Requires `owner` role.
   operationId: adminGrantPoleAdmin
+  x-zod-query: admin.staff/[staffId]/pole-admin.query
   tags:
     - admin/users
   security:
@@ -33,6 +34,7 @@ delete:
   summary: Revoke pole-admin role from a staff member.
   description: Requires `owner` role.
   operationId: adminRevokePoleAdmin
+  x-zod-query: admin.staff/[staffId]/pole-admin.query
   tags:
     - admin/users
   security:

@@ -3,6 +3,7 @@ post:
     - admin/demandes
   summary: Relancer les capitaines d'une demande de scrim sur Discord.
   operationId: adminNotifyScrimCaptains
+  x-zod-query: admin.demandes/[id]/notify-captains.query
   description: |
     Rejoue l'envoi automatique des messages prives (capitaine, manager,
     coach de l'equipe cible), boutons de decision compris, et trace la

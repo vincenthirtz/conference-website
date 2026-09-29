@@ -68,25 +68,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - reward_id
-            - redemption_ids
-            - status
-          properties:
-            reward_id:
-              type: string
-            redemption_ids:
-              type: array
-              minItems: 1
-              maxItems: 50
-              items:
-                type: string
-            status:
-              type: string
-              enum:
-                - FULFILLED
-                - CANCELED
+          x-zod: admin.twitch/channel-points/redemptions.update
   responses:
     '200':
       description: Redemptions updated.

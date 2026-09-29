@@ -393,3 +393,23 @@ export const DISCORD_CHANNEL_TYPES = [
   'support_tickets',
 ] as const;
 export type DiscordChannelType = (typeof DISCORD_CHANNEL_TYPES)[number];
+
+/* ------------------- Quick bracket, modèles personnalisés ------------------- */
+
+/** POST /api/admin/quick-bracket — validé par le service (400 « Champ invalide »). */
+export const QuickBracketDoc = looseBody([
+  'name',
+  'format',
+  'participants',
+  'bestOf',
+]);
+
+/** POST /api/admin/tournament-templates — nom, description, phases. */
+export const TournamentTemplateCreateDoc = looseBody([
+  'name',
+  'description',
+  'stages',
+]);
+
+/** DELETE /api/admin/tournament-templates — `templateId` dans le corps. */
+export const TournamentTemplateDeleteDoc = looseBody(['templateId']);

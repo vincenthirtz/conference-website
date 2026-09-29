@@ -26,6 +26,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.caster/audit.body
           type: object
           required:
             - action

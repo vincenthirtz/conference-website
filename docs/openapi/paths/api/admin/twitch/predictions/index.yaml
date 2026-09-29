@@ -42,28 +42,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - title
-            - outcomes
-            - prediction_window
-          properties:
-            title:
-              type: string
-              minLength: 1
-              maxLength: 45
-            outcomes:
-              type: array
-              minItems: 2
-              maxItems: 10
-              items:
-                type: string
-                minLength: 1
-                maxLength: 25
-            prediction_window:
-              type: integer
-              minimum: 30
-              maximum: 1800
+          x-zod: admin.twitch/predictions.create
   responses:
     '201':
       description: Prediction created.

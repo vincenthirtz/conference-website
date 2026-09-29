@@ -15,21 +15,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - login
-          properties:
-            login:
-              type: string
-              minLength: 1
-              maxLength: 25
-            duration:
-              type: integer
-              minimum: 1
-              maximum: 1209600
-            reason:
-              type: string
-              maxLength: 500
+          x-zod: admin.twitch/moderation/ban.body
   responses:
     '200':
       description: User banned or timed out.

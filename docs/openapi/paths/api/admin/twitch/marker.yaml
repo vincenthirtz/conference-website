@@ -16,11 +16,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            description:
-              type: string
-              maxLength: 140
+          x-zod: admin.twitch/marker.body
   responses:
     '200':
       description: Marker created.

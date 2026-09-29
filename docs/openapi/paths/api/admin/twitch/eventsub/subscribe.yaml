@@ -30,15 +30,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - session_id
-          properties:
-            session_id:
-              type: string
-              minLength: 8
-              maxLength: 300
-              description: EventSub websocket session id from `session_welcome`.
+          x-zod: admin.twitch/eventsub/subscribe.body
   responses:
     '200':
       description: Subscriptions created (possibly partially).

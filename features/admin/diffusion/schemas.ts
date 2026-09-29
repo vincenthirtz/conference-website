@@ -141,3 +141,6 @@ export const BroadcastStatePatchDoc = looseBody([
   'scene',
   'auto_director',
 ]);
+
+/** POST /api/admin/stream-alert-test — type d'alerte Twitch + pseudo affiché. */
+export const StreamAlertTestDoc = looseBody(['kind', 'name']);

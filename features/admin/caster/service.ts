@@ -14,7 +14,9 @@
 // entière ; au-delà, ce n'est plus un choix de régie, c'est de l'archive.
 
 import type { ServiceContext } from '@/utils/admin/serviceContext';
-import { AdminError } from '@/utils/admin/errors';
+import { AdminError, LegacyAdminError } from '@/utils/admin/errors';
+import { logStaffAction } from '@/utils/staffLogs';
+import { CasterAuditSchema } from './schemas';
 import * as repo from './repository';
 
 const LIMIT = 25;
@@ -59,4 +61,44 @@ export async function listRecentPlayedMatches(
       completedAt: m.completed_at ?? null,
     })),
   };
+}
+
+/* --------------------------- Journal du cockpit ---------------------------- */
+
+/**
+ * POST /caster/audit : journalise une action NOTABLE du cockpit caster web
+ * (le cockpit écrit Supabase et OBS depuis le navigateur : rien ne traverse
+ * le serveur, donc rien ne pourrait être tracé côté back).
+ *
+ * Écrit le journal LUI-MÊME (et non via `ctx.audit`) : l'action est choisie
+ * par le client dans une allowlist, c'est l'objet même de la route, et
+ * l'entrée doit garder sa forme exacte. Best effort : un journal en panne ne
+ * casse jamais une action à l'antenne.
+ */
+export async function recordCasterAction(
+  ctx: ServiceContext,
+  staffId: string,
+  raw: unknown
+): Promise<{ ok: true }> {
+  const parsed = CasterAuditSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new LegacyAdminError(400, 'Invalid payload.', {
+      code: 'INVALID_PAYLOAD',
+      extra: { details: parsed.error.issues },
+    });
+  }
+  const { action, details, entity_id } = parsed.data;
+  try {
+    await logStaffAction({
+      staff_id: staffId,
+      action,
+      entity_type: 'caster_cockpit',
+      entity_id: entity_id ?? null,
+      payload: details ?? null,
+      tenant_id: ctx.tenantId,
+    });
+  } catch (err) {
+    ctx.logger.error('[admin/caster/audit] log error', err);
+  }
+  return { ok: true };
 }

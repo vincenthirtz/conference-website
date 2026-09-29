@@ -91,6 +91,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.discord/team-channels.body
           type: object
           required:
             - action

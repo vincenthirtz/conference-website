@@ -54,7 +54,7 @@ importent les fichiers touchés. Hooks extraits relus contre l'original (corps i
   `RegistrationFieldsEditor`, `ChoiceCard`/`BigChip` du quiz ; `TenantSwitcher.tsx` non importé) ;
 - `TenantSwitcher.tsx` : non monté depuis 28afe291 (mai 2026) mais gardé exprès « au cas où » —
   NON supprimé ; à trancher (le garder = le passer en Ruban le jour où on le remonte) ;
-- phases 1–2 : vagues serveur 1-3 faites (232 routes) ; restent 80 routes hors `defineAdminRoute` —
+- phases 1–2 : vagues serveur 1-4 faites (287 routes) ; restent 22 routes volontairement hors wrapper hors `defineAdminRoute` —
   gros domaines : tournament (32), stages (22), tenants (22), matches (20), events (20), twitch
   (17), teams (14), tcg (12)… ; `select('*')` 64 ; cache client généralisé (L10).
 
@@ -344,6 +344,19 @@ routes de lecture pour éprouver l'API, puis domaine par domaine (lots 15–20).
       POST, lineups, auto-byes, batch-scores, clone (`targetTournamentId`), stage teams POST,
       bracket/matches POST (stageId, team*_id, next_match_*_id), discord-webhooks PUT ; et
       l'undo de bulk-matches écrit `snapshots[].fields` tel quel dans `matches`.
+- [x] **Vague serveur 4 (2026-09-29) — 55 routes** : `twitch` (16), `teams` + `demandes` (13),
+      routes isolées (26 : communications, adherents/helloasso, tenants, `logs` et `recycle-bin`
+      en modules neufs, dashboard, news, social, matches, tournaments, diffusion, caster).
+      **Routes hors `defineAdminRoute` : 309 → 22** ; `select('*')` 100 → 8. Les 22 restantes sont
+      volontaires (uploads base64 / multipart, flux CSV, redirections OAuth, GET journalisés,
+      routes à deux journaux, `me` en `withAuthRoute`, `logout`) — liste dans les rapports de vague.
+      **Défauts de sécurité PRÉEXISTANTS signalés (vagues 3-4), à corriger avant tout déploiement** :
+      `staff/[staffId]/pole-admin` (garde `manage_tenant` sur le rôle EFFECTIF → un owner
+      d'espace, dev compris, peut se passer pôle-admin et accéder à tout — contourne 8467a881) ;
+      `recycle-bin` (restaure `staff`/`partners`/`adherents` globaux depuis n'importe quel espace) ;
+      `tournament-templates` sous le tenant par défaut ; `teams/bulk assign`, `availability` PATCH,
+      `import-platform` (clé API du tenant par défaut), `teams/[teamId]` PUT `captain_id` ;
+      `eventsub/tcg-drop` (`featuredFanartId` non recoupé) ; + la liste de la vague 3.
 - [ ] Temps de réponse inchangé (± 5 ms) — **non mesuré** : demande la prod ; le wrapper
       n'ajoute aucune requête, seulement la résolution de garde que faisait déjà
       `withStaffRoute`.

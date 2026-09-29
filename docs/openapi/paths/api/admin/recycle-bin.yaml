@@ -2,6 +2,7 @@ get:
   summary: List soft-deleted entities (stages, teams, matches, etc.).
   description: Requires `admin` role.
   operationId: adminListRecycleBin
+  x-zod-query: admin.recycle-bin.query
   tags:
     - admin/misc
   security:
@@ -54,6 +55,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.recycle-bin.update
           type: object
           required:
             - type

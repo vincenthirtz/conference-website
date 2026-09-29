@@ -4,6 +4,7 @@ get:
     Serves the full assembled spec as YAML (default) or as JSON when called
     with `?format=json`. Powers the `/admin/api-docs` Swagger UI page.
   operationId: adminGetOpenApiSpec
+  x-zod-query: admin.docs/openapi.query
   tags:
     - admin/misc
   security:

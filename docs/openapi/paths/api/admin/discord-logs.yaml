@@ -1,6 +1,7 @@
 get:
   summary: Discord bot journal — player actions and outgoing bot events.
   operationId: adminListDiscordLogs
+  x-zod-query: admin.discord-logs.query
   tags:
     - admin/misc
   security:

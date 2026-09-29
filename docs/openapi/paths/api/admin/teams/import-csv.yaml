@@ -15,15 +15,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - csv
-          properties:
-            csv:
-              type: string
-            tournamentId:
-              type: string
-              format: uuid
+          x-zod: admin.teams/import-csv.body
   responses:
     '200':
       description: Import result.

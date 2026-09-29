@@ -1,6 +1,7 @@
 get:
   summary: Etat du verrou de roster d'une equipe, tournoi par tournoi.
   operationId: adminTeamRosterLockState
+  x-zod-query: admin.teams/[teamId]/roster-lock.query
   tags:
     - admin/teams
   security:
@@ -23,8 +24,7 @@ get:
     roster passe alors qu'il n'a rien fait.
   responses:
     '200':
-      description: '`{ tournaments: [{ tournamentId, locks, tournamentUnlockedUntil,
-        teamUnlockedUntil, … }] }`.'
+      description: '`{ tournaments: [{ tournamentId, locks, tournamentUnlockedUntil, teamUnlockedUntil, … }] }`.'
     '400':
       description: Id d'equipe invalide.
     '401':
@@ -36,6 +36,7 @@ get:
 post:
   summary: Ouvre une fenetre de deverrouillage POUR CETTE EQUIPE.
   operationId: adminTeamRosterUnlock
+  x-zod-query: admin.teams/[teamId]/roster-lock.query
   tags:
     - admin/teams
   security:
@@ -69,24 +70,13 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required: [tournamentId]
-          properties:
-            tournamentId:
-              type: string
-              format: uuid
-            minutes:
-              type: integer
-              minimum: 5
-              maximum: 1440
-              default: 60
+          x-zod: admin.teams/[teamId]/roster-lock.body
   responses:
     '200':
       description: '`{ rosterUnlockedUntil, minutes, tournamentId }`.'
     '400':
       description: >-
-        Id invalide, equipe non inscrite (`NOT_REGISTERED`) ou duree hors bornes
-        (`INVALID_MINUTES`).
+        Id invalide, equipe non inscrite (`NOT_REGISTERED`) ou duree hors bornes (`INVALID_MINUTES`).
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -96,6 +86,7 @@ post:
 delete:
   summary: Referme la fenetre de deverrouillage de cette equipe.
   operationId: adminTeamRosterRelock
+  x-zod-query: admin.teams/[teamId]/roster-lock.query
   tags:
     - admin/teams
   security:
@@ -112,12 +103,7 @@ delete:
     content:
       application/json:
         schema:
-          type: object
-          required: [tournamentId]
-          properties:
-            tournamentId:
-              type: string
-              format: uuid
+          x-zod: admin.teams/[teamId]/roster-lock.body
   responses:
     '200':
       description: '`{ rosterUnlockedUntil: null, tournamentId }`.'

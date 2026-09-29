@@ -291,3 +291,17 @@ export const MvpPublicBody = z.discriminatedUnion('action', [
   }),
   z.object({ action: z.literal('close') }),
 ]);
+
+/**
+ * GET /api/admin/disputes — tableau des litiges ouverts de l'espace. Filtres
+ * lus par le service (400 `Invalid tournament_id` / `Invalid status`).
+ */
+export const DisputeBoardQuery = looseQuery([
+  'tournament_id',
+  'status',
+  'orderBy',
+  'orderDir',
+  'limit',
+  'offset',
+  'includeTotal',
+]);

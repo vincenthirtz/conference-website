@@ -10,6 +10,7 @@ patch:
     Requires `manager` role and the `channel:manage:predictions` scope.
     `status=RESOLVED` requires `winning_outcome_id`.
   operationId: adminTwitchUpdatePrediction
+  x-zod-query: admin.twitch/[id].query
   tags:
     - admin/twitch
   security:
@@ -19,18 +20,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - status
-          properties:
-            status:
-              type: string
-              enum:
-                - LOCKED
-                - RESOLVED
-                - CANCELED
-            winning_outcome_id:
-              type: string
+          x-zod: admin.twitch/predictions/[id].update
   responses:
     '200':
       description: Prediction updated.

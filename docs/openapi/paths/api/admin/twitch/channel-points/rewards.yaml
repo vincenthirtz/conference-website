@@ -16,6 +16,7 @@ get:
 
     `409 NOT_CONNECTED` / `403 MISSING_SCOPE`.
   operationId: adminTwitchListRewards
+  x-zod-query: admin.twitch/channel-points/rewards.query
   tags:
     - admin/twitch
   security:
@@ -71,31 +72,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - title
-            - cost
-          properties:
-            title:
-              type: string
-              minLength: 1
-              maxLength: 45
-            cost:
-              type: integer
-              minimum: 1
-            prompt:
-              type: string
-              maxLength: 200
-            is_enabled:
-              type: boolean
-              default: true
-            is_user_input_required:
-              type: boolean
-            background_color:
-              type: string
-              pattern: '^#[0-9A-Fa-f]{6}$'
-            should_redemptions_skip_request_queue:
-              type: boolean
+          x-zod: admin.twitch/channel-points/rewards.create
   responses:
     '200':
       description: Reward created.

@@ -12,6 +12,7 @@ get:
     universel du journal. La route match reste a part : elle fait davantage
     (logs `game` relies par payload).
   operationId: adminEntityHistory
+  x-zod-query: admin.entity-history.query
   security:
     - StaffSession: []
   parameters:

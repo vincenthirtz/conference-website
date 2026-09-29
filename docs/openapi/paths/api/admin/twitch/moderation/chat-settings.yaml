@@ -14,20 +14,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            emote_mode:
-              type: boolean
-            subscriber_mode:
-              type: boolean
-            follower_mode:
-              type: boolean
-            follower_mode_duration:
-              type: integer
-            slow_mode:
-              type: boolean
-            slow_mode_wait_time:
-              type: integer
+          x-zod: admin.twitch/moderation/chat-settings.body
   responses:
     '200':
       description: Chat settings updated.

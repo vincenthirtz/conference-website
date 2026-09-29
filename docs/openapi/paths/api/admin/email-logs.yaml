@@ -1,6 +1,7 @@
 get:
   summary: Outgoing email log (transactional + campaigns).
   operationId: adminListEmailLogs
+  x-zod-query: admin.email-logs.query
   tags:
     - admin/misc
   security:
