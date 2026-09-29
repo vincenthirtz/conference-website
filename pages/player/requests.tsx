@@ -25,10 +25,11 @@ import { logger } from '../../utils/logger';
 import nsPlayerRequests from '@/lib/i18n/locales/fr/playerRequests';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 import { loginHrefFor } from '@/utils/player/sessionExpiry';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 type Tab = 'transfer' | 'scrim';
 
-export default function PlayerRequestsPage() {
+function PlayerRequestsPage() {
   const router = useRouter();
   // Retour à CETTE page après connexion (`?next=`), requête comprise — sans
   // quoi un lien partagé (`?tab=scrim&team=…`, un mail, une notification)
@@ -502,3 +503,7 @@ const playerRequestsSeo: SeoProps = {
 };
 
 PlayerRequestsPage.seo = playerRequestsSeo;
+
+// Coquille joueuse (lot P8) : navigation basse / rail. La page garde sa
+// propre redirection de session (pas encore migrée) : `redirectTo` absent.
+export default withPlayerShell(PlayerRequestsPage);

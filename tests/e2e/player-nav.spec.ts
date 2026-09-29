@@ -1,9 +1,13 @@
-// E2E — PlayerTopBar (components/Navbar/PlayerTopBar.tsx)
+// E2E — PlayerTopBar (components/Navbar/PlayerTopBar.tsx) + navigation de la
+// coquille joueuse (features/player/_shared/shell/PlayerNav.tsx, lot P8).
 //
 // The fixed top-bar shown to a signed-in non-staff user on /player routes:
 //   - 4 tabs (Tableau de bord / Mes matchs / Notifications / Mon profil),
 //   - active tab highlight driven by pathname,
 //   - logout button → signs out and lands on /.
+// The shell navigation: bottom bar under `lg` (Accueil / Équipe / Matchs /
+// TCG, targets ≥ 44 px), side rail from `lg`, never on the public site.
+// Also run by the `mobile` Playwright project (Pixel 7).
 //
 // Auth is a REAL player login (see _helpers/playerSession.ts); the /api/player/*
 // data endpoints are route-mocked so navigation is deterministic without DB.
@@ -17,6 +21,13 @@ import {
 } from './_helpers/playerSession';
 
 const PLAYER_EMAIL = `hirtzvincent+playernav@gmail.com`;
+const SHELL_NAV = 'Navigation de l’espace joueuse';
+const SHELL_ENTRIES = [
+  ['Accueil', '/player'],
+  ['Équipe', '/player/manage-team'],
+  ['Matchs', '/player/matches'],
+  ['TCG', '/player/tcg'],
+] as const;
 
 // Empty-but-valid payloads so every /player page renders instantly.
 async function mockPlayerApis(page: import('@playwright/test').Page) {
@@ -67,11 +78,19 @@ test.describe('PlayerTopBar navigation', () => {
     await expect(page.getByRole('button', { name: 'Déconnexion' })).toHaveCount(
       0
     );
+    // Ni la navigation basse de la coquille joueuse.
+    await expect(page.getByRole('navigation', { name: SHELL_NAV })).toHaveCount(
+      0
+    );
   });
 
   test('signed-in player sees the top-bar with the 4 tabs', async ({
     page,
+    isMobile,
   }) => {
+    // Onglets et déconnexion en ligne : barre desktop (≥ 900 px). Le projet
+    // `mobile` couvre le menu hamburger et la navigation basse.
+    test.skip(isMobile, 'barre desktop uniquement');
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await mockPlayerApis(page);
     await loginPlayer(page, PLAYER_EMAIL, '/player');
@@ -97,7 +116,11 @@ test.describe('PlayerTopBar navigation', () => {
 
   test('tabs navigate to the right routes and highlight the active one', async ({
     page,
+    isMobile,
   }) => {
+    // Onglets et déconnexion en ligne : barre desktop (≥ 900 px). Le projet
+    // `mobile` couvre le menu hamburger et la navigation basse.
+    test.skip(isMobile, 'barre desktop uniquement');
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await mockPlayerApis(page);
     await loginPlayer(page, PLAYER_EMAIL, '/player');
@@ -172,7 +195,11 @@ test.describe('PlayerTopBar navigation', () => {
 
   test('logout signs the player out and returns to the home page', async ({
     page,
+    isMobile,
   }) => {
+    // Onglets et déconnexion en ligne : barre desktop (≥ 900 px). Le projet
+    // `mobile` couvre le menu hamburger et la navigation basse.
+    test.skip(isMobile, 'barre desktop uniquement');
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await mockPlayerApis(page);
     await loginPlayer(page, PLAYER_EMAIL, '/player');
@@ -186,5 +213,71 @@ test.describe('PlayerTopBar navigation', () => {
     await expect(page.locator('a:has-text("Connexion")')).toBeVisible({
       timeout: 10000,
     });
+  });
+
+  test('mobile: bottom nav (4 entries ≥ 44 px) navigates and marks the page', async ({
+    page,
+  }) => {
+    test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
+    await page.setViewportSize({ width: 375, height: 800 });
+    await mockPlayerApis(page);
+    await loginPlayer(page, PLAYER_EMAIL, '/player');
+
+    const nav = page.getByRole('navigation', { name: SHELL_NAV });
+    await expect(nav).toBeVisible({ timeout: 10000 });
+    const navBox = await nav.boundingBox();
+    // Collée en bas de l'écran (barre du pouce).
+    expect(navBox && navBox.y + navBox.height).toBeGreaterThan(760);
+
+    for (const [name, href] of SHELL_ENTRIES) {
+      const link = nav.getByRole('link', { name, exact: true });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute('href', href);
+      const box = await link.boundingBox();
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+      expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+    }
+    await expect(
+      nav.getByRole('link', { name: 'Accueil', exact: true })
+    ).toHaveAttribute('aria-current', 'page');
+
+    await nav.getByRole('link', { name: 'Matchs', exact: true }).click();
+    await page.waitForURL(/\/player\/matches$/, { timeout: 10000 });
+    await expect(
+      nav.getByRole('link', { name: 'Matchs', exact: true })
+    ).toHaveAttribute('aria-current', 'page');
+    await expect(
+      nav.getByRole('link', { name: 'Accueil', exact: true })
+    ).not.toHaveAttribute('aria-current', 'page');
+
+    // Focus visible au clavier sur une entrée.
+    await nav.getByRole('link', { name: 'TCG', exact: true }).focus();
+    const outline = await nav
+      .getByRole('link', { name: 'TCG', exact: true })
+      .evaluate((el) => getComputedStyle(el).outlineStyle);
+    expect(outline).not.toBe('none');
+  });
+
+  test('desktop: the same navigation becomes a side rail', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, 'rail : desktop uniquement');
+    test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await mockPlayerApis(page);
+    await loginPlayer(page, PLAYER_EMAIL, '/player');
+
+    const nav = page.getByRole('navigation', { name: SHELL_NAV });
+    await expect(nav).toBeVisible({ timeout: 10000 });
+    const box = await nav.boundingBox();
+    expect(box?.x ?? -1).toBe(0);
+    expect(box?.width ?? 0).toBeLessThanOrEqual(96);
+    expect(box?.height ?? 0).toBeGreaterThan(400);
+    // La barre du haut garde ses onglets.
+    const bar = page.locator('div.fixed.top-0').first();
+    await expect(
+      bar.getByRole('link', { name: 'Tableau de bord', exact: true })
+    ).toBeVisible();
   });
 });

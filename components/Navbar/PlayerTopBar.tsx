@@ -1,22 +1,20 @@
 /* biome-ignore-all lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */
 import Image from 'next/image';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import type { PlayerLink } from './playerLinks';
-import type { PlayerNotificationsPayload } from '@/pages/api/player/notifications';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import LanguageToggle from './LanguageToggle';
-import { useT, format } from '@/lib/i18n/useT';
+import { useT } from '@/lib/i18n/useT';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 import { useSeasonalLogo } from '@/lib/branding/useSeasonalLogo';
 import nsPlayerTopBar from '@/lib/i18n/locales/fr/playerTopBar';
-import { useDocumentVisible } from '@/hooks/useDocumentVisible';
-import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 import { isPlayerLinkActive } from './headerBars';
 import { flatPublicLinks } from './navigation';
 import nsNavbar from '@/lib/i18n/locales/fr/navbar';
+import PlayerTopBarBell from './PlayerTopBarBell';
+import { DropdownButton, DropdownPanel, PanelLink } from './PlayerTopBarMenus';
 
 const SITE_MENU_KEY = '__site__';
 const MOBILE_MENU_KEY = '__mobile__';
@@ -36,44 +34,6 @@ type PlayerTopBarProps = {
   adminHref?: string | null;
 };
 
-function ChevronDown({ open }: { open: boolean }) {
-  return (
-    <svg
-      aria-hidden
-      className={`h-3 w-3 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M19 9l-7 7-7-7"
-      />
-    </svg>
-  );
-}
-
-function BellIcon() {
-  return (
-    <svg
-      aria-hidden
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-      />
-    </svg>
-  );
-}
-
 export default function PlayerTopBar({
   playerName,
   roleLabel,
@@ -88,45 +48,10 @@ export default function PlayerTopBar({
   const branding = useTenantBranding();
   const seasonal = useSeasonalLogo(!branding);
   const router = useRouter();
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
-  // La cloche compte pour l'équipe ACTIVE, comme le tableau de bord et
-  // /player/notifications : c'est la raison pour laquelle ActiveTeamProvider
-  // enveloppe toute l'application (cf. _app.tsx). Sans `withTeam`, un manager
-  // multi-équipes voyait le compteur de sa première équipe quelle que soit
-  // celle choisie.
-  const { withTeam } = useActiveTeam();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const menuAreaRef = useRef<HTMLDivElement>(null);
   const mobileAreaRef = useRef<HTMLDivElement>(null);
   const drawerRef = useFocusTrap<HTMLDivElement>();
-
-  const [notifTotal, setNotifTotal] = useState<number | null>(null);
-  const visible = useDocumentVisible();
-
-  const poll = useCallback(async () => {
-    try {
-      const json = await adminFetchJson<PlayerNotificationsPayload>(
-        withTeam('/api/player/notifications'),
-        { skipAuthRedirect: true }
-      );
-      if (typeof json?.total === 'number') {
-        setNotifTotal(json.total);
-      }
-    } catch {
-      // silent — pas d'incidence sur l'UX si ça plante
-    }
-  }, [adminFetchJson, withTeam]);
-
-  // Onglet caché = pas de poll. Au retour, l'effet se relance et rafraîchit
-  // IMMÉDIATEMENT le compteur, au lieu d'attendre le prochain cycle de 90 s.
-  useEffect(() => {
-    if (!visible) return undefined;
-    poll();
-    const interval = setInterval(poll, 90_000);
-    return () => {
-      clearInterval(interval);
-    };
-  }, [poll, visible]);
 
   useEffect(() => {
     if (!openMenu) return;
@@ -175,13 +100,6 @@ export default function PlayerTopBar({
   // Préfixe et non égalité : « Mes matchs » reste actif sur le fil d'un match
   // (`/player/match/[id]`). Cf. headerBars.ts.
   const isActive = (ref: string) => isPlayerLinkActive(router.pathname, ref);
-
-  const hasNotifs = typeof notifTotal === 'number' && notifTotal > 0;
-  const notifBadgeLabel = notifTotal && notifTotal > 99 ? '99+' : notifTotal;
-  const bellAriaLabel =
-    hasNotifs && typeof notifTotal === 'number'
-      ? format(t.bellPending, { count: notifTotal })
-      : t.bellEmpty;
 
   return (
     <div
@@ -294,18 +212,7 @@ export default function PlayerTopBar({
         <LanguageToggle />
 
         {/* Notification bell — always visible (desktop + mobile) */}
-        <Link
-          href="/player/notifications"
-          aria-label={bellAriaLabel}
-          className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-neutral-300 transition-all hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
-        >
-          <BellIcon />
-          {hasNotifs && (
-            <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-1 text-[10px] font-bold leading-none text-white shadow-[0_0_0_2px_rgba(178,75,224,0.25)]">
-              {notifBadgeLabel}
-            </span>
-          )}
-        </Link>
+        <PlayerTopBarBell />
 
         {/* Desktop logout */}
         <button
@@ -419,75 +326,5 @@ export default function PlayerTopBar({
         </div>
       </div>
     </div>
-  );
-}
-
-function DropdownButton({
-  label,
-  open,
-  onToggle,
-}: {
-  label: string;
-  open: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
-        open
-          ? 'bg-white/[0.08] text-white'
-          : 'text-neutral-300 hover:bg-white/[0.06] hover:text-white'
-      }`}
-      aria-expanded={open}
-      aria-haspopup="true"
-    >
-      {label}
-      <ChevronDown open={open} />
-    </button>
-  );
-}
-
-function DropdownPanel({
-  open,
-  children,
-}: {
-  open: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className={`absolute left-0 top-[calc(100%+8px)] z-[130] min-w-[220px] overflow-hidden rounded-xl border border-white/10 bg-neutral-900/95 shadow-2xl backdrop-blur-xl transition-all duration-200 ease-out ${
-        open
-          ? 'pointer-events-auto translate-y-0 opacity-100'
-          : 'pointer-events-none -translate-y-1 opacity-0'
-      }`}
-      role="menu"
-      aria-hidden={!open}
-    >
-      {children}
-    </div>
-  );
-}
-
-function PanelLink({
-  href,
-  onNavigate,
-  children,
-}: {
-  href: string;
-  onNavigate: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      role="menuitem"
-      className="block px-4 py-2.5 text-[13px] text-neutral-300 transition-colors hover:bg-white/[0.06] hover:text-white"
-      onClick={onNavigate}
-    >
-      {children}
-    </Link>
   );
 }

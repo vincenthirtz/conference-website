@@ -13,6 +13,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
 import nsCasterApplication from '@/lib/i18n/locales/fr/casterApplication';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 const MOTIVATION_MAX = 1000;
 
@@ -26,7 +27,7 @@ type CasterApplication = {
   processed_at?: string | null;
 };
 
-export default function CasterApplicationPage() {
+function CasterApplicationPage() {
   const { user, token, loading: authLoading, ready } = usePlayerSession();
   const { addToast } = useToast();
   const t = useT(nsCasterApplication);
@@ -345,3 +346,7 @@ const casterApplicationSeo: SeoProps = {
 };
 
 CasterApplicationPage.seo = casterApplicationSeo;
+
+// Coquille joueuse (lot P8) : navigation basse / rail. La page garde sa
+// propre redirection de session (pas encore migrée) : `redirectTo` absent.
+export default withPlayerShell(CasterApplicationPage);

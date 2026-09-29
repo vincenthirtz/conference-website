@@ -19,6 +19,14 @@ export default {
   bellPending: 'Notifications ({count} pending)',
   bellEmpty: 'Notifications (none pending)',
   adminLink: 'Admin',
+  shell: {
+    navAria: 'Player space navigation',
+    home: 'Home',
+    team: 'Team',
+    matches: 'Matches',
+    tcg: 'TCG',
+    activeTeam: 'Active team: {name}',
+  },
   linkLabels: {
     dashboard: 'Dashboard',
     matches: 'My matches',

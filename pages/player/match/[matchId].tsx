@@ -13,6 +13,7 @@ import PlayerMatchScreen from '@/components/player/screens/PlayerMatchScreen';
 import { PlayerAreaProvider } from '@/components/player/PlayerAreaContext';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 function PlayerMatchPage() {
   const router = useRouter();
@@ -44,4 +45,6 @@ const playerMatchSeo: SeoProps = {
 
 PlayerMatchPage.seo = playerMatchSeo;
 
-export default PlayerMatchPage;
+// Coquille joueuse (lot P8) : navigation basse / rail. La page garde sa
+// propre redirection de session (pas encore migrée) : `redirectTo` absent.
+export default withPlayerShell(PlayerMatchPage);

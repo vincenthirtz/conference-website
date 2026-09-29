@@ -18,6 +18,14 @@ export default ns('playerTopBar', {
   bellPending: 'Notifications ({count} en attente)',
   bellEmpty: 'Notifications (aucune en attente)',
   adminLink: 'Administration',
+  shell: {
+    navAria: 'Navigation de l’espace joueuse',
+    home: 'Accueil',
+    team: 'Équipe',
+    matches: 'Matchs',
+    tcg: 'TCG',
+    activeTeam: 'Équipe active : {name}',
+  },
   linkLabels: {
     dashboard: 'Tableau de bord',
     matches: 'Mes matchs',

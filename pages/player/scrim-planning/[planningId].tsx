@@ -21,6 +21,7 @@ import type { ScrimPlanning, ScrimPlanningParty } from '@/types/admin';
 import { logger } from '../../../utils/logger';
 import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';
 import { loginHrefFor } from '@/utils/player/sessionExpiry';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 type DetailResponse = {
   planning: ScrimPlanning;
@@ -36,7 +37,7 @@ type LoadState =
   | { kind: 'notfound' }
   | { kind: 'error' };
 
-export default function ScrimPlanningDetailPage() {
+function ScrimPlanningDetailPage() {
   const router = useRouter();
   // Retour à CETTE page après connexion (`?next=`), requête comprise — sans
   // quoi un lien partagé (`?tab=scrim&team=…`, un mail, une notification)
@@ -209,3 +210,7 @@ const scrimPlanningSeo: SeoProps = {
 };
 
 ScrimPlanningDetailPage.seo = scrimPlanningSeo;
+
+// Coquille joueuse (lot P8) : navigation basse / rail. La page garde sa
+// propre redirection de session (pas encore migrée) : `redirectTo` absent.
+export default withPlayerShell(ScrimPlanningDetailPage);

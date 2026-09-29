@@ -8,6 +8,8 @@ import PlayerManageTeamScreen from '@/components/player/screens/PlayerManageTeam
 import { PlayerAreaProvider } from '@/components/player/PlayerAreaContext';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { withPlayerQuery } from '@/features/player/_shared/query';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
+import { loginHrefFor } from '@/utils/player/sessionExpiry';
 
 function ManageTeamPage() {
   return (
@@ -32,4 +34,8 @@ const manageTeamSeo: SeoProps = {
 ManageTeamPage.seo = manageTeamSeo;
 
 // Cache joueuse (lot P5) : `seo` est recopié sur l'enveloppe.
-export default withPlayerQuery(ManageTeamPage);
+// Coquille joueuse (lot P8) : session + redirection (même adresse que
+// l'écran), navigation basse / rail.
+export default withPlayerQuery(
+  withPlayerShell(ManageTeamPage, { redirectTo: loginHrefFor })
+);

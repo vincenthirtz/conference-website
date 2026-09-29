@@ -20,6 +20,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { logger } from '../../utils/logger';
 import nsJoinTeam from '@/lib/i18n/locales/fr/joinTeam';
 import { loginHrefFor } from '@/utils/player/sessionExpiry';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 type Team = {
   id: string;
@@ -31,7 +32,7 @@ type Team = {
   is_joinable?: boolean;
 };
 
-export default function JoinTeamPage() {
+function JoinTeamPage() {
   const t = useT(nsJoinTeam);
   const router = useRouter();
   // Retour à CETTE page après connexion (`?next=`), requête comprise — sans
@@ -535,3 +536,7 @@ const joinTeamSeo: SeoProps = {
 };
 
 JoinTeamPage.seo = joinTeamSeo;
+
+// Coquille joueuse (lot P8) : navigation basse / rail. La page garde sa
+// propre redirection de session (pas encore migrée) : `redirectTo` absent.
+export default withPlayerShell(JoinTeamPage);

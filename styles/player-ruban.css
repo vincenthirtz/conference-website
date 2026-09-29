@@ -416,3 +416,30 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── Coquille : place de la navigation (lot P8) ───────────────────────────
+ * PlayerShell monte `PlayerNav` (`data-player-nav`) pour une joueuse
+ * connectée : barre BASSE sous `lg`, rail LATÉRAL (88 px) au-dessus. Le
+ * contenu et le pied de page ne passent jamais dessous ; la barre d'action
+ * des archétypes (ActionDock) se colle juste au-dessus de la barre basse. */
+@media (max-width: 1023.98px) {
+  :root:has([data-surface="player"] [data-player-nav]) {
+    --player-nav-offset: calc(3.5rem + 0.75rem + env(safe-area-inset-bottom));
+  }
+  :root:has([data-surface="player"] [data-player-nav]) body {
+    padding-bottom: var(--player-nav-offset, 4.25rem);
+  }
+  /* Le bouton « haut de page » remonte au-dessus de la barre basse. */
+  :root:has([data-surface="player"] [data-player-nav]) .back-to-top-button {
+    bottom: calc(var(--player-nav-offset, 4.25rem) + 0.75rem);
+  }
+}
+@media (min-width: 1024px) {
+  :root:has([data-surface="player"] [data-player-nav]) body {
+    padding-left: 88px;
+  }
+  /* Les réseaux flottants occupent la même marge gauche que le rail. */
+  :root:has([data-surface="player"] [data-player-nav]) [data-floating-socials] {
+    display: none;
+  }
+}

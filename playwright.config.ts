@@ -26,6 +26,17 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+    // Espace joueuse en MOBILE (lot P8, docs/PLAN-industrialisation-joueur.md) :
+    // les parcours joueuse / capitaine / équipe / check-in / scrim / TCG
+    // rejoués sur un téléphone (412 px, tactile). Pixel 7 = Chromium, déjà
+    // installé pour le projet desktop. Base LOCALE uniquement, comme le reste
+    // de la suite (skipIfNoServiceRole + supabaseTestClient) — jamais la prod.
+    {
+      name: 'mobile',
+      testMatch:
+        /e2e[\\/](player-|captain-|team-|checkin-|scrim-|tcg)[^\\/]*\.spec\.ts$/,
+      use: { ...devices['Pixel 7'] },
+    },
   ],
   webServer: {
     command: 'npm run dev -- --hostname 0.0.0.0 --port ' + PORT,

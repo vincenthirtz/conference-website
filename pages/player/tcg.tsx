@@ -52,6 +52,7 @@ import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 import nsTcgTrade from '@/lib/i18n/locales/fr/tcgTrade';
 import nsMatchPrediction from '@/lib/i18n/locales/fr/matchPrediction';
 import { reloadAfterMutation } from '@/utils/tcg/reloadAfterMutation';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 /*
  * PANNEAUX CHARGÉS À LA DEMANDE (`next/dynamic`), comme les onglets du
@@ -1791,5 +1792,4 @@ const playerTcgSeo: SeoProps = {
 };
 
 PlayerTcg.seo = playerTcgSeo;
-
-export default PlayerTcg;
+export default withPlayerShell(PlayerTcg);

@@ -27,6 +27,7 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { logger } from '../../utils/logger';
 import nsPlayerMessages from '@/lib/i18n/locales/fr/playerMessages';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 type Conversation = {
   conversationId: string;
@@ -69,7 +70,7 @@ type Team = {
   member_count?: number;
 };
 
-export default function MessagesPage() {
+function MessagesPage() {
   const router = useRouter();
   const t = useT(nsPlayerMessages);
   const locale = useLocale();
@@ -884,10 +885,7 @@ function formatTime(iso: string, locale: string): string {
 }
 
 const playerMessagesSeo: SeoProps = {
-  title: {
-    fr: 'Messagerie',
-    en: 'Messages',
-  },
+  title: { fr: 'Messagerie', en: 'Messages' },
   description: {
     fr: "Échange avec les autres capitaines de l'OW Women's Cup.",
     en: "Chat with the other OW Women's Cup captains.",
@@ -896,3 +894,4 @@ const playerMessagesSeo: SeoProps = {
 };
 
 MessagesPage.seo = playerMessagesSeo;
+export default withPlayerShell(MessagesPage);

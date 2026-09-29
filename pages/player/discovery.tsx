@@ -30,6 +30,7 @@ import DirectoryPlayerCard, {
 
 import { logger } from '../../utils/logger';
 import nsPlayerDiscovery from '@/lib/i18n/locales/fr/playerDiscovery';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 const PAGE_SIZE = 24;
 
@@ -449,4 +450,6 @@ const playerDiscoverySeo: SeoProps = {
 
 PlayerDiscovery.seo = playerDiscoverySeo;
 
-export default PlayerDiscovery;
+// Coquille joueuse (lot P8) : navigation basse / rail. La page garde sa
+// propre redirection de session (pas encore migrée) : `redirectTo` absent.
+export default withPlayerShell(PlayerDiscovery);

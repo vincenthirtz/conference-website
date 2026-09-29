@@ -19,6 +19,7 @@ import { useT } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import PredictionsPanel from '@/components/predictions/PredictionsPanel';
 import nsMatchPrediction from '@/lib/i18n/locales/fr/matchPrediction';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 function PlayerPredictions(): JSX.Element {
   const t = useT(nsMatchPrediction);
@@ -75,4 +76,8 @@ const predictionsSeo: SeoProps = {
 
 PlayerPredictions.seo = predictionsSeo;
 
-export default PlayerPredictions;
+// Coquille joueuse (lot P8) : session + redirection (même adresse que
+// l'écran), navigation basse / rail.
+export default withPlayerShell(PlayerPredictions, {
+  redirectTo: '/login?next=/player/pronostics',
+});

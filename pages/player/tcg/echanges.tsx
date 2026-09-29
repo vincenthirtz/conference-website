@@ -43,6 +43,7 @@ import { reloadAfterMutation } from '@/utils/tcg/reloadAfterMutation';
 // Les libellés de rareté vivent déjà là : les recopier donnerait deux jeux de
 // mots libres de diverger.
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 type Limits = {
   maxCardsPerSide: number;
@@ -1252,5 +1253,4 @@ const playerTcgTradesSeo: SeoProps = {
 };
 
 PlayerTcgTrades.seo = playerTcgTradesSeo;
-
-export default PlayerTcgTrades;
+export default withPlayerShell(PlayerTcgTrades);

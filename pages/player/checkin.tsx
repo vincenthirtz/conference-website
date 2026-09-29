@@ -30,6 +30,7 @@ import nsCheckin from '@/lib/i18n/locales/fr/checkin';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 import ActiveTeamSwitcher from '@/components/player/ActiveTeamSwitcher';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 type T = typeof nsCheckin.fr;
 
@@ -612,4 +613,6 @@ const playerCheckinSeo: SeoProps = {
 
 PlayerCheckin.seo = playerCheckinSeo;
 
-export default PlayerCheckin;
+// Coquille joueuse (lot P8) : navigation basse / rail. La page garde sa
+// propre redirection de session (pas encore migrée) : `redirectTo` absent.
+export default withPlayerShell(PlayerCheckin);

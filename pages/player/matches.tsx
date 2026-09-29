@@ -8,6 +8,7 @@
 import PlayerMatchesScreen from '@/components/player/screens/PlayerMatchesScreen';
 import { PlayerAreaProvider } from '@/components/player/PlayerAreaContext';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 function PlayerMatches() {
   return (
@@ -31,4 +32,8 @@ const playerMatchesSeo: SeoProps = {
 
 PlayerMatches.seo = playerMatchesSeo;
 
-export default PlayerMatches;
+// Coquille joueuse (lot P8) : session + redirection (même adresse que
+// l'écran), navigation basse / rail.
+export default withPlayerShell(PlayerMatches, {
+  redirectTo: '/login?next=/player/matches',
+});

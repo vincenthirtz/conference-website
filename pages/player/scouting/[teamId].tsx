@@ -30,6 +30,7 @@ import nsScouting from '@/lib/i18n/locales/fr/scouting';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 import { loginHrefFor } from '@/utils/player/sessionExpiry';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 /** Lundi 1er janvier 2024 — base neutre pour nommer les jours. */
 const REFERENCE_MONDAY = Date.UTC(2024, 0, 1);
@@ -414,4 +415,6 @@ const scoutingSeo: SeoProps = {
 
 ScoutingPage.seo = scoutingSeo;
 
-export default ScoutingPage;
+// Coquille joueuse (lot P8) : navigation basse / rail. La page garde sa
+// propre redirection de session (pas encore migrée) : `redirectTo` absent.
+export default withPlayerShell(ScoutingPage);

@@ -10,6 +10,7 @@
 import PlayerMyTeamsScreen from '@/components/player/screens/PlayerMyTeamsScreen';
 import { PlayerAreaProvider } from '@/components/player/PlayerAreaContext';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 function PlayerMyTeams() {
   return (
@@ -30,4 +31,6 @@ const seo: SeoProps = {
 
 PlayerMyTeams.seo = seo;
 
-export default PlayerMyTeams;
+// Coquille joueuse (lot P8) : session + redirection (même adresse que
+// l'écran), navigation basse / rail.
+export default withPlayerShell(PlayerMyTeams, { redirectTo: '/login' });

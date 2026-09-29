@@ -58,7 +58,10 @@ const SOCIALS: SocialLink[] = [
 function FloatingSocials(): JSX.Element {
   const t = useT(nsFloatingSocials);
   return (
-    <div className="fixed left-5 top-1/2 -translate-y-1/2 z-40 hidden lg:block print:hidden">
+    <div
+      data-floating-socials=""
+      className="fixed left-5 top-1/2 -translate-y-1/2 z-40 hidden lg:block print:hidden"
+    >
       <div className="relative">
         {/* Gradient glow */}
         <div

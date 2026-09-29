@@ -37,6 +37,7 @@ import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
 import nsSpecialty from '@/lib/i18n/locales/fr/specialty';
 import { TWITCH_HANDLE_MAX } from '@/utils/social/profileHandles';
 import type { PlayerTwitchOrigin } from '@/utils/rating/readPlayerProfile';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 /** Réponse de `GET /api/player/update-profile`. */
 type TwitchSourceResponse = {
@@ -1070,5 +1071,4 @@ const playerProfileSeo: SeoProps = {
 };
 
 PlayerProfile.seo = playerProfileSeo;
-
-export default PlayerProfile;
+export default withPlayerShell(PlayerProfile);

@@ -42,6 +42,7 @@ import {
   TRADE_TTL_HOURS,
 } from '@/utils/tcg/tradeLimits';
 import nsGuidePlayerTcg from '@/lib/i18n/locales/fr/guidePlayerTcg';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 /** Le barème, tel que le rend `GET /api/player/tcg/packs`. */
 type Bareme = {
@@ -391,4 +392,6 @@ const guideSeo: SeoProps = {
 
 TcgGuide.seo = guideSeo;
 
-export default TcgGuide;
+// Coquille joueuse (lot P8) : navigation basse / rail. La page garde sa
+// propre redirection de session (pas encore migrée) : `redirectTo` absent.
+export default withPlayerShell(TcgGuide);

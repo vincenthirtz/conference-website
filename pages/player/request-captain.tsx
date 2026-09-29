@@ -16,6 +16,7 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
 import nsRequestCaptain from '@/lib/i18n/locales/fr/requestCaptain';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 type Team = {
   id: string;
@@ -40,7 +41,7 @@ function nextMemberId(): string {
   return `member-${memberIdSeq}`;
 }
 
-export default function RequestCaptainPage() {
+function RequestCaptainPage() {
   const router = useRouter();
   const { user, token, loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
@@ -457,3 +458,7 @@ const requestCaptainSeo: SeoProps = {
 };
 
 RequestCaptainPage.seo = requestCaptainSeo;
+
+// Coquille joueuse (lot P8) : navigation basse / rail. La page garde sa
+// propre redirection de session (pas encore migrée) : `redirectTo` absent.
+export default withPlayerShell(RequestCaptainPage);

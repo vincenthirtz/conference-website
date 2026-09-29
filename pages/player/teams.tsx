@@ -45,6 +45,7 @@ import {
   sortRecruitingFirst,
 } from '@/utils/teams/directoryRecruitment';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
+import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 
 type DirectoryResponse = {
   teams: DirectoryTeam[];
@@ -713,4 +714,6 @@ const playerTeamsSeo: SeoProps = {
 
 PlayerTeamsPage.seo = playerTeamsSeo;
 
-export default PlayerTeamsPage;
+// Coquille joueuse (lot P8) : navigation basse / rail. La page garde sa
+// propre redirection de session (pas encore migrée) : `redirectTo` absent.
+export default withPlayerShell(PlayerTeamsPage);

@@ -484,7 +484,11 @@ repositories à colonnes explicites typées `database.generated.ts`.
       *Socle posé : catalogue `PLAYER_ERROR_CODES` + `PlayerError` (`utils/player/errors.ts`),
       namespace `playerErrors` FR/EN, résolveur pur `features/player/_shared/errorMessage.ts`
       (code du catalogue → message traduit, sinon texte serveur). Branchement dans `playerHttp`
-      = P5.*
+      = P5.* *P6 : branché côté client — `playerErrorText(err, messages, fallback)` (erreur levée
+      par `playerRequest` → message traduit + réf.) et `usePlayerErrorText()` ; branché dans les
+      formulaires `useSchemaForm` (pilote `HeroPreferencesCard`). Reste : les écrans qui
+      affichent encore `err.message` (bascules de `PlayerManageTeamScreen`, gelé en taille) —
+      au fil des lots P9-P15.*
 - [x] Drift OpenAPI vert (`npx vitest run tests/unit/openapi`), corps via `x-zod`.
       *28 corps de requête passés en `x-zod` (`lib/apiContracts/player/bodies.ts`) ; les
       schémas « forme seule » (`update-member`, `tcg-image`, `tcg/photo`, `tcg/fanart`, achat
@@ -545,9 +549,30 @@ harnais `*.test.tsx` joueuse (happy-dom, `afterEach(cleanup)`, `PlayerAreaProvid
 sujet/inspection/act-as) ; pilote `HeroPreferencesCard`.
 
 **Critères d'acceptation**
-- [ ] `useAdminForm.test.tsx` vert inchangé.
-- [ ] Harnais : un test prouve qu'en inspection aucune action n'est rendue sans act-as.
-- [ ] Pilote : 0 `useState` de champ.
+- [x] `useAdminForm.test.tsx` vert inchangé.
+      *`useAdminForm` = adaptateur de `hooks/forms/useSchemaForm.ts` (erreurs par champ et
+      message seulement pour une `AdminHttpError`, pas de garde implicite) ; test non modifié,
+      vert. `useUnsavedChangesGuard` déménage dans `hooks/forms/` (singleton `Router`, utilisable
+      hors app montée), l'ancien chemin ré-exporte.*
+- [x] Harnais : un test prouve qu'en inspection aucune action n'est rendue sans act-as.
+      *`renderPlayer(ui, { subjectId, actAs })` (`tests/unit/__helpers__/playerHarness.tsx`) ;
+      `tests/unit/heroPreferencesCard.test.tsx` : inspection → aucun bouton, aucun menu, aucune
+      lecture. NB : la carte pilote ne rend rien en act-as non plus — sa route est « soi
+      seulement » (`withAuthRoute`, sans `?as=`) et montrerait les héros DU STAFF ; la
+      démonstration « act-as rend les actions » attend un écran à route `follow` (P9).*
+- [x] Pilote : 0 `useState` de champ.
+      *`HeroPreferencesCard` : les deux listes sont les valeurs du formulaire (restent 4
+      `useState` de chargement : chargé, en cours, erreur de lecture, nombre d'emplacements).
+      Schéma `HeroPreferencesForm` = champs `.pipe(HeroPreferencesBody)`, corps extrait de la
+      route vers `features/player/profile/schemas.ts`. `playerRequest` remplace `useAdminFetch`.
+      Erreur serveur sous la liste en faute (`FormFieldset`, focus), erreur non rattachée
+      affichée dans le formulaire (`role="alert"`, au lieu d'un toast) et traduite par son `code`
+      (`usePlayerErrorText`, qui ferme le critère P4 « le client affiche le message traduit » côté
+      formulaires). Champs `FormField` / `FormFieldset` / `FormError` dans le kit
+      `features/ruban/FormField.tsx` (garde « iso » étendue aux briques de formulaire ; le
+      `FormField` local de `CampaignsPanel` est gelé). Tests : `useSchemaForm.test.tsx` (5),
+      `heroPreferencesCard.test.tsx` (7). Baseline `player:metrics` à baisser (useState 563 → 560,
+      useAdminFetch 57 → 56, rawApiUrl 203 → 202).*
 
 ### P7 · Kit « Le Ruban » unique + surface joueuse — 🟧 / L
 
@@ -588,10 +613,28 @@ navigation basse PWA, cloche) ; archétypes Fil / Fiche / Liste / Parcours / Col
 `scrim-*`, `tcg*`.
 
 **Critères d'acceptation**
-- [ ] Cibles ≥ 44 px, focus visible, `aria-live` vérifiés par spec sur chaque archétype.
+- [x] Cibles ≥ 44 px, focus visible, `aria-live` vérifiés par spec sur chaque archétype.
+      *(`tests/unit/playerArchetypes.test.tsx` : cibles, `aria-live`, focus déplacé / piégé / rendu
+      sur les 5 archétypes ; le focus visible est porté par la surface
+      (`[data-surface="player"] :focus-visible`) et mesuré sur la nav par `player-nav.spec.ts`.)*
 - [ ] Les 27 specs du périmètre passent en projet `mobile` **et** desktop, base locale
-      (`skipIfNoServiceRole` + `supabaseTestClient`).
-- [ ] `player-nav.spec.ts` couvre la navigation basse.
+      (`skipIfNoServiceRole` + `supabaseTestClient`). *(Projet `mobile` (Pixel 7) posé :
+      `--list --project=mobile` → 23 fichiers / 206 tests (`player-*` 10, `captain-*` 2, `team-*` 5,
+      `checkin-*` 1, `scrim-*` 4, `tcg*` 2). **À exécuter en base locale** ; les tests propres à la
+      barre desktop de `player-nav` sont sautés en mobile (`isMobile`).)*
+- [x] `player-nav.spec.ts` couvre la navigation basse. *(Barre basse : 4 entrées ≥ 44 px, `href`,
+      `aria-current`, focus visible ; rail desktop ; absente du site public. Écrite, **à exécuter en
+      base locale**.)*
+
+**Livré (2026-09-29).** `features/player/_shared/shell/` : `PlayerShell` + `withPlayerShell`
+(session, redirection à l'adresse de l'écran ou `null` = redirection gardée par la page, jamais en
+inspection), `PlayerNav` (barre basse < `lg`, rail 88 px ≥ `lg`, équipe active), `playerNavItems`.
+Branchée sur les 21 pages `/player/*` (hors profil public `[userId]`) ; redirection portée par la
+coquille pour `index`, `manage-team`, `matches`, `notifications`, `my-teams`, `pronostics`.
+`PlayerTopBar` scindée (493 → 330 lignes : `PlayerTopBarBell`, `PlayerTopBarMenus`) ; la cloche
+reste unique, dans la barre du haut. Archétypes `features/player/_shared/ui/` (`FilView`,
+`FicheView`/`FicheFold`, `ListeView`/`ListeRow`, `ParcoursView`, `CollectionView`, `ActionDock`) ;
+aperçu `/dev/player-kit`. Place de la nav : `styles/player-ruban.css` (`data-player-nav`).
 
 ---
 
