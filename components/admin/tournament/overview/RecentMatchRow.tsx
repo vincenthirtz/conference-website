@@ -2,8 +2,16 @@ import { memo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { format } from '@/lib/i18n/useAdminT';
-import { matchStatusColor, matchStatusLabel } from './labels';
+import type { MatchStatus } from '@/types/admin';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
+import { matchStatusLabel } from './labels';
 import type { Dict, RecentMatch } from './types';
+
+const STATUS_TONE: Partial<Record<MatchStatus, ChipTone>> = {
+  ongoing: 'live',
+  finished: 'ok',
+  cancelled: 'err',
+};
 
 type RecentMatchRowProps = {
   match: RecentMatch;
@@ -18,18 +26,14 @@ function RecentMatchRow({ match, tx }: RecentMatchRowProps) {
   return (
     <Link
       href={`/admin/matches/${match.id}`}
-      className="block bg-neutral-900/50 hover:bg-neutral-900 rounded-xl p-3 transition-colors group"
+      className="group block rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-3 transition-colors hover:border-[var(--or,#b467d1)]"
     >
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span
-          className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${matchStatusColor(
-            match.status
-          )}`}
-        >
+        <Chip tone={STATUS_TONE[match.status] ?? 'neutral'}>
           {matchStatusLabel(tx, match.status)}
-        </span>
+        </Chip>
         {match.round_number && (
-          <span className="text-[10px] text-neutral-500">
+          <span className="text-[10px] text-[var(--t4,#807984)]">
             {format(tx.roundLabel, {
               round: match.round_number,
             })}
@@ -45,18 +49,18 @@ function RecentMatchRow({ match, tx }: RecentMatchRowProps) {
               alt=""
               width={24}
               height={24}
-              className="w-6 h-6 rounded object-cover"
+              className="h-6 w-6 rounded-[3px] object-cover"
             />
           ) : (
-            <div className="w-6 h-6 rounded bg-neutral-700 flex items-center justify-center text-[10px] font-semibold">
+            <div className="flex h-6 w-6 items-center justify-center rounded-[3px] bg-[var(--s3,#2f2732)] text-[10px] font-semibold">
               {(match.team1?.name || 'TBD').slice(0, 2).toUpperCase()}
             </div>
           )}
           <span
             className={`text-xs font-medium truncate ${
               match.winner_team_id === match.team1?.id
-                ? 'text-emerald-400'
-                : 'text-neutral-300'
+                ? 'text-[var(--lf,#7fca65)]'
+                : 'text-[var(--t2,#c7bfca)]'
             }`}
           >
             {match.team1?.name || 'TBD'}
@@ -64,7 +68,10 @@ function RecentMatchRow({ match, tx }: RecentMatchRowProps) {
         </div>
 
         {/* Score */}
-        <div className="text-sm font-bold px-2 py-0.5 bg-neutral-800 rounded">
+        <div
+          className="rounded-[3px] bg-[var(--s1,#100812)] px-2 py-0.5 font-mono text-sm font-bold"
+          data-numeric
+        >
           {typeof match.team1_score === 'number' ||
           typeof match.team2_score === 'number'
             ? `${match.team1_score ?? 0} - ${match.team2_score ?? 0}`
@@ -76,8 +83,8 @@ function RecentMatchRow({ match, tx }: RecentMatchRowProps) {
           <span
             className={`text-xs font-medium truncate ${
               match.winner_team_id === match.team2?.id
-                ? 'text-emerald-400'
-                : 'text-neutral-300'
+                ? 'text-[var(--lf,#7fca65)]'
+                : 'text-[var(--t2,#c7bfca)]'
             }`}
           >
             {match.team2?.name || 'TBD'}
@@ -88,10 +95,10 @@ function RecentMatchRow({ match, tx }: RecentMatchRowProps) {
               alt=""
               width={24}
               height={24}
-              className="w-6 h-6 rounded object-cover"
+              className="h-6 w-6 rounded-[3px] object-cover"
             />
           ) : (
-            <div className="w-6 h-6 rounded bg-neutral-700 flex items-center justify-center text-[10px] font-semibold">
+            <div className="flex h-6 w-6 items-center justify-center rounded-[3px] bg-[var(--s3,#2f2732)] text-[10px] font-semibold">
               {(match.team2?.name || 'TBD').slice(0, 2).toUpperCase()}
             </div>
           )}

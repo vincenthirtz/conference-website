@@ -24,11 +24,11 @@ function TeamRow({ tt, registrationFields, onRemove, tx }: TeamRowProps) {
     hasRenderableAnswers(tt.field_values, registrationFields);
 
   return (
-    <div className="bg-neutral-900/50 rounded-lg px-3 py-2 group">
+    <div className="group rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-3 py-2">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {tt.seed && (
-            <span className="text-xs text-neutral-500 font-mono w-6">
+            <span className="w-6 font-mono text-xs text-[var(--t4,#807984)]">
               #{tt.seed}
             </span>
           )}
@@ -38,7 +38,7 @@ function TeamRow({ tt, registrationFields, onRemove, tx }: TeamRowProps) {
               alt=""
               width={24}
               height={24}
-              className="w-6 h-6 rounded object-cover"
+              className="h-6 w-6 rounded-[3px] object-cover"
             />
           )}
           <span className="truncate text-sm font-medium">
@@ -47,7 +47,7 @@ function TeamRow({ tt, registrationFields, onRemove, tx }: TeamRowProps) {
         </div>
         <button
           onClick={() => onRemove(tt.id)}
-          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-900/50 text-red-400 transition-all"
+          className="rounded-[var(--r-ctrl,4px)] border border-transparent p-1 text-[var(--err,#ff6b6b)] opacity-0 transition-all hover:border-[rgba(255,107,107,.45)] hover:bg-[rgba(255,107,107,.08)] group-hover:opacity-100 focus-visible:opacity-100"
           title={tx.removeFromTournament}
         >
           <svg

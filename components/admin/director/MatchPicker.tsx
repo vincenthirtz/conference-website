@@ -33,6 +33,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { logger } from '../../../utils/logger';
 import nsAdminDirectorMatchPicker from '@/lib/i18n/locales/admin-fr/adminDirectorMatchPicker';
+import { rubanInput } from '@/features/admin/diffusion/ui/rubanClasses';
 
 type Dict = typeof nsAdminDirectorMatchPicker.fr;
 
@@ -293,7 +294,7 @@ export default function MatchPicker({
           aria-controls="match-picker-listbox"
           role="combobox"
           data-testid="match-picker-input"
-          className="w-full px-3 py-2.5 pr-9 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white placeholder:text-neutral-500 text-sm focus:outline-none focus:border-purple-500 disabled:opacity-50"
+          className={`${rubanInput} pr-9`}
         />
         {value && !disabled && (
           <button
@@ -301,7 +302,7 @@ export default function MatchPicker({
             onClick={handleClear}
             aria-label={t.clearAria}
             data-testid="match-picker-clear"
-            className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-neutral-400 hover:text-red-300 text-base leading-none"
+            className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[var(--t3,#a39ba6)] hover:text-[var(--err,#ff6b6b)] text-base leading-none"
           >
             ×
           </button>
@@ -313,7 +314,7 @@ export default function MatchPicker({
           id="match-picker-listbox"
           role="listbox"
           data-testid="match-picker-listbox"
-          className="absolute left-0 right-0 top-full mt-1 z-50 max-h-60 overflow-y-auto rounded-lg bg-neutral-900 border border-neutral-700 shadow-xl"
+          className="absolute left-0 right-0 top-full mt-1 z-50 max-h-60 overflow-y-auto rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] shadow-xl"
         >
           {loading && (
             <div className="px-3 py-2 text-xs text-neutral-400">
@@ -321,7 +322,9 @@ export default function MatchPicker({
             </div>
           )}
           {!loading && fetchError && (
-            <div className="px-3 py-2 text-xs text-red-300">{fetchError}</div>
+            <div className="px-3 py-2 text-xs text-[var(--err,#ff6b6b)]">
+              {fetchError}
+            </div>
           )}
           {!loading && !fetchError && results.length === 0 && (
             <div
@@ -341,7 +344,7 @@ export default function MatchPicker({
                 aria-selected={value === m.id}
                 onClick={() => handleSelect(m)}
                 data-testid={`match-picker-option-${m.id}`}
-                className="block w-full text-left px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800 border-b border-neutral-800 last:border-b-0"
+                className="block w-full text-left px-3 py-2 text-xs text-[var(--t2,#c7bfca)] hover:bg-[var(--s3,#2f2732)] hover:text-[var(--t1,#f4edf7)] border-b border-[var(--line,rgba(194,196,201,.12))] last:border-b-0"
               >
                 <div className="font-medium">
                   {m.teamAName ?? '?'} vs {m.teamBName ?? '?'}

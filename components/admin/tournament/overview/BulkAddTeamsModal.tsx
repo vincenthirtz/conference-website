@@ -3,6 +3,8 @@ import Image from 'next/image';
 import Modal from '@/components/admin/Modal';
 import { format } from '@/lib/i18n/useAdminT';
 import type { Dict, Team } from './types';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { FAINT, INPUT, MUTED } from '@/features/admin/stages/ui/rubanClasses';
 
 type BulkProgress = { done: number; total: number };
 
@@ -82,17 +84,14 @@ function BulkAddTeamsModal({
       disableEscapeClose={adding}
       footer={
         <>
-          <button
-            onClick={handleClose}
-            disabled={adding}
-            className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
-          >
+          <AdminButton size="sm" onClick={handleClose} disabled={adding}>
             {tx.cancel}
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
+            variant="primary"
+            size="sm"
             onClick={handleSubmit}
             disabled={selected.size === 0 || adding}
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {adding
               ? format(tx.bulkAddingProgress, {
@@ -102,7 +101,7 @@ function BulkAddTeamsModal({
               : format(tx.bulkAddButton, {
                   count: selected.size > 0 ? `(${selected.size})` : '',
                 })}
-          </button>
+          </AdminButton>
         </>
       }
     >
@@ -113,40 +112,35 @@ function BulkAddTeamsModal({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={tx.searchTeamPlaceholder}
-          className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3 text-sm"
+          className={`mb-3 ${INPUT}`}
         />
 
         {/* Select all / deselect all */}
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-neutral-400">
+          <span className={`text-xs ${MUTED}`}>
             {format(tx.selectedTeamsCount, {
               count: selected.size,
             })}
           </span>
           <div className="flex gap-2">
-            <button
-              type="button"
+            <AdminButton
+              size="xs"
               onClick={() => setSelected(new Set(filtered.map((t) => t.id)))}
-              className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
             >
               {tx.selectAll}
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelected(new Set())}
-              className="text-xs text-neutral-400 hover:text-neutral-300 transition-colors"
-            >
+            </AdminButton>
+            <AdminButton size="xs" onClick={() => setSelected(new Set())}>
               {tx.deselectAll}
-            </button>
+            </AdminButton>
           </div>
         </div>
 
         {/* Team checkbox list */}
-        <div className="max-h-64 overflow-y-auto space-y-1 mb-4 border border-neutral-700 rounded-lg p-2">
+        <div className="mb-4 max-h-64 space-y-1 overflow-y-auto rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-2">
           {filtered.map((team) => (
             <label
               key={team.id}
-              className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-neutral-700/50 cursor-pointer transition-colors"
+              className="flex cursor-pointer items-center gap-3 rounded-[var(--r-ctrl,4px)] px-2 py-1.5 transition-colors hover:bg-[var(--s3,#2f2732)]"
             >
               <input
                 type="checkbox"
@@ -160,7 +154,7 @@ function BulkAddTeamsModal({
                   }
                   setSelected(next);
                 }}
-                className="rounded border-neutral-600 bg-neutral-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+                className="rounded-[3px]"
               />
               {team.logo_url && (
                 <Image
@@ -175,7 +169,7 @@ function BulkAddTeamsModal({
             </label>
           ))}
           {filtered.length === 0 && (
-            <div className="text-neutral-500 text-sm text-center py-4">
+            <div className={`py-4 text-center text-sm ${FAINT}`}>
               {tx.noAvailableTeam}
             </div>
           )}
@@ -184,16 +178,16 @@ function BulkAddTeamsModal({
         {/* Progress indicator */}
         {adding && (
           <div className="mb-4">
-            <div className="flex items-center gap-2 text-xs text-neutral-400 mb-1">
-              <div className="w-3 h-3 border border-neutral-500 border-t-white rounded-full animate-spin" />
+            <div className={`mb-1 flex items-center gap-2 text-xs ${MUTED}`}>
+              <div className="h-3 w-3 animate-spin rounded-full border border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--or,#b467d1)]" />
               {format(tx.bulkAddingInProgress, {
                 done: progress.done,
                 total: progress.total,
               })}
             </div>
-            <div className="w-full bg-neutral-700 rounded-full h-1.5">
+            <div className="h-1.5 w-full rounded-[2px] bg-[var(--s3,#2f2732)]">
               <div
-                className="bg-blue-500 h-1.5 rounded-full transition-all"
+                className="h-1.5 rounded-[2px] bg-[var(--or,#b467d1)] transition-all"
                 style={{
                   width: `${progress.total > 0 ? (progress.done / progress.total) * 100 : 0}%`,
                 }}

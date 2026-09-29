@@ -29,8 +29,9 @@ type ModalProps = {
   /** Extra classes for the panel element. */
   panelClassName?: string;
   /**
-   * Overrides the panel's themeable chrome (default
-   * 'bg-neutral-800 border border-neutral-700 rounded-2xl shadow-2xl').
+   * Overrides the panel's themeable chrome. Default: `DEFAULT_PANEL_CHROME` —
+   * bg-neutral-800 / border-neutral-700 / rounded-2xl / shadow-2xl, read
+   * through the « Le Ruban » tokens (s1, line2, sh3) when they exist (admin).
    */
   panelChromeClassName?: string;
   /** Extra classes for the backdrop/overlay element. */
@@ -50,6 +51,13 @@ type ModalProps = {
    */
   labelledBy?: string;
 };
+
+// Surface « Le Ruban » dans l'admin (s1, filet, ombre haute) ; ailleurs, les
+// jetons n'existent pas et les replis `var(--color-neutral-…)` / `--shadow-2xl`
+// redonnent à l'identique bg-neutral-800 / border-neutral-700 / shadow-2xl.
+// `rounded-2xl` vaut déjà --r-card dans l'admin (pont de styles/admin-ruban.css).
+const DEFAULT_PANEL_CHROME =
+  'bg-[var(--s1,var(--color-neutral-800))] border border-[var(--line2,var(--color-neutral-700))] rounded-2xl shadow-[var(--sh3,var(--shadow-2xl))]';
 
 const SIZE_CLASSES: Record<ModalSize, string> = {
   sm: 'max-w-sm',
@@ -80,7 +88,7 @@ export default function Modal({
   disableEscapeClose = false,
   showCloseButton,
   panelClassName = '',
-  panelChromeClassName = 'bg-neutral-800 border border-neutral-700 rounded-2xl shadow-2xl',
+  panelChromeClassName = DEFAULT_PANEL_CHROME,
   overlayClassName = '',
   backdropClassName = 'bg-black/60 backdrop-blur-sm',
   zIndexClassName = 'z-50',
@@ -159,7 +167,7 @@ export default function Modal({
         </div>
 
         {footer && (
-          <div className="flex justify-end gap-3 p-6 pt-4 border-t border-neutral-700/60">
+          <div className="flex justify-end gap-3 p-6 pt-4 border-t border-neutral-700/60 [:root:has([data-surface=admin])_&]:border-[var(--line)]">
             {footer}
           </div>
         )}

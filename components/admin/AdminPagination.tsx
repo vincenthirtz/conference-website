@@ -12,6 +12,7 @@
 // du bruit.
 
 import { format } from '@/lib/i18n/useAdminT';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type Props = {
   /** Index de la première ligne affichée (0 = première page). */
@@ -41,16 +42,15 @@ export default function AdminPagination({
 
   return (
     <div className="flex items-center justify-center gap-3 mt-4">
-      <button
-        type="button"
+      <AdminButton
+        size="sm"
         onClick={onPrev}
         disabled={offset === 0 || loading}
-        className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
       >
         {labels.prev}
-      </button>
+      </AdminButton>
       {typeof total === 'number' && (
-        <span className="text-xs text-neutral-500">
+        <span className="font-mono text-xs tabular-nums text-[var(--t3,#a39ba6)]">
           {format(labels.info, {
             from: offset + 1,
             to: offset + count,
@@ -58,14 +58,9 @@ export default function AdminPagination({
           })}
         </span>
       )}
-      <button
-        type="button"
-        onClick={onNext}
-        disabled={!hasMore || loading}
-        className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
-      >
+      <AdminButton size="sm" onClick={onNext} disabled={!hasMore || loading}>
         {labels.next}
-      </button>
+      </AdminButton>
     </div>
   );
 }

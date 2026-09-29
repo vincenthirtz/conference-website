@@ -13,6 +13,9 @@
 //
 // Composant browser-only (WebSocket, localStorage) : importé en dynamic
 // ssr:false depuis pages/admin/caster.tsx.
+//
+// Passe « Le Ruban » (lot 10C) : états en Chip — le stream en cours prend le
+// ton `live` (la lueur), l'enregistrement le ton erreur ; mêmes confirmations.
 
 import { useEffect, useState } from 'react';
 
@@ -21,7 +24,18 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { logCasterAction } from '@/utils/caster/auditClient';
 
-import { inputClass, labelClass } from './fieldClasses';
+import {
+  errNoticeClass,
+  inputClass,
+  labelClass,
+  panelClass,
+  panelTitleClass,
+  sectionClass,
+  smallBtnClass,
+  warnNoticeClass,
+} from './fieldClasses';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 import { useObs } from './useObs';
 import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
@@ -35,10 +49,11 @@ function formatElapsed(startedAt: number, now: number): string {
   return `${pad(h)}:${pad(m)}:${pad(s)}`;
 }
 
-const sectionClass =
-  'rounded-xl border border-neutral-800 bg-neutral-950/60 p-3';
-const smallBtnClass =
-  'px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium disabled:opacity-50';
+/** Ton de la puce d'état de la connexion OBS. */
+const PHASE_TONE: Record<string, ChipTone> = {
+  connected: 'ok',
+  connecting: 'warn',
+};
 
 export default function ObsPanel() {
   const t = useAdminT(nsAdminCasterScenes);
@@ -202,39 +217,30 @@ export default function ObsPanel() {
       : phase === 'connecting'
         ? t.obsStatusConnecting
         : t.obsStatusDisconnected;
-  const statusColor =
-    phase === 'connected'
-      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-      : phase === 'connecting'
-        ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
-        : 'bg-neutral-800 border-neutral-700 text-neutral-400';
 
   return (
-    <section
-      className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4"
-      data-testid="caster-obs-panel"
-    >
+    <section className={panelClass} data-testid="caster-obs-panel">
       {dialog}
 
       <div className="flex flex-wrap items-center gap-2 mb-1.5">
-        <h2 className="text-lg font-bold">{t.obsTitle}</h2>
-        <span
-          className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${statusColor}`}
+        <h2 className={panelTitleClass}>{t.obsTitle}</h2>
+        <Chip
+          tone={PHASE_TONE[phase] ?? 'neutral'}
           data-testid="caster-obs-status"
         >
           {statusLabel}
-        </span>
+        </Chip>
       </div>
-      <p className="text-xs text-neutral-500 mb-3">{t.obsIntro}</p>
+      <p className="mt-1 text-xs text-[var(--t3,#a39ba6)] mb-3">{t.obsIntro}</p>
 
       {browserWarning && (
-        <div className="mb-3 rounded-xl bg-amber-900/30 border border-amber-500/40 px-3 py-2 text-xs text-amber-200">
+        <div className={`mb-3 px-3 py-2 text-xs ${warnNoticeClass}`}>
           {t.obsBrowserWarning}
         </div>
       )}
 
       {reconnectFailedAttempts != null && (
-        <div className="mb-3 rounded-xl bg-red-900/40 border border-red-500/50 px-3 py-2 text-xs">
+        <div className={`mb-3 px-3 py-2 text-xs ${errNoticeClass}`}>
           {format(t.obsReconnectFailed, { attempts: reconnectFailedAttempts })}
         </div>
       )}
@@ -284,23 +290,24 @@ export default function ObsPanel() {
             className={inputClass}
           />
         </label>
-        <button
-          type="button"
+        <AdminButton
+          variant={phase === 'disconnected' ? 'secondary' : 'ghost'}
+          size="sm"
           onClick={() => void onConnectClick()}
-          className={`px-4 py-2 rounded-lg text-sm font-semibold border ${
-            phase === 'disconnected'
-              ? 'bg-purple-600/20 border-purple-500/40 hover:bg-purple-600/30'
-              : 'bg-neutral-800 border-neutral-700 hover:bg-neutral-700'
-          }`}
           data-testid="caster-obs-connect"
         >
           {phase === 'disconnected' ? t.obsConnect : t.obsDisconnect}
-        </button>
+        </AdminButton>
       </div>
-      <p className="text-[11px] text-neutral-600 mt-1.5">{t.obsPasswordNote}</p>
+      <p className="text-[11px] text-[var(--t4,#807984)] mt-1.5">
+        {t.obsPasswordNote}
+      </p>
 
       {connectErrorLabel && (
-        <p className="mt-2 text-xs text-red-300" data-testid="caster-obs-error">
+        <p
+          className="mt-2 text-xs text-[var(--err,#ff6b6b)]"
+          data-testid="caster-obs-error"
+        >
           {connectErrorLabel}
         </p>
       )}
@@ -309,7 +316,9 @@ export default function ObsPanel() {
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
           {/* Scènes */}
           <div className={sectionClass}>
-            <h3 className="text-sm font-semibold mb-1">{t.obsScenesTitle}</h3>
+            <h3 className="text-sm font-semibold text-[var(--t1,#f4edf7)] mb-1">
+              {t.obsScenesTitle}
+            </h3>
             <p className="text-[11px] text-neutral-500 mb-2">
               {format(t.obsCurrentScene, { scene: currentScene || '—' })}
             </p>
@@ -332,10 +341,10 @@ export default function ObsPanel() {
                       )
                     }
                     aria-pressed={name === currentScene}
-                    className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition ${
+                    className={`h-[30px] px-2.5 rounded-[var(--r-ctrl,4px)] border font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.02em] transition-colors ${
                       name === currentScene
-                        ? 'bg-purple-600/25 border-purple-500/50 text-white'
-                        : 'bg-neutral-900 border-neutral-700 text-neutral-300 hover:bg-neutral-800'
+                        ? 'border-[var(--or,#b467d1)] bg-[rgba(180,103,209,.22)] text-[var(--or-100,#f6e1ff)]'
+                        : 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] text-[var(--t2,#c7bfca)] hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]'
                     }`}
                   >
                     {name}
@@ -343,7 +352,7 @@ export default function ObsPanel() {
                 ))}
               </div>
             )}
-            <div className="mt-3 pt-3 border-t border-neutral-800">
+            <div className="mt-3 pt-3 border-t border-[var(--line,rgba(194,196,201,.12))]">
               <button
                 type="button"
                 onClick={() => void onSetupScenes()}
@@ -353,7 +362,7 @@ export default function ObsPanel() {
               >
                 {busy === 'setup' ? t.obsSetupScenesRunning : t.obsSetupScenes}
               </button>
-              <p className="text-[11px] text-neutral-600 mt-1.5">
+              <p className="text-[11px] text-[var(--t4,#807984)] mt-1.5">
                 {t.obsSetupScenesHint}
               </p>
             </div>
@@ -364,19 +373,23 @@ export default function ObsPanel() {
             <div className={sectionClass}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold">{t.obsStreamTitle}</h3>
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${
-                      stream.active
-                        ? 'bg-red-500/20 border-red-500/50 text-red-300'
-                        : 'bg-neutral-800 border-neutral-700 text-neutral-400'
-                    }`}
+                  <h3 className="text-sm font-semibold text-[var(--t1,#f4edf7)]">
+                    {t.obsStreamTitle}
+                  </h3>
+                  <Chip
+                    tone={stream.active ? 'live' : 'neutral'}
                     data-testid="caster-obs-stream-state"
                   >
+                    {stream.active && (
+                      <span
+                        aria-hidden
+                        className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--lf,#7fca65)]"
+                      />
+                    )}
                     {stream.active ? t.obsStreamLive : t.obsStreamOff}
-                  </span>
+                  </Chip>
                   {stream.active && stream.startedAt != null && (
-                    <span className="text-xs tabular-nums text-neutral-300">
+                    <span className="font-mono text-xs font-bold tabular-nums text-[var(--t1,#f4edf7)]">
                       {formatElapsed(stream.startedAt, now)}
                     </span>
                   )}
@@ -391,7 +404,7 @@ export default function ObsPanel() {
                   {stream.active ? t.obsStreamStop : t.obsStreamStart}
                 </button>
               </div>
-              <p className="text-[11px] text-neutral-600 mt-1.5">
+              <p className="text-[11px] text-[var(--t4,#807984)] mt-1.5">
                 {t.obsStreamKeyNote}
               </p>
             </div>
@@ -400,18 +413,14 @@ export default function ObsPanel() {
             <div className={sectionClass}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold">{t.obsRecordTitle}</h3>
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${
-                      record.active
-                        ? 'bg-red-500/20 border-red-500/50 text-red-300'
-                        : 'bg-neutral-800 border-neutral-700 text-neutral-400'
-                    }`}
-                  >
+                  <h3 className="text-sm font-semibold text-[var(--t1,#f4edf7)]">
+                    {t.obsRecordTitle}
+                  </h3>
+                  <Chip tone={record.active ? 'err' : 'neutral'}>
                     {record.active ? t.obsRecordOn : t.obsRecordOff}
-                  </span>
+                  </Chip>
                   {record.active && record.startedAt != null && (
-                    <span className="text-xs tabular-nums text-neutral-300">
+                    <span className="font-mono text-xs font-bold tabular-nums text-[var(--t1,#f4edf7)]">
                       {formatElapsed(record.startedAt, now)}
                     </span>
                   )}
@@ -429,7 +438,9 @@ export default function ObsPanel() {
 
             {/* Audio */}
             <div className={sectionClass}>
-              <h3 className="text-sm font-semibold mb-2">{t.obsAudioTitle}</h3>
+              <h3 className="text-sm font-semibold text-[var(--t1,#f4edf7)] mb-2">
+                {t.obsAudioTitle}
+              </h3>
               {audioInputs.length === 0 ? (
                 <p className="text-xs text-neutral-500">{t.obsAudioEmpty}</p>
               ) : (
@@ -462,7 +473,7 @@ export default function ObsPanel() {
                             Number(e.target.value)
                           ).catch(() => undefined)
                         }
-                        className="flex-1 accent-purple-500"
+                        className="flex-1 accent-[var(--or,#b467d1)]"
                       />
                       <button
                         type="button"
@@ -482,10 +493,10 @@ export default function ObsPanel() {
                           { input: input.name }
                         )}
                         aria-pressed={input.muted}
-                        className={`shrink-0 px-2 py-1 rounded-lg border text-[11px] font-semibold ${
+                        className={`h-[30px] w-[30px] shrink-0 rounded-[var(--r-ctrl,4px)] border font-[family-name:var(--fd)] text-[12px] font-bold ${
                           input.muted
-                            ? 'bg-red-500/20 border-red-500/50 text-red-300'
-                            : 'bg-neutral-900 border-neutral-700 text-neutral-300 hover:bg-neutral-800'
+                            ? 'bg-[rgba(255,107,107,.18)] border-[rgba(255,107,107,.55)] text-[#ffc2c2]'
+                            : 'bg-[var(--s1,#100812)] border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t2,#c7bfca)] hover:border-[var(--t4,#807984)]'
                         }`}
                       >
                         M

@@ -45,7 +45,7 @@ export default function CasterPresenceBar({
     >
       {users.length > 1 && (
         <span
-          className="rounded-full border border-neutral-700 bg-neutral-900/70 px-2 py-0.5 text-[11px] text-neutral-300"
+          className="rounded-[3px] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2 py-0.5 font-mono text-[11px] text-[var(--t2,#c7bfca)]"
           title={format(t.presenceHeadcount, { count: users.length })}
         >
           {`👥 ${users.length}`}
@@ -60,7 +60,7 @@ export default function CasterPresenceBar({
         return (
           <span
             key={u.staffId}
-            className="inline-flex items-center gap-1.5 rounded-full border border-neutral-700 bg-neutral-900/70 pl-0.5 pr-2 py-0.5"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] pl-0.5 pr-2 py-0.5"
             title={format(t.presenceUserTooltip, {
               name: u.displayName,
               role: u.role || '—',
@@ -74,7 +74,7 @@ export default function CasterPresenceBar({
             >
               {presenceInitials(u.displayName)}
             </span>
-            <span className="text-[11px] text-neutral-200 max-w-[14rem] truncate">
+            <span className="text-[11px] text-[var(--t1,#f4edf7)] max-w-[14rem] truncate">
               {isSelf
                 ? format(t.presenceSelfLabel, { name: u.displayName })
                 : u.displayName}

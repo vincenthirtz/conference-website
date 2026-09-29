@@ -3,6 +3,7 @@
 
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminDraftBanner from '@/lib/i18n/locales/admin-fr/adminDraftBanner';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type DraftBannerProps = {
   lastSaved: string | null;
@@ -32,10 +33,11 @@ export default function DraftBanner({
   const t = useAdminT(nsAdminDraftBanner);
   const suffix = lastSaved ? ` (${formatSavedAt(lastSaved)})` : '';
   return (
-    <div className="rounded-xl bg-amber-900/40 border border-amber-500/50 px-4 py-3 text-sm flex items-center justify-between gap-4 flex-wrap">
+    <div className="rounded-[var(--r-ctrl,4px)] bg-[rgba(245,165,36,.08)] border border-[rgba(245,165,36,.38)] px-4 py-3 text-sm flex items-center justify-between gap-4 flex-wrap">
       <div className="flex items-center gap-2">
         <svg
-          className="w-5 h-5 text-amber-400 flex-shrink-0"
+          className="w-5 h-5 text-[var(--warn,#f5a524)] flex-shrink-0"
+          aria-hidden="true"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -47,23 +49,15 @@ export default function DraftBanner({
             d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <span className="text-amber-200">{format(t.message, { suffix })}</span>
+        <span className="text-[#ffd9a3]">{format(t.message, { suffix })}</span>
       </div>
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onRestore}
-          className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium transition-colors"
-        >
+        <AdminButton variant="secondary" size="xs" onClick={onRestore}>
           {t.restore}
-        </button>
-        <button
-          type="button"
-          onClick={onDiscard}
-          className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-neutral-200 text-xs font-medium transition-colors"
-        >
+        </AdminButton>
+        <AdminButton size="xs" onClick={onDiscard}>
           {t.discard}
-        </button>
+        </AdminButton>
       </div>
     </div>
   );

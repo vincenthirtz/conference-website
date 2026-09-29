@@ -40,6 +40,7 @@ import { useAdminT } from '@/lib/i18n/useAdminT';
 import { logger } from '@/utils/logger';
 import type { CasterScene } from '@/types/caster';
 import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
+import { errNoticeClass, smallBtnClass, warnNoticeClass } from './fieldClasses';
 
 /** Canevas natif des overlays (identique au desktop). */
 const OVERLAY_W = 1920;
@@ -151,7 +152,7 @@ export default function OverlayPreview({ scene }: Props) {
 
   return (
     <section
-      className="mb-4 rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2.5"
+      className="mb-4 rounded-[var(--r-card,14px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-3 py-2.5"
       data-testid="caster-overlay-preview"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -159,7 +160,7 @@ export default function OverlayPreview({ scene }: Props) {
           type="button"
           onClick={() => toggle(!open)}
           aria-expanded={open}
-          className="flex items-center gap-1.5 text-sm font-medium text-neutral-200 hover:text-white"
+          className="flex items-center gap-1.5 font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--t2,#c7bfca)] [font-stretch:75%] hover:text-[var(--t1,#f4edf7)]"
           data-testid="caster-overlay-preview-toggle"
         >
           <span aria-hidden="true" className="text-[10px] text-neutral-500">
@@ -172,7 +173,7 @@ export default function OverlayPreview({ scene }: Props) {
             type="button"
             onClick={() => setReloadKey((k) => k + 1)}
             disabled={!open || blockedForWebcam}
-            className="rounded-lg border border-neutral-700 bg-neutral-800 px-2.5 py-1 text-[11px] font-medium text-neutral-200 hover:bg-neutral-700 disabled:opacity-40"
+            className={smallBtnClass}
             data-testid="caster-overlay-preview-refresh"
           >
             {t.previewRefresh}
@@ -181,7 +182,7 @@ export default function OverlayPreview({ scene }: Props) {
             href={src}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg border border-neutral-700 bg-neutral-800 px-2.5 py-1 text-[11px] font-medium text-cyan-200 hover:bg-neutral-700"
+            className={smallBtnClass}
             data-testid="caster-overlay-preview-open"
           >
             {t.previewOpen}
@@ -193,19 +194,17 @@ export default function OverlayPreview({ scene }: Props) {
         <>
           {blockedForWebcam ? (
             <div
-              className="mt-2 rounded-lg border border-amber-500/40 bg-amber-950/30 px-3 py-3"
+              className={`mt-2 px-3 py-3 ${warnNoticeClass}`}
               data-testid="caster-overlay-preview-webcam-guard"
             >
-              <p className="text-xs font-medium text-amber-200">
-                {t.previewWebcamTitle}
-              </p>
-              <p className="mt-1 text-[11px] text-amber-100/70">
+              <p className="text-xs font-semibold">{t.previewWebcamTitle}</p>
+              <p className="mt-1 text-[11px] text-[var(--t2,#c7bfca)]">
                 {t.previewWebcamBody}
               </p>
               <button
                 type="button"
                 onClick={() => setWebcamAllowed(true)}
-                className="mt-2 rounded-lg border border-amber-500/50 bg-amber-900/40 px-2.5 py-1 text-[11px] font-medium text-amber-100 hover:bg-amber-900/70"
+                className={`mt-2 ${smallBtnClass}`}
                 data-testid="caster-overlay-preview-webcam-allow"
               >
                 {t.previewWebcamShow}
@@ -216,13 +215,11 @@ export default function OverlayPreview({ scene }: Props) {
             // refuserait l'iframe. On le dit, plutôt que d'afficher un cadre
             // noir que le caster prendrait pour un overlay cassé.
             <div
-              className="mt-2 rounded-lg border border-red-500/40 bg-red-950/30 px-3 py-3"
+              className={`mt-2 px-3 py-3 ${errNoticeClass}`}
               data-testid="caster-overlay-preview-blocked"
             >
-              <p className="text-xs font-medium text-red-200">
-                {t.previewBlockedTitle}
-              </p>
-              <p className="mt-1 text-[11px] text-red-100/70">
+              <p className="text-xs font-semibold">{t.previewBlockedTitle}</p>
+              <p className="mt-1 text-[11px] text-[var(--t2,#c7bfca)]">
                 {t.previewBlockedBody}
               </p>
             </div>
@@ -231,7 +228,7 @@ export default function OverlayPreview({ scene }: Props) {
               ref={boxRef}
               // Ratio 16/9 préservé et débordement coupé : l'iframe fait
               // physiquement 1920×1080, seule sa transformée la fait tenir.
-              className="mt-2 w-full overflow-hidden rounded-lg border border-neutral-800 bg-black"
+              className="mt-2 w-full overflow-hidden rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-black"
               style={{ aspectRatio: '16 / 9' }}
             >
               {scale > 0 && framing === 'allowed' && (

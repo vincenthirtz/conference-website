@@ -23,7 +23,14 @@ import { logCasterAction } from '@/utils/caster/auditClient';
 import { normalizeThemeData } from '@/utils/caster/theme';
 import type { CasterTheme, CasterThemeColors } from '@/types/casterTheme';
 
-import { inputClass, labelClass } from './fieldClasses';
+import {
+  inputClass,
+  labelClass,
+  panelClass,
+  panelTitleClass,
+  smallBtnClass,
+} from './fieldClasses';
+import Chip from '@/features/admin/_shared/ui/Chip';
 import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 /** Débounce d'écriture des couleurs : un color picker émet en continu. */
@@ -220,19 +227,19 @@ export default function ThemePanel({ themes, activeId, reload }: Props) {
   }
 
   return (
-    <section
-      className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4"
-      data-testid="caster-theme-panel"
-    >
+    <section className={panelClass} data-testid="caster-theme-panel">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <h2 className="text-lg font-bold">{t.themeTitle}</h2>
+        <h2 className={panelTitleClass}>{t.themeTitle}</h2>
         {saving && (
-          <span className="text-[11px] text-amber-300" role="status">
+          <span
+            className="text-[11px] text-[var(--warn,#f5a524)]"
+            role="status"
+          >
             {t.saveSaving}
           </span>
         )}
       </div>
-      <p className="text-xs text-neutral-500 mb-4">{t.themeIntro}</p>
+      <p className="text-xs text-[var(--t3,#a39ba6)] mb-4">{t.themeIntro}</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-4 items-start">
         {/* Liste des thèmes + activation */}
@@ -247,23 +254,21 @@ export default function ThemePanel({ themes, activeId, reload }: Props) {
                     type="button"
                     onClick={() => setEditingId(th.id)}
                     aria-current={isEditing ? 'true' : undefined}
-                    className={`flex-1 text-left rounded-lg px-2.5 py-2 text-sm truncate transition ${
+                    className={`flex-1 text-left rounded-[var(--r-ctrl,4px)] px-2.5 py-2 text-sm truncate transition ${
                       isEditing
-                        ? 'bg-purple-600/20 border border-purple-500/40 text-white'
-                        : 'border border-transparent text-neutral-300 hover:bg-neutral-800/60'
+                        ? 'bg-[rgba(180,103,209,.14)] border border-[var(--or,#b467d1)] text-[var(--t1,#f4edf7)]'
+                        : 'border border-transparent text-[var(--t2,#c7bfca)] hover:bg-[var(--s2,#1d1520)]'
                     }`}
                   >
                     {th.name}
                   </button>
                   {th.is_active ? (
-                    <span className="shrink-0 rounded-full border border-emerald-500/40 bg-emerald-900/30 px-2 py-0.5 text-[10px] uppercase text-emerald-300">
-                      {t.themeActiveBadge}
-                    </span>
+                    <Chip tone="ok">{t.themeActiveBadge}</Chip>
                   ) : (
                     <button
                       type="button"
                       onClick={() => void activate(th.id)}
-                      className="shrink-0 rounded-lg border border-neutral-700 bg-neutral-800 px-2 py-1 text-[10px] hover:bg-neutral-700"
+                      className={smallBtnClass}
                     >
                       {t.themeActivate}
                     </button>
@@ -277,7 +282,7 @@ export default function ThemePanel({ themes, activeId, reload }: Props) {
               type="button"
               onClick={() => void duplicate()}
               disabled={!editing}
-              className="rounded-lg border border-neutral-700 bg-neutral-800 px-2.5 py-1.5 text-[11px] hover:bg-neutral-700 disabled:opacity-40"
+              className={smallBtnClass}
             >
               {t.themeDuplicate}
             </button>
@@ -286,7 +291,7 @@ export default function ThemePanel({ themes, activeId, reload }: Props) {
               onClick={() => void remove()}
               disabled={!editing || editing.is_active}
               title={editing?.is_active ? t.themeDeleteActiveHint : undefined}
-              className="rounded-lg border border-red-500/40 bg-red-900/30 px-2.5 py-1.5 text-[11px] text-red-200 hover:bg-red-900/50 disabled:opacity-40"
+              className={`${smallBtnClass} border-[rgba(255,107,107,.45)] text-[var(--err,#ff6b6b)] hover:border-[var(--err,#ff6b6b)] hover:text-[var(--err,#ff6b6b)]`}
             >
               {t.themeDelete}
             </button>
@@ -310,7 +315,7 @@ export default function ThemePanel({ themes, activeId, reload }: Props) {
                         value={draftColors[key]}
                         onChange={(e) => patchColor(key, e.target.value)}
                         aria-label={label}
-                        className="h-8 w-8 shrink-0 cursor-pointer rounded border border-neutral-700 bg-neutral-950 p-0.5"
+                        className="h-8 w-8 shrink-0 cursor-pointer rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-0.5"
                       />
                       <input
                         type="text"
@@ -340,7 +345,7 @@ export default function ThemePanel({ themes, activeId, reload }: Props) {
 
             {/* Aperçu : mêmes variables que celles posées sur les overlays. */}
             <div
-              className="rounded-xl border border-neutral-800 p-4"
+              className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] p-4"
               style={{
                 background: draftColors.bg,
                 color: draftColors.text,

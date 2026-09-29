@@ -64,7 +64,7 @@ export function DraftBoard({ state }: Props) {
         const phaseSteps = state.flow.steps.filter((s) => s.phase === phase);
         return (
           <div key={phase}>
-            <div className="mb-2 text-xs uppercase tracking-wider text-neutral-500">
+            <div className="mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
               {phase.replace('_', ' ')}
             </div>
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
@@ -82,9 +82,9 @@ export function DraftBoard({ state }: Props) {
                 return (
                   <div
                     key={flowStep.step_number}
-                    className={`relative flex items-center gap-3 rounded-xl border px-3 py-2 text-sm ${tone.cls} ${
+                    className={`relative flex items-center gap-3 rounded-[var(--r-ctrl,4px)] border px-3 py-2 text-sm ${tone.cls} ${
                       isCurrent
-                        ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-neutral-950'
+                        ? 'shadow-[var(--glow-live)] ring-2 ring-[var(--lf,#7fca65)] ring-offset-2 ring-offset-[var(--canvas,#07030a)]'
                         : ''
                     } ${isBan ? 'opacity-90' : ''}`}
                   >

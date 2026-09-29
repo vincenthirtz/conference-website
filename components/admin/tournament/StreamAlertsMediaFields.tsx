@@ -32,6 +32,7 @@ import { useToast } from '@/components/Toast';
 import { format, useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminStreamAlerts from '@/lib/i18n/locales/admin-fr/adminStreamAlerts';
 import { logger } from '@/utils/logger';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type Dict = typeof nsAdminStreamAlerts.fr;
 
@@ -243,7 +244,7 @@ export default function StreamAlertsMediaFields({
           {t.frameLabel}
         </span>
 
-        <div className="mb-2 overflow-hidden rounded-lg border border-neutral-700 bg-neutral-950/60">
+        <div className="mb-2 overflow-hidden rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)]">
           {frameSrc && frameKind === 'video' && (
             // `muted` + `loop` : un aperçu qui se met à parler tout seul dans
             // une régie est un incident ; `playsInline` évite le plein écran.
@@ -285,26 +286,25 @@ export default function StreamAlertsMediaFields({
               if (file) pick(file, 'frame');
             }}
           />
-          <button
-            type="button"
+          <AdminButton
+            size="xs"
             disabled={disabled}
             onClick={() => frameInput.current?.click()}
-            className="rounded-lg border border-neutral-700 px-3 py-2 text-xs text-neutral-300 transition-colors hover:border-neutral-500 hover:text-white disabled:opacity-50"
           >
             {frameSrc ? t.frameReplace : t.frameChoose}
-          </button>
+          </AdminButton>
           {/* Le retour au défaut n'a de sens que s'il y a quelque chose à
               retirer : ni quand on est DÉJÀ sur l'habillage du code, ni quand
               le retrait est déjà en attente d'enregistrement. */}
           {frameSrc && (media.frameUrl || frameEdit) && (
-            <button
-              type="button"
+            <AdminButton
+              size="xs"
+              className="border-transparent"
               disabled={disabled}
               onClick={() => onFrameEdit(media.frameUrl ? null : undefined)}
-              className="rounded-lg px-3 py-2 text-xs text-neutral-400 transition-colors hover:text-white disabled:opacity-50"
             >
               {t.frameReset}
-            </button>
+            </AdminButton>
           )}
         </div>
 
@@ -329,7 +329,7 @@ export default function StreamAlertsMediaFields({
           {t.soundFileLabel}
         </span>
 
-        <div className="mb-2 rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-3">
+        <div className="mb-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-3 py-3">
           {soundSrc ? (
             <>
               <audio controls src={soundSrc} className="w-full" />
@@ -363,23 +363,23 @@ export default function StreamAlertsMediaFields({
               if (file) pick(file, 'sound');
             }}
           />
-          <button
-            type="button"
+          <AdminButton
+            size="xs"
             disabled={disabled}
             onClick={() => soundInput.current?.click()}
-            className="rounded-lg border border-neutral-700 px-3 py-2 text-xs text-neutral-300 transition-colors hover:border-neutral-500 hover:text-white disabled:opacity-50"
           >
             {hasSoundFile ? t.soundReplace : t.soundChoose}
-          </button>
+          </AdminButton>
           {hasSoundFile && (
-            <button
-              type="button"
+            <AdminButton
+              variant="danger"
+              size="xs"
+              className="border-transparent"
               disabled={disabled}
               onClick={() => onSoundEdit(media.hasSoundFile ? null : undefined)}
-              className="rounded-lg px-3 py-2 text-xs text-neutral-400 transition-colors hover:text-red-200 disabled:opacity-50"
             >
               {t.soundFileRemove}
-            </button>
+            </AdminButton>
           )}
         </div>
 

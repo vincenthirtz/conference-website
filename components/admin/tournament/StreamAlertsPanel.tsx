@@ -46,6 +46,8 @@ import {
   type AlertKind,
 } from '@/utils/overlay/alertBox';
 import { logger } from '@/utils/logger';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { ERROR_BOX, MUTED } from '@/features/admin/stages/ui/rubanClasses';
 
 const ENDPOINT = '/api/admin/stream-alerts';
 
@@ -373,10 +375,7 @@ export default function StreamAlertsPanel() {
 
   if (loadError) {
     return (
-      <div
-        role="alert"
-        className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200"
-      >
+      <div role="alert" className={`${ERROR_BOX} text-xs`}>
         {loadError}
       </div>
     );
@@ -392,7 +391,7 @@ export default function StreamAlertsPanel() {
       {/* Le titre vit ICI, et pas dans la page : elle n'aurait rien d'autre à
           faire de ce namespace que de l'afficher. */}
       <h3 className="text-sm font-semibold text-white">{t.title}</h3>
-      <p className="text-xs text-neutral-400">{t.description}</p>
+      <p className={`text-xs ${MUTED}`}>{t.description}</p>
 
       {/* En tête, parce que c'est la panne la plus silencieuse : sans ces
           abonnements, Twitch n'envoie rien et la boîte reste muette. */}
@@ -400,7 +399,7 @@ export default function StreamAlertsPanel() {
       <StreamAlertsTestCard />
 
       {/* Réglages globaux */}
-      <div className="space-y-4 rounded-xl border border-neutral-700/40 bg-neutral-900/50 p-4">
+      <div className="space-y-4 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
         <div>
           <label className="flex items-start gap-3">
             <input
@@ -437,7 +436,7 @@ export default function StreamAlertsPanel() {
                 step={1}
                 value={settings.durationSec}
                 onChange={(e) => patchSettings({ durationSec: e.target.value })}
-                className="w-24 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-24 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white focus:border-[var(--or,#b467d1)] focus:outline-none"
               />
               <span className="text-xs text-neutral-500">{t.durationUnit}</span>
             </div>
@@ -460,19 +459,18 @@ export default function StreamAlertsPanel() {
                 aria-label={t.accentLabel}
                 value={settings.accentColor || SWATCH_FALLBACK}
                 onChange={(e) => patchSettings({ accentColor: e.target.value })}
-                className="h-9 w-12 cursor-pointer rounded-lg border border-neutral-700 bg-neutral-900"
+                className="h-9 w-12 cursor-pointer rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)]"
               />
               <span className="font-mono text-xs text-neutral-400">
                 {settings.accentColor || t.accentIsDefault}
               </span>
               {settings.accentColor !== '' && (
-                <button
-                  type="button"
+                <AdminButton
+                  size="xs"
                   onClick={() => patchSettings({ accentColor: '' })}
-                  className="rounded-lg border border-neutral-700 px-2 py-1 text-[11px] text-neutral-400 transition-colors hover:border-neutral-500 hover:text-white"
                 >
                   {t.accentReset}
-                </button>
+                </AdminButton>
               )}
             </div>
             <p className="mt-1 text-[11px] text-neutral-500">{t.accentHelp}</p>
@@ -493,7 +491,7 @@ export default function StreamAlertsPanel() {
               value={settings.soundUrl}
               placeholder={t.soundUrlPlaceholder}
               onChange={(e) => patchSettings({ soundUrl: e.target.value })}
-              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 font-mono text-xs text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 font-mono text-xs text-white focus:border-[var(--or,#b467d1)] focus:outline-none"
             />
             <p className="mt-1 text-[11px] text-neutral-500">
               {t.soundUrlHelp}
@@ -546,7 +544,7 @@ export default function StreamAlertsPanel() {
       </div>
 
       {/* Une ligne par type d'alerte */}
-      <div className="space-y-3 rounded-xl border border-neutral-700/40 bg-neutral-900/50 p-4">
+      <div className="space-y-3 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
         <div>
           <h4 className="text-sm font-medium text-white">{t.rulesTitle}</h4>
           <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
@@ -561,7 +559,7 @@ export default function StreamAlertsPanel() {
             return (
               <div
                 key={kind}
-                className="flex flex-col gap-2 rounded-lg border border-neutral-700/40 bg-neutral-950/40 p-3 sm:flex-row sm:items-center"
+                className="flex flex-col gap-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-3 sm:flex-row sm:items-center"
               >
                 <label className="flex w-48 shrink-0 items-center gap-2">
                   <input
@@ -584,7 +582,7 @@ export default function StreamAlertsPanel() {
                   placeholder={DEFAULT_ALERT_MESSAGES[kind]}
                   aria-label={format(t.messageAria, { kind: label })}
                   onChange={(e) => patchRule(kind, { message: e.target.value })}
-                  className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="min-w-0 flex-1 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-[var(--or,#b467d1)] focus:outline-none"
                 />
 
                 {/* Les types sans quantité gardent la place du seuil vide :
@@ -609,7 +607,7 @@ export default function StreamAlertsPanel() {
                       onChange={(e) =>
                         patchRule(kind, { minAmount: e.target.value })
                       }
-                      className="w-24 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-24 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-[var(--or,#b467d1)] focus:outline-none"
                     />
                     <span className="w-20 text-[11px] text-neutral-500">
                       {unitLabel(t, kind)}
@@ -627,14 +625,13 @@ export default function StreamAlertsPanel() {
       </div>
 
       <div className="flex justify-end">
-        <button
-          type="button"
+        <AdminButton
+          variant="primary"
           onClick={() => void save()}
           disabled={saving || !dirty}
-          className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium transition-colors hover:bg-purple-500 disabled:opacity-50"
         >
           {saving ? t.saving : t.save}
-        </button>
+        </AdminButton>
       </div>
     </div>
   );

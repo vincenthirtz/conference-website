@@ -20,6 +20,7 @@
 import type { ReactNode } from 'react';
 import EmptyState from './EmptyState';
 import LoadingSpinner from './LoadingSpinner';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 export type AdminListShellProps = {
   /** État de chargement (typiquement `loading` de `useAdminResource`). */
@@ -108,18 +109,14 @@ export default function AdminListShell({
         <div
           role="alert"
           data-testid={errorTestId}
-          className="mb-4 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+          className="mb-4 rounded-[var(--r-ctrl,4px)] border border-[rgba(255,107,107,.4)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-sm text-[#ffc2c2]"
         >
           <div className="flex items-center justify-between gap-3">
             <span className="flex-1">{error}</span>
             {onRetry && (
-              <button
-                type="button"
-                onClick={onRetry}
-                className="flex-shrink-0 rounded-lg bg-red-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-red-500"
-              >
+              <AdminButton variant="danger" size="xs" onClick={onRetry}>
                 {retryLabel}
-              </button>
+              </AdminButton>
             )}
           </div>
         </div>

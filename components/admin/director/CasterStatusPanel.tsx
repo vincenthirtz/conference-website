@@ -10,6 +10,9 @@
 // Polling presence : 15s (le statut bouge lentement, pas la peine de spam).
 // Polling assignments : on-mount + on match_ids change (rare). Pas de poll
 // continu : un ack est rare et le Director peut cliquer ↻ pour forcer.
+//
+// Passe « Le Ruban » (lot 10C) : présence et ack en Chip (couleur = signal),
+// carte d'encre — mêmes polls, mêmes libellés.
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -19,6 +22,13 @@ import { logger } from '@/utils/logger';
 import type { EventSegment } from '@/types/events';
 import nsAdminDirectorCasterStatusPanel from '@/lib/i18n/locales/admin-fr/adminDirectorCasterStatusPanel';
 import { clockOrDash } from '@/utils/director/clock';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
+import {
+  rubanCard,
+  rubanErr,
+  rubanEyebrow,
+  rubanInset,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 
 type Dict = typeof nsAdminDirectorCasterStatusPanel.fr;
 
@@ -85,26 +95,26 @@ function formatRelativeShort(iso: string | null | undefined, tx: Dict): string {
 
 function getStatusStyles(
   tx: Dict
-): Record<PresenceStatus, { dot: string; pill: string; label: string }> {
+): Record<PresenceStatus, { dot: string; tone: ChipTone; label: string }> {
   return {
     online: {
-      dot: 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]',
-      pill: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300',
+      dot: 'bg-[var(--lf,#7fca65)]',
+      tone: 'ok',
       label: tx.statusOnline,
     },
     idle: {
-      dot: 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.5)]',
-      pill: 'bg-amber-500/15 border-amber-500/40 text-amber-300',
+      dot: 'bg-[var(--warn,#f5a524)]',
+      tone: 'warn',
       label: tx.statusIdle,
     },
     offline: {
-      dot: 'bg-neutral-500',
-      pill: 'bg-neutral-700/50 border-neutral-600/40 text-neutral-400',
+      dot: 'bg-[var(--t4,#807984)]',
+      tone: 'neutral',
       label: tx.statusOffline,
     },
     unknown: {
-      dot: 'bg-neutral-700',
-      pill: 'bg-neutral-800/50 border-neutral-700/40 text-neutral-500',
+      dot: 'bg-[var(--s3,#2f2732)]',
+      tone: 'neutral',
       label: tx.statusUnknown,
     },
   };
@@ -253,27 +263,28 @@ function CasterStatusPanel({
   const totalCount = presence.length;
 
   return (
-    <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-5">
+    <div className={`${rubanCard} p-5`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-neutral-200">
-            {t.heading}
-          </h3>
+          <h3 className={rubanEyebrow}>{t.heading}</h3>
           {totalCount > 0 && (
             <span
-              className={`text-[11px] px-2 py-0.5 rounded-full border ${
-                onlineCount === totalCount
-                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                  : onlineCount > 0
-                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
-                    : 'bg-neutral-700/50 border-neutral-600/40 text-neutral-400'
-              }`}
               aria-label={format(t.onlineAria, {
                 online: onlineCount,
                 total: totalCount,
               })}
             >
-              {onlineCount}/{totalCount} online
+              <Chip
+                tone={
+                  onlineCount === totalCount
+                    ? 'ok'
+                    : onlineCount > 0
+                      ? 'warn'
+                      : 'neutral'
+                }
+              >
+                {onlineCount}/{totalCount} online
+              </Chip>
             </span>
           )}
         </div>
@@ -283,7 +294,7 @@ function CasterStatusPanel({
             fetchAssignments();
             fetchPresence();
           }}
-          className="text-xs text-neutral-400 hover:text-white"
+          className="h-[30px] w-[30px] rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] text-sm text-[var(--t3,#a39ba6)] hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]"
           title={t.refreshTitle}
           aria-label={t.refreshAria}
         >
@@ -292,7 +303,7 @@ function CasterStatusPanel({
       </div>
 
       {presenceError && (
-        <div className="mb-2 rounded-lg bg-red-900/30 border border-red-500/40 px-3 py-1.5 text-[11px] text-red-300">
+        <div className={`mb-2 px-3 py-1.5 text-[11px] ${rubanErr}`}>
           {presenceError}
         </div>
       )}
@@ -302,9 +313,7 @@ function CasterStatusPanel({
           <LoadingSpinner size="sm" />
         </div>
       ) : assignError ? (
-        <div className="rounded-lg bg-red-900/30 border border-red-500/40 px-3 py-2 text-xs text-red-300">
-          {assignError}
-        </div>
+        <div className={`px-3 py-2 text-xs ${rubanErr}`}>{assignError}</div>
       ) : matchIds.length === 0 ? (
         <p className="text-xs text-neutral-500">{t.noMatchSegment}</p>
       ) : assignments.length === 0 ? (
@@ -321,14 +330,14 @@ function CasterStatusPanel({
             return (
               <li
                 key={a.id}
-                className="flex items-center gap-3 rounded-lg bg-neutral-900/40 border border-neutral-700/60 p-2.5"
+                className={`flex items-center gap-3 p-2.5 ${rubanInset}`}
               >
                 <div className="relative">
-                  <div className="w-8 h-8 rounded-full bg-neutral-700/60 flex items-center justify-center text-xs font-bold text-neutral-200 flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-[var(--s3,#2f2732)] flex items-center justify-center font-[family-name:var(--fd)] text-xs font-bold text-[var(--t2,#c7bfca)] flex-shrink-0">
                     {a.cast_member?.name?.slice(0, 2).toUpperCase() ?? '??'}
                   </div>
                   <span
-                    className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-neutral-900 ${styles.dot}`}
+                    className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[var(--s2,#1d1520)] ${styles.dot}`}
                     title={tooltip}
                     aria-label={format(t.statusAria, {
                       label: styles.label,
@@ -348,7 +357,7 @@ function CasterStatusPanel({
                       <span>
                         {t.ack}{' '}
                         {acked ? (
-                          <span className="text-emerald-300">
+                          <span className="text-[var(--lf-200,#b3e7a3)]">
                             {clockOrDash(a.acked_at)}
                           </span>
                         ) : (
@@ -362,26 +371,15 @@ function CasterStatusPanel({
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   {ackedKnown ? (
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                        acked
-                          ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                          : 'bg-neutral-700/50 border-neutral-600/40 text-neutral-300'
-                      }`}
-                    >
+                    <Chip tone={acked ? 'ok' : 'neutral'}>
                       {acked ? t.ackYes : t.ackNo}
-                    </span>
+                    </Chip>
                   ) : (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-neutral-700/50 border-neutral-600/40 text-neutral-500">
-                      {t.ackUnavailable}
-                    </span>
+                    <Chip>{t.ackUnavailable}</Chip>
                   )}
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${styles.pill}`}
-                    title={tooltip}
-                  >
+                  <Chip tone={styles.tone} title={tooltip}>
                     {styles.label}
-                  </span>
+                  </Chip>
                 </div>
               </li>
             );

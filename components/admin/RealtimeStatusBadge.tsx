@@ -10,34 +10,34 @@
 // namespace i18n. aria-live polite : le lecteur d'écran annonce le passage
 // dégradé -> temps réel sans voler le focus.
 
+import Chip from '@/features/admin/_shared/ui/Chip';
+
 type Props = {
   connected: boolean;
   connectedLabel: string;
   degradedLabel: string;
 };
 
+// Puce « Le Ruban » : `ok` (et non `live`, dont la lueur est réservée à l'état
+// EN DIRECT d'un match) quand les canaux sont abonnés, `warn` en mode dégradé.
 export default function RealtimeStatusBadge({
   connected,
   connectedLabel,
   degradedLabel,
 }: Props) {
   return (
-    <span
-      role="status"
-      aria-live="polite"
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-        connected
-          ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200'
-          : 'border-amber-500/50 bg-amber-500/15 text-amber-200'
-      }`}
-    >
-      <span
-        aria-hidden="true"
-        className={`h-2 w-2 rounded-full ${
-          connected ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'
-        }`}
-      />
-      {connected ? connectedLabel : degradedLabel}
+    <span role="status" aria-live="polite" className="inline-flex">
+      <Chip tone={connected ? 'ok' : 'warn'}>
+        <span
+          aria-hidden="true"
+          className={`h-1.5 w-1.5 rounded-full ${
+            connected
+              ? 'bg-[var(--ok,#30d07e)]'
+              : 'bg-[var(--warn,#f5a524)] animate-pulse'
+          }`}
+        />
+        {connected ? connectedLabel : degradedLabel}
+      </Chip>
     </span>
   );
 }

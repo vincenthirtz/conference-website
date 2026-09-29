@@ -10,6 +10,16 @@ import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentStats from '@/lib/i18n/locales/admin-fr/adminTournamentStats';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import StatTile, { type StatTone } from '@/features/admin/_shared/ui/StatTile';
+import {
+  CARD_FLUSH,
+  ERROR_BOX,
+  FAINT,
+  MUTED,
+  STRONG,
+  TILE,
+} from '@/features/admin/stages/ui/rubanClasses';
 
 type Tournament = {
   id: string;
@@ -112,13 +122,15 @@ export default function StatsOverviewPanel() {
         <div>
           <h1 className="text-3xl font-bold">{t.heading}</h1>
           {stats?.tournament && (
-            <p className="text-neutral-400 text-sm mt-1">
+            <p className={`mt-1 text-sm ${MUTED}`}>
               {t.tournamentLabel}
-              <span className="font-semibold">{stats.tournament.name}</span>
+              <span className={`font-semibold ${STRONG}`}>
+                {stats.tournament.name}
+              </span>
               {stats.tournament.slug && (
                 <>
                   {' '}
-                  <span className="font-mono bg-neutral-800 border border-neutral-700 px-2 py-0.5 rounded text-xs">
+                  <span className={`${TILE} px-2 py-0.5 font-mono text-xs`}>
                     {stats.tournament.slug}
                   </span>
                 </>
@@ -127,25 +139,16 @@ export default function StatsOverviewPanel() {
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={fetchStats}
-          disabled={loading}
-          className="px-4 py-2 rounded bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold disabled:opacity-50"
-        >
+        <AdminButton size="sm" onClick={fetchStats} disabled={loading}>
           {loading ? t.loading : t.refresh}
-        </button>
+        </AdminButton>
       </div>
 
       {/* Messages */}
-      {errorMsg && (
-        <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
-          {errorMsg}
-        </div>
-      )}
+      {errorMsg && <div className={`mb-4 ${ERROR_BOX}`}>{errorMsg}</div>}
 
       {loading && !stats && (
-        <div className="text-neutral-400 text-sm">{t.loadingStats}</div>
+        <div className={`text-sm ${MUTED}`}>{t.loadingStats}</div>
       )}
 
       {stats && (
@@ -155,7 +158,7 @@ export default function StatsOverviewPanel() {
             <StatCard
               label={t.kpiTeams}
               value={stats.overview.totalTeams}
-              color="blue"
+              color="neutral"
             />
             <StatCard
               label={t.kpiTotalMatches}
@@ -165,12 +168,12 @@ export default function StatsOverviewPanel() {
             <StatCard
               label={t.kpiFinished}
               value={stats.overview.finishedMatches}
-              color="emerald"
+              color="neutral"
             />
             <StatCard
               label={t.kpiOngoing}
               value={stats.overview.ongoingMatches}
-              color="amber"
+              color="live"
             />
             <StatCard
               label={t.kpiPending}
@@ -180,34 +183,32 @@ export default function StatsOverviewPanel() {
             <StatCard
               label={t.kpiMapsPlayed}
               value={stats.overview.totalGames}
-              color="purple"
+              color="neutral"
             />
             <StatCard
               label={t.kpiOvertimes}
               value={stats.overview.totalOvertimes}
-              color="red"
+              color="neutral"
             />
           </div>
 
           {/* Two column layout */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Team Rankings */}
-            <div className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-neutral-700">
+            <div className={CARD_FLUSH}>
+              <div className="border-b border-[var(--line,rgba(194,196,201,.12))] px-4 py-3">
                 <h2 className="text-lg font-semibold">{t.teamRankingTitle}</h2>
-                <p className="text-xs text-neutral-400">
-                  {t.teamRankingSubtitle}
-                </p>
+                <p className={`text-xs ${MUTED}`}>{t.teamRankingSubtitle}</p>
               </div>
 
               {stats.teamStats.length === 0 ? (
-                <div className="px-4 py-6 text-sm text-neutral-400">
+                <div className={`px-4 py-6 text-sm ${MUTED}`}>
                   {t.teamsEmpty}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-neutral-750 text-neutral-300">
+                    <thead className="bg-[var(--s2,#1d1520)]">
                       <tr>
                         <th scope="col" className="px-4 py-2 text-left">
                           #
@@ -233,7 +234,7 @@ export default function StatsOverviewPanel() {
                       {stats.teamStats.map((ts, idx) => (
                         <tr
                           key={ts.team.id}
-                          className="border-t border-neutral-700"
+                          className="border-t border-[var(--line,rgba(194,196,201,.12))]"
                         >
                           <td className="px-4 py-2 text-neutral-400 font-mono">
                             {idx + 1}
@@ -274,20 +275,20 @@ export default function StatsOverviewPanel() {
             </div>
 
             {/* Map Stats */}
-            <div className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-neutral-700">
+            <div className={CARD_FLUSH}>
+              <div className="border-b border-[var(--line,rgba(194,196,201,.12))] px-4 py-3">
                 <h2 className="text-lg font-semibold">{t.mapStatsTitle}</h2>
-                <p className="text-xs text-neutral-400">{t.mapStatsSubtitle}</p>
+                <p className={`text-xs ${MUTED}`}>{t.mapStatsSubtitle}</p>
               </div>
 
               {stats.mapStats.length === 0 ? (
-                <div className="px-4 py-6 text-sm text-neutral-400">
+                <div className={`px-4 py-6 text-sm ${MUTED}`}>
                   {t.mapsEmpty}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-neutral-750 text-neutral-300">
+                    <thead className="bg-[var(--s2,#1d1520)]">
                       <tr>
                         <th scope="col" className="px-4 py-2 text-left">
                           {t.colMap}
@@ -310,7 +311,7 @@ export default function StatsOverviewPanel() {
                       {stats.mapStats.map((ms) => (
                         <tr
                           key={ms.mapName}
-                          className="border-t border-neutral-700"
+                          className="border-t border-[var(--line,rgba(194,196,201,.12))]"
                         >
                           <td className="px-4 py-2 font-medium">
                             {ms.mapName}
@@ -343,14 +344,14 @@ export default function StatsOverviewPanel() {
           </div>
 
           {/* Closest Matches */}
-          <div className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-neutral-700">
+          <div className={CARD_FLUSH}>
+            <div className="border-b border-[var(--line,rgba(194,196,201,.12))] px-4 py-3">
               <h2 className="text-lg font-semibold">{t.closestTitle}</h2>
-              <p className="text-xs text-neutral-400">{t.closestSubtitle}</p>
+              <p className={`text-xs ${MUTED}`}>{t.closestSubtitle}</p>
             </div>
 
             {stats.closestMatches.length === 0 ? (
-              <div className="px-4 py-6 text-sm text-neutral-400">
+              <div className={`px-4 py-6 text-sm ${MUTED}`}>
                 {t.closestEmpty}
               </div>
             ) : (
@@ -359,7 +360,7 @@ export default function StatsOverviewPanel() {
                   <Link
                     key={m.id}
                     href={`/admin/matches/${m.id}`}
-                    className="bg-neutral-900 border border-neutral-700 rounded-lg p-4 hover:border-neutral-500 transition-colors"
+                    className={`${TILE} p-4 transition-colors hover:border-[var(--or,#b467d1)]`}
                   >
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <TeamCell team={m.team1} compact />
@@ -367,26 +368,28 @@ export default function StatsOverviewPanel() {
                         <span
                           className={`text-xl font-bold ${
                             m.winner_team_id === m.team1?.id
-                              ? 'text-emerald-400'
-                              : 'text-neutral-300'
+                              ? 'text-[var(--lf,#7fca65)]'
+                              : 'text-[var(--t2,#c7bfca)]'
                           }`}
+                          data-numeric
                         >
                           {m.team1_score}
                         </span>
-                        <span className="text-neutral-500 mx-2">-</span>
+                        <span className={`mx-2 ${FAINT}`}>-</span>
                         <span
                           className={`text-xl font-bold ${
                             m.winner_team_id === m.team2?.id
-                              ? 'text-emerald-400'
-                              : 'text-neutral-300'
+                              ? 'text-[var(--lf,#7fca65)]'
+                              : 'text-[var(--t2,#c7bfca)]'
                           }`}
+                          data-numeric
                         >
                           {m.team2_score}
                         </span>
                       </div>
                       <TeamCell team={m.team2} compact />
                     </div>
-                    <div className="text-xs text-neutral-500 text-center">
+                    <div className={`text-center text-xs ${FAINT}`}>
                       {m.stage_name || 'Stage inconnu'}
                       {m.round_number ? ` • Round ${m.round_number}` : ''}
                     </div>
@@ -404,25 +407,13 @@ export default function StatsOverviewPanel() {
 type StatCardProps = {
   label: string;
   value: number;
-  color: 'blue' | 'emerald' | 'amber' | 'red' | 'purple' | 'neutral';
+  /** `live` = ce qui est en cours ; le reste est neutre (couleur = signal). */
+  color: 'live' | 'neutral';
 };
 
 function StatCard({ label, value, color }: StatCardProps) {
-  const colorClasses = {
-    blue: 'border-blue-600/50 bg-blue-900/20',
-    emerald: 'border-emerald-600/50 bg-emerald-900/20',
-    amber: 'border-amber-600/50 bg-amber-900/20',
-    red: 'border-red-600/50 bg-red-900/20',
-    purple: 'border-purple-600/50 bg-purple-900/20',
-    neutral: 'border-neutral-600/50 bg-neutral-800',
-  };
-
-  return (
-    <div className={`rounded-xl border p-4 ${colorClasses[color]}`}>
-      <div className="text-2xl font-bold">{value}</div>
-      <div className="text-xs text-neutral-400">{label}</div>
-    </div>
-  );
+  const tone: StatTone = color === 'live' ? 'ok' : 'neutral';
+  return <StatTile label={label} value={value} tone={tone} />;
 }
 
 type TeamCellProps = {
@@ -432,7 +423,7 @@ type TeamCellProps = {
 
 function TeamCell({ team, compact }: TeamCellProps) {
   if (!team) {
-    return <span className="text-neutral-500 text-sm">TBD</span>;
+    return <span className={`text-sm ${FAINT}`}>TBD</span>;
   }
 
   if (compact) {
@@ -486,11 +477,15 @@ function TeamCell({ team, compact }: TeamCellProps) {
 function WinrateBar({ winrate }: { winrate: number }) {
   const pct = Math.round(winrate * 100);
   const color =
-    pct >= 70 ? 'bg-emerald-500' : pct >= 50 ? 'bg-blue-500' : 'bg-red-500';
+    pct >= 70
+      ? 'bg-[var(--lf,#7fca65)]'
+      : pct >= 50
+        ? 'bg-[var(--t3,#a39ba6)]'
+        : 'bg-[var(--err,#ff6b6b)]';
 
   return (
     <div className="flex items-center gap-2">
-      <div className="w-16 h-2 bg-neutral-700 rounded-full overflow-hidden">
+      <div className="h-2 w-16 overflow-hidden rounded-[2px] bg-[var(--s3,#2f2732)]">
         <div
           className={`h-full ${color} transition-all`}
           style={{ width: `${pct}%` }}
@@ -506,9 +501,9 @@ function UsageBar({ usage }: { usage: number }) {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="w-12 h-2 bg-neutral-700 rounded-full overflow-hidden">
+      <div className="h-2 w-12 overflow-hidden rounded-[2px] bg-[var(--s3,#2f2732)]">
         <div
-          className="h-full bg-purple-500 transition-all"
+          className="h-full bg-[var(--or,#b467d1)] transition-all"
           style={{ width: `${pct}%` }}
         />
       </div>

@@ -15,19 +15,32 @@
 
 import { useState } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import {
-  stationStatusBadgeClasses,
-  stationStatusDotClasses,
-  stationStatusLabel,
-} from '@/utils/eventSegmentLabels';
+import { stationStatusLabel } from '@/utils/eventSegmentLabels';
+import type { ChipTone } from '@/features/admin/_shared/ui/Chip';
 import type {
   EventSegment,
   EventStation,
   EventStationStatus,
 } from '@/types/events';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import {
+  rubanCard,
+  rubanEyebrow,
+  rubanInput,
+  rubanInset,
+  rubanRow,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 import nsAdminDirectorStationBoard from '@/lib/i18n/locales/admin-fr/adminDirectorStationBoard';
 
 type Dict = typeof nsAdminDirectorStationBoard.fr;
+
+/** Ton de puce d'un statut de station (couleur = signal). */
+const STATION_STATUS_TONE: Record<EventStationStatus, ChipTone> = {
+  idle: 'neutral',
+  in_use: 'ok',
+  offline: 'err',
+};
 
 /** Ordre de cycle du toggle de statut. */
 const STATUS_CYCLE: EventStationStatus[] = ['idle', 'in_use', 'offline'];
@@ -147,38 +160,36 @@ export default function StationBoard({
   }
 
   return (
-    <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-5 space-y-4">
+    <div className={`${rubanCard} p-5 space-y-4`}>
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-neutral-200">
-            {t.heading}
-          </h3>
-          <p className="text-xs text-neutral-500">{t.subtitle}</p>
+          <h3 className={rubanEyebrow}>{t.heading}</h3>
+          <p className="mt-1 text-xs text-[var(--t4,#807984)]">{t.subtitle}</p>
         </div>
-        <button
-          type="button"
+        <AdminButton
+          variant="secondary"
+          size="sm"
           onClick={() => {
             setShowCreate((v) => !v);
             setCreateForm(emptyEdit());
             setCreateError(null);
           }}
-          className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-xs font-medium"
           disabled={busy}
           data-testid="station-create-toggle"
         >
           {showCreate ? t.cancel : t.addStation}
-        </button>
+        </AdminButton>
       </div>
 
       {showCreate && (
-        <div className="rounded-xl border border-neutral-700/40 bg-neutral-900/40 p-3 space-y-2">
+        <div className={`${rubanInset} p-3 space-y-2`}>
           <input
             value={createForm.name}
             onChange={(e) =>
               setCreateForm((f) => ({ ...f, name: e.target.value }))
             }
             placeholder={t.namePlaceholder}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+            className={rubanInput}
             data-testid="station-create-name"
           />
           <input
@@ -187,7 +198,7 @@ export default function StationBoard({
               setCreateForm((f) => ({ ...f, stream_url: e.target.value }))
             }
             placeholder={t.streamPlaceholder}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+            className={rubanInput}
           />
           <textarea
             value={createForm.notes}
@@ -196,25 +207,27 @@ export default function StationBoard({
             }
             rows={2}
             placeholder={t.notesPlaceholder}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+            className={rubanInput}
           />
           {createError && (
-            <div className="text-xs text-red-300">{createError}</div>
+            <div className="text-xs text-[var(--err,#ff6b6b)]">
+              {createError}
+            </div>
           )}
-          <button
-            type="button"
+          <AdminButton
+            variant="secondary"
+            size="xs"
             onClick={submitCreate}
             disabled={busy}
-            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-xs font-medium"
             data-testid="station-create-submit"
           >
             {t.createStation}
-          </button>
+          </AdminButton>
         </div>
       )}
 
       {sorted.length === 0 ? (
-        <p className="text-xs text-neutral-500">{t.empty}</p>
+        <p className="text-xs text-[var(--t4,#807984)]">{t.empty}</p>
       ) : (
         <ul className="space-y-2">
           {sorted.map((s) => {
@@ -223,7 +236,7 @@ export default function StationBoard({
             return (
               <li
                 key={s.id}
-                className="rounded-xl border border-neutral-700/60 bg-neutral-800/60 p-3"
+                className={`${rubanRow(!!liveSeg)} p-3`}
                 data-testid={`station-row-${s.id}`}
                 data-station-status={s.status}
               >
@@ -233,19 +246,14 @@ export default function StationBoard({
                     onClick={() => onSetStatus(s, nextStatus(s.status))}
                     disabled={busy}
                     title={t.statusTitle}
-                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold disabled:opacity-50 ${stationStatusBadgeClasses(
-                      s.status
-                    )}`}
+                    className="rounded-[3px] disabled:opacity-50"
                     data-testid={`station-status-${s.id}`}
                   >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${stationStatusDotClasses(
-                        s.status
-                      )}`}
-                    />
-                    {stationStatusLabel(s.status)}
+                    <Chip tone={STATION_STATUS_TONE[s.status] ?? 'neutral'}>
+                      {stationStatusLabel(s.status)}
+                    </Chip>
                   </button>
-                  <span className="font-medium text-white truncate max-w-[220px]">
+                  <span className="font-semibold text-[var(--t1,#f4edf7)] truncate max-w-[220px]">
                     {s.name}
                   </span>
                   {s.stream_url && (
@@ -254,7 +262,7 @@ export default function StationBoard({
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="text-[11px] text-purple-300 hover:text-purple-200 underline truncate max-w-[200px]"
+                      className="text-[11px] text-[var(--or-200,#eec4ff)] hover:text-[var(--or-100,#f6e1ff)] underline truncate max-w-[200px]"
                       data-testid={`station-stream-${s.id}`}
                     >
                       {t.streamLink}
@@ -263,7 +271,7 @@ export default function StationBoard({
                 </div>
 
                 {s.notes && (
-                  <p className="mt-1.5 text-[11px] text-neutral-400 whitespace-pre-wrap">
+                  <p className="mt-1.5 text-[11px] text-[var(--t3,#a39ba6)] whitespace-pre-wrap">
                     {s.notes}
                   </p>
                 )}
@@ -272,49 +280,50 @@ export default function StationBoard({
                 <div className="mt-1.5 text-[11px]">
                   {liveSeg ? (
                     <span
-                      className="inline-flex items-center gap-1.5 text-emerald-300"
+                      className="inline-flex items-center gap-1.5 font-semibold text-[var(--lf-200,#b3e7a3)]"
                       data-testid={`station-live-seg-${s.id}`}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--lf,#7fca65)] animate-pulse" />
                       {format(t.liveNow, { title: liveSeg.title })}
                     </span>
                   ) : (
-                    <span className="text-neutral-500">{t.noLive}</span>
+                    <span className="text-[var(--t4,#807984)]">{t.noLive}</span>
                   )}
                 </div>
 
                 <div className="mt-2 flex items-center gap-1.5">
-                  <button
-                    type="button"
+                  <AdminButton
+                    variant="ghost"
+                    size="xs"
                     onClick={() =>
                       isEditing ? setEditingId(null) : startEdit(s)
                     }
                     disabled={busy}
-                    className="px-2 py-1 rounded-md text-xs bg-neutral-700/50 hover:bg-neutral-600/60 text-neutral-200 border border-neutral-600/40 disabled:opacity-50"
                     data-testid={`station-edit-${s.id}`}
                   >
                     {isEditing ? t.close : t.edit}
-                  </button>
-                  <button
-                    type="button"
+                  </AdminButton>
+                  <AdminButton
+                    variant="ghost"
+                    size="xs"
                     onClick={() => onDelete(s)}
                     disabled={busy}
-                    className="px-2 py-1 rounded-md text-xs bg-neutral-700/50 hover:bg-red-700/40 text-neutral-300 hover:text-red-200 border border-neutral-600/40 disabled:opacity-50"
+                    className="hover:border-[rgba(255,107,107,.45)] hover:text-[var(--err,#ff6b6b)]"
                     data-testid={`station-delete-${s.id}`}
                   >
                     {t.delete}
-                  </button>
+                  </AdminButton>
                 </div>
 
                 {isEditing && (
-                  <div className="mt-3 rounded-lg border border-neutral-700/40 bg-neutral-900/40 p-3 space-y-2">
+                  <div className={`mt-3 p-3 space-y-2 ${rubanCard}`}>
                     <input
                       value={editForm.name}
                       onChange={(e) =>
                         setEditForm((f) => ({ ...f, name: e.target.value }))
                       }
                       placeholder={t.editNamePlaceholder}
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+                      className={rubanInput}
                       data-testid={`station-edit-name-${s.id}`}
                     />
                     <input
@@ -326,7 +335,7 @@ export default function StationBoard({
                         }))
                       }
                       placeholder={t.editStreamPlaceholder}
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+                      className={rubanInput}
                     />
                     <textarea
                       value={editForm.notes}
@@ -335,20 +344,22 @@ export default function StationBoard({
                       }
                       rows={2}
                       placeholder={t.editNotesPlaceholder}
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+                      className={rubanInput}
                     />
                     {editError && (
-                      <div className="text-xs text-red-300">{editError}</div>
+                      <div className="text-xs text-[var(--err,#ff6b6b)]">
+                        {editError}
+                      </div>
                     )}
-                    <button
-                      type="button"
+                    <AdminButton
+                      variant="secondary"
+                      size="xs"
                       onClick={() => submitEdit(s.id)}
                       disabled={busy}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-xs font-medium"
                       data-testid={`station-edit-submit-${s.id}`}
                     >
                       {t.save}
-                    </button>
+                    </AdminButton>
                   </div>
                 )}
               </li>

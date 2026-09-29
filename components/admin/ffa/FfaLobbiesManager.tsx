@@ -15,6 +15,17 @@ import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminFfa from '@/lib/i18n/locales/admin-fr/adminFfa';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
+import {
+  CARD,
+  CARD_TITLE,
+  ERROR_BOX,
+  FAINT,
+  MUTED,
+  ROW_ICON,
+  TILE,
+} from '@/features/admin/stages/ui/rubanClasses';
 
 type Dict = typeof nsAdminFfa.fr;
 
@@ -90,14 +101,14 @@ function statusLabel(status: string, t: Dict): string {
   }
 }
 
-function statusColor(status: string): string {
+function statusTone(status: string): ChipTone {
   switch (status) {
     case 'in_progress':
-      return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+      return 'live';
     case 'completed':
-      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+      return 'ok';
     default:
-      return 'bg-neutral-500/20 text-neutral-300 border-neutral-500/30';
+      return 'neutral';
   }
 }
 
@@ -295,9 +306,9 @@ function FfaLobbiesManager({
 
   if (loading) {
     return (
-      <section className="bg-neutral-800/50 backdrop-blur border border-indigo-700/40 rounded-2xl p-6">
-        <div className="flex items-center gap-2 text-sm text-neutral-400">
-          <div className="w-4 h-4 border-2 border-neutral-600 border-t-indigo-400 rounded-full animate-spin" />
+      <section className={CARD}>
+        <div className={`flex items-center gap-2 text-sm ${MUTED}`}>
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--or,#b467d1)]" />
           {t.loading}
         </div>
       </section>
@@ -307,69 +318,66 @@ function FfaLobbiesManager({
   return (
     <>
       {dialog}
-      <section className="bg-neutral-800/50 backdrop-blur border border-indigo-700/40 rounded-2xl p-6 space-y-6">
+      <section className={`space-y-6 ${CARD}`}>
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <span className="inline-flex w-8 h-8 rounded-lg bg-indigo-600/20 items-center justify-center text-indigo-300">
-                ★
-              </span>
+            <h2 className={CARD_TITLE}>
+              <span className={`${ROW_ICON} !h-8 !w-8`}>★</span>
               {t.lobbiesTitle}
             </h2>
-            <p className="text-xs text-neutral-500 mt-1">{t.lobbiesDesc}</p>
+            <p className={`mt-1 text-xs ${FAINT}`}>{t.lobbiesDesc}</p>
           </div>
         </div>
 
-        {error && (
-          <div className="rounded bg-red-900/40 border border-red-700/50 px-3 py-2 text-sm text-red-200">
-            {error}
-          </div>
-        )}
+        {error && <div className={ERROR_BOX}>{error}</div>}
 
         {/* Create lobby */}
-        <div className="rounded-xl border border-neutral-700/60 bg-neutral-900/40 p-4">
+        <div className={`${TILE} p-4`}>
           <h3 className="text-sm font-medium mb-3">{t.createLobby}</h3>
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex-1 min-w-[160px]">
-              <label className="block text-xs text-neutral-400 mb-1">
+              <label className={`mb-1 block text-xs ${MUTED}`}>
                 {t.lobbyName}
               </label>
               <input
                 type="text"
-                className="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                 value={newLobbyName}
                 onChange={(e) => setNewLobbyName(e.target.value)}
                 placeholder={t.lobbyNamePlaceholder}
               />
             </div>
             <div className="w-28">
-              <label className="block text-xs text-neutral-400 mb-1">
+              <label className={`mb-1 block text-xs ${MUTED}`}>
                 {t.roundNumber}
               </label>
               <input
                 type="number"
                 min={1}
-                className="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                 value={newLobbyRound}
                 onChange={(e) => setNewLobbyRound(e.target.value)}
                 placeholder="—"
               />
             </div>
-            <button
-              type="button"
+            <AdminButton
+              variant="secondary"
+              size="sm"
               onClick={handleCreateLobby}
               disabled={creating}
-              className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-sm font-medium disabled:opacity-50"
             >
               {creating ? t.creating : t.createLobby}
-            </button>
+            </AdminButton>
           </div>
         </div>
 
         {/* Lobbies list */}
         {(!data || data.lobbies.length === 0) && (
-          <div className="rounded-xl border border-dashed border-neutral-700 bg-neutral-900/30 p-8 text-center">
-            <p className="text-sm text-neutral-400">{t.emptyLobbies}</p>
+          <div
+            data-empty
+            className="rounded-[var(--r-card,14px)] border border-dashed border-[var(--line2,rgba(194,196,201,.2))] p-8 text-center"
+          >
+            <p className={`text-sm ${MUTED}`}>{t.emptyLobbies}</p>
           </div>
         )}
 
@@ -385,45 +393,38 @@ function FfaLobbiesManager({
             );
 
             return (
-              <div
-                key={lobby.id}
-                className="rounded-xl border border-neutral-700/60 bg-neutral-900/40 p-4 space-y-4"
-              >
+              <div key={lobby.id} className={`space-y-4 p-4 ${TILE}`}>
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center gap-3">
-                    <span className="font-medium">
+                    <span className="font-medium text-[var(--t1,#f4edf7)]">
                       {lobby.name || t.unnamedLobby}
                     </span>
                     {lobby.round_number !== null && (
-                      <span className="text-xs text-neutral-500">
+                      <span className={`text-xs ${FAINT}`}>
                         {t.roundNumber} {lobby.round_number}
                       </span>
                     )}
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full border ${statusColor(
-                        lobby.status
-                      )}`}
-                    >
+                    <Chip tone={statusTone(lobby.status)}>
                       {statusLabel(lobby.status, t)}
-                    </span>
+                    </Chip>
                   </div>
-                  <button
-                    type="button"
+                  <AdminButton
+                    variant="danger"
+                    size="xs"
                     onClick={() => handleDeleteLobby(lobby)}
-                    className="text-xs text-neutral-400 hover:text-red-400"
                   >
                     {t.deleteLobby}
-                  </button>
+                  </AdminButton>
                 </div>
 
                 {/* Placements table */}
                 {draft.length === 0 ? (
-                  <p className="text-xs text-neutral-500">{t.emptyTeams}</p>
+                  <p className={`text-xs ${FAINT}`}>{t.emptyTeams}</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="text-xs text-neutral-500 text-left">
+                        <tr className="text-left">
                           <th scope="col" className="pb-2 font-normal">
                             {t.team}
                           </th>
@@ -443,7 +444,7 @@ function FfaLobbiesManager({
                         {draft.map((entry) => (
                           <tr
                             key={entry.teamId}
-                            className="border-t border-neutral-800"
+                            className="border-t border-[var(--line,rgba(194,196,201,.12))]"
                           >
                             <td className="py-2 pr-2">
                               <span className="flex items-center gap-2">
@@ -452,7 +453,7 @@ function FfaLobbiesManager({
                                   <img
                                     src={entry.teamLogoUrl}
                                     alt=""
-                                    className="w-5 h-5 rounded object-cover"
+                                    className="h-5 w-5 rounded-[3px] object-cover"
                                   />
                                 )}
                                 <span>
@@ -464,7 +465,7 @@ function FfaLobbiesManager({
                               <input
                                 type="number"
                                 min={1}
-                                className="w-20 px-2 py-1 rounded bg-neutral-800 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="w-20 px-2 py-1 font-mono rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                                 value={entry.placement}
                                 onChange={(e) =>
                                   updateEntry(
@@ -479,7 +480,7 @@ function FfaLobbiesManager({
                             <td className="py-2 pr-2">
                               <input
                                 type="number"
-                                className="w-20 px-2 py-1 rounded bg-neutral-800 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="w-20 px-2 py-1 font-mono rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                                 value={entry.score}
                                 onChange={(e) =>
                                   updateEntry(
@@ -491,7 +492,7 @@ function FfaLobbiesManager({
                                 }
                               />
                             </td>
-                            <td className="py-2 pr-2 text-neutral-300">
+                            <td className="py-2 pr-2 font-mono text-[var(--t2,#c7bfca)]">
                               {savedPoints.has(entry.teamId)
                                 ? (savedPoints.get(entry.teamId) ?? '—')
                                 : '—'}
@@ -502,7 +503,7 @@ function FfaLobbiesManager({
                                 onClick={() =>
                                   removeTeamFromLobby(lobby.id, entry.teamId)
                                 }
-                                className="text-neutral-500 hover:text-red-400"
+                                className="text-[var(--t4,#807984)] hover:text-[var(--err,#ff6b6b)]"
                                 aria-label={t.removeTeam}
                                 title={t.removeTeam}
                               >
@@ -519,11 +520,11 @@ function FfaLobbiesManager({
                 {/* Controls */}
                 <div className="flex flex-wrap items-end gap-3 pt-1">
                   <div className="min-w-[180px]">
-                    <label className="block text-xs text-neutral-400 mb-1">
+                    <label className={`mb-1 block text-xs ${MUTED}`}>
                       {t.addTeam}
                     </label>
                     <select
-                      className="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                       value=""
                       onChange={(e) => {
                         addTeamToLobby(lobby.id, e.target.value);
@@ -545,11 +546,11 @@ function FfaLobbiesManager({
                   </div>
 
                   <div className="w-40">
-                    <label className="block text-xs text-neutral-400 mb-1">
+                    <label className={`mb-1 block text-xs ${MUTED}`}>
                       {t.statusLabel}
                     </label>
                     <select
-                      className="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                       value={statusDrafts[lobby.id] ?? lobby.status}
                       onChange={(e) =>
                         setStatusDrafts((prev) => ({
@@ -566,36 +567,36 @@ function FfaLobbiesManager({
                     </select>
                   </div>
 
-                  <button
-                    type="button"
+                  <AdminButton
+                    variant="primary"
+                    size="sm"
                     onClick={() => handleSaveLobby(lobby.id)}
                     disabled={savingLobbyId === lobby.id}
-                    className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 text-sm font-medium disabled:opacity-50"
                   >
                     {savingLobbyId === lobby.id ? t.saving : t.save}
-                  </button>
+                  </AdminButton>
                 </div>
               </div>
             );
           })}
 
         {/* Standings preview */}
-        <div className="rounded-xl border border-neutral-700/60 bg-neutral-900/40 p-4">
+        <div className={`${TILE} p-4`}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-medium">{t.standingsTitle}</h3>
             {data && (
-              <span className="text-xs text-neutral-500">
+              <span className={`text-xs ${FAINT}`}>
                 {t.tiebreakLabel}: {tiebreakLabel(data.tiebreak, t)}
               </span>
             )}
           </div>
           {!data || data.standings.length === 0 ? (
-            <p className="text-xs text-neutral-500">{t.emptyStandings}</p>
+            <p className={`text-xs ${FAINT}`}>{t.emptyStandings}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-xs text-neutral-500 text-left">
+                  <tr className="text-left">
                     <th scope="col" className="pb-2 font-normal w-12">
                       #
                     </th>
@@ -618,8 +619,11 @@ function FfaLobbiesManager({
                 </thead>
                 <tbody>
                   {data.standings.map((s) => (
-                    <tr key={s.teamId} className="border-t border-neutral-800">
-                      <td className="py-2 font-medium text-neutral-300">
+                    <tr
+                      key={s.teamId}
+                      className="border-t border-[var(--line,rgba(194,196,201,.12))]"
+                    >
+                      <td className="py-2 font-mono font-medium text-[var(--t2,#c7bfca)]">
                         {s.rank}
                       </td>
                       <td className="py-2">
@@ -629,20 +633,22 @@ function FfaLobbiesManager({
                             <img
                               src={s.teamLogoUrl}
                               alt=""
-                              className="w-5 h-5 rounded object-cover"
+                              className="h-5 w-5 rounded-[3px] object-cover"
                             />
                           )}
                           <span>{s.teamName || s.teamId.slice(0, 8)}</span>
                         </span>
                       </td>
-                      <td className="py-2 font-medium">{s.totalPoints}</td>
-                      <td className="py-2 text-neutral-400">
+                      <td className="py-2 font-mono font-medium text-[var(--t1,#f4edf7)]">
+                        {s.totalPoints}
+                      </td>
+                      <td className={`py-2 font-mono ${MUTED}`}>
                         {s.lobbiesPlayed}
                       </td>
-                      <td className="py-2 text-neutral-400">
+                      <td className={`py-2 font-mono ${MUTED}`}>
                         {s.bestPlacement ?? '—'}
                       </td>
-                      <td className="py-2 text-neutral-400">{s.firsts}</td>
+                      <td className={`py-2 font-mono ${MUTED}`}>{s.firsts}</td>
                     </tr>
                   ))}
                 </tbody>

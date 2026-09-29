@@ -12,6 +12,8 @@ import SeedSlot from './SeedSlot';
 import { parseNotes } from './types';
 import type { ScheduleMatch, TournamentTeam, DragPayload } from './types';
 import nsAdminBracketMatchCard from '@/lib/i18n/locales/admin-fr/adminBracketMatchCard';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import { MATCH_STATUS_TONE } from './statusTone';
 
 type MatchCardProps = {
   match: ScheduleMatch;
@@ -50,10 +52,10 @@ export default function MatchCard({
 
   return (
     <div
-      className={`group relative rounded-xl border transition-all duration-200 hover:border-purple-500/30 ${
+      className={`group relative rounded-[var(--r-card,14px)] border transition-all duration-200 hover:border-[var(--or,#b467d1)] ${
         isTBD
-          ? 'bg-gradient-to-br from-purple-950/40 to-indigo-950/40 border-purple-500/20'
-          : 'bg-surface border-white/[0.06]'
+          ? 'border-dashed border-[rgba(180,103,209,.4)] bg-[var(--s1,#100812)]'
+          : 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]'
       }`}
     >
       {/* Top bar: time + status + format */}
@@ -63,25 +65,18 @@ export default function MatchCard({
             <button
               type="button"
               onClick={() => onEditDate(isEditing ? null : match.id)}
-              className="text-sm font-bold tabular-nums text-white/90 hover:text-purple-300 transition-colors"
+              className="font-mono text-sm font-bold text-[var(--t1,#f4edf7)] transition-colors hover:text-[var(--or-300,#dea3f6)]"
               title={t.editTime}
             >
               {formatTime(match.scheduled_at)}
             </button>
           )}
-          {match.match_format && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-white/5 text-neutral-400 border border-white/5">
-              {match.match_format}
-            </span>
-          )}
+          {match.match_format && <Chip>{match.match_format}</Chip>}
         </div>
         <div className="flex items-center gap-2">
-          <span
-            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border ${statusCfg.bg}`}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+          <Chip tone={MATCH_STATUS_TONE[match.status] ?? 'neutral'}>
             {statusCfg.label}
-          </span>
+          </Chip>
         </div>
       </div>
 
@@ -103,7 +98,7 @@ export default function MatchCard({
                 );
               if (e.key === 'Escape') onEditDate(null);
             }}
-            className="w-full px-2.5 py-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+            className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2.5 py-1.5 text-xs text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
           />
         </div>
       )}
@@ -131,11 +126,11 @@ export default function MatchCard({
 
           {/* VS divider */}
           <div className="flex items-center gap-2 px-1">
-            <div className="flex-1 h-px bg-white/[0.04]" />
-            <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest">
+            <div className="h-px flex-1 bg-[var(--line,rgba(194,196,201,.12))]" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--t4,#807984)]">
               vs
             </span>
-            <div className="flex-1 h-px bg-white/[0.04]" />
+            <div className="h-px flex-1 bg-[var(--line,rgba(194,196,201,.12))]" />
           </div>
 
           <SeedSlot
@@ -159,7 +154,7 @@ export default function MatchCard({
 
         {/* Venue */}
         {info?.venue && (
-          <div className="mt-2.5 flex items-center gap-1.5 text-[10px] text-neutral-500">
+          <div className="mt-2.5 flex items-center gap-1.5 text-[10px] text-[var(--t4,#807984)]">
             <svg
               width="12"
               height="12"

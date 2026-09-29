@@ -6,7 +6,6 @@
 // wrapper, no TournamentTabsNav — the host route provides those).
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
@@ -14,6 +13,19 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentBracket from '@/lib/i18n/locales/admin-fr/adminTournamentBracket';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import {
+  CARD,
+  ERROR_BOX,
+  EYEBROW,
+  FAINT,
+  INPUT,
+  LABEL,
+  MUTED,
+  TILE,
+} from '@/features/admin/stages/ui/rubanClasses';
 
 export default function BracketPanel() {
   const router = useRouter();
@@ -149,100 +161,79 @@ export default function BracketPanel() {
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-              {t.eyebrow}
-            </p>
+            <p className={EYEBROW}>{t.eyebrow}</p>
             <h1 className="text-2xl font-semibold">
               {format(t.title, { id: tournamentId?.slice(0, 8) ?? '—' })}
             </h1>
           </div>
           {hasMatches && (
             <div className="flex gap-2">
-              <Link
+              <AdminButtonLink
                 href={`/admin/tournament/${tournamentId}/bracket?tab=builder`}
-                className="px-3 py-2 rounded-lg bg-purple-600/80 hover:bg-purple-600 text-sm font-semibold shadow"
+                variant="secondary"
+                size="sm"
               >
                 {t.openBuilder}
-              </Link>
-              <Link
+              </AdminButtonLink>
+              <AdminButtonLink
                 href={`/admin/tournament/${tournamentId}/matches`}
-                className="px-3 py-2 rounded-lg bg-white/10 border border-white/15 hover:bg-white/15 text-sm"
+                size="sm"
               >
                 {t.viewMatches}
-              </Link>
+              </AdminButtonLink>
             </div>
           )}
         </div>
 
-        {loading && <div className="text-neutral-400 text-sm">{t.loading}</div>}
+        {loading && <div className={`text-sm ${MUTED}`}>{t.loading}</div>}
 
         {/* Formulaire de création quand aucun bracket n'existe */}
         {!loading && !hasMatches && (
-          <div className="rounded-xl border border-white/10 bg-white/5 p-6 space-y-6">
+          <div className={`space-y-6 ${CARD}`}>
             <div>
               <h2 className="text-lg font-semibold mb-1">{t.createHeading}</h2>
-              <p className="text-sm text-neutral-400">{t.createDesc}</p>
+              <p className={`text-sm ${MUTED}`}>{t.createDesc}</p>
             </div>
 
-            {errorMsg && (
-              <div className="rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
-                {errorMsg}
-              </div>
-            )}
+            {errorMsg && <div className={ERROR_BOX}>{errorMsg}</div>}
             <form onSubmit={handleGenerate} className="space-y-5">
               {/* Type de bracket */}
               <div>
-                <label className="block text-sm font-medium text-neutral-200 mb-2">
-                  {t.bracketTypeLabel}
-                </label>
+                <label className={LABEL}>{t.bracketTypeLabel}</label>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
+                  <AdminButton
+                    size="sm"
+                    variant={bracketType === 'single' ? 'secondary' : 'ghost'}
                     onClick={() => setBracketType('single')}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
-                      bracketType === 'single'
-                        ? 'bg-purple-600 border-purple-500 text-white'
-                        : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                    }`}
                   >
                     {t.singleElim}
-                  </button>
-                  <button
-                    type="button"
+                  </AdminButton>
+                  <AdminButton
+                    size="sm"
+                    variant={bracketType === 'double' ? 'secondary' : 'ghost'}
                     onClick={() => setBracketType('double')}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
-                      bracketType === 'double'
-                        ? 'bg-purple-600 border-purple-500 text-white'
-                        : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                    }`}
                   >
                     {t.doubleElim}
-                  </button>
+                  </AdminButton>
                 </div>
               </div>
 
               {/* Taille du bracket */}
               <div>
-                <label className="block text-sm font-medium text-neutral-200 mb-2">
-                  {t.slotsLabel}
-                </label>
+                <label className={LABEL}>{t.slotsLabel}</label>
                 <div className="flex gap-2">
                   {[4, 8, 16, 32].map((s) => (
-                    <button
+                    <AdminButton
                       key={s}
-                      type="button"
+                      size="sm"
+                      variant={size === s ? 'secondary' : 'ghost'}
                       onClick={() => setSize(s)}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
-                        size === s
-                          ? 'bg-purple-600 border-purple-500 text-white'
-                          : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                      }`}
                     >
                       {s}
-                    </button>
+                    </AdminButton>
                   ))}
                 </div>
-                <p className="mt-1 text-xs text-neutral-500">
+                <p className={`mt-1 text-xs ${FAINT}`}>
                   {format(t.roundsSummary, {
                     rounds: totalRounds,
                     matches: totalMatches,
@@ -252,33 +243,24 @@ export default function BracketPanel() {
 
               {/* Format (Best of) */}
               <div>
-                <label className="block text-sm font-medium text-neutral-200 mb-2">
-                  {t.defaultFormatLabel}
-                </label>
+                <label className={LABEL}>{t.defaultFormatLabel}</label>
                 <div className="flex gap-2">
                   {[1, 3, 5].map((bo) => (
-                    <button
+                    <AdminButton
                       key={bo}
-                      type="button"
+                      size="sm"
+                      variant={bestOf === bo ? 'secondary' : 'ghost'}
                       onClick={() => setBestOf(bo)}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
-                        bestOf === bo
-                          ? 'bg-purple-600 border-purple-500 text-white'
-                          : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                      }`}
                     >
                       BO{bo}
-                    </button>
+                    </AdminButton>
                   ))}
                 </div>
               </div>
 
               {/* Date de début */}
               <div>
-                <label
-                  htmlFor="startDate"
-                  className="block text-sm font-medium text-neutral-200 mb-2"
-                >
+                <label htmlFor="startDate" className={LABEL}>
                   {t.firstMatchLabel}
                 </label>
                 <input
@@ -286,19 +268,14 @@ export default function BracketPanel() {
                   type="datetime-local"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={INPUT}
                 />
-                <p className="mt-1 text-xs text-neutral-500">
-                  {t.firstMatchHelp}
-                </p>
+                <p className={`mt-1 text-xs ${FAINT}`}>{t.firstMatchHelp}</p>
               </div>
 
               {/* Intervalle */}
               <div>
-                <label
-                  htmlFor="interval"
-                  className="block text-sm font-medium text-neutral-200 mb-2"
-                >
+                <label htmlFor="interval" className={LABEL}>
                   {t.intervalLabel}
                 </label>
                 <input
@@ -310,7 +287,7 @@ export default function BracketPanel() {
                   onChange={(e) =>
                     setIntervalMinutes(parseInt(e.target.value, 10) || 60)
                   }
-                  className="w-32 px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`!w-32 ${INPUT}`}
                 />
               </div>
 
@@ -324,26 +301,22 @@ export default function BracketPanel() {
                       onChange={(e) => setGrandFinalReset(e.target.checked)}
                       className="rounded border-neutral-500 bg-neutral-700"
                     />
-                    <span className="font-medium text-neutral-200">
+                    <span className="font-medium text-[var(--t2,#c7bfca)]">
                       {t.grandFinalReset}
                     </span>
                   </label>
-                  <p className="mt-1 text-xs text-neutral-500 ml-6">
+                  <p className={`mt-1 ml-6 text-xs ${FAINT}`}>
                     {t.grandFinalResetHelp}
                   </p>
                 </div>
               )}
 
               {/* Aperçu visuel */}
-              <div className="rounded-lg border border-neutral-700 bg-neutral-900/50 p-4">
-                <h3 className="text-sm font-medium text-neutral-300 mb-3">
-                  {t.structurePreview}
-                </h3>
+              <div className={`${TILE} p-4`}>
+                <h3 className={`mb-3 ${EYEBROW}`}>{t.structurePreview}</h3>
                 {/* Winners bracket preview */}
                 {bracketType === 'double' && (
-                  <p className="text-xs text-purple-300 uppercase tracking-wider mb-2 font-semibold">
-                    {t.winnersBracket}
-                  </p>
+                  <p className={`mb-2 ${EYEBROW}`}>{t.winnersBracket}</p>
                 )}
                 <div className="flex items-center gap-4 overflow-x-auto pb-2">
                   {Array.from({ length: totalRounds }, (_, r) => {
@@ -370,14 +343,16 @@ export default function BracketPanel() {
 
                     return (
                       <div key={r} className="flex-shrink-0 text-center">
-                        <div className="text-[10px] uppercase tracking-wider text-neutral-500 mb-2">
+                        <div
+                          className={`mb-2 text-[10px] uppercase tracking-wider ${FAINT}`}
+                        >
                           {label}
                         </div>
                         <div className="flex flex-col gap-1">
                           {Array.from({ length: matchesInRound }, (_, i) => (
                             <div
                               key={i}
-                              className="w-20 h-8 rounded border border-neutral-700 bg-neutral-800 flex items-center justify-center text-[10px] text-neutral-500"
+                              className="flex h-8 w-20 items-center justify-center rounded-[3px] border font-mono text-[10px] border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] text-[var(--t3,#a39ba6)]"
                             >
                               M{i + 1}
                             </div>
@@ -388,15 +363,15 @@ export default function BracketPanel() {
                   })}
                   {bracketType === 'double' && (
                     <div className="flex-shrink-0 text-center">
-                      <div className="text-[10px] uppercase tracking-wider text-amber-400 mb-2">
+                      <div className="mb-2 text-[10px] uppercase tracking-wider text-[var(--or-300,#dea3f6)]">
                         GF{grandFinalReset ? ' + Reset' : ''}
                       </div>
                       <div className="flex flex-col gap-1">
-                        <div className="w-20 h-8 rounded border border-amber-700/50 bg-amber-900/20 flex items-center justify-center text-[10px] text-amber-300">
+                        <div className="flex h-8 w-20 items-center justify-center rounded-[3px] border font-mono text-[10px] border-[rgba(180,103,209,.45)] bg-[rgba(180,103,209,.12)] text-[var(--or-200,#eec4ff)]">
                           GF
                         </div>
                         {grandFinalReset && (
-                          <div className="w-20 h-8 rounded border border-amber-700/30 bg-amber-900/10 flex items-center justify-center text-[10px] text-amber-400/70">
+                          <div className="flex h-8 w-20 items-center justify-center rounded-[3px] border font-mono text-[10px] border-dashed border-[rgba(180,103,209,.35)] bg-[var(--s1,#100812)] text-[var(--or-300,#dea3f6)]">
                             Reset
                           </div>
                         )}
@@ -407,9 +382,7 @@ export default function BracketPanel() {
                 {/* Losers bracket preview */}
                 {bracketType === 'double' && (
                   <>
-                    <p className="text-xs text-red-300 uppercase tracking-wider mb-2 mt-4 font-semibold">
-                      {t.losersBracket}
-                    </p>
+                    <p className={`mt-4 mb-2 ${EYEBROW}`}>{t.losersBracket}</p>
                     <div className="flex items-center gap-4 overflow-x-auto pb-2">
                       {(() => {
                         const lbRoundsCount = 2 * (wbRounds - 1);
@@ -436,14 +409,16 @@ export default function BracketPanel() {
                         }
                         return rounds.map((rd, idx) => (
                           <div key={idx} className="flex-shrink-0 text-center">
-                            <div className="text-[10px] uppercase tracking-wider text-neutral-500 mb-2">
+                            <div
+                              className={`mb-2 text-[10px] uppercase tracking-wider ${FAINT}`}
+                            >
                               {rd.label}
                             </div>
                             <div className="flex flex-col gap-1">
                               {Array.from({ length: rd.count }, (_, i) => (
                                 <div
                                   key={i}
-                                  className="w-20 h-8 rounded border border-red-800/40 bg-red-900/10 flex items-center justify-center text-[10px] text-red-400/70"
+                                  className="flex h-8 w-20 items-center justify-center rounded-[3px] border font-mono text-[10px] border-dashed border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] text-[var(--t4,#807984)]"
                                 >
                                   M{i + 1}
                                 </div>
@@ -457,33 +432,31 @@ export default function BracketPanel() {
                 )}
               </div>
 
-              <button
+              <AdminButton
                 type="submit"
+                variant="primary"
                 disabled={generating}
-                className={`w-full px-4 py-3 rounded-lg text-sm font-semibold transition-colors ${
-                  generating
-                    ? 'bg-purple-900/70 cursor-wait'
-                    : 'bg-purple-600 hover:bg-purple-700'
-                }`}
+                className={`w-full ${generating ? 'cursor-wait' : ''}`}
               >
                 {generating
                   ? t.generating
                   : format(t.generateBtn, { matches: totalMatches })}
-              </button>
+              </AdminButton>
             </form>
           </div>
         )}
 
         {/* Quand un bracket existe déjà */}
         {!loading && hasMatches && (
-          <div className="rounded-xl border border-white/10 bg-white/5 p-6 space-y-4">
-            <p className="text-sm text-neutral-300">{t.existsNotice}</p>
-            <Link
+          <div className={`space-y-4 ${CARD}`}>
+            <p className="text-sm text-[var(--t2,#c7bfca)]">{t.existsNotice}</p>
+            <AdminButtonLink
               href={`/admin/tournament/${tournamentId}/bracket?tab=builder`}
-              className="inline-block px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-semibold"
+              variant="primary"
+              size="sm"
             >
               {t.openBuilder}
-            </Link>
+            </AdminButtonLink>
           </div>
         )}
       </div>

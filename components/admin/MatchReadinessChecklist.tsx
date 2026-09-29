@@ -3,6 +3,7 @@
 
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminMatchReadinessChecklist from '@/lib/i18n/locales/admin-fr/adminMatchReadinessChecklist';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 type CheckItem = {
   label: string;
@@ -34,7 +35,7 @@ function CheckRow({ item }: { item: CheckItem }) {
       <div className="mt-0.5 flex-shrink-0">
         {item.ok ? (
           <svg
-            className="w-4 h-4 text-emerald-400"
+            className="h-4 w-4 text-[var(--lf,#7fca65)]"
             fill="currentColor"
             viewBox="0 0 20 20"
           >
@@ -46,7 +47,7 @@ function CheckRow({ item }: { item: CheckItem }) {
           </svg>
         ) : (
           <svg
-            className="w-4 h-4 text-neutral-500"
+            className="h-4 w-4 text-[var(--t4,#807984)]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -58,13 +59,15 @@ function CheckRow({ item }: { item: CheckItem }) {
       <div className="flex-1 min-w-0">
         <span
           className={`text-sm ${
-            item.ok ? 'text-emerald-300' : 'text-neutral-400'
+            item.ok ? 'text-[var(--t1,#f4edf7)]' : 'text-[var(--t3,#a39ba6)]'
           }`}
         >
           {item.label}
         </span>
         {item.detail && (
-          <p className="text-[11px] text-neutral-500 mt-0.5">{item.detail}</p>
+          <p className="mt-0.5 text-[11px] text-[var(--t4,#807984)]">
+            {item.detail}
+          </p>
         )}
       </div>
     </div>
@@ -166,26 +169,18 @@ export default function MatchReadinessChecklist({
   const percentage = Math.round((readyCount / totalCount) * 100);
 
   return (
-    <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-3">
+    <section className="space-y-3 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-5">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">{t.heading}</h2>
-        <span
-          className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-            allReady
-              ? 'bg-emerald-600/20 text-emerald-300'
-              : percentage >= 60
-                ? 'bg-amber-600/20 text-amber-300'
-                : 'bg-red-600/20 text-red-300'
-          }`}
-        >
+        <Chip tone={allReady ? 'ok' : percentage >= 60 ? 'warn' : 'err'}>
           {readyCount}/{totalCount}
-        </span>
+        </Chip>
       </div>
 
       {/* Progress bar */}
-      <div className="w-full h-1.5 bg-neutral-700 rounded-full overflow-hidden">
+      <div className="h-1.5 w-full overflow-hidden rounded-[2px] bg-[var(--s3,#2f2732)]">
         <div
-          className={`h-full rounded-full transition-all ${
+          className={`h-full rounded-[2px] transition-all ${
             allReady
               ? 'bg-emerald-500'
               : percentage >= 60
@@ -196,14 +191,14 @@ export default function MatchReadinessChecklist({
         />
       </div>
 
-      <div className="divide-y divide-neutral-700/50">
+      <div className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
         {checks.map((check, i) => (
           <CheckRow key={i} item={check} />
         ))}
       </div>
 
       {allReady && (
-        <p className="text-xs text-emerald-400 font-medium pt-1">
+        <p className="pt-1 text-xs font-medium text-[var(--lf,#7fca65)]">
           {t.allReady}
         </p>
       )}

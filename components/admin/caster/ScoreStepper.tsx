@@ -23,13 +23,13 @@ export default function ScoreStepper({
   onChange: (next: number) => void;
 }) {
   return (
-    <div className="inline-flex items-center rounded-lg border border-neutral-700 bg-neutral-950 overflow-hidden">
+    <div className="inline-flex items-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] overflow-hidden">
       <button
         type="button"
         tabIndex={-1}
         aria-label={minusLabel}
         onClick={() => onChange(clampScore(value - 1))}
-        className="px-3 py-2 text-neutral-300 hover:bg-neutral-800 text-lg leading-none"
+        className="px-3 py-2 text-[var(--t2,#c7bfca)] hover:bg-[var(--s3,#2f2732)] hover:text-[var(--t1,#f4edf7)] text-lg leading-none"
       >
         −
       </button>
@@ -40,14 +40,14 @@ export default function ScoreStepper({
         value={value}
         aria-label={label}
         onChange={(e) => onChange(clampScore(Number(e.target.value)))}
-        className="w-14 bg-transparent text-center text-xl font-extrabold text-white py-1.5 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="w-14 bg-transparent text-center font-[family-name:var(--fd)] text-[26px] font-extrabold [font-stretch:75%] text-[var(--t1,#f4edf7)] py-1 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
       />
       <button
         type="button"
         tabIndex={-1}
         aria-label={plusLabel}
         onClick={() => onChange(clampScore(value + 1))}
-        className="px-3 py-2 text-neutral-300 hover:bg-neutral-800 text-lg leading-none"
+        className="px-3 py-2 text-[var(--t2,#c7bfca)] hover:bg-[var(--s3,#2f2732)] hover:text-[var(--t1,#f4edf7)] text-lg leading-none"
       >
         +
       </button>

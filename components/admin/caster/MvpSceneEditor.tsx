@@ -16,7 +16,12 @@ import type { CasterScene } from '@/types/caster';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import SaveIndicator from './SaveIndicator';
-import { inputClass, labelClass } from './fieldClasses';
+import {
+  iconBtnClass,
+  inputClass,
+  labelClass,
+  smallBtnClass,
+} from './fieldClasses';
 import { useSceneDraft } from './useSceneDraft';
 import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
@@ -157,7 +162,7 @@ export default function MvpSceneEditor({ scene, onSave }: Props) {
               }
               title={format(t.mvpRemoveCandidate, { index: i + 1 })}
               aria-label={format(t.mvpRemoveCandidate, { index: i + 1 })}
-              className="shrink-0 px-2.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm"
+              className={iconBtnClass}
             >
               ✕
             </button>
@@ -167,7 +172,7 @@ export default function MvpSceneEditor({ scene, onSave }: Props) {
           type="button"
           onClick={() => patch({ candidates: [...draft.candidates, ''] })}
           disabled={draft.candidates.length >= MAX_CANDIDATES}
-          className="px-2.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          className={smallBtnClass}
           data-testid="caster-mvp-add"
         >
           {t.mvpAddCandidate}
@@ -175,11 +180,13 @@ export default function MvpSceneEditor({ scene, onSave }: Props) {
       </div>
 
       {/* État du poll (snapshot lecture seule). */}
-      <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2.5 space-y-1">
+      <div className="rounded-[var(--r-card,14px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-3 py-2.5 space-y-1">
         <div className="flex items-center justify-between gap-2 text-xs">
           <span
             className={
-              isOpen ? 'text-emerald-300 font-medium' : 'text-neutral-400'
+              isOpen
+                ? 'font-semibold text-[var(--lf-200,#b3e7a3)]'
+                : 'text-[var(--t3,#a39ba6)]'
             }
           >
             {isOpen ? t.mvpPollOpen : t.mvpPollClosed}

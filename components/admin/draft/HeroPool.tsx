@@ -59,9 +59,9 @@ export function HeroPool({
   }
 
   return (
-    <div className="rounded-2xl border border-neutral-700/50 bg-neutral-900/40 p-4">
+    <div className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="text-sm font-semibold uppercase tracking-wider text-neutral-400">
+        <div className="font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
           Hero pool ({filtered.length}/{heroes.length})
         </div>
         <input
@@ -69,7 +69,7 @@ export function HeroPool({
           placeholder="Filter heroes…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-white placeholder:text-neutral-500 focus:border-emerald-500 focus:outline-none"
+          className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-1.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
         />
       </div>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
@@ -83,10 +83,10 @@ export function HeroPool({
               disabled={disabled || isLocked || isBusy}
               onClick={() => click(hero.id)}
               title={hero.name}
-              className={`group relative aspect-square overflow-hidden rounded-lg border transition ${
+              className={`group relative aspect-square overflow-hidden rounded-[var(--r-ctrl,4px)] border transition ${
                 isLocked
-                  ? 'border-neutral-800 opacity-30 grayscale'
-                  : 'border-neutral-700 hover:border-emerald-500 hover:ring-2 hover:ring-emerald-500/40'
+                  ? 'border-[var(--line,rgba(194,196,201,.12))] opacity-30 grayscale'
+                  : 'border-[var(--line2,rgba(194,196,201,.2))] hover:border-[var(--or,#b467d1)] hover:ring-2 hover:ring-[rgba(180,103,209,.35)]'
               } ${isBusy ? 'opacity-60' : ''} disabled:cursor-not-allowed`}
             >
               {hero.icon_url ? (
@@ -98,7 +98,7 @@ export function HeroPool({
                   loading="lazy"
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-neutral-800 text-xs text-neutral-400">
+                <div className="flex h-full w-full items-center justify-center bg-[var(--s2,#1d1520)] text-xs text-[var(--t3,#a39ba6)]">
                   {hero.key}
                 </div>
               )}

@@ -43,10 +43,10 @@ type Props = {
 
 function pillClass(active: boolean): string {
   return [
-    'px-3 py-2 rounded-lg border text-sm text-left transition-colors',
+    'rounded-[var(--r-ctrl,4px)] border px-3 py-2 text-left text-sm transition-colors',
     active
-      ? 'bg-purple-600 border-purple-400/60 text-white'
-      : 'bg-white/5 border-white/10 text-gray-200 hover:bg-white/10',
+      ? 'border-[rgba(180,103,209,.55)] bg-[rgba(180,103,209,.14)] text-[var(--or-100,#f6e1ff)]'
+      : 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-[var(--t2,#c7bfca)] hover:border-[var(--t4,#807984)]',
   ].join(' ');
 }
 
@@ -68,8 +68,8 @@ export default function RoundPoolSelector({
 }: Props) {
   const isDefault = value.kind === 'default';
   return (
-    <div className="mb-6 p-4 rounded-xl bg-white/5 border border-white/10">
-      <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80 mb-3">
+    <div className="mb-6 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
+      <p className="mb-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
         {labels.legend}
       </p>
       <div className="flex flex-wrap gap-2">
@@ -116,18 +116,22 @@ export default function RoundPoolSelector({
       </div>
 
       {rounds.length === 0 && (
-        <p className="mt-3 text-xs text-gray-400">{labels.noRounds}</p>
+        <p className="mt-3 text-xs text-[var(--t3,#a39ba6)]">
+          {labels.noRounds}
+        </p>
       )}
 
       {dates.length > 0 && (
         <>
           <p
-            className="text-xs uppercase tracking-[0.18em] text-purple-200/80 mt-4 mb-1"
+            className="mt-4 mb-1 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]"
             title={labels.datesHint}
           >
             {labels.datesLegend}
           </p>
-          <p className="text-xs text-gray-400 mb-3">{labels.datesHint}</p>
+          <p className="mb-3 text-xs text-[var(--t3,#a39ba6)]">
+            {labels.datesHint}
+          </p>
           <div className="flex flex-wrap gap-2">
             {dates.map((d) => {
               const active = value.kind === 'date' && value.date === d.date;

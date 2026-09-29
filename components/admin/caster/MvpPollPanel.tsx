@@ -16,6 +16,9 @@
 // publication est DEBOUNCÉE (~1,5 s) pour ne pas marteler Supabase pendant un
 // flux de votes ; les changements d'état (ouvrir/fermer/reset) publient tout de
 // suite pour que l'overlay bascule sans latence.
+//
+// Passe « Le Ruban » (lot 10C) : panneau d'encre, états en Chip, barres de
+// dépouillement aux couleurs de la marque (meneuse en feuille) — même logique.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -46,12 +49,17 @@ import type { CasterScene } from '@/types/caster';
 
 import type { ChatMessageListener } from './useTwitchChat';
 import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
+import {
+  panelClass,
+  panelTitleClass,
+  smallBtnClass,
+  warnNoticeClass,
+} from './fieldClasses';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 /** Fenêtre de regroupement des publications pendant un flux de votes. */
 export const PUBLISH_DEBOUNCE_MS = 1500;
-
-const smallBtnClass =
-  'px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium disabled:opacity-50';
 
 type Props = {
   /** Scène de type `mvp` (null si la table n'en contient pas). */
@@ -378,48 +386,37 @@ export default function MvpPollPanel({
       : t.mvpPollStatusWaiting;
 
   return (
-    <section
-      className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4"
-      data-testid="caster-mvp-poll-panel"
-    >
+    <section className={panelClass} data-testid="caster-mvp-poll-panel">
       {dialog}
 
       <div className="flex flex-wrap items-center gap-2 mb-1.5">
-        <h2 className="text-lg font-bold">{t.mvpPollTitle}</h2>
-        <span
-          className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${
-            poll.isOpen
-              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-              : 'bg-neutral-800 border-neutral-700 text-neutral-400'
-          }`}
+        <h2 className={panelTitleClass}>{t.mvpPollTitle}</h2>
+        <Chip
+          tone={poll.isOpen ? 'ok' : 'neutral'}
           data-testid="caster-mvp-poll-status"
         >
           {statusLabel}
-        </span>
-        <span className="text-xs text-neutral-300 tabular-nums">
+        </Chip>
+        <span className="font-mono text-xs font-bold text-[var(--t1,#f4edf7)] tabular-nums">
           {format(t.mvpPollTotal, { total: snapshot.total })}
         </span>
         {/* La régie doit savoir si ses voix ATTERRISSENT. Un scrutin qui
             compte joliment à l'écran sans rien persister ressemble en tout
             point à un scrutin qui marche — c'est exactement ce qui s'est passé
             pendant deux éditions. */}
-        <span
-          className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${
-            matchId
-              ? 'bg-sky-500/15 border-sky-500/40 text-sky-300'
-              : 'bg-amber-500/15 border-amber-500/40 text-amber-300'
-          }`}
+        <Chip
+          tone={matchId ? 'brand' : 'warn'}
           data-testid="caster-mvp-poll-persist"
         >
           {matchId ? t.mvpPollPersisted : t.mvpPollNotPersisted}
-        </span>
+        </Chip>
         {relay.pending > 0 && (
           <span className="text-[11px] text-neutral-500 tabular-nums">
             {format(t.mvpPollRelayPending, { count: relay.pending })}
           </span>
         )}
         {relay.lastError && (
-          <span className="text-[11px] text-red-300">
+          <span className="text-[11px] text-[var(--err,#ff6b6b)]">
             {t.mvpPollRelayError}
           </span>
         )}
@@ -438,7 +435,7 @@ export default function MvpPollPanel({
           value={matchId ?? ''}
           disabled={linking || poll.isOpen}
           onChange={(e) => void onPickMatch(e.target.value)}
-          className="rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-white disabled:opacity-50"
+          className="h-[30px] rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2 text-xs text-[var(--t1,#f4edf7)] outline-none focus:border-[var(--or,#b467d1)] disabled:opacity-50"
           data-testid="caster-mvp-match-select"
         >
           <option value="">{t.mvpPollMatchNone}</option>
@@ -464,25 +461,25 @@ export default function MvpPollPanel({
       <p className="text-xs text-neutral-500 mb-3">{t.mvpPollIntro}</p>
 
       {!scene ? (
-        <p className="text-xs text-amber-300">{t.mvpPollNoScene}</p>
+        <p className="text-xs text-[var(--warn,#f5a524)]">{t.mvpPollNoScene}</p>
       ) : (
         <>
           {!chatConnected && (
-            <div className="mb-3 rounded-xl bg-amber-900/30 border border-amber-500/40 px-3 py-2 text-xs text-amber-200">
+            <div className={`mb-3 px-3 py-2 text-xs ${warnNoticeClass}`}>
               {t.mvpPollChatOffline}
             </div>
           )}
 
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
+            <AdminButton
+              variant="secondary"
+              size="xs"
               onClick={onStart}
               disabled={candidates.length < MIN_CANDIDATES}
-              className={smallBtnClass}
               data-testid="caster-mvp-poll-start"
             >
               {t.mvpPollStart}
-            </button>
+            </AdminButton>
             <button
               type="button"
               onClick={onStop}
@@ -518,10 +515,10 @@ export default function MvpPollPanel({
                 return (
                   <div key={c.id} className="flex items-center gap-2">
                     <span
-                      className={`w-5 shrink-0 text-center text-[11px] font-bold rounded ${
+                      className={`w-5 shrink-0 text-center text-[11px] font-bold rounded-[3px] ${
                         leader
-                          ? 'bg-emerald-500/80 text-black'
-                          : 'text-neutral-500'
+                          ? 'bg-[var(--lf,#7fca65)] text-[#0f0a12]'
+                          : 'text-[var(--t4,#807984)]'
                       }`}
                     >
                       {idx}
@@ -529,15 +526,17 @@ export default function MvpPollPanel({
                     <span className="w-32 shrink-0 truncate text-xs text-neutral-200">
                       {c.label}
                     </span>
-                    <span className="flex-1 h-2 rounded-full bg-neutral-800 overflow-hidden">
+                    <span className="flex-1 h-2 rounded-full bg-[var(--s3,#2f2732)] overflow-hidden">
                       <span
                         className={`block h-full rounded-full ${
-                          leader ? 'bg-emerald-400' : 'bg-purple-500'
+                          leader
+                            ? 'bg-[var(--lf,#7fca65)]'
+                            : 'bg-[var(--or,#b467d1)]'
                         }`}
                         style={{ width: `${c.percent}%` }}
                       />
                     </span>
-                    <span className="w-16 shrink-0 text-right text-xs tabular-nums text-neutral-300">
+                    <span className="w-16 shrink-0 text-right font-mono text-xs font-bold tabular-nums text-[var(--t1,#f4edf7)]">
                       {c.count}{' '}
                       <span className="text-neutral-500">{c.percent}%</span>
                     </span>

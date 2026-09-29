@@ -26,12 +26,21 @@
 //
 // Poll 60s VISIBILITY-GATÉ (comme le reste de la console) + refetch au retour
 // visible. Pas de realtime : le statut Twitch bouge lentement.
+//
+// Passe « Le Ruban » (lot 10C) : carte d'encre, statut de chaîne en Chip — une
+// chaîne à l'antenne prend le ton `live` (la lueur), hors ligne reste neutre.
 
 import { useEffect, useMemo, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useTwitchLiveStatuses } from '@/hooks/useTwitchLiveStatuses';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminBroadcastLive from '@/lib/i18n/locales/admin-fr/adminBroadcastLive';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import {
+  rubanCard,
+  rubanEyebrow,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 
 type TwitchChannelRow = { channel: string; label: string | null };
 
@@ -86,10 +95,8 @@ export default function TwitchStatusPanel() {
   // Chargement initial des chaînes : ligne discrète (pas d'écran blanc).
   if (channels === null) {
     return (
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-4 py-4 mb-6">
-        <div className="text-xs uppercase tracking-widest text-neutral-400 mb-2">
-          {t.twitchHeading}
-        </div>
+      <div className={`${rubanCard} px-5 py-4 mb-6`}>
+        <div className={`${rubanEyebrow} mb-2`}>{t.twitchHeading}</div>
         <div className="flex items-center gap-2 text-sm text-neutral-500">
           <span className="inline-block h-4 w-4 rounded-full border-2 border-neutral-600 border-t-neutral-300 animate-spin" />
           {t.twitchLoading}
@@ -123,19 +130,17 @@ export default function TwitchStatusPanel() {
     : null;
 
   return (
-    <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 px-4 py-4 mb-6">
+    <div className={`${rubanCard} px-5 py-4 mb-6`}>
       <div className="flex items-center justify-between gap-3 mb-3">
-        <div className="text-xs uppercase tracking-widest text-neutral-400">
-          {t.twitchHeading}
-        </div>
-        <button
-          type="button"
+        <div className={rubanEyebrow}>{t.twitchHeading}</div>
+        <AdminButton
+          variant="ghost"
+          size="xs"
           onClick={() => setCollapsed((c) => !c)}
           aria-expanded={!collapsed}
-          className="px-2 py-1 rounded-md bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-[11px] font-medium text-neutral-300"
         >
           {collapsed ? t.twitchExpand : t.twitchCollapse}
-        </button>
+        </AdminButton>
       </div>
 
       {notConfigured ? (
@@ -157,22 +162,20 @@ export default function TwitchStatusPanel() {
                 <li key={login} className="flex items-center gap-3 text-sm">
                   <span
                     className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                      live ? 'bg-red-500 animate-pulse' : 'bg-neutral-600'
+                      live
+                        ? 'bg-[var(--lf,#7fca65)] animate-pulse shadow-[var(--glow-live)]'
+                        : 'bg-[var(--t4,#807984)]'
                     }`}
                     aria-hidden
                   />
-                  <span className="font-medium shrink-0">
+                  <span className="font-semibold text-[var(--t1,#f4edf7)] shrink-0">
                     {c.label || login}
                   </span>
                   <span aria-live="polite" className="shrink-0 text-xs">
                     {live ? (
-                      <span className="font-bold text-red-400">
-                        {t.twitchLive}
-                      </span>
+                      <Chip tone="live">{t.twitchLive}</Chip>
                     ) : (
-                      <span className="text-neutral-500">
-                        {t.twitchOffline}
-                      </span>
+                      <Chip>{t.twitchOffline}</Chip>
                     )}
                   </span>
                   {live && (
@@ -183,7 +186,10 @@ export default function TwitchStatusPanel() {
                         </span>
                       )}
                       {typeof st?.viewer_count === 'number' && (
-                        <span className="ml-auto shrink-0 whitespace-nowrap text-xs text-neutral-500">
+                        <span
+                          className="ml-auto shrink-0 whitespace-nowrap font-mono text-xs text-[var(--t2,#c7bfca)]"
+                          data-numeric
+                        >
                           {format(t.twitchViewers, {
                             count: st.viewer_count.toLocaleString(),
                           })}
@@ -201,7 +207,7 @@ export default function TwitchStatusPanel() {
           {!collapsed && (
             <div className="flex flex-col lg:flex-row gap-3">
               {/* Player vidéo (muté). Placeholder « hors ligne » si offline. */}
-              <div className="relative w-full aspect-video overflow-hidden rounded-xl border border-neutral-800 bg-black lg:aspect-auto lg:h-[380px] lg:flex-1 lg:max-w-2xl">
+              <div className="relative w-full aspect-video overflow-hidden rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-black lg:aspect-auto lg:h-[380px] lg:flex-1 lg:max-w-2xl">
                 {playerSrc ? (
                   <iframe
                     key={playerSrc}
@@ -223,7 +229,7 @@ export default function TwitchStatusPanel() {
               {/* Chat Twitch (consultable même hors live). Hauteur alignée sur
                   le player en large écran. */}
               {chatSrc && (
-                <div className="relative w-full h-[320px] overflow-hidden rounded-xl border border-neutral-800 bg-black lg:h-[380px] lg:w-[340px] lg:shrink-0">
+                <div className="relative w-full h-[320px] overflow-hidden rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-black lg:h-[380px] lg:w-[340px] lg:shrink-0">
                   <iframe
                     key={chatSrc}
                     src={chatSrc}

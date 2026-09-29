@@ -18,6 +18,9 @@
 // Le drag & drop n'est PAS implémenté : les flèches montent/descendent suffisent
 // et sont utilisables au clavier — en régie, une souris qui dérape sur un
 // glisser-déposer réordonne l'antenne par accident.
+//
+// Passe « Le Ruban » (lot 10C) : carte d'encre, sélection orchidée, type et
+// présence en Chip — mêmes actions, mêmes confirmations, mêmes `data-testid`.
 
 import {
   useCallback,
@@ -40,6 +43,8 @@ import {
   type CasterSceneType,
 } from '@/types/caster';
 import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import { rubanCard } from '@/features/admin/diffusion/ui/rubanClasses';
 
 /** Mutateurs de la liste — fournis par `useCasterScenes`. */
 export type SceneCrud = {
@@ -62,7 +67,7 @@ type Props = {
 };
 
 const actionBtn =
-  'shrink-0 rounded-md border border-neutral-700 bg-neutral-800/80 px-1.5 py-0.5 text-[11px] leading-none text-neutral-300 hover:bg-neutral-700 hover:text-white disabled:opacity-30 disabled:hover:bg-neutral-800/80';
+  'shrink-0 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-1.5 py-0.5 text-[11px] leading-none text-[var(--t2,#c7bfca)] hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)] disabled:opacity-30';
 
 export default function SceneList({
   scenes,
@@ -184,7 +189,7 @@ export default function SceneList({
   return (
     <nav
       aria-label={t.sceneListTitle}
-      className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-2"
+      className={`${rubanCard} p-2`}
       data-testid="caster-scene-list"
     >
       <NewSceneMenu
@@ -204,10 +209,10 @@ export default function SceneList({
           return (
             <li
               key={scene.id}
-              className={`group rounded-xl px-1 py-1 ${
+              className={`group rounded-[var(--r-ctrl,4px)] px-1 py-1 ${
                 isSelected
-                  ? 'bg-purple-600/20 border border-purple-500/40'
-                  : 'border border-transparent hover:bg-neutral-800/60'
+                  ? 'bg-[rgba(180,103,209,.14)] border border-[var(--or,#b467d1)]'
+                  : 'border border-transparent hover:bg-[var(--s2,#1d1520)]'
               }`}
               data-testid="caster-scene-item"
             >
@@ -231,7 +236,7 @@ export default function SceneList({
                     aria-label={format(t.sceneRenameLabel, {
                       name: scene.name,
                     })}
-                    className="min-w-0 flex-1 rounded-md bg-neutral-950 border border-purple-500/50 px-2 py-1 text-sm text-white"
+                    className="min-w-0 flex-1 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--or,#b467d1)] px-2 py-1 text-sm text-[var(--t1,#f4edf7)] outline-none"
                     data-testid="caster-scene-rename-input"
                   />
                   <button
@@ -259,18 +264,20 @@ export default function SceneList({
                     type="button"
                     onClick={() => onSelect(scene.id)}
                     aria-current={isSelected ? 'true' : undefined}
-                    className={`w-full flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition ${
-                      isSelected ? 'text-white' : 'text-neutral-300'
+                    className={`w-full flex items-center justify-between gap-2 rounded-[var(--r-ctrl,4px)] px-2 py-1.5 text-left text-sm transition ${
+                      isSelected
+                        ? 'text-[var(--t1,#f4edf7)]'
+                        : 'text-[var(--t2,#c7bfca)]'
                     }`}
                   >
-                    <span className="font-medium truncate">{scene.name}</span>
+                    <span className="font-semibold truncate">{scene.name}</span>
                     <span className="flex shrink-0 items-center gap-1.5">
                       {others.length > 0 && (
-                        <span
+                        <Chip
+                          tone="warn"
                           title={format(t.sceneOpenByOthers, {
                             names: othersNames,
                           })}
-                          className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-200"
                           data-testid="caster-scene-presence-dot"
                         >
                           <span aria-hidden="true">👁</span>
@@ -280,11 +287,9 @@ export default function SceneList({
                               names: othersNames,
                             })}
                           </span>
-                        </span>
+                        </Chip>
                       )}
-                      <span className="rounded-full border border-neutral-700 bg-neutral-950/70 px-2 py-0.5 text-[10px] uppercase tracking-wide text-neutral-400">
-                        {typeLabel(scene.type)}
-                      </span>
+                      <Chip>{typeLabel(scene.type)}</Chip>
                     </span>
                   </button>
 
@@ -364,7 +369,7 @@ export default function SceneList({
                           ? t.sceneDeleteLastHint
                           : t.sceneDelete
                       }
-                      className={`${actionBtn} border-red-500/40 bg-red-900/30 text-red-200 hover:bg-red-900/60`}
+                      className={`${actionBtn} hover:border-[rgba(255,107,107,.45)] hover:text-[var(--err,#ff6b6b)]`}
                       data-testid="caster-scene-delete"
                     >
                       <span aria-hidden="true">🗑</span>
@@ -453,7 +458,7 @@ function NewSceneMenu({
         disabled={disabled}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="w-full rounded-xl border border-dashed border-neutral-700 bg-neutral-950/40 px-3 py-2 text-sm font-medium text-neutral-300 hover:border-purple-500/50 hover:text-white disabled:opacity-40"
+        className="w-full rounded-[var(--r-ctrl,4px)] border border-dashed border-[var(--line2,rgba(194,196,201,.2))] px-3 py-2 font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.02em] text-[var(--t3,#a39ba6)] hover:border-[var(--or,#b467d1)] hover:text-[var(--or-200,#eec4ff)] disabled:opacity-40"
         data-testid="caster-scene-new"
       >
         {t.newSceneButton}
@@ -464,7 +469,7 @@ function NewSceneMenu({
           role="menu"
           aria-label={t.newSceneMenuLabel}
           onKeyDown={onMenuKeyDown}
-          className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-neutral-700 bg-neutral-950 p-1 shadow-xl"
+          className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-1 shadow-xl"
           data-testid="caster-scene-new-menu"
         >
           {CASTER_SCENE_TYPES.map((type) => (
@@ -476,7 +481,7 @@ function NewSceneMenu({
                 setOpen(false);
                 onPick(type);
               }}
-              className="block w-full rounded-lg px-2.5 py-1.5 text-left text-sm text-neutral-300 hover:bg-purple-600/25 hover:text-white"
+              className="block w-full rounded-[3px] px-2.5 py-1.5 text-left text-sm text-[var(--t2,#c7bfca)] hover:bg-[rgba(180,103,209,.18)] hover:text-[var(--t1,#f4edf7)]"
             >
               {typeLabel(type)}
             </button>

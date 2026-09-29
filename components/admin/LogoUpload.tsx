@@ -6,6 +6,22 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminLogoUpload from '@/lib/i18n/locales/admin-fr/adminLogoUpload';
 
+// « Le Ruban » dans l'admin SANS toucher la page publique d'édition d'équipe
+// (pages/team/[slug]/edit.tsx), qui réutilise ce composant hors de l'admin :
+// les classes Ruban ne s'appliquent que sous `:root:has([data-surface=admin])`
+// — la portée de styles/admin-ruban.css — et l'emportent alors (plus
+// spécifiques) sur l'allure historique, laissée intacte en classes de base.
+const RUBAN_LABEL =
+  '[:root:has([data-surface=admin])_&]:font-[family-name:var(--fd)] [:root:has([data-surface=admin])_&]:text-[11px] [:root:has([data-surface=admin])_&]:font-bold [:root:has([data-surface=admin])_&]:uppercase [:root:has([data-surface=admin])_&]:tracking-[0.2em] [:root:has([data-surface=admin])_&]:text-[var(--t3)] [:root:has([data-surface=admin])_&]:[font-stretch:75%]';
+const RUBAN_TOGGLE_ON =
+  '[:root:has([data-surface=admin])_&]:bg-[var(--s3)] [:root:has([data-surface=admin])_&]:text-[var(--t1)]';
+const RUBAN_TOGGLE_OFF =
+  '[:root:has([data-surface=admin])_&]:bg-transparent [:root:has([data-surface=admin])_&]:text-[var(--t3)] [:root:has([data-surface=admin])_&]:hover:text-[var(--t1)]';
+const RUBAN_DROP =
+  '[:root:has([data-surface=admin])_&]:border [:root:has([data-surface=admin])_&]:border-[var(--line2)] [:root:has([data-surface=admin])_&]:bg-[var(--s2)] [:root:has([data-surface=admin])_&]:hover:border-[var(--t4)]';
+const RUBAN_INPUT =
+  '[:root:has([data-surface=admin])_&]:rounded-[var(--r-ctrl)] [:root:has([data-surface=admin])_&]:bg-[var(--s2)] [:root:has([data-surface=admin])_&]:border-[var(--line2)] [:root:has([data-surface=admin])_&]:text-[var(--t1)] [:root:has([data-surface=admin])_&]:focus:ring-0 [:root:has([data-surface=admin])_&]:focus:border-[var(--or)]';
+
 type LogoUploadProps = {
   value: string; // URL actuelle (externe ou locale)
   onChange: (url: string) => void;
@@ -123,17 +139,17 @@ export default function LogoUpload({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="block text-sm text-neutral-300">
+        <label className={`block text-sm text-neutral-300 ${RUBAN_LABEL}`}>
           {resolvedLabel}
         </label>
-        <div className="flex gap-1 text-xs">
+        <div className="flex gap-1 text-xs [:root:has([data-surface=admin])_&]:rounded-[var(--r-ctrl)] [:root:has([data-surface=admin])_&]:border [:root:has([data-surface=admin])_&]:border-[var(--line2)] [:root:has([data-surface=admin])_&]:p-0.5">
           <button
             type="button"
             onClick={() => setMode('upload')}
             className={`px-2 py-1 rounded-md transition-colors ${
               mode === 'upload'
-                ? 'bg-blue-600 text-white'
-                : 'bg-neutral-700 text-neutral-400 hover:text-white'
+                ? `bg-blue-600 text-white ${RUBAN_TOGGLE_ON}`
+                : `bg-neutral-700 text-neutral-400 hover:text-white ${RUBAN_TOGGLE_OFF}`
             }`}
           >
             {t.uploadTab}
@@ -143,8 +159,8 @@ export default function LogoUpload({
             onClick={() => setMode('url')}
             className={`px-2 py-1 rounded-md transition-colors ${
               mode === 'url'
-                ? 'bg-blue-600 text-white'
-                : 'bg-neutral-700 text-neutral-400 hover:text-white'
+                ? `bg-blue-600 text-white ${RUBAN_TOGGLE_ON}`
+                : `bg-neutral-700 text-neutral-400 hover:text-white ${RUBAN_TOGGLE_OFF}`
             }`}
           >
             URL
@@ -161,10 +177,10 @@ export default function LogoUpload({
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
-          className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 cursor-pointer transition-colors ${
+          className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed [:root:has([data-surface=admin])_&]:rounded-[var(--r-card)] p-4 cursor-pointer transition-colors ${
             dragOver
               ? 'border-blue-500 bg-blue-500/10'
-              : 'border-neutral-600 bg-neutral-900/50 hover:border-neutral-500'
+              : `border-neutral-600 bg-neutral-900/50 hover:border-neutral-500 ${RUBAN_DROP}`
           }`}
         >
           {uploading ? (
@@ -209,7 +225,7 @@ export default function LogoUpload({
             setError(null);
             onChange(e.target.value);
           }}
-          className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+          className={`w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono ${RUBAN_INPUT}`}
           placeholder="https://..."
         />
       )}
@@ -227,7 +243,7 @@ export default function LogoUpload({
               width={48}
               height={48}
               loading="lazy"
-              className="w-12 h-12 rounded-lg object-cover border border-neutral-600"
+              className="w-12 h-12 rounded-lg object-cover border border-neutral-600 [:root:has([data-surface=admin])_&]:border-[var(--line2)]"
               onError={() => setImgError(true)}
             />
           )}
@@ -241,7 +257,9 @@ export default function LogoUpload({
         </div>
       )}
 
-      <p className="text-xs text-neutral-500">{resolvedHint}</p>
+      <p className="text-xs text-[var(--t4,var(--color-neutral-500))]">
+        {resolvedHint}
+      </p>
     </div>
   );
 }

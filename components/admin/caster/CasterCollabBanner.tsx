@@ -28,10 +28,10 @@ export default function CasterCollabBanner({ others }: Props) {
   return (
     <div
       role="status"
-      className={`mb-3 rounded-xl px-3 py-2 text-xs border ${
+      className={`mb-3 rounded-[var(--r-ctrl,4px)] px-3 py-2 text-xs border ${
         editing
-          ? 'border-amber-500/50 bg-amber-900/25 text-amber-100'
-          : 'border-neutral-700 bg-neutral-900/60 text-neutral-300'
+          ? 'border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.08)] text-[#ffd9a3]'
+          : 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-[var(--t2,#c7bfca)]'
       }`}
       data-testid="caster-collab-banner"
     >

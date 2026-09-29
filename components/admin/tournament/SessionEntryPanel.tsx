@@ -35,6 +35,14 @@ import {
 import { parisDayKey } from '@/utils/maps/roundPools';
 import nsAdminTournamentAnalytics from '@/lib/i18n/locales/admin-fr/adminTournamentAnalytics';
 import nsAdminMatchEdit from '@/lib/i18n/locales/admin-fr/adminMatchEdit';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import {
+  CARD,
+  ERROR_BOX,
+  FAINT,
+  MUTED,
+} from '@/features/admin/stages/ui/rubanClasses';
 
 type TeamMini = {
   id: string;
@@ -301,27 +309,21 @@ export default function SessionEntryPanel() {
   }, [dirtyToday, saveMatch, addToast, load, markSaved, t]);
 
   if (loadError) {
-    return (
-      <div className="rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
-        {loadError}
-      </div>
-    );
+    return <div className={ERROR_BOX}>{loadError}</div>;
   }
   if (!matches) {
-    return <div className="text-neutral-400 text-sm">{t.loading}</div>;
+    return <div className={`text-sm ${MUTED}`}>{t.loading}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">{t.entryHeading}</h1>
-        <p className="mt-1 max-w-3xl text-sm text-neutral-400">
-          {t.entrySubtitle}
-        </p>
+        <p className={`mt-1 max-w-3xl text-sm ${MUTED}`}>{t.entrySubtitle}</p>
       </div>
 
       {days.length === 0 ? (
-        <div className="rounded-xl border border-neutral-700 bg-neutral-800 px-4 py-10 text-center text-sm text-neutral-400">
+        <div className={`${CARD} text-center text-sm ${MUTED}`}>
           {t.entryNoMatches}
         </div>
       ) : (
@@ -341,21 +343,23 @@ export default function SessionEntryPanel() {
                   role="radio"
                   aria-checked={active}
                   onClick={() => setDay(d.day)}
-                  className={`rounded-lg border px-3 py-1.5 text-left text-sm transition-colors ${
+                  className={`inline-flex items-center rounded-[var(--r-ctrl,4px)] border px-3 py-1.5 text-left text-sm transition-colors ${
                     active
-                      ? 'border-blue-500 bg-blue-900/40 text-white'
-                      : 'border-neutral-700 bg-neutral-800 text-neutral-300 hover:border-neutral-500'
+                      ? 'border-[rgba(180,103,209,.55)] bg-[rgba(180,103,209,.12)] text-[var(--or-100,#f6e1ff)]'
+                      : 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] text-[var(--t2,#c7bfca)] hover:border-[var(--t4,#807984)]'
                   }`}
                 >
                   <span className="font-semibold capitalize">
                     {dayLabel(d.day, locale)}
                   </span>
-                  <span className="ml-2 text-xs text-neutral-400">
+                  <span className={`ml-2 text-xs ${MUTED}`}>
                     {format(t.entryMatchCount, { count: d.matches.length })}
                   </span>
                   {d.toFill > 0 && (
-                    <span className="ml-2 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[11px] font-semibold text-amber-300">
-                      {format(t.entryToFill, { count: d.toFill })}
+                    <span className="ml-2">
+                      <Chip tone="warn">
+                        {format(t.entryToFill, { count: d.toFill })}
+                      </Chip>
                     </span>
                   )}
                 </button>
@@ -378,17 +382,17 @@ export default function SessionEntryPanel() {
                   <section
                     key={m.id}
                     aria-label={`${teamName(m.team1)} – ${teamName(m.team2)}`}
-                    className={`rounded-xl border p-4 ${
+                    className={`rounded-[var(--r-card,14px)] border bg-[var(--s1,#100812)] p-4 ${
                       isDirty
-                        ? 'border-blue-600/60 bg-blue-950/20'
+                        ? 'border-[rgba(180,103,209,.55)]'
                         : todo
-                          ? 'border-amber-600/50 bg-neutral-800'
-                          : 'border-neutral-700 bg-neutral-800'
+                          ? 'border-[rgba(245,165,36,.38)]'
+                          : 'border-[var(--line2,rgba(194,196,201,.2))]'
                     }`}
                   >
                     <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <p className="text-xs text-neutral-400">
+                        <p className={`font-mono text-xs ${MUTED}`}>
                           {timeLabel(m.scheduled_at, locale)}
                           {m.round_name ? ` · ${m.round_name}` : ''}
                           {m.match_format
@@ -397,21 +401,17 @@ export default function SessionEntryPanel() {
                         </p>
                         <h2 className="text-lg font-semibold">
                           {teamName(m.team1)}{' '}
-                          <span className="font-mono text-neutral-300">
+                          <span className="font-mono text-[var(--t2,#c7bfca)]">
                             {m.team1_score ?? '–'} : {m.team2_score ?? '–'}
                           </span>{' '}
                           {teamName(m.team2)}
                         </h2>
                       </div>
                       <div className="flex items-center gap-3">
-                        {isDirty && (
-                          <span className="text-xs text-blue-300">
-                            {t.entryUnsaved}
-                          </span>
-                        )}
+                        {isDirty && <Chip tone="brand">{t.entryUnsaved}</Chip>}
                         <Link
                           href={`/admin/matches/${m.id}/edit`}
-                          className="text-xs text-blue-400 hover:underline"
+                          className="text-xs text-[var(--or-300,#dea3f6)] hover:underline"
                         >
                           {t.entryOpenMatch}
                         </Link>
@@ -419,7 +419,7 @@ export default function SessionEntryPanel() {
                     </header>
 
                     {noEntry ? (
-                      <p className="text-sm text-neutral-400">
+                      <p className={`text-sm ${MUTED}`}>
                         {m.status === 'walkover' ? t.entryForfeit : t.entryTbd}
                       </p>
                     ) : (
@@ -435,27 +435,27 @@ export default function SessionEntryPanel() {
                           t={tMatch as unknown as Record<string, string>}
                         />
                         {ties > 0 && (
-                          <p className="mt-2 text-xs text-amber-300">
+                          <p className="mt-2 text-xs text-[#ffd9a3]">
                             {format(t.entryTieWarning, { count: ties })}
                           </p>
                         )}
                         {errors[m.id] && (
-                          <p className="mt-2 text-xs text-red-300">
+                          <p className="mt-2 text-xs text-[var(--err,#ff6b6b)]">
                             {errors[m.id]}
                           </p>
                         )}
                         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-xs text-neutral-500">
+                          <p className={`text-xs ${FAINT}`}>
                             {t.entryRecomputeNote}
                           </p>
-                          <button
-                            type="button"
+                          <AdminButton
+                            variant="secondary"
+                            size="sm"
                             onClick={() => void onSaveOne(m.id)}
                             disabled={!isDirty || saving !== null}
-                            className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold hover:bg-blue-500 disabled:opacity-40"
                           >
                             {saving === m.id ? t.entrySaving : t.entrySaveMatch}
-                          </button>
+                          </AdminButton>
                         </div>
                       </>
                     )}
@@ -465,16 +465,16 @@ export default function SessionEntryPanel() {
 
               {dirtyToday.length > 1 && (
                 <div className="sticky bottom-4 flex justify-end">
-                  <button
-                    type="button"
+                  <AdminButton
+                    variant="primary"
+                    className="shadow-lg"
                     onClick={() => void onSaveAll()}
                     disabled={saving !== null}
-                    className="rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-bold shadow-lg hover:bg-emerald-500 disabled:opacity-50"
                   >
                     {saving === 'all'
                       ? t.entrySaving
                       : format(t.entrySaveAll, { count: dirtyToday.length })}
-                  </button>
+                  </AdminButton>
                 </div>
               )}
             </div>

@@ -14,6 +14,19 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { useAdminT, format as fmt } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentMapDraw from '@/lib/i18n/locales/admin-fr/adminTournamentMapDraw';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import {
+  CARD,
+  CARD_FLUSH,
+  ERROR_BOX,
+  EYEBROW,
+  FAINT,
+  INPUT,
+  MUTED,
+} from '@/features/admin/stages/ui/rubanClasses';
 
 type Dict = typeof nsAdminTournamentMapDraw.fr;
 
@@ -57,23 +70,6 @@ function getTypeLabels(t: Dict): Record<string, string> {
 function typeLabel(t: Dict, type: string | null | undefined) {
   if (!type) return '—';
   return getTypeLabels(t)[type] || type;
-}
-
-function typeBadgeColor(t: string | null | undefined): string {
-  switch (t) {
-    case 'control':
-      return 'border-blue-400/50 text-blue-200 bg-blue-600/20';
-    case 'escort':
-      return 'border-amber-400/50 text-amber-200 bg-amber-600/20';
-    case 'hybrid':
-      return 'border-emerald-400/50 text-emerald-200 bg-emerald-600/20';
-    case 'push':
-      return 'border-pink-400/50 text-pink-200 bg-pink-600/20';
-    case 'flashpoint':
-      return 'border-orange-400/50 text-orange-200 bg-orange-600/20';
-    default:
-      return 'border-gray-400/50 text-gray-200 bg-gray-600/20';
-  }
 }
 
 /** Fisher-Yates shuffle */
@@ -413,9 +409,7 @@ ${selectedSlots
       {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-            {t.eyebrow}
-          </p>
+          <p className={EYEBROW}>{t.eyebrow}</p>
           <h1 className="text-2xl font-semibold">
             {fmt(t.pageTitle, {
               name: tournament?.name || t.defaultTournamentName,
@@ -423,45 +417,37 @@ ${selectedSlots
           </h1>
         </div>
         <div className="flex gap-2">
-          <Link
+          <AdminButtonLink
             href={`/admin/tournament/${tournamentId}/bracket?tab=veto`}
-            className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
+            size="sm"
           >
             {t.linkVeto}
-          </Link>
-          <Link
+          </AdminButtonLink>
+          <AdminButtonLink
             href={`/admin/tournament/${tournamentId}/maps`}
-            className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
+            size="sm"
           >
             {t.linkMapPool}
-          </Link>
-          <Link
+          </AdminButtonLink>
+          <AdminButtonLink
             href={`/admin/tournament/${tournamentId}/matches`}
-            className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
+            size="sm"
           >
             {t.linkMatches}
-          </Link>
+          </AdminButtonLink>
         </div>
       </div>
 
-      {loading && (
-        <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-          {t.loading}
-        </div>
-      )}
+      {loading && <div className={`${CARD} ${MUTED}`}>{t.loading}</div>}
 
-      {errorMsg && (
-        <div className="mb-4 p-4 rounded-lg bg-red-900/60 border border-red-500/40 text-red-100">
-          {errorMsg}
-        </div>
-      )}
+      {errorMsg && <div className={`mb-4 ${ERROR_BOX}`}>{errorMsg}</div>}
 
       {!loading && maps.length === 0 && !errorMsg && (
-        <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+        <div className={`${CARD} ${MUTED}`}>
           {t.emptyPool}{' '}
           <Link
             href={`/admin/tournament/${tournamentId}/maps`}
-            className="text-purple-300 underline"
+            className="text-[var(--or-300,#dea3f6)] underline"
           >
             {t.configurePool}
           </Link>
@@ -471,28 +457,23 @@ ${selectedSlots
       {!loading && maps.length > 0 && (
         <>
           {/* Controls */}
-          <div className="mb-6 p-5 rounded-xl bg-white/5 border border-white/10 space-y-4">
+          <div className={`mb-6 space-y-4 ${CARD}`}>
             {/* Format selector */}
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-300 font-medium">
-                {t.formatLabel}
-              </span>
+              <span className={EYEBROW}>{t.formatLabel}</span>
               <div className="flex gap-2">
                 {(['bo3', 'bo5'] as BoFormat[]).map((f) => (
-                  <button
+                  <AdminButton
                     key={f}
+                    size="sm"
+                    variant={format === f ? 'secondary' : 'ghost'}
                     onClick={() => setFormat(f)}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                      format === f
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                    }`}
                   >
                     {f.toUpperCase()}
-                  </button>
+                  </AdminButton>
                 ))}
               </div>
-              <span className="text-xs text-gray-500">
+              <span className={`text-xs ${FAINT}`}>
                 {fmt(t.formatSummary, {
                   choices: CHOICES_PER_SLOT,
                   slots: slotCount,
@@ -504,40 +485,39 @@ ${selectedSlots
 
             {/* Match label */}
             <div className="flex items-center gap-3">
-              <label className="text-sm text-gray-300 font-medium whitespace-nowrap">
+              <label className={`whitespace-nowrap ${EYEBROW}`}>
                 {t.matchLabelLabel}
               </label>
               <input
                 type="text"
                 value={matchLabel}
                 onChange={(e) => setMatchLabel(e.target.value)}
-                className="flex-1 max-w-md px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm"
+                className={`max-w-md flex-1 ${INPUT}`}
                 placeholder={t.matchLabelPlaceholder}
               />
             </div>
 
             {/* Action buttons */}
             <div className="flex gap-2">
-              <button
+              <AdminButton
+                variant="primary"
+                size="sm"
                 onClick={handleRandomDraw}
                 disabled={maps.length < totalMapsNeeded}
-                className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
               >
                 {t.randomDraw}
-              </button>
-              <button
-                onClick={handleClearAll}
-                className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white text-sm transition-colors"
-              >
+              </AdminButton>
+              <AdminButton size="sm" onClick={handleClearAll}>
                 {t.reset}
-              </button>
+              </AdminButton>
               {allSlotsFilled && (
-                <button
+                <AdminButton
+                  variant="secondary"
+                  size="sm"
                   onClick={handleExportPDF}
-                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition-colors"
                 >
                   {t.exportPdf}
-                </button>
+                </AdminButton>
               )}
             </div>
           </div>
@@ -546,7 +526,7 @@ ${selectedSlots
           <div className="mb-8">
             <h2 className="text-lg font-semibold mb-4">
               {t.selectedMapsTitle}
-              <span className="text-sm font-normal text-gray-400 ml-2">
+              <span className={`ml-2 text-sm font-normal ${MUTED}`}>
                 {fmt(t.choicesPerMatch, { choices: CHOICES_PER_SLOT })}
               </span>
             </h2>
@@ -556,35 +536,32 @@ ${selectedSlots
               {selectedSlots.map((slot, si) => {
                 const cat = slotCategory(si);
                 return (
-                  <div
-                    key={si}
-                    className="rounded-xl border border-white/10 overflow-hidden bg-white/5"
-                  >
+                  <div key={si} className={CARD_FLUSH}>
                     {/* Slot header */}
-                    <div className="bg-purple-600/30 border-b border-purple-500/30 px-3 py-2 text-center">
-                      <span className="text-xs font-bold uppercase tracking-wider text-purple-200">
+                    <div className="border-b border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-3 py-2 text-center">
+                      <span className={EYEBROW}>
                         {fmt(t.mapSlot, { n: si + 1 })}
                       </span>
                       {cat && (
-                        <span
-                          className={`ml-2 inline-block px-2 py-0.5 rounded-full text-[10px] border ${typeBadgeColor(cat)}`}
-                        >
-                          {typeLabel(t, cat)}
+                        <span className="ml-2">
+                          <Chip>{typeLabel(t, cat)}</Chip>
                         </span>
                       )}
                     </div>
 
                     {/* 3 choices */}
-                    <div className="divide-y divide-white/5">
+                    <div className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
                       {slot.map((choice, ci) => (
                         <div key={ci} className="p-3">
-                          <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">
+                          <p
+                            className={`mb-1.5 text-[10px] uppercase tracking-wider ${FAINT}`}
+                          >
                             {fmt(t.choiceLabel, { n: ci + 1 })}
                           </p>
 
                           {/* Map image or placeholder (fallback géré par état) */}
                           {choice?.image_url && !brokenImages.has(choice.id) ? (
-                            <div className="relative w-full h-20 rounded-lg overflow-hidden mb-2 bg-gradient-to-b from-purple-900/20 to-transparent">
+                            <div className="relative mb-2 h-20 w-full overflow-hidden rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)]">
                               <img
                                 src={choice.image_url}
                                 alt={choice.map_name}
@@ -596,7 +573,7 @@ ${selectedSlots
                               />
                             </div>
                           ) : (
-                            <div className="w-full h-20 rounded-lg flex items-center justify-center bg-gradient-to-b from-purple-900/10 to-transparent text-gray-600 text-xl mb-2">
+                            <div className="mb-2 flex h-20 w-full items-center justify-center rounded-[var(--r-ctrl,4px)] border border-dashed border-[var(--line2,rgba(194,196,201,.2))] text-xl text-[var(--t4,#807984)]">
                               {choice ? '🗺' : '?'}
                             </div>
                           )}
@@ -606,10 +583,8 @@ ${selectedSlots
                               <p className="text-xs font-semibold">
                                 {choice.map_name}
                               </p>
-                              <span
-                                className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] border ${typeBadgeColor(choice.map_type)}`}
-                              >
-                                {typeLabel(t, choice.map_type)}
+                              <span className="mt-0.5 inline-block">
+                                <Chip>{typeLabel(t, choice.map_type)}</Chip>
                               </span>
                             </div>
                           )}
@@ -620,7 +595,7 @@ ${selectedSlots
                             onChange={(e) =>
                               handleSetChoice(si, ci, e.target.value)
                             }
-                            className="w-full px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-xs"
+                            className={`!px-2 !py-1.5 !text-xs ${INPUT}`}
                           >
                             <option value="">{t.choosePlaceholder}</option>
                             {maps
@@ -660,14 +635,14 @@ ${selectedSlots
                   return (
                     <div
                       key={m.id}
-                      className={`rounded-lg border overflow-hidden transition-opacity ${
+                      className={`overflow-hidden rounded-[var(--r-ctrl,4px)] border bg-[var(--s1,#100812)] transition-opacity ${
                         isUsed
-                          ? 'border-purple-500/50 opacity-50'
-                          : 'border-white/10 opacity-100'
+                          ? 'border-[rgba(180,103,209,.55)] opacity-50'
+                          : 'border-[var(--line2,rgba(194,196,201,.2))] opacity-100'
                       }`}
                     >
                       {m.image_url && !brokenImages.has(m.id) && (
-                        <div className="w-full h-20 bg-gradient-to-b from-purple-900/20 to-transparent">
+                        <div className="h-20 w-full bg-[var(--s2,#1d1520)]">
                           <img
                             src={m.image_url}
                             alt={m.map_name}
@@ -683,11 +658,11 @@ ${selectedSlots
                         <p className="text-xs font-semibold truncate">
                           {m.map_name}
                         </p>
-                        <p className="text-[10px] text-gray-400">
+                        <p className={`text-[10px] ${MUTED}`}>
                           {typeLabel(t, m.map_type)}
                         </p>
                         {isUsed && (
-                          <p className="text-[10px] text-purple-300 font-medium mt-0.5">
+                          <p className="mt-0.5 text-[10px] font-medium text-[var(--or-300,#dea3f6)]">
                             {t.selected}
                           </p>
                         )}

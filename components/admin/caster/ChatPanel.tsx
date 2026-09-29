@@ -24,7 +24,16 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { EventSubEvent } from '@/utils/caster/eventsubClient';
 import type { ChatEvent } from '@/utils/caster/twitchProtocol';
 
-import { inputClass, labelClass } from './fieldClasses';
+import {
+  errNoticeClass,
+  inputClass,
+  labelClass,
+  panelClass,
+  panelTitleClass,
+  smallBtnClass,
+} from './fieldClasses';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 import {
   TIMEOUT_SECONDS,
   type ChatFeedItem,
@@ -33,9 +42,6 @@ import {
 import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 const MAX_CHAT = 500;
-
-const smallBtnClass =
-  'px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium disabled:opacity-50';
 
 type AnyEvent = ChatEvent | EventSubEvent;
 
@@ -241,12 +247,12 @@ export default function ChatPanel({ chat }: { chat: UseTwitchChatApi }) {
       : chat.phase === 'connecting'
         ? t.chatStatusConnecting
         : t.chatStatusDisconnected;
-  const statusColor =
+  const statusTone =
     chat.phase === 'connected'
-      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+      ? 'ok'
       : chat.phase === 'connecting'
-        ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
-        : 'bg-neutral-800 border-neutral-700 text-neutral-400';
+        ? 'warn'
+        : 'neutral';
 
   const eventSubLabel = (() => {
     switch (chat.eventSub.phase) {
@@ -272,29 +278,26 @@ export default function ChatPanel({ chat }: { chat: UseTwitchChatApi }) {
 
   return (
     <section
-      className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4 flex flex-col"
+      className={`${panelClass} flex flex-col`}
       data-testid="caster-chat-panel"
     >
       {dialog}
 
       <div className="flex flex-wrap items-center gap-2 mb-1.5">
-        <h2 className="text-lg font-bold">{t.chatTitle}</h2>
-        <span
-          className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${statusColor}`}
-          data-testid="caster-chat-status"
-        >
+        <h2 className={panelTitleClass}>{t.chatTitle}</h2>
+        <Chip tone={statusTone} data-testid="caster-chat-status">
           {statusLabel}
-        </span>
+        </Chip>
         {chat.joinedChannel && (
           <span className="text-xs text-neutral-400">
             #{chat.joinedChannel}
           </span>
         )}
       </div>
-      <p className="text-xs text-neutral-500 mb-3">{t.chatIntro}</p>
+      <p className="mt-1 mb-3 text-xs text-[var(--t3)]">{t.chatIntro}</p>
 
       {chat.reconnectFailedAttempts != null && (
-        <div className="mb-3 rounded-xl bg-red-900/40 border border-red-500/50 px-3 py-2 text-xs">
+        <div className={`mb-3 px-3 py-2 text-xs ${errNoticeClass}`}>
           {format(t.chatReconnectFailed, {
             attempts: chat.reconnectFailedAttempts,
           })}
@@ -316,22 +319,18 @@ export default function ChatPanel({ chat }: { chat: UseTwitchChatApi }) {
             data-testid="caster-chat-channel"
           />
         </label>
-        <button
-          type="button"
+        <AdminButton
+          variant={chat.phase === 'disconnected' ? 'secondary' : 'ghost'}
+          size="sm"
           onClick={() =>
             chat.phase === 'disconnected'
               ? void chat.connect()
               : chat.disconnect()
           }
-          className={`px-4 py-2 rounded-lg text-sm font-semibold border ${
-            chat.phase === 'disconnected'
-              ? 'bg-purple-600/20 border-purple-500/40 hover:bg-purple-600/30'
-              : 'bg-neutral-800 border-neutral-700 hover:bg-neutral-700'
-          }`}
           data-testid="caster-chat-connect"
         >
           {chat.phase === 'disconnected' ? t.chatConnect : t.chatDisconnect}
-        </button>
+        </AdminButton>
       </div>
       <p className="text-[11px] text-neutral-600 mt-1.5">{t.chatAnonNote}</p>
 
@@ -345,7 +344,7 @@ export default function ChatPanel({ chat }: { chat: UseTwitchChatApi }) {
           <button
             type="button"
             onClick={chat.retryEventSub}
-            className="px-2 py-0.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-[11px]"
+            className={smallBtnClass}
           >
             {t.chatEventsubRetry}
           </button>
@@ -360,7 +359,7 @@ export default function ChatPanel({ chat }: { chat: UseTwitchChatApi }) {
           role="log"
           aria-live="polite"
           aria-label={t.chatTitle}
-          className="h-80 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 px-2 py-2 space-y-1"
+          className="h-80 overflow-y-auto rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--canvas,#07030a)] px-2 py-2 space-y-1"
           data-testid="caster-chat-feed"
         >
           {chat.feed.length === 0 ? (
@@ -392,7 +391,7 @@ export default function ChatPanel({ chat }: { chat: UseTwitchChatApi }) {
           <button
             type="button"
             onClick={jumpToBottom}
-            className="absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-purple-600/90 border border-purple-400/50 text-xs font-semibold shadow-lg"
+            className="absolute bottom-2 left-1/2 -translate-x-1/2 h-[30px] px-3 rounded-[var(--r-ctrl,4px)] bg-[var(--or,#b467d1)] border border-[var(--or-300,#dea3f6)] font-[family-name:var(--fd)] text-[11px] font-bold uppercase text-[#0f0a12] shadow-lg"
             data-testid="caster-chat-jump"
           >
             {format(t.chatJumpNew, { count: unread })}
@@ -518,7 +517,7 @@ function FeedRow({
 
   return (
     <div
-      className="group flex items-start gap-1.5 rounded-lg px-1 py-0.5 text-sm hover:bg-neutral-900"
+      className="group flex items-start gap-1.5 rounded-[3px] px-1 py-0.5 text-sm hover:bg-[var(--s2,#1d1520)]"
       data-testid="caster-chat-message"
     >
       <span className="shrink-0 flex items-center gap-0.5 pt-0.5">
@@ -559,7 +558,7 @@ function FeedRow({
             onClick={() => onTimeout(msg.nick)}
             title={format(timeoutLabel, { user: msg.nick })}
             aria-label={format(timeoutLabel, { user: msg.nick })}
-            className="px-1.5 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-[11px]"
+            className="px-1.5 py-0.5 rounded-[3px] bg-[var(--s2,#1d1520)] hover:border-[var(--t4,#807984)] border border-[var(--line2,rgba(194,196,201,.2))] text-[11px]"
           >
             ⏱
           </button>
@@ -568,7 +567,7 @@ function FeedRow({
             onClick={() => onBan(msg.nick)}
             title={format(banLabel, { user: msg.nick })}
             aria-label={format(banLabel, { user: msg.nick })}
-            className="px-1.5 py-0.5 rounded bg-red-900/60 hover:bg-red-800/70 border border-red-700/60 text-[11px]"
+            className="px-1.5 py-0.5 rounded-[3px] bg-[rgba(255,107,107,.1)] hover:bg-[rgba(255,107,107,.2)] border border-[rgba(255,107,107,.45)] text-[11px] text-[#ffc2c2]"
           >
             ⦸
           </button>

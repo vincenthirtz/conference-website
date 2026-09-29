@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { format } from '@/lib/i18n/useAdminT';
 import { readHeroBans, type HeroBan } from '@/utils/matches/heroBans';
 import MatchGamePickBans from './MatchGamePickBans';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 export type MatchGameInput = {
   map_name: string;
@@ -108,14 +109,17 @@ export default function MatchGamesPanel({
             tournoi : sans ce rappel ici, l'arbitre ne sait pas qu'il existe et
             retape les noms à la main. */}
       {vetoComplete === true && (
-        <p className="text-xs text-emerald-300/90 bg-emerald-950/40 border border-emerald-800/60 rounded px-3 py-2">
+        <p className="rounded-[var(--r-ctrl,4px)] border border-[rgba(127,202,101,.36)] bg-[rgba(127,202,101,.08)] px-3 py-2 text-xs text-[var(--lf-200,#b3e7a3)]">
           {t.mapsFromVeto}
         </p>
       )}
       {vetoComplete === false && vetoHref && (
-        <p className="text-xs text-neutral-400 bg-neutral-900/60 border border-neutral-700 rounded px-3 py-2">
+        <p className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-xs text-[var(--t3,#a39ba6)]">
           {t.mapsNoVeto}{' '}
-          <Link href={vetoHref} className="text-blue-400 hover:underline">
+          <Link
+            href={vetoHref}
+            className="text-[var(--or-300,#dea3f6)] hover:underline"
+          >
             {t.mapsGoToVeto}
           </Link>
         </p>
@@ -125,8 +129,9 @@ export default function MatchGamesPanel({
         <h2 className="font-semibold text-lg">
           {format(t.mapsHeading, { count: games.length })}
         </h2>
-        <button
-          type="button"
+        <AdminButton
+          variant="secondary"
+          size="xs"
           onClick={() =>
             setGames((prev) => [
               ...prev,
@@ -142,10 +147,9 @@ export default function MatchGamesPanel({
               },
             ])
           }
-          className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-xs font-medium transition-colors"
         >
           {t.addMap}
-        </button>
+        </AdminButton>
       </div>
 
       {mapPool.length > 0 && (
@@ -157,21 +161,21 @@ export default function MatchGamesPanel({
       )}
 
       {games.length === 0 && (
-        <p className="text-sm text-neutral-500">{t.mapsEmpty}</p>
+        <p className="text-sm text-[var(--t4,#807984)]">{t.mapsEmpty}</p>
       )}
 
       <div className="space-y-3">
         {games.map((g, idx) => (
           <div
             key={idx}
-            className="flex items-start gap-3 p-3 rounded-lg bg-neutral-900/50 border border-neutral-700"
+            className="flex items-start gap-3 rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-3"
           >
             <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="col-span-2 md:col-span-1">
-                <label className="block text-xs text-neutral-400 mb-1">
+                <label className="mb-1 block text-xs text-[var(--t3,#a39ba6)]">
                   {format(t.mapLabelNumbered, { n: idx + 1 })}
                   {requiredMaps !== undefined && idx >= requiredMaps && (
-                    <span className="ml-1 text-neutral-500">
+                    <span className="ml-1 text-[var(--t4,#807984)]">
                       {t.mapOptional}
                     </span>
                   )}
@@ -183,7 +187,7 @@ export default function MatchGamesPanel({
                 <input
                   type="text"
                   list={mapPool.length > 0 ? datalistId : undefined}
-                  className="w-full px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] px-2 py-1.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                   value={g.map_name}
                   onChange={(e) => {
                     const updated = [...games];
@@ -203,13 +207,13 @@ export default function MatchGamesPanel({
                 />
               </div>
               <div>
-                <label className="block text-xs text-neutral-400 mb-1">
+                <label className="mb-1 block text-xs text-[var(--t3,#a39ba6)]">
                   {team1?.short_name || team1?.name || t.teamShort1Fallback}
                 </label>
                 <input
                   type="number"
                   min={0}
-                  className="w-full px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] px-2 py-1.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                   value={g.team1_score}
                   onChange={(e) => {
                     const updated = [...games];
@@ -222,13 +226,13 @@ export default function MatchGamesPanel({
                 />
               </div>
               <div>
-                <label className="block text-xs text-neutral-400 mb-1">
+                <label className="mb-1 block text-xs text-[var(--t3,#a39ba6)]">
                   {team2?.short_name || team2?.name || t.teamShort2Fallback}
                 </label>
                 <input
                   type="number"
                   min={0}
-                  className="w-full px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] px-2 py-1.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                   value={g.team2_score}
                   onChange={(e) => {
                     const updated = [...games];
@@ -267,7 +271,7 @@ export default function MatchGamesPanel({
             <div className="flex flex-col items-center gap-2 pt-5">
               <label
                 title={t.otHint}
-                className="flex items-center gap-1.5 text-xs text-neutral-400 cursor-pointer"
+                className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--t3,#a39ba6)]"
               >
                 <input
                   type="checkbox"
@@ -286,7 +290,7 @@ export default function MatchGamesPanel({
               </label>
               <label
                 title={t.tbHint}
-                className="flex items-center gap-1.5 text-xs text-neutral-400 cursor-pointer"
+                className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--t3,#a39ba6)]"
               >
                 <input
                   type="checkbox"
@@ -310,7 +314,7 @@ export default function MatchGamesPanel({
               onClick={() =>
                 setGames((prev) => prev.filter((_, i) => i !== idx))
               }
-              className="mt-5 p-1.5 rounded hover:bg-red-900/50 text-neutral-500 hover:text-red-400 transition-colors"
+              className="mt-5 rounded-[var(--r-ctrl,4px)] p-1.5 text-[var(--t4,#807984)] transition-colors hover:bg-[rgba(255,107,107,.08)] hover:text-[var(--err,#ff6b6b)]"
               title={t.deleteMapTitle}
             >
               <svg

@@ -32,17 +32,6 @@ type SeedSlotProps = {
   onAssignTeam: (team: TournamentTeam) => void;
 };
 
-const SEED_GRADIENT_COLORS: Record<string, string> = {
-  '1': 'from-amber-500 to-orange-600',
-  '2': 'from-sky-500 to-blue-600',
-  '3': 'from-emerald-500 to-green-600',
-  '4': 'from-rose-500 to-pink-600',
-  '5': 'from-violet-500 to-purple-600',
-  '6': 'from-cyan-400 to-teal-600',
-  '7': 'from-fuchsia-500 to-pink-600',
-  '8': 'from-lime-500 to-emerald-600',
-};
-
 export default function SeedSlot({
   match,
   slot,
@@ -64,9 +53,6 @@ export default function SeedSlot({
   const pickerRef = useRef<HTMLDivElement>(null);
   const hasTeam = !!(team || teamId);
 
-  const gradientClass = seed
-    ? SEED_GRADIENT_COLORS[seed] || 'from-neutral-500 to-neutral-600'
-    : '';
   const canPick = !hasTeam && availableTeams.length > 0;
 
   const filteredPickerTeams = availableTeams.filter((t) =>
@@ -89,13 +75,13 @@ export default function SeedSlot({
   return (
     <div
       ref={pickerRef}
-      className={`relative flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+      className={`relative flex items-center gap-3 rounded-[var(--r-ctrl,4px)] px-3 py-2 transition-colors ${
         hasTeam
-          ? 'bg-white/[0.03] hover:bg-white/[0.06]'
+          ? 'border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] hover:border-[var(--line2,rgba(194,196,201,.2))]'
           : isTBD
-            ? 'bg-purple-500/5 border border-dashed border-purple-500/20'
-            : 'bg-white/[0.02] border border-dashed border-white/[0.06]'
-      } ${isWinner ? 'ring-1 ring-emerald-500/30' : ''} ${canPick && !showPicker ? 'cursor-pointer hover:border-purple-500/40' : ''}`}
+            ? 'border border-dashed border-[rgba(180,103,209,.35)] bg-[var(--s2,#1d1520)]'
+            : 'border border-dashed border-[var(--line2,rgba(194,196,201,.2))]'
+      } ${isWinner ? 'ring-1 ring-[rgba(127,202,101,.45)]' : ''} ${canPick && !showPicker ? 'cursor-pointer hover:border-[var(--or,#b467d1)]' : ''}`}
       onDragOver={onDragOverSlot}
       onDrop={(e) => onDropOnSlot(e, match.id, slot)}
       onClick={() => {
@@ -114,23 +100,21 @@ export default function SeedSlot({
       >
         {/* Seed badge */}
         {seed && (
-          <div
-            className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center text-sm font-extrabold text-white shadow-lg`}
-          >
+          <div className="flex h-8 w-8 items-center justify-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s3,#2f2732)] font-[family-name:var(--fd)] text-sm font-extrabold text-[var(--t1,#f4edf7)]">
             {seed}
           </div>
         )}
 
         {/* TBD badge */}
         {!seed && isTBD && (
-          <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-[10px] font-bold text-purple-300">
+          <div className="flex h-8 w-8 items-center justify-center rounded-[var(--r-ctrl,4px)] border border-[rgba(180,103,209,.4)] bg-[rgba(180,103,209,.12)] text-[10px] font-bold text-[var(--or-200,#eec4ff)]">
             ?
           </div>
         )}
 
         {/* Empty badge */}
         {!seed && !isTBD && (
-          <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-[10px] text-neutral-600">
+          <div className="flex h-8 w-8 items-center justify-center rounded-[var(--r-ctrl,4px)] border border-dashed border-[var(--line2,rgba(194,196,201,.2))] text-[10px] text-[var(--t4,#807984)]">
             —
           </div>
         )}
@@ -150,27 +134,29 @@ export default function SeedSlot({
               )}
               <span
                 className={`text-sm font-semibold truncate ${
-                  isWinner ? 'text-emerald-300' : 'text-white'
+                  isWinner
+                    ? 'text-[var(--lf-200,#b3e7a3)]'
+                    : 'text-[var(--t1,#f4edf7)]'
                 }`}
               >
                 {team.name}
               </span>
             </div>
           ) : isTBD ? (
-            <span className="text-sm font-medium text-purple-300/50 italic">
+            <span className="text-sm font-medium italic text-[var(--or-300,#dea3f6)]">
               {t.available}
             </span>
           ) : seed ? (
-            <span className="text-sm font-semibold text-white/70">
+            <span className="text-sm font-semibold text-[var(--t2,#c7bfca)]">
               Seed {seed}
             </span>
           ) : (
-            <span className="text-xs text-neutral-600 italic">
+            <span className="text-xs italic text-[var(--t4,#807984)]">
               {t.emptySlot}
             </span>
           )}
           {teamId && !team && (
-            <span className="text-[10px] text-neutral-500 font-mono truncate">
+            <span className="truncate font-mono text-[10px] text-[var(--t4,#807984)]">
               {teamId.slice(0, 8)}
             </span>
           )}
@@ -179,7 +165,7 @@ export default function SeedSlot({
 
       {/* Assign hint */}
       {canPick && !showPicker && (
-        <div className="text-[10px] text-purple-400/60 flex-shrink-0">
+        <div className="shrink-0 text-[10px] text-[var(--or-300,#dea3f6)]">
           <svg
             className="w-4 h-4"
             fill="none"
@@ -197,14 +183,16 @@ export default function SeedSlot({
       )}
 
       {/* Winner indicator */}
-      {isWinner && <div className="text-emerald-400 text-xs font-bold">W</div>}
+      {isWinner && (
+        <div className="text-xs font-bold text-[var(--lf,#7fca65)]">W</div>
+      )}
 
       {/* Clear button */}
       {hasTeam && (
         <button
           type="button"
           onClick={onClear}
-          className="opacity-0 group-hover:opacity-100 text-neutral-500 hover:text-red-400 transition-all p-0.5"
+          className="p-0.5 text-[var(--t4,#807984)] opacity-0 transition-all hover:text-[var(--err,#ff6b6b)] group-hover:opacity-100"
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <path
@@ -220,7 +208,7 @@ export default function SeedSlot({
       {/* Team picker dropdown */}
       {showPicker && (
         <div
-          className="absolute top-full left-0 right-0 mt-1 z-50 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl overflow-hidden"
+          className="absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-2">
@@ -230,12 +218,12 @@ export default function SeedSlot({
               placeholder={t.searchPlaceholder}
               value={pickerSearch}
               onChange={(e) => setPickerSearch(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-800 border border-neutral-600 text-xs text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2.5 py-1.5 text-xs text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
             />
           </div>
           <div className="max-h-48 overflow-y-auto">
             {filteredPickerTeams.length === 0 ? (
-              <div className="px-3 py-2 text-xs text-neutral-500 text-center">
+              <div className="px-3 py-2 text-center text-xs text-[var(--t4,#807984)]">
                 {t.noTeams}
               </div>
             ) : (
@@ -243,7 +231,8 @@ export default function SeedSlot({
                 <button
                   key={t.team_id}
                   type="button"
-                  className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-purple-600/20 transition-colors"
+                  data-case="normal"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-[rgba(180,103,209,.12)]"
                   onClick={() => {
                     onAssignTeam(t);
                     setShowPicker(false);
@@ -259,11 +248,11 @@ export default function SeedSlot({
                       className="w-5 h-5 rounded object-cover flex-shrink-0"
                     />
                   )}
-                  <span className="text-sm text-white truncate">
+                  <span className="truncate text-sm text-[var(--t1,#f4edf7)]">
                     {t.team.name}
                   </span>
                   {t.seed != null && (
-                    <span className="ml-auto text-[10px] text-neutral-500 flex-shrink-0">
+                    <span className="ml-auto shrink-0 text-[10px] text-[var(--t4,#807984)]">
                       Seed {t.seed}
                     </span>
                   )}

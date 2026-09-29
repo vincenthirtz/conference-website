@@ -13,6 +13,7 @@
 // une image »).
 
 import { OW_HEROES, type HeroBan } from '@/utils/matches/heroBans';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type Team = {
   id?: string | null;
@@ -34,7 +35,7 @@ const HEROES_BY_NAME = OW_HEROES.slice().sort((a, b) =>
 );
 
 const selectClass =
-  'px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
+  'rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] px-2 py-1.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 export default function MatchGamePickBans({
   pickedBy,
@@ -56,9 +57,9 @@ export default function MatchGamePickBans({
     });
 
   return (
-    <div className="col-span-full grid gap-3 md:grid-cols-[12rem_1fr] border-t border-neutral-700/60 pt-3">
+    <div className="col-span-full grid gap-3 border-t border-[var(--line,rgba(194,196,201,.12))] pt-3 md:grid-cols-[12rem_1fr]">
       <div>
-        <label className="block text-xs text-neutral-400 mb-1">
+        <label className="mb-1 block text-xs text-[var(--t3,#a39ba6)]">
           {t.pickedByLabel}
         </label>
         <select
@@ -76,7 +77,9 @@ export default function MatchGamePickBans({
       </div>
 
       <div>
-        <p className="block text-xs text-neutral-400 mb-1">{t.heroBansLabel}</p>
+        <p className="mb-1 block text-xs text-[var(--t3,#a39ba6)]">
+          {t.heroBansLabel}
+        </p>
         <div className="space-y-2">
           {bans.map((ban, i) => {
             const takenElsewhere = new Set(
@@ -88,7 +91,7 @@ export default function MatchGamePickBans({
                 key={i}
                 className="flex flex-wrap items-center gap-2"
               >
-                <span className="w-5 text-xs text-neutral-500 tabular-nums">
+                <span className="w-5 font-mono text-xs text-[var(--t4,#807984)]">
                   {i + 1}.
                 </span>
                 <select
@@ -129,15 +132,15 @@ export default function MatchGamePickBans({
                       bans: bans.filter((_, j) => j !== i),
                     })
                   }
-                  className="px-2 py-1 rounded text-neutral-500 hover:text-red-400 hover:bg-red-900/40 text-sm"
+                  className="rounded-[var(--r-ctrl,4px)] px-2 py-1 text-sm text-[var(--t4,#807984)] hover:bg-[rgba(255,107,107,.08)] hover:text-[var(--err,#ff6b6b)]"
                 >
                   ×
                 </button>
               </div>
             );
           })}
-          <button
-            type="button"
+          <AdminButton
+            size="xs"
             onClick={() => {
               // Alterne l'équipe par défaut : c'est l'ordre usuel des bans.
               const last = bans[bans.length - 1]?.team_id;
@@ -148,11 +151,12 @@ export default function MatchGamePickBans({
                 bans: [...bans, { team_id: next, hero: '' }],
               });
             }}
-            className="px-2.5 py-1 rounded bg-neutral-700 hover:bg-neutral-600 text-xs"
           >
             {t.addBan}
-          </button>
-          <p className="text-[11px] text-neutral-500">{t.heroBansHint}</p>
+          </AdminButton>
+          <p className="text-[11px] text-[var(--t4,#807984)]">
+            {t.heroBansHint}
+          </p>
         </div>
       </div>
     </div>

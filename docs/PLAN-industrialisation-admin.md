@@ -14,6 +14,68 @@
 
 ---
 
+## ⏸ Point d'arrêt — 2026-09-29 (changement de machine)
+
+**Où est le travail.** Branche `admin-industrialisation` (poussée sur `origin`), partie de `work`.
+Elle n'est PAS fusionnée dans `work` : `work` déploie en prod sur Netlify. Pour reprendre :
+`git fetch origin && git switch admin-industrialisation`. La fusion dans `work` n'aura lieu
+qu'après la recette ci-dessous et un feu vert explicite.
+
+**Fait** (L1–L14 socles, cf. sections ; passe visuelle « Le Ruban » lots 1 à 10, cf. L12) :
+- toutes les pages admin sont sur les archétypes Le Ruban ; **plus aucune page > 800 lignes**
+  (20 au départ) — les géantes ont été découpées en `features/admin/<module>/{ui,hooks}` ;
+- pont Tailwind de `styles/admin-ruban.css` étendu aux signaux (emerald/green → `--ok`,
+  amber/yellow → `--warn`, red → `--err`, lime → `--lf`) : les ~1 700 classes de signal en dur
+  prennent les couleurs exactes sans réécriture ;
+- primitives partagées (Modal, ConfirmDialog, AlertBanner, Skeleton, Tabs, historique…) et
+  composants tournoi/phases/bracket/draft/matchs et régie/diffusion/caster en grammaire Ruban.
+  Les primitives aussi rendues côté public (Modal, ConfirmDialog, AlertBanner, LoadingSpinner,
+  LogoUpload, ui/Skeleton, ui/Tabs) ne changent QUE sous `[data-surface=admin]` (variante
+  `[:root:has([data-surface=admin])_&]:` ou repli `var(--x, var(--color-…))`).
+
+**Vérifié à chaque lot** : `tsc --noEmit` (seule erreur tolérée : `qrcode`, préexistante), diff
+des appels réseau / `router.push` / `data-testid` / `confirm(` / `aria-*` (aucun perdu), les 7
+gardes (`noHardcodedFrench`, `i18nLocaleParity`, `adminFileSizeGuard`, `adminPageGuards`,
+`adminDebtRatchet`, `adminBoundariesGuard`, `adminLinkGuards`) + les tests unitaires qui
+importent les fichiers touchés. Hooks extraits relus contre l'original (corps identiques).
+
+**PAS vérifié — c'est la prochaine étape, avant toute fusion dans `work`** :
+1. **Recette visuelle** : aucun écran migré n'a été ouvert dans un navigateur. Priorités :
+   hub tournoi, matchs du tournoi, gestion des inscrits, Kanban, régie/Director/console live,
+   simulateur, édition d'équipe ; et côté PUBLIC, qu'aucune modale/onglet/squelette n'a bougé
+   (TCG, pronostics, `pages/team/[slug]/edit`, `pages/developpeurs/dashboard`).
+2. **e2e** contre une base LOCALE (jamais la prod) : `admin-*.spec.ts`, `caster-cockpit-*`.
+   `admin-users.spec.ts` était déjà cassé avant (clique un « Rechercher » inexistant).
+3. CI GitHub sur la branche (le Mac d'origine ne peut pas lancer `npm run verify`).
+
+**Reste à faire (ordre suggéré)** :
+- composants encore en grammaire d'origine (couleurs déjà corrigées par le pont) :
+  `components/admin/{communications,moderation,dashboard,logs,onboarding,teams,scrims,
+  site-settings,tcg,tenants,partners,association,stats,profile,…}` et `components/admin/simulator/*`,
+  `QuizMode` ;
+- remonter les classes Ruban dupliquées (`features/admin/stages/ui/rubanClasses.ts`,
+  `features/admin/diffusion/ui/rubanClasses.ts`, `components/admin/caster/fieldClasses.ts`)
+  dans `features/admin/_shared/ui/` ; `AdminButtonLink` ne prend pas `target`/`rel`
+  (liens externes stylés à la main) ;
+- code mort : `SummaryCard`, `stageTypeBadgeClass`, `runStatusBadgeClasses`/`*DotClasses`,
+  `segment|wave|stationStatusBadgeClasses`, `stageTypeColor`/`matchStatusColor`, clés i18n
+  `breadcrumb*` des fiches phase/ligue ;
+- phases 1–2 non terminées : migration des routes vers `defineAdminRoute` (L3), `select('*')`
+  (L5), service/repository (L7), cache client généralisé (L10).
+
+**Décisions produit en attente (à trancher par Vincent)** : confirmation sur « Notifier les
+capitaines » ; Dashboard visible ou non pour helper/referee ; plusieurs `primary` simultanés
+(modale presets, panneaux des matchs) ; « 🔴 LIVE » à côté d'une puce verte (console live) ;
+ConfirmDialog `warning` rendu en primary plutôt qu'en danger ; tons choisis (MVP ouvert = ok,
+prédiction active = brand, station `in_use` = ok, `walkover` = neutral).
+
+**Règles de travail sur ce chantier** : pas de `npm run verify` sur le Mac (i7 2014, surchauffe)
+— tests ciblés + CI ; mesurer `npm run -s admin:metrics` SANS `--write` avant de regeler, et ne
+regeler que des baisses ; le garde de taille compte `wc -l + 1` ; un fichier gelé ne grossit
+jamais (extraire plutôt) ; e2e jamais contre la prod.
+
+---
+
 ## 1. Diagnostic chiffré (2026-09-29)
 
 ### Taille
@@ -656,6 +718,14 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       mise en page du Director en Ruban). Corps des hooks relus contre l'original.
       **Pages admin > 800 lignes : 0** (20 au début de la passe visuelle).
 - [ ] Code mort : `components/admin/simulator/SummaryCard.tsx` n'est plus importé.
+- [x] **Passe visuelle, lot 10 (composants partagés)** : pont Tailwind étendu aux signaux
+      (`styles/admin-ruban.css`) ; primitives (Modal, ConfirmDialog, DeleteConfirmModal,
+      ApiTokenRevealModal, AlertBanner, LoadingSpinner, Skeleton, Tabs, Breadcrumb,
+      pagination, historique, LogoUpload…) protégées côté public ; 44 composants
+      tournoi/phases/bracket/draft/matchs (`StageTabsNav` inclus, `bracket/statusTone.ts`) ;
+      38 composants régie/diffusion/caster (`diffusion/ui/rubanClasses.ts`,
+      `caster/fieldClasses.ts`). Laissés tels quels car rendus côté public :
+      `BracketTreeView`, `InlineScoreEditor`, `DraftTimer`, `utils/statusConfig`.
 - [ ] e2e `admin-users.spec.ts` : clique un bouton « Rechercher » qui n'existe pas sur la page
       (recherche automatique) — cassé AVANT le lot 8, à réaligner sur le vrai comportement.
 - [ ] Plusieurs `primary` simultanés possibles sur les matchs du tournoi (panneaux de

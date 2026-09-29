@@ -14,11 +14,18 @@ type AlertBannerProps = {
   onDismiss?: () => void;
 };
 
+// Hors admin (portail développeur), ces classes de base restent le rendu.
+// Dans l'admin (« Le Ruban », portée de styles/admin-ruban.css), les tons
+// s'alignent sur ceux des puces (features/admin/_shared/ui/Chip) : filet de
+// signal plus net, texte de signal éclairci.
 const VARIANT_STYLES: Record<AlertVariant, string> = {
-  error: 'bg-red-500/10 border-red-500/20 text-red-300',
-  success: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300',
-  info: 'bg-blue-500/10 border-blue-500/20 text-blue-300',
-  warning: 'bg-amber-500/10 border-amber-500/20 text-amber-300',
+  error:
+    'bg-red-500/10 border-red-500/20 text-red-300 [:root:has([data-surface=admin])_&]:border-[rgba(255,107,107,.4)] [:root:has([data-surface=admin])_&]:text-[#ffc2c2]',
+  success:
+    'bg-emerald-500/10 border-emerald-500/20 text-emerald-300 [:root:has([data-surface=admin])_&]:border-[rgba(127,202,101,.36)] [:root:has([data-surface=admin])_&]:text-[var(--lf-200)]',
+  info: 'bg-blue-500/10 border-blue-500/20 text-blue-300 [:root:has([data-surface=admin])_&]:border-[rgba(180,103,209,.4)] [:root:has([data-surface=admin])_&]:text-[var(--or-200)]',
+  warning:
+    'bg-amber-500/10 border-amber-500/20 text-amber-300 [:root:has([data-surface=admin])_&]:border-[rgba(245,165,36,.38)] [:root:has([data-surface=admin])_&]:text-[#ffd9a3]',
 };
 
 // Per-variant icon path (drawn inside a 16x16 viewBox, stroke: currentColor).

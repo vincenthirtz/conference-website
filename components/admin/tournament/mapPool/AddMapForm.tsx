@@ -10,6 +10,7 @@
 
 import { useState } from 'react';
 import { typeLabel } from './types';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 export type SelectableMap = {
   name: string;
@@ -106,11 +107,11 @@ export default function AddMapForm({
   }
 
   return (
-    <div className="mb-6 p-5 rounded-xl bg-white/5 border border-white/10">
+    <div className="mb-6 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-5">
       <h3 className="text-lg font-semibold mb-4">{labels.addMapTitle}</h3>
 
       {!hasMapVeto && (
-        <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-400/30 text-amber-100 text-sm">
+        <div className="mb-4 rounded-[var(--r-ctrl,4px)] border border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.08)] p-3 text-sm text-[#ffd9a3]">
           {hasGameDef
             ? labels.noVetoGame.replace('{game}', gameLabel)
             : labels.noPredefinedPool}{' '}
@@ -120,39 +121,33 @@ export default function AddMapForm({
 
       {hasMapVeto && (
         <div className="flex gap-4 mb-4">
-          <button
+          <AdminButton
+            size="sm"
+            variant={!useCustom ? 'secondary' : 'ghost'}
             onClick={() => setUseCustom(false)}
-            className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-              !useCustom
-                ? 'bg-purple-600 text-white'
-                : 'bg-white/5 text-gray-300 hover:bg-white/10'
-            }`}
           >
             {labels.mapGameToggle.replace('{game}', gameLabel)}
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
+            size="sm"
+            variant={useCustom ? 'secondary' : 'ghost'}
             onClick={() => setUseCustom(true)}
-            className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-              useCustom
-                ? 'bg-purple-600 text-white'
-                : 'bg-white/5 text-gray-300 hover:bg-white/10'
-            }`}
           >
             {labels.mapCustomToggle}
-          </button>
+          </AdminButton>
         </div>
       )}
 
       {hasMapVeto && !useCustom ? (
         <div className="space-y-3">
           <div>
-            <label className="block text-sm text-gray-300 mb-2">
+            <label className="mb-2 block text-sm text-[var(--t2,#c7bfca)]">
               {labels.selectMapLabel.replace('{game}', gameLabel)}
             </label>
             <select
               value={selected}
               onChange={(e) => setSelected(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
+              className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
             >
               <option value="">{labels.chooseMapPlaceholder}</option>
               {available.map((m) => (
@@ -166,25 +161,25 @@ export default function AddMapForm({
       ) : (
         <div className="space-y-3">
           <div>
-            <label className="block text-sm text-gray-300 mb-2">
+            <label className="mb-2 block text-sm text-[var(--t2,#c7bfca)]">
               {labels.mapNameLabel}
             </label>
             <input
               type="text"
               value={customName}
               onChange={(e) => setCustomName(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
+              className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
               placeholder={labels.mapNamePlaceholder}
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-300 mb-2">
+            <label className="mb-2 block text-sm text-[var(--t2,#c7bfca)]">
               {labels.mapTypeLabel}
             </label>
             <select
               value={customType}
               onChange={(e) => setCustomType(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
+              className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
             >
               <option value="control">{labels.typeControl}</option>
               <option value="escort">{labels.typeEscort}</option>
@@ -194,14 +189,14 @@ export default function AddMapForm({
             </select>
           </div>
           <div>
-            <label className="block text-sm text-gray-300 mb-2">
+            <label className="mb-2 block text-sm text-[var(--t2,#c7bfca)]">
               {labels.imageUrlLabel}
             </label>
             <input
               type="text"
               value={customImage}
               onChange={(e) => setCustomImage(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
+              className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
               placeholder={labels.imageUrlPlaceholder}
             />
           </div>
@@ -209,19 +204,17 @@ export default function AddMapForm({
       )}
 
       <div className="mt-4 flex gap-2">
-        <button
+        <AdminButton
+          variant="primary"
+          size="sm"
           onClick={handleSubmit}
           disabled={adding}
-          className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
         >
           {adding ? labels.adding : labels.addButton}
-        </button>
-        <button
-          onClick={onCancel}
-          className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white text-sm transition-colors"
-        >
+        </AdminButton>
+        <AdminButton size="sm" onClick={onCancel}>
           {labels.cancel}
-        </button>
+        </AdminButton>
       </div>
     </div>
   );

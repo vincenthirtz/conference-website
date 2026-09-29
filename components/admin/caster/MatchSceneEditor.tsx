@@ -39,6 +39,7 @@ import ScoreStepper from './ScoreStepper';
 import SaveIndicator from './SaveIndicator';
 import {
   detailsClass,
+  iconBtnClass,
   inputClass,
   labelClass,
   summaryClass,
@@ -138,7 +139,7 @@ function BanSelect({
       ) : (
         <span
           aria-hidden="true"
-          className="h-8 w-8 rounded-md bg-neutral-800 text-neutral-400 text-xs font-bold flex items-center justify-center shrink-0"
+          className="h-8 w-8 rounded-[var(--r-ctrl,4px)] bg-[var(--s3,#2f2732)] text-[var(--t3,#a39ba6)] text-xs font-bold flex items-center justify-center shrink-0"
         >
           {b ? teamInitial(b.name) : '—'}
         </span>
@@ -219,12 +220,12 @@ export default function MatchSceneEditor({
       {linkedMatchId && (
         <div
           role="status"
-          className="rounded-xl border border-cyan-500/30 bg-cyan-900/15 px-3 py-2.5 text-xs text-cyan-100 flex items-center gap-2"
+          className="rounded-[var(--r-ctrl,4px)] border border-[rgba(127,202,101,.55)] bg-[rgba(127,202,101,.1)] px-3 py-2.5 text-xs text-[var(--lf-200,#b3e7a3)] shadow-[var(--glow-live)] flex items-center gap-2"
           data-testid="caster-live-score-banner"
         >
           <span
             aria-hidden="true"
-            className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0"
+            className="w-2 h-2 rounded-full bg-[var(--lf,#7fca65)] animate-pulse shrink-0"
           />
           {t.liveMatchBanner}
         </div>
@@ -256,7 +257,7 @@ export default function MatchSceneEditor({
             onClick={swapTeams}
             title={t.swapTeams}
             aria-label={t.swapTeams}
-            className="px-2.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm"
+            className={iconBtnClass}
             data-testid="caster-swap-teams"
           >
             ⇄
@@ -322,7 +323,7 @@ export default function MatchSceneEditor({
               type="checkbox"
               checked={draft.seriesDots}
               onChange={(e) => patch({ seriesDots: e.target.checked })}
-              className="accent-purple-500"
+              className="accent-[var(--or,#b467d1)]"
             />
             {t.seriesDotsLabel}
           </label>
@@ -331,7 +332,7 @@ export default function MatchSceneEditor({
               type="checkbox"
               checked={draft.overwatchHud}
               onChange={(e) => patch({ overwatchHud: e.target.checked })}
-              className="accent-purple-500"
+              className="accent-[var(--or,#b467d1)]"
             />
             {t.overwatchHudLabel}
           </label>

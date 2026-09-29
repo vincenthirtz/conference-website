@@ -39,6 +39,12 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { logger } from '../../../utils/logger';
 import nsAdminBroadcastLive from '@/lib/i18n/locales/admin-fr/adminBroadcastLive';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import {
+  rubanEyebrow,
+  rubanInput,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 
 type Subscription = {
   id: string | null;
@@ -184,27 +190,27 @@ export default function TcgDropHealthCard() {
   const healthy = blocking.length === 0 && !unknown && ailing.length === 0;
 
   return (
-    <section className="mb-4 rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+    <section
+      className={`mb-4 rounded-[var(--r-card,14px)] border bg-[var(--s1,#100812)] px-5 py-4 ${
+        !unknown && !healthy
+          ? 'border-[rgba(255,107,107,.45)]'
+          : 'border-[var(--line2,rgba(194,196,201,.2))]'
+      }`}
+    >
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-sm font-semibold text-white">{t.dropHeading}</h2>
-        <span
-          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-            unknown
-              ? 'bg-neutral-700/60 text-neutral-300'
-              : healthy
-                ? 'bg-emerald-500/15 text-emerald-300'
-                : 'bg-red-500/15 text-red-300'
-          }`}
-        >
+        <h2 className={rubanEyebrow}>{t.dropHeading}</h2>
+        <Chip tone={unknown ? 'neutral' : healthy ? 'ok' : 'err'}>
           {unknown
             ? t.dropStatusUnknown
             : healthy
               ? t.dropStatusHealthy
               : t.dropStatusBroken}
-        </span>
+        </Chip>
       </div>
 
-      <p className="mt-1 text-[11px] text-neutral-400">{t.dropSubtitle}</p>
+      <p className="mt-1 text-[11px] text-[var(--t3,#a39ba6)]">
+        {t.dropSubtitle}
+      </p>
 
       {unknown && (
         <p className="mt-2 text-xs text-neutral-400">{t.dropUnreadable}</p>
@@ -213,7 +219,7 @@ export default function TcgDropHealthCard() {
       {blocking.length > 0 && (
         <ul className="mt-3 space-y-1">
           {blocking.map((reason) => (
-            <li key={reason} className="text-xs text-red-200">
+            <li key={reason} className="text-xs text-[#ffc2c2]">
               {reason}
             </li>
           ))}
@@ -227,14 +233,15 @@ export default function TcgDropHealthCard() {
           enverrait chercher au mauvais endroit — le reproche exact que
           l'en-tête de cette carte adresse au voyant rouge unique. */}
       {!healthy && !unknown && state.secretConfigured && state.hasScope && (
-        <button
-          type="button"
+        <AdminButton
+          variant="secondary"
+          size="sm"
           onClick={() => void setup()}
           disabled={busy}
-          className="mt-3 inline-flex min-h-9 items-center rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-500/30 disabled:opacity-50"
+          className="mt-3"
         >
           {busy ? t.dropSetupBusy : t.dropSetupCta}
-        </button>
+        </AdminButton>
       )}
 
       {/* Le statut BRUT de chaque souscription en peine : les causes appellent
@@ -245,7 +252,7 @@ export default function TcgDropHealthCard() {
           {ailing.map((s) => (
             <li
               key={s.id ?? s.status ?? 'sub'}
-              className="text-xs text-red-200"
+              className="text-xs text-[#ffc2c2]"
             >
               {format(t.dropSubscriptionAiling, {
                 status: s.status ?? t.dropStatusUnknown,
@@ -256,7 +263,7 @@ export default function TcgDropHealthCard() {
       )}
 
       {healthy && (
-        <p className="mt-3 text-xs text-emerald-200">
+        <p className="mt-3 text-xs text-[var(--lf-200,#b3e7a3)]">
           {format(t.dropHealthyDetail, { count: active.length })}
         </p>
       )}
@@ -304,17 +311,14 @@ function FeaturedRewardBlock({
   const current = candidates.find((c) => c.id === state.featuredFanartId);
   const live = Boolean(state.featuredRewardId && current);
   const selected = card || current?.id || candidates[0]?.id || '';
-  const input =
-    'mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-white';
+  const input = `mt-1 ${rubanInput}`;
 
   return (
-    <div className="mt-4 border-t border-neutral-800 pt-3">
-      <h3 className="text-xs font-semibold text-white">
-        {t.dropFeaturedHeading}
-      </h3>
+    <div className="mt-4 border-t border-[var(--line,rgba(194,196,201,.12))] pt-3">
+      <h3 className={rubanEyebrow}>{t.dropFeaturedHeading}</h3>
       <p className="mt-1 text-[11px] text-neutral-400">{t.dropFeaturedIntro}</p>
       {live && current && (
-        <p className="mt-2 text-xs text-emerald-200">
+        <p className="mt-2 text-xs text-[var(--lf-200,#b3e7a3)]">
           {format(t.dropFeaturedActive, { title: current.title })}
         </p>
       )}
@@ -347,18 +351,18 @@ function FeaturedRewardBlock({
               className={input}
             />
           </label>
-          <button
-            type="button"
+          <AdminButton
+            variant="secondary"
+            size="sm"
             disabled={busy || !selected}
             onClick={() => onSetup(selected)}
-            className="inline-flex min-h-9 items-center justify-center rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-500/30 disabled:opacity-50"
           >
             {busy ? t.dropSetupBusy : t.dropFeaturedCta}
-          </button>
+          </AdminButton>
         </div>
       )}
       {error && (
-        <p role="alert" className="mt-2 text-xs text-red-200">
+        <p role="alert" className="mt-2 text-xs text-[#ffc2c2]">
           {t.dropFeaturedError}
         </p>
       )}

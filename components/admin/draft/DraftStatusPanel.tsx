@@ -5,6 +5,8 @@
 
 import type { DraftState } from '@/types/draft';
 import { DraftTimer } from './DraftTimer';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type Props = {
   state: DraftState | null;
@@ -21,11 +23,11 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
-const STATUS_TONE: Record<string, string> = {
-  pending: 'bg-neutral-700 text-neutral-200',
-  in_progress: 'bg-emerald-700 text-white',
-  completed: 'bg-sky-700 text-white',
-  cancelled: 'bg-red-700 text-white',
+const STATUS_TONE: Record<string, ChipTone> = {
+  pending: 'neutral',
+  in_progress: 'live',
+  completed: 'ok',
+  cancelled: 'err',
 };
 
 export function DraftStatusPanel({
@@ -37,25 +39,25 @@ export function DraftStatusPanel({
 }: Props) {
   if (!state) {
     return (
-      <div className="flex items-center justify-between rounded-2xl border border-dashed border-neutral-700 bg-neutral-900/40 p-4">
+      <div className="flex items-center justify-between rounded-[var(--r-card,14px)] border border-dashed border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
         <div>
-          <div className="text-sm font-semibold uppercase tracking-wider text-neutral-400">
+          <div className="font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
             No draft yet
           </div>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="mt-1 text-sm text-[var(--t3,#a39ba6)]">
             Initialise the draft to seed the ban/pick steps from the game
             registry.
           </p>
         </div>
         {onInit ? (
-          <button
-            type="button"
+          <AdminButton
+            variant="primary"
+            size="sm"
             onClick={() => void onInit()}
             disabled={busy}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {busy ? 'Initialising…' : 'Initialise draft'}
-          </button>
+          </AdminButton>
         ) : null}
       </div>
     );
@@ -74,21 +76,17 @@ export function DraftStatusPanel({
   );
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-neutral-700/50 bg-neutral-900/40 p-4">
+    <div className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
       <div className="flex flex-wrap items-center gap-3">
-        <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${
-            STATUS_TONE[draft.status] ?? 'bg-neutral-700 text-white'
-          }`}
-        >
+        <Chip tone={STATUS_TONE[draft.status] ?? 'neutral'}>
           {STATUS_LABEL[draft.status] ?? draft.status}
-        </span>
-        <div className="text-sm text-neutral-300">
+        </Chip>
+        <div className="text-sm text-[var(--t2,#c7bfca)]">
           Game {draft.game_index} · {draft.game.toUpperCase()} · {done}/{total}{' '}
           steps
           {draft.fearless ? (
-            <span className="ml-2 rounded bg-amber-700/30 px-1.5 py-0.5 text-[10px] uppercase text-amber-300">
-              fearless
+            <span className="ml-2">
+              <Chip tone="warn">fearless</Chip>
             </span>
           ) : null}
         </div>
@@ -96,24 +94,23 @@ export function DraftStatusPanel({
       <div className="flex items-center gap-3">
         <DraftTimer deadlineAt={currentStep?.deadline_at ?? null} />
         {canStart && onStart ? (
-          <button
-            type="button"
+          <AdminButton
+            variant="primary"
+            size="sm"
             onClick={() => void onStart()}
             disabled={busy}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Start draft
-          </button>
+          </AdminButton>
         ) : null}
         {draft.status === 'in_progress' && onAutoPick ? (
-          <button
-            type="button"
+          <AdminButton
+            size="sm"
             onClick={() => void onAutoPick()}
             disabled={busy}
-            className="rounded-lg border border-neutral-600 px-4 py-2 text-sm font-medium text-neutral-200 hover:border-neutral-400 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Auto-pick now
-          </button>
+          </AdminButton>
         ) : null}
       </div>
     </div>

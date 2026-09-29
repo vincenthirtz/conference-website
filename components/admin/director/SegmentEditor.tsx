@@ -19,6 +19,9 @@
 //     donne le jour) avec l'heure (HH:MM) saisie. Cle UX : pas de calendrier
 //     date, juste l'heure ; on assume que le Director ancre TOUJOURS dans la
 //     fenetre du jour du run.
+//
+// Passe « Le Ruban » (lot 10C) : surfaces d'encre, titres étroits, champs et
+// boutons de l'admin — mêmes champs, mêmes `data-testid`, même validation.
 
 import { useEffect, useState } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -32,6 +35,19 @@ import type {
   EventWave,
 } from '@/types/events';
 import nsAdminDirectorSegmentEditor from '@/lib/i18n/locales/admin-fr/adminDirectorSegmentEditor';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import {
+  rubanCard,
+  rubanErr,
+  rubanEyebrow,
+  rubanInput,
+  rubanInset,
+  rubanLabel,
+} from '@/features/admin/diffusion/ui/rubanClasses';
+
+/** Champ compact des lignes de checklist. */
+const rowInput =
+  'px-2 py-1 rounded-[var(--r-ctrl,4px)] bg-[var(--s1,#100812)] border border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t1,#f4edf7)] text-xs outline-none focus:border-[var(--or,#b467d1)]';
 
 type Props = {
   segment: EventSegment | null;
@@ -195,7 +211,7 @@ export default function SegmentEditor({
 
   if (!segment) {
     return (
-      <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-6 text-sm text-neutral-400">
+      <div className={`${rubanCard} p-6 text-sm text-[var(--t3,#a39ba6)]`}>
         {t.selectPrompt}
       </div>
     );
@@ -335,38 +351,34 @@ export default function SegmentEditor({
   }
 
   return (
-    <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-5 space-y-4">
+    <div className={`${rubanCard} p-5 space-y-4`}>
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-neutral-200">
-            {t.heading}
-          </h3>
-          <p className="text-xs text-neutral-500">
+          <h3 className={rubanEyebrow}>{t.heading}</h3>
+          <p className="mt-1 text-xs text-[var(--t4,#807984)]">
             {format(t.typeOrd, {
               type: segmentTypeLabel(segment.type),
               ord: segment.ord,
             })}
           </p>
         </div>
-        <button
-          type="button"
+        <AdminButton
+          variant="secondary"
+          size="sm"
           onClick={handleSave}
           disabled={saving || busy}
-          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-xs font-medium"
         >
           {saving ? t.saving : t.save}
-        </button>
+        </AdminButton>
       </div>
 
       {/* Section Horaire (Lot 6) — en HAUT pour signaler la criticite. */}
-      <div className="rounded-xl border border-neutral-700/40 bg-neutral-900/40 p-3 space-y-2">
+      <div className={`${rubanInset} p-3 space-y-2`}>
         <div className="flex items-center justify-between">
-          <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wide">
-            {t.scheduleHeading}
-          </h4>
+          <h4 className={rubanEyebrow}>{t.scheduleHeading}</h4>
           {form.anchorEnabled ? (
             <span
-              className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-amber-300"
+              className="inline-flex items-center gap-1 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--warn,#f5a524)]"
               aria-label={t.anchored}
               data-testid="segment-anchor-active"
             >
@@ -382,7 +394,7 @@ export default function SegmentEditor({
               {t.anchored}
             </span>
           ) : (
-            <span className="text-[10px] uppercase tracking-wide text-neutral-500">
+            <span className="font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--t4,#807984)]">
               {t.autoComputed}
             </span>
           )}
@@ -395,51 +407,49 @@ export default function SegmentEditor({
               value={form.anchorTime}
               onChange={(e) => update('anchorTime', e.target.value)}
               data-testid="segment-anchor-time"
-              className="px-2 py-1 rounded-md bg-neutral-900/80 border border-amber-500/40 text-white text-sm font-mono focus:outline-none focus:border-amber-400"
+              className="h-[30px] px-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s1,#100812)] border border-[rgba(245,165,36,.45)] text-[var(--t1,#f4edf7)] text-sm font-mono outline-none focus:border-[var(--warn,#f5a524)]"
             />
-            <button
-              type="button"
+            <AdminButton
+              variant="ghost"
+              size="xs"
               onClick={handleReleaseAnchor}
               data-testid="segment-anchor-release"
-              className="px-2 py-1 rounded-md text-[11px] text-neutral-300 hover:text-white border border-neutral-700/60 hover:border-neutral-500"
             >
               {t.release}
-            </button>
+            </AdminButton>
           </div>
         ) : (
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] text-neutral-500">{t.computedHelp}</p>
-            <button
-              type="button"
+            <p className="text-[11px] text-[var(--t4,#807984)]">
+              {t.computedHelp}
+            </p>
+            <AdminButton
+              variant="ghost"
+              size="xs"
               onClick={handleEnableAnchor}
               data-testid="segment-anchor-enable"
               disabled={!run?.scheduled_at}
-              className="px-2 py-1 rounded-md text-[11px] text-amber-200 border border-amber-500/40 hover:bg-amber-500/10 disabled:opacity-40"
             >
               {t.anchorAction}
-            </button>
+            </AdminButton>
           </div>
         )}
       </div>
 
       {/* Assignation Wave / Station (PATCH immediat). */}
       {onAssign && (
-        <div className="rounded-xl border border-neutral-700/40 bg-neutral-900/40 p-3 space-y-2">
-          <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wide">
-            {t.assignHeading}
-          </h4>
+        <div className={`${rubanInset} p-3 space-y-2`}>
+          <h4 className={rubanEyebrow}>{t.assignHeading}</h4>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] text-neutral-500 mb-1">
-                {t.waveLabel}
-              </label>
+              <label className={rubanLabel}>{t.waveLabel}</label>
               <select
                 value={segment.wave_id ?? ''}
                 disabled={assigning || busy}
                 onChange={(e) =>
                   handleAssign({ wave_id: e.target.value || null })
                 }
-                className="w-full px-2 py-1.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500 disabled:opacity-50"
+                className={rubanInput}
                 data-testid="segment-wave-select"
               >
                 <option value="">{t.none}</option>
@@ -453,16 +463,14 @@ export default function SegmentEditor({
               </select>
             </div>
             <div>
-              <label className="block text-[11px] text-neutral-500 mb-1">
-                {t.stationLabel}
-              </label>
+              <label className={rubanLabel}>{t.stationLabel}</label>
               <select
                 value={segment.station_id ?? ''}
                 disabled={assigning || busy}
                 onChange={(e) =>
                   handleAssign({ station_id: e.target.value || null })
                 }
-                className="w-full px-2 py-1.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500 disabled:opacity-50"
+                className={rubanInput}
                 data-testid="segment-station-select"
               >
                 <option value="">{t.none}</option>
@@ -481,19 +489,17 @@ export default function SegmentEditor({
 
       <div className="space-y-3">
         <div>
-          <label className="block text-xs text-neutral-400 mb-1">
-            {t.titleLabel} <span className="text-red-400">*</span>
+          <label className={rubanLabel}>
+            {t.titleLabel} <span className="text-[var(--err,#ff6b6b)]">*</span>
           </label>
           <input
             value={form.title}
             onChange={(e) => update('title', e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+            className={rubanInput}
           />
         </div>
         <div>
-          <label className="block text-xs text-neutral-400 mb-1">
-            {t.durationLabel}
-          </label>
+          <label className={rubanLabel}>{t.durationLabel}</label>
           <input
             type="number"
             min={1}
@@ -501,7 +507,7 @@ export default function SegmentEditor({
             value={form.duration_min}
             onChange={(e) => update('duration_min', e.target.value)}
             placeholder={t.durationPlaceholder}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+            className={rubanInput}
           />
         </div>
         {segment.type === 'match' && (
@@ -513,68 +519,52 @@ export default function SegmentEditor({
         )}
       </div>
 
-      <div className="border-t border-neutral-700/40 pt-4 space-y-3">
-        <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wide">
-          {t.broadcastHeading}
-        </h4>
+      <div className="border-t border-[var(--line,rgba(194,196,201,.12))] pt-4 space-y-3">
+        <h4 className={rubanEyebrow}>{t.broadcastHeading}</h4>
         <div>
-          <label className="block text-xs text-neutral-400 mb-1">
-            {t.discordLabel}
-          </label>
+          <label className={rubanLabel}>{t.discordLabel}</label>
           <textarea
             value={form.bm_discord}
             onChange={(e) => update('bm_discord', e.target.value)}
             rows={2}
             placeholder={t.discordPlaceholder}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+            className={rubanInput}
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-neutral-400 mb-1">
-              Push title
-            </label>
+            <label className={rubanLabel}>Push title</label>
             <input
               value={form.bm_push_title}
               onChange={(e) => update('bm_push_title', e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+              className={rubanInput}
             />
           </div>
           <div>
-            <label className="block text-xs text-neutral-400 mb-1">
-              Email subject
-            </label>
+            <label className={rubanLabel}>Email subject</label>
             <input
               value={form.bm_email_subject}
               onChange={(e) => update('bm_email_subject', e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+              className={rubanInput}
             />
           </div>
         </div>
         <div>
-          <label className="block text-xs text-neutral-400 mb-1">
-            Push body
-          </label>
+          <label className={rubanLabel}>Push body</label>
           <input
             value={form.bm_push_body}
             onChange={(e) => update('bm_push_body', e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+            className={rubanInput}
           />
         </div>
       </div>
 
-      <div className="border-t border-neutral-700/40 pt-4 space-y-3">
+      <div className="border-t border-[var(--line,rgba(194,196,201,.12))] pt-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wide">
-            Checklist caster
-          </h4>
-          <button
-            type="button"
-            onClick={addChecklistItem}
-            className="text-xs text-purple-300 hover:text-purple-200"
-          >
+          <h4 className={rubanEyebrow}>Checklist caster</h4>
+          <AdminButton variant="secondary" size="xs" onClick={addChecklistItem}>
             {t.addItem}
-          </button>
+          </AdminButton>
         </div>
         {form.checklist.length === 0 ? (
           <p className="text-xs text-neutral-500">{t.emptyChecklist}</p>
@@ -583,7 +573,7 @@ export default function SegmentEditor({
             {form.checklist.map((it, idx) => (
               <li
                 key={idx}
-                className="flex items-center gap-2 rounded-lg bg-neutral-900/40 border border-neutral-700/60 p-2"
+                className={`flex items-center gap-2 p-2 ${rubanInset}`}
               >
                 <input
                   value={it.key}
@@ -591,7 +581,7 @@ export default function SegmentEditor({
                     updateChecklistItem(idx, { key: e.target.value })
                   }
                   placeholder={t.keyPlaceholder}
-                  className="w-32 px-2 py-1 rounded bg-neutral-900/80 border border-neutral-700 text-white text-xs font-mono focus:outline-none focus:border-purple-500"
+                  className={`w-32 font-mono ${rowInput}`}
                 />
                 <input
                   value={it.label}
@@ -599,12 +589,12 @@ export default function SegmentEditor({
                     updateChecklistItem(idx, { label: e.target.value })
                   }
                   placeholder={t.labelPlaceholder}
-                  className="flex-1 px-2 py-1 rounded bg-neutral-900/80 border border-neutral-700 text-white text-xs focus:outline-none focus:border-purple-500"
+                  className={`flex-1 ${rowInput}`}
                 />
                 <button
                   type="button"
                   onClick={() => removeChecklistItem(idx)}
-                  className="px-2 py-1 rounded text-xs text-neutral-400 hover:text-red-300"
+                  className="px-2 py-1 rounded-[var(--r-ctrl,4px)] text-xs text-[var(--t3,#a39ba6)] hover:text-[var(--err,#ff6b6b)]"
                   aria-label={t.deleteAria}
                 >
                   ×
@@ -615,11 +605,7 @@ export default function SegmentEditor({
         )}
       </div>
 
-      {error && (
-        <div className="rounded-lg bg-red-900/30 border border-red-500/40 px-3 py-2 text-xs text-red-300">
-          {error}
-        </div>
-      )}
+      {error && <div className={`${rubanErr} px-3 py-2 text-xs`}>{error}</div>}
     </div>
   );
 }

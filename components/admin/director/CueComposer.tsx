@@ -14,6 +14,9 @@
 //
 // Apres envoi reussi : on clear l'input, on regarde le focus (reste sur le
 // textarea pour permettre la frappe du cue suivant), on garde la severite.
+//
+// Passe « Le Ruban » (lot 10C) : état du run en Chip (ton `live`), sévérités
+// en couleurs de SIGNAL (ardoise / alerte / erreur), envoi AdminButton.
 
 import { memo, useCallback, useRef, useState } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -27,6 +30,13 @@ import type {
   EventRunStatus,
 } from '@/types/events';
 import nsAdminDirectorCueComposer from '@/lib/i18n/locales/admin-fr/adminDirectorCueComposer';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import {
+  rubanCard,
+  rubanEyebrow,
+  rubanInput,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 
 const MAX_BODY = 500;
 
@@ -47,24 +57,26 @@ const SEVERITY_BUTTONS: Array<{
   {
     value: 'info',
     label: 'Info',
-    active: 'bg-slate-500/30 border-slate-400/60 text-slate-100',
+    active:
+      'bg-[var(--s3,#2f2732)] border-[var(--t3,#a39ba6)] text-[var(--t1,#f4edf7)]',
     inactive:
-      'bg-neutral-900/40 border-neutral-700/60 text-neutral-300 hover:border-slate-500/40 hover:text-slate-200',
+      'bg-[var(--s2,#1d1520)] border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t3,#a39ba6)] hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]',
   },
   {
     value: 'warn',
     label: 'Warn',
-    active: 'bg-amber-500/25 border-amber-400/60 text-amber-100',
+    active:
+      'bg-[rgba(245,165,36,.18)] border-[var(--warn,#f5a524)] text-[#ffd9a3]',
     inactive:
-      'bg-neutral-900/40 border-neutral-700/60 text-neutral-300 hover:border-amber-500/40 hover:text-amber-200',
+      'bg-[var(--s2,#1d1520)] border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t3,#a39ba6)] hover:border-[rgba(245,165,36,.45)] hover:text-[#ffd9a3]',
   },
   {
     value: 'urgent',
     label: 'Urgent',
     active:
-      'bg-red-500/25 border-red-400/70 text-red-100 animate-pulse shadow-[0_0_12px_rgba(248,113,113,0.4)]',
+      'bg-[rgba(255,107,107,.2)] border-[var(--err,#ff6b6b)] text-[#ffc2c2] animate-pulse',
     inactive:
-      'bg-neutral-900/40 border-neutral-700/60 text-neutral-300 hover:border-red-500/50 hover:text-red-200',
+      'bg-[var(--s2,#1d1520)] border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t3,#a39ba6)] hover:border-[rgba(255,107,107,.45)] hover:text-[#ffc2c2]',
   },
 ];
 
@@ -130,18 +142,14 @@ function CueComposer({ runId, runStatus, onCueCreated }: Props) {
   }
 
   return (
-    <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-5">
+    <div className={`${rubanCard} p-5`}>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-neutral-200">{t.heading}</h3>
-        <span
-          className={`text-[11px] uppercase tracking-wide font-semibold ${
-            isLive ? 'text-emerald-400' : 'text-neutral-500'
-          }`}
-        >
+        <h3 className={rubanEyebrow}>{t.heading}</h3>
+        <Chip tone={isLive ? 'live' : 'neutral'}>
           {isLive
             ? t.statusLive
             : format(t.statusRun, { status: runStatusLabel(runStatus) })}
-        </span>
+        </Chip>
       </div>
 
       {/* Severity picker — segmented */}
@@ -161,7 +169,7 @@ function CueComposer({ runId, runStatus, onCueCreated }: Props) {
               aria-label={format(t.severityItemAria, { label: sev.label })}
               data-testid={`cue-composer-severity-${sev.value}`}
               onClick={() => setSeverity(sev.value)}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+              className={`h-[38px] rounded-[var(--r-ctrl,4px)] border px-3 font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.02em] transition-colors ${
                 selected ? sev.active : sev.inactive
               }`}
             >
@@ -184,7 +192,7 @@ function CueComposer({ runId, runStatus, onCueCreated }: Props) {
         placeholder={isLive ? t.placeholderLive : t.placeholderIdle}
         disabled={!isLive || busy}
         rows={3}
-        className="w-full rounded-lg bg-neutral-900/60 border border-neutral-700/60 focus:border-purple-500/60 focus:outline-none focus:ring-1 focus:ring-purple-500/30 px-3 py-2 text-sm text-white placeholder:text-neutral-600 resize-none disabled:opacity-50"
+        className={`${rubanInput} resize-none text-base`}
         aria-describedby="cue-body-help"
       />
 
@@ -192,8 +200,8 @@ function CueComposer({ runId, runStatus, onCueCreated }: Props) {
         id="cue-body-help"
         className="mt-1 flex items-center justify-between text-[11px]"
       >
-        <span className="text-neutral-500">
-          <kbd className="rounded bg-neutral-900/70 border border-neutral-700/60 px-1 py-0.5 text-[10px] text-neutral-400">
+        <span className="text-[var(--t4,#807984)]">
+          <kbd className="rounded-[3px] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] px-1 py-0.5 text-[10px] text-[var(--t3,#a39ba6)]">
             {typeof navigator !== 'undefined' &&
             /Mac|iPhone|iPad/i.test(navigator.platform)
               ? t.keyMac
@@ -204,40 +212,36 @@ function CueComposer({ runId, runStatus, onCueCreated }: Props) {
         <span
           className={
             trimmed.length > MAX_BODY - 50
-              ? 'text-amber-400'
-              : 'text-neutral-500'
+              ? 'text-[var(--warn,#f5a524)]'
+              : 'text-[var(--t4,#807984)]'
           }
         >
           {trimmed.length}/{MAX_BODY}
         </span>
       </div>
 
-      <button
-        type="button"
+      <AdminButton
+        variant={severity === 'urgent' ? 'danger' : 'secondary'}
         onClick={handleSend}
         disabled={!canSend}
         aria-label={t.sendAria}
         data-testid="cue-composer-submit"
-        className={`mt-3 w-full rounded-lg px-3 py-2 text-sm font-semibold transition ${
-          canSend
-            ? severity === 'urgent'
-              ? 'bg-red-500/80 hover:bg-red-500 text-white'
-              : severity === 'warn'
-                ? 'bg-amber-500/80 hover:bg-amber-500 text-white'
-                : 'bg-purple-600 hover:bg-purple-500 text-white'
-            : 'bg-neutral-800/60 text-neutral-500 cursor-not-allowed'
+        className={`mt-3 w-full ${
+          severity === 'warn'
+            ? 'border-[rgba(245,165,36,.45)] text-[#ffd9a3] hover:border-[var(--warn,#f5a524)] hover:bg-[rgba(245,165,36,.08)]'
+            : ''
         }`}
       >
         {busy ? t.sending : t.send}
-      </button>
+      </AdminButton>
 
       {severity === 'urgent' && (
-        <p className="mt-2 text-[11px] text-red-300/80" role="note">
+        <p className="mt-2 text-[11px] text-[#ffc2c2]" role="note">
           {t.ackNote}
         </p>
       )}
       {!isLive && (
-        <p className="mt-2 text-[11px] text-neutral-500" role="note">
+        <p className="mt-2 text-[11px] text-[var(--t4,#807984)]" role="note">
           {t.startNote}
         </p>
       )}

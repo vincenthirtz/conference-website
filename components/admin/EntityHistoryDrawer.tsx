@@ -18,6 +18,7 @@ import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminEntityHistory from '@/lib/i18n/locales/admin-fr/adminEntityHistory';
 import type { HistoryEntityType } from '@/pages/api/admin/entity-history';
 import AuditChangesView from './AuditChanges';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type FormattedLog = {
   id: string;
@@ -83,32 +84,33 @@ export default function EntityHistoryDrawer({
         role="dialog"
         aria-modal="true"
         aria-label={t.title}
-        className="flex w-full max-w-md flex-col border-l border-neutral-700 bg-neutral-900"
+        className="flex w-full max-w-md flex-col border-l border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] shadow-[var(--sh3)]"
       >
-        <header className="flex items-center justify-between border-b border-neutral-700 px-4 py-3">
+        <header className="flex items-center justify-between gap-3 border-b border-[var(--line,rgba(194,196,201,.12))] px-4 py-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.16em] text-purple-200/80">
+            <p className="font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
               {t.kicker}
             </p>
-            <h3 className="text-base font-semibold">{t.title}</h3>
+            <h3 className="font-[family-name:var(--fd)] text-base font-bold uppercase tracking-[0.01em] text-[var(--t1,#f4edf7)]">
+              {t.title}
+            </h3>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded border border-white/15 bg-white/10 px-2 py-1 text-sm hover:bg-white/15"
-          >
+          <AdminButton size="xs" onClick={onClose}>
             {t.close}
-          </button>
+          </AdminButton>
         </header>
 
         <div className="flex-1 overflow-y-auto px-4 py-3">
-          {loading && <p className="text-sm text-neutral-400">{t.loading}</p>}
+          {loading && (
+            <p className="text-sm text-[var(--t3,#a39ba6)]">{t.loading}</p>
+          )}
           {error && (
-            <p role="alert" className="text-sm text-red-300">
+            <p role="alert" className="text-sm text-[var(--err,#ff6b6b)]">
               {error}
             </p>
           )}
           {!loading && !error && logs.length === 0 && (
-            <p className="text-sm italic text-neutral-500">{t.empty}</p>
+            <p className="text-sm text-[var(--t4,#807984)]">{t.empty}</p>
           )}
           {!loading && logs.length > 0 && (
             <ol className="space-y-3">
@@ -117,23 +119,24 @@ export default function EntityHistoryDrawer({
                 return (
                   <li
                     key={log.id}
-                    className="overflow-hidden rounded-lg border border-white/10 bg-white/5"
+                    className="overflow-hidden rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)]"
                   >
                     <button
                       type="button"
                       aria-expanded={isOpen}
                       onClick={() => setExpanded(isOpen ? null : log.id)}
-                      className="w-full px-3 py-2 text-left hover:bg-white/5"
+                      data-case="normal"
+                      className="w-full px-3 py-2 text-left transition-colors hover:bg-[var(--s3,#2f2732)]"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-semibold text-purple-200">
+                        <span className="text-sm font-semibold text-[var(--or-200,#eec4ff)]">
                           {log.readableAction}
                         </span>
-                        <span className="font-mono text-xs text-neutral-500">
+                        <span className="font-mono text-xs text-[var(--t4,#807984)]">
                           {log.date}
                         </span>
                       </div>
-                      <span className="mt-0.5 block truncate text-xs text-neutral-300">
+                      <span className="mt-0.5 block truncate text-xs text-[var(--t2,#c7bfca)]">
                         {log.staff?.display_name || t.unknownStaff}
                         {log.staff?.role ? ` · ${log.staff.role}` : ''}
                       </span>

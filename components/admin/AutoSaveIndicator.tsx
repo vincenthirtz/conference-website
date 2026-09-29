@@ -27,7 +27,7 @@ export default function AutoSaveIndicator({
   if (!time) return null;
 
   return (
-    <span className="text-xs text-neutral-500">
+    <span className="text-xs tabular-nums text-[var(--t4,#807984)]">
       {format(t.savedAt, { time })}
     </span>
   );

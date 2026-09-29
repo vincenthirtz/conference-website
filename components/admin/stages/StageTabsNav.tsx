@@ -110,11 +110,11 @@ export default function StageTabsNav({
       >
         <Link
           href={backHref}
-          className="inline-flex w-fit items-center gap-2 text-sm text-neutral-400 hover:text-white"
+          className="inline-flex w-fit items-center gap-2 text-sm text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]"
         >
           {backLabel}
         </Link>
-        <div className="flex flex-wrap gap-1 border-b border-neutral-700/60">
+        <div className="flex flex-wrap items-end gap-1 border-b border-[var(--line,rgba(194,196,201,.12))]">
           {TAB_ORDER.filter(({ id }) =>
             isTabVisible(id, active, stageType)
           ).map(({ id, labelKey }) => {
@@ -124,10 +124,10 @@ export default function StageTabsNav({
                 key={id}
                 href={stageTabHref(stageId, id)}
                 aria-current={selected ? 'page' : undefined}
-                className={`-mb-px rounded-t-lg px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
+                className={`-mb-px px-4 py-3 font-[family-name:var(--fd)] text-[13px] font-bold uppercase tracking-[0.06em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--or,#b467d1)] ${
                   selected
-                    ? 'border-b-2 border-purple-500 text-white'
-                    : 'border-b-2 border-transparent text-neutral-400 hover:text-neutral-200'
+                    ? 'text-[var(--t1,#f4edf7)] shadow-[inset_0_-2px_0_var(--or,#b467d1)]'
+                    : 'text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]'
                 }`}
               >
                 {tx[labelKey]}

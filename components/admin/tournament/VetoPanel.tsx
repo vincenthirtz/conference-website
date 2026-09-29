@@ -7,7 +7,6 @@
 // TournamentTabsNav — the host route provides those).
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
@@ -17,6 +16,11 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { VetoFlowStep, VetoStep, MatchVetoState } from '@/types/veto';
 import nsAdminTournamentVeto from '@/lib/i18n/locales/admin-fr/adminTournamentVeto';
 import { useMatchMapPool } from '@/components/admin/tournament/mapPool/useMatchMapPool';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import * as R from '@/features/admin/stages/ui/rubanClasses';
 
 type Dict = typeof nsAdminTournamentVeto.fr;
 
@@ -77,23 +81,6 @@ function typeLabel(t: Dict, type: string | null | undefined) {
   return getTypeLabels(t)[type] || type;
 }
 
-function typeBadgeColor(t: string | null | undefined): string {
-  switch (t) {
-    case 'control':
-      return 'border-blue-400/50 text-blue-200 bg-blue-600/20';
-    case 'escort':
-      return 'border-amber-400/50 text-amber-200 bg-amber-600/20';
-    case 'hybrid':
-      return 'border-emerald-400/50 text-emerald-200 bg-emerald-600/20';
-    case 'push':
-      return 'border-pink-400/50 text-pink-200 bg-pink-600/20';
-    case 'flashpoint':
-      return 'border-orange-400/50 text-orange-200 bg-orange-600/20';
-    default:
-      return 'border-gray-400/50 text-gray-200 bg-gray-600/20';
-  }
-}
-
 function actionLabel(action: string): string {
   switch (action) {
     case 'ban':
@@ -110,13 +97,13 @@ function actionLabel(action: string): string {
 function actionColor(action: string): string {
   switch (action) {
     case 'ban':
-      return 'bg-red-600/30 border-red-500/40 text-red-200';
+      return 'bg-[rgba(255,107,107,.13)] border-[rgba(255,107,107,.4)] text-[#ffc2c2]';
     case 'pick':
-      return 'bg-emerald-600/30 border-emerald-500/40 text-emerald-200';
+      return 'bg-[rgba(127,202,101,.13)] border-[rgba(127,202,101,.36)] text-[var(--lf-200,#b3e7a3)]';
     case 'decider':
-      return 'bg-yellow-600/30 border-yellow-500/40 text-yellow-200';
+      return 'bg-[rgba(180,103,209,.12)] border-[rgba(180,103,209,.4)] text-[var(--or-200,#eec4ff)]';
     default:
-      return 'bg-white/10 border-white/20 text-gray-200';
+      return 'bg-[var(--s2,#1d1520)] border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t2,#c7bfca)]';
   }
 }
 
@@ -443,53 +430,43 @@ export default function VetoPanel() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-            {t.eyebrow}
-          </p>
+          <p className={R.EYEBROW}>{t.eyebrow}</p>
           <h1 className="text-2xl font-semibold">
             {format(t.pageTitle, { name: tournamentName })}
           </h1>
         </div>
         <div className="flex gap-2">
-          <Link
+          <AdminButtonLink
             href={`/admin/tournament/${tournamentId}/bracket?tab=map-draw`}
-            className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
+            size="sm"
           >
             {t.linkMapDraw}
-          </Link>
-          <Link
+          </AdminButtonLink>
+          <AdminButtonLink
             href={`/admin/tournament/${tournamentId}/maps`}
-            className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
+            size="sm"
           >
             {t.linkMapPool}
-          </Link>
+          </AdminButtonLink>
         </div>
       </div>
 
       {/* Messages */}
-      {errorMsg && (
-        <div className="mb-4 p-4 rounded-lg bg-red-900/60 border border-red-500/40 text-red-100">
-          {errorMsg}
-        </div>
-      )}
-      {loading && (
-        <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-          {t.loading}
-        </div>
-      )}
+      {errorMsg && <div className={`mb-4 ${R.ERROR_BOX}`}>{errorMsg}</div>}
+      {loading && <div className={`${R.CARD} ${R.MUTED}`}>{t.loading}</div>}
 
       {!loading && (
         <>
           {/* Match selector */}
-          <div className="mb-6 p-5 rounded-xl bg-white/5 border border-white/10 space-y-4">
+          <div className={`mb-6 space-y-4 ${R.CARD}`}>
             <div className="flex items-center gap-4">
-              <label className="text-sm text-gray-300 font-medium whitespace-nowrap">
+              <label className={`whitespace-nowrap ${R.EYEBROW}`}>
                 {t.matchLabel}
               </label>
               <select
                 value={selectedMatchId}
                 onChange={(e) => setSelectedMatchId(e.target.value)}
-                className="flex-1 max-w-lg px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm"
+                className={`max-w-lg flex-1 ${R.INPUT}`}
               >
                 <option value="">{t.selectMatchPlaceholder}</option>
                 {matches.map((m) => (
@@ -503,7 +480,7 @@ export default function VetoPanel() {
             </div>
 
             {matches.length === 0 && (
-              <p className="text-sm text-gray-400">{t.noEligibleMatch}</p>
+              <p className={`text-sm ${R.MUTED}`}>{t.noEligibleMatch}</p>
             )}
           </div>
 
@@ -512,15 +489,15 @@ export default function VetoPanel() {
             <>
               {/* Lock banner : visible des qu'un match a passe ongoing */}
               {isLocked && (
-                <div className="mb-6 p-5 rounded-xl bg-amber-900/30 border border-amber-500/40">
+                <div className={`mb-6 !p-5 ${R.WARN_BOX}`}>
                   <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
                       <span className="text-2xl leading-none">🔒</span>
                       <div className="min-w-0">
-                        <p className="text-base font-semibold text-amber-100">
+                        <p className="text-base font-semibold">
                           {t.lockedTitle}
                         </p>
-                        <p className="text-sm text-amber-200/80 mt-0.5">
+                        <p className="mt-0.5 text-sm opacity-80">
                           {t.lockedDesc}
                           {lockedLabel
                             ? format(t.lockedAtSuffix, {
@@ -531,14 +508,14 @@ export default function VetoPanel() {
                       </div>
                     </div>
                     {canUnlockVeto && (
-                      <button
+                      <AdminButton
+                        size="sm"
                         onClick={handleUnlock}
                         disabled={submitting}
-                        className="px-3 py-1.5 rounded-lg bg-amber-600/40 border border-amber-400/50 text-amber-50 text-sm hover:bg-amber-600/60 disabled:opacity-50 whitespace-nowrap"
                         title={t.unlockButtonTitle}
                       >
                         {t.unlockButton}
-                      </button>
+                      </AdminButton>
                     )}
                   </div>
                 </div>
@@ -546,10 +523,10 @@ export default function VetoPanel() {
 
               {/* Current step indicator */}
               {currentFlowStep && !vetoState.isComplete && (
-                <div className="mb-6 p-5 rounded-xl bg-white/5 border border-white/10">
+                <div className={`mb-6 ${R.CARD}`}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-gray-400 mb-1">
+                      <p className={`mb-1 text-xs ${R.MUTED}`}>
                         {format(t.stepProgress, {
                           current: vetoState.currentStepIndex + 1,
                           total: vetoState.flow.length,
@@ -557,7 +534,7 @@ export default function VetoPanel() {
                       </p>
                       <p className="text-lg font-semibold">
                         <span
-                          className={`inline-block px-3 py-1 rounded-lg text-sm font-bold mr-2 border ${actionColor(currentFlowStep.action)}`}
+                          className={`mr-2 inline-block rounded-[3px] border px-3 py-1 font-[family-name:var(--fd)] text-sm font-bold tracking-[0.1em] ${actionColor(currentFlowStep.action)}`}
                         >
                           {actionLabel(currentFlowStep.action)}
                         </span>
@@ -568,7 +545,7 @@ export default function VetoPanel() {
                           vetoState.team2Name
                         )}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className={`mt-1 text-xs ${R.MUTED}`}>
                         {t.clickMapPrefix}
                         {currentFlowStep.action === 'ban'
                           ? t.actionBan
@@ -577,40 +554,40 @@ export default function VetoPanel() {
                             : t.actionDecider}
                       </p>
                     </div>
-                    <button
+                    <AdminButton
+                      variant="danger"
+                      size="sm"
                       onClick={handleReset}
                       disabled={submitting || isLocked}
                       title={isLocked ? t.lockedShort : undefined}
-                      className="px-3 py-1.5 rounded-lg bg-red-600/30 border border-red-500/40 text-red-200 text-sm hover:bg-red-600/50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {t.resetButton}
-                    </button>
+                    </AdminButton>
                   </div>
                 </div>
               )}
 
               {vetoState.isComplete && (
-                <div className="mb-6 p-5 rounded-xl bg-emerald-900/30 border border-emerald-500/30">
+                <div className={`mb-6 !p-5 ${R.OK_BOX}`}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-lg font-semibold text-emerald-200">
-                        {t.completeTitle}
-                      </p>
-                      <p className="text-xs text-emerald-300/70 mt-1">
+                      <p className="text-lg font-semibold">{t.completeTitle}</p>
+                      <p className="mt-1 text-xs opacity-80">
                         {format(t.completeSummary, {
                           count: vetoState.pickedMaps.length,
                           format: vetoState.format.toUpperCase(),
                         })}
                       </p>
                     </div>
-                    <button
+                    <AdminButton
+                      variant="danger"
+                      size="sm"
                       onClick={handleReset}
                       disabled={submitting || isLocked}
                       title={isLocked ? t.lockedShort : undefined}
-                      className="px-3 py-1.5 rounded-lg bg-red-600/30 border border-red-500/40 text-red-200 text-sm hover:bg-red-600/50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {t.restartButton}
-                    </button>
+                    </AdminButton>
                   </div>
                 </div>
               )}
@@ -626,7 +603,7 @@ export default function VetoPanel() {
                       return (
                         <div
                           key={step.id}
-                          className={`px-3 py-2 rounded-lg border text-sm ${actionColor(step.action)}`}
+                          className={`rounded-[var(--r-ctrl,4px)] border px-3 py-2 text-sm ${actionColor(step.action)}`}
                         >
                           <span className="font-bold mr-1">{i + 1}.</span>
                           <span className="font-semibold mr-1">
@@ -661,17 +638,14 @@ export default function VetoPanel() {
                         (m) => m.map_name === pm.map_name
                       );
                       return (
-                        <div
-                          key={i}
-                          className="rounded-xl border border-emerald-500/30 overflow-hidden bg-emerald-900/10"
-                        >
-                          <div className="bg-emerald-600/30 border-b border-emerald-500/30 px-3 py-2 text-center">
-                            <span className="text-xs font-bold uppercase tracking-wider text-emerald-200">
+                        <div key={i} className={R.CARD_FLUSH}>
+                          <div className="border-b border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-3 py-2 text-center">
+                            <span className={R.EYEBROW}>
                               {format(t.mapSlot, { n: i + 1 })}
                             </span>
                           </div>
                           {mapData?.image_url ? (
-                            <div className="w-full h-28 bg-gradient-to-b from-emerald-900/20 to-transparent">
+                            <div className="h-28 w-full bg-[var(--s2,#1d1520)]">
                               {/* biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */}
                               <img
                                 src={mapData.image_url}
@@ -680,7 +654,7 @@ export default function VetoPanel() {
                               />
                             </div>
                           ) : (
-                            <div className="w-full h-28 flex items-center justify-center bg-gradient-to-b from-emerald-900/10 to-transparent text-gray-500 text-2xl">
+                            <div className="flex h-28 w-full items-center justify-center bg-[var(--s2,#1d1520)] text-2xl text-[var(--t4,#807984)]">
                               ?
                             </div>
                           )}
@@ -689,13 +663,11 @@ export default function VetoPanel() {
                               {pm.map_name}
                             </p>
                             {pm.map_type && (
-                              <span
-                                className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs border ${typeBadgeColor(pm.map_type)}`}
-                              >
-                                {typeLabel(t, pm.map_type)}
+                              <span className="mt-1 inline-block">
+                                <Chip>{typeLabel(t, pm.map_type)}</Chip>
                               </span>
                             )}
-                            <p className="text-[10px] text-gray-400 mt-1">
+                            <p className={`mt-1 text-[10px] ${R.MUTED}`}>
                               {pm.picked_by
                                 ? pm.picked_by === vetoState.team1Id
                                   ? format(t.pickBy, {
@@ -748,14 +720,15 @@ export default function VetoPanel() {
                                   ? t.mapUsedTitle
                                   : undefined
                             }
-                            className={`rounded-lg border overflow-hidden text-left transition-all ${
+                            data-case="normal"
+                            className={`overflow-hidden rounded-[var(--r-ctrl,4px)] border bg-[var(--s1,#100812)] text-left transition-all ${
                               isUsed || isLocked
-                                ? 'border-white/5 opacity-30 cursor-not-allowed'
-                                : 'border-white/10 hover:border-purple-400/60 hover:bg-white/5 cursor-pointer'
+                                ? 'cursor-not-allowed border-[var(--line,rgba(194,196,201,.12))] opacity-30'
+                                : 'cursor-pointer border-[var(--line2,rgba(194,196,201,.2))] hover:border-[var(--or,#b467d1)]'
                             }`}
                           >
                             {m.image_url ? (
-                              <div className="w-full h-24 bg-gradient-to-b from-purple-900/20 to-transparent">
+                              <div className="h-24 w-full bg-[var(--s2,#1d1520)]">
                                 {/* biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */}
                                 <img
                                   src={m.image_url}
@@ -764,7 +737,7 @@ export default function VetoPanel() {
                                 />
                               </div>
                             ) : (
-                              <div className="w-full h-24 flex items-center justify-center bg-gradient-to-b from-purple-900/10 to-transparent text-gray-500 text-xl">
+                              <div className="flex h-24 w-full items-center justify-center bg-[var(--s2,#1d1520)] text-xl text-[var(--t4,#807984)]">
                                 ?
                               </div>
                             )}
@@ -772,13 +745,11 @@ export default function VetoPanel() {
                               <p className="text-xs font-semibold truncate">
                                 {m.map_name}
                               </p>
-                              <span
-                                className={`inline-block mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] border ${typeBadgeColor(m.map_type)}`}
-                              >
-                                {typeLabel(t, m.map_type)}
+                              <span className="mt-0.5 inline-block">
+                                <Chip>{typeLabel(t, m.map_type)}</Chip>
                               </span>
                               {isUsed && (
-                                <p className="text-[10px] text-red-300 mt-0.5">
+                                <p className="mt-0.5 text-[10px] text-[var(--err,#ff6b6b)]">
                                   {t.mapUsed}
                                 </p>
                               )}

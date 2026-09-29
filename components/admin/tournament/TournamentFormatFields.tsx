@@ -17,6 +17,12 @@
 
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentEdit from '@/lib/i18n/locales/admin-fr/adminTournamentEdit';
+import {
+  FAINT,
+  INPUT,
+  LABEL,
+  TILE,
+} from '@/features/admin/stages/ui/rubanClasses';
 
 /** Les seuls champs du formulaire que ce bloc touche. */
 export type TournamentFormatForm = {
@@ -60,25 +66,21 @@ export default function TournamentFormatFields({ form, updateField }: Props) {
   return (
     <>
       <div>
-        <label className="block text-sm mb-1 text-neutral-300">
-          {t.formatLabel}
-        </label>
+        <label className={LABEL}>{t.formatLabel}</label>
         <input
           type="text"
-          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={INPUT}
           value={form.format}
           onChange={(e) => updateField('format', e.target.value)}
           placeholder="BO3"
         />
-        <p className="text-xs text-neutral-500 mt-1">{t.formatHelp}</p>
+        <p className={`mt-1 text-xs ${FAINT}`}>{t.formatHelp}</p>
       </div>
 
       <div>
-        <label className="block text-sm mb-1 text-neutral-300">
-          {t.formatTypeLabel}
-        </label>
+        <label className={LABEL}>{t.formatTypeLabel}</label>
         <select
-          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={INPUT}
           value={form.format_type}
           onChange={(e) => updateField('format_type', e.target.value)}
         >
@@ -92,13 +94,11 @@ export default function TournamentFormatFields({ form, updateField }: Props) {
       </div>
 
       <div>
-        <label className="block text-sm mb-1 text-neutral-300">
-          {t.maxTeamsLabel}
-        </label>
+        <label className={LABEL}>{t.maxTeamsLabel}</label>
         <input
           type="number"
           min={2}
-          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={INPUT}
           value={form.max_teams}
           onChange={(e) => updateField('max_teams', e.target.value)}
           placeholder="16"
@@ -106,38 +106,36 @@ export default function TournamentFormatFields({ form, updateField }: Props) {
       </div>
 
       <div className="md:col-span-2">
-        <label className="block text-sm mb-1 text-neutral-300">
-          {t.minPlayersLabel}
-        </label>
+        <label className={LABEL}>{t.minPlayersLabel}</label>
         <input
           type="number"
           min={1}
-          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={INPUT}
           value={form.min_players}
           onChange={(e) => updateField('min_players', e.target.value)}
           placeholder="5"
         />
-        <p className="text-xs text-neutral-500 mt-1">{t.minPlayersHelp}</p>
+        <p className={`mt-1 text-xs ${FAINT}`}>{t.minPlayersHelp}</p>
       </div>
       <div className="md:col-span-2">
-        <label className="block text-sm mb-1 text-neutral-300">
-          {t.maxPlayersLabel}
-        </label>
+        <label className={LABEL}>{t.maxPlayersLabel}</label>
         <input
           type="number"
           min={1}
-          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={INPUT}
           value={form.max_players}
           onChange={(e) => updateField('max_players', e.target.value)}
           placeholder="10"
         />
-        <p className="text-xs text-neutral-500 mt-1">{t.maxPlayersHelp}</p>
+        <p className={`mt-1 text-xs ${FAINT}`}>{t.maxPlayersHelp}</p>
       </div>
       {/* Inscription individuelle : une case, deux
           conséquences (parcours d'inscription + silence
           Discord), toutes deux dites dans l'aide — aucune ne
           se devine depuis le libellé. */}
-      <label className="md:col-span-2 flex items-start gap-3 rounded-xl border border-neutral-700/60 bg-neutral-900/40 p-3 text-sm cursor-pointer">
+      <label
+        className={`flex cursor-pointer items-start gap-3 p-3 text-sm md:col-span-2 ${TILE}`}
+      >
         <input
           type="checkbox"
           className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-900"
@@ -150,7 +148,7 @@ export default function TournamentFormatFields({ form, updateField }: Props) {
         />
         <span>
           <span className="font-medium">{t.soloModeLabel}</span>
-          <span className="mt-1 block text-xs text-neutral-500">
+          <span className={`mt-1 block text-xs ${FAINT}`}>
             {t.soloModeHelp}
           </span>
         </span>
@@ -158,7 +156,9 @@ export default function TournamentFormatFields({ form, updateField }: Props) {
 
       {/* Inscription individuelle REGROUPÉE en équipes de 5 : exclusive du
           mode solo ci-dessus. */}
-      <label className="md:col-span-2 flex items-start gap-3 rounded-xl border border-neutral-700/60 bg-neutral-900/40 p-3 text-sm cursor-pointer">
+      <label
+        className={`flex cursor-pointer items-start gap-3 p-3 text-sm md:col-span-2 ${TILE}`}
+      >
         <input
           type="checkbox"
           className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-900"
@@ -170,7 +170,7 @@ export default function TournamentFormatFields({ form, updateField }: Props) {
         />
         <span>
           <span className="font-medium">{t.pooledTeamsLabel}</span>
-          <span className="mt-1 block text-xs text-neutral-500">
+          <span className={`mt-1 block text-xs ${FAINT}`}>
             {t.pooledTeamsHelp}
           </span>
         </span>

@@ -178,25 +178,27 @@ function AdvancementRulesEditor({
           checked={enabled}
           onChange={(e) => handleToggle(e.target.checked)}
           disabled={disabled}
-          className="rounded border-neutral-600 bg-neutral-700 text-blue-500 focus:ring-blue-500"
+          className="rounded-[3px]"
         />
-        <span className="text-sm font-medium text-neutral-200">
+        <span className="text-sm font-medium text-[var(--t1,#f4edf7)]">
           {t.enableLabel}
         </span>
       </label>
 
       {enabled && (
-        <div className="pl-1 space-y-4 border-l-2 border-blue-600/30 ml-2 pl-4">
+        <div className="ml-2 space-y-4 border-l-2 border-[rgba(180,103,209,.4)] pl-4">
           {/* Target stage */}
           <div>
-            <label className="block text-sm mb-1 text-neutral-300">
+            <label className="mb-1 block text-sm text-[var(--t2,#c7bfca)]">
               {t.targetStageLabel}
             </label>
             {availableStages.length === 0 ? (
-              <p className="text-xs text-amber-400">{t.noOtherStage}</p>
+              <p className="text-xs text-[var(--warn,#f5a524)]">
+                {t.noOtherStage}
+              </p>
             ) : (
               <select
-                className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                 value={targetStageId}
                 onChange={(e) => handleTargetChange(e.target.value)}
                 disabled={disabled}
@@ -215,11 +217,11 @@ function AdvancementRulesEditor({
           {/* Mode (uniquement utile pour les stages 'group') */}
           {isGroup && (
             <div>
-              <label className="block text-sm mb-1 text-neutral-300">
+              <label className="mb-1 block text-sm text-[var(--t2,#c7bfca)]">
                 {t.modeLabel}
               </label>
               <div className="flex flex-col gap-2">
-                <label className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--t2,#c7bfca)]">
                   <input
                     type="radio"
                     name="advance_mode"
@@ -227,11 +229,11 @@ function AdvancementRulesEditor({
                     checked={mode === 'top_n'}
                     onChange={() => handleModeChange('top_n')}
                     disabled={disabled}
-                    className="border-neutral-600 bg-neutral-700 text-blue-500 focus:ring-blue-500"
+                    className="accent-[var(--or,#b467d1)]"
                   />
                   {t.modeTopGlobal}
                 </label>
-                <label className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--t2,#c7bfca)]">
                   <input
                     type="radio"
                     name="advance_mode"
@@ -239,7 +241,7 @@ function AdvancementRulesEditor({
                     checked={mode === 'per_group'}
                     onChange={() => handleModeChange('per_group')}
                     disabled={disabled}
-                    className="border-neutral-600 bg-neutral-700 text-blue-500 focus:ring-blue-500"
+                    className="accent-[var(--or,#b467d1)]"
                   />
                   {t.modePerGroup}
                 </label>
@@ -250,21 +252,21 @@ function AdvancementRulesEditor({
           {/* Advance top N (par groupe ou global) */}
           {mode === 'per_group' ? (
             <div>
-              <label className="block text-sm mb-1 text-neutral-300">
+              <label className="mb-1 block text-sm text-[var(--t2,#c7bfca)]">
                 {t.perGroupCountLabel}
               </label>
               <input
                 type="number"
                 min={1}
                 max={32}
-                className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                 value={advancePerGroup}
                 onChange={(e) =>
                   handlePerGroupChange(Math.max(1, Number(e.target.value) || 1))
                 }
                 disabled={disabled}
               />
-              <p className="text-xs text-neutral-500 mt-1">
+              <p className="mt-1 text-xs text-[var(--t4,#807984)]">
                 {t.perGroupHintPre}
                 <strong>{t.perGroupHintStrong}</strong>
                 {t.perGroupHintPost}
@@ -272,34 +274,36 @@ function AdvancementRulesEditor({
             </div>
           ) : (
             <div>
-              <label className="block text-sm mb-1 text-neutral-300">
+              <label className="mb-1 block text-sm text-[var(--t2,#c7bfca)]">
                 {t.topCountLabel}
               </label>
               <input
                 type="number"
                 min={1}
                 max={128}
-                className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                 value={advanceTop}
                 onChange={(e) =>
                   handleTopChange(Math.max(1, Number(e.target.value) || 1))
                 }
                 disabled={disabled}
               />
-              <p className="text-xs text-neutral-500 mt-1">{t.topHint}</p>
+              <p className="mt-1 text-xs text-[var(--t4,#807984)]">
+                {t.topHint}
+              </p>
             </div>
           )}
 
           {/* Seed mode */}
           <div>
-            <label className="block text-sm mb-1 text-neutral-300">
+            <label className="mb-1 block text-sm text-[var(--t2,#c7bfca)]">
               {t.seedModeLabel}
             </label>
             <div className="flex flex-col gap-2">
               {seedByOptions.map((opt) => (
                 <label
                   key={opt.value}
-                  className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer"
+                  className="flex cursor-pointer items-center gap-2 text-sm text-[var(--t2,#c7bfca)]"
                 >
                   <input
                     type="radio"
@@ -308,7 +312,7 @@ function AdvancementRulesEditor({
                     checked={seedBy === opt.value}
                     onChange={() => handleSeedByChange(opt.value)}
                     disabled={disabled}
-                    className="border-neutral-600 bg-neutral-700 text-blue-500 focus:ring-blue-500"
+                    className="accent-[var(--or,#b467d1)]"
                   />
                   {opt.label}
                 </label>

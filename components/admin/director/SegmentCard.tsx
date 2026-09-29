@@ -6,15 +6,22 @@
 // Drag-and-drop : on utilise les events HTML5 natifs portes par le parent
 // TimelineBuilder (drag handle = la zone "::" a gauche). Pas de lib externe
 // pour respecter la zero-dependency policy.
+//
+// Passe « Le Ruban » (lot 10C) : statut en Chip (ton `live` = la lueur), carte
+// d'encre, actions AdminButton — mêmes `data-testid`, mêmes gestes.
 
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   SEGMENT_TYPE_ICON,
-  segmentStatusBadgeClasses,
-  segmentStatusDotClasses,
   segmentStatusLabel,
   segmentTypeLabel,
 } from '@/utils/eventSegmentLabels';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import {
+  SEGMENT_STATUS_TONE,
+  rubanLiveFrame,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 import type { EventSegment } from '@/types/events';
 import nsAdminDirectorSegmentCard from '@/lib/i18n/locales/admin-fr/adminDirectorSegmentCard';
 import { clockHHMM } from '@/utils/director/clock';
@@ -82,19 +89,23 @@ export default function SegmentCard({
 }: Props) {
   const t = useAdminT(nsAdminDirectorSegmentCard);
   const hasOverrun = !!overrunSec && overrunSec > 0;
-  const baseClasses =
-    'group relative rounded-xl border bg-neutral-800/60 transition-colors';
+  const isLive = segment.status === 'live';
+  const baseClasses = `group relative rounded-[var(--r-card,14px)] border transition-colors ${
+    isLive ? 'bg-[var(--s2,#1d1520)]' : 'bg-[var(--s1,#100812)]'
+  }`;
   const overrunRing = hasOverrun
-    ? 'ring-2 ring-amber-400/60 animate-pulse'
+    ? 'ring-2 ring-[rgba(245,165,36,.6)] animate-pulse'
     : '';
   const borderClasses = isSelected
-    ? 'border-purple-500/70 ring-2 ring-purple-500/30'
+    ? 'border-[var(--or,#b467d1)] ring-2 ring-[rgba(180,103,209,.3)]'
     : hasOverrun
-      ? 'border-amber-500/70'
-      : 'border-neutral-700/60 hover:border-neutral-600';
+      ? 'border-[rgba(245,165,36,.7)]'
+      : isLive
+        ? rubanLiveFrame
+        : 'border-[var(--line2,rgba(194,196,201,.2))] hover:border-[var(--t4,#807984)]';
   const opacity = isDragging ? 'opacity-40' : 'opacity-100';
   const dragOverIndicator = dragOver
-    ? 'before:absolute before:inset-x-0 before:-top-1 before:h-0.5 before:bg-purple-400 before:rounded-full'
+    ? 'before:absolute before:inset-x-0 before:-top-1 before:h-0.5 before:bg-[var(--or,#b467d1)] before:rounded-full'
     : '';
   const plannedHHMM = clockHHMM(plannedStartAt);
 
@@ -185,7 +196,7 @@ export default function SegmentCard({
                 viewBox="0 0 10 12"
                 fill="currentColor"
                 aria-hidden="true"
-                className="text-amber-300"
+                className="text-[var(--warn,#f5a524)]"
                 data-testid={`segment-anchor-icon-${segment.id}`}
               >
                 <path d="M2 5h6v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5zm1.5-3.5a1.5 1.5 0 1 1 3 0V5h-3V1.5z" />
@@ -198,25 +209,22 @@ export default function SegmentCard({
         {/* Body */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span
-              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold ${segmentStatusBadgeClasses(
-                segment.status
-              )}`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${segmentStatusDotClasses(
-                  segment.status
-                )}`}
-              />
+            <Chip tone={SEGMENT_STATUS_TONE[segment.status] ?? 'neutral'}>
+              {isLive && (
+                <span
+                  aria-hidden
+                  className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--lf,#7fca65)]"
+                />
+              )}
               {segmentStatusLabel(segment.status)}
-            </span>
+            </Chip>
             <span
-              className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-neutral-700/70 text-[10px] font-bold text-neutral-200"
+              className="inline-flex items-center justify-center w-5 h-5 rounded-[var(--r-ctrl,4px)] bg-[var(--s3,#2f2732)] text-[10px] font-bold text-[var(--t2,#c7bfca)]"
               title={segmentTypeLabel(segment.type)}
             >
               {SEGMENT_TYPE_ICON[segment.type] ?? '?'}
             </span>
-            <span className="font-medium text-white truncate max-w-[260px]">
+            <span className="font-semibold text-[var(--t1,#f4edf7)] truncate max-w-[260px]">
               {segment.title}
             </span>
             <span className="text-[11px] text-neutral-500 uppercase tracking-wide">
@@ -229,7 +237,7 @@ export default function SegmentCard({
             )}
             {hasOverrun && (
               <span
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold text-amber-100 bg-amber-500/30 border border-amber-400/60"
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[3px] font-mono text-[11px] font-bold text-[#ffd9a3] bg-[rgba(245,165,36,.18)] border border-[rgba(245,165,36,.6)]"
                 data-testid={`segment-overrun-${segment.id}`}
                 data-overrun-sec={Math.floor(overrunSec ?? 0)}
                 title={format(t.overrunTitle, {
@@ -254,51 +262,52 @@ export default function SegmentCard({
         >
           {segment.status === 'upcoming' && (
             <>
-              <button
-                type="button"
+              <AdminButton
+                variant="secondary"
+                size="xs"
                 onClick={onStart}
                 disabled={busy}
                 title={t.startTitle}
                 data-testid={`segment-start-${segment.id}`}
-                className="px-2 py-1 rounded-md text-xs bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-500/40 disabled:opacity-50"
               >
                 {t.start}
-              </button>
-              <button
-                type="button"
+              </AdminButton>
+              <AdminButton
+                variant="ghost"
+                size="xs"
                 onClick={onSkip}
                 disabled={busy}
                 title={t.skipTitle}
                 data-testid={`segment-skip-${segment.id}`}
-                className="px-2 py-1 rounded-md text-xs bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-500/40 disabled:opacity-50"
               >
                 {t.skip}
-              </button>
+              </AdminButton>
             </>
           )}
           {segment.status === 'live' && (
-            <button
-              type="button"
+            <AdminButton
+              variant="danger"
+              size="xs"
               onClick={onEnd}
               disabled={busy}
               title={t.endTitle}
               data-testid={`segment-end-${segment.id}`}
-              className="px-2 py-1 rounded-md text-xs bg-red-600/30 hover:bg-red-600/50 text-red-200 border border-red-500/40 disabled:opacity-50"
             >
               {t.end}
-            </button>
+            </AdminButton>
           )}
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="xs"
             onClick={onDelete}
             disabled={busy}
             title={t.deleteTitle}
             aria-label={t.deleteTitle}
             data-testid={`segment-delete-${segment.id}`}
-            className="px-2 py-1 rounded-md text-xs bg-neutral-700/50 hover:bg-red-700/40 text-neutral-300 hover:text-red-200 border border-neutral-600/40 disabled:opacity-50"
+            className="hover:border-[rgba(255,107,107,.45)] hover:text-[var(--err,#ff6b6b)]"
           >
             ×
-          </button>
+          </AdminButton>
         </div>
       </div>
     </div>

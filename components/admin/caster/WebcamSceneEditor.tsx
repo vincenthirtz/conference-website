@@ -23,7 +23,7 @@ import type {
 import { useAdminT } from '@/lib/i18n/useAdminT';
 
 import SaveIndicator from './SaveIndicator';
-import { inputClass, labelClass } from './fieldClasses';
+import { inputClass, labelClass, smallBtnClass } from './fieldClasses';
 import { useSceneDraft } from './useSceneDraft';
 import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
@@ -154,7 +154,7 @@ export default function WebcamSceneEditor({ scene, onSave }: Props) {
         type="button"
         onClick={() => void detectCameras()}
         disabled={detecting}
-        className="px-2.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium disabled:opacity-50"
+        className={smallBtnClass}
         data-testid="caster-webcam-detect"
       >
         {detecting ? t.webcamDetecting : t.webcamDetect}
@@ -178,7 +178,7 @@ export default function WebcamSceneEditor({ scene, onSave }: Props) {
           type="checkbox"
           checked={draft.mirror}
           onChange={(e) => patch({ mirror: e.target.checked })}
-          className="accent-purple-500"
+          className="accent-[var(--or,#b467d1)]"
         />
         {t.webcamMirrorLabel}
       </label>

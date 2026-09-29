@@ -17,6 +17,17 @@ import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentPodium from '@/lib/i18n/locales/admin-fr/adminTournamentPodium';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
+import {
+  CARD,
+  CARD_FLUSH,
+  ERROR_BOX,
+  FAINT,
+  MUTED,
+  STRONG,
+  WARN_BOX,
+} from '@/features/admin/stages/ui/rubanClasses';
 
 type Candidate = {
   team_id: string;
@@ -201,9 +212,9 @@ export default function StatsPodiumPanel() {
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t.heading}</h1>
-          <p className="text-sm text-neutral-400 mt-1">
+          <p className={`mt-1 text-sm ${MUTED}`}>
             {t.introBefore}
-            <span className="text-white">{t.introStatusDone}</span>
+            <span className={STRONG}>{t.introStatusDone}</span>
             {t.introAfter}
           </p>
         </div>
@@ -212,44 +223,36 @@ export default function StatsPodiumPanel() {
             href={`/tournament/${tournamentId}/podium`}
             target="_blank"
             rel="noopener"
-            className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
+            className="inline-flex h-[38px] items-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-[14px] font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.02em] text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]"
           >
             {t.publicPreview}
           </Link>
-          <button
-            type="button"
-            onClick={fetchPreview}
-            className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
-          >
+          <AdminButton size="sm" onClick={fetchPreview}>
             {t.refresh}
-          </button>
+          </AdminButton>
         </div>
       </div>
 
       {loading && (
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-8 text-center text-sm text-neutral-400">
+        <div className={`${CARD} text-center text-sm ${MUTED}`}>
           {t.loading}
         </div>
       )}
 
-      {error && (
-        <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
-          {error}
-        </div>
-      )}
+      {error && <div className={`mb-4 ${ERROR_BOX}`}>{error}</div>}
 
       {!loading && data && (
         <>
-          <div className="mb-6 rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-3 flex flex-wrap items-center gap-3 text-sm">
-            <span className="text-neutral-400">{t.tournamentStatus}</span>
+          <div className="mb-6 flex flex-wrap items-center gap-3 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] px-4 py-3 text-sm">
+            <span className={MUTED}>{t.tournamentStatus}</span>
             <StatusPill status={tournamentStatus} />
-            <span className="text-neutral-500">·</span>
-            <span className="text-neutral-400">{t.lastStage}</span>
-            <span className="text-white">{data.last_stage_type ?? '—'}</span>
+            <span className={FAINT}>·</span>
+            <span className={MUTED}>{t.lastStage}</span>
+            <span className={STRONG}>{data.last_stage_type ?? '—'}</span>
             {isFinalized && (
               <>
-                <span className="text-neutral-500">·</span>
-                <span className="inline-flex items-center gap-1 text-amber-300">
+                <span className={FAINT}>·</span>
+                <span className="inline-flex items-center gap-1 text-[#ffd9a3]">
                   <svg
                     className="w-4 h-4"
                     fill="none"
@@ -270,12 +273,13 @@ export default function StatsPodiumPanel() {
           </div>
 
           {isFinalized && !forceMode && (
-            <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-900/20 px-4 py-3 text-sm">
+            <div className={`mb-6 ${WARN_BOX}`}>
               {t.frozenNoticeBefore}
               <button
                 type="button"
                 onClick={() => setForceMode(true)}
-                className="underline font-medium hover:text-white"
+                data-case="normal"
+                className="font-medium underline hover:text-[var(--t1,#f4edf7)]"
               >
                 {t.forceMode}
               </button>
@@ -284,20 +288,18 @@ export default function StatsPodiumPanel() {
           )}
 
           {forceMode && (
-            <div className="mb-6 rounded-xl border border-red-500/50 bg-red-900/30 px-4 py-3 text-sm flex items-center justify-between">
+            <div
+              className={`mb-6 flex items-center justify-between ${ERROR_BOX}`}
+            >
               <span>{t.forceModeBanner}</span>
-              <button
-                type="button"
-                onClick={() => setForceMode(false)}
-                className="text-xs underline hover:text-white"
-              >
+              <AdminButton size="xs" onClick={() => setForceMode(false)}>
                 {t.cancel}
-              </button>
+              </AdminButton>
             </div>
           )}
 
           {tournamentStatus !== 'running' && !isFinalized && (
-            <div className="mb-6 rounded-xl border border-red-500/40 bg-red-900/20 px-4 py-3 text-sm">
+            <div className={`mb-6 ${ERROR_BOX}`}>
               {t.notRunningBefore}
               <span className="font-mono">{tournamentStatus}</span>
               {t.notRunningMiddle}
@@ -307,28 +309,20 @@ export default function StatsPodiumPanel() {
           )}
 
           <div className="flex flex-wrap items-center gap-2 mb-3">
-            <button
-              type="button"
-              onClick={autofillFromProposed}
-              className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
-            >
+            <AdminButton size="xs" onClick={autofillFromProposed}>
               {t.autofillFromProposed}
-            </button>
-            <button
-              type="button"
-              onClick={clearRanks}
-              className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
-            >
+            </AdminButton>
+            <AdminButton size="xs" onClick={clearRanks}>
               {t.clearRanks}
-            </button>
-            <span className="ml-auto text-xs text-neutral-500">
+            </AdminButton>
+            <span className={`ml-auto text-xs ${FAINT}`}>
               {format(t.teamCount, { count: rows.length })}
             </span>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-neutral-800 bg-neutral-900/40">
+          <div className={`overflow-x-auto ${CARD_FLUSH}`}>
             <table className="w-full text-sm">
-              <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
+              <thead className="bg-[var(--s2,#1d1520)]">
                 <tr>
                   <th scope="col" className="px-3 py-2 text-left w-16">
                     {t.colRank}
@@ -351,7 +345,7 @@ export default function StatsPodiumPanel() {
                 {rows.map((r) => (
                   <tr
                     key={r.team_id}
-                    className="border-t border-neutral-800/60"
+                    className="border-t border-[var(--line,rgba(194,196,201,.12))]"
                   >
                     <td className="px-3 py-2">
                       <input
@@ -361,11 +355,13 @@ export default function StatsPodiumPanel() {
                         onChange={(e) =>
                           updateRow(r.team_id, { rank: e.target.value })
                         }
-                        className="w-14 rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1 text-sm text-center"
+                        className="w-14 text-center font-mono rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2 py-1 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                       />
                     </td>
-                    <td className="px-3 py-2 font-medium">{r.team_name}</td>
-                    <td className="px-3 py-2 text-xs text-neutral-400">
+                    <td className={`px-3 py-2 font-medium ${STRONG}`}>
+                      {r.team_name}
+                    </td>
+                    <td className={`px-3 py-2 text-xs ${MUTED}`}>
                       {r.source === 'bracket_final'
                         ? t.sourceBracketFinal
                         : r.source === 'bracket_semi'
@@ -380,7 +376,7 @@ export default function StatsPodiumPanel() {
                         onChange={(e) =>
                           updateRow(r.team_id, { prize: e.target.value })
                         }
-                        className="w-32 rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1 text-sm"
+                        className="w-32 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2 py-1 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -391,7 +387,7 @@ export default function StatsPodiumPanel() {
                         onChange={(e) =>
                           updateRow(r.team_id, { notes: e.target.value })
                         }
-                        className="w-full rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1 text-sm"
+                        className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2 py-1 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                       />
                     </td>
                   </tr>
@@ -401,25 +397,24 @@ export default function StatsPodiumPanel() {
           </div>
 
           {ranksPreview.length > 0 && (
-            <div className="mt-4 text-xs text-neutral-500">
+            <div className={`mt-4 text-xs ${FAINT}`}>
               {t.previewLabel}
               {ranksPreview.map((p) => `#${p.rank} ${p.team}`).join(' · ')}
             </div>
           )}
 
           <div className="mt-6 flex items-center justify-end gap-2">
-            <button
-              type="button"
+            <AdminButton
+              variant={forceMode ? 'danger' : 'primary'}
               onClick={onSubmit}
               disabled={!canSubmit}
-              className="px-5 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition-colors"
             >
               {submitting
                 ? t.submitting
                 : forceMode
                   ? t.overwriteRefreeze
                   : t.finalizeTournament}
-            </button>
+            </AdminButton>
           </div>
         </>
       )}
@@ -459,13 +454,13 @@ function seedRowsFrom(preview: PreviewResponse): RowDraft[] {
 
 function StatusPill({ status }: { status: string }) {
   const t = useAdminT(nsAdminTournamentPodium);
-  const styles: Record<string, string> = {
-    draft: 'bg-neutral-700/40 text-neutral-300 border-neutral-600',
-    published: 'bg-blue-700/30 text-blue-300 border-blue-500/40',
-    running: 'bg-emerald-700/30 text-emerald-300 border-emerald-500/40',
-    completed: 'bg-purple-700/30 text-purple-300 border-purple-500/40',
-    archived: 'bg-neutral-700/40 text-neutral-400 border-neutral-600',
-    cancelled: 'bg-red-700/30 text-red-300 border-red-500/40',
+  const tones: Record<string, ChipTone> = {
+    draft: 'neutral',
+    published: 'brand',
+    running: 'live',
+    completed: 'ok',
+    archived: 'neutral',
+    cancelled: 'err',
   };
   const labels: Record<string, string> = {
     draft: t.statusDraft,
@@ -476,12 +471,6 @@ function StatusPill({ status }: { status: string }) {
     cancelled: t.statusCancelled,
   };
   return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${
-        styles[status] ?? styles.draft
-      }`}
-    >
-      {labels[status] ?? status}
-    </span>
+    <Chip tone={tones[status] ?? 'neutral'}>{labels[status] ?? status}</Chip>
   );
 }

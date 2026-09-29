@@ -45,10 +45,14 @@ import {
   detailsClass,
   inputClass,
   labelClass,
+  smallBtnClass,
   summaryClass,
+  warnNoticeClass,
 } from './fieldClasses';
 import { useSceneDraft } from './useSceneDraft';
 import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type Props = {
   scene: CasterScene;
@@ -147,12 +151,12 @@ export default function CameraSceneEditor({ scene, onSave }: Props) {
     high: t.cameraLatencyHigh,
     unknown: t.cameraLatencyUnknown,
   };
-  const latencyClass =
+  const latencyTone: ChipTone =
     source.latency === 'sub-second'
-      ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200'
+      ? 'ok'
       : source.latency === 'low'
-        ? 'border-cyan-500/40 bg-cyan-500/15 text-cyan-200'
-        : 'border-amber-500/40 bg-amber-500/15 text-amber-200';
+        ? 'brand'
+        : 'warn';
 
   const shapeLabels: Record<string, string> = {
     rounded: t.cameraShapeRounded,
@@ -178,16 +182,19 @@ export default function CameraSceneEditor({ scene, onSave }: Props) {
     testId: string,
     extra?: ReactNode
   ) => (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-950/60 px-2.5 py-2">
+    <div className="rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-2.5 py-2">
       <p className="text-[11px] text-neutral-500 mb-1">{label}</p>
       <div className="flex flex-wrap items-center gap-2">
-        <code className="text-xs text-cyan-200 break-all" data-testid={testId}>
+        <code
+          className="text-xs text-[var(--or-200,#eec4ff)] break-all"
+          data-testid={testId}
+        >
           {value}
         </code>
         <button
           type="button"
           onClick={() => void copy(value)}
-          className="shrink-0 px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-[11px] font-medium"
+          className={smallBtnClass}
           data-testid={`${testId}-copy`}
         >
           {t.copy}
@@ -227,11 +234,11 @@ export default function CameraSceneEditor({ scene, onSave }: Props) {
 
       {hasUrl && source.kind === 'unknown' && (
         <div
-          className="rounded-xl border border-amber-500/40 bg-amber-900/25 px-3 py-2.5 text-[11px] text-amber-200"
+          className={`px-3 py-2.5 text-[11px] ${warnNoticeClass}`}
           role="status"
           data-testid="caster-camera-unknown"
         >
-          <p className="font-medium text-amber-100">{t.cameraUnknownTitle}</p>
+          <p className="font-semibold">{t.cameraUnknownTitle}</p>
           <p className="mt-1">{t.cameraUnknownBody}</p>
           <ul className="mt-1 list-disc pl-4 space-y-0.5">
             <li>{t.cameraFormatVdoninja}</li>
@@ -249,16 +256,13 @@ export default function CameraSceneEditor({ scene, onSave }: Props) {
             <span className="text-[11px] text-neutral-400">
               {format(t.cameraDetected, { kind: kindLabels[source.kind] })}
             </span>
-            <span
-              className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${latencyClass}`}
-              data-testid="caster-camera-latency"
-            >
+            <Chip tone={latencyTone} data-testid="caster-camera-latency">
               {latencyLabels[source.latency]}
-            </span>
+            </Chip>
           </div>
           {source.latency === 'high' && (
             <p
-              className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-200"
+              className={`px-2.5 py-2 text-[11px] ${warnNoticeClass}`}
               data-testid="caster-camera-latency-warning"
             >
               {t.cameraLatencyHighWarning}
@@ -295,7 +299,7 @@ export default function CameraSceneEditor({ scene, onSave }: Props) {
             <button
               type="button"
               onClick={() => setRoomId(randomVdoRoomId())}
-              className="px-2.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
+              className={smallBtnClass}
               data-testid="caster-camera-vdo-regenerate"
             >
               {t.cameraVdoRegenerate}
@@ -313,18 +317,20 @@ export default function CameraSceneEditor({ scene, onSave }: Props) {
                 t.cameraVdoViewLabel,
                 links.view,
                 'caster-camera-vdo-view',
-                <button
-                  type="button"
+                <AdminButton
+                  variant="secondary"
+                  size="xs"
                   onClick={() => patch({ url: links.view })}
-                  className="shrink-0 px-2.5 py-1 rounded-lg bg-purple-600/80 hover:bg-purple-600 border border-purple-500/60 text-[11px] font-medium"
                   data-testid="caster-camera-vdo-use"
                 >
                   {t.cameraVdoUse}
-                </button>
+                </AdminButton>
               )}
             </div>
           ) : (
-            <p className="text-[11px] text-amber-300">{t.cameraVdoRoomEmpty}</p>
+            <p className="text-[11px] text-[var(--warn,#f5a524)]">
+              {t.cameraVdoRoomEmpty}
+            </p>
           )}
 
           <p className="text-[11px] text-neutral-500">{t.cameraVdoRoomHint}</p>
@@ -421,7 +427,7 @@ export default function CameraSceneEditor({ scene, onSave }: Props) {
           type="checkbox"
           checked={draft.mirror}
           onChange={(e) => patch({ mirror: e.target.checked })}
-          className="accent-purple-500"
+          className="accent-[var(--or,#b467d1)]"
           data-testid="caster-camera-mirror"
         />
         {t.cameraMirrorLabel}
@@ -434,14 +440,14 @@ export default function CameraSceneEditor({ scene, onSave }: Props) {
             type="checkbox"
             checked={draft.audio}
             onChange={(e) => patch({ audio: e.target.checked })}
-            className="accent-purple-500"
+            className="accent-[var(--or,#b467d1)]"
             data-testid="caster-camera-audio"
           />
           {t.cameraAudioLabel}
         </label>
         {draft.audio ? (
           <p
-            className="rounded-lg border border-amber-500/40 bg-amber-900/25 px-2.5 py-2 text-[11px] text-amber-200"
+            className={`px-2.5 py-2 text-[11px] ${warnNoticeClass}`}
             role="status"
             data-testid="caster-camera-audio-warning"
           >

@@ -19,7 +19,12 @@ import {
   resolvePickerSelection,
 } from '@/utils/caster/dataSceneOptions';
 
-import { labelClass, inputClass } from './fieldClasses';
+import {
+  inputClass,
+  labelClass,
+  smallBtnClass,
+  warnNoticeClass,
+} from './fieldClasses';
 import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
 type Props = {
@@ -125,12 +130,14 @@ export default function PublicDataPicker({
         <button
           type="button"
           onClick={onReload}
-          className="px-2.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
+          className={smallBtnClass}
           data-testid={`${testId}-reload`}
         >
           {reloadLabel}
         </button>
-        {error && <span className="text-xs text-red-300">{error}</span>}
+        {error && (
+          <span className="text-xs text-[var(--err,#ff6b6b)]">{error}</span>
+        )}
         {empty && (
           <span
             className="text-xs text-neutral-500"
@@ -142,7 +149,7 @@ export default function PublicDataPicker({
       </div>
       {ghost && ghostNote && !loading && (
         <p
-          className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-200"
+          className={`px-2.5 py-2 text-[11px] ${warnNoticeClass}`}
           data-testid={`${testId}-ghost-note`}
         >
           {ghostNote}

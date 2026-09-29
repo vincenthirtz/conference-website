@@ -12,6 +12,20 @@ import { useToast } from '@/components/Toast';
 import Modal from '@/components/admin/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentCheckin from '@/lib/i18n/locales/admin-fr/adminTournamentCheckin';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
+import StatTile from '@/features/admin/_shared/ui/StatTile';
+import {
+  CARD_FLUSH,
+  ERROR_BOX,
+  FAINT,
+  INPUT,
+  LABEL,
+  MUTED,
+  SPINNER,
+} from '@/features/admin/stages/ui/rubanClasses';
 
 type Dict = typeof nsAdminTournamentCheckin.fr;
 
@@ -77,37 +91,37 @@ function formatTimeFr(value: string | null): string {
 function statusBadge(
   t: Dict,
   status: string
-): { label: string; className: string } {
+): { label: string; tone: ChipTone } {
   switch (status) {
     case 'pending':
       return {
         label: t.statusPending,
-        className: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+        tone: 'neutral',
       };
     case 'ongoing':
       return {
         label: t.statusOngoing,
-        className: 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30',
+        tone: 'live',
       };
     case 'finished':
       return {
         label: t.statusFinished,
-        className: 'bg-neutral-600/20 text-neutral-400 border-neutral-500/30',
+        tone: 'ok',
       };
     case 'walkover':
       return {
         label: t.statusWalkover,
-        className: 'bg-red-700/30 text-red-200 border-red-500/30',
+        tone: 'err',
       };
     case 'cancelled':
       return {
         label: t.statusCancelled,
-        className: 'bg-amber-700/30 text-amber-200 border-amber-500/30',
+        tone: 'warn',
       };
     default:
       return {
         label: status,
-        className: 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30',
+        tone: 'neutral',
       };
   }
 }
@@ -273,104 +287,88 @@ export default function CheckinSettingsPanel() {
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t.pageTitle}</h1>
-          <p className="text-sm text-neutral-400 mt-1">{t.pageSubtitle}</p>
+          <p className={`mt-1 text-sm ${MUTED}`}>{t.pageSubtitle}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
+          <AdminButtonLink
             href={`/admin/tournament/${tournamentId}/checkin?tab=live`}
-            className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors"
+            variant="secondary"
+            size="sm"
           >
             {t.liveConsole}
-          </Link>
-          <button
-            type="button"
+          </AdminButtonLink>
+          <AdminButton
+            size="sm"
             onClick={() => {
               setGraceDraft(String(graceMinutes));
               setSettingsOpen(true);
             }}
-            className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
             title={format(t.currentGraceTitle, { minutes: graceMinutes })}
           >
             {t.configureCheckin}
-          </button>
-          <button
-            type="button"
-            onClick={fetchData}
-            className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
-          >
+          </AdminButton>
+          <AdminButton size="sm" onClick={fetchData}>
             {t.refresh}
-          </button>
-          <button
-            type="button"
+          </AdminButton>
+          <AdminButton
+            variant="primary"
+            size="sm"
             onClick={processNow}
             disabled={processing}
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
           >
             {processing ? t.processing : t.processNow}
-          </button>
+          </AdminButton>
         </div>
       </div>
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
         <Stat label={t.statMatches} value={stats.total} />
-        <Stat label={t.statUpcoming} value={stats.upcoming} accent="blue" />
+        <Stat label={t.statUpcoming} value={stats.upcoming} accent="brand" />
         <Stat
           label={t.statAllCheckedIn}
           value={stats.bothCheckedIn}
-          accent="emerald"
+          accent="ok"
         />
-        <Stat label={t.statNoCheckin} value={stats.noCheckin} accent="amber" />
-        <Stat label={t.statAutoForfeits} value={stats.forfeited} accent="red" />
+        <Stat label={t.statNoCheckin} value={stats.noCheckin} accent="warn" />
+        <Stat label={t.statAutoForfeits} value={stats.forfeited} accent="err" />
       </div>
 
       <div className="flex items-center gap-2 mb-3">
-        <button
-          type="button"
+        <AdminButton
+          size="xs"
+          variant={filter === 'upcoming' ? 'secondary' : 'ghost'}
           onClick={() => setFilter('upcoming')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-            filter === 'upcoming'
-              ? 'bg-blue-600 text-white'
-              : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
-          }`}
         >
           {t.filterUpcoming}
-        </button>
-        <button
-          type="button"
+        </AdminButton>
+        <AdminButton
+          size="xs"
+          variant={filter === 'all' ? 'secondary' : 'ghost'}
           onClick={() => setFilter('all')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-            filter === 'all'
-              ? 'bg-blue-600 text-white'
-              : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
-          }`}
         >
           {t.filterAll}
-        </button>
-        <span className="ml-auto text-xs text-neutral-500">
+        </AdminButton>
+        <span className={`ml-auto text-xs ${FAINT}`}>
           {format(t.matchCount, { count: visibleRows.length })}
         </span>
       </div>
 
-      {errorMsg && (
-        <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
-          {errorMsg}
-        </div>
-      )}
+      {errorMsg && <div className={`mb-4 ${ERROR_BOX}`}>{errorMsg}</div>}
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+          <div className={SPINNER} />
         </div>
       ) : visibleRows.length === 0 ? (
-        <div className="text-center py-20 text-neutral-500 text-sm">
+        <div className={`py-20 text-center text-sm ${FAINT}`}>
           {t.emptyMatches}
         </div>
       ) : (
-        <div className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+        <div className={CARD_FLUSH}>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-neutral-800/80 text-xs uppercase tracking-wide text-neutral-400">
+              <thead className="bg-[var(--s2,#1d1520)]">
                 <tr>
                   <th scope="col" className="px-4 py-3 text-left">
                     {t.thDate}
@@ -404,53 +402,52 @@ export default function CheckinSettingsPanel() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-700/50">
+              <tbody className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
                 {visibleRows.map((r) => {
                   const badge = statusBadge(t, r.status);
                   return (
-                    <tr key={r.matchId} className="hover:bg-neutral-700/20">
-                      <td className="px-4 py-3 whitespace-nowrap text-xs text-neutral-300">
+                    <tr
+                      key={r.matchId}
+                      className="hover:bg-[var(--s2,#1d1520)]"
+                    >
+                      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-[var(--t2,#c7bfca)]">
                         {formatDateFr(r.scheduledAt)}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="text-white text-sm">
+                        <div className="text-sm text-[var(--t1,#f4edf7)]">
                           {r.team1.name || '—'}{' '}
-                          <span className="text-neutral-500">vs</span>{' '}
+                          <span className={FAINT}>vs</span>{' '}
                           {r.team2.name || '—'}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${badge.className}`}
-                        >
-                          {badge.label}
-                        </span>
+                        <Chip tone={badge.tone}>{badge.label}</Chip>
                       </td>
                       <td className="px-4 py-3 text-center text-xs">
                         {r.emailSentAt ? (
-                          <span className="text-emerald-300">
+                          <span className="font-mono text-[var(--t2,#c7bfca)]">
                             {formatTimeFr(r.emailSentAt)}
                           </span>
                         ) : (
-                          <span className="text-neutral-600">—</span>
+                          <span className={FAINT}>—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center text-xs">
                         {r.reminder30At ? (
-                          <span className="text-amber-300">
+                          <span className="font-mono text-[var(--t2,#c7bfca)]">
                             {formatTimeFr(r.reminder30At)}
                           </span>
                         ) : (
-                          <span className="text-neutral-600">—</span>
+                          <span className={FAINT}>—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center text-xs">
                         {r.reminder15At ? (
-                          <span className="text-red-300">
+                          <span className="font-mono text-[var(--t2,#c7bfca)]">
                             {formatTimeFr(r.reminder15At)}
                           </span>
                         ) : (
-                          <span className="text-neutral-600">—</span>
+                          <span className={FAINT}>—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -461,17 +458,17 @@ export default function CheckinSettingsPanel() {
                       </td>
                       <td className="px-4 py-3">
                         {noShowReasons[r.matchId] ? (
-                          <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium border bg-red-700/30 text-red-200 border-red-500/30">
+                          <Chip tone="err">
                             {noShowReasonLabel(t, noShowReasons[r.matchId])}
-                          </span>
+                          </Chip>
                         ) : (
-                          <span className="text-neutral-600 text-xs">—</span>
+                          <span className={`text-xs ${FAINT}`}>—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Link
                           href={`/admin/matches/${r.matchId}/edit`}
-                          className="text-xs text-blue-400 hover:text-blue-300"
+                          className="text-xs text-[var(--or-300,#dea3f6)] hover:text-[var(--or-200,#eec4ff)]"
                         >
                           {t.view}
                         </Link>
@@ -485,7 +482,7 @@ export default function CheckinSettingsPanel() {
         </div>
       )}
 
-      <p className="text-xs text-neutral-500 mt-6 text-center">
+      <p className={`mt-6 text-center text-xs ${FAINT}`}>
         {t.footerBefore} <code>scheduled_at</code> {t.footerAfter}
       </p>
 
@@ -497,30 +494,23 @@ export default function CheckinSettingsPanel() {
         size="md"
         footer={
           <>
-            <button
-              type="button"
-              onClick={() => setSettingsOpen(false)}
-              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-            >
+            <AdminButton size="sm" onClick={() => setSettingsOpen(false)}>
               {t.cancel}
-            </button>
-            <button
-              type="button"
+            </AdminButton>
+            <AdminButton
+              variant="primary"
+              size="sm"
               onClick={handleSaveSettings}
               disabled={savingSettings}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
             >
               {savingSettings ? t.saving : t.save}
-            </button>
+            </AdminButton>
           </>
         }
       >
         <div className="space-y-4">
           <div>
-            <label
-              htmlFor="checkin-grace-minutes"
-              className="block text-sm font-medium text-neutral-200 mb-1"
-            >
+            <label htmlFor="checkin-grace-minutes" className={LABEL}>
               {t.graceLabel}
             </label>
             <input
@@ -531,9 +521,9 @@ export default function CheckinSettingsPanel() {
               step={1}
               value={graceDraft}
               onChange={(e) => setGraceDraft(e.target.value)}
-              className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={INPUT}
             />
-            <p className="text-xs text-neutral-500 mt-1.5">
+            <p className={`mt-1.5 text-xs ${FAINT}`}>
               {format(t.graceHelp, { default: DEFAULT_GRACE_MINUTES })}
             </p>
           </div>
@@ -550,23 +540,9 @@ function Stat({
 }: {
   label: string;
   value: number;
-  accent?: 'blue' | 'emerald' | 'amber' | 'red';
+  accent?: 'brand' | 'ok' | 'warn' | 'err';
 }) {
-  const colors: Record<string, string> = {
-    blue: 'text-blue-300',
-    emerald: 'text-emerald-300',
-    amber: 'text-amber-300',
-    red: 'text-red-300',
-  };
-  const accentColor = accent ? colors[accent] : 'text-white';
-  return (
-    <div className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-4 py-3">
-      <p className="text-xs text-neutral-400 uppercase tracking-wide">
-        {label}
-      </p>
-      <p className={`text-2xl font-bold mt-1 ${accentColor}`}>{value}</p>
-    </div>
-  );
+  return <StatTile label={label} value={value} tone={accent ?? 'neutral'} />;
 }
 
 function CheckinDot({ at }: { at: string | null }) {
@@ -574,11 +550,11 @@ function CheckinDot({ at }: { at: string | null }) {
   if (at) {
     return (
       <span
-        className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-600/20 border border-emerald-500/40"
+        className="inline-flex h-6 w-6 items-center justify-center rounded-[3px] border border-[rgba(127,202,101,.36)] bg-[rgba(127,202,101,.13)]"
         title={format(t.checkinAtTitle, { time: formatTimeFr(at) })}
       >
         <svg
-          className="w-3 h-3 text-emerald-400"
+          className="h-3 w-3 text-[var(--lf,#7fca65)]"
           fill="currentColor"
           viewBox="0 0 20 20"
         >
@@ -591,5 +567,7 @@ function CheckinDot({ at }: { at: string | null }) {
       </span>
     );
   }
-  return <span className="inline-block w-2 h-2 rounded-full bg-neutral-700" />;
+  return (
+    <span className="inline-block h-2 w-2 rounded-full bg-[var(--s3,#2f2732)]" />
+  );
 }

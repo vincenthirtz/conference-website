@@ -31,6 +31,9 @@ import type {
   MatchDay,
 } from '@/components/admin/bracket';
 import nsAdminTournamentBracketBuilder from '@/lib/i18n/locales/admin-fr/adminTournamentBracketBuilder';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import { EYEBROW, FAINT, MUTED } from '@/features/admin/stages/ui/rubanClasses';
 
 type ViewMode = 'planning' | 'list' | 'bracket';
 
@@ -518,20 +521,18 @@ ${day.matches
   return (
     <>
       {/* ---- Hero header ---- */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-transparent to-indigo-900/30" />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDYwIEwgNjAgMCIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMpIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IGZpbGw9InVybCgjZykiIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiLz48L3N2Zz4=')] opacity-50" />
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      <div>
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
           <div className="flex items-end justify-between flex-wrap gap-4">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-purple-100 to-purple-300 bg-clip-text text-transparent">
+              <h1 className="text-3xl text-[var(--t1,#f4edf7)] sm:text-4xl">
                 {t.heading}
               </h1>
               {tournament && (
-                <p className="mt-2 text-purple-200/60 text-sm font-medium">
+                <p className={`mt-2 text-sm font-medium ${MUTED}`}>
                   {tournament.name}
                   {tournament.slug && (
-                    <span className="ml-2 font-mono text-xs bg-white/5 border border-white/10 px-2 py-0.5 rounded">
+                    <span className="ml-2 rounded-[3px] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-2 py-0.5 font-mono text-xs">
                       {tournament.slug}
                     </span>
                   )}
@@ -542,21 +543,16 @@ ${day.matches
             {/* Stats pills */}
             {!loading && matches.length > 0 && (
               <div className="flex gap-2">
-                <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium">
-                  <span className="text-purple-300">{totalMatches}</span>{' '}
-                  <span className="text-neutral-400">{t.statMatches}</span>
-                </div>
-                <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium">
-                  <span className="text-purple-300">{matchDays.length}</span>{' '}
-                  <span className="text-neutral-400">{t.statDays}</span>
-                </div>
+                <Chip>
+                  {totalMatches} {t.statMatches}
+                </Chip>
+                <Chip>
+                  {matchDays.length} {t.statDays}
+                </Chip>
                 {finishedCount > 0 && (
-                  <div className="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium">
-                    <span className="text-emerald-300">{finishedCount}</span>{' '}
-                    <span className="text-emerald-400/60">
-                      {t.statFinished}
-                    </span>
-                  </div>
+                  <Chip tone="ok">
+                    {finishedCount} {t.statFinished}
+                  </Chip>
                 )}
               </div>
             )}
@@ -565,10 +561,10 @@ ${day.matches
       </div>
 
       {/* ---- Toolbar ---- */}
-      <div className="sticky top-0 z-30 bg-surface-deep/80 backdrop-blur-xl border-b border-white/5">
+      <div className="sticky top-0 z-30 border-b border-[var(--line,rgba(194,196,201,.12))] bg-[var(--canvas,#07030a)]/90 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3 flex-wrap">
           {/* View mode toggle */}
-          <div className="flex rounded-lg border border-white/10 overflow-hidden">
+          <div className="flex overflow-hidden rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))]">
             {[
               {
                 key: 'planning' as ViewMode,
@@ -590,10 +586,10 @@ ${day.matches
                 key={v.key}
                 type="button"
                 onClick={() => setViewMode(v.key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex h-[30px] items-center gap-1.5 px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.06em] transition-colors ${
                   viewMode === v.key
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-white/5 text-neutral-400 hover:text-white hover:bg-white/10'
+                    ? 'bg-[rgba(180,103,209,.14)] text-[var(--or-200,#eec4ff)] shadow-[inset_0_-2px_0_var(--or,#b467d1)]'
+                    : 'text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]'
                 }`}
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -610,42 +606,32 @@ ${day.matches
             ))}
           </div>
 
-          <div className="w-px h-5 bg-white/10" />
+          <div className="h-5 w-px bg-[var(--line2,rgba(194,196,201,.2))]" />
 
-          <button
-            type="button"
+          <AdminButton
+            size="xs"
             onClick={fetchData}
             disabled={loading || saving}
-            className="px-3.5 py-1.5 rounded-lg text-xs font-medium border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40"
           >
             {loading ? t.loading : t.reload}
-          </button>
-          <button
-            type="button"
+          </AdminButton>
+          <AdminButton
+            variant="primary"
+            size="xs"
             onClick={handleSave}
             disabled={saving || !dirty}
-            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              saving || !dirty
-                ? 'bg-purple-900/30 text-purple-300/40 cursor-not-allowed'
-                : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/20'
-            }`}
           >
             {saving ? t.saving : dirty ? t.save : t.saved}
-          </button>
-          {dirty && (
-            <span className="text-[11px] text-amber-400/70">
-              {t.unsavedChanges}
-            </span>
-          )}
+          </AdminButton>
+          {dirty && <Chip tone="warn">{t.unsavedChanges}</Chip>}
 
           <div className="flex-1" />
 
           {/* PDF Export */}
-          <button
-            type="button"
+          <AdminButton
+            size="xs"
             onClick={handleExportPDF}
             disabled={loading || matches.length === 0}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path
@@ -671,7 +657,7 @@ ${day.matches
               />
             </svg>
             {t.exportPdf}
-          </button>
+          </AdminButton>
         </div>
       </div>
 
@@ -690,10 +676,10 @@ ${day.matches
         {!loading && matches.length === 0 && (
           <div className="text-center py-20">
             <div className="text-4xl mb-3 opacity-30">&#9917;</div>
-            <p className="text-neutral-400">{t.emptyMatches}</p>
+            <p className={MUTED}>{t.emptyMatches}</p>
             <Link
               href={`/admin/tournament/${id}/bracket?tab=view`}
-              className="mt-4 inline-block text-sm text-purple-400 hover:text-purple-300 underline underline-offset-2"
+              className="mt-4 inline-block text-sm text-[var(--or-300,#dea3f6)] underline underline-offset-2 hover:text-[var(--or-200,#eec4ff)]"
             >
               {t.createBracket}
             </Link>
@@ -707,20 +693,18 @@ ${day.matches
               <section key={day.dateKey}>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-1 h-8 rounded-full bg-gradient-to-b from-purple-400 to-purple-600" />
+                    <div className="h-8 w-1 rounded-[2px] bg-[var(--or,#b467d1)]" />
                     <div>
                       <h2 className="text-lg font-bold capitalize">
                         {day.label}
                       </h2>
                       {day.roundName && (
-                        <span className="text-xs font-medium text-purple-300/60 uppercase tracking-wider">
-                          {day.roundName}
-                        </span>
+                        <span className={EYEBROW}>{day.roundName}</span>
                       )}
                     </div>
                   </div>
-                  <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
-                  <span className="text-xs text-neutral-500 font-medium">
+                  <div className="h-px flex-1 bg-[var(--line,rgba(194,196,201,.12))]" />
+                  <span className={`text-xs font-medium ${FAINT}`}>
                     {format(
                       day.matches.length === 1
                         ? t.dayMatchCount_one
@@ -761,18 +745,14 @@ ${day.matches
         {!loading && matches.length > 0 && viewMode === 'bracket' && (
           <>
             {isDoubleElim && (
-              <h3 className="text-sm font-bold uppercase tracking-wider text-purple-300 mb-2">
-                {t.winnersBracket}
-              </h3>
+              <h3 className={`mb-2 ${EYEBROW}`}>{t.winnersBracket}</h3>
             )}
             <BracketTreeView rounds={bracketRounds} onScoreSaved={fetchData} />
 
             {isDoubleElim && loserBracketRounds.length > 0 && (
               <>
-                <div className="mt-8 mb-2 pt-6 border-t border-red-500/20">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-red-300">
-                    {t.losersBracket}
-                  </h3>
+                <div className="mt-8 mb-2 border-t border-[var(--line,rgba(194,196,201,.12))] pt-6">
+                  <h3 className={EYEBROW}>{t.losersBracket}</h3>
                 </div>
                 <BracketTreeView
                   rounds={loserBracketRounds}

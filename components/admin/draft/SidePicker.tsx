@@ -6,6 +6,7 @@
 // a fresh combination. Disabled once a step has been committed.
 
 import { useState, useEffect } from 'react';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type Game = 'lol' | 'dota2';
 
@@ -66,13 +67,13 @@ export function SidePicker({
   }
 
   return (
-    <div className="rounded-2xl border border-neutral-700/50 bg-neutral-900/40 p-4">
-      <div className="mb-3 text-sm font-semibold uppercase tracking-wider text-neutral-400">
+    <div className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
+      <div className="mb-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
         Side selection
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <div className="mb-1 text-xs text-neutral-500">Team 1</div>
+          <div className="mb-1 text-xs text-[var(--t4,#807984)]">Team 1</div>
           <div className="flex gap-2">
             {SIDES[game].map((s) => (
               <button
@@ -80,10 +81,10 @@ export function SidePicker({
                 type="button"
                 disabled={disabled || busy}
                 onClick={() => pickTeam1(s)}
-                className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                className={`flex-1 rounded-[var(--r-ctrl,4px)] border px-3 py-2 text-sm font-medium transition ${
                   team1 === s
-                    ? 'border-emerald-500 bg-emerald-600/30 text-white'
-                    : 'border-neutral-700 bg-neutral-800/50 text-neutral-300 hover:border-neutral-500'
+                    ? 'border-[rgba(180,103,209,.55)] bg-[rgba(180,103,209,.14)] text-[var(--or-100,#f6e1ff)]'
+                    : 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-[var(--t2,#c7bfca)] hover:border-[var(--t4,#807984)]'
                 } disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 {LABELS[s] ?? s}
@@ -92,15 +93,17 @@ export function SidePicker({
           </div>
         </div>
         <div>
-          <div className="mb-1 text-xs text-neutral-500">Team 2 (mirror)</div>
+          <div className="mb-1 text-xs text-[var(--t4,#807984)]">
+            Team 2 (mirror)
+          </div>
           <div className="flex gap-2">
             {SIDES[game].map((s) => (
               <div
                 key={s}
-                className={`flex-1 rounded-lg border px-3 py-2 text-center text-sm font-medium ${
+                className={`flex-1 rounded-[var(--r-ctrl,4px)] border px-3 py-2 text-center text-sm font-medium ${
                   team2 === s
-                    ? 'border-emerald-500 bg-emerald-600/30 text-white'
-                    : 'border-neutral-800 bg-neutral-900/50 text-neutral-500'
+                    ? 'border-[rgba(180,103,209,.55)] bg-[rgba(180,103,209,.14)] text-[var(--or-100,#f6e1ff)]'
+                    : 'border-[var(--line,rgba(194,196,201,.12))] text-[var(--t4,#807984)]'
                 }`}
               >
                 {LABELS[s] ?? s}
@@ -110,14 +113,14 @@ export function SidePicker({
         </div>
       </div>
       <div className="mt-4 flex justify-end">
-        <button
-          type="button"
+        <AdminButton
+          variant="primary"
+          size="sm"
           onClick={submit}
           disabled={!valid || !dirty || busy || disabled}
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {busy ? 'Saving…' : 'Save sides'}
-        </button>
+        </AdminButton>
       </div>
     </div>
   );

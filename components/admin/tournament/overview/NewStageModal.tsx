@@ -1,6 +1,8 @@
 import { memo, useState } from 'react';
 import Modal from '@/components/admin/Modal';
 import type { Dict } from './types';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { INPUT, LABEL } from '@/features/admin/stages/ui/rubanClasses';
 
 type StageTypeOption = { value: string; label: string };
 
@@ -57,44 +59,38 @@ function NewStageModal({
       title={tx.createStageTitle}
       footer={
         <>
-          <button
-            onClick={handleClose}
-            className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-          >
+          <AdminButton size="sm" onClick={handleClose}>
             {tx.cancel}
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
+            variant="primary"
+            size="sm"
             onClick={handleSubmit}
             disabled={!name.trim() || creating}
-            className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {creating ? tx.creating : tx.create}
-          </button>
+          </AdminButton>
         </>
       }
     >
       <div className="space-y-4">
         <div>
-          <label className="block text-sm text-neutral-400 mb-1">
-            {tx.stageNameLabel}
-          </label>
+          <label className={LABEL}>{tx.stageNameLabel}</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={tx.stageNamePlaceholder}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className={INPUT}
           />
         </div>
 
         <div>
-          <label className="block text-sm text-neutral-400 mb-1">
-            {tx.stageTypeLabel}
-          </label>
+          <label className={LABEL}>{tx.stageTypeLabel}</label>
           <select
             value={stageType}
             onChange={(e) => setStageType(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className={INPUT}
           >
             {stageTypeOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>

@@ -38,6 +38,15 @@ import {
   adminErrorCode,
   useBusySet,
 } from '@/components/admin/broadcast/twitchPanelUtils';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import {
+  rubanCard,
+  rubanEyebrow,
+  rubanInput,
+  rubanInset,
+  rubanOk,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 
 // --- Formes du contrat (figées) ---------------------------------------------
 
@@ -369,32 +378,39 @@ export default function TwitchPredictionsPanel() {
         </div>
       ) : !connected ? (
         // === État non connecté : carte de connexion ===
-        <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 px-4 py-4">
-          <div className="text-base font-bold">{t.connectTitle}</div>
+        <div className="rounded-[var(--r-card,14px)] border border-[rgba(180,103,209,.4)] bg-[rgba(180,103,209,.06)] px-4 py-4">
+          <div className="text-base font-bold text-[var(--t1,#f4edf7)]">
+            {t.connectTitle}
+          </div>
           <p className="mt-1 max-w-xl text-sm text-neutral-400">
             {t.connectDescription}
           </p>
           {connError && (
-            <div className="mt-2 text-xs text-red-400">{connError}</div>
+            <div className="mt-2 text-xs text-[var(--err,#ff6b6b)]">
+              {connError}
+            </div>
           )}
-          <button
-            type="button"
+          <AdminButton
+            variant="secondary"
+            size="sm"
             onClick={handleConnect}
             disabled={connecting}
-            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-3"
           >
             {connecting && <Spinner />}
             {connecting ? t.connectLoading : t.connectButton}
-          </button>
+          </AdminButton>
         </div>
       ) : (
         // === État connecté : bandeau chaîne + panneau predictions ===
         <>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-800 bg-neutral-950/60 px-3 py-2">
+          <div
+            className={`mb-4 flex flex-wrap items-center justify-between gap-2 px-3 py-2 ${rubanInset}`}
+          >
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-sm">
                 <span
-                  className="h-2 w-2 shrink-0 rounded-full bg-emerald-500"
+                  className="h-2 w-2 shrink-0 rounded-full bg-[var(--lf,#7fca65)]"
                   aria-hidden
                 />
                 <span className="truncate font-semibold">
@@ -411,14 +427,14 @@ export default function TwitchPredictionsPanel() {
                 </div>
               )}
             </div>
-            <button
-              type="button"
+            <AdminButton
+              variant="ghost"
+              size="xs"
               onClick={handleDisconnect}
               disabled={disconnecting}
-              className="shrink-0 rounded-md border border-neutral-700 bg-neutral-800 px-2.5 py-1 text-[11px] font-medium text-neutral-300 hover:bg-neutral-700 disabled:opacity-40"
             >
               {disconnecting ? t.disconnecting : t.disconnect}
-            </button>
+            </AdminButton>
           </div>
 
           {/* Région aria-live : annonce l'état courant de la prediction. */}
@@ -446,10 +462,10 @@ export default function TwitchPredictionsPanel() {
                 (prediction.status === 'RESOLVED' ||
                   prediction.status === 'CANCELED') && (
                   <div
-                    className={`mb-4 rounded-lg border px-3 py-2 text-sm ${
+                    className={`mb-4 px-3 py-2 text-sm ${
                       prediction.status === 'RESOLVED'
-                        ? 'border-emerald-500/40 bg-emerald-950/30 text-emerald-300'
-                        : 'border-neutral-700 bg-neutral-900/60 text-neutral-400'
+                        ? rubanOk
+                        : `${rubanInset} text-[var(--t3,#a39ba6)]`
                     }`}
                   >
                     <div className="font-semibold">
@@ -480,30 +496,26 @@ export default function TwitchPredictionsPanel() {
             // === Prediction ACTIVE ou LOCKED ===
             <div>
               <div className="mb-3">
-                <div className="text-base font-bold">{prediction.title}</div>
-                <span
-                  className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                    prediction.status === 'ACTIVE'
-                      ? 'bg-purple-900/50 text-purple-200'
-                      : 'bg-amber-900/40 text-amber-200'
-                  }`}
-                >
+                <div className="mb-1 text-base font-bold text-[var(--t1,#f4edf7)]">
+                  {prediction.title}
+                </div>
+                <Chip tone={prediction.status === 'ACTIVE' ? 'brand' : 'warn'}>
                   {statusLabels[prediction.status]}
-                </span>
+                </Chip>
               </div>
 
               <ul className="mb-4 space-y-2">
                 {prediction.outcomes.map((o) => (
                   <li
                     key={o.id}
-                    className="flex flex-wrap items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/60 px-3 py-2"
+                    className={`flex flex-wrap items-center gap-3 px-3 py-2 ${rubanInset}`}
                   >
                     <span
                       className="h-3 w-3 shrink-0 rounded-full"
                       style={o.color ? { backgroundColor: o.color } : undefined}
                       aria-hidden
                     />
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--t1,#f4edf7)]">
                       {o.title}
                     </span>
                     {typeof o.users === 'number' && (
@@ -521,14 +533,14 @@ export default function TwitchPredictionsPanel() {
                       </span>
                     )}
                     {prediction.status === 'LOCKED' && (
-                      <button
-                        type="button"
+                      <AdminButton
+                        variant="secondary"
+                        size="xs"
                         onClick={() => handleResolve(o)}
                         disabled={isBusy(`resolve:${o.id}`)}
-                        className="shrink-0 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-bold hover:bg-emerald-500 disabled:opacity-40"
                       >
                         {isBusy(`resolve:${o.id}`) ? t.resolving : t.makeWinner}
-                      </button>
+                      </AdminButton>
                     )}
                   </li>
                 ))}
@@ -536,23 +548,24 @@ export default function TwitchPredictionsPanel() {
 
               <div className="flex flex-wrap items-center gap-2">
                 {prediction.status === 'ACTIVE' && (
-                  <button
-                    type="button"
+                  <AdminButton
+                    variant="ghost"
+                    size="sm"
                     onClick={handleLock}
                     disabled={isBusy('lock')}
-                    className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold hover:bg-amber-500 disabled:opacity-40"
+                    className="border-[rgba(245,165,36,.45)] text-[#ffd9a3] hover:border-[var(--warn,#f5a524)] hover:text-[#ffd9a3]"
                   >
                     {isBusy('lock') ? t.locking : t.lock}
-                  </button>
+                  </AdminButton>
                 )}
-                <button
-                  type="button"
+                <AdminButton
+                  variant="ghost"
+                  size="sm"
                   onClick={handleCancel}
                   disabled={isBusy('cancel')}
-                  className="rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm font-medium text-neutral-200 hover:bg-neutral-700 disabled:opacity-40"
                 >
                   {isBusy('cancel') ? t.canceling : t.cancel}
-                </button>
+                </AdminButton>
               </div>
             </div>
           )}
@@ -573,12 +586,10 @@ function Shell({
   children: ReactNode;
 }) {
   return (
-    <div className="mb-6 rounded-2xl border border-neutral-800 bg-neutral-900/40 px-4 py-4">
+    <div className={`mb-6 px-5 py-4 ${rubanCard}`}>
       <div className="mb-3 flex items-center gap-2">
-        <span className="h-4 w-4 rounded bg-[#9146FF]" aria-hidden />
-        <div className="text-xs uppercase tracking-widest text-neutral-400">
-          {heading}
-        </div>
+        <span className="h-4 w-4 rounded-[3px] bg-[#9146FF]" aria-hidden />
+        <div className={rubanEyebrow}>{heading}</div>
       </div>
       {children}
     </div>
@@ -626,7 +637,7 @@ function CreateForm({
         onSubmit();
       }}
     >
-      <div className="mb-3 text-sm font-semibold text-neutral-200">
+      <div className="mb-3 text-sm font-semibold text-[var(--t1,#f4edf7)]">
         {t.createHeading}
       </div>
 
@@ -643,7 +654,7 @@ function CreateForm({
         onChange={(e) => setTitle(e.target.value)}
         maxLength={MAX_TITLE}
         placeholder={t.titlePlaceholder}
-        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+        className={rubanInput}
       />
       <div className="mt-1 text-right text-[11px] text-neutral-500">
         {format(t.titleCounter, { count: title.length })}
@@ -662,14 +673,14 @@ function CreateForm({
               maxLength={25}
               aria-label={format(t.outcomeAriaLabel, { n: i + 1 })}
               placeholder={format(t.outcomePlaceholder, { n: i + 1 })}
-              className="flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+              className={`flex-1 ${rubanInput}`}
             />
             <button
               type="button"
               onClick={() => removeOutcomeField(i)}
               disabled={outcomes.length <= MIN_OUTCOMES}
               aria-label={format(t.removeOutcome, { n: i + 1 })}
-              className="shrink-0 rounded-md border border-neutral-700 bg-neutral-800 px-2 py-2 text-xs text-neutral-400 hover:bg-neutral-700 disabled:opacity-30"
+              className="h-[38px] w-[38px] shrink-0 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] text-xs text-[var(--t3,#a39ba6)] hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)] disabled:opacity-30"
             >
               ✕
             </button>
@@ -677,14 +688,14 @@ function CreateForm({
         ))}
       </ul>
       <div className="mt-2 flex items-center justify-between">
-        <button
-          type="button"
+        <AdminButton
+          variant="ghost"
+          size="xs"
           onClick={addOutcomeField}
           disabled={outcomes.length >= MAX_OUTCOMES}
-          className="rounded-md border border-neutral-700 bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-300 hover:bg-neutral-700 disabled:opacity-30"
         >
           + {t.addOutcome}
-        </button>
+        </AdminButton>
         <span className="text-[11px] text-neutral-500">{t.outcomesHint}</span>
       </div>
 
@@ -698,7 +709,7 @@ function CreateForm({
         id="twp-window"
         value={windowSec}
         onChange={(e) => setWindowSec(Number(e.target.value))}
-        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+        className={rubanInput}
       >
         {WINDOWS.map((w) => (
           <option key={w} value={w}>
@@ -708,14 +719,16 @@ function CreateForm({
       </select>
       <div className="mt-1 text-[11px] text-neutral-500">{t.windowHint}</div>
 
-      <button
+      <AdminButton
+        variant="secondary"
+        size="sm"
         type="submit"
         disabled={submitting}
-        className="mt-4 inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-40"
+        className="mt-4"
       >
         {submitting && <Spinner />}
         {submitting ? t.launching : t.launch}
-      </button>
+      </AdminButton>
     </form>
   );
 }

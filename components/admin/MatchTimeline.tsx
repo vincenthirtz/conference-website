@@ -62,13 +62,6 @@ function summarize(log: HistoryLog, t: Dict): string {
   return log.readableAction;
 }
 
-const ROLE_COLORS: Record<string, string> = {
-  owner: 'text-amber-300',
-  admin: 'text-blue-300',
-  manager: 'text-emerald-300',
-  caster: 'text-purple-300',
-};
-
 export default function MatchTimeline({ matchId }: Props) {
   const t = useAdminT(nsAdminMatchTimeline);
   const { adminFetch } = useAdminFetch();
@@ -102,15 +95,21 @@ export default function MatchTimeline({ matchId }: Props) {
   }, [fetchHistory]);
 
   if (loading) {
-    return <div className="text-xs text-neutral-500 py-3">{t.loading}</div>;
+    return (
+      <div className="py-3 text-xs text-[var(--t4,#807984)]">{t.loading}</div>
+    );
   }
 
   if (error) {
-    return <div className="text-xs text-red-400 py-3">{error}</div>;
+    return (
+      <div className="py-3 text-xs text-[var(--err,#ff6b6b)]">{error}</div>
+    );
   }
 
   if (logs.length === 0) {
-    return <div className="text-xs text-neutral-500 py-3">{t.empty}</div>;
+    return (
+      <div className="py-3 text-xs text-[var(--t4,#807984)]">{t.empty}</div>
+    );
   }
 
   return (
@@ -119,35 +118,34 @@ export default function MatchTimeline({ matchId }: Props) {
         <div key={log.id} className="flex gap-3 group">
           {/* Vertical line + dot */}
           <div className="flex flex-col items-center">
-            <div className="w-2 h-2 rounded-full bg-neutral-500 group-hover:bg-blue-400 mt-1.5 shrink-0 transition-colors" />
+            <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--t4,#807984)] transition-colors group-hover:bg-[var(--or,#b467d1)]" />
             {idx < Math.min(logs.length, 15) - 1 && (
-              <div className="w-px flex-1 bg-neutral-700" />
+              <div className="w-px flex-1 bg-[var(--line2,rgba(194,196,201,.2))]" />
             )}
           </div>
 
           {/* Content */}
           <div className="pb-4 min-w-0">
-            <p className="text-sm text-neutral-200 leading-tight">
+            <p className="text-sm leading-tight text-[var(--t1,#f4edf7)]">
               {summarize(log, t)}
             </p>
             <div className="flex items-center gap-2 mt-0.5 text-[11px]">
               {log.staff?.display_name && (
-                <span
-                  className={
-                    ROLE_COLORS[log.staff.role ?? ''] ?? 'text-neutral-400'
-                  }
-                >
+                // Le rôle n'est pas un signal : l'auteur reste en encre.
+                <span className="font-medium text-[var(--t2,#c7bfca)]">
                   {log.staff.display_name}
                 </span>
               )}
-              <span className="text-neutral-500">{log.date}</span>
+              <span className="font-mono text-[var(--t4,#807984)]">
+                {log.date}
+              </span>
             </div>
           </div>
         </div>
       ))}
 
       {logs.length > 15 && (
-        <p className="text-[11px] text-neutral-500 pl-5">
+        <p className="pl-5 text-[11px] text-[var(--t4,#807984)]">
           {format(t.more, { count: logs.length - 15 })}
         </p>
       )}

@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import Link from 'next/link';
-import { stageTypeColor, stageTypeLabel } from './labels';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import { stageTypeLabel } from './labels';
 import type { Dict, Stage } from './types';
 
 type StageRowProps = {
@@ -16,39 +17,25 @@ function StageRow({ stage, tx }: StageRowProps) {
   return (
     <Link
       href={`/admin/stages/${stage.id}`}
-      className="flex items-center justify-between gap-3 bg-neutral-900/50 hover:bg-neutral-900 rounded-xl px-4 py-3 transition-colors group"
+      className="group flex items-center justify-between gap-3 rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-4 py-3 transition-colors hover:border-[var(--or,#b467d1)]"
     >
       <div className="flex items-center gap-3">
-        <span className="text-xs font-mono text-neutral-500 w-6">
+        <span className="w-6 font-mono text-xs text-[var(--t4,#807984)]">
           {(stage.order_index ?? 0) + 1}.
         </span>
         <div>
-          <div className="font-medium text-sm group-hover:text-white transition-colors">
+          <div className="text-sm font-medium text-[var(--t1,#f4edf7)]">
             {stage.name}
           </div>
           <div className="flex items-center gap-2 mt-1">
-            <span
-              className={`px-2 py-0.5 rounded-full text-xs border ${stageTypeColor(
-                stage.stage_type
-              )}`}
-            >
-              {stageTypeLabel(tx, stage.stage_type)}
-            </span>
-            {stage.is_active && (
-              <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                {tx.stageActive}
-              </span>
-            )}
-            {stage.is_public && (
-              <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                {tx.stagePublic}
-              </span>
-            )}
+            <Chip>{stageTypeLabel(tx, stage.stage_type)}</Chip>
+            {stage.is_active && <Chip tone="live">{tx.stageActive}</Chip>}
+            {stage.is_public && <Chip tone="brand">{tx.stagePublic}</Chip>}
           </div>
         </div>
       </div>
       <svg
-        className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors"
+        className="h-5 w-5 text-[var(--t4,#807984)] transition-colors group-hover:text-[var(--or-200,#eec4ff)]"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"

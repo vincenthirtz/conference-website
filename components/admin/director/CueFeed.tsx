@@ -20,6 +20,9 @@
 // On utilise une ref pour le "snapshot precedent" et on skip le tout
 // premier render (pour ne pas beep en arrivant sur la page si des cues
 // urgents traineg deja).
+//
+// Passe « Le Ruban » (lot 10C) : sévérité en Chip (neutre / alerte / erreur),
+// carte d'encre — même poll, même chime, même confirmation d'annulation.
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -32,6 +35,15 @@ import { logger } from '@/utils/logger';
 import type { EventCue, EventCueSeverity } from '@/types/events';
 import nsAdminDirectorCueFeed from '@/lib/i18n/locales/admin-fr/adminDirectorCueFeed';
 import { clockOrDash } from '@/utils/director/clock';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
+import {
+  rubanCard,
+  rubanErr,
+  rubanEyebrow,
+  rubanInset,
+  rubanWarn,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 
 type Dict = typeof nsAdminDirectorCueFeed.fr;
 
@@ -66,10 +78,10 @@ type Props = {
   optimisticCue?: EventCue | null;
 };
 
-const SEVERITY_BADGE: Record<EventCueSeverity, string> = {
-  info: 'bg-slate-500/20 border-slate-400/40 text-slate-200',
-  warn: 'bg-amber-500/20 border-amber-400/50 text-amber-200',
-  urgent: 'bg-red-500/25 border-red-400/60 text-red-100',
+const SEVERITY_TONE: Record<EventCueSeverity, ChipTone> = {
+  info: 'neutral',
+  warn: 'warn',
+  urgent: 'err',
 };
 
 function formatRelative(iso: string, tx: Dict): string {
@@ -105,7 +117,7 @@ const CueRelativeTime = memo(function CueRelativeTime({
   }, []);
   return (
     <span
-      className="text-[11px] text-neutral-500"
+      className="text-[11px] text-[var(--t4,#807984)]"
       title={new Date(iso).toLocaleString('fr-FR')}
     >
       {formatRelative(iso, t)}
@@ -280,35 +292,34 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
     <>
       {dialog}
       <div
-        className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-5 flex flex-col"
+        className={`${rubanCard} p-5 flex flex-col`}
         role="status"
         aria-live="polite"
         aria-label={t.listAria}
       >
         {audioBlocked && (
-          <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-amber-500/50 bg-amber-500/15 px-3 py-2">
-            <span className="text-[11px] text-amber-200">
-              {t.audioBlockedHint}
-            </span>
-            <button
-              type="button"
+          <div
+            className={`mb-3 flex items-center justify-between gap-2 px-3 py-2 ${rubanWarn}`}
+          >
+            <span className="text-[11px]">{t.audioBlockedHint}</span>
+            <AdminButton
+              variant="ghost"
+              size="xs"
               onClick={handleUnlockAudio}
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-md border border-amber-400/60 bg-amber-500/25 px-2.5 py-1 text-[11px] font-semibold text-amber-100 hover:bg-amber-500/40"
+              className="border-[rgba(245,165,36,.5)] text-[#ffd9a3] hover:border-[var(--warn,#f5a524)] hover:text-[#ffd9a3]"
             >
               <span aria-hidden="true">🔈</span>
               {t.audioBlocked}
-            </button>
+            </AdminButton>
           </div>
         )}
 
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-neutral-200">
-            {t.heading}
-          </h3>
+          <h3 className={rubanEyebrow}>{t.heading}</h3>
           <button
             type="button"
             onClick={fetchData}
-            className="text-xs text-neutral-400 hover:text-white"
+            className="h-[30px] w-[30px] rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] text-sm text-[var(--t3,#a39ba6)] hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]"
             title={t.refreshTitle}
             aria-label={t.refreshAria}
           >
@@ -321,11 +332,9 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
             <LoadingSpinner size="sm" />
           </div>
         ) : error ? (
-          <div className="rounded-lg bg-red-900/30 border border-red-500/40 px-3 py-2 text-xs text-red-300">
-            {error}
-          </div>
+          <div className={`px-3 py-2 text-xs ${rubanErr}`}>{error}</div>
         ) : cues.length === 0 ? (
-          <p className="text-xs text-neutral-500 py-4 text-center">
+          <p className="text-xs text-[var(--t4,#807984)] py-4 text-center">
             {t.noCues}
           </p>
         ) : (
@@ -342,26 +351,27 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
                 <li
                   key={cue.id}
                   data-testid={`cue-feed-item-${cue.id}`}
-                  className={`rounded-lg border p-3 ${
+                  className={`p-3 ${rubanInset} ${
                     isRetracted
-                      ? 'bg-neutral-900/20 border-neutral-700/40'
-                      : 'bg-neutral-900/40 border-neutral-700/60'
+                      ? 'opacity-60'
+                      : cue.severity === 'urgent'
+                        ? 'border-l-2 border-l-[var(--err,#ff6b6b)]'
+                        : cue.severity === 'warn'
+                          ? 'border-l-2 border-l-[var(--warn,#f5a524)]'
+                          : ''
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2 mb-1.5">
                     <span className="flex items-center gap-1.5">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border uppercase tracking-wide ${SEVERITY_BADGE[cue.severity]}`}
-                      >
+                      <Chip tone={SEVERITY_TONE[cue.severity]}>
                         {cue.severity}
-                      </span>
+                      </Chip>
                       {isRetracted && (
-                        <span
+                        <Chip
                           data-testid={`cue-feed-retracted-badge-${cue.id}`}
-                          className="px-2 py-0.5 rounded-full text-[10px] font-semibold border uppercase tracking-wide bg-neutral-700/40 border-neutral-500/50 text-neutral-300"
                         >
                           {t.retractedBadge}
-                        </span>
+                        </Chip>
                       )}
                     </span>
                     <CueRelativeTime iso={cue.created_at} t={t} />
@@ -369,8 +379,8 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
                   <p
                     className={`text-sm whitespace-pre-wrap break-words ${
                       isRetracted
-                        ? 'line-through text-neutral-500'
-                        : 'text-neutral-100'
+                        ? 'line-through text-[var(--t4,#807984)]'
+                        : 'text-[var(--t1,#f4edf7)]'
                     }`}
                   >
                     {cue.body}
@@ -383,7 +393,7 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
                         data-testid={`cue-feed-retract-${cue.id}`}
                         onClick={() => handleRetract(cue.id)}
                         disabled={retractingId === cue.id}
-                        className="text-[11px] font-medium text-neutral-400 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="text-[11px] font-medium text-[var(--t3,#a39ba6)] hover:text-[var(--err,#ff6b6b)] disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {t.retractAction}
                       </button>
@@ -391,24 +401,24 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
                   )}
 
                   {!isRetracted && cue.ack_required && (
-                    <div className="mt-2 pt-2 border-t border-neutral-700/60">
+                    <div className="mt-2 pt-2 border-t border-[var(--line,rgba(194,196,201,.12))]">
                       <div className="flex items-center justify-between text-[11px] mb-1.5">
-                        <span className="font-semibold text-neutral-300">
+                        <span className="font-semibold text-[var(--t2,#c7bfca)]">
                           {t.ackLabel}
                         </span>
                         <span
                           data-testid={`cue-feed-ack-count-${cue.id}`}
-                          className={
+                          className={`font-mono font-bold ${
                             total > 0 && cue.ack_count === total
-                              ? 'text-emerald-300'
-                              : 'text-amber-300'
-                          }
+                              ? 'text-[var(--lf-200,#b3e7a3)]'
+                              : 'text-[var(--warn,#f5a524)]'
+                          }`}
                         >
                           {cue.ack_count}/{total}
                         </span>
                       </div>
                       {acks.length > 0 && (
-                        <ul className="text-[11px] text-emerald-300/80 space-y-0.5 mb-1">
+                        <ul className="text-[11px] text-[var(--lf-200,#b3e7a3)] space-y-0.5 mb-1">
                           {acks.map((a) => (
                             <li
                               key={a.cast_member_id}
@@ -418,7 +428,7 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
                                 <span aria-hidden="true">✓</span>{' '}
                                 {a.cast_member_name}
                               </span>
-                              <span className="text-neutral-500">
+                              <span className="text-[var(--t4,#807984)]">
                                 {clockOrDash(a.acked_at)}
                               </span>
                             </li>
@@ -426,7 +436,7 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
                         </ul>
                       )}
                       {missing.length > 0 && (
-                        <ul className="text-[11px] text-neutral-500 space-y-0.5">
+                        <ul className="text-[11px] text-[var(--t4,#807984)] space-y-0.5">
                           {missing.map((m) => (
                             <li
                               key={m.cast_member_id}
@@ -439,7 +449,7 @@ function CueFeed({ runId, casters, optimisticCue }: Props) {
                         </ul>
                       )}
                       {total === 0 && (
-                        <p className="text-[11px] text-neutral-500">
+                        <p className="text-[11px] text-[var(--t4,#807984)]">
                           {t.noCasterAssigned}
                         </p>
                       )}

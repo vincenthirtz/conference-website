@@ -108,7 +108,7 @@ export const DIFFUSION_TABS: readonly DiffusionTab[] = [
 ];
 
 /**
- * Les onglets qui suivent le RUN en direct : c'est sur eux que le point rouge
+ * Les onglets qui suivent le RUN en direct : c'est sur eux que le point du direct
  * s'allume. Les autres (overlays, casteuses…) se règlent hors antenne.
  */
 export const LIVE_TABS: ReadonlySet<DiffusionTabId> = new Set([
@@ -150,7 +150,7 @@ export default function DiffusionTabsNav({
   return (
     <nav
       aria-label={t.ariaLabel}
-      className="mb-5 flex flex-wrap items-end gap-1 overflow-x-auto border-b border-neutral-700/60"
+      className="mb-5 flex flex-wrap items-end gap-1 overflow-x-auto border-b border-[var(--line2,rgba(194,196,201,.2))]"
     >
       {tabs.map((tab) => {
         const selected = tab.id === active;
@@ -159,10 +159,10 @@ export default function DiffusionTabsNav({
             key={tab.id}
             href={tab.href}
             aria-current={selected ? 'page' : undefined}
-            className={`-mb-px shrink-0 rounded-t-lg px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
+            className={`-mb-px shrink-0 rounded-t-[var(--r-ctrl,4px)] px-4 py-2.5 font-[family-name:var(--fd)] text-[13px] font-bold uppercase tracking-[0.06em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--or,#b467d1)] ${
               selected
-                ? 'border-b-2 border-rose-500 text-white'
-                : 'border-b-2 border-transparent text-neutral-400 hover:text-neutral-200'
+                ? 'border-b-2 border-[var(--or,#b467d1)] text-[var(--t1,#f4edf7)]'
+                : 'border-b-2 border-transparent text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]'
             }`}
           >
             {t[tab.labelKey]}
@@ -171,7 +171,7 @@ export default function DiffusionTabsNav({
                 <span
                   aria-hidden
                   title={live?.runName ?? undefined}
-                  className="ml-2 inline-block h-2 w-2 animate-pulse rounded-full bg-red-500 align-middle"
+                  className="ml-2 inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--lf,#7fca65)] align-middle shadow-[var(--glow-live)]"
                 />
                 <span className="sr-only">
                   {` — ${t.liveNow}${live?.runName ? ` : ${live.runName}` : ''}`}

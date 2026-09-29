@@ -1,6 +1,8 @@
 import { memo, useState } from 'react';
 import Modal from '@/components/admin/Modal';
 import type { Dict, Team } from './types';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { INPUT, LABEL } from '@/features/admin/stages/ui/rubanClasses';
 
 type AddTeamModalProps = {
   open: boolean;
@@ -61,31 +63,27 @@ function AddTeamModal({
       title={tx.addTeamTitle}
       footer={
         <>
-          <button
-            onClick={handleClose}
-            className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-          >
+          <AdminButton size="sm" onClick={handleClose}>
             {tx.cancel}
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
+            variant="primary"
+            size="sm"
             onClick={handleSubmit}
             disabled={!selectedTeamId || adding}
-            className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {adding ? tx.adding : tx.add}
-          </button>
+          </AdminButton>
         </>
       }
     >
       <div className="space-y-4">
         <div>
-          <label className="block text-sm text-neutral-400 mb-1">
-            {tx.teamLabel}
-          </label>
+          <label className={LABEL}>{tx.teamLabel}</label>
           <select
             value={selectedTeamId}
             onChange={(e) => setSelectedTeamId(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={INPUT}
           >
             <option value="">{tx.selectTeam}</option>
             {availableTeams.map((team) => (
@@ -97,16 +95,14 @@ function AddTeamModal({
         </div>
 
         <div>
-          <label className="block text-sm text-neutral-400 mb-1">
-            {tx.seedLabel}
-          </label>
+          <label className={LABEL}>{tx.seedLabel}</label>
           <input
             type="number"
             value={teamSeed}
             onChange={(e) => setTeamSeed(e.target.value)}
             placeholder="1, 2, 3..."
             min={1}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={INPUT}
           />
         </div>
       </div>

@@ -14,6 +14,9 @@
 // la page (onImport / onDetach) qui possède saveSceneData. Le suivi du score
 // live est dans useLinkedMatchTracker (poll — voir l'en-tête du hook pour le
 // pourquoi ce n'est pas du Realtime).
+//
+// Passe « Le Ruban » (lot 10C) : le score en direct du match lié porte la
+// lueur de l'antenne ; import en AdminButton — mêmes confirmations.
 
 import { useMemo, useState } from 'react';
 
@@ -30,11 +33,14 @@ import {
 } from '@/utils/caster/matchPickerFormat';
 import type { CasterApiMatch, CasterScene } from '@/types/caster';
 
-import { inputClass, labelClass } from './fieldClasses';
+import {
+  errNoticeClass,
+  inputClass,
+  labelClass,
+  smallBtnClass,
+} from './fieldClasses';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
-
-const smallBtnClass =
-  'px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium disabled:opacity-50';
 
 type Props = {
   /** Scène cible de l'import (type `match` ou `results`). */
@@ -125,19 +131,23 @@ export default function MatchPickerPanel({
 
   return (
     <section
-      className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3.5 mb-4"
+      className="rounded-[var(--r-card,14px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-3.5 mb-4"
       data-testid="caster-match-picker"
     >
       {dialog}
 
       <div className="flex flex-wrap items-center gap-2 mb-1.5">
-        <h3 className="text-sm font-bold">{t.pickerTitle}</h3>
+        <h3 className="font-[family-name:var(--fd)] text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--t1,#f4edf7)] [font-stretch:75%]">
+          {t.pickerTitle}
+        </h3>
       </div>
       <p className="text-[11px] text-neutral-500 mb-3">{t.pickerIntro}</p>
 
       {/* Erreur réseau : bandeau non bloquant, la sélection reste utilisable. */}
       {error && (
-        <div className="mb-3 rounded-xl bg-red-900/30 border border-red-500/40 px-3 py-2 text-xs text-red-200 flex flex-wrap items-center justify-between gap-2">
+        <div
+          className={`mb-3 px-3 py-2 text-xs flex flex-wrap items-center justify-between gap-2 ${errNoticeClass}`}
+        >
           <span>{format(t.pickerLoadError, { message: error })}</span>
           <button
             type="button"
@@ -236,15 +246,15 @@ export default function MatchPickerPanel({
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
+        <AdminButton
+          variant="secondary"
+          size="xs"
           onClick={() => void handleImport()}
           disabled={!selectedMatchId || busy}
-          className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 border border-purple-400/40 text-xs font-semibold disabled:opacity-50"
           data-testid="caster-import-match"
         >
           {busy ? t.pickerImporting : t.pickerImport}
-        </button>
+        </AdminButton>
 
         {/* Indicateur « score en direct » + détachement du match lié. */}
         {linkedMatchId && (
@@ -254,11 +264,11 @@ export default function MatchPickerPanel({
           >
             <span
               role="status"
-              className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 text-[11px] text-cyan-100 tabular-nums"
+              className="inline-flex items-center gap-1.5 rounded-[3px] border border-[rgba(127,202,101,.55)] bg-[rgba(127,202,101,.13)] px-2.5 py-1 font-mono text-[12px] font-bold text-[var(--lf-200,#b3e7a3)] tabular-nums shadow-[var(--glow-live)]"
             >
               <span
                 aria-hidden="true"
-                className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse"
+                className="h-2 w-2 rounded-full bg-[var(--lf,#7fca65)] animate-pulse"
               />
               {linkedMatch && live
                 ? format(t.pickerLiveScore, {

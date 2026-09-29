@@ -21,6 +21,17 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import nsAdminTournamentEmbed from '@/lib/i18n/locales/admin-fr/adminTournamentEmbed';
 import type { OverlayPresence } from '@/hooks/useOverlayPresence';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import {
+  FAINT,
+  MUTED,
+  WARN_BOX,
+} from '@/features/admin/stages/ui/rubanClasses';
+
+/** Lien d'action à l'allure d'un bouton `ghost` (AdminButton, taille xs). */
+const LINK_BTN =
+  'inline-flex h-[30px] shrink-0 items-center justify-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.02em] text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]';
 
 type Props = {
   /** Slug (ou id) du tournoi, tel qu'il ira dans l'URL. */
@@ -221,18 +232,16 @@ export default function StreamSourcesPanel({
 
   if (!enabled) {
     return (
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-4">
-        <h3 className="text-sm font-semibold text-amber-100">
-          {t.sourcesTitle}
-        </h3>
-        <p className="mt-1 text-xs text-amber-100/80">
+      <div className={WARN_BOX}>
+        <h3 className="text-sm font-semibold">{t.sourcesTitle}</h3>
+        <p className="mt-1 text-xs">
           {t.sourcesLockedBody.replace('{plan}', planLabel)}
         </p>
         <a
           href="/organisateurs#offres"
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 inline-flex rounded-lg border border-amber-400/40 px-3 py-1.5 text-xs font-semibold text-amber-100 transition-colors hover:border-amber-300"
+          className={`mt-3 ${LINK_BTN}`}
         >
           {t.sourcesLockedCta}
         </a>
@@ -242,7 +251,7 @@ export default function StreamSourcesPanel({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-neutral-400">{t.sourcesDescription}</p>
+      <p className={`text-xs ${MUTED}`}>{t.sourcesDescription}</p>
 
       <div className="space-y-2">
         {sources.map((s) => {
@@ -252,24 +261,20 @@ export default function StreamSourcesPanel({
           return (
             <div
               key={s.key}
-              className="rounded-xl border border-neutral-700/40 bg-neutral-900/50 p-4"
+              className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4"
             >
               <div className="mb-2 flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-sm font-medium text-white">{label}</div>
-                  <div className="mt-0.5 text-xs text-neutral-500">{desc}</div>
+                  <div className="text-sm font-medium text-[var(--t1,#f4edf7)]">
+                    {label}
+                  </div>
+                  <div className={`mt-0.5 text-xs ${FAINT}`}>{desc}</div>
                 </div>
                 <span className="flex shrink-0 items-center gap-1.5">
                   {presence && (
                     // AFFICHÉE OU PAS : l'URL collée dans OBS ne le disait
                     // jamais (source masquée, OBS fermé, URL de travers).
-                    <span
-                      className={`rounded-md px-2 py-1 text-[10px] font-semibold ${
-                        presence.isLive(s.key)
-                          ? 'bg-emerald-500/15 text-emerald-300'
-                          : 'bg-neutral-800 text-neutral-500'
-                      }`}
-                    >
+                    <Chip tone={presence.isLive(s.key) ? 'live' : 'neutral'}>
                       {presence.isLive(s.key)
                         ? t.presenceLive
                         : presence.secondsAgo(s.key) === null
@@ -278,15 +283,15 @@ export default function StreamSourcesPanel({
                               '{ago}',
                               agoLabel(presence.secondsAgo(s.key) ?? 0, t)
                             )}
-                    </span>
+                    </Chip>
                   )}
-                  <span className="rounded-md bg-neutral-800 px-2 py-1 font-mono text-[10px] text-neutral-400">
+                  <span className="rounded-[3px] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-2 py-0.5 font-mono text-[10px] text-[var(--t3,#a39ba6)]">
                     {s.size}
                   </span>
                 </span>
               </div>
               <div className="relative">
-                <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-neutral-700/60 bg-neutral-950/70 p-3 pr-40 font-mono text-[11px] text-neutral-300">
+                <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-3 pr-40 font-mono text-[11px] text-[var(--t2,#c7bfca)]">
                   {url}
                 </pre>
                 <div className="absolute right-2 top-2 flex gap-1.5">
@@ -298,23 +303,24 @@ export default function StreamSourcesPanel({
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`${t.openBtn} — ${label}`}
-                    className="rounded-md border border-neutral-600 px-2.5 py-1 text-xs font-medium text-neutral-200 transition-colors hover:bg-neutral-700"
+                    className={LINK_BTN}
                   >
                     {t.openBtn}
                   </a>
-                  <button
-                    type="button"
+                  <AdminButton
+                    variant="secondary"
+                    size="xs"
+                    className="bg-[var(--s1,#100812)]"
                     onClick={() => copy(url, s.key)}
-                    className="rounded-md bg-neutral-700 px-2.5 py-1 text-xs font-medium transition-colors hover:bg-neutral-600"
                   >
                     <span aria-live="polite">
                       {copied === s.key ? t.copiedBtn : t.copyBtn}
                     </span>
-                  </button>
+                  </AdminButton>
                 </div>
               </div>
               {copied === `${s.key}:failed` && (
-                <p role="alert" className="mt-1.5 text-xs text-amber-200">
+                <p role="alert" className="mt-1.5 text-xs text-[#ffd9a3]">
                   {t.copyFailed}
                 </p>
               )}
@@ -325,7 +331,7 @@ export default function StreamSourcesPanel({
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <label
                     htmlFor="day-overlay-test-date"
-                    className="text-xs text-neutral-400"
+                    className={`text-xs ${MUTED}`}
                   >
                     {t.dayTestLabel}
                   </label>
@@ -334,60 +340,59 @@ export default function StreamSourcesPanel({
                     type="date"
                     value={testDay}
                     onChange={(e) => setTestDay(e.target.value)}
-                    className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-white [color-scheme:dark]"
+                    className="h-[30px] rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2 text-xs text-[var(--t1,#f4edf7)] [color-scheme:dark]"
                   />
                   <a
                     href={`${url}&date=${encodeURIComponent(testDay)}&preview=1`}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-disabled={!testDay}
-                    className={`rounded-md bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-blue-500 ${
+                    className={`${LINK_BTN} ${
                       testDay ? '' : 'pointer-events-none opacity-40'
                     }`}
                   >
                     {t.dayTestBtn}
                   </a>
                   {overlayDayUrl && (
-                    <button
-                      type="button"
+                    <AdminButton
+                      variant="primary"
+                      size="xs"
                       onClick={() => void sendDay(testDay)}
                       disabled={!testDay || sending}
-                      className="rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-40"
                     >
                       {t.daySendBtn}
-                    </button>
+                    </AdminButton>
                   )}
-                  <span className="text-[11px] text-neutral-500">
+                  <span className={`text-[11px] ${FAINT}`}>
                     {t.dayTestHint}
                   </span>
                   {overlayDayUrl && (
                     <div className="flex w-full flex-wrap items-center gap-2 text-[11px]">
                       {forced?.active && forced.date ? (
                         <>
-                          <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-300">
+                          <Chip tone="live">
                             {format(t.dayForcedStatus, {
                               day: shortDay(forced.date),
                               until: forced.expiresAt
                                 ? shortTime(forced.expiresAt)
                                 : '—',
                             })}
-                          </span>
-                          <button
-                            type="button"
+                          </Chip>
+                          <AdminButton
+                            size="xs"
                             onClick={() => void sendDay(null)}
                             disabled={sending}
-                            className="rounded-md border border-neutral-600 px-2 py-0.5 text-neutral-200 hover:border-neutral-400 disabled:opacity-40"
                           >
                             {t.dayResetBtn}
-                          </button>
+                          </AdminButton>
                         </>
                       ) : (
-                        <span className="text-neutral-500">
-                          {t.dayLiveStatus}
-                        </span>
+                        <span className={FAINT}>{t.dayLiveStatus}</span>
                       )}
                       {sendError && (
-                        <span className="text-red-300">{sendError}</span>
+                        <span className="text-[var(--err,#ff6b6b)]">
+                          {sendError}
+                        </span>
                       )}
                     </div>
                   )}
@@ -398,9 +403,7 @@ export default function StreamSourcesPanel({
         })}
       </div>
 
-      <p className="text-[11px] leading-relaxed text-neutral-500">
-        {t.sourcesHint}
-      </p>
+      <p className={`text-[11px] leading-relaxed ${FAINT}`}>{t.sourcesHint}</p>
     </div>
   );
 }

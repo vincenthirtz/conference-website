@@ -20,12 +20,19 @@
 
 import { useMemo, useState } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import {
-  waveStatusBadgeClasses,
-  waveStatusDotClasses,
-  waveStatusLabel,
-} from '@/utils/eventSegmentLabels';
+import { waveStatusLabel } from '@/utils/eventSegmentLabels';
 import type { EventSegment, EventWave, EventWaveStatus } from '@/types/events';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import {
+  rubanCard,
+  rubanEyebrow,
+  rubanInput,
+  rubanInset,
+  rubanLabel,
+  rubanRow,
+  SEGMENT_STATUS_TONE,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 import nsAdminDirectorWaveBoard from '@/lib/i18n/locales/admin-fr/adminDirectorWaveBoard';
 import { clockHHMM } from '@/utils/director/clock';
 
@@ -178,58 +185,52 @@ export default function WaveBoard({
   }
 
   return (
-    <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30 p-5 space-y-4">
+    <div className={`${rubanCard} p-5 space-y-4`}>
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-neutral-200">
-            {t.heading}
-          </h3>
-          <p className="text-xs text-neutral-500">{t.subtitle}</p>
+          <h3 className={rubanEyebrow}>{t.heading}</h3>
+          <p className="mt-1 text-xs text-[var(--t4,#807984)]">{t.subtitle}</p>
         </div>
-        <button
-          type="button"
+        <AdminButton
+          variant="secondary"
+          size="sm"
           onClick={() => {
             setShowCreate((v) => !v);
             setCreateForm(emptyEdit());
             setCreateError(null);
           }}
-          className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-xs font-medium"
           disabled={busy}
           data-testid="wave-create-toggle"
         >
           {showCreate ? t.cancel : t.addWave}
-        </button>
+        </AdminButton>
       </div>
 
       {showCreate && (
-        <div className="rounded-xl border border-neutral-700/40 bg-neutral-900/40 p-3 space-y-2">
+        <div className={`${rubanInset} p-3 space-y-2`}>
           <input
             value={createForm.title}
             onChange={(e) =>
               setCreateForm((f) => ({ ...f, title: e.target.value }))
             }
             placeholder={t.titlePlaceholder}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+            className={rubanInput}
             data-testid="wave-create-title"
           />
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-[11px] text-neutral-500 mb-1">
-                {t.startLabel}
-              </label>
+              <label className={rubanLabel}>{t.startLabel}</label>
               <input
                 type="datetime-local"
                 value={createForm.planned}
                 onChange={(e) =>
                   setCreateForm((f) => ({ ...f, planned: e.target.value }))
                 }
-                className="w-full px-2 py-1.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+                className={rubanInput}
               />
             </div>
             <div>
-              <label className="block text-[11px] text-neutral-500 mb-1">
-                {t.durationLabel}
-              </label>
+              <label className={rubanLabel}>{t.durationLabel}</label>
               <input
                 type="number"
                 min={1}
@@ -238,27 +239,29 @@ export default function WaveBoard({
                   setCreateForm((f) => ({ ...f, duration: e.target.value }))
                 }
                 placeholder={t.durationPlaceholder}
-                className="w-full px-2 py-1.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+                className={rubanInput}
               />
             </div>
           </div>
           {createError && (
-            <div className="text-xs text-red-300">{createError}</div>
+            <div className="text-xs text-[var(--err,#ff6b6b)]">
+              {createError}
+            </div>
           )}
-          <button
-            type="button"
+          <AdminButton
+            variant="secondary"
+            size="xs"
             onClick={submitCreate}
             disabled={busy}
-            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-xs font-medium"
             data-testid="wave-create-submit"
           >
             {t.createWave}
-          </button>
+          </AdminButton>
         </div>
       )}
 
       {sorted.length === 0 ? (
-        <p className="text-xs text-neutral-500">{t.empty}</p>
+        <p className="text-xs text-[var(--t4,#807984)]">{t.empty}</p>
       ) : (
         <ul className="space-y-2">
           {sorted.map((w, idx) => {
@@ -268,7 +271,7 @@ export default function WaveBoard({
             return (
               <li
                 key={w.id}
-                className="rounded-xl border border-neutral-700/60 bg-neutral-800/60 p-3"
+                className={`${rubanRow(w.status === 'live')} p-3`}
                 data-testid={`wave-row-${w.id}`}
                 data-wave-status={w.status}
               >
@@ -279,7 +282,7 @@ export default function WaveBoard({
                       type="button"
                       onClick={() => move(idx, -1)}
                       disabled={busy || idx === 0}
-                      className="text-neutral-400 hover:text-white disabled:opacity-30 text-xs leading-none"
+                      className="text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)] disabled:opacity-30 text-xs leading-none"
                       aria-label={t.upAria}
                       data-testid={`wave-up-${w.id}`}
                     >
@@ -289,7 +292,7 @@ export default function WaveBoard({
                       type="button"
                       onClick={() => move(idx, 1)}
                       disabled={busy || idx === sorted.length - 1}
-                      className="text-neutral-400 hover:text-white disabled:opacity-30 text-xs leading-none"
+                      className="text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)] disabled:opacity-30 text-xs leading-none"
                       aria-label={t.downAria}
                       data-testid={`wave-down-${w.id}`}
                     >
@@ -299,19 +302,16 @@ export default function WaveBoard({
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold ${waveStatusBadgeClasses(
-                          w.status
-                        )}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${waveStatusDotClasses(
-                            w.status
-                          )}`}
-                        />
+                      <Chip tone={SEGMENT_STATUS_TONE[w.status] ?? 'neutral'}>
+                        {w.status === 'live' && (
+                          <span
+                            aria-hidden
+                            className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--lf,#7fca65)]"
+                          />
+                        )}
                         {waveStatusLabel(w.status)}
-                      </span>
-                      <span className="font-medium text-white truncate max-w-[220px]">
+                      </Chip>
+                      <span className="font-semibold text-[var(--t1,#f4edf7)] truncate max-w-[220px]">
                         {w.title}
                       </span>
                       {hhmm && (
@@ -325,7 +325,7 @@ export default function WaveBoard({
                         </span>
                       )}
                       <span
-                        className="text-[11px] text-neutral-400 bg-neutral-700/50 px-1.5 py-0.5 rounded"
+                        className="text-[11px] text-[var(--t3,#a39ba6)] bg-[var(--s3,#2f2732)] px-1.5 py-0.5 rounded-[3px]"
                         title={t.segCountTitle}
                         data-testid={`wave-segcount-${w.id}`}
                       >
@@ -339,62 +339,63 @@ export default function WaveBoard({
                     <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                       {w.status === 'upcoming' && (
                         <>
-                          <button
-                            type="button"
+                          <AdminButton
+                            variant="secondary"
+                            size="xs"
                             onClick={() => onSetStatus(w, 'live')}
                             disabled={busy}
-                            className="px-2 py-1 rounded-md text-xs bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-500/40 disabled:opacity-50"
                             data-testid={`wave-start-${w.id}`}
                           >
                             {t.start}
-                          </button>
-                          <button
-                            type="button"
+                          </AdminButton>
+                          <AdminButton
+                            variant="ghost"
+                            size="xs"
                             onClick={() => onSetStatus(w, 'skipped')}
                             disabled={busy}
-                            className="px-2 py-1 rounded-md text-xs bg-amber-600/30 hover:bg-amber-600/50 text-amber-200 border border-amber-500/40 disabled:opacity-50"
                             data-testid={`wave-skip-${w.id}`}
                           >
                             {t.skip}
-                          </button>
+                          </AdminButton>
                         </>
                       )}
                       {w.status === 'live' && (
-                        <button
-                          type="button"
+                        <AdminButton
+                          variant="danger"
+                          size="xs"
                           onClick={() => onSetStatus(w, 'done')}
                           disabled={busy}
-                          className="px-2 py-1 rounded-md text-xs bg-red-600/30 hover:bg-red-600/50 text-red-200 border border-red-500/40 disabled:opacity-50"
                           data-testid={`wave-end-${w.id}`}
                         >
                           {t.end}
-                        </button>
+                        </AdminButton>
                       )}
-                      <button
-                        type="button"
+                      <AdminButton
+                        variant="ghost"
+                        size="xs"
                         onClick={() =>
                           isEditing ? setEditingId(null) : startEdit(w)
                         }
                         disabled={busy}
-                        className="px-2 py-1 rounded-md text-xs bg-neutral-700/50 hover:bg-neutral-600/60 text-neutral-200 border border-neutral-600/40 disabled:opacity-50"
                         data-testid={`wave-edit-${w.id}`}
                       >
                         {isEditing ? t.close : t.edit}
-                      </button>
-                      <button
-                        type="button"
+                      </AdminButton>
+                      <AdminButton
+                        variant="ghost"
+                        size="xs"
                         onClick={() => onDelete(w)}
                         disabled={busy}
-                        className="px-2 py-1 rounded-md text-xs bg-neutral-700/50 hover:bg-red-700/40 text-neutral-300 hover:text-red-200 border border-neutral-600/40 disabled:opacity-50"
+                        className="hover:border-[rgba(255,107,107,.45)] hover:text-[var(--err,#ff6b6b)]"
                         data-testid={`wave-delete-${w.id}`}
                       >
                         {t.delete}
-                      </button>
+                      </AdminButton>
                     </div>
 
                     {/* Formulaire d'edition inline */}
                     {isEditing && (
-                      <div className="mt-3 rounded-lg border border-neutral-700/40 bg-neutral-900/40 p-3 space-y-2">
+                      <div className={`mt-3 p-3 space-y-2 ${rubanCard}`}>
                         <input
                           value={editForm.title}
                           onChange={(e) =>
@@ -404,7 +405,7 @@ export default function WaveBoard({
                             }))
                           }
                           placeholder={t.editTitlePlaceholder}
-                          className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+                          className={rubanInput}
                           data-testid={`wave-edit-title-${w.id}`}
                         />
                         <div className="grid grid-cols-2 gap-2">
@@ -417,7 +418,7 @@ export default function WaveBoard({
                                 planned: e.target.value,
                               }))
                             }
-                            className="w-full px-2 py-1.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+                            className={rubanInput}
                           />
                           <input
                             type="number"
@@ -430,23 +431,23 @@ export default function WaveBoard({
                               }))
                             }
                             placeholder={t.editDurationPlaceholder}
-                            className="w-full px-2 py-1.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white text-sm focus:outline-none focus:border-purple-500"
+                            className={rubanInput}
                           />
                         </div>
                         {editError && (
-                          <div className="text-xs text-red-300">
+                          <div className="text-xs text-[var(--err,#ff6b6b)]">
                             {editError}
                           </div>
                         )}
-                        <button
-                          type="button"
+                        <AdminButton
+                          variant="secondary"
+                          size="xs"
                           onClick={() => submitEdit(w.id)}
                           disabled={busy}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-xs font-medium"
                           data-testid={`wave-edit-submit-${w.id}`}
                         >
                           {t.save}
-                        </button>
+                        </AdminButton>
                       </div>
                     )}
                   </div>

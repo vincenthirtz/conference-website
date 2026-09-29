@@ -7,6 +7,8 @@
 // /api/admin/matches/search) au lieu du champ UUID brut. Le match_id
 // envoye a l'API reste un UUID. L'API valide tenant + existence — un
 // mauvais UUID renverra 400 INVALID_MATCH_ID.
+//
+// Passe « Le Ruban » (lot 10C) : surface d'encre, champs et boutons admin.
 
 import { useEffect, useState } from 'react';
 import { useAdminT } from '@/lib/i18n/useAdminT';
@@ -18,6 +20,13 @@ import {
 } from '@/utils/eventSegmentLabels';
 import type { EventSegmentType } from '@/types/events';
 import nsAdminDirectorAddSegmentModal from '@/lib/i18n/locales/admin-fr/adminDirectorAddSegmentModal';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import {
+  rubanCard,
+  rubanErr,
+  rubanInput,
+  rubanLabel,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 
 type Props = {
   onClose: () => void;
@@ -105,26 +114,29 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
     >
       <div
         ref={ref}
-        className="w-full max-w-md bg-neutral-900 border border-neutral-700/60 rounded-2xl shadow-xl"
+        className={`w-full max-w-md shadow-xl ${rubanCard}`}
         onClick={(e) => e.stopPropagation()}
         data-testid="add-segment-modal"
       >
-        <div className="px-6 py-4 border-b border-neutral-700/60">
-          <h2 id="add-segment-title" className="text-lg font-semibold">
+        <div className="px-6 py-4 border-b border-[var(--line,rgba(194,196,201,.12))]">
+          <h2
+            id="add-segment-title"
+            className="text-lg font-semibold text-[var(--t1,#f4edf7)]"
+          >
             {t.heading}
           </h2>
-          <p className="text-xs text-neutral-400 mt-0.5">{t.subtitle}</p>
+          <p className="text-xs text-[var(--t3,#a39ba6)] mt-0.5">
+            {t.subtitle}
+          </p>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div>
-            <label className="block text-sm text-neutral-300 mb-1">
-              {t.typeLabel}
-            </label>
+            <label className={rubanLabel}>{t.typeLabel}</label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value as EventSegmentType)}
               data-testid="add-segment-type"
-              className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white focus:outline-none focus:border-purple-500"
+              className={rubanInput}
             >
               {TYPE_OPTIONS.map((t) => (
                 <option key={t} value={t}>
@@ -134,8 +146,9 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
             </select>
           </div>
           <div>
-            <label className="block text-sm text-neutral-300 mb-1">
-              {t.titleLabel} <span className="text-red-400">*</span>
+            <label className={rubanLabel}>
+              {t.titleLabel}{' '}
+              <span className="text-[var(--err,#ff6b6b)]">*</span>
             </label>
             <input
               autoFocus
@@ -145,14 +158,15 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
               placeholder={
                 type === 'match' ? t.matchPlaceholder : segmentTypeLabel(type)
               }
-              className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white placeholder:text-neutral-500 focus:outline-none focus:border-purple-500"
+              className={rubanInput}
               required
             />
           </div>
           {type === 'match' && (
             <div>
-              <label className="block text-sm text-neutral-300 mb-1">
-                {t.matchLabel} <span className="text-red-400">*</span>
+              <label className={rubanLabel}>
+                {t.matchLabel}{' '}
+                <span className="text-[var(--err,#ff6b6b)]">*</span>
               </label>
               <MatchPicker
                 value={matchId || null}
@@ -160,13 +174,13 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
                 disabled={submitting}
                 testId="add-segment-match-id"
               />
-              <p className="text-xs text-neutral-500 mt-1">{t.matchHint}</p>
+              <p className="text-xs text-[var(--t4,#807984)] mt-1">
+                {t.matchHint}
+              </p>
             </div>
           )}
           <div>
-            <label className="block text-sm text-neutral-300 mb-1">
-              {t.durationLabel}
-            </label>
+            <label className={rubanLabel}>{t.durationLabel}</label>
             <input
               type="number"
               min={1}
@@ -175,24 +189,24 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
               onChange={(e) => setDurationMin(e.target.value)}
               data-testid="add-segment-duration"
               placeholder={t.durationPlaceholder}
-              className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/80 border border-neutral-700 text-white placeholder:text-neutral-500 focus:outline-none focus:border-purple-500"
+              className={rubanInput}
             />
           </div>
           {error && (
-            <div className="rounded-lg bg-red-900/30 border border-red-500/40 px-3 py-2 text-sm text-red-300">
-              {error}
-            </div>
+            <div className={`${rubanErr} px-3 py-2 text-sm`}>{error}</div>
           )}
           <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
+            <AdminButton
+              variant="ghost"
+              size="sm"
               onClick={onClose}
               disabled={submitting}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 disabled:opacity-50"
             >
               {t.cancel}
-            </button>
-            <button
+            </AdminButton>
+            <AdminButton
+              variant="primary"
+              size="sm"
               type="submit"
               disabled={
                 submitting ||
@@ -200,10 +214,9 @@ export default function AddSegmentModal({ onClose, onSubmit }: Props) {
                 (type === 'match' && !UUID_RE.test(matchId.trim()))
               }
               data-testid="add-segment-submit"
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? t.submitting : t.submit}
-            </button>
+            </AdminButton>
           </div>
         </form>
       </div>

@@ -34,6 +34,16 @@ import type {
 import nsAdminTournamentAnalytics from '@/lib/i18n/locales/admin-fr/adminTournamentAnalytics';
 import TierListPanel from './TierListPanel';
 import type { TeamDuel, TierList } from '@/utils/analytics/teamTiers';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import StatTile from '@/features/admin/_shared/ui/StatTile';
+import {
+  CARD,
+  CARD_FLUSH,
+  ERROR_BOX,
+  MUTED,
+  TILE,
+} from '@/features/admin/stages/ui/rubanClasses';
 
 type AnalyticsResponse = {
   tournament: { id: string; name: string; slug: string | null };
@@ -110,13 +120,13 @@ export default function StatsAnalyticsPanel() {
         <div>
           <h1 className="text-3xl font-bold">{t.heading}</h1>
           {data?.tournament && (
-            <p className="text-neutral-400 text-sm mt-1">
+            <p className={`mt-1 text-sm ${MUTED}`}>
               {t.tournamentLabel}
               <span className="font-semibold">{data.tournament.name}</span>
               {data.tournament.slug && (
                 <>
                   {' '}
-                  <span className="font-mono bg-neutral-800 border border-neutral-700 px-2 py-0.5 rounded text-xs">
+                  <span className={`${TILE} px-2 py-0.5 font-mono text-xs`}>
                     {data.tournament.slug}
                   </span>
                 </>
@@ -128,35 +138,24 @@ export default function StatsAnalyticsPanel() {
         <div className="flex items-center gap-2">
           <Link
             href={{ query: { ...router.query, tab: 'entry' } }}
-            className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-sm font-semibold"
+            className="inline-flex h-[38px] items-center rounded-[var(--r-ctrl,4px)] border border-[var(--lf-300,#8ed377)] bg-[var(--lf,#7fca65)] px-[14px] font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.02em] text-[#0f0a12] transition-colors hover:bg-[var(--lf-300,#8ed377)]"
           >
             {t.entryCta}
           </Link>
-          <button
-            type="button"
-            onClick={fetchAnalytics}
-            disabled={loading}
-            className="px-4 py-2 rounded bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold disabled:opacity-50"
-          >
+          <AdminButton size="sm" onClick={fetchAnalytics} disabled={loading}>
             {loading ? t.loading : t.refresh}
-          </button>
+          </AdminButton>
         </div>
       </div>
 
-      {errorMsg && (
-        <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
-          {errorMsg}
-        </div>
-      )}
+      {errorMsg && <div className={`mb-4 ${ERROR_BOX}`}>{errorMsg}</div>}
 
       {loading && !data && (
-        <div className="text-neutral-400 text-sm">{t.loadingAnalytics}</div>
+        <div className={`text-sm ${MUTED}`}>{t.loadingAnalytics}</div>
       )}
 
       {analytics && isEmpty && (
-        <div className="rounded-xl border border-neutral-700 bg-neutral-800 px-4 py-10 text-center text-sm text-neutral-400">
-          {t.empty}
-        </div>
+        <div className={`${CARD} text-center text-sm ${MUTED}`}>{t.empty}</div>
       )}
 
       {analytics && summary && !isEmpty && (
@@ -167,18 +166,15 @@ export default function StatsAnalyticsPanel() {
               <SummaryCard
                 label={t.kpiMatchesPlayed}
                 value={`${summary.finishedMatches}/${summary.totalMatches}`}
-                color="emerald"
               />
               <SummaryCard
                 label={t.kpiGamesPlayed}
                 value={String(summary.totalGames)}
-                color="purple"
               />
               {summary.pickedMaps > 0 && (
                 <SummaryCard
                   label={t.kpiPickedMaps}
                   value={String(summary.pickedMaps)}
-                  color="blue"
                 />
               )}
               {summary.pickDecided > 0 && (
@@ -189,7 +185,6 @@ export default function StatsAnalyticsPanel() {
                     wins: analytics.maps.reduce((a, m) => a + m.pickerWins, 0),
                     total: summary.pickDecided,
                   })}
-                  color="blue"
                 />
               )}
               {summary.totalHeroBans > 0 && (
@@ -199,28 +194,24 @@ export default function StatsAnalyticsPanel() {
                   hint={format(t.kpiHeroBansHint, {
                     maps: summary.mapsWithHeroBans,
                   })}
-                  color="amber"
                 />
               )}
               {hasDuration && (
                 <SummaryCard
                   label={t.kpiAvgDuration}
                   value={fmtMin(summary.avgGameDurationMin)}
-                  color="blue"
                 />
               )}
               {hasOvertime && (
                 <SummaryCard
                   label={t.kpiOvertime}
                   value={pct(summary.overtimeRate)}
-                  color="amber"
                 />
               )}
               {hasTiebreaker && (
                 <SummaryCard
                   label={t.kpiDecisiveGames}
                   value={pct(summary.tiebreakerGameRate)}
-                  color="neutral"
                 />
               )}
             </div>
@@ -276,44 +267,29 @@ export default function StatsAnalyticsPanel() {
  * Sous-composants
  * ---------------------------------------------------------*/
 
-type SummaryColor = 'blue' | 'emerald' | 'amber' | 'purple' | 'neutral';
-
 function SummaryCard({
   label,
   value,
   hint,
-  color,
 }: {
   label: string;
   value: string;
   hint?: string;
-  color: SummaryColor;
 }) {
-  const colorClasses: Record<SummaryColor, string> = {
-    blue: 'border-blue-600/50 bg-blue-900/20',
-    emerald: 'border-emerald-600/50 bg-emerald-900/20',
-    amber: 'border-amber-600/50 bg-amber-900/20',
-    purple: 'border-purple-600/50 bg-purple-900/20',
-    neutral: 'border-neutral-600/50 bg-neutral-800',
-  };
-  return (
-    <div className={`rounded-xl border p-4 ${colorClasses[color]}`}>
-      <div className="text-2xl font-bold">{value}</div>
-      <div className="text-xs text-neutral-400">{label}</div>
-      {hint && (
-        <div className="text-[11px] text-neutral-500 mt-0.5">{hint}</div>
-      )}
-    </div>
-  );
+  return <StatTile label={label} value={value} hint={hint} />;
 }
 
 function WinratePill({ fraction }: { fraction: number }) {
   const p = Math.round((fraction ?? 0) * 100);
   const color =
-    p >= 70 ? 'bg-emerald-500' : p >= 50 ? 'bg-blue-500' : 'bg-red-500';
+    p >= 70
+      ? 'bg-[var(--lf,#7fca65)]'
+      : p >= 50
+        ? 'bg-[var(--t3,#a39ba6)]'
+        : 'bg-[var(--err,#ff6b6b)]';
   return (
     <div className="flex items-center gap-2 justify-center">
-      <div className="w-16 h-2 bg-neutral-700 rounded-full overflow-hidden">
+      <div className="h-2 w-16 overflow-hidden rounded-[2px] bg-[var(--s3,#2f2732)]">
         <div
           className={`h-full ${color} transition-all`}
           style={{ width: `${p}%` }}
@@ -338,13 +314,13 @@ function TableShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-neutral-700">
+    <div className={CARD_FLUSH}>
+      <div className="border-b border-[var(--line,rgba(194,196,201,.12))] px-4 py-3">
         <h2 className="text-lg font-semibold">{title}</h2>
-        <p className="text-xs text-neutral-400">{subtitle}</p>
+        <p className={`text-xs ${MUTED}`}>{subtitle}</p>
       </div>
       {isEmpty ? (
-        <div className="px-4 py-6 text-sm text-neutral-400">{emptyLabel}</div>
+        <div className={`px-4 py-6 text-sm ${MUTED}`}>{emptyLabel}</div>
       ) : (
         <div className="overflow-x-auto">{children}</div>
       )}
@@ -362,7 +338,7 @@ function TeamsTable({ teams }: { teams: TournamentAnalyticsTeam[] }) {
       isEmpty={teams.length === 0}
     >
       <table className="w-full text-sm">
-        <thead className="bg-neutral-750 text-neutral-300">
+        <thead className="bg-[var(--s2,#1d1520)]">
           <tr>
             <th scope="col" className="px-4 py-2 text-left">
               #
@@ -453,7 +429,7 @@ function MapsTable({
       isEmpty={maps.length === 0}
     >
       <table className="w-full text-sm">
-        <thead className="bg-neutral-750 text-neutral-300">
+        <thead className="bg-[var(--s2,#1d1520)]">
           <tr>
             <th scope="col" className="px-4 py-2 text-left">
               {t.colMap}
@@ -544,12 +520,6 @@ function MapsTable({
   );
 }
 
-const ROLE_STYLE: Record<string, string> = {
-  tank: 'bg-sky-900/50 text-sky-300 border-sky-700/60',
-  damage: 'bg-red-900/40 text-red-300 border-red-700/60',
-  support: 'bg-emerald-900/40 text-emerald-300 border-emerald-700/60',
-};
-
 function RoleBadge({ role }: { role: string | null }) {
   const t = useAdminT(nsAdminTournamentAnalytics);
   if (!role) return <span className="text-neutral-500">—</span>;
@@ -561,15 +531,8 @@ function RoleBadge({ role }: { role: string | null }) {
         : role === 'support'
           ? t.roleSupport
           : role;
-  return (
-    <span
-      className={`inline-block rounded border px-1.5 py-0.5 text-[11px] ${
-        ROLE_STYLE[role] ?? 'bg-neutral-700 text-neutral-300 border-neutral-600'
-      }`}
-    >
-      {label}
-    </span>
-  );
+  // Le rôle est une catégorie, pas un signal : puce neutre.
+  return <Chip tone="neutral">{label}</Chip>;
 }
 
 /** Barre horizontale proportionnelle (part 0..1) + libelle. */
@@ -577,8 +540,11 @@ function RateBar({ fraction }: { fraction: number }) {
   const p = Math.round((fraction ?? 0) * 100);
   return (
     <div className="flex items-center gap-2 justify-center">
-      <div className="w-20 h-2 bg-neutral-700 rounded-full overflow-hidden">
-        <div className="h-full bg-amber-500" style={{ width: `${p}%` }} />
+      <div className="h-2 w-20 overflow-hidden rounded-[2px] bg-[var(--s3,#2f2732)]">
+        <div
+          className="h-full bg-[var(--or,#b467d1)]"
+          style={{ width: `${p}%` }}
+        />
       </div>
       <span className="text-xs font-mono w-10 text-right">{p}%</span>
     </div>
@@ -634,7 +600,7 @@ function HeroBansTable({
       isEmpty={heroBans.length === 0}
     >
       <table className="w-full text-sm">
-        <thead className="bg-neutral-750 text-neutral-300">
+        <thead className="bg-[var(--s2,#1d1520)]">
           <tr>
             <th scope="col" className="px-4 py-2 text-left">
               {t.colHero}
@@ -701,7 +667,7 @@ function TeamBansTable({
       isEmpty={teamBans.length === 0}
     >
       <table className="w-full text-sm">
-        <thead className="bg-neutral-750 text-neutral-300">
+        <thead className="bg-[var(--s2,#1d1520)]">
           <tr>
             <th scope="col" className="px-4 py-2 text-left">
               {t.colTeam}
@@ -748,7 +714,7 @@ function HeroesTable({ heroes }: { heroes: TournamentAnalyticsHero[] }) {
       isEmpty={heroes.length === 0}
     >
       <table className="w-full text-sm">
-        <thead className="bg-neutral-750 text-neutral-300">
+        <thead className="bg-[var(--s2,#1d1520)]">
           <tr>
             <th scope="col" className="px-4 py-2 text-left">
               {t.colHero}

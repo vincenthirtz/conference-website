@@ -52,6 +52,17 @@ export function useQueryTab(
   return [active, setActive];
 }
 
+// Variante `segmented` dans l'admin (« Le Ruban ») : un cadre s1 + filet et
+// une pastille active pleine en s3 — pas de dégradé ni de halo, la seule lueur
+// de la plateforme étant l'état EN DIRECT. Classes limitées à la portée de
+// styles/admin-ruban.css (`:root:has([data-surface=admin])`) : hors admin,
+// classement, demandes et découverte joueuse gardent leur rendu à l'identique.
+// (La variante `underline` est déjà habillée par styles/admin-ruban.css.)
+const RUBAN_SEGMENTED_FRAME =
+  '[:root:has([data-surface=admin])_&]:rounded-[var(--r-ctrl)] [:root:has([data-surface=admin])_&]:border-[var(--line2)] [:root:has([data-surface=admin])_&]:bg-[var(--s1)]';
+const RUBAN_SEGMENTED_ON =
+  '[:root:has([data-surface=admin])_&]:bg-none [:root:has([data-surface=admin])_&]:bg-[var(--s3)] [:root:has([data-surface=admin])_&]:shadow-none [:root:has([data-surface=admin])_&]:text-[var(--t1)]';
+
 type TabsProps = {
   tabs: TabItem[];
   active: string;
@@ -135,7 +146,7 @@ export default function Tabs({
       aria-label={ariaLabel}
       className={`${
         variant === 'segmented'
-          ? 'inline-flex rounded-xl border border-white/10 bg-white/[0.03] p-1'
+          ? `inline-flex rounded-xl border border-white/10 bg-white/[0.03] p-1 ${RUBAN_SEGMENTED_FRAME}`
           : 'flex flex-wrap gap-1 border-b border-neutral-700/60'
       } ${className}`}
     >
@@ -159,7 +170,7 @@ export default function Tabs({
               variant === 'segmented'
                 ? `rounded-lg px-4 py-1.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
                     selected
-                      ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-purple-500/20'
+                      ? `bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-purple-500/20 ${RUBAN_SEGMENTED_ON}`
                       : 'text-gray-300 hover:bg-white/[0.06] hover:text-white'
                   }`
                 : `-mb-px rounded-t-lg px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${

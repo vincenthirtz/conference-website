@@ -1,5 +1,6 @@
 import { ReactNode, useEffect } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminDeleteConfirmModal from '@/lib/i18n/locales/admin-fr/adminDeleteConfirmModal';
 
@@ -44,12 +45,12 @@ export default function DeleteConfirmModal({
     >
       <div
         ref={trapRef}
-        className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl"
+        className="bg-[var(--s1,#100812)] border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] p-6 w-full max-w-md shadow-[var(--sh3)]"
       >
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-red-900/50 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-[var(--r-ctrl,4px)] border border-[rgba(255,107,107,.4)] bg-[rgba(255,107,107,.13)] flex items-center justify-center">
             <svg
-              className="w-5 h-5 text-red-400"
+              className="w-5 h-5 text-[var(--err,#ff6b6b)]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -66,16 +67,18 @@ export default function DeleteConfirmModal({
             <h3 id="delete-modal-title" className="text-lg font-semibold">
               {title}
             </h3>
-            <p className="text-sm text-neutral-400">{resolvedSubtitle}</p>
+            <p className="text-sm text-[var(--t3,#a39ba6)]">
+              {resolvedSubtitle}
+            </p>
           </div>
         </div>
 
         {children && <div className="mb-4">{children}</div>}
 
         {errorMsg && (
-          <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm flex items-center gap-2">
+          <div className="mb-4 rounded-[var(--r-ctrl,4px)] bg-[rgba(255,107,107,.08)] border border-[rgba(255,107,107,.4)] px-3 py-2 text-sm text-[#ffc2c2] flex items-center gap-2">
             <svg
-              className="w-4 h-4 text-red-400 flex-shrink-0"
+              className="w-4 h-4 text-[var(--err,#ff6b6b)] flex-shrink-0"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -90,33 +93,27 @@ export default function DeleteConfirmModal({
         )}
 
         <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-            disabled={deleting}
-          >
+          <AdminButton size="sm" onClick={onCancel} disabled={deleting}>
             {t.cancel}
-          </button>
-          <button
-            type="button"
+          </AdminButton>
+          <AdminButton
+            variant="danger"
+            size="sm"
             onClick={onConfirm}
             disabled={deleting}
-            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${
-              deleting
-                ? 'bg-red-800 cursor-not-allowed'
-                : 'bg-red-600 hover:bg-red-500'
-            }`}
           >
             {deleting ? (
               <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span
+                  aria-hidden="true"
+                  className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"
+                />
                 {t.deleting}
               </>
             ) : (
               t.delete
             )}
-          </button>
+          </AdminButton>
         </div>
       </div>
     </div>

@@ -16,7 +16,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import BrandSocialsFields from './BrandSocialsFields';
 import SaveIndicator from './SaveIndicator';
-import { inputClass, labelClass } from './fieldClasses';
+import { inputClass, labelClass, smallBtnClass } from './fieldClasses';
 import { useSceneDraft } from './useSceneDraft';
 import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 
@@ -206,13 +206,13 @@ export default function ScrimSceneEditor({ scene, onSave }: Props) {
             <button
               type="button"
               onClick={() => setListSeq((n) => n + 1)}
-              className="px-2.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
+              className={smallBtnClass}
               data-testid="caster-scrim-reload"
             >
               {t.scrimReload}
             </button>
             {listError && (
-              <span className="text-xs text-red-300">
+              <span className="text-xs text-[var(--err,#ff6b6b)]">
                 {format(t.scrimListError, { message: listError })}
               </span>
             )}

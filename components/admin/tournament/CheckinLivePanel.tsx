@@ -12,6 +12,15 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentCheckinLive from '@/lib/i18n/locales/admin-fr/adminTournamentCheckinLive';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import StatTile from '@/features/admin/_shared/ui/StatTile';
+import {
+  CARD,
+  ERROR_BOX,
+  FAINT,
+  MUTED,
+} from '@/features/admin/stages/ui/rubanClasses';
 
 type Dict = typeof nsAdminTournamentCheckinLive.fr;
 
@@ -182,7 +191,7 @@ export default function CheckinLivePanel() {
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mt-1">
             {t.pageTitle}
           </h1>
-          <p className="text-sm text-neutral-400 mt-1">
+          <p className={`mt-1 text-sm ${MUTED}`}>
             {format(t.windowInfo, {
               past: PAST_WINDOW_MIN,
               future: FUTURE_WINDOW_MIN,
@@ -190,7 +199,7 @@ export default function CheckinLivePanel() {
             })}
           </p>
         </div>
-        <div className="text-right text-xs text-neutral-400">
+        <div className={`text-right font-mono text-xs ${MUTED}`}>
           <LiveClock template={t.nowLabel} />
           {lastNudgeAt && (
             <div>
@@ -212,12 +221,12 @@ export default function CheckinLivePanel() {
         <BigMetric
           label={t.metricTeamsCheckedIn}
           value={`${stats.teamsCheckedIn} / ${stats.teamsExpected}`}
-          accent="emerald"
+          accent="ok"
         />
         <BigMetric
           label={t.metricCompleteMatches}
           value={`${stats.bothCheckedIn} / ${stats.matches}`}
-          accent="blue"
+          accent="brand"
         />
         <BigMetric
           label={t.metricNextMatch}
@@ -228,26 +237,18 @@ export default function CheckinLivePanel() {
                 ? format(t.tMinusMin, { n: stats.nextEta })
                 : format(t.tPlusMin, { n: Math.abs(stats.nextEta) })
           }
-          accent={stats.nextEta !== null && stats.nextEta < 5 ? 'red' : 'amber'}
+          accent={stats.nextEta !== null && stats.nextEta < 5 ? 'err' : 'warn'}
         />
       </div>
 
-      {error && (
-        <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
-          {error}
-        </div>
-      )}
+      {error && <div className={`mb-4 ${ERROR_BOX}`}>{error}</div>}
 
       {loading && rows.length === 0 && (
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-10 text-center text-neutral-400">
-          {t.loading}
-        </div>
+        <div className={`${CARD} text-center ${MUTED}`}>{t.loading}</div>
       )}
 
       {!loading && windowedRows.length === 0 && (
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 px-4 py-10 text-center text-neutral-500">
-          {t.emptyWindow}
-        </div>
+        <div className={`${CARD} text-center ${FAINT}`}>{t.emptyWindow}</div>
       )}
 
       <div className="space-y-3">
@@ -272,25 +273,9 @@ function BigMetric({
 }: {
   label: string;
   value: string | number;
-  accent: 'neutral' | 'emerald' | 'blue' | 'amber' | 'red';
+  accent: 'neutral' | 'ok' | 'brand' | 'warn' | 'err';
 }) {
-  const accentClass = {
-    neutral: 'border-neutral-800 bg-neutral-900/60',
-    emerald: 'border-emerald-500/40 bg-emerald-900/20',
-    blue: 'border-blue-500/40 bg-blue-900/20',
-    amber: 'border-amber-500/40 bg-amber-900/20',
-    red: 'border-red-500/50 bg-red-900/30',
-  }[accent];
-  return (
-    <div className={`rounded-2xl border px-5 py-4 ${accentClass}`}>
-      <div className="text-[11px] uppercase tracking-widest text-neutral-300">
-        {label}
-      </div>
-      <div className="text-3xl sm:text-4xl font-extrabold mt-1 tabular-nums">
-        {value}
-      </div>
-    </div>
-  );
+  return <StatTile label={label} value={value} tone={accent} />;
 }
 
 function MatchRow({
@@ -321,22 +306,16 @@ function MatchRow({
 
   return (
     <div
-      className={`rounded-2xl border bg-neutral-900/40 px-4 py-3 ${
-        urgent ? 'border-red-500/50' : 'border-neutral-800'
+      className={`rounded-[var(--r-card,14px)] border bg-[var(--s1,#100812)] px-4 py-3 ${
+        urgent
+          ? 'border-[rgba(255,107,107,.45)]'
+          : 'border-[var(--line2,rgba(194,196,201,.2))]'
       }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-3">
-          <span
-            className={`px-2 py-1 rounded text-xs font-mono ${
-              urgent
-                ? 'bg-red-900/40 text-red-100 border border-red-500/40'
-                : 'bg-neutral-800 text-neutral-300'
-            }`}
-          >
-            {tLabel}
-          </span>
-          <span className="text-xs text-neutral-500">
+          <Chip tone={urgent ? 'err' : 'neutral'}>{tLabel}</Chip>
+          <span className={`font-mono text-xs ${FAINT}`}>
             {row.scheduledAt
               ? new Date(row.scheduledAt).toLocaleTimeString('fr-FR', {
                   hour: '2-digit',
@@ -346,17 +325,17 @@ function MatchRow({
               : '—'}
           </span>
         </div>
-        <button
-          type="button"
+        <AdminButton
+          variant="secondary"
+          size="xs"
           onClick={() => onNudge(row.matchId, 'both')}
           disabled={
             !!(row.team1.checkedInAt && row.team2.checkedInAt) ||
             nudgingSet.has(`${row.matchId}:both`)
           }
-          className="text-xs px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium"
         >
           {nudgingSet.has(`${row.matchId}:both`) ? t.nudgingShort : t.nudgeBoth}
-        </button>
+        </AdminButton>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -400,37 +379,38 @@ function TeamLine({
   const checkedIn = !!checkedInAt;
   return (
     <div
-      className={`rounded-xl px-4 py-3 flex items-center justify-between gap-3 border ${
+      className={`flex items-center justify-between gap-3 rounded-[var(--r-ctrl,4px)] border bg-[var(--s2,#1d1520)] px-4 py-3 ${
         checkedIn
-          ? 'border-emerald-500/40 bg-emerald-900/15'
-          : 'border-amber-500/40 bg-amber-900/10'
+          ? 'border-[rgba(127,202,101,.36)]'
+          : 'border-[rgba(245,165,36,.38)]'
       }`}
     >
       <div className="min-w-0">
-        <div className="text-xs uppercase tracking-wider text-neutral-400">
+        <div className="font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
           {format(t.teamSide, { side })}
         </div>
-        <div className="text-lg font-semibold truncate">{name ?? '—'}</div>
+        <div className="truncate text-lg font-semibold text-[var(--t1,#f4edf7)]">
+          {name ?? '—'}
+        </div>
         <div className="text-xs mt-1">
           {checkedIn ? (
-            <span className="text-emerald-300">
+            <span className="text-[var(--lf-200,#b3e7a3)]">
               {format(t.checkedInRelative, {
                 relative: formatRelative(t, checkedInAt),
               })}
             </span>
           ) : (
-            <span className="text-amber-300">{t.notCheckedIn}</span>
+            <span className="text-[#ffd9a3]">{t.notCheckedIn}</span>
           )}
         </div>
       </div>
-      <button
-        type="button"
+      <AdminButton
+        size="xs"
         onClick={() => onNudge(matchId, side)}
         disabled={checkedIn || loading}
-        className="text-xs px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium whitespace-nowrap"
       >
         {loading ? '…' : t.nudgeDiscord}
-      </button>
+      </AdminButton>
     </div>
   );
 }

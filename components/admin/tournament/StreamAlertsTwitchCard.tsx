@@ -23,6 +23,9 @@ import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminStreamAlerts from '@/lib/i18n/locales/admin-fr/adminStreamAlerts';
 import { logger } from '@/utils/logger';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import { ERROR_BOX, MUTED } from '@/features/admin/stages/ui/rubanClasses';
 
 const ENDPOINT = '/api/admin/twitch/eventsub/alerts';
 
@@ -105,9 +108,9 @@ export default function StreamAlertsTwitchCard() {
 
   if ('message' in state) {
     return (
-      <section className="rounded-xl border border-red-500/40 bg-red-500/10 p-4">
+      <section className={ERROR_BOX}>
         <h4 className="text-sm font-semibold text-white">{t.twitchHeading}</h4>
-        <p className="mt-1 text-xs text-red-200">{state.message}</p>
+        <p className="mt-1 text-xs">{state.message}</p>
       </section>
     );
   }
@@ -117,34 +120,34 @@ export default function StreamAlertsTwitchCard() {
   const healthy = active === subs.length && subs.length > 0;
 
   return (
-    <section className="rounded-xl border border-neutral-700/40 bg-neutral-900/50 p-4">
+    <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h4 className="text-sm font-semibold text-white">{t.twitchHeading}</h4>
-        <span
-          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-            healthy
-              ? 'bg-emerald-500/15 text-emerald-300'
-              : 'bg-red-500/15 text-red-300'
-          }`}
-        >
+        <Chip tone={healthy ? 'ok' : 'err'}>
           {format(t.twitchCount, { active, total: subs.length })}
-        </span>
+        </Chip>
       </div>
-      <p className="mt-1 text-xs text-neutral-400">{t.twitchHelp}</p>
+      <p className={`mt-1 text-xs ${MUTED}`}>{t.twitchHelp}</p>
 
       {state.secretConfigured === false && (
-        <p className="mt-2 text-xs text-red-200">{t.twitchSecretMissing}</p>
+        <p className="mt-2 text-xs text-[var(--err,#ff6b6b)]">
+          {t.twitchSecretMissing}
+        </p>
       )}
       {state.readable === false && (
-        <p className="mt-2 text-xs text-neutral-400">{t.twitchUnreadable}</p>
+        <p className={`mt-2 text-xs ${MUTED}`}>{t.twitchUnreadable}</p>
       )}
 
       <ul className="mt-3 space-y-1">
         {subs.map((s) => (
           <li key={s.type} className="flex flex-wrap gap-x-2 text-xs">
-            <span className="font-mono text-neutral-300">{s.type}</span>
+            <span className="font-mono text-[var(--t2,#c7bfca)]">{s.type}</span>
             <span
-              className={s.subscribed ? 'text-emerald-300' : 'text-red-300'}
+              className={
+                s.subscribed
+                  ? 'text-[var(--lf-200,#b3e7a3)]'
+                  : 'text-[var(--err,#ff6b6b)]'
+              }
             >
               {s.subscribed
                 ? t.twitchSubOk
@@ -157,14 +160,15 @@ export default function StreamAlertsTwitchCard() {
       </ul>
 
       {!healthy && (
-        <button
-          type="button"
+        <AdminButton
+          variant="secondary"
+          size="sm"
+          className="mt-3"
           onClick={() => void subscribe()}
           disabled={busy}
-          className="mt-3 rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold text-white hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {busy ? t.twitchSubscribing : t.twitchSubscribe}
-        </button>
+        </AdminButton>
       )}
     </section>
   );

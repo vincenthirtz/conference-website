@@ -63,7 +63,7 @@ export default function FormField<N extends string>({
       >
         {label}
         {required && (
-          <span className="text-red-400" aria-hidden="true">
+          <span className="text-[var(--err,#ff6b6b)]" aria-hidden="true">
             {' '}
             *
           </span>
@@ -97,7 +97,7 @@ export function FormError({ message }: { message: string | null }) {
   return (
     <div
       role="alert"
-      className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm"
+      className="rounded-[var(--r-ctrl,4px)] bg-[rgba(255,107,107,.08)] border border-[rgba(255,107,107,.4)] px-4 py-3 text-sm text-[#ffc2c2]"
     >
       {message}
     </div>

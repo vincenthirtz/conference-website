@@ -53,6 +53,9 @@ import {
   adminErrorCode,
   useBusySet,
 } from '@/components/admin/broadcast/twitchPanelUtils';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import * as R from '@/features/admin/diffusion/ui/rubanClasses';
 
 // --- Formes du contrat (figées) ---------------------------------------------
 
@@ -551,35 +554,30 @@ export default function TwitchCommandsPanel() {
   if (!connected) return null;
 
   return (
-    <div
-      className="mb-6 rounded-2xl border border-neutral-800 bg-neutral-900/40 px-4 py-4"
-      aria-label={t.heading}
-    >
+    <div className={`mb-6 px-5 py-4 ${R.rubanCard}`} aria-label={t.heading}>
       <div className="mb-3 flex items-center gap-2">
-        <span className="h-4 w-4 rounded bg-[#9146FF]" aria-hidden />
-        <div className="text-xs uppercase tracking-widest text-neutral-400">
-          {t.heading}
-        </div>
+        <span className="h-4 w-4 rounded-[3px] bg-[#9146FF]" aria-hidden />
+        <div className={R.rubanEyebrow}>{t.heading}</div>
       </div>
 
       {/* 1. CLIP */}
       <Section title={t.clipHeading}>
-        <button
-          type="button"
+        <AdminButton
+          variant="secondary"
+          size="md"
           onClick={handleClip}
           disabled={isBusy('clip')}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#9146FF] px-5 py-3 text-base font-bold hover:bg-[#7b32e0] disabled:cursor-not-allowed disabled:opacity-40"
         >
           {isBusy('clip') && <Spinner />}
           {isBusy('clip') ? t.clipCreating : t.clipButton}
-        </button>
+        </AdminButton>
         <p className="mt-2 text-xs text-neutral-500">{t.clipHint}</p>
         {lastClip && (
           <a
             href={lastClip.edit_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-2 inline-block text-sm font-semibold text-purple-300 underline hover:text-purple-200"
+            className="mt-2 inline-block text-sm font-semibold text-[var(--or-200,#eec4ff)] underline hover:text-[var(--or-100,#f6e1ff)]"
           >
             {t.clipOpen}
           </a>
@@ -606,46 +604,41 @@ export default function TwitchCommandsPanel() {
               onChange={(e) => setChatMessage(e.target.value)}
               maxLength={MAX_CHAT}
               placeholder={t.chatPlaceholder}
-              className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+              className={R.rubanInput}
             />
             <div className="mt-1 text-right text-[11px] text-neutral-500">
               {format(t.chatCounter, { count: chatMessage.length })}
             </div>
           </div>
-          <button
+          <AdminButton
+            variant="secondary"
             type="submit"
             disabled={isBusy('chat')}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold hover:bg-blue-500 disabled:opacity-40"
           >
             {isBusy('chat') && <Spinner />}
             {isBusy('chat') ? t.chatSending : t.chatSend}
-          </button>
+          </AdminButton>
         </form>
       </Section>
 
       {/* 3. MODÉRATION */}
       <Section title={t.modHeading}>
         {/* Vider le chat */}
-        <button
-          type="button"
+        <AdminButton
+          variant="danger"
+          size="sm"
           onClick={handleClearChat}
           disabled={isBusy('clear')}
-          className="rounded-lg border border-red-500/50 bg-red-950/40 px-3 py-2 text-sm font-medium text-red-200 hover:bg-red-900/40 disabled:opacity-40"
         >
           {isBusy('clear') ? t.clearing : t.clearButton}
-        </button>
+        </AdminButton>
 
         {/* Ban */}
-        <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-950/40 p-3">
-          <div className="mb-2 text-sm font-semibold text-neutral-200">
-            {t.banHeading}
-          </div>
+        <div className={`mt-4 p-3 ${R.rubanInset}`}>
+          <div className={`mb-2 ${R.rubanEyebrow}`}>{t.banHeading}</div>
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-[10rem] flex-1">
-              <label
-                className="mb-1 block text-xs text-neutral-400"
-                htmlFor="twc-ban-login"
-              >
+              <label className={R.rubanLabel} htmlFor="twc-ban-login">
                 {t.banLoginLabel}
               </label>
               <input
@@ -654,21 +647,18 @@ export default function TwitchCommandsPanel() {
                 value={banLogin}
                 onChange={(e) => setBanLogin(e.target.value)}
                 placeholder={t.banLoginPlaceholder}
-                className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+                className={R.rubanInput}
               />
             </div>
             <div>
-              <label
-                className="mb-1 block text-xs text-neutral-400"
-                htmlFor="twc-ban-duration"
-              >
+              <label className={R.rubanLabel} htmlFor="twc-ban-duration">
                 {t.banDurationLabel}
               </label>
               <select
                 id="twc-ban-duration"
                 value={banDuration}
                 onChange={(e) => setBanDuration(e.target.value)}
-                className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+                className={`w-auto ${R.rubanInput}`}
               >
                 {BAN_DURATIONS.map((d) => (
                   <option key={d || 'perm'} value={d}>
@@ -679,10 +669,7 @@ export default function TwitchCommandsPanel() {
             </div>
           </div>
           <div className="mt-2">
-            <label
-              className="mb-1 block text-xs text-neutral-400"
-              htmlFor="twc-ban-reason"
-            >
+            <label className={R.rubanLabel} htmlFor="twc-ban-reason">
               {t.banReasonLabel}
             </label>
             <input
@@ -691,25 +678,24 @@ export default function TwitchCommandsPanel() {
               value={banReason}
               onChange={(e) => setBanReason(e.target.value)}
               placeholder={t.banReasonPlaceholder}
-              className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+              className={R.rubanInput}
             />
           </div>
-          <button
-            type="button"
+          <AdminButton
+            variant="danger"
+            size="sm"
             onClick={handleBan}
             disabled={isBusy('ban')}
-            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-bold hover:bg-red-500 disabled:opacity-40"
+            className="mt-3"
           >
             {isBusy('ban') && <Spinner />}
             {isBusy('ban') ? t.banning : t.banButton}
-          </button>
+          </AdminButton>
         </div>
 
         {/* Modes de chat */}
-        <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-950/40 p-3">
-          <div className="mb-2 text-sm font-semibold text-neutral-200">
-            {t.modesHeading}
-          </div>
+        <div className={`mt-4 p-3 ${R.rubanInset}`}>
+          <div className={`mb-2 ${R.rubanEyebrow}`}>{t.modesHeading}</div>
           <div className="space-y-2">
             <Toggle
               label={t.modeEmote}
@@ -741,7 +727,7 @@ export default function TwitchCommandsPanel() {
                       )
                     }
                     aria-label={t.modeFollowerDuration}
-                    className="w-20 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm"
+                    className={`w-20! py-1! ${R.rubanInput}`}
                   />
                 </label>
               )}
@@ -766,29 +752,30 @@ export default function TwitchCommandsPanel() {
                       )
                     }
                     aria-label={t.modeSlowWait}
-                    className="w-20 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm"
+                    className={`w-20! py-1! ${R.rubanInput}`}
                   />
                 </label>
               )}
             </div>
           </div>
-          <button
-            type="button"
+          <AdminButton
+            variant="secondary"
+            size="sm"
             onClick={handleApplySettings}
             disabled={isBusy('chat-settings')}
-            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold hover:bg-amber-500 disabled:opacity-40"
+            className="mt-3"
           >
             {isBusy('chat-settings') && <Spinner />}
             {isBusy('chat-settings') ? t.modesApplying : t.modesApply}
-          </button>
+          </AdminButton>
         </div>
       </Section>
 
       {/* 4. POINTS DE CHAÎNE */}
       <Section title={t.pointsHeading}>
         {/* 4a. Créer une récompense */}
-        <div className="rounded-lg border border-neutral-800 bg-neutral-950/40 p-3">
-          <div className="mb-2 text-sm font-semibold text-neutral-200">
+        <div className={`p-3 ${R.rubanInset}`}>
+          <div className={`mb-2 ${R.rubanEyebrow}`}>
             {t.rewardCreateHeading}
           </div>
           <form
@@ -800,10 +787,7 @@ export default function TwitchCommandsPanel() {
           >
             <div className="flex flex-wrap items-end gap-2">
               <div className="min-w-[12rem] flex-1">
-                <label
-                  className="mb-1 block text-xs text-neutral-400"
-                  htmlFor="twc-reward-title"
-                >
+                <label className={R.rubanLabel} htmlFor="twc-reward-title">
                   {t.rewardTitleLabel}
                 </label>
                 <input
@@ -813,17 +797,14 @@ export default function TwitchCommandsPanel() {
                   onChange={(e) => setNewTitle(e.target.value)}
                   maxLength={MAX_REWARD_TITLE}
                   placeholder={t.rewardTitlePlaceholder}
-                  className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+                  className={R.rubanInput}
                 />
                 <div className="mt-1 text-right text-[11px] text-neutral-500">
                   {format(t.rewardTitleCounter, { count: newTitle.length })}
                 </div>
               </div>
               <div className="w-28">
-                <label
-                  className="mb-1 block text-xs text-neutral-400"
-                  htmlFor="twc-reward-cost"
-                >
+                <label className={R.rubanLabel} htmlFor="twc-reward-cost">
                   {t.rewardCostLabel}
                 </label>
                 <input
@@ -834,14 +815,11 @@ export default function TwitchCommandsPanel() {
                   value={newCost}
                   onChange={(e) => setNewCost(e.target.value)}
                   placeholder={t.rewardCostPlaceholder}
-                  className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+                  className={R.rubanInput}
                 />
               </div>
               <div>
-                <label
-                  className="mb-1 block text-xs text-neutral-400"
-                  htmlFor="twc-reward-color"
-                >
+                <label className={R.rubanLabel} htmlFor="twc-reward-color">
                   {t.rewardColorLabel}
                 </label>
                 <input
@@ -850,15 +828,12 @@ export default function TwitchCommandsPanel() {
                   value={newColor || '#9146ff'}
                   onChange={(e) => setNewColor(e.target.value)}
                   aria-label={t.rewardColorLabel}
-                  className="h-10 w-14 cursor-pointer rounded-md border border-neutral-700 bg-neutral-950 p-1"
+                  className="h-10 w-14 cursor-pointer rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-1"
                 />
               </div>
             </div>
             <div>
-              <label
-                className="mb-1 block text-xs text-neutral-400"
-                htmlFor="twc-reward-prompt"
-              >
+              <label className={R.rubanLabel} htmlFor="twc-reward-prompt">
                 {t.rewardPromptLabel}
               </label>
               <input
@@ -868,7 +843,7 @@ export default function TwitchCommandsPanel() {
                 onChange={(e) => setNewPrompt(e.target.value)}
                 maxLength={MAX_REWARD_PROMPT}
                 placeholder={t.rewardPromptPlaceholder}
-                className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+                className={R.rubanInput}
               />
             </div>
             <div className="flex flex-wrap gap-4">
@@ -883,22 +858,22 @@ export default function TwitchCommandsPanel() {
                 onChange={setNewSkipQueue}
               />
             </div>
-            <button
+            <AdminButton
+              variant="secondary"
               type="submit"
               disabled={isBusy('reward-create')}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#9146FF] px-4 py-2 text-sm font-bold hover:bg-[#7b32e0] disabled:opacity-40"
             >
               {isBusy('reward-create') && <Spinner />}
               {isBusy('reward-create')
                 ? t.rewardCreating
                 : t.rewardCreateButton}
-            </button>
+            </AdminButton>
           </form>
         </div>
 
         {/* 4b. Gérer les récompenses existantes */}
         <div className="mt-4">
-          <div className="mb-2 text-sm font-semibold text-neutral-200">
+          <div className={`mb-2 ${R.rubanEyebrow}`}>
             {t.rewardManageHeading}
           </div>
           {rewards === undefined ? (
@@ -907,7 +882,9 @@ export default function TwitchCommandsPanel() {
               {t.rewardsLoading}
             </div>
           ) : rewards.length === 0 ? (
-            <div className="rounded-lg border border-neutral-800 bg-neutral-950/40 px-3 py-4 text-center text-sm text-neutral-500">
+            <div
+              className={`px-3 py-4 text-center text-sm text-[var(--t4,#807984)] ${R.rubanInset}`}
+            >
               {t.rewardsEmpty}
             </div>
           ) : (
@@ -919,10 +896,10 @@ export default function TwitchCommandsPanel() {
                 return (
                   <li
                     key={r.id}
-                    className="flex flex-wrap items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/60 px-3 py-2"
+                    className={`flex flex-wrap items-center gap-3 px-3 py-2 ${R.rubanInset}`}
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold">
+                      <div className="truncate text-sm font-semibold text-[var(--t1,#f4edf7)]">
                         {r.title}
                       </div>
                       {typeof r.cost === 'number' && (
@@ -931,35 +908,29 @@ export default function TwitchCommandsPanel() {
                         </div>
                       )}
                     </div>
-                    <span
-                      className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold ${
-                        enabled
-                          ? 'bg-emerald-900/50 text-emerald-300'
-                          : 'bg-neutral-800 text-neutral-400'
-                      }`}
-                    >
+                    <Chip tone={enabled ? 'ok' : 'neutral'}>
                       {enabled ? t.rewardStateEnabled : t.rewardStateDisabled}
-                    </span>
-                    <button
-                      type="button"
+                    </Chip>
+                    <AdminButton
+                      variant="ghost"
+                      size="xs"
                       onClick={() => toggleReward(r)}
                       disabled={toggling || deleting}
-                      className="shrink-0 rounded-md border border-neutral-700 bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700 disabled:opacity-40"
                     >
                       {toggling
                         ? t.rewardToggling
                         : enabled
                           ? t.rewardDisable
                           : t.rewardEnable}
-                    </button>
-                    <button
-                      type="button"
+                    </AdminButton>
+                    <AdminButton
+                      variant="danger"
+                      size="xs"
                       onClick={() => deleteReward(r)}
                       disabled={toggling || deleting}
-                      className="shrink-0 rounded-md border border-red-500/50 bg-red-950/40 px-2.5 py-1 text-xs font-medium text-red-200 hover:bg-red-900/40 disabled:opacity-40"
                     >
                       {deleting ? t.rewardDeleting : t.rewardDelete}
-                    </button>
+                    </AdminButton>
                   </li>
                 );
               })}
@@ -970,10 +941,7 @@ export default function TwitchCommandsPanel() {
 
         {/* 4c. Demandes en attente */}
         <div className="mt-4">
-          <label
-            className="mb-1 block text-xs text-neutral-400"
-            htmlFor="twc-reward"
-          >
+          <label className={R.rubanLabel} htmlFor="twc-reward">
             {t.rewardSelectLabel}
           </label>
           {rewards === undefined ? (
@@ -986,7 +954,7 @@ export default function TwitchCommandsPanel() {
               id="twc-reward"
               value={selectedReward}
               onChange={(e) => handleSelectReward(e.target.value)}
-              className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+              className={R.rubanInput}
             >
               <option value="">{t.rewardSelectPlaceholder}</option>
               {rewards.map((r) => (
@@ -1009,7 +977,9 @@ export default function TwitchCommandsPanel() {
                   {t.redemptionsLoading}
                 </div>
               ) : redemptions.length === 0 ? (
-                <div className="rounded-lg border border-neutral-800 bg-neutral-950/40 px-3 py-4 text-center text-sm text-neutral-500">
+                <div
+                  className={`px-3 py-4 text-center text-sm text-[var(--t4,#807984)] ${R.rubanInset}`}
+                >
                   {t.redemptionsEmpty}
                 </div>
               ) : (
@@ -1020,10 +990,10 @@ export default function TwitchCommandsPanel() {
                     return (
                       <li
                         key={r.id}
-                        className="flex flex-wrap items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/60 px-3 py-2"
+                        className={`flex flex-wrap items-center gap-3 px-3 py-2 ${R.rubanInset}`}
                       >
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold">
+                          <div className="truncate text-sm font-semibold text-[var(--t1,#f4edf7)]">
                             {r.user_name}
                           </div>
                           <div className="truncate text-xs text-neutral-400">
@@ -1032,26 +1002,26 @@ export default function TwitchCommandsPanel() {
                               : t.redemptionNoInput}
                           </div>
                         </div>
-                        <button
-                          type="button"
+                        <AdminButton
+                          variant="secondary"
+                          size="xs"
                           onClick={() => resolveRedemption(r, 'FULFILLED')}
                           disabled={approving || rejecting}
-                          className="shrink-0 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-bold hover:bg-emerald-500 disabled:opacity-40"
                         >
                           {approving
                             ? t.redemptionApproving
                             : t.redemptionApprove}
-                        </button>
-                        <button
-                          type="button"
+                        </AdminButton>
+                        <AdminButton
+                          variant="ghost"
+                          size="xs"
                           onClick={() => resolveRedemption(r, 'CANCELED')}
                           disabled={approving || rejecting}
-                          className="shrink-0 rounded-md border border-neutral-700 bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700 disabled:opacity-40"
                         >
                           {rejecting
                             ? t.redemptionRejecting
                             : t.redemptionReject}
-                        </button>
+                        </AdminButton>
                       </li>
                     );
                   })}
@@ -1083,20 +1053,20 @@ export default function TwitchCommandsPanel() {
               onChange={(e) => setMarkerDescription(e.target.value)}
               maxLength={MAX_MARKER_DESC}
               placeholder={t.markerPlaceholder}
-              className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm"
+              className={R.rubanInput}
             />
             <div className="mt-1 text-right text-[11px] text-neutral-500">
               {format(t.markerCounter, { count: markerDescription.length })}
             </div>
           </div>
-          <button
+          <AdminButton
+            variant="secondary"
             type="submit"
             disabled={isBusy('marker')}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#9146FF] px-4 py-2 text-sm font-bold hover:bg-[#7b32e0] disabled:opacity-40"
           >
             {isBusy('marker') && <Spinner />}
             {isBusy('marker') ? t.markerCreating : t.markerButton}
-          </button>
+          </AdminButton>
         </form>
       </Section>
 
@@ -1140,10 +1110,12 @@ function Section({
   return (
     <div
       className={
-        last ? 'pt-4' : 'border-b border-neutral-800/60 pb-4 pt-4 first:pt-0'
+        last
+          ? 'pt-4'
+          : 'border-b border-[var(--line,rgba(194,196,201,.12))] pb-4 pt-4 first:pt-0'
       }
     >
-      <div className="mb-2 text-sm font-semibold text-neutral-100">{title}</div>
+      <div className={`mb-2 ${R.rubanEyebrow}`}>{title}</div>
       {children}
     </div>
   );

@@ -23,6 +23,7 @@ import { fmtHourOfDay } from '@/utils/teams/scrimTime';
 import { blackoutDaysByTeam } from '@/utils/matches/availability';
 import type { AvailabilityConstraint } from '@/utils/matches/availability';
 import type { ScheduleAnomalySeverity } from '@/utils/matches/scheduleDiagnostics';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 export type CalendarMatch = {
   id: string;
@@ -147,34 +148,32 @@ export default function ScheduleMonthCalendar({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <button
-          type="button"
+        <AdminButton
+          size="xs"
           onClick={() => setMonthIndex((i) => Math.max(0, i - 1))}
           disabled={monthIndex === 0}
-          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm text-neutral-200 disabled:opacity-40"
         >
           {labels.prevMonth}
-        </button>
-        <p className="text-sm font-semibold first-letter:uppercase">
+        </AdminButton>
+        <p className="font-[family-name:var(--fd)] text-sm font-bold uppercase tracking-[0.06em] text-[var(--t1,#f4edf7)]">
           {monthLabel}
         </p>
-        <button
-          type="button"
+        <AdminButton
+          size="xs"
           onClick={() =>
             setMonthIndex((i) => Math.min(months.length - 1, i + 1))
           }
           disabled={monthIndex >= months.length - 1}
-          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm text-neutral-200 disabled:opacity-40"
         >
           {labels.nextMonth}
-        </button>
+        </AdminButton>
       </div>
 
       <div className="grid grid-cols-7 gap-1">
         {DOW.map((d) => (
           <div
             key={d}
-            className="pb-1 text-center text-[0.6rem] font-semibold uppercase tracking-[0.08em] text-neutral-500"
+            className="pb-1 text-center font-[family-name:var(--fd)] text-[0.6rem] font-bold uppercase tracking-[0.14em] text-[var(--t3,#a39ba6)]"
           >
             {d}
           </div>
@@ -197,10 +196,10 @@ export default function ScheduleMonthCalendar({
             <div
               key={cell.ymd}
               title={blockedTitle}
-              className={`min-h-[72px] rounded-md border p-1 ${
+              className={`min-h-[72px] rounded-[var(--r-ctrl,4px)] border p-1 ${
                 blocked
-                  ? 'border-dashed border-neutral-500 bg-neutral-700/40'
-                  : 'border-neutral-700 bg-neutral-800/60'
+                  ? 'border-dashed border-[var(--t4,#807984)] bg-[var(--s3,#2f2732)]'
+                  : 'border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s1,#100812)]'
               }`}
             >
               <span

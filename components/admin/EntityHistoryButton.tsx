@@ -12,6 +12,7 @@
 
 import { useState } from 'react';
 import EntityHistoryDrawer from './EntityHistoryDrawer';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminEntityHistory from '@/lib/i18n/locales/admin-fr/adminEntityHistory';
 import type { HistoryEntityType } from '@/pages/api/admin/entity-history';
@@ -19,11 +20,14 @@ import type { HistoryEntityType } from '@/pages/api/admin/entity-history';
 export default function EntityHistoryButton({
   entityType,
   entityId,
-  className = 'rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-white/10',
+  className,
 }: {
   entityType: HistoryEntityType;
   entityId: string;
-  /** Surcharge d'apparence : chaque écran a sa densité de boutons. */
+  /**
+   * Surcharge d'apparence : chaque écran a sa densité de boutons. Absente, le
+   * bouton est un `AdminButton` fantôme (sm) de « Le Ruban ».
+   */
   className?: string;
 }) {
   const t = useAdminT(nsAdminEntityHistory);
@@ -31,9 +35,19 @@ export default function EntityHistoryButton({
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={className}>
-        {t.openHistory}
-      </button>
+      {className === undefined ? (
+        <AdminButton size="sm" onClick={() => setOpen(true)}>
+          {t.openHistory}
+        </AdminButton>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className={className}
+        >
+          {t.openHistory}
+        </button>
+      )}
       <EntityHistoryDrawer
         entityType={entityType}
         entityId={entityId}

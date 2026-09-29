@@ -26,6 +26,18 @@ import type {
   VoteBoardMatch,
 } from '@/utils/mvp/voteBoard';
 import nsAdminTournamentMvpVotes from '@/lib/i18n/locales/admin-fr/adminTournamentMvpVotes';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
+import StatTile from '@/features/admin/_shared/ui/StatTile';
+import {
+  CARD,
+  ERROR_BOX,
+  EYEBROW,
+  FAINT,
+  INPUT,
+  MUTED,
+  STRONG,
+} from '@/features/admin/stages/ui/rubanClasses';
 
 /** Match terminé sans vote du public : on peut le lancer à la main. */
 type OpenableMatch = {
@@ -54,11 +66,11 @@ const REFRESH_SECONDS = 30;
  */
 const PUBLIC_REFRESH_SECONDS = 10;
 
-const STATE_CLASSES: Record<MvpPollState, string> = {
-  open: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-  expired: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-  closed: 'bg-neutral-500/15 text-neutral-300 border-neutral-500/30',
-  none: 'bg-neutral-800 text-neutral-400 border-neutral-700',
+const STATE_TONES: Record<MvpPollState, ChipTone> = {
+  open: 'live',
+  expired: 'warn',
+  closed: 'neutral',
+  none: 'neutral',
 };
 
 function stateLabel(t: Dict, s: MvpPollState): string {
@@ -182,7 +194,7 @@ export default function StatsMvpPanel({
   }, [data, filter]);
 
   if (loading && !data) {
-    return <p className="text-neutral-400">{t.loading}</p>;
+    return <p className={MUTED}>{t.loading}</p>;
   }
 
   return (
@@ -192,31 +204,24 @@ export default function StatsMvpPanel({
           <h2 className="text-xl font-semibold">
             {kind === 'public' ? t.headingPublic : t.heading}
           </h2>
-          <p className="text-sm text-neutral-400 mt-1">
+          <p className={`mt-1 text-sm ${MUTED}`}>
             {format(kind === 'public' ? t.introPublic : t.intro, {
               min: MIN_VOTES_FOR_AWARD,
             })}
           </p>
           {hasOpen && (
-            <p className="text-xs text-neutral-500 mt-1">
+            <p className={`mt-1 text-xs ${FAINT}`}>
               {format(t.autoRefresh, { seconds: refreshSeconds })}
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => void load()}
-          className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-neutral-800 border border-neutral-700 hover:bg-neutral-700 transition-colors"
-        >
+        <AdminButton size="sm" onClick={() => void load()}>
           {t.refresh}
-        </button>
+        </AdminButton>
       </div>
 
       {error && (
-        <p
-          role="alert"
-          className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
-        >
+        <p role="alert" className={ERROR_BOX}>
           {error}
         </p>
       )}
@@ -233,17 +238,17 @@ export default function StatsMvpPanel({
       )}
 
       {kind === 'public' && data && (
-        <section className="rounded-xl border border-purple-500/30 bg-purple-500/[0.05] p-4">
-          <h3 className="font-semibold">{t.openTitle}</h3>
-          <p className="text-xs text-neutral-400 mt-1">{t.openHelp}</p>
+        <section className={CARD}>
+          <h3 className={STRONG}>{t.openTitle}</h3>
+          <p className={`mt-1 text-xs ${MUTED}`}>{t.openHelp}</p>
           {(data.openable ?? []).length === 0 ? (
-            <p className="text-sm text-neutral-500 mt-3">{t.openNone}</p>
+            <p className={`mt-3 text-sm ${FAINT}`}>{t.openNone}</p>
           ) : (
             <div className="mt-3 flex flex-wrap items-end gap-3">
-              <label className="text-xs text-neutral-400">
+              <label className={`text-xs ${MUTED}`}>
                 {t.openMatchLabel}
                 <select
-                  className="mt-1 block rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-white"
+                  className={`mt-1 block !w-auto ${INPUT}`}
                   value={openMatchId}
                   onChange={(e) => setOpenMatchId(e.target.value)}
                 >
@@ -257,19 +262,20 @@ export default function StatsMvpPanel({
                   ))}
                 </select>
               </label>
-              <label className="text-xs text-neutral-400">
+              <label className={`text-xs ${MUTED}`}>
                 {t.openMinutesLabel}
                 <input
                   type="number"
                   min={1}
                   max={360}
-                  className="mt-1 block w-24 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-white"
+                  className={`mt-1 block !w-24 font-mono ${INPUT}`}
                   value={minutes}
                   onChange={(e) => setMinutes(e.target.value)}
                 />
               </label>
-              <button
-                type="button"
+              <AdminButton
+                variant="primary"
+                size="sm"
                 disabled={
                   busy ||
                   !openMatchId ||
@@ -281,19 +287,16 @@ export default function StatsMvpPanel({
                     windowMinutes: Math.round(Number(minutes)),
                   })
                 }
-                className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-purple-600 text-white hover:bg-purple-500 disabled:opacity-50"
               >
                 {t.openCta}
-              </button>
+              </AdminButton>
             </div>
           )}
         </section>
       )}
 
       {data && data.matches.length === 0 && (
-        <p className="text-neutral-400">
-          {kind === 'public' ? t.emptyPublic : t.empty}
-        </p>
+        <p className={MUTED}>{kind === 'public' ? t.emptyPublic : t.empty}</p>
       )}
 
       {data && data.matches.length > 0 && (
@@ -306,19 +309,15 @@ export default function StatsMvpPanel({
                 ['closed', t.filterClosed],
               ] as const
             ).map(([value, label]) => (
-              <button
+              <AdminButton
                 key={value}
-                type="button"
+                size="xs"
+                variant={filter === value ? 'secondary' : 'ghost'}
                 aria-pressed={filter === value}
                 onClick={() => setFilter(value)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
-                  filter === value
-                    ? 'bg-purple-600/30 border-purple-500/50 text-white'
-                    : 'bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-white'
-                }`}
               >
                 {label}
-              </button>
+              </AdminButton>
             ))}
           </fieldset>
 
@@ -346,14 +345,7 @@ export default function StatsMvpPanel({
 }
 
 function Kpi({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-      <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-        {label}
-      </div>
-      <div className="text-2xl font-bold mt-1 tabular-nums">{value}</div>
-    </div>
-  );
+  return <StatTile label={label} value={value} />;
 }
 
 function MatchCard({
@@ -371,54 +363,50 @@ function MatchCard({
   busy?: boolean;
 }) {
   return (
-    <li className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
+    <li className={CARD}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="font-semibold">
+          <div className={`font-semibold ${STRONG}`}>
             {m.team1Name ?? t.tbd}{' '}
-            <span className="text-neutral-500 font-normal">{t.vs}</span>{' '}
+            <span className={`font-normal ${FAINT}`}>{t.vs}</span>{' '}
             {m.team2Name ?? t.tbd}
           </div>
-          <div className="text-xs text-neutral-400 mt-0.5">
+          <div className={`mt-0.5 text-xs ${MUTED}`}>
             {[m.roundName, m.scheduledAt ? fmtDate(m.scheduledAt) : null]
               .filter(Boolean)
               .join(' · ')}
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span
-            className={`px-2 py-0.5 rounded-full border text-xs font-semibold ${STATE_CLASSES[m.state]}`}
-          >
-            {stateLabel(t, m.state)}
-          </span>
+          <Chip tone={STATE_TONES[m.state]}>{stateLabel(t, m.state)}</Chip>
           {m.state === 'closed' && m.closedAt && (
-            <span className="text-[11px] text-neutral-500">
+            <span className={`font-mono text-[11px] ${FAINT}`}>
               {format(t.closedAt, { date: fmtDate(m.closedAt) })}
             </span>
           )}
           {(m.state === 'open' || m.state === 'expired') && m.closesAt && (
-            <span className="text-[11px] text-neutral-500">
+            <span className={`font-mono text-[11px] ${FAINT}`}>
               {format(t.closesAt, { date: fmtDate(m.closesAt) })}
             </span>
           )}
           {onClose && (
-            <button
-              type="button"
+            <AdminButton
+              size="xs"
+              className="mt-1"
               onClick={onClose}
               disabled={busy}
-              className="mt-1 px-2.5 py-1 rounded-lg text-xs font-semibold border border-neutral-600 text-neutral-200 hover:bg-neutral-700/50 disabled:opacity-50"
             >
               {t.closeCta}
-            </button>
+            </AdminButton>
           )}
         </div>
       </div>
 
       <div className="mt-3 text-sm">
         {m.winner ? (
-          <p className="font-semibold text-amber-300">
+          <p className="font-semibold text-[var(--or-200,#eec4ff)]">
             🏅 {format(t.winner, { name: m.winner.label })}{' '}
-            <span className="text-neutral-400 font-normal">
+            <span className={`font-normal ${MUTED}`}>
               (
               {m.winner.source === 'manual' || m.winner.votes == null
                 ? t.winnerManual
@@ -431,9 +419,9 @@ function MatchCard({
             </span>
           </p>
         ) : m.leader.memberId !== null ? (
-          <p className="font-semibold text-emerald-300">
+          <p className={`font-semibold ${STRONG}`}>
             {format(t.leader, { name: m.leader.label })}{' '}
-            <span className="text-neutral-400 font-normal">
+            <span className={`font-normal ${MUTED}`}>
               (
               {format(t.leaderDetail, {
                 votes: m.leader.votes,
@@ -444,7 +432,7 @@ function MatchCard({
             </span>
           </p>
         ) : (
-          <p className="text-neutral-400">
+          <p className={MUTED}>
             {m.leader.reason === 'tie'
               ? t.reasonTie
               : m.leader.reason === 'too_few_votes'
@@ -455,12 +443,14 @@ function MatchCard({
       </div>
 
       {m.sources.length === 0 ? (
-        <p className="mt-3 text-sm text-neutral-500">{t.noVotes}</p>
+        <p className={`mt-3 text-sm ${FAINT}`}>{t.noVotes}</p>
       ) : (
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           {m.sources.map((s) => (
             <div key={s.source}>
-              <div className="flex items-baseline justify-between text-xs uppercase tracking-wider text-neutral-500 font-semibold mb-2">
+              <div
+                className={`mb-2 flex items-baseline justify-between ${EYEBROW}`}
+              >
                 <span>{sourceLabel(t, s.source)}</span>
                 <span className="tabular-nums">
                   {format(t.votesCount, { count: s.total })}
@@ -473,22 +463,19 @@ function MatchCard({
                       <span className="truncate">
                         {r.label}
                         {r.teamName && (
-                          <span className="text-neutral-500">
-                            {' '}
-                            · {r.teamName}
-                          </span>
+                          <span className={FAINT}> · {r.teamName}</span>
                         )}
                       </span>
-                      <span className="tabular-nums text-neutral-300">
+                      <span className="font-mono text-[var(--t2,#c7bfca)]">
                         {r.votes} · {Math.round(r.share * 100)} %
                       </span>
                     </div>
-                    <div className="mt-1 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-[2px] bg-[var(--s3,#2f2732)]">
                       <div
-                        className={`h-full rounded-full ${
+                        className={`h-full rounded-[2px] ${
                           s.source === 'twitch'
-                            ? 'bg-purple-500'
-                            : 'bg-indigo-400'
+                            ? 'bg-[var(--or,#b467d1)]'
+                            : 'bg-[var(--t3,#a39ba6)]'
                         }`}
                         style={{ width: `${Math.round(r.share * 100)}%` }}
                       />

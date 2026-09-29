@@ -18,6 +18,13 @@ import { useToast } from '@/components/Toast';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentEdit from '@/lib/i18n/locales/admin-fr/adminTournamentEdit';
+import {
+  CARD,
+  FAINT,
+  INPUT,
+  LABEL,
+  MUTED,
+} from '@/features/admin/stages/ui/rubanClasses';
 
 /** Les seuls champs du formulaire que ce panneau touche. */
 export type TournamentVisualsForm = {
@@ -87,10 +94,10 @@ export default function TournamentVisualsSection({ form, updateField }: Props) {
   }
 
   return (
-    <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+    <section className={CARD}>
       <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
         <svg
-          className="w-5 h-5 text-neutral-400"
+          className={`h-5 w-5 ${MUTED}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -107,24 +114,20 @@ export default function TournamentVisualsSection({ form, updateField }: Props) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm mb-1 text-neutral-300">
-            {t.logoLabel}
-          </label>
+          <label className={LABEL}>{t.logoLabel}</label>
           <input
             type="text"
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={INPUT}
             value={form.logo_url}
             onChange={(e) => updateField('logo_url', e.target.value)}
             placeholder="https://…"
           />
         </div>
         <div>
-          <label className="block text-sm mb-1 text-neutral-300">
-            {t.bannerLabel}
-          </label>
+          <label className={LABEL}>{t.bannerLabel}</label>
           <input
             type="text"
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={INPUT}
             value={form.banner_url}
             onChange={(e) => updateField('banner_url', e.target.value)}
             placeholder="https://…"
@@ -133,18 +136,16 @@ export default function TournamentVisualsSection({ form, updateField }: Props) {
       </div>
 
       <div className="mt-4">
-        <label className="block text-sm mb-1 text-neutral-300">
-          {t.rulesLabel}
-        </label>
+        <label className={LABEL}>{t.rulesLabel}</label>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
-            className="flex-1 px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`flex-1 ${INPUT}`}
             value={form.rules_url}
             onChange={(e) => updateField('rules_url', e.target.value)}
             placeholder="https://…/reglement.pdf"
           />
-          <label className="inline-flex items-center justify-center px-3 py-2 rounded-lg bg-neutral-700/60 hover:bg-neutral-700 border border-neutral-600 text-sm cursor-pointer whitespace-nowrap">
+          <label className="inline-flex h-[38px] cursor-pointer items-center justify-center whitespace-nowrap rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-[14px] font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.02em] text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]">
             {uploadingRules ? t.uploading : t.uploadPdf}
             <input
               type="file"
@@ -155,16 +156,16 @@ export default function TournamentVisualsSection({ form, updateField }: Props) {
             />
           </label>
         </div>
-        <p className="text-xs text-neutral-500 mt-1">{t.rulesHelp}</p>
+        <p className={`mt-1 text-xs ${FAINT}`}>{t.rulesHelp}</p>
         {rulesError && (
-          <p className="text-xs text-red-400 mt-1">{rulesError}</p>
+          <p className="mt-1 text-xs text-[var(--err,#ff6b6b)]">{rulesError}</p>
         )}
         {form.rules_url && (
           <a
             href={form.rules_url}
             target="_blank"
             rel="noreferrer"
-            className="inline-block text-xs text-blue-400 hover:text-blue-300 mt-1"
+            className="mt-1 inline-block text-xs text-[var(--or-300,#dea3f6)] hover:text-[var(--or-200,#eec4ff)]"
           >
             {t.openCurrentRules}
           </a>
@@ -172,17 +173,15 @@ export default function TournamentVisualsSection({ form, updateField }: Props) {
       </div>
 
       <div className="mt-4">
-        <label className="block text-sm font-medium text-neutral-300 mb-1">
-          {t.defaultStreamLabel}
-        </label>
+        <label className={LABEL}>{t.defaultStreamLabel}</label>
         <input
           type="text"
-          className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={INPUT}
           value={form.default_stream_url}
           onChange={(e) => updateField('default_stream_url', e.target.value)}
           placeholder="https://www.twitch.tv/…"
         />
-        <p className="text-xs text-neutral-500 mt-1">{t.defaultStreamHelp}</p>
+        <p className={`mt-1 text-xs ${FAINT}`}>{t.defaultStreamHelp}</p>
       </div>
     </section>
   );

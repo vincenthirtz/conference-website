@@ -16,6 +16,8 @@ import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminStreamAlerts from '@/lib/i18n/locales/admin-fr/adminStreamAlerts';
 import { TWITCH_ALERT_KINDS, type AlertKind } from '@/utils/overlay/alertBox';
 import { logger } from '@/utils/logger';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { INPUT, MUTED } from '@/features/admin/stages/ui/rubanClasses';
 
 export default function StreamAlertsTestCard() {
   const t = useAdminT(nsAdminStreamAlerts);
@@ -46,9 +48,9 @@ export default function StreamAlertsTestCard() {
   };
 
   return (
-    <section className="rounded-xl border border-neutral-700/40 bg-neutral-900/50 p-4">
+    <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
       <h4 className="text-sm font-semibold text-white">{t.testHeading}</h4>
-      <p className="mt-1 text-xs text-neutral-400">{t.testHelp}</p>
+      <p className={`mt-1 text-xs ${MUTED}`}>{t.testHelp}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <label htmlFor="stream-alerts-test-kind" className="sr-only">
           {t.testKindLabel}
@@ -57,7 +59,7 @@ export default function StreamAlertsTestCard() {
           id="stream-alerts-test-kind"
           value={kind}
           onChange={(e) => setKind(e.target.value as AlertKind)}
-          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+          className={`!w-auto ${INPUT}`}
         >
           {TWITCH_ALERT_KINDS.map((k) => (
             <option key={k} value={k}>
@@ -65,14 +67,14 @@ export default function StreamAlertsTestCard() {
             </option>
           ))}
         </select>
-        <button
-          type="button"
+        <AdminButton
+          variant="secondary"
+          size="sm"
           onClick={() => void fire()}
           disabled={busy}
-          className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold text-white hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {busy ? t.testSending : t.testButton}
-        </button>
+        </AdminButton>
       </div>
     </section>
   );
