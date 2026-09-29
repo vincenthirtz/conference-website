@@ -16,16 +16,25 @@
 # supabase/seed.sql (tenant par défaut). Voir docs/E2E-LOCAL-SUPABASE.md.
 # Si le socle manque, le job échoue AVEC UN MESSAGE explicite.
 #
-# SIX TRANCHES en parallèle, chacune avec sa Supabase ; un job final
-# fusionne leurs rapports en un seul rapport HTML (artefact playwright-report).
+# HUIT TRANCHES en parallèle, chacune avec SA Supabase (les specs sèment et
+# nettoient : deux tranches sur une même base se marcheraient dessus) ; un job
+# final fusionne leurs rapports en un seul rapport HTML (artefact
+# playwright-report). Dans chaque tranche, `supabase start` tourne en
+# arrière-plan PENDANT `npm ci` + `next build` : l'app est servie en
+# `next start`, sans compilation à la demande pendant les tests.
 #
-# DÉCLENCHEMENT MANUEL ET NOCTURNE, pas à chaque push : la suite est longue, et
-# la CI rapide (typecheck + unitaires) reste le filet du quotidien.
+# Sur push : projet `chromium` seul (retour rapide). Le projet `mobile`
+# (Pixel 7, parcours joueuse) tourne la nuit et, au choix, en manuel.
 
 name: e2e
 
 on:
   workflow_dispatch:
+    inputs:
+      mobile:
+        description: 'Jouer aussi le projet mobile (Pixel 7)'
+        type: boolean
+        default: true
   # `workflow_dispatch` n'est déclenchable que si le fichier existe sur la
   # branche PAR DÉFAUT (master), ce qui n'est pas le cas : un push sur la
   # branche de validation dédiée le déclenche donc aussi. Jamais `work`.
@@ -37,17 +46,31 @@ on:
     # 04:12 UTC — tôt, et pas à l'heure pile, pour éviter la cohue des runners.
     - cron: '12 4 * * *'
 
+# Un nouveau push sur la même branche rend le run précédent caduc.
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Supabase locale : ports fixés par supabase/config.toml, clé anon = la clé
+  # de démonstration PUBLIQUE et déterministe de la CLI (même valeur sur
+  # toutes les machines). Elle est inlinée au `next build`, avant que la base
+  # ne soit prête ; l'étape « Vérifier la clé inlinée » le contrôle et
+  # reconstruit si la CLI venait à en changer.
+  E2E_SUPABASE_URL: http://127.0.0.1:54321
+  E2E_BUILD_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+  SHARDS: 8
+
 jobs:
   playwright:
     runs-on: ubuntu-latest
-    # Par tranche : ~1/4 de la suite + démarrage Supabase/Next.
-    timeout-minutes: 30
+    timeout-minutes: 25
     strategy:
       # Une tranche rouge ne doit pas annuler les autres : on veut le bilan
       # complet de la suite, pas le premier échec.
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
 
     steps:
       - uses: actions/checkout@v4
@@ -71,36 +94,57 @@ jobs:
         with:
           version: latest
 
-      # CHAQUE tranche a SA Supabase : les specs sèment et nettoient, deux
-      # tranches sur une même base se marcheraient dessus.
-      # Seuls les services dont l'app a besoin : auth, rest (PostgREST), kong,
-      # realtime (cockpit / régie), storage (téléversements), mailpit (e-mails
-      # de changement d'adresse). Studio, analytics et edge-runtime sont déjà
-      # coupés dans supabase/config.toml ; `-x` écarte le reste.
-      - name: Démarrer une Supabase locale
-        run: supabase start -x studio,postgres-meta,imgproxy,edge-runtime,logflare,vector,supavisor
-
-      - name: Relever l'URL et les clés de l'instance
-        id: sb
+      # En ARRIÈRE-PLAN : ~70 s (dont ~40 s de pull d'images) recouverts par
+      # npm ci + next build + navigateurs. Seuls les services dont l'app a
+      # besoin : auth, rest, kong, realtime (cockpit / régie), storage
+      # (téléversements), mailpit (e-mails de changement d'adresse) ; studio,
+      # analytics et edge-runtime sont déjà coupés dans supabase/config.toml.
+      # Pas de cache des images Docker : un `docker save/load` de ~1 Go ne
+      # battrait pas un pull déjà masqué par le build.
+      - name: Démarrer une Supabase locale (arrière-plan)
         run: |
-          # `supabase status -o env` rend des KEY="value" ; $GITHUB_ENV ne retire
-          # PAS les guillemets — ils finiraient DANS la valeur, et supabase-js
-          # rejetterait `"http://127.0.0.1:54321"` (« Invalid supabaseUrl »).
-          supabase status -o env | sed -E 's/^([A-Za-z_][A-Za-z0-9_]*)="(.*)"$/\1=\2/' >> "$GITHUB_ENV"
+          nohup sh -c 'supabase start -x studio,postgres-meta,imgproxy,edge-runtime,logflare,vector,supavisor > "$RUNNER_TEMP/supabase-start.log" 2>&1; echo $? > "$RUNNER_TEMP/supabase-start.exit"' > /dev/null 2>&1 &
 
       - name: Installer les dépendances
         run: npm ci
+
+      - name: Choisir les projets Playwright
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] || { [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.mobile }}" != "true" ]; }; then
+            echo "PW_PROJECTS=--project=chromium" >> "$GITHUB_ENV"
+          fi
+
+      # Cache Turbopack de `next build` (cf. ci.yml) : clé par commit, repli
+      # sur le dernier cache du même lockfile.
+      - name: Restaurer le cache de build Next
+        id: next-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .next/cache
+          key: nextjs-e2e-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            nextjs-e2e-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+
+      - name: Construire l'app (next build)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.E2E_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.E2E_BUILD_ANON_KEY }}
+        run: npm run build
+
+      - name: Sauver le cache de build Next
+        if: matrix.shard == 1 && steps.next-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .next/cache
+          key: nextjs-e2e-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
 
       - name: Version de Playwright
         id: pw
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
 
-      # Les navigateurs sont gros et ne dépendent que de la version de
-      # Playwright : sûrs à mettre en cache. Les dépendances système (apt),
-      # elles, ne le sont pas — elles sont réinstallées à chaque fois.
-      # restore/save séparés : `actions/cache` ne sauvegarde qu'en fin de job
-      # RÉUSSI — or une tranche rouge est ici le cas courant, et le cache ne
-      # se remplirait jamais.
+      # Les navigateurs ne dépendent que de la version de Playwright : sûrs à
+      # mettre en cache. restore/save séparés : `actions/cache` ne sauvegarde
+      # qu'en fin de job RÉUSSI, et une tranche rouge est le cas courant.
       - name: Cache des navigateurs Playwright
         id: pw-cache
         uses: actions/cache/restore@v4
@@ -123,7 +167,31 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ms-playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
 
-      - name: Jouer la tranche ${{ matrix.shard }}/6
+      - name: Attendre la Supabase locale
+        timeout-minutes: 5
+        run: |
+          while [ ! -f "$RUNNER_TEMP/supabase-start.exit" ]; do sleep 2; done
+          cat "$RUNNER_TEMP/supabase-start.log" | grep -vE 'Pulling|Download|Extract|Waiting|Verifying|Pull complete|Already exists|fs layer' || true
+          exit "$(cat "$RUNNER_TEMP/supabase-start.exit")"
+
+      - name: Relever l'URL et les clés de l'instance
+        run: |
+          # `supabase status -o env` rend des KEY="value" ; $GITHUB_ENV ne retire
+          # PAS les guillemets — ils finiraient DANS la valeur, et supabase-js
+          # rejetterait `"http://127.0.0.1:54321"` (« Invalid supabaseUrl »).
+          supabase status -o env | sed -E 's/^([A-Za-z_][A-Za-z0-9_]*)="(.*)"$/\1=\2/' >> "$GITHUB_ENV"
+
+      # Filet : si la CLI changeait d'URL ou de clé anon par défaut, le bundle
+      # construit viserait une autre instance. On reconstruit alors avec les
+      # vraies valeurs plutôt que de jouer toute la suite pour rien.
+      - name: Vérifier la clé inlinée au build
+        run: |
+          if [ "$API_URL" != "$E2E_SUPABASE_URL" ] || [ "$ANON_KEY" != "$E2E_BUILD_ANON_KEY" ]; then
+            echo "::warning::URL ou clé anon locale différente de celle inlinée au build — reconstruction."
+            NEXT_PUBLIC_SUPABASE_URL="$API_URL" NEXT_PUBLIC_SUPABASE_ANON_KEY="$ANON_KEY" npm run build
+          fi
+
+      - name: Jouer la tranche ${{ matrix.shard }}/${{ env.SHARDS }}
         env:
           # La suite ET le serveur Next visent la MÊME instance jetable. C'est
           # tout l'intérêt : plus aucune spec n'a de raison d'être ignorée, et
@@ -134,8 +202,13 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ env.SERVICE_ROLE_KEY }}
           JWT_SECRET: e2e-jwt-secret-not-a-real-one
-          NODE_ENV: test
-        run: npx playwright test --shard=${{ matrix.shard }}/6 --reporter=blob
+          # Pas de NODE_ENV=test : `next start` le garderait, et le rendu
+          # serveur chargerait la variante DÉVELOPPEMENT de React face à un
+          # bundle client de production. On sert donc l'app comme en prod.
+          E2E_SERVER: start
+        # blob → fusion en fin de run ; github → annotations des échecs sur
+        # le commit / la PR.
+        run: npx playwright test $PW_PROJECTS --shard=${{ matrix.shard }}/${{ env.SHARDS }} --reporter=blob,github
 
       - name: Conserver le rapport de la tranche
         if: always()
