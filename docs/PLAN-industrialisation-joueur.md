@@ -670,8 +670,13 @@ liens d'invitation, demandes, rang) ; `team/[slug]/edit` sur Fiche, sans accès 
 S4 résolu pour ce domaine.
 
 **Critères** : [ ] `manage-team`, `team-management`, `team-join-requests`, `captain-transfer`,
-`admin-captain-view` verts ; [ ] act-as des 12 routes inchangé (tests S4) ;
-[ ] règles « capitaine toujours tout » et « coach jamais roster » testées au service.
+`admin-captain-view` verts ; [x] act-as des 12 routes inchangé (tests S4) ;
+[x] règles « capitaine toujours tout » et « coach jamais roster » testées au service.
+*(2026-09-29 — `tests/unit/teamRosterRules.test.ts` : déclarations `subjectRoute` des 15 routes
+migrées (act-as là où il existait, `self` là où `?as=` n'a jamais été suivi, permission
+d'équipe déclarée), capitaine vs manager au service (`updateMemberRole`, `removeMember`), coach
+refusé en 403 « roster » sur 9 routes sans rien écrire ; matrice `subjectRoutePermissionMatrix`
+sur toutes. e2e non rejoués — pas de base locale dans ce lot.)*
 
 **Livré (1re tranche, 2026-09-29).**
 - Écran : `PlayerManageTeamScreen` 2 220 → ~250 lignes, coquille `FicheView` ; état et gestes
@@ -697,14 +702,52 @@ S4 résolu pour ce domaine.
   selects « lecture sans décision » (`invite-free-player`, `invite-links`, `teams/my`).
 - Act-as staff sur `public-page`, `upload-image`, `tcg-image` (`withSubjectRoute` +
   `allowActAs`, droit du sujet, équipe du tenant actif du staff) — testé
-  (`playerSecurityP0`). **Reste** : l'entrée UI (SSR de `team/[slug]/edit` n'accepte pas
-  `?as=`).
+  (`playerSecurityP0`).
 
-**Reste.** Migration `defineSubjectRoute` des routes roster/capitanat/invitations
-(`update-member*`, `[teamId]/members`, `transfer-captain`, `join-requests`, `invitations/*`,
-`invite-links/*`, `add-member`, `leave`, `search-players`, `free-players`,
-`invite-free-player`, `transfer-requests`) et `features/shared/team-roster` ;
-`team/[slug]/edit` sur Fiche sans base en page (+ act-as staff) ; e2e mobile/desktop.
+**Livré (2e tranche, 2026-09-29).**
+- **15 routes sur `defineSubjectRoute`**, même contrat HTTP (statuts, messages, `code`
+  historiques via `LegacyAdminError` ; `requestId` et un `code` générique s'ajoutent) :
+  `update-member`, `update-member-role`, `update-member-specialty`, `[teamId]/members`,
+  `transfer-captain`, `join-requests`, `transfer-requests`, `invitations/index`,
+  `invitations/[invitationId]`, `invite-links/index`, `add-member`, `leave`,
+  `search-players`, `free-players`, `invite-free-player` — réexports de
+  `features/player/team/routes/*`. Services : `roster` (rôle, poste, fiche, retrait),
+  `captaincy`, `membership` (ajout direct, départ), `demandes` (adhésion + transfert, un
+  seul flux), `invites` (invitations nominatives + lien d'équipe), `recruiting`
+  (recherche, joueuses libres, invitation) ; repositories `roster`, `demandes`,
+  `invites`, `recruiting`. Les utils existants sont APPELÉS (managementAccess, teamRoles,
+  rosterLock, rpcErrors, invitations, inviteLinks, botRoleSync, botEvents).
+- `team: { permission }` partout où la garde était `getManagedTeamForRequest` +
+  `assertTeamPermission` ; option additive `forbiddenCode` (refus 403 au code historique
+  `FORBIDDEN` des routes d'invitation). Trois gardes restent au service, même modèle
+  (`getManagedTeam` + permission) : `[teamId]/members` (ordre 400 → 404 → 403 sur l'équipe du
+  CHEMIN), `transfer-captain` (capitaine trouvée par son capitanat, message de refus propre),
+  `leave` (appartenance, pas de permission). `invite-free-player` exige en plus
+  équipe du corps = équipe gérée.
+- Act-as S4 conservé exactement (9 routes + GET suivis en inspection `view_captain_data`) ;
+  les 5 routes ex-`withAuthRoute` sont `subject: 'self'` (`?as=` → 403 `subject_unsupported`
+  au lieu d'être ignoré).
+- **`team/[slug]/edit`** : coquille de ~70 lignes (1 125 avant). SSR par
+  `utils/player/subjectPage.ts` (`defineSubjectPage`, nouveau : session, sujet, entrée
+  act-as) → service `loadTeamPageEditor` + repository `pageEditor` ; plus aucun accès base
+  dans la page. Écran en archétype Fiche (`FicheView`, `FicheFold`, `EntityHeader`,
+  `Button`/`ButtonLink`, `FormField` du kit) dans `features/player/team/ui/pageEditor/` ;
+  état dans `hooks/useTeamPageEditor.ts` sur `useSchemaForm` (`TeamPageEditorForm`) :
+  0 `useState` de champ. Entrée act-as `?as=<id>&act=1` (staff ≥ admin, tenant actif, sujet
+  existant) journalisée `view_captain_data` (`act: true`) ; enregistrement, téléversements,
+  illustration TCG et fiches membres portent la portée (`act_as_player` côté routes).
+  `members/[memberId]/profile` ouverte à l'act-as (`withSubjectRoute` + `allowActAs`, comme
+  ses trois voisines). Testé : `playerSecurityP0` (SSR act-as, refus, témoin),
+  `teamPageEditorScreen.test.tsx`.
+- `adminBoundariesGuard` : les routes de `PLAYER_SPACE_ROUTES` (appChrome, désormais exporté)
+  ne comptent plus comme pages publiques — `/team/[slug]/edit` est réservée.
+
+**Reste.** `features/shared/team-roster` NON créé : les pendants admin (forçage du verrou,
+`setTeamCaptain`) et bot (`/bot/v1/teams/*/transfer-captain` = UPDATE direct sans RPC,
+journal `logPlayerAction`) divergent ; les unifier changerait leur comportement — à décider
+avec les lots admin/bot. `[teamId]/{public-page,upload-image,tcg-image,members/[memberId]/profile}`
+restent sur `withSubjectRoute` (act-as ouvert, pas encore déclaratives). Lien d'entrée
+act-as depuis `captain-view` (admin) vers l'éditeur. e2e mobile/desktop des specs du lot.
 
 ### P11 · Création d'équipe & adhésion — 🟥 / XL
 
@@ -719,6 +762,35 @@ unifiées (rejoindre, capitanat, transfert, scrim, caster) sur un schéma commun
 **Critères** : [ ] `team-create`, `team-transfers`, `teams-import` verts ;
 [ ] `create-with-member` < 500 lignes, logique au service ; [ ] erreurs serveur localisées par
 `code` (déjà le cas pour la création, étendu aux demandes).
+
+**Livré (1re tranche, 2026-09-29).**
+- Deux gardes nouvelles, à côté de `defineSubjectRoute` (même noyau `createRoute`, testées) :
+  `utils/player/defineTokenRoute.ts` (lien secret : rate-limit historique AVANT tout → 401 si
+  session exigée → forme du jeton → session facultative, source `bearer` ou
+  `cookie-or-bearer`) et `utils/player/definePublicRoute.ts` (anonyme : plafonds historiques
+  dans l'ordre → 503 `SERVICE_UNAVAILABLE` → honeypot → captcha → tenant public). Matrice de
+  permissions et contrats étendus à `tokenRoute` / `publicRoute` (ajout seul).
+- Demandes : `features/player/demandes` (repository → service → routes) ; les 7 routes
+  `demandes/*` (join, captain, transfer, scrim, register-team, cancel, caster-application) sur
+  `defineSubjectRoute`, pages/api = réexports ; plafonds, messages, codes (`BATTLE_TAG_*`,
+  `ALREADY_*`, `field`, `fieldErrors`, `existingDemandeId`) conservés. GET join/captain
+  `follow` ; tout le reste `self` (un `?as=` y est désormais refusé au lieu d'être ignoré).
+  Écran `/player/requests` : coquille + `useRequestsScreen` (deux `useSchemaForm`, annuaire
+  sur le cache joueuse, appels `demandesClient`), formulaires dans `features/player/demandes/ui`
+  (kit Ruban : `PageHeader`, `Card`, `Button`, `FormField`).
+- Jetons : `features/player/invitations` — `invitations/[token]`, `teams/invitations/by-token`
+  (façade), `teams/invite-links/by-token` sur `defineTokenRoute` ; pages `/invitation/[token]`,
+  `/rejoindre/[token]` et `TeamInvitationPanel` passent par `utils/invitations/tokenClient.ts`
+  (hors `features/player` : pages publiques). Rendu inchangé.
+- Création anonyme : `create-with-member` 1 386 → 3 lignes ; `features/player/onboarding`
+  (schéma de STRUCTURE zod + 8 étapes : identité, roster, comptes, réponses, sièges/invitations,
+  accès + pont magic-link, tournoi, annonce) sur `definePublicRoute`. `/team/create` 1 983 →
+  ~100 lignes : `components/TeamCreate/*` (hook + 7 composants), JSX identique au caractère
+  près (espaces exceptés), hors Ruban.
+
+**Reste.** Écrans `join-team`, `request-captain`, `caster-application` (encore `useState` /
+`fetch`) ; codes métier des demandes traduits (`playerErrors`) — aujourd'hui texte serveur ;
+`useTeamCreateWizard` (~720 lignes) à découper en sous-hooks ; e2e mobile/desktop du domaine.
 
 ### P12 · Jour de match — 🟥 / XL
 
@@ -760,11 +832,25 @@ ligne ; report sur permission (fin de S4).
   = conteneur (report sur `useSchemaForm`), `ScrimPlanningsDashboardCard` sans fetch.
   `ListeView` gagne `lead` / `after`. Grille (`components/scrim/*`) inchangée.
 
-**Reste.** `ScrimNegotiationCard` (contre-proposition : `useState` de champ, validation au
-parent `usePlayerDashboard`) et `ScrimSlotCalendarPicker` ; client du tableau de bord
-(`dashboard/client.ts` : `scrimRequests`/`scrimPlannings`) à basculer sur `scrimsClient` ;
-`demandes/scrim` (création de demande, avec P11) ; `features/shared/scrim` (négociation
-commune bot/admin) ; `ScrimPlanningPanel` (430) à découper en `ui/` ; e2e mobile/desktop.
+**Livré (2e tranche, 2026-09-29).**
+- `ScrimNegotiationCard` : contre-proposition sur `useSchemaForm` +
+  `scrims/negotiationForm.ts` (cases vides écartées, ≥ 1 créneau, sortie ISO — la
+  normalisation que faisait le parent ; erreur sous le sélecteur, `role="alert"`) ;
+  « accepter » n'envoie qu'avec un créneau choisi. `usePlayerDashboard` ne valide plus :
+  confirmation de rejet + appel seulement. Test `scrimCounterProposalForm`.
+- Tableau de bord : `scrimsClient.decideRequest` (équipe seule, `Idempotency-Key`) et
+  `scrimsClient.plannings` remplacent `dashboardClient.scrimAction/scrimPlannings`.
+- `ScrimPlanningPanel` 430 → `features/player/scrims/ui/ScrimPlanningPanel.tsx` (268,
+  composition) + `hooks/usePlanningDerived` + `ui/planning/` (`PlanningHeader`,
+  `PlanningCanvas`, `usePlanningLabels`, et les 7 sous-composants ex-
+  `components/player/scrim-planning/`). Rendu inchangé.
+- `ScrimSlotCalendarPicker` laissé en place : déjà contrôlé (`slots`/`onChange`, seul
+  l'état de pagination est local), branché tel quel sur `setValue` ; le déplacer
+  toucherait `ScrimRequestForm` (P11). Non rendu par une page publique.
+
+**Reste.** `demandes/scrim` (création de demande, avec P11) ; `features/shared/scrim`
+(négociation commune bot/admin) ; déplacer `ScrimNegotiationCard` / le sélecteur dans
+`features/player/scrims/ui` quand P11 aura libéré `ScrimRequestForm` ; e2e mobile/desktop.
 
 ### P14 · TCG joueuse — 🟧 / XL
 
@@ -798,12 +884,26 @@ clé unique) — l'idempotence HTTP s'ajoute, ne remplace pas.
   est illisible (rendait `balance: 0`) ; le composeur d'échanges a un état d'erreur (rendait
   « personne » / « aucun double »).
 
-**Reste.** `photo` et `fanart` (téléversements base64, laissés tels quels) ; panneaux
-autonomes `components/tcg/{TcgForgePanel,TcgCosmeticsPanel,TcgShowcaseEditor,
-FanartSubmitPanel,TcgSetsPanel,TcgPhotoInvite}` encore sur `useAdminFetch` (à passer sur le
-client du module) ; 3 écrans importent encore les types de `welcome-gift` depuis `pages/api`
-(gel « 7 ») ; sélection du composeur d'échanges en `useState` (sélection, pas saisie) ; e2e
-mobile/desktop en base locale.
+**Livré (2e tranche, 2026-09-29).**
+- Panneaux joueuse `components/tcg/{TcgForgePanel,TcgCosmeticsPanel,TcgShowcaseEditor,
+  FanartSubmitPanel,TcgSetsPanel,TcgPhotoInvite}` et `components/player/TcgExclusionCard`
+  sur `tcgClient` (plus de `useAdminFetch` ni d'URL en dur) ; vérifié : aucun n'est rendu
+  par une page publique (seulement `features/player/tcg/ui` et le profil). Composants
+  publics (`TcgCard`, vitrine `/tcg`, `TcgShowcaseSection`…) intacts. `Idempotency-Key`
+  ajoutée sur forge, achat/équipement d'habillage, vitrine, retrait, cadeau — la protection
+  monétaire reste en base (RPC inchangées). `fanart` (route hors noyau) : pas de clé,
+  refus lu sur `ApiHttpError.status/code` (même `fanartErrorKey`, relecture conservée).
+  Échecs de lecture : comportements existants gardés (état d'erreur séries/vitrine/fan-art,
+  carte masquée pour retrait/photo), aucun ne se déguise en valeur absente.
+- `welcome-gift` : `tcgClient.welcomeGift` (sujet seul, `?as=` suivi) /
+  `claimWelcomeGift` (pour soi) ; `WelcomeGiftCard`, `SupporterWelcomeCard`,
+  `PlayerDashboardScreen` importent les types de `features/player/tcg/schemas` et sortent du
+  gel « 7 » ; le réexport de types de `pages/api/player/tcg/welcome-gift.ts` est retiré.
+
+**Reste.** routes `photo` et `fanart` (téléversements base64) hors `defineSubjectRoute` ;
+panneaux à migrer sur le kit Ruban / TanStack (ils gardent leur état local) ; sélection du
+composeur d'échanges en `useState` (sélection, pas saisie) ; e2e mobile/desktop en base
+locale.
 
 ### P15 · Réseau & messages — 🟧 / L
 
@@ -835,9 +935,19 @@ découverte invisible par défaut, jamais d'annuaire public.
   `notifications/schemas.ts` (bundle public intact). `FollowButton` et la couche sociale de
   `/player/[userId]` (page publique) restent sur leur mécanisme.
 
-**Reste.** Dossier d'adversaire (`scouting/[teamId].tsx`, 420, `useAdminFetch`) à passer sur
-Fiche + client ; lectures `network-status` du tableau de bord (`NetworkOnboardingCard`,
-`RegistrationDeadlineBanner`, avec P12) ; e2e mobile/desktop en base locale.
+**Livré (2e tranche, 2026-09-29).**
+- Dossier d'adversaire : `scouting/[teamId].tsx` 420 → 45 lignes, archétype FICHE
+  (`network/ui/scouting/{ScoutingScreen,ScoutingSections}`, sections en `FicheFold`,
+  « Proposer un scrim » dans la barre d'action), cache joueuse (`useScoutingReport`),
+  `networkClient.scouting` : équipe active TOUJOURS portée (`?teamId=`), sujet jamais.
+  Règles pures dans `network/scoutingModel.ts`. Garde `scoutingPageTeamScope` réécrite,
+  même sens : test de comportement sur l'URL produite (`teamId` présent, `as`/`act`
+  absents) + source (le hook passe `usePlayerScope()`, aucune URL en dur dans la page).
+- `network-status` : `networkClient.networkStatus` pour `NetworkOnboardingCard`,
+  `RegistrationDeadlineBanner` et `PlayerDashboardScreen` (qui lit aussi le cadeau via
+  `tcgClient`) ; `dashboardClient` perd `networkStatus`/`welcomeGift`.
+
+**Reste.** e2e mobile/desktop en base locale.
 
 ---
 

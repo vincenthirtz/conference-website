@@ -19,7 +19,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Router from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import ProfileSummaryCard from '@/components/player/ProfileSummaryCard';
 import WelcomeGiftCard from '@/components/player/WelcomeGiftCard';
@@ -62,7 +61,9 @@ import {
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import type { NetworkStatus } from '@/features/player/network/schemas';
-import type { PlayerWelcomeGiftResponse } from '@/pages/api/player/tcg/welcome-gift';
+import type { PlayerWelcomeGiftResponse } from '@/features/player/tcg/schemas';
+import { tcgClient } from '@/features/player/tcg/client';
+import { networkClient } from '@/features/player/network/client';
 import {
   DASHBOARD_ANCHORS,
   hashTargetId,
@@ -104,8 +105,8 @@ export default function PlayerDashboardScreen() {
     loading: authLoading,
     ready,
   } = usePlayerSession({ redirectTo: '/login?next=/player' });
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
-  const { withSubject, readOnly, isInspecting, subjectName } = usePlayerArea();
+  const { readOnly, isInspecting, subjectName, subjectId, isActingAs } =
+    usePlayerArea();
   const { confirm, dialog } = useConfirmDialog();
   const d = usePlayerDashboard({ ready, token, t, confirm });
 
@@ -123,9 +124,8 @@ export default function PlayerDashboardScreen() {
     // Hors inspection seulement : les deux cartes qui la lisent sont masquées
     // en inspection, et la route ne suit pas `?as=`.
     if (!isInspecting) {
-      adminFetchJson<NetworkStatus>('/api/player/network-status', {
-        skipAuthRedirect: true,
-      })
+      networkClient
+        .networkStatus()
         .then((data) => {
           if (!cancelled) setNetworkStatus(data);
         })
@@ -133,10 +133,8 @@ export default function PlayerDashboardScreen() {
           logger.error('[player] network-status load error:', err);
         });
     }
-    adminFetchJson<PlayerWelcomeGiftResponse>(
-      withSubject('/api/player/tcg/welcome-gift'),
-      { skipAuthRedirect: true }
-    )
+    tcgClient
+      .welcomeGift({ subjectId, actAs: isActingAs, teamId: null })
       .then((data) => {
         if (!cancelled) setWelcomeGift(data);
       })
@@ -146,7 +144,7 @@ export default function PlayerDashboardScreen() {
     return () => {
       cancelled = true;
     };
-  }, [ready, isInspecting, adminFetchJson, withSubject]);
+  }, [ready, isInspecting, subjectId, isActingAs]);
 
   // Arrivée sur `/player#…` : le navigateur a tenté le défilement pendant le
   // squelette. On le refait une fois le contenu rendu, puis à chaque hash.

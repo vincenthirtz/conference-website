@@ -25,7 +25,7 @@ export type RubanSurface = 'admin' | 'player';
  * anonyme, publique — décision du 2026-09-29 : pas de Ruban sur le public) n'en
  * sont pas.
  */
-const PLAYER_SPACE_ROUTES: ReadonlySet<string> = new Set([
+export const PLAYER_SPACE_ROUTES: ReadonlySet<string> = new Set([
   '/espace-capitaine',
   '/team/[slug]/edit',
   '/checkin/[token]',

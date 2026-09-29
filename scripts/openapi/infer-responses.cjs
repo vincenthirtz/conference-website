@@ -364,6 +364,8 @@ function toSchema(type, checker, stack = [], depth = 0) {
 const DECLARATIVE_DEFINERS = new Set([
   'defineAdminRoute',
   'defineSubjectRoute',
+  'defineTokenRoute',
+  'definePublicRoute',
 ]);
 
 function declarativeRouteObject(sf, checker) {

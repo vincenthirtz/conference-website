@@ -21,7 +21,7 @@
 // anonymes. Le découvrir ensuite ferait de ce retrait une demi-promesse.
 
 import { useCallback, useEffect, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tcgClient } from '@/features/player/tcg/client';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT } from '@/lib/i18n/useT';
@@ -35,7 +35,6 @@ export default function TcgExclusionCard({
   className?: string;
 }) {
   const t = useT(nsPlayerTcg);
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
 
@@ -44,13 +43,13 @@ export default function TcgExclusionCard({
 
   const load = useCallback(async () => {
     try {
-      setState(await adminFetchJson<State>('/api/player/tcg/exclusion'));
+      setState(await tcgClient.exclusion<State>());
     } catch {
       // On n'affiche rien plutôt qu'un état faux : proposer « se retirer » à
       // quelqu'un qui s'est DÉJÀ retirée serait au mieux troublant.
       setState(null);
     }
-  }, [adminFetchJson]);
+  }, []);
 
   useEffect(() => {
     void load();
@@ -70,9 +69,7 @@ export default function TcgExclusionCard({
       }
       setBusy(true);
       try {
-        await adminFetchJson('/api/player/tcg/exclusion', {
-          method: next ? 'POST' : 'DELETE',
-        });
+        await tcgClient.setExclusion(next);
         addToast(next ? t.exclusionDone : t.exclusionUndone, 'success');
         await load();
       } catch (err) {
@@ -81,7 +78,7 @@ export default function TcgExclusionCard({
         setBusy(false);
       }
     },
-    [busy, confirm, adminFetchJson, addToast, load, t]
+    [busy, confirm, addToast, load, t]
   );
 
   if (!state) return null;

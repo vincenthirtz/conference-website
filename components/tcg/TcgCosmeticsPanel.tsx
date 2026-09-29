@@ -17,7 +17,7 @@
 // seconde copie des libellés.
 
 import { useCallback, useEffect, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tcgClient } from '@/features/player/tcg/client';
 import { useToast } from '@/components/Toast';
 import { useT } from '@/lib/i18n/useT';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
@@ -42,7 +42,6 @@ export default function TcgCosmeticsPanel({
   className = '',
 }: Props) {
   const t = useT(nsPlayerTcg);
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
 
   const [state, setState] = useState<State | null>(null);
@@ -50,14 +49,14 @@ export default function TcgCosmeticsPanel({
 
   const load = useCallback(async () => {
     try {
-      const json = await adminFetchJson<State>('/api/player/tcg/cosmetics');
+      const json = await tcgClient.cosmetics<State>();
       setState(json);
     } catch {
       // Panneau secondaire : on se tait plutôt que d'alerter. La page a déjà
       // de quoi faire, et un habillage indisponible n'empêche rien.
       setState(null);
     }
-  }, [adminFetchJson]);
+  }, []);
 
   useEffect(() => {
     void load();
@@ -67,11 +66,7 @@ export default function TcgCosmeticsPanel({
     if (busy) return;
     setBusy(cosmetic.key);
     try {
-      await adminFetchJson('/api/player/tcg/cosmetics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: cosmetic.key }),
-      });
+      await tcgClient.buyCosmetic(cosmetic.key);
       addToast(t.cosmeticBought, 'success');
       await load();
       onChanged?.();
@@ -86,11 +81,7 @@ export default function TcgCosmeticsPanel({
     if (busy) return;
     setBusy(key ?? `clear-${kind}`);
     try {
-      await adminFetchJson('/api/player/tcg/cosmetics', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [kind]: key }),
-      });
+      await tcgClient.equipCosmetics({ [kind]: key });
       await load();
     } catch (err) {
       addToast((err as Error)?.message ?? t.cosmeticFailed, 'error');

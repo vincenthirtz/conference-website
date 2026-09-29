@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useT, format } from '@/lib/i18n/useT';
 import {
   MEMBER_DISPLAY_NAME_MAX,
@@ -55,6 +56,8 @@ export default function MemberProfileEditor({
 }) {
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
+  // Act-as staff : même portée que l'éditeur de page (`?as=…&act=1`).
+  const { withSubject } = usePlayerArea();
   const t = useT(nsMemberProfileEditor);
   const specialtyLabels = getSpecialtyLabels(t);
 
@@ -74,7 +77,7 @@ export default function MemberProfileEditor({
     setSaving(true);
     try {
       const json = await adminFetchJson<{ updatedFields?: unknown[] }>(
-        `/api/teams/${teamId}/members/${member.id}/profile`,
+        withSubject(`/api/teams/${teamId}/members/${member.id}/profile`),
         {
           method: 'PATCH',
           body: JSON.stringify({

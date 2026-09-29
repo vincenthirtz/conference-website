@@ -84,13 +84,10 @@ const FROZEN = {
   importsPagesApi: [
     'components/player/AgendaCard.tsx',
     'components/player/MatchPrepCard.tsx',
-    'components/player/SupporterWelcomeCard.tsx',
     'components/player/TeamHealthCard.tsx',
     'components/player/TeamMemoryCard.tsx',
     'components/player/TeamRegistrationCard.tsx',
     'components/player/TeamRhythmCard.tsx',
-    'components/player/WelcomeGiftCard.tsx',
-    'components/player/screens/PlayerDashboardScreen.tsx',
     'components/player/screens/PlayerMyTeamsScreen.tsx',
   ],
   // Règle 8 — appels `/api/admin/*` depuis l'UI joueuse (hors commentaire) :

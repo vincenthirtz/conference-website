@@ -19,19 +19,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - memberId
-          properties:
-            memberId:
-              type: string
-              format: uuid
-            role:
-              type: string
-            battle_tag:
-              type: string
-            is_substitute:
-              type: boolean
+          x-zod: player.teams.update-member
   responses:
     '200':
       description: Membre mis a jour.

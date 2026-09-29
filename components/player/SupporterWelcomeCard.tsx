@@ -16,7 +16,7 @@
 // serait pire que ne rien proposer.
 //
 // ELLE NE SUIT PAS LE SUJET POUR L'ÉCRITURE, et c'est voulu. La lecture passe
-// par `withSubject` comme les autres cartes ; le POST, lui, part sans `?as=` :
+// avec `?as=` (`tcgClient.welcomeGift`) comme les autres cartes ; le POST, lui, part sans `?as=` :
 // la route n'active pas `allowActAs`, donc un staff qui inspecte ne peut pas
 // réclamer à la place de quelqu'un. Un cadeau réclamé ne se rend pas.
 //
@@ -27,13 +27,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tcgClient } from '@/features/player/tcg/client';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useT, format } from '@/lib/i18n/useT';
-import type {
-  PlayerWelcomeGiftResponse,
-  PlayerWelcomeClaimResponse,
-} from '../../pages/api/player/tcg/welcome-gift';
+import type { PlayerWelcomeGiftResponse } from '@/features/player/tcg/schemas';
 import { logger } from '../../utils/logger';
 import nsPlayerIndex from '@/lib/i18n/locales/fr/playerIndex';
 
@@ -49,8 +46,7 @@ export default function SupporterWelcomeCard({
   data?: PlayerWelcomeGiftResponse | null;
 }) {
   const t = useT(nsPlayerIndex);
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
-  const { withSubject, readOnly } = usePlayerArea();
+  const { readOnly, subjectId, isActingAs } = usePlayerArea();
   const selfLoads = data === undefined;
 
   // `undefined` = pas encore lu. Aucun indicateur de chargement : la carte
@@ -73,10 +69,11 @@ export default function SupporterWelcomeCard({
 
   const load = useCallback(async () => {
     try {
-      const payload = await adminFetchJson<PlayerWelcomeGiftResponse>(
-        withSubject('/api/player/tcg/welcome-gift'),
-        { skipAuthRedirect: true }
-      );
+      const payload = await tcgClient.welcomeGift({
+        subjectId,
+        actAs: isActingAs,
+        teamId: null,
+      });
       setClaimable(payload.welcomeClaimable);
     } catch (err) {
       logger.error('[SupporterWelcomeCard] load error', err);
@@ -84,7 +81,7 @@ export default function SupporterWelcomeCard({
       // attente indéfinie.
       setClaimable(false);
     }
-  }, [adminFetchJson, withSubject]);
+  }, [subjectId, isActingAs]);
 
   useEffect(() => {
     if (!selfLoads) return;
@@ -95,11 +92,8 @@ export default function SupporterWelcomeCard({
     setBusy(true);
     setNotice(null);
     try {
-      // Sans `withSubject` : l'écriture est toujours pour soi. Cf. l'en-tête.
-      const out = await adminFetchJson<PlayerWelcomeClaimResponse>(
-        '/api/player/tcg/welcome-gift',
-        { method: 'POST', skipAuthRedirect: true }
-      );
+      // Sans portée : l'écriture est toujours pour soi. Cf. l'en-tête.
+      const out = await tcgClient.claimWelcomeGift();
       if (out.status === 'granted' && !out.packGranted) {
         // Les pièces sont écrites et ne seront pas rejouées : on le DIT.
         setNotice(t.supporterWelcomePartial);

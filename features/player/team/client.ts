@@ -16,6 +16,7 @@ import type {
   TeamMemberRightChange,
   TeamMemberRightsResponse,
   TeamInfoPatchInput,
+  TeamPageEditorPayload,
   TeamJoinRequestDto,
   TeamSpecialty,
 } from './schemas';
@@ -33,6 +34,10 @@ export const teamUrls = {
   updateMember: '/api/teams/update-member',
   transferCaptain: '/api/teams/transfer-captain',
   memberPermissions: '/api/teams/member-permissions',
+  publicPage: (teamId: string) =>
+    `/api/teams/${encodeURIComponent(teamId)}/public-page`,
+  uploadImage: (teamId: string) =>
+    `/api/teams/${encodeURIComponent(teamId)}/upload-image`,
 };
 
 const mutate = <T>(
@@ -147,5 +152,21 @@ export const teamClient = {
       body.grant ? 'POST' : 'DELETE',
       scope,
       { userId: body.userId, permission: body.permission }
+    ),
+
+  /**
+   * Page publique (`team/[slug]/edit`). L'équipe est dans le CHEMIN : pas de
+   * `?teamId=` concurrent ; `?as=…&act=1` suit la portée (act-as staff).
+   */
+  patchPublicPage: (
+    scope: PlayerScope,
+    teamId: string,
+    body: TeamPageEditorPayload
+  ) =>
+    mutate<{ updatedFields?: unknown[] }>(
+      teamUrls.publicPage(teamId),
+      'PATCH',
+      { ...scope, teamId: null },
+      body
     ),
 };

@@ -22,6 +22,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useT, format } from '@/lib/i18n/useT';
 import nsInvitationPage from '@/lib/i18n/locales/fr/invitationPage';
+import { invitationsClient } from '@/utils/invitations/tokenClient';
 import TeamInvitationPanel, {
   type TeamInvitationInfo,
 } from '@/components/invitation/TeamInvitationPanel';
@@ -64,14 +65,16 @@ export default function InvitationPage() {
   const load = useCallback(async () => {
     if (!token) return;
     try {
-      const res = await fetch(`/api/invitations/${encodeURIComponent(token)}`);
-      const json = await res.json();
-      if (!res.ok) {
-        setError(json.error || t.notFound);
+      const res = await invitationsClient.read<
+        Loaded & { redirectTo?: string }
+      >(token);
+      const json = res.json;
+      if (!res.ok || !json) {
+        setError(json?.error || t.notFound);
         return;
       }
       // Lien d'équipe partageable : sa page sait le servir, pas celle-ci.
-      if (json.kind === 'join-link' && json.redirectTo) {
+      if ((json.kind as string) === 'join-link' && json.redirectTo) {
         void router.replace(json.redirectTo);
         return;
       }
@@ -89,12 +92,9 @@ export default function InvitationPage() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/invitations/${encodeURIComponent(token)}`, {
-        method: 'POST',
-      });
-      const json = await res.json();
+      const res = await invitationsClient.respond(token);
       if (!res.ok) {
-        setError(json.error || t.acceptFailed);
+        setError(res.json?.error || t.acceptFailed);
         return;
       }
       setDone(true);

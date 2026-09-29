@@ -136,4 +136,6 @@ export default {
   updateSuccess_other: 'Page updated ({count} fields changed).',
   noChanges: 'No changes.',
   errorUnexpected: 'Unexpected error.',
+  actingAsNotice:
+    '“Act as” mode: every save is made on behalf of this person and logged.',
 };

@@ -16,6 +16,7 @@ import {
   TransferDemandeBody,
 } from '../../../features/player/demandes/schemas';
 import { LineupBody } from '../../../features/player/matches/schemas';
+import { CreateTeamBody } from '../../../features/player/onboarding/schemas';
 import { SendMessageBody } from '../../../features/player/messages/schemas';
 import { LeaderboardVisibilityBody } from '../../../features/player/predictions/schemas';
 import { UpdatePlayerProfileBody } from '../../../features/player/profile/schemas';
@@ -35,6 +36,7 @@ import {
   TransferCaptainBody,
   TransferRequestDecisionBody,
   UpdateMemberRoleBody,
+  UpdateMemberBody,
   UpdateMemberSpecialtyBody,
 } from '../../../features/player/team/schemas';
 import {
@@ -56,11 +58,13 @@ export const PLAYER_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   'player.demandes.transfer': input(TransferDemandeBody),
   'player.demandes.register-team': input(RegisterTeamDemandeBody),
   'player.demandes.cancel': input(CancelDemandeBody),
+  'player.onboarding.create-team': input(CreateTeamBody),
   'player.teams.transfer-requests.decide': input(TransferRequestDecisionBody),
   'player.teams.join-requests.decide': input(JoinRequestDecisionBody),
   'player.teams.scrim-requests.decide': input(ScrimRequestDecisionBody),
   'player.teams.update-member-role': input(UpdateMemberRoleBody),
   'player.teams.update-member-specialty': input(UpdateMemberSpecialtyBody),
+  'player.teams.update-member': input(UpdateMemberBody),
   'player.teams.transfer-captain': input(TransferCaptainBody),
   'player.teams.members.remove': input(RemoveTeamMemberBody),
   'player.teams.member-permissions': input(MemberPermissionBody),

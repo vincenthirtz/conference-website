@@ -16,6 +16,7 @@
 import { useCallback, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useT, format } from '@/lib/i18n/useT';
 import nsTeamEdit from '@/lib/i18n/locales/fr/teamEdit';
 
@@ -35,6 +36,10 @@ export default function TcgTeamImageCard({
 }) {
   const t = useT(nsTeamEdit);
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
+  // Act-as staff (`?as=…&act=1`) : l'éditeur ouvert au nom d'une personne
+  // habilitée écrit en son nom ; hors portée, identité.
+  const { withSubject } = usePlayerArea();
+  const endpoint = withSubject(`/api/teams/${teamId}/tcg-image`);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [imageUrl, setImageUrl] = useState<string | null>(initialImageUrl);
@@ -85,13 +90,10 @@ export default function TcgTeamImageCard({
           reader.readAsDataURL(file);
         });
 
-        const json = await adminFetchJson<{ url: string | null }>(
-          `/api/teams/${teamId}/tcg-image`,
-          {
-            method: 'POST',
-            body: JSON.stringify({ data, mimeType: file.type }),
-          }
-        );
+        const json = await adminFetchJson<{ url: string | null }>(endpoint, {
+          method: 'POST',
+          body: JSON.stringify({ data, mimeType: file.type }),
+        });
         setImageUrl(json.url);
       } catch (err) {
         const code = (err as { payload?: { code?: unknown } })?.payload?.code;
@@ -103,16 +105,14 @@ export default function TcgTeamImageCard({
         if (inputRef.current) inputRef.current.value = '';
       }
     },
-    [adminFetchJson, teamId, t, messageForCode]
+    [adminFetchJson, endpoint, t, messageForCode]
   );
 
   const remove = useCallback(async () => {
     setError(null);
     setBusy(true);
     try {
-      await adminFetchJson(`/api/teams/${teamId}/tcg-image`, {
-        method: 'DELETE',
-      });
+      await adminFetchJson(endpoint, { method: 'DELETE' });
       setImageUrl(null);
     } catch (err) {
       const code = (err as { payload?: { code?: unknown } })?.payload?.code;
@@ -120,7 +120,7 @@ export default function TcgTeamImageCard({
     } finally {
       setBusy(false);
     }
-  }, [adminFetchJson, teamId, messageForCode]);
+  }, [adminFetchJson, endpoint, messageForCode]);
 
   const shown = imageUrl ?? logoUrl;
   const isFallback = !imageUrl;

@@ -26,7 +26,7 @@ vi.mock('@/hooks/useAdminFetch', () => ({
 }));
 
 import { manageTeamLinkProps } from '../../components/player/screens/PlayerMyTeamsScreen';
-import { isScoutingDossierEmpty } from '../../pages/player/scouting/[teamId]';
+import { isScoutingDossierEmpty } from '../../features/player/network/scoutingModel';
 import WelcomeGiftCard from '../../components/player/WelcomeGiftCard';
 import SupporterWelcomeCard from '../../components/player/SupporterWelcomeCard';
 

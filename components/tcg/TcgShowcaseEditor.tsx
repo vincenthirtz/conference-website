@@ -21,7 +21,8 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import Link from 'next/link';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tcgClient } from '@/features/player/tcg/client';
+import { ApiHttpError } from '@/utils/http/authedRequest';
 import { useToast } from '@/components/Toast';
 import TcgCard from '@/components/tcg/TcgCard';
 import { showcaseCardSubject } from '@/components/tcg/TcgShowcaseSection';
@@ -137,7 +138,6 @@ export default function TcgShowcaseEditor({
   const t = useT(nsTcgShowcase);
   const tTcg = useT(nsPlayerTcg);
   const { addToast } = useToast();
-  const { adminFetch, adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const chooserId = useId();
   const toggleId = useId();
 
@@ -198,7 +198,7 @@ export default function TcgShowcaseEditor({
     async (force = false) => {
       try {
         apply(
-          await adminFetchJson<ShowcaseResponse>('/api/player/tcg/showcase'),
+          await tcgClient.showcase<ShowcaseResponse>(),
           !force && dirtyRef.current
         );
         setState('ready');
@@ -206,7 +206,7 @@ export default function TcgShowcaseEditor({
         setState((prev) => (prev === 'ready' ? prev : 'error'));
       }
     },
-    [adminFetchJson, apply]
+    [apply]
   );
 
   useEffect(() => {
@@ -217,36 +217,27 @@ export default function TcgShowcaseEditor({
     async (nextEnabled: boolean, cards: ShowcaseCard[]) => {
       setBusy(true);
       try {
-        const res = await adminFetch('/api/player/tcg/showcase', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        apply(
+          await tcgClient.saveShowcase<ShowcaseResponse>({
             enabled: nextEnabled,
             cards: cards.map((c) => c.key),
-          }),
-        });
-        if (!res.ok) {
-          const body = (await res.json().catch(() => ({}))) as {
-            code?: string;
-          };
-          addToast(
-            body.code === 'not_owned' ? t.errNotOwned : t.errGeneric,
-            'error'
-          );
-          // L'écran reprend l'état RÉEL plutôt que sa version optimiste.
-          await load(true);
-          return;
-        }
-        apply((await res.json()) as ShowcaseResponse);
+          })
+        );
         addToast(nextEnabled ? t.saved : t.savedOff, 'success');
-      } catch {
-        addToast(t.errGeneric, 'error');
+      } catch (err) {
+        addToast(
+          err instanceof ApiHttpError && err.code === 'not_owned'
+            ? t.errNotOwned
+            : t.errGeneric,
+          'error'
+        );
+        // L'écran reprend l'état RÉEL plutôt que sa version optimiste.
         await load(true);
       } finally {
         setBusy(false);
       }
     },
-    [adminFetch, addToast, apply, load, t]
+    [addToast, apply, load, t]
   );
 
   const openChooser = useCallback(async () => {
@@ -257,14 +248,9 @@ export default function TcgShowcaseEditor({
       const acc: ShowcaseCard[] = [];
       let cursor: string | null = null;
       do {
-        const qs: string = cursor
-          ? `limit=${COLLECTION_PAGE}&cursor=${encodeURIComponent(cursor)}`
-          : `limit=${COLLECTION_PAGE}`;
-        const page = await adminFetchJson<{
-          cards?: CollectionCard[];
-          nextCursor?: string | null;
-        }>(`/api/player/tcg/collection?${qs}`);
-        acc.push(...(page.cards ?? []).map(collectionToShowcaseCard));
+        const page = await tcgClient.collectionPage(COLLECTION_PAGE, cursor);
+        const cards: CollectionCard[] = page.cards ?? [];
+        acc.push(...cards.map(collectionToShowcaseCard));
         cursor = page.nextCursor ?? null;
       } while (cursor && acc.length < CHOOSER_MAX);
       setCollection(acc);
@@ -272,7 +258,7 @@ export default function TcgShowcaseEditor({
     } catch {
       setChooserState('error');
     }
-  }, [adminFetchJson, chooserState]);
+  }, [chooserState]);
 
   const toggleCard = useCallback(
     (card: ShowcaseCard) => {

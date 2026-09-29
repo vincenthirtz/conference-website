@@ -38160,37 +38160,7 @@
     "properties": {
      "demandes": {
       "type": "array",
-      "items": {
-       "type": "object",
-       "properties": {
-        "comment": {},
-        "created_at": {},
-        "id": {},
-        "payload": {},
-        "processed_at": {},
-        "staff_note": {},
-        "status": {},
-        "team_id": {},
-        "tournament_id": {},
-        "type": {},
-        "updated_at": {},
-        "user_id": {}
-       },
-       "required": [
-        "comment",
-        "created_at",
-        "id",
-        "payload",
-        "processed_at",
-        "staff_note",
-        "status",
-        "team_id",
-        "tournament_id",
-        "type",
-        "updated_at",
-        "user_id"
-       ]
-      }
+      "items": {}
      }
     },
     "required": [
@@ -38208,11 +38178,27 @@
        "null"
       ],
       "properties": {
-       "comment": {},
-       "created_at": {},
-       "id": {},
-       "processed_at": {},
-       "status": {}
+       "comment": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "processed_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string"
+       }
       },
       "required": [
        "comment",
@@ -38234,56 +38220,7 @@
     "properties": {
      "demandes": {
       "type": "array",
-      "items": {
-       "type": "object",
-       "properties": {
-        "comment": {},
-        "created_at": {},
-        "id": {},
-        "payload": {},
-        "processed_at": {},
-        "staff_note": {},
-        "status": {},
-        "team": {
-         "type": "array",
-         "items": {
-          "type": "object",
-          "properties": {
-           "id": {},
-           "logo_url": {},
-           "name": {},
-           "short_name": {}
-          },
-          "required": [
-           "id",
-           "logo_url",
-           "name",
-           "short_name"
-          ]
-         }
-        },
-        "team_id": {},
-        "tournament_id": {},
-        "type": {},
-        "updated_at": {},
-        "user_id": {}
-       },
-       "required": [
-        "comment",
-        "created_at",
-        "id",
-        "payload",
-        "processed_at",
-        "staff_note",
-        "status",
-        "team",
-        "team_id",
-        "tournament_id",
-        "type",
-        "updated_at",
-        "user_id"
-       ]
-      }
+      "items": {}
      }
     },
     "required": [
@@ -38297,37 +38234,7 @@
     "properties": {
      "demandes": {
       "type": "array",
-      "items": {
-       "type": "object",
-       "properties": {
-        "comment": {},
-        "created_at": {},
-        "id": {},
-        "payload": {},
-        "processed_at": {},
-        "staff_note": {},
-        "status": {},
-        "team_id": {},
-        "tournament_id": {},
-        "type": {},
-        "updated_at": {},
-        "user_id": {}
-       },
-       "required": [
-        "comment",
-        "created_at",
-        "id",
-        "payload",
-        "processed_at",
-        "staff_note",
-        "status",
-        "team_id",
-        "tournament_id",
-        "type",
-        "updated_at",
-        "user_id"
-       ]
-      }
+      "items": {}
      },
      "status": {
       "type": "object",
@@ -38513,56 +38420,7 @@
     "properties": {
      "demandes": {
       "type": "array",
-      "items": {
-       "type": "object",
-       "properties": {
-        "comment": {},
-        "created_at": {},
-        "id": {},
-        "payload": {},
-        "processed_at": {},
-        "staff_note": {},
-        "status": {},
-        "team": {
-         "type": "array",
-         "items": {
-          "type": "object",
-          "properties": {
-           "id": {},
-           "logo_url": {},
-           "name": {},
-           "short_name": {}
-          },
-          "required": [
-           "id",
-           "logo_url",
-           "name",
-           "short_name"
-          ]
-         }
-        },
-        "team_id": {},
-        "tournament_id": {},
-        "type": {},
-        "updated_at": {},
-        "user_id": {}
-       },
-       "required": [
-        "comment",
-        "created_at",
-        "id",
-        "payload",
-        "processed_at",
-        "staff_note",
-        "status",
-        "team",
-        "team_id",
-        "tournament_id",
-        "type",
-        "updated_at",
-        "user_id"
-       ]
-      }
+      "items": {}
      }
     },
     "required": [
@@ -38576,56 +38434,7 @@
     "properties": {
      "demandes": {
       "type": "array",
-      "items": {
-       "type": "object",
-       "properties": {
-        "comment": {},
-        "created_at": {},
-        "id": {},
-        "payload": {},
-        "processed_at": {},
-        "staff_note": {},
-        "status": {},
-        "team": {
-         "type": "array",
-         "items": {
-          "type": "object",
-          "properties": {
-           "id": {},
-           "logo_url": {},
-           "name": {},
-           "short_name": {}
-          },
-          "required": [
-           "id",
-           "logo_url",
-           "name",
-           "short_name"
-          ]
-         }
-        },
-        "team_id": {},
-        "tournament_id": {},
-        "type": {},
-        "updated_at": {},
-        "user_id": {}
-       },
-       "required": [
-        "comment",
-        "created_at",
-        "id",
-        "payload",
-        "processed_at",
-        "staff_note",
-        "status",
-        "team",
-        "team_id",
-        "tournament_id",
-        "type",
-        "updated_at",
-        "user_id"
-       ]
-      }
+      "items": {}
      }
     },
     "required": [
@@ -38872,43 +38681,7 @@
    }
   },
   "GET /api/invitations/{token}": {
-   "200": {
-    "type": "object",
-    "properties": {
-     "emailHint": {
-      "type": "string"
-     },
-     "expiresAt": {
-      "type": "string"
-     },
-     "kind": {
-      "type": "string"
-     },
-     "role": {
-      "type": "string"
-     },
-     "status": {
-      "type": "string",
-      "enum": [
-       "accepted",
-       "expired",
-       "pending",
-       "revoked"
-      ]
-     },
-     "tenantName": {
-      "type": "string"
-     }
-    },
-    "required": [
-     "emailHint",
-     "expiresAt",
-     "kind",
-     "role",
-     "status",
-     "tenantName"
-    ]
-   }
+   "200": {}
   },
   "GET /api/leagues": {
    "200": {
@@ -52053,6 +51826,9 @@
     ]
    }
   },
+  "GET /api/teams/invitations/by-token": {
+   "200": {}
+  },
   "GET /api/teams/invite-links": {
    "200": {
     "type": "object",
@@ -52064,10 +51840,7 @@
       ],
       "properties": {
        "created_at": {
-        "type": [
-         "string",
-         "null"
-        ]
+        "type": "string"
        },
        "expires_at": {
         "type": "string"
@@ -52142,48 +51915,7 @@
    }
   },
   "GET /api/teams/invite-links/by-token": {
-   "200": {
-    "type": "object",
-    "properties": {
-     "battle_tag_required": {
-      "type": "boolean"
-     },
-     "expires_at": {
-      "type": "string"
-     },
-     "remaining_uses": {
-      "type": [
-       "number",
-       "null"
-      ]
-     },
-     "role": {
-      "type": "string"
-     },
-     "team": {
-      "type": "object",
-      "properties": {
-       "logo_url": {},
-       "name": {},
-       "short_name": {},
-       "slug": {}
-      },
-      "required": [
-       "logo_url",
-       "name",
-       "short_name",
-       "slug"
-      ]
-     }
-    },
-    "required": [
-     "battle_tag_required",
-     "expires_at",
-     "remaining_uses",
-     "role",
-     "team"
-    ]
-   }
+   "200": {}
   },
   "GET /api/teams/join-requests": {
    "200": {
@@ -52314,7 +52046,10 @@
            ]
           },
           "id": {
-           "type": "string"
+           "type": [
+            "string",
+            "null"
+           ]
           }
          },
          "required": [
@@ -53227,7 +52962,10 @@
            ]
           },
           "id": {
-           "type": "string"
+           "type": [
+            "string",
+            "null"
+           ]
           }
          },
          "required": [
@@ -76890,35 +76628,11 @@
     "type": "object",
     "properties": {
      "demande": {
-      "type": "object",
-      "properties": {
-       "comment": {},
-       "created_at": {},
-       "id": {},
-       "payload": {},
-       "processed_at": {},
-       "staff_note": {},
-       "status": {},
-       "team_id": {},
-       "tournament_id": {},
-       "type": {},
-       "updated_at": {},
-       "user_id": {}
-      },
-      "required": [
-       "comment",
-       "created_at",
-       "id",
-       "payload",
-       "processed_at",
-       "staff_note",
-       "status",
-       "team_id",
-       "tournament_id",
-       "type",
-       "updated_at",
-       "user_id"
-      ]
+      "type": [
+       "object",
+       "null"
+      ],
+      "additionalProperties": {}
      },
      "message": {
       "type": "string"
@@ -76962,35 +76676,11 @@
     "type": "object",
     "properties": {
      "demande": {
-      "type": "object",
-      "properties": {
-       "comment": {},
-       "created_at": {},
-       "id": {},
-       "payload": {},
-       "processed_at": {},
-       "staff_note": {},
-       "status": {},
-       "team_id": {},
-       "tournament_id": {},
-       "type": {},
-       "updated_at": {},
-       "user_id": {}
-      },
-      "required": [
-       "comment",
-       "created_at",
-       "id",
-       "payload",
-       "processed_at",
-       "staff_note",
-       "status",
-       "team_id",
-       "tournament_id",
-       "type",
-       "updated_at",
-       "user_id"
-      ]
+      "type": [
+       "object",
+       "null"
+      ],
+      "additionalProperties": {}
      },
      "message": {
       "type": "string"
@@ -77011,35 +76701,11 @@
     "type": "object",
     "properties": {
      "demande": {
-      "type": "object",
-      "properties": {
-       "comment": {},
-       "created_at": {},
-       "id": {},
-       "payload": {},
-       "processed_at": {},
-       "staff_note": {},
-       "status": {},
-       "team_id": {},
-       "tournament_id": {},
-       "type": {},
-       "updated_at": {},
-       "user_id": {}
-      },
-      "required": [
-       "comment",
-       "created_at",
-       "id",
-       "payload",
-       "processed_at",
-       "staff_note",
-       "status",
-       "team_id",
-       "tournament_id",
-       "type",
-       "updated_at",
-       "user_id"
-      ]
+      "type": [
+       "object",
+       "null"
+      ],
+      "additionalProperties": {}
      },
      "message": {
       "type": "string"
@@ -77060,35 +76726,11 @@
     "type": "object",
     "properties": {
      "demande": {
-      "type": "object",
-      "properties": {
-       "comment": {},
-       "created_at": {},
-       "id": {},
-       "payload": {},
-       "processed_at": {},
-       "staff_note": {},
-       "status": {},
-       "team_id": {},
-       "tournament_id": {},
-       "type": {},
-       "updated_at": {},
-       "user_id": {}
-      },
-      "required": [
-       "comment",
-       "created_at",
-       "id",
-       "payload",
-       "processed_at",
-       "staff_note",
-       "status",
-       "team_id",
-       "tournament_id",
-       "type",
-       "updated_at",
-       "user_id"
-      ]
+      "type": [
+       "object",
+       "null"
+      ],
+      "additionalProperties": {}
      },
      "message": {
       "type": "string"
@@ -77109,35 +76751,11 @@
     "type": "object",
     "properties": {
      "demande": {
-      "type": "object",
-      "properties": {
-       "comment": {},
-       "created_at": {},
-       "id": {},
-       "payload": {},
-       "processed_at": {},
-       "staff_note": {},
-       "status": {},
-       "team_id": {},
-       "tournament_id": {},
-       "type": {},
-       "updated_at": {},
-       "user_id": {}
-      },
-      "required": [
-       "comment",
-       "created_at",
-       "id",
-       "payload",
-       "processed_at",
-       "staff_note",
-       "status",
-       "team_id",
-       "tournament_id",
-       "type",
-       "updated_at",
-       "user_id"
-      ]
+      "type": [
+       "object",
+       "null"
+      ],
+      "additionalProperties": {}
      },
      "message": {
       "type": "string"
@@ -77268,29 +76886,7 @@
    }
   },
   "POST /api/invitations/{token}": {
-   "200": {
-    "type": "object",
-    "properties": {
-     "kind": {
-      "type": "string"
-     },
-     "role": {
-      "type": "string"
-     },
-     "status": {
-      "type": "string"
-     },
-     "tenantName": {
-      "type": "string"
-     }
-    },
-    "required": [
-     "kind",
-     "role",
-     "status",
-     "tenantName"
-    ]
-   }
+   "200": {}
   },
   "POST /api/matches/{matchId}/games": {
    "201": {
@@ -78659,7 +78255,9 @@
      "role": {
       "type": "string"
      },
-     "teamId": {},
+     "teamId": {
+      "type": "string"
+     },
      "teamMemberId": {
       "type": "string"
      },
@@ -78784,20 +78382,7 @@
      },
      "team": {
       "type": "object",
-      "properties": {
-       "discord_role_id": {},
-       "id": {},
-       "is_joinable": {},
-       "name": {},
-       "slug": {}
-      },
-      "required": [
-       "discord_role_id",
-       "id",
-       "is_joinable",
-       "name",
-       "slug"
-      ]
+      "additionalProperties": {}
      },
      "tournament": {
       "type": "object",
@@ -78834,11 +78419,67 @@
      }
     },
     "required": [
-     "accessEmail",
-     "info",
      "team"
     ]
    }
+  },
+  "POST /api/teams/invitations": {
+   "201": {
+    "type": "object",
+    "properties": {
+     "email_sent": {
+      "type": "boolean"
+     },
+     "invitation": {
+      "type": "object",
+      "properties": {
+       "expires_at": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "role": {
+        "type": "string",
+        "enum": [
+         "coach",
+         "manager",
+         "player",
+         "substitute"
+        ]
+       },
+       "set_captain": {
+        "type": "boolean"
+       },
+       "team_id": {
+        "type": "string"
+       },
+       "user_id": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "expires_at",
+       "id",
+       "role",
+       "set_captain",
+       "team_id",
+       "user_id"
+      ]
+     },
+     "invite_url": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "email_sent",
+     "invitation",
+     "invite_url"
+    ]
+   }
+  },
+  "POST /api/teams/invitations/by-token": {
+   "200": {}
   },
   "POST /api/teams/invitations/{invitationId}": {
    "200": {
@@ -78905,10 +78546,7 @@
       "type": "object",
       "properties": {
        "created_at": {
-        "type": [
-         "string",
-         "null"
-        ]
+        "type": "string"
        },
        "expires_at": {
         "type": "string"
@@ -78990,6 +78628,9 @@
     ]
    }
   },
+  "POST /api/teams/invite-links/by-token": {
+   "200": {}
+  },
   "POST /api/teams/join-requests": {
    "200": {
     "type": "object",
@@ -79040,6 +78681,7 @@
      {
       "type": "object",
       "properties": {
+       "dissolved": {},
        "info": {
         "type": "string"
        },
@@ -82869,11 +82511,7 @@
   "pages/api/cron/quota-alerts.ts:114",
   "pages/api/cron/quota-alerts.ts:211",
   "pages/api/cron/tenant-purge.ts:163",
-  "pages/api/invitations/[token].ts:145",
   "pages/api/player/team-reviews.ts:384",
-  "pages/api/teams/invitations/index.ts:314",
-  "pages/api/teams/invite-links/by-token.ts:229",
-  "pages/api/teams/invite-links/by-token.ts:307",
   "pages/api/teams/matches/[matchId]/lineup.ts:295"
  ]
 }

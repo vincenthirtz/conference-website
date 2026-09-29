@@ -461,3 +461,123 @@ export type TeamMemberRightChange = {
   permission: TeamPermission;
   userId: string;
 };
+
+/* ------------------------------------------------------------------------
+ * Éditeur de page publique — /team/[slug]/edit (SSR) et PATCH public-page
+ * ---------------------------------------------------------------------- */
+
+/** Équipe telle que la charge l'éditeur (colonnes éditables, en l'état). */
+export type EditableTeamDto = {
+  id: string;
+  slug: string;
+  name: string;
+  short_name: string | null;
+  logo_url: string | null;
+  /** Chemin de bucket ; l'URL publique est résolue à part (`tcgImageUrl`). */
+  tcg_image_path: string | null;
+  banner_url: string | null;
+  description: string | null;
+  public_content: string | null;
+  accent_color: string | null;
+  secondary_color: string | null;
+  banner_overlay: string | null;
+  banner_focal: string | null;
+  twitter: string | null;
+  discord: string | null;
+  website: string | null;
+  youtube: string | null;
+  twitch: string | null;
+  instagram: string | null;
+  tiktok: string | null;
+  achievements:
+    | { title: string; date: string | null; tournament: string | null }[]
+    | null;
+  sponsors:
+    | { name: string; logo_url: string | null; url: string | null }[]
+    | null;
+  embed_provider: string | null;
+  embed_id: string | null;
+  pinned_announcement: string | null;
+  pinned_announcement_until: string | null;
+  captain_id: string | null;
+};
+
+/** Membre éditable (fiche publique du membre), capitanat affiché. */
+export type EditableMemberDto = {
+  id: string;
+  user_id: string;
+  battle_tag: string | null;
+  role: string | null;
+  is_captain: boolean;
+  is_substitute: boolean;
+  display_name: string | null;
+  specialty: string | null;
+  avatar_url: string | null;
+  pronouns: string | null;
+  tagline: string | null;
+  twitter: string | null;
+  twitch: string | null;
+};
+
+/** Props de l'éditeur, rendues par le service. */
+export type TeamPageEditorData = {
+  team: EditableTeamDto;
+  /** URL publique de l'illustration TCG, `null` si l'équipe n'en a pas. */
+  tcgImageUrl: string | null;
+  members: EditableMemberDto[];
+};
+
+const editorText = z.string();
+const editorList = <T extends z.ZodType>(item: T) => z.array(item);
+
+/**
+ * Formulaire de l'éditeur (useSchemaForm) : valeurs des CHAMPS → corps de
+ * PATCH /api/teams/{teamId}/public-page, tel que la page l'envoyait. Les
+ * règles (longueurs, couleurs, URLs, intégration) restent celles du serveur ;
+ * couleur et intégration invalides sont signalées avant l'envoi par l'écran.
+ */
+export const TeamPageEditorForm = z
+  .object({
+    description: editorText,
+    public_content: editorText,
+    accent_color: editorText,
+    secondary_color: editorText,
+    banner_overlay: editorText,
+    banner_focal: editorText,
+    logo_url: editorText,
+    banner_url: editorText,
+    twitter: editorText,
+    discord: editorText,
+    website: editorText,
+    youtube: editorText,
+    twitch: editorText,
+    instagram: editorText,
+    tiktok: editorText,
+    achievements: editorList(
+      z.object({
+        title: z.string(),
+        date: z.string().nullable(),
+        tournament: z.string().nullable(),
+      })
+    ),
+    sponsors: editorList(
+      z.object({
+        name: z.string(),
+        logo_url: z.string().nullable(),
+        url: z.string().nullable(),
+      })
+    ),
+    embed_url: editorText,
+    pinned_announcement: editorText,
+    /** `datetime-local` (heure locale) ; converti en ISO à l'envoi. */
+    pinned_until: editorText,
+  })
+  .transform(({ embed_url, pinned_until, ...rest }) => ({
+    ...rest,
+    embed_url: embed_url || null,
+    pinned_announcement_until: pinned_until
+      ? new Date(pinned_until).toISOString()
+      : null,
+  }));
+export type TeamPageEditorValues = z.input<typeof TeamPageEditorForm>;
+export type TeamPageEditorPayload = z.output<typeof TeamPageEditorForm>;

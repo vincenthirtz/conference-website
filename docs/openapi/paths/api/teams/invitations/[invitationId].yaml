@@ -6,9 +6,10 @@ parameters:
       type: string
       format: uuid
   - $ref: '#/components/parameters/TeamScope'
-  - $ref: '#/components/parameters/SubjectAs'
-  - $ref: '#/components/parameters/ActAs'
 post:
+  parameters:
+    - $ref: '#/components/parameters/SubjectAs'
+    - $ref: '#/components/parameters/ActAs'
   tags:
     - public/teams
   summary: Relancer une invitation en attente.
@@ -66,6 +67,9 @@ post:
     '429':
       $ref: '#/components/responses/RateLimited'
 delete:
+  parameters:
+    - $ref: '#/components/parameters/SubjectAs'
+    - $ref: '#/components/parameters/ActAs'
   tags:
     - public/teams
   summary: Annuler une invitation en attente.

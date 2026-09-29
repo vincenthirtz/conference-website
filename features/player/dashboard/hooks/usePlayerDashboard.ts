@@ -31,6 +31,8 @@ import {
 } from '@/utils/teams/clientPermissions';
 import type { TeamPermission } from '@/utils/teamRoles';
 import { dashboardClient } from '../client';
+import { scrimsClient } from '@/features/player/scrims/client';
+import type { ScrimRequestDecisionInput } from '@/features/player/scrims/schemas';
 import type { NextMatchSection, TodoItem } from '../schemas';
 
 export type DashboardTeam = {
@@ -186,7 +188,9 @@ export function usePlayerDashboard(args: {
   };
 
   // Négociation multi-créneaux : 'accept' + { slot }, 'counter' + { slots },
-  // 'reject' (confirmé — destructif). Stable : les cartes mémoïsées ne se
+  // 'reject' (confirmé — destructif). La carte envoie un corps DÉJÀ validé
+  // (créneau choisi ; contre-proposition sur schéma, en ISO) : ici, seulement
+  // la confirmation et l'appel. Stable : les cartes mémoïsées ne se
   // re-rendent pas à chaque changement d'état du tableau de bord.
   const scrimAction = useCallback(
     async (
@@ -195,26 +199,9 @@ export function usePlayerDashboard(args: {
       payload?: ScrimActionPayload
     ) => {
       setScrimError(null);
-      let body: Record<string, unknown> = { demandeId, action };
-      if (action === 'accept') {
-        const slot = payload?.slot;
-        if (!slot) {
-          setScrimError(t.selectSlotFirst);
-          return;
-        }
-        body = { ...body, slot };
-      }
-      if (action === 'counter') {
-        const slots = (payload?.slots || [])
-          .map((s) => s.trim())
-          .filter(Boolean)
-          .map((s) => new Date(s).toISOString());
-        if (slots.length === 0) {
-          setScrimError(t.atLeastOneSlot);
-          return;
-        }
-        body = { ...body, slots };
-      }
+      const body: ScrimRequestDecisionInput = { demandeId, action };
+      if (action === 'accept') body.slot = payload?.slot;
+      if (action === 'counter') body.slots = payload?.slots;
       if (action === 'reject') {
         const ok = await confirm({
           title: t.rejectConfirmTitle,
@@ -227,7 +214,7 @@ export function usePlayerDashboard(args: {
       }
       setScrimActionId(demandeId);
       try {
-        await dashboardClient.scrimAction(scope, body);
+        await scrimsClient.decideRequest(scope, body);
         // Accepter, refuser ou renvoyer la balle : la carte quitte MA liste.
         setPendingScrims((prev) => prev.filter((s) => s.id !== demandeId));
       } catch (err) {
@@ -244,8 +231,8 @@ export function usePlayerDashboard(args: {
   useEffect(() => {
     if (!ready || !token || !canManageScrims) return;
     let cancelled = false;
-    dashboardClient
-      .scrimPlannings<{ plannings?: unknown }>(scope)
+    scrimsClient
+      .plannings(scope)
       .then((data) => {
         if (!cancelled && Array.isArray(data?.plannings)) {
           setScrimPlannings(data.plannings as PlanningEntry[]);

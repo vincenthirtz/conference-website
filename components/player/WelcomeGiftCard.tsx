@@ -8,7 +8,7 @@
 // distribution, n'a pas de cadeau. Afficher « aucun cadeau » lui apprendrait
 // seulement qu'elle a raté quelque chose.
 //
-// ELLE SUIT LE SUJET. La lecture passe par `withSubject`, et la route
+// ELLE SUIT LE SUJET. La lecture porte `?as=` (`tcgClient.welcomeGift`), et la route
 // (`/api/player/tcg/welcome-gift`) est écrite avec `withSubjectRoute` : en
 // inspection admin, l'écran montre le cadeau de la personne inspectée, pas
 // celui du staff qui regarde. C'est la première route `tcg/` à le faire —
@@ -25,10 +25,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 
-import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
+import { tcgClient } from '@/features/player/tcg/client';
 import { useT, format } from '@/lib/i18n/useT';
-import type { PlayerWelcomeGiftResponse } from '../../pages/api/player/tcg/welcome-gift';
+import type { PlayerWelcomeGiftResponse } from '@/features/player/tcg/schemas';
 import { logger } from '../../utils/logger';
 import nsPlayerIndex from '@/lib/i18n/locales/fr/playerIndex';
 
@@ -46,8 +46,7 @@ export default function WelcomeGiftCard({
   data?: PlayerWelcomeGiftResponse | null;
 }) {
   const t = useT(nsPlayerIndex);
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
-  const { withSubject } = usePlayerArea();
+  const { subjectId, isActingAs } = usePlayerArea();
   const selfLoads = data === undefined;
   const [fetchedGift, setGift] = useState<
     PlayerWelcomeGiftResponse['gift'] | undefined
@@ -56,10 +55,11 @@ export default function WelcomeGiftCard({
 
   const load = useCallback(async () => {
     try {
-      const payload = await adminFetchJson<PlayerWelcomeGiftResponse>(
-        withSubject('/api/player/tcg/welcome-gift'),
-        { skipAuthRedirect: true }
-      );
+      const payload = await tcgClient.welcomeGift({
+        subjectId,
+        actAs: isActingAs,
+        teamId: null,
+      });
       setGift(payload.gift);
     } catch (err) {
       logger.error('[WelcomeGiftCard] load error', err);
@@ -67,7 +67,7 @@ export default function WelcomeGiftCard({
       // attente indéfinie.
       setGift(null);
     }
-  }, [adminFetchJson, withSubject]);
+  }, [subjectId, isActingAs]);
 
   useEffect(() => {
     if (!selfLoads) return;

@@ -20,6 +20,7 @@ import { useSession } from '@/hooks/useSession';
 import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import nsTeamJoinLink from '@/lib/i18n/locales/fr/teamJoinLink';
+import { invitationsClient } from '@/utils/invitations/tokenClient';
 
 type JoinLinkInfo = {
   team: {
@@ -62,19 +63,19 @@ function JoinByLinkPage() {
     }
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/teams/invite-links/by-token?token=${encodeURIComponent(token)}`)
+    invitationsClient
+      .readJoinLink<JoinLinkInfo>(token)
       .then(async (res) => {
-        const json = await res.json().catch(() => null);
+        const json = res.json;
         if (cancelled) return;
         if (!res.ok) {
           // Ce jeton n'est pas un lien d'équipe partageable — mais il peut être
           // une invitation NOMINATIVE collée dans la mauvaise barre d'adresse.
           // On demande sa famille avant de conclure à l'inexistence : « lien
           // invalide » sur un lien valide est le pire des messages.
-          const probe = await fetch(
-            `/api/invitations/${encodeURIComponent(token)}`
-          )
-            .then((r) => (r.ok ? r.json() : null))
+          const probe = await invitationsClient
+            .read<{ kind?: string }>(token)
+            .then((r) => (r.ok ? r.json : null))
             .catch(() => null);
           if (cancelled) return;
           if (probe?.kind === 'tenant' || probe?.kind === 'team') {
@@ -102,19 +103,14 @@ function JoinByLinkPage() {
     setJoining(true);
     setActionError(null);
     try {
-      const res = await fetch('/api/teams/invite-links/by-token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({
-          token,
-          battle_tag: battleTag.trim() || null,
-          specialty: specialty || null,
-        }),
+      const res = await invitationsClient.joinByLink<{
+        already_member?: boolean;
+      }>(authToken, {
+        token,
+        battle_tag: battleTag.trim() || null,
+        specialty: specialty || null,
       });
-      const json = await res.json().catch(() => null);
+      const json = res.json;
       if (!res.ok) {
         setActionError(json?.error || t.errorAction);
         return;

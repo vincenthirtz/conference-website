@@ -1,357 +1,42 @@
-// pages/player/requests.tsx
-// Page pour demander un transfert de joueur ou un scrim contre une autre equipe
+// pages/player/requests.tsx — demandes ÉMISES par la joueuse : transfert
+// (pour soi ou proposé pour une coéquipière) et scrim. Coquille : l'état et
+// les gestes vivent dans features/player/demandes (lot P11).
 
-import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
-import { useDebounce } from '@/hooks/useDebounce';
-import { useManagedTeam } from '@/hooks/useManagedTeam';
-import { makeTeamPermissionCheck } from '@/utils/teams/clientPermissions';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
-import RequestTabs, {
-  REQUESTS_TAB_BASE,
-} from '@/components/player/requests/RequestTabs';
 import { tabButtonId, tabPanelId } from '@/components/ui/Tabs';
-import TransferRequestForm from '@/components/player/requests/TransferRequestForm';
-import ScrimRequestForm from '@/components/player/requests/ScrimRequestForm';
-import type { Team } from '@/components/player/requests/types';
-import { useToast } from '@/components/Toast';
-import { useT, format } from '@/lib/i18n/useT';
+import { Card, PageHeader } from '@/features/ruban';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-
-import { logger } from '../../utils/logger';
-import nsPlayerRequests from '@/lib/i18n/locales/fr/playerRequests';
-import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 import { loginHrefFor } from '@/utils/player/sessionExpiry';
 import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
-
-type Tab = 'transfer' | 'scrim';
+import { withPlayerQuery } from '@/features/player/_shared/query';
+import { useRequestsScreen } from '@/features/player/demandes/hooks/useRequestsScreen';
+import RequestTabs, {
+  REQUESTS_TAB_BASE,
+} from '@/features/player/demandes/ui/RequestTabs';
+import TransferRequestForm from '@/features/player/demandes/ui/TransferRequestForm';
+import ScrimRequestForm from '@/features/player/demandes/ui/ScrimRequestForm';
+import { ErrorBanner } from '@/features/player/demandes/ui/formPrimitives';
 
 function PlayerRequestsPage() {
   const router = useRouter();
-  // Retour à CETTE page après connexion (`?next=`), requête comprise — sans
-  // quoi un lien partagé (`?tab=scrim&team=…`, un mail, une notification)
-  // perdait sa destination. Avant hydratation `asPath` n'est pas fiable :
-  // repli sur `/player/requests`.
-  const {
-    user,
-    token,
-    loading: authLoading,
-    ready,
-  } = usePlayerSession({
+  // Retour à CETTE page après connexion (`?next=`), requête comprise — un
+  // lien partagé (`?tab=scrim&team=…`) garde sa destination. Avant
+  // hydratation `asPath` n'est pas fiable : repli sur `/player/requests`.
+  const { user, loading: authLoading } = usePlayerSession({
     redirectTo: loginHrefFor(
       router.isReady ? router.asPath : '/player/requests'
     ),
   });
-  const {
-    data: managedTeam,
-    loading: teamLoading,
-    error: teamError,
-  } = useManagedTeam();
-  const t = useT(nsPlayerRequests);
-  const { addToast } = useToast();
-  const { withTeam } = useActiveTeam();
-  const [tab, setTab] = useState<Tab>('transfer');
-  // Which field a validation error concerns, so we only flag the relevant input
-  // as aria-invalid (not every input on the form).
-  const [errorField, setErrorField] = useState<
-    'team' | 'player' | 'slots' | null
-  >(null);
+  const screen = useRequestsScreen(user?.id ?? null);
+  const { t, tab } = screen;
 
-  // Contexte joueur — derive depuis le cache partage useManagedTeam.
-  const hasTeam = !!managedTeam?.team;
-  const isCaptain = managedTeam?.isCaptain ?? false;
-  const myTeamId = managedTeam?.team?.id ?? null;
-  /**
-   * Permissions EFFECTIVES : `isManager` ne dit que « ce rôle accorde au moins
-   * une permission ». Une coach (scrims + feuille de match) se voyait donc
-   * proposer le transfert d'une coéquipière, refusé ensuite par
-   * /api/demandes/transfer.
-   */
-  const can = makeTeamPermissionCheck(managedTeam?.permissions ?? []);
-  const canProposeTransfer = can('manage_roster');
-  const canManageScrims = can('manage_scrims');
-
-  // Equipes
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [teamsLoading, setTeamsLoading] = useState(false);
-  const [selectedTeamId, setSelectedTeamId] = useState('');
-  const [teamSearch, setTeamSearch] = useState('');
-
-  // Transfert
-  const [desiredRole, setDesiredRole] = useState<
-    'player' | 'substitute' | 'coach'
-  >('player');
-  const [transferMode, setTransferMode] = useState<'self' | 'propose'>('self');
-  const [teamMembers, setTeamMembers] = useState<
-    {
-      user_id: string;
-      role: string;
-      battle_tag: string | null;
-      display_name?: string;
-    }[]
-  >([]);
-  const [selectedPlayerId, setSelectedPlayerId] = useState('');
-
-  // Scrim — multi-slot negotiation. Each entry is a `datetime-local` value;
-  // converted to ISO on submit. Always at least one row.
-  const [scrimSlots, setScrimSlots] = useState<string[]>(['']);
-
-  // Commun
-  const [message, setMessage] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
-  const debouncedSearch = useDebounce(teamSearch, 300);
-
-  const loadTeams = useCallback(async (search?: string) => {
-    setTeamsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search?.trim()) params.set('search', search.trim());
-      params.set('limit', '50');
-      const res = await fetch(`/api/teams?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setTeams(data.teams || []);
-      }
-    } catch (err) {
-      logger.error('[requests] load teams error:', err);
-    } finally {
-      setTeamsLoading(false);
-    }
-  }, []);
-
-  const loading = authLoading || teamLoading;
-
-  // Surface a connection error if the shared team fetch failed.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
-  useEffect(() => {
-    if (teamError) setError(t.connectionError);
-  }, [teamError]);
-
-  // Derive the transfer-target roster (captains/managers can propose a
-  // teammate) from the shared payload, excluding the current user.
-  useEffect(() => {
-    if (!user || !managedTeam?.team) {
-      setTeamMembers([]);
-      return;
-    }
-    // Cibles proposables = seulement si le rôle couvre `manage_roster`.
-    if (canProposeTransfer) {
-      setTeamMembers(
-        managedTeam.members
-          .filter((m) => m.user_id && m.user_id !== user.id)
-          .map((m) => ({
-            user_id: m.user_id as string,
-            role: m.role ?? 'player',
-            battle_tag: m.battle_tag,
-          }))
-      );
-    } else {
-      setTeamMembers([]);
-    }
-    // `canProposeTransfer` dérive de `managedTeam` : la dépendance est
-    // redondante, mais explicite (et le booléen ne change pas d'identité).
-  }, [user, managedTeam, canProposeTransfer]);
-
-  // Pre-select the scrim tab from the URL.
-  useEffect(() => {
-    if (router.query.tab === 'scrim') setTab('scrim');
-  }, [router.query.tab]);
-
-  // Pré-sélection de l'adversaire depuis l'URL (R3) : `?tab=scrim&team=<id>`.
-  // C'est ce qui permet d'arriver ici DEPUIS un contexte (fiche d'équipe, hub
-  // scrims) avec l'adversaire déjà choisi, au lieu de le rechercher à la main
-  // dans une liste alphabétique.
-  useEffect(() => {
-    const target = router.query.team;
-    if (typeof target === 'string' && target && target !== myTeamId) {
-      setSelectedTeamId(target);
-    }
-  }, [router.query.team, myTeamId]);
-
-  // Recharge la liste d'equipes quand la recherche (debouncee) change.
-  useEffect(() => {
-    if (!ready) return;
-    loadTeams(debouncedSearch);
-  }, [debouncedSearch, ready, loadTeams]);
-
-  const handleTabChange = (newTab: Tab) => {
-    setTab(newTab);
-    setSelectedTeamId('');
-    setSelectedPlayerId('');
-    setTransferMode('self');
-    setMessage('');
-    setScrimSlots(['']);
-    setError(null);
-    setErrorField(null);
-    setSuccess(null);
-    // Keep the URL in sync so the tab is shareable / survives a reload.
-    router.replace(
-      { pathname: router.pathname, query: { tab: newTab } },
-      undefined,
-      { shallow: true }
-    );
-  };
-
-  const handleSubmitTransfer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // Garde anti double-submit : le disabled ne protège pas d'un double-Enter
-    // envoyé avant le re-render.
-    if (submitting) return;
-    setError(null);
-    setErrorField(null);
-
-    if (!selectedTeamId) {
-      setError(t.errSelectTargetTeam);
-      setErrorField('team');
-      return;
-    }
-
-    if (transferMode === 'propose' && !selectedPlayerId) {
-      setError(t.errSelectPlayer);
-      setErrorField('player');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const bodyData: Record<string, unknown> = {
-        teamId: selectedTeamId,
-        message: message.trim() || undefined,
-        desiredRole,
-      };
-
-      if (transferMode === 'propose') {
-        bodyData.targetPlayerId = selectedPlayerId;
-      }
-
-      const res = await fetch(withTeam('/api/demandes/transfer'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(bodyData),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || t.errCreateRequest);
-
-      const team = teams.find((tm) => tm.id === selectedTeamId);
-      let successMsg: string;
-      if (transferMode === 'propose') {
-        const player = teamMembers.find((m) => m.user_id === selectedPlayerId);
-        const playerName =
-          player?.display_name || player?.battle_tag || t.fallbackPlayer;
-        successMsg = format(t.successProposeTransfer, {
-          playerName,
-          teamName: team?.name || t.fallbackTeam,
-        });
-      } else {
-        successMsg = format(t.successSelfTransfer, {
-          teamName: team?.name || t.fallbackTeam,
-        });
-      }
-      setSuccess(successMsg);
-      addToast(successMsg, 'success');
-      // Reset the form in place so the captain can chain another request.
-      setSelectedTeamId('');
-      setSelectedPlayerId('');
-      setMessage('');
-    } catch (err: unknown) {
-      setError((err as Error).message || t.errGeneric);
-      setErrorField(null);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleSubmitScrim = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // Garde anti double-submit : le disabled ne protège pas d'un double-Enter
-    // envoyé avant le re-render.
-    if (submitting) return;
-    setError(null);
-    setErrorField(null);
-
-    if (!selectedTeamId) {
-      setError(t.errSelectOpponent);
-      setErrorField('team');
-      return;
-    }
-
-    // Convert filled `datetime-local` rows to ISO; require at least one.
-    const proposedSlots = scrimSlots
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .map((s) => new Date(s).toISOString());
-
-    if (proposedSlots.length === 0) {
-      setError(t.atLeastOneSlot);
-      setErrorField('slots');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const res = await fetch(withTeam('/api/demandes/scrim'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          teamId: selectedTeamId,
-          message: message.trim() || undefined,
-          proposedSlots,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || t.errCreateRequest);
-
-      const team = teams.find((tm) => tm.id === selectedTeamId);
-      const successMsg = format(t.successScrim, {
-        teamName: team?.name || t.fallbackTeam,
-      });
-      setSuccess(successMsg);
-      addToast(successMsg, 'success');
-      setSelectedTeamId('');
-      setMessage('');
-      setScrimSlots(['']);
-    } catch (err: unknown) {
-      setError((err as Error).message || t.errGeneric);
-      setErrorField(null);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Filtrer les equipes : exclure sa propre equipe
-  const filteredTeams = teams.filter((t) => t.id !== myTeamId);
-  // Pour le transfert, ne montrer que les equipes rejoignables
-  const transferTeams = filteredTeams.filter((t) => t.is_joinable);
-
-  // Onglet scrim : les équipes qui SE DÉCLARENT disponibles remontent en tête
-  // (R3). L'ordre alphabétique de l'API ne dit rien de l'envie de jouer ; ici,
-  // la première décision — « qui est dispo ? » — se lit d'un coup d'œil.
-  const scrimTeams = [...filteredTeams].sort((a, b) => {
-    const av = a.open_for_scrim ? 0 : 1;
-    const bv = b.open_for_scrim ? 0 : 1;
-    return av !== bv ? av - bv : a.name.localeCompare(b.name);
-  });
-
-  const displayTeams = tab === 'transfer' ? transferTeams : scrimTeams;
-
-  if (authLoading || loading) {
+  if (authLoading || screen.loading) {
     return <PlayerPageSkeleton rows={3} />;
   }
-
   if (!user) return null;
 
   return (
@@ -360,131 +45,61 @@ function PlayerRequestsPage() {
         <title>{t.pageTitleTab}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-        <main className="max-w-2xl mx-auto px-4 py-10 pt-header">
+      <div className="mx-auto flex w-full max-w-2xl flex-col px-4 pb-6 pt-header lg:px-6">
+        <Link
+          href="/player"
+          className="mb-6 inline-flex items-center gap-2 text-sm text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]"
+        >
+          &larr; {t.backToSpace}
+        </Link>
+
+        <PageHeader title={t.heading} subtitle={t.intro} />
+
+        <Card>
+          {/* Cette page n'émet que des demandes : les candidatures REÇUES se
+              traitent dans la gestion d'équipe. */}
           <Link
-            href="/player"
-            className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-6"
+            href="/player/manage-team"
+            className="mb-6 flex items-center justify-between gap-3 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-4 py-3 text-sm hover:bg-[var(--s2,#1d1520)]"
           >
-            &larr; {t.backToSpace}
+            <span>
+              <span className="block font-semibold text-[var(--t1,#f4edf7)]">
+                {t.receivedTitle}
+              </span>
+              <span className="block text-xs text-[var(--t3,#a39ba6)]">
+                {t.receivedDesc}
+              </span>
+            </span>
+            <span aria-hidden="true">&rarr;</span>
           </Link>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
-            <h1 className="text-2xl font-bold mb-2">{t.heading}</h1>
-            <p className="text-gray-400 text-sm mb-4">{t.intro}</p>
-
-            {/* Cette page n'émet que des demandes. Les candidatures REÇUES
-                vivent dans la gestion d'équipe — une capitaine qui cherche
-                « Demandes » atterrissait ici et n'y trouvait rien. Pas
-                d'ancre : la section candidatures de PlayerManageTeamScreen
-                n'en expose aucune. */}
-            <Link
-              href="/player/manage-team"
-              className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-purple-400/30 bg-purple-500/10 px-4 py-3 text-sm hover:bg-purple-500/20 transition"
-            >
-              <span>
-                <span className="block font-semibold text-white">
-                  {t.receivedTitle}
-                </span>
-                <span className="block text-xs text-gray-400">
-                  {t.receivedDesc}
-                </span>
-              </span>
-              <span aria-hidden="true" className="text-purple-300">
-                &rarr;
-              </span>
-            </Link>
-
-            {success && (
-              <div
-                id="requests-success"
-                role="status"
-                aria-live="polite"
-                className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200"
-              >
-                <svg
-                  className="w-5 h-5 flex-shrink-0 text-emerald-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <span>{success}</span>
-              </div>
-            )}
-
-            {/* Onglets */}
-            <RequestTabs tab={tab} onTabChange={handleTabChange} />
-
-            {/* Les identifiants viennent de la primitive : les écrire à la
-                main des deux côtés, c'était accepter qu'ils divergent le jour
-                où l'un des deux change. */}
-            <div
-              role="tabpanel"
-              id={tabPanelId(REQUESTS_TAB_BASE, tab)}
-              aria-labelledby={tabButtonId(REQUESTS_TAB_BASE, tab)}
-            >
-              {/* Contenu transfert */}
-              {tab === 'transfer' && (
-                <TransferRequestForm
-                  hasTeam={hasTeam}
-                  isCaptain={isCaptain}
-                  canProposeForOthers={canProposeTransfer}
-                  transferMode={transferMode}
-                  setTransferMode={setTransferMode}
-                  teamMembers={teamMembers}
-                  selectedPlayerId={selectedPlayerId}
-                  setSelectedPlayerId={setSelectedPlayerId}
-                  teamSearch={teamSearch}
-                  setTeamSearch={setTeamSearch}
-                  errorField={errorField}
-                  displayTeams={displayTeams}
-                  selectedTeamId={selectedTeamId}
-                  setSelectedTeamId={setSelectedTeamId}
-                  teamsLoading={teamsLoading}
-                  desiredRole={desiredRole}
-                  setDesiredRole={setDesiredRole}
-                  message={message}
-                  setMessage={setMessage}
-                  error={error}
-                  submitting={submitting}
-                  onSubmit={handleSubmitTransfer}
-                  setError={setError}
-                  setErrorField={setErrorField}
-                />
-              )}
-
-              {/* Contenu scrim */}
-              {tab === 'scrim' && (
-                <ScrimRequestForm
-                  hasTeam={hasTeam}
-                  canManageScrims={canManageScrims}
-                  teamSearch={teamSearch}
-                  setTeamSearch={setTeamSearch}
-                  errorField={errorField}
-                  displayTeams={displayTeams}
-                  selectedTeamId={selectedTeamId}
-                  setSelectedTeamId={setSelectedTeamId}
-                  teamsLoading={teamsLoading}
-                  scrimSlots={scrimSlots}
-                  setScrimSlots={setScrimSlots}
-                  message={message}
-                  setMessage={setMessage}
-                  error={error}
-                  submitting={submitting}
-                  onSubmit={handleSubmitScrim}
-                />
-              )}
+          {screen.connectionError && (
+            <div className="mb-6">
+              <ErrorBanner message={screen.connectionError} />
             </div>
+          )}
+
+          <p
+            id="requests-success"
+            role="status"
+            aria-live="polite"
+            className="text-sm text-[var(--ok,#30d07e)] empty:hidden [&:not(:empty)]:mb-6"
+          >
+            {screen.success}
+          </p>
+
+          <RequestTabs tab={tab} onTabChange={screen.changeTab} />
+
+          {/* Identifiants fournis par la primitive, des deux côtés. */}
+          <div
+            role="tabpanel"
+            id={tabPanelId(REQUESTS_TAB_BASE, tab)}
+            aria-labelledby={tabButtonId(REQUESTS_TAB_BASE, tab)}
+          >
+            {tab === 'transfer' && <TransferRequestForm screen={screen} />}
+            {tab === 'scrim' && <ScrimRequestForm screen={screen} />}
           </div>
-        </main>
+        </Card>
       </div>
     </>
   );
@@ -504,6 +119,6 @@ const playerRequestsSeo: SeoProps = {
 
 PlayerRequestsPage.seo = playerRequestsSeo;
 
-// Coquille joueuse (lot P8) : navigation basse / rail. La page garde sa
-// propre redirection de session (pas encore migrée) : `redirectTo` absent.
-export default withPlayerShell(PlayerRequestsPage);
+// Coquille joueuse (lot P8) + cache joueuse (annuaire d'équipes). La page
+// garde sa propre redirection de session : `redirectTo` absent.
+export default withPlayerQuery(withPlayerShell(PlayerRequestsPage));

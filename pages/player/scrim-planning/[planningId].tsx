@@ -12,7 +12,7 @@ import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useTeamNames } from '@/hooks/useTeamNames';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
-import ScrimPlanningPanel from '@/components/player/ScrimPlanningPanel';
+import ScrimPlanningPanel from '@/features/player/scrims/ui/ScrimPlanningPanel';
 import { useT } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';

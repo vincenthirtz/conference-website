@@ -18,6 +18,7 @@ import { useSession } from '@/hooks/useSession';
 import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useT, format } from '@/lib/i18n/useT';
 import nsInvitationLink from '@/lib/i18n/locales/fr/invitationLink';
+import { invitationsClient } from '@/utils/invitations/tokenClient';
 
 export type TeamInvitationInfo = {
   team_name: string | null;
@@ -72,22 +73,12 @@ export default function TeamInvitationPanel({
       setActionLoading(action);
       setActionError(null);
       try {
-        const res = await fetch(
-          `/api/invitations/${encodeURIComponent(token)}`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              // La route accepte cookie OU Bearer : on envoie le Bearer quand
-              // `useSession` en a un, le cookie prend le relais sinon.
-              ...(authToken
-                ? { Authorization: `Bearer ${authToken}` }
-                : undefined),
-            },
-            body: JSON.stringify({ action }),
-          }
-        );
-        const json = await res.json().catch(() => null);
+        const res = await invitationsClient.respond<{
+          invited_email?: string;
+          session_email?: string;
+          promotedToCaptain?: boolean;
+        }>(token, { action, bearer: authToken });
+        const json = res.json;
         if (!res.ok) {
           // 403 « pas la destinataire » : on recompose le message côté client
           // pour l'avoir traduit, et surtout pour NOMMER les deux adresses.

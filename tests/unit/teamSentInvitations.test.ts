@@ -439,7 +439,11 @@ describe('méthodes non supportées', () => {
     );
 
     expect(res.statusCode).toBe(405);
-    expect(res.headers['Allow']).toBe('POST, DELETE');
+    // Liste de méthodes (le noyau defineSubjectRoute écrit `POST,DELETE`).
+    expect(String(res.headers['Allow']).split(/,\s*/)).toEqual([
+      'POST',
+      'DELETE',
+    ]);
   });
 
   it('la liste annonce GET et POST', async () => {
@@ -449,6 +453,6 @@ describe('méthodes non supportées', () => {
     await listHandler(makeReq({ method: 'DELETE' }), res);
 
     expect(res.statusCode).toBe(405);
-    expect(res.headers['Allow']).toBe('GET, POST');
+    expect(String(res.headers['Allow']).split(/,\s*/)).toEqual(['GET', 'POST']);
   });
 });

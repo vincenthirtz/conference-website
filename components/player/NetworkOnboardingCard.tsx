@@ -16,9 +16,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useT } from '@/lib/i18n/useT';
 import type { NetworkStatus } from '@/features/player/network/schemas';
+import { networkClient } from '@/features/player/network/client';
 import { logger } from '../../utils/logger';
 import nsNetworkOnboarding from '@/lib/i18n/locales/fr/networkOnboarding';
 
@@ -51,7 +51,6 @@ export default function NetworkOnboardingCard({
   status?: NetworkStatus | null;
 }) {
   const t = useT(nsNetworkOnboarding);
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const selfLoads = providedStatus === undefined;
   const [fetchedStatus, setStatus] = useState<NetworkStatus | null>(null);
   const status = selfLoads ? fetchedStatus : providedStatus;
@@ -67,15 +66,12 @@ export default function NetworkOnboardingCard({
 
   const load = useCallback(async () => {
     try {
-      const data = await adminFetchJson<NetworkStatus>(
-        '/api/player/network-status',
-        { skipAuthRedirect: true }
-      );
+      const data = await networkClient.networkStatus();
       setStatus(data);
     } catch (err) {
       logger.error('[NetworkOnboardingCard] load error', err);
     }
-  }, [adminFetchJson]);
+  }, []);
 
   useEffect(() => {
     if (!selfLoads) return;

@@ -9,6 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { PLAYER_SPACE_ROUTES } from '../../utils/layout/appChrome';
 
 const ROOT = path.resolve(__dirname, '../..');
 const FEATURES = 'features/admin';
@@ -206,13 +207,19 @@ describe('frontières des modules features/admin', () => {
       return out;
     };
     const posix = (rel: string) => rel.split(path.sep).join('/');
+    // Pages de l'espace joueuse HORS /player (`PLAYER_SPACE_ROUTES`,
+    // utils/layout/appChrome.ts : `/team/[slug]/edit`, check-in à jeton…) :
+    // réservées, pas publiques — la surface les traite déjà comme joueuses.
+    const routeOf = (rel: string) =>
+      rel.replace(/^pages/, '').replace(/(\/index)?\.tsx?$/, '') || '/';
     const publicEntries = walk('pages')
       .map(posix)
       .filter(
         (rel) =>
           !/^pages\/(admin|api|dev)\//.test(rel) &&
           (!rel.startsWith('pages/player/') ||
-            rel === 'pages/player/[userId].tsx')
+            rel === 'pages/player/[userId].tsx') &&
+          !PLAYER_SPACE_ROUTES.has(routeOf(rel))
       );
     expect(publicEntries.length).toBeGreaterThan(10);
 

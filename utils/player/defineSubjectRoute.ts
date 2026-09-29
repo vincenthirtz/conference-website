@@ -86,6 +86,12 @@ export type TeamRequirement = {
   permission: TeamPermission;
   /** Paramètre de query qui désigne l'équipe. Défaut `teamId`. */
   param?: string;
+  /**
+   * Code du refus 403, quand la route migrée en avait un historique
+   * (`FORBIDDEN`…) : le contrat HTTP ne change pas à la migration. Défaut
+   * `forbidden`.
+   */
+  forbiddenCode?: string;
 };
 
 /** Contexte reçu par un handler : de quoi appeler un service, sans HTTP. */
@@ -349,7 +355,12 @@ export function defineSubjectRoute(
             access,
             methodMeta.team.permission
           );
-          if (denied) throw new AdminError(403, 'forbidden', denied.error);
+          if (denied) {
+            const code = methodMeta.team.forbiddenCode;
+            throw code
+              ? new LegacyAdminError(403, denied.error, { code })
+              : new AdminError(403, 'forbidden', denied.error);
+          }
           team = access;
         }
 

@@ -19,6 +19,8 @@ import path from 'node:path';
 import { resetSupabaseMock, setAuthUser } from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
 import type { SubjectRouteHandler } from '../../utils/player/defineSubjectRoute';
+import type { TokenRouteHandler } from '../../utils/player/defineTokenRoute';
+import type { PublicRouteHandler } from '../../utils/player/definePublicRoute';
 
 const ROOT = path.resolve(__dirname, '../..');
 const CALLER = '33333333-3333-4333-8333-333333333333';
@@ -70,6 +72,44 @@ function makeRes(): any {
   return res;
 }
 
+/**
+ * Garde d'une route de jeton : sans session ni jeton, chaque méthode refuse
+ * AVANT le handler — 401 si elle exige une session (on ne dit rien du jeton
+ * à qui n'est pas connecté), sinon le refus « jeton invalide » (400/404).
+ * Aucune lecture de base : le mock n'a rien à rendre.
+ */
+async function refuseSansJeton(rel: string, route: TokenRouteHandler) {
+  const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  for (const [method, meta] of Object.entries(route.tokenRoute.methods)) {
+    const res = makeRes();
+    await route(makeReq(method, {}, false), res);
+    const expected = meta!.session === 'required' ? [401] : [400, 404];
+    expect(
+      expected,
+      `${rel} ${method} sans jeton ni session : reçu ${res.statusCode}`
+    ).toContain(res.statusCode);
+  }
+  spy.mockRestore();
+}
+
+/**
+ * Garde d'une route anonyme : une route publique qui crée des comptes ou
+ * envoie des e-mails DOIT déclarer l'anti-bot, et un corps sans captcha y est
+ * refusé (400) avant le handler.
+ */
+async function refuseSansCaptcha(rel: string, route: PublicRouteHandler) {
+  expect(route.publicRoute.antiBot, `${rel} : antiBot requis`).toBe(true);
+  for (const method of Object.keys(route.publicRoute.methods)) {
+    const res = makeRes();
+    await route(makeReq(method, { body: { name: 'Équipe' } }, false), res);
+    expect(
+      res.statusCode,
+      `${rel} ${method} sans captcha : reçu ${res.statusCode}`
+    ).toBe(400);
+    expect(res.body?.code).toBe('CAPTCHA_INVALID');
+  }
+}
+
 beforeEach(() => {
   resetSupabaseMock();
   invalidateStaffCache();
@@ -84,6 +124,18 @@ describe('matrice de permissions des routes joueuse déclaratives', () => {
   for (const rel of ROUTE_FILES) {
     it(`${rel} refuse avant le handler`, async () => {
       const mod = await import(path.join(ROOT, rel));
+      // Route de JETON public (`defineTokenRoute`, lot P11) : pas de sujet,
+      // sa garde est vérifiée à part (cf. `refuseSansJeton`).
+      if ((mod.default as TokenRouteHandler).tokenRoute) {
+        await refuseSansJeton(rel, mod.default as TokenRouteHandler);
+        return;
+      }
+      // Route ANONYME (`definePublicRoute`, lot P11) : sa garde anti-bot doit
+      // refuser un corps sans captcha AVANT le handler.
+      if ((mod.default as PublicRouteHandler).publicRoute) {
+        await refuseSansCaptcha(rel, mod.default as PublicRouteHandler);
+        return;
+      }
       const route = mod.default as SubjectRouteHandler;
       expect(
         route.subjectRoute,

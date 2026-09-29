@@ -26,7 +26,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tcgClient } from '@/features/player/tcg/client';
 import { useToast } from '@/components/Toast';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useT, format } from '@/lib/i18n/useT';
@@ -137,7 +137,6 @@ export default function TcgSetsPanel({
 }): JSX.Element | null {
   const t = useT(nsTcgSets);
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
 
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [sets, setSets] = useState<TcgSetProgress[]>([]);
@@ -169,7 +168,7 @@ export default function TcgSetsPanel({
 
   const load = useCallback(async () => {
     try {
-      const data = await adminFetchJson<SetsResponse>('/api/player/tcg/sets');
+      const data = await tcgClient.sets<SetsResponse>();
       setSets(Array.isArray(data.sets) ? data.sets : []);
       setRewardCoins(
         typeof data.rewardCoins === 'number' && data.rewardCoins > 0
@@ -186,7 +185,7 @@ export default function TcgSetsPanel({
       // « aucune série » qui ferait croire à un état réel.
       if (!loadedOnce.current) setState('error');
     }
-  }, [adminFetchJson, announce]);
+  }, [announce]);
 
   // `reloadToken` est une dépendance VOULUE : il n'est pas lu dans l'effet, il
   // le relance quand la collection change.

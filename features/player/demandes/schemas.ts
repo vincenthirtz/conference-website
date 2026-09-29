@@ -71,3 +71,37 @@ export const CancelDemandeBody = z.object({
   demandeId: looseUuid('demandeId (UUID) requis.'),
 });
 export type CancelDemandeInput = z.infer<typeof CancelDemandeBody>;
+
+/**
+ * Corps de POST /api/demandes/scrim (lot P11 : quitte la route). Validé par
+ * le service, pas par le noyau : l'erreur historique porte `field`.
+ */
+export const ScrimDemandeBody = z.object({
+  teamId: z.string().trim().min(1, 'Selectionne une equipe adverse.'),
+  message: z.string().trim().max(1000).optional().nullable(),
+  /** Négociation multi-créneaux : 1..5 dates ISO sur la table. */
+  proposedSlots: z.array(z.string()).optional(),
+  /** Ancien créneau unique (replié dans `proposedSlots`). */
+  preferredDate: z.string().optional(),
+});
+export type ScrimDemandeInput = z.infer<typeof ScrimDemandeBody>;
+
+/**
+ * Corps de POST /api/demandes/caster-application (lot P11 : quitte la
+ * route). Validé par le service : l'erreur historique est `Invalid body.` +
+ * `fieldErrors` (forme `flatten()`), pas le `fields` du noyau.
+ */
+export const CasterApplicationBody = z.object({
+  motivation: z
+    .string()
+    .trim()
+    .max(1000, 'Motivation trop longue (max 1000 caractères).')
+    .optional(),
+  portfolioUrl: z
+    .string()
+    .trim()
+    .max(300, 'URL trop longue (max 300 caractères).')
+    .url('URL de portfolio invalide.')
+    .optional(),
+});
+export type CasterApplicationInput = z.infer<typeof CasterApplicationBody>;

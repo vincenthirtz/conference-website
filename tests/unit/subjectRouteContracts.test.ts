@@ -12,6 +12,8 @@ import path from 'node:path';
 import { parse } from 'yaml';
 import { API_CONTRACT_SCHEMAS } from '../../lib/apiContracts';
 import type { SubjectRouteHandler } from '../../utils/player/defineSubjectRoute';
+import type { TokenRouteHandler } from '../../utils/player/defineTokenRoute';
+import type { PublicRouteHandler } from '../../utils/player/definePublicRoute';
 
 const ROOT = path.resolve(__dirname, '../..');
 const API = path.join(ROOT, 'pages/api');
@@ -56,11 +58,20 @@ describe('spec des routes joueuse déclaratives = leurs schémas zod', () => {
   for (const file of DECLARATIVE) {
     const rel = path.relative(ROOT, file);
     it(`${rel}`, async () => {
-      const route = (await import(file)).default as SubjectRouteHandler;
+      const route = (await import(file)).default as SubjectRouteHandler &
+        Partial<TokenRouteHandler> &
+        Partial<PublicRouteHandler>;
       const fragment = fragmentOf(file);
       const problems: string[] = [];
 
-      for (const [method, meta] of Object.entries(route.subjectRoute.methods)) {
+      // Route de jeton ou anonyme (`defineTokenRoute` / `definePublicRoute`,
+      // lot P11) : pas de sujet, mêmes exigences de schéma (`x-zod`…).
+      const methods = (
+        route.tokenRoute ??
+        route.publicRoute ??
+        route.subjectRoute
+      ).methods as SubjectRouteHandler['subjectRoute']['methods'];
+      for (const [method, meta] of Object.entries(methods)) {
         const op = fragment[method.toLowerCase()];
         if (!op) {
           problems.push(`${method} absent du fragment`);

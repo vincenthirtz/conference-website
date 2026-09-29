@@ -38,22 +38,22 @@ const ZONES: { roots: string[]; max: number }[] = [
  */
 const BASELINE: Record<string, number> = {
   // Pages (> 800)
-  'pages/team/create.tsx': 1984,
+  'pages/team/create.tsx': 103,
   'pages/player/tcg.tsx': 32,
   'pages/player/tcg/echanges.tsx': 34,
-  'pages/team/[slug]/edit.tsx': 1126,
+  'pages/team/[slug]/edit.tsx': 66,
   'pages/player/profile.tsx': 33,
   // Composants (> 600)
   'components/player/screens/PlayerManageTeamScreen.tsx': 255,
-  'components/player/screens/PlayerDashboardScreen.tsx': 447,
+  'components/player/screens/PlayerDashboardScreen.tsx': 445,
   'components/player/screens/PlayerMatchScreen.tsx': 195,
   // Routes (> 500)
-  'pages/api/teams/create-with-member.ts': 1387,
+  'pages/api/teams/create-with-member.ts': 4,
   'pages/api/player/tcg/packs.ts': 4,
   'pages/api/player/dashboard.ts': 5,
   'pages/api/player/matches/[matchId]/report-score.ts': 4,
   'pages/api/player/tcg/collection.ts': 4,
-  'pages/api/demandes/register-team.ts': 508,
+  'pages/api/demandes/register-team.ts': 8,
 };
 
 const countLines = (file: string) =>

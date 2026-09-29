@@ -28,7 +28,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import {
@@ -38,6 +37,7 @@ import {
   type RegistrationDeadlineState,
 } from '@/utils/registrationDeadline';
 import type { NetworkStatus } from '@/features/player/network/schemas';
+import { networkClient } from '@/features/player/network/client';
 import { logger } from '../../utils/logger';
 import nsRegistrationDeadline from '@/lib/i18n/locales/fr/registrationDeadline';
 import { socialUrl } from '@/config/socials';
@@ -70,7 +70,6 @@ export default function RegistrationDeadlineBanner({
 }) {
   const t = useT(nsRegistrationDeadline);
   const locale = useLocale();
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
 
   const [deadline, setDeadline] = useState<RegistrationDeadlineState | null>(
     null
@@ -101,10 +100,7 @@ export default function RegistrationDeadlineBanner({
 
   const load = useCallback(async () => {
     try {
-      const data = await adminFetchJson<NetworkStatus>(
-        '/api/player/network-status',
-        { skipAuthRedirect: true }
-      );
+      const data = await networkClient.networkStatus();
       setDiscordLinked(Boolean(data?.discordLinked));
     } catch (err) {
       logger.error('[RegistrationDeadlineBanner] load error', err);
@@ -112,7 +108,7 @@ export default function RegistrationDeadlineBanner({
       // Discord. Masquer sur une erreur réseau serait le pire des deux.
       setDiscordLinked(null);
     }
-  }, [adminFetchJson]);
+  }, []);
 
   useEffect(() => {
     if (!selfLoads) return;

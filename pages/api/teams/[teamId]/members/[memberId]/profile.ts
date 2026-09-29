@@ -9,9 +9,16 @@
 //     profiles of teammates (e.g. a manager)
 //
 // All edits are recorded in `team_audit_logs` so staff can audit / revert.
+//
+// Act-as staff (P10) : `withSubjectRoute` + `allowActAs`, comme `public-page`,
+// `upload-image` et `tcg-image` — l'éditeur `team/[slug]/edit` ouvert en
+// `?as=<id>&act=1` enregistre les fiches À LA PLACE de la personne (journal
+// `act_as_player`). Le droit évalué est celui du SUJET ; sous act-as, l'équipe
+// doit appartenir au tenant actif du staff. Le journal d'équipe garde
+// l'appelant réel. Sans act-as, un staff reste refusé comme n'importe qui.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { withAuthRoute } from '@/utils/staff';
+import { withSubjectRoute } from '@/utils/subject';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
@@ -46,199 +53,206 @@ function validateAvatarUrl(raw: unknown): string | null | 'invalid' {
   return 'invalid';
 }
 
-export default withAuthRoute(async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  { user }
-) {
-  if (req.method !== 'PATCH') {
-    res.setHeader('Allow', 'PATCH');
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+export default withSubjectRoute(
+  async function handler(
+    req: NextApiRequest,
+    res: NextApiResponse,
+    { user, subject }
+  ) {
+    if (req.method !== 'PATCH') {
+      res.setHeader('Allow', 'PATCH');
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
 
-  if (
-    applyRateLimit(
-      req,
-      res,
-      { max: 12, windowMs: 60_000 },
-      'team-member-profile'
+    if (
+      applyRateLimit(
+        req,
+        res,
+        { max: 12, windowMs: 60_000 },
+        'team-member-profile'
+      )
     )
-  )
-    return;
+      return;
 
-  if (!supabaseAdmin) {
-    return res.status(503).json({ error: 'Service unavailable.' });
-  }
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Service unavailable.' });
+    }
 
-  const { teamId, memberId } = req.query;
-  if (typeof teamId !== 'string' || !isValidUUID(teamId)) {
-    return res.status(400).json({ error: 'teamId invalide.' });
-  }
-  if (typeof memberId !== 'string' || !isValidUUID(memberId)) {
-    return res.status(400).json({ error: 'memberId invalide.' });
-  }
+    const { teamId, memberId } = req.query;
+    if (typeof teamId !== 'string' || !isValidUUID(teamId)) {
+      return res.status(400).json({ error: 'teamId invalide.' });
+    }
+    if (typeof memberId !== 'string' || !isValidUUID(memberId)) {
+      return res.status(400).json({ error: 'memberId invalide.' });
+    }
 
-  // Tenant DE L'ÉQUIPE (P10), pas celui du chemin (tenant par défaut) :
-  // sinon le membre d'une équipe d'un autre tenant était « introuvable ».
-  const tenantId = await readTeamTenantId(teamId);
-  if (!tenantId) {
-    return res
-      .status(404)
-      .json({ error: 'Membre introuvable dans cette équipe.' });
-  }
+    // Tenant DE L'ÉQUIPE (P10), pas celui du chemin (tenant par défaut) :
+    // sinon le membre d'une équipe d'un autre tenant était « introuvable ».
+    const tenantId = await readTeamTenantId(teamId);
+    if (!tenantId || (subject.isInspection && tenantId !== subject.tenantId)) {
+      return res
+        .status(404)
+        .json({ error: 'Membre introuvable dans cette équipe.' });
+    }
 
-  // Look up the member to confirm she belongs to the team and to get her
-  // user_id (needed for the self-edit allowance).
-  const { data: member, error: memberErr } = await supabaseAdmin
-    .from('team_members')
-    .select(
-      'id, team_id, user_id, role, display_name, specialty, avatar_url, pronouns, tagline, twitter, twitch, is_substitute'
-    )
-    .eq('id', memberId)
-    .eq('team_id', teamId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle();
+    // Look up the member to confirm she belongs to the team and to get her
+    // user_id (needed for the self-edit allowance).
+    const { data: member, error: memberErr } = await supabaseAdmin
+      .from('team_members')
+      .select(
+        'id, team_id, user_id, role, display_name, specialty, avatar_url, pronouns, tagline, twitter, twitch, is_substitute'
+      )
+      .eq('id', memberId)
+      .eq('team_id', teamId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
 
-  if (memberErr || !member) {
-    return res
-      .status(404)
-      .json({ error: 'Membre introuvable dans cette équipe.' });
-  }
+    if (memberErr || !member) {
+      return res
+        .status(404)
+        .json({ error: 'Membre introuvable dans cette équipe.' });
+    }
 
-  const isSelf = member.user_id === user.id;
-  let allowed = isSelf;
-  if (!allowed) {
-    allowed = await hasTeamPermission(user.id, teamId, 'edit_public_page');
-  }
-  if (!allowed) {
-    return res
-      .status(403)
-      .json({ error: "Tu n'as pas la permission d'éditer ce profil." });
-  }
+    const isSelf = member.user_id === subject.userId;
+    let allowed = isSelf;
+    if (!allowed) {
+      allowed = await hasTeamPermission(
+        subject.userId,
+        teamId,
+        'edit_public_page'
+      );
+    }
+    if (!allowed) {
+      return res
+        .status(403)
+        .json({ error: "Tu n'as pas la permission d'éditer ce profil." });
+    }
 
-  // Schéma partagé : types et plafonds, dans l'ordre historique des contrôles.
-  const parsed = parseBody(TeamMemberProfileBody, req.body);
-  if (!parsed.ok) return res.status(400).json(parsed.body);
-  const body = parsed.data;
+    // Schéma partagé : types et plafonds, dans l'ordre historique des contrôles.
+    const parsed = parseBody(TeamMemberProfileBody, req.body);
+    if (!parsed.ok) return res.status(400).json(parsed.body);
+    const body = parsed.data;
 
-  const displayName = { value: body.display_name || null };
+    const displayName = { value: body.display_name || null };
 
-  let specialty: MemberSpecialty | null = null;
-  if (body.specialty !== undefined && body.specialty !== null) {
-    if (body.specialty.trim() === '') {
-      specialty = null;
-    } else {
-      const normalized = normalizeMemberSpecialty(body.specialty);
-      if (!normalized) {
-        return res.status(400).json({
-          error: 'specialty doit être tank, dps, support ou flex.',
+    let specialty: MemberSpecialty | null = null;
+    if (body.specialty !== undefined && body.specialty !== null) {
+      if (body.specialty.trim() === '') {
+        specialty = null;
+      } else {
+        const normalized = normalizeMemberSpecialty(body.specialty);
+        if (!normalized) {
+          return res.status(400).json({
+            error: 'specialty doit être tank, dps, support ou flex.',
+          });
+        }
+        specialty = normalized;
+      }
+    }
+
+    const avatar = validateAvatarUrl(body.avatar_url);
+    if (avatar === 'invalid')
+      return res.status(400).json({ error: 'avatar_url invalide.' });
+
+    const pronouns = { value: body.pronouns || null };
+    const tagline = { value: body.tagline || null };
+    const twitter = { value: body.twitter || null };
+    const twitch = { value: body.twitch || null };
+    // Même contrôle de format que le chemin self-service
+    // (`/api/player/update-profile`) : le champ est étiqueté « Twitch », et les
+    // deux écrans alimentent la MÊME colonne. Sans ça, une capitaine pouvait y
+    // ranger un lien Discord que la joueuse, elle, se serait vu refuser.
+    if (twitch.value && !isValidTwitchValue(twitch.value)) {
+      return res.status(400).json({
+        error:
+          'Chaîne Twitch invalide. Attendu : un pseudo Twitch ou une URL twitch.tv.',
+        code: 'TWITCH_INVALID',
+      });
+    }
+
+    // is_substitute: only updatable by team admins, not by the member herself
+    // (a substitute shouldn't be able to promote herself to titulaire).
+    let isSubstitute: boolean | null = null;
+    if (body.is_substitute !== undefined && body.is_substitute !== null) {
+      if (
+        isSelf &&
+        !(await hasTeamPermission(subject.userId, teamId, 'edit_public_page'))
+      ) {
+        return res.status(403).json({
+          error:
+            'Seul le capitaine ou un manager peut changer le statut titulaire/remplaçant.',
         });
       }
-      specialty = normalized;
+      isSubstitute = body.is_substitute;
     }
-  }
 
-  const avatar = validateAvatarUrl(body.avatar_url);
-  if (avatar === 'invalid')
-    return res.status(400).json({ error: 'avatar_url invalide.' });
+    const updates: Updates = {
+      display_name: displayName.value,
+      specialty,
+      avatar_url: avatar,
+      pronouns: pronouns.value,
+      tagline: tagline.value,
+      twitter: twitter.value,
+      twitch: twitch.value,
+      is_substitute: isSubstitute,
+    };
 
-  const pronouns = { value: body.pronouns || null };
-  const tagline = { value: body.tagline || null };
-  const twitter = { value: body.twitter || null };
-  const twitch = { value: body.twitch || null };
-  // Même contrôle de format que le chemin self-service
-  // (`/api/player/update-profile`) : le champ est étiqueté « Twitch », et les
-  // deux écrans alimentent la MÊME colonne. Sans ça, une capitaine pouvait y
-  // ranger un lien Discord que la joueuse, elle, se serait vu refuser.
-  if (twitch.value && !isValidTwitchValue(twitch.value)) {
-    return res.status(400).json({
-      error:
-        'Chaîne Twitch invalide. Attendu : un pseudo Twitch ou une URL twitch.tv.',
-      code: 'TWITCH_INVALID',
+    // Build the patch — drop is_substitute if not provided (keep existing value).
+    const patch: Record<string, unknown> = {
+      display_name: updates.display_name,
+      specialty: updates.specialty,
+      avatar_url: updates.avatar_url,
+      pronouns: updates.pronouns,
+      tagline: updates.tagline,
+      twitter: updates.twitter,
+      twitch: updates.twitch,
+    };
+    if (updates.is_substitute !== null) {
+      patch.is_substitute = updates.is_substitute;
+    }
+
+    const { error: updateErr } = await supabaseAdmin
+      .from('team_members')
+      .update(patch)
+      .eq('id', memberId)
+      .eq('team_id', teamId)
+      .eq('tenant_id', tenantId);
+
+    if (updateErr) {
+      logger.error('[team-member-profile] update error:', updateErr);
+      return res.status(500).json({ error: 'Échec de la mise à jour.' });
+    }
+
+    // Audit log: only the fields that actually changed.
+    const before = member as Record<string, unknown>;
+    const diff: Record<string, { from: unknown; to: unknown }> = {};
+    for (const key of Object.keys(patch)) {
+      const fromVal = before[key] ?? null;
+      const toVal = patch[key];
+      if (fromVal !== toVal) {
+        diff[key] = { from: fromVal, to: toVal };
+      }
+    }
+
+    if (Object.keys(diff).length > 0) {
+      const { error: logErr } = await supabaseAdmin
+        .from('team_audit_logs')
+        .insert({
+          team_id: teamId,
+          user_id: user.id,
+          action: 'update_member_profile',
+          payload: { member_id: memberId, diff },
+          tenant_id: tenantId,
+        });
+      if (logErr) {
+        logger.error('[team-member-profile] audit log error:', logErr);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      updatedFields: Object.keys(diff),
     });
-  }
-
-  // is_substitute: only updatable by team admins, not by the member herself
-  // (a substitute shouldn't be able to promote herself to titulaire).
-  let isSubstitute: boolean | null = null;
-  if (body.is_substitute !== undefined && body.is_substitute !== null) {
-    if (
-      isSelf &&
-      !(await hasTeamPermission(user.id, teamId, 'edit_public_page'))
-    ) {
-      return res.status(403).json({
-        error:
-          'Seul le capitaine ou un manager peut changer le statut titulaire/remplaçant.',
-      });
-    }
-    isSubstitute = body.is_substitute;
-  }
-
-  const updates: Updates = {
-    display_name: displayName.value,
-    specialty,
-    avatar_url: avatar,
-    pronouns: pronouns.value,
-    tagline: tagline.value,
-    twitter: twitter.value,
-    twitch: twitch.value,
-    is_substitute: isSubstitute,
-  };
-
-  // Build the patch — drop is_substitute if not provided (keep existing value).
-  const patch: Record<string, unknown> = {
-    display_name: updates.display_name,
-    specialty: updates.specialty,
-    avatar_url: updates.avatar_url,
-    pronouns: updates.pronouns,
-    tagline: updates.tagline,
-    twitter: updates.twitter,
-    twitch: updates.twitch,
-  };
-  if (updates.is_substitute !== null) {
-    patch.is_substitute = updates.is_substitute;
-  }
-
-  const { error: updateErr } = await supabaseAdmin
-    .from('team_members')
-    .update(patch)
-    .eq('id', memberId)
-    .eq('team_id', teamId)
-    .eq('tenant_id', tenantId);
-
-  if (updateErr) {
-    logger.error('[team-member-profile] update error:', updateErr);
-    return res.status(500).json({ error: 'Échec de la mise à jour.' });
-  }
-
-  // Audit log: only the fields that actually changed.
-  const before = member as Record<string, unknown>;
-  const diff: Record<string, { from: unknown; to: unknown }> = {};
-  for (const key of Object.keys(patch)) {
-    const fromVal = before[key] ?? null;
-    const toVal = patch[key];
-    if (fromVal !== toVal) {
-      diff[key] = { from: fromVal, to: toVal };
-    }
-  }
-
-  if (Object.keys(diff).length > 0) {
-    const { error: logErr } = await supabaseAdmin
-      .from('team_audit_logs')
-      .insert({
-        team_id: teamId,
-        user_id: user.id,
-        action: 'update_member_profile',
-        payload: { member_id: memberId, diff },
-        tenant_id: tenantId,
-      });
-    if (logErr) {
-      logger.error('[team-member-profile] audit log error:', logErr);
-    }
-  }
-
-  return res.status(200).json({
-    success: true,
-    updatedFields: Object.keys(diff),
-  });
-});
+  },
+  { tenantResolution: 'async', allowActAs: true }
+);

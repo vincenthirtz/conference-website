@@ -20,7 +20,7 @@
 // « jamais le dernier exemplaire », qui est la garde la plus importante du lot.
 
 import { useMemo, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tcgClient } from '@/features/player/tcg/client';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
@@ -59,7 +59,6 @@ export default function TcgForgePanel({
   className = '',
 }: Props) {
   const t = useT(nsPlayerTcg);
-  const { adminFetchJson } = useAdminFetch();
   const { addToast } = useToast();
 
   const [rarity, setRarity] = useState<TcgRarity | null>(null);
@@ -114,14 +113,7 @@ export default function TcgForgePanel({
         .filter((c) => picked.includes(c.key))
         .map((c) => c.recyclable!)
         .filter(Boolean);
-      const json = await adminFetchJson<{ rarity?: string }>(
-        '/api/player/tcg/forge',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cards: chosen }),
-        }
-      );
+      const json = await tcgClient.forge(chosen);
       addToast(
         format(t.forgeDone, { rarity: rarityLabel(t, json?.rarity) }),
         'success'

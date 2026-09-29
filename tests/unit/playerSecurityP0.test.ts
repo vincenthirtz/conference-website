@@ -391,6 +391,76 @@ describe('P10 — act-as staff sur page publique / images d’équipe', () => {
     expect(res.statusCode).toBe(200);
     expect(storageUploads.length).toBeGreaterThan(0);
   });
+
+  it('PATCH members/[memberId]/profile ?as=<manager>&act=1 → écrit, journalisé', async () => {
+    const res = makeRes();
+    await memberProfileHandler(
+      makeReq({
+        method: 'PATCH',
+        query: {
+          teamId: TEAM_A,
+          memberId: MEMBER_ROW_A,
+          as: MANAGER_A,
+          act: '1',
+        },
+        body: { display_name: 'EditedAs' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const names = (store.team_members as any[]).map((m) => m.display_name);
+    expect(names).toContain('EditedAs');
+    expect(staffLogs().some((l) => l.action === 'act_as_player')).toBe(true);
+  });
+
+  const ssr = (query: Record<string, string>) =>
+    editTeamSSR({
+      params: { slug: TEAM_A },
+      req: { headers: { host: 'h' }, cookies: {} },
+      res: { setHeader: () => {}, getHeader: () => undefined },
+      query,
+      resolvedUrl: `/team/${TEAM_A}/edit`,
+    } as any) as Promise<any>;
+
+  it('SSR /team/[slug]/edit ?as=<manager>&act=1 → éditeur ouvert, entrée journalisée', async () => {
+    setCookieUser({ id: STAFF_ADMIN });
+    const result = await ssr({ as: MANAGER_A, act: '1' });
+    expect(result.props?.team?.id).toBe(TEAM_A);
+    expect(result.props?.subjectScope).toEqual({
+      subjectId: MANAGER_A,
+      actAs: true,
+    });
+    const entry = ((store as any).staff_logs ?? []).find(
+      (l: any) => l.action === 'view_captain_data'
+    );
+    expect(entry?.entity_id).toBe(MANAGER_A);
+    expect(entry?.payload?.act).toBe(true);
+  });
+
+  it('SSR sans `act=1`, ou sujet sans le droit → refus', async () => {
+    setCookieUser({ id: STAFF_ADMIN });
+    expect((await ssr({ as: MANAGER_A })).redirect?.destination).toBe('/403');
+    // Représenter une simple joueuse : le droit est celui du SUJET.
+    expect(
+      (await ssr({ as: STAFF_ADMIN, act: '1' })).redirect?.destination
+    ).toBe(`/team/${TEAM_A}`);
+  });
+
+  it('SSR ?as= par un compte non staff → /403', async () => {
+    setCookieUser({ id: MANAGER_B });
+    const result = await ssr({ as: MANAGER_A, act: '1' });
+    expect(result.redirect?.destination).toBe('/403');
+  });
+
+  it('SSR sans ?as= : la manager ouvre son éditeur (témoin)', async () => {
+    setCookieUser({ id: MANAGER_A });
+    const result = await ssr({});
+    expect(result.props?.team?.id).toBe(TEAM_A);
+    expect(result.props?.subjectScope).toEqual({
+      subjectId: null,
+      actAs: false,
+    });
+  });
 });
 
 /* ------------------------------------------------------------------ */

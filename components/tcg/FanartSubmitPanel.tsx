@@ -22,7 +22,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import Link from 'next/link';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tcgClient } from '@/features/player/tcg/client';
+import { ApiHttpError } from '@/utils/http/authedRequest';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import nsTcgFanart from '@/lib/i18n/locales/fr/tcgFanart';
@@ -58,7 +59,6 @@ export default function FanartSubmitPanel({
   className?: string;
 }): JSX.Element {
   const t = useT(nsTcgFanart);
-  const { adminFetch, adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { addToast } = useToast();
 
   const [data, setData] = useState<Response | null>(null);
@@ -73,14 +73,14 @@ export default function FanartSubmitPanel({
 
   const load = useCallback(async () => {
     try {
-      const res = await adminFetchJson<Response>('/api/player/tcg/fanart');
+      const res = await tcgClient.fanart<Response>();
       setData(res);
       loadedOnce.current = true;
       setState('ready');
     } catch {
       if (!loadedOnce.current) setState('error');
     }
-  }, [adminFetchJson]);
+  }, []);
 
   useEffect(() => {
     void load();
@@ -129,23 +129,22 @@ export default function FanartSubmitPanel({
         reader.onerror = () => reject(new Error('read_error'));
         reader.readAsDataURL(file);
       });
-      const res = await adminFetch('/api/player/tcg/fanart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      try {
+        await tcgClient.submitFanart({
           data: payload,
           mimeType: file.type,
           title: title.trim(),
           artistName: artistName.trim(),
           artistUrl: artistUrl.trim() || undefined,
           licenceAccepted: licence,
-        }),
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { code?: string };
+        });
+      } catch (err) {
+        // Réponse HTTP de refus (statut + `code`) ; un échec réseau remonte
+        // au `catch` générique ci-dessous.
+        if (!(err instanceof ApiHttpError)) throw err;
         addToast(
           errorText(
-            fanartErrorKey(res.status, body.code),
+            fanartErrorKey(err.status, err.code ?? undefined),
             data?.maxPending ?? 3
           ),
           'error'
@@ -172,7 +171,6 @@ export default function FanartSubmitPanel({
       setBusy(false);
     }
   }, [
-    adminFetch,
     addToast,
     artistName,
     artistUrl,
@@ -188,10 +186,7 @@ export default function FanartSubmitPanel({
     async (id: string) => {
       setBusy(true);
       try {
-        await adminFetchJson(
-          `/api/player/tcg/fanart?id=${encodeURIComponent(id)}`,
-          { method: 'DELETE' }
-        );
+        await tcgClient.withdrawFanart(id);
         addToast(t.withdrawn, 'success');
         await load();
       } catch {
@@ -203,7 +198,7 @@ export default function FanartSubmitPanel({
         setBusy(false);
       }
     },
-    [adminFetchJson, addToast, load, t]
+    [addToast, load, t]
   );
 
   const statusLabel: Record<Submission['status'], string> = {

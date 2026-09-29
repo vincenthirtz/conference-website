@@ -137,4 +137,6 @@ export default ns('teamEdit', {
   updateSuccess_other: 'Page mise à jour ({count} champs modifiés).',
   noChanges: 'Aucun changement.',
   errorUnexpected: 'Erreur inattendue.',
+  actingAsNotice:
+    'Mode « agir en tant que » : chaque enregistrement est fait au nom de cette personne et journalisé.',
 });

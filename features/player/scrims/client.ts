@@ -18,6 +18,7 @@ import type {
   ScrimPlanningsResponse,
   ScrimReportInput,
   ScrimReportResponse,
+  ScrimRequestDecisionInput,
   ScrimSearchInput,
   ScrimSearchResponse,
   ScrimSearchSaveResponse,
@@ -37,6 +38,7 @@ export const scrimsUrls = {
   myScrims: '/api/player/scrims',
   report: (scrimId: string) =>
     `/api/player/scrims/${encodeURIComponent(scrimId)}/report`,
+  requests: '/api/teams/scrim-requests',
   plannings: '/api/teams/scrim-plannings',
   planning: planningUrl,
   suggest: (id: string) => `${planningUrl(id)}/suggest`,
@@ -53,6 +55,17 @@ export const scrimsClient = {
     }),
   report: (scope: PlayerScope, scrimId: string, body: ScrimReportInput) =>
     playerRequest<ScrimReportResponse>(scrimsUrls.report(scrimId), {
+      method: 'POST',
+      json: body,
+      idempotent: true,
+      scope: teamOnly(scope),
+    }),
+  /**
+   * Réponse à une demande reçue (accepter un créneau, contre-proposer,
+   * refuser) — équipe seule : le geste est celui de la capitaine connectée.
+   */
+  decideRequest: (scope: PlayerScope, body: ScrimRequestDecisionInput) =>
+    playerRequest<unknown>(scrimsUrls.requests, {
       method: 'POST',
       json: body,
       idempotent: true,

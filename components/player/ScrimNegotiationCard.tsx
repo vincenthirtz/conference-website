@@ -8,12 +8,17 @@
 // re-rend pendant la saisie.
 //
 // Le composant ne remonte au parent QUE les soumissions (accept / counter /
-// reject) via un unique callback `onAction` STABLE (useCallback côté parent).
-// La validation métier (créneau requis, ≥1 créneau) et la confirmation de rejet
-// restent côté parent pour garder un comportement identique à l'existant.
+// reject) via un unique callback `onAction` STABLE (useCallback côté parent),
+// avec un corps DÉJÀ VALIDE : la contre-proposition est un formulaire sur
+// schéma (`useSchemaForm` + `makeCounterProposalSchema` : ≥ 1 créneau,
+// normalisé en ISO), l'erreur s'affiche sous le sélecteur ; « accepter » n'est
+// actif qu'avec un créneau choisi. Le parent garde la confirmation de rejet
+// et l'appel serveur (lot P13).
 
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import ScrimSlotCalendarPicker from '@/components/player/ScrimSlotCalendarPicker';
+import { useSchemaForm, errorDomId } from '@/hooks/forms/useSchemaForm';
+import { makeCounterProposalSchema } from '@/features/player/scrims/negotiationForm';
 import { format } from '@/lib/i18n/useT';
 import nsPlayerIndex from '@/lib/i18n/locales/fr/playerIndex';
 
@@ -55,7 +60,7 @@ export type ScrimAction = 'accept' | 'counter' | 'reject';
 export type ScrimActionPayload = {
   /** Créneau retenu (ISO) pour un `accept`. */
   slot?: string;
-  /** Créneaux datetime-local d'une contre-proposition. */
+  /** Créneaux d'une contre-proposition, validés et en ISO UTC. */
   slots?: string[];
 };
 
@@ -77,10 +82,21 @@ type Props = {
 };
 
 function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
-  // État de saisie LOCAL (isolé du dashboard).
+  // État LOCAL (isolé du dashboard) : le créneau choisi (une sélection) et
+  // l'ouverture du panneau ; la saisie de la contre-proposition est un
+  // formulaire sur schéma.
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [counterOpen, setCounterOpen] = useState(false);
-  const [counterSlots, setCounterSlots] = useState<string[]>(['']);
+  const counterSchema = useMemo(
+    () => makeCounterProposalSchema(t.atLeastOneSlot),
+    [t.atLeastOneSlot]
+  );
+  const counter = useSchemaForm({
+    schema: counterSchema,
+    initialValues: { slots: [''] },
+    onSubmit: ({ slots }) => onAction?.(scrim.id, 'counter', { slots }),
+  });
+  const counterError = counter.errors.slots;
 
   const formatSlot = (iso: string) =>
     new Date(iso).toLocaleString(locale, {
@@ -235,10 +251,14 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
 
       {/* Inline counter-proposal picker */}
       {counterOpen && (
-        <div className="rounded-lg border border-white/10 bg-black/40 p-3">
+        <form
+          onSubmit={counter.handleSubmit}
+          noValidate
+          className="rounded-lg border border-white/10 bg-black/40 p-3"
+        >
           <ScrimSlotCalendarPicker
-            slots={counterSlots}
-            onChange={setCounterSlots}
+            slots={counter.values.slots}
+            onChange={(next) => counter.setValue('slots', next)}
             accent="blue"
             labels={{
               slotsLabel: t.slotsLabel,
@@ -252,17 +272,26 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
               empty: t.slotEmpty,
             }}
           />
+          {counterError && (
+            <p
+              id={errorDomId(counter.formId, 'slots')}
+              role="alert"
+              className="mt-2 text-xs text-red-300"
+            >
+              {counterError}
+            </p>
+          )}
           <button
-            type="button"
+            type="submit"
             disabled={busy}
-            onClick={() =>
-              onAction?.(scrim.id, 'counter', { slots: counterSlots })
+            aria-describedby={
+              counterError ? errorDomId(counter.formId, 'slots') : undefined
             }
             className="mt-3 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-xs font-medium text-white"
           >
             {t.counterSubmit}
           </button>
-        </div>
+        </form>
       )}
 
       {onAction && (
@@ -271,11 +300,11 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
             <button
               type="button"
               disabled={busy || !selectedSlot}
-              onClick={() =>
-                onAction?.(scrim.id, 'accept', {
-                  slot: selectedSlot ?? undefined,
-                })
-              }
+              onClick={() => {
+                if (selectedSlot) {
+                  onAction?.(scrim.id, 'accept', { slot: selectedSlot });
+                }
+              }}
               className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium text-white"
             >
               {t.acceptSlot}

@@ -27,7 +27,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { tcgClient } from '@/features/player/tcg/client';
 import { useT } from '@/lib/i18n/useT';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 
@@ -79,7 +79,6 @@ export default function TcgPhotoInvite({
   className?: string;
 }) {
   const t = useT(nsPlayerTcg);
-  const { adminFetchJson } = useAdminFetch();
 
   const [show, setShow] = useState(false);
 
@@ -89,7 +88,7 @@ export default function TcgPhotoInvite({
 
     void (async () => {
       try {
-        const data = await adminFetchJson<PhotoState>('/api/player/tcg/photo');
+        const data = await tcgClient.photo<PhotoState>();
         if (cancelled) return;
         // La règle vit dans `shouldInvite`, au-dessus : elle se teste seule.
         setShow(shouldInvite(data));
@@ -103,7 +102,7 @@ export default function TcgPhotoInvite({
     return () => {
       cancelled = true;
     };
-  }, [adminFetchJson]);
+  }, []);
 
   const dismiss = useCallback(() => {
     setShow(false);
