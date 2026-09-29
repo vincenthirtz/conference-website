@@ -44,6 +44,8 @@ import {
 } from '@/utils/teams/trainingSuggestion';
 import { getTimeZoneOffsetMinutes } from '@/utils/timezone';
 import { logger } from '@/utils/logger';
+import { parseBody } from '../../../utils/player/errors';
+import { TeamRhythmBody } from '../../../features/player/team/schemas';
 import { readRequestedTeamId } from '@/utils/teams/teamScope';
 
 const DEFAULT_TIMEZONE = 'Europe/Paris';
@@ -166,7 +168,9 @@ export default withSubjectRoute(
     }
 
     if (isPut) {
-      const body = (req.body ?? {}) as { slots?: unknown; timezone?: unknown };
+      const parsed = parseBody(TeamRhythmBody, req.body);
+      if (!parsed.ok) return res.status(400).json(parsed.body);
+      const body = parsed.data;
       const normalized = normalizeRhythmSlots(body.slots);
       if (!normalized.ok) {
         return res.status(400).json({ error: normalized.error });

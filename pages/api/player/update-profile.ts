@@ -24,6 +24,8 @@ import {
 } from '@/utils/social/profileHandles';
 
 import { logger } from '../../../utils/logger';
+import { parseBody } from '../../../utils/player/errors';
+import { UpdatePlayerProfileBody } from '../../../features/player/profile/schemas';
 const BATTLE_TAG_RE = /^[A-Za-z0-9\u00C0-\u024F]+#[0-9]{4,6}$/;
 
 export default withAuthRoute(async function handler(
@@ -53,6 +55,10 @@ export default withAuthRoute(async function handler(
   )
     return;
 
+  // Schéma partagé : forme et champs tolérants ; les règles suivent.
+  const parsed = parseBody(UpdatePlayerProfileBody, req.body);
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const body = parsed.data;
   const {
     display_name,
     battle_tag,
@@ -61,7 +67,7 @@ export default withAuthRoute(async function handler(
     specialty,
     twitch,
     clear_twitch,
-  } = req.body || {};
+  } = body;
   const updates: Record<string, unknown> = {};
 
   if (typeof display_name === 'string') {
@@ -88,7 +94,7 @@ export default withAuthRoute(async function handler(
   // de sa capitaine : c'est SA donnee, et la faire transiter par quelqu'un
   // d'autre pour une valeur qu'elle seule connait n'avait pas de sens.
   // `null` / chaine vide effacent ; l'absence de cle ne touche a rien.
-  if ('skill_rating' in (req.body || {})) {
+  if ('skill_rating' in body) {
     if (
       skill_rating === null ||
       (typeof skill_rating === 'string' && skill_rating.trim() === '')
@@ -116,7 +122,7 @@ export default withAuthRoute(async function handler(
   // Une valeur inconnue est REFUSEE, jamais ramenee silencieusement a null :
   // meme contrat que /api/teams/update-member-specialty cote capitaine. Corriger
   // en douce effacerait le poste de quelqu'un sans le lui dire.
-  if ('specialty' in (req.body || {})) {
+  if ('specialty' in body) {
     if (specialty === null || specialty === '') {
       updates.specialty = null;
     } else if (
@@ -159,7 +165,7 @@ export default withAuthRoute(async function handler(
   }
   if (clearTwitch) {
     updates.twitch = null;
-  } else if ('twitch' in (req.body || {})) {
+  } else if ('twitch' in body) {
     if (twitch === null || twitch === '') {
       updates.twitch = null;
     } else if (typeof twitch !== 'string') {

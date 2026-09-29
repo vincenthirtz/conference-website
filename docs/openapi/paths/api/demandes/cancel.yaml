@@ -10,13 +10,7 @@ delete:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - demandeId
-          properties:
-            demandeId:
-              type: string
-              format: uuid
+          x-zod: player.demandes.cancel
   responses:
     '200':
       description: Demande annulee.

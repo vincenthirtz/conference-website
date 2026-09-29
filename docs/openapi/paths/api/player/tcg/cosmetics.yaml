@@ -45,7 +45,7 @@ post:
       application/json:
         schema:
           type: object
-          required: [key]
+          required: [ key ]
           properties:
             key:
               type: string
@@ -84,12 +84,7 @@ put:
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            frame:
-              type: [string, 'null']
-            background:
-              type: [string, 'null']
+          x-zod: player.tcg.cosmetics.equip
   responses:
     '200':
       description: Equipped.

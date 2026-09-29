@@ -59,7 +59,12 @@ export default withAuthRoute(async function handler(
 
   const { data: planning, error } = await supabaseAdmin
     .from('scrim_plannings')
-    .select('*')
+    // Colonnes explicites (P4) : celles que lit l'écran de la session.
+    // L'ancien `*` renvoyait aussi `created_by`, `source_demande_id`,
+    // `reminder_pinged_at`, `scrim_id`, `is_public`, `deleted_at`, `tenant_id`.
+    .select(
+      'id, status, title, team1_id, team2_id, horizon_start, horizon_days, slot_minutes, day_start_min, day_end_min, timezone, staff_required, validated_slot'
+    )
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .is('deleted_at', null)
@@ -89,7 +94,7 @@ export default withAuthRoute(async function handler(
 
   const { data: availabilities } = await supabaseAdmin
     .from('scrim_planning_availabilities')
-    .select('*')
+    .select('user_id, party, display_name, slots')
     .eq('tenant_id', tenantId)
     .eq('planning_id', id);
 

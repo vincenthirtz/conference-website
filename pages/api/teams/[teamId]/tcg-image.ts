@@ -32,6 +32,8 @@ import { hasTeamPermission } from '@/utils/teams/permissions';
 import { decodeImagePayload } from '@/utils/uploads/imageBytes';
 import { TCG_BUCKET, tcgTeamImagePrefix } from '@/utils/tcg/teamCardImage';
 import { logger } from '@/utils/logger';
+import { parseBody } from '../../../../utils/player/errors';
+import { TeamTcgImageBody } from '../../../../features/player/team/schemas';
 import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from '@/utils/uploads/storageCache';
 
 export const config = {
@@ -118,10 +120,9 @@ export default withAuthRoute(async function handler(
   }
 
   // ---------- POST : déposer ou remplacer ----------
-  const { data, mimeType } = (req.body ?? {}) as {
-    data?: unknown;
-    mimeType?: unknown;
-  };
+  const parsed = parseBody(TeamTcgImageBody, req.body);
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const { data, mimeType } = parsed.data;
   const decoded = decodeImagePayload(data, mimeType);
   if (!decoded.ok) {
     // Code stable, message traduit côté client : le serveur ne connaît pas la

@@ -45,12 +45,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required: [userId]
-          properties:
-            userId:
-              type: string
-              format: uuid
+          x-zod: player.tcg.trades.blocks
   responses:
     '201':
       description: Blocked.
@@ -79,12 +74,7 @@ delete:
     content:
       application/json:
         schema:
-          type: object
-          required: [userId]
-          properties:
-            userId:
-              type: string
-              format: uuid
+          x-zod: player.tcg.trades.blocks
   responses:
     '200':
       description: Unblocked.

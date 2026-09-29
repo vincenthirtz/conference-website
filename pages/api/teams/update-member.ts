@@ -20,7 +20,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { isValidUUID, validateRole } from '@/utils/apiHelpers';
+import { validateRole } from '@/utils/apiHelpers';
 import { getStaffByUserId } from '@/utils/staff';
 import { withSubjectRoute } from '@/utils/subject';
 import {
@@ -46,6 +46,8 @@ import {
 import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../utils/logger';
+import { parseBody } from '../../../utils/player/errors';
+import { UpdateMemberBody } from '../../../features/player/team/schemas';
 
 export default withSubjectRoute(
   async function handler(
@@ -78,16 +80,18 @@ export default withSubjectRoute(
     const denied = assertTeamPermission(access, 'manage_roster');
     if (denied) return res.status(denied.status).json({ error: denied.error });
 
-    const { memberId } = req.body || {};
-    if (!memberId || typeof memberId !== 'string' || !isValidUUID(memberId)) {
-      return res.status(400).json({ error: 'memberId invalide.' });
-    }
+    // Schéma partagé : `memberId` ; les champs, PRÉSENTS ou non, sont
+    // validés plus bas contre le membre visé.
+    const parsed = parseBody(UpdateMemberBody, req.body);
+    if (!parsed.ok) return res.status(400).json(parsed.body);
+    const body = parsed.data;
+    const { memberId } = body;
 
-    const hasRole = 'role' in (req.body || {}) && req.body.role != null;
-    const hasBattleTag = 'battle_tag' in (req.body || {});
+    const hasRole = 'role' in body && body.role != null;
+    const hasBattleTag = 'battle_tag' in body;
     const hasIsSubstitute =
-      'is_substitute' in (req.body || {}) && req.body.is_substitute != null;
-    const hasSkillRating = 'skill_rating' in (req.body || {});
+      'is_substitute' in body && body.is_substitute != null;
+    const hasSkillRating = 'skill_rating' in body;
 
     if (!hasRole && !hasBattleTag && !hasIsSubstitute && !hasSkillRating) {
       return res.status(400).json({
@@ -117,14 +121,12 @@ export default withSubjectRoute(
     let battleTagChanged = false;
     let newBattleTag: string | null = member.battle_tag;
     if (hasBattleTag) {
-      const raw = req.body.battle_tag;
+      const raw = body.battle_tag;
       // Rôle visé par CETTE requête (le bloc « Role » plus bas le revalide) :
       // vider le BattleTag n'est légitime que pour l'encadrement, y compris
       // quand le rôle change au même appel (player → coach, par exemple).
       const prospectiveRole =
-        hasRole && typeof req.body.role === 'string'
-          ? req.body.role
-          : member.role;
+        hasRole && typeof body.role === 'string' ? body.role : member.role;
 
       if (raw == null || (typeof raw === 'string' && raw.trim() === '')) {
         if (roleRequiresBattleTag(prospectiveRole)) {
@@ -152,7 +154,7 @@ export default withSubjectRoute(
     let skillRatingChanged = false;
     let newSkillRating: number | null = member.skill_rating ?? null;
     if (hasSkillRating) {
-      const raw = req.body.skill_rating;
+      const raw = body.skill_rating;
       if (raw == null || (typeof raw === 'string' && raw.trim() === '')) {
         newSkillRating = null;
       } else {
@@ -178,10 +180,10 @@ export default withSubjectRoute(
     let newIsSubstitute: boolean = member.is_substitute ?? false;
 
     if (hasRole) {
-      if (typeof req.body.role !== 'string') {
+      if (typeof body.role !== 'string') {
         return res.status(400).json({ error: 'role invalide.' });
       }
-      newRole = validateRole(req.body.role);
+      newRole = validateRole(body.role);
       const teamRoles = await loadTeamRolesFromSupabase(supabaseAdmin);
 
       // Anti-escalation, MÊME RÈGLE que /api/teams/update-member-role : les
@@ -217,7 +219,7 @@ export default withSubjectRoute(
 
     let substituteChanged = false;
     if (hasIsSubstitute) {
-      const desired = req.body.is_substitute === true;
+      const desired = body.is_substitute === true;
 
       // `is_substitute` n'est PAS un état parallèle au rôle : c'est le même
       // fait, écrit deux fois. Les laisser bouger indépendamment rendait

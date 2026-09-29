@@ -6,7 +6,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit, applyActorRateLimit } from '@/utils/rateLimit';
-import { isValidUUID, validateRole } from '@/utils/apiHelpers';
+import { validateRole } from '@/utils/apiHelpers';
 import { withSubjectRoute } from '@/utils/subject';
 import {
   assertTeamPermission,
@@ -22,6 +22,8 @@ import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 import { resolveDemandeBattleTag } from '@/utils/teams/demandeBattleTag';
 
 import { logger } from '../../../utils/logger';
+import { parseBody } from '../../../utils/player/errors';
+import { JoinRequestDecisionBody } from '../../../features/player/team/schemas';
 import type { DemandeRow, DemandePayload } from '@/utils/teams/demandeRows';
 export default withSubjectRoute(
   async function handler(
@@ -103,7 +105,8 @@ async function handleGet(
 
   let query = supabaseAdmin!
     .from('demandes')
-    .select('*')
+    // Colonnes explicites (P4) : celles que la réponse enrichie renvoie.
+    .select('id, user_id, status, comment, payload, created_at')
     .eq('team_id', teamId)
     .eq('tenant_id', tenantId)
     .eq('type', 'join')
@@ -165,22 +168,14 @@ async function handlePost(
   captainUserId: string,
   tenantId: string
 ) {
-  const { demandeId, action, battleTag: battleTagOverride } = req.body || {};
-
-  if (!demandeId || typeof demandeId !== 'string' || !isValidUUID(demandeId)) {
-    return res.status(400).json({ error: 'demandeId invalide.' });
-  }
-
-  if (action !== 'approve' && action !== 'reject') {
-    return res
-      .status(400)
-      .json({ error: 'Action invalide. Utilise "approve" ou "reject".' });
-  }
+  const parsed = parseBody(JoinRequestDecisionBody, req.body);
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const { demandeId, action, battleTag: battleTagOverride } = parsed.data;
 
   // Fetch the demande and verify it belongs to this team
   const { data: demande, error: fetchErr } = await supabaseAdmin!
     .from('demandes')
-    .select('*')
+    .select('id, user_id, payload')
     .eq('id', demandeId)
     .eq('team_id', captainTeam.id)
     .eq('tenant_id', tenantId)

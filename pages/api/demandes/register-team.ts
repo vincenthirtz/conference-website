@@ -25,13 +25,8 @@ import {
 } from '@/utils/registrationFields';
 
 import { logger } from '../../../utils/logger';
-export type RegisterTeamBody = {
-  teamId: string;
-  tournamentId: string;
-  message?: string;
-  /** Réponses aux champs d'inscription personnalisés du tournoi (Flow B). */
-  field_values?: Record<string, unknown> | null;
-};
+import { parseBody } from '../../../utils/player/errors';
+import { RegisterTeamDemandeBody } from '../../../features/player/demandes/schemas';
 
 /**
  * Ce qui empêche l'équipe de déposer sa candidature, en CODES et non en
@@ -286,7 +281,9 @@ export default withAuthRoute(async function handler(
   if (req.method === 'GET') {
     const { data: demandes, error: demandesErr } = await supabaseAdmin
       .from('demandes')
-      .select('*')
+      .select(
+        'id, type, status, user_id, team_id, tournament_id, comment, staff_note, payload, created_at, updated_at, processed_at'
+      )
       .eq('user_id', userId)
       .eq('tenant_id', tenantId)
       .eq('type', 'team_registration')
@@ -312,22 +309,14 @@ export default withAuthRoute(async function handler(
   }
 
   if (req.method === 'POST') {
-    const body = req.body as RegisterTeamBody;
+    // Schéma partagé : équipe + tournoi requis, message ≤ 1000 après trim.
+    const parsed = parseBody(RegisterTeamDemandeBody, req.body);
+    if (!parsed.ok) return res.status(400).json(parsed.body);
+    const body = parsed.data;
 
-    if (!body?.teamId?.trim() || !body?.tournamentId?.trim()) {
-      return res.status(400).json({
-        error: 'teamId et tournamentId sont requis.',
-      });
-    }
-
-    const teamId = body.teamId.trim();
-    const tournamentId = body.tournamentId.trim();
-    const rawMessage = body.message?.trim() || null;
-    if (rawMessage && rawMessage.length > 1000) {
-      return res
-        .status(400)
-        .json({ error: 'Message trop long (max 1000 caractères).' });
-    }
+    const teamId = body.teamId;
+    const tournamentId = body.tournamentId;
+    const rawMessage = body.message || null;
     const message = rawMessage?.slice(0, 1000) || null;
 
     // Verify team exists
@@ -479,7 +468,9 @@ export default withAuthRoute(async function handler(
         payload,
         tenant_id: tenantId,
       })
-      .select('*')
+      .select(
+        'id, type, status, user_id, team_id, tournament_id, comment, staff_note, payload, created_at, updated_at, processed_at'
+      )
       .single();
 
     if (insertErr) {

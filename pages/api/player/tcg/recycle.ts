@@ -47,6 +47,8 @@ import {
   readOpenedPackIds,
 } from '@/utils/tcg/readOwnedCards';
 import { logger } from '@/utils/logger';
+import { parseBody } from '../../../../utils/player/errors';
+import { RecycleCardBody } from '../../../../features/player/tcg/schemas';
 
 type CardRow = {
   pack_id: string;
@@ -85,18 +87,12 @@ export default withAuthRoute(async function handler(
     return;
   }
 
-  const body = (req.body ?? {}) as { packId?: unknown; position?: unknown };
-  const packId = typeof body.packId === 'string' ? body.packId : '';
-  const position =
-    typeof body.position === 'number' && Number.isInteger(body.position)
-      ? body.position
-      : null;
-
-  if (!packId || position === null || position < 0) {
-    return res
-      .status(400)
-      .json({ error: 'Carte manquante.', code: 'missing_card' });
-  }
+  const parsed = parseBody(RecycleCardBody, req.body, {
+    message: 'Carte manquante.',
+    code: 'missing_card',
+  });
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const { packId, position } = parsed.data;
 
   const tenantId = resolveTenantIdForUserRequest(req);
   const userId = user.id;

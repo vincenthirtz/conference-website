@@ -34,21 +34,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - requestId
-            - action
-          properties:
-            requestId:
-              type: string
-              format: uuid
-            action:
-              type: string
-              enum:
-                - accept
-                - reject
-            reason:
-              type: string
+          x-zod: player.teams.scrim-requests.decide
   responses:
     '200':
       description: Action appliquee.

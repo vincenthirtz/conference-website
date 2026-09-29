@@ -12,18 +12,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            userId:
-              type: string
-              format: uuid
-            email:
-              type: string
-              format: email
-            role:
-              type: string
-            battleTag:
-              type: string
+          x-zod: player.teams.add-member
   responses:
     '200':
       description: Membre ajoute.

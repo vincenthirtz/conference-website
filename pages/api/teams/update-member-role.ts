@@ -6,7 +6,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { isValidUUID } from '@/utils/apiHelpers';
 import { withSubjectRoute } from '@/utils/subject';
 import {
   assertTeamPermission,
@@ -20,6 +19,8 @@ import {
 } from '@/utils/teamRoles';
 
 import { logger } from '../../../utils/logger';
+import { parseBody } from '../../../utils/player/errors';
+import { UpdateMemberRoleBody } from '../../../features/player/team/schemas';
 
 // Roles acceptes par cet endpoint. On REJETTE toute valeur inconnue en 400
 // plutot que de la corriger silencieusement vers 'player' (ce que ferait le
@@ -74,15 +75,9 @@ export default withSubjectRoute(
       return res.status(404).json({ error: 'Team introuvable.' });
     }
 
-    const { memberId, role } = req.body || {};
-
-    if (!memberId || typeof memberId !== 'string' || !isValidUUID(memberId)) {
-      return res.status(400).json({ error: 'memberId invalide.' });
-    }
-
-    if (!role || typeof role !== 'string') {
-      return res.status(400).json({ error: 'role requis.' });
-    }
+    const parsed = parseBody(UpdateMemberRoleBody, req.body);
+    if (!parsed.ok) return res.status(400).json(parsed.body);
+    const { memberId, role } = parsed.data;
 
     // Validation stricte au niveau de l'endpoint : une valeur inconnue est
     // rejetee (400) au lieu d'etre coercee silencieusement vers 'player' (ce qui

@@ -14,16 +14,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - memberId
-            - role
-          properties:
-            memberId:
-              type: string
-              format: uuid
-            role:
-              type: string
+          x-zod: player.teams.update-member-role
   responses:
     '200':
       description: Role mis a jour.

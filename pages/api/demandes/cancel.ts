@@ -4,11 +4,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { isValidUUID } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
+import { parseBody } from '../../../utils/player/errors';
+import { CancelDemandeBody } from '../../../features/player/demandes/schemas';
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -28,11 +29,9 @@ export default withAuthRoute(async function handler(
   const tenantId = await resolveTenantIdForUserRequestAsync(req, {
     authUserId: userId,
   });
-  const { demandeId } = req.body || {};
-
-  if (!demandeId || typeof demandeId !== 'string' || !isValidUUID(demandeId)) {
-    return res.status(400).json({ error: 'demandeId (UUID) requis.' });
-  }
+  const parsed = parseBody(CancelDemandeBody, req.body);
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const { demandeId } = parsed.data;
 
   // Vérifier l'ownership (403 explicite si la demande existe mais appartient à
   // un autre user). Lecture ciblée : on ne s'appuie PAS sur le statut lu ici

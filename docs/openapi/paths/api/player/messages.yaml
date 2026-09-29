@@ -32,19 +32,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - recipientId
-            - body
-          properties:
-            recipientId:
-              type: string
-              format: uuid
-            body:
-              type: string
-              maxLength: 5000
-            subject:
-              type: string
+          x-zod: player.messages.send
   responses:
     '201':
       description: Message envoye.

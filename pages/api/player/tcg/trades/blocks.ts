@@ -28,9 +28,8 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { parseBody } from '../../../../../utils/player/errors';
+import { TradeBlockBody } from '../../../../../features/player/tcg/schemas';
 
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
@@ -92,26 +91,18 @@ async function list(res: NextApiResponse, tenantId: string, userId: string) {
   });
 }
 
-/** L'identifiant visé, ou `null` si la forme ne tient pas. */
-function targetOf(body: unknown): string | null {
-  const raw = (body as { userId?: unknown } | undefined)?.userId;
-  return typeof raw === 'string' && UUID_RE.test(raw)
-    ? raw.toLowerCase()
-    : null;
-}
-
 async function block(
   req: NextApiRequest,
   res: NextApiResponse,
   tenantId: string,
   userId: string
 ) {
-  const target = targetOf(req.body);
-  if (!target) {
-    return res
-      .status(400)
-      .json({ error: 'Joueuse invalide.', code: 'invalid_body' });
-  }
+  const parsed = parseBody(TradeBlockBody, req.body, {
+    message: 'Joueuse invalide.',
+    code: 'invalid_body',
+  });
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const target = parsed.data.userId;
   if (target === userId.toLowerCase()) {
     return res
       .status(400)
@@ -141,12 +132,12 @@ async function unblock(
   tenantId: string,
   userId: string
 ) {
-  const target = targetOf(req.body);
-  if (!target) {
-    return res
-      .status(400)
-      .json({ error: 'Joueuse invalide.', code: 'invalid_body' });
-  }
+  const parsed = parseBody(TradeBlockBody, req.body, {
+    message: 'Joueuse invalide.',
+    code: 'invalid_body',
+  });
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const target = parsed.data.userId;
 
   const { error } = await supabaseAdmin!
     .from('tcg_trade_blocks')

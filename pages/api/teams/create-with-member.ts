@@ -647,7 +647,7 @@ export default async function handler(
   const { data: createdTeam, error: createErr } = await supabaseAdmin
     .from('teams')
     .insert(teamPayload)
-    .select('*')
+    .select('id, name, slug, is_joinable, discord_role_id')
     .maybeSingle();
 
   if (createErr || !createdTeam) {

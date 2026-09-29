@@ -3,11 +3,7 @@ get:
     - public/teams
   summary: Memoire d'equipe — affrontements joues et revues associees.
   description: >-
-    Chronologie des matchs termines et scrims clos de l'equipe de l'appelant,
-    chacun avec sa revue (VOD + notes) ou `null`, plus la liste des adversaires
-    rencontres pour filtrer cote client. Ouverte a TOUT membre. Les revues sont
-    STRICTEMENT privees a l'equipe : aucune surface publique ne les expose et
-    l'adversaire n'y a jamais acces.
+    Chronologie des matchs termines et scrims clos de l'equipe de l'appelant, chacun avec sa revue (VOD + notes) ou `null`, plus la liste des adversaires rencontres pour filtrer cote client. Ouverte a TOUT membre. Les revues sont STRICTEMENT privees a l'equipe : aucune surface publique ne les expose et l'adversaire n'y a jamais acces.
   operationId: playerTeamReviews
   parameters:
     - $ref: '#/components/parameters/TeamScope'
@@ -29,9 +25,7 @@ put:
     - public/teams
   summary: Ecrire ou mettre a jour la revue d'un affrontement.
   description: >-
-    `opponent_team_id` et `played_at` sont derives du sujet cote serveur et
-    jamais lus dans le body. Le sujet doit appartenir a l'equipe de l'appelant.
-    Vider les deux champs SUPPRIME la revue.
+    `opponent_team_id` et `played_at` sont derives du sujet cote serveur et jamais lus dans le body. Le sujet doit appartenir a l'equipe de l'appelant. Vider les deux champs SUPPRIME la revue.
   operationId: playerTeamReviewUpsert
   parameters:
     - $ref: '#/components/parameters/TeamScope'
@@ -42,29 +36,11 @@ put:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - subjectType
-            - subjectId
-          properties:
-            subjectType:
-              type: string
-              enum: [match, scrim]
-            subjectId:
-              type: string
-              format: uuid
-            vodUrl:
-              type: [string, 'null']
-              maxLength: 500
-              description: URL http(s) uniquement.
-            notes:
-              type: [string, 'null']
-              maxLength: 4000
+          x-zod: player.team-reviews.put
   responses:
     '200':
       description: >-
-        Revue enregistree, ou supprimee (`review: null`) si les deux champs sont
-        vides.
+        Revue enregistree, ou supprimee (`review: null`) si les deux champs sont vides.
       content:
         application/json:
           schema:
@@ -73,12 +49,12 @@ put:
               ok:
                 type: boolean
               review:
-                type: [object, 'null']
+                type: [ object, 'null' ]
                 properties:
                   vodUrl:
-                    type: [string, 'null']
+                    type: [ string, 'null' ]
                   notes:
-                    type: [string, 'null']
+                    type: [ string, 'null' ]
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':
@@ -103,7 +79,7 @@ delete:
       required: true
       schema:
         type: string
-        enum: [match, scrim]
+        enum: [ match, scrim ]
     - in: query
       name: subjectId
       required: true

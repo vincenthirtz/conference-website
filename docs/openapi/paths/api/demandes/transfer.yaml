@@ -31,8 +31,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: player.demandes.transfer
   responses:
     '201':
       description: Demande creee.

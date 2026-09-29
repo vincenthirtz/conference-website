@@ -188,6 +188,7 @@ import nsPlayerHeroPrefs from './playerHeroPrefs';
 import nsPlayerDiscordLink from './playerDiscordLink';
 import nsPlayerTwitchLink from './playerTwitchLink';
 import nsOverlayTcg from './overlayTcg';
+import nsPlayerErrors from './playerErrors';
 
 export const frDict = {
   profileSummary: nsProfileSummary.fr,
@@ -371,4 +372,5 @@ export const frDict = {
   playerDiscordLink: nsPlayerDiscordLink.fr,
   playerTwitchLink: nsPlayerTwitchLink.fr,
   overlayTcg: nsOverlayTcg.fr,
+  playerErrors: nsPlayerErrors.fr,
 };

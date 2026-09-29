@@ -19,15 +19,12 @@ import { hasTeamPermission } from '@/utils/teams/permissions';
 import { isValidTwitchValue } from '@/utils/social/profileHandles';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import {
-  MEMBER_DISPLAY_NAME_MAX,
-  MEMBER_PRONOUNS_MAX,
-  MEMBER_TAGLINE_MAX,
   normalizeMemberSpecialty,
   type MemberSpecialty,
 } from '@/utils/markdown/teamPublicMarkdown';
 import { logger } from '@/utils/logger';
-
-const HANDLE_MAX = 80;
+import { parseBody } from '../../../../../../utils/player/errors';
+import { TeamMemberProfileBody } from '../../../../../../features/player/team/schemas';
 
 type Updates = {
   display_name: string | null;
@@ -39,24 +36,6 @@ type Updates = {
   twitch: string | null;
   is_substitute: boolean | null;
 };
-
-function trimOrNull(
-  raw: unknown,
-  max: number
-): { ok: true; value: string | null } | { ok: false; error: string } {
-  if (raw === null || raw === undefined || raw === '') {
-    return { ok: true, value: null };
-  }
-  if (typeof raw !== 'string') {
-    return { ok: false, error: 'Format invalide.' };
-  }
-  const trimmed = raw.trim();
-  if (trimmed.length === 0) return { ok: true, value: null };
-  if (trimmed.length > max) {
-    return { ok: false, error: `Trop long (max ${max} caractères).` };
-  }
-  return { ok: true, value: trimmed };
-}
 
 function validateAvatarUrl(raw: unknown): string | null | 'invalid' {
   if (raw === null || raw === undefined || raw === '') return null;
@@ -131,17 +110,15 @@ export default withAuthRoute(async function handler(
       .json({ error: "Tu n'as pas la permission d'éditer ce profil." });
   }
 
-  const body = (req.body ?? {}) as Record<string, unknown>;
+  // Schéma partagé : types et plafonds, dans l'ordre historique des contrôles.
+  const parsed = parseBody(TeamMemberProfileBody, req.body);
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const body = parsed.data;
 
-  const displayName = trimOrNull(body.display_name, MEMBER_DISPLAY_NAME_MAX);
-  if (!displayName.ok)
-    return res.status(400).json({ error: displayName.error });
+  const displayName = { value: body.display_name || null };
 
   let specialty: MemberSpecialty | null = null;
   if (body.specialty !== undefined && body.specialty !== null) {
-    if (typeof body.specialty !== 'string') {
-      return res.status(400).json({ error: 'specialty invalide.' });
-    }
     if (body.specialty.trim() === '') {
       specialty = null;
     } else {
@@ -159,17 +136,10 @@ export default withAuthRoute(async function handler(
   if (avatar === 'invalid')
     return res.status(400).json({ error: 'avatar_url invalide.' });
 
-  const pronouns = trimOrNull(body.pronouns, MEMBER_PRONOUNS_MAX);
-  if (!pronouns.ok) return res.status(400).json({ error: pronouns.error });
-
-  const tagline = trimOrNull(body.tagline, MEMBER_TAGLINE_MAX);
-  if (!tagline.ok) return res.status(400).json({ error: tagline.error });
-
-  const twitter = trimOrNull(body.twitter, HANDLE_MAX);
-  if (!twitter.ok) return res.status(400).json({ error: twitter.error });
-
-  const twitch = trimOrNull(body.twitch, HANDLE_MAX);
-  if (!twitch.ok) return res.status(400).json({ error: twitch.error });
+  const pronouns = { value: body.pronouns || null };
+  const tagline = { value: body.tagline || null };
+  const twitter = { value: body.twitter || null };
+  const twitch = { value: body.twitch || null };
   // Même contrôle de format que le chemin self-service
   // (`/api/player/update-profile`) : le champ est étiqueté « Twitch », et les
   // deux écrans alimentent la MÊME colonne. Sans ça, une capitaine pouvait y
@@ -186,9 +156,6 @@ export default withAuthRoute(async function handler(
   // (a substitute shouldn't be able to promote herself to titulaire).
   let isSubstitute: boolean | null = null;
   if (body.is_substitute !== undefined && body.is_substitute !== null) {
-    if (typeof body.is_substitute !== 'boolean') {
-      return res.status(400).json({ error: 'is_substitute invalide.' });
-    }
     if (
       isSelf &&
       !(await hasTeamPermission(user.id, teamId, 'edit_public_page'))

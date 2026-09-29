@@ -12,7 +12,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit, applyActorRateLimit } from '@/utils/rateLimit';
-import { isValidUUID } from '@/utils/apiHelpers';
 import { withSubjectRoute } from '@/utils/subject';
 import {
   assertTeamPermission,
@@ -20,16 +19,15 @@ import {
 } from '@/utils/teams/managementAccess';
 import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import { readScrimNego } from '@/utils/teams/scrimNegotiation';
-import {
-  applyScrimRequestAction,
-  isScrimAction,
-} from '@/utils/teams/scrimRequestActions';
+import { applyScrimRequestAction } from '@/utils/teams/scrimRequestActions';
 import {
   fetchAdminUserProfiles,
   type AdminUserProfile,
 } from '@/utils/adminUserProfiles';
 
 import { logger } from '../../../utils/logger';
+import { parseBody } from '../../../utils/player/errors';
+import { ScrimRequestDecisionBody } from '../../../features/player/scrims/schemas';
 
 type DemandeRow = Record<string, any>;
 
@@ -158,7 +156,7 @@ export default withSubjectRoute(
         const [asTargetRes, asRequesterRes] = await Promise.all([
           supabaseAdmin
             .from('demandes')
-            .select('*')
+            .select('id, user_id, source, status, comment, payload, created_at')
             .eq('team_id', myTeamId)
             .eq('tenant_id', tenantId)
             .eq('type', 'scrim')
@@ -166,7 +164,7 @@ export default withSubjectRoute(
             .order('created_at', { ascending: false }),
           supabaseAdmin
             .from('demandes')
-            .select('*')
+            .select('id, user_id, source, status, comment, payload, created_at')
             .filter('payload->>from_team_id', 'eq', myTeamId)
             .eq('tenant_id', tenantId)
             .eq('type', 'scrim')
@@ -216,21 +214,9 @@ export default withSubjectRoute(
     }
 
     if (req.method === 'POST') {
-      const { demandeId, action, slot, slots } = req.body || {};
-
-      if (
-        !demandeId ||
-        typeof demandeId !== 'string' ||
-        !isValidUUID(demandeId)
-      ) {
-        return res.status(400).json({ error: 'demandeId invalide.' });
-      }
-      if (!isScrimAction(action)) {
-        return res.status(400).json({
-          error:
-            'Action invalide. Utilise "accept", "counter", "reject" ou "report".',
-        });
-      }
+      const parsed = parseBody(ScrimRequestDecisionBody, req.body);
+      if (!parsed.ok) return res.status(400).json(parsed.body);
+      const { demandeId, action, slot, slots } = parsed.data;
 
       // L'autorisation est faite ci-dessus (équipe gérée + `manage_scrims`) ;
       // la logique de négociation vit dans un cœur partagé avec la route bot,

@@ -18,8 +18,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: player.teams.member-profile
   responses:
     '200':
       description: Profil mis a jour.

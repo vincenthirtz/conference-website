@@ -13,6 +13,8 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { hasTeamPermission } from '@/utils/teams/permissions';
 import { SVG_MAX_BYTES, SVG_MIME, sanitizeSvg } from '@/utils/svgSanitize';
 import { logger } from '@/utils/logger';
+import { parseBody } from '../../../../utils/player/errors';
+import { TeamImageUploadBody } from '../../../../features/player/team/schemas';
 import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from '@/utils/uploads/storageCache';
 
 export const config = {
@@ -85,10 +87,9 @@ export default withAuthRoute(async function handler(
       .json({ error: "Tu n'as pas la permission d'éditer cette équipe." });
   }
 
-  const { data, mimeType, filename } = req.body || {};
-  if (!data || !mimeType) {
-    return res.status(400).json({ error: 'Missing data or mimeType' });
-  }
+  const parsed = parseBody(TeamImageUploadBody, req.body);
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const { data, mimeType, filename } = parsed.data;
 
   const ext = ALLOWED_TYPES[mimeType];
   if (!ext) {

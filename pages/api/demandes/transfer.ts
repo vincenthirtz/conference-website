@@ -16,13 +16,8 @@ import { findExclusiveMembership } from '@/utils/teams/memberships';
 import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
-export type TransferRequestBody = {
-  teamId: string;
-  desiredRole?: 'player' | 'substitute' | 'coach';
-  message?: string;
-  /** Optional: captain can propose transferring one of their players */
-  targetPlayerId?: string;
-};
+import { parseBody } from '../../../utils/player/errors';
+import { TransferDemandeBody } from '../../../features/player/demandes/schemas';
 
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
@@ -42,7 +37,9 @@ export default withAuthRoute(async function handler(
   if (req.method === 'GET') {
     const { data: demandes, error: demandesErr } = await supabaseAdmin
       .from('demandes')
-      .select('*, team:teams!team_id(id, name, short_name, logo_url)')
+      .select(
+        'id, type, status, user_id, team_id, tournament_id, comment, staff_note, payload, created_at, updated_at, processed_at, team:teams!team_id(id, name, short_name, logo_url)'
+      )
       .eq('user_id', userId)
       .eq('tenant_id', tenantId)
       .eq('type', 'transfer')
@@ -57,21 +54,13 @@ export default withAuthRoute(async function handler(
   }
 
   if (req.method === 'POST') {
-    const body = req.body as TransferRequestBody;
+    // Schéma partagé : équipe cible requise, message ≤ 1000 après trim.
+    const parsed = parseBody(TransferDemandeBody, req.body);
+    if (!parsed.ok) return res.status(400).json(parsed.body);
+    const body = parsed.data;
 
-    if (!body?.teamId?.trim()) {
-      return res.status(400).json({
-        error: 'Selectionne une equipe cible.',
-      });
-    }
-
-    const teamId = body.teamId.trim();
-    const rawMessage = body.message?.trim() || null;
-    if (rawMessage && rawMessage.length > 1000) {
-      return res
-        .status(400)
-        .json({ error: 'Message trop long (max 1000 caracteres).' });
-    }
+    const teamId = body.teamId;
+    const rawMessage = body.message || null;
     const message = rawMessage?.slice(0, 1000) || null;
 
     // ─── Captain/manager-proposed transfer: propose le transfert d'un joueur ───
@@ -223,7 +212,9 @@ export default withAuthRoute(async function handler(
           payload,
           tenant_id: tenantId,
         })
-        .select('*')
+        .select(
+          'id, type, status, user_id, team_id, tournament_id, comment, staff_note, payload, created_at, updated_at, processed_at'
+        )
         .single();
 
       if (insertErr) {
@@ -357,7 +348,9 @@ export default withAuthRoute(async function handler(
         payload,
         tenant_id: tenantId,
       })
-      .select('*')
+      .select(
+        'id, type, status, user_id, team_id, tournament_id, comment, staff_note, payload, created_at, updated_at, processed_at'
+      )
       .single();
 
     if (insertErr) {

@@ -17,15 +17,7 @@ put:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - slots
-          properties:
-            slots:
-              type: array
-              items:
-                type: string
-                format: date-time
+          x-zod: player.teams.scrim-plannings.availability
   responses:
     '200':
       description: Availability saved.

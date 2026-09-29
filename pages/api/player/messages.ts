@@ -15,10 +15,8 @@ import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import type { TeamPermission } from '@/utils/teamRoles';
 
 import { logger } from '../../../utils/logger';
-export type SendMessageBody = {
-  targetTeamId: string;
-  content: string;
-};
+import { parseBody } from '../../../utils/player/errors';
+import { SendMessageBody } from '../../../features/player/messages/schemas';
 
 /** Deterministic conversation ID from two team UUIDs */
 function conversationId(teamA: string, teamB: string): string {
@@ -181,26 +179,9 @@ export default withSubjectRoute(
       );
       if (!team) return;
 
-      const body = req.body as SendMessageBody;
-
-      if (!body?.content?.trim()) {
-        return res
-          .status(400)
-          .json({ error: 'Le message ne peut pas etre vide.' });
-      }
-
-      const content = body.content.trim();
-      if (content.length > 2000) {
-        return res
-          .status(400)
-          .json({ error: 'Message trop long (max 2000 caracteres).' });
-      }
-
-      if (!body?.targetTeamId?.trim()) {
-        return res.status(400).json({ error: 'Equipe cible requise.' });
-      }
-
-      const targetTeamId = body.targetTeamId.trim();
+      const parsed = parseBody(SendMessageBody, req.body);
+      if (!parsed.ok) return res.status(400).json(parsed.body);
+      const { content, targetTeamId } = parsed.data;
 
       // Cannot message own team
       if (targetTeamId === team.id) {
@@ -247,7 +228,9 @@ export default withSubjectRoute(
           payload,
           tenant_id: tenantId,
         })
-        .select('*')
+        // Colonnes explicites (P4) : l'ancien `*` renvoyait aussi `staff_note`,
+        // `metadata` et les identifiants staff de traitement.
+        .select('id, type, status, team_id, comment, payload, created_at')
         .single();
 
       if (insertErr) {

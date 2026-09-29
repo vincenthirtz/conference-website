@@ -194,6 +194,7 @@ import enPlayerHeroPrefs from './playerHeroPrefs';
 import enPlayerDiscordLink from './playerDiscordLink';
 import enPlayerTwitchLink from './playerTwitchLink';
 import enOverlayTcg from './overlayTcg';
+import enPlayerErrors from './playerErrors';
 
 const enDict = {
   profileSummary: enProfileSummary,
@@ -377,6 +378,7 @@ const enDict = {
   playerDiscordLink: enPlayerDiscordLink,
   playerTwitchLink: enPlayerTwitchLink,
   overlayTcg: enOverlayTcg,
+  playerErrors: enPlayerErrors,
 };
 
 export default enDict;

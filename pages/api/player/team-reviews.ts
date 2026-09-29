@@ -31,13 +31,14 @@ import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { findMemberTeam } from '@/utils/teams/memberTeam';
 import {
   buildEncounterHistory,
-  isReviewSubjectType,
   normalizeReviewContent,
   type Encounter,
   type EncounterInput,
   type ReviewSubjectType,
 } from '@/utils/teams/teamReviews';
 import { logger } from '@/utils/logger';
+import { parseBody } from '../../../utils/player/errors';
+import { TeamReviewBody } from '../../../features/player/team/schemas';
 import { readRequestedTeamId } from '@/utils/teams/teamScope';
 
 /** Profondeur d'historique : au-delà, personne ne fait défiler. */
@@ -223,23 +224,11 @@ export default withAuthRoute(async function handler(
 
   /* ------------------------------------------------------------ écriture */
   if (isPut || isDelete) {
-    const source = (isDelete ? req.query : (req.body ?? {})) as {
-      subjectType?: unknown;
-      subjectId?: unknown;
-      vodUrl?: unknown;
-      notes?: unknown;
-      /** Intentions d'avant-match (lot J5) — même ligne que la revue. */
-      objectives?: unknown;
-    };
-
-    if (!isReviewSubjectType(source.subjectType)) {
-      return res.status(400).json({ error: 'Type de sujet invalide.' });
-    }
-    const subjectId =
-      typeof source.subjectId === 'string' ? source.subjectId.trim() : '';
-    if (!subjectId) {
-      return res.status(400).json({ error: 'Sujet manquant.' });
-    }
+    // Même schéma pour le corps (PUT) et la query (DELETE) : le sujet.
+    const parsed = parseBody(TeamReviewBody, isDelete ? req.query : req.body);
+    if (!parsed.ok) return res.status(400).json(parsed.body);
+    const source = parsed.data;
+    const subjectId = source.subjectId;
 
     // Une requête neuve à chaque appel : un builder Supabase ne se rejoue pas.
     const removeReview = () =>
@@ -248,7 +237,7 @@ export default withAuthRoute(async function handler(
         .delete()
         .eq('tenant_id', tenantId)
         .eq('team_id', team.id)
-        .eq('subject_type', source.subjectType as ReviewSubjectType)
+        .eq('subject_type', source.subjectType)
         .eq('subject_id', subjectId);
 
     if (isDelete) {

@@ -15,7 +15,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import { isValidUUID } from '@/utils/apiHelpers';
 import { getStaffByUserId } from '@/utils/staff';
 import { withSubjectRoute } from '@/utils/subject';
 import { logStaffAction } from '@/utils/staffLogs';
@@ -29,6 +28,8 @@ import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import { emitRoleSyncEvent } from '@/utils/botRoleSync';
 
 import { logger } from '../../../utils/logger';
+import { parseBody } from '../../../utils/player/errors';
+import { TransferCaptainBody } from '../../../features/player/team/schemas';
 
 /**
  * Attribution du capitanat PAR UN MANAGER. Couvre les deux cas d'un seul
@@ -135,15 +136,9 @@ export default withSubjectRoute(
     // Sujet = l'appelant, ou la capitaine dépannée en act-as (`?as=…&act=1`) :
     // c'est SON capitanat qui est transféré, jamais celui du staff.
     const { userId, tenantId } = subject;
-    const { newCaptainUserId } = req.body || {};
-
-    if (
-      !newCaptainUserId ||
-      typeof newCaptainUserId !== 'string' ||
-      !isValidUUID(newCaptainUserId)
-    ) {
-      return res.status(400).json({ error: 'newCaptainUserId (UUID) requis.' });
-    }
+    const parsed = parseBody(TransferCaptainBody, req.body);
+    if (!parsed.ok) return res.status(400).json(parsed.body);
+    const { newCaptainUserId } = parsed.data;
 
     if (newCaptainUserId === userId) {
       return res.status(400).json({ error: 'Tu es déjà capitaine.' });

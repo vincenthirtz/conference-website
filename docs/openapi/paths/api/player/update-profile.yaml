@@ -3,10 +3,7 @@ get:
     - public/auth
   summary: Chaine Twitch effective de la joueuse et son origine.
   description: >-
-    Valeur que publie la fiche publique `/player/{userId}` — la declaration de
-    la joueuse, sinon celle saisie par sa capitaine sur la fiche de roster — et
-    d'ou elle vient. Sert au formulaire « Mon profil », qui affichait un champ
-    vide quand la valeur publiee venait du roster.
+    Valeur que publie la fiche publique `/player/{userId}` — la declaration de la joueuse, sinon celle saisie par sa capitaine sur la fiche de roster — et d'ou elle vient. Sert au formulaire « Mon profil », qui affichait un champ vide quand la valeur publiee venait du roster.
   operationId: getPlayerTwitchSource
   security:
     - PlayerBearer: []
@@ -35,8 +32,7 @@ get:
                   - roster
                   - null
                 description: >-
-                  `self` = declaree par la joueuse sur son compte ; `roster` =
-                  saisie par sa capitaine ou une manager ; null si aucune chaine.
+                  `self` = declaree par la joueuse sur son compte ; `roster` = saisie par sa capitaine ou une manager ; null si aucune chaine.
     '401':
       $ref: '#/components/responses/Unauthorized'
     '429':
@@ -55,59 +51,11 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            display_name:
-              type: string
-              maxLength: 50
-            battle_tag:
-              type: string
-              description: Format `Pseudo#1234`. Chaine vide = effacer.
-            skill_rating:
-              type:
-                - integer
-                - string
-                - 'null'
-              description: null ou chaine vide = effacer.
-            specialty:
-              type:
-                - string
-                - 'null'
-              enum:
-                - tank
-                - dps
-                - support
-                - flex
-                - ''
-                - null
-            twitch:
-              type:
-                - string
-                - 'null'
-              description: >-
-                Pseudo ou URL twitch.tv. Un null n'efface la fiche de roster que
-                si la joueuse avait deja declare sa chaine (protege la saisie de
-                la capitaine).
-            clear_twitch:
-              type: boolean
-              description: >-
-                `true` retire le lien Twitch PUBLIE, y compris celui saisi par la
-                capitaine sur la fiche de roster. Incompatible avec une valeur
-                `twitch` non vide (400 `TWITCH_INVALID`).
-            avatar_url:
-              type: string
-              description: >-
-                URL https d'un hote que le site sait afficher (stockage Supabase
-                public, Discord, Twitch, Blizzard). Un autre hote est refuse
-                (400 `AVATAR_HOST_UNSUPPORTED`) quand la valeur change. Chaine
-                vide = effacer.
+          x-zod: player.update-profile
   responses:
     '200':
       description: >-
-        Profil mis a jour. Les champs modifies sont renvoyes en echo.
-        `rosterSynced: false` signale que les metadonnees du compte sont
-        ecrites mais que la propagation vers les fiches de roster
-        (`team_members`) a echoue : renvoyer la meme requete la retente.
+        Profil mis a jour. Les champs modifies sont renvoyes en echo. `rosterSynced: false` signale que les metadonnees du compte sont ecrites mais que la propagation vers les fiches de roster (`team_members`) a echoue : renvoyer la meme requete la retente.
       content:
         application/json:
           schema:
@@ -122,8 +70,7 @@ patch:
               rosterSynced:
                 type: boolean
                 description: >-
-                  false si l'ecriture sur les fiches de roster a echoue (le
-                  compte, lui, est a jour).
+                  false si l'ecriture sur les fiches de roster a echoue (le compte, lui, est a jour).
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

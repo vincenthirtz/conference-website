@@ -14,17 +14,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - memberId
-            - specialty
-          properties:
-            memberId:
-              type: string
-              format: uuid
-            specialty:
-              type: [string, 'null']
-              enum: [tank, dps, support, flex, null]
+          x-zod: player.teams.update-member-specialty
   responses:
     '200':
       description: Specialite mise a jour.

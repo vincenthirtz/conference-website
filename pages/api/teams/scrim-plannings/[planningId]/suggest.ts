@@ -54,7 +54,10 @@ export default withAuthRoute(async function handler(
 
   const { data: planning, error } = await supabaseAdmin
     .from('scrim_plannings')
-    .select('*')
+    // Colonnes explicites (P4) : statut, équipes, grille.
+    .select(
+      'id, status, team1_id, team2_id, horizon_start, horizon_days, slot_minutes, day_start_min, day_end_min, timezone'
+    )
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .is('deleted_at', null)

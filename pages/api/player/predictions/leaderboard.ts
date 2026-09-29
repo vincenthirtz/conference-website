@@ -19,6 +19,8 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { logger } from '@/utils/logger';
+import { parseBody } from '../../../../utils/player/errors';
+import { LeaderboardVisibilityBody } from '../../../../features/player/predictions/schemas';
 import {
   readPredictionLeaderboard,
   setLeaderboardVisibility,
@@ -55,12 +57,12 @@ export default withAuthRoute(async function handler(
     ) {
       return;
     }
-    const body = (req.body ?? {}) as { showInLeaderboard?: unknown };
-    if (typeof body.showInLeaderboard !== 'boolean') {
-      return res
-        .status(400)
-        .json({ error: 'Choix invalide.', code: 'invalid_choice' });
-    }
+    const parsed = parseBody(LeaderboardVisibilityBody, req.body, {
+      message: 'Choix invalide.',
+      code: 'invalid_choice',
+    });
+    if (!parsed.ok) return res.status(400).json(parsed.body);
+    const body = parsed.data;
     const saved = await setLeaderboardVisibility({
       tenantId,
       userId: user.id,

@@ -34,7 +34,9 @@ export default withSubjectRoute(
       // Récupérer les demandes de capitaine de l'utilisateur
       const { data: demandes, error: demandesErr } = await supabaseAdmin
         .from('demandes')
-        .select('*')
+        .select(
+          'id, type, status, user_id, team_id, tournament_id, comment, staff_note, payload, created_at, updated_at, processed_at'
+        )
         .eq('user_id', userId)
         .eq('tenant_id', tenantId)
         .eq('type', 'captain_request')
@@ -140,7 +142,9 @@ export default withSubjectRoute(
           payload,
           tenant_id: tenantId,
         })
-        .select('*')
+        .select(
+          'id, type, status, user_id, team_id, tournament_id, comment, staff_note, payload, created_at, updated_at, processed_at'
+        )
         .single();
 
       if (insertErr) {

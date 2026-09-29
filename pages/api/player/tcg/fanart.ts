@@ -34,6 +34,8 @@ import { withAuthRoute } from '@/utils/staff';
 import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
+import { parseBody } from '../../../../utils/player/errors';
+import { FanartSubmitBody } from '../../../../features/player/tcg/schemas';
 import {
   IMAGE_MAX_BYTES,
   decodeImagePayload,
@@ -163,14 +165,9 @@ async function submit(
     return;
   }
 
-  const body = (req.body ?? {}) as {
-    data?: unknown;
-    mimeType?: unknown;
-    title?: unknown;
-    artistName?: unknown;
-    artistUrl?: unknown;
-    licenceAccepted?: unknown;
-  };
+  const parsed = parseBody(FanartSubmitBody, req.body);
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const body = parsed.data;
 
   const title = typeof body.title === 'string' ? body.title.trim() : '';
   const artistName =

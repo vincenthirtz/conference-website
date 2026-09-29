@@ -10,11 +10,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
-import {
-  ALLOWED_SPECIALTIES,
-  isValidUUID,
-  validateSpecialty,
-} from '@/utils/apiHelpers';
+import { ALLOWED_SPECIALTIES, validateSpecialty } from '@/utils/apiHelpers';
 import { withSubjectRoute } from '@/utils/subject';
 import {
   assertTeamPermission,
@@ -23,6 +19,8 @@ import {
 import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 
 import { logger } from '../../../utils/logger';
+import { parseBody } from '../../../utils/player/errors';
+import { UpdateMemberSpecialtyBody } from '../../../features/player/team/schemas';
 
 export default withSubjectRoute(
   async function handler(
@@ -72,12 +70,9 @@ export default withSubjectRoute(
       return res.status(404).json({ error: 'Team introuvable.' });
     }
 
-    const { memberId } = req.body || {};
-    const rawSpecialty = (req.body || {}).specialty;
-
-    if (!memberId || typeof memberId !== 'string' || !isValidUUID(memberId)) {
-      return res.status(400).json({ error: 'memberId invalide.' });
-    }
+    const parsed = parseBody(UpdateMemberSpecialtyBody, req.body);
+    if (!parsed.ok) return res.status(400).json(parsed.body);
+    const { memberId, specialty: rawSpecialty } = parsed.data;
 
     // `specialty` accepte une valeur de l'enum OU null (pour effacer). Tout le
     // reste (chaine inconnue, nombre, etc.) est rejete en 400 — on ne "corrige"

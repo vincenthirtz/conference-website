@@ -31,6 +31,11 @@ import {
   type CosmeticKind,
 } from '@/utils/tcg/cosmetics';
 import { logger } from '@/utils/logger';
+import { parseBody } from '../../../../utils/player/errors';
+import {
+  BuyCosmeticBody,
+  EquipCosmeticsBody,
+} from '../../../../features/player/tcg/schemas';
 
 type ShowcaseRow = {
   frame: string | null;
@@ -130,8 +135,10 @@ async function handleBuy(
   if (balance === null)
     return res.status(500).json({ error: 'Solde illisible.' });
 
+  const parsed = parseBody(BuyCosmeticBody, req.body);
+  if (!parsed.ok) return res.status(400).json(parsed.body);
   const plan = planCosmeticPurchase({
-    key: (req.body as { key?: unknown } | undefined)?.key,
+    key: parsed.data.key,
     owned: row.unlocked_cosmetics ?? [],
     balance,
   });
@@ -180,7 +187,12 @@ async function handleEquip(
   tenantId: string,
   userId: string
 ) {
-  const body = (req.body ?? {}) as { frame?: unknown; background?: unknown };
+  const parsed = parseBody(EquipCosmeticsBody, req.body, {
+    message: 'Habillage invalide.',
+    code: 'invalid_body',
+  });
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const body = parsed.data;
   const patch: Record<string, unknown> = {};
 
   const row = await readShowcase(tenantId, userId);

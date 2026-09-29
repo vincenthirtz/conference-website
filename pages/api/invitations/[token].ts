@@ -33,6 +33,8 @@ import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { resolveUserFromToken } from '@/utils/staff';
 import { logger } from '@/utils/logger';
+import { parseBody } from '../../../utils/player/errors';
+import { TeamInvitationActionBody } from '../../../features/player/invitations/schemas';
 import {
   resolveInvitationToken,
   hashInvitationToken,
@@ -160,9 +162,9 @@ export default async function handler(
         .json({ error: 'Connexion requise.', code: 'AUTH_REQUIRED' });
     }
 
-    const raw = (req.body ?? {}) as { action?: unknown };
-    const action: TeamInviteAction =
-      raw.action === 'reject' ? 'reject' : 'accept';
+    const parsed = parseBody(TeamInvitationActionBody, req.body);
+    if (!parsed.ok) return res.status(400).json(parsed.body);
+    const action: TeamInviteAction = parsed.data.action;
     const { status, body } = await actOnTeamInvitation(token, action, user);
     return res.status(status).json({ kind: 'team', ...body });
   }

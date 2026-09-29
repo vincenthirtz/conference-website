@@ -25,6 +25,8 @@ import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { alertIfBlacklisted } from '@/utils/moderation/blacklist';
 
 import { logger } from '../../../utils/logger';
+import { parseBody } from '../../../utils/player/errors';
+import { AddMemberBody } from '../../../features/player/team/schemas';
 type AddMemberResponse =
   | {
       teamMemberId?: string;
@@ -92,7 +94,9 @@ export default withAuthRoute(async function handler(
     });
   }
 
-  const { userId, email, role, battleTag } = req.body || {};
+  const parsed = parseBody(AddMemberBody, req.body);
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const { userId, email, role, battleTag } = parsed.data;
   const validatedRole = validateRole(role);
 
   let resolvedUserId =

@@ -18,6 +18,8 @@ import { planningConfigFromRow } from '@/utils/teams/scrimPlanningConfig';
 import { normalizePlanningSlots } from '@/utils/teams/scrimPlanningOverlap';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
+import { parseBody } from '../../../../../utils/player/errors';
+import { PlanningAvailabilityBody } from '../../../../../features/player/scrims/schemas';
 
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
@@ -53,7 +55,10 @@ export default withAuthRoute(async function handler(
 
   const { data: planning, error } = await supabaseAdmin
     .from('scrim_plannings')
-    .select('*')
+    // Colonnes explicites (P4) : statut, équipes, grille.
+    .select(
+      'id, status, team1_id, team2_id, horizon_start, horizon_days, slot_minutes, day_start_min, day_end_min, timezone'
+    )
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .is('deleted_at', null)
@@ -89,7 +94,10 @@ export default withAuthRoute(async function handler(
   }
 
   const config = planningConfigFromRow(planning as never);
-  const result = normalizePlanningSlots((req.body ?? {}).slots, config);
+  // Forme (schéma partagé) puis appartenance à la grille de CETTE session.
+  const parsed = parseBody(PlanningAvailabilityBody, req.body);
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const result = normalizePlanningSlots(parsed.data.slots, config);
   if (!result.ok) {
     return res.status(400).json({ error: result.error });
   }

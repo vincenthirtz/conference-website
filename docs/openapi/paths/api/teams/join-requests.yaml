@@ -36,21 +36,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - requestId
-            - action
-          properties:
-            requestId:
-              type: string
-              format: uuid
-            action:
-              type: string
-              enum:
-                - approve
-                - reject
-            role:
-              type: string
+          x-zod: player.teams.join-requests.decide
   responses:
     '200':
       description: Action appliquee.

@@ -155,7 +155,14 @@ export const DEBT_METRICS: DebtMetric[] = [
     label: 'Routes sans zod qui lisent req.body',
     scope: API,
     per: 'file',
-    test: (src) => /\breq\.body\b/.test(src) && !/from ['"]zod['"]/.test(src),
+    // Validée = importe zod, OU passe le corps par un schéma partagé
+    // (`parseBody(Schema, req.body)` d'utils/player/errors, ou
+    // `Schema.safeParse(req.body…)`) — le schéma vit alors dans
+    // `features/player/<domaine>/schemas.ts` (P4), la route n'importe pas zod.
+    test: (src) =>
+      /\breq\.body\b/.test(src) &&
+      !/from ['"]zod['"]/.test(src) &&
+      !/\bparseBody\(|\.safeParse\(\s*req\.body\b/.test(src),
   },
   {
     key: 'api.reqBodyCast',

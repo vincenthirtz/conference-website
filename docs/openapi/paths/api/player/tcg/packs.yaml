@@ -31,21 +31,17 @@ get:
     - name: cursor
       in: query
       required: false
-      description: '`nextCursor` de la page precedente. Opaque. Invalide : `400
-        invalid_cursor`.'
+      description: '`nextCursor` de la page precedente. Opaque. Invalide : `400 invalid_cursor`.'
       schema:
         type: string
     - name: status
       in: query
       required: false
       description: >-
-        `unopened` (paquets a ouvrir) ou `opened`. Absent : tous. Sans ce
-        filtre, un paquet ferme plus ancien que la premiere page ne
-        s'afficherait jamais cote espace joueuse. Autre valeur : `400
-        invalid_status`.
+        `unopened` (paquets a ouvrir) ou `opened`. Absent : tous. Sans ce filtre, un paquet ferme plus ancien que la premiere page ne s'afficherait jamais cote espace joueuse. Autre valeur : `400 invalid_status`.
       schema:
         type: string
-        enum: [unopened, opened]
+        enum: [ unopened, opened ]
   responses:
     '200':
       description: Paquets et solde.
@@ -82,12 +78,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required: [packId]
-          properties:
-            packId:
-              type: string
-              format: uuid
+          x-zod: player.tcg.packs.open
   responses:
     '200':
       description: Paquet ouvert, cartes figees.
@@ -136,61 +127,49 @@ post:
                       type: integer
                     kind:
                       type: string
-                      enum: [player, team, map]
+                      enum: [ player, team, map ]
                     userId:
-                      type: [string, 'null']
+                      type: [ string, 'null' ]
                     teamId:
-                      type: [string, 'null']
+                      type: [ string, 'null' ]
                     displayName:
-                      type: [string, 'null']
+                      type: [ string, 'null' ]
                       description: Cartes `player` seulement.
                     imageUrl:
-                      type: [string, 'null']
+                      type: [ string, 'null' ]
                       description: >-
-                        Cartes `player` et `map`. Pour une map, la maquette
-                        voxel pre-rendue ; `null` si la map a quitte le
-                        registre.
+                        Cartes `player` et `map`. Pour une map, la maquette voxel pre-rendue ; `null` si la map a quitte le registre.
                     name:
-                      type: [string, 'null']
+                      type: [ string, 'null' ]
                       description: Cartes `team` et `map`.
                     slug:
-                      type: [string, 'null']
+                      type: [ string, 'null' ]
                       description: >-
-                        Adresse publique pour une carte `team` ; pour une carte
-                        `map`, c'est l'IDENTIFIANT lui-meme.
+                        Adresse publique pour une carte `team` ; pour une carte `map`, c'est l'IDENTIFIANT lui-meme.
                     logoUrl:
-                      type: [string, 'null']
+                      type: [ string, 'null' ]
                       description: Cartes `team` seulement.
                     logoCredit:
-                      type: [object, 'null']
+                      type: [ object, 'null' ]
                       description: >-
-                        Cartes `team` seulement. Credit de l'artiste du LOGO, deja nettoye :
-                        `null` sans nom ; `url` a `null` si le lien n'est pas `https://`.
-                        Toujours rendu, meme quand la carte a une illustration dediee : c'est
-                        l'interface qui ne l'affiche que si la carte montre le logo.
-                      required: [name, url]
+                        Cartes `team` seulement. Credit de l'artiste du LOGO, deja nettoye : `null` sans nom ; `url` a `null` si le lien n'est pas `https://`. Toujours rendu, meme quand la carte a une illustration dediee : c'est l'interface qui ne l'affiche que si la carte montre le logo.
+                      required: [ name, url ]
                       properties:
                         name:
                           type: string
                         url:
-                          type: [string, 'null']
+                          type: [ string, 'null' ]
                     rarity:
                       type: string
-                      enum: [common, rare, epic, legendary]
+                      enum: [ common, rare, epic, legendary ]
                       description: >-
-                        Toujours `common` pour une carte `map` — cf. la
-                        description de `/api/player/tcg/collection`.
+                        Toujours `common` pour une carte `map` — cf. la description de `/api/player/tcg/collection`.
                     isFoil:
                       type: boolean
                     isNew:
                       type: boolean
                       description: >-
-                        `true` si l'appelante ne possedait pas ce sujet avant ce
-                        paquet (cartes recyclees exclues). Decide par le SERVEUR
-                        : la collection etant paginee, l'interface ne sait plus
-                        ce qu'elle possede deja. OMIS si la lecture echoue —
-                        l'ouverture, deja ecrite, n'est pas annulee pour un
-                        badge.
+                        `true` si l'appelante ne possedait pas ce sujet avant ce paquet (cartes recyclees exclues). Decide par le SERVEUR : la collection etant paginee, l'interface ne sait plus ce qu'elle possede deja. OMIS si la lecture echoue — l'ouverture, deja ecrite, n'est pas annulee pour un badge.
     '400':
       description: '`code: missing_pack`.'
     '401':

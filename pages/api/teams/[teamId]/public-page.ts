@@ -31,6 +31,8 @@ import {
   type EmbedProvider,
 } from '@/utils/markdown/teamPublicMarkdown';
 import { logger } from '@/utils/logger';
+import { parseBody } from '../../../../utils/player/errors';
+import { TeamPublicPageBody } from '../../../../features/player/team/schemas';
 
 const DESCRIPTION_MAX = 280;
 const HANDLE_MAX = 80;
@@ -139,7 +141,11 @@ export default withAuthRoute(async function handler(
       .json({ error: "Tu n'as pas la permission d'éditer cette équipe." });
   }
 
-  const body = (req.body ?? {}) as Record<string, unknown>;
+  // Schéma partagé : les types, avec les messages historiques ; les règles
+  // de domaine suivent.
+  const parsed = parseBody(TeamPublicPageBody, req.body);
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const body = parsed.data;
 
   const description = trimOrNull(body.description, DESCRIPTION_MAX);
   if (!description.ok)

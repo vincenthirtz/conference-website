@@ -6,7 +6,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit, applyActorRateLimit } from '@/utils/rateLimit';
-import { isValidUUID, validateRole } from '@/utils/apiHelpers';
+import { validateRole } from '@/utils/apiHelpers';
 import { withAuthRoute } from '@/utils/staff';
 import {
   assertTeamPermission,
@@ -22,6 +22,8 @@ import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 
 import { logger } from '../../../utils/logger';
+import { parseBody } from '../../../utils/player/errors';
+import { TransferRequestDecisionBody } from '../../../features/player/team/schemas';
 import type { DemandeRow, DemandePayload } from '@/utils/teams/demandeRows';
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
@@ -93,7 +95,8 @@ async function handleGet(
 
   let query = supabaseAdmin!
     .from('demandes')
-    .select('*')
+    // Colonnes explicites (P4) : celles que la réponse enrichie renvoie.
+    .select('id, user_id, status, comment, payload, created_at')
     .eq('team_id', teamId)
     .eq('tenant_id', tenantId)
     .eq('type', 'transfer')
@@ -154,22 +157,14 @@ async function handlePost(
   captainUserId: string,
   tenantId: string
 ) {
-  const { demandeId, action } = req.body || {};
-
-  if (!demandeId || typeof demandeId !== 'string' || !isValidUUID(demandeId)) {
-    return res.status(400).json({ error: 'demandeId invalide.' });
-  }
-
-  if (action !== 'approve' && action !== 'reject') {
-    return res
-      .status(400)
-      .json({ error: 'Action invalide. Utilise "approve" ou "reject".' });
-  }
+  const parsed = parseBody(TransferRequestDecisionBody, req.body);
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const { demandeId, action } = parsed.data;
 
   // Fetch the demande and verify it belongs to this team
   const { data: demande, error: fetchErr } = await supabaseAdmin!
     .from('demandes')
-    .select('*')
+    .select('id, user_id, payload')
     .eq('id', demandeId)
     .eq('team_id', captainTeam.id)
     .eq('tenant_id', tenantId)

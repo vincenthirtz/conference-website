@@ -14,13 +14,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - newCaptainUserId
-          properties:
-            newCaptainUserId:
-              type: string
-              format: uuid
+          x-zod: player.teams.transfer-captain
   responses:
     '200':
       description: Transfert effectue.

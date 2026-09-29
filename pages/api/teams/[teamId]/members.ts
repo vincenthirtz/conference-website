@@ -17,6 +17,8 @@ import {
 } from '@/utils/teamRoles';
 
 import { logger } from '../../../../utils/logger';
+import { parseBody } from '../../../../utils/player/errors';
+import { RemoveTeamMemberBody } from '../../../../features/player/team/schemas';
 export default withSubjectRoute(
   async function handler(
     req: NextApiRequest,
@@ -68,10 +70,9 @@ export default withSubjectRoute(
     const denied = assertTeamPermission(access, 'manage_roster');
     if (denied) return res.status(denied.status).json({ error: denied.error });
 
-    const { memberId } = req.body || {};
-    if (!memberId || typeof memberId !== 'string' || !isValidUUID(memberId)) {
-      return res.status(400).json({ error: 'memberId (UUID) requis.' });
-    }
+    const parsed = parseBody(RemoveTeamMemberBody, req.body);
+    if (!parsed.ok) return res.status(400).json(parsed.body);
+    const { memberId } = parsed.data;
 
     // Récupérer le membre
     const { data: member, error: fetchErr } = await supabaseAdmin

@@ -31,18 +31,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - tournamentId
-          properties:
-            tournamentId:
-              type: string
-              format: uuid
-            teamId:
-              type: string
-              format: uuid
-            message:
-              type: string
+          x-zod: player.demandes.register-team
   responses:
     '201':
       description: Demande creee.

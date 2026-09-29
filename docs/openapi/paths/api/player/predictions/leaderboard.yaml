@@ -46,11 +46,7 @@ put:
     content:
       application/json:
         schema:
-          type: object
-          required: [showInLeaderboard]
-          properties:
-            showInLeaderboard:
-              type: boolean
+          x-zod: player.predictions.leaderboard
   responses:
     '200':
       description: Preference enregistree.

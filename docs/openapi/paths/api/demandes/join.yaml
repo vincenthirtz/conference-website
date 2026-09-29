@@ -29,19 +29,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - teamId
-          properties:
-            teamId:
-              type: string
-              format: uuid
-            message:
-              type: string
-            role:
-              type: string
-            battleTag:
-              type: string
+          x-zod: player.demandes.join
   responses:
     '201':
       description: Demande creee.

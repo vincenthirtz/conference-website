@@ -58,6 +58,20 @@ zod, erreurs `{ error, code, fields?, requestId }`). Par méthode :
 Pas de CSRF (Bearer uniquement). `tenantResolution` reprend celle de la route migrée. La route
 expose `handler.subjectRoute`, lu par la matrice de permissions et le contrat OpenAPI.
 
+### Client et cache (lot P5)
+
+- `playerRequest` ([`utils/player/playerHttp.ts`](../../utils/player/playerHttp.ts)) partage son
+  cœur avec `adminRequest` ([`utils/http/authedRequest.ts`](../../utils/http/authedRequest.ts)) :
+  Bearer, `Idempotency-Key` (`idempotent: true` sur une mutation), erreur `PlayerHttpError`
+  (`code`, `fields`, `requestId`), 401 → `/login?next=<page courante>` sauf `skipAuthRedirect`.
+- **Portée automatique** : un appel qui reçoit `scope` (`usePlayerScope()`) porte `?as=`
+  (+ `&act=1` en act-as) puis `?teamId=`. Un `client.ts` ne compose plus l'URL à la main.
+- Cache : page joueuse enveloppée par `withPlayerQuery(Page)` (statiques comme `seo` recopiées) ;
+  sous l'admin (inspection), le client admin déjà monté est réutilisé. Clés
+  `playerKey(scope, <domaine>, …)` = `['player', <sujet|self>, <équipe>, …]` : changer de sujet
+  ou d'équipe relit. Lectures : `PLAYER_QUERY_OPTIONS` (pas de nouvel essai sur 4xx, pas de
+  relecture au focus — en inspection chaque lecture écrit une ligne de journal staff).
+
 ### Surfaces
 
 Un seul kit « Le Ruban » (jetons, briques, archétypes, grammaire). Une surface
@@ -104,5 +118,7 @@ commun régénéré par l'orchestrateur, pas par les agents.
 - (−) Deux façons de faire coexistent pendant la migration — borné par le cliquet et les gels.
 - (−) La garde « iso » repose sur des noms de briques : une brique déguisée sous un nom de domaine
   lui échappe ; la revue et la page `/dev/ruban-kit` (P7) complètent.
-- À noter : la règle TanStack de `adminBoundariesGuard` n'autorise la librairie que sous l'admin ;
-  le lot P5 (cache joueuse) devra l'ouvrir à `features/player`.
+- TanStack Query est autorisé sous `features/player/**` (lot P5) ; un composant joueuse n'y accède
+  qu'à travers un hook de module. Une garde transitive (`adminBoundariesGuard`) suit les imports
+  de chaque page publique et échoue si l'une atteint TanStack ou `features/player` (hors
+  `schemas.ts`, zod pur lu par le registre OpenAPI).

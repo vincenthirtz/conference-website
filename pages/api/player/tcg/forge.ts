@@ -46,6 +46,8 @@ import {
 import { readDrawPool } from '@/utils/tcg/readDrawPool';
 import { readPlayerBadges } from '@/utils/rating/readPlayerBadges';
 import { logger } from '@/utils/logger';
+import { parseBody } from '../../../../utils/player/errors';
+import { ForgeBody } from '../../../../features/player/tcg/schemas';
 
 export type ForgeResponse =
   | {
@@ -81,12 +83,12 @@ async function handler(
   const tenantId = resolveTenantIdForUserRequest(req);
   const userId = user.id;
 
-  const selection = parseSelection(req.body);
-  if (!selection) {
-    return res
-      .status(400)
-      .json({ error: 'Cartes à forger attendues.', code: 'invalid_body' });
-  }
+  const parsed = parseBody(ForgeBody, req.body, {
+    message: 'Cartes à forger attendues.',
+    code: 'invalid_body',
+  });
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const selection = parsed.data.cards;
 
   // 1) Ma collection. Une carte d'un paquet fermé n'est pas encore possédée ;
   //    une carte d'un paquet qui n'est pas le mien ne l'est pas du tout.
@@ -190,24 +192,6 @@ async function handler(
     rarity: plan.targetRarity,
     balance: result.balance ?? balance - plan.feeCoins,
   });
-}
-
-/** `{ cards: [{ packId, position }] }`, ou `null` si la forme ne tient pas. */
-function parseSelection(
-  body: unknown
-): { packId: string; position: number }[] | null {
-  const raw = (body as { cards?: unknown } | undefined)?.cards;
-  if (!Array.isArray(raw) || raw.length === 0 || raw.length > 10) return null;
-  const out: { packId: string; position: number }[] = [];
-  for (const entry of raw) {
-    const packId = (entry as { packId?: unknown })?.packId;
-    const position = (entry as { position?: unknown })?.position;
-    if (typeof packId !== 'string' || !packId) return null;
-    if (typeof position !== 'number' || !Number.isInteger(position))
-      return null;
-    out.push({ packId, position });
-  }
-  return out;
 }
 
 /** Le solde, lu au REGISTRE : c'est lui qui fait foi, pas son cache. */

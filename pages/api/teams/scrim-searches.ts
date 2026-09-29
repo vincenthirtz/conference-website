@@ -83,7 +83,10 @@ export default withAuthRoute(async function handler(
   if (isGet) {
     const { data, error } = await supabaseAdmin
       .from('scrim_searches')
-      .select('*')
+      // Colonnes explicites (P4) : sans `tenant_id` ni `created_by`.
+      .select(
+        'id, team_id, slots, format, note, status, expires_at, created_at, updated_at'
+      )
       .eq('tenant_id', tenantId)
       .eq('team_id', teamId)
       .eq('status', 'active')
@@ -164,7 +167,9 @@ export default withAuthRoute(async function handler(
       .from('scrim_searches')
       .update(payload)
       .eq('id', existing.id)
-      .select('*')
+      .select(
+        'id, team_id, slots, format, note, status, expires_at, created_at, updated_at'
+      )
       .maybeSingle();
     if (error) {
       logger.error('[scrim-searches] update error', error);
@@ -175,7 +180,9 @@ export default withAuthRoute(async function handler(
     const { data, error } = await supabaseAdmin
       .from('scrim_searches')
       .insert(payload)
-      .select('*')
+      .select(
+        'id, team_id, slots, format, note, status, expires_at, created_at, updated_at'
+      )
       .maybeSingle();
     if (error) {
       logger.error('[scrim-searches] insert error', error);

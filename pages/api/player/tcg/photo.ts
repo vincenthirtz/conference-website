@@ -43,6 +43,8 @@ import {
 } from '@/utils/uploads/imageBytes';
 import { revalidatePlayerCard } from '@/utils/tcg/revalidatePlayerCard';
 import { logger } from '@/utils/logger';
+import { parseBody } from '../../../../utils/player/errors';
+import { TcgPhotoBody } from '../../../../features/player/tcg/schemas';
 import { enqueuePhotoPurge, tryPurgeNow } from '@/utils/tcg/photoPurge';
 import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from '@/utils/uploads/storageCache';
 import { hasPlayerProfile } from '@/utils/tcg/playerProfile';
@@ -198,7 +200,9 @@ async function submitPhoto(
     });
   }
 
-  const { data, mimeType } = req.body || {};
+  const parsed = parseBody(TcgPhotoBody, req.body);
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const { data, mimeType } = parsed.data;
   const decoded = decodeImagePayload(data, mimeType);
   if (!decoded.ok) {
     // `code` stable pour que l'interface traduise ; le message reste un repli.

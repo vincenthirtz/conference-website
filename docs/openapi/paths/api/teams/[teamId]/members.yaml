@@ -15,13 +15,7 @@ delete:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - memberId
-          properties:
-            memberId:
-              type: string
-              format: uuid
+          x-zod: player.teams.members.remove
   responses:
     '200':
       description: Membre retire.

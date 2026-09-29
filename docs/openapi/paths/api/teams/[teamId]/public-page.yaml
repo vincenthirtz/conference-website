@@ -12,8 +12,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: player.teams.public-page
   responses:
     '200':
       description: Page mise a jour.

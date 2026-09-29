@@ -79,7 +79,7 @@ export default withAuthRoute(async function handler(
   if (isCaptain) {
     const { count } = await supabaseAdmin
       .from('team_members')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('team_id', membership.team_id)
       .eq('tenant_id', tenantId);
     memberCount = count ?? 1;

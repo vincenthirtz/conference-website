@@ -86,6 +86,9 @@ import {
   RECYCLE_REFUND_COINS,
 } from '@/utils/tcg/economy';
 import { logger } from '@/utils/logger';
+import { parseBody } from '../../../../utils/player/errors';
+import { OpenPackBody } from '../../../../features/player/tcg/schemas';
+const MISSING_PACK = { message: 'Paquet manquant.', code: 'missing_pack' };
 
 export default withAuthRoute(async function handler(
   req: NextApiRequest,
@@ -343,12 +346,9 @@ async function openPack(
   )
     return;
 
-  const packId = String((req.body ?? {}).packId ?? '');
-  if (!packId) {
-    return res
-      .status(400)
-      .json({ error: 'Paquet manquant.', code: 'missing_pack' });
-  }
+  const parsed = parseBody(OpenPackBody, req.body, MISSING_PACK);
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const { packId } = parsed.data;
 
   // 1) Le paquet doit m'appartenir et être fermé. On le LIT d'abord : la
   //    réservation viendra après le tirage, pour ne pas consommer un paquet

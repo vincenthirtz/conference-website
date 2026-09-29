@@ -465,10 +465,31 @@ dans les locales (`playerErrors` FR/EN) ; schémas zod par domaine dans `feature
 repositories à colonnes explicites typées `database.generated.ts`.
 
 **Critères d'acceptation**
-- [ ] `select('*')` = 0 dans le périmètre (hors `count/head`).
+- [x] `select('*')` = 0 dans le périmètre (hors `count/head`).
+      *27 → 0 (le `count/head` de `teams/leave` passe aussi sur `id`). Colonnes = ce que lisent
+      l'UI, la route et les tests ; l'ancien `*` exposait notamment `staff_note`/`metadata`/
+      identifiants staff de traitement (demandes), `created_by`/`source_demande_id`/`is_public`/
+      `scrim_id` (sessions de planning), toute la ligne `teams` à l'appel ANONYME de
+      `create-with-member`.*
 - [ ] Routes lisant `req.body` sans zod = 0 ; `req.body as` = 0.
+      *`req.body as` 5 → 0 ; sans zod 40 → 2 : restent `teams/create-with-member` (publique
+      anonyme, 1 386 lignes → P11) et `teams/matches/[matchId]/lineup` (jour de match → P12).
+      Schémas dans `features/player/{demandes,messages,scrims,team,tcg,profile,predictions,
+      invitations}/schemas.ts`, appliqués par `parseBody` (`utils/player/errors.ts`) avec les
+      messages et codes historiques. Le cliquet reconnaît désormais `parseBody(` /
+      `.safeParse(req.body` (6 routes validaient déjà sans importer zod). Une route non migrée
+      importe son schéma en RELATIF : `@/features/player/` reste le marqueur « route migrée »
+      (règle 6, matrice, contrats).*
 - [ ] Le client affiche le message traduit du `code`, le texte serveur reste en repli.
-- [ ] Drift OpenAPI vert (`npx vitest run tests/unit/openapi`), corps via `x-zod`.
+      *Socle posé : catalogue `PLAYER_ERROR_CODES` + `PlayerError` (`utils/player/errors.ts`),
+      namespace `playerErrors` FR/EN, résolveur pur `features/player/_shared/errorMessage.ts`
+      (code du catalogue → message traduit, sinon texte serveur). Branchement dans `playerHttp`
+      = P5.*
+- [x] Drift OpenAPI vert (`npx vitest run tests/unit/openapi`), corps via `x-zod`.
+      *28 corps de requête passés en `x-zod` (`lib/apiContracts/player/bodies.ts`) ; les
+      schémas « forme seule » (`update-member`, `tcg-image`, `tcg/photo`, `tcg/fanart`, achat
+      `tcg/cosmetics`, `upload-image`) gardent leur fragment écrit. `inferred-responses.json`
+      à régénérer (`openapi:responses`).*
 
 ---
 
@@ -485,10 +506,35 @@ automatique pour les routes `follow` ; `/api/admin/teams/my` → `/api/player/te
 en réexport le temps d'une version).
 
 **Critères d'acceptation**
-- [ ] Changer d'équipe active ou d'inspectée invalide les requêtes concernées (test).
+- [x] Changer d'équipe active ou d'inspectée invalide les requêtes concernées (test).
+      → la clé `playerKey(scope, …)` porte sujet + équipe : en changer relit
+      (`tests/unit/playerQueryHooks.test.tsx`).
 - [ ] Gestes jour de match : file hors ligne conservée (test `BgSyncQueuedError`).
+      → à faire avec la migration des écrans de match (hors premier pilote).
 - [ ] Règle 8 (UI → `/api/admin`) à 0 ; règle 7 en baisse.
+      → règle 7 : 22 → 21 (`ProgressionCard` lit `features/player/progression/schemas`).
+      Règle 8 inchangée (3) : `/api/admin/teams/my` → `/api/player/team` est un
+      changement serveur, pas encore fait.
 - [ ] Pilote : `PlayerNotificationsScreen` et `TeamHealthCard` sans `useAdminFetch`.
+      → premier pilote livré sur d'autres écrans : `ProgressionCard` (lecture en
+      cache) et les bascules recrutement / scrims de `PlayerDashboardScreen` et
+      `PlayerManageTeamScreen` (mutations). Notifications et TeamHealthCard restent.
+
+**Livré (1re tranche).** Cœur commun `utils/http/authedRequest.ts` (Bearer, 401,
+`Idempotency-Key`, erreur `ApiHttpError` avec `code`/`fields`/`requestId`) ;
+`adminRequest` s'appuie dessus sans changer d'API ; `utils/player/playerHttp.ts`
+(`playerRequest`, `PlayerHttpError`, `scopedUrl`, 401 → `/login?next=<page>`) ;
+`features/player/_shared/query.tsx` (`withPlayerQuery`, `PlayerQueryProvider` qui
+réutilise un client déjà monté — l'admin en inspection —, `usePlayerScope`,
+`playerKey`, pas de nouvel essai sur 4xx, pas de relecture au focus) ;
+`features/player/{progression,teamSettings}/{client.ts,hooks/}`. Garde TanStack
+ouverte à `features/player/**` + garde transitive « aucune page publique
+n'atteint TanStack ni `features/player` » (`adminBoundariesGuard`).
+Écart de comportement voulu : en **act-as**, les bascules portent désormais
+`?as=…&act=1` (elles partaient sans sujet, donc sur l'équipe du staff) ; le 401
+du tableau de bord ramène sur la page (`/login?next=…`) au lieu de `/login` nu.
+Reste : `bundle-budget.json` à regeler pour `/player` et `/player/manage-team`
+(TanStack entre dans leur premier chargement, ~+12 ko gz) après un build.
 
 ### P6 · `useSchemaForm` + tests de composants — 🟧 / M
 
@@ -520,14 +566,15 @@ carte ; page `/dev/ruban-kit` ; garde « iso » (test de source).
 **Critères d'acceptation**
 - [ ] L'admin consomme `features/ruban` et ne change PAS d'un pixel (captures avant/après des
       écrans admin de référence : accueil, liste, fiche, pilotage).
-- [ ] `/dev/ruban-kit` : chaque brique rendue sous `admin` et `player` — seules la densité et la
+- [x] `/dev/ruban-kit` : chaque brique rendue sous `admin` et `player` — seules la densité et la
       taille des cibles diffèrent.
-- [ ] Garde « iso » verte : aucune brique Ruban redéfinie hors `features/ruban`.
+- [x] Garde « iso » verte : aucune brique Ruban redéfinie hors `features/ruban`.
 - [ ] Captures avant/après (Playwright, base locale) : pages publiques **identiques** (accueil,
       fiche équipe, scrims, TCG vitrine, profil public `[userId]`) — le public est hors périmètre.
 - [ ] Inspection admin : `player-view` / `captain-view` rendus sans régression.
-- [ ] Contraste AA sur les puces d'état ; aucune teinte jaune de marque.
-- [ ] Aucun jeton sans repli (un jeton non défini casse toute la déclaration) : tout `var(--x)` a un repli (`var(--x, …)`) — test grep.
+- [x] Contraste AA sur les puces d'état ; aucune teinte jaune de marque. *(Chip, 6 tons × 4 surfaces :
+      min 5,4:1 — `neutral` sur `--s3` ; ≥ 7,3:1 sur `--s1` ; test `rubanTokensFallback`.)*
+- [x] Aucun jeton sans repli (un jeton non défini casse toute la déclaration) : tout `var(--x)` a un repli (`var(--x, …)`) — test grep.
 
 ### P8 · Coquille `PlayerShell` + archétypes mobiles + e2e mobile — 🟥 / L
 

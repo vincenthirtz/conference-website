@@ -37,6 +37,8 @@ import {
 } from '@/utils/teamRoles';
 
 import { logger } from '../../../utils/logger';
+import { parseBody } from '../../../utils/player/errors';
+import { MemberPermissionBody } from '../../../features/player/team/schemas';
 
 /**
  * Droits d'UN membre, décomposés par SOURCE. L'écran doit pouvoir dire « ça
@@ -59,18 +61,6 @@ export type TeamPermissionGrant = {
   createdAt: string;
   revokedAt: string | null;
 };
-
-type Body = { userId?: unknown; permission?: unknown };
-
-function readBody(body: Body): {
-  userId: string;
-  permission: TeamPermission;
-} | null {
-  const userId = typeof body?.userId === 'string' ? body.userId.trim() : '';
-  const permission = body?.permission;
-  if (!userId || !isTeamPermission(permission)) return null;
-  return { userId, permission };
-}
 
 export default withSubjectRoute(async function handler(
   req: NextApiRequest,
@@ -205,11 +195,19 @@ export default withSubjectRoute(async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const parsed = readBody((req.body ?? {}) as Body);
-  if (!parsed) {
-    return res.status(400).json({ error: 'userId et permission requis.' });
+  // Schéma partagé (userId non vide, permission textuelle), puis catalogue.
+  const parsed = parseBody(MemberPermissionBody, req.body, {
+    message: 'userId et permission requis.',
+  });
+  if (!parsed.ok) return res.status(400).json(parsed.body);
+  const { userId: targetId, permission } = parsed.data;
+  if (!isTeamPermission(permission)) {
+    return res.status(400).json({
+      error: 'userId et permission requis.',
+      code: 'validation',
+      fields: { permission: 'Permission inconnue.' },
+    });
   }
-  const { userId: targetId, permission } = parsed;
 
   // Règle 2 — on ne délègue que ce qu'on a.
   if (!access.permissions.includes(permission)) {

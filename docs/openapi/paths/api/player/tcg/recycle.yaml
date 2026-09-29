@@ -36,14 +36,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required: [packId, position]
-          properties:
-            packId:
-              $ref: '#/components/schemas/Uuid'
-            position:
-              type: integer
-              description: Rang de la carte dans son paquet (0..n-1).
+          x-zod: player.tcg.recycle
   responses:
     '200':
       description: Doublon recycle, pieces creditees.

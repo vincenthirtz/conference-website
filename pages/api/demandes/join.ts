@@ -15,17 +15,8 @@ import {
 import { notifyJoinRequest } from '@/utils/joinRequestNotify';
 
 import { logger } from '../../../utils/logger';
-export type JoinRequestBody = {
-  teamId: string;
-  message?: string;
-  desiredRole?: 'player' | 'substitute' | 'coach';
-  /**
-   * BattleTag saisi dans le formulaire. Facultatif dans le type parce que le
-   * profil peut deja le porter : c'est la RESOLUTION plus bas (corps, puis
-   * metadonnees) qui decide s'il en manque un.
-   */
-  battleTag?: string;
-};
+import { parseBody } from '../../../utils/player/errors';
+import { JoinDemandeBody } from '../../../features/player/demandes/schemas';
 
 export default withSubjectRoute(
   async function handler(
@@ -46,7 +37,9 @@ export default withSubjectRoute(
       // Recuperer les demandes de type "join" de l'utilisateur
       const { data: demandes, error: demandesErr } = await supabaseAdmin
         .from('demandes')
-        .select('*, team:teams!team_id(id, name, short_name, logo_url)')
+        .select(
+          'id, type, status, user_id, team_id, tournament_id, comment, staff_note, payload, created_at, updated_at, processed_at, team:teams!team_id(id, name, short_name, logo_url)'
+        )
         .eq('user_id', userId)
         .eq('tenant_id', tenantId)
         .eq('type', 'join')
@@ -61,21 +54,13 @@ export default withSubjectRoute(
     }
 
     if (req.method === 'POST') {
-      const body = req.body as JoinRequestBody;
+      // Schéma partagé : équipe requise, message ≤ 1000 après trim.
+      const parsed = parseBody(JoinDemandeBody, req.body);
+      if (!parsed.ok) return res.status(400).json(parsed.body);
+      const body = parsed.data;
 
-      if (!body?.teamId?.trim()) {
-        return res.status(400).json({
-          error: 'Selectionne une equipe a rejoindre.',
-        });
-      }
-
-      const teamId = body.teamId.trim();
-      const rawMessage = body.message?.trim() || null;
-      if (rawMessage && rawMessage.length > 1000) {
-        return res
-          .status(400)
-          .json({ error: 'Message trop long (max 1000 caractères).' });
-      }
+      const teamId = body.teamId;
+      const rawMessage = body.message || null;
       const message = rawMessage?.slice(0, 1000) || null;
 
       // Verifier que l'equipe existe et est rejoignable
@@ -163,9 +148,7 @@ export default withSubjectRoute(
           ? user.user_metadata.battle_tag
           : ''
         ).trim() || null;
-      const submittedBattleTag =
-        (typeof body.battleTag === 'string' ? body.battleTag : '').trim() ||
-        null;
+      const submittedBattleTag = (body.battleTag ?? '').trim() || null;
       const battleTag = submittedBattleTag || metaBattleTag;
 
       if (battleTag && !BATTLE_TAG_REGEX.test(battleTag)) {
@@ -207,7 +190,9 @@ export default withSubjectRoute(
           payload,
           tenant_id: tenantId,
         })
-        .select('*')
+        .select(
+          'id, type, status, user_id, team_id, tournament_id, comment, staff_note, payload, created_at, updated_at, processed_at'
+        )
         .single();
 
       if (insertErr) {

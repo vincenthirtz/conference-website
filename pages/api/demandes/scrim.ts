@@ -55,7 +55,9 @@ export default withAuthRoute(async function handler(
   if (req.method === 'GET') {
     const { data: demandes, error: demandesErr } = await supabaseAdmin
       .from('demandes')
-      .select('*, team:teams!team_id(id, name, short_name, logo_url)')
+      .select(
+        'id, type, status, user_id, team_id, tournament_id, comment, staff_note, payload, created_at, updated_at, processed_at, team:teams!team_id(id, name, short_name, logo_url)'
+      )
       .eq('user_id', userId)
       .eq('tenant_id', tenantId)
       .eq('type', 'scrim')
@@ -193,7 +195,9 @@ export default withAuthRoute(async function handler(
         payload,
         tenant_id: tenantId,
       })
-      .select('*')
+      .select(
+        'id, type, status, user_id, team_id, tournament_id, comment, staff_note, payload, created_at, updated_at, processed_at'
+      )
       .single();
 
     if (insertErr) {

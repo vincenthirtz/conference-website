@@ -41,14 +41,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required: [userId, permission]
-          properties:
-            userId:
-              type: string
-              format: uuid
-            permission:
-              type: string
+          x-zod: player.teams.member-permissions
   responses:
     '200':
       description: Permission accordee.
@@ -77,14 +70,7 @@ delete:
     content:
       application/json:
         schema:
-          type: object
-          required: [userId, permission]
-          properties:
-            userId:
-              type: string
-              format: uuid
-            permission:
-              type: string
+          x-zod: player.teams.member-permissions
   responses:
     '200':
       description: Delegation revoquee.
