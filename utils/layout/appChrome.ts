@@ -21,11 +21,12 @@ export type RubanSurface = 'admin' | 'player';
  * Pages de l'espace joueuse HORS `/player/*` : le périmètre de
  * docs/PLAN-industrialisation-joueur.md § 1 (scripts/player-metrics.ts,
  * `PAGES`). Motifs de route exacts (`router.pathname`) : `/team/[slug]` (fiche
- * publique) et `/rejoindre` (marché public) n'en sont pas.
+ * publique), `/rejoindre` (marché public) et `/team/create` (création d'équipe
+ * anonyme, publique — décision du 2026-09-29 : pas de Ruban sur le public) n'en
+ * sont pas.
  */
 const PLAYER_SPACE_ROUTES: ReadonlySet<string> = new Set([
   '/espace-capitaine',
-  '/team/create',
   '/team/[slug]/edit',
   '/checkin/[token]',
   '/invitation/[token]',
