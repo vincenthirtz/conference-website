@@ -9,17 +9,39 @@ dotenv.config();
 const PORT = process.env.PORT || 3000;
 const baseURL = process.env.TEST_BASE_URL || `http://localhost:${PORT}`;
 
+// En CI (workflow e2e), réglages resserrés — le poste local garde les siens.
+//   - timeout 60 s : les tests VERTS vont jusqu'à ~48 s (admin-tasks, sous
+//     `next dev`) pour un p95 de ~7 s ; 120 s ne faisait que laisser un test
+//     cassé bloquer un worker deux minutes (près de la moitié du temps de la
+//     suite partait en tests expirés).
+//   - retries 0 : ~110 échecs connus ; un essai de plus doublerait leur coût
+//     sans rien apprendre (et rejouerait des describe `serial` entiers).
+//   - trace à l'échec seulement, et pas de vidéo : la trace contient déjà
+//     captures et DOM, la vidéo coûtait du CPU sur CHAQUE test.
+const CI = !!process.env.CI;
+
+// `E2E_SERVER=start` : la CI a construit l'app (`next build`) et la sert en
+// `next start` — pas de compilation à la demande pendant les tests. En local,
+// `next dev` comme toujours.
+const serverCommand =
+  process.env.E2E_SERVER === 'start'
+    ? `npm run start -- --hostname 0.0.0.0 --port ${PORT}`
+    : `npm run dev -- --hostname 0.0.0.0 --port ${PORT}`;
+
 export default defineConfig({
   testDir: './tests/e2e',
-  timeout: 120000,
+  timeout: CI ? 60_000 : 120_000,
+  forbidOnly: CI,
+  retries: 0,
   expect: {
     timeout: 10000,
   },
   use: {
     baseURL,
-    trace: 'on-first-retry',
-    video: 'retain-on-failure',
+    trace: CI ? 'retain-on-failure' : 'on-first-retry',
+    video: CI ? 'off' : 'retain-on-failure',
     screenshot: 'only-on-failure',
+    ...(CI ? { actionTimeout: 15_000, navigationTimeout: 15_000 } : {}),
   },
   projects: [
     {
@@ -28,9 +50,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev -- --hostname 0.0.0.0 --port ' + PORT,
+    command: serverCommand,
     url: baseURL,
-    reuseExistingServer: true,
+    reuseExistingServer: !CI,
     timeout: 120000,
   },
 });
