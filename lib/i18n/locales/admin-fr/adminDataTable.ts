@@ -20,4 +20,6 @@ export default adminNs('adminDataTable', {
   previous: 'Précédent',
   next: 'Suivant',
   page: 'Page {page} / {pages}',
+  summary: '{shown} sur {total} · page {page} sur {pages}',
+  pagination: 'Pagination',
 });

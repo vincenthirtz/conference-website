@@ -87,7 +87,7 @@ describe('DataTable — mode serveur', () => {
         server={{ total: 60, pageSize: 25 }}
       />
     );
-    expect(screen.getByText(/1 \/ 3/)).toBeTruthy();
+    expect(screen.getByText(/2 sur 60 · page 1 sur 3/)).toBeTruthy();
     act(() => {
       fireEvent.click(screen.getByTestId('pagination-next'));
     });

@@ -11,4 +11,6 @@ export default {
   previous: 'Previous',
   next: 'Next',
   page: 'Page {page} / {pages}',
+  summary: '{shown} of {total} · page {page} of {pages}',
+  pagination: 'Pagination',
 };

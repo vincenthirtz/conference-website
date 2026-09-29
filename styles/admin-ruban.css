@@ -294,6 +294,25 @@
   text-transform: uppercase;
 }
 
+/* État vide (components/ui/EmptyState → `data-empty`) : hachures orchidée,
+ * phrase en casse normale — « Aucune équipe ne correspond à ces filtres ». */
+[data-surface="admin"] [data-empty] {
+  border-radius: 8px;
+  background-image: repeating-linear-gradient(
+    115deg,
+    rgba(180, 103, 209, 0.09) 0 2px,
+    transparent 2px 16px
+  );
+}
+[data-surface="admin"] main [data-empty] h3 {
+  font-family: var(--fu);
+  font-stretch: 100%;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--t3);
+}
+
 /* Un en-tête triable est un bouton : il doit garder l'allure de l'en-tête
  * (le reset de Tailwind remet les boutons en casse et police normales). */
 [data-surface="admin"] main th :is(button, a) {

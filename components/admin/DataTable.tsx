@@ -137,8 +137,33 @@ export type DataTableProps<T> = {
     previous: string;
     next: string;
     page: string;
+    summary: string;
+    pagination: string;
   }>;
 };
+
+/** Boutons de pagination : carrés de 30 px (planche « Liste »). */
+const pageBtn =
+  'inline-flex h-[30px] min-w-[30px] items-center justify-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-2 text-[var(--t2,#c7bfca)] tabular-nums transition-colors hover:text-[var(--t1,#f4edf7)] disabled:opacity-40';
+
+/**
+ * Pages à montrer : toutes jusqu'à 7 ; au-delà, la première, la dernière et
+ * les voisines de la page courante, `null` marquant un saut.
+ */
+export function pageWindow(current: number, count: number): (number | null)[] {
+  if (count <= 7) return Array.from({ length: count }, (_, i) => i + 1);
+  const pages = new Set([1, count, current - 1, current, current + 1]);
+  const sorted = [...pages]
+    .filter((n) => n >= 1 && n <= count)
+    .sort((a, b) => a - b);
+  const out: (number | null)[] = [];
+  for (const n of sorted) {
+    const prev = out[out.length - 1];
+    if (typeof prev === 'number' && n - prev > 1) out.push(null);
+    out.push(n);
+  }
+  return out;
+}
 
 function toCsvCell(value: string | number | null): string {
   const s = value == null ? '' : String(value);
@@ -241,6 +266,17 @@ export default function DataTable<T>({
       ? sorted
       : sorted.slice((current - 1) * pageSize, current * pageSize);
 
+  // Total affiché dans le résumé : celui du serveur quand il le connaît.
+  const totalLabel = server
+    ? server.total !== null
+      ? String(server.total)
+      : '?'
+    : serverPagination
+      ? serverPagination.total !== null
+        ? String(serverPagination.total)
+        : '?'
+      : String(sorted.length);
+
   const goToPage = (next: number) => {
     if (serverPagination) {
       serverPagination.onOffsetChange(
@@ -314,28 +350,35 @@ export default function DataTable<T>({
         </div>
       )}
 
+      {/* Planche « Liste » : bandeau orchidée, compte à gauche, actions à
+          droite — le compte dit sur QUOI l'action va porter. */}
       {selection && selectedRows.length > 0 && (
         <div
-          className="flex flex-wrap items-center gap-2 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2"
+          className="flex flex-wrap items-center gap-3.5 rounded-[var(--r-ctrl,4px)] border-b border-[var(--line,rgba(194,196,201,.12))] bg-[rgba(180,103,209,.10)] px-4 py-2.5"
           role="status"
         >
-          <span className="text-xs text-blue-100">
+          <span
+            className="text-[13px] text-[var(--or-200,#eec4ff)]"
+            data-numeric
+          >
             {labels.selected.replace('{n}', String(selectedRows.length))}
           </span>
-          {selection.actions.map((action) => (
-            <button
-              key={action.label}
-              type="button"
-              onClick={() => action.run(selectedRows)}
-              className={`rounded-lg border px-3 py-1 text-xs font-semibold transition ${
-                action.variant === 'danger'
-                  ? 'border-red-500/40 bg-red-500/10 text-red-200 hover:bg-red-500/20'
-                  : 'border-white/15 bg-white/5 text-white hover:bg-white/10'
-              }`}
-            >
-              {action.label}
-            </button>
-          ))}
+          <div className="ml-auto flex flex-wrap gap-2">
+            {selection.actions.map((action) => (
+              <button
+                key={action.label}
+                type="button"
+                onClick={() => action.run(selectedRows)}
+                className={`h-[30px] rounded-[var(--r-ctrl,4px)] border px-3 text-[11px] font-bold transition-colors ${
+                  action.variant === 'danger'
+                    ? 'border-[rgba(255,107,107,.45)] text-[var(--err,#ff6b6b)] hover:bg-[rgba(255,107,107,.08)]'
+                    : 'border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t2,#c7bfca)] hover:text-[var(--t1,#f4edf7)]'
+                }`}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -446,31 +489,64 @@ export default function DataTable<T>({
           </table>
         </div>
 
+        {/* Planche « Liste » : le résumé à gauche (« 8 sur 12 · page 1 sur
+            2 »), les pages numérotées à droite. */}
         {pageCount > 1 && (
-          <div className="mt-3 flex items-center justify-end gap-3 text-xs text-neutral-400">
-            <button
-              type="button"
-              onClick={() => goToPage(current - 1)}
-              disabled={current <= 1}
-              data-testid="pagination-prev"
-              className="rounded-lg border border-white/15 px-2 py-1 transition hover:bg-white/10 disabled:opacity-40"
-            >
-              {labels.previous}
-            </button>
-            <span className="tabular-nums">
-              {labels.page
+          <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-[var(--line,rgba(194,196,201,.12))] pt-3 text-xs">
+            <span className="flex-1 text-[var(--t4,#807984)]" data-numeric>
+              {labels.summary
+                .replace('{shown}', String(visible.length))
+                .replace('{total}', totalLabel)
                 .replace('{page}', String(current))
                 .replace('{pages}', String(pageCount))}
             </span>
-            <button
-              type="button"
-              onClick={() => goToPage(current + 1)}
-              disabled={current >= pageCount}
-              data-testid="pagination-next"
-              className="rounded-lg border border-white/15 px-2 py-1 transition hover:bg-white/10 disabled:opacity-40"
-            >
-              {labels.next}
-            </button>
+            <nav aria-label={labels.pagination} className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => goToPage(current - 1)}
+                disabled={current <= 1}
+                aria-label={labels.previous}
+                data-testid="pagination-prev"
+                className={pageBtn}
+              >
+                ‹
+              </button>
+              {pageWindow(current, pageCount).map((n, i) =>
+                n === null ? (
+                  <span
+                    key={`gap-${i}`}
+                    aria-hidden
+                    className="px-1 leading-[30px] text-[var(--t4,#807984)]"
+                  >
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => goToPage(n)}
+                    aria-current={n === current ? 'page' : undefined}
+                    className={
+                      n === current
+                        ? `${pageBtn} border-[var(--or,#b467d1)] bg-[var(--or-600,#9e4dbb)] text-white`
+                        : pageBtn
+                    }
+                  >
+                    {n}
+                  </button>
+                )
+              )}
+              <button
+                type="button"
+                onClick={() => goToPage(current + 1)}
+                disabled={current >= pageCount}
+                aria-label={labels.next}
+                data-testid="pagination-next"
+                className={pageBtn}
+              >
+                ›
+              </button>
+            </nav>
           </div>
         )}
       </AdminListShell>

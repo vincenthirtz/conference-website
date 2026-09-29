@@ -43,6 +43,9 @@ export default function EmptyState({
 }: EmptyStateProps) {
   return (
     <div
+      // Repère de style : dans l'admin, styles/admin-ruban.css le hachure
+      // (planche « Liste », état vide) ; ailleurs, rien.
+      data-empty
       className={`flex flex-col items-center justify-center text-center px-6 py-12 ${className}`}
     >
       <div className="text-neutral-500 mb-4">{icon ?? DEFAULT_ICON}</div>
