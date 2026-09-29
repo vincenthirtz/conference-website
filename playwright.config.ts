@@ -41,7 +41,9 @@ export default defineConfig({
     trace: CI ? 'retain-on-failure' : 'on-first-retry',
     video: CI ? 'off' : 'retain-on-failure',
     screenshot: 'only-on-failure',
-    ...(CI ? { actionTimeout: 15_000, navigationTimeout: 15_000 } : {}),
+    // actionTimeout seulement : un navigationTimeout de 15 s coupait des
+    // tests VERTS qui attendent `networkidle` (admin-tasks, admin-events).
+    ...(CI ? { actionTimeout: 15_000 } : {}),
   },
   projects: [
     {
