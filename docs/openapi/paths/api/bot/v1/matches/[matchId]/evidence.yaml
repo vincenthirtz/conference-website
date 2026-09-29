@@ -3,7 +3,7 @@ parameters:
 get:
   tags:
     - bot/matches
-  summary: Vue capitaine — liste les preuves attachées à un de ses matches.
+  summary: Vue capitaine / manager — liste les preuves attachées à un de ses matches.
   operationId: botListMatchEvidence
   parameters:
     - name: actorDiscordUserId
@@ -31,20 +31,32 @@ get:
     '400':
       $ref: '#/components/responses/BadRequest'
     '403':
-      $ref: '#/components/responses/Forbidden'
+      description: |
+        Le compte Discord (via `user_discord_links`, tous les comptes du site
+        lies) n'est ni capitaine (`teams.captain_id`) ni manager d'equipe
+        (`team_members.role = 'manager'`) d'une des deux equipes du match, dans
+        le tenant du match — les coachs sont exclus. `code: REPORT_BOTH_SIDES` :
+        il tient les DEUX equipes du match (une preuve porte un `team_side`, une seule personne ne la depose pas pour les deux cotes). Meme regle que
+        `/api/bot/v1/matches/{matchId}/report` (utils/matches/reportRight.ts).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     '404':
       $ref: '#/components/responses/NotFound'
+    '500':
+      $ref: '#/components/responses/ServerError'
   x-zod-query: bot.matches/[matchId]/evidence.query
 post:
   tags:
     - bot/matches
-  summary: Capitaine attache une preuve à un match (capture, replay, ou lien).
+  summary: Capitaine ou manager d'équipe attache une preuve à un match (capture, replay, ou lien).
   description: |
     Union discriminée sur `kind`. `screenshot` / `replay_file` portent un
     binaire base64 (validé : magic bytes + extension allowlistée), hashé
     (sha256) et uploadé dans le bucket privé `match-evidence` ; `replay_url`
-    porte un lien externe. Le camp (`team_side`) est déduit du capitaine
-    appelant. Limite de corps 15 Mo. Rate limit : 40/min par IP + 10/min
+    porte un lien externe. Le camp (`team_side`) est déduit de
+    l'appelante (capitaine ou manager de cette équipe). Limite de corps 15 Mo. Rate limit : 40/min par IP + 10/min
     par acteur (`discordUserId`). `Idempotency-Key` honoré (réponses 2xx).
   operationId: botAttachMatchEvidence
   parameters:
@@ -65,7 +77,17 @@ post:
     '400':
       $ref: '#/components/responses/BadRequest'
     '403':
-      $ref: '#/components/responses/Forbidden'
+      description: |
+        Le compte Discord (via `user_discord_links`, tous les comptes du site
+        lies) n'est ni capitaine (`teams.captain_id`) ni manager d'equipe
+        (`team_members.role = 'manager'`) d'une des deux equipes du match, dans
+        le tenant du match — les coachs sont exclus. `code: REPORT_BOTH_SIDES` :
+        il tient les DEUX equipes du match (une preuve porte un `team_side`, une seule personne ne la depose pas pour les deux cotes). Meme regle que
+        `/api/bot/v1/matches/{matchId}/report` (utils/matches/reportRight.ts).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     '404':
       $ref: '#/components/responses/NotFound'
     '429':

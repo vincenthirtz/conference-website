@@ -815,11 +815,15 @@ capitaine d'une + manager de l'autre, ou deux comptes du site liés au même Dis
 `utils/matches/reportRight.ts` (`loadReportableTeamIds` +
 `decideReportingSide`), lu par report-score, la liste, le fil du match ET
 `/api/bot/v1/matches/{matchId}/report` (qui ne teste plus `captain_id` ; le 400 « Capitaines
-manquants » disparaît). Réconciliation, preuve, litige, finalisation : inchangés. Restent
-capitaine-seule côté bot (hors décision, à trancher) : `matches/{matchId}/evidence` et
-`matches/{matchId}/dispute` — une manager peut déclarer par Discord mais pas y joindre de
-preuve. Tests : `reportRight`, `playerReportScore`, `botReportReconcile`, `playerMatchDetail`,
-`reportScoreErrors`.
+manquants » disparaît). Réconciliation, preuve, litige, finalisation : inchangés. Discord
+aligné ensuite (2026-09-29) : `matches/{matchId}/evidence` (GET/POST) et
+`matches/{matchId}/dispute` (GET) passent par le MÊME cœur via `resolveDiscordReporter`
+(compte Discord → tous les comptes liés → côté), partagé avec `/report` : manager admise,
+coach refusée, `REPORT_BOTH_SIDES` si les deux équipes (une preuve porte un `team_side`),
+lecture des droits en échec = 500. Côté site, pas de route joueuse de preuve ; le litige
+s'ouvre par report-score (déjà aligné). Règles de preuve et de litige inchangées. Tests :
+`reportRight`, `playerReportScore`, `botReportReconcile`, `playerMatchDetail`,
+`reportScoreErrors`, `apiBotMatchEvidence`, `match-dispute`.
 
 ### P13 · Scrims — 🟧 / L
 

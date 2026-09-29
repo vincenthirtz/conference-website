@@ -3,7 +3,7 @@ parameters:
 get:
   tags:
     - bot/matches
-  summary: Vue capitaine d'une dispute en cours sur un de ses matches.
+  summary: Vue capitaine / manager d'une dispute en cours sur un de ses matches.
   operationId: botGetMatchDispute
   parameters:
     - name: actorDiscordUserId
@@ -13,7 +13,7 @@ get:
         $ref: '#/components/schemas/DiscordId'
   responses:
     '200':
-      description: Etat de la dispute filtre pour le capitaine.
+      description: Etat de la dispute filtre pour la capitaine ou la manager.
       content:
         application/json:
           schema:
@@ -64,6 +64,19 @@ get:
     '400':
       $ref: '#/components/responses/BadRequest'
     '403':
-      $ref: '#/components/responses/Forbidden'
+      description: |
+        Compte Discord non lie au site, ou :
+        Le compte Discord (via `user_discord_links`, tous les comptes du site
+        lies) n'est ni capitaine (`teams.captain_id`) ni manager d'equipe
+        (`team_members.role = 'manager'`) d'une des deux equipes du match, dans
+        le tenant du match — les coachs sont exclus. `code: REPORT_BOTH_SIDES` :
+        il tient les DEUX equipes du match (le litige se suit depuis chaque equipe separement). Meme regle que
+        `/api/bot/v1/matches/{matchId}/report` (utils/matches/reportRight.ts).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     '404':
       $ref: '#/components/responses/NotFound'
+    '500':
+      $ref: '#/components/responses/ServerError'

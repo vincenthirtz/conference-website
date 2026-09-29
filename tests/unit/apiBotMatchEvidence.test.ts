@@ -12,6 +12,7 @@
 //     jamais storage_path
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { failTable } from './__helpers__/failTable';
 import {
   store,
   resetSupabaseMock,
@@ -275,5 +276,122 @@ describe('GET /api/bot/v1/matches/[matchId]/evidence', () => {
       res
     );
     expect(res.statusCode).toBe(403);
+  });
+});
+
+// ── Droit de joindre une preuve : MÊME cœur que le report (reportRight.ts) ──
+// Capitaine OU manager d'équipe (team_members.role='manager'), coach exclu,
+// tenant du match ; REPORT_BOTH_SIDES si l'on tient les deux équipes ;
+// lecture des droits en échec = 500 (jamais un faux 403).
+describe('evidence — capitaine ou manager (reportRight)', () => {
+  const MANAGER = '00000000-0000-4000-8000-0000000000d1';
+  const COACH = '00000000-0000-4000-8000-0000000000d2';
+  const DISCORD_MANAGER = '900000000000000011';
+  const DISCORD_COACH = '900000000000000012';
+
+  function seedStaffRoles(managerTeams: string[], tenantId = TENANT_ID) {
+    store.user_discord_links = [
+      ...(store.user_discord_links as any[]),
+      { auth_user_id: MANAGER, discord_user_id: DISCORD_MANAGER },
+      { auth_user_id: COACH, discord_user_id: DISCORD_COACH },
+    ] as any;
+    store.team_members = [
+      ...managerTeams.map((teamId) => ({
+        team_id: teamId,
+        user_id: MANAGER,
+        role: 'manager',
+        tenant_id: tenantId,
+      })),
+      { team_id: TEAM_1, user_id: COACH, role: 'coach', tenant_id: TENANT_ID },
+    ] as any;
+  }
+
+  const postLink = (discordUserId: string) =>
+    makeReq({
+      body: {
+        kind: 'replay_url',
+        discordUserId,
+        external_url: 'https://www.twitch.tv/videos/123',
+      },
+    });
+
+  it('une manager de team2 joint une preuve (team_side = 2)', async () => {
+    seedStaffRoles([TEAM_2]);
+    const res = makeRes();
+    await handler(postLink(DISCORD_MANAGER), res);
+    expect(res.statusCode).toBe(201);
+    const row = store.match_evidence[0] as any;
+    expect(row.team_side).toBe(2);
+    expect(row.submitted_by_auth_user_id).toBe(MANAGER);
+  });
+
+  it('une manager lit la liste des preuves (GET)', async () => {
+    seedStaffRoles([TEAM_1]);
+    const res = makeRes();
+    await handler(
+      makeReq({
+        method: 'GET',
+        query: { matchId: MATCH_ID, actorDiscordUserId: DISCORD_MANAGER },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('une coach est refusée (403, rien d’écrit)', async () => {
+    seedStaffRoles([]);
+    const res = makeRes();
+    await handler(postLink(DISCORD_COACH), res);
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).toBeUndefined();
+    expect(store.match_evidence).toHaveLength(0);
+  });
+
+  it('une manager d’un AUTRE tenant est refusée (403)', async () => {
+    seedStaffRoles([TEAM_2], '00000000-0000-4000-8000-00000000ffff');
+    const res = makeRes();
+    await handler(postLink(DISCORD_MANAGER), res);
+    expect(res.statusCode).toBe(403);
+    expect(store.match_evidence).toHaveLength(0);
+  });
+
+  it('manager des deux équipes → 403 REPORT_BOTH_SIDES, rien d’écrit', async () => {
+    seedStaffRoles([TEAM_1, TEAM_2]);
+    const res = makeRes();
+    await handler(postLink(DISCORD_MANAGER), res);
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).toBe('REPORT_BOTH_SIDES');
+    expect(store.match_evidence).toHaveLength(0);
+  });
+
+  it('capitaine de team1 + manager de team2 → REPORT_BOTH_SIDES', async () => {
+    store.team_members = [
+      { team_id: TEAM_2, user_id: CAP1, role: 'manager', tenant_id: TENANT_ID },
+    ] as any;
+    const res = makeRes();
+    await handler(postLink(DISCORD_1), res);
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).toBe('REPORT_BOTH_SIDES');
+  });
+
+  it('la capitaine reste acceptée (team_side = 1)', async () => {
+    seedStaffRoles([TEAM_2]);
+    const res = makeRes();
+    await handler(postLink(DISCORD_1), res);
+    expect(res.statusCode).toBe(201);
+    expect((store.match_evidence[0] as any).team_side).toBe(1);
+  });
+
+  it('lecture des droits en échec → 500, jamais 403, rien d’écrit', async () => {
+    seedStaffRoles([TEAM_2]);
+    const spy = failTable('team_members');
+    try {
+      const res = makeRes();
+      await handler(postLink(DISCORD_MANAGER), res);
+      expect(res.statusCode).toBe(500);
+      expect(store.match_evidence).toHaveLength(0);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

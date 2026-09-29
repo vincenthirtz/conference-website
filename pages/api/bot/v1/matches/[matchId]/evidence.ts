@@ -2,20 +2,22 @@
 //
 // Feature "Integrite des resultats & anti-triche", slice 1 : preuve.
 //
-// POST — un capitaine (depuis Discord) attache une preuve a un match :
+// POST — une capitaine ou une manager d'equipe (depuis Discord) attache une preuve a un match :
 //        capture d'ecran, fichier replay, ou lien externe (VOD, replay
 //        hebergé). Le fichier binaire est valide (taille + magic bytes),
 //        hashe (sha256), uploade dans le bucket PRIVE `match-evidence` via
 //        le service role, puis une row `match_evidence` est inseree avec
-//        team_side = camp du capitaine appelant.
+//        team_side = camp de l'appelante.
 //
 // GET  — liste les preuves d'un match (vue capitaine). Chaque item binaire
 //        est accompagne d'une URL SIGNEE courte-duree (jamais le storage_path
 //        brut) ; les liens exposent external_url.
 //
-// Auth : x-api-key (BOT_API_KEY per-tenant). Identite du capitaine verifiee
-// via user_discord_links -> teams.captain_id (meme convention que report.ts /
-// dispute.ts). Route "basic" (pas de gate Régie+) : soumettre une preuve fait
+// Auth : x-api-key (BOT_API_KEY per-tenant). Droit decide par
+// utils/matches/reportRight.ts (resolveDiscordReporter, meme cœur que report.ts
+// et dispute.ts) : capitaine OU manager d'equipe du match (tenant du match),
+// coach exclu ; 403 REPORT_BOTH_SIDES si l'on tient les deux equipes ; lecture
+// des droits en echec = 500. Route "basic" (pas de gate Régie+) : soumettre une preuve fait
 // partie du flux de report de base.
 
 import { z } from 'zod';
@@ -29,6 +31,11 @@ import {
   uploadEvidenceObject,
   signEvidenceUrl,
 } from '@/utils/matches/evidence';
+import {
+  REPORT_BOTH_SIDES,
+  ReportRightLookupError,
+  resolveDiscordReporter,
+} from '@/utils/matches/reportRight';
 import { logPlayerAction } from '@/utils/botPlayerLogs';
 import { logger } from '@/utils/logger';
 import { evidencePostSchema } from '@/lib/apiContracts/bot/matches/[matchId]/evidence';
@@ -106,51 +113,51 @@ async function loadMatchTeams(
 type CaptainResolution = { side: 1 | 2; authUserId: string };
 
 /**
- * Resout le compte Discord -> capitaine d'une des deux equipes, renvoie le
- * team_side + l'auth_user_id. Renvoie null (+ ecrit un 403) si l'appelant
- * n'est pas capitaine.
+ * Compte Discord -> cote du match (capitaine OU manager d'equipe, coach exclu),
+ * MEME cœur que le report (utils/matches/reportRight.ts). Renvoie null
+ * (+ ecrit la reponse) sinon : 403 (dont REPORT_BOTH_SIDES si l'on tient les
+ * deux equipes — une preuve porte un team_side, la deposer pour les deux
+ * cotes seule fausserait la reconciliation), 500 si la lecture echoue.
  */
 async function resolveCaptain(
-  _req: BotTenantRequest,
+  req: BotTenantRequest,
   res: NextApiResponse,
   teams: { team1: MatchTeam; team2: MatchTeam },
   discordUserId: string
 ): Promise<CaptainResolution | null> {
-  const captainIds = [teams.team1.captain_id, teams.team2.captain_id].filter(
-    (v): v is string => typeof v === 'string'
-  );
-  if (captainIds.length === 0) {
-    res.status(400).json({
-      error: 'Capitaines manquants sur le match — preuve impossible.',
-    });
-    return null;
-  }
-
-  const { data: links, error } = await supabaseAdmin
-    .from('user_discord_links')
-    .select('auth_user_id')
-    .in('auth_user_id', captainIds)
-    .eq('discord_user_id', discordUserId)
-    .limit(1);
-
-  if (error) {
-    logger.error('[bot/matches/evidence] link lookup error', error);
+  let reporter: Awaited<ReturnType<typeof resolveDiscordReporter>>;
+  try {
+    reporter = await resolveDiscordReporter(
+      supabaseAdmin,
+      req.botContext.tenantId,
+      discordUserId,
+      teams.team1,
+      teams.team2
+    );
+  } catch (e) {
+    if (!(e instanceof ReportRightLookupError)) throw e;
+    logger.error('[bot/matches/evidence] report right lookup error', e.cause);
     res.status(500).json({ error: 'Erreur de verification capitaine' });
     return null;
   }
 
-  const authId = (links?.[0]?.auth_user_id as string | undefined) ?? null;
-  if (!authId) {
+  if (reporter.side === null) {
+    if (reporter.code === REPORT_BOTH_SIDES) {
+      res.status(403).json({
+        error:
+          'Tu es capitaine ou manager des deux équipes de ce match : chaque équipe joint ses preuves séparément.',
+        // Litteral (et non la constante) : le catalogue des codes bot le lit.
+        code: 'REPORT_BOTH_SIDES',
+      });
+      return null;
+    }
     res.status(403).json({
       error:
-        "Ce compte Discord n'est pas le capitaine d'une des deux equipes de ce match.",
+        "Ce compte Discord n'est ni capitaine ni manager d'une des deux equipes de ce match.",
     });
     return null;
   }
-  return {
-    side: authId === teams.team1.captain_id ? 1 : 2,
-    authUserId: authId,
-  };
+  return { side: reporter.side, authUserId: reporter.authUserId };
 }
 
 async function handlePost(

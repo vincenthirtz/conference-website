@@ -20,9 +20,10 @@
 // features/player/matches/service/reportRight.ts.
 //
 // Lecteurs : la déclaration web (reportScore.ts), la liste des matchs
-// (list.ts), le fil du match (detail.ts) ET la route bot
-// `/api/bot/v1/matches/{matchId}/report` — tous passent par
-// `loadReportableTeamIds` + `decideReportingSide`, jamais par `captain_id`.
+// (list.ts), le fil du match (detail.ts) ET les routes bot
+// `/api/bot/v1/matches/{matchId}/{report,evidence,dispute}` (via
+// `resolveDiscordReporter`) — tous passent par `loadReportableTeamIds` +
+// `decideReportingSide`, jamais par `captain_id`.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AdminDb } from '@/utils/admin/serviceContext';
@@ -134,3 +135,68 @@ export const REPORT_CLOSED_STATUSES: ReadonlySet<string> = new Set([
   'walkover',
   'cancelled',
 ]);
+
+/** Résolution d'un compte Discord en déclarante d'un côté du match. */
+export type DiscordReporterResolution =
+  | { side: 1 | 2; authUserId: string }
+  | {
+      side: null;
+      /** `NOT_LINKED` : aucun compte du site lié à ce compte Discord. */
+      code: 'NOT_LINKED' | 'NOT_A_REPORTER' | typeof REPORT_BOTH_SIDES;
+    };
+
+/**
+ * Routes bot : compte Discord → côté déclaré, MÊME règle que le web.
+ * Un compte Discord peut être lié à plusieurs comptes du site : on les prend
+ * TOUS, et tenir les deux côtés via deux comptes reste `REPORT_BOTH_SIDES`.
+ * `team1`/`team2` = les équipes du match (avec `captain_id`, absentes
+ * tolérées), scopées au tenant du match. Erreur de lecture (liens OU droits) →
+ * `ReportRightLookupError` : l'appelant répond 500, jamais un faux 403.
+ *
+ * Lecteurs : `/api/bot/v1/matches/{matchId}/report`, `/evidence`, `/dispute`.
+ */
+export async function resolveDiscordReporter(
+  db: AdminDb,
+  tenantId: string,
+  discordUserId: string,
+  team1: { id?: string | null; captain_id?: string | null } | null | undefined,
+  team2: { id?: string | null; captain_id?: string | null } | null | undefined
+): Promise<DiscordReporterResolution> {
+  const { data: links, error } = await loose(db)
+    .from('user_discord_links')
+    .select('auth_user_id')
+    .eq('discord_user_id', discordUserId)
+    .limit(10);
+  if (error) throw new ReportRightLookupError(error);
+
+  const linkedIds = [
+    ...new Set(
+      ((links as { auth_user_id?: unknown }[] | null) ?? [])
+        .map((l) => l?.auth_user_id)
+        .filter((v): v is string => typeof v === 'string' && v.length > 0)
+    ),
+  ];
+  if (linkedIds.length === 0) return { side: null, code: 'NOT_LINKED' };
+
+  const byAccount: { authId: string; reportable: Set<string> }[] = [];
+  for (const authId of linkedIds) {
+    byAccount.push({
+      authId,
+      reportable: await loadReportableTeamIds(db, tenantId, authId, [
+        team1,
+        team2,
+      ]),
+    });
+  }
+  const reportable = new Set(byAccount.flatMap((r) => [...r.reportable]));
+  const decision = decideReportingSide(reportable, team1?.id, team2?.id);
+  if (decision.side === null) return decision;
+
+  const teamId = decision.side === 1 ? team1?.id : team2?.id;
+  const authUserId = teamId
+    ? byAccount.find((r) => r.reportable.has(teamId))?.authId
+    : undefined;
+  // Inatteignable (le côté vient de ces mêmes ensembles) : traité en erreur.
+  if (!authUserId) throw new ReportRightLookupError('reporter account lost');
+  return { side: decision.side, authUserId };
+}

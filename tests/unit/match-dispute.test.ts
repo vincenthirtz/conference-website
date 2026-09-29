@@ -7,6 +7,7 @@ import {
   resetSupabaseMock,
   seedBotAuth,
 } from './__helpers__/supabaseMock';
+import { failTable } from './__helpers__/failTable';
 import handler from '../../pages/api/bot/v1/matches/[matchId]/dispute';
 
 const MATCH_ID = '550e8400-e29b-41d4-a716-446655440a01';
@@ -282,5 +283,104 @@ describe('GET /api/bot/v1/matches/[matchId]/dispute', () => {
       decidedScoreA: 2,
       decidedScoreB: 1,
     });
+  });
+});
+
+// ── Droit de suivre le litige : MÊME cœur que le report (reportRight.ts) ──
+describe('dispute — capitaine ou manager (reportRight)', () => {
+  const MANAGER = '00000000-0000-4000-8000-0000000000d1';
+  const COACH = '00000000-0000-4000-8000-0000000000d2';
+  const DISCORD_MANAGER = '900000000000000011';
+  const DISCORD_COACH = '900000000000000012';
+
+  function seedRoles(managerTeams: string[], tenantId = CONFERENCE_TENANT_ID) {
+    store.user_discord_links = [
+      ...(store.user_discord_links as any[]),
+      { discord_user_id: DISCORD_MANAGER, auth_user_id: MANAGER },
+      { discord_user_id: DISCORD_COACH, auth_user_id: COACH },
+    ] as any;
+    store.team_members = [
+      ...managerTeams.map((teamId) => ({
+        team_id: teamId,
+        user_id: MANAGER,
+        role: 'manager',
+        tenant_id: tenantId,
+      })),
+      {
+        team_id: TEAM_1,
+        user_id: COACH,
+        role: 'coach',
+        tenant_id: CONFERENCE_TENANT_ID,
+      },
+    ] as any;
+  }
+
+  const get = async (actorDiscordUserId: string) => {
+    const res = makeRes();
+    await handler(
+      makeReq({ query: { matchId: MATCH_ID, actorDiscordUserId } }),
+      res
+    );
+    return res;
+  };
+
+  it('une manager de team2 consulte le litige (200)', async () => {
+    seedRoles([TEAM_2]);
+    const res = await get(DISCORD_MANAGER);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.matchId).toBe(MATCH_ID);
+  });
+
+  it('une coach est refusée (403)', async () => {
+    seedRoles([]);
+    const res = await get(DISCORD_COACH);
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).toBeUndefined();
+  });
+
+  it('une manager d’un AUTRE tenant est refusée (403)', async () => {
+    seedRoles([TEAM_2], '00000000-0000-4000-8000-00000000ffff');
+    const res = await get(DISCORD_MANAGER);
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('manager des deux équipes → 403 REPORT_BOTH_SIDES', async () => {
+    seedRoles([TEAM_1, TEAM_2]);
+    const res = await get(DISCORD_MANAGER);
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).toBe('REPORT_BOTH_SIDES');
+  });
+
+  it('compte Discord non lié → 403 (message dédié)', async () => {
+    const res = await get('900000000000000099');
+    expect(res.statusCode).toBe(403);
+    expect(res.body.error).toMatch(/pas lié/);
+  });
+
+  it('la capitaine reste acceptée (200)', async () => {
+    seedRoles([TEAM_2]);
+    const res = await get(CAPTAIN_DISCORD);
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('lecture des droits en échec → 500, jamais 403', async () => {
+    seedRoles([TEAM_2]);
+    const spy = failTable('team_members');
+    try {
+      const res = await get(DISCORD_MANAGER);
+      expect(res.statusCode).toBe(500);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('lecture des liens Discord en échec → 500', async () => {
+    const spy = failTable('user_discord_links');
+    try {
+      const res = await get(CAPTAIN_DISCORD);
+      expect(res.statusCode).toBe(500);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

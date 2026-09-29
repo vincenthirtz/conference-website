@@ -1,6 +1,6 @@
 // GET /api/bot/v1/matches/[matchId]/dispute
 //
-// Vue capitaine d'une dispute en cours sur un de ses matches (commande
+// Vue capitaine / manager d'une dispute en cours sur un de ses matches (commande
 // Discord /ma-dispute). Expose une version *filtree* de la dispute :
 //
 //   - matchId, status, openedAt
@@ -13,12 +13,12 @@
 //                 ou null si pas encore resolu
 //   - resolution : { resolvedAt, decidedScoreA, decidedScoreB } ou null
 //
-// Schema de capitaine retenu : `teams.captain_id` (auth.users.id direct).
-// On resout le actorDiscordUserId -> auth_user_id via user_discord_links
-// et on verifie que cet auth_user_id == team1.captain_id OU team2.captain_id.
-// Cette convention vient des autres routes /api/bot/v1/teams/* (cf.
-// teams/[teamId].ts:90, teams/leave.ts:52). Pas de team_members.role
-// 'captain', pas de captain_discord_id en colonne dedee.
+// Qui peut consulter : capitaine (`teams.captain_id`) OU manager d'equipe
+// (`team_members.role = 'manager'`, coach exclu) d'une des deux equipes, dans
+// le tenant du match — regle unique de utils/matches/reportRight.ts
+// (resolveDiscordReporter), partagee avec /report et /evidence. 403
+// REPORT_BOTH_SIDES si l'on tient les deux equipes ; lecture des droits en
+// echec = 500.
 //
 // Aucun champ interne staff (audit log, IP, raison interne) n'est expose :
 //   - matches.dispute_opened_by      -> NON exposé (staff UUID interne)
@@ -33,6 +33,11 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { logger } from '@/utils/logger';
+import {
+  REPORT_BOTH_SIDES,
+  ReportRightLookupError,
+  resolveDiscordReporter,
+} from '@/utils/matches/reportRight';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 
@@ -52,26 +57,6 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const actorDiscordUserId = queryString(req.query.actorDiscordUserId);
   if (!actorDiscordUserId || !DISCORD_ID_RE.test(actorDiscordUserId)) {
     return res.status(400).json({ error: 'actorDiscordUserId requis' });
-  }
-
-  // Resolve actor Discord -> auth_user_id
-  const { data: link, error: lErr } = await supabaseAdmin
-    .from('user_discord_links')
-    .select('auth_user_id')
-    .eq('discord_user_id', actorDiscordUserId)
-    .maybeSingle();
-  if (lErr) {
-    logger.error('[bot/match/dispute] link error', lErr);
-    return res.status(500).json({ error: 'Erreur de verification' });
-  }
-  const actorAuthId =
-    link && typeof (link as { auth_user_id: unknown }).auth_user_id === 'string'
-      ? (link as { auth_user_id: string }).auth_user_id
-      : null;
-  if (!actorAuthId) {
-    return res.status(403).json({
-      error: "Ton compte Discord n'est pas lié au site.",
-    });
   }
 
   // Load match + teams (only the fields we plan to expose).
@@ -105,12 +90,40 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
     | null
     | undefined;
 
-  const isCaptain =
-    (t1?.captain_id && t1.captain_id === actorAuthId) ||
-    (t2?.captain_id && t2.captain_id === actorAuthId);
-  if (!isCaptain) {
+  // Qui consulte ? MEME cœur que le report (utils/matches/reportRight.ts) :
+  // capitaine OU manager d'equipe du match, coach exclu, refus si l'on tient
+  // les deux equipes. Lecture en echec = 500, jamais un faux 403.
+  let reporter: Awaited<ReturnType<typeof resolveDiscordReporter>>;
+  try {
+    reporter = await resolveDiscordReporter(
+      supabaseAdmin,
+      req.botContext.tenantId,
+      actorDiscordUserId,
+      t1,
+      t2
+    );
+  } catch (e) {
+    if (!(e instanceof ReportRightLookupError)) throw e;
+    logger.error('[bot/match/dispute] report right lookup error', e.cause);
+    return res.status(500).json({ error: 'Erreur de verification' });
+  }
+  if (reporter.side === null) {
+    if (reporter.code === 'NOT_LINKED') {
+      return res.status(403).json({
+        error: "Ton compte Discord n'est pas lié au site.",
+      });
+    }
+    if (reporter.code === REPORT_BOTH_SIDES) {
+      return res.status(403).json({
+        error:
+          'Tu es capitaine ou manager des deux équipes de ce match : le litige se suit depuis chaque équipe séparément.',
+        // Litteral (et non la constante) : le catalogue des codes bot le lit.
+        code: 'REPORT_BOTH_SIDES',
+      });
+    }
     return res.status(403).json({
-      error: "Tu n'es pas capitaine d'une des deux équipes de ce match.",
+      error:
+        "Tu n'es ni capitaine ni manager d'une des deux équipes de ce match.",
     });
   }
 

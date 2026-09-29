@@ -62,10 +62,9 @@ import { revalidateMatchPages } from '@/utils/matches/revalidateMatchPages';
 import { reportQuerySchema } from '@/lib/apiContracts/bot/matches/[matchId]/report.query';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
 import {
-  decideReportingSide,
-  loadReportableTeamIds,
   REPORT_BOTH_SIDES,
   ReportRightLookupError,
+  resolveDiscordReporter,
 } from '@/utils/matches/reportRight';
 
 /**
@@ -152,50 +151,25 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   }
 
   // 2) Qui declare ? Meme regle que le report web (reportRight.ts) :
-  //    capitaine OU manager d'equipe, refus si l'on tient les deux cotes.
-  //    Un compte Discord peut etre lie a plusieurs comptes du site : on les
-  //    prend TOUS, et tenir les deux cotes via deux comptes reste un refus.
-  const { data: links, error: linkErr } = await supabaseAdmin
-    .from('user_discord_links')
-    .select('auth_user_id')
-    .eq('discord_user_id', discordUserId)
-    .limit(10);
-
-  if (linkErr) {
-    logger.error('[bot/matches/report] link lookup error', linkErr);
-    return res.status(500).json({ error: 'Erreur de verification capitaine' });
-  }
-
-  const linkedIds = [
-    ...new Set(
-      (links ?? [])
-        .map((l) => l.auth_user_id as string | null)
-        .filter((v): v is string => typeof v === 'string' && v.length > 0)
-    ),
-  ];
-  const rightByAccount: { authId: string; reportable: Set<string> }[] = [];
+  //    capitaine OU manager d'equipe, refus si l'on tient les deux cotes
+  //    (y compris via deux comptes du site lies au meme compte Discord).
+  let reporter: Awaited<ReturnType<typeof resolveDiscordReporter>>;
   try {
-    for (const authId of linkedIds) {
-      rightByAccount.push({
-        authId,
-        reportable: await loadReportableTeamIds(
-          supabaseAdmin,
-          req.botContext.tenantId,
-          authId,
-          [team1, team2]
-        ),
-      });
-    }
+    reporter = await resolveDiscordReporter(
+      supabaseAdmin,
+      req.botContext.tenantId,
+      discordUserId,
+      team1,
+      team2
+    );
   } catch (e) {
     if (!(e instanceof ReportRightLookupError)) throw e;
     logger.error('[bot/matches/report] report right lookup error', e.cause);
     return res.status(500).json({ error: 'Erreur de verification capitaine' });
   }
-  const reportable = new Set(rightByAccount.flatMap((r) => [...r.reportable]));
-  const decision = decideReportingSide(reportable, team1.id, team2.id);
 
-  if (decision.side === null) {
-    if (decision.code === REPORT_BOTH_SIDES) {
+  if (reporter.side === null) {
+    if (reporter.code === REPORT_BOTH_SIDES) {
       return res.status(403).json({
         error:
           'Tu es capitaine ou manager des deux équipes de ce match : le score doit être reporté par chaque équipe séparément.',
@@ -208,13 +182,8 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
         "Ce compte Discord n'est ni capitaine ni manager d'une des deux equipes de ce match.",
     });
   }
-  const mySide: 1 | 2 = decision.side;
-  const myTeamId = mySide === 1 ? team1.id : team2.id;
-  const reportingAuthId =
-    rightByAccount.find((r) => r.reportable.has(myTeamId))?.authId ?? null;
-  if (!reportingAuthId) {
-    return res.status(500).json({ error: 'Erreur de verification capitaine' });
-  }
+  const mySide: 1 | 2 = reporter.side;
+  const reportingAuthId = reporter.authUserId;
 
   // 2b) Le match a-t-il commence ? Apres le controle capitaine (un tiers n'a
   // pas a apprendre l'horaire), avant l'upsert (rien n'est ecrit). Sans cette
