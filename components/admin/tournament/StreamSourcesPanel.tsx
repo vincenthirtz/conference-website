@@ -314,7 +314,7 @@ export default function StreamSourcesPanel({
                   <AdminButton
                     variant="secondary"
                     size="xs"
-                    className="bg-[var(--s1,#100812)]"
+                    className={LINK_BG}
                     onClick={() => copy(url, s.key)}
                   >
                     <span aria-live="polite">

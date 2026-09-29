@@ -52,10 +52,6 @@ importent les fichiers touchés. Hooks extraits relus contre l'original (corps i
 - composants admin : tous passés en grammaire Ruban au lot 11 (restent volontairement bruts :
   quelques contrôles compacts — barre de `SimMatchCard`, outils de `MarkdownEditor`, icônes de
   `RegistrationFieldsEditor`, `ChoiceCard`/`BigChip` du quiz ; `TenantSwitcher.tsx` non importé) ;
-- clés i18n `stageType*` / `matchStatus*` de `adminTournamentOverview` probablement orphelines
-  depuis la suppression de `overview/StageRow`/`RecentMatchRow` (lot 12) — vérifier puis retirer ;
-- bouton « Copier » de `StreamSourcesPanel` : son `className="bg-[var(--s1…)]"` ne surcharge
-  pas le fond d'`AdminButton` (Tailwind v4, ordre des utilitaires) → fond transparent ;
 - `TenantSwitcher.tsx` : non monté depuis 28afe291 (mai 2026) mais gardé exprès « au cas où » —
   NON supprimé ; à trancher (le garder = le passer en Ruban le jour où on le remonte) ;
 - phases 1–2 non terminées : migration des routes vers `defineAdminRoute` (L3), `select('*')`
