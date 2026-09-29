@@ -94,9 +94,12 @@ jobs:
       # Les navigateurs sont gros et ne dépendent que de la version de
       # Playwright : sûrs à mettre en cache. Les dépendances système (apt),
       # elles, ne le sont pas — elles sont réinstallées à chaque fois.
+      # restore/save séparés : `actions/cache` ne sauvegarde qu'en fin de job
+      # RÉUSSI — or une tranche rouge est ici le cas courant, et le cache ne
+      # se remplirait jamais.
       - name: Cache des navigateurs Playwright
         id: pw-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ms-playwright
           key: ms-playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
@@ -108,6 +111,13 @@ jobs:
       - name: Dépendances système de Chromium
         if: steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
+
+      - name: Sauver le cache des navigateurs
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
 
       - name: Jouer la tranche ${{ matrix.shard }}/4
         env:
