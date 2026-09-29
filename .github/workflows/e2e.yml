@@ -28,6 +28,11 @@ name: e2e
 
 on:
   workflow_dispatch:
+  # `workflow_dispatch` n'est déclenchable que si le fichier existe sur la
+  # branche PAR DÉFAUT (master), ce qui n'est pas le cas : un push sur la
+  # branche de validation dédiée le déclenche donc aussi. Jamais `work`.
+  push:
+    branches: [admin-industrialisation]
   schedule:
     # 04:12 UTC — tôt, et pas à l'heure pile, pour éviter la cohue des runners.
     - cron: '12 4 * * *'
