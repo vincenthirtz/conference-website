@@ -7,6 +7,7 @@
 // 375 px (référence) puis à 1280 px (`lg:` = amélioration).
 
 import { useState } from 'react';
+import Tabs, { tabButtonId, tabPanelId } from '@/components/ui/Tabs';
 import type { GetServerSideProps } from 'next';
 import {
   Button,
@@ -287,25 +288,20 @@ export default function PlayerKitPreview() {
   const Demo = DEMOS[section];
   return (
     <div data-surface="player" className="min-h-screen py-6">
-      <div
-        role="tablist"
-        aria-label="Archétypes"
-        className="mb-6 flex gap-1 overflow-x-auto px-4"
+      <Tabs
+        tabs={SECTIONS.map((s) => ({ id: s, label: s }))}
+        active={section}
+        onChange={(id) => setSection(id as Section)}
+        ariaLabel="Archétypes"
+        idBase="player-kit"
+        className="mb-6 px-4"
+      />
+      <main
+        role="tabpanel"
+        id={tabPanelId('player-kit', section)}
+        aria-labelledby={tabButtonId('player-kit', section)}
+        data-archetype={section}
       >
-        {SECTIONS.map((s) => (
-          <button
-            key={s}
-            type="button"
-            role="tab"
-            aria-selected={section === s}
-            onClick={() => setSection(s)}
-            className="shrink-0 px-3 text-[var(--t2,#c7bfca)]"
-          >
-            {s}
-          </button>
-        ))}
-      </div>
-      <main aria-label={section} data-archetype={section}>
         <Demo />
       </main>
     </div>
