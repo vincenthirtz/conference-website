@@ -10,7 +10,6 @@ import { adminNs } from '../../ns';
 
 export default adminNs('adminTaskBoard', {
   headTitle: 'Admin – Tâches',
-  eyebrow: 'Espace staff',
   pageTitle: 'Tableau des tâches',
   subtitle:
     'Kanban interne du staff : organisez le travail par board, colonne et carte.',

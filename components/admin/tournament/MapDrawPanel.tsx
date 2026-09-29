@@ -19,14 +19,14 @@ import AdminButton, {
 } from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import {
-  CARD,
-  CARD_FLUSH,
-  ERROR_BOX,
-  EYEBROW,
-  FAINT,
-  INPUT,
-  MUTED,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardFlush,
+  rubanCardPadded,
+  rubanErrBox,
+  rubanEyebrowSnug,
+  rubanFaint,
+  rubanFormInput,
+  rubanMuted,
+} from '@/features/admin/_shared/ui/ruban';
 
 type Dict = typeof nsAdminTournamentMapDraw.fr;
 
@@ -409,7 +409,7 @@ ${selectedSlots
       {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div>
-          <p className={EYEBROW}>{t.eyebrow}</p>
+          <p className={rubanEyebrowSnug}>{t.eyebrow}</p>
           <h1 className="text-2xl font-semibold">
             {fmt(t.pageTitle, {
               name: tournament?.name || t.defaultTournamentName,
@@ -438,12 +438,14 @@ ${selectedSlots
         </div>
       </div>
 
-      {loading && <div className={`${CARD} ${MUTED}`}>{t.loading}</div>}
+      {loading && (
+        <div className={`${rubanCardPadded} ${rubanMuted}`}>{t.loading}</div>
+      )}
 
-      {errorMsg && <div className={`mb-4 ${ERROR_BOX}`}>{errorMsg}</div>}
+      {errorMsg && <div className={`mb-4 ${rubanErrBox}`}>{errorMsg}</div>}
 
       {!loading && maps.length === 0 && !errorMsg && (
-        <div className={`${CARD} ${MUTED}`}>
+        <div className={`${rubanCardPadded} ${rubanMuted}`}>
           {t.emptyPool}{' '}
           <Link
             href={`/admin/tournament/${tournamentId}/maps`}
@@ -457,10 +459,10 @@ ${selectedSlots
       {!loading && maps.length > 0 && (
         <>
           {/* Controls */}
-          <div className={`mb-6 space-y-4 ${CARD}`}>
+          <div className={`mb-6 space-y-4 ${rubanCardPadded}`}>
             {/* Format selector */}
             <div className="flex items-center gap-4">
-              <span className={EYEBROW}>{t.formatLabel}</span>
+              <span className={rubanEyebrowSnug}>{t.formatLabel}</span>
               <div className="flex gap-2">
                 {(['bo3', 'bo5'] as BoFormat[]).map((f) => (
                   <AdminButton
@@ -473,7 +475,7 @@ ${selectedSlots
                   </AdminButton>
                 ))}
               </div>
-              <span className={`text-xs ${FAINT}`}>
+              <span className={`text-xs ${rubanFaint}`}>
                 {fmt(t.formatSummary, {
                   choices: CHOICES_PER_SLOT,
                   slots: slotCount,
@@ -485,14 +487,14 @@ ${selectedSlots
 
             {/* Match label */}
             <div className="flex items-center gap-3">
-              <label className={`whitespace-nowrap ${EYEBROW}`}>
+              <label className={`whitespace-nowrap ${rubanEyebrowSnug}`}>
                 {t.matchLabelLabel}
               </label>
               <input
                 type="text"
                 value={matchLabel}
                 onChange={(e) => setMatchLabel(e.target.value)}
-                className={`max-w-md flex-1 ${INPUT}`}
+                className={`max-w-md flex-1 ${rubanFormInput}`}
                 placeholder={t.matchLabelPlaceholder}
               />
             </div>
@@ -526,7 +528,7 @@ ${selectedSlots
           <div className="mb-8">
             <h2 className="text-lg font-semibold mb-4">
               {t.selectedMapsTitle}
-              <span className={`ml-2 text-sm font-normal ${MUTED}`}>
+              <span className={`ml-2 text-sm font-normal ${rubanMuted}`}>
                 {fmt(t.choicesPerMatch, { choices: CHOICES_PER_SLOT })}
               </span>
             </h2>
@@ -536,10 +538,10 @@ ${selectedSlots
               {selectedSlots.map((slot, si) => {
                 const cat = slotCategory(si);
                 return (
-                  <div key={si} className={CARD_FLUSH}>
+                  <div key={si} className={rubanCardFlush}>
                     {/* Slot header */}
                     <div className="border-b border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-3 py-2 text-center">
-                      <span className={EYEBROW}>
+                      <span className={rubanEyebrowSnug}>
                         {fmt(t.mapSlot, { n: si + 1 })}
                       </span>
                       {cat && (
@@ -554,7 +556,7 @@ ${selectedSlots
                       {slot.map((choice, ci) => (
                         <div key={ci} className="p-3">
                           <p
-                            className={`mb-1.5 text-[10px] uppercase tracking-wider ${FAINT}`}
+                            className={`mb-1.5 text-[10px] uppercase tracking-wider ${rubanFaint}`}
                           >
                             {fmt(t.choiceLabel, { n: ci + 1 })}
                           </p>
@@ -595,7 +597,7 @@ ${selectedSlots
                             onChange={(e) =>
                               handleSetChoice(si, ci, e.target.value)
                             }
-                            className={`!px-2 !py-1.5 !text-xs ${INPUT}`}
+                            className={`!px-2 !py-1.5 !text-xs ${rubanFormInput}`}
                           >
                             <option value="">{t.choosePlaceholder}</option>
                             {maps
@@ -658,7 +660,7 @@ ${selectedSlots
                         <p className="text-xs font-semibold truncate">
                           {m.map_name}
                         </p>
-                        <p className={`text-[10px] ${MUTED}`}>
+                        <p className={`text-[10px] ${rubanMuted}`}>
                           {typeLabel(t, m.map_type)}
                         </p>
                         {isUsed && (

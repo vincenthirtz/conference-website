@@ -7,7 +7,9 @@ import Link from 'next/link';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { Match, StageMini, TournamentMini } from '@/types/admin';
 import nsAdminMatchEdit from '@/lib/i18n/locales/admin-fr/adminMatchEdit';
-import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
 import { matchStatusTone } from './MatchDetailBlocks';
@@ -15,9 +17,6 @@ import { matchEditStatusLabel } from './MatchEditForm';
 
 const KICKER =
   'mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
-// Même allure qu'un AdminButton « secondary », mais lien externe (_blank).
-const EXTERNAL_SECONDARY =
-  'inline-flex h-[38px] shrink-0 items-center justify-center gap-2 rounded-[var(--r-ctrl,4px)] border border-[rgba(180,103,209,.45)] px-[14px] font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.02em] text-[var(--or-200,#eec4ff)] transition-colors hover:border-[var(--or,#b467d1)] hover:bg-[rgba(180,103,209,.08)]';
 const LINK = 'text-[var(--or-200,#eec4ff)] hover:underline';
 
 export function MatchEditHeader({
@@ -82,11 +81,11 @@ export function MatchEditHeader({
               {t.backToMatch}
             </AdminButton>
             {match && (
-              <a
+              <AdminButtonLink
                 href={`/cast/${match.id}`}
                 target="_blank"
-                rel="noreferrer"
-                className={EXTERNAL_SECONDARY}
+                variant="secondary"
+                size="sm"
                 title={t.casterViewTitle}
               >
                 {t.casterView}
@@ -104,7 +103,7 @@ export function MatchEditHeader({
                     d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
                   />
                 </svg>
-              </a>
+              </AdminButtonLink>
             )}
           </>
         }

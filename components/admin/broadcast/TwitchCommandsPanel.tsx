@@ -55,7 +55,7 @@ import {
 } from '@/components/admin/broadcast/twitchPanelUtils';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
-import * as R from '@/features/admin/diffusion/ui/rubanClasses';
+import * as R from '@/features/admin/_shared/ui/ruban';
 
 // --- Formes du contrat (figées) ---------------------------------------------
 

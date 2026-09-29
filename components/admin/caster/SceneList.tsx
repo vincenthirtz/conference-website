@@ -44,7 +44,7 @@ import {
 } from '@/types/caster';
 import nsAdminCasterScenes from '@/lib/i18n/locales/admin-fr/adminCasterScenes';
 import Chip from '@/features/admin/_shared/ui/Chip';
-import { rubanCard } from '@/features/admin/diffusion/ui/rubanClasses';
+import { rubanCard } from '@/features/admin/_shared/ui/ruban';
 
 /** Mutateurs de la liste — fournis par `useCasterScenes`. */
 export type SceneCrud = {

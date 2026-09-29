@@ -16,7 +16,7 @@ export type SimHistoryEntry = {
 import nsAdminTournamentSimulator from '@/lib/i18n/locales/admin-fr/adminTournamentSimulator';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
-import { CARD, TILE } from '@/features/admin/stages/ui/rubanClasses';
+import { rubanCardPadded, rubanInset } from '@/features/admin/_shared/ui/ruban';
 import {
   SIM_EYEBROW,
   SIM_MUTED,
@@ -38,7 +38,7 @@ export function SimulatorHistoryTab({
   const tx = useAdminT(nsAdminTournamentSimulator);
   return (
     <div className="space-y-6">
-      <div className={CARD}>
+      <div className={rubanCardPadded}>
         <div className="flex items-center justify-between mb-4">
           <h3 className={SIM_EYEBROW}>{tx.historyHeading}</h3>
           {entries.length > 0 && (
@@ -52,7 +52,7 @@ export function SimulatorHistoryTab({
         ) : (
           <div className="space-y-4">
             {entries.map((entry, idx) => (
-              <div key={entry.id} className={`${TILE} p-4`}>
+              <div key={entry.id} className={`${rubanInset} p-4`}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-bold text-neutral-500">

@@ -41,10 +41,7 @@ import { logger } from '../../../utils/logger';
 import nsAdminBroadcastLive from '@/lib/i18n/locales/admin-fr/adminBroadcastLive';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
-import {
-  rubanEyebrow,
-  rubanInput,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+import { rubanEyebrow, rubanInput } from '@/features/admin/_shared/ui/ruban';
 
 type Subscription = {
   id: string | null;

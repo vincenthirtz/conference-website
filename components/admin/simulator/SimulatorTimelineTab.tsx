@@ -3,7 +3,7 @@ import { formatMatchDate } from '@/utils/simulatorFakeData';
 import type { OccurrenceData } from '@/utils/simulatorSerialization';
 import nsAdminTournamentSimulator from '@/lib/i18n/locales/admin-fr/adminTournamentSimulator';
 import StatTile from '@/features/admin/_shared/ui/StatTile';
-import { CARD } from '@/features/admin/stages/ui/rubanClasses';
+import { rubanCardPadded } from '@/features/admin/_shared/ui/ruban';
 import { SIM_EYEBROW } from '@/features/admin/simulator/ui/simulatorClasses';
 
 /**
@@ -26,7 +26,7 @@ export function SimulatorTimelineTab({
   const tx = useAdminT(nsAdminTournamentSimulator);
   return (
     <div className="space-y-6">
-      <div className={CARD}>
+      <div className={rubanCardPadded}>
         <h3 className={`mb-6 ${SIM_EYEBROW}`}>{tx.calendarHeading}</h3>
         <div className="relative">
           {/* Vertical line */}

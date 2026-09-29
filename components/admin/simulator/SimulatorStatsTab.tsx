@@ -4,7 +4,7 @@ import type { H2HRecord, SimStage, SimTeam } from '@/utils/simulator';
 import type { SimStats } from '@/utils/simulatorStats';
 import nsAdminTournamentSimulator from '@/lib/i18n/locales/admin-fr/adminTournamentSimulator';
 import StatTile from '@/features/admin/_shared/ui/StatTile';
-import { CARD } from '@/features/admin/stages/ui/rubanClasses';
+import { rubanCardPadded } from '@/features/admin/_shared/ui/ruban';
 import {
   SIM_EYEBROW,
   SIM_MUTED,
@@ -30,7 +30,7 @@ export function SimulatorStatsTab({
   return (
     <div className="space-y-6">
       {/* Standings with score diff */}
-      <div className={CARD}>
+      <div className={rubanCardPadded}>
         <h3 className={`mb-4 ${SIM_EYEBROW}`}>{tx.standingsHeading}</h3>
         <div className="space-y-1">
           <div className="grid grid-cols-[auto_1fr_50px_50px_50px_70px_50px] gap-2 px-3 pb-2 font-[family-name:var(--fd)] text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--t4,#807984)] [font-stretch:75%]">
@@ -111,7 +111,7 @@ export function SimulatorStatsTab({
       </div>
 
       {/* Progression */}
-      <div className={CARD}>
+      <div className={rubanCardPadded}>
         <h3 className={`mb-4 ${SIM_EYEBROW}`}>{tx.progressionHeading}</h3>
         <div className="flex items-center gap-4">
           <div className="h-4 flex-1 overflow-hidden rounded-full bg-[var(--s3,#2f2732)]">
@@ -148,7 +148,7 @@ export function SimulatorStatsTab({
 
       {/* Competitiveness metrics */}
       {stats.finished > 0 && (
-        <div className={CARD}>
+        <div className={rubanCardPadded}>
           <h3 className={`mb-4 ${SIM_EYEBROW}`}>{tx.competitivenessHeading}</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <StatTile
@@ -198,7 +198,7 @@ export function SimulatorStatsTab({
       )}
 
       {/* Round-by-round breakdown */}
-      <div className={CARD}>
+      <div className={rubanCardPadded}>
         <h3 className={`mb-4 ${SIM_EYEBROW}`}>{tx.roundDetailHeading}</h3>
         <div className="space-y-2">
           {(() => {
@@ -273,7 +273,7 @@ export function SimulatorStatsTab({
           );
 
           return (
-            <div className={CARD}>
+            <div className={rubanCardPadded}>
               <h3 className={`mb-4 ${SIM_EYEBROW}`}>{tx.h2hHeading}</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">

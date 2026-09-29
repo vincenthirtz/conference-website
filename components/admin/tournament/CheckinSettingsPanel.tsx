@@ -18,14 +18,14 @@ import AdminButton, {
 import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 import StatTile from '@/features/admin/_shared/ui/StatTile';
 import {
-  CARD_FLUSH,
-  ERROR_BOX,
-  FAINT,
-  INPUT,
-  LABEL,
-  MUTED,
-  SPINNER,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardFlush,
+  rubanErrBox,
+  rubanFaint,
+  rubanFormInput,
+  rubanFormLabel,
+  rubanMuted,
+  rubanSpinner,
+} from '@/features/admin/_shared/ui/ruban';
 
 type Dict = typeof nsAdminTournamentCheckin.fr;
 
@@ -287,7 +287,7 @@ export default function CheckinSettingsPanel() {
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t.pageTitle}</h1>
-          <p className={`mt-1 text-sm ${MUTED}`}>{t.pageSubtitle}</p>
+          <p className={`mt-1 text-sm ${rubanMuted}`}>{t.pageSubtitle}</p>
         </div>
         <div className="flex items-center gap-2">
           <AdminButtonLink
@@ -349,23 +349,23 @@ export default function CheckinSettingsPanel() {
         >
           {t.filterAll}
         </AdminButton>
-        <span className={`ml-auto text-xs ${FAINT}`}>
+        <span className={`ml-auto text-xs ${rubanFaint}`}>
           {format(t.matchCount, { count: visibleRows.length })}
         </span>
       </div>
 
-      {errorMsg && <div className={`mb-4 ${ERROR_BOX}`}>{errorMsg}</div>}
+      {errorMsg && <div className={`mb-4 ${rubanErrBox}`}>{errorMsg}</div>}
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className={SPINNER} />
+          <div className={rubanSpinner} />
         </div>
       ) : visibleRows.length === 0 ? (
-        <div className={`py-20 text-center text-sm ${FAINT}`}>
+        <div className={`py-20 text-center text-sm ${rubanFaint}`}>
           {t.emptyMatches}
         </div>
       ) : (
-        <div className={CARD_FLUSH}>
+        <div className={rubanCardFlush}>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-[var(--s2,#1d1520)]">
@@ -416,7 +416,7 @@ export default function CheckinSettingsPanel() {
                       <td className="px-4 py-3">
                         <div className="text-sm text-[var(--t1,#f4edf7)]">
                           {r.team1.name || '—'}{' '}
-                          <span className={FAINT}>vs</span>{' '}
+                          <span className={rubanFaint}>vs</span>{' '}
                           {r.team2.name || '—'}
                         </div>
                       </td>
@@ -429,7 +429,7 @@ export default function CheckinSettingsPanel() {
                             {formatTimeFr(r.emailSentAt)}
                           </span>
                         ) : (
-                          <span className={FAINT}>—</span>
+                          <span className={rubanFaint}>—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center text-xs">
@@ -438,7 +438,7 @@ export default function CheckinSettingsPanel() {
                             {formatTimeFr(r.reminder30At)}
                           </span>
                         ) : (
-                          <span className={FAINT}>—</span>
+                          <span className={rubanFaint}>—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center text-xs">
@@ -447,7 +447,7 @@ export default function CheckinSettingsPanel() {
                             {formatTimeFr(r.reminder15At)}
                           </span>
                         ) : (
-                          <span className={FAINT}>—</span>
+                          <span className={rubanFaint}>—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -462,7 +462,7 @@ export default function CheckinSettingsPanel() {
                             {noShowReasonLabel(t, noShowReasons[r.matchId])}
                           </Chip>
                         ) : (
-                          <span className={`text-xs ${FAINT}`}>—</span>
+                          <span className={`text-xs ${rubanFaint}`}>—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -482,7 +482,7 @@ export default function CheckinSettingsPanel() {
         </div>
       )}
 
-      <p className={`mt-6 text-center text-xs ${FAINT}`}>
+      <p className={`mt-6 text-center text-xs ${rubanFaint}`}>
         {t.footerBefore} <code>scheduled_at</code> {t.footerAfter}
       </p>
 
@@ -510,7 +510,7 @@ export default function CheckinSettingsPanel() {
       >
         <div className="space-y-4">
           <div>
-            <label htmlFor="checkin-grace-minutes" className={LABEL}>
+            <label htmlFor="checkin-grace-minutes" className={rubanFormLabel}>
               {t.graceLabel}
             </label>
             <input
@@ -521,9 +521,9 @@ export default function CheckinSettingsPanel() {
               step={1}
               value={graceDraft}
               onChange={(e) => setGraceDraft(e.target.value)}
-              className={INPUT}
+              className={rubanFormInput}
             />
-            <p className={`mt-1.5 text-xs ${FAINT}`}>
+            <p className={`mt-1.5 text-xs ${rubanFaint}`}>
               {format(t.graceHelp, { default: DEFAULT_GRACE_MINUTES })}
             </p>
           </div>

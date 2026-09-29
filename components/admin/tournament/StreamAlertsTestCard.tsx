@@ -17,7 +17,7 @@ import nsAdminStreamAlerts from '@/lib/i18n/locales/admin-fr/adminStreamAlerts';
 import { TWITCH_ALERT_KINDS, type AlertKind } from '@/utils/overlay/alertBox';
 import { logger } from '@/utils/logger';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { INPUT, MUTED } from '@/features/admin/stages/ui/rubanClasses';
+import { rubanFormInput, rubanMuted } from '@/features/admin/_shared/ui/ruban';
 
 export default function StreamAlertsTestCard() {
   const t = useAdminT(nsAdminStreamAlerts);
@@ -50,7 +50,7 @@ export default function StreamAlertsTestCard() {
   return (
     <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
       <h4 className="text-sm font-semibold text-white">{t.testHeading}</h4>
-      <p className={`mt-1 text-xs ${MUTED}`}>{t.testHelp}</p>
+      <p className={`mt-1 text-xs ${rubanMuted}`}>{t.testHelp}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <label htmlFor="stream-alerts-test-kind" className="sr-only">
           {t.testKindLabel}
@@ -59,7 +59,7 @@ export default function StreamAlertsTestCard() {
           id="stream-alerts-test-kind"
           value={kind}
           onChange={(e) => setKind(e.target.value as AlertKind)}
-          className={`!w-auto ${INPUT}`}
+          className={`!w-auto ${rubanFormInput}`}
         >
           {TWITCH_ALERT_KINDS.map((k) => (
             <option key={k} value={k}>

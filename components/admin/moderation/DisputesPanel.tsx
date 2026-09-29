@@ -20,10 +20,7 @@ import AdminButton, {
   AdminButtonLink,
 } from '@/features/admin/_shared/ui/AdminButton';
 import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
-import {
-  rubanCard,
-  rubanEyebrow,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+import { rubanCard, rubanEyebrow } from '@/features/admin/_shared/ui/ruban';
 
 type Classification = 'breached' | 'approaching' | 'fresh';
 

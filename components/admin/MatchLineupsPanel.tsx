@@ -29,7 +29,7 @@ import {
   rubanCard,
   rubanErr,
   rubanInset,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+} from '@/features/admin/_shared/ui/ruban';
 
 type LineupPlayer = {
   team_id: string;

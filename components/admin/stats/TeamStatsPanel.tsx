@@ -6,8 +6,11 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
-import { CARD, ERROR_BOX } from '@/features/admin/stages/ui/rubanClasses';
-import { rubanCard } from '@/features/admin/diffusion/ui/rubanClasses';
+import {
+  rubanCard,
+  rubanCardPadded,
+  rubanErrBox,
+} from '@/features/admin/_shared/ui/ruban';
 
 import { logger } from '../../../utils/logger';
 import nsAdminStatsTeams from '@/lib/i18n/locales/admin-fr/adminStatsTeams';
@@ -389,7 +392,7 @@ export default function TeamStatsPanel() {
 
       {/* Error Message */}
       {errorMsg && (
-        <div className={`mb-6 flex items-center gap-2 ${ERROR_BOX}`}>
+        <div className={`mb-6 flex items-center gap-2 ${rubanErrBox}`}>
           <svg
             className="w-5 h-5 text-red-400 flex-shrink-0"
             fill="currentColor"
@@ -406,7 +409,7 @@ export default function TeamStatsPanel() {
       )}
 
       {/* Filters */}
-      <section className={`mb-6 ${CARD}`}>
+      <section className={`mb-6 ${rubanCardPadded}`}>
         <form
           onSubmit={handleFilterSubmit}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end"

@@ -43,7 +43,6 @@ export default {
   userCount_other: '{count} users',
   loading: 'Loading...',
   newUser: 'New user',
-  searchLabel: 'Search',
   searchPlaceholder: 'Email, name or BattleTag...',
   roleLabel: 'Role',
   roleSelectAria: 'Change role of {name}',

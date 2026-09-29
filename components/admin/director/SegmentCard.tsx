@@ -21,7 +21,7 @@ import Chip from '@/features/admin/_shared/ui/Chip';
 import {
   SEGMENT_STATUS_TONE,
   rubanLiveFrame,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+} from '@/features/admin/_shared/ui/ruban';
 import type { EventSegment } from '@/types/events';
 import nsAdminDirectorSegmentCard from '@/lib/i18n/locales/admin-fr/adminDirectorSegmentCard';
 import { clockHHMM } from '@/utils/director/clock';

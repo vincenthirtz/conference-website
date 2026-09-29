@@ -46,7 +46,7 @@ import {
   rubanInput,
   rubanInset,
   rubanOk,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+} from '@/features/admin/_shared/ui/ruban';
 
 // --- Formes du contrat (figées) ---------------------------------------------
 

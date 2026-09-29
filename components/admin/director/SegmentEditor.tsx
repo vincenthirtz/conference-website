@@ -43,7 +43,7 @@ import {
   rubanInput,
   rubanInset,
   rubanLabel,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+} from '@/features/admin/_shared/ui/ruban';
 
 /** Champ compact des lignes de checklist. */
 const rowInput =

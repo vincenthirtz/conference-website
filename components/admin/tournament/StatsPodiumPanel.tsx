@@ -9,7 +9,6 @@
 // `podium` sub-tab of the merged stats route.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
@@ -17,17 +16,19 @@ import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentPodium from '@/lib/i18n/locales/admin-fr/adminTournamentPodium';
-import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
 import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 import {
-  CARD,
-  CARD_FLUSH,
-  ERROR_BOX,
-  FAINT,
-  MUTED,
-  STRONG,
-  WARN_BOX,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardFlush,
+  rubanCardPadded,
+  rubanErrBox,
+  rubanFaint,
+  rubanMuted,
+  rubanStrong,
+  rubanWarnBox,
+} from '@/features/admin/_shared/ui/ruban';
 
 type Candidate = {
   team_id: string;
@@ -212,21 +213,21 @@ export default function StatsPodiumPanel() {
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t.heading}</h1>
-          <p className={`mt-1 text-sm ${MUTED}`}>
+          <p className={`mt-1 text-sm ${rubanMuted}`}>
             {t.introBefore}
-            <span className={STRONG}>{t.introStatusDone}</span>
+            <span className={rubanStrong}>{t.introStatusDone}</span>
             {t.introAfter}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
+          <AdminButtonLink
             href={`/tournament/${tournamentId}/podium`}
             target="_blank"
             rel="noopener"
-            className="inline-flex h-[38px] items-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-[14px] font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.02em] text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]"
+            size="sm"
           >
             {t.publicPreview}
-          </Link>
+          </AdminButtonLink>
           <AdminButton size="sm" onClick={fetchPreview}>
             {t.refresh}
           </AdminButton>
@@ -234,24 +235,24 @@ export default function StatsPodiumPanel() {
       </div>
 
       {loading && (
-        <div className={`${CARD} text-center text-sm ${MUTED}`}>
+        <div className={`${rubanCardPadded} text-center text-sm ${rubanMuted}`}>
           {t.loading}
         </div>
       )}
 
-      {error && <div className={`mb-4 ${ERROR_BOX}`}>{error}</div>}
+      {error && <div className={`mb-4 ${rubanErrBox}`}>{error}</div>}
 
       {!loading && data && (
         <>
           <div className="mb-6 flex flex-wrap items-center gap-3 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] px-4 py-3 text-sm">
-            <span className={MUTED}>{t.tournamentStatus}</span>
+            <span className={rubanMuted}>{t.tournamentStatus}</span>
             <StatusPill status={tournamentStatus} />
-            <span className={FAINT}>·</span>
-            <span className={MUTED}>{t.lastStage}</span>
-            <span className={STRONG}>{data.last_stage_type ?? '—'}</span>
+            <span className={rubanFaint}>·</span>
+            <span className={rubanMuted}>{t.lastStage}</span>
+            <span className={rubanStrong}>{data.last_stage_type ?? '—'}</span>
             {isFinalized && (
               <>
-                <span className={FAINT}>·</span>
+                <span className={rubanFaint}>·</span>
                 <span className="inline-flex items-center gap-1 text-[#ffd9a3]">
                   <svg
                     className="w-4 h-4"
@@ -273,7 +274,7 @@ export default function StatsPodiumPanel() {
           </div>
 
           {isFinalized && !forceMode && (
-            <div className={`mb-6 ${WARN_BOX}`}>
+            <div className={`mb-6 ${rubanWarnBox}`}>
               {t.frozenNoticeBefore}
               <button
                 type="button"
@@ -289,7 +290,7 @@ export default function StatsPodiumPanel() {
 
           {forceMode && (
             <div
-              className={`mb-6 flex items-center justify-between ${ERROR_BOX}`}
+              className={`mb-6 flex items-center justify-between ${rubanErrBox}`}
             >
               <span>{t.forceModeBanner}</span>
               <AdminButton size="xs" onClick={() => setForceMode(false)}>
@@ -299,7 +300,7 @@ export default function StatsPodiumPanel() {
           )}
 
           {tournamentStatus !== 'running' && !isFinalized && (
-            <div className={`mb-6 ${ERROR_BOX}`}>
+            <div className={`mb-6 ${rubanErrBox}`}>
               {t.notRunningBefore}
               <span className="font-mono">{tournamentStatus}</span>
               {t.notRunningMiddle}
@@ -315,12 +316,12 @@ export default function StatsPodiumPanel() {
             <AdminButton size="xs" onClick={clearRanks}>
               {t.clearRanks}
             </AdminButton>
-            <span className={`ml-auto text-xs ${FAINT}`}>
+            <span className={`ml-auto text-xs ${rubanFaint}`}>
               {format(t.teamCount, { count: rows.length })}
             </span>
           </div>
 
-          <div className={`overflow-x-auto ${CARD_FLUSH}`}>
+          <div className={`overflow-x-auto ${rubanCardFlush}`}>
             <table className="w-full text-sm">
               <thead className="bg-[var(--s2,#1d1520)]">
                 <tr>
@@ -358,10 +359,10 @@ export default function StatsPodiumPanel() {
                         className="w-14 text-center font-mono rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2 py-1 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                       />
                     </td>
-                    <td className={`px-3 py-2 font-medium ${STRONG}`}>
+                    <td className={`px-3 py-2 font-medium ${rubanStrong}`}>
                       {r.team_name}
                     </td>
-                    <td className={`px-3 py-2 text-xs ${MUTED}`}>
+                    <td className={`px-3 py-2 text-xs ${rubanMuted}`}>
                       {r.source === 'bracket_final'
                         ? t.sourceBracketFinal
                         : r.source === 'bracket_semi'
@@ -397,7 +398,7 @@ export default function StatsPodiumPanel() {
           </div>
 
           {ranksPreview.length > 0 && (
-            <div className={`mt-4 text-xs ${FAINT}`}>
+            <div className={`mt-4 text-xs ${rubanFaint}`}>
               {t.previewLabel}
               {ranksPreview.map((p) => `#${p.rank} ${p.team}`).join(' · ')}
             </div>

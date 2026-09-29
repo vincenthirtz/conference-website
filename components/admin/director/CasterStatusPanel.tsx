@@ -28,7 +28,7 @@ import {
   rubanErr,
   rubanEyebrow,
   rubanInset,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+} from '@/features/admin/_shared/ui/ruban';
 
 type Dict = typeof nsAdminDirectorCasterStatusPanel.fr;
 

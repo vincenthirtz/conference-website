@@ -13,13 +13,13 @@ import nsAdminTournamentStats from '@/lib/i18n/locales/admin-fr/adminTournamentS
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import StatTile, { type StatTone } from '@/features/admin/_shared/ui/StatTile';
 import {
-  CARD_FLUSH,
-  ERROR_BOX,
-  FAINT,
-  MUTED,
-  STRONG,
-  TILE,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardFlush,
+  rubanErrBox,
+  rubanFaint,
+  rubanInset,
+  rubanMuted,
+  rubanStrong,
+} from '@/features/admin/_shared/ui/ruban';
 
 type Tournament = {
   id: string;
@@ -122,15 +122,17 @@ export default function StatsOverviewPanel() {
         <div>
           <h1 className="text-3xl font-bold">{t.heading}</h1>
           {stats?.tournament && (
-            <p className={`mt-1 text-sm ${MUTED}`}>
+            <p className={`mt-1 text-sm ${rubanMuted}`}>
               {t.tournamentLabel}
-              <span className={`font-semibold ${STRONG}`}>
+              <span className={`font-semibold ${rubanStrong}`}>
                 {stats.tournament.name}
               </span>
               {stats.tournament.slug && (
                 <>
                   {' '}
-                  <span className={`${TILE} px-2 py-0.5 font-mono text-xs`}>
+                  <span
+                    className={`${rubanInset} px-2 py-0.5 font-mono text-xs`}
+                  >
                     {stats.tournament.slug}
                   </span>
                 </>
@@ -145,10 +147,10 @@ export default function StatsOverviewPanel() {
       </div>
 
       {/* Messages */}
-      {errorMsg && <div className={`mb-4 ${ERROR_BOX}`}>{errorMsg}</div>}
+      {errorMsg && <div className={`mb-4 ${rubanErrBox}`}>{errorMsg}</div>}
 
       {loading && !stats && (
-        <div className={`text-sm ${MUTED}`}>{t.loadingStats}</div>
+        <div className={`text-sm ${rubanMuted}`}>{t.loadingStats}</div>
       )}
 
       {stats && (
@@ -195,14 +197,16 @@ export default function StatsOverviewPanel() {
           {/* Two column layout */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Team Rankings */}
-            <div className={CARD_FLUSH}>
+            <div className={rubanCardFlush}>
               <div className="border-b border-[var(--line,rgba(194,196,201,.12))] px-4 py-3">
                 <h2 className="text-lg font-semibold">{t.teamRankingTitle}</h2>
-                <p className={`text-xs ${MUTED}`}>{t.teamRankingSubtitle}</p>
+                <p className={`text-xs ${rubanMuted}`}>
+                  {t.teamRankingSubtitle}
+                </p>
               </div>
 
               {stats.teamStats.length === 0 ? (
-                <div className={`px-4 py-6 text-sm ${MUTED}`}>
+                <div className={`px-4 py-6 text-sm ${rubanMuted}`}>
                   {t.teamsEmpty}
                 </div>
               ) : (
@@ -275,14 +279,14 @@ export default function StatsOverviewPanel() {
             </div>
 
             {/* Map Stats */}
-            <div className={CARD_FLUSH}>
+            <div className={rubanCardFlush}>
               <div className="border-b border-[var(--line,rgba(194,196,201,.12))] px-4 py-3">
                 <h2 className="text-lg font-semibold">{t.mapStatsTitle}</h2>
-                <p className={`text-xs ${MUTED}`}>{t.mapStatsSubtitle}</p>
+                <p className={`text-xs ${rubanMuted}`}>{t.mapStatsSubtitle}</p>
               </div>
 
               {stats.mapStats.length === 0 ? (
-                <div className={`px-4 py-6 text-sm ${MUTED}`}>
+                <div className={`px-4 py-6 text-sm ${rubanMuted}`}>
                   {t.mapsEmpty}
                 </div>
               ) : (
@@ -344,14 +348,14 @@ export default function StatsOverviewPanel() {
           </div>
 
           {/* Closest Matches */}
-          <div className={CARD_FLUSH}>
+          <div className={rubanCardFlush}>
             <div className="border-b border-[var(--line,rgba(194,196,201,.12))] px-4 py-3">
               <h2 className="text-lg font-semibold">{t.closestTitle}</h2>
-              <p className={`text-xs ${MUTED}`}>{t.closestSubtitle}</p>
+              <p className={`text-xs ${rubanMuted}`}>{t.closestSubtitle}</p>
             </div>
 
             {stats.closestMatches.length === 0 ? (
-              <div className={`px-4 py-6 text-sm ${MUTED}`}>
+              <div className={`px-4 py-6 text-sm ${rubanMuted}`}>
                 {t.closestEmpty}
               </div>
             ) : (
@@ -360,7 +364,7 @@ export default function StatsOverviewPanel() {
                   <Link
                     key={m.id}
                     href={`/admin/matches/${m.id}`}
-                    className={`${TILE} p-4 transition-colors hover:border-[var(--or,#b467d1)]`}
+                    className={`${rubanInset} p-4 transition-colors hover:border-[var(--or,#b467d1)]`}
                   >
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <TeamCell team={m.team1} compact />
@@ -375,7 +379,7 @@ export default function StatsOverviewPanel() {
                         >
                           {m.team1_score}
                         </span>
-                        <span className={`mx-2 ${FAINT}`}>-</span>
+                        <span className={`mx-2 ${rubanFaint}`}>-</span>
                         <span
                           className={`text-xl font-bold ${
                             m.winner_team_id === m.team2?.id
@@ -389,7 +393,7 @@ export default function StatsOverviewPanel() {
                       </div>
                       <TeamCell team={m.team2} compact />
                     </div>
-                    <div className={`text-center text-xs ${FAINT}`}>
+                    <div className={`text-center text-xs ${rubanFaint}`}>
                       {m.stage_name || 'Stage inconnu'}
                       {m.round_number ? ` • Round ${m.round_number}` : ''}
                     </div>
@@ -423,7 +427,7 @@ type TeamCellProps = {
 
 function TeamCell({ team, compact }: TeamCellProps) {
   if (!team) {
-    return <span className={`text-sm ${FAINT}`}>TBD</span>;
+    return <span className={`text-sm ${rubanFaint}`}>TBD</span>;
   }
 
   if (compact) {

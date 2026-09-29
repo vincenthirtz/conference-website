@@ -1,5 +1,5 @@
 import type { SimStats } from '@/utils/simulatorStats';
-import { TILE } from '@/features/admin/stages/ui/rubanClasses';
+import { rubanInset } from '@/features/admin/_shared/ui/ruban';
 
 /**
  * Onglet « maps » du simulateur : le pool de maps et le nombre de fois
@@ -21,7 +21,7 @@ export function SimulatorMapsTab({
           const count = stats.mapCount.get(name) ?? 0;
           const maxCount = Math.max(...stats.mapCount.values(), 1);
           return (
-            <div key={name} className={`${TILE} space-y-2 p-4`}>
+            <div key={name} className={`${rubanInset} space-y-2 p-4`}>
               <div className="text-sm font-semibold">{name}</div>
               <div className="flex items-center gap-2">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--s3,#2f2732)]">

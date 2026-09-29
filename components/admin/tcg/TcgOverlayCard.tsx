@@ -30,10 +30,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import {
-  rubanErr,
-  rubanInset,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+import { rubanErr, rubanInset } from '@/features/admin/_shared/ui/ruban';
 import { logger } from '../../../utils/logger';
 
 export type TcgOverlayTokenState = {

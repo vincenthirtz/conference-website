@@ -2,11 +2,11 @@
 import React from 'react';
 import type { Stage } from '@/types/admin';
 import {
-  CARD,
-  CARD_TITLE,
-  EYEBROW,
-  TILE,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardPadded,
+  rubanCardTitle,
+  rubanEyebrowSnug,
+  rubanInset,
+} from '@/features/admin/_shared/ui/ruban';
 import { type Dict, formatDateTime, stageTypeLabel } from './stageDisplay';
 
 type Props = {
@@ -43,13 +43,13 @@ function StageOverviewCard({ stage, t }: Props) {
     },
   ];
   return (
-    <section className={CARD}>
-      <h2 className={`${CARD_TITLE} mb-4`}>{t.infoTitle}</h2>
+    <section className={rubanCardPadded}>
+      <h2 className={`${rubanCardTitle} mb-4`}>{t.infoTitle}</h2>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         {items.map((item) => (
-          <div key={item.label} className={`${TILE} p-4`}>
-            <div className={`${EYEBROW} mb-1.5`}>{item.label}</div>
+          <div key={item.label} className={`${rubanInset} p-4`}>
+            <div className={`${rubanEyebrowSnug} mb-1.5`}>{item.label}</div>
             <div
               className={`font-medium text-[var(--t1,#f4edf7)] ${item.small ? 'font-mono text-sm' : ''}`}
             >

@@ -21,17 +21,21 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import nsAdminTournamentEmbed from '@/lib/i18n/locales/admin-fr/adminTournamentEmbed';
 import type { OverlayPresence } from '@/hooks/useOverlayPresence';
-import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import {
-  FAINT,
-  MUTED,
-  WARN_BOX,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanFaint,
+  rubanMuted,
+  rubanWarnBox,
+} from '@/features/admin/_shared/ui/ruban';
 
-/** Lien d'action à l'allure d'un bouton `ghost` (AdminButton, taille xs). */
-const LINK_BTN =
-  'inline-flex h-[30px] shrink-0 items-center justify-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.02em] text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]';
+/**
+ * Fond plein des liens `ghost` xs : ils se posent sur un bloc d'URL (--s2).
+ * `!` : sans lui, le `bg-transparent` de la variante l'emporte (ordre Tailwind).
+ */
+const LINK_BG = 'bg-[var(--s1,#100812)]!';
 
 type Props = {
   /** Slug (ou id) du tournoi, tel qu'il ira dans l'URL. */
@@ -232,26 +236,26 @@ export default function StreamSourcesPanel({
 
   if (!enabled) {
     return (
-      <div className={WARN_BOX}>
+      <div className={rubanWarnBox}>
         <h3 className="text-sm font-semibold">{t.sourcesTitle}</h3>
         <p className="mt-1 text-xs">
           {t.sourcesLockedBody.replace('{plan}', planLabel)}
         </p>
-        <a
+        <AdminButtonLink
           href="/organisateurs#offres"
           target="_blank"
-          rel="noopener noreferrer"
-          className={`mt-3 ${LINK_BTN}`}
+          size="xs"
+          className={`mt-3 ${LINK_BG}`}
         >
           {t.sourcesLockedCta}
-        </a>
+        </AdminButtonLink>
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      <p className={`text-xs ${MUTED}`}>{t.sourcesDescription}</p>
+      <p className={`text-xs ${rubanMuted}`}>{t.sourcesDescription}</p>
 
       <div className="space-y-2">
         {sources.map((s) => {
@@ -268,7 +272,7 @@ export default function StreamSourcesPanel({
                   <div className="text-sm font-medium text-[var(--t1,#f4edf7)]">
                     {label}
                   </div>
-                  <div className={`mt-0.5 text-xs ${FAINT}`}>{desc}</div>
+                  <div className={`mt-0.5 text-xs ${rubanFaint}`}>{desc}</div>
                 </div>
                 <span className="flex shrink-0 items-center gap-1.5">
                   {presence && (
@@ -298,15 +302,15 @@ export default function StreamSourcesPanel({
                   {/* VÉRIFIER AVANT DE COLLER : seule « Matchs du jour » avait
                       un aperçu ; les autres ne se voyaient qu'une fois dans
                       OBS, en direct. */}
-                  <a
+                  <AdminButtonLink
                     href={url}
                     target="_blank"
-                    rel="noopener noreferrer"
                     aria-label={`${t.openBtn} — ${label}`}
-                    className={LINK_BTN}
+                    size="xs"
+                    className={LINK_BG}
                   >
                     {t.openBtn}
-                  </a>
+                  </AdminButtonLink>
                   <AdminButton
                     variant="secondary"
                     size="xs"
@@ -331,7 +335,7 @@ export default function StreamSourcesPanel({
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <label
                     htmlFor="day-overlay-test-date"
-                    className={`text-xs ${MUTED}`}
+                    className={`text-xs ${rubanMuted}`}
                   >
                     {t.dayTestLabel}
                   </label>
@@ -342,17 +346,17 @@ export default function StreamSourcesPanel({
                     onChange={(e) => setTestDay(e.target.value)}
                     className="h-[30px] rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2 text-xs text-[var(--t1,#f4edf7)] [color-scheme:dark]"
                   />
-                  <a
+                  <AdminButtonLink
                     href={`${url}&date=${encodeURIComponent(testDay)}&preview=1`}
                     target="_blank"
-                    rel="noopener noreferrer"
                     aria-disabled={!testDay}
-                    className={`${LINK_BTN} ${
+                    size="xs"
+                    className={`${LINK_BG} ${
                       testDay ? '' : 'pointer-events-none opacity-40'
                     }`}
                   >
                     {t.dayTestBtn}
-                  </a>
+                  </AdminButtonLink>
                   {overlayDayUrl && (
                     <AdminButton
                       variant="primary"
@@ -363,7 +367,7 @@ export default function StreamSourcesPanel({
                       {t.daySendBtn}
                     </AdminButton>
                   )}
-                  <span className={`text-[11px] ${FAINT}`}>
+                  <span className={`text-[11px] ${rubanFaint}`}>
                     {t.dayTestHint}
                   </span>
                   {overlayDayUrl && (
@@ -387,7 +391,7 @@ export default function StreamSourcesPanel({
                           </AdminButton>
                         </>
                       ) : (
-                        <span className={FAINT}>{t.dayLiveStatus}</span>
+                        <span className={rubanFaint}>{t.dayLiveStatus}</span>
                       )}
                       {sendError && (
                         <span className="text-[var(--err,#ff6b6b)]">
@@ -403,7 +407,9 @@ export default function StreamSourcesPanel({
         })}
       </div>
 
-      <p className={`text-[11px] leading-relaxed ${FAINT}`}>{t.sourcesHint}</p>
+      <p className={`text-[11px] leading-relaxed ${rubanFaint}`}>
+        {t.sourcesHint}
+      </p>
     </div>
   );
 }

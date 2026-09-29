@@ -16,7 +16,7 @@ import { useAdminT } from '@/lib/i18n/useAdminT';
 import SegmentCard from './SegmentCard';
 import EmptyState from '@/components/admin/EmptyState';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { rubanCard } from '@/features/admin/diffusion/ui/rubanClasses';
+import { rubanCard } from '@/features/admin/_shared/ui/ruban';
 import type { ComputedRunSchedule } from '@/utils/eventSchedule';
 import type { EventSegment } from '@/types/events';
 import nsAdminDirectorTimelineBuilder from '@/lib/i18n/locales/admin-fr/adminDirectorTimelineBuilder';

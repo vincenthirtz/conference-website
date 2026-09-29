@@ -39,8 +39,6 @@ export default adminNs('adminStageDetail', {
   toastAdvancementRules: "Regles d'avancement mises a jour.",
   pageTitle: 'Admin – Phase',
   pageTitleWithName: 'Admin – Phase : {name}',
-  breadcrumbStages: 'Phases',
-  stageFallback: 'Phase',
   backToTournament: 'Retour au tournoi',
   loadingName: 'Chargement...',
   tournamentPrefix: 'Tournoi :',

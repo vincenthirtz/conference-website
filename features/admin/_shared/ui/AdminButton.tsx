@@ -10,8 +10,13 @@
 //
 // Un seul `primary` par écran : c'est ce qui le rend lisible.
 
-import Link from 'next/link';
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import Link, { type LinkProps } from 'next/link';
+import type {
+  AnchorHTMLAttributes,
+  ButtonHTMLAttributes,
+  ReactNode,
+  Ref,
+} from 'react';
 
 export type AdminButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type AdminButtonSize = 'md' | 'sm' | 'xs';
@@ -49,10 +54,16 @@ export default function AdminButton({
   className = '',
   type = 'button',
   children,
+  ref,
   ...rest
-}: Common & ButtonHTMLAttributes<HTMLButtonElement>) {
+}: Common &
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    /** React 19 : la ref est une prop (focus rendu après un changement d'état). */
+    ref?: Ref<HTMLButtonElement>;
+  }) {
   return (
     <button
+      ref={ref}
       type={type}
       className={`${classes(variant, size)} ${className}`}
       {...rest}
@@ -62,26 +73,31 @@ export default function AdminButton({
   );
 }
 
-/** Même allure, pour une navigation (« NOUVELLE ÉQUIPE » → /admin/teams/new). */
+/**
+ * Même allure, pour une navigation (« NOUVELLE ÉQUIPE » → /admin/teams/new),
+ * interne ou externe. `target="_blank"` pose `rel="noopener noreferrer"` par
+ * défaut ; un `rel` explicite l'emporte.
+ */
 export function AdminButtonLink({
   href,
   variant = 'ghost',
   size = 'md',
   className = '',
   children,
-  title,
-  'data-testid': testId,
-}: Common & {
-  href: string;
-  className?: string;
-  title?: string;
-  'data-testid'?: string;
-}) {
+  target,
+  rel,
+  ...rest
+}: Common &
+  Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'children'> & {
+    href: LinkProps['href'];
+    'data-testid'?: string;
+  }) {
   return (
     <Link
       href={href}
-      title={title}
-      data-testid={testId}
+      target={target}
+      rel={rel ?? (target === '_blank' ? 'noopener noreferrer' : undefined)}
+      {...rest}
       className={`${classes(variant, size)} ${className}`}
     >
       {children}

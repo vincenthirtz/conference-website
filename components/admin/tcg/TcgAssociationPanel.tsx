@@ -16,11 +16,11 @@ import nsAdminTcgAssociation from '@/lib/i18n/locales/admin-fr/adminTcgAssociati
 import { FANART_LIMITS } from '@/utils/tcg/fanart';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import {
-  CARD_FLUSH,
-  MUTED,
-  TILE,
-} from '@/features/admin/stages/ui/rubanClasses';
-import { rubanCard } from '@/features/admin/diffusion/ui/rubanClasses';
+  rubanCard,
+  rubanCardFlush,
+  rubanInset,
+  rubanMuted,
+} from '@/features/admin/_shared/ui/ruban';
 
 type Item = {
   id: string;
@@ -209,7 +209,7 @@ export default function TcgAssociationPanel() {
     );
 
   if (state === 'loading') {
-    return <p className={`text-sm ${MUTED}`}>{t.working}</p>;
+    return <p className={`text-sm ${rubanMuted}`}>{t.working}</p>;
   }
   if (state === 'error' || !data) {
     return (
@@ -242,7 +242,7 @@ export default function TcgAssociationPanel() {
             {data.eventLogos.map((logo) => (
               <li
                 key={logo.id}
-                className={`flex items-center gap-3 p-3 ${TILE}`}
+                className={`flex items-center gap-3 p-3 ${rubanInset}`}
               >
                 {/* biome-ignore lint/performance/noImgElement: bucket public ou chemin du site, hors remotePatterns */}
                 <img
@@ -382,7 +382,7 @@ export default function TcgAssociationPanel() {
               return (
                 <li
                   key={item.id}
-                  className={`${CARD_FLUSH} ${
+                  className={`${rubanCardFlush} ${
                     item.status === 'approved' ? '' : 'opacity-70'
                   }`}
                 >

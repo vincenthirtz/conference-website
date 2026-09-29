@@ -36,7 +36,7 @@ import {
   rubanCard,
   rubanEyebrow,
   rubanInput,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+} from '@/features/admin/_shared/ui/ruban';
 
 const MAX_BODY = 500;
 

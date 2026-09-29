@@ -25,12 +25,12 @@ import {
 } from '@/utils/analytics/teamTiers';
 import type { TournamentAnalyticsTeam } from '@/utils/analytics/tournamentAnalytics';
 import {
-  CARD,
-  EYEBROW,
-  INPUT,
-  MUTED,
-  TILE,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardPadded,
+  rubanEyebrowSnug,
+  rubanFormInput,
+  rubanInset,
+  rubanMuted,
+} from '@/features/admin/_shared/ui/ruban';
 
 // La lettre porte le rang ; la couleur ne fait que distinguer le haut du
 // tableau (orchidée) du reste (neutre) — pas de palette par palier.
@@ -70,24 +70,24 @@ export default function TierListPanel({
       ? duelBetween(duels, left.teamId, right.teamId)
       : null;
 
-  const selectClass = `mt-1 ${INPUT}`;
+  const selectClass = `mt-1 ${rubanFormInput}`;
 
   return (
     <div className="mt-8 space-y-8">
-      <section className={CARD} aria-labelledby="tierlist-title">
+      <section className={rubanCardPadded} aria-labelledby="tierlist-title">
         <h2 id="tierlist-title" className="text-lg font-semibold">
           {t.tierListTitle}
         </h2>
-        <p className={`mt-1 text-sm ${MUTED}`}>{t.tierListSubtitle}</p>
+        <p className={`mt-1 text-sm ${rubanMuted}`}>{t.tierListSubtitle}</p>
 
         {tiers.tiers.length === 0 ? (
-          <p className={`mt-4 text-sm ${MUTED}`}>{t.tierListEmpty}</p>
+          <p className={`mt-4 text-sm ${rubanMuted}`}>{t.tierListEmpty}</p>
         ) : (
           <ul className="mt-4 space-y-3">
             {tiers.tiers.map((tier) => (
               <li
                 key={tier.label}
-                className={`flex flex-wrap items-center gap-3 p-3 ${TILE}`}
+                className={`flex flex-wrap items-center gap-3 p-3 ${rubanInset}`}
               >
                 <span
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--r-ctrl,4px)] border font-[family-name:var(--fd)] text-base font-extrabold ${TIER_STYLE[tier.label]}`}
@@ -106,7 +106,7 @@ export default function TierListPanel({
                       })}
                     >
                       {team.name}
-                      <span className={`ml-2 font-mono text-xs ${MUTED}`}>
+                      <span className={`ml-2 font-mono text-xs ${rubanMuted}`}>
                         {team.wins}–{team.losses}
                       </span>
                     </li>
@@ -118,7 +118,7 @@ export default function TierListPanel({
         )}
 
         {tiers.unranked.length > 0 && (
-          <p className={`mt-3 text-xs ${MUTED}`}>
+          <p className={`mt-3 text-xs ${rubanMuted}`}>
             {format(t.tierUnranked, {
               minPlayed: tiers.minPlayed,
               teams: tiers.unranked.map((team) => team.name).join(', '),
@@ -127,11 +127,11 @@ export default function TierListPanel({
         )}
       </section>
 
-      <section className={CARD} aria-labelledby="comparator-title">
+      <section className={rubanCardPadded} aria-labelledby="comparator-title">
         <h2 id="comparator-title" className="text-lg font-semibold">
           {t.comparatorTitle}
         </h2>
-        <p className={`mt-1 text-sm ${MUTED}`}>{t.comparatorSubtitle}</p>
+        <p className={`mt-1 text-sm ${rubanMuted}`}>{t.comparatorSubtitle}</p>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           {[
@@ -149,7 +149,7 @@ export default function TierListPanel({
             },
           ].map((field) => (
             <div key={field.id}>
-              <label htmlFor={field.id} className={`block ${EYEBROW}`}>
+              <label htmlFor={field.id} className={`block ${rubanEyebrowSnug}`}>
                 {field.label}
               </label>
               <select
@@ -205,7 +205,7 @@ export default function TierListPanel({
                   ],
                 ].map(([label, a, b]) => (
                   <tr key={label} className="text-[var(--t2,#c7bfca)]">
-                    <td className={`py-1.5 pr-3 ${MUTED}`}>{label}</td>
+                    <td className={`py-1.5 pr-3 ${rubanMuted}`}>{label}</td>
                     <td className="py-1.5 pr-3 text-right font-mono">{a}</td>
                     <td className="py-1.5 text-right font-mono">{b}</td>
                   </tr>
@@ -228,7 +228,7 @@ export default function TierListPanel({
             </p>
           </>
         ) : (
-          <p className={`mt-4 text-sm ${MUTED}`}>{t.comparatorPickTwo}</p>
+          <p className={`mt-4 text-sm ${rubanMuted}`}>{t.comparatorPickTwo}</p>
         )}
       </section>
     </div>

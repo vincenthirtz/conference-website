@@ -15,7 +15,7 @@ import type {
 } from '@/utils/registrationFields';
 import nsAdminRegistrationFields from '@/lib/i18n/locales/admin-fr/adminRegistrationFields';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { CARD, TILE } from '@/features/admin/stages/ui/rubanClasses';
+import { rubanCardPadded, rubanInset } from '@/features/admin/_shared/ui/ruban';
 
 const FIELD_TYPES: RegistrationFieldType[] = [
   'text',
@@ -211,7 +211,7 @@ function RegistrationFieldsEditor({
     'w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t1,#f4edf7)] focus:outline-none focus:border-[var(--or,#b467d1)] text-sm';
 
   return (
-    <section className={CARD}>
+    <section className={rubanCardPadded}>
       <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
         <svg
           className="w-5 h-5 text-neutral-400"
@@ -271,7 +271,7 @@ function RegistrationFieldsEditor({
         {fields.map((field, index) => {
           const rowError = errorsByIndex[index];
           return (
-            <div key={index} className={`${TILE} p-4`}>
+            <div key={index} className={`${rubanInset} p-4`}>
               <div className="flex items-center justify-between mb-3">
                 <span className="font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
                   {t.fieldBadge} {index + 1}

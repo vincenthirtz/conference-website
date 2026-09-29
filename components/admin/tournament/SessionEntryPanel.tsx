@@ -38,11 +38,11 @@ import nsAdminMatchEdit from '@/lib/i18n/locales/admin-fr/adminMatchEdit';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import {
-  CARD,
-  ERROR_BOX,
-  FAINT,
-  MUTED,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardPadded,
+  rubanErrBox,
+  rubanFaint,
+  rubanMuted,
+} from '@/features/admin/_shared/ui/ruban';
 
 type TeamMini = {
   id: string;
@@ -309,21 +309,23 @@ export default function SessionEntryPanel() {
   }, [dirtyToday, saveMatch, addToast, load, markSaved, t]);
 
   if (loadError) {
-    return <div className={ERROR_BOX}>{loadError}</div>;
+    return <div className={rubanErrBox}>{loadError}</div>;
   }
   if (!matches) {
-    return <div className={`text-sm ${MUTED}`}>{t.loading}</div>;
+    return <div className={`text-sm ${rubanMuted}`}>{t.loading}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">{t.entryHeading}</h1>
-        <p className={`mt-1 max-w-3xl text-sm ${MUTED}`}>{t.entrySubtitle}</p>
+        <p className={`mt-1 max-w-3xl text-sm ${rubanMuted}`}>
+          {t.entrySubtitle}
+        </p>
       </div>
 
       {days.length === 0 ? (
-        <div className={`${CARD} text-center text-sm ${MUTED}`}>
+        <div className={`${rubanCardPadded} text-center text-sm ${rubanMuted}`}>
           {t.entryNoMatches}
         </div>
       ) : (
@@ -352,7 +354,7 @@ export default function SessionEntryPanel() {
                   <span className="font-semibold capitalize">
                     {dayLabel(d.day, locale)}
                   </span>
-                  <span className={`ml-2 text-xs ${MUTED}`}>
+                  <span className={`ml-2 text-xs ${rubanMuted}`}>
                     {format(t.entryMatchCount, { count: d.matches.length })}
                   </span>
                   {d.toFill > 0 && (
@@ -392,7 +394,7 @@ export default function SessionEntryPanel() {
                   >
                     <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <p className={`font-mono text-xs ${MUTED}`}>
+                        <p className={`font-mono text-xs ${rubanMuted}`}>
                           {timeLabel(m.scheduled_at, locale)}
                           {m.round_name ? ` · ${m.round_name}` : ''}
                           {m.match_format
@@ -419,7 +421,7 @@ export default function SessionEntryPanel() {
                     </header>
 
                     {noEntry ? (
-                      <p className={`text-sm ${MUTED}`}>
+                      <p className={`text-sm ${rubanMuted}`}>
                         {m.status === 'walkover' ? t.entryForfeit : t.entryTbd}
                       </p>
                     ) : (
@@ -445,7 +447,7 @@ export default function SessionEntryPanel() {
                           </p>
                         )}
                         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                          <p className={`text-xs ${FAINT}`}>
+                          <p className={`text-xs ${rubanFaint}`}>
                             {t.entryRecomputeNote}
                           </p>
                           <AdminButton

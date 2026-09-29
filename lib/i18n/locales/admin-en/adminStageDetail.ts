@@ -39,8 +39,6 @@ export default {
   toastAdvancementRules: 'Advancement rules updated.',
   pageTitle: 'Admin – Stage',
   pageTitleWithName: 'Admin – Stage: {name}',
-  breadcrumbStages: 'Stages',
-  stageFallback: 'Stage',
   backToTournament: 'Back to tournament',
   loadingName: 'Loading...',
   tournamentPrefix: 'Tournament:',

@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import Modal from '@/components/admin/Modal';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { ERROR_BOX } from '@/features/admin/stages/ui/rubanClasses';
+import { rubanErrBox } from '@/features/admin/_shared/ui/ruban';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { POLE_KEYS, POLE_LABELS, type PoleKey } from '@/utils/associationPoles';
 import { useAdminT } from '@/lib/i18n/useAdminT';
@@ -125,7 +125,7 @@ export default function PoleMemberFormModal({
       }
     >
       <form id={formId} onSubmit={handleSubmit} className="space-y-6">
-        {error && <div className={ERROR_BOX}>{error}</div>}
+        {error && <div className={rubanErrBox}>{error}</div>}
 
         <div className="grid gap-6 md:grid-cols-2">
           <div>

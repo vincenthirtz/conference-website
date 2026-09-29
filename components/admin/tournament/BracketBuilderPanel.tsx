@@ -33,7 +33,11 @@ import type {
 import nsAdminTournamentBracketBuilder from '@/lib/i18n/locales/admin-fr/adminTournamentBracketBuilder';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
-import { EYEBROW, FAINT, MUTED } from '@/features/admin/stages/ui/rubanClasses';
+import {
+  rubanEyebrowSnug,
+  rubanFaint,
+  rubanMuted,
+} from '@/features/admin/_shared/ui/ruban';
 
 type ViewMode = 'planning' | 'list' | 'bracket';
 
@@ -529,7 +533,7 @@ ${day.matches
                 {t.heading}
               </h1>
               {tournament && (
-                <p className={`mt-2 text-sm font-medium ${MUTED}`}>
+                <p className={`mt-2 text-sm font-medium ${rubanMuted}`}>
                   {tournament.name}
                   {tournament.slug && (
                     <span className="ml-2 rounded-[3px] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-2 py-0.5 font-mono text-xs">
@@ -676,7 +680,7 @@ ${day.matches
         {!loading && matches.length === 0 && (
           <div className="text-center py-20">
             <div className="text-4xl mb-3 opacity-30">&#9917;</div>
-            <p className={MUTED}>{t.emptyMatches}</p>
+            <p className={rubanMuted}>{t.emptyMatches}</p>
             <Link
               href={`/admin/tournament/${id}/bracket?tab=view`}
               className="mt-4 inline-block text-sm text-[var(--or-300,#dea3f6)] underline underline-offset-2 hover:text-[var(--or-200,#eec4ff)]"
@@ -699,12 +703,14 @@ ${day.matches
                         {day.label}
                       </h2>
                       {day.roundName && (
-                        <span className={EYEBROW}>{day.roundName}</span>
+                        <span className={rubanEyebrowSnug}>
+                          {day.roundName}
+                        </span>
                       )}
                     </div>
                   </div>
                   <div className="h-px flex-1 bg-[var(--line,rgba(194,196,201,.12))]" />
-                  <span className={`text-xs font-medium ${FAINT}`}>
+                  <span className={`text-xs font-medium ${rubanFaint}`}>
                     {format(
                       day.matches.length === 1
                         ? t.dayMatchCount_one
@@ -745,14 +751,14 @@ ${day.matches
         {!loading && matches.length > 0 && viewMode === 'bracket' && (
           <>
             {isDoubleElim && (
-              <h3 className={`mb-2 ${EYEBROW}`}>{t.winnersBracket}</h3>
+              <h3 className={`mb-2 ${rubanEyebrowSnug}`}>{t.winnersBracket}</h3>
             )}
             <BracketTreeView rounds={bracketRounds} onScoreSaved={fetchData} />
 
             {isDoubleElim && loserBracketRounds.length > 0 && (
               <>
                 <div className="mt-8 mb-2 border-t border-[var(--line,rgba(194,196,201,.12))] pt-6">
-                  <h3 className={EYEBROW}>{t.losersBracket}</h3>
+                  <h3 className={rubanEyebrowSnug}>{t.losersBracket}</h3>
                 </div>
                 <BracketTreeView
                   rounds={loserBracketRounds}

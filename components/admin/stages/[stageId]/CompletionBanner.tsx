@@ -5,11 +5,11 @@ import type { StageType } from '@/types/admin';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import {
-  CARD,
-  CARD_TITLE,
-  MUTED,
-  TILE,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardPadded,
+  rubanCardTitle,
+  rubanInset,
+  rubanMuted,
+} from '@/features/admin/_shared/ui/ruban';
 import { type Dict, stageTypeLabel } from './stageDisplay';
 
 export type CompletionStatus = {
@@ -34,27 +34,29 @@ type Props = {
  */
 function CompletionBanner({ completionStatus, onOpenAdvance, t }: Props) {
   return (
-    <section className={`${CARD} !border-[rgba(127,202,101,.36)]`}>
-      <h2 className={`${CARD_TITLE} mb-3`}>
+    <section className={`${rubanCardPadded} !border-[rgba(127,202,101,.36)]`}>
+      <h2 className={`${rubanCardTitle} mb-3`}>
         <Chip tone="ok">✓</Chip>
         {t.phaseCompleteTitle}
       </h2>
 
-      <p className={`mb-4 text-sm ${MUTED}`}>
+      <p className={`mb-4 text-sm ${rubanMuted}`}>
         {format(t.phaseCompleteDesc, {
           count: completionStatus.finishedMatches,
         })}
       </p>
 
       {completionStatus.canAdvance && completionStatus.nextStage && (
-        <div className={`${TILE} flex items-center justify-between gap-4 p-4`}>
+        <div
+          className={`${rubanInset} flex items-center justify-between gap-4 p-4`}
+        >
           <div>
             <div className="text-sm font-medium text-[var(--t1,#f4edf7)]">
               {format(t.advanceToward, {
                 name: completionStatus.nextStage.name,
               })}
             </div>
-            <div className={`text-xs ${MUTED}`}>
+            <div className={`text-xs ${rubanMuted}`}>
               {completionStatus.nextStage.stage_type
                 ? stageTypeLabel(
                     completionStatus.nextStage.stage_type as StageType,
@@ -70,7 +72,7 @@ function CompletionBanner({ completionStatus, onOpenAdvance, t }: Props) {
       )}
 
       {!completionStatus.canAdvance && !completionStatus.nextStage && (
-        <p className={`text-xs ${MUTED}`}>{t.noNextPhase}</p>
+        <p className={`text-xs ${rubanMuted}`}>{t.noNextPhase}</p>
       )}
     </section>
   );

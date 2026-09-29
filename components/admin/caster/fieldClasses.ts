@@ -11,7 +11,7 @@ import {
   rubanInput,
   rubanLabel,
   rubanWarn,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+} from '@/features/admin/_shared/ui/ruban';
 
 /** Input/select/textarea standard des formulaires de scène. */
 export const inputClass = rubanInput;

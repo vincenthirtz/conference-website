@@ -19,12 +19,12 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentEdit from '@/lib/i18n/locales/admin-fr/adminTournamentEdit';
 import {
-  CARD,
-  FAINT,
-  INPUT,
-  LABEL,
-  MUTED,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardPadded,
+  rubanFaint,
+  rubanFormInput,
+  rubanFormLabel,
+  rubanMuted,
+} from '@/features/admin/_shared/ui/ruban';
 
 /** Les seuls champs du formulaire que ce panneau touche. */
 export type TournamentVisualsForm = {
@@ -94,10 +94,10 @@ export default function TournamentVisualsSection({ form, updateField }: Props) {
   }
 
   return (
-    <section className={CARD}>
+    <section className={rubanCardPadded}>
       <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
         <svg
-          className={`h-5 w-5 ${MUTED}`}
+          className={`h-5 w-5 ${rubanMuted}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -114,20 +114,20 @@ export default function TournamentVisualsSection({ form, updateField }: Props) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className={LABEL}>{t.logoLabel}</label>
+          <label className={rubanFormLabel}>{t.logoLabel}</label>
           <input
             type="text"
-            className={INPUT}
+            className={rubanFormInput}
             value={form.logo_url}
             onChange={(e) => updateField('logo_url', e.target.value)}
             placeholder="https://…"
           />
         </div>
         <div>
-          <label className={LABEL}>{t.bannerLabel}</label>
+          <label className={rubanFormLabel}>{t.bannerLabel}</label>
           <input
             type="text"
-            className={INPUT}
+            className={rubanFormInput}
             value={form.banner_url}
             onChange={(e) => updateField('banner_url', e.target.value)}
             placeholder="https://…"
@@ -136,11 +136,11 @@ export default function TournamentVisualsSection({ form, updateField }: Props) {
       </div>
 
       <div className="mt-4">
-        <label className={LABEL}>{t.rulesLabel}</label>
+        <label className={rubanFormLabel}>{t.rulesLabel}</label>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
-            className={`flex-1 ${INPUT}`}
+            className={`flex-1 ${rubanFormInput}`}
             value={form.rules_url}
             onChange={(e) => updateField('rules_url', e.target.value)}
             placeholder="https://…/reglement.pdf"
@@ -156,7 +156,7 @@ export default function TournamentVisualsSection({ form, updateField }: Props) {
             />
           </label>
         </div>
-        <p className={`mt-1 text-xs ${FAINT}`}>{t.rulesHelp}</p>
+        <p className={`mt-1 text-xs ${rubanFaint}`}>{t.rulesHelp}</p>
         {rulesError && (
           <p className="mt-1 text-xs text-[var(--err,#ff6b6b)]">{rulesError}</p>
         )}
@@ -173,15 +173,15 @@ export default function TournamentVisualsSection({ form, updateField }: Props) {
       </div>
 
       <div className="mt-4">
-        <label className={LABEL}>{t.defaultStreamLabel}</label>
+        <label className={rubanFormLabel}>{t.defaultStreamLabel}</label>
         <input
           type="text"
-          className={INPUT}
+          className={rubanFormInput}
           value={form.default_stream_url}
           onChange={(e) => updateField('default_stream_url', e.target.value)}
           placeholder="https://www.twitch.tv/…"
         />
-        <p className={`mt-1 text-xs ${FAINT}`}>{t.defaultStreamHelp}</p>
+        <p className={`mt-1 text-xs ${rubanFaint}`}>{t.defaultStreamHelp}</p>
       </div>
     </section>
   );

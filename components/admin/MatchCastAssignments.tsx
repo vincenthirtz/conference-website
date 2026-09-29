@@ -9,7 +9,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { logger } from '../../utils/logger';
 import nsAdminMatchCastAssignments from '@/lib/i18n/locales/admin-fr/adminMatchCastAssignments';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { CARD, TILE } from '@/features/admin/stages/ui/rubanClasses';
+import { rubanCardPadded, rubanInset } from '@/features/admin/_shared/ui/ruban';
 
 type CastMember = {
   id: string;
@@ -178,7 +178,7 @@ export default function MatchCastAssignments({ matchId }: Props) {
   return (
     <>
       {dialog}
-      <section className={`space-y-4 ${CARD}`}>
+      <section className={`space-y-4 ${rubanCardPadded}`}>
         <div>
           <h2 className="text-lg font-semibold">{t.heading}</h2>
           <p className="text-xs text-neutral-500 mt-0.5">{t.headingDesc}</p>
@@ -193,7 +193,7 @@ export default function MatchCastAssignments({ matchId }: Props) {
             ) : (
               <ul className="space-y-2">
                 {assignments.map((a) => (
-                  <li key={a.id} className={`p-3 ${TILE}`}>
+                  <li key={a.id} className={`p-3 ${rubanInset}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="text-sm font-medium truncate">

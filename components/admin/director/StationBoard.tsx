@@ -30,7 +30,7 @@ import {
   rubanInput,
   rubanInset,
   rubanRow,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+} from '@/features/admin/_shared/ui/ruban';
 import nsAdminDirectorStationBoard from '@/lib/i18n/locales/admin-fr/adminDirectorStationBoard';
 
 type Dict = typeof nsAdminDirectorStationBoard.fr;

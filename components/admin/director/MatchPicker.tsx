@@ -33,7 +33,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { logger } from '../../../utils/logger';
 import nsAdminDirectorMatchPicker from '@/lib/i18n/locales/admin-fr/adminDirectorMatchPicker';
-import { rubanInput } from '@/features/admin/diffusion/ui/rubanClasses';
+import { rubanInput } from '@/features/admin/_shared/ui/ruban';
 
 type Dict = typeof nsAdminDirectorMatchPicker.fr;
 

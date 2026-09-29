@@ -7,18 +7,22 @@
 import type nsAdminTournamentsCreate from '@/lib/i18n/locales/admin-fr/adminTournamentsCreate';
 import type { TournamentTemplate } from '@/config/tournament-templates';
 import Chip from '@/features/admin/_shared/ui/Chip';
+import {
+  rubanCardPadded,
+  rubanErrBox,
+  rubanFormLabel,
+  rubanHelp,
+} from '@/features/admin/_shared/ui/ruban';
 
 type Dict = typeof nsAdminTournamentsCreate.fr;
 
-export const CREATE_CARD =
-  'space-y-4 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6';
+export const CREATE_CARD = `space-y-4 ${rubanCardPadded}`;
 export const CREATE_CARD_TITLE = 'text-[19px] text-[var(--t1,#f4edf7)]';
-export const CREATE_LABEL = 'mb-1 block text-sm text-[var(--t2,#c7bfca)]';
+export const CREATE_LABEL = rubanFormLabel;
 export const CREATE_INPUT =
   'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
-export const CREATE_HELP = 'mt-1 text-xs text-[var(--t3,#a39ba6)]';
-export const CREATE_ERROR =
-  'rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-sm text-[#ffc2c2]';
+export const CREATE_HELP = rubanHelp;
+export const CREATE_ERROR = rubanErrBox;
 export const CREATE_TOGGLE =
   'inline-flex cursor-pointer items-center gap-3 text-sm text-[var(--t2,#c7bfca)]';
 

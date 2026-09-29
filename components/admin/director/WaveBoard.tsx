@@ -3,8 +3,8 @@
 //
 // Liste ordonnee des waves d'un event_run. Une wave = regroupement logique de
 // segments (ex "Poules matin", "Finale"). Chaque wave affiche :
-//   - un badge de statut (upcoming/live/done/skipped) — meme style que les
-//     segments (waveStatusBadgeClasses),
+//   - un badge de statut (upcoming/live/done/skipped) — meme ton que les
+//     segments (SEGMENT_STATUS_TONE),
 //   - l'horaire prevu + la duree,
 //   - le nombre de segments rattaches,
 //   - des boutons de transition (Demarrer / Terminer / Skip),
@@ -25,14 +25,14 @@ import type { EventSegment, EventWave, EventWaveStatus } from '@/types/events';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import {
+  SEGMENT_STATUS_TONE,
   rubanCard,
   rubanEyebrow,
   rubanInput,
   rubanInset,
   rubanLabel,
   rubanRow,
-  SEGMENT_STATUS_TONE,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+} from '@/features/admin/_shared/ui/ruban';
 import nsAdminDirectorWaveBoard from '@/lib/i18n/locales/admin-fr/adminDirectorWaveBoard';
 import { clockHHMM } from '@/utils/director/clock';
 

@@ -4,8 +4,11 @@ import { useAdminT } from '@/lib/i18n/useAdminT';
 import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
-import { CARD, ERROR_BOX } from '@/features/admin/stages/ui/rubanClasses';
-import { rubanCard } from '@/features/admin/diffusion/ui/rubanClasses';
+import {
+  rubanCard,
+  rubanCardPadded,
+  rubanErrBox,
+} from '@/features/admin/_shared/ui/ruban';
 import nsAdminStatsMaps from '@/lib/i18n/locales/admin-fr/adminStatsMaps';
 
 type MapStatsRow = {
@@ -242,7 +245,7 @@ export default function MapStatsPanel() {
       />
 
       {/* Filters */}
-      <section className={`mb-6 ${CARD}`}>
+      <section className={`mb-6 ${rubanCardPadded}`}>
         <form
           onSubmit={handleFilterSubmit}
           className="flex gap-4 flex-wrap items-end"
@@ -344,7 +347,7 @@ export default function MapStatsPanel() {
 
       {/* Error */}
       {errorMsg && (
-        <div className={`mb-6 flex items-center gap-3 ${ERROR_BOX}`}>
+        <div className={`mb-6 flex items-center gap-3 ${rubanErrBox}`}>
           <svg
             className="w-5 h-5 text-red-400 flex-shrink-0"
             fill="none"

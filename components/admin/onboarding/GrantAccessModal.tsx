@@ -27,7 +27,7 @@ import {
   rubanCard,
   rubanInput,
   rubanLabel,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+} from '@/features/admin/_shared/ui/ruban';
 import {
   TENANT_STAFF_ROLES,
   TENANT_STAFF_ROLE_HINTS,

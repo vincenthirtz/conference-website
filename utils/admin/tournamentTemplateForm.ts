@@ -61,23 +61,3 @@ export function applyTemplateDefaults<F extends TemplateTargetForm>(
     ...(d.is_public !== undefined ? { is_public: d.is_public } : {}),
   };
 }
-
-/** Classes de la pastille d'une phase, par type. */
-export function stageTypeBadgeClass(type: string): string {
-  switch (type) {
-    case 'bracket':
-      return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
-    case 'swiss':
-      return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
-    case 'group':
-      return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-    case 'round_robin':
-      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
-    case 'showmatch':
-      return 'bg-pink-500/20 text-pink-300 border-pink-500/30';
-    case 'ffa':
-      return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
-    default:
-      return 'bg-neutral-500/20 text-neutral-300 border-neutral-500/30';
-  }
-}

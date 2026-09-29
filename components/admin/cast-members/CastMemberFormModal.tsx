@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import Modal from '@/components/admin/Modal';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { ERROR_BOX } from '@/features/admin/stages/ui/rubanClasses';
+import { rubanErrBox } from '@/features/admin/_shared/ui/ruban';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import CastMemberStaffPicker from '@/components/admin/CastMemberStaffPicker';
 import { useAdminT } from '@/lib/i18n/useAdminT';
@@ -132,7 +132,7 @@ export default function CastMemberFormModal({
     >
       <form id={formId} onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className={`flex items-start gap-3 ${ERROR_BOX}`}>
+          <div className={`flex items-start gap-3 ${rubanErrBox}`}>
             <svg
               className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5"
               fill="currentColor"

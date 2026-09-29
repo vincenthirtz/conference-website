@@ -2,7 +2,10 @@ import { memo, useState } from 'react';
 import Modal from '@/components/admin/Modal';
 import type { Dict, Team } from './types';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { INPUT, LABEL } from '@/features/admin/stages/ui/rubanClasses';
+import {
+  rubanFormInput,
+  rubanFormLabel,
+} from '@/features/admin/_shared/ui/ruban';
 
 type AddTeamModalProps = {
   open: boolean;
@@ -79,11 +82,11 @@ function AddTeamModal({
     >
       <div className="space-y-4">
         <div>
-          <label className={LABEL}>{tx.teamLabel}</label>
+          <label className={rubanFormLabel}>{tx.teamLabel}</label>
           <select
             value={selectedTeamId}
             onChange={(e) => setSelectedTeamId(e.target.value)}
-            className={INPUT}
+            className={rubanFormInput}
           >
             <option value="">{tx.selectTeam}</option>
             {availableTeams.map((team) => (
@@ -95,14 +98,14 @@ function AddTeamModal({
         </div>
 
         <div>
-          <label className={LABEL}>{tx.seedLabel}</label>
+          <label className={rubanFormLabel}>{tx.seedLabel}</label>
           <input
             type="number"
             value={teamSeed}
             onChange={(e) => setTeamSeed(e.target.value)}
             placeholder="1, 2, 3..."
             min={1}
-            className={INPUT}
+            className={rubanFormInput}
           />
         </div>
       </div>

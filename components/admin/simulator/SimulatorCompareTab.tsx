@@ -13,7 +13,10 @@ const NOOP_SIM_ACTION = (_id: string) => {};
 import nsAdminTournamentSimulator from '@/lib/i18n/locales/admin-fr/adminTournamentSimulator';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
-import { CARD, CARD_FLUSH } from '@/features/admin/stages/ui/rubanClasses';
+import {
+  rubanCardFlush,
+  rubanCardPadded,
+} from '@/features/admin/_shared/ui/ruban';
 import {
   SIM_EYEBROW,
   SIM_MUTED,
@@ -58,7 +61,7 @@ export function SimulatorCompareTab({
   return (
     <div className="space-y-6">
       {/* Config selector for comparison */}
-      <div className={CARD}>
+      <div className={rubanCardPadded}>
         <h3 className={`mb-4 ${SIM_EYEBROW}`}>{tx.compareHeading}</h3>
         <p className={`mb-4 ${SIM_MUTED}`}>
           {format(tx.compareDesc, {
@@ -106,7 +109,7 @@ export function SimulatorCompareTab({
       {compareData && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* Current config */}
-          <div className={`${CARD_FLUSH} space-y-4 p-4`}>
+          <div className={`${rubanCardFlush} space-y-4 p-4`}>
             <div className="flex items-center gap-2">
               <Chip tone="brand">{tx.badgeCurrent}</Chip>
               <span className="text-sm font-semibold">
@@ -155,7 +158,7 @@ export function SimulatorCompareTab({
           </div>
 
           {/* Compare config */}
-          <div className={`${CARD_FLUSH} space-y-4 p-4`}>
+          <div className={`${rubanCardFlush} space-y-4 p-4`}>
             <div className="flex items-center gap-2">
               <Chip tone="neutral">{tx.badgeComparison}</Chip>
               <span className="text-sm font-semibold">

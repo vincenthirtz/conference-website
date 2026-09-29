@@ -12,8 +12,9 @@
 // les données chargées. Cette page, elle, est gardée côté serveur par cookie.
 
 import { useState } from 'react';
-import Link from 'next/link';
-import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -35,11 +36,6 @@ type TeamExportActionsProps = {
   filters?: TeamExportFilters;
   className?: string;
 };
-
-// Le lien PDF s'ouvre dans un onglet (target) : AdminButtonLink ne le porte
-// pas, il reprend donc à la main l'allure « ghost » de son voisin.
-const LINK_CLASS =
-  'inline-flex h-[38px] shrink-0 items-center justify-center gap-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-[14px] font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.02em] text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]';
 
 function triggerDownload(blob: Blob, filename: string) {
   const objectUrl = URL.createObjectURL(blob);
@@ -143,12 +139,11 @@ export default function TeamExportActions({
         )}
         {exporting ? t.csvExporting : t.exportCsv}
       </AdminButton>
-      <Link
+      <AdminButtonLink
         href={buildTeamPrintPageUrl(target, { autoprint: true })}
         target="_blank"
-        rel="noopener noreferrer"
         title={single ? t.pdfHintTeam : t.pdfHintList}
-        className={LINK_CLASS}
+        size="sm"
       >
         <svg
           className="w-4 h-4"
@@ -165,7 +160,7 @@ export default function TeamExportActions({
           <path d="M6 14h12v8H6z" />
         </svg>
         {t.exportPdf}
-      </Link>
+      </AdminButtonLink>
     </div>
   );
 }

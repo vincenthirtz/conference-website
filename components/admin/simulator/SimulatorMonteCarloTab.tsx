@@ -3,7 +3,7 @@ import { SEED_COLORS } from '@/components/admin/simulator/SimMatchCard';
 import type { MonteCarloResult, SimStage, SimTeam } from '@/utils/simulator';
 import nsAdminTournamentSimulator from '@/lib/i18n/locales/admin-fr/adminTournamentSimulator';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { CARD } from '@/features/admin/stages/ui/rubanClasses';
+import { rubanCardPadded } from '@/features/admin/_shared/ui/ruban';
 import {
   SIM_EYEBROW,
   SIM_MUTED,
@@ -36,7 +36,7 @@ export function SimulatorMonteCarloTab({
   const tx = useAdminT(nsAdminTournamentSimulator);
   return (
     <div className="space-y-6">
-      <div className={CARD}>
+      <div className={rubanCardPadded}>
         <h3 className={`mb-4 ${SIM_EYEBROW}`}>{tx.monteCarloHeading}</h3>
         <p className={`mb-4 ${SIM_MUTED}`}>
           {tx.monteCarloDesc}

@@ -6,7 +6,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Sparkline from './Sparkline';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { rubanInset } from '@/features/admin/diffusion/ui/rubanClasses';
+import { rubanInset } from '@/features/admin/_shared/ui/ruban';
 import nsAdminDashboardStageProgressBar from '@/lib/i18n/locales/admin-fr/adminDashboardStageProgressBar';
 
 type Dict = typeof nsAdminDashboardStageProgressBar.fr;

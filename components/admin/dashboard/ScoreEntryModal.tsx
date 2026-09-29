@@ -11,7 +11,7 @@ import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminDashboardScoreEntryModal from '@/lib/i18n/locales/admin-fr/adminDashboardScoreEntryModal';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { rubanErr } from '@/features/admin/diffusion/ui/rubanClasses';
+import { rubanErr } from '@/features/admin/_shared/ui/ruban';
 
 type Props = {
   open: boolean;

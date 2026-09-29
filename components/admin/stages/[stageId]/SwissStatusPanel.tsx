@@ -5,13 +5,13 @@ import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import StatTile from '@/features/admin/_shared/ui/StatTile';
 import {
-  CARD,
-  CARD_TITLE,
-  MUTED,
-  OK_BOX,
-  TILE,
-  WARN_BOX,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardPadded,
+  rubanCardTitle,
+  rubanInset,
+  rubanMuted,
+  rubanOkBox,
+  rubanWarnBox,
+} from '@/features/admin/_shared/ui/ruban';
 import type { Dict } from './stageDisplay';
 
 export type SwissStatus = {
@@ -44,8 +44,8 @@ function SwissStatusPanel({
   t,
 }: Props) {
   return (
-    <section className={CARD}>
-      <h2 className={`${CARD_TITLE} mb-4`}>{t.swissProgressTitle}</h2>
+    <section className={rubanCardPadded}>
+      <h2 className={`${rubanCardTitle} mb-4`}>{t.swissProgressTitle}</h2>
 
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatTile
@@ -78,7 +78,7 @@ function SwissStatusPanel({
       {/* Progress bar */}
       {swissStatus.totalRounds && (
         <div className="mb-4">
-          <div className={`mb-1 flex justify-between text-xs ${MUTED}`}>
+          <div className={`mb-1 flex justify-between text-xs ${rubanMuted}`}>
             <span>{t.swissGlobalProgress}</span>
             <span className="font-mono">
               {format(t.swissRoundsProgress, {
@@ -99,11 +99,11 @@ function SwissStatusPanel({
       )}
 
       {swissStatus.isComplete ? (
-        <div className={`${OK_BOX} flex items-center gap-3`}>
+        <div className={`${rubanOkBox} flex items-center gap-3`}>
           <Chip tone="ok">✓</Chip>
           <div>
             <div className="font-medium">{t.swissCompleteTitle}</div>
-            <div className={`text-xs ${MUTED}`}>
+            <div className={`text-xs ${rubanMuted}`}>
               {format(t.swissCompleteDesc, {
                 total: swissStatus.totalRounds ?? 0,
               })}
@@ -111,14 +111,16 @@ function SwissStatusPanel({
           </div>
         </div>
       ) : swissStatus.canGenerateNext ? (
-        <div className={`${WARN_BOX} flex items-center justify-between gap-3`}>
+        <div
+          className={`${rubanWarnBox} flex items-center justify-between gap-3`}
+        >
           <div>
             <div className="font-medium">
               {format(t.swissRoundDoneTitle, {
                 round: swissStatus.currentRound,
               })}
             </div>
-            <div className={`text-xs ${MUTED}`}>
+            <div className={`text-xs ${rubanMuted}`}>
               {format(t.swissRoundDoneDesc, {
                 next: swissStatus.currentRound + 1,
                 suffix: swissStatus.totalRounds
@@ -144,7 +146,7 @@ function SwissStatusPanel({
           </AdminButton>
         </div>
       ) : (
-        <div className={`${TILE} flex items-center gap-3 p-4`}>
+        <div className={`${rubanInset} flex items-center gap-3 p-4`}>
           <Chip tone="neutral">…</Chip>
           <div>
             <div className="font-medium text-[var(--t2,#c7bfca)]">
@@ -152,7 +154,7 @@ function SwissStatusPanel({
                 round: swissStatus.currentRound,
               })}
             </div>
-            <div className={`text-xs ${MUTED}`}>
+            <div className={`text-xs ${rubanMuted}`}>
               {format(t.swissRoundInProgressDesc, {
                 count:
                   swissStatus.roundStatus.pending +

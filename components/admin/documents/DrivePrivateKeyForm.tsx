@@ -18,7 +18,10 @@ import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminDocuments from '@/lib/i18n/locales/admin-fr/adminDocuments';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { CARD, CARD_TITLE } from '@/features/admin/stages/ui/rubanClasses';
+import {
+  rubanCardPadded,
+  rubanCardTitle,
+} from '@/features/admin/_shared/ui/ruban';
 
 export default function DrivePrivateKeyForm({
   onStored,
@@ -56,8 +59,8 @@ export default function DrivePrivateKeyForm({
   };
 
   return (
-    <div className={`max-w-3xl ${CARD}`}>
-      <h2 className={`${CARD_TITLE} font-semibold`}>{t.keyTitle}</h2>
+    <div className={`max-w-3xl ${rubanCardPadded}`}>
+      <h2 className={`${rubanCardTitle} font-semibold`}>{t.keyTitle}</h2>
       <p className="mt-2 text-sm text-neutral-300">{t.keyIntro}</p>
       <p className="mt-2 text-xs text-neutral-500">{t.keyHowTo}</p>
 

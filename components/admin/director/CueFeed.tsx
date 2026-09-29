@@ -43,7 +43,7 @@ import {
   rubanEyebrow,
   rubanInset,
   rubanWarn,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+} from '@/features/admin/_shared/ui/ruban';
 
 type Dict = typeof nsAdminDirectorCueFeed.fr;
 

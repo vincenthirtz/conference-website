@@ -3,10 +3,7 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import {
-  rubanCard,
-  rubanEyebrow,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+import { rubanCard, rubanEyebrow } from '@/features/admin/_shared/ui/ruban';
 
 type Props = {
   title: string;

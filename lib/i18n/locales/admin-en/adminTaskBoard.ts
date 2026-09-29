@@ -11,7 +11,6 @@
 
 export default {
   headTitle: 'Admin – Tasks',
-  eyebrow: 'Staff area',
   pageTitle: 'Task board',
   subtitle: 'Internal staff Kanban: organise work by board, column and card.',
   refresh: 'Refresh',

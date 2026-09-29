@@ -22,11 +22,11 @@ import AlertBanner from '@/components/admin/AlertBanner';
 import nsAdminTcgPage from '@/lib/i18n/locales/admin-fr/adminTcgPage';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import {
-  EYEBROW,
-  FAINT,
-  MUTED,
-  STRONG,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanEyebrowSnug,
+  rubanFaint,
+  rubanMuted,
+  rubanStrong,
+} from '@/features/admin/_shared/ui/ruban';
 
 type DormantPlayer = {
   userId: string;
@@ -93,7 +93,7 @@ export default function TcgEngagementPanel() {
   }, [data]);
 
   if (!data && !error) {
-    return <p className={`text-sm ${MUTED}`}>{t.catalogueLoading}</p>;
+    return <p className={`text-sm ${rubanMuted}`}>{t.catalogueLoading}</p>;
   }
 
   const openRate =
@@ -116,9 +116,11 @@ export default function TcgEngagementPanel() {
           </p>
 
           <section className="mb-8">
-            <h3 className={`mb-3 ${EYEBROW}`}>{t.engagementTrendHeading}</h3>
+            <h3 className={`mb-3 ${rubanEyebrowSnug}`}>
+              {t.engagementTrendHeading}
+            </h3>
             {data.weekly.length === 0 ? (
-              <p className={`text-sm ${MUTED}`}>{t.engagementNoTrend}</p>
+              <p className={`text-sm ${rubanMuted}`}>{t.engagementNoTrend}</p>
             ) : (
               <ul className="flex flex-wrap items-end gap-3">
                 {data.weekly.map((point) => (
@@ -140,7 +142,7 @@ export default function TcgEngagementPanel() {
                         }}
                       />
                     </div>
-                    <span className={`mt-1 block text-[11px] ${FAINT}`}>
+                    <span className={`mt-1 block text-[11px] ${rubanFaint}`}>
                       {shortDate(point.week)}
                     </span>
                     <span className="sr-only">
@@ -154,19 +156,19 @@ export default function TcgEngagementPanel() {
                 ))}
               </ul>
             )}
-            <p className={`mt-2 text-[11px] ${FAINT}`}>
+            <p className={`mt-2 text-[11px] ${rubanFaint}`}>
               {t.engagementTrendLegend}
             </p>
           </section>
 
           <section>
-            <h3 className={`mb-3 ${EYEBROW}`}>
+            <h3 className={`mb-3 ${rubanEyebrowSnug}`}>
               {format(t.engagementListHeading, {
                 count: data.players.length,
               })}
             </h3>
             {data.players.length === 0 ? (
-              <p className={`py-8 text-center text-sm ${MUTED}`}>
+              <p className={`py-8 text-center text-sm ${rubanMuted}`}>
                 {t.engagementNobody}
               </p>
             ) : (
@@ -181,14 +183,16 @@ export default function TcgEngagementPanel() {
                     >
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className={`text-sm font-medium ${STRONG}`}>
+                          <span
+                            className={`text-sm font-medium ${rubanStrong}`}
+                          >
                             {player.displayName ?? player.userId}
                           </span>
                           {player.neverOpened && (
                             <Chip tone="warn">{t.engagementNeverOpened}</Chip>
                           )}
                         </div>
-                        <p className={`mt-0.5 text-xs ${FAINT}`}>
+                        <p className={`mt-0.5 text-xs ${rubanFaint}`}>
                           {format(t.engagementPending, {
                             pending: player.pending,
                           })}

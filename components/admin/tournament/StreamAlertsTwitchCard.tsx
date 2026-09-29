@@ -25,7 +25,7 @@ import nsAdminStreamAlerts from '@/lib/i18n/locales/admin-fr/adminStreamAlerts';
 import { logger } from '@/utils/logger';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
-import { ERROR_BOX, MUTED } from '@/features/admin/stages/ui/rubanClasses';
+import { rubanErrBox, rubanMuted } from '@/features/admin/_shared/ui/ruban';
 
 const ENDPOINT = '/api/admin/twitch/eventsub/alerts';
 
@@ -108,7 +108,7 @@ export default function StreamAlertsTwitchCard() {
 
   if ('message' in state) {
     return (
-      <section className={ERROR_BOX}>
+      <section className={rubanErrBox}>
         <h4 className="text-sm font-semibold text-white">{t.twitchHeading}</h4>
         <p className="mt-1 text-xs">{state.message}</p>
       </section>
@@ -127,7 +127,7 @@ export default function StreamAlertsTwitchCard() {
           {format(t.twitchCount, { active, total: subs.length })}
         </Chip>
       </div>
-      <p className={`mt-1 text-xs ${MUTED}`}>{t.twitchHelp}</p>
+      <p className={`mt-1 text-xs ${rubanMuted}`}>{t.twitchHelp}</p>
 
       {state.secretConfigured === false && (
         <p className="mt-2 text-xs text-[var(--err,#ff6b6b)]">
@@ -135,7 +135,7 @@ export default function StreamAlertsTwitchCard() {
         </p>
       )}
       {state.readable === false && (
-        <p className={`mt-2 text-xs ${MUTED}`}>{t.twitchUnreadable}</p>
+        <p className={`mt-2 text-xs ${rubanMuted}`}>{t.twitchUnreadable}</p>
       )}
 
       <ul className="mt-3 space-y-1">

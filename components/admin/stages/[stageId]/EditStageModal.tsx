@@ -2,7 +2,10 @@
 import React from 'react';
 import Modal from '@/components/admin/Modal';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { INPUT, LABEL } from '@/features/admin/stages/ui/rubanClasses';
+import {
+  rubanFormInput,
+  rubanFormLabel,
+} from '@/features/admin/_shared/ui/ruban';
 import type { Dict } from './stageDisplay';
 
 export type EditForm = {
@@ -62,21 +65,21 @@ function EditStageModal({
     >
       <div className="space-y-4">
         <div>
-          <label className={LABEL}>{t.editNameLabel}</label>
+          <label className={rubanFormLabel}>{t.editNameLabel}</label>
           <input
             type="text"
             value={editForm.name}
             onChange={(e) => onChange({ name: e.target.value })}
-            className={INPUT}
+            className={rubanFormInput}
           />
         </div>
 
         <div>
-          <label className={LABEL}>{t.editTournamentLabel}</label>
+          <label className={rubanFormLabel}>{t.editTournamentLabel}</label>
           <select
             value={editForm.tournament_id}
             onChange={(e) => onChange({ tournament_id: e.target.value })}
-            className={INPUT}
+            className={rubanFormInput}
           >
             <option value="">{t.editNoTournament}</option>
             {allTournaments.map((tm) => (

@@ -5,10 +5,10 @@ import type { AdvancementRules } from '@/components/admin/AdvancementRulesEditor
 import type { StageType } from '@/types/admin';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import {
-  CARD,
-  CARD_TITLE,
-  MUTED,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardPadded,
+  rubanCardTitle,
+  rubanMuted,
+} from '@/features/admin/_shared/ui/ruban';
 import type { Dict } from './stageDisplay';
 
 type Props = {
@@ -36,9 +36,9 @@ function AdvancementRulesSection({
   t,
 }: Props) {
   return (
-    <section className={CARD}>
-      <h2 className={`${CARD_TITLE} mb-2`}>{t.advancementRulesTitle}</h2>
-      <p className={`mb-4 text-xs ${MUTED}`}>{t.advancementRulesDesc}</p>
+    <section className={rubanCardPadded}>
+      <h2 className={`${rubanCardTitle} mb-2`}>{t.advancementRulesTitle}</h2>
+      <p className={`mb-4 text-xs ${rubanMuted}`}>{t.advancementRulesDesc}</p>
 
       <AdvancementRulesEditor
         value={value}

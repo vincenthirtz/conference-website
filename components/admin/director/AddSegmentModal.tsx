@@ -26,7 +26,7 @@ import {
   rubanErr,
   rubanInput,
   rubanLabel,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+} from '@/features/admin/_shared/ui/ruban';
 
 type Props = {
   onClose: () => void;

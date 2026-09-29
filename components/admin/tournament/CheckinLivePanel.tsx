@@ -16,11 +16,11 @@ import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import StatTile from '@/features/admin/_shared/ui/StatTile';
 import {
-  CARD,
-  ERROR_BOX,
-  FAINT,
-  MUTED,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardPadded,
+  rubanErrBox,
+  rubanFaint,
+  rubanMuted,
+} from '@/features/admin/_shared/ui/ruban';
 
 type Dict = typeof nsAdminTournamentCheckinLive.fr;
 
@@ -191,7 +191,7 @@ export default function CheckinLivePanel() {
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mt-1">
             {t.pageTitle}
           </h1>
-          <p className={`mt-1 text-sm ${MUTED}`}>
+          <p className={`mt-1 text-sm ${rubanMuted}`}>
             {format(t.windowInfo, {
               past: PAST_WINDOW_MIN,
               future: FUTURE_WINDOW_MIN,
@@ -199,7 +199,7 @@ export default function CheckinLivePanel() {
             })}
           </p>
         </div>
-        <div className={`text-right font-mono text-xs ${MUTED}`}>
+        <div className={`text-right font-mono text-xs ${rubanMuted}`}>
           <LiveClock template={t.nowLabel} />
           {lastNudgeAt && (
             <div>
@@ -241,14 +241,18 @@ export default function CheckinLivePanel() {
         />
       </div>
 
-      {error && <div className={`mb-4 ${ERROR_BOX}`}>{error}</div>}
+      {error && <div className={`mb-4 ${rubanErrBox}`}>{error}</div>}
 
       {loading && rows.length === 0 && (
-        <div className={`${CARD} text-center ${MUTED}`}>{t.loading}</div>
+        <div className={`${rubanCardPadded} text-center ${rubanMuted}`}>
+          {t.loading}
+        </div>
       )}
 
       {!loading && windowedRows.length === 0 && (
-        <div className={`${CARD} text-center ${FAINT}`}>{t.emptyWindow}</div>
+        <div className={`${rubanCardPadded} text-center ${rubanFaint}`}>
+          {t.emptyWindow}
+        </div>
       )}
 
       <div className="space-y-3">
@@ -315,7 +319,7 @@ function MatchRow({
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-3">
           <Chip tone={urgent ? 'err' : 'neutral'}>{tLabel}</Chip>
-          <span className={`font-mono text-xs ${FAINT}`}>
+          <span className={`font-mono text-xs ${rubanFaint}`}>
             {row.scheduledAt
               ? new Date(row.scheduledAt).toLocaleTimeString('fr-FR', {
                   hour: '2-digit',

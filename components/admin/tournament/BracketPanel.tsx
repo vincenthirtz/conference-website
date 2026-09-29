@@ -17,15 +17,15 @@ import AdminButton, {
   AdminButtonLink,
 } from '@/features/admin/_shared/ui/AdminButton';
 import {
-  CARD,
-  ERROR_BOX,
-  EYEBROW,
-  FAINT,
-  INPUT,
-  LABEL,
-  MUTED,
-  TILE,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardPadded,
+  rubanErrBox,
+  rubanEyebrowSnug,
+  rubanFaint,
+  rubanFormInput,
+  rubanFormLabel,
+  rubanInset,
+  rubanMuted,
+} from '@/features/admin/_shared/ui/ruban';
 
 export default function BracketPanel() {
   const router = useRouter();
@@ -161,7 +161,7 @@ export default function BracketPanel() {
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <p className={EYEBROW}>{t.eyebrow}</p>
+            <p className={rubanEyebrowSnug}>{t.eyebrow}</p>
             <h1 className="text-2xl font-semibold">
               {format(t.title, { id: tournamentId?.slice(0, 8) ?? '—' })}
             </h1>
@@ -185,21 +185,21 @@ export default function BracketPanel() {
           )}
         </div>
 
-        {loading && <div className={`text-sm ${MUTED}`}>{t.loading}</div>}
+        {loading && <div className={`text-sm ${rubanMuted}`}>{t.loading}</div>}
 
         {/* Formulaire de création quand aucun bracket n'existe */}
         {!loading && !hasMatches && (
-          <div className={`space-y-6 ${CARD}`}>
+          <div className={`space-y-6 ${rubanCardPadded}`}>
             <div>
               <h2 className="text-lg font-semibold mb-1">{t.createHeading}</h2>
-              <p className={`text-sm ${MUTED}`}>{t.createDesc}</p>
+              <p className={`text-sm ${rubanMuted}`}>{t.createDesc}</p>
             </div>
 
-            {errorMsg && <div className={ERROR_BOX}>{errorMsg}</div>}
+            {errorMsg && <div className={rubanErrBox}>{errorMsg}</div>}
             <form onSubmit={handleGenerate} className="space-y-5">
               {/* Type de bracket */}
               <div>
-                <label className={LABEL}>{t.bracketTypeLabel}</label>
+                <label className={rubanFormLabel}>{t.bracketTypeLabel}</label>
                 <div className="flex gap-2">
                   <AdminButton
                     size="sm"
@@ -220,7 +220,7 @@ export default function BracketPanel() {
 
               {/* Taille du bracket */}
               <div>
-                <label className={LABEL}>{t.slotsLabel}</label>
+                <label className={rubanFormLabel}>{t.slotsLabel}</label>
                 <div className="flex gap-2">
                   {[4, 8, 16, 32].map((s) => (
                     <AdminButton
@@ -233,7 +233,7 @@ export default function BracketPanel() {
                     </AdminButton>
                   ))}
                 </div>
-                <p className={`mt-1 text-xs ${FAINT}`}>
+                <p className={`mt-1 text-xs ${rubanFaint}`}>
                   {format(t.roundsSummary, {
                     rounds: totalRounds,
                     matches: totalMatches,
@@ -243,7 +243,7 @@ export default function BracketPanel() {
 
               {/* Format (Best of) */}
               <div>
-                <label className={LABEL}>{t.defaultFormatLabel}</label>
+                <label className={rubanFormLabel}>{t.defaultFormatLabel}</label>
                 <div className="flex gap-2">
                   {[1, 3, 5].map((bo) => (
                     <AdminButton
@@ -260,7 +260,7 @@ export default function BracketPanel() {
 
               {/* Date de début */}
               <div>
-                <label htmlFor="startDate" className={LABEL}>
+                <label htmlFor="startDate" className={rubanFormLabel}>
                   {t.firstMatchLabel}
                 </label>
                 <input
@@ -268,14 +268,16 @@ export default function BracketPanel() {
                   type="datetime-local"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className={INPUT}
+                  className={rubanFormInput}
                 />
-                <p className={`mt-1 text-xs ${FAINT}`}>{t.firstMatchHelp}</p>
+                <p className={`mt-1 text-xs ${rubanFaint}`}>
+                  {t.firstMatchHelp}
+                </p>
               </div>
 
               {/* Intervalle */}
               <div>
-                <label htmlFor="interval" className={LABEL}>
+                <label htmlFor="interval" className={rubanFormLabel}>
                   {t.intervalLabel}
                 </label>
                 <input
@@ -287,7 +289,7 @@ export default function BracketPanel() {
                   onChange={(e) =>
                     setIntervalMinutes(parseInt(e.target.value, 10) || 60)
                   }
-                  className={`!w-32 ${INPUT}`}
+                  className={`!w-32 ${rubanFormInput}`}
                 />
               </div>
 
@@ -305,18 +307,22 @@ export default function BracketPanel() {
                       {t.grandFinalReset}
                     </span>
                   </label>
-                  <p className={`mt-1 ml-6 text-xs ${FAINT}`}>
+                  <p className={`mt-1 ml-6 text-xs ${rubanFaint}`}>
                     {t.grandFinalResetHelp}
                   </p>
                 </div>
               )}
 
               {/* Aperçu visuel */}
-              <div className={`${TILE} p-4`}>
-                <h3 className={`mb-3 ${EYEBROW}`}>{t.structurePreview}</h3>
+              <div className={`${rubanInset} p-4`}>
+                <h3 className={`mb-3 ${rubanEyebrowSnug}`}>
+                  {t.structurePreview}
+                </h3>
                 {/* Winners bracket preview */}
                 {bracketType === 'double' && (
-                  <p className={`mb-2 ${EYEBROW}`}>{t.winnersBracket}</p>
+                  <p className={`mb-2 ${rubanEyebrowSnug}`}>
+                    {t.winnersBracket}
+                  </p>
                 )}
                 <div className="flex items-center gap-4 overflow-x-auto pb-2">
                   {Array.from({ length: totalRounds }, (_, r) => {
@@ -344,7 +350,7 @@ export default function BracketPanel() {
                     return (
                       <div key={r} className="flex-shrink-0 text-center">
                         <div
-                          className={`mb-2 text-[10px] uppercase tracking-wider ${FAINT}`}
+                          className={`mb-2 text-[10px] uppercase tracking-wider ${rubanFaint}`}
                         >
                           {label}
                         </div>
@@ -382,7 +388,9 @@ export default function BracketPanel() {
                 {/* Losers bracket preview */}
                 {bracketType === 'double' && (
                   <>
-                    <p className={`mt-4 mb-2 ${EYEBROW}`}>{t.losersBracket}</p>
+                    <p className={`mt-4 mb-2 ${rubanEyebrowSnug}`}>
+                      {t.losersBracket}
+                    </p>
                     <div className="flex items-center gap-4 overflow-x-auto pb-2">
                       {(() => {
                         const lbRoundsCount = 2 * (wbRounds - 1);
@@ -410,7 +418,7 @@ export default function BracketPanel() {
                         return rounds.map((rd, idx) => (
                           <div key={idx} className="flex-shrink-0 text-center">
                             <div
-                              className={`mb-2 text-[10px] uppercase tracking-wider ${FAINT}`}
+                              className={`mb-2 text-[10px] uppercase tracking-wider ${rubanFaint}`}
                             >
                               {rd.label}
                             </div>
@@ -448,7 +456,7 @@ export default function BracketPanel() {
 
         {/* Quand un bracket existe déjà */}
         {!loading && hasMatches && (
-          <div className={`space-y-4 ${CARD}`}>
+          <div className={`space-y-4 ${rubanCardPadded}`}>
             <p className="text-sm text-[var(--t2,#c7bfca)]">{t.existsNotice}</p>
             <AdminButtonLink
               href={`/admin/tournament/${tournamentId}/bracket?tab=builder`}

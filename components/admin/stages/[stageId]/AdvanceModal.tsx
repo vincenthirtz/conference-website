@@ -4,12 +4,12 @@ import Modal from '@/components/admin/Modal';
 import { format } from '@/lib/i18n/useAdminT';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import {
-  EYEBROW,
-  INPUT,
-  LABEL,
-  MUTED,
-  TILE,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanEyebrowSnug,
+  rubanFormInput,
+  rubanFormLabel,
+  rubanInset,
+  rubanMuted,
+} from '@/features/admin/_shared/ui/ruban';
 import type { Dict } from './stageDisplay';
 import AdvanceStandingsTable, {
   type AdvanceStanding,
@@ -83,7 +83,7 @@ function AdvanceModal({
       }
       footer={
         <div className="flex justify-between items-center w-full">
-          <span className={`text-xs ${MUTED}`}>
+          <span className={`text-xs ${rubanMuted}`}>
             {format(t.advanceSelectedCount, {
               count: selectedIds.size,
             })}
@@ -119,14 +119,14 @@ function AdvanceModal({
         <div className="space-y-5">
           {/* Target stage selector */}
           <div>
-            <label className={LABEL}>{t.targetStageLabel}</label>
+            <label className={rubanFormLabel}>{t.targetStageLabel}</label>
             {otherStages.length === 0 ? (
-              <p className={`text-sm ${MUTED}`}>{t.noOtherStages}</p>
+              <p className={`text-sm ${rubanMuted}`}>{t.noOtherStages}</p>
             ) : (
               <select
                 value={targetStageId}
                 onChange={(e) => onChangeTarget(e.target.value)}
-                className={INPUT}
+                className={rubanFormInput}
               >
                 {otherStages.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -138,8 +138,8 @@ function AdvanceModal({
           </div>
 
           {/* Criteria filters */}
-          <div className={`${TILE} space-y-3 p-4`}>
-            <p className={`${EYEBROW} mb-2`}>{t.criteriaTitle}</p>
+          <div className={`${rubanInset} space-y-3 p-4`}>
+            <p className={`${rubanEyebrowSnug} mb-2`}>{t.criteriaTitle}</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="mb-1 block text-xs text-[var(--t3,#a39ba6)]">
@@ -152,7 +152,7 @@ function AdvanceModal({
                     max={standings.length}
                     value={topN}
                     onChange={(e) => onTopN(e.target.value)}
-                    className={INPUT}
+                    className={rubanFormInput}
                     placeholder={t.topNPlaceholder}
                   />
                 </div>
@@ -167,7 +167,7 @@ function AdvanceModal({
                   step="any"
                   value={minScore}
                   onChange={(e) => onMinScore(e.target.value)}
-                  className={INPUT}
+                  className={rubanFormInput}
                   placeholder={t.minScorePlaceholder}
                 />
               </div>
@@ -180,12 +180,12 @@ function AdvanceModal({
                   min={1}
                   value={minWins}
                   onChange={(e) => onMinWins(e.target.value)}
-                  className={INPUT}
+                  className={rubanFormInput}
                   placeholder={t.minWinsPlaceholder}
                 />
               </div>
             </div>
-            <p className={`text-xs ${MUTED}`}>
+            <p className={`text-xs ${rubanMuted}`}>
               {format(t.advanceRatio, {
                 selected: selectedIds.size,
                 total: standings.length,
@@ -204,7 +204,7 @@ function AdvanceModal({
               t={t}
             />
           ) : (
-            <p className={`text-sm ${MUTED}`}>{t.noStandings}</p>
+            <p className={`text-sm ${rubanMuted}`}>{t.noStandings}</p>
           )}
 
           {/* Seed mode */}

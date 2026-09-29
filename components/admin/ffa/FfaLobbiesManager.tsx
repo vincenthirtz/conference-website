@@ -18,14 +18,14 @@ import nsAdminFfa from '@/lib/i18n/locales/admin-fr/adminFfa';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 import {
-  CARD,
-  CARD_TITLE,
-  ERROR_BOX,
-  FAINT,
-  MUTED,
-  ROW_ICON,
-  TILE,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardPadded,
+  rubanCardTitle,
+  rubanErrBox,
+  rubanFaint,
+  rubanInset,
+  rubanMuted,
+  rubanRowIcon,
+} from '@/features/admin/_shared/ui/ruban';
 
 type Dict = typeof nsAdminFfa.fr;
 
@@ -306,8 +306,8 @@ function FfaLobbiesManager({
 
   if (loading) {
     return (
-      <section className={CARD}>
-        <div className={`flex items-center gap-2 text-sm ${MUTED}`}>
+      <section className={rubanCardPadded}>
+        <div className={`flex items-center gap-2 text-sm ${rubanMuted}`}>
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--or,#b467d1)]" />
           {t.loading}
         </div>
@@ -318,25 +318,25 @@ function FfaLobbiesManager({
   return (
     <>
       {dialog}
-      <section className={`space-y-6 ${CARD}`}>
+      <section className={`space-y-6 ${rubanCardPadded}`}>
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h2 className={CARD_TITLE}>
-              <span className={`${ROW_ICON} !h-8 !w-8`}>★</span>
+            <h2 className={rubanCardTitle}>
+              <span className={`${rubanRowIcon} !h-8 !w-8`}>★</span>
               {t.lobbiesTitle}
             </h2>
-            <p className={`mt-1 text-xs ${FAINT}`}>{t.lobbiesDesc}</p>
+            <p className={`mt-1 text-xs ${rubanFaint}`}>{t.lobbiesDesc}</p>
           </div>
         </div>
 
-        {error && <div className={ERROR_BOX}>{error}</div>}
+        {error && <div className={rubanErrBox}>{error}</div>}
 
         {/* Create lobby */}
-        <div className={`${TILE} p-4`}>
+        <div className={`${rubanInset} p-4`}>
           <h3 className="text-sm font-medium mb-3">{t.createLobby}</h3>
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex-1 min-w-[160px]">
-              <label className={`mb-1 block text-xs ${MUTED}`}>
+              <label className={`mb-1 block text-xs ${rubanMuted}`}>
                 {t.lobbyName}
               </label>
               <input
@@ -348,7 +348,7 @@ function FfaLobbiesManager({
               />
             </div>
             <div className="w-28">
-              <label className={`mb-1 block text-xs ${MUTED}`}>
+              <label className={`mb-1 block text-xs ${rubanMuted}`}>
                 {t.roundNumber}
               </label>
               <input
@@ -377,7 +377,7 @@ function FfaLobbiesManager({
             data-empty
             className="rounded-[var(--r-card,14px)] border border-dashed border-[var(--line2,rgba(194,196,201,.2))] p-8 text-center"
           >
-            <p className={`text-sm ${MUTED}`}>{t.emptyLobbies}</p>
+            <p className={`text-sm ${rubanMuted}`}>{t.emptyLobbies}</p>
           </div>
         )}
 
@@ -393,14 +393,14 @@ function FfaLobbiesManager({
             );
 
             return (
-              <div key={lobby.id} className={`space-y-4 p-4 ${TILE}`}>
+              <div key={lobby.id} className={`space-y-4 p-4 ${rubanInset}`}>
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center gap-3">
                     <span className="font-medium text-[var(--t1,#f4edf7)]">
                       {lobby.name || t.unnamedLobby}
                     </span>
                     {lobby.round_number !== null && (
-                      <span className={`text-xs ${FAINT}`}>
+                      <span className={`text-xs ${rubanFaint}`}>
                         {t.roundNumber} {lobby.round_number}
                       </span>
                     )}
@@ -419,7 +419,7 @@ function FfaLobbiesManager({
 
                 {/* Placements table */}
                 {draft.length === 0 ? (
-                  <p className={`text-xs ${FAINT}`}>{t.emptyTeams}</p>
+                  <p className={`text-xs ${rubanFaint}`}>{t.emptyTeams}</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -520,7 +520,7 @@ function FfaLobbiesManager({
                 {/* Controls */}
                 <div className="flex flex-wrap items-end gap-3 pt-1">
                   <div className="min-w-[180px]">
-                    <label className={`mb-1 block text-xs ${MUTED}`}>
+                    <label className={`mb-1 block text-xs ${rubanMuted}`}>
                       {t.addTeam}
                     </label>
                     <select
@@ -546,7 +546,7 @@ function FfaLobbiesManager({
                   </div>
 
                   <div className="w-40">
-                    <label className={`mb-1 block text-xs ${MUTED}`}>
+                    <label className={`mb-1 block text-xs ${rubanMuted}`}>
                       {t.statusLabel}
                     </label>
                     <select
@@ -581,17 +581,17 @@ function FfaLobbiesManager({
           })}
 
         {/* Standings preview */}
-        <div className={`${TILE} p-4`}>
+        <div className={`${rubanInset} p-4`}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-medium">{t.standingsTitle}</h3>
             {data && (
-              <span className={`text-xs ${FAINT}`}>
+              <span className={`text-xs ${rubanFaint}`}>
                 {t.tiebreakLabel}: {tiebreakLabel(data.tiebreak, t)}
               </span>
             )}
           </div>
           {!data || data.standings.length === 0 ? (
-            <p className={`text-xs ${FAINT}`}>{t.emptyStandings}</p>
+            <p className={`text-xs ${rubanFaint}`}>{t.emptyStandings}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -642,13 +642,15 @@ function FfaLobbiesManager({
                       <td className="py-2 font-mono font-medium text-[var(--t1,#f4edf7)]">
                         {s.totalPoints}
                       </td>
-                      <td className={`py-2 font-mono ${MUTED}`}>
+                      <td className={`py-2 font-mono ${rubanMuted}`}>
                         {s.lobbiesPlayed}
                       </td>
-                      <td className={`py-2 font-mono ${MUTED}`}>
+                      <td className={`py-2 font-mono ${rubanMuted}`}>
                         {s.bestPlacement ?? '—'}
                       </td>
-                      <td className={`py-2 font-mono ${MUTED}`}>{s.firsts}</td>
+                      <td className={`py-2 font-mono ${rubanMuted}`}>
+                        {s.firsts}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -20,7 +20,7 @@ import AdminButton, {
   AdminButtonLink,
 } from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
-import * as R from '@/features/admin/stages/ui/rubanClasses';
+import * as R from '@/features/admin/_shared/ui/ruban';
 
 type Dict = typeof nsAdminTournamentVeto.fr;
 
@@ -430,7 +430,7 @@ export default function VetoPanel() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div>
-          <p className={R.EYEBROW}>{t.eyebrow}</p>
+          <p className={R.rubanEyebrowSnug}>{t.eyebrow}</p>
           <h1 className="text-2xl font-semibold">
             {format(t.pageTitle, { name: tournamentName })}
           </h1>
@@ -452,21 +452,25 @@ export default function VetoPanel() {
       </div>
 
       {/* Messages */}
-      {errorMsg && <div className={`mb-4 ${R.ERROR_BOX}`}>{errorMsg}</div>}
-      {loading && <div className={`${R.CARD} ${R.MUTED}`}>{t.loading}</div>}
+      {errorMsg && <div className={`mb-4 ${R.rubanErrBox}`}>{errorMsg}</div>}
+      {loading && (
+        <div className={`${R.rubanCardPadded} ${R.rubanMuted}`}>
+          {t.loading}
+        </div>
+      )}
 
       {!loading && (
         <>
           {/* Match selector */}
-          <div className={`mb-6 space-y-4 ${R.CARD}`}>
+          <div className={`mb-6 space-y-4 ${R.rubanCardPadded}`}>
             <div className="flex items-center gap-4">
-              <label className={`whitespace-nowrap ${R.EYEBROW}`}>
+              <label className={`whitespace-nowrap ${R.rubanEyebrowSnug}`}>
                 {t.matchLabel}
               </label>
               <select
                 value={selectedMatchId}
                 onChange={(e) => setSelectedMatchId(e.target.value)}
-                className={`max-w-lg flex-1 ${R.INPUT}`}
+                className={`max-w-lg flex-1 ${R.rubanFormInput}`}
               >
                 <option value="">{t.selectMatchPlaceholder}</option>
                 {matches.map((m) => (
@@ -480,7 +484,7 @@ export default function VetoPanel() {
             </div>
 
             {matches.length === 0 && (
-              <p className={`text-sm ${R.MUTED}`}>{t.noEligibleMatch}</p>
+              <p className={`text-sm ${R.rubanMuted}`}>{t.noEligibleMatch}</p>
             )}
           </div>
 
@@ -489,7 +493,7 @@ export default function VetoPanel() {
             <>
               {/* Lock banner : visible des qu'un match a passe ongoing */}
               {isLocked && (
-                <div className={`mb-6 !p-5 ${R.WARN_BOX}`}>
+                <div className={`mb-6 !p-5 ${R.rubanWarnBox}`}>
                   <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
                       <span className="text-2xl leading-none">🔒</span>
@@ -523,10 +527,10 @@ export default function VetoPanel() {
 
               {/* Current step indicator */}
               {currentFlowStep && !vetoState.isComplete && (
-                <div className={`mb-6 ${R.CARD}`}>
+                <div className={`mb-6 ${R.rubanCardPadded}`}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className={`mb-1 text-xs ${R.MUTED}`}>
+                      <p className={`mb-1 text-xs ${R.rubanMuted}`}>
                         {format(t.stepProgress, {
                           current: vetoState.currentStepIndex + 1,
                           total: vetoState.flow.length,
@@ -545,7 +549,7 @@ export default function VetoPanel() {
                           vetoState.team2Name
                         )}
                       </p>
-                      <p className={`mt-1 text-xs ${R.MUTED}`}>
+                      <p className={`mt-1 text-xs ${R.rubanMuted}`}>
                         {t.clickMapPrefix}
                         {currentFlowStep.action === 'ban'
                           ? t.actionBan
@@ -568,7 +572,7 @@ export default function VetoPanel() {
               )}
 
               {vetoState.isComplete && (
-                <div className={`mb-6 !p-5 ${R.OK_BOX}`}>
+                <div className={`mb-6 !p-5 ${R.rubanOkBox}`}>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-lg font-semibold">{t.completeTitle}</p>
@@ -638,9 +642,9 @@ export default function VetoPanel() {
                         (m) => m.map_name === pm.map_name
                       );
                       return (
-                        <div key={i} className={R.CARD_FLUSH}>
+                        <div key={i} className={R.rubanCardFlush}>
                           <div className="border-b border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-3 py-2 text-center">
-                            <span className={R.EYEBROW}>
+                            <span className={R.rubanEyebrowSnug}>
                               {format(t.mapSlot, { n: i + 1 })}
                             </span>
                           </div>
@@ -667,7 +671,7 @@ export default function VetoPanel() {
                                 <Chip>{typeLabel(t, pm.map_type)}</Chip>
                               </span>
                             )}
-                            <p className={`mt-1 text-[10px] ${R.MUTED}`}>
+                            <p className={`mt-1 text-[10px] ${R.rubanMuted}`}>
                               {pm.picked_by
                                 ? pm.picked_by === vetoState.team1Id
                                   ? format(t.pickBy, {

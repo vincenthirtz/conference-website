@@ -36,7 +36,8 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { format } from '@/lib/i18n/useAdminT';
 import type nsAdminTcgGrant from '@/lib/i18n/locales/admin-fr/adminTcgGrant';
 import { adminUserLabel, isUuid, shortUserId } from './tcgGrantForm';
-import { rubanInset } from '@/features/admin/diffusion/ui/rubanClasses';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { rubanInset } from '@/features/admin/_shared/ui/ruban';
 
 type Labels = typeof nsAdminTcgGrant.fr;
 
@@ -253,14 +254,14 @@ export default function TcgPlayerPicker({
               : ''}
           </p>
         </div>
-        <button
+        <AdminButton
           ref={changeButtonRef}
-          type="button"
+          size="xs"
           onClick={clear}
-          className="inline-flex h-[30px] items-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.02em] text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--or,#b467d1)]"
+          className="focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--or,#b467d1)]"
         >
           {labels.changePlayer}
-        </button>
+        </AdminButton>
       </div>
     );
   }

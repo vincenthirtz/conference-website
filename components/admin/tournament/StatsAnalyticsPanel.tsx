@@ -18,7 +18,6 @@
 // un vrai 0 %.
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -34,16 +33,18 @@ import type {
 import nsAdminTournamentAnalytics from '@/lib/i18n/locales/admin-fr/adminTournamentAnalytics';
 import TierListPanel from './TierListPanel';
 import type { TeamDuel, TierList } from '@/utils/analytics/teamTiers';
-import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import StatTile from '@/features/admin/_shared/ui/StatTile';
 import {
-  CARD,
-  CARD_FLUSH,
-  ERROR_BOX,
-  MUTED,
-  TILE,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardFlush,
+  rubanCardPadded,
+  rubanErrBox,
+  rubanInset,
+  rubanMuted,
+} from '@/features/admin/_shared/ui/ruban';
 
 type AnalyticsResponse = {
   tournament: { id: string; name: string; slug: string | null };
@@ -120,13 +121,15 @@ export default function StatsAnalyticsPanel() {
         <div>
           <h1 className="text-3xl font-bold">{t.heading}</h1>
           {data?.tournament && (
-            <p className={`mt-1 text-sm ${MUTED}`}>
+            <p className={`mt-1 text-sm ${rubanMuted}`}>
               {t.tournamentLabel}
               <span className="font-semibold">{data.tournament.name}</span>
               {data.tournament.slug && (
                 <>
                   {' '}
-                  <span className={`${TILE} px-2 py-0.5 font-mono text-xs`}>
+                  <span
+                    className={`${rubanInset} px-2 py-0.5 font-mono text-xs`}
+                  >
                     {data.tournament.slug}
                   </span>
                 </>
@@ -136,26 +139,29 @@ export default function StatsAnalyticsPanel() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Link
+          <AdminButtonLink
             href={{ query: { ...router.query, tab: 'entry' } }}
-            className="inline-flex h-[38px] items-center rounded-[var(--r-ctrl,4px)] border border-[var(--lf-300,#8ed377)] bg-[var(--lf,#7fca65)] px-[14px] font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.02em] text-[#0f0a12] transition-colors hover:bg-[var(--lf-300,#8ed377)]"
+            variant="primary"
+            size="sm"
           >
             {t.entryCta}
-          </Link>
+          </AdminButtonLink>
           <AdminButton size="sm" onClick={fetchAnalytics} disabled={loading}>
             {loading ? t.loading : t.refresh}
           </AdminButton>
         </div>
       </div>
 
-      {errorMsg && <div className={`mb-4 ${ERROR_BOX}`}>{errorMsg}</div>}
+      {errorMsg && <div className={`mb-4 ${rubanErrBox}`}>{errorMsg}</div>}
 
       {loading && !data && (
-        <div className={`text-sm ${MUTED}`}>{t.loadingAnalytics}</div>
+        <div className={`text-sm ${rubanMuted}`}>{t.loadingAnalytics}</div>
       )}
 
       {analytics && isEmpty && (
-        <div className={`${CARD} text-center text-sm ${MUTED}`}>{t.empty}</div>
+        <div className={`${rubanCardPadded} text-center text-sm ${rubanMuted}`}>
+          {t.empty}
+        </div>
       )}
 
       {analytics && summary && !isEmpty && (
@@ -314,13 +320,13 @@ function TableShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className={CARD_FLUSH}>
+    <div className={rubanCardFlush}>
       <div className="border-b border-[var(--line,rgba(194,196,201,.12))] px-4 py-3">
         <h2 className="text-lg font-semibold">{title}</h2>
-        <p className={`text-xs ${MUTED}`}>{subtitle}</p>
+        <p className={`text-xs ${rubanMuted}`}>{subtitle}</p>
       </div>
       {isEmpty ? (
-        <div className={`px-4 py-6 text-sm ${MUTED}`}>{emptyLabel}</div>
+        <div className={`px-4 py-6 text-sm ${rubanMuted}`}>{emptyLabel}</div>
       ) : (
         <div className="overflow-x-auto">{children}</div>
       )}

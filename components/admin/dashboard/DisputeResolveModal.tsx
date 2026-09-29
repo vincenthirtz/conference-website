@@ -16,10 +16,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import nsAdminDashboardDisputeResolveModal from '@/lib/i18n/locales/admin-fr/adminDashboardDisputeResolveModal';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import {
-  rubanErr,
-  rubanWarn,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+import { rubanErr, rubanWarn } from '@/features/admin/_shared/ui/ruban';
 
 type Props = {
   open: boolean;

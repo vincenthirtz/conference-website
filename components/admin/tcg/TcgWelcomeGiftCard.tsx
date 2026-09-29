@@ -34,10 +34,7 @@ import { useToast } from '@/components/Toast';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import {
-  rubanErr,
-  rubanWarn,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+import { rubanErr, rubanWarn } from '@/features/admin/_shared/ui/ruban';
 import { format } from '@/lib/i18n/useT';
 import { logger } from '../../../utils/logger';
 

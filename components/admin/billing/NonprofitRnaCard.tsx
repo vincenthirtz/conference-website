@@ -26,11 +26,13 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminBilling from '@/lib/i18n/locales/admin-fr/adminBilling';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { CARD, INPUT, TILE } from '@/features/admin/stages/ui/rubanClasses';
 import {
+  rubanCardPadded,
   rubanErr,
+  rubanFormInput,
+  rubanInset,
   rubanWarn,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+} from '@/features/admin/_shared/ui/ruban';
 
 type Dict = typeof nsAdminBilling.fr;
 
@@ -139,7 +141,7 @@ export default function NonprofitRnaCard({
   }
 
   return (
-    <section className={`space-y-4 ${CARD}`}>
+    <section className={`space-y-4 ${rubanCardPadded}`}>
       <div>
         <h2 className="text-lg font-semibold">{t.rnaTitle}</h2>
         <p className="mt-1 text-sm text-neutral-400">{t.rnaIntro}</p>
@@ -147,7 +149,7 @@ export default function NonprofitRnaCard({
 
       {rna ? (
         <div className="space-y-3">
-          <div className={`p-3 ${TILE}`}>
+          <div className={`p-3 ${rubanInset}`}>
             <p className="font-mono text-sm text-neutral-100">{rna}</p>
             <p className="mt-1 text-xs text-neutral-400">
               {verifiedByRna
@@ -172,7 +174,7 @@ export default function NonprofitRnaCard({
             onChange={(e) => setInput(e.target.value)}
             placeholder="W751074179"
             aria-label={t.rnaFieldLabel}
-            className={`${INPUT} font-mono sm:max-w-xs`}
+            className={`${rubanFormInput} font-mono sm:max-w-xs`}
           />
           <AdminButton
             type="submit"

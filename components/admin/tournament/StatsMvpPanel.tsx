@@ -30,14 +30,14 @@ import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 import StatTile from '@/features/admin/_shared/ui/StatTile';
 import {
-  CARD,
-  ERROR_BOX,
-  EYEBROW,
-  FAINT,
-  INPUT,
-  MUTED,
-  STRONG,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardPadded,
+  rubanErrBox,
+  rubanEyebrowSnug,
+  rubanFaint,
+  rubanFormInput,
+  rubanMuted,
+  rubanStrong,
+} from '@/features/admin/_shared/ui/ruban';
 
 /** Match terminé sans vote du public : on peut le lancer à la main. */
 type OpenableMatch = {
@@ -194,7 +194,7 @@ export default function StatsMvpPanel({
   }, [data, filter]);
 
   if (loading && !data) {
-    return <p className={MUTED}>{t.loading}</p>;
+    return <p className={rubanMuted}>{t.loading}</p>;
   }
 
   return (
@@ -204,13 +204,13 @@ export default function StatsMvpPanel({
           <h2 className="text-xl font-semibold">
             {kind === 'public' ? t.headingPublic : t.heading}
           </h2>
-          <p className={`mt-1 text-sm ${MUTED}`}>
+          <p className={`mt-1 text-sm ${rubanMuted}`}>
             {format(kind === 'public' ? t.introPublic : t.intro, {
               min: MIN_VOTES_FOR_AWARD,
             })}
           </p>
           {hasOpen && (
-            <p className={`mt-1 text-xs ${FAINT}`}>
+            <p className={`mt-1 text-xs ${rubanFaint}`}>
               {format(t.autoRefresh, { seconds: refreshSeconds })}
             </p>
           )}
@@ -221,7 +221,7 @@ export default function StatsMvpPanel({
       </div>
 
       {error && (
-        <p role="alert" className={ERROR_BOX}>
+        <p role="alert" className={rubanErrBox}>
           {error}
         </p>
       )}
@@ -238,17 +238,17 @@ export default function StatsMvpPanel({
       )}
 
       {kind === 'public' && data && (
-        <section className={CARD}>
-          <h3 className={STRONG}>{t.openTitle}</h3>
-          <p className={`mt-1 text-xs ${MUTED}`}>{t.openHelp}</p>
+        <section className={rubanCardPadded}>
+          <h3 className={rubanStrong}>{t.openTitle}</h3>
+          <p className={`mt-1 text-xs ${rubanMuted}`}>{t.openHelp}</p>
           {(data.openable ?? []).length === 0 ? (
-            <p className={`mt-3 text-sm ${FAINT}`}>{t.openNone}</p>
+            <p className={`mt-3 text-sm ${rubanFaint}`}>{t.openNone}</p>
           ) : (
             <div className="mt-3 flex flex-wrap items-end gap-3">
-              <label className={`text-xs ${MUTED}`}>
+              <label className={`text-xs ${rubanMuted}`}>
                 {t.openMatchLabel}
                 <select
-                  className={`mt-1 block !w-auto ${INPUT}`}
+                  className={`mt-1 block !w-auto ${rubanFormInput}`}
                   value={openMatchId}
                   onChange={(e) => setOpenMatchId(e.target.value)}
                 >
@@ -262,13 +262,13 @@ export default function StatsMvpPanel({
                   ))}
                 </select>
               </label>
-              <label className={`text-xs ${MUTED}`}>
+              <label className={`text-xs ${rubanMuted}`}>
                 {t.openMinutesLabel}
                 <input
                   type="number"
                   min={1}
                   max={360}
-                  className={`mt-1 block !w-24 font-mono ${INPUT}`}
+                  className={`mt-1 block !w-24 font-mono ${rubanFormInput}`}
                   value={minutes}
                   onChange={(e) => setMinutes(e.target.value)}
                 />
@@ -296,7 +296,9 @@ export default function StatsMvpPanel({
       )}
 
       {data && data.matches.length === 0 && (
-        <p className={MUTED}>{kind === 'public' ? t.emptyPublic : t.empty}</p>
+        <p className={rubanMuted}>
+          {kind === 'public' ? t.emptyPublic : t.empty}
+        </p>
       )}
 
       {data && data.matches.length > 0 && (
@@ -363,15 +365,15 @@ function MatchCard({
   busy?: boolean;
 }) {
   return (
-    <li className={CARD}>
+    <li className={rubanCardPadded}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className={`font-semibold ${STRONG}`}>
+          <div className={`font-semibold ${rubanStrong}`}>
             {m.team1Name ?? t.tbd}{' '}
-            <span className={`font-normal ${FAINT}`}>{t.vs}</span>{' '}
+            <span className={`font-normal ${rubanFaint}`}>{t.vs}</span>{' '}
             {m.team2Name ?? t.tbd}
           </div>
-          <div className={`mt-0.5 text-xs ${MUTED}`}>
+          <div className={`mt-0.5 text-xs ${rubanMuted}`}>
             {[m.roundName, m.scheduledAt ? fmtDate(m.scheduledAt) : null]
               .filter(Boolean)
               .join(' · ')}
@@ -380,12 +382,12 @@ function MatchCard({
         <div className="flex flex-col items-end gap-1">
           <Chip tone={STATE_TONES[m.state]}>{stateLabel(t, m.state)}</Chip>
           {m.state === 'closed' && m.closedAt && (
-            <span className={`font-mono text-[11px] ${FAINT}`}>
+            <span className={`font-mono text-[11px] ${rubanFaint}`}>
               {format(t.closedAt, { date: fmtDate(m.closedAt) })}
             </span>
           )}
           {(m.state === 'open' || m.state === 'expired') && m.closesAt && (
-            <span className={`font-mono text-[11px] ${FAINT}`}>
+            <span className={`font-mono text-[11px] ${rubanFaint}`}>
               {format(t.closesAt, { date: fmtDate(m.closesAt) })}
             </span>
           )}
@@ -406,7 +408,7 @@ function MatchCard({
         {m.winner ? (
           <p className="font-semibold text-[var(--or-200,#eec4ff)]">
             🏅 {format(t.winner, { name: m.winner.label })}{' '}
-            <span className={`font-normal ${MUTED}`}>
+            <span className={`font-normal ${rubanMuted}`}>
               (
               {m.winner.source === 'manual' || m.winner.votes == null
                 ? t.winnerManual
@@ -419,9 +421,9 @@ function MatchCard({
             </span>
           </p>
         ) : m.leader.memberId !== null ? (
-          <p className={`font-semibold ${STRONG}`}>
+          <p className={`font-semibold ${rubanStrong}`}>
             {format(t.leader, { name: m.leader.label })}{' '}
-            <span className={`font-normal ${MUTED}`}>
+            <span className={`font-normal ${rubanMuted}`}>
               (
               {format(t.leaderDetail, {
                 votes: m.leader.votes,
@@ -432,7 +434,7 @@ function MatchCard({
             </span>
           </p>
         ) : (
-          <p className={MUTED}>
+          <p className={rubanMuted}>
             {m.leader.reason === 'tie'
               ? t.reasonTie
               : m.leader.reason === 'too_few_votes'
@@ -443,13 +445,13 @@ function MatchCard({
       </div>
 
       {m.sources.length === 0 ? (
-        <p className={`mt-3 text-sm ${FAINT}`}>{t.noVotes}</p>
+        <p className={`mt-3 text-sm ${rubanFaint}`}>{t.noVotes}</p>
       ) : (
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           {m.sources.map((s) => (
             <div key={s.source}>
               <div
-                className={`mb-2 flex items-baseline justify-between ${EYEBROW}`}
+                className={`mb-2 flex items-baseline justify-between ${rubanEyebrowSnug}`}
               >
                 <span>{sourceLabel(t, s.source)}</span>
                 <span className="tabular-nums">
@@ -463,7 +465,7 @@ function MatchCard({
                       <span className="truncate">
                         {r.label}
                         {r.teamName && (
-                          <span className={FAINT}> · {r.teamName}</span>
+                          <span className={rubanFaint}> · {r.teamName}</span>
                         )}
                       </span>
                       <span className="font-mono text-[var(--t2,#c7bfca)]">

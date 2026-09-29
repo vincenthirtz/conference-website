@@ -52,13 +52,12 @@ importent les fichiers touchés. Hooks extraits relus contre l'original (corps i
 - composants admin : tous passés en grammaire Ruban au lot 11 (restent volontairement bruts :
   quelques contrôles compacts — barre de `SimMatchCard`, outils de `MarkdownEditor`, icônes de
   `RegistrationFieldsEditor`, `ChoiceCard`/`BigChip` du quiz ; `TenantSwitcher.tsx` non importé) ;
-- remonter les classes Ruban dupliquées (`features/admin/stages/ui/rubanClasses.ts`,
-  `features/admin/diffusion/ui/rubanClasses.ts`, `components/admin/caster/fieldClasses.ts`)
-  dans `features/admin/_shared/ui/` ; `AdminButtonLink` ne prend pas `target`/`rel`
-  (liens externes stylés à la main) ;
-- code mort : `SummaryCard`, `stageTypeBadgeClass`, `runStatusBadgeClasses`/`*DotClasses`,
-  `segment|wave|stationStatusBadgeClasses`, `stageTypeColor`/`matchStatusColor`, clés i18n
-  `breadcrumb*` des fiches phase/ligue ;
+- clés i18n `stageType*` / `matchStatus*` de `adminTournamentOverview` probablement orphelines
+  depuis la suppression de `overview/StageRow`/`RecentMatchRow` (lot 12) — vérifier puis retirer ;
+- bouton « Copier » de `StreamSourcesPanel` : son `className="bg-[var(--s1…)]"` ne surcharge
+  pas le fond d'`AdminButton` (Tailwind v4, ordre des utilitaires) → fond transparent ;
+- `TenantSwitcher.tsx` : non monté depuis 28afe291 (mai 2026) mais gardé exprès « au cas où » —
+  NON supprimé ; à trancher (le garder = le passer en Ruban le jour où on le remonte) ;
 - phases 1–2 non terminées : migration des routes vers `defineAdminRoute` (L3), `select('*')`
   (L5), service/repository (L7), cache client généralisé (L10).
 
@@ -733,6 +732,13 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       couleurs décoratives par catégorie neutralisées (familles Discord, types) ; couleurs de
       données gardées (donut, calendrier scrims, couleurs d'espace, raretés TCG, seeds).
       Gels abaissés : CampaignsPanel 1 151, SupportPanel 1 146, ProfileModal 858.
+- [x] **Lot 12 — consolidation** : une seule source de classes, `features/admin/_shared/ui/ruban.ts`
+      (84 consommateurs repointés ; `diffusion/ui/rubanClasses.ts` supprimé, `stages/ui/rubanClasses.ts`
+      = ré-export d'alias locaux) — fin des imports croisés entre modules. `AdminButtonLink` prend
+      `target`/`rel` (liens externes recopiés à la main convertis), `AdminButton` prend `ref`.
+      Code mort retiré : `SummaryCard`, `overview/{StageRow,RecentMatchRow,labels}`,
+      `stageTypeBadgeClass`, les `*StatusBadgeClasses`/`*DotClasses` d'`eventSegmentLabels`,
+      clés i18n `breadcrumb*`/`stageFallback`/`eyebrow`/`searchLabel`.
 - [ ] e2e `admin-users.spec.ts` : clique un bouton « Rechercher » qui n'existe pas sur la page
       (recherche automatique) — cassé AVANT le lot 8, à réaligner sur le vrai comportement.
 - [ ] Plusieurs `primary` simultanés possibles sur les matchs du tournoi (panneaux de

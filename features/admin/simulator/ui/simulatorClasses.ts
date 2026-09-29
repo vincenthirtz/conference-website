@@ -1,11 +1,13 @@
 // features/admin/simulator/ui/simulatorClasses.ts — classes « Le Ruban »
 // partagées par les blocs du simulateur de tournoi (surfaces, champs,
 // libellés, options à bascule). Jetons de styles/admin-ruban.css, avec repli
-// pour un rendu hors coquille.
+// pour un rendu hors coquille. Les surfaces communes viennent de
+// features/admin/_shared/ui/ruban.ts.
+
+import { rubanCardPadded, rubanEyebrow } from '../../_shared/ui/ruban';
 
 /** Surface d'un panneau (configuration). */
-export const SIM_PANEL =
-  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6';
+export const SIM_PANEL = rubanCardPadded;
 
 /** Titre de panneau. */
 export const SIM_TITLE =
@@ -16,8 +18,7 @@ export const SIM_SECTION =
   'border-t border-[var(--line,rgba(194,196,201,.12))] pt-6';
 
 /** Libellé d'intertitre (étroit, espacé). */
-export const SIM_EYEBROW =
-  'font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
+export const SIM_EYEBROW = rubanEyebrow;
 
 /** Libellé de champ. */
 export const SIM_LABEL = 'mb-2 block text-sm text-[var(--t2,#c7bfca)]';

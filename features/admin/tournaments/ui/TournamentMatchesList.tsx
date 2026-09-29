@@ -6,7 +6,6 @@
 
 import { memo, useState } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { format } from '@/lib/i18n/useAdminT';
 import AdminButton, {
   AdminButtonLink,
@@ -282,13 +281,9 @@ const MatchRow = memo(function MatchRow({
           >
             {t.edit}
           </AdminButtonLink>
-          <Link
-            href={`/match/${m.id}`}
-            target="_blank"
-            className="inline-flex h-[30px] shrink-0 items-center justify-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.02em] text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]"
-          >
+          <AdminButtonLink href={`/match/${m.id}`} target="_blank" size="xs">
             {t.view}
-          </Link>
+          </AdminButtonLink>
         </div>
       </div>
 

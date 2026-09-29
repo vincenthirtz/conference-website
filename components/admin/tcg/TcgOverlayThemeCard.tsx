@@ -31,7 +31,7 @@ import {
   rubanErr,
   rubanEyebrow,
   rubanInput,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+} from '@/features/admin/_shared/ui/ruban';
 import TcgAnnouncement from '@/components/overlay/TcgAnnouncement';
 import {
   DEFAULT_OVERLAY_THEME,

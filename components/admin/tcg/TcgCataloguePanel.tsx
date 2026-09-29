@@ -23,8 +23,11 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { rubanCard } from '@/features/admin/diffusion/ui/rubanClasses';
-import { EYEBROW, MUTED } from '@/features/admin/stages/ui/rubanClasses';
+import {
+  rubanCard,
+  rubanEyebrowSnug,
+  rubanMuted,
+} from '@/features/admin/_shared/ui/ruban';
 import TcgPlayerPicker, {
   type PickedUser,
 } from '@/components/admin/tcg/TcgPlayerPicker';
@@ -139,7 +142,7 @@ export default function TcgCataloguePanel() {
   return (
     <div>
       <AlertBanner message={error} variant="error" className="mb-4" />
-      <p className={`mb-4 text-sm ${MUTED}`}>{t.catalogueIntro}</p>
+      <p className={`mb-4 text-sm ${rubanMuted}`}>{t.catalogueIntro}</p>
 
       <div className={`mb-5 p-4 ${rubanCard}`}>
         <TcgPlayerPicker
@@ -196,7 +199,7 @@ export default function TcgCataloguePanel() {
           key={group.kind}
           className="mb-7 [content-visibility:auto] [contain-intrinsic-size:auto_900px]"
         >
-          <h3 className={`mb-2 ${EYEBROW}`}>
+          <h3 className={`mb-2 ${rubanEyebrowSnug}`}>
             {kindLabel(group.kind)} · {group.cards.length}
           </h3>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -253,7 +256,7 @@ export default function TcgCataloguePanel() {
       ))}
 
       {!busy && data && groups.length === 0 && (
-        <p className={`py-10 text-center text-sm ${MUTED}`}>
+        <p className={`py-10 text-center text-sm ${rubanMuted}`}>
           {missingOnly ? t.catalogueNothingMissing : t.catalogueEmpty}
         </p>
       )}

@@ -45,7 +45,6 @@ export default adminNs('adminUsersManage', {
   userCount_other: '{count} utilisateurs',
   loading: 'Chargement...',
   newUser: 'Nouvel utilisateur',
-  searchLabel: 'Recherche',
   searchPlaceholder: 'Email, nom ou BattleTag...',
   roleLabel: 'Rôle',
   roleSelectAria: 'Changer le rôle de {name}',

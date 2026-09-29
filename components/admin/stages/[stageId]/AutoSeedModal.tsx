@@ -2,7 +2,11 @@
 import React from 'react';
 import Modal from '@/components/admin/Modal';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { INPUT, LABEL, MUTED } from '@/features/admin/stages/ui/rubanClasses';
+import {
+  rubanFormInput,
+  rubanFormLabel,
+  rubanMuted,
+} from '@/features/admin/_shared/ui/ruban';
 import type { Dict } from './stageDisplay';
 
 type OtherStage = { id: string; name: string; stage_type: string | null };
@@ -74,14 +78,14 @@ function AutoSeedModal({
       ) : (
         <div className="space-y-4">
           <div>
-            <label className={LABEL}>{t.sourceStageLabel}</label>
+            <label className={rubanFormLabel}>{t.sourceStageLabel}</label>
             {otherStages.length === 0 ? (
-              <p className={`text-sm ${MUTED}`}>{t.noSourceStages}</p>
+              <p className={`text-sm ${rubanMuted}`}>{t.noSourceStages}</p>
             ) : (
               <select
                 value={sourceStageId}
                 onChange={(e) => onChangeSource(e.target.value)}
-                className={INPUT}
+                className={rubanFormInput}
               >
                 {otherStages.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -106,7 +110,7 @@ function AutoSeedModal({
                 />
                 <div>
                   <span className="font-medium">{t.patternStandard}</span>
-                  <span className={`ml-1 ${MUTED}`}>
+                  <span className={`ml-1 ${rubanMuted}`}>
                     {t.patternStandardDesc}
                   </span>
                 </div>
@@ -120,7 +124,7 @@ function AutoSeedModal({
                 />
                 <div>
                   <span className="font-medium">{t.patternSequential}</span>
-                  <span className={`ml-1 ${MUTED}`}>
+                  <span className={`ml-1 ${rubanMuted}`}>
                     {t.patternSequentialDesc}
                   </span>
                 </div>

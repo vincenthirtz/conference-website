@@ -32,7 +32,7 @@ import {
   rubanErr,
   rubanOk,
   rubanWarn,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+} from '@/features/admin/_shared/ui/ruban';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTcgBattlenetBackfill from '@/lib/i18n/locales/admin-fr/adminTcgBattlenetBackfill';
 import {

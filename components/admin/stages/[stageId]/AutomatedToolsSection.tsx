@@ -3,12 +3,12 @@ import React, { type ReactNode } from 'react';
 import Link from 'next/link';
 import type { Stage } from '@/types/admin';
 import {
-  CARD,
-  CARD_TITLE,
-  MUTED,
-  ROW_ICON,
-  ROW_LINK,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardPadded,
+  rubanCardTitle,
+  rubanMuted,
+  rubanRowIcon,
+  rubanRowLink,
+} from '@/features/admin/_shared/ui/ruban';
 import type { Dict } from './stageDisplay';
 
 type Props = {
@@ -38,7 +38,7 @@ function ToolBody({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <div className={ROW_ICON}>
+      <div className={rubanRowIcon}>
         <svg
           className="h-5 w-5"
           fill="none"
@@ -58,7 +58,7 @@ function ToolBody({
         <div className="text-sm font-medium text-[var(--t1,#f4edf7)]">
           {title}
         </div>
-        <div className={`text-xs ${MUTED}`}>{desc}</div>
+        <div className={`text-xs ${rubanMuted}`}>{desc}</div>
       </div>
     </div>
   );
@@ -78,8 +78,8 @@ function AutomatedToolsSection({
   t,
 }: Props) {
   return (
-    <section className={CARD}>
-      <h2 className={`${CARD_TITLE} mb-4`}>{t.autoToolsTitle}</h2>
+    <section className={rubanCardPadded}>
+      <h2 className={`${rubanCardTitle} mb-4`}>{t.autoToolsTitle}</h2>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <button
@@ -87,7 +87,7 @@ function AutomatedToolsSection({
           data-case="normal"
           onClick={onAutoByes}
           disabled={loadingActions}
-          className={ROW_LINK}
+          className={rubanRowLink}
         >
           <ToolBody
             icon={ICON.byes}
@@ -102,7 +102,7 @@ function AutomatedToolsSection({
             data-case="normal"
             onClick={onOpenAutoSeed}
             disabled={loadingActions}
-            className={ROW_LINK}
+            className={rubanRowLink}
           >
             <ToolBody
               icon={ICON.seed}
@@ -113,7 +113,10 @@ function AutomatedToolsSection({
         )}
 
         {stage.stage_type === 'bracket' && (
-          <Link href={`/admin/stages/${stage.id}/seeding`} className={ROW_LINK}>
+          <Link
+            href={`/admin/stages/${stage.id}/seeding`}
+            className={rubanRowLink}
+          >
             <ToolBody
               icon={ICON.seeding}
               title={t.seedingComparatorTitle}
@@ -128,7 +131,7 @@ function AutomatedToolsSection({
             data-case="normal"
             onClick={onGenerateSwissRound}
             disabled={loadingActions}
-            className={ROW_LINK}
+            className={rubanRowLink}
           >
             <ToolBody
               icon={ICON.swiss}
@@ -140,7 +143,7 @@ function AutomatedToolsSection({
       </div>
 
       {loadingActions && (
-        <div className={`mt-4 flex items-center gap-2 text-xs ${MUTED}`}>
+        <div className={`mt-4 flex items-center gap-2 text-xs ${rubanMuted}`}>
           <div className="h-3 w-3 animate-spin rounded-full border border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--or,#b467d1)]" />
           {t.processing}
         </div>

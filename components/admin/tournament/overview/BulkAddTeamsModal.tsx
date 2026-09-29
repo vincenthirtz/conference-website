@@ -4,7 +4,11 @@ import Modal from '@/components/admin/Modal';
 import { format } from '@/lib/i18n/useAdminT';
 import type { Dict, Team } from './types';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { FAINT, INPUT, MUTED } from '@/features/admin/stages/ui/rubanClasses';
+import {
+  rubanFaint,
+  rubanFormInput,
+  rubanMuted,
+} from '@/features/admin/_shared/ui/ruban';
 
 type BulkProgress = { done: number; total: number };
 
@@ -112,12 +116,12 @@ function BulkAddTeamsModal({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={tx.searchTeamPlaceholder}
-          className={`mb-3 ${INPUT}`}
+          className={`mb-3 ${rubanFormInput}`}
         />
 
         {/* Select all / deselect all */}
         <div className="flex items-center justify-between mb-2">
-          <span className={`text-xs ${MUTED}`}>
+          <span className={`text-xs ${rubanMuted}`}>
             {format(tx.selectedTeamsCount, {
               count: selected.size,
             })}
@@ -169,7 +173,7 @@ function BulkAddTeamsModal({
             </label>
           ))}
           {filtered.length === 0 && (
-            <div className={`py-4 text-center text-sm ${FAINT}`}>
+            <div className={`py-4 text-center text-sm ${rubanFaint}`}>
               {tx.noAvailableTeam}
             </div>
           )}
@@ -178,7 +182,9 @@ function BulkAddTeamsModal({
         {/* Progress indicator */}
         {adding && (
           <div className="mb-4">
-            <div className={`mb-1 flex items-center gap-2 text-xs ${MUTED}`}>
+            <div
+              className={`mb-1 flex items-center gap-2 text-xs ${rubanMuted}`}
+            >
               <div className="h-3 w-3 animate-spin rounded-full border border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--or,#b467d1)]" />
               {format(tx.bulkAddingInProgress, {
                 done: progress.done,

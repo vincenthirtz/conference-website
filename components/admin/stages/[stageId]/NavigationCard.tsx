@@ -3,12 +3,12 @@ import React, { type ReactNode } from 'react';
 import Link from 'next/link';
 import type { Stage, Tournament } from '@/types/admin';
 import {
-  CARD,
-  CARD_TITLE,
-  MUTED,
-  ROW_ICON,
-  ROW_LINK,
-} from '@/features/admin/stages/ui/rubanClasses';
+  rubanCardPadded,
+  rubanCardTitle,
+  rubanMuted,
+  rubanRowIcon,
+  rubanRowLink,
+} from '@/features/admin/_shared/ui/ruban';
 import type { Dict } from './stageDisplay';
 
 type Props = {
@@ -44,9 +44,9 @@ function NavRow({
   desc: ReactNode;
 }) {
   return (
-    <Link href={href} className={ROW_LINK}>
+    <Link href={href} className={rubanRowLink}>
       <div className="flex items-center gap-3">
-        <div className={ROW_ICON}>
+        <div className={rubanRowIcon}>
           <svg
             className="h-5 w-5"
             fill="none"
@@ -66,7 +66,7 @@ function NavRow({
           <div className="text-sm font-medium text-[var(--t1,#f4edf7)]">
             {title}
           </div>
-          <div className={`text-xs ${MUTED}`}>{desc}</div>
+          <div className={`text-xs ${rubanMuted}`}>{desc}</div>
         </div>
       </div>
       <span
@@ -88,8 +88,8 @@ function NavigationCard({
   t,
 }: Props) {
   return (
-    <section className={CARD}>
-      <h2 className={`${CARD_TITLE} mb-4`}>{t.navTitle}</h2>
+    <section className={rubanCardPadded}>
+      <h2 className={`${rubanCardTitle} mb-4`}>{t.navTitle}</h2>
       <div className="space-y-2">
         {matchesUrl && (
           <NavRow

@@ -37,10 +37,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminBroadcastLive from '@/lib/i18n/locales/admin-fr/adminBroadcastLive';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
-import {
-  rubanCard,
-  rubanEyebrow,
-} from '@/features/admin/diffusion/ui/rubanClasses';
+import { rubanCard, rubanEyebrow } from '@/features/admin/_shared/ui/ruban';
 
 type TwitchChannelRow = { channel: string; label: string | null };
 

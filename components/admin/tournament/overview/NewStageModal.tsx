@@ -2,7 +2,10 @@ import { memo, useState } from 'react';
 import Modal from '@/components/admin/Modal';
 import type { Dict } from './types';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { INPUT, LABEL } from '@/features/admin/stages/ui/rubanClasses';
+import {
+  rubanFormInput,
+  rubanFormLabel,
+} from '@/features/admin/_shared/ui/ruban';
 
 type StageTypeOption = { value: string; label: string };
 
@@ -75,22 +78,22 @@ function NewStageModal({
     >
       <div className="space-y-4">
         <div>
-          <label className={LABEL}>{tx.stageNameLabel}</label>
+          <label className={rubanFormLabel}>{tx.stageNameLabel}</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={tx.stageNamePlaceholder}
-            className={INPUT}
+            className={rubanFormInput}
           />
         </div>
 
         <div>
-          <label className={LABEL}>{tx.stageTypeLabel}</label>
+          <label className={rubanFormLabel}>{tx.stageTypeLabel}</label>
           <select
             value={stageType}
             onChange={(e) => setStageType(e.target.value)}
-            className={INPUT}
+            className={rubanFormInput}
           >
             {stageTypeOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>

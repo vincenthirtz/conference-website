@@ -47,7 +47,7 @@ import {
 } from '@/utils/overlay/alertBox';
 import { logger } from '@/utils/logger';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import { ERROR_BOX, MUTED } from '@/features/admin/stages/ui/rubanClasses';
+import { rubanErrBox, rubanMuted } from '@/features/admin/_shared/ui/ruban';
 
 const ENDPOINT = '/api/admin/stream-alerts';
 
@@ -375,7 +375,7 @@ export default function StreamAlertsPanel() {
 
   if (loadError) {
     return (
-      <div role="alert" className={`${ERROR_BOX} text-xs`}>
+      <div role="alert" className={`${rubanErrBox} text-xs`}>
         {loadError}
       </div>
     );
@@ -391,7 +391,7 @@ export default function StreamAlertsPanel() {
       {/* Le titre vit ICI, et pas dans la page : elle n'aurait rien d'autre à
           faire de ce namespace que de l'afficher. */}
       <h3 className="text-sm font-semibold text-white">{t.title}</h3>
-      <p className={`text-xs ${MUTED}`}>{t.description}</p>
+      <p className={`text-xs ${rubanMuted}`}>{t.description}</p>
 
       {/* En tête, parce que c'est la panne la plus silencieuse : sans ces
           abonnements, Twitch n'envoie rien et la boîte reste muette. */}

@@ -44,7 +44,7 @@ import {
 } from './tcgPhotoQueue';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
-import { rubanWarn } from '@/features/admin/diffusion/ui/rubanClasses';
+import { rubanWarn } from '@/features/admin/_shared/ui/ruban';
 
 function formatDate(value: string | null, locale: string): string {
   if (!value) return '—';
