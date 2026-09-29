@@ -349,3 +349,75 @@ describe('/api/player/matches/[matchId]/report-score — idempotence', () => {
     expect(store.match_score_reports[0].team2_score).toBe(1);
   });
 });
+
+// Décision produit 2026-09-29 (reportRight.ts) : capitaine OU manager d'équipe ;
+// coach refusée ; tenir les deux équipes → 403 REPORT_BOTH_SIDES.
+describe('/api/player/matches/[matchId]/report-score — capitaine ou manager', () => {
+  const MGR = '00000000-0000-4000-8000-0000000000e1';
+
+  function seedMember(userId: string, teamId: string, role: string) {
+    store.team_members = [
+      ...((store.team_members as any[]) ?? []),
+      { team_id: teamId, user_id: userId, role, tenant_id: TENANT_ID },
+    ] as any;
+  }
+
+  it('une manager de team2 déclare pour le côté 2', async () => {
+    seedMatch();
+    seedMember(MGR, TEAM_2, 'manager');
+    setAuthUser({ id: MGR });
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.mySide).toBe(2);
+    expect(store.match_score_reports[0].reported_by_auth_user_id).toBe(MGR);
+  });
+
+  it('une coach ne déclare pas (403, rien d’écrit)', async () => {
+    seedMatch();
+    seedMember(MGR, TEAM_1, 'coach');
+    setAuthUser({ id: MGR });
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).not.toBe('REPORT_BOTH_SIDES');
+    expect(store.match_score_reports ?? []).toHaveLength(0);
+  });
+
+  it('manager des deux équipes → 403 REPORT_BOTH_SIDES, rien d’écrit', async () => {
+    seedMatch();
+    seedMember(MGR, TEAM_1, 'manager');
+    seedMember(MGR, TEAM_2, 'Manager');
+    setAuthUser({ id: MGR });
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).toBe('REPORT_BOTH_SIDES');
+    expect(store.match_score_reports ?? []).toHaveLength(0);
+  });
+
+  it('capitaine de team1 ET manager de team2 → 403 REPORT_BOTH_SIDES', async () => {
+    seedMatch();
+    seedMember(CAP1, TEAM_2, 'manager');
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).toBe('REPORT_BOTH_SIDES');
+  });
+
+  it('une manager d’une équipe d’un AUTRE tenant ne déclare pas', async () => {
+    seedMatch();
+    store.team_members = [
+      {
+        team_id: TEAM_1,
+        user_id: MGR,
+        role: 'manager',
+        tenant_id: '00000000-0000-4000-8000-00000000abcd',
+      },
+    ] as any;
+    setAuthUser({ id: MGR });
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect(res.statusCode).toBe(403);
+  });
+});

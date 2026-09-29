@@ -3,7 +3,7 @@ parameters:
 post:
   tags:
     - bot/matches
-  summary: Capitaine soumet le score final d'un match (resoud dispute si accord).
+  summary: Capitaine ou manager d'equipe soumet le score final d'un match (resoud dispute si accord).
   operationId: botReportMatchScore
   parameters:
     - $ref: '#/components/parameters/IdempotencyKey'
@@ -99,7 +99,19 @@ post:
           schema:
             $ref: '#/components/schemas/Error'
     '403':
-      $ref: '#/components/responses/Forbidden'
+      description: |
+        Le compte Discord (via `user_discord_links`) n'est ni capitaine
+        (`teams.captain_id`) ni manager d'equipe (`team_members.role =
+        'manager'`) d'une des deux equipes — les coachs ne declarent pas.
+        `code: REPORT_BOTH_SIDES` : il tient les DEUX equipes du match (y
+        compris via deux comptes du site lies au meme Discord) ; une seule
+        personne ne peut pas declarer les deux cotes. Meme regle que
+        `/api/player/matches/{matchId}/report-score`
+        (utils/matches/reportRight.ts).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     '404':
       $ref: '#/components/responses/NotFound'
     '409':

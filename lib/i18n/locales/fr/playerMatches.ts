@@ -59,7 +59,10 @@ export default ns('playerMatches', {
   badgeAwaiting: 'Score en attente',
   badgeDisputed: 'Score en litige',
   errInvalidScore: 'Score invalide. Vérifie les valeurs saisies.',
-  errNotCaptain: "Seul le capitaine d'une des équipes peut rapporter le score.",
+  errNotCaptain:
+    "Seule la capitaine ou une manager d'une des équipes peut rapporter le score.",
+  errBothSides:
+    'Tu es capitaine ou manager des deux équipes de ce match : le score doit être rapporté par chaque équipe séparément.',
   errFinalized:
     'Ce match est déjà clôturé. Contacte le staff pour le modifier.',
   errRateLimited: 'Trop de tentatives. Réessaie dans un instant.',

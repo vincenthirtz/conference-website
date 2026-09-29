@@ -28,7 +28,7 @@ import { PlayerError } from '@/utils/player/errors';
 import * as repo from '../repository';
 import type { PlayerMatchDetail } from '../schemas';
 import type { MatchesCtx } from './context';
-import { mayReportFor } from './reportRight';
+import { loadReportableTeamIds, mayReportFor } from './reportRight';
 
 const notFound = () =>
   new LegacyAdminError(404, 'Match not found', { code: 'not_found' });
@@ -118,7 +118,16 @@ export async function getPlayerMatchDetail(
     ? managed
     : await getManagedTeams(userId, tenantId);
   const myAccess = access.find((a) => a.teamId === teamId) ?? null;
-  const captainId = await repo.readTeamCaptainId(db, tenantId, teamId);
+  // Droit de déclarer : même règle que report-score (reportRight.ts). Lecture
+  // en échec → pas de bouton (l'écriture répondrait 500, pas un faux 403).
+  const reportable = await loadReportableTeamIds(db, tenantId, userId).catch(
+    (e: unknown) => {
+      ctx.logger.error('[/api/player/matches/[matchId]] report right:', e);
+      return new Set<string>();
+    }
+  );
+  const opponentId =
+    teamId === match.team1_id ? match.team2_id : match.team1_id;
 
   return {
     match: {
@@ -152,7 +161,11 @@ export async function getPlayerMatchDetail(
     },
     permissions: {
       validateLineup: !!myAccess?.permissions.includes('validate_lineup'),
-      reportScore: mayReportFor(userId, captainId),
+      reportScore: mayReportFor(
+        reportable,
+        teamId,
+        (opponentId as string | null) ?? null
+      ),
     },
   };
 }

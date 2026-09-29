@@ -1,9 +1,9 @@
 post:
   tags:
     - public/auth
-  summary: Self-report du score d'un match par un capitaine (pendant web du report bot).
+  summary: Self-report du score d'un match par la capitaine ou une manager d'equipe (pendant web du report bot).
   description: |
-    Permet a un CAPITAINE, depuis l'espace capitaine du site, de rapporter
+    Permet a la CAPITAINE ou a une MANAGER d'equipe, depuis l'espace joueuse, de rapporter
     le score final d'un de ses matchs. Reutilise la logique du handler bot
     `/api/bot/v1/matches/{matchId}/report` : un report par equipe (table
     `match_score_reports`, unique sur `(match_id, team_side)`, upsert
@@ -18,7 +18,11 @@ post:
                                    auto, event bot `match.disputed`, embed
                                    staff pour les matchs de tournoi)
 
-    Droit de rapport : etre `teams.captain_id` de team1 OU team2 du match.
+    Droit de rapport (decision 2026-09-29, service/reportRight.ts) : etre
+    `teams.captain_id` OU `team_members.role = 'manager'` (role d'equipe, pas
+    staff ; les coachs sont exclus) de team1 OU team2 du match, dans son
+    tenant. Tenir les DEUX equipes → `403 REPORT_BOTH_SIDES` (une voix par
+    cote).
     Re-soumission supportee (idempotent) ; corriger son report pour rejoindre
     celui de l'adversaire ferme une dispute ouverte.
 
@@ -81,7 +85,14 @@ post:
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
-      $ref: '#/components/responses/Forbidden'
+      description: |
+        Ni capitaine ni manager d'une des deux equipes (coach comprise).
+        `code: REPORT_BOTH_SIDES` : capitaine ou manager des DEUX equipes du
+        match — chaque equipe declare separement.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     '404':
       $ref: '#/components/responses/NotFound'
     '409':

@@ -96,6 +96,10 @@ export function reportScoreErrorToast(
   if (code === 'DISPUTE_UNDER_STAFF_REVIEW') {
     return { message: t.errStaffReview, level: 'warning' };
   }
+  // Capitaine / manager des DEUX équipes : chaque côté déclare séparément.
+  if (code === 'REPORT_BOTH_SIDES') {
+    return { message: t.errBothSides, level: 'error' };
+  }
   if (status === 401) return { message: t.errSessionExpired, level: 'error' };
   if (status === 403) return { message: t.errNotCaptain, level: 'error' };
   // 409 sans code connu : trois 409 différents existent désormais, on ne

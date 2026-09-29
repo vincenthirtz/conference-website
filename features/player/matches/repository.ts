@@ -91,20 +91,6 @@ export async function readScoreReports(
   return { reports: (data ?? null) as ScoreReportRow[] | null, error };
 }
 
-export async function readTeamCaptainId(
-  db: AdminDb,
-  tenantId: string,
-  teamId: string
-) {
-  const { data } = await loose(db)
-    .from('teams')
-    .select('captain_id')
-    .eq('id', teamId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle();
-  return (data as { captain_id?: string | null } | null)?.captain_id ?? null;
-}
-
 /* ---------------------- Déclaration de score ------------------------- */
 
 export async function readMatchForReport(

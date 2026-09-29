@@ -268,6 +268,26 @@ describe('permissions annoncées à l’écran', () => {
     });
   });
 
+  it('une manager d’équipe rapporte (décision 2026-09-29, reportRight.ts)', async () => {
+    (store.team_members as any[])[0].role = 'manager';
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect((res.body as any).permissions.reportScore).toBe(true);
+  });
+
+  it('manager des DEUX équipes : pas de bouton (une voix par côté)', async () => {
+    (store.team_members as any[])[0].role = 'manager';
+    (store.team_members as any[]).push({
+      id: 'tm-3',
+      team_id: OTHER_TEAM_ID,
+      user_id: USER_ID,
+      role: 'manager',
+    });
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect((res.body as any).permissions.reportScore).toBe(false);
+  });
+
   it('un coach aligne mais ne rapporte pas — miroir de report-score.ts', async () => {
     (store.team_members as any[])[0].role = 'coach';
     const res = makeRes();

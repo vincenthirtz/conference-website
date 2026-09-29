@@ -58,7 +58,9 @@ export default {
   badgeAwaiting: 'Score pending',
   badgeDisputed: 'Score disputed',
   errInvalidScore: 'Invalid score. Check the values you entered.',
-  errNotCaptain: 'Only a team captain can report the score.',
+  errNotCaptain: 'Only a team captain or manager can report the score.',
+  errBothSides:
+    'You are captain or manager of both teams in this match: each team must report the score separately.',
   errFinalized: 'This match is already finalized. Contact staff to change it.',
   errRateLimited: 'Too many attempts. Try again in a moment.',
   errGeneric: 'Failed to send the score. Please try again.',

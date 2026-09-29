@@ -177,6 +177,7 @@ absent d'ici, ou listé mais plus émis, fait échouer la suite.
 | `INVALID_SCORE_FOR_FORMAT` | 400 | Score incompatible avec le format (BO) du match. | `matches/[matchId]/report` |
 | `FINALIZATION_IN_PROGRESS` | 409 | L'autre capitaine valide le même score au même moment ; réessayer. | `matches/[matchId]/report` |
 | `DISPUTE_UNDER_STAFF_REVIEW` | 409 | Litige ouvert par le staff : l'accord des capitaines ne le referme pas. | `matches/[matchId]/report` |
+| `REPORT_BOTH_SIDES` | 403 | Le compte (ou l'un des comptes du site liés à ce compte Discord) est capitaine ou manager des DEUX équipes du match : chaque équipe déclare séparément. | `matches/[matchId]/report` |
 | `NOT_DISPUTED` | 409 | Le match n'est pas en litige. | `matches/[matchId]/resolve-dispute` |
 | `TOURNAMENT_COMPLETED` | 403 | Tournoi terminé : le rouvrir avant de modifier le match. | `matches/[matchId]`, `matches/[matchId]/reset` |
 | `ALREADY_COMPLETE` | 400 | Veto déjà complet. | `matches/[matchId]/veto` |
@@ -908,7 +909,7 @@ doesn't break during a deploy. The mode is toggled via
   | `matches/:matchId/resolve-dispute`    | 5           | `actorDiscordUserId` | staff      |
   | `matches/:matchId/veto` (POST/DELETE) | 5           | `actorDiscordUserId` | staff      |
   | `matches/:matchId/cast` (POST/DELETE) | 5           | `actorDiscordUserId` | staff      |
-  | `matches/:matchId/report`             | 5           | `discordUserId`      | captain    |
+  | `matches/:matchId/report`             | 5           | `discordUserId`      | captain / manager (not both teams) |
   | `matches/:matchId/checkin`            | 10          | `discordUserId`      | captain / coach / manager |
   | `matches/:matchId/evidence` (POST)    | 10          | `discordUserId`      | captain    |
 
@@ -978,6 +979,18 @@ Response paths (see handler for full logic). All are `200`; branch on
 `auto_resolved`) are present on the `finalized` branch; both are absent/null on
 the other branches. The auto-resolution path (silence + evidence) leans on the
 `/matches/:matchId/evidence` endpoint above and the tenant dispute SLA.
+
+**Who may report (2026-09-29).** The team's captain (`teams.captain_id`) OR a
+team **manager** (`team_members.role = 'manager'` — team role, not staff;
+coaches are excluded). All site accounts linked to `discordUserId` are
+considered. Holding BOTH teams of the match (e.g. manager of both, or captain
+of one + manager of the other, even through two linked accounts) →
+`403 REPORT_BOTH_SIDES`: reconciliation counts one vote per side, a single
+person must not report both. Otherwise not entitled → `403` (no code). Teams
+with no captain but a manager can now report (the former
+`400 « Capitaines manquants »` is gone). Shared core with the web report:
+`utils/matches/reportRight.ts`. The `error` string is shown
+as-is by the bot — no bot change required.
 
 **Refusals (2026-09-16, score integrity).** Checked after the captain check and
 BEFORE the report is stored (nothing is written). Same rules as the web report

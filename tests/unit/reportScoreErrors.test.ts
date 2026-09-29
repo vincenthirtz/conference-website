@@ -60,6 +60,12 @@ describe('reportScoreErrorToast', () => {
     );
   });
 
+  it('403 REPORT_BOTH_SIDES → message dédié, pas « seule la capitaine »', () => {
+    const r = reportScoreErrorToast(403, 'REPORT_BOTH_SIDES', 3, t);
+    expect(r.message).toBe(t.errBothSides);
+    expect(r.message).not.toBe(t.errNotCaptain);
+  });
+
   it('401 → session expirée, pas un échec générique', () => {
     expect(reportScoreErrorToast(401, null, 3, t).message).toBe(
       t.errSessionExpired

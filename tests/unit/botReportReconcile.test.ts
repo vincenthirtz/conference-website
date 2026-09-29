@@ -341,3 +341,83 @@ describe('bot report — reconciliation branches', () => {
     expect(propagateBracketForMatch).not.toHaveBeenCalled();
   });
 });
+
+// Même règle que le report web (reportRight.ts, décision 2026-09-29).
+describe('bot report — capitaine ou manager (cœur partagé reportRight)', () => {
+  const MGR = '00000000-0000-4000-8000-0000000000e1';
+  const DISCORD_MGR = '900000000000000009';
+
+  function seedManager(teamIds: string[], role = 'manager') {
+    store.user_discord_links = [
+      ...((store.user_discord_links as any[]) ?? []),
+      { auth_user_id: MGR, discord_user_id: DISCORD_MGR },
+    ] as any;
+    store.team_members = teamIds.map((teamId) => ({
+      team_id: teamId,
+      user_id: MGR,
+      role,
+      tenant_id: TENANT_ID,
+    })) as any;
+  }
+
+  it('une manager de team2 déclare pour le côté 2', async () => {
+    seedManager([TEAM_2]);
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: { discordUserId: DISCORD_MGR, team1Score: 2, team2Score: 1 },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body.mySide).toBe(2);
+    expect(
+      (store.match_score_reports as any[]).find((r) => r.team_side === 2)
+        ?.reported_by_auth_user_id
+    ).toBe(MGR);
+  });
+
+  it('une coach est refusée (403)', async () => {
+    seedManager([TEAM_1], 'coach');
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: { discordUserId: DISCORD_MGR, team1Score: 2, team2Score: 1 },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    expect(store.match_score_reports ?? []).toHaveLength(0);
+  });
+
+  it('manager des deux équipes → 403 REPORT_BOTH_SIDES, rien d’écrit', async () => {
+    seedManager([TEAM_1, TEAM_2]);
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: { discordUserId: DISCORD_MGR, team1Score: 2, team2Score: 1 },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).toBe('REPORT_BOTH_SIDES');
+    expect(store.match_score_reports ?? []).toHaveLength(0);
+  });
+
+  it('un compte Discord lié à la capitaine de team1 ET à une manager de team2 → REPORT_BOTH_SIDES', async () => {
+    seedManager([TEAM_2]);
+    store.user_discord_links = [
+      { auth_user_id: CAP1, discord_user_id: DISCORD_MGR },
+      { auth_user_id: MGR, discord_user_id: DISCORD_MGR },
+    ] as any;
+    const res = makeRes();
+    await handler(
+      makeReq({
+        body: { discordUserId: DISCORD_MGR, team1Score: 2, team2Score: 1 },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).toBe('REPORT_BOTH_SIDES');
+  });
+});

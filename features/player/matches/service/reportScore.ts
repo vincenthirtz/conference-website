@@ -43,7 +43,13 @@ import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import * as repo from '../repository';
 import { ReportScoreBody } from '../schemas';
 import type { MatchesCtx } from './context';
-import { REPORT_CLOSED_STATUSES, reportingSide } from './reportRight';
+import {
+  decideReportingSide,
+  loadReportableTeamIds,
+  REPORT_BOTH_SIDES,
+  REPORT_CLOSED_STATUSES,
+  ReportRightLookupError,
+} from './reportRight';
 import { z } from 'zod';
 
 const SITE_URL =
@@ -128,13 +134,33 @@ export async function reportScore(
   }
 
   // 3) Le droit de déclarer (reportRight.ts).
-  const mySide = reportingSide(userId, team1.captain_id, team2.captain_id);
-  if (!mySide) {
+  //    Capitaine OU manager d'équipe ; refus si l'on tient les deux côtés.
+  let reportable: Set<string>;
+  try {
+    reportable = await loadReportableTeamIds(db, tenantId, userId, [
+      team1,
+      team2,
+    ]);
+  } catch (e) {
+    if (!(e instanceof ReportRightLookupError)) throw e;
+    logger.error('[player/report-score] report right lookup error', e.cause);
+    throw fail(500, 'Erreur de verification des droits');
+  }
+  const decision = decideReportingSide(reportable, team1.id, team2.id);
+  if (decision.side === null) {
+    if (decision.code === REPORT_BOTH_SIDES) {
+      throw fail(
+        403,
+        'Vous etes capitaine ou manager des deux equipes de ce match : le score doit etre declare par chaque equipe separement.',
+        REPORT_BOTH_SIDES
+      );
+    }
     throw fail(
       403,
-      "Vous n'etes pas le capitaine d'une des deux equipes de ce match."
+      "Vous n'etes ni capitaine ni manager d'une des deux equipes de ce match."
     );
   }
+  const mySide = decision.side;
 
   // 3b) Le match a-t-il commencé ? APRÈS le contrôle du droit : un tiers n'a
   // pas à apprendre l'horaire par ce biais.

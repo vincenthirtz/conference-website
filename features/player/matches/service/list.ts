@@ -19,7 +19,11 @@ import { PlayerError } from '@/utils/player/errors';
 import * as repo from '../repository';
 import type { PlayerMatch, PlayerMatchesPayload } from '../schemas';
 import type { MatchesCtx } from './context';
-import { mayReportFor, REPORT_CLOSED_STATUSES } from './reportRight';
+import {
+  loadReportableTeamIds,
+  mayReportFor,
+  REPORT_CLOSED_STATUSES,
+} from './reportRight';
 
 export async function listPlayerMatches(
   ctx: MatchesCtx,
@@ -39,8 +43,16 @@ export async function listPlayerMatches(
   const myTeam = teamRow
     ? { id: teamRow.id, name: teamRow.name }
     : { id: teamId, name: '' };
-  // Une seule lecture pour toute la liste : c'est la même équipe partout.
-  const mayReport = mayReportFor(userId, teamRow?.captain_id);
+  // Une seule lecture pour toute la liste (capitanat ∪ manager, cf.
+  // reportRight.ts) ; la décision, elle, se prend par match — l'adversaire
+  // change, et tenir les deux côtés retire le droit. Lecture en échec : le
+  // bouton disparaît (la route d'écriture, elle, répondrait 500).
+  const reportable = await loadReportableTeamIds(db, tenantId, userId).catch(
+    (e: unknown) => {
+      ctx.logger.error('[/api/player/matches] report right error:', e);
+      return new Set<string>();
+    }
+  );
 
   // Check-in : UNE décision pour la liste ; le jeton ne sort que pour la
   // capitaine / coach / manager.
@@ -97,7 +109,8 @@ export async function listPlayerMatches(
       tournament: side.tournament,
       checkin,
       canReportScore:
-        mayReport && !!side.opponent?.id && !REPORT_CLOSED_STATUSES.has(status),
+        mayReportFor(reportable, teamId, side.opponent?.id) &&
+        !REPORT_CLOSED_STATUSES.has(status),
     };
   });
 

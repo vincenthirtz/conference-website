@@ -69,8 +69,9 @@ export type PlayerMatch = {
   } | null;
   /**
    * Le serveur acceptera-t-il un report de score de CETTE personne ? Même
-   * règle que la déclaration (service/reportRight.ts) : capitaine au sens
-   * strict, deux équipes assignées, match non clôturé. Le MOMENT (coup
+   * règle que la déclaration (service/reportRight.ts) : capitaine ou manager
+   * d'équipe (pas des deux équipes), deux équipes assignées, match non
+   * clôturé. Le MOMENT (coup
    * d'envoi passé) reste au client (utils/matches/playerMatchLive).
    */
   canReportScore: boolean;

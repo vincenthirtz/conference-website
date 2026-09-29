@@ -359,9 +359,9 @@ délégation et le pendant bot `/api/bot/v1/matches/[matchId]/report`) :
 
 | Fichier:ligne (`pages/api/…`) | Classe | Justification |
 |---|---|---|
-| `player/matches/[matchId]/report-score.ts:181-182` | permission (P12) | Rapporter le score est un geste délégable ; une délégation J3 n'y est pas honorée. |
-| `player/matches.ts:126-127` | permission (P12) | `isCaptain` n'y sert qu'à afficher « Rapporter le score » : suit `report-score`. |
-| `player/matches/[matchId].ts:250-251` | permission (P12) | `reportScore: isCaptain` — même cause, même lot. |
+| `player/matches/[matchId]/report-score.ts:181-182` | ✅ réglé (P12, 2026-09-29) | Décision J3 : capitaine OU manager d'équipe (pas les coachs, pas une permission du catalogue), jamais les deux côtés — `utils/matches/reportRight.ts`. |
+| `player/matches.ts:126-127` | ✅ réglé (P12, 2026-09-29) | `canReportScore` suit `reportRight.ts` (par match : l'adversaire compte). |
+| `player/matches/[matchId].ts:250-251` | ✅ réglé (P12, 2026-09-29) | `permissions.reportScore` suit `reportRight.ts`. |
 | `admin/me.ts:211` | permission (P10) | Ouvre l'accès « capitaine » au seul `captain_id` ; un manager/délégué n'y est pas vu — aligner sur `getManagedTeams`. |
 | `teams/transfer-captain.ts:156` | capitanat voulu | Seule la capitaine transmet son propre rôle. |
 | `teams/transfer-captain.ts:192` | capitanat voulu | Lit la capitaine courante pour la désignation par un manager (`manage_roster` déjà exigé). |
@@ -804,6 +804,22 @@ ligne ; report sur permission (fin de S4).
 **Critères** : [ ] `player-match-thread` (6 cas, 3 personas), `player-checkin`, `checkin-flow`,
 `player-matches` verts en mobile ; [ ] double tap sur check-in/report = une écriture (test) ;
 [ ] **hors soir de match**, déployable en 3 étapes (serveur, client, UI).
+
+**Décision J3 prise et livrée (2026-09-29) — qui déclare le score.** Règle : la capitaine
+(`teams.captain_id`) OU une manager de l'équipe (`team_members.role = 'manager'`, rôle
+d'ÉQUIPE, distinct du staff), dans le tenant de l'équipe ; les coachs ne déclarent pas, et
+le droit n'entre PAS au catalogue `utils/teamRoles.ts` (il y serait accordé en silence à tout
+rôle « toutes permissions »). Garde-fou : tenir les DEUX équipes du match (manager des deux,
+capitaine d'une + manager de l'autre, ou deux comptes du site liés au même Discord) →
+`403 REPORT_BOTH_SIDES` — la réconciliation compte une voix par côté. Un seul cœur,
+`utils/matches/reportRight.ts` (`loadReportableTeamIds` +
+`decideReportingSide`), lu par report-score, la liste, le fil du match ET
+`/api/bot/v1/matches/{matchId}/report` (qui ne teste plus `captain_id` ; le 400 « Capitaines
+manquants » disparaît). Réconciliation, preuve, litige, finalisation : inchangés. Restent
+capitaine-seule côté bot (hors décision, à trancher) : `matches/{matchId}/evidence` et
+`matches/{matchId}/dispute` — une manager peut déclarer par Discord mais pas y joindre de
+preuve. Tests : `reportRight`, `playerReportScore`, `botReportReconcile`, `playerMatchDetail`,
+`reportScoreErrors`.
 
 ### P13 · Scrims — 🟧 / L
 
