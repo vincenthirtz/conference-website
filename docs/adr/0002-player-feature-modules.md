@@ -72,6 +72,27 @@ expose `handler.subjectRoute`, lu par la matrice de permissions et le contrat Op
   ou d'équipe relit. Lectures : `PLAYER_QUERY_OPTIONS` (pas de nouvel essai sur 4xx, pas de
   relecture au focus — en inspection chaque lecture écrit une ligne de journal staff).
 
+### Formulaires (lot P6)
+
+- Un formulaire = `useSchemaForm` ([`hooks/forms/useSchemaForm.ts`](../../hooks/forms/useSchemaForm.ts)),
+  commun à l'admin (`useAdminForm` n'en est plus qu'un adaptateur au comportement inchangé) et à
+  la joueuse. Schéma de formulaire = valeurs des CHAMPS `.pipe(<Body>)`, `<Body>` étant le schéma
+  partagé de la route (`features/player/<domaine>/schemas.ts`) : mêmes règles, mêmes messages,
+  même champ en faute avant l'envoi. Aucun `useState` de champ dans un formulaire migré.
+- Erreurs serveur `fields` (chaîne ou liste `flatten()`) rattachées au champ du même nom, focus
+  sur le premier champ en erreur ; l'erreur non rattachée passe par `describeError` — côté
+  joueuse `usePlayerErrorText()` ([`features/player/_shared/useErrorText.ts`](../../features/player/_shared/useErrorText.ts)) :
+  message traduit du `code` (namespace `playerErrors`), texte serveur en repli, référence de
+  requête ajoutée. `unsavedChangesMessage` arme la garde « quitter sans enregistrer ».
+- Champs accessibles = briques du kit : `FormField` (label relié, `aria-describedby`,
+  `aria-required`, erreur `role="alert"`), `FormFieldset` (champ composé : liste, groupe — le
+  `<fieldset>` reçoit le focus), `FormError` ([`features/ruban/FormField.tsx`](../../features/ruban/FormField.tsx) ;
+  `components/admin/form/FormField.tsx` ré-exporte). Densité joueuse (44 px, 16 px) par la
+  surface, pas par une variante.
+- Tests de composants joueuse : `*.test.tsx` en happy-dom, `afterEach(cleanup)`, harnais
+  `renderPlayer(ui, { subjectId, actAs })` ([`tests/unit/__helpers__/playerHarness.tsx`](../../tests/unit/__helpers__/playerHarness.tsx))
+  qui monte toasts, équipe active et portée (soi / inspection / act-as).
+
 ### Surfaces
 
 Un seul kit « Le Ruban » (jetons, briques, archétypes, grammaire). Une surface

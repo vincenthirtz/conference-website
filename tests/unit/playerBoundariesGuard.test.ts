@@ -116,7 +116,7 @@ const FROZEN = {
 
 /** Briques du kit « Le Ruban » : elles vivent dans `features/ruban/` (P7). */
 const RUBAN_BRICK =
-  /^(?:Player|Admin|Base|Ui|Ruban)?(?:Button|ButtonLink|IconButton|Chip|Pill|Badge|Card|StatTile|EntityHeader|PageHeader|SectionHeader|Fiche|ListToolbar|DangerZone)$/;
+  /^(?:Player|Admin|Base|Ui|Ruban)?(?:Button|ButtonLink|IconButton|Chip|Pill|Badge|Card|StatTile|EntityHeader|PageHeader|SectionHeader|Fiche|ListToolbar|DangerZone|FormField|FormFieldset|FormError)$/;
 
 /** Noms de briques Ruban DÉFINIES par une source (déclaration ou fichier). */
 function rubanBricksDefined(rel: string, src: string): string[] {
@@ -287,6 +287,9 @@ const RUBAN_COMPAT = 'features/admin/_shared/ui';
  */
 const FROZEN_ADMIN_BRICKS = [
   'components/admin/caster/ChatPanel.tsx — Badge',
+  // Champ local antérieur au kit de formulaires (P6) : à passer sur
+  // features/ruban/FormField.
+  'components/admin/communications/CampaignsPanel.tsx — FormField',
   'components/admin/onboarding/TenantReadinessPanel.tsx — Pill',
   'components/admin/tenants/TenantOverviewPanel.tsx — Card',
   'features/admin/pilotage/ui/PilotageView.tsx — Card',
@@ -297,6 +300,11 @@ const isPureReexport = (src: string) =>
   /^(?:\s*export\s+(?:\*|\{[^}]*\})\s+from\s+'[^']+';)+\s*$/.test(
     stripComments(src)
   );
+
+/** Ré-export pur depuis le kit, et de lui seul. */
+const isKitReexport = (src: string) =>
+  isPureReexport(src) &&
+  importsOf(src).every((spec) => spec.startsWith(`@/${RUBAN_KIT}/`));
 
 describe('garde « iso » : un seul kit Le Ruban', () => {
   // Les deux surfaces qui portent Le Ruban : l'espace joueuse ET l'admin.
@@ -376,6 +384,9 @@ describe('garde « iso » : un seul kit Le Ruban', () => {
   it('aucune brique Ruban définie hors features/ruban (admin et joueuse)', () => {
     const v = scanned
       .filter((rel) => !rel.startsWith(`${RUBAN_COMPAT}/`))
+      // Ancien chemin conservé en ré-export PUR du kit (ex. le FormField
+      // admin, déplacé au lot P6) : il ne définit rien.
+      .filter((rel) => !isKitReexport(read(rel)))
       .flatMap((rel) =>
         rubanBricksDefined(rel, read(rel)).map((b) => `${rel} — ${b}`)
       )

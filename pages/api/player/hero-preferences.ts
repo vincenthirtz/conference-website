@@ -28,41 +28,16 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { User } from '@supabase/supabase-js';
-import { z } from 'zod';
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';
 import { logger } from '@/utils/logger';
-import {
-  HERO_PREFERENCE_SLOTS,
-  isOverwatchHero,
-} from '@/utils/heroes/overwatch';
+import { HERO_PREFERENCE_SLOTS } from '@/utils/heroes/overwatch';
+import { HeroPreferencesBody } from '../../../features/player/profile/schemas';
 
-/**
- * Une liste de héros : bornée, sans doublon, et ne contenant que des héros qui
- * existent. `refine` plutôt qu'un `Set` en aval — un message d'erreur ciblé vaut
- * mieux qu'un rejet global qui ne dit pas laquelle des deux listes fautait.
- */
-const heroList = z
-  .array(z.string().trim().min(1).max(64))
-  .max(HERO_PREFERENCE_SLOTS)
-  .default([])
-  .refine((list) => new Set(list).size === list.length, {
-    message: 'Doublon dans la liste.',
-  })
-  .refine((list) => list.every(isOverwatchHero), {
-    message: 'Héros inconnu.',
-  });
-
-const putSchema = z
-  .object({ picks: heroList, bans: heroList })
-  // La base porte déjà cette règle, mais un 400 explicite vaut mieux qu'un 500
-  // sur violation de contrainte : la joueuse doit savoir CE qui ne va pas.
-  .refine((d) => !d.picks.some((p) => d.bans.includes(p)), {
-    message: 'Un héros ne peut pas être à la fois préféré et banni.',
-    path: ['bans'],
-  });
+// Corps du PUT : schéma partagé avec la carte « Mes héros » (lot P6).
+const putSchema = HeroPreferencesBody;
 
 type PrefsRow = { picks: string[] | null; bans: string[] | null };
 
