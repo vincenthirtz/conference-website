@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import type { GetServerSidePropsContext } from 'next';
 import { withStaffPage } from '@/utils/staff';
@@ -32,6 +31,17 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
 import nsAdminTenantDetail from '@/lib/i18n/locales/admin-fr/adminTenantDetail';
+import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
+import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import {
+  FicheLayout,
+  FicheSection,
+  MetaList,
+} from '@/features/admin/_shared/ui/Fiche';
 import TenantNetworkSection from '@/components/admin/tenants/TenantNetworkSection';
 import TenantBrandingSection from '@/components/admin/tenants/TenantBrandingSection';
 
@@ -104,6 +114,7 @@ function formatDate(s: string | null): string {
 
 function AdminTenantDetailPage({ tenantId }: Props) {
   const t = useAdminT(nsAdminTenantDetail);
+  const tf = useAdminT(nsAdminFiche);
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
@@ -270,61 +281,74 @@ function AdminTenantDetailPage({ tenantId }: Props) {
     onRemove: handleRemoveStaff,
   });
 
+  const inputClass =
+    'w-full px-4 py-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t1,#f4edf7)] focus:outline-none focus:ring-2 focus:ring-[var(--or,#b467d1)]';
+  const labelClass = 'block text-sm font-medium text-[var(--t2,#c7bfca)] mb-2';
+  const smallInputClass =
+    'px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-sm text-[var(--t1,#f4edf7)] focus:outline-none focus:ring-2 focus:ring-[var(--or,#b467d1)]';
+  const smallLabelClass =
+    'block text-xs font-medium text-[var(--t3,#a39ba6)] mb-1';
+  const cardClass =
+    'overflow-hidden rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]';
+  const countBadgeClass =
+    'ml-2 rounded-[3px] bg-[var(--s3,#2f2732)] px-1.5 py-0.5 text-[10px] text-[var(--t2,#c7bfca)]';
+
   return (
     <>
       <Head>
         <title>{format(t.pageTitle, { slug: data?.tenant.slug ?? '' })}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          <Breadcrumb
-            items={[
-              { label: t.breadcrumbAdmin, href: '/admin' },
-              { label: t.breadcrumbTenants, href: '/admin/tenants' },
-              { label: data?.tenant.slug ?? '…' },
-            ]}
-          />
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <Breadcrumb
+          items={[
+            { label: t.breadcrumbAdmin, href: '/admin' },
+            { label: t.breadcrumbTenants, href: '/admin/tenants' },
+            { label: data?.tenant.slug ?? '…' },
+          ]}
+        />
 
-          {data === null && error === null && (
-            <div className="py-16">
-              <LoadingSpinner label={t.loading} />
-            </div>
-          )}
+        {data === null && error === null && (
+          <div className="py-16">
+            <LoadingSpinner label={t.loading} />
+          </div>
+        )}
 
-          <AlertBanner message={error} className="mb-4" />
+        <AlertBanner message={error} className="mb-4" />
 
-          {data && (
-            <>
-              <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                      {data.tenant.name}
-                    </h1>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        data.tenant.is_active
-                          ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30'
-                          : 'bg-neutral-700/40 text-neutral-400 border border-neutral-600/40'
-                      }`}
-                    >
-                      {data.tenant.is_active
-                        ? t.statusActive
-                        : t.statusArchived}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-neutral-400 font-mono">
+        {data && (
+          <>
+            <div className="mt-4">
+              <EntityHeader
+                crest={
+                  data.tenant.logo_url ? (
+                    // biome-ignore lint/performance/noImgElement: free-form URL, outside next/image remotePatterns
+                    <img
+                      src={data.tenant.logo_url}
+                      alt={data.tenant.name}
+                      className="h-full w-full object-contain p-1"
+                    />
+                  ) : (
+                    data.tenant.slug.slice(0, 3).toUpperCase()
+                  )
+                }
+                title={data.tenant.name}
+                meta={
+                  <span className="font-mono">
                     {data.tenant.slug} · {data.tenant.id}
-                  </p>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
+                  </span>
+                }
+                status={
+                  <Chip tone={data.tenant.is_active ? 'ok' : 'neutral'}>
+                    {data.tenant.is_active ? t.statusActive : t.statusArchived}
+                  </Chip>
+                }
+                actions={
+                  <AdminButton
+                    variant="danger"
+                    size="sm"
                     onClick={handleArchive}
                     disabled={archiving || data.tenant.slug === CONFERENCE_SLUG}
-                    className="px-4 py-2.5 rounded-xl border border-red-500/40 text-red-300 hover:border-red-400 hover:bg-red-500/10 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     title={
                       data.tenant.slug === CONFERENCE_SLUG
                         ? t.archiveTitleDisabled
@@ -333,306 +357,322 @@ function AdminTenantDetailPage({ tenantId }: Props) {
                     data-testid="tenant-archive-btn"
                   >
                     {archiving ? t.archiving : t.archive}
-                  </button>
+                  </AdminButton>
+                }
+              />
+            </div>
+
+            {/* Tabs */}
+            <Tabs
+              tabs={
+                [
+                  { id: 'overview', label: t.tabOverview },
+                  { id: 'general', label: t.tabGeneral },
+                  {
+                    id: 'discord',
+                    label: (
+                      <>
+                        {t.tabDiscord}
+                        {data.guilds.length > 0 && (
+                          <span className={countBadgeClass} data-numeric>
+                            {data.guilds.length}
+                          </span>
+                        )}
+                      </>
+                    ),
+                  },
+                  {
+                    id: 'staff',
+                    label: (
+                      <>
+                        {t.tabStaff}
+                        {data.staff.length > 0 && (
+                          <span className={countBadgeClass} data-numeric>
+                            {data.staff.length}
+                          </span>
+                        )}
+                      </>
+                    ),
+                  },
+                ] satisfies TabItem[]
+              }
+              active={tab}
+              onChange={(id) => setTab(id as Tab)}
+              ariaLabel={t.tablistLabel}
+              idBase={TABS_ID_BASE}
+              className="mb-6"
+            />
+
+            {tab === 'overview' && (
+              <div
+                role="tabpanel"
+                id={tabPanelId(TABS_ID_BASE, 'overview')}
+                aria-labelledby={tabButtonId(TABS_ID_BASE, 'overview')}
+              >
+                <TenantOverviewPanel
+                  tenantId={tenantId}
+                  onOpenTab={(next) => setTab(next as Tab)}
+                />
+
+                <div className="mt-6">
+                  <TenantLifecyclePanel
+                    tenantId={tenantId}
+                    onChanged={() => void fetchData()}
+                  />
+                </div>
+
+                {/* « Qui a fait quoi ici » : suspension, plan, rotation de
+                    clé, domaine. Il fallait jusqu'ici ouvrir /admin/logs et
+                    filtrer à la main, en sachant quoi chercher. */}
+                <div className="mt-6">
+                  <EntityHistoryButton
+                    entityType="tenant"
+                    entityId={tenantId}
+                  />
                 </div>
               </div>
+            )}
 
-              {/* Tabs */}
-              <Tabs
-                tabs={
-                  [
-                    { id: 'overview', label: t.tabOverview },
-                    { id: 'general', label: t.tabGeneral },
-                    {
-                      id: 'discord',
-                      label: (
-                        <>
-                          {t.tabDiscord}
-                          {data.guilds.length > 0 && (
-                            <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-neutral-700 text-neutral-300">
-                              {data.guilds.length}
-                            </span>
-                          )}
-                        </>
-                      ),
-                    },
-                    {
-                      id: 'staff',
-                      label: (
-                        <>
-                          {t.tabStaff}
-                          {data.staff.length > 0 && (
-                            <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-neutral-700 text-neutral-300">
-                              {data.staff.length}
-                            </span>
-                          )}
-                        </>
-                      ),
-                    },
-                  ] satisfies TabItem[]
-                }
-                active={tab}
-                onChange={(id) => setTab(id as Tab)}
-                ariaLabel={t.tablistLabel}
-                idBase={TABS_ID_BASE}
-                className="mb-6"
-              />
-
-              {tab === 'overview' && (
-                <div
-                  role="tabpanel"
-                  id={tabPanelId(TABS_ID_BASE, 'overview')}
-                  aria-labelledby={tabButtonId(TABS_ID_BASE, 'overview')}
-                >
-                  <TenantOverviewPanel
-                    tenantId={tenantId}
-                    onOpenTab={(next) => setTab(next as Tab)}
-                  />
-
-                  <div className="mt-6">
-                    <TenantLifecyclePanel
-                      tenantId={tenantId}
-                      onChanged={() => void fetchData()}
-                    />
-                  </div>
-
-                  {/* « Qui a fait quoi ici » : suspension, plan, rotation de
-                      clé, domaine. Il fallait jusqu'ici ouvrir /admin/logs et
-                      filtrer à la main, en sachant quoi chercher. */}
-                  <div className="mt-6">
-                    <EntityHistoryButton
-                      entityType="tenant"
-                      entityId={tenantId}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {tab === 'general' && (
-                <div
-                  role="tabpanel"
-                  id={tabPanelId(TABS_ID_BASE, 'general')}
-                  aria-labelledby={tabButtonId(TABS_ID_BASE, 'general')}
-                  className="space-y-6"
-                >
-                  <form
-                    onSubmit={handleSaveGeneral}
-                    className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 sm:p-8 space-y-6"
-                  >
-                    <div>
-                      <label
-                        htmlFor="g-name"
-                        className="block text-sm font-medium text-neutral-300 mb-2"
-                      >
-                        {t.nameLabel}
-                      </label>
-                      <input
-                        id="g-name"
-                        type="text"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        required
-                        className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="g-locale"
-                        className="block text-sm font-medium text-neutral-300 mb-2"
-                      >
-                        {t.localeLabel}
-                      </label>
-                      <select
-                        id="g-locale"
-                        value={editLocale}
-                        onChange={(e) => setEditLocale(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-                      >
-                        <option value="fr">{t.localeFr}</option>
-                        <option value="en">{t.localeEn}</option>
-                      </select>
-                    </div>
-
-                    <label className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={editActive}
-                        onChange={(e) => setEditActive(e.target.checked)}
-                        className="w-5 h-5 rounded border-neutral-600 bg-neutral-900/50 text-purple-500 focus:ring-purple-500"
-                      />
-                      <span className="text-sm font-medium text-neutral-300">
-                        {t.activeLabel}
-                      </span>
-                    </label>
-
-                    {/* Réseau entre espaces volontaires : décision
-                        d'ouverture, posée avant la marque blanche parce qu'elle
-                        engage l'espace et pas son apparence. Le panneau vit à
-                        part (règle des écrans gelés, cf.
-                        tests/unit/adminFileSizeGuard.test.ts). */}
-                    <TenantNetworkSection
-                      shareScrims={editShareScrims}
-                      shareRecruitment={editShareRecruitment}
-                      onChangeScrims={setEditShareScrims}
-                      onChangeRecruitment={setEditShareRecruitment}
-                      labels={{
-                        heading: t.networkHeading,
-                        intro: t.networkIntro,
-                        scrimsLabel: t.networkScrimsLabel,
-                        scrimsHint: t.networkScrimsHint,
-                        recruitmentLabel: t.networkRecruitmentLabel,
-                        recruitmentHint: t.networkRecruitmentHint,
-                      }}
-                    />
-
-                    <TenantBrandingSection
-                      logoUrl={editLogoUrl}
-                      primaryColor={editPrimaryColor}
-                      accentColor={editAccentColor}
-                      customDomain={editCustomDomain}
-                      onChangeLogoUrl={setEditLogoUrl}
-                      onChangePrimaryColor={setEditPrimaryColor}
-                      onChangeAccentColor={setEditAccentColor}
-                      onChangeCustomDomain={setEditCustomDomain}
-                    />
-
-                    <div className="pt-2">
-                      <button
-                        type="submit"
-                        disabled={saving}
-                        className="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
-                      >
-                        {saving ? t.saving : t.save}
-                      </button>
-                    </div>
-                  </form>
-
-                  <TenantDomainPanel tenantId={tenantId} />
-
-                  <TenantBotSecretsPanel tenantId={tenantId} />
-                </div>
-              )}
-
-              {tab === 'discord' && (
-                <section
-                  role="tabpanel"
-                  id={tabPanelId(TABS_ID_BASE, 'discord')}
-                  aria-labelledby={tabButtonId(TABS_ID_BASE, 'discord')}
-                  className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden"
-                >
-                  {data.guilds.length === 0 ? (
-                    <EmptyState
-                      title={t.discordEmptyTitle}
-                      description={t.discordEmptyDesc}
-                      action={
-                        <Link
-                          href="/admin/onboarding?tab=a-traiter"
-                          className="px-4 py-2 rounded-lg border border-neutral-600 text-sm hover:border-neutral-500 transition-colors"
+            {tab === 'general' && (
+              <div
+                role="tabpanel"
+                id={tabPanelId(TABS_ID_BASE, 'general')}
+                aria-labelledby={tabButtonId(TABS_ID_BASE, 'general')}
+              >
+                <FicheLayout
+                  main={
+                    <>
+                      <FicheSection title={t.tabGeneral}>
+                        <form
+                          onSubmit={handleSaveGeneral}
+                          className="space-y-6"
                         >
-                          {t.discordEmptyAction}
-                        </Link>
-                      }
+                          <div>
+                            <label htmlFor="g-name" className={labelClass}>
+                              {t.nameLabel}
+                            </label>
+                            <input
+                              id="g-name"
+                              type="text"
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              required
+                              className={inputClass}
+                            />
+                          </div>
+
+                          <div>
+                            <label htmlFor="g-locale" className={labelClass}>
+                              {t.localeLabel}
+                            </label>
+                            <select
+                              id="g-locale"
+                              value={editLocale}
+                              onChange={(e) => setEditLocale(e.target.value)}
+                              className={inputClass}
+                            >
+                              <option value="fr">{t.localeFr}</option>
+                              <option value="en">{t.localeEn}</option>
+                            </select>
+                          </div>
+
+                          <label className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={editActive}
+                              onChange={(e) => setEditActive(e.target.checked)}
+                              className="h-5 w-5 rounded border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-[var(--or,#b467d1)] focus:ring-[var(--or,#b467d1)]"
+                            />
+                            <span className="text-sm font-medium text-[var(--t2,#c7bfca)]">
+                              {t.activeLabel}
+                            </span>
+                          </label>
+
+                          {/* Réseau entre espaces volontaires : décision
+                              d'ouverture, posée avant la marque blanche parce
+                              qu'elle engage l'espace et pas son apparence. Le
+                              panneau vit à part (règle des écrans gelés, cf.
+                              tests/unit/adminFileSizeGuard.test.ts). */}
+                          <TenantNetworkSection
+                            shareScrims={editShareScrims}
+                            shareRecruitment={editShareRecruitment}
+                            onChangeScrims={setEditShareScrims}
+                            onChangeRecruitment={setEditShareRecruitment}
+                            labels={{
+                              heading: t.networkHeading,
+                              intro: t.networkIntro,
+                              scrimsLabel: t.networkScrimsLabel,
+                              scrimsHint: t.networkScrimsHint,
+                              recruitmentLabel: t.networkRecruitmentLabel,
+                              recruitmentHint: t.networkRecruitmentHint,
+                            }}
+                          />
+
+                          <TenantBrandingSection
+                            logoUrl={editLogoUrl}
+                            primaryColor={editPrimaryColor}
+                            accentColor={editAccentColor}
+                            customDomain={editCustomDomain}
+                            onChangeLogoUrl={setEditLogoUrl}
+                            onChangePrimaryColor={setEditPrimaryColor}
+                            onChangeAccentColor={setEditAccentColor}
+                            onChangeCustomDomain={setEditCustomDomain}
+                          />
+
+                          <div className="pt-2">
+                            <AdminButton
+                              variant="primary"
+                              type="submit"
+                              disabled={saving}
+                            >
+                              {saving ? t.saving : t.save}
+                            </AdminButton>
+                          </div>
+                        </form>
+                      </FicheSection>
+
+                      <TenantDomainPanel tenantId={tenantId} />
+
+                      <TenantBotSecretsPanel tenantId={tenantId} />
+                    </>
+                  }
+                  aside={
+                    <FicheSection eyebrow title={tf.metaTitle}>
+                      <MetaList
+                        items={[
+                          {
+                            label: tf.metaId,
+                            value: `${data.tenant.id.slice(0, 8)}…`,
+                          },
+                          {
+                            label: tf.metaCreated,
+                            value: formatDate(data.tenant.created_at),
+                          },
+                          {
+                            label: tf.metaUpdated,
+                            value: formatDate(data.tenant.updated_at),
+                          },
+                        ]}
+                      />
+                    </FicheSection>
+                  }
+                />
+              </div>
+            )}
+
+            {tab === 'discord' && (
+              <section
+                role="tabpanel"
+                id={tabPanelId(TABS_ID_BASE, 'discord')}
+                aria-labelledby={tabButtonId(TABS_ID_BASE, 'discord')}
+                className={cardClass}
+              >
+                {data.guilds.length === 0 ? (
+                  <EmptyState
+                    title={t.discordEmptyTitle}
+                    description={t.discordEmptyDesc}
+                    action={
+                      <AdminButtonLink
+                        href="/admin/onboarding?tab=a-traiter"
+                        size="sm"
+                      >
+                        {t.discordEmptyAction}
+                      </AdminButtonLink>
+                    }
+                  />
+                ) : (
+                  <DataTable<GuildRow>
+                    rows={data.guilds}
+                    columns={guildColumns}
+                    rowKey={(g) => g.guild_id}
+                    loading={false}
+                    error={null}
+                    emptyTitle={t.discordEmptyTitle}
+                    exportFilename="serveurs-discord"
+                  />
+                )}
+              </section>
+            )}
+
+            {tab === 'staff' && (
+              <div
+                role="tabpanel"
+                id={tabPanelId(TABS_ID_BASE, 'staff')}
+                aria-labelledby={tabButtonId(TABS_ID_BASE, 'staff')}
+                className="space-y-4"
+              >
+                {/* Inviter d'abord : rattacher un UUID est le cas rare, et
+                    c'était pourtant le seul possible. */}
+                <TenantInvitationsPanel
+                  tenantId={tenantId}
+                  onAccepted={() => void fetchData()}
+                />
+
+                <form
+                  onSubmit={handleAddStaff}
+                  className="flex flex-wrap items-end gap-3 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4"
+                >
+                  <div className="min-w-[220px] flex-1">
+                    <label htmlFor="add-staff-id" className={smallLabelClass}>
+                      {t.staffIdLabel}
+                    </label>
+                    <input
+                      id="add-staff-id"
+                      type="text"
+                      value={staffIdToAdd}
+                      onChange={(e) => setStaffIdToAdd(e.target.value)}
+                      placeholder={t.staffIdPlaceholder}
+                      className={`${smallInputClass} w-full font-mono`}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="add-staff-role" className={smallLabelClass}>
+                      {t.staffRoleLabel}
+                    </label>
+                    <select
+                      id="add-staff-role"
+                      value={staffRoleToAdd}
+                      onChange={(e) => setStaffRoleToAdd(e.target.value)}
+                      className={smallInputClass}
+                    >
+                      <option value="caster">caster</option>
+                      <option value="admin">admin</option>
+                      <option value="owner">owner</option>
+                    </select>
+                  </div>
+                  <AdminButton
+                    variant="secondary"
+                    size="sm"
+                    type="submit"
+                    disabled={addingStaff || !staffIdToAdd.trim()}
+                  >
+                    {addingStaff ? t.addingStaff : t.addStaff}
+                  </AdminButton>
+                </form>
+
+                <section className={cardClass}>
+                  {data.staff.length === 0 ? (
+                    <EmptyState
+                      title={t.staffEmptyTitle}
+                      description={t.staffEmptyDesc}
                     />
                   ) : (
-                    <DataTable<GuildRow>
-                      rows={data.guilds}
-                      columns={guildColumns}
-                      rowKey={(g) => g.guild_id}
+                    <DataTable<StaffRow>
+                      rows={data.staff}
+                      columns={staffColumns}
+                      rowKey={(row) => row.staff_id}
                       loading={false}
                       error={null}
-                      emptyTitle={t.discordEmptyTitle}
-                      exportFilename="serveurs-discord"
+                      emptyTitle={t.staffEmptyTitle}
+                      emptyMessage={t.staffEmptyDesc}
+                      exportFilename="staff-tenant"
                     />
                   )}
                 </section>
-              )}
-
-              {tab === 'staff' && (
-                <div
-                  role="tabpanel"
-                  id={tabPanelId(TABS_ID_BASE, 'staff')}
-                  aria-labelledby={tabButtonId(TABS_ID_BASE, 'staff')}
-                  className="space-y-4"
-                >
-                  {/* Inviter d'abord : rattacher un UUID est le cas rare, et
-                      c'était pourtant le seul possible. */}
-                  <TenantInvitationsPanel
-                    tenantId={tenantId}
-                    onAccepted={() => void fetchData()}
-                  />
-
-                  <form
-                    onSubmit={handleAddStaff}
-                    className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 flex flex-wrap gap-3 items-end"
-                  >
-                    <div className="flex-1 min-w-[220px]">
-                      <label
-                        htmlFor="add-staff-id"
-                        className="block text-xs font-medium text-neutral-400 mb-1"
-                      >
-                        {t.staffIdLabel}
-                      </label>
-                      <input
-                        id="add-staff-id"
-                        type="text"
-                        value={staffIdToAdd}
-                        onChange={(e) => setStaffIdToAdd(e.target.value)}
-                        placeholder={t.staffIdPlaceholder}
-                        className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="add-staff-role"
-                        className="block text-xs font-medium text-neutral-400 mb-1"
-                      >
-                        {t.staffRoleLabel}
-                      </label>
-                      <select
-                        id="add-staff-role"
-                        value={staffRoleToAdd}
-                        onChange={(e) => setStaffRoleToAdd(e.target.value)}
-                        className="px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                      >
-                        <option value="caster">caster</option>
-                        <option value="admin">admin</option>
-                        <option value="owner">owner</option>
-                      </select>
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={addingStaff || !staffIdToAdd.trim()}
-                      className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {addingStaff ? t.addingStaff : t.addStaff}
-                    </button>
-                  </form>
-
-                  <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-                    {data.staff.length === 0 ? (
-                      <EmptyState
-                        title={t.staffEmptyTitle}
-                        description={t.staffEmptyDesc}
-                      />
-                    ) : (
-                      <DataTable<StaffRow>
-                        rows={data.staff}
-                        columns={staffColumns}
-                        rowKey={(row) => row.staff_id}
-                        loading={false}
-                        error={null}
-                        emptyTitle={t.staffEmptyTitle}
-                        emptyMessage={t.staffEmptyDesc}
-                        exportFilename="staff-tenant"
-                      />
-                    )}
-                  </section>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+              </div>
+            )}
+          </>
+        )}
         {dialog}
       </div>
     </>

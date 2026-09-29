@@ -35,6 +35,9 @@ import type {
   ScheduleAnomalySeverity,
   ScheduleSuggestion,
 } from '@/utils/matches/scheduleDiagnostics';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import StatTile, { type StatTone } from '@/features/admin/_shared/ui/StatTile';
 
 type DiagnosticsResponse = {
   tournament: {
@@ -57,16 +60,30 @@ type DiagnosticsResponse = {
 const SEVERITIES: ScheduleAnomalySeverity[] = ['blocking', 'warning', 'info'];
 
 const SEVERITY_STYLE: Record<ScheduleAnomalySeverity, string> = {
-  blocking: 'border-red-500/40 bg-red-500/10',
-  warning: 'border-amber-500/40 bg-amber-500/10',
-  info: 'border-neutral-700 bg-neutral-800/60',
+  blocking: 'border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)]',
+  warning: 'border-[rgba(245,165,36,.4)] bg-[rgba(245,165,36,.08)]',
+  info: 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]',
 };
 
 const SEVERITY_DOT: Record<ScheduleAnomalySeverity, string> = {
-  blocking: 'bg-red-400',
-  warning: 'bg-amber-400',
-  info: 'bg-neutral-500',
+  blocking: 'bg-[var(--err,#ff6b6b)]',
+  warning: 'bg-[var(--warn,#f5a524)]',
+  info: 'bg-[var(--t4,#807984)]',
 };
+
+/** Tonalité de la tuile de décompte : la couleur ne s'allume que s'il y a lieu. */
+const SEVERITY_TONE: Record<ScheduleAnomalySeverity, StatTone> = {
+  blocking: 'err',
+  warning: 'warn',
+  info: 'neutral',
+};
+
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4';
+const EYEBROW =
+  'mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
+const INPUT =
+  'w-24 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 font-mono text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 export const getServerSideProps = withStaffPage(
   { permission: 'manage_tournaments' },
@@ -169,23 +186,26 @@ export default function TournamentSchedulePage() {
         }),
         body: (
           <span className="block space-y-1 text-sm">
-            <span className="block text-emerald-300">
+            <span className="block text-[var(--lf-200,#b3e7a3)]">
               {format(t.impactFixed, { count: impact.fixed.length })}
             </span>
             <span
-              className={`block ${impact.broken.length > 0 ? 'text-amber-300' : 'text-neutral-400'}`}
+              className={`block ${impact.broken.length > 0 ? 'text-[#ffd9a3]' : 'text-[var(--t3,#a39ba6)]'}`}
             >
               {impact.broken.length > 0
                 ? format(t.impactBroken, { count: impact.broken.length })
                 : t.impactNone}
             </span>
             {impact.broken.map((b, i) => (
-              <span key={i} className="block pl-3 text-xs text-neutral-400">
+              <span
+                key={i}
+                className="block pl-3 text-xs text-[var(--t3,#a39ba6)]"
+              >
                 · {b.message}
               </span>
             ))}
             {impact.createsBlocking && (
-              <span className="block pt-1 font-semibold text-red-300">
+              <span className="block pt-1 font-semibold text-[#ffc2c2]">
                 {t.impactBlocking}
               </span>
             )}
@@ -252,29 +272,19 @@ export default function TournamentSchedulePage() {
         <title>{t.headTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="mx-auto max-w-[1200px] px-4 pb-14 pt-header sm:px-6 lg:px-8">
-          {id && (
-            <TournamentTabsNav tournamentId={String(id)} active="matches" />
-          )}
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        {id && <TournamentTabsNav tournamentId={String(id)} active="matches" />}
 
-          <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
-            <div>
-              <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">
-                {t.eyebrow}
-              </p>
-              <h1 className="text-3xl font-bold tracking-tight">
-                {data?.tournament.name ?? t.pageTitle}
-              </h1>
-              <p className="mt-1 max-w-prose text-sm text-neutral-400">
-                {t.subtitle}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
+        <p className={EYEBROW}>{t.eyebrow}</p>
+        <AdminPageHeader
+          title={data?.tournament.name ?? t.pageTitle}
+          subtitle={t.subtitle}
+          actions={
+            <>
               <div
                 role="group"
                 aria-label={t.viewLabel}
-                className="inline-flex rounded-lg border border-neutral-700 bg-neutral-800 p-0.5"
+                className="inline-flex h-[38px] items-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-0.5"
               >
                 {(['month', 'list'] as const).map((v) => (
                   <button
@@ -282,220 +292,218 @@ export default function TournamentSchedulePage() {
                     type="button"
                     aria-pressed={view === v}
                     onClick={() => setView(v)}
-                    className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                    className={`h-full rounded-[3px] px-3 font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.02em] transition-colors ${
                       view === v
-                        ? 'bg-neutral-700 text-white'
-                        : 'text-neutral-400'
+                        ? 'bg-[rgba(180,103,209,.18)] text-[var(--or-200,#eec4ff)]'
+                        : 'text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]'
                     }`}
                   >
                     {v === 'month' ? t.viewMonth : t.viewList}
                   </button>
                 ))}
               </div>
-              <button
-                type="button"
+              <AdminButton
+                variant="ghost"
+                size="sm"
                 onClick={() => void load()}
                 disabled={loading}
-                className="rounded-lg border border-neutral-600 px-3 py-2 text-sm text-neutral-200 disabled:opacity-50"
               >
                 {t.refresh}
-              </button>
-            </div>
-          </div>
+              </AdminButton>
+            </>
+          }
+        />
 
-          {/* Réglages : ils changent la LECTURE du calendrier, jamais le calendrier. */}
-          <section className="mb-6 rounded-xl border border-neutral-700 bg-neutral-800/60 p-4">
-            <p className="mb-3 text-xs uppercase tracking-[0.12em] text-neutral-400">
-              {t.settings}
-            </p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block space-y-1">
-                <span className="text-sm text-neutral-300">{t.restLabel}</span>
-                <span className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min={0}
-                    max={240}
-                    step={5}
-                    value={rest}
-                    onChange={(e) => setRest(Number(e.target.value) || 0)}
-                    className="w-24 rounded-lg border border-neutral-600 bg-neutral-900 px-3 py-2 text-sm"
-                  />
-                  <span className="text-xs text-neutral-500">{t.restUnit}</span>
-                </span>
-              </label>
-              <label className="block space-y-1">
-                <span className="text-sm text-neutral-300">
-                  {t.concurrentLabel}
-                </span>
+        {/* Réglages : ils changent la LECTURE du calendrier, jamais le calendrier. */}
+        <section className={`${CARD} mb-6`}>
+          <p className={EYEBROW}>{t.settings}</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block space-y-1">
+              <span className="text-sm text-[var(--t2,#c7bfca)]">
+                {t.restLabel}
+              </span>
+              <span className="flex items-center gap-2">
                 <input
                   type="number"
-                  min={1}
-                  max={32}
-                  value={concurrent}
-                  onChange={(e) => setConcurrent(Number(e.target.value) || 1)}
-                  className="w-24 rounded-lg border border-neutral-600 bg-neutral-900 px-3 py-2 text-sm"
+                  min={0}
+                  max={240}
+                  step={5}
+                  value={rest}
+                  onChange={(e) => setRest(Number(e.target.value) || 0)}
+                  className={INPUT}
                 />
-              </label>
+                <span className="text-xs text-[var(--t4,#807984)]">
+                  {t.restUnit}
+                </span>
+              </span>
+            </label>
+            <label className="block space-y-1">
+              <span className="text-sm text-[var(--t2,#c7bfca)]">
+                {t.concurrentLabel}
+              </span>
+              <input
+                type="number"
+                min={1}
+                max={32}
+                value={concurrent}
+                onChange={(e) => setConcurrent(Number(e.target.value) || 1)}
+                className={`${INPUT} block`}
+              />
+            </label>
+          </div>
+          <p className="mt-2 text-xs text-[var(--t4,#807984)]">
+            {t.settingsHint}
+          </p>
+        </section>
+
+        {error && (
+          <p
+            role="alert"
+            className="mb-4 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] px-3 py-2 text-sm text-[#ffc2c2]"
+          >
+            {error}
+          </p>
+        )}
+
+        {loading && !data ? (
+          <p className="text-sm text-[var(--t3,#a39ba6)]">{t.loading}</p>
+        ) : data ? (
+          <>
+            <div className="mb-6 grid gap-3 sm:grid-cols-3">
+              {SEVERITIES.map((s) => (
+                <StatTile
+                  key={s}
+                  label={severityLabel(s)}
+                  value={data.counts[s]}
+                  tone={data.counts[s] > 0 ? SEVERITY_TONE[s] : 'neutral'}
+                />
+              ))}
             </div>
-            <p className="mt-2 text-xs text-neutral-500">{t.settingsHint}</p>
-          </section>
 
-          {error && (
-            <p
-              role="alert"
-              className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200"
-            >
-              {error}
+            <p className="mb-4 text-xs text-[var(--t3,#a39ba6)]" data-numeric>
+              {format(t.countMatches, { count: data.matchCount })} ·{' '}
+              {format(t.countConstraints, { count: data.constraintCount })}
+              {data.slotGrid.length > 0 && (
+                <>
+                  {' · '}
+                  {format(t.slotGrid, { slots: data.slotGrid.join(' · ') })}
+                </>
+              )}
             </p>
-          )}
 
-          {loading && !data ? (
-            <p className="text-sm text-neutral-300">{t.loading}</p>
-          ) : data ? (
-            <>
-              <div className="mb-6 flex flex-wrap gap-3">
-                {SEVERITIES.map((s) => (
-                  <div
-                    key={s}
-                    className={`flex-1 min-w-[150px] rounded-xl border px-4 py-3 ${SEVERITY_STYLE[s]}`}
-                  >
-                    <p className="text-2xl font-bold tabular-nums">
-                      {data.counts[s]}
-                    </p>
-                    <p className="text-sm text-neutral-300">
-                      {severityLabel(s)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              <p className="mb-4 text-xs text-neutral-500">
-                {format(t.countMatches, { count: data.matchCount })} ·{' '}
-                {format(t.countConstraints, { count: data.constraintCount })}
-                {data.slotGrid.length > 0 && (
-                  <>
-                    {' · '}
-                    {format(t.slotGrid, { slots: data.slotGrid.join(' · ') })}
-                  </>
-                )}
+            {data.constraintCount === 0 && (
+              <p className={`${CARD} mb-6 text-sm text-[var(--t2,#c7bfca)]`}>
+                {t.noConstraints}
               </p>
+            )}
 
-              {data.constraintCount === 0 && (
-                <p className="mb-6 rounded-xl border border-neutral-700 bg-neutral-800/60 px-4 py-3 text-sm text-neutral-300">
-                  {t.noConstraints}
+            {view === 'month' && (
+              <div className={`${CARD} mb-6 p-3`}>
+                <ScheduleMonthCalendar
+                  matches={data.matches}
+                  severityByMatch={severityByMatch}
+                  constraints={data.constraints}
+                  teamNames={data.teamNames}
+                  timezone={data.tournament.timezone}
+                  labels={{
+                    prevMonth: t.prevMonth,
+                    nextMonth: t.nextMonth,
+                    blockedDay: t.blockedDay,
+                    legendBlocking: t.legendBlocking,
+                    legendWarning: t.legendWarning,
+                    legendOk: t.legendOk,
+                    legendBlocked: t.legendBlocked,
+                    empty: t.calendarEmpty,
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Le détail des anomalies ne s'affiche qu'en vue liste : dans une
+                case de calendrier, une anomalie tient en une couleur, pas en
+                une phrase. Les deux vues lisent le même diagnostic. */}
+            {total === 0 ? (
+              <div className="rounded-[var(--r-card,14px)] border border-[rgba(127,202,101,.36)] bg-[rgba(127,202,101,.08)] px-4 py-5">
+                <p className="font-semibold text-[var(--lf-200,#b3e7a3)]">
+                  {t.allGood}
                 </p>
-              )}
+                <p className="mt-1 text-sm text-[var(--t2,#c7bfca)]">
+                  {t.allGoodHint}
+                </p>
+              </div>
+            ) : (
+              view === 'list' && (
+                <ul className="space-y-2">
+                  {data.anomalies.map((a, i) => (
+                    <li
+                      key={`${a.kind}-${a.matchIds.join('-')}-${i}`}
+                      className={`rounded-[var(--r-card,14px)] border px-4 py-3 ${SEVERITY_STYLE[a.severity]}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span
+                          aria-hidden="true"
+                          className={`mt-2 h-2 w-2 shrink-0 rounded-full ${SEVERITY_DOT[a.severity]}`}
+                        />
+                        <div className="min-w-0 space-y-1">
+                          <p className="font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
+                            {kindLabel(a.kind)}
+                            {a.at && <> · {when(a.at)}</>}
+                          </p>
+                          <p className="text-sm text-[var(--t1,#f4edf7)]">
+                            {a.message}
+                          </p>
 
-              {view === 'month' && (
-                <div className="mb-6 rounded-xl border border-neutral-700 bg-neutral-900/40 p-3">
-                  <ScheduleMonthCalendar
-                    matches={data.matches}
-                    severityByMatch={severityByMatch}
-                    constraints={data.constraints}
-                    teamNames={data.teamNames}
-                    timezone={data.tournament.timezone}
-                    labels={{
-                      prevMonth: t.prevMonth,
-                      nextMonth: t.nextMonth,
-                      blockedDay: t.blockedDay,
-                      legendBlocking: t.legendBlocking,
-                      legendWarning: t.legendWarning,
-                      legendOk: t.legendOk,
-                      legendBlocked: t.legendBlocked,
-                      empty: t.calendarEmpty,
-                    }}
-                  />
-                </div>
-              )}
+                          {a.suggestion && (
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                              <p className="text-sm text-[var(--lf-200,#b3e7a3)]">
+                                <span className="text-xs uppercase tracking-[0.1em] text-[var(--lf,#7fca65)]">
+                                  {t.suggestionLabel}
+                                </span>{' '}
+                                —{' '}
+                                {format(t.suggestionMove, {
+                                  time: when(a.suggestion.moveTo),
+                                })}
+                                .{' '}
+                                <span className="text-[var(--t2,#c7bfca)]">
+                                  {a.suggestion.why}
+                                </span>
+                              </p>
+                              <AdminButton
+                                variant="secondary"
+                                size="xs"
+                                onClick={() =>
+                                  a.suggestion &&
+                                  void applySuggestion(a.suggestion, a.message)
+                                }
+                                disabled={movingId !== null}
+                              >
+                                {movingId === a.suggestion.matchId
+                                  ? t.applyChecking
+                                  : t.applySuggestion}
+                              </AdminButton>
+                            </div>
+                          )}
 
-              {total === 0 ? (
-                <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-5">
-                  <p className="font-semibold text-emerald-200">{t.allGood}</p>
-                  <p className="mt-1 text-sm text-neutral-300">
-                    {t.allGoodHint}
-                  </p>
-                </div>
-              ) : (
-                // Le détail des anomalies ne s'affiche qu'en vue liste : dans une
-                // case de calendrier, une anomalie tient en une couleur, pas en
-                // une phrase. Les deux vues lisent le même diagnostic.
-                view === 'list' && (
-                  <ul className="space-y-2">
-                    {data.anomalies.map((a, i) => (
-                      <li
-                        key={`${a.kind}-${a.matchIds.join('-')}-${i}`}
-                        className={`rounded-xl border px-4 py-3 ${SEVERITY_STYLE[a.severity]}`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <span
-                            aria-hidden="true"
-                            className={`mt-2 h-2 w-2 shrink-0 rounded-full ${SEVERITY_DOT[a.severity]}`}
-                          />
-                          <div className="min-w-0 space-y-1">
-                            <p className="text-xs uppercase tracking-[0.1em] text-neutral-400">
-                              {kindLabel(a.kind)}
-                              {a.at && <> · {when(a.at)}</>}
-                            </p>
-                            <p className="text-sm text-neutral-100">
-                              {a.message}
-                            </p>
-
-                            {a.suggestion && (
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                <p className="text-sm text-emerald-200">
-                                  <span className="text-xs uppercase tracking-[0.1em] text-emerald-300/80">
-                                    {t.suggestionLabel}
-                                  </span>{' '}
-                                  —{' '}
-                                  {format(t.suggestionMove, {
-                                    time: when(a.suggestion.moveTo),
-                                  })}
-                                  .{' '}
-                                  <span className="text-neutral-300">
-                                    {a.suggestion.why}
-                                  </span>
-                                </p>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    a.suggestion &&
-                                    void applySuggestion(
-                                      a.suggestion,
-                                      a.message
-                                    )
-                                  }
-                                  disabled={movingId !== null}
-                                  className="rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-100 disabled:opacity-50"
-                                >
-                                  {movingId === a.suggestion.matchId
-                                    ? t.applyChecking
-                                    : t.applySuggestion}
-                                </button>
-                              </div>
-                            )}
-
-                            <p className="flex flex-wrap gap-3 pt-1">
-                              {a.matchIds.map((matchId) => (
-                                <Link
-                                  key={matchId}
-                                  href={`/admin/matches/${matchId}`}
-                                  className="text-xs underline text-neutral-300"
-                                >
-                                  {t.openMatch}
-                                </Link>
-                              ))}
-                            </p>
-                          </div>
+                          <p className="flex flex-wrap gap-3 pt-1">
+                            {a.matchIds.map((matchId) => (
+                              <Link
+                                key={matchId}
+                                href={`/admin/matches/${matchId}`}
+                                className="text-xs text-[var(--or-200,#eec4ff)] underline hover:text-[var(--t1,#f4edf7)]"
+                              >
+                                {t.openMatch}
+                              </Link>
+                            ))}
+                          </p>
                         </div>
-                      </li>
-                    ))}
-                  </ul>
-                )
-              )}
-            </>
-          ) : null}
-        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )
+            )}
+          </>
+        ) : null}
       </div>
       {dialog}
     </>

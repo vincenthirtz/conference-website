@@ -15,7 +15,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { formatPlayDateShort, type PoolScope } from '@/utils/maps/poolScope';
 import { withStaffPage } from '@/utils/staff';
@@ -24,6 +23,11 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 import RoundPoolSelector from '@/components/admin/tournament/mapPool/RoundPoolSelector';
 import AddMapForm, {
   type SelectableMap,
@@ -44,6 +48,11 @@ import {
 import { getGame, type GameDef } from '@/config/games';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentMaps from '@/lib/i18n/locales/admin-fr/adminTournamentMaps';
+
+const EYEBROW =
+  'mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
+const PANEL =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 text-[var(--t2,#c7bfca)]';
 
 type StaffShape = {
   id: string;
@@ -313,54 +322,48 @@ function AdminTournamentMapsPage(_: StaffProps) {
       <Head>
         <title>{t.headTitle}</title>
       </Head>
-      <div className="min-h-screen bg-neutral-950 text-white pt-header">
-        <div className="max-w-6xl mx-auto px-6 py-10">
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <div>
           <TournamentTabsNav
             tournamentId={String(tournamentId ?? '')}
             active="settings"
           />
-          <div className="flex items-center justify-between gap-4 mb-6">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-                {t.eyebrow}
-              </p>
-              <h1 className="text-2xl font-semibold flex items-center gap-3">
-                <span>
-                  {format(t.pageTitle, {
-                    name: tournament?.name || t.defaultTournamentName,
-                  })}
-                </span>
-                {tournament?.game && (
-                  <span
-                    className="px-2 py-0.5 rounded-full text-xs border border-purple-400/40 bg-purple-500/10 text-purple-200 font-normal"
-                    title={format(t.slugTitle, { slug: tournament.game })}
-                  >
-                    {format(t.gameBadge, { game: gameLabel })}
-                  </span>
-                )}
-              </h1>
-            </div>
-            <div className="flex gap-2">
-              <Link
-                href={`/admin/tournament/${tournamentId}/bracket?tab=map-draw`}
-                className="px-3 py-1.5 rounded-lg bg-purple-600/80 border border-purple-500/30 text-sm hover:bg-purple-600"
-              >
-                {t.linkMapDraw}
-              </Link>
-              <Link
-                href={`/admin/tournament/${tournamentId}/matches`}
-                className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
-              >
-                {t.linkMatches}
-              </Link>
-              <button
-                onClick={() => fetchMaps(scope)}
-                className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm hover:bg-white/10"
-              >
-                {t.refresh}
-              </button>
-            </div>
-          </div>
+          <p className={EYEBROW}>{t.eyebrow}</p>
+          <AdminPageHeader
+            title={format(t.pageTitle, {
+              name: tournament?.name || t.defaultTournamentName,
+            })}
+            badge={
+              tournament?.game ? (
+                <Chip
+                  tone="brand"
+                  title={format(t.slugTitle, { slug: tournament.game })}
+                >
+                  {format(t.gameBadge, { game: gameLabel })}
+                </Chip>
+              ) : undefined
+            }
+            actions={
+              <>
+                <AdminButtonLink
+                  href={`/admin/tournament/${tournamentId}/bracket?tab=map-draw`}
+                  variant="secondary"
+                  size="sm"
+                >
+                  {t.linkMapDraw}
+                </AdminButtonLink>
+                <AdminButtonLink
+                  href={`/admin/tournament/${tournamentId}/matches`}
+                  size="sm"
+                >
+                  {t.linkMatches}
+                </AdminButtonLink>
+                <AdminButton size="sm" onClick={() => fetchMaps(scope)}>
+                  {t.refresh}
+                </AdminButton>
+              </>
+            }
+          />
 
           <RoundPoolSelector
             rounds={rounds}
@@ -387,19 +390,15 @@ function AdminTournamentMapsPage(_: StaffProps) {
           />
 
           {texts.notice && (
-            <div className="mb-6 p-3 rounded-lg bg-purple-500/10 border border-purple-400/30 text-purple-100 text-sm">
+            <div className="mb-6 rounded-[var(--r-card,14px)] border border-[rgba(180,103,209,.4)] bg-[rgba(180,103,209,.08)] p-3 text-sm text-[var(--or-200,#eec4ff)]">
               {texts.notice}
             </div>
           )}
 
-          {loading && (
-            <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-              {t.loading}
-            </div>
-          )}
+          {loading && <div className={PANEL}>{t.loading}</div>}
 
           {errorMsg && !loading && (
-            <div className="p-4 rounded-lg bg-red-900/60 border border-red-500/40 text-red-100">
+            <div className="rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] p-4 text-[#ffc2c2]">
               {errorMsg}
             </div>
           )}
@@ -407,17 +406,19 @@ function AdminTournamentMapsPage(_: StaffProps) {
           {!loading && (
             <>
               <div className="mb-6 flex flex-wrap gap-2">
-                <button
+                <AdminButton
+                  variant="primary"
+                  size="sm"
                   onClick={() => setShowAddForm(!showAddForm)}
-                  className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm transition-colors"
                 >
                   {showAddForm ? t.cancelAddToggle : t.addMapToggle}
-                </button>
+                </AdminButton>
                 {canPickFromList && availableMaps.length > 0 && (
-                  <button
+                  <AdminButton
+                    variant="secondary"
+                    size="sm"
                     onClick={handleAddAllMaps}
                     disabled={addingAll}
-                    className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
                   >
                     {addingAll
                       ? t.addingAll
@@ -429,15 +430,16 @@ function AdminTournamentMapsPage(_: StaffProps) {
                             game: gameLabel,
                             count: availableMaps.length,
                           })}
-                  </button>
+                  </AdminButton>
                 )}
                 {maps.length > 0 && (
-                  <button
+                  <AdminButton
+                    variant="danger"
+                    size="sm"
                     onClick={handleDeleteAllMaps}
-                    className="px-4 py-2 rounded-lg bg-red-600/80 hover:bg-red-700 text-white font-medium text-sm transition-colors"
                   >
                     {format(t.deleteAllMapsScoped, { pool: texts.poolName })}
-                  </button>
+                  </AdminButton>
                 )}
               </div>
 
@@ -487,9 +489,7 @@ function AdminTournamentMapsPage(_: StaffProps) {
           )}
 
           {!loading && !errorMsg && maps.length === 0 && (
-            <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-              {texts.empty}
-            </div>
+            <div className={PANEL}>{texts.empty}</div>
           )}
 
           {maps.length > 0 && (

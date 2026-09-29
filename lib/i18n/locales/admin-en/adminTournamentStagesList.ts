@@ -22,6 +22,7 @@ export default {
   breadcrumbStages: 'Stages',
   eyebrow: 'Admin · Stages',
   titleSuffix: '{name} · Stages',
+  stagesCount: '{count} stage(s)',
   viewMatches: 'View matches',
   cancel: 'Cancel',
   reorder: 'Reorder',

@@ -606,6 +606,17 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       des hubs Association, Modération, Communications, TCG. Consigne « aucun nouvel état »
       tenue (cliquet à zéro), aucun appel / navigation / `data-testid` perdu (vérifié au diff).
       La suppression d'un scrim passe de `confirm()` à la zone sensible (saisie du nom).
+- [x] **Passe visuelle, lot 3 (18 fichiers)** : barre d'onglets du tournoi ; sous-pages cartes,
+      pool, cagnotte, Discord, historique, statistiques, opérations en lot, outils, planning,
+      phases, bracket ; quick bracket, réseau, création d'équipe et de phase, historique de
+      phase, fiche d'un espace et sa configuration Discord. Écrans d'opérations : confirmations,
+      garde-fous et ordre des étapes inchangés. Le garde de taille a refusé la croissance de la
+      configuration Discord (fichier gelé) : la rangée de champs est sortie
+      (`features/admin/tenants/ui/SnowflakeField.tsx`), gel abaissé 693 → 689.
+- [ ] À trancher : « Notifier les capitaines » (outils du tournoi) est un envoi en masse sans
+      confirmation — désormais en rouge ; faut-il ajouter une confirmation ?
+- [ ] L'archivage d'un espace reste un bouton rouge (data-testid, confirm, blocage de l'espace
+      principal) : `DangerZone` ne sait ni porter un `data-testid` ni désactiver une action.
 - [x] Constat du lot 1 corrigé : `Chip` et `AdminButtonLink` acceptent `title` et `data-testid`.
 - [ ] Tableau de bord tournoi à onglets ; les autres listes et fiches : avec les lots de
       découpe L15–L20.

@@ -11,9 +11,23 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import StatTile from '@/features/admin/_shared/ui/StatTile';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
 import nsAdminTournamentPrizePool from '@/lib/i18n/locales/admin-fr/adminTournamentPrizePool';
+
+const EYEBROW =
+  'mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]';
+const SECTION_TITLE =
+  'font-[family-name:var(--fd)] text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--t1,#f4edf7)] [font-stretch:75%]';
+const LABEL = 'mb-1 block text-sm font-medium text-[var(--t2,#c7bfca)]';
+const INPUT =
+  'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
+const HINT = 'mt-1 text-xs text-[var(--t4,#807984)]';
 
 type PrizePool = {
   id: string;
@@ -216,40 +230,32 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
       <Head>
         <title>{t.headTitle}</title>
       </Head>
-      <div className="min-h-screen bg-neutral-950 text-white pt-header">
-        <div className="max-w-4xl mx-auto px-6 py-10">
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <div className="max-w-4xl">
           <TournamentTabsNav
             tournamentId={String(tournamentId ?? '')}
             active="settings"
           />
 
-          <div className="flex items-start justify-between gap-4 mb-6">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-                {t.eyebrow}
-              </p>
-              <h1 className="text-2xl font-semibold">{t.pageTitle}</h1>
-              <p className="text-sm text-neutral-400 mt-2 max-w-2xl">
-                {t.intro}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => fetchPool()}
-              className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm hover:bg-white/10 flex-shrink-0"
-            >
-              {t.refresh}
-            </button>
-          </div>
+          <p className={EYEBROW}>{t.eyebrow}</p>
+          <AdminPageHeader
+            title={t.pageTitle}
+            subtitle={<span className="block max-w-2xl">{t.intro}</span>}
+            actions={
+              <AdminButton size="sm" onClick={() => fetchPool()}>
+                {t.refresh}
+              </AdminButton>
+            }
+          />
 
           {loading && (
-            <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+            <div className={`${CARD} p-4 text-[var(--t2,#c7bfca)]`}>
               {t.loading}
             </div>
           )}
 
           {errorMsg && !loading && (
-            <div className="p-4 rounded-lg bg-red-900/60 border border-red-500/40 text-red-100 mb-6">
+            <div className="mb-6 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] p-4 text-[#ffc2c2]">
               {errorMsg}
             </div>
           )}
@@ -257,9 +263,9 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
           {!loading && (
             <div className="space-y-6">
               {pool === null && (
-                <div className="rounded-2xl border border-purple-500/30 bg-purple-500/5 p-6 text-center">
-                  <h2 className="text-lg font-semibold">{t.noPoolTitle}</h2>
-                  <p className="text-sm text-neutral-400 mt-2 mb-4">
+                <div className="rounded-[var(--r-card,14px)] border border-[rgba(180,103,209,.4)] bg-[rgba(180,103,209,.08)] p-6 text-center">
+                  <h2 className={SECTION_TITLE}>{t.noPoolTitle}</h2>
+                  <p className="mt-2 mb-4 text-sm text-[var(--t3,#a39ba6)]">
                     {t.noPoolText}
                   </p>
                 </div>
@@ -268,54 +274,38 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
               {/* Récapitulatif des montants (seulement si la cagnotte existe) */}
               {pool && (
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
-                    <p className="text-xs uppercase tracking-wide text-neutral-400">
-                      {t.baseSummaryLabel}
-                    </p>
-                    <p className="text-xl font-semibold mt-1">
-                      {formatCents(pool.base_amount_cents)}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
-                    <p className="text-xs uppercase tracking-wide text-neutral-400">
-                      {t.raisedLabel}
-                    </p>
-                    <p className="text-xl font-semibold mt-1">
-                      {formatCents(pool.raised_amount_cents)}
-                    </p>
-                    <p className="text-[11px] text-neutral-500 mt-1">
-                      {t.raisedHint}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl bg-purple-500/10 border border-purple-400/30 p-4">
-                    <p className="text-xs uppercase tracking-wide text-purple-200/80">
-                      {t.totalLabel}
-                    </p>
-                    <p className="text-xl font-semibold mt-1 text-purple-100">
-                      {formatCents(pool.total_cents)}
-                    </p>
-                    {goalPercent !== null && (
-                      <p className="text-[11px] text-purple-200/70 mt-1">
-                        {format(t.goalProgress, {
-                          percent: goalPercent,
-                          goal: formatCents(pool.goal_amount_cents),
-                        })}
-                      </p>
-                    )}
-                  </div>
+                  <StatTile
+                    label={t.baseSummaryLabel}
+                    value={formatCents(pool.base_amount_cents)}
+                  />
+                  <StatTile
+                    label={t.raisedLabel}
+                    value={formatCents(pool.raised_amount_cents)}
+                    hint={t.raisedHint}
+                  />
+                  <StatTile
+                    tone="brand"
+                    label={t.totalLabel}
+                    value={formatCents(pool.total_cents)}
+                    hint={
+                      goalPercent !== null
+                        ? format(t.goalProgress, {
+                            percent: goalPercent,
+                            goal: formatCents(pool.goal_amount_cents),
+                          })
+                        : undefined
+                    }
+                  />
                 </div>
               )}
 
               {/* Formulaire de configuration */}
-              <section className="rounded-2xl bg-white/5 border border-white/10 p-6">
-                <h2 className="text-lg font-semibold mb-4">{t.configTitle}</h2>
+              <section className={`${CARD} p-6`}>
+                <h2 className={`${SECTION_TITLE} mb-4`}>{t.configTitle}</h2>
 
                 <div className="space-y-5">
                   <div>
-                    <label
-                      htmlFor="pp-title"
-                      className="block text-sm font-medium text-neutral-200 mb-1"
-                    >
+                    <label htmlFor="pp-title" className={LABEL}>
                       {t.fieldTitleLabel}
                     </label>
                     <input
@@ -325,19 +315,14 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
                       onChange={(e) => setTitleInput(e.target.value)}
                       placeholder={t.fieldTitlePlaceholder}
                       maxLength={200}
-                      className="w-full px-3 py-2 rounded-xl bg-neutral-900/60 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                      className={INPUT}
                     />
-                    <p className="text-xs text-neutral-500 mt-1">
-                      {t.fieldTitleHint}
-                    </p>
+                    <p className={HINT}>{t.fieldTitleHint}</p>
                   </div>
 
                   <div className="grid gap-5 sm:grid-cols-2">
                     <div>
-                      <label
-                        htmlFor="pp-base"
-                        className="block text-sm font-medium text-neutral-200 mb-1"
-                      >
+                      <label htmlFor="pp-base" className={LABEL}>
                         {t.fieldBaseLabel}
                       </label>
                       <div className="relative">
@@ -348,25 +333,20 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
                           value={baseInput}
                           onChange={(e) => setBaseInput(e.target.value)}
                           placeholder="0"
-                          className="w-full px-3 py-2 pr-8 rounded-xl bg-neutral-900/60 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                          className={`${INPUT} pr-8`}
                         />
                         <span
                           aria-hidden="true"
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 text-sm"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--t4,#807984)]"
                         >
                           €
                         </span>
                       </div>
-                      <p className="text-xs text-neutral-500 mt-1">
-                        {t.fieldBaseHint}
-                      </p>
+                      <p className={HINT}>{t.fieldBaseHint}</p>
                     </div>
 
                     <div>
-                      <label
-                        htmlFor="pp-goal"
-                        className="block text-sm font-medium text-neutral-200 mb-1"
-                      >
+                      <label htmlFor="pp-goal" className={LABEL}>
                         {t.fieldGoalLabel}
                       </label>
                       <div className="relative">
@@ -377,18 +357,16 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
                           value={goalInput}
                           onChange={(e) => setGoalInput(e.target.value)}
                           placeholder={t.fieldGoalPlaceholder}
-                          className="w-full px-3 py-2 pr-8 rounded-xl bg-neutral-900/60 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                          className={`${INPUT} pr-8`}
                         />
                         <span
                           aria-hidden="true"
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 text-sm"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--t4,#807984)]"
                         >
                           €
                         </span>
                       </div>
-                      <p className="text-xs text-neutral-500 mt-1">
-                        {t.fieldGoalHint}
-                      </p>
+                      <p className={HINT}>{t.fieldGoalHint}</p>
                     </div>
                   </div>
 
@@ -400,13 +378,13 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
                         aria-checked={isOpen}
                         checked={isOpen}
                         onChange={(e) => setIsOpen(e.target.checked)}
-                        className="mt-0.5 w-4 h-4 rounded border-neutral-600 bg-neutral-900 accent-purple-600"
+                        className="mt-0.5 h-4 w-4 accent-[var(--or,#b467d1)]"
                       />
                       <span>
-                        <span className="block text-sm font-medium text-neutral-200">
+                        <span className="block text-sm font-medium text-[var(--t2,#c7bfca)]">
                           {t.fieldIsOpenLabel}
                         </span>
-                        <span className="block text-xs text-neutral-500">
+                        <span className="block text-xs text-[var(--t4,#807984)]">
                           {t.fieldIsOpenHint}
                         </span>
                       </span>
@@ -414,26 +392,26 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
                   </div>
 
                   <div>
-                    <button
-                      type="button"
+                    <AdminButton
+                      variant="primary"
                       onClick={handleSave}
                       disabled={saving}
-                      className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors disabled:opacity-50"
                     >
                       {saving ? t.saving : pool === null ? t.createCta : t.save}
-                    </button>
+                    </AdminButton>
                   </div>
                 </div>
               </section>
 
               {/* Liste des contributions */}
               {pool && (
-                <section className="rounded-2xl bg-white/5 border border-white/10 p-6">
-                  <div className="flex items-center justify-between gap-3 mb-4">
-                    <h2 className="text-lg font-semibold">
-                      {t.contributionsTitle}
-                    </h2>
-                    <span className="text-sm text-neutral-400">
+                <section className={`${CARD} p-6`}>
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <h2 className={SECTION_TITLE}>{t.contributionsTitle}</h2>
+                    <span
+                      className="text-sm text-[var(--t3,#a39ba6)]"
+                      data-numeric
+                    >
                       {format(
                         contributorCount > 1
                           ? t.contributionsCount_other
@@ -444,14 +422,14 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
                   </div>
 
                   {contributions.length === 0 ? (
-                    <div className="p-4 rounded-lg bg-white/5 border border-white/10 text-sm text-neutral-400">
+                    <div className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-4 text-sm text-[var(--t3,#a39ba6)]">
                       {t.contributionsEmpty}
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="text-left text-xs uppercase tracking-wide text-neutral-400 border-b border-white/10">
+                          <tr className="border-b border-[var(--line2,rgba(194,196,201,.2))] text-left font-[family-name:var(--fd)] text-[11px] uppercase tracking-[0.12em] text-[var(--t3,#a39ba6)]">
                             <th scope="col" className="py-2 pr-4 font-medium">
                               {t.colDate}
                             </th>
@@ -473,28 +451,31 @@ function AdminTournamentPrizePoolPage(_: StaffProps) {
                           {contributions.map((c) => (
                             <tr
                               key={c.id}
-                              className="border-b border-white/5 last:border-0"
+                              className="border-b border-[var(--line,rgba(194,196,201,.12))] last:border-0"
                             >
-                              <td className="py-2 pr-4 text-neutral-400 whitespace-nowrap">
+                              <td className="whitespace-nowrap py-2 pr-4 text-[var(--t3,#a39ba6)]">
                                 {formatDate(c.created_at)}
                               </td>
-                              <td className="py-2 pr-4">
+                              <td className="py-2 pr-4 text-[var(--t1,#f4edf7)]">
                                 {c.is_anonymous || !c.contributor_name ? (
-                                  <span className="text-neutral-500 italic">
+                                  <span className="italic text-[var(--t4,#807984)]">
                                     {t.anonymous}
                                   </span>
                                 ) : (
                                   c.contributor_name
                                 )}
                               </td>
-                              <td className="py-2 pr-4 text-right font-medium whitespace-nowrap">
+                              <td
+                                className="whitespace-nowrap py-2 pr-4 text-right font-medium text-[var(--t1,#f4edf7)]"
+                                data-numeric
+                              >
                                 {formatCents(c.amount_cents)}
                               </td>
-                              <td className="py-2 text-neutral-300">
+                              <td className="py-2 text-[var(--t2,#c7bfca)]">
                                 {c.message ? (
                                   c.message
                                 ) : (
-                                  <span className="text-neutral-600">
+                                  <span className="text-[var(--t4,#807984)]">
                                     {t.noValue}
                                   </span>
                                 )}

@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentHistory from '@/lib/i18n/locales/admin-fr/adminTournamentHistory';
 
@@ -49,6 +52,12 @@ type ApiResponse = {
   tournamentId: string;
   logs: FormattedStaffLog[];
 };
+
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]';
+const LABEL = 'text-xs text-[var(--t3,#a39ba6)]';
+const INPUT =
+  'rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
@@ -124,28 +133,21 @@ function AdminTournamentHistoryPage(_props: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-header">
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
         <TournamentTabsNav tournamentId={String(id ?? '')} active="tools" />
         {/* Header */}
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">{t.heading}</h1>
-            <p className="text-neutral-400 text-sm mt-1">{t.intro}</p>
-          </div>
-        </div>
+        <AdminPageHeader title={t.heading} subtitle={t.intro} />
 
         {/* Filtres */}
         <form
           onSubmit={handleFilterSubmit}
-          className="bg-neutral-800 border border-neutral-700 rounded-xl p-4 mb-6 flex flex-wrap gap-4 items-end"
+          className={`${CARD} mb-6 flex flex-wrap items-end gap-4 p-4`}
         >
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">
-              {t.labelEntityType}
-            </label>
+            <label className={LABEL}>{t.labelEntityType}</label>
             <input
               type="text"
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={INPUT}
               placeholder={t.placeholderEntityType}
               value={entityType}
               onChange={(e) => setEntityType(e.target.value)}
@@ -153,10 +155,10 @@ function AdminTournamentHistoryPage(_props: StaffProps) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">{t.labelAction}</label>
+            <label className={LABEL}>{t.labelAction}</label>
             <input
               type="text"
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={INPUT}
               placeholder={t.placeholderAction}
               value={action}
               onChange={(e) => setAction(e.target.value)}
@@ -164,9 +166,9 @@ function AdminTournamentHistoryPage(_props: StaffProps) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-neutral-400">{t.labelLimit}</label>
+            <label className={LABEL}>{t.labelLimit}</label>
             <select
-              className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={INPUT}
               value={limit}
               onChange={(e) => setLimit(Number(e.target.value) || 50)}
             >
@@ -176,40 +178,47 @@ function AdminTournamentHistoryPage(_props: StaffProps) {
             </select>
           </div>
 
-          <button
+          <AdminButton
             type="submit"
-            className="ml-auto px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-sm font-semibold"
+            variant="primary"
+            size="sm"
+            className="ml-auto"
           >
             {t.filter}
-          </button>
+          </AdminButton>
         </form>
 
         {/* Error / Loading */}
         {errorMsg && (
-          <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
+          <div className="mb-4 rounded-[var(--r-ctrl,4px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-sm text-[#ffc2c2]">
             {errorMsg}
           </div>
         )}
 
         {/* Liste des logs */}
-        <div className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
-            <span className="text-sm font-semibold">
+        <div className={`${CARD} overflow-hidden`}>
+          <div className="flex items-center justify-between border-b border-[var(--line2,rgba(194,196,201,.2))] px-4 py-3">
+            <span
+              className="font-[family-name:var(--fd)] text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--t1,#f4edf7)] [font-stretch:75%]"
+              data-numeric
+            >
               {loading
                 ? t.loading
                 : format(t.logsCount, { count: logs.length })}
             </span>
-            <span className="text-xs text-neutral-400">
+            <span className="text-xs text-[var(--t3,#a39ba6)]">
               {t.sortedNewestFirst}
             </span>
           </div>
 
           {logs.length === 0 && !loading && (
-            <div className="px-4 py-6 text-sm text-neutral-400">{t.empty}</div>
+            <div className="px-4 py-6 text-sm text-[var(--t3,#a39ba6)]">
+              {t.empty}
+            </div>
           )}
 
           {logs.length > 0 && (
-            <ul className="divide-y divide-neutral-700">
+            <ul className="divide-y divide-[var(--line2,rgba(194,196,201,.2))]">
               {logs.map((log) => (
                 <li
                   key={log.id}
@@ -218,54 +227,50 @@ function AdminTournamentHistoryPage(_props: StaffProps) {
                   {/* Ligne principale */}
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-neutral-500">
+                      <span className="font-mono text-xs text-[var(--t4,#807984)]">
                         {formatDateTime(log.created_at)}
                       </span>
-                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-neutral-700 text-neutral-100">
-                        {log.action}
-                      </span>
+                      <Chip tone="brand">{log.action}</Chip>
                       {log.entity_type && (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-neutral-900 border border-neutral-700 text-neutral-300">
+                        <Chip>
                           {log.entity_type}
                           {log.entity_id ? ` #${shortId(log.entity_id)}` : ''}
-                        </span>
+                        </Chip>
                       )}
                     </div>
 
                     {log.staff && (
-                      <div className="flex items-center gap-2 text-xs text-neutral-400">
-                        <span className="text-neutral-500">{t.by}</span>
-                        <span className="font-medium text-neutral-200">
+                      <div className="flex items-center gap-2 text-xs text-[var(--t3,#a39ba6)]">
+                        <span className="text-[var(--t4,#807984)]">{t.by}</span>
+                        <span className="font-medium text-[var(--t2,#c7bfca)]">
                           {log.staff.display_name || log.staff.id}
                         </span>
-                        {log.staff.role && (
-                          <span className="px-1.5 py-0.5 rounded bg-neutral-900 border border-neutral-700 text-[10px] uppercase tracking-wide">
-                            {log.staff.role}
-                          </span>
-                        )}
+                        {log.staff.role && <Chip>{log.staff.role}</Chip>}
                       </div>
                     )}
                   </div>
 
                   {/* Message formatté si dispo */}
                   {log.message && (
-                    <div className="text-neutral-200">{log.message}</div>
+                    <div className="text-[var(--t2,#c7bfca)]">
+                      {log.message}
+                    </div>
                   )}
 
                   {/* Payload brut (mini) */}
                   {log.payload ? (
-                    <details className="mt-1 text-xs text-neutral-400">
-                      <summary className="cursor-pointer select-none hover:text-neutral-200">
+                    <details className="mt-1 text-xs text-[var(--t3,#a39ba6)]">
+                      <summary className="cursor-pointer select-none hover:text-[var(--t1,#f4edf7)]">
                         {t.detailsPayload}
                       </summary>
-                      <pre className="mt-1 bg-neutral-900 border border-neutral-800 rounded p-2 text-[11px] overflow-x-auto">
+                      <pre className="mt-1 overflow-x-auto rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-2 text-[11px]">
                         {JSON.stringify(log.payload, null, 2)}
                       </pre>
                     </details>
                   ) : null}
 
                   {/* Liens rapides vers entités si possible */}
-                  <div className="mt-1 flex flex-wrap gap-2 text-xs text-blue-300">
+                  <div className="mt-1 flex flex-wrap gap-2 text-xs text-[var(--or-200,#eec4ff)]">
                     {log.entity_type === 'match' && log.entity_id && (
                       <Link
                         href={`/admin/matches/${log.entity_id}`}

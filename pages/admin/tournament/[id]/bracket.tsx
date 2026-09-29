@@ -72,29 +72,28 @@ export default function AdminTournamentBracketPage(_: StaffProps) {
         <title>{nav.tabBracket}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          <TournamentTabsNav tournamentId={tournamentId} active="bracket" />
+      {/* Pas d'AdminPageHeader ici : chaque panneau porte déjà son propre h1. */}
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <TournamentTabsNav tournamentId={tournamentId} active="bracket" />
 
-          <Tabs
-            tabs={tabs}
-            active={active}
-            onChange={setActive}
-            ariaLabel={nav.tabBracket}
-            idBase={ID_BASE}
-            className="mb-8"
-          />
+        <Tabs
+          tabs={tabs}
+          active={active}
+          onChange={setActive}
+          ariaLabel={nav.tabBracket}
+          idBase={ID_BASE}
+          className="mb-8"
+        />
 
-          <div
-            role="tabpanel"
-            id={tabPanelId(ID_BASE, active)}
-            aria-labelledby={tabButtonId(ID_BASE, active)}
-          >
-            {active === 'view' && <BracketPanel />}
-            {active === 'builder' && <BracketBuilderPanel />}
-            {active === 'map-draw' && <MapDrawPanel />}
-            {active === 'veto' && <VetoPanel />}
-          </div>
+        <div
+          role="tabpanel"
+          id={tabPanelId(ID_BASE, active)}
+          aria-labelledby={tabButtonId(ID_BASE, active)}
+        >
+          {active === 'view' && <BracketPanel />}
+          {active === 'builder' && <BracketBuilderPanel />}
+          {active === 'map-draw' && <MapDrawPanel />}
+          {active === 'veto' && <VetoPanel />}
         </div>
       </div>
     </>

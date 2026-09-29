@@ -15,6 +15,8 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import type { StaffProps } from '@/types/admin';
 import nsAdminQuickBracket from '@/lib/i18n/locales/admin-fr/adminQuickBracket';
 
@@ -127,14 +129,18 @@ function AdminQuickBracketPage(_props: StaffProps) {
     }
   }
 
+  const inputClass =
+    'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2.5 text-[var(--t1,#f4edf7)] focus:outline-none focus:ring-2 focus:ring-[var(--or,#b467d1)]';
+  const labelClass = 'mb-1 block text-sm text-[var(--t3,#a39ba6)]';
+
   return (
     <>
       <Head>
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 lg:px-8 pt-header pb-12">
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <div className="mx-auto w-full max-w-2xl">
           <Breadcrumb
             items={[
               { label: t.breadcrumbTournaments, href: '/admin/tournaments' },
@@ -142,23 +148,17 @@ function AdminQuickBracketPage(_props: StaffProps) {
             ]}
           />
 
-          <div className="mb-6 mt-4">
-            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-              {t.heading}
-            </h1>
-            <p className="mt-2 text-sm text-neutral-400">{t.description}</p>
+          <div className="mt-4">
+            <AdminPageHeader title={t.heading} subtitle={t.description} />
           </div>
 
           <form
             onSubmit={submit}
-            className="space-y-6 rounded-2xl border border-neutral-700/50 bg-neutral-800/50 p-6"
+            className="space-y-6 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6"
           >
             {/* Nom */}
             <div>
-              <label
-                htmlFor="qb-name"
-                className="mb-1 block text-sm text-neutral-400"
-              >
+              <label htmlFor="qb-name" className={labelClass}>
                 {t.nameLabel}
               </label>
               <input
@@ -167,15 +167,13 @@ function AdminQuickBracketPage(_props: StaffProps) {
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t.namePlaceholder}
                 maxLength={100}
-                className="w-full rounded-lg border border-neutral-600 bg-neutral-900/50 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={inputClass}
               />
             </div>
 
             {/* Format */}
             <div>
-              <span className="mb-1 block text-sm text-neutral-400">
-                {t.formatLabel}
-              </span>
+              <span className={labelClass}>{t.formatLabel}</span>
               <div className="grid grid-cols-2 gap-3">
                 {(
                   [
@@ -190,10 +188,10 @@ function AdminQuickBracketPage(_props: StaffProps) {
                       type="button"
                       onClick={() => setFormatType(opt.value)}
                       aria-pressed={active}
-                      className={`rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${
+                      className={`rounded-[var(--r-ctrl,4px)] border px-4 py-3 text-sm font-medium transition-colors ${
                         active
-                          ? 'border-emerald-500 bg-emerald-600/20 text-emerald-200'
-                          : 'border-neutral-600 bg-neutral-900/50 text-neutral-300 hover:bg-neutral-700/40'
+                          ? 'border-[var(--or,#b467d1)] bg-[rgba(180,103,209,.12)] text-[var(--or-200,#eec4ff)]'
+                          : 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-[var(--t2,#c7bfca)] hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]'
                       }`}
                     >
                       {opt.label}
@@ -205,10 +203,7 @@ function AdminQuickBracketPage(_props: StaffProps) {
 
             {/* Participants */}
             <div>
-              <label
-                htmlFor="qb-participants"
-                className="mb-1 block text-sm text-neutral-400"
-              >
+              <label htmlFor="qb-participants" className={labelClass}>
                 {t.participantsLabel}
               </label>
               <textarea
@@ -217,15 +212,18 @@ function AdminQuickBracketPage(_props: StaffProps) {
                 onChange={(e) => setParticipantsRaw(e.target.value)}
                 placeholder={t.participantsPlaceholder}
                 rows={8}
-                className="w-full resize-y rounded-lg border border-neutral-600 bg-neutral-900/50 px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`${inputClass} resize-y font-mono text-sm`}
               />
               <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                <span className="text-neutral-400">{t.participantsHint}</span>
+                <span className="text-[var(--t3,#a39ba6)]">
+                  {t.participantsHint}
+                </span>
                 <span
+                  data-numeric
                   className={
                     tooFew || tooMany
-                      ? 'font-medium text-amber-300'
-                      : 'font-medium text-neutral-200'
+                      ? 'font-medium text-[var(--warn,#f5a524)]'
+                      : 'font-medium text-[var(--t1,#f4edf7)]'
                   }
                 >
                   {format(
@@ -236,7 +234,7 @@ function AdminQuickBracketPage(_props: StaffProps) {
                   )}
                 </span>
                 {size !== null && !tooMany && (
-                  <span className="text-neutral-400">
+                  <span className="text-[var(--t3,#a39ba6)]" data-numeric>
                     {format(t.bracketSizeHint, { size })}
                     {byes > 0 && (
                       <>
@@ -252,7 +250,7 @@ function AdminQuickBracketPage(_props: StaffProps) {
               </div>
 
               {clientValidationMsg && (
-                <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-300">
+                <p className="mt-2 flex items-center gap-1.5 text-xs text-[var(--warn,#f5a524)]">
                   <svg
                     className="h-4 w-4 flex-shrink-0"
                     fill="none"
@@ -274,17 +272,14 @@ function AdminQuickBracketPage(_props: StaffProps) {
 
             {/* Best of */}
             <div>
-              <label
-                htmlFor="qb-bestof"
-                className="mb-1 block text-sm text-neutral-400"
-              >
+              <label htmlFor="qb-bestof" className={labelClass}>
                 {t.boLabel}
               </label>
               <select
                 id="qb-bestof"
                 value={bestOf}
                 onChange={(e) => setBestOf(Number(e.target.value) as BestOf)}
-                className="w-full rounded-lg border border-neutral-600 bg-neutral-900/50 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={inputClass}
               >
                 <option value={1}>{t.boBo1}</option>
                 <option value={3}>{t.boBo3}</option>
@@ -294,23 +289,24 @@ function AdminQuickBracketPage(_props: StaffProps) {
 
             {/* Erreur serveur */}
             {error && (
-              <div className="rounded-lg border border-red-500/50 bg-red-900/40 px-3 py-2 text-sm">
+              <div className="rounded-[var(--r-ctrl,4px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)]">
                 {error}
               </div>
             )}
 
             {/* Blurb + submit */}
-            <p className="text-xs leading-relaxed text-neutral-500">
+            <p className="text-xs leading-relaxed text-[var(--t4,#807984)]">
               {t.helperBlurb}
             </p>
 
-            <button
+            <AdminButton
+              variant="primary"
               type="submit"
               disabled={!canSubmit}
-              className="w-full rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full"
             >
               {submitting ? t.submitting : t.submit}
-            </button>
+            </AdminButton>
           </form>
         </div>
       </div>

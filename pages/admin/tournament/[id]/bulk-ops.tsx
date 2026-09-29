@@ -5,7 +5,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
@@ -14,6 +13,22 @@ import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps, StageSummary, TournamentMini } from '@/types/admin';
 import nsAdminTournamentBulkOps from '@/lib/i18n/locales/admin-fr/adminTournamentBulkOps';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4';
+const SECTION_TITLE =
+  'font-[family-name:var(--fd)] text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--t1,#f4edf7)] [font-stretch:75%]';
+const SECTION_DESC = 'mt-1 mb-4 text-xs text-[var(--t3,#a39ba6)]';
+const EYEBROW =
+  'mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
+const LABEL = 'mb-1 block text-xs text-[var(--t3,#a39ba6)]';
+const INPUT =
+  'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none disabled:opacity-50';
 
 /** Un match tel que l'écran d'opérations groupées le liste. */
 type BulkMatchRow = {
@@ -39,7 +54,7 @@ function BulkOpsPage(_: StaffProps) {
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [, setTournament] = useState<TournamentMini | null>(null);
+  const [tournament, setTournament] = useState<TournamentMini | null>(null);
   const [stages, setStages] = useState<StageSummary[]>([]);
   const [roundOptions, setRoundOptions] = useState<RoundOption[]>([]);
 
@@ -291,256 +306,241 @@ function BulkOpsPage(_: StaffProps) {
       <Head>
         <title>{t.headTitle}</title>
       </Head>
-      <div className="min-h-screen bg-neutral-950 text-white pt-header">
-        <div className="max-w-5xl mx-auto px-6 py-10">
-          <TournamentTabsNav
-            tournamentId={String(tournamentId ?? '')}
-            active="matches"
-          />
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <TournamentTabsNav
+          tournamentId={String(tournamentId ?? '')}
+          active="matches"
+        />
 
-          <div className="flex items-center justify-between gap-4 mb-6">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-                {t.eyebrow}
-              </p>
-              <h1 className="text-2xl font-semibold">{t.pageTitle}</h1>
-              <p className="text-sm text-gray-400 mt-1">{t.pageSubtitle}</p>
-            </div>
-            <Link
+        <p className={EYEBROW}>{t.breadcrumbBulkOps}</p>
+        <AdminPageHeader
+          title={tournament?.name || t.pageTitle}
+          subtitle={t.pageSubtitle}
+          actions={
+            <AdminButtonLink
               href={`/admin/tournament/${tournamentId}/matches`}
-              className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
+              variant="ghost"
+              size="sm"
             >
               {t.backToMatches}
-            </Link>
+            </AdminButtonLink>
+          }
+        />
+
+        {loading && (
+          <div className={`${CARD} text-sm text-[var(--t3,#a39ba6)]`}>
+            {t.loading}
           </div>
+        )}
 
-          {loading && (
-            <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-              {t.loading}
-            </div>
-          )}
+        {errorMsg && !loading && (
+          <div className="mb-6 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] p-4 text-sm text-[#ffc2c2]">
+            {errorMsg}
+          </div>
+        )}
 
-          {errorMsg && !loading && (
-            <div className="p-4 rounded-lg bg-red-900/60 border border-red-500/40 text-red-100 mb-6">
-              {errorMsg}
-            </div>
-          )}
-
-          {!loading && !errorMsg && (
-            <div className="space-y-8">
-              {/* Shift round */}
-              <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6">
-                <h2 className="text-lg font-semibold mb-1">{t.shiftTitle}</h2>
-                <p className="text-xs text-neutral-400 mb-4">{t.shiftDesc}</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs text-neutral-400 mb-1">
-                      {t.stageLabel}
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-sm"
-                      value={shiftStageId}
-                      onChange={(e) => {
-                        setShiftStageId(e.target.value);
-                        setShiftRoundNumber('');
-                      }}
-                    >
-                      <option value="">{t.selectPlaceholder}</option>
-                      {stages.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-neutral-400 mb-1">
-                      {t.roundLabel}
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-sm"
-                      value={shiftRoundNumber}
-                      onChange={(e) => setShiftRoundNumber(e.target.value)}
-                      disabled={!shiftStageId}
-                    >
-                      <option value="">{t.selectPlaceholder}</option>
-                      {roundOptions
-                        .filter((r) => r.stageId === shiftStageId)
-                        .map((r) => (
-                          <option key={r.roundNumber} value={r.roundNumber}>
-                            {format(t.roundOption, {
-                              n: r.roundNumber,
-                              count: r.matchCount,
-                            })}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-neutral-400 mb-1">
-                      {t.offsetLabel}
-                    </label>
-                    <input
-                      type="number"
-                      step="15"
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-sm"
-                      value={shiftOffset}
-                      onChange={(e) => setShiftOffset(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="mt-4 flex justify-end">
-                  <button
-                    onClick={submitShift}
-                    disabled={shiftBusy || !shiftStageId || !shiftRoundNumber}
-                    className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium disabled:opacity-50"
+        {!loading && !errorMsg && (
+          <div className="max-w-5xl space-y-6">
+            {/* Shift round */}
+            <section className={`${CARD} sm:p-6`}>
+              <h2 className={SECTION_TITLE}>{t.shiftTitle}</h2>
+              <p className={SECTION_DESC}>{t.shiftDesc}</p>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div>
+                  <label className={LABEL}>{t.stageLabel}</label>
+                  <select
+                    className={INPUT}
+                    value={shiftStageId}
+                    onChange={(e) => {
+                      setShiftStageId(e.target.value);
+                      setShiftRoundNumber('');
+                    }}
                   >
-                    {shiftBusy ? t.shifting : t.applyShift}
-                  </button>
+                    <option value="">{t.selectPlaceholder}</option>
+                    {stages.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </section>
+                <div>
+                  <label className={LABEL}>{t.roundLabel}</label>
+                  <select
+                    className={INPUT}
+                    value={shiftRoundNumber}
+                    onChange={(e) => setShiftRoundNumber(e.target.value)}
+                    disabled={!shiftStageId}
+                  >
+                    <option value="">{t.selectPlaceholder}</option>
+                    {roundOptions
+                      .filter((r) => r.stageId === shiftStageId)
+                      .map((r) => (
+                        <option key={r.roundNumber} value={r.roundNumber}>
+                          {format(t.roundOption, {
+                            n: r.roundNumber,
+                            count: r.matchCount,
+                          })}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={LABEL}>{t.offsetLabel}</label>
+                  <input
+                    type="number"
+                    step="15"
+                    className={`${INPUT} font-mono`}
+                    value={shiftOffset}
+                    onChange={(e) => setShiftOffset(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <AdminButton
+                  variant="danger"
+                  size="sm"
+                  onClick={submitShift}
+                  disabled={shiftBusy || !shiftStageId || !shiftRoundNumber}
+                >
+                  {shiftBusy ? t.shifting : t.applyShift}
+                </AdminButton>
+              </div>
+            </section>
 
-              {/* Reassign stage */}
-              <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6">
-                <h2 className="text-lg font-semibold mb-1">
-                  {t.reassignTitle}
-                </h2>
-                <p className="text-xs text-neutral-400 mb-4">
-                  {t.reassignDesc}
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                  <div>
-                    <label className="block text-xs text-neutral-400 mb-1">
-                      {t.sourceStageLabel}
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-sm"
-                      value={reassignSourceStageId}
-                      onChange={(e) => setReassignSourceStageId(e.target.value)}
-                    >
-                      <option value="">{t.selectPlaceholder}</option>
-                      {stages.map((s) => (
+            {/* Reassign stage */}
+            <section className={`${CARD} sm:p-6`}>
+              <h2 className={SECTION_TITLE}>{t.reassignTitle}</h2>
+              <p className={SECTION_DESC}>{t.reassignDesc}</p>
+              <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div>
+                  <label className={LABEL}>{t.sourceStageLabel}</label>
+                  <select
+                    className={INPUT}
+                    value={reassignSourceStageId}
+                    onChange={(e) => setReassignSourceStageId(e.target.value)}
+                  >
+                    <option value="">{t.selectPlaceholder}</option>
+                    {stages.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={LABEL}>{t.targetStageLabel}</label>
+                  <select
+                    className={INPUT}
+                    value={reassignTargetStageId}
+                    onChange={(e) => setReassignTargetStageId(e.target.value)}
+                  >
+                    <option value="">{t.selectPlaceholder}</option>
+                    {stages
+                      .filter((s) => s.id !== reassignSourceStageId)
+                      .map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.name}
                         </option>
                       ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-neutral-400 mb-1">
-                      {t.targetStageLabel}
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-sm"
-                      value={reassignTargetStageId}
-                      onChange={(e) => setReassignTargetStageId(e.target.value)}
-                    >
-                      <option value="">{t.selectPlaceholder}</option>
-                      {stages
-                        .filter((s) => s.id !== reassignSourceStageId)
-                        .map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
+                  </select>
                 </div>
+              </div>
 
-                {reassignSourceStageId && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-xs text-neutral-400">
-                      <span>
-                        {format(t.matchesSelectedSummary, {
-                          count: reassignMatches.length,
-                          selected: reassignSelected.size,
-                        })}
-                      </span>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={selectAllVisible}
-                          disabled={reassignMatches.length === 0}
-                          className="px-2 py-1 rounded bg-white/10 hover:bg-white/15 disabled:opacity-50"
-                        >
-                          {t.selectAll}
-                        </button>
-                        <button
-                          onClick={selectNone}
-                          disabled={reassignSelected.size === 0}
-                          className="px-2 py-1 rounded bg-white/10 hover:bg-white/15 disabled:opacity-50"
-                        >
-                          {t.selectNone}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="max-h-72 overflow-y-auto rounded-lg border border-neutral-700/50">
-                      {reassignMatches.length === 0 ? (
-                        <p className="p-4 text-sm text-neutral-500 text-center">
-                          {t.emptyStageMatches}
-                        </p>
-                      ) : (
-                        <ul className="divide-y divide-neutral-800">
-                          {reassignMatches.map((m) => (
-                            <li
-                              key={m.id}
-                              className={`flex items-center gap-3 px-3 py-2 hover:bg-white/5 cursor-pointer ${
-                                reassignSelected.has(m.id)
-                                  ? 'bg-blue-500/10'
-                                  : ''
-                              }`}
-                              onClick={() => toggleMatch(m.id)}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={reassignSelected.has(m.id)}
-                                onChange={() => toggleMatch(m.id)}
-                                className="rounded border-neutral-600 bg-neutral-700 text-blue-500"
-                              />
-                              <span className="text-sm flex-1 truncate">
-                                {m.round_name ||
-                                  format(t.roundLabel, {
-                                    n: m.round_number ?? '',
-                                  })}
-                                <span className="text-xs text-neutral-500 ml-2 font-mono">
-                                  {m.id.slice(0, 8)}
-                                </span>
-                              </span>
-                              <span className="text-xs text-neutral-400">
-                                {m.status}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div className="mt-4 flex items-center justify-between">
-                  <p className="text-xs text-neutral-500">
-                    {reassignTargetStageId &&
-                      format(t.targetSummary, {
-                        name: stageById.get(reassignTargetStageId)?.name ?? '—',
+              {reassignSourceStageId && (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--t3,#a39ba6)]">
+                    <span data-numeric>
+                      {format(t.matchesSelectedSummary, {
+                        count: reassignMatches.length,
+                        selected: reassignSelected.size,
                       })}
-                  </p>
-                  <button
-                    onClick={submitReassign}
-                    disabled={
-                      reassignBusy ||
-                      reassignSelected.size === 0 ||
-                      !reassignTargetStageId
-                    }
-                    className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
-                  >
-                    {reassignBusy
-                      ? t.moving
-                      : format(t.moveButton, { count: reassignSelected.size })}
-                  </button>
+                    </span>
+                    <div className="flex gap-2">
+                      <AdminButton
+                        variant="ghost"
+                        size="xs"
+                        onClick={selectAllVisible}
+                        disabled={reassignMatches.length === 0}
+                      >
+                        {t.selectAll}
+                      </AdminButton>
+                      <AdminButton
+                        variant="ghost"
+                        size="xs"
+                        onClick={selectNone}
+                        disabled={reassignSelected.size === 0}
+                      >
+                        {t.selectNone}
+                      </AdminButton>
+                    </div>
+                  </div>
+                  <div className="max-h-72 overflow-y-auto rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)]">
+                    {reassignMatches.length === 0 ? (
+                      <p className="p-4 text-center text-sm text-[var(--t3,#a39ba6)]">
+                        {t.emptyStageMatches}
+                      </p>
+                    ) : (
+                      <ul className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
+                        {reassignMatches.map((m) => (
+                          <li
+                            key={m.id}
+                            className={`flex cursor-pointer items-center gap-3 px-3 py-2 transition-colors hover:bg-[rgba(180,103,209,.06)] ${
+                              reassignSelected.has(m.id)
+                                ? 'bg-[rgba(180,103,209,.1)]'
+                                : ''
+                            }`}
+                            onClick={() => toggleMatch(m.id)}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={reassignSelected.has(m.id)}
+                              onChange={() => toggleMatch(m.id)}
+                              className="rounded border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] accent-[var(--or,#b467d1)]"
+                            />
+                            <span className="flex-1 truncate text-sm text-[var(--t1,#f4edf7)]">
+                              {m.round_name ||
+                                format(t.roundLabel, {
+                                  n: m.round_number ?? '',
+                                })}
+                              <span className="ml-2 font-mono text-xs text-[var(--t4,#807984)]">
+                                {m.id.slice(0, 8)}
+                              </span>
+                            </span>
+                            <Chip tone="neutral">{m.status}</Chip>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
-              </section>
-            </div>
-          )}
-        </div>
+              )}
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-[var(--t3,#a39ba6)]">
+                  {reassignTargetStageId &&
+                    format(t.targetSummary, {
+                      name: stageById.get(reassignTargetStageId)?.name ?? '—',
+                    })}
+                </p>
+                <AdminButton
+                  variant="danger"
+                  size="sm"
+                  onClick={submitReassign}
+                  disabled={
+                    reassignBusy ||
+                    reassignSelected.size === 0 ||
+                    !reassignTargetStageId
+                  }
+                >
+                  {reassignBusy
+                    ? t.moving
+                    : format(t.moveButton, { count: reassignSelected.size })}
+                </AdminButton>
+              </div>
+            </section>
+          </div>
+        )}
       </div>
     </>
   );

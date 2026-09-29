@@ -23,6 +23,10 @@ import { useAdminT } from '@/lib/i18n/useAdminT';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { format } from '@/lib/i18n/useT';
 import type { StaffProps } from '@/types/admin';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import StatTile from '@/features/admin/_shared/ui/StatTile';
 import type { NetworkFunnel } from '@/pages/api/admin/network-funnel';
 import nsAdminNetworkFunnel from '@/lib/i18n/locales/admin-fr/adminNetworkFunnel';
 
@@ -117,10 +121,19 @@ function pctOfBase(value: number | null, base: number | null): number | null {
 function Figure({ value, unknown }: { value: number | null; unknown: string }) {
   if (value === null) {
     return (
-      <span className="text-2xl font-bold text-neutral-500">{unknown}</span>
+      <span className="font-[family-name:var(--fd)] text-2xl font-extrabold text-[var(--t4,#807984)] [font-stretch:75%]">
+        {unknown}
+      </span>
     );
   }
-  return <span className="text-3xl font-bold text-white">{value}</span>;
+  return (
+    <span
+      className="font-[family-name:var(--fd)] text-[32px] font-extrabold leading-none text-[var(--t1,#f4edf7)] [font-stretch:75%]"
+      data-numeric
+    >
+      {value}
+    </span>
+  );
 }
 
 // La page ne lit pas `staff` : la garde est côté serveur (withStaffPage) et
@@ -153,95 +166,103 @@ export default function AdminNetworkFunnelPage(_props: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="mx-auto max-w-4xl px-4 py-8 text-white">
-        <h1 className="text-2xl font-bold">{t.heading}</h1>
-        <p className="mt-2 max-w-2xl text-sm text-neutral-400">{t.subtitle}</p>
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <div className="max-w-4xl">
+          <AdminPageHeader title={t.heading} subtitle={t.subtitle} />
 
-        {!data && !failed && (
-          <p className="mt-8 text-sm text-neutral-400">{t.loading}</p>
-        )}
+          {!data && !failed && (
+            <p className="text-sm text-[var(--t3,#a39ba6)]">{t.loading}</p>
+          )}
 
-        {failed && (
-          <div
-            role="alert"
-            className="mt-8 rounded-xl border border-red-500/30 bg-red-500/10 p-4"
-          >
-            <p className="text-sm text-red-200">{t.loadError}</p>
-            <button
-              type="button"
-              onClick={() => void load()}
-              className="mt-2 text-sm font-semibold text-red-100 underline underline-offset-2"
+          {failed && (
+            <div
+              role="alert"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[var(--s1,#100812)] p-4"
             >
-              {t.retry}
-            </button>
-          </div>
-        )}
-
-        {data && (
-          <>
-            <h2 className="mt-8 text-sm font-semibold uppercase tracking-widest text-neutral-400">
-              {t.stepsHeading}
-            </h2>
-            <ol className="mt-4 space-y-3">
-              {steps.map((step) => {
-                const pct = pctOfBase(step.value, step.base);
-                return (
-                  <li
-                    key={step.key}
-                    className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
-                  >
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <div>
-                        <p className="font-semibold text-white">{step.label}</p>
-                        <p className="mt-1 text-xs text-neutral-400">
-                          {step.hint}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <Figure value={step.value} unknown={t.unknown} />
-                        <p className="mt-1 text-xs text-neutral-500">
-                          {step.scope === 'global'
-                            ? t.scopeGlobal
-                            : t.scopeTenant}
-                          {pct !== null && (
-                            <> · {format(t.ofPrevious, { pct })}</>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    {step.value === null && (
-                      <p className="mt-2 text-xs text-amber-300">
-                        {t.unknownHint}
-                      </p>
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
-
-            <h2 className="mt-10 text-sm font-semibold uppercase tracking-widest text-neutral-400">
-              {t.marketsHeading}
-            </h2>
-            <p className="mt-2 text-xs text-neutral-400">{t.marketsHint}</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                <p className="text-sm text-neutral-300">
-                  {t.marketFreePlayers}
-                </p>
-                <Figure value={data.freePlayers} unknown={t.unknown} />
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                <p className="text-sm text-neutral-300">
-                  {t.marketTeamOpenings}
-                </p>
-                <Figure value={data.teamOpenings} unknown={t.unknown} />
-              </div>
+              <p className="text-sm text-[var(--err,#ff6b6b)]">{t.loadError}</p>
+              <AdminButton size="sm" onClick={() => void load()}>
+                {t.retry}
+              </AdminButton>
             </div>
-            <p className="mt-2 text-xs text-neutral-500">
-              {t.marketsActiveOnly}
-            </p>
-          </>
-        )}
+          )}
+
+          {data && (
+            <>
+              <h2 className="font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
+                {t.stepsHeading}
+              </h2>
+              <ol className="mt-4 space-y-3">
+                {steps.map((step) => {
+                  const pct = pctOfBase(step.value, step.base);
+                  return (
+                    <li
+                      key={step.key}
+                      className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-5"
+                    >
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-[15px] font-semibold text-[var(--t1,#f4edf7)]">
+                            {step.label}
+                          </p>
+                          <p className="mt-1 text-[12.5px] text-[var(--t3,#a39ba6)]">
+                            {step.hint}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <Figure value={step.value} unknown={t.unknown} />
+                          <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+                            <Chip
+                              tone={
+                                step.scope === 'global' ? 'brand' : 'neutral'
+                              }
+                            >
+                              {step.scope === 'global'
+                                ? t.scopeGlobal
+                                : t.scopeTenant}
+                            </Chip>
+                            {pct !== null && (
+                              <span
+                                className="text-xs text-[var(--t3,#a39ba6)]"
+                                data-numeric
+                              >
+                                {format(t.ofPrevious, { pct })}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {step.value === null && (
+                        <p className="mt-2 text-xs text-[var(--warn,#f5a524)]">
+                          {t.unknownHint}
+                        </p>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+
+              <h2 className="mt-10 font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
+                {t.marketsHeading}
+              </h2>
+              <p className="mt-2 text-xs text-[var(--t3,#a39ba6)]">
+                {t.marketsHint}
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <StatTile
+                  label={t.marketFreePlayers}
+                  value={data.freePlayers ?? t.unknown}
+                />
+                <StatTile
+                  label={t.marketTeamOpenings}
+                  value={data.teamOpenings ?? t.unknown}
+                />
+              </div>
+              <p className="mt-2 text-xs text-[var(--t4,#807984)]">
+                {t.marketsActiveOnly}
+              </p>
+            </>
+          )}
+        </div>
       </div>
     </>
   );

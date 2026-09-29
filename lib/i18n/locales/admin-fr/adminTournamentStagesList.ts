@@ -21,6 +21,7 @@ export default adminNs('adminTournamentStagesList', {
   breadcrumbStages: 'Phases',
   eyebrow: 'Admin · Phases',
   titleSuffix: '{name} · Phases',
+  stagesCount: '{count} phase(s)',
   viewMatches: 'Voir les matchs',
   cancel: 'Annuler',
   reorder: 'Réorganiser',

@@ -132,12 +132,15 @@ type Props = {
   breadcrumb?: boolean;
 };
 
-/** Style partagé des onglets de premier niveau. */
+/**
+ * Style partagé des onglets de premier niveau (planche « Le Ruban ») :
+ * capitales Archivo, souligné orchidée sous l'actif.
+ */
 function tabClassName(selected: boolean) {
-  return `-mb-px rounded-t-lg px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
+  return `-mb-px px-4 py-3 font-[family-name:var(--fd)] text-[13px] font-bold uppercase tracking-[0.06em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--or,#b467d1)] ${
     selected
-      ? 'border-b-2 border-purple-500 text-white'
-      : 'border-b-2 border-transparent text-neutral-400 hover:text-neutral-200'
+      ? 'text-[var(--t1,#f4edf7)] shadow-[inset_0_-2px_0_var(--or,#b467d1)]'
+      : 'text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]'
   }`;
 }
 
@@ -191,12 +194,12 @@ export default function TournamentTabsNav({
               ? '/admin/tournaments'
               : `/admin/tournament/${tournamentId}/dashboard`
           }
-          className="inline-flex w-fit items-center gap-2 text-sm text-neutral-400 hover:text-white"
+          className="inline-flex w-fit items-center gap-2 text-sm text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]"
         >
           {active === 'dashboard' ? tx.backToList : t.back}
         </Link>
 
-        <div className="flex flex-wrap items-end gap-1 border-b border-neutral-700/60">
+        <div className="flex flex-wrap items-end gap-1 border-b border-[var(--line,rgba(194,196,201,.12))]">
           {TOURNAMENT_TAB_GROUPS.map((g) => {
             const selected = g.id === active;
             return (
@@ -221,10 +224,10 @@ export default function TournamentTabsNav({
                   key={m.route}
                   href={`/admin/tournament/${tournamentId}/${m.route}`}
                   aria-current={selected ? 'page' : undefined}
-                  className={`rounded-lg px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
+                  className={`rounded-[var(--r-ctrl,4px)] border px-3 py-1.5 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.1em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--or,#b467d1)] ${
                     selected
-                      ? 'bg-neutral-800 font-medium text-white'
-                      : 'text-neutral-400 hover:bg-neutral-800/60 hover:text-neutral-200'
+                      ? 'border-[rgba(180,103,209,.4)] bg-[rgba(180,103,209,.12)] text-[var(--or-200,#eec4ff)]'
+                      : 'border-transparent text-[var(--t3,#a39ba6)] hover:border-[var(--line2,rgba(194,196,201,.2))] hover:text-[var(--t1,#f4edf7)]'
                   }`}
                 >
                   {tx[m.labelKey]}

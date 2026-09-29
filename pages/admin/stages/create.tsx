@@ -10,6 +10,9 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminStagesCreate from '@/lib/i18n/locales/admin-fr/adminStagesCreate';
 import nsAdminFfa from '@/lib/i18n/locales/admin-fr/adminFfa';
+import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { FicheLayout, FicheSection } from '@/features/admin/_shared/ui/Fiche';
 
 type StaffShape = {
   id: string;
@@ -288,347 +291,351 @@ function AdminStageCreatePage(_props: StaffProps) {
     }
   }
 
+  const formId = 'stage-create-form';
+  const inputClass =
+    'w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-sm text-[var(--t1,#f4edf7)] focus:outline-none focus:ring-2 focus:ring-[var(--or,#b467d1)]';
+  const labelClass = 'block text-sm mb-1 text-[var(--t2,#c7bfca)]';
+  const helpClass = 'text-xs text-[var(--t4,#807984)] mt-1';
+  const checkboxLabelClass =
+    'inline-flex items-center gap-2 text-sm text-[var(--t1,#f4edf7)]';
+  const checkboxClass =
+    'rounded border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)]';
+
   return (
     <>
       <Head>
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-header">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <div>
-            <button
-              type="button"
-              onClick={() => window.history.back()}
-              className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
-            >
-              {t.back}
-            </button>
-            <h1 className="text-3xl font-bold">{t.heading}</h1>
-            <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
-          </div>
-        </div>
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <button
+          type="button"
+          onClick={() => window.history.back()}
+          className="mb-3 inline-flex items-center gap-2 text-sm text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]"
+        >
+          {t.back}
+        </button>
 
-        <div className="max-w-3xl bg-neutral-800 border border-neutral-700 rounded-xl p-6 pt-header">
-          {errorMsg && (
-            <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
-              {errorMsg}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Tournoi */}
-            <section className="space-y-4">
-              <h2 className="font-semibold text-lg">
-                {t.parentTournamentTitle}
-              </h2>
-              <div>
-                <label className="block text-sm mb-1 text-neutral-300">
-                  {t.tournamentLabel} <span className="text-red-400">*</span>
-                </label>
-                <select
-                  className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={form.tournamentId}
-                  onChange={(e) => updateField('tournamentId', e.target.value)}
-                  disabled={loadingTournaments || submitting}
-                >
-                  <option value="">
-                    {loadingTournaments
-                      ? t.loadingTournaments
-                      : t.selectTournament}
-                  </option>
-                  {tournaments.map((tm) => (
-                    <option key={tm.id} value={tm.id}>
-                      {tm.name} {tm.slug ? `(${tm.slug})` : ''}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-neutral-500 mt-1">
-                  {t.tournamentHelp}
-                </p>
-              </div>
-            </section>
-
-            {/* Infos générales */}
-            <section className="space-y-4">
-              <h2 className="font-semibold text-lg">{t.generalInfoTitle}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm mb-1 text-neutral-300">
-                    {t.nameLabel} <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={form.name}
-                    onChange={(e) => updateField('name', e.target.value)}
-                    placeholder={t.namePlaceholder}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm mb-1 text-neutral-300">
-                    {t.slugLabel}
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={form.slug}
-                    onChange={(e) => updateField('slug', e.target.value)}
-                    placeholder={t.slugPlaceholder}
-                  />
-                  <p className="text-xs text-neutral-500 mt-1">{t.slugHelp}</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm mb-1 text-neutral-300">
-                    {t.stageTypeLabel}
-                  </label>
-                  <select
-                    className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={form.stage_type}
-                    onChange={(e) =>
-                      updateField(
-                        'stage_type',
-                        e.target.value as StageType | ''
-                      )
-                    }
-                  >
-                    <option value="">{t.stageTypeNone}</option>
-                    <option value="group">{t.stageTypeGroup}</option>
-                    <option value="bracket">{t.stageTypeBracket}</option>
-                    <option value="swiss">{t.stageTypeSwiss}</option>
-                    <option value="round_robin">{t.stageTypeRoundRobin}</option>
-                    <option value="showmatch">{t.stageTypeShowmatch}</option>
-                    <option value="ffa">{tf.stageTypeFfa}</option>
-                    <option value="other">{t.stageTypeOther}</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm mb-1 text-neutral-300">
-                    {t.orderLabel}
-                  </label>
-                  <input
-                    type="number"
-                    className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={form.order_index}
-                    onChange={(e) => updateField('order_index', e.target.value)}
-                    placeholder={t.orderPlaceholder}
-                  />
-                  <p className="text-xs text-neutral-500 mt-1">{t.orderHelp}</p>
-                </div>
-              </div>
-            </section>
-
-            {/* Visibilité & dates */}
-            <section className="space-y-4">
-              <h2 className="font-semibold text-lg">{t.visibilityTitle}</h2>
-
-              <div className="flex flex-col gap-3">
-                <label className="inline-flex items-center gap-2 text-sm text-neutral-200">
-                  <input
-                    type="checkbox"
-                    className="rounded border-neutral-500 bg-neutral-700"
-                    checked={form.is_active}
-                    onChange={(e) => updateField('is_active', e.target.checked)}
-                  />
-                  <span>{t.activeLabel}</span>
-                </label>
-
-                <label className="inline-flex items-center gap-2 text-sm text-neutral-200">
-                  <input
-                    type="checkbox"
-                    className="rounded border-neutral-500 bg-neutral-700"
-                    checked={form.is_public}
-                    onChange={(e) => updateField('is_public', e.target.checked)}
-                  />
-                  <span>{t.publicLabel}</span>
-                </label>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm mb-1 text-neutral-300">
-                    {t.startLabel}
-                  </label>
-                  <input
-                    type="datetime-local"
-                    className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={form.start_date}
-                    onChange={(e) => updateField('start_date', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm mb-1 text-neutral-300">
-                    {t.endLabel}
-                  </label>
-                  <input
-                    type="datetime-local"
-                    className={`w-full px-3 py-2 rounded bg-neutral-700 border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      dateError ? 'border-red-500' : 'border-neutral-600'
-                    }`}
-                    value={form.end_date}
-                    onChange={(e) => {
-                      updateField('end_date', e.target.value);
-                      setDateError(null);
-                    }}
-                  />
-                  {dateError && (
-                    <p className="text-xs text-red-400 mt-1">{dateError}</p>
-                  )}
-                </div>
-              </div>
-            </section>
-
-            {/* FFA settings (structured) */}
-            {form.stage_type === 'ffa' && (
-              <section className="space-y-4 rounded-xl border border-indigo-700/40 bg-indigo-900/10 p-4">
-                <div>
-                  <h2 className="font-semibold text-lg">{tf.settingsTitle}</h2>
-                  <p className="text-xs text-neutral-400">{tf.settingsHelp}</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm mb-1 text-neutral-300">
-                      {tf.lobbySizeLabel}
-                    </label>
-                    <input
-                      type="number"
-                      min={2}
-                      max={64}
-                      className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      value={ffaLobbySize}
-                      onChange={(e) => setFfaLobbySize(e.target.value)}
-                    />
-                    <p className="text-xs text-neutral-500 mt-1">
-                      {tf.lobbySizeHelp}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm mb-1 text-neutral-300">
-                      {tf.tiebreakLabel}
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 rounded bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      value={ffaTiebreak}
-                      onChange={(e) =>
-                        setFfaTiebreak(e.target.value as FfaTiebreak)
-                      }
-                    >
-                      <option value="best_placement">
-                        {tf.tiebreakBestPlacement}
-                      </option>
-                      <option value="total_points">
-                        {tf.tiebreakTotalPoints}
-                      </option>
-                      <option value="most_firsts">
-                        {tf.tiebreakMostFirsts}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm text-neutral-300">
-                      {tf.pointsTableLabel}
-                    </label>
-                    <button
-                      type="button"
-                      onClick={addFfaRow}
-                      className="text-xs px-2 py-1 rounded border border-neutral-600 text-neutral-200 hover:bg-neutral-700"
-                    >
-                      {tf.addRow}
-                    </button>
-                  </div>
-                  <p className="text-xs text-neutral-500 mb-2">
-                    {tf.pointsTableHelp}
-                  </p>
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-[80px_1fr_40px] gap-2 text-xs text-neutral-500 px-1">
-                      <span>{tf.placement}</span>
-                      <span>{tf.points}</span>
-                      <span />
-                    </div>
-                    {ffaPointsRows.map((row, i) => (
-                      <div
-                        key={i}
-                        className="grid grid-cols-[80px_1fr_40px] gap-2 items-center"
-                      >
-                        <input
-                          type="number"
-                          min={1}
-                          className="w-full px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          value={row.rank}
-                          onChange={(e) =>
-                            updateFfaRow(i, 'rank', e.target.value)
-                          }
-                        />
-                        <input
-                          type="number"
-                          className="w-full px-2 py-1.5 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          value={row.points}
-                          onChange={(e) =>
-                            updateFfaRow(i, 'points', e.target.value)
-                          }
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeFfaRow(i)}
-                          className="text-neutral-400 hover:text-red-400 text-sm"
-                          aria-label={tf.removeRow}
-                          title={tf.removeRow}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {/* Settings JSON */}
-            <section className="space-y-3">
-              <h2 className="font-semibold text-lg">{t.settingsTitle}</h2>
-              <p className="text-xs text-neutral-400">{t.settingsHelp}</p>
-              <textarea
-                className="w-full min-h-[180px] font-mono text-xs bg-neutral-900 border border-neutral-700 rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={form.settingsRaw}
-                onChange={(e) => updateField('settingsRaw', e.target.value)}
-                spellCheck={false}
-              />
-            </section>
-
-            {/* Actions */}
-            <div className="flex justify-between items-center pt-2">
-              <button
-                type="button"
-                className="px-4 py-2 rounded border border-neutral-600 text-neutral-200 hover:bg-neutral-800 text-sm"
+        <EntityHeader
+          crest={
+            form.name.trim()
+              ? form.name.trim().slice(0, 3).toUpperCase()
+              : undefined
+          }
+          title={form.name.trim() || t.heading}
+          meta={t.subtitle}
+          actions={
+            <>
+              <AdminButton
                 onClick={() => window.history.back()}
                 disabled={submitting}
               >
                 {t.cancel}
-              </button>
-
-              <button
+              </AdminButton>
+              <AdminButton
+                variant="primary"
                 type="submit"
+                form={formId}
                 disabled={submitting}
-                className={`px-5 py-2 rounded font-semibold text-sm ${
-                  submitting
-                    ? 'bg-blue-800 cursor-wait'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
               >
                 {submitting ? t.creating : t.submit}
-              </button>
-            </div>
-          </form>
-        </div>
+              </AdminButton>
+            </>
+          }
+        />
+
+        {errorMsg && (
+          <div className="mb-6 rounded-[var(--r-ctrl,4px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-sm text-[var(--t1,#f4edf7)]">
+            {errorMsg}
+          </div>
+        )}
+
+        <form id={formId} onSubmit={handleSubmit}>
+          <FicheLayout
+            main={
+              <>
+                {/* Infos générales */}
+                <FicheSection title={t.generalInfoTitle}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>
+                        {t.nameLabel}{' '}
+                        <span className="text-[var(--err,#ff6b6b)]">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className={inputClass}
+                        value={form.name}
+                        onChange={(e) => updateField('name', e.target.value)}
+                        placeholder={t.namePlaceholder}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>{t.slugLabel}</label>
+                      <input
+                        type="text"
+                        className={inputClass}
+                        value={form.slug}
+                        onChange={(e) => updateField('slug', e.target.value)}
+                        placeholder={t.slugPlaceholder}
+                      />
+                      <p className={helpClass}>{t.slugHelp}</p>
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>{t.stageTypeLabel}</label>
+                      <select
+                        className={inputClass}
+                        value={form.stage_type}
+                        onChange={(e) =>
+                          updateField(
+                            'stage_type',
+                            e.target.value as StageType | ''
+                          )
+                        }
+                      >
+                        <option value="">{t.stageTypeNone}</option>
+                        <option value="group">{t.stageTypeGroup}</option>
+                        <option value="bracket">{t.stageTypeBracket}</option>
+                        <option value="swiss">{t.stageTypeSwiss}</option>
+                        <option value="round_robin">
+                          {t.stageTypeRoundRobin}
+                        </option>
+                        <option value="showmatch">
+                          {t.stageTypeShowmatch}
+                        </option>
+                        <option value="ffa">{tf.stageTypeFfa}</option>
+                        <option value="other">{t.stageTypeOther}</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>{t.orderLabel}</label>
+                      <input
+                        type="number"
+                        className={inputClass}
+                        value={form.order_index}
+                        onChange={(e) =>
+                          updateField('order_index', e.target.value)
+                        }
+                        placeholder={t.orderPlaceholder}
+                      />
+                      <p className={helpClass}>{t.orderHelp}</p>
+                    </div>
+                  </div>
+                </FicheSection>
+
+                {/* FFA settings (structured) */}
+                {form.stage_type === 'ffa' && (
+                  <FicheSection title={tf.settingsTitle}>
+                    <p className="-mt-3 mb-4 text-xs text-[var(--t3,#a39ba6)]">
+                      {tf.settingsHelp}
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelClass}>
+                          {tf.lobbySizeLabel}
+                        </label>
+                        <input
+                          type="number"
+                          min={2}
+                          max={64}
+                          className={inputClass}
+                          value={ffaLobbySize}
+                          onChange={(e) => setFfaLobbySize(e.target.value)}
+                        />
+                        <p className={helpClass}>{tf.lobbySizeHelp}</p>
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>{tf.tiebreakLabel}</label>
+                        <select
+                          className={inputClass}
+                          value={ffaTiebreak}
+                          onChange={(e) =>
+                            setFfaTiebreak(e.target.value as FfaTiebreak)
+                          }
+                        >
+                          <option value="best_placement">
+                            {tf.tiebreakBestPlacement}
+                          </option>
+                          <option value="total_points">
+                            {tf.tiebreakTotalPoints}
+                          </option>
+                          <option value="most_firsts">
+                            {tf.tiebreakMostFirsts}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <label className="text-sm text-[var(--t2,#c7bfca)]">
+                          {tf.pointsTableLabel}
+                        </label>
+                        <AdminButton size="xs" onClick={addFfaRow}>
+                          {tf.addRow}
+                        </AdminButton>
+                      </div>
+                      <p className="mb-2 text-xs text-[var(--t4,#807984)]">
+                        {tf.pointsTableHelp}
+                      </p>
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-[80px_1fr_40px] gap-2 px-1 text-xs text-[var(--t4,#807984)]">
+                          <span>{tf.placement}</span>
+                          <span>{tf.points}</span>
+                          <span />
+                        </div>
+                        {ffaPointsRows.map((row, i) => (
+                          <div
+                            key={i}
+                            className="grid grid-cols-[80px_1fr_40px] items-center gap-2"
+                          >
+                            <input
+                              type="number"
+                              min={1}
+                              className={inputClass}
+                              value={row.rank}
+                              onChange={(e) =>
+                                updateFfaRow(i, 'rank', e.target.value)
+                              }
+                            />
+                            <input
+                              type="number"
+                              className={inputClass}
+                              value={row.points}
+                              onChange={(e) =>
+                                updateFfaRow(i, 'points', e.target.value)
+                              }
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeFfaRow(i)}
+                              className="text-sm text-[var(--t3,#a39ba6)] hover:text-[var(--err,#ff6b6b)]"
+                              aria-label={tf.removeRow}
+                              title={tf.removeRow}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </FicheSection>
+                )}
+
+                {/* Settings JSON */}
+                <FicheSection title={t.settingsTitle}>
+                  <p className="-mt-3 mb-3 text-xs text-[var(--t3,#a39ba6)]">
+                    {t.settingsHelp}
+                  </p>
+                  <textarea
+                    className="min-h-[180px] w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-3 font-mono text-xs text-[var(--t1,#f4edf7)] focus:outline-none focus:ring-2 focus:ring-[var(--or,#b467d1)]"
+                    value={form.settingsRaw}
+                    onChange={(e) => updateField('settingsRaw', e.target.value)}
+                    spellCheck={false}
+                  />
+                </FicheSection>
+              </>
+            }
+            aside={
+              <>
+                {/* Tournoi */}
+                <FicheSection eyebrow title={t.parentTournamentTitle}>
+                  <label className={labelClass}>
+                    {t.tournamentLabel}{' '}
+                    <span className="text-[var(--err,#ff6b6b)]">*</span>
+                  </label>
+                  <select
+                    className={inputClass}
+                    value={form.tournamentId}
+                    onChange={(e) =>
+                      updateField('tournamentId', e.target.value)
+                    }
+                    disabled={loadingTournaments || submitting}
+                  >
+                    <option value="">
+                      {loadingTournaments
+                        ? t.loadingTournaments
+                        : t.selectTournament}
+                    </option>
+                    {tournaments.map((tm) => (
+                      <option key={tm.id} value={tm.id}>
+                        {tm.name} {tm.slug ? `(${tm.slug})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className={helpClass}>{t.tournamentHelp}</p>
+                </FicheSection>
+
+                {/* Visibilité & dates */}
+                <FicheSection eyebrow title={t.visibilityTitle}>
+                  <div className="flex flex-col gap-3">
+                    <label className={checkboxLabelClass}>
+                      <input
+                        type="checkbox"
+                        className={checkboxClass}
+                        checked={form.is_active}
+                        onChange={(e) =>
+                          updateField('is_active', e.target.checked)
+                        }
+                      />
+                      <span>{t.activeLabel}</span>
+                    </label>
+
+                    <label className={checkboxLabelClass}>
+                      <input
+                        type="checkbox"
+                        className={checkboxClass}
+                        checked={form.is_public}
+                        onChange={(e) =>
+                          updateField('is_public', e.target.checked)
+                        }
+                      />
+                      <span>{t.publicLabel}</span>
+                    </label>
+                  </div>
+
+                  <div className="mt-4 flex flex-col gap-4">
+                    <div>
+                      <label className={labelClass}>{t.startLabel}</label>
+                      <input
+                        type="datetime-local"
+                        className={inputClass}
+                        value={form.start_date}
+                        onChange={(e) =>
+                          updateField('start_date', e.target.value)
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>{t.endLabel}</label>
+                      <input
+                        type="datetime-local"
+                        className={`${inputClass} ${
+                          dateError ? 'border-[var(--err,#ff6b6b)]' : ''
+                        }`}
+                        value={form.end_date}
+                        onChange={(e) => {
+                          updateField('end_date', e.target.value);
+                          setDateError(null);
+                        }}
+                      />
+                      {dateError && (
+                        <p className="mt-1 text-xs text-[var(--err,#ff6b6b)]">
+                          {dateError}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </FicheSection>
+              </>
+            }
+          />
+        </form>
       </div>
     </>
   );

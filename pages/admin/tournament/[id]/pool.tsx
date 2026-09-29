@@ -25,6 +25,9 @@ import { format as fmt } from '@/lib/i18n/useT';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 import type { StaffProps } from '@/types/admin';
 import type {
   AdminPoolEntry,
@@ -36,13 +39,15 @@ export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
 });
 
-const card = 'rounded-2xl border border-neutral-700/50 bg-neutral-800/40 p-5';
-const btn =
-  'rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-50 transition-colors';
-const btnPrimary = `${btn} bg-violet-600 text-white hover:bg-violet-500`;
-const btnGhost = `${btn} border border-neutral-600 text-neutral-200 hover:bg-neutral-700/50`;
+const card =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4';
+/** Bloc logé dans une carte (une équipe, le placement manuel). */
+const inner =
+  'rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)]';
+const sectionTitle =
+  'font-[family-name:var(--fd)] text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--t1,#f4edf7)] [font-stretch:75%]';
 const input =
-  'rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-white';
+  'rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-1.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 const NEW_TEAM = '__new__';
 
@@ -145,21 +150,21 @@ export default function AdminTournamentPoolPage(_: StaffProps) {
   if (state === 'loading') {
     return (
       <Shell id={tournamentId} title={t.headTitle}>
-        <p className="text-neutral-400">{t.loading}</p>
+        <p className="text-[var(--t3,#a39ba6)]">{t.loading}</p>
       </Shell>
     );
   }
   if (state === 'notPooled') {
     return (
       <Shell id={tournamentId} title={t.headTitle}>
-        <p className="text-amber-200">{t.notPooled}</p>
+        <p className="text-[#ffd9a3]">{t.notPooled}</p>
       </Shell>
     );
   }
   if (state === 'error' || !view) {
     return (
       <Shell id={tournamentId} title={t.headTitle}>
-        <p className="text-red-300" role="alert">
+        <p className="text-[var(--err,#ff6b6b)]" role="alert">
           {t.loadError}
         </p>
       </Shell>
@@ -194,36 +199,37 @@ export default function AdminTournamentPoolPage(_: StaffProps) {
 
   return (
     <Shell id={tournamentId} title={t.headTitle}>
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{t.title}</h1>
-          <p className="mt-1 max-w-3xl text-sm text-neutral-400">
-            {t.subtitle}
-          </p>
-          <p className="mt-2 text-sm text-neutral-300" data-testid="pool-stats">
-            {fmt(t.stats, {
-              teams: String(view.squads.length),
-              placed: String(placedCount),
-              waiting: String(view.waitlist.length),
-            })}
-          </p>
-        </div>
-        <button
-          type="button"
-          className={btnGhost}
-          onClick={() => void load()}
-          disabled={busy}
-        >
-          {t.refresh}
-        </button>
-      </div>
+      <AdminPageHeader
+        title={t.title}
+        subtitle={<span className="block max-w-3xl">{t.subtitle}</span>}
+        actions={
+          <AdminButton size="sm" onClick={() => void load()} disabled={busy}>
+            {t.refresh}
+          </AdminButton>
+        }
+      />
+      <p
+        className="-mt-4 mb-6 text-sm text-[var(--t2,#c7bfca)]"
+        data-testid="pool-stats"
+        data-numeric
+      >
+        {fmt(t.stats, {
+          teams: String(view.squads.length),
+          placed: String(placedCount),
+          waiting: String(view.waitlist.length),
+        })}
+      </p>
 
       {/* 1) Proposition */}
       <section className={`${card} mb-6`} data-testid="pool-proposal">
-        <h2 className="text-lg font-semibold">{t.proposalTitle}</h2>
-        <p className="mt-1 text-sm text-neutral-400">{t.proposalHelp}</p>
+        <h2 className={sectionTitle}>{t.proposalTitle}</h2>
+        <p className="mt-1 text-sm text-[var(--t3,#a39ba6)]">
+          {t.proposalHelp}
+        </p>
         {view.proposal.squads.length === 0 ? (
-          <p className="mt-4 text-sm text-neutral-400">{t.proposalEmpty}</p>
+          <p className="mt-4 text-sm text-[var(--t3,#a39ba6)]">
+            {t.proposalEmpty}
+          </p>
         ) : (
           <ul className="mt-4 grid gap-3 md:grid-cols-2">
             {view.proposal.squads.map((sq, i) => {
@@ -232,22 +238,19 @@ export default function AdminTournamentPoolPage(_: StaffProps) {
               const name =
                 mixedNames[i] ?? fmt(t.proposalMixedDefault, { n: String(n) });
               return (
-                <li
-                  key={sq.entryIds.join('-')}
-                  className="rounded-xl border border-neutral-700/60 bg-neutral-900/40 p-4"
-                >
-                  <p className="font-medium">
+                <li key={sq.entryIds.join('-')} className={`${inner} p-4`}>
+                  <p className="font-medium text-[var(--t1,#f4edf7)]">
                     {isMixed
                       ? t.proposalMixed
                       : fmt(t.proposalCore, { team: sq.teamName })}
                   </p>
-                  <ul className="mt-2 space-y-1 text-sm text-neutral-300">
+                  <ul className="mt-2 space-y-1 text-sm text-[var(--t2,#c7bfca)]">
                     {sq.entryIds.map((eid) => {
                       const e = byId.get(eid);
                       return (
                         <li key={eid}>
                           {e?.displayName}{' '}
-                          <span className="text-neutral-500">
+                          <span className="text-[var(--t4,#807984)]">
                             {e?.originTeamName ?? t.noTeam}
                           </span>
                         </li>
@@ -255,7 +258,7 @@ export default function AdminTournamentPoolPage(_: StaffProps) {
                     })}
                   </ul>
                   {isMixed && (
-                    <label className="mt-3 block text-xs text-neutral-400">
+                    <label className="mt-3 block text-xs text-[var(--t3,#a39ba6)]">
                       {t.proposalMixedName}
                       <input
                         className={`${input} mt-1 w-full`}
@@ -270,9 +273,10 @@ export default function AdminTournamentPoolPage(_: StaffProps) {
                       />
                     </label>
                   )}
-                  <button
-                    type="button"
-                    className={`${btnPrimary} mt-3`}
+                  <AdminButton
+                    variant="secondary"
+                    size="xs"
+                    className="mt-3"
                     disabled={busy || (isMixed && name.trim().length < 2)}
                     onClick={() =>
                       void run(
@@ -291,14 +295,14 @@ export default function AdminTournamentPoolPage(_: StaffProps) {
                     }
                   >
                     {t.proposalApply}
-                  </button>
+                  </AdminButton>
                 </li>
               );
             })}
           </ul>
         )}
         {view.proposal.leftoverIds.length > 0 && (
-          <p className="mt-4 text-sm text-amber-200">
+          <p className="mt-4 text-sm text-[#ffd9a3]">
             {fmt(t.proposalLeftover, {
               count: String(view.proposal.leftoverIds.length),
             })}
@@ -309,27 +313,30 @@ export default function AdminTournamentPoolPage(_: StaffProps) {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* 2) Liste d'attente + placement manuel */}
         <section className={card} data-testid="pool-waitlist">
-          <h2 className="text-lg font-semibold">{t.waitlistTitle}</h2>
+          <h2 className={sectionTitle}>{t.waitlistTitle}</h2>
           {view.waitlist.length === 0 ? (
-            <p className="mt-3 text-sm text-neutral-400">{t.waitlistEmpty}</p>
+            <p className="mt-3 text-sm text-[var(--t3,#a39ba6)]">
+              {t.waitlistEmpty}
+            </p>
           ) : (
             <div className="mt-3 space-y-4">
               {groups.map((g) => (
                 <div key={g.key || 'none'}>
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
+                  <p className="font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t4,#807984)] [font-stretch:75%]">
                     {g.label} · {g.entries.length}
                   </p>
                   <ul className="mt-1 space-y-1">
                     {g.entries.map((e) => (
                       <li key={e.id}>
-                        <label className="flex cursor-pointer items-center gap-2 text-sm">
+                        <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--t2,#c7bfca)]">
                           <input
                             type="checkbox"
+                            className="accent-[var(--or,#b467d1)]"
                             checked={selected.has(e.id)}
                             onChange={() => toggle(e.id)}
                           />
                           <span>{e.displayName}</span>
-                          <span className="text-neutral-500">
+                          <span className="text-[var(--t4,#807984)]">
                             {e.battleTag}
                           </span>
                         </label>
@@ -339,15 +346,15 @@ export default function AdminTournamentPoolPage(_: StaffProps) {
                 </div>
               ))}
 
-              <div className="rounded-xl border border-neutral-700/60 bg-neutral-900/40 p-3">
-                <p className="text-sm font-medium">
+              <div className={`${inner} p-3`}>
+                <p className="text-sm font-medium text-[var(--t1,#f4edf7)]">
                   {t.manualTitle} ·{' '}
-                  <span className="text-neutral-400">
+                  <span className="text-[var(--t3,#a39ba6)]">
                     {fmt(t.manualSelected, { count: String(selection.length) })}
                   </span>
                 </p>
                 <div className="mt-2 flex flex-wrap items-end gap-2">
-                  <label className="text-xs text-neutral-400">
+                  <label className="text-xs text-[var(--t3,#a39ba6)]">
                     {t.manualTarget}
                     <select
                       className={`${input} mt-1 block`}
@@ -363,7 +370,7 @@ export default function AdminTournamentPoolPage(_: StaffProps) {
                     </select>
                   </label>
                   {target === NEW_TEAM && (
-                    <label className="text-xs text-neutral-400">
+                    <label className="text-xs text-[var(--t3,#a39ba6)]">
                       {t.manualNewTeamName}
                       <input
                         className={`${input} mt-1 block`}
@@ -373,9 +380,9 @@ export default function AdminTournamentPoolPage(_: StaffProps) {
                       />
                     </label>
                   )}
-                  <button
-                    type="button"
-                    className={btnPrimary}
+                  <AdminButton
+                    variant="primary"
+                    size="sm"
                     disabled={!canPlace}
                     onClick={() =>
                       void run(
@@ -394,7 +401,7 @@ export default function AdminTournamentPoolPage(_: StaffProps) {
                     }
                   >
                     {t.manualPlace}
-                  </button>
+                  </AdminButton>
                 </div>
               </div>
             </div>
@@ -403,34 +410,29 @@ export default function AdminTournamentPoolPage(_: StaffProps) {
 
         {/* 3) Équipes inscrites */}
         <section className={card} data-testid="pool-squads">
-          <h2 className="text-lg font-semibold">{t.squadsTitle}</h2>
+          <h2 className={sectionTitle}>{t.squadsTitle}</h2>
           {view.squads.length === 0 ? (
-            <p className="mt-3 text-sm text-neutral-400">{t.squadsEmpty}</p>
+            <p className="mt-3 text-sm text-[var(--t3,#a39ba6)]">
+              {t.squadsEmpty}
+            </p>
           ) : (
             <ul className="mt-3 space-y-3">
               {view.squads.map((s) => (
-                <li
-                  key={s.teamId}
-                  className="rounded-xl border border-neutral-700/60 bg-neutral-900/40 p-3"
-                >
-                  <p className="flex flex-wrap items-center gap-2 font-medium">
+                <li key={s.teamId} className={`${inner} p-3`}>
+                  <p className="flex flex-wrap items-center gap-2 font-medium text-[var(--t1,#f4edf7)]">
                     {s.teamName}
-                    {s.mixed && (
-                      <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-xs text-sky-200">
-                        {t.squadMixed}
-                      </span>
-                    )}
+                    {s.mixed && <Chip tone="brand">{t.squadMixed}</Chip>}
                     {s.members.length > 0 && s.members.length < size && (
-                      <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-200">
+                      <Chip tone="warn">
                         {fmt(t.squadIncomplete, {
                           count: String(s.members.length),
                           size: String(size),
                         })}
-                      </span>
+                      </Chip>
                     )}
                   </p>
                   {s.members.length === 0 ? (
-                    <p className="mt-1 text-xs text-neutral-500">
+                    <p className="mt-1 text-xs text-[var(--t4,#807984)]">
                       {t.squadNoPool}
                     </p>
                   ) : (
@@ -438,11 +440,11 @@ export default function AdminTournamentPoolPage(_: StaffProps) {
                       {s.members.map((m) => (
                         <li
                           key={m.id}
-                          className="flex items-center justify-between gap-2 text-sm"
+                          className="flex items-center justify-between gap-2 text-sm text-[var(--t2,#c7bfca)]"
                         >
                           <span>
                             {m.displayName}{' '}
-                            <span className="text-neutral-500">
+                            <span className="text-[var(--t4,#807984)]">
                               {m.originTeamName && m.originTeamId !== s.teamId
                                 ? fmt(t.fromTeam, { team: m.originTeamName })
                                 : m.battleTag}
@@ -450,7 +452,7 @@ export default function AdminTournamentPoolPage(_: StaffProps) {
                           </span>
                           <button
                             type="button"
-                            className="text-xs text-neutral-400 underline-offset-2 hover:text-white hover:underline disabled:opacity-50"
+                            className="text-xs text-[var(--t3,#a39ba6)] underline-offset-2 hover:text-[var(--t1,#f4edf7)] hover:underline disabled:opacity-50"
                             disabled={busy}
                             onClick={() =>
                               void run({ action: 'unplace', entryId: m.id })
@@ -486,8 +488,8 @@ function Shell({
       <Head>
         <title>{title}</title>
       </Head>
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="mx-auto max-w-7xl px-4 pb-12 pt-header sm:px-6 lg:px-8">
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <div>
           <TournamentTabsNav tournamentId={id} active="stages" />
           {children}
         </div>

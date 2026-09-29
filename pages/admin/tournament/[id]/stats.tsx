@@ -14,6 +14,7 @@ import Tabs, {
   tabButtonId,
 } from '@/components/admin/Tabs';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import StatsOverviewPanel from '@/components/admin/tournament/StatsOverviewPanel';
 import StatsAnalyticsPanel from '@/components/admin/tournament/StatsAnalyticsPanel';
 import StatsPodiumPanel from '@/components/admin/tournament/StatsPodiumPanel';
@@ -52,9 +53,11 @@ export default function AdminTournamentStatsPage(_: StaffProps) {
         <title>{nav.tabStats}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <div>
           <TournamentTabsNav tournamentId={tournamentId} active="results" />
+
+          <AdminPageHeader title={nav.tabStats} />
 
           <Tabs
             tabs={tabs}

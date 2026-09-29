@@ -3,7 +3,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
@@ -18,6 +17,16 @@ import {
 } from '@/config/tournament-templates';
 import type { StaffProps, StageType, StageSummary } from '@/types/admin';
 import nsAdminTournamentStagesList from '@/lib/i18n/locales/admin-fr/adminTournamentStagesList';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4';
+const EYEBROW =
+  'mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
 
 export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
@@ -223,30 +232,33 @@ function StagesPage(_: StaffProps) {
       <Head>
         <title>{t.pageTitle}</title>
       </Head>
-      <div className="min-h-screen bg-neutral-950 text-white pt-header">
-        <div className="max-w-6xl mx-auto px-6 py-10">
-          <TournamentTabsNav
-            tournamentId={String(tournamentId ?? '')}
-            active="stages"
-          />
-          <div className="flex items-center justify-between gap-4 mb-6">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-purple-200/80">
-                {t.eyebrow}
-              </p>
-              <h1 className="text-2xl font-semibold">
-                {format(t.titleSuffix, { name: tournamentName })}
-              </h1>
-            </div>
-            <div className="flex gap-2">
-              <Link
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <TournamentTabsNav
+          tournamentId={String(tournamentId ?? '')}
+          active="stages"
+        />
+
+        <p className={EYEBROW}>{t.breadcrumbStages}</p>
+        <AdminPageHeader
+          title={tournamentName}
+          subtitle={
+            loading
+              ? undefined
+              : format(t.stagesCount, { count: stages.length })
+          }
+          actions={
+            <>
+              <AdminButtonLink
                 href={`/admin/tournament/${tournamentId}/matches`}
-                className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-sm hover:bg-white/15"
+                variant="ghost"
+                size="sm"
               >
                 {t.viewMatches}
-              </Link>
+              </AdminButtonLink>
               {stages.length > 1 && (
-                <button
+                <AdminButton
+                  variant={reorderMode ? 'danger' : 'ghost'}
+                  size="sm"
                   onClick={() => {
                     if (reorderMode && orderChanged) {
                       // Cancel: refetch original order
@@ -257,146 +269,151 @@ function StagesPage(_: StaffProps) {
                       setReorderMode(!reorderMode);
                     }
                   }}
-                  className={`px-3 py-1.5 rounded-lg border text-sm ${
-                    reorderMode
-                      ? 'bg-red-500/20 border-red-400/40 text-red-200 hover:bg-red-500/30'
-                      : 'bg-white/10 border-white/15 hover:bg-white/15'
-                  }`}
                 >
                   {reorderMode ? t.cancel : t.reorder}
-                </button>
+                </AdminButton>
               )}
               {reorderMode && orderChanged && (
-                <button
+                <AdminButton
+                  variant="primary"
+                  size="sm"
                   onClick={saveOrder}
                   disabled={reordering}
-                  className="px-3 py-1.5 rounded-lg bg-purple-600 border border-purple-400/40 text-sm hover:bg-purple-500 disabled:opacity-50"
                 >
                   {reordering ? t.saving : t.saveOrder}
-                </button>
+                </AdminButton>
               )}
-              <button
+              <AdminButton
+                variant="secondary"
+                size="sm"
                 onClick={openTemplateModal}
-                className="px-3 py-1.5 rounded-lg bg-blue-600/80 border border-blue-400/40 text-sm hover:bg-blue-500"
               >
                 {t.addTemplateBlock}
-              </button>
-              <button
+              </AdminButton>
+              <AdminButton
+                variant="ghost"
+                size="sm"
                 onClick={() => fetchStages()}
-                className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm hover:bg-white/10"
               >
                 {t.refresh}
-              </button>
-            </div>
+              </AdminButton>
+            </>
+          }
+        />
+
+        {loading && (
+          <div className={`${CARD} text-sm text-[var(--t3,#a39ba6)]`}>
+            {t.loading}
           </div>
+        )}
 
-          {loading && (
-            <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-              {t.loading}
-            </div>
-          )}
+        {errorMsg && !loading && (
+          <div className="rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] p-4 text-sm text-[#ffc2c2]">
+            {errorMsg}
+          </div>
+        )}
 
-          {errorMsg && !loading && (
-            <div className="p-4 rounded-lg bg-red-900/60 border border-red-500/40 text-red-100">
-              {errorMsg}
-            </div>
-          )}
+        {!loading && !errorMsg && stages.length === 0 && (
+          <div className={`${CARD} text-sm text-[var(--t3,#a39ba6)]`}>
+            {t.empty}
+          </div>
+        )}
 
-          {!loading && !errorMsg && stages.length === 0 && (
-            <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-              {t.empty}
-            </div>
-          )}
-
-          {stages.length > 0 && (
-            <div
-              className={
-                reorderMode
-                  ? 'flex flex-col gap-3'
-                  : 'grid grid-cols-1 md:grid-cols-2 gap-4'
-              }
-            >
-              {getSortedStages().map((stage, idx) => (
-                <div
-                  key={stage.id}
-                  className={`p-4 rounded-xl bg-white/5 border ${
-                    reorderMode ? 'border-purple-400/30' : 'border-white/10'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3 mb-2">
-                    <div className="flex items-center gap-3">
-                      {reorderMode && (
-                        <div className="flex flex-col gap-1">
-                          <button
-                            onClick={() => moveStage(idx, 'up')}
-                            disabled={idx === 0}
-                            className="px-2 py-0.5 rounded bg-white/10 border border-white/15 text-xs hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                            title={t.moveUp}
-                          >
-                            &#9650;
-                          </button>
-                          <button
-                            onClick={() => moveStage(idx, 'down')}
-                            disabled={idx === stages.length - 1}
-                            className="px-2 py-0.5 rounded bg-white/10 border border-white/15 text-xs hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                            title={t.moveDown}
-                          >
-                            &#9660;
-                          </button>
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-sm font-semibold">{stage.name}</p>
-                        <p className="text-xs text-gray-400">
-                          {typeLabel(t, stage.stage_type)} · {t.orderPrefix}
-                          {stage.order_index ?? '—'}
-                        </p>
+        {stages.length > 0 && (
+          <div
+            className={
+              reorderMode
+                ? 'flex max-w-4xl flex-col gap-3'
+                : 'grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3'
+            }
+          >
+            {getSortedStages().map((stage, idx) => (
+              <div
+                key={stage.id}
+                className={`rounded-[var(--r-card,14px)] border bg-[var(--s1,#100812)] p-4 ${
+                  reorderMode
+                    ? 'border-[rgba(180,103,209,.45)]'
+                    : 'border-[var(--line2,rgba(194,196,201,.2))]'
+                }`}
+              >
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    {reorderMode && (
+                      <div className="flex flex-col gap-1">
+                        <AdminButton
+                          variant="ghost"
+                          size="xs"
+                          onClick={() => moveStage(idx, 'up')}
+                          disabled={idx === 0}
+                          title={t.moveUp}
+                          aria-label={t.moveUp}
+                        >
+                          &#9650;
+                        </AdminButton>
+                        <AdminButton
+                          variant="ghost"
+                          size="xs"
+                          onClick={() => moveStage(idx, 'down')}
+                          disabled={idx === stages.length - 1}
+                          title={t.moveDown}
+                          aria-label={t.moveDown}
+                        >
+                          &#9660;
+                        </AdminButton>
                       </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-[15px] font-semibold text-[var(--t1,#f4edf7)]">
+                        {stage.name}
+                      </p>
+                      <p className="text-xs text-[var(--t3,#a39ba6)]">
+                        {typeLabel(t, stage.stage_type)} · {t.orderPrefix}
+                        <span className="font-mono">
+                          {stage.order_index ?? '—'}
+                        </span>
+                      </p>
                     </div>
-                    <Link
-                      href={`/admin/stages/${stage.id}`}
-                      className="text-sm px-3 py-1 rounded-lg bg-white/10 border border-white/15 hover:bg-white/15"
-                    >
-                      {t.open}
-                    </Link>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-300">
-                    <span
-                      className={`px-2 py-0.5 rounded-full border ${
-                        stage.is_active
-                          ? 'border-emerald-400/50 text-emerald-200'
-                          : 'border-gray-500/40 text-gray-300'
-                      }`}
-                    >
-                      {stage.is_active ? t.active : t.inactive}
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full border ${
-                        stage.is_public
-                          ? 'border-blue-300/50 text-blue-200'
-                          : 'border-gray-500/40 text-gray-300'
-                      }`}
-                    >
-                      {stage.is_public ? t.public : t.private}
-                    </span>
+                  <AdminButtonLink
+                    href={`/admin/stages/${stage.id}`}
+                    variant="ghost"
+                    size="xs"
+                  >
+                    {t.open}
+                  </AdminButtonLink>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Chip tone={stage.is_active ? 'ok' : 'neutral'}>
+                    {stage.is_active ? t.active : t.inactive}
+                  </Chip>
+                  <Chip tone={stage.is_public ? 'brand' : 'neutral'}>
+                    {stage.is_public ? t.public : t.private}
+                  </Chip>
+                </div>
+                {(stage.start_date || stage.end_date) && (
+                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--t3,#a39ba6)]">
                     {stage.start_date && (
-                      <span className="px-2 py-0.5 rounded-full border border-white/10 text-gray-200">
+                      <span>
                         {t.startsAt}
-                        {new Date(stage.start_date).toLocaleString()}
+                        <span className="font-mono text-[var(--t2,#c7bfca)]">
+                          {new Date(stage.start_date).toLocaleString()}
+                        </span>
                       </span>
                     )}
                     {stage.end_date && (
-                      <span className="px-2 py-0.5 rounded-full border border-white/10 text-gray-200">
+                      <span>
                         {t.endsAt}
-                        {new Date(stage.end_date).toLocaleString()}
+                        <span className="font-mono text-[var(--t2,#c7bfca)]">
+                          {new Date(stage.end_date).toLocaleString()}
+                        </span>
                       </span>
                     )}
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Template Append Modal */}
@@ -411,22 +428,24 @@ function StagesPage(_: StaffProps) {
         size="lg"
         footer={
           <>
-            <button
+            <AdminButton
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 setShowTemplateModal(false);
                 setSelectedTemplate(null);
               }}
-              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
             >
               {t.cancel}
-            </button>
-            <button
+            </AdminButton>
+            <AdminButton
+              variant="primary"
+              size="sm"
               onClick={handleAppendTemplate}
               disabled={!selectedTemplate || applyingTemplate}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {applyingTemplate ? t.applying : t.addStages}
-            </button>
+            </AdminButton>
           </>
         }
       >
@@ -436,14 +455,17 @@ function StagesPage(_: StaffProps) {
               key={tpl.id}
               type="button"
               onClick={() => setSelectedTemplate(tpl)}
-              className={`p-3 rounded-xl border text-left transition-all ${
+              aria-pressed={selectedTemplate?.id === tpl.id}
+              className={`rounded-[var(--r-card,14px)] border p-3 text-left transition-colors ${
                 selectedTemplate?.id === tpl.id
-                  ? 'bg-blue-600/20 border-blue-500/50 ring-1 ring-blue-500/30'
-                  : 'bg-neutral-900/50 border-neutral-700 hover:bg-neutral-800 hover:border-neutral-600'
+                  ? 'border-[rgba(180,103,209,.55)] bg-[rgba(180,103,209,.12)]'
+                  : 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] hover:border-[var(--t4,#807984)]'
               }`}
             >
-              <div className="font-medium text-sm">{tpl.name}</div>
-              <div className="text-xs text-neutral-400 mt-0.5">
+              <div className="text-sm font-medium text-[var(--t1,#f4edf7)]">
+                {tpl.name}
+              </div>
+              <div className="mt-0.5 text-xs text-[var(--t3,#a39ba6)]">
                 {tpl.description}
               </div>
               <div className="flex flex-wrap gap-1.5 mt-2">

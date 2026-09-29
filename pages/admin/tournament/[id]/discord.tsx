@@ -9,6 +9,9 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import {
   DISCORD_CHANNEL_TYPES,
@@ -19,6 +22,10 @@ import type { StaffProps } from '@/types/admin';
 import nsAdminTournamentDiscord from '@/lib/i18n/locales/admin-fr/adminTournamentDiscord';
 
 type ChannelType = DiscordChannelType;
+
+const LABEL = 'mb-1 block text-xs text-[var(--t3,#a39ba6)]';
+const INPUT =
+  'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 font-mono text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 type WebhookRow = {
   id: string;
@@ -214,32 +221,36 @@ function DiscordConfigPage(_: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <div className="max-w-5xl">
           <TournamentTabsNav
             tournamentId={String(tournamentId ?? '')}
             active="settings"
           />
 
-          <h1 className="text-3xl font-bold tracking-tight mb-1">
-            {t.heading}
-          </h1>
-          <p className="text-sm text-neutral-400 mb-4">
-            {t.introBefore}
-            <Link
-              href="/admin/site-settings?tab=discord"
-              className="underline hover:text-white"
-            >
-              {t.introLinkMaster}
-            </Link>
-            {t.introMiddle}
-            <code className="bg-neutral-800 px-1 rounded">admin</code>
-            {t.introAfter}
-          </p>
+          <AdminPageHeader
+            title={t.heading}
+            subtitle={
+              <>
+                {t.introBefore}
+                <Link
+                  href="/admin/site-settings?tab=discord"
+                  className="underline hover:text-[var(--t1,#f4edf7)]"
+                >
+                  {t.introLinkMaster}
+                </Link>
+                {t.introMiddle}
+                <code className="rounded-[3px] bg-[var(--s2,#1d1520)] px-1">
+                  admin
+                </code>
+                {t.introAfter}
+              </>
+            }
+          />
 
-          <div className="mb-8 rounded-2xl border border-indigo-500/30 bg-indigo-500/5 p-4 flex items-start gap-3">
+          <div className="mb-8 flex items-start gap-3 rounded-[var(--r-card,14px)] border border-[rgba(180,103,209,.4)] bg-[rgba(180,103,209,.08)] p-4">
             <svg
-              className="w-5 h-5 text-indigo-300 flex-shrink-0 mt-0.5"
+              className="mt-0.5 h-5 w-5 flex-shrink-0 text-[var(--or-300,#dea3f6)]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -251,11 +262,11 @@ function DiscordConfigPage(_: StaffProps) {
                 d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <div className="text-xs text-indigo-100/90">
+            <div className="text-xs text-[var(--t2,#c7bfca)]">
               {t.strategyBefore}
               <Link
                 href="/admin/site-settings?tab=discord"
-                className="underline font-semibold hover:text-white"
+                className="font-semibold underline hover:text-[var(--t1,#f4edf7)]"
               >
                 {t.strategyLink}
               </Link>
@@ -265,12 +276,12 @@ function DiscordConfigPage(_: StaffProps) {
 
           {loading && (
             <div className="flex items-center justify-center py-20">
-              <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--or,#b467d1)]" />
             </div>
           )}
 
           {errorMsg && !loading && (
-            <div className="p-4 rounded-xl bg-red-900/40 border border-red-500/50 text-sm">
+            <div className="rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] p-4 text-sm text-[#ffc2c2]">
               {errorMsg}
             </div>
           )}
@@ -286,47 +297,41 @@ function DiscordConfigPage(_: StaffProps) {
                 return (
                   <div
                     key={ct}
-                    className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-5"
+                    className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-5"
                   >
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div>
-                        <h3 className="text-lg font-semibold">{meta.label}</h3>
-                        <p className="text-xs text-neutral-400 mt-1">
+                        <h3 className="font-[family-name:var(--fd)] text-[15px] font-bold uppercase tracking-[0.06em] text-[var(--t1,#f4edf7)]">
+                          {meta.label}
+                        </h3>
+                        <p className="mt-1 text-xs text-[var(--t3,#a39ba6)]">
                           {meta.description}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {scoped ? (
-                          <span
-                            title={t.overrideActiveTitle}
-                            className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30"
-                          >
+                          <Chip tone="ok" title={t.overrideActiveTitle}>
                             {t.overrideActive}
-                          </span>
+                          </Chip>
                         ) : fallback ? (
                           <Link
                             href="/admin/site-settings?tab=discord"
                             title={t.masterFallbackTitle}
-                            className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30 hover:bg-amber-600/30 transition-colors"
+                            className="inline-flex h-[22px] items-center whitespace-nowrap rounded-[3px] border border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.13)] px-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.12em] text-[#ffd9a3] transition-colors [font-stretch:75%] hover:bg-[rgba(245,165,36,.22)]"
                           >
                             {t.masterFallback}
                           </Link>
                         ) : (
-                          <span
-                            title={t.notConfiguredTitle}
-                            className="px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-600/20 text-neutral-400 border border-neutral-500/30"
-                          >
+                          <Chip title={t.notConfiguredTitle}>
                             {t.notConfigured}
-                          </span>
+                          </Chip>
                         )}
                       </div>
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-[1fr_auto] mb-3">
                       <div>
-                        <label className="block text-xs text-neutral-400 mb-1">
-                          {t.webhookUrlLabel}
-                        </label>
+                        <label className={LABEL}>{t.webhookUrlLabel}</label>
                         <input
                           type="text"
                           placeholder="https://discord.com/api/webhooks/..."
@@ -337,11 +342,11 @@ function DiscordConfigPage(_: StaffProps) {
                               [ct]: { ...d[ct], webhookUrl: e.target.value },
                             }))
                           }
-                          className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                          className={INPUT}
                         />
                       </div>
                       <div className="flex items-end gap-2">
-                        <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--t2,#c7bfca)]">
                           <input
                             type="checkbox"
                             checked={draft.isActive}
@@ -351,7 +356,7 @@ function DiscordConfigPage(_: StaffProps) {
                                 [ct]: { ...d[ct], isActive: e.target.checked },
                               }))
                             }
-                            className="w-4 h-4 rounded border-neutral-600 bg-neutral-900"
+                            className="h-4 w-4 accent-[var(--or,#b467d1)]"
                           />
                           {t.active}
                         </label>
@@ -359,9 +364,7 @@ function DiscordConfigPage(_: StaffProps) {
                     </div>
 
                     <div className="mb-3">
-                      <label className="block text-xs text-neutral-400 mb-1">
-                        {t.roleMentionLabel}
-                      </label>
+                      <label className={LABEL}>{t.roleMentionLabel}</label>
                       <input
                         type="text"
                         placeholder="1234567890123456789"
@@ -372,11 +375,11 @@ function DiscordConfigPage(_: StaffProps) {
                             [ct]: { ...d[ct], roleMention: e.target.value },
                           }))
                         }
-                        className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                        className={INPUT}
                       />
-                      <p className="text-xs text-neutral-500 mt-1">
+                      <p className="mt-1 text-xs text-[var(--t4,#807984)]">
                         {t.roleHintBefore}
-                        <code className="bg-neutral-900 px-1 rounded">
+                        <code className="rounded-[3px] bg-[var(--s2,#1d1520)] px-1">
                           \@LeRole
                         </code>
                         {t.roleHintAfter}
@@ -384,31 +387,30 @@ function DiscordConfigPage(_: StaffProps) {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
+                      <AdminButton
+                        variant="secondary"
+                        size="sm"
                         onClick={() => save(ct)}
                         disabled={saving[ct] || !draft.webhookUrl.trim()}
-                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
                       >
                         {saving[ct] ? t.saving : t.save}
-                      </button>
-                      <button
-                        type="button"
+                      </AdminButton>
+                      <AdminButton
+                        size="sm"
                         onClick={() => test(ct)}
                         disabled={saving[ct]}
-                        className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
                       >
                         {t.test}
-                      </button>
+                      </AdminButton>
                       {scoped && (
-                        <button
-                          type="button"
+                        <AdminButton
+                          variant="danger"
+                          size="sm"
                           onClick={() => remove(ct)}
                           disabled={saving[ct]}
-                          className="px-4 py-2 rounded-xl bg-red-700/50 hover:bg-red-700 text-sm font-medium transition-colors disabled:opacity-50"
                         >
                           {t.delete}
-                        </button>
+                        </AdminButton>
                       )}
                     </div>
                   </div>
