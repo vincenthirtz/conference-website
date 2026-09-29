@@ -105,13 +105,30 @@ défaut fait échouer la connexion en 429 — que la page `/login` affiche comme
 
 ## Dans la CI
 
-Le workflow [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml)
-découpe la suite en **quatre tranches** parallèles
-(`--shard=N/4 --reporter=blob`). Chacune a **sa propre** Supabase — les specs
-sèment et nettoient, deux tranches sur une même base se marcheraient dessus.
-Un job `merge-reports` fusionne les rapports en un seul rapport HTML
-(artefact `playwright-report`), même quand des tranches échouent. Les
-navigateurs Playwright sont en cache (clé : version de `@playwright/test`).
+Le workflow [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml) :
+
+- **Huit tranches** parallèles (`--shard=N/8`), chacune avec **sa propre**
+  Supabase — les specs sèment et nettoient, deux tranches sur une même base se
+  marcheraient dessus. Deux workers par tranche, pas plus : 59 fichiers sont
+  en mode `serial` et toutes les specs partagent la base de leur tranche.
+- Dans chaque tranche, `supabase start` tourne **en arrière-plan** pendant
+  `npm ci` + `next build` ; l'app est ensuite servie en **`next start`**
+  (`E2E_SERVER=start`), sans compilation à la demande. En local, `next dev`
+  comme avant. La clé anon inlinée au build est la clé de démonstration
+  publique et déterministe de la CLI ; une étape vérifie qu'elle correspond à
+  l'instance et reconstruit sinon.
+- Services Supabase réduits (`-x studio,postgres-meta,imgproxy,…`), cache du
+  build Next (`.next/cache`), du npm et des navigateurs Playwright.
+- **Sur push : projet `chromium` seul.** Le projet `mobile` (Pixel 7) tourne
+  la nuit, et en manuel si la case `mobile` est cochée.
+- Réglages CI de Playwright : timeout 60 s par test (les tests verts vont
+  jusqu'à ~48 s, p95 ≈ 7 s), actions et navigations 15 s, `expect` 10 s,
+  `retries: 0` (un second essai doublerait le coût des échecs connus),
+  trace conservée à l'échec, pas de vidéo, `forbidOnly`.
+- Rapports : `blob` par tranche + annotations `github` ; un job
+  `merge-reports` fusionne le tout (artefact `playwright-report`), même quand
+  des tranches échouent.
+- `concurrency` : un nouveau push annule le run en cours de la même branche.
 
 Il refuse de démarrer tant que `supabase/migrations/` est vide, avec un message
 qui renvoie ici.
@@ -120,11 +137,21 @@ Déclenchement : manuel (*Actions → e2e → Run workflow*, une fois le workflo
 présent sur la branche par défaut), une fois par nuit, et à chaque push sur
 les branches de validation `admin-industrialisation` et `e2e-baseline` (code de
 prod + infra e2e seule : la référence qui départage régressions et échecs
-préexistants). Pas à chaque push sur `work` — la suite est longue, et la CI
-rapide (typecheck + unitaires) reste le filet du quotidien.
+préexistants). Pas à chaque push sur `work` — la CI rapide (typecheck +
+unitaires) reste le filet du quotidien.
 
 Playwright ne cherche que dans `tests/e2e/` (`testDir`) : avec `./tests`, il
 ramassait les `*.test.ts` de Vitest et s'arrêtait à la collecte.
+
+### Écarté
+
+- **Sessions pré-connectées (`storageState`)** : chaque spec crée ses propres
+  comptes (`createTestPlayer` / `createTestStaff`, e-mails dédiés, équipes et
+  rôles propres). Une session partagée par rôle casserait cette isolation et
+  changerait ce que les specs vérifient.
+- **Cache des images Docker** : le pull (~40 s) est déjà recouvert par
+  `npm ci` + `next build` ; un `docker save/load` d'environ 1 Go n'y gagnerait
+  rien.
 
 ## Toute nouvelle migration, à partir de là
 
