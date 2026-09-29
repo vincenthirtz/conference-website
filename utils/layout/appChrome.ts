@@ -34,10 +34,13 @@ export function resolveAppChrome(pathname: string): AppChrome {
     pathname !== '/player/[userId]';
   const isEmbed = pathname.startsWith('/embed');
   const isOverlay = pathname.startsWith('/overlay');
+  // Aperçus de développement (404 en production) : ils montent leur propre
+  // coquille, comme un overlay.
+  const isDevPreview = pathname.startsWith('/dev/');
   // Retours OAuth / liens magiques et accès refusé : 200 sans contenu à indexer.
   const isTechnical = pathname.startsWith('/auth/') || pathname === '/403';
 
-  const bare = isEmbed || isOverlay;
+  const bare = isEmbed || isOverlay || isDevPreview;
   const appScope = isAdmin || isCaster || isPlayer;
 
   return {

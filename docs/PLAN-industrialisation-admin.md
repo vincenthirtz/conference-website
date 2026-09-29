@@ -537,26 +537,43 @@ erreurs serveur sont refaits à chaque fois.
 - `testing-library` ne nettoie pas le DOM seul sans les globals de vitest :
   `afterEach(cleanup)` dans chaque `*.test.tsx`.
 
-### L12 · Kit UI admin + jetons « Le Ruban » — 🟧 / L
+### L12 · L'admin en « Le Ruban » — 🟨 FONDATIONS + COQUILLE LIVRÉES (2026-09-29)
 
-**Problème.** Pas de gabarit de page commun ; 72 styles inline ; le design system « Le Ruban »
-(direction A verrouillée le 2026-09-05) n'est pas migré dans le code. Chaque écran recompose en-tête,
-actions, sections, statistiques.
+**Direction** : aucune nouvelle. L'identité « Le Ruban » est verrouillée depuis le 2026-09-05 et
+son canvas contient déjà six planches admin (pilotage du jour, tableau de bord tournoi, Liste,
+Fiche, régie, système). La refonte les pose ; aperçu validé le 2026-09-29 :
+https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
 
-**Livrable.**
-- Jetons CSS « Le Ruban » (palette exacte du logo, ardoise = le trait) dans une feuille admin ;
-  **tous avec valeur de repli** (piège du jeton non défini qui casse toute la déclaration).
-- Primitives : `AdminPage` (titre, fil d'Ariane, actions, onglets), `Section`, `StatGrid`,
-  `Toolbar`, `Drawer`, `Callout` ; `Modal`, `ConfirmDialog`, `StatusBadge`, `EmptyState`,
-  `Skeleton` alignés dessus.
-- Page catalogue `/admin/_kit` (owner seulement) : chaque primitive dans ses états, sert de banc
-  visuel Playwright.
-- Cliquet `style={{` : 72 → 0 (hors valeurs dynamiques justifiées).
+**Livré**
+- [x] **Fondations** [`styles/admin-ruban.css`](../styles/admin-ruban.css), portée
+      `[data-surface="admin"]` (posée par `_app` sur `/admin`) : jetons exacts de la planche
+      « Du dessin au code », polices Archivo + Instrument Sans (`next/font`, sans préchargement
+      côté public), titres en capitales condensées, en-têtes de table en « eyebrow », chiffres
+      tabulaires, focus orchidée, deux rayons (4 / 14 px). Le site public ne bouge pas.
+- [x] **Pont Tailwind — compromis validé** : dans l'admin seulement, gris → encre, violets →
+      orchidée exacte, rampes « jaunes » → orchidée (pas de jaune de marque), froids → feuille.
+      Les 133 écrans changent d'un coup ; chaque écran repasse aux jetons nommés à sa découpe.
+- [x] **Coquille** [`features/admin/_shared/shell/AdminShell.tsx`](../features/admin/_shared/shell/AdminShell.tsx) :
+      barre latérale par sections (sous-sections repliées, dépliées quand elles contiennent la
+      page), recherche → palette ⌘K, bandeau (fil d'Ariane, badge d'alertes, rôle, profil),
+      tiroir sous `lg`. Remplace l'ancienne barre à menus déroulants (supprimée) ; mêmes droits
+      (`filterAdminLinks`), même badge d'alertes (logique sortie dans `useAdminAlertsCount`).
+- [x] Onglets (`role="tab"`), puces d'état (`data-chip`) et boutons d'action alignés sur les
+      planches par CSS de portée admin — l'espace joueuse, qui partage ces composants, ne
+      bouge pas.
+- [x] Vérifié en capture réelle (Playwright, 1440 px et 400 px) sur
+      [`/dev/admin-preview`](../pages/dev/admin-preview.tsx) — vraie coquille, balisage copié des
+      écrans actuels. **404 en production.** Les écrans réels, derrière connexion staff, n'ont pas
+      été capturés.
 
-**Critères d'acceptation**
-- [ ] `/admin/_kit` rend toutes les primitives en clair et en sombre.
-- [ ] Captures Playwright de référence du kit en CI.
-- [ ] Contraste AA vérifié sur les jetons.
+**Reste**
+- [ ] Archétypes exacts (Liste, Fiche, pilotage du jour, tableau de bord tournoi) : avec les lots
+      de découpe L15–L20.
+- [ ] Bouton d'action principal en vert feuille (« NOUVELLE ÉQUIPE » des planches) : aujourd'hui
+      les CTA restent orchidée ; à trancher écran par écran (vert = le jeu).
+- [ ] Captures avant / après sur les écrans réels à chaque lot (garde-fou de la planche) — demande
+      une session staff de test.
+- [ ] Libellé du rôle dans le bandeau (« OWNER ») : `formatStaffRoleLabel` renvoie l'anglais.
 
 ### L13 · DataTable v2 : pagination serveur, vues, virtualisation — 🟨 SOCLE LIVRÉ (2026-09-29) · pilote adhérents
 

@@ -33,8 +33,11 @@ const SCAN_DIRS = ['pages', 'components'];
 // en français figé, port au pixel des overlays de l'app desktop (mêmes
 // libellés que src/overlays/*.html du repo womenscup-caster). Ce n'est pas de
 // l'UI utilisateur : pas d'i18n, comme sur le desktop.
+// pages/dev : aperçus de développement (404 en production, cf.
+// pages/dev/admin-preview.tsx) — jamais servis à une utilisatrice.
 const EXCLUDED_DIR_SEGMENTS: string[] = [
   path.join('components', 'overlay', 'caster'),
+  path.join('pages', 'dev'),
 ];
 
 // Curated allowlist of accepted accented snippets (brand copy, etc.). Keep this

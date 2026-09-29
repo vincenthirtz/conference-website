@@ -58,7 +58,11 @@ describe('resolveAppChrome', () => {
   });
 
   it('iframes et overlays OBS : pages nues', () => {
-    for (const p of ['/embed/bracket/[id]', '/overlay/day']) {
+    for (const p of [
+      '/embed/bracket/[id]',
+      '/overlay/day',
+      '/dev/admin-preview',
+    ]) {
       expect(resolveAppChrome(p)).toMatchObject({
         bare: true,
         navbar: false,
