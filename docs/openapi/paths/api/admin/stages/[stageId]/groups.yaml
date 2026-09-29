@@ -3,6 +3,7 @@ parameters:
 get:
   summary: List groups in a stage.
   operationId: adminListStageGroups
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -22,6 +23,7 @@ get:
 post:
   summary: Create a group in a stage.
   operationId: adminCreateStageGroup
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -31,6 +33,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId]/groups.body
           type: object
           additionalProperties: true
   responses:
@@ -48,6 +51,7 @@ post:
 put:
   summary: Replace groups in a stage (bulk).
   operationId: adminReplaceStageGroups
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -57,6 +61,7 @@ put:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId]/groups.body
           type: object
           additionalProperties: true
   responses:

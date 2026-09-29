@@ -8,6 +8,7 @@ parameters:
 get:
   summary: List stages of a tournament.
   operationId: adminListTournamentStages
+  x-zod-query: admin.tournament/[id]/checkin.query
   tags:
     - admin/tournaments
   security:
@@ -31,6 +32,7 @@ get:
 post:
   summary: Add a stage to a tournament.
   operationId: adminCreateTournamentStage
+  x-zod-query: admin.tournament/[id]/checkin.query
   tags:
     - admin/tournaments
   security:
@@ -40,8 +42,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournament/[id]/stages.create
   responses:
     '201':
       description: Created.
@@ -54,6 +55,7 @@ post:
 patch:
   summary: Reorder / patch stages of a tournament.
   operationId: adminPatchTournamentStages
+  x-zod-query: admin.tournament/[id]/checkin.query
   tags:
     - admin/tournaments
   security:
@@ -63,8 +65,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournament/[id]/stages.update
   responses:
     '200':
       description: Updated.

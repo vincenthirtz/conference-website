@@ -30,6 +30,7 @@ get:
     affiche EXACTEMENT ce que la liste d'anomalies juge, donc les deux viennent
     du meme appel.
   operationId: adminGetTournamentScheduleDiagnostics
+  x-zod-query: admin.tournament/[id]/schedule-diagnostics.query
   tags:
     - admin/tournaments
   security:

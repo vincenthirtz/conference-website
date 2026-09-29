@@ -8,6 +8,7 @@ parameters:
 get:
   summary: List scheduling / roster conflicts for a tournament.
   operationId: adminGetTournamentConflicts
+  x-zod-query: admin.tournament/[id]/checkin.query
   tags:
     - admin/tournaments
   security:

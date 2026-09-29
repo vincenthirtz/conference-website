@@ -1,6 +1,7 @@
 get:
   summary: List tournaments of the active tenant.
   operationId: adminListTournaments
+  x-zod-query: admin.tournaments.query
   tags:
     - admin/tournaments
   security:
@@ -26,8 +27,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournaments.create
   responses:
     '201':
       description: Created.

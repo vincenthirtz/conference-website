@@ -11,6 +11,7 @@ post:
     - admin/matches
   summary: Commit one ban/pick step on the draft.
   operationId: adminCommitMatchDraftStep
+  x-zod-query: admin.matches/[matchId]/drafts/[gameIndex].query
   description: |
     `stepNumber` must equal `current_step + 1`. Transitions
     pending → in_progress on step 1, in_progress → completed once the
@@ -25,6 +26,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.matches/[matchId]/drafts/[gameIndex]/commit.body
           $ref: '#/components/schemas/CommitMatchDraftStepRequest'
   responses:
     '200':

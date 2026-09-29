@@ -4,6 +4,7 @@ get:
   summary: Analytics for a single match (games, vetos, timing).
   description: Requires `manager` role.
   operationId: adminGetMatchAnalytics
+  x-zod-query: admin.matches/[matchId]/sub.query
   tags:
     - admin/matches
   security:

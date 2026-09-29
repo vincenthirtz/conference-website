@@ -3,6 +3,7 @@ parameters:
 post:
   summary: Generate the next Swiss round pairings.
   operationId: adminGenerateSwissRound
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -12,6 +13,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId]/generate-swiss-round.body
           type: object
           additionalProperties: true
   responses:

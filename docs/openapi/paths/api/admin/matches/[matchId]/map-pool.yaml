@@ -10,6 +10,7 @@ get:
     only ever recorded placeholders such as "Map 1". Writes are normalised
     server-side against this same pool.
   operationId: adminGetMatchMapPool
+  x-zod-query: admin.matches/[matchId]/sub-fr.query
   tags:
     - admin/matches
   security:

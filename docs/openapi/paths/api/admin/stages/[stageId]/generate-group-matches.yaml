@@ -3,6 +3,7 @@ parameters:
 post:
   summary: Generate round-robin matches inside each group.
   operationId: adminGenerateGroupMatches
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -12,6 +13,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId]/generate-group-matches.body
           type: object
           additionalProperties: true
   responses:

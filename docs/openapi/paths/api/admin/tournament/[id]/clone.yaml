@@ -8,6 +8,7 @@ parameters:
 post:
   summary: Clone a tournament (stages + matches scaffolding, no scores).
   operationId: adminCloneTournament
+  x-zod-query: admin.tournament/[id]/checkin.query
   tags:
     - admin/tournaments
   security:
@@ -17,8 +18,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournament/[id]/clone.body
   responses:
     '201':
       description: Cloned.

@@ -13,6 +13,7 @@ get:
     vote were settled now (same rule as the settlement), and the frozen winner
     once closed. Voter identifiers are never returned.
   operationId: adminTournamentMvpVotes
+  x-zod-query: admin.tournament/[id]/stats.query
   tags:
     - admin/tournaments
   security:

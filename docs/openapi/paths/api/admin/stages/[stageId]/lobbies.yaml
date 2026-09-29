@@ -3,6 +3,7 @@ parameters:
 get:
   summary: List FFA lobbies of a stage with placements and computed standings.
   operationId: adminListStageLobbies
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -26,6 +27,7 @@ get:
 post:
   summary: Create an FFA lobby in a stage.
   operationId: adminCreateStageLobby
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -35,6 +37,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId]/lobbies.create
           type: object
           additionalProperties: true
   responses:

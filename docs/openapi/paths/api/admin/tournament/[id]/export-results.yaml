@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Export final results / standings / rankings.
   operationId: adminExportTournamentResults
+  x-zod-query: admin.tournament/[id]/export-results.query
   tags:
     - admin/tournaments
   security:

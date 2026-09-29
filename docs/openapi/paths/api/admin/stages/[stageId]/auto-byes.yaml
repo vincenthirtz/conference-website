@@ -3,6 +3,7 @@ parameters:
 post:
   summary: Generate auto-byes for the stage when team count is non-power-of-2.
   operationId: adminAutoByesStage
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -12,6 +13,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId]/auto-byes.body
           type: object
           additionalProperties: true
   responses:

@@ -42,6 +42,12 @@ export type StaffLogAction =
   | 'update_group_assignments'
   | 'auto_distribute_groups'
   | 'generate_group_matches'
+  // Snapshots de bracket et overrides de départage (ex-`other` +
+  // `payload.subject`, qui reste dans le payload).
+  | 'create_bracket_snapshot'
+  | 'restore_bracket_snapshot'
+  | 'set_tiebreaker_override'
+  | 'remove_tiebreaker_override'
   // --- Matchs ---
   | 'create_match'
   | 'update_match'
@@ -234,6 +240,8 @@ export type StaffLogAction =
   | 'ticket_closed'
   | 'process_demande'
   | 'notify_scrim_captains'
+  // Relance des capitaines/managers à l'ouverture d'un tournoi (ex-`other`).
+  | 'notify_tournament_captains'
   | 'requestMoreInfo'
   | 'resend_credentials'
   // --- Blacklist ---

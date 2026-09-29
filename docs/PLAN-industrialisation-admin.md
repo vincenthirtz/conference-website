@@ -54,7 +54,7 @@ importent les fichiers touchés. Hooks extraits relus contre l'original (corps i
   `RegistrationFieldsEditor`, `ChoiceCard`/`BigChip` du quiz ; `TenantSwitcher.tsx` non importé) ;
 - `TenantSwitcher.tsx` : non monté depuis 28afe291 (mai 2026) mais gardé exprès « au cas où » —
   NON supprimé ; à trancher (le garder = le passer en Ruban le jour où on le remonte) ;
-- phases 1–2 : vagues serveur 1-2 faites (157 routes) ; restent 155 routes hors `defineAdminRoute` —
+- phases 1–2 : vagues serveur 1-3 faites (232 routes) ; restent 80 routes hors `defineAdminRoute` —
   gros domaines : tournament (32), stages (22), tenants (22), matches (20), events (20), twitch
   (17), teams (14), tcg (12)… ; `select('*')` 64 ; cache client généralisé (L10).
 
@@ -336,6 +336,14 @@ routes de lecture pour éprouver l'API, puis domaine par domaine (lots 15–20).
       `tcg/{association,overlay-theme}` (upload), `instagram|tiktok/{authorize,callback}` (OAuth).
       Défauts PRÉEXISTANTS signalés : `PATCH segments/[segId]` n'écrit jamais `obs_scene` (→ 400
       `EMPTY_UPDATE` depuis ObsSegmentBridge) ; insertion `staff` avec `email` NULL (colonne NOT NULL).
+- [x] **Vague serveur 3 (2026-09-29) — 75 routes** : `tournament`/`tournaments` (34), `stages` (22),
+      `matches` (19). Hors `defineAdminRoute` 155 → 80, `select('*')` 60 → 17. Laissées :
+      `tournament/[id]/finalize` (deux journaux), `matches/[matchId]/evidence` (upload 15 Mo).
+      **Défauts d'isolation PRÉEXISTANTS signalés, non corrigés** (ids venant du corps ou de l'URL
+      non recoupés avec le tenant du staff) : litiges de match (`…Unscoped`), cast-assignments
+      POST, lineups, auto-byes, batch-scores, clone (`targetTournamentId`), stage teams POST,
+      bracket/matches POST (stageId, team*_id, next_match_*_id), discord-webhooks PUT ; et
+      l'undo de bulk-matches écrit `snapshots[].fields` tel quel dans `matches`.
 - [ ] Temps de réponse inchangé (± 5 ms) — **non mesuré** : demande la prod ; le wrapper
       n'ajoute aucune requête, seulement la résolution de garde que faisait déjà
       `withStaffRoute`.

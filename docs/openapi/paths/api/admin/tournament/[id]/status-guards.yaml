@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Compute status guards (preconditions to transition states).
   operationId: adminGetTournamentStatusGuards
+  x-zod-query: admin.tournament/[id]/checkin.query
   tags:
     - admin/tournaments
   security:

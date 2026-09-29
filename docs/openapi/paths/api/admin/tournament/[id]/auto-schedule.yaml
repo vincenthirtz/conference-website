@@ -20,6 +20,7 @@ post:
     montrer les conflits, c'est sa raison d'etre. Le defaut reste l'ecriture,
     pour ne pas casser les appels existants.
   operationId: adminAutoScheduleTournament
+  x-zod-query: admin.tournament/[id]/stats.query
   tags:
     - admin/tournaments
   security:
@@ -29,8 +30,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournament/[id]/auto-schedule.body
   responses:
     '200':
       description: Scheduled.

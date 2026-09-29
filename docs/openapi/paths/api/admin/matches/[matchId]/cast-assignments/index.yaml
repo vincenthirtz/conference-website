@@ -3,6 +3,7 @@ parameters:
 get:
   summary: List cast assignments on a match.
   operationId: adminListMatchCastAssignments
+  x-zod-query: admin.matches/[matchId]/sub-fr.query
   tags:
     - admin/matches
   security:
@@ -22,6 +23,7 @@ get:
 post:
   summary: Assign a caster/observer/director to a match.
   operationId: adminCreateMatchCastAssignment
+  x-zod-query: admin.matches/[matchId]/sub-fr.query
   tags:
     - admin/matches
   security:
@@ -31,6 +33,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.matches/[matchId]/cast-assignments.create
           type: object
           additionalProperties: true
   responses:

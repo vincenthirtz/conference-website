@@ -3,6 +3,7 @@ parameters:
 get:
   summary: Match audit history (status, score, dispute transitions).
   operationId: adminGetMatchHistory
+  x-zod-query: admin.matches/[matchId]/sub.query
   tags:
     - admin/matches
   security:

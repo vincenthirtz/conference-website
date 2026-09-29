@@ -3,6 +3,7 @@ parameters:
 get:
   summary: Compute standings of a stage.
   operationId: adminGetStageStandings
+  x-zod-query: admin.stages/[stageId]/standings.query
   tags:
     - admin/stages
   security:

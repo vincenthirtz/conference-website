@@ -11,6 +11,31 @@
 
 import type { ApiContractEntry } from '../index';
 import {
+  RatingSeedBody,
+  RatingSeedingPreviewQuery,
+  SeedingPreviewQuery,
+  SnapshotListQuery,
+  StageAdvanceBody,
+  StageAutoByesBody,
+  StageAutoSeedBody,
+  StageBatchScoresBody,
+  StageBulkMatchesBody,
+  StageCloneBody,
+  StageDeleteQuery,
+  StageGroupMatchesBody,
+  StageGroupsBody,
+  StageHistoryQuery,
+  StageIdQuery,
+  StageLobbyCreateBody,
+  StageManualSeedBody,
+  StageSnapshotBody,
+  StageStandingsQuery,
+  StageSwissRoundBody,
+  StageTeamsBody,
+  StageUpdateBody,
+  TiebreakerOverrideBody,
+} from '../../../features/admin/stages/schemas';
+import {
   TwitchChannelBody,
   TwitchChannelIdQuery,
   TwitchChannelListQuery,
@@ -197,7 +222,201 @@ import {
   WebhookPatchDoc,
 } from '../../../features/admin/tenants/schemas';
 
+import {
+  CheckinNudgeBody,
+  DisputeOpenBody,
+  DisputeResolveBody,
+  DraftCommitBody,
+  DraftInitBody,
+  DraftSideBody,
+  MatchByIdQuery,
+  MatchCastAssignmentBody,
+  MatchCastAssignmentIdQuery,
+  MatchCastAssignmentPatchBody,
+  MatchDisputeQuery,
+  MatchDraftQuery,
+  MatchIdFrQuery,
+  MatchIdQuery,
+  MatchLineupBody,
+  MatchLineupQuery,
+  MatchSearchQuery,
+  MatchUpdateBody,
+  MvpImportBody,
+  MvpPublicLooseBody,
+  VetoStepBody,
+  VetoUnlockBody,
+} from '../../../features/admin/matches/schemas';
+
+import {
+  ApplyTemplateBody,
+  AutoScheduleBody,
+  BracketBody,
+  BulkMatchesBody,
+  CheckinSettingsBody,
+  CloneTournamentBody,
+  CodedTournamentIdQuery,
+  DashboardQuery,
+  DiscordTestBody,
+  DiscordWebhookBody,
+  DiscordWebhooksQuery,
+  ExportResultsQuery,
+  NotifyCaptainsBody,
+  OverlayDayBody,
+  PoolLooseBody,
+  PrizePoolLooseBody,
+  RosterUnlockBody,
+  ScheduleDiagnosticsQuery,
+  ScheduleMoveLooseBody,
+  StageCreateBody,
+  StageReorderBody,
+  TournamentCreateBody,
+  TournamentDetailQuery,
+  TournamentHistoryQuery,
+  TournamentIdLowerQuery,
+  TournamentIdQuery,
+  TournamentListQuery,
+  TournamentMatchesCreateBody,
+  TournamentMatchesQuery,
+  TournamentPatchBody,
+  TournamentTeamAddBody,
+  TournamentTeamEntryQuery,
+  TournamentTeamPatchBody,
+  TournamentTeamsQuery,
+} from '../../../features/admin/tournaments/schemas';
+
 export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
+  // Tournoi : hub, structure, équipes, matchs, planning, exploitation
+  // (features/admin/tournaments, vague serveur 3). Corps « historiques » en
+  // `looseBody` : champs nommés, validés par le service.
+  'admin.tournaments.create': { schema: TournamentCreateBody, io: 'input' },
+  'admin.tournament/[id].update': { schema: TournamentPatchBody, io: 'input' },
+  'admin.tournament/[id]/apply-template.body': {
+    schema: ApplyTemplateBody,
+    io: 'input',
+  },
+  'admin.tournament/[id]/clone.body': {
+    schema: CloneTournamentBody,
+    io: 'input',
+  },
+  'admin.tournament/[id]/overlay-day.update': {
+    schema: OverlayDayBody,
+    io: 'input',
+  },
+  'admin.tournament/[id]/roster-unlock.body': {
+    schema: RosterUnlockBody,
+    io: 'input',
+  },
+  'admin.tournament/[id]/checkin-settings.update': {
+    schema: CheckinSettingsBody,
+    io: 'input',
+  },
+  'admin.tournament/[id]/discord-test.body': {
+    schema: DiscordTestBody,
+    io: 'input',
+  },
+  'admin.tournament/[id]/discord-webhooks.update': {
+    schema: DiscordWebhookBody,
+    io: 'input',
+  },
+  'admin.tournament/[id]/stages.create': {
+    schema: StageCreateBody,
+    io: 'input',
+  },
+  'admin.tournament/[id]/stages.update': {
+    schema: StageReorderBody,
+    io: 'input',
+  },
+  'admin.tournament/[id]/teams.create': {
+    schema: TournamentTeamAddBody,
+    io: 'input',
+  },
+  'admin.tournament/[id]/teams/[teamId].update': {
+    schema: TournamentTeamPatchBody,
+    io: 'input',
+  },
+  'admin.tournament/[id]/matches.create': {
+    schema: TournamentMatchesCreateBody,
+    io: 'input',
+  },
+  'admin.tournament/[id]/bracket.body': { schema: BracketBody, io: 'input' },
+  'admin.tournament/[id]/bulk-matches.body': {
+    schema: BulkMatchesBody,
+    io: 'input',
+  },
+  'admin.tournament/[id]/auto-schedule.body': {
+    schema: AutoScheduleBody,
+    io: 'input',
+  },
+  'admin.tournament/[id]/schedule-move.body': {
+    schema: ScheduleMoveLooseBody,
+    io: 'input',
+  },
+  'admin.tournament/[id]/pool.body': { schema: PoolLooseBody, io: 'input' },
+  'admin.tournaments/[id]/prize-pool.update': {
+    schema: PrizePoolLooseBody,
+    io: 'input',
+  },
+  'admin.tournaments/notify-captains.body': {
+    schema: NotifyCaptainsBody,
+    io: 'input',
+  },
+  // Phases de tournoi (features/admin/stages, vague serveur 3) : corps
+  // « historiques » NOMMÉS, contrôlés par le service (messages d’origine).
+  'admin.stages/[stageId].update': { schema: StageUpdateBody, io: 'input' },
+  'admin.stages/[stageId]/clone.body': { schema: StageCloneBody, io: 'input' },
+  'admin.stages/[stageId]/advance.body': {
+    schema: StageAdvanceBody,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/auto-seed.body': {
+    schema: StageAutoSeedBody,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/manual-seed.body': {
+    schema: StageManualSeedBody,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/rating-seed.body': {
+    schema: RatingSeedBody,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/auto-byes.body': {
+    schema: StageAutoByesBody,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/batch-scores.body': {
+    schema: StageBatchScoresBody,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/bulk-matches.body': {
+    schema: StageBulkMatchesBody,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/generate-group-matches.body': {
+    schema: StageGroupMatchesBody,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/generate-swiss-round.body': {
+    schema: StageSwissRoundBody,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/groups.body': {
+    schema: StageGroupsBody,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/lobbies.create': {
+    schema: StageLobbyCreateBody,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/snapshots.body': {
+    schema: StageSnapshotBody,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/tiebreaker-override.body': {
+    schema: TiebreakerOverrideBody,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/teams.body': { schema: StageTeamsBody, io: 'input' },
   'admin.twitchChannels.create': { schema: TwitchChannelBody, io: 'input' },
   'admin.twitchChannels.update': { schema: TwitchChannelPatch, io: 'input' },
   'admin.adherents.create': { schema: AdherentCreateBody, io: 'input' },
@@ -403,9 +622,143 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   'admin.api-tokens/[id].update': { schema: ApiTokenPatchDoc, io: 'input' },
   'admin.webhooks.create': { schema: WebhookCreateDoc, io: 'input' },
   'admin.webhooks/[id].update': { schema: WebhookPatchDoc, io: 'input' },
+  // Fiche, litige, veto, drafts, casters, MVP, feuille de match, relance
+  // check-in d'un match (features/admin/matches).
+  'admin.matches/[matchId].update': { schema: MatchUpdateBody, io: 'input' },
+  'admin.matches/[matchId]/dispute.create': {
+    schema: DisputeOpenBody,
+    io: 'input',
+  },
+  'admin.matches/[matchId]/dispute.update': {
+    schema: DisputeResolveBody,
+    io: 'input',
+  },
+  'admin.matches/[matchId]/veto.create': { schema: VetoStepBody, io: 'input' },
+  'admin.matches/[matchId]/veto.update': {
+    schema: VetoUnlockBody,
+    io: 'input',
+  },
+  'admin.matches/[matchId]/drafts.create': {
+    schema: DraftInitBody,
+    io: 'input',
+  },
+  'admin.matches/[matchId]/drafts/[gameIndex]/side.update': {
+    schema: DraftSideBody,
+    io: 'input',
+  },
+  'admin.matches/[matchId]/drafts/[gameIndex]/commit.body': {
+    schema: DraftCommitBody,
+    io: 'input',
+  },
+  'admin.matches/[matchId]/cast-assignments.create': {
+    schema: MatchCastAssignmentBody,
+    io: 'input',
+  },
+  'admin.matches/[matchId]/cast-assignments/[assignmentId].update': {
+    schema: MatchCastAssignmentPatchBody,
+    io: 'input',
+  },
+  'admin.matches/[matchId]/mvp.body': { schema: MvpImportBody, io: 'input' },
+  'admin.matches/[matchId]/mvp-public.body': {
+    schema: MvpPublicLooseBody,
+    io: 'input',
+  },
+  'admin.matches/[matchId]/lineup.body': {
+    schema: MatchLineupBody,
+    io: 'input',
+  },
+  'admin.matches/[matchId]/checkin-nudge.body': {
+    schema: CheckinNudgeBody,
+    io: 'input',
+  },
 };
 
 export const ADMIN_FEATURE_QUERY_SCHEMAS: Record<string, ApiContractEntry> = {
+  // Tournoi (features/admin/tournaments). Trois libellés d'erreur d'id
+  // coexistaient ; chaque schéma partagé porte le sien :
+  //   `checkin` (« Invalid tournament ID ») : checkin, checkin-nudge-all,
+  //     checkin-settings, status-guards, apply-template, clone, stages, pool,
+  //     podium-preview, conflicts, discord-test ;
+  //   `stats` (« Invalid tournament id ») : stats, analytics, overlay-day,
+  //     mvp-votes, mvp-public-votes, bracket, bulk-matches, auto-schedule ;
+  //   `roster-unlock` (id validé par le service, code INVALID_TOURNAMENT_ID) :
+  //     roster-unlock, availability, schedule-move, prize-pool.
+  'admin.tournaments.query': { schema: TournamentListQuery, io: 'input' },
+  'admin.tournament/[id].query': {
+    schema: TournamentDetailQuery,
+    io: 'input',
+  },
+  'admin.tournament/[id]/checkin.query': {
+    schema: TournamentIdQuery,
+    io: 'input',
+  },
+  'admin.tournament/[id]/stats.query': {
+    schema: TournamentIdLowerQuery,
+    io: 'input',
+  },
+  'admin.tournament/[id]/roster-unlock.query': {
+    schema: CodedTournamentIdQuery,
+    io: 'input',
+  },
+  'admin.tournament/[id]/dashboard.query': {
+    schema: DashboardQuery,
+    io: 'input',
+  },
+  'admin.tournament/[id]/teams.query': {
+    schema: TournamentTeamsQuery,
+    io: 'input',
+  },
+  'admin.tournament/[id]/teams/[teamId].query': {
+    schema: TournamentTeamEntryQuery,
+    io: 'input',
+  },
+  'admin.tournament/[id]/schedule-diagnostics.query': {
+    schema: ScheduleDiagnosticsQuery,
+    io: 'input',
+  },
+  'admin.tournament/[id]/history.query': {
+    schema: TournamentHistoryQuery,
+    io: 'input',
+  },
+  'admin.tournament/[id]/export-results.query': {
+    schema: ExportResultsQuery,
+    io: 'input',
+  },
+  'admin.tournament/[id]/discord-webhooks.query': {
+    schema: DiscordWebhooksQuery,
+    io: 'input',
+  },
+  'admin.tournament/[id]/matches.query': {
+    schema: TournamentMatchesQuery,
+    io: 'input',
+  },
+  // Phases (vague serveur 3) : `stages/[stageId]` couvre toutes les routes
+  // qui ne lisent que stageId.
+  'admin.stages/[stageId].query': { schema: StageIdQuery, io: 'input' },
+  'admin.stages/[stageId].delete.query': {
+    schema: StageDeleteQuery,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/history.query': {
+    schema: StageHistoryQuery,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/standings.query': {
+    schema: StageStandingsQuery,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/seeding-preview.query': {
+    schema: SeedingPreviewQuery,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/rating-seeding-preview.query': {
+    schema: RatingSeedingPreviewQuery,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/snapshots.query': {
+    schema: SnapshotListQuery,
+    io: 'input',
+  },
   'admin.free-players.query': { schema: RemoveFreePlayerQuery, io: 'input' },
   'admin.twitch-channels.query': {
     schema: TwitchChannelListQuery,
@@ -579,4 +932,30 @@ export const ADMIN_FEATURE_QUERY_SCHEMAS: Record<string, ApiContractEntry> = {
     schema: TenantRequestListQuery,
     io: 'input',
   },
+  // Matchs (features/admin/matches). `[matchId]` seul : un schéma par
+  // message d'erreur historique (« Invalid matchId » / « matchId invalide »),
+  // partagé par toutes les routes qui l'emploient.
+  'admin.matches/[matchId].query': { schema: MatchByIdQuery, io: 'input' },
+  'admin.matches/[matchId]/sub.query': { schema: MatchIdQuery, io: 'input' },
+  'admin.matches/[matchId]/sub-fr.query': {
+    schema: MatchIdFrQuery,
+    io: 'input',
+  },
+  'admin.matches/[matchId]/lineup.query': {
+    schema: MatchLineupQuery,
+    io: 'input',
+  },
+  'admin.matches/[matchId]/dispute.delete.query': {
+    schema: MatchDisputeQuery,
+    io: 'input',
+  },
+  'admin.matches/[matchId]/cast-assignments/[assignmentId].query': {
+    schema: MatchCastAssignmentIdQuery,
+    io: 'input',
+  },
+  'admin.matches/[matchId]/drafts/[gameIndex].query': {
+    schema: MatchDraftQuery,
+    io: 'input',
+  },
+  'admin.matches/search.query': { schema: MatchSearchQuery, io: 'input' },
 };

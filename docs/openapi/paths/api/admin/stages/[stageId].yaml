@@ -3,6 +3,7 @@ parameters:
 get:
   summary: Stage detail.
   operationId: adminGetStage
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -21,6 +22,7 @@ get:
 patch:
   summary: Patch stage fields.
   operationId: adminPatchStage
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -30,6 +32,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId].update
           type: object
           additionalProperties: true
   responses:
@@ -44,6 +47,7 @@ patch:
 put:
   summary: Replace a stage.
   operationId: adminReplaceStage
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -53,15 +57,14 @@ put:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId].update
           type: object
           additionalProperties: true
   responses:
     '200':
       description: Updated.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Stage'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -69,6 +72,7 @@ put:
 delete:
   summary: Soft-delete a stage.
   operationId: adminDeleteStage
+  x-zod-query: admin.stages/[stageId].delete.query
   tags:
     - admin/stages
   security:

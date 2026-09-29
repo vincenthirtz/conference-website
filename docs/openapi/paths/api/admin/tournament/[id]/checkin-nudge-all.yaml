@@ -12,6 +12,7 @@ post:
     un cote a la fois. Protege du double-clic par `withAdminIdempotency`
     (5 min) ; une relance ratee n'annule pas les autres.
   operationId: nudgeAllMissingCheckins
+  x-zod-query: admin.tournament/[id]/checkin.query
   parameters:
     - name: id
       in: path

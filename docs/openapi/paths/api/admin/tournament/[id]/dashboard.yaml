@@ -12,6 +12,7 @@ get:
     velocity, recent staff activity. Cached `private, max-age=30,
     stale-while-revalidate=60` on the response.
   operationId: adminGetTournamentDashboard
+  x-zod-query: admin.tournament/[id]/dashboard.query
   tags:
     - admin/tournaments
   security:

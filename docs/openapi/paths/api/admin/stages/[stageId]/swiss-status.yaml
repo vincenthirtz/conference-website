@@ -3,6 +3,7 @@ parameters:
 get:
   summary: Swiss-specific status (current round, dropped teams, completion).
   operationId: adminGetStageSwissStatus
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:

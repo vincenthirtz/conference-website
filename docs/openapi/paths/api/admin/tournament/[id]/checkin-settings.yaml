@@ -12,6 +12,7 @@ get:
     reasons. Both are read defensively and fall back to defaults if the check-in
     migration has not been applied yet.
   operationId: adminGetTournamentCheckinSettings
+  x-zod-query: admin.tournament/[id]/checkin.query
   tags:
     - admin/tournaments
   security:
@@ -41,6 +42,7 @@ get:
 patch:
   summary: Update the per-tournament check-in grace window.
   operationId: adminUpdateTournamentCheckinSettings
+  x-zod-query: admin.tournament/[id]/checkin.query
   tags:
     - admin/tournaments
   security:
@@ -50,14 +52,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - checkinGraceMinutes
-          properties:
-            checkinGraceMinutes:
-              type: integer
-              minimum: 0
-              maximum: 120
+          x-zod: admin.tournament/[id]/checkin-settings.update
   responses:
     '200':
       description: Updated.

@@ -10,8 +10,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournaments/notify-captains.body
   responses:
     '200':
       description: Notification queued.

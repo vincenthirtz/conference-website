@@ -9,6 +9,7 @@ parameters:
 get:
   summary: Team enrollment detail in a tournament.
   operationId: adminGetTournamentTeam
+  x-zod-query: admin.tournament/[id]/teams/[teamId].query
   tags:
     - admin/tournaments
   security:
@@ -28,6 +29,7 @@ get:
 patch:
   summary: Patch a team enrollment (seed, group, status).
   operationId: adminPatchTournamentTeam
+  x-zod-query: admin.tournament/[id]/teams/[teamId].query
   tags:
     - admin/tournaments
   security:
@@ -37,8 +39,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournament/[id]/teams/[teamId].update
   responses:
     '200':
       description: Updated.
@@ -54,6 +55,7 @@ patch:
 delete:
   summary: Unenroll a team from a tournament.
   operationId: adminUnenrollTournamentTeam
+  x-zod-query: admin.tournament/[id]/teams/[teamId].query
   tags:
     - admin/tournaments
   security:

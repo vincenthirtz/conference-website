@@ -11,6 +11,7 @@ patch:
     - admin/matches
   summary: Assign team1Side + team2Side on a pending draft.
   operationId: adminSetMatchDraftSides
+  x-zod-query: admin.matches/[matchId]/drafts/[gameIndex].query
   description: |
     Side enum is game-specific :
     `lol` accepts `blue|red`, `dota2` accepts `radiant|dire`.
@@ -24,6 +25,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.matches/[matchId]/drafts/[gameIndex]/side.update
           $ref: '#/components/schemas/SetMatchDraftSidesRequest'
   responses:
     '200':

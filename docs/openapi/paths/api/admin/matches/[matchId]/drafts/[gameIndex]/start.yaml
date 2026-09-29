@@ -11,6 +11,7 @@ post:
     - admin/matches
   summary: Arm the draft timer (Lot 3) — transition pending to in_progress.
   operationId: adminStartMatchDraft
+  x-zod-query: admin.matches/[matchId]/drafts/[gameIndex].query
   description: |
     Stamps `started_at` + sets `deadline_at` on step 1 = now +
     pick_timer_seconds so the captain UI / spectator UI / cron can

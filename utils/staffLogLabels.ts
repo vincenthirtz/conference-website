@@ -61,6 +61,10 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   update_group_assignments: 'Mise à jour groupes',
   auto_distribute_groups: 'Distribution auto groupes',
   generate_group_matches: 'Génération matchs de poule',
+  create_bracket_snapshot: 'Snapshot de bracket',
+  restore_bracket_snapshot: 'Restauration snapshot de bracket',
+  set_tiebreaker_override: 'Override de départage ajouté',
+  remove_tiebreaker_override: 'Override de départage retiré',
   // Matchs
   create_match: 'Création match',
   update_match: 'Modification match',
@@ -218,6 +222,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   ticket_closed: 'Ticket fermé',
   process_demande: 'Traitement demande',
   notify_scrim_captains: 'Relance capitaines (scrim)',
+  notify_tournament_captains: 'Relance capitaines (ouverture tournoi)',
   requestMoreInfo: "Demande d'informations complémentaires",
   resend_credentials: 'Renvoi des identifiants',
   // Blacklist

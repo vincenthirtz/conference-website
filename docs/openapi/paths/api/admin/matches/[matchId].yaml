@@ -4,6 +4,7 @@ get:
   summary: Match detail (with optional games payload).
   description: Requires `manager` role.
   operationId: adminGetMatch
+  x-zod-query: admin.matches/[matchId].query
   tags:
     - admin/matches
   security:
@@ -52,6 +53,7 @@ patch:
     reportable. A score written with a closed status does not purge. Purge
     failure → 500, match unchanged.
   operationId: adminPatchMatch
+  x-zod-query: admin.matches/[matchId].query
   tags:
     - admin/matches
   security:
@@ -61,6 +63,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.matches/[matchId].update
           $ref: '#/components/schemas/AdminMatchPatchInput'
   responses:
     '200':
@@ -80,6 +83,7 @@ patch:
 put:
   summary: Update match (alias of PATCH).
   operationId: adminPutMatch
+  x-zod-query: admin.matches/[matchId].query
   tags:
     - admin/matches
   security:
@@ -89,6 +93,7 @@ put:
     content:
       application/json:
         schema:
+          x-zod: admin.matches/[matchId].update
           $ref: '#/components/schemas/AdminMatchPatchInput'
   responses:
     '200':
@@ -106,6 +111,7 @@ delete:
   summary: Cancel a match (soft) or hard-delete with `?hard=1`.
   description: Requires `manager` role.
   operationId: adminDeleteMatch
+  x-zod-query: admin.matches/[matchId].query
   tags:
     - admin/matches
   security:

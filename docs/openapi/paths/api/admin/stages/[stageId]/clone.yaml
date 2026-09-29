@@ -3,6 +3,7 @@ parameters:
 post:
   summary: Clone a stage into the same tournament (with empty matches).
   operationId: adminCloneStage
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -12,6 +13,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId]/clone.body
           type: object
           additionalProperties: true
   responses:

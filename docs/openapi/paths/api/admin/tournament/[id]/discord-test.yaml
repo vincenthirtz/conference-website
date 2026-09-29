@@ -8,6 +8,7 @@ parameters:
 post:
   summary: Send a test Discord notification for this tournament.
   operationId: adminTournamentDiscordTest
+  x-zod-query: admin.tournament/[id]/checkin.query
   tags:
     - admin/tournaments
   security:
@@ -17,8 +18,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournament/[id]/discord-test.body
   responses:
     '200':
       description: Sent.

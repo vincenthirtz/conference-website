@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Read Discord webhooks bound to this tournament.
   operationId: adminGetTournamentDiscordWebhooks
+  x-zod-query: admin.tournament/[id]/discord-webhooks.query
   tags:
     - admin/tournaments
   security:
@@ -27,6 +28,7 @@ get:
 put:
   summary: Replace Discord webhooks for this tournament.
   operationId: adminPutTournamentDiscordWebhooks
+  x-zod-query: admin.tournament/[id]/discord-webhooks.query
   tags:
     - admin/tournaments
   security:
@@ -36,8 +38,7 @@ put:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournament/[id]/discord-webhooks.update
   responses:
     '200':
       description: Saved.
@@ -53,6 +54,7 @@ put:
 delete:
   summary: Clear Discord webhooks for this tournament.
   operationId: adminDeleteTournamentDiscordWebhooks
+  x-zod-query: admin.tournament/[id]/discord-webhooks.query
   tags:
     - admin/tournaments
   security:

@@ -8,6 +8,7 @@ get:
     (rating, rd, sos, score, rank, provisional) and a `lock` object so the
     UI can grey out the apply button. Does not block on lock.
   operationId: adminGetStageRatingSeedingPreview
+  x-zod-query: admin.stages/[stageId]/rating-seeding-preview.query
   tags:
     - admin/stages
   security:

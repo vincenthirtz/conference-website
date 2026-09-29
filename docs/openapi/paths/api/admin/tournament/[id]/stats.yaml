@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Aggregated tournament statistics.
   operationId: adminGetTournamentStats
+  x-zod-query: admin.tournament/[id]/stats.query
   tags:
     - admin/tournaments
   security:

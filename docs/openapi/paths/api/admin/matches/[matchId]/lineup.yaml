@@ -3,6 +3,7 @@ get:
     - admin
   summary: Les deux feuilles de match (vue organisation).
   operationId: adminGetMatchLineups
+  x-zod-query: admin.matches/[matchId]/lineup.query
   security:
     - StaffSession: []
   parameters:
@@ -30,6 +31,7 @@ post:
     n'engage pas l'equipe de la meme facon. `reopen: true` defige une feuille
     validee — le seul geste qui le permette.
   operationId: adminValidateMatchLineup
+  x-zod-query: admin.matches/[matchId]/lineup.query
   security:
     - StaffSession: []
   parameters:
@@ -44,6 +46,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.matches/[matchId]/lineup.body
           type: object
           required:
             - teamId

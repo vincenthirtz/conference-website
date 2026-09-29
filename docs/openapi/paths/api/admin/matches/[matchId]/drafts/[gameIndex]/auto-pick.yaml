@@ -11,6 +11,7 @@ post:
     - admin/matches
   summary: Manual trigger of the auto-pick logic on this draft (Lot 3).
   operationId: adminAutoPickMatchDraft
+  x-zod-query: admin.matches/[matchId]/drafts/[gameIndex].query
   description: |
     If the current step's `deadline_at` is in the past, picks the
     first alphabetical eligible hero and commits it with

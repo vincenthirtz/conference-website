@@ -6,6 +6,7 @@ post:
     Requires `manager` role. Status → `disputed`. Saves reason + author +
     timestamp. Score propagation is blocked until resolution.
   operationId: adminOpenMatchDispute
+  x-zod-query: admin.matches/[matchId]/sub.query
   tags:
     - admin/matches
   security:
@@ -15,6 +16,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.matches/[matchId]/dispute.create
           type: object
           required:
             - reason
@@ -51,6 +53,7 @@ patch:
     log as `purged_reports`), so a stale report can no longer finalize the
     match again; if the purge fails the dispute stays open (500).
   operationId: adminResolveMatchDispute
+  x-zod-query: admin.matches/[matchId]/sub.query
   tags:
     - admin/matches
   security:
@@ -60,6 +63,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.matches/[matchId]/dispute.update
           type: object
           required:
             - resolution
@@ -98,6 +102,7 @@ delete:
     Requires `manager` role. Purges both captains' score reports before
     reopening the match (same rule as a resolution without score).
   operationId: adminCancelMatchDispute
+  x-zod-query: admin.matches/[matchId]/dispute.delete.query
   tags:
     - admin/matches
   security:

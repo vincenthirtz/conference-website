@@ -8,6 +8,7 @@ parameters:
 post:
   summary: Bulk-create matches for a tournament.
   operationId: adminTournamentBulkMatches
+  x-zod-query: admin.tournament/[id]/stats.query
   tags:
     - admin/tournaments
   security:
@@ -17,8 +18,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournament/[id]/bulk-matches.body
   responses:
     '200':
       description: Created.

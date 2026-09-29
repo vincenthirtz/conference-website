@@ -8,6 +8,7 @@ parameters:
 get:
   summary: List matches of a tournament.
   operationId: adminListTournamentMatches
+  x-zod-query: admin.tournament/[id]/matches.query
   tags:
     - admin/tournaments
   security:
@@ -24,6 +25,7 @@ get:
 post:
   summary: Create a match in a tournament.
   operationId: adminCreateTournamentMatch
+  x-zod-query: admin.tournament/[id]/matches.query
   tags:
     - admin/tournaments
   security:
@@ -33,8 +35,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournament/[id]/matches.create
   responses:
     '201':
       description: Created.

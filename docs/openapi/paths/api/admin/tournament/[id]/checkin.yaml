@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Read check-in status for a tournament.
   operationId: adminGetTournamentCheckin
+  x-zod-query: admin.tournament/[id]/checkin.query
   tags:
     - admin/tournaments
   security:
@@ -27,6 +28,7 @@ get:
 post:
   summary: Open / close / extend the check-in window.
   operationId: adminUpdateTournamentCheckin
+  x-zod-query: admin.tournament/[id]/checkin.query
   tags:
     - admin/tournaments
   security:

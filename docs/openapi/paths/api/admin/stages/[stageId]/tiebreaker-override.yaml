@@ -3,6 +3,7 @@ parameters:
 get:
   summary: Read tiebreaker overrides for a stage.
   operationId: adminGetStageTiebreaker
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -22,6 +23,7 @@ get:
 post:
   summary: Set a manual tiebreaker override.
   operationId: adminSetStageTiebreaker
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -31,6 +33,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId]/tiebreaker-override.body
           type: object
           additionalProperties: true
   responses:
@@ -48,10 +51,19 @@ post:
 delete:
   summary: Clear tiebreaker overrides for a stage.
   operationId: adminDeleteStageTiebreaker
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
     - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.stages/[stageId]/tiebreaker-override.body
+          type: object
+          additionalProperties: true
   responses:
     '204':
       description: Cleared.

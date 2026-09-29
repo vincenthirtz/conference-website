@@ -1,6 +1,7 @@
 get:
-  summary: Search matches by team name, tournament, status.
+  summary: Search matches by team name, tournament or match text fields.
   operationId: adminSearchMatches
+  x-zod-query: admin.matches/search.query
   tags:
     - admin/matches
   security:
@@ -8,22 +9,23 @@ get:
   parameters:
     - in: query
       name: q
+      description: >-
+        Texte (2 caracteres utiles minimum) cherche dans les noms d'equipes,
+        le nom / slug du tournoi, round_name, notes et lobby_code. En dessous,
+        pas de filtre texte.
       schema:
         type: string
     - in: query
-      name: status
+      name: upcoming
+      description: >-
+        Defaut vrai : matchs a venir ou non planifies. `0` pour l'historique.
       schema:
         type: string
-    - in: query
-      name: tournamentId
-      schema:
-        type: string
-        format: uuid
     - in: query
       name: limit
+      description: 1 a 50 (defaut 20).
       schema:
-        type: integer
-        default: 50
+        type: string
   responses:
     '200':
       description: Search results.

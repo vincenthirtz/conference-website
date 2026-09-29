@@ -17,6 +17,7 @@ get:
     Perimetre : les contraintes propres au tournoi ET les globales de ces memes
     equipes.
   operationId: adminGetTournamentAvailability
+  x-zod-query: admin.tournament/[id]/roster-unlock.query
   tags:
     - admin/tournaments
   security:

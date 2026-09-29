@@ -6,6 +6,7 @@ post:
     Requires `manager` role. Emits `checkin.nudge` event to the bot outbox.
     Soft idempotency (5 min) — same admin click within window is no-op.
   operationId: adminCheckinNudge
+  x-zod-query: admin.matches/[matchId]/sub.query
   tags:
     - admin/matches
   security:
@@ -17,6 +18,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.matches/[matchId]/checkin-nudge.body
           $ref: '#/components/schemas/CheckinNudgePayload'
   responses:
     '200':

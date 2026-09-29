@@ -3,6 +3,7 @@ parameters:
 get:
   summary: Compute completion status (matches finished vs pending).
   operationId: adminGetStageCompletion
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:

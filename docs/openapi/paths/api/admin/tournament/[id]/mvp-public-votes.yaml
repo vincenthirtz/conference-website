@@ -15,6 +15,7 @@ get:
     per-platform tally, who would win if settled now, frozen winner once
     closed. Voter identifiers are never returned.
   operationId: adminTournamentMvpPublicVotes
+  x-zod-query: admin.tournament/[id]/stats.query
   tags:
     - admin/tournaments
   security:

@@ -3,6 +3,7 @@ parameters:
 get:
   summary: Audit history of a stage.
   operationId: adminGetStageHistory
+  x-zod-query: admin.stages/[stageId]/history.query
   tags:
     - admin/stages
   security:

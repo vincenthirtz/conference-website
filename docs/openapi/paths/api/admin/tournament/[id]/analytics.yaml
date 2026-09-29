@@ -9,6 +9,7 @@ get:
   summary: Aggregate analytics for a tournament (matches, games, timing).
   description: Requires `manager` role.
   operationId: adminGetTournamentAnalytics
+  x-zod-query: admin.tournament/[id]/stats.query
   tags:
     - admin/tournaments
   security:

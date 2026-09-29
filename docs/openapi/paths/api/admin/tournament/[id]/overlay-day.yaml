@@ -12,6 +12,7 @@ get:
     (sans `date`) affiche ce jour tant que le forcage est valide (12 h apres
     sa pose), sinon le jour meme a Paris.
   operationId: adminGetTournamentOverlayDay
+  x-zod-query: admin.tournament/[id]/stats.query
   tags:
     - admin/tournaments
   security:
@@ -48,6 +49,7 @@ put:
     jour meme). La source deja collee dans OBS le suit a son prochain
     rafraichissement ; le forcage expire seul au bout de 12 h. Journalise.
   operationId: adminPutTournamentOverlayDay
+  x-zod-query: admin.tournament/[id]/stats.query
   tags:
     - admin/tournaments
   security:
@@ -57,13 +59,7 @@ put:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - date
-          properties:
-            date:
-              type: [string, 'null']
-              description: '`AAAA-MM-JJ`, ou null pour revenir au jour meme.'
+          x-zod: admin.tournament/[id]/overlay-day.update
   responses:
     '200':
       description: Forcage enregistre.

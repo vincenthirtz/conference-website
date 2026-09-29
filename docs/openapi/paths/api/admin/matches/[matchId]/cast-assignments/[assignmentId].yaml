@@ -9,6 +9,7 @@ parameters:
 patch:
   summary: Patch a cast assignment.
   operationId: adminPatchMatchCastAssignment
+  x-zod-query: admin.matches/[matchId]/cast-assignments/[assignmentId].query
   tags:
     - admin/matches
   security:
@@ -18,6 +19,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.matches/[matchId]/cast-assignments/[assignmentId].update
           type: object
           additionalProperties: true
   responses:
@@ -32,6 +34,7 @@ patch:
 delete:
   summary: Remove a cast assignment.
   operationId: adminDeleteMatchCastAssignment
+  x-zod-query: admin.matches/[matchId]/cast-assignments/[assignmentId].query
   tags:
     - admin/matches
   security:

@@ -8,6 +8,7 @@ parameters:
 post:
   summary: Generate the elimination bracket for a tournament.
   operationId: adminGenerateTournamentBracket
+  x-zod-query: admin.tournament/[id]/stats.query
   tags:
     - admin/tournaments
   security:
@@ -17,8 +18,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournament/[id]/bracket.body
   responses:
     '200':
       description: Bracket.

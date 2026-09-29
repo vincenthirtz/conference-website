@@ -11,6 +11,7 @@ get:
     - admin/matches
   summary: Read the assembled draft state for (matchId, gameIndex).
   operationId: adminGetMatchDraft
+  x-zod-query: admin.matches/[matchId]/drafts/[gameIndex].query
   description: |
     Returns `{ draft: null }` when no draft has been initialised yet,
     otherwise the full `DraftState` including the flow, the seeded
@@ -37,6 +38,7 @@ delete:
     - admin/matches
   summary: Drop a draft + its steps (recovery from a bad init).
   operationId: adminDeleteMatchDraft
+  x-zod-query: admin.matches/[matchId]/drafts/[gameIndex].query
   description: |
     Removes the draft row and all its steps so the operator can
     re-init with the right gameIndex / fearless flag without

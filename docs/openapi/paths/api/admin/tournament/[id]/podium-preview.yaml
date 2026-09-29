@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Preview the podium before calling `/finalize`.
   operationId: adminPodiumPreview
+  x-zod-query: admin.tournament/[id]/checkin.query
   tags:
     - admin/tournaments
   security:

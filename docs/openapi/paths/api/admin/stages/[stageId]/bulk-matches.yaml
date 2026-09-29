@@ -3,6 +3,7 @@ parameters:
 post:
   summary: Bulk-create matches in a stage.
   operationId: adminStageBulkMatchesPost
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -12,6 +13,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId]/bulk-matches.body
           type: object
           additionalProperties: true
   responses:
@@ -29,6 +31,7 @@ post:
 patch:
   summary: Bulk-patch matches of a stage.
   operationId: adminStageBulkMatchesPatch
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -38,6 +41,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId]/bulk-matches.body
           type: object
           additionalProperties: true
   responses:
@@ -61,6 +65,7 @@ put:
     whole batch (logged as `purged_reports`). Purge failure → 500, no match
     updated.
   operationId: adminStageBulkMatchesPut
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -70,6 +75,7 @@ put:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId]/bulk-matches.body
           type: object
           additionalProperties: true
   responses:
@@ -87,10 +93,19 @@ put:
 delete:
   summary: Bulk-delete matches of a stage.
   operationId: adminStageBulkMatchesDelete
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
     - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.stages/[stageId]/bulk-matches.body
+          type: object
+          additionalProperties: true
   responses:
     '204':
       description: Deleted.

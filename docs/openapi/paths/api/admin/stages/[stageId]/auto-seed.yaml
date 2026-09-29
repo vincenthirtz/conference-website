@@ -7,6 +7,7 @@ post:
     round-1 slots of the target bracket. Two patterns supported:
     `standard` (1vN, 2v(N-1), etc.) and `sequential` (1v2, 3v4, etc.).
   operationId: adminAutoSeedStage
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -18,6 +19,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId]/auto-seed.body
           type: object
           required:
             - sourceStageId

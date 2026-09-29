@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Tournament detail (admin view).
   operationId: adminGetTournament
+  x-zod-query: admin.tournament/[id].query
   tags:
     - admin/tournaments
   security:
@@ -26,6 +27,7 @@ get:
 patch:
   summary: Patch tournament fields.
   operationId: adminPatchTournament
+  x-zod-query: admin.tournament/[id].query
   tags:
     - admin/tournaments
   security:
@@ -35,15 +37,12 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournament/[id].update
   responses:
     '200':
       description: Updated.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Tournament'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -51,6 +50,7 @@ patch:
 put:
   summary: Replace tournament fields (full update).
   operationId: adminPutTournament
+  x-zod-query: admin.tournament/[id].query
   tags:
     - admin/tournaments
   security:
@@ -60,8 +60,7 @@ put:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournament/[id].update
   responses:
     '200':
       description: Updated.

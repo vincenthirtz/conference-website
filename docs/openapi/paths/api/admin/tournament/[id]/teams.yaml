@@ -8,6 +8,7 @@ parameters:
 get:
   summary: List teams enrolled in a tournament.
   operationId: adminListTournamentTeams
+  x-zod-query: admin.tournament/[id]/teams.query
   tags:
     - admin/tournaments
   security:
@@ -31,6 +32,7 @@ get:
 post:
   summary: Enroll teams in a tournament.
   operationId: adminEnrollTournamentTeams
+  x-zod-query: admin.tournament/[id]/teams.query
   tags:
     - admin/tournaments
   security:
@@ -40,8 +42,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournament/[id]/teams.create
   responses:
     '201':
       description: Enrolled.

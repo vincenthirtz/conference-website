@@ -3,6 +3,7 @@ parameters:
 get:
   summary: Preview proposed seeding without applying it.
   operationId: adminGetStageSeedingPreview
+  x-zod-query: admin.stages/[stageId]/seeding-preview.query
   tags:
     - admin/stages
   security:
@@ -14,7 +15,7 @@ get:
         type: string
         format: uuid
     - in: query
-      name: seedingPattern
+      name: pattern
       schema:
         type: string
         enum:

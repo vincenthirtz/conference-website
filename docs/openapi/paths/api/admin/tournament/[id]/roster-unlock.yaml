@@ -1,6 +1,7 @@
 post:
   summary: Ouvre une fenetre de deverrouillage temporaire du roster.
   operationId: adminTournamentRosterUnlock
+  x-zod-query: admin.tournament/[id]/roster-unlock.query
   tags:
     - admin/tournaments
   security:
@@ -39,13 +40,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            minutes:
-              type: integer
-              minimum: 5
-              maximum: 1440
-              default: 60
+          x-zod: admin.tournament/[id]/roster-unlock.body
   responses:
     '200':
       description: '`{ rosterUnlockedUntil, minutes, rosterLockedAt }`.'
@@ -62,6 +57,7 @@ post:
 delete:
   summary: Referme la fenetre de deverrouillage du roster.
   operationId: adminTournamentRosterRelock
+  x-zod-query: admin.tournament/[id]/roster-unlock.query
   tags:
     - admin/tournaments
   security:

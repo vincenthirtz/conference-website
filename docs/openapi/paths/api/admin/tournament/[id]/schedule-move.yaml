@@ -30,6 +30,7 @@ post:
     ecriture qui creerait une anomalie BLOQUANTE est refusee en 409 avec son
     impact ; `force: true` passe outre.
   operationId: adminMoveTournamentMatches
+  x-zod-query: admin.tournament/[id]/roster-unlock.query
   tags:
     - admin/tournaments
   security:
@@ -39,8 +40,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournament/[id]/schedule-move.body
   responses:
     '200':
       description: 'Apercu (`applied: false`) ou deplacement applique.'

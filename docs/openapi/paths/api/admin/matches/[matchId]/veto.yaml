@@ -3,6 +3,7 @@ parameters:
 get:
   summary: Read veto state for a match.
   operationId: adminGetMatchVeto
+  x-zod-query: admin.matches/[matchId]/sub.query
   tags:
     - admin/matches
   security:
@@ -19,6 +20,7 @@ get:
 post:
   summary: Apply a veto action (ban/pick) or reset.
   operationId: adminPostMatchVeto
+  x-zod-query: admin.matches/[matchId]/sub.query
   tags:
     - admin/matches
   security:
@@ -28,6 +30,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.matches/[matchId]/veto.create
           type: object
           additionalProperties: true
   responses:
@@ -44,6 +47,7 @@ post:
 patch:
   summary: Update veto state (admin override).
   operationId: adminPatchMatchVeto
+  x-zod-query: admin.matches/[matchId]/sub.query
   tags:
     - admin/matches
   security:
@@ -53,6 +57,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.matches/[matchId]/veto.update
           type: object
           additionalProperties: true
   responses:
@@ -67,6 +72,7 @@ patch:
 delete:
   summary: Reset the veto for a match.
   operationId: adminDeleteMatchVeto
+  x-zod-query: admin.matches/[matchId]/sub.query
   tags:
     - admin/matches
   security:

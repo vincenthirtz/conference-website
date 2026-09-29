@@ -3,6 +3,7 @@ parameters:
 post:
   summary: Advance a stage (close round, propagate winners).
   operationId: adminAdvanceStage
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -14,6 +15,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId]/advance.body
           type: object
           additionalProperties: true
   responses:

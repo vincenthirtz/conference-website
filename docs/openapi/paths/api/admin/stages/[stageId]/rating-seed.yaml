@@ -10,6 +10,7 @@ post:
     ongoing/finished/walkover. Snapshots the bracket before mutating and
     upserts `stage_teams.seed` with the computed rank.
   operationId: adminRatingSeedStage
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -21,6 +22,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId]/rating-seed.body
           type: object
           properties:
             method:

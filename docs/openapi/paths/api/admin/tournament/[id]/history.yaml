@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Audit history of a tournament.
   operationId: adminGetTournamentHistory
+  x-zod-query: admin.tournament/[id]/history.query
   tags:
     - admin/tournaments
   security:

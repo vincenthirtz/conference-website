@@ -7,6 +7,7 @@ get:
     `voter_key` : savoir pour qui une personne a vote n'est l'affaire de
     personne, staff compris.
   operationId: adminGetMatchPublicMvp
+  x-zod-query: admin.matches/[matchId]/sub-fr.query
   tags:
     - admin/matches
   security:
@@ -35,6 +36,7 @@ post:
     depouille en ADDITIONNANT les deux plateformes, contrairement au vote des
     equipes ou elles s'arbitrent.
   operationId: adminPostMatchPublicMvp
+  x-zod-query: admin.matches/[matchId]/sub-fr.query
   tags:
     - admin/matches
   security:
@@ -44,6 +46,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.matches/[matchId]/mvp-public.body
           oneOf:
             - type: object
               required: [action]

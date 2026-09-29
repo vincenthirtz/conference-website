@@ -3,6 +3,7 @@ parameters:
 get:
   summary: List teams in a stage.
   operationId: adminListStageTeams
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -22,6 +23,7 @@ get:
 post:
   summary: Add teams to a stage.
   operationId: adminAddStageTeams
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -31,6 +33,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId]/teams.body
           type: object
           additionalProperties: true
   responses:
@@ -48,6 +51,7 @@ post:
 patch:
   summary: Patch a team membership in a stage (group, seed).
   operationId: adminPatchStageTeams
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
@@ -57,6 +61,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.stages/[stageId]/teams.body
           type: object
           additionalProperties: true
   responses:
@@ -74,10 +79,19 @@ patch:
 delete:
   summary: Remove teams from a stage.
   operationId: adminRemoveStageTeams
+  x-zod-query: admin.stages/[stageId].query
   tags:
     - admin/stages
   security:
     - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.stages/[stageId]/teams.body
+          type: object
+          additionalProperties: true
   responses:
     '204':
       description: Removed.

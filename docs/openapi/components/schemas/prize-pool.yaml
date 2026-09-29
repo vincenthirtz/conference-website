@@ -182,24 +182,6 @@ PrizeContributionAdmin:
       type: [string, 'null']
     created_at:
       $ref: '#/components/schemas/Timestamp'
-PrizePoolUpsertRequest:
-  type: object
-  description: >-
-    Corps de `PUT`/`POST /api/admin/tournaments/{id}/prize-pool`. Tous les
-    champs sont optionnels ; seuls ceux fournis sont écrasés.
-    `raised_amount_cents` n'est jamais modifiable ici.
-  properties:
-    title:
-      type: [string, 'null']
-      maxLength: 200
-    goal_amount_cents:
-      type: [integer, 'null']
-      minimum: 1
-    base_amount_cents:
-      type: integer
-      minimum: 0
-    is_open:
-      type: boolean
 PrizePoolUpsertResponse:
   type: object
   required:

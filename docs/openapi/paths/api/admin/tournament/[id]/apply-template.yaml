@@ -8,6 +8,7 @@ parameters:
 post:
   summary: Apply a template to a tournament (creates stages/matches scaffolding).
   operationId: adminApplyTournamentTemplate
+  x-zod-query: admin.tournament/[id]/checkin.query
   tags:
     - admin/tournaments
   security:
@@ -17,8 +18,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.tournament/[id]/apply-template.body
   responses:
     '200':
       description: Applied.

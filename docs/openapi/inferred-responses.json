@@ -292,7 +292,8 @@
       "type": "boolean"
      },
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -306,7 +307,8 @@
     "type": "object",
     "properties": {
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -336,7 +338,8 @@
       "type": "number"
      },
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -358,36 +361,7 @@
    }
   },
   "DELETE /api/admin/matches/{matchId}/veto": {
-   "200": {
-    "type": "object",
-    "properties": {
-     "gamesCleared": {
-      "type": [
-       "number",
-       "null"
-      ]
-     },
-     "gamesKeptReason": {
-      "type": [
-       "string",
-       "null"
-      ],
-      "enum": [
-       "erreur",
-       "scores-existants",
-       null
-      ]
-     },
-     "success": {
-      "type": "boolean"
-     }
-    },
-    "required": [
-     "gamesCleared",
-     "gamesKeptReason",
-     "success"
-    ]
-   }
+   "200": {}
   },
   "DELETE /api/admin/partners/{id}": {
    "200": {
@@ -498,288 +472,20 @@
   },
   "DELETE /api/admin/stages/{stageId}": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "hardDeleted": {
-        "type": "boolean"
-       },
-       "stage": {
-        "type": "object",
-        "properties": {
-         "created_at": {
-          "type": "string"
-         },
-         "end_date": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "id": {
-          "type": "string"
-         },
-         "is_active": {
-          "type": "boolean"
-         },
-         "is_public": {
-          "type": "boolean"
-         },
-         "name": {
-          "type": "string"
-         },
-         "order_index": {
-          "type": [
-           "number",
-           "null"
-          ]
-         },
-         "settings": {
-          "type": [
-           "object",
-           "null"
-          ],
-          "properties": {
-           "advancement_rules": {
-            "type": [
-             "object",
-             "null"
-            ],
-            "properties": {
-             "advance_per_group": {
-              "type": "number"
-             },
-             "advance_top": {
-              "type": "number"
-             },
-             "seed_by": {
-              "type": "string",
-              "enum": [
-               "manual",
-               "none",
-               "standings"
-              ]
-             },
-             "target_stage_id": {
-              "type": "string"
-             }
-            },
-            "required": [
-             "target_stage_id"
-            ]
-           },
-           "group_assignments": {
-            "type": [
-             "object",
-             "null"
-            ],
-            "additionalProperties": {
-             "type": "array",
-             "items": {
-              "type": "string"
-             }
-            }
-           },
-           "home_away": {
-            "type": [
-             "boolean",
-             "null"
-            ]
-           },
-           "loss_threshold": {
-            "type": [
-             "number",
-             "null"
-            ]
-           },
-           "match_format": {
-            "type": [
-             "string",
-             "null"
-            ]
-           },
-           "rounds": {
-            "type": [
-             "number",
-             "null"
-            ]
-           },
-           "standings_tiebreakers": {
-            "type": [
-             "array",
-             "null"
-            ],
-            "items": {
-             "type": "string",
-             "enum": [
-              "head_to_head",
-              "score_diff",
-              "scored",
-              "seed",
-              "wins"
-             ]
-            }
-           },
-           "total_rounds": {
-            "type": [
-             "number",
-             "null"
-            ]
-           },
-           "win_threshold": {
-            "type": [
-             "number",
-             "null"
-            ]
-           }
-          }
-         },
-         "slug": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "stage_type": {
-          "type": [
-           "string",
-           "null"
-          ],
-          "enum": [
-           "bracket",
-           "group",
-           "other",
-           "round_robin",
-           "showmatch",
-           "swiss",
-           null
-          ]
-         },
-         "start_date": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "tournament_id": {
-          "type": "string"
-         },
-         "updated_at": {
-          "type": [
-           "string",
-           "null"
-          ]
-         }
-        },
-        "required": [
-         "created_at",
-         "end_date",
-         "id",
-         "is_active",
-         "is_public",
-         "name",
-         "order_index",
-         "settings",
-         "slug",
-         "stage_type",
-         "start_date",
-         "tournament_id",
-         "updated_at"
-        ]
-       },
-       "success": {
-        "type": "boolean"
-       }
-      },
-      "required": [
-       "hardDeleted",
-       "stage",
-       "success"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "hardDeleted": {
-        "type": "boolean"
-       },
-       "success": {
-        "type": "boolean"
-       }
-      },
-      "required": [
-       "hardDeleted",
-       "success"
-      ]
-     }
-    ]
+    "type": "object",
+    "additionalProperties": {}
    }
   },
   "DELETE /api/admin/stages/{stageId}/bulk-matches": {
    "200": {
     "type": "object",
-    "properties": {
-     "count": {
-      "type": "number"
-     },
-     "hard": {},
-     "success": {
-      "type": "boolean"
-     },
-     "undoPayload": {
-      "type": "object",
-      "properties": {
-       "snapshots": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "fields": {
-           "type": "object",
-           "additionalProperties": {}
-          },
-          "matchId": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "fields",
-          "matchId"
-         ]
-        }
-       },
-       "type": {
-        "type": "string"
-       }
-      },
-      "required": [
-       "snapshots",
-       "type"
-      ]
-     }
-    },
-    "required": [
-     "count",
-     "hard",
-     "success"
-    ]
+    "additionalProperties": {}
    }
   },
   "DELETE /api/admin/stages/{stageId}/teams": {
    "200": {
     "type": "object",
-    "properties": {
-     "removed": {
-      "type": "number"
-     },
-     "success": {
-      "type": "boolean"
-     }
-    },
-    "required": [
-     "success"
-    ]
+    "additionalProperties": {}
    }
   },
   "DELETE /api/admin/stages/{stageId}/tiebreaker-override": {
@@ -787,7 +493,8 @@
     "type": "object",
     "properties": {
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -1404,8 +1111,7 @@
     "type": "object",
     "properties": {
      "success": {
-      "type": "boolean",
-      "const": true
+      "type": "boolean"
      }
     },
     "required": [
@@ -5048,6 +4754,7 @@
           "create_adherent",
           "create_announcement",
           "create_api_token",
+          "create_bracket_snapshot",
           "create_cast_assignment",
           "create_cast_member",
           "create_custom_game_preset",
@@ -5154,6 +4861,7 @@
           "map_veto",
           "match_rescheduled",
           "notify_scrim_captains",
+          "notify_tournament_captains",
           "open_match_dispute",
           "open_public_mvp",
           "other",
@@ -5175,6 +4883,7 @@
           "reject_tenant_request",
           "remove",
           "remove_team_member",
+          "remove_tiebreaker_override",
           "reopen_match_lineup",
           "reorder_event_segments",
           "reorder_event_waves",
@@ -5182,6 +4891,7 @@
           "requestMoreInfo",
           "resend_credentials",
           "resolve_match_dispute",
+          "restore_bracket_snapshot",
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
@@ -5194,6 +4904,7 @@
           "save_placements",
           "send_team_message",
           "send_twitch_chat",
+          "set_tiebreaker_override",
           "settings_update",
           "shift_round",
           "skip_event_segment",
@@ -6986,6 +6697,7 @@
           "create_adherent",
           "create_announcement",
           "create_api_token",
+          "create_bracket_snapshot",
           "create_cast_assignment",
           "create_cast_member",
           "create_custom_game_preset",
@@ -7092,6 +6804,7 @@
           "map_veto",
           "match_rescheduled",
           "notify_scrim_captains",
+          "notify_tournament_captains",
           "open_match_dispute",
           "open_public_mvp",
           "other",
@@ -7113,6 +6826,7 @@
           "reject_tenant_request",
           "remove",
           "remove_team_member",
+          "remove_tiebreaker_override",
           "reopen_match_lineup",
           "reorder_event_segments",
           "reorder_event_waves",
@@ -7120,6 +6834,7 @@
           "requestMoreInfo",
           "resend_credentials",
           "resolve_match_dispute",
+          "restore_bracket_snapshot",
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
@@ -7132,6 +6847,7 @@
           "save_placements",
           "send_team_message",
           "send_twitch_chat",
+          "set_tiebreaker_override",
           "settings_update",
           "shift_round",
           "skip_event_segment",
@@ -8224,32 +7940,68 @@
       "items": {
        "type": "object",
        "properties": {
-        "acked_at": {},
-        "briefing_at": {},
-        "briefing_reminder_sent_at": {},
-        "cast_member": {
-         "type": "array",
-         "items": {
-          "type": "object",
-          "properties": {
-           "auth_user_id": {},
-           "id": {},
-           "image_url": {},
-           "name": {}
-          },
-          "required": [
-           "auth_user_id",
-           "id",
-           "image_url",
-           "name"
-          ]
-         }
+        "acked_at": {
+         "type": [
+          "string",
+          "null"
+         ]
         },
-        "cast_member_id": {},
-        "created_at": {},
-        "id": {},
-        "match_id": {},
-        "updated_at": {}
+        "briefing_at": {
+         "type": "string"
+        },
+        "briefing_reminder_sent_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "cast_member": {
+         "type": "object",
+         "properties": {
+          "auth_user_id": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "id": {
+           "type": "string"
+          },
+          "image_url": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "name": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "auth_user_id",
+          "id",
+          "image_url",
+          "name"
+         ]
+        },
+        "cast_member_id": {
+         "type": "string"
+        },
+        "created_at": {
+         "type": "string"
+        },
+        "id": {
+         "type": "string"
+        },
+        "match_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "updated_at": {
+         "type": "string"
+        }
        },
        "required": [
         "acked_at",
@@ -8981,6 +8733,7 @@
           "create_adherent",
           "create_announcement",
           "create_api_token",
+          "create_bracket_snapshot",
           "create_cast_assignment",
           "create_cast_member",
           "create_custom_game_preset",
@@ -9087,6 +8840,7 @@
           "map_veto",
           "match_rescheduled",
           "notify_scrim_captains",
+          "notify_tournament_captains",
           "open_match_dispute",
           "open_public_mvp",
           "other",
@@ -9108,6 +8862,7 @@
           "reject_tenant_request",
           "remove",
           "remove_team_member",
+          "remove_tiebreaker_override",
           "reopen_match_lineup",
           "reorder_event_segments",
           "reorder_event_waves",
@@ -9115,6 +8870,7 @@
           "requestMoreInfo",
           "resend_credentials",
           "resolve_match_dispute",
+          "restore_bracket_snapshot",
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
@@ -9127,6 +8883,7 @@
           "save_placements",
           "send_team_message",
           "send_twitch_chat",
+          "set_tiebreaker_override",
           "settings_update",
           "shift_round",
           "skip_event_segment",
@@ -9377,12 +9134,37 @@
          "items": {
           "type": "object",
           "properties": {
+           "battle_tag": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "is_substitute": {
+            "type": "boolean"
+           },
+           "role": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
            "team_id": {
             "type": "string"
+           },
+           "user_id": {
+            "type": [
+             "string",
+             "null"
+            ]
            }
           },
           "required": [
-           "team_id"
+           "battle_tag",
+           "is_substitute",
+           "role",
+           "team_id",
+           "user_id"
           ]
          }
         },
@@ -9430,9 +9212,18 @@
      "match": {
       "type": "object",
       "properties": {
-       "id": {},
-       "scheduledAt": {},
-       "status": {}
+       "id": {
+        "type": "string"
+       },
+       "scheduledAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string"
+       }
       },
       "required": [
        "id",
@@ -9539,8 +9330,134 @@
      "matchId": {
       "type": "string"
      },
-     "matchStatus": {},
-     "poll": {}
+     "matchStatus": {
+      "type": "string"
+     },
+     "poll": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "candidate_player_ids": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "closed_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "closes_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "discord_channel_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "discord_message_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "duration_hours": {
+        "type": "number"
+       },
+       "id": {
+        "type": "string"
+       },
+       "match_id": {
+        "type": "string"
+       },
+       "posted_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "tenant_id": {
+        "type": "string"
+       },
+       "total_votes": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "updated_at": {
+        "type": "string"
+       },
+       "winner_battle_tag": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "winner_imported_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "winner_imported_by": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "winner_member_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "winner_source": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "winner_votes": {
+        "type": [
+         "number",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "candidate_player_ids",
+       "closed_at",
+       "closes_at",
+       "created_at",
+       "discord_channel_id",
+       "discord_message_id",
+       "duration_hours",
+       "id",
+       "match_id",
+       "posted_at",
+       "tenant_id",
+       "total_votes",
+       "updated_at",
+       "winner_battle_tag",
+       "winner_imported_at",
+       "winner_imported_by",
+       "winner_member_id",
+       "winner_source",
+       "winner_votes"
+      ]
+     }
     },
     "required": [
      "candidates",
@@ -13410,8 +13327,29 @@
      "stage": {
       "type": "object",
       "properties": {
+       "bracket_format": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "created_at": {
-        "type": "string"
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "default_match_format": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "deleted_at": {
+        "type": [
+         "string",
+         "null"
+        ]
        },
        "end_date": {
         "type": [
@@ -13423,10 +13361,16 @@
         "type": "string"
        },
        "is_active": {
-        "type": "boolean"
+        "type": [
+         "boolean",
+         "null"
+        ]
        },
        "is_public": {
-        "type": "boolean"
+        "type": [
+         "boolean",
+         "null"
+        ]
        },
        "name": {
         "type": "string"
@@ -13438,104 +13382,28 @@
         ]
        },
        "settings": {
-        "type": [
-         "object",
-         "null"
-        ],
-        "properties": {
-         "advancement_rules": {
-          "type": [
-           "object",
-           "null"
-          ],
-          "properties": {
-           "advance_per_group": {
-            "type": "number"
-           },
-           "advance_top": {
-            "type": "number"
-           },
-           "seed_by": {
-            "type": "string",
-            "enum": [
-             "manual",
-             "none",
-             "standings"
-            ]
-           },
-           "target_stage_id": {
-            "type": "string"
-           }
-          },
-          "required": [
-           "target_stage_id"
-          ]
+        "anyOf": [
+         {
+          "type": "boolean"
          },
-         "group_assignments": {
-          "type": [
-           "object",
-           "null"
-          ],
-          "additionalProperties": {
-           "type": "array",
-           "items": {
-            "type": "string"
-           }
-          }
+         {
+          "type": "string"
          },
-         "home_away": {
-          "type": [
-           "boolean",
-           "null"
-          ]
+         {
+          "type": "number"
          },
-         "loss_threshold": {
-          "type": [
-           "number",
-           "null"
-          ]
+         {
+          "type": "object",
+          "additionalProperties": {}
          },
-         "match_format": {
-          "type": [
-           "string",
-           "null"
-          ]
+         {
+          "type": "array",
+          "items": {}
          },
-         "rounds": {
-          "type": [
-           "number",
-           "null"
-          ]
-         },
-         "standings_tiebreakers": {
-          "type": [
-           "array",
-           "null"
-          ],
-          "items": {
-           "type": "string",
-           "enum": [
-            "head_to_head",
-            "score_diff",
-            "scored",
-            "seed",
-            "wins"
-           ]
-          }
-         },
-         "total_rounds": {
-          "type": [
-           "number",
-           "null"
-          ]
-         },
-         "win_threshold": {
-          "type": [
-           "number",
-           "null"
-          ]
+         {
+          "type": "null"
          }
-        }
+        ]
        },
        "slug": {
         "type": [
@@ -13544,21 +13412,24 @@
         ]
        },
        "stage_type": {
+        "type": "string"
+       },
+       "start_date": {
         "type": [
          "string",
          "null"
-        ],
-        "enum": [
-         "bracket",
-         "group",
-         "other",
-         "round_robin",
-         "showmatch",
-         "swiss",
-         null
         ]
        },
-       "start_date": {
+       "swiss_rounds": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "tenant_id": {
+        "type": "string"
+       },
+       "tiebreaker_policy": {
         "type": [
          "string",
          "null"
@@ -13572,10 +13443,19 @@
          "string",
          "null"
         ]
+       },
+       "visible": {
+        "type": [
+         "boolean",
+         "null"
+        ]
        }
       },
       "required": [
+       "bracket_format",
        "created_at",
+       "default_match_format",
+       "deleted_at",
        "end_date",
        "id",
        "is_active",
@@ -13586,8 +13466,12 @@
        "slug",
        "stage_type",
        "start_date",
+       "swiss_rounds",
+       "tenant_id",
+       "tiebreaker_policy",
        "tournament_id",
-       "updated_at"
+       "updated_at",
+       "visible"
       ]
      }
     },
@@ -13600,7 +13484,31 @@
    "200": {
     "type": "object",
     "properties": {
-     "advancementRules": {},
+     "advancementRules": {
+      "type": "object",
+      "properties": {
+       "advance_per_group": {
+        "type": "number"
+       },
+       "advance_top": {
+        "type": "number"
+       },
+       "seed_by": {
+        "type": "string",
+        "enum": [
+         "manual",
+         "none",
+         "standings"
+        ]
+       },
+       "target_stage_id": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "target_stage_id"
+      ]
+     },
      "canAdvance": {
       "type": "boolean"
      },
@@ -13644,14 +13552,17 @@
      "stageId": {
       "type": "string"
      },
-     "stageName": {},
-     "stageType": {},
+     "stageName": {
+      "type": "string"
+     },
+     "stageType": {
+      "type": "string"
+     },
      "totalMatches": {
       "type": "number"
      }
     },
     "required": [
-     "advancementRules",
      "canAdvance",
      "finishedMatches",
      "isComplete",
@@ -13834,6 +13745,7 @@
           "create_adherent",
           "create_announcement",
           "create_api_token",
+          "create_bracket_snapshot",
           "create_cast_assignment",
           "create_cast_member",
           "create_custom_game_preset",
@@ -13940,6 +13852,7 @@
           "map_veto",
           "match_rescheduled",
           "notify_scrim_captains",
+          "notify_tournament_captains",
           "open_match_dispute",
           "open_public_mvp",
           "other",
@@ -13961,6 +13874,7 @@
           "reject_tenant_request",
           "remove",
           "remove_team_member",
+          "remove_tiebreaker_override",
           "reopen_match_lineup",
           "reorder_event_segments",
           "reorder_event_waves",
@@ -13968,6 +13882,7 @@
           "requestMoreInfo",
           "resend_credentials",
           "resolve_match_dispute",
+          "restore_bracket_snapshot",
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
@@ -13980,6 +13895,7 @@
           "save_placements",
           "send_team_message",
           "send_twitch_chat",
+          "set_tiebreaker_override",
           "settings_update",
           "shift_round",
           "skip_event_segment",
@@ -14295,7 +14211,10 @@
          ]
         },
         "stage_id": {
-         "type": "string"
+         "type": [
+          "string",
+          "null"
+         ]
         },
         "status": {
          "type": "string"
@@ -14743,10 +14662,7 @@
          "type": "string"
         },
         "stage_type": {
-         "type": [
-          "string",
-          "null"
-         ]
+         "type": "string"
         }
        },
        "required": [
@@ -14759,9 +14675,15 @@
      "stage": {
       "type": "object",
       "properties": {
-       "id": {},
-       "name": {},
-       "tournament_id": {}
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "tournament_id": {
+        "type": "string"
+       }
       },
       "required": [
        "id",
@@ -14790,28 +14712,55 @@
       "items": {
        "type": "object",
        "properties": {
-        "id": {},
-        "match_count": {},
-        "reason": {},
-        "staff": {
-         "type": "array",
-         "items": {
-          "type": "object",
-          "properties": {
-           "display_name": {},
-           "id": {},
-           "role": {}
-          },
-          "required": [
-           "display_name",
-           "id",
-           "role"
-          ]
-         }
+        "id": {
+         "type": "number"
         },
-        "stage_id": {},
-        "taken_at": {},
-        "taken_by_staff_id": {}
+        "match_count": {
+         "type": "number"
+        },
+        "reason": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "staff": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "display_name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "id": {
+           "type": "string"
+          },
+          "role": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "display_name",
+          "id",
+          "role"
+         ]
+        },
+        "stage_id": {
+         "type": "string"
+        },
+        "taken_at": {
+         "type": "string"
+        },
+        "taken_by_staff_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
        },
        "required": [
         "id",
@@ -14833,233 +14782,7 @@
   "GET /api/admin/stages/{stageId}/standings": {
    "200": {
     "type": "object",
-    "properties": {
-     "grouped": {
-      "type": "object",
-      "properties": {
-       "groups": {
-        "type": "object",
-        "additionalProperties": {
-         "type": "array",
-         "items": {
-          "type": "object",
-          "properties": {
-           "draws": {
-            "type": "number"
-           },
-           "groupKey": {
-            "type": [
-             "string",
-             "null"
-            ]
-           },
-           "losses": {
-            "type": "number"
-           },
-           "rank": {
-            "type": "number"
-           },
-           "score": {
-            "type": "number"
-           },
-           "seed": {
-            "type": [
-             "number",
-             "null"
-            ]
-           },
-           "teamId": {
-            "type": "string"
-           },
-           "teamName": {
-            "type": [
-             "string",
-             "null"
-            ]
-           },
-           "tiebrokenBy": {
-            "type": [
-             "string",
-             "null"
-            ],
-            "enum": [
-             "head_to_head",
-             "score_diff",
-             "scored",
-             "seed",
-             "wins",
-             null
-            ]
-           },
-           "wins": {
-            "type": "number"
-           }
-          },
-          "required": [
-           "draws",
-           "losses",
-           "rank",
-           "score",
-           "seed",
-           "teamId",
-           "teamName",
-           "wins"
-          ]
-         }
-        }
-       },
-       "unassigned": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "draws": {
-           "type": "number"
-          },
-          "groupKey": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "losses": {
-           "type": "number"
-          },
-          "rank": {
-           "type": "number"
-          },
-          "score": {
-           "type": "number"
-          },
-          "seed": {
-           "type": [
-            "number",
-            "null"
-           ]
-          },
-          "teamId": {
-           "type": "string"
-          },
-          "teamName": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "tiebrokenBy": {
-           "type": [
-            "string",
-            "null"
-           ],
-           "enum": [
-            "head_to_head",
-            "score_diff",
-            "scored",
-            "seed",
-            "wins",
-            null
-           ]
-          },
-          "wins": {
-           "type": "number"
-          }
-         },
-         "required": [
-          "draws",
-          "losses",
-          "rank",
-          "score",
-          "seed",
-          "teamId",
-          "teamName",
-          "wins"
-         ]
-        }
-       }
-      },
-      "required": [
-       "groups",
-       "unassigned"
-      ]
-     },
-     "stageId": {
-      "type": "string"
-     },
-     "stageType": {},
-     "standings": {
-      "type": "array",
-      "items": {
-       "type": "object",
-       "properties": {
-        "draws": {
-         "type": "number"
-        },
-        "groupKey": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "losses": {
-         "type": "number"
-        },
-        "rank": {
-         "type": "number"
-        },
-        "score": {
-         "type": "number"
-        },
-        "seed": {
-         "type": [
-          "number",
-          "null"
-         ]
-        },
-        "teamId": {
-         "type": "string"
-        },
-        "teamName": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "tiebrokenBy": {
-         "type": [
-          "string",
-          "null"
-         ],
-         "enum": [
-          "head_to_head",
-          "score_diff",
-          "scored",
-          "seed",
-          "wins",
-          null
-         ]
-        },
-        "wins": {
-         "type": "number"
-        }
-       },
-       "required": [
-        "draws",
-        "losses",
-        "rank",
-        "score",
-        "seed",
-        "teamId",
-        "teamName",
-        "wins"
-       ]
-      }
-     }
-    },
-    "required": [
-     "stageId",
-     "stageType",
-     "standings"
-    ]
+    "additionalProperties": {}
    }
   },
   "GET /api/admin/stages/{stageId}/swiss-status": {
@@ -15087,7 +14810,11 @@
          "type": "number"
         },
         "reason": {
-         "type": "string"
+         "type": "string",
+         "enum": [
+          "loss_threshold",
+          "win_threshold"
+         ]
         },
         "teamId": {
          "type": "string"
@@ -15182,10 +14909,18 @@
      "stage": {
       "type": "object",
       "properties": {
-       "id": {},
-       "name": {},
-       "stage_type": {},
-       "tournament_id": {}
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "stage_type": {
+        "type": "string"
+       },
+       "tournament_id": {
+        "type": "string"
+       }
       },
       "required": [
        "id",
@@ -15202,29 +14937,56 @@
       "items": {
        "type": "object",
        "properties": {
-        "is_substitute": {},
-        "notes": {},
-        "seed": {},
-        "stage_id": {},
-        "team": {
-         "type": "array",
-         "items": {
-          "type": "object",
-          "properties": {
-           "id": {},
-           "logo_url": {},
-           "name": {},
-           "short_name": {}
-          },
-          "required": [
-           "id",
-           "logo_url",
-           "name",
-           "short_name"
-          ]
-         }
+        "is_substitute": {
+         "type": "boolean"
         },
-        "team_id": {}
+        "notes": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "seed": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "stage_id": {
+         "type": "string"
+        },
+        "team": {
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "logo_url": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "name": {
+           "type": "string"
+          },
+          "short_name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "id",
+          "logo_url",
+          "name",
+          "short_name"
+         ]
+        },
+        "team_id": {
+         "type": "string"
+        }
        },
        "required": [
         "is_substitute",
@@ -15242,9 +15004,18 @@
        "null"
       ],
       "properties": {
-       "id": {},
-       "name": {},
-       "slug": {}
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "slug": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
       },
       "required": [
        "id",
@@ -15270,40 +15041,60 @@
       "items": {
        "type": "object",
        "properties": {
-        "id": {},
+        "id": {
+         "type": "number"
+        },
         "loser": {
-         "type": "array",
-         "items": {
-          "type": "object",
-          "properties": {
-           "id": {},
-           "name": {}
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string"
           },
-          "required": [
-           "id",
-           "name"
-          ]
-         }
+          "name": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "id",
+          "name"
+         ]
         },
-        "loser_team_id": {},
-        "reason": {},
-        "set_at": {},
-        "set_by_staff_id": {},
+        "loser_team_id": {
+         "type": "string"
+        },
+        "reason": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "set_at": {
+         "type": "string"
+        },
+        "set_by_staff_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "winner": {
-         "type": "array",
-         "items": {
-          "type": "object",
-          "properties": {
-           "id": {},
-           "name": {}
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string"
           },
-          "required": [
-           "id",
-           "name"
-          ]
-         }
+          "name": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "id",
+          "name"
+         ]
         },
-        "winner_team_id": {}
+        "winner_team_id": {
+         "type": "string"
+        }
        },
        "required": [
         "id",
@@ -19562,6 +19353,7 @@
           "create_adherent",
           "create_announcement",
           "create_api_token",
+          "create_bracket_snapshot",
           "create_cast_assignment",
           "create_cast_member",
           "create_custom_game_preset",
@@ -19668,6 +19460,7 @@
           "map_veto",
           "match_rescheduled",
           "notify_scrim_captains",
+          "notify_tournament_captains",
           "open_match_dispute",
           "open_public_mvp",
           "other",
@@ -19689,6 +19482,7 @@
           "reject_tenant_request",
           "remove",
           "remove_team_member",
+          "remove_tiebreaker_override",
           "reopen_match_lineup",
           "reorder_event_segments",
           "reorder_event_waves",
@@ -19696,6 +19490,7 @@
           "requestMoreInfo",
           "resend_credentials",
           "resolve_match_dispute",
+          "restore_bracket_snapshot",
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
@@ -19708,6 +19503,7 @@
           "save_placements",
           "send_team_message",
           "send_twitch_chat",
+          "set_tiebreaker_override",
           "settings_update",
           "shift_round",
           "skip_event_segment",
@@ -21822,7 +21618,10 @@
         ]
        },
        "created_at": {
-        "type": "string"
+        "type": [
+         "string",
+         "null"
+        ]
        },
        "default_stream_url": {
         "type": [
@@ -21842,7 +21641,19 @@
          "null"
         ]
        },
+       "format": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "format_details": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "format_type": {
         "type": [
          "string",
          "null"
@@ -21894,53 +21705,28 @@
         "type": "boolean"
        },
        "registration_fields": {
-        "type": [
-         "array",
-         "null"
-        ],
-        "items": {
-         "type": "object",
-         "properties": {
-          "help": {
-           "type": "string"
-          },
-          "key": {
-           "type": "string"
-          },
-          "label": {
-           "type": "string"
-          },
-          "maxLength": {
-           "type": "number"
-          },
-          "options": {
-           "type": "array",
-           "items": {
-            "type": "string"
-           }
-          },
-          "required": {
-           "type": "boolean"
-          },
-          "type": {
-           "type": "string",
-           "enum": [
-            "checkbox",
-            "number",
-            "select",
-            "text",
-            "textarea",
-            "url"
-           ]
-          }
+        "anyOf": [
+         {
+          "type": "boolean"
          },
-         "required": [
-          "key",
-          "label",
-          "required",
-          "type"
-         ]
-        }
+         {
+          "type": "string"
+         },
+         {
+          "type": "number"
+         },
+         {
+          "type": "object",
+          "additionalProperties": {}
+         },
+         {
+          "type": "array",
+          "items": {}
+         },
+         {
+          "type": "null"
+         }
+        ]
        },
        "roster_locked_at": {
         "type": [
@@ -21982,10 +21768,7 @@
         ]
        },
        "status": {
-        "type": [
-         "string",
-         "null"
-        ]
+        "type": "string"
        },
        "timezone": {
         "type": [
@@ -22006,7 +21789,9 @@
        "default_stream_url",
        "description_info",
        "end_date",
+       "format",
        "format_details",
+       "format_type",
        "game",
        "id",
        "is_featured",
@@ -22523,9 +22308,18 @@
      "tournament": {
       "type": "object",
       "properties": {
-       "id": {},
-       "name": {},
-       "slug": {}
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "slug": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
       },
       "required": [
        "id",
@@ -22544,211 +22338,186 @@
   },
   "GET /api/admin/tournament/{id}/availability": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "constraints": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "endsOn": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "id": {
-           "type": "string"
-          },
-          "kind": {
-           "type": "string",
-           "enum": [
-            "blackout",
-            "earliest",
-            "latest",
-            "weekday"
-           ]
-          },
-          "note": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "startsOn": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "teamId": {
-           "type": "string"
-          },
-          "timeOfDay": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "timezone": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "tournamentId": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "weekdays": {
-           "type": [
-            "array",
-            "null"
-           ],
-           "items": {
-            "type": "number"
-           }
-          }
-         },
-         "required": [
-          "id",
-          "kind",
-          "teamId",
-          "tournamentId"
+    "type": "object",
+    "properties": {
+     "constraints": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "endsOn": {
+         "type": [
+          "string",
+          "null"
          ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "kind": {
+         "type": "string",
+         "enum": [
+          "blackout",
+          "earliest",
+          "latest",
+          "weekday"
+         ]
+        },
+        "note": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "startsOn": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "teamId": {
+         "type": "string"
+        },
+        "timeOfDay": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "timezone": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "tournamentId": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "weekdays": {
+         "type": [
+          "array",
+          "null"
+         ],
+         "items": {
+          "type": "number"
+         }
         }
        },
-       "teams": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "constraints": {
-           "type": "array",
-           "items": {
-            "type": "object",
-            "properties": {
-             "endsOn": {
-              "type": [
-               "string",
-               "null"
-              ]
-             },
-             "id": {
-              "type": "string"
-             },
-             "kind": {
-              "type": "string",
-              "enum": [
-               "blackout",
-               "earliest",
-               "latest",
-               "weekday"
-              ]
-             },
-             "note": {
-              "type": [
-               "string",
-               "null"
-              ]
-             },
-             "startsOn": {
-              "type": [
-               "string",
-               "null"
-              ]
-             },
-             "teamId": {
-              "type": "string"
-             },
-             "timeOfDay": {
-              "type": [
-               "string",
-               "null"
-              ]
-             },
-             "timezone": {
-              "type": [
-               "string",
-               "null"
-              ]
-             },
-             "tournamentId": {
-              "type": [
-               "string",
-               "null"
-              ]
-             },
-             "weekdays": {
-              "type": [
-               "array",
-               "null"
-              ],
-              "items": {
-               "type": "number"
-              }
-             }
-            },
-            "required": [
-             "id",
-             "kind",
-             "teamId",
-             "tournamentId"
-            ]
-           }
-          },
-          "id": {
-           "type": "string"
-          },
-          "name": {
-           "type": [
-            "string",
-            "null"
-           ]
-          }
-         },
-         "required": [
-          "constraints",
-          "id",
-          "name"
-         ]
-        }
-       },
-       "tournamentId": {
-        "type": "string"
-       }
-      },
-      "required": [
-       "constraints",
-       "teams",
-       "tournamentId"
-      ]
+       "required": [
+        "id",
+        "kind",
+        "teamId",
+        "tournamentId"
+       ]
+      }
      },
-     {
-      "type": "object",
-      "properties": {
-       "constraints": {
-        "type": "array",
-        "items": {}
+     "teams": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "constraints": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "endsOn": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "id": {
+            "type": "string"
+           },
+           "kind": {
+            "type": "string",
+            "enum": [
+             "blackout",
+             "earliest",
+             "latest",
+             "weekday"
+            ]
+           },
+           "note": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "startsOn": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "teamId": {
+            "type": "string"
+           },
+           "timeOfDay": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "timezone": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "tournamentId": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "weekdays": {
+            "type": [
+             "array",
+             "null"
+            ],
+            "items": {
+             "type": "number"
+            }
+           }
+          },
+          "required": [
+           "id",
+           "kind",
+           "teamId",
+           "tournamentId"
+          ]
+         }
+        },
+        "id": {
+         "type": "string"
+        },
+        "name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
        },
-       "teams": {
-        "type": "array",
-        "items": {}
-       },
-       "tournamentId": {
-        "type": "string"
-       }
-      },
-      "required": [
-       "constraints",
-       "teams",
-       "tournamentId"
-      ]
+       "required": [
+        "constraints",
+        "id",
+        "name"
+       ]
+      }
+     },
+     "tournamentId": {
+      "type": "string"
      }
+    },
+    "required": [
+     "constraints",
+     "teams",
+     "tournamentId"
     ]
    }
   },
@@ -23942,17 +23711,65 @@
       "items": {
        "type": "object",
        "properties": {
+        "channel_type": {
+         "type": "string"
+        },
+        "created_at": {
+         "type": "string"
+        },
+        "id": {
+         "type": "string"
+        },
+        "is_active": {
+         "type": "boolean"
+        },
+        "last_post_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "last_post_status": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "role_mention": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "tenant_id": {
+         "type": "string"
+        },
         "tournament_id": {
          "type": [
           "string",
           "null"
          ]
+        },
+        "updated_at": {
+         "type": "string"
+        },
+        "webhook_url": {
+         "type": "string"
         }
        },
        "required": [
-        "tournament_id"
-       ],
-       "additionalProperties": {}
+        "channel_type",
+        "created_at",
+        "id",
+        "is_active",
+        "last_post_at",
+        "last_post_status",
+        "role_mention",
+        "tenant_id",
+        "tournament_id",
+        "updated_at",
+        "webhook_url"
+       ]
       }
      },
      "scoped": {
@@ -23960,17 +23777,65 @@
       "items": {
        "type": "object",
        "properties": {
+        "channel_type": {
+         "type": "string"
+        },
+        "created_at": {
+         "type": "string"
+        },
+        "id": {
+         "type": "string"
+        },
+        "is_active": {
+         "type": "boolean"
+        },
+        "last_post_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "last_post_status": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "role_mention": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "tenant_id": {
+         "type": "string"
+        },
         "tournament_id": {
          "type": [
           "string",
           "null"
          ]
+        },
+        "updated_at": {
+         "type": "string"
+        },
+        "webhook_url": {
+         "type": "string"
         }
        },
        "required": [
-        "tournament_id"
-       ],
-       "additionalProperties": {}
+        "channel_type",
+        "created_at",
+        "id",
+        "is_active",
+        "last_post_at",
+        "last_post_status",
+        "role_mention",
+        "tenant_id",
+        "tournament_id",
+        "updated_at",
+        "webhook_url"
+       ]
       }
      }
     },
@@ -23980,6 +23845,9 @@
      "scoped"
     ]
    }
+  },
+  "GET /api/admin/tournament/{id}/export-results": {
+   "200": {}
   },
   "GET /api/admin/tournament/{id}/history": {
    "200": {
@@ -24054,6 +23922,7 @@
           "create_adherent",
           "create_announcement",
           "create_api_token",
+          "create_bracket_snapshot",
           "create_cast_assignment",
           "create_cast_member",
           "create_custom_game_preset",
@@ -24160,6 +24029,7 @@
           "map_veto",
           "match_rescheduled",
           "notify_scrim_captains",
+          "notify_tournament_captains",
           "open_match_dispute",
           "open_public_mvp",
           "other",
@@ -24181,6 +24051,7 @@
           "reject_tenant_request",
           "remove",
           "remove_team_member",
+          "remove_tiebreaker_override",
           "reopen_match_lineup",
           "reorder_event_segments",
           "reorder_event_waves",
@@ -24188,6 +24059,7 @@
           "requestMoreInfo",
           "resend_credentials",
           "resolve_match_dispute",
+          "restore_bracket_snapshot",
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
@@ -24200,6 +24072,7 @@
           "save_placements",
           "send_team_message",
           "send_twitch_chat",
+          "set_tiebreaker_override",
           "settings_update",
           "shift_round",
           "skip_event_segment",
@@ -24427,322 +24300,16 @@
     "properties": {
      "matches": {
       "type": "array",
-      "items": {
-       "type": "object",
-       "properties": {
-        "bracket_side": {
-         "type": [
-          "string",
-          "null"
-         ],
-         "enum": [
-          "final",
-          "lb",
-          "none",
-          "wb",
-          null
-         ]
-        },
-        "completed_at": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "created_at": {
-         "type": "string"
-        },
-        "group_key": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "id": {
-         "type": "string"
-        },
-        "is_bye": {
-         "type": [
-          "boolean",
-          "null"
-         ]
-        },
-        "lobby_code": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "match_format": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "next_match_lose_id": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "next_match_lose_slot": {
-         "type": [
-          "number",
-          "null"
-         ],
-         "enum": [
-          1,
-          2,
-          null
-         ]
-        },
-        "next_match_win_id": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "next_match_win_slot": {
-         "type": [
-          "number",
-          "null"
-         ],
-         "enum": [
-          1,
-          2,
-          null
-         ]
-        },
-        "notes": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "round_name": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "round_number": {
-         "type": [
-          "number",
-          "null"
-         ]
-        },
-        "scheduled_at": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "stage_id": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "status": {
-         "type": "string",
-         "enum": [
-          "cancelled",
-          "disputed",
-          "finished",
-          "ongoing",
-          "pending",
-          "postponed",
-          "walkover"
-         ]
-        },
-        "stream_url": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "team1_id": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "team1_score": {
-         "type": [
-          "number",
-          "null"
-         ]
-        },
-        "team2_id": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "team2_score": {
-         "type": [
-          "number",
-          "null"
-         ]
-        },
-        "tournament_id": {
-         "type": "string"
-        },
-        "updated_at": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "winner_team_id": {
-         "type": [
-          "string",
-          "null"
-         ]
-        }
-       },
-       "required": [
-        "bracket_side",
-        "completed_at",
-        "created_at",
-        "group_key",
-        "id",
-        "is_bye",
-        "lobby_code",
-        "match_format",
-        "next_match_lose_id",
-        "next_match_lose_slot",
-        "next_match_win_id",
-        "next_match_win_slot",
-        "notes",
-        "round_name",
-        "round_number",
-        "scheduled_at",
-        "stage_id",
-        "status",
-        "stream_url",
-        "team1_id",
-        "team1_score",
-        "team2_id",
-        "team2_score",
-        "tournament_id",
-        "updated_at",
-        "winner_team_id"
-       ]
-      }
+      "items": {}
      },
      "stages": {
       "type": "array",
-      "items": {
-       "type": "object",
-       "properties": {
-        "end_date": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "id": {
-         "type": "string"
-        },
-        "is_active": {
-         "type": [
-          "boolean",
-          "null"
-         ]
-        },
-        "is_public": {
-         "type": [
-          "boolean",
-          "null"
-         ]
-        },
-        "name": {
-         "type": "string"
-        },
-        "order_index": {
-         "type": [
-          "number",
-          "null"
-         ]
-        },
-        "stage_type": {
-         "type": [
-          "string",
-          "null"
-         ],
-         "enum": [
-          "bracket",
-          "ffa",
-          "group",
-          "other",
-          "round_robin",
-          "showmatch",
-          "swiss",
-          null
-         ]
-        },
-        "start_date": {
-         "type": [
-          "string",
-          "null"
-         ]
-        }
-       },
-       "required": [
-        "id",
-        "name",
-        "order_index",
-        "stage_type"
-       ]
-      }
+      "items": {}
      },
      "total": {
       "type": "number"
      },
-     "tournament": {
-      "type": [
-       "object",
-       "null"
-      ],
-      "properties": {
-       "game": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "id": {
-        "type": "string"
-       },
-       "name": {
-        "type": "string"
-       },
-       "slug": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "status": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "timezone": {
-        "type": [
-         "string",
-         "null"
-        ]
-       }
-      },
-      "required": [
-       "id",
-       "name",
-       "slug"
-      ]
-     }
+     "tournament": {}
     },
     "required": [
      "matches"
@@ -25045,8 +24612,12 @@
      "tournament": {
       "type": "object",
       "properties": {
-       "id": {},
-       "name": {}
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       }
       },
       "required": [
        "id",
@@ -25316,8 +24887,12 @@
      "tournament": {
       "type": "object",
       "properties": {
-       "id": {},
-       "name": {}
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       }
       },
       "required": [
        "id",
@@ -25462,13 +25037,21 @@
        ]
       }
      },
-     "last_stage_type": {},
+     "last_stage_type": {
+      "type": "string"
+     },
      "tournament": {
       "type": "object",
       "properties": {
-       "id": {},
-       "name": {},
-       "status": {}
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "status": {
+        "type": "string"
+       }
       },
       "required": [
        "id",
@@ -26003,14 +25586,50 @@
       "items": {
        "type": "object",
        "properties": {
+        "bracket_format": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "created_at": {
-         "type": "string"
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "default_match_format": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "deleted_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "end_date": {
+         "type": [
+          "string",
+          "null"
+         ]
         },
         "id": {
          "type": "string"
         },
+        "is_active": {
+         "type": [
+          "boolean",
+          "null"
+         ]
+        },
         "is_public": {
-         "type": "boolean"
+         "type": [
+          "boolean",
+          "null"
+         ]
         },
         "name": {
          "type": "string"
@@ -26022,104 +25641,28 @@
          ]
         },
         "settings": {
-         "type": [
-          "object",
-          "null"
-         ],
-         "properties": {
-          "advancement_rules": {
-           "type": [
-            "object",
-            "null"
-           ],
-           "properties": {
-            "advance_per_group": {
-             "type": "number"
-            },
-            "advance_top": {
-             "type": "number"
-            },
-            "seed_by": {
-             "type": "string",
-             "enum": [
-              "manual",
-              "none",
-              "standings"
-             ]
-            },
-            "target_stage_id": {
-             "type": "string"
-            }
-           },
-           "required": [
-            "target_stage_id"
-           ]
+         "anyOf": [
+          {
+           "type": "boolean"
           },
-          "group_assignments": {
-           "type": [
-            "object",
-            "null"
-           ],
-           "additionalProperties": {
-            "type": "array",
-            "items": {
-             "type": "string"
-            }
-           }
+          {
+           "type": "string"
           },
-          "home_away": {
-           "type": [
-            "boolean",
-            "null"
-           ]
+          {
+           "type": "number"
           },
-          "loss_threshold": {
-           "type": [
-            "number",
-            "null"
-           ]
+          {
+           "type": "object",
+           "additionalProperties": {}
           },
-          "match_format": {
-           "type": [
-            "string",
-            "null"
-           ]
+          {
+           "type": "array",
+           "items": {}
           },
-          "rounds": {
-           "type": [
-            "number",
-            "null"
-           ]
-          },
-          "standings_tiebreakers": {
-           "type": [
-            "array",
-            "null"
-           ],
-           "items": {
-            "type": "string",
-            "enum": [
-             "head_to_head",
-             "score_diff",
-             "scored",
-             "seed",
-             "wins"
-            ]
-           }
-          },
-          "total_rounds": {
-           "type": [
-            "number",
-            "null"
-           ]
-          },
-          "win_threshold": {
-           "type": [
-            "number",
-            "null"
-           ]
+          {
+           "type": "null"
           }
-         }
+         ]
         },
         "slug": {
          "type": [
@@ -26128,21 +25671,24 @@
          ]
         },
         "stage_type": {
+         "type": "string"
+        },
+        "start_date": {
          "type": [
           "string",
           "null"
-         ],
-         "enum": [
-          "bracket",
-          "group",
-          "other",
-          "round_robin",
-          "showmatch",
-          "swiss",
-          null
          ]
         },
-        "start_date": {
+        "swiss_rounds": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "tenant_id": {
+         "type": "string"
+        },
+        "tiebreaker_policy": {
          "type": [
           "string",
           "null"
@@ -26156,11 +25702,22 @@
           "string",
           "null"
          ]
+        },
+        "visible": {
+         "type": [
+          "boolean",
+          "null"
+         ]
         }
        },
        "required": [
+        "bracket_format",
         "created_at",
+        "default_match_format",
+        "deleted_at",
+        "end_date",
         "id",
+        "is_active",
         "is_public",
         "name",
         "order_index",
@@ -26168,8 +25725,12 @@
         "slug",
         "stage_type",
         "start_date",
+        "swiss_rounds",
+        "tenant_id",
+        "tiebreaker_policy",
         "tournament_id",
-        "updated_at"
+        "updated_at",
+        "visible"
        ]
       }
      }
@@ -26436,9 +25997,18 @@
      "tournament": {
       "type": "object",
       "properties": {
-       "id": {},
-       "name": {},
-       "slug": {}
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "slug": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
       },
       "required": [
        "id",
@@ -26460,7 +26030,9 @@
    "200": {
     "type": "object",
     "properties": {
-     "current_status": {},
+     "current_status": {
+      "type": "string"
+     },
      "guards": {
       "type": "array",
       "items": {
@@ -26503,26 +26075,34 @@
        "type": "object",
        "properties": {
         "created_at": {
-         "type": "string"
+         "type": [
+          "string",
+          "null"
+         ]
         },
         "field_values": {
-         "type": [
-          "object",
-          "null"
-         ],
-         "additionalProperties": {
-          "anyOf": [
-           {
-            "type": "boolean"
-           },
-           {
-            "type": "string"
-           },
-           {
-            "type": "number"
-           }
-          ]
-         }
+         "anyOf": [
+          {
+           "type": "boolean"
+          },
+          {
+           "type": "string"
+          },
+          {
+           "type": "number"
+          },
+          {
+           "type": "object",
+           "additionalProperties": {}
+          },
+          {
+           "type": "array",
+           "items": {}
+          },
+          {
+           "type": "null"
+          }
+         ]
         },
         "id": {
          "type": "string"
@@ -26592,7 +26172,73 @@
     "properties": {
      "team": {
       "type": "object",
-      "additionalProperties": {}
+      "properties": {
+       "created_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "seed": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "status": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "team": {
+        "type": "object",
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "is_active": {
+          "type": [
+           "boolean",
+           "null"
+          ]
+         },
+         "logo_url": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "name": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "id",
+         "is_active",
+         "logo_url",
+         "name"
+        ]
+       },
+       "team_id": {
+        "type": "string"
+       },
+       "tournament_id": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "created_at",
+       "id",
+       "seed",
+       "status",
+       "team",
+       "team_id",
+       "tournament_id"
+      ]
      }
     },
     "required": [
@@ -26616,7 +26262,10 @@
        "type": "object",
        "properties": {
         "created_at": {
-         "type": "string"
+         "type": [
+          "string",
+          "null"
+         ]
         },
         "end_date": {
          "type": [
@@ -26655,10 +26304,7 @@
          ]
         },
         "status": {
-         "type": [
-          "string",
-          "null"
-         ]
+         "type": "string"
         },
         "updated_at": {
          "type": [
@@ -26699,14 +26345,39 @@
         "items": {
          "type": "object",
          "properties": {
-          "amount_cents": {},
-          "checkout_intent_id": {},
-          "contributor_name": {},
-          "created_at": {},
-          "helloasso_payment_id": {},
-          "id": {},
-          "is_anonymous": {},
-          "message": {}
+          "amount_cents": {
+           "type": "number"
+          },
+          "checkout_intent_id": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "contributor_name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "created_at": {
+           "type": "string"
+          },
+          "helloasso_payment_id": {
+           "type": "string"
+          },
+          "id": {
+           "type": "string"
+          },
+          "is_anonymous": {
+           "type": "boolean"
+          },
+          "message": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
          },
          "required": [
           "amount_cents",
@@ -26726,19 +26397,45 @@
        "pool": {
         "type": "object",
         "properties": {
-         "base_amount_cents": {},
-         "created_at": {},
-         "currency": {},
-         "goal_amount_cents": {},
-         "id": {},
-         "is_open": {},
-         "raised_amount_cents": {},
-         "title": {},
+         "base_amount_cents": {
+          "type": "number"
+         },
+         "created_at": {
+          "type": "string"
+         },
+         "currency": {
+          "type": "string"
+         },
+         "goal_amount_cents": {
+          "type": [
+           "number",
+           "null"
+          ]
+         },
+         "id": {
+          "type": "string"
+         },
+         "is_open": {
+          "type": "boolean"
+         },
+         "raised_amount_cents": {
+          "type": "number"
+         },
+         "title": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
          "total_cents": {
           "type": "number"
          },
-         "tournament_id": {},
-         "updated_at": {}
+         "tournament_id": {
+          "type": "string"
+         },
+         "updated_at": {
+          "type": "string"
+         }
         },
         "required": [
          "base_amount_cents",
@@ -53669,57 +53366,78 @@
    }
   },
   "PATCH /api/admin/matches/{matchId}": {
-   "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "keptOngoing": {
-        "type": "boolean"
-       },
-       "match": {},
-       "matchId": {
-        "type": "string"
-       },
-       "updated": {
-        "type": "boolean"
-       },
-       "winnerTeamId": {
-        "type": [
-         "string",
-         "null"
-        ]
-       }
-      },
-      "required": [
-       "matchId",
-       "updated",
-       "winnerTeamId"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "match": {},
-       "warnings": {
-        "type": "array",
-        "items": {
-         "type": "string"
-        }
-       }
-      },
-      "required": [
-       "match"
-      ]
-     }
-    ]
-   }
+   "200": {}
   },
   "PATCH /api/admin/matches/{matchId}/cast-assignments/{assignmentId}": {
    "200": {
     "type": "object",
     "properties": {
-     "assignment": {}
+     "assignment": {
+      "type": "object",
+      "properties": {
+       "acked_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "briefing_at": {
+        "type": "string"
+       },
+       "briefing_reminder_sent_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "cast_member_id": {
+        "type": "string"
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "match_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "role": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "scrim_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "tenant_id": {
+        "type": "string"
+       },
+       "updated_at": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "acked_at",
+       "briefing_at",
+       "briefing_reminder_sent_at",
+       "cast_member_id",
+       "created_at",
+       "id",
+       "match_id",
+       "role",
+       "scrim_id",
+       "tenant_id",
+       "updated_at"
+      ]
+     }
     },
     "required": [
      "assignment"
@@ -54271,44 +53989,7 @@
    }
   },
   "PATCH /api/admin/matches/{matchId}/veto": {
-   "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "alreadyUnlocked": {
-        "type": "boolean"
-       },
-       "success": {
-        "type": "boolean"
-       },
-       "vetoLockedAt": {
-        "type": "null"
-       }
-      },
-      "required": [
-       "alreadyUnlocked",
-       "success",
-       "vetoLockedAt"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "success": {
-        "type": "boolean"
-       },
-       "vetoLockedAt": {
-        "type": "null"
-       }
-      },
-      "required": [
-       "success",
-       "vetoLockedAt"
-      ]
-     }
-    ]
-   }
+   "200": {}
   },
   "PATCH /api/admin/me": {
    "200": {
@@ -55149,189 +54830,7 @@
    "200": {
     "type": "object",
     "properties": {
-     "stage": {
-      "type": "object",
-      "properties": {
-       "created_at": {
-        "type": "string"
-       },
-       "end_date": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "id": {
-        "type": "string"
-       },
-       "is_active": {
-        "type": "boolean"
-       },
-       "is_public": {
-        "type": "boolean"
-       },
-       "name": {
-        "type": "string"
-       },
-       "order_index": {
-        "type": [
-         "number",
-         "null"
-        ]
-       },
-       "settings": {
-        "type": [
-         "object",
-         "null"
-        ],
-        "properties": {
-         "advancement_rules": {
-          "type": [
-           "object",
-           "null"
-          ],
-          "properties": {
-           "advance_per_group": {
-            "type": "number"
-           },
-           "advance_top": {
-            "type": "number"
-           },
-           "seed_by": {
-            "type": "string",
-            "enum": [
-             "manual",
-             "none",
-             "standings"
-            ]
-           },
-           "target_stage_id": {
-            "type": "string"
-           }
-          },
-          "required": [
-           "target_stage_id"
-          ]
-         },
-         "group_assignments": {
-          "type": [
-           "object",
-           "null"
-          ],
-          "additionalProperties": {
-           "type": "array",
-           "items": {
-            "type": "string"
-           }
-          }
-         },
-         "home_away": {
-          "type": [
-           "boolean",
-           "null"
-          ]
-         },
-         "loss_threshold": {
-          "type": [
-           "number",
-           "null"
-          ]
-         },
-         "match_format": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "rounds": {
-          "type": [
-           "number",
-           "null"
-          ]
-         },
-         "standings_tiebreakers": {
-          "type": [
-           "array",
-           "null"
-          ],
-          "items": {
-           "type": "string",
-           "enum": [
-            "head_to_head",
-            "score_diff",
-            "scored",
-            "seed",
-            "wins"
-           ]
-          }
-         },
-         "total_rounds": {
-          "type": [
-           "number",
-           "null"
-          ]
-         },
-         "win_threshold": {
-          "type": [
-           "number",
-           "null"
-          ]
-         }
-        }
-       },
-       "slug": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "stage_type": {
-        "type": [
-         "string",
-         "null"
-        ],
-        "enum": [
-         "bracket",
-         "group",
-         "other",
-         "round_robin",
-         "showmatch",
-         "swiss",
-         null
-        ]
-       },
-       "start_date": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "tournament_id": {
-        "type": "string"
-       },
-       "updated_at": {
-        "type": [
-         "string",
-         "null"
-        ]
-       }
-      },
-      "required": [
-       "created_at",
-       "end_date",
-       "id",
-       "is_active",
-       "is_public",
-       "name",
-       "order_index",
-       "settings",
-       "slug",
-       "stage_type",
-       "start_date",
-       "tournament_id",
-       "updated_at"
-      ]
-     }
+     "stage": {}
     },
     "required": [
      "stage"
@@ -55341,79 +54840,7 @@
   "PATCH /api/admin/stages/{stageId}/bulk-matches": {
    "200": {
     "type": "object",
-    "properties": {
-     "results": {
-      "type": "array",
-      "items": {
-       "type": "object",
-       "properties": {
-        "error": {
-         "type": "string"
-        },
-        "matchId": {
-         "type": "string"
-        },
-        "success": {
-         "type": "boolean"
-        }
-       },
-       "required": [
-        "matchId",
-        "success"
-       ]
-      }
-     },
-     "successCount": {
-      "type": "number"
-     },
-     "undoPayload": {
-      "type": "object",
-      "properties": {
-       "snapshots": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "fields": {
-           "type": "object",
-           "properties": {
-            "scheduled_at": {
-             "type": [
-              "string",
-              "null"
-             ]
-            }
-           },
-           "required": [
-            "scheduled_at"
-           ]
-          },
-          "matchId": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "fields",
-          "matchId"
-         ]
-        }
-       },
-       "type": {
-        "type": "string",
-        "const": "bulk_schedule"
-       }
-      },
-      "required": [
-       "snapshots",
-       "type"
-      ]
-     }
-    },
-    "required": [
-     "results",
-     "successCount",
-     "undoPayload"
-    ]
+    "additionalProperties": {}
    }
   },
   "PATCH /api/admin/stages/{stageId}/snapshots": {
@@ -55427,7 +54854,8 @@
       "type": "number"
      },
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -55439,50 +54867,8 @@
   },
   "PATCH /api/admin/stages/{stageId}/teams": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "bulk": {
-        "type": "boolean"
-       },
-       "results": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "error": {
-           "type": "string"
-          },
-          "success": {
-           "type": "boolean"
-          },
-          "teamId": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "success",
-          "teamId"
-         ]
-        }
-       }
-      },
-      "required": [
-       "bulk",
-       "results"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "stageTeam": {}
-      },
-      "required": [
-       "stageTeam"
-      ]
-     }
-    ]
+    "type": "object",
+    "additionalProperties": {}
    }
   },
   "PATCH /api/admin/stream-alerts": {
@@ -56702,6 +56088,227 @@
     ]
    }
   },
+  "PATCH /api/admin/tournament/{id}": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "success": {
+      "type": "boolean"
+     },
+     "tournament": {
+      "type": "object",
+      "properties": {
+       "banner_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "created_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "default_stream_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "description_info": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "end_date": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "format": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "format_details": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "format_type": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "game": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "is_featured": {
+        "type": "boolean"
+       },
+       "is_public": {
+        "type": "boolean"
+       },
+       "logo_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "max_players": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "max_teams": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "min_players": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "name": {
+        "type": "string"
+       },
+       "pooled_teams": {
+        "type": "boolean"
+       },
+       "registration_fields": {
+        "anyOf": [
+         {
+          "type": "boolean"
+         },
+         {
+          "type": "string"
+         },
+         {
+          "type": "number"
+         },
+         {
+          "type": "object",
+          "additionalProperties": {}
+         },
+         {
+          "type": "array",
+          "items": {}
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "roster_locked_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "rules_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "schedule_details": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "schedule_rules": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "slug": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "solo_mode": {
+        "type": "boolean"
+       },
+       "start_date": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string"
+       },
+       "timezone": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "updated_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "banner_url",
+       "created_at",
+       "default_stream_url",
+       "description_info",
+       "end_date",
+       "format",
+       "format_details",
+       "format_type",
+       "game",
+       "id",
+       "is_featured",
+       "is_public",
+       "logo_url",
+       "max_players",
+       "max_teams",
+       "min_players",
+       "name",
+       "pooled_teams",
+       "registration_fields",
+       "roster_locked_at",
+       "rules_url",
+       "schedule_details",
+       "schedule_rules",
+       "slug",
+       "solo_mode",
+       "start_date",
+       "status",
+       "timezone",
+       "updated_at"
+      ]
+     }
+    },
+    "required": [
+     "success",
+     "tournament"
+    ]
+   }
+  },
   "PATCH /api/admin/tournament/{id}/checkin-settings": {
    "200": {
     "type": "object",
@@ -56728,14 +56335,50 @@
       "items": {
        "type": "object",
        "properties": {
+        "bracket_format": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "created_at": {
-         "type": "string"
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "default_match_format": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "deleted_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "end_date": {
+         "type": [
+          "string",
+          "null"
+         ]
         },
         "id": {
          "type": "string"
         },
+        "is_active": {
+         "type": [
+          "boolean",
+          "null"
+         ]
+        },
         "is_public": {
-         "type": "boolean"
+         "type": [
+          "boolean",
+          "null"
+         ]
         },
         "name": {
          "type": "string"
@@ -56747,104 +56390,28 @@
          ]
         },
         "settings": {
-         "type": [
-          "object",
-          "null"
-         ],
-         "properties": {
-          "advancement_rules": {
-           "type": [
-            "object",
-            "null"
-           ],
-           "properties": {
-            "advance_per_group": {
-             "type": "number"
-            },
-            "advance_top": {
-             "type": "number"
-            },
-            "seed_by": {
-             "type": "string",
-             "enum": [
-              "manual",
-              "none",
-              "standings"
-             ]
-            },
-            "target_stage_id": {
-             "type": "string"
-            }
-           },
-           "required": [
-            "target_stage_id"
-           ]
+         "anyOf": [
+          {
+           "type": "boolean"
           },
-          "group_assignments": {
-           "type": [
-            "object",
-            "null"
-           ],
-           "additionalProperties": {
-            "type": "array",
-            "items": {
-             "type": "string"
-            }
-           }
+          {
+           "type": "string"
           },
-          "home_away": {
-           "type": [
-            "boolean",
-            "null"
-           ]
+          {
+           "type": "number"
           },
-          "loss_threshold": {
-           "type": [
-            "number",
-            "null"
-           ]
+          {
+           "type": "object",
+           "additionalProperties": {}
           },
-          "match_format": {
-           "type": [
-            "string",
-            "null"
-           ]
+          {
+           "type": "array",
+           "items": {}
           },
-          "rounds": {
-           "type": [
-            "number",
-            "null"
-           ]
-          },
-          "standings_tiebreakers": {
-           "type": [
-            "array",
-            "null"
-           ],
-           "items": {
-            "type": "string",
-            "enum": [
-             "head_to_head",
-             "score_diff",
-             "scored",
-             "seed",
-             "wins"
-            ]
-           }
-          },
-          "total_rounds": {
-           "type": [
-            "number",
-            "null"
-           ]
-          },
-          "win_threshold": {
-           "type": [
-            "number",
-            "null"
-           ]
+          {
+           "type": "null"
           }
-         }
+         ]
         },
         "slug": {
          "type": [
@@ -56853,21 +56420,24 @@
          ]
         },
         "stage_type": {
+         "type": "string"
+        },
+        "start_date": {
          "type": [
           "string",
           "null"
-         ],
-         "enum": [
-          "bracket",
-          "group",
-          "other",
-          "round_robin",
-          "showmatch",
-          "swiss",
-          null
          ]
         },
-        "start_date": {
+        "swiss_rounds": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "tenant_id": {
+         "type": "string"
+        },
+        "tiebreaker_policy": {
          "type": [
           "string",
           "null"
@@ -56881,11 +56451,22 @@
           "string",
           "null"
          ]
+        },
+        "visible": {
+         "type": [
+          "boolean",
+          "null"
+         ]
         }
        },
        "required": [
+        "bracket_format",
         "created_at",
+        "default_match_format",
+        "deleted_at",
+        "end_date",
         "id",
+        "is_active",
         "is_public",
         "name",
         "order_index",
@@ -56893,8 +56474,12 @@
         "slug",
         "stage_type",
         "start_date",
+        "swiss_rounds",
+        "tenant_id",
+        "tiebreaker_policy",
         "tournament_id",
-        "updated_at"
+        "updated_at",
+        "visible"
        ]
       }
      }
@@ -56910,7 +56495,73 @@
     "properties": {
      "team": {
       "type": "object",
-      "additionalProperties": {}
+      "properties": {
+       "created_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "seed": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "status": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "team": {
+        "type": "object",
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "is_active": {
+          "type": [
+           "boolean",
+           "null"
+          ]
+         },
+         "logo_url": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "name": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "id",
+         "is_active",
+         "logo_url",
+         "name"
+        ]
+       },
+       "team_id": {
+        "type": "string"
+       },
+       "tournament_id": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "created_at",
+       "id",
+       "seed",
+       "status",
+       "team",
+       "team_id",
+       "tournament_id"
+      ]
      }
     },
     "required": [
@@ -60947,48 +60598,7 @@
    "201": {
     "type": "object",
     "properties": {
-     "assignment": {
-      "type": "object",
-      "properties": {
-       "acked_at": {},
-       "briefing_at": {},
-       "briefing_reminder_sent_at": {},
-       "cast_member": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "auth_user_id": {},
-          "id": {},
-          "image_url": {},
-          "name": {}
-         },
-         "required": [
-          "auth_user_id",
-          "id",
-          "image_url",
-          "name"
-         ]
-        }
-       },
-       "cast_member_id": {},
-       "created_at": {},
-       "id": {},
-       "match_id": {},
-       "updated_at": {}
-      },
-      "required": [
-       "acked_at",
-       "briefing_at",
-       "briefing_reminder_sent_at",
-       "cast_member",
-       "cast_member_id",
-       "created_at",
-       "id",
-       "match_id",
-       "updated_at"
-      ]
-     }
+     "assignment": {}
     },
     "required": [
      "assignment"
@@ -61019,7 +60629,8 @@
       }
      },
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -61581,7 +61192,23 @@
       "type": "object",
       "properties": {
        "autoPicked": {
-        "type": "boolean"
+        "type": "boolean",
+        "const": false
+       },
+       "draft": {},
+       "heroId": {},
+       "stepNumber": {}
+      },
+      "required": [
+       "autoPicked"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "autoPicked": {
+        "type": "boolean",
+        "const": true
        },
        "draft": {
         "type": "object",
@@ -62118,17 +61745,6 @@
        "draft",
        "heroId",
        "stepNumber"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "autoPicked": {
-        "type": "boolean"
-       }
-      },
-      "required": [
-       "autoPicked"
       ]
      }
     ]
@@ -63222,6 +62838,9 @@
     ]
    }
   },
+  "POST /api/admin/matches/{matchId}/lineup": {
+   "200": {}
+  },
   "POST /api/admin/matches/{matchId}/mvp": {
    "200": {
     "type": "object",
@@ -63235,280 +62854,375 @@
   },
   "POST /api/admin/matches/{matchId}/mvp-public": {
    "200": {
-    "type": "object",
-    "properties": {
-     "candidates": {
-      "type": "array",
-      "items": {
-       "type": "object",
-       "properties": {
-        "battleTag": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "displayName": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "label": {
-         "type": "string"
-        },
-        "memberId": {
-         "type": "string"
-        },
-        "teamId": {
-         "type": "string"
-        },
-        "teamName": {
-         "type": [
-          "string",
-          "null"
-         ]
-        }
-       },
-       "required": [
-        "battleTag",
-        "displayName",
-        "label",
-        "memberId",
-        "teamId",
-        "teamName"
-       ]
-      }
-     },
-     "isOpen": {
-      "type": "boolean"
-     },
-     "matchId": {
-      "type": "string"
-     },
-     "poll": {
-      "type": [
-       "object",
-       "null"
-      ],
-      "properties": {
-       "candidate_member_ids": {
-        "type": [
-         "array",
-         "null"
-        ],
-        "items": {
-         "type": "string"
-        }
-       },
-       "closed_at": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "closes_at": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "discord_channel_id": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "discord_message_id": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "id": {
-        "type": "string"
-       },
-       "match_id": {
-        "type": "string"
-       },
-       "opened_at": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "settled_at": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "total_votes": {
-        "type": [
-         "number",
-         "null"
-        ]
-       },
-       "winner_battle_tag": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "winner_member_id": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "winner_votes": {
-        "type": [
-         "number",
-         "null"
-        ]
-       }
-      },
-      "required": [
-       "candidate_member_ids",
-       "closed_at",
-       "closes_at",
-       "discord_channel_id",
-       "discord_message_id",
-       "id",
-       "match_id",
-       "opened_at",
-       "settled_at",
-       "total_votes",
-       "winner_battle_tag",
-       "winner_member_id",
-       "winner_votes"
-      ]
-     },
-     "roundName": {
-      "type": [
-       "string",
-       "null"
-      ]
-     },
-     "status": {
-      "type": "string"
-     },
-     "tallies": {
+    "anyOf": [
+     {
       "type": "object",
       "properties": {
-       "discord": {
-        "type": "object",
-        "properties": {
-         "rows": {
-          "type": "array",
-          "items": {
-           "type": "object",
-           "properties": {
-            "memberId": {
-             "type": "string"
-            },
-            "share": {
-             "type": "number"
-            },
-            "votes": {
-             "type": "number"
-            }
-           },
-           "required": [
-            "memberId",
-            "share",
-            "votes"
-           ]
-          }
-         },
-         "source": {
-          "type": "string",
-          "enum": [
-           "discord",
-           "twitch"
-          ]
-         },
-         "total": {
-          "type": "number"
-         }
-        },
-        "required": [
-         "rows",
-         "source",
-         "total"
-        ]
+       "accepted": {
+        "type": "number"
        },
-       "twitch": {
+       "rejected": {
         "type": "object",
         "properties": {
-         "rows": {
-          "type": "array",
-          "items": {
-           "type": "object",
-           "properties": {
-            "memberId": {
-             "type": "string"
-            },
-            "share": {
-             "type": "number"
-            },
-            "votes": {
-             "type": "number"
-            }
-           },
-           "required": [
-            "memberId",
-            "share",
-            "votes"
-           ]
-          }
+         "closed": {
+          "type": "number"
          },
-         "source": {
-          "type": "string",
-          "enum": [
-           "discord",
-           "twitch"
-          ]
+         "malformed": {
+          "type": "number"
          },
-         "total": {
+         "notCandidate": {
           "type": "number"
          }
         },
         "required": [
-         "rows",
-         "source",
-         "total"
+         "closed",
+         "malformed",
+         "notCandidate"
         ]
        }
       },
       "required": [
-       "discord",
-       "twitch"
+       "accepted",
+       "rejected"
       ]
      },
-     "team1Name": {
-      "type": [
-       "string",
-       "null"
+     {
+      "type": "object",
+      "properties": {
+       "alreadyOpen": {
+        "type": "boolean"
+       },
+       "award": {},
+       "candidates": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "label": {
+           "type": "string"
+          },
+          "memberId": {
+           "type": "string"
+          },
+          "teamName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "label",
+          "memberId",
+          "teamName"
+         ]
+        }
+       },
+       "poll": {
+        "type": "object",
+        "properties": {
+         "candidate_member_ids": {
+          "type": [
+           "array",
+           "null"
+          ],
+          "items": {
+           "type": "string"
+          }
+         },
+         "closed_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "closes_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "discord_channel_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "discord_message_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "id": {
+          "type": "string"
+         },
+         "match_id": {
+          "type": "string"
+         },
+         "opened_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "settled_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "total_votes": {
+          "type": [
+           "number",
+           "null"
+          ]
+         },
+         "winner_battle_tag": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "winner_member_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "winner_votes": {
+          "type": [
+           "number",
+           "null"
+          ]
+         }
+        },
+        "required": [
+         "candidate_member_ids",
+         "closed_at",
+         "closes_at",
+         "discord_channel_id",
+         "discord_message_id",
+         "id",
+         "match_id",
+         "opened_at",
+         "settled_at",
+         "total_votes",
+         "winner_battle_tag",
+         "winner_member_id",
+         "winner_votes"
+        ]
+       },
+       "reason": {},
+       "success": {},
+       "tallies": {},
+       "team1Name": {},
+       "team2Name": {},
+       "votable": {
+        "type": "boolean"
+       },
+       "winnerLabel": {}
+      },
+      "required": [
+       "alreadyOpen",
+       "candidates",
+       "poll",
+       "votable"
       ]
      },
-     "team2Name": {
-      "type": [
-       "string",
-       "null"
+     {
+      "type": "object",
+      "properties": {
+       "alreadyOpen": {},
+       "award": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "bySource": {
+          "type": "object",
+          "properties": {
+           "discord": {
+            "type": "number"
+           },
+           "twitch": {
+            "type": "number"
+           }
+          },
+          "required": [
+           "discord",
+           "twitch"
+          ]
+         },
+         "matchId": {
+          "type": "string"
+         },
+         "memberId": {
+          "type": "string"
+         },
+         "roundName": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "totalVotes": {
+          "type": "number"
+         },
+         "winnerVotes": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "bySource",
+         "matchId",
+         "memberId",
+         "roundName",
+         "totalVotes",
+         "winnerVotes"
+        ]
+       },
+       "candidates": {},
+       "poll": {},
+       "reason": {
+        "type": [
+         "string",
+         "null"
+        ],
+        "enum": [
+         "no_votes",
+         "tie",
+         "too_few_votes",
+         null
+        ]
+       },
+       "success": {
+        "type": "boolean"
+       },
+       "tallies": {
+        "type": "object",
+        "properties": {
+         "discord": {
+          "type": "object",
+          "properties": {
+           "rows": {
+            "type": "array",
+            "items": {
+             "type": "object",
+             "properties": {
+              "memberId": {
+               "type": "string"
+              },
+              "share": {
+               "type": "number"
+              },
+              "votes": {
+               "type": "number"
+              }
+             },
+             "required": [
+              "memberId",
+              "share",
+              "votes"
+             ]
+            }
+           },
+           "source": {
+            "type": "string",
+            "enum": [
+             "discord",
+             "twitch"
+            ]
+           },
+           "total": {
+            "type": "number"
+           }
+          },
+          "required": [
+           "rows",
+           "source",
+           "total"
+          ]
+         },
+         "twitch": {
+          "type": "object",
+          "properties": {
+           "rows": {
+            "type": "array",
+            "items": {
+             "type": "object",
+             "properties": {
+              "memberId": {
+               "type": "string"
+              },
+              "share": {
+               "type": "number"
+              },
+              "votes": {
+               "type": "number"
+              }
+             },
+             "required": [
+              "memberId",
+              "share",
+              "votes"
+             ]
+            }
+           },
+           "source": {
+            "type": "string",
+            "enum": [
+             "discord",
+             "twitch"
+            ]
+           },
+           "total": {
+            "type": "number"
+           }
+          },
+          "required": [
+           "rows",
+           "source",
+           "total"
+          ]
+         }
+        },
+        "required": [
+         "discord",
+         "twitch"
+        ]
+       },
+       "team1Name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "team2Name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "votable": {},
+       "winnerLabel": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "award",
+       "reason",
+       "success",
+       "tallies",
+       "team1Name",
+       "team2Name",
+       "winnerLabel"
       ]
      }
-    },
-    "required": [
-     "candidates",
-     "isOpen",
-     "matchId",
-     "poll",
-     "roundName",
-     "status",
-     "tallies",
-     "team1Name",
-     "team2Name"
     ]
    }
   },
@@ -65680,127 +65394,53 @@
   },
   "POST /api/admin/stages/{stageId}/advance": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "advanced": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "seed": {
-           "type": [
-            "number",
-            "null"
-           ]
-          },
-          "teamId": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "seed",
-          "teamId"
+    "type": "object",
+    "properties": {
+     "advanced": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "seed": {
+         "type": [
+          "number",
+          "null"
          ]
-        }
-       },
-       "skipped": {
-        "type": "array",
-        "items": {
+        },
+        "teamId": {
          "type": "string"
         }
        },
-       "sourceStageCompleted": {
-        "type": "boolean",
-        "const": true
-       },
-       "targetStageId": {
-        "type": "string"
-       }
-      },
-      "required": [
-       "advanced",
-       "skipped",
-       "targetStageId"
-      ]
+       "required": [
+        "seed",
+        "teamId"
+       ]
+      }
      },
-     {
-      "type": "object",
-      "properties": {
-       "advanced": {
-        "type": "array",
-        "items": {}
-       },
-       "skipped": {
-        "type": "array",
-        "items": {
-         "type": "string"
-        }
-       },
-       "targetStageId": {
-        "type": "string"
-       }
-      },
-      "required": [
-       "advanced",
-       "skipped",
-       "targetStageId"
-      ]
+     "skipped": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "sourceStageCompleted": {
+      "type": "boolean"
+     },
+     "targetStageId": {
+      "type": "string"
      }
+    },
+    "required": [
+     "advanced",
+     "skipped",
+     "targetStageId"
     ]
    }
   },
   "POST /api/admin/stages/{stageId}/auto-byes": {
    "200": {
     "type": "object",
-    "properties": {
-     "failed": {
-      "type": "array",
-      "items": {
-       "type": "object",
-       "properties": {
-        "matchId": {
-         "type": "string"
-        },
-        "reason": {
-         "type": "string"
-        }
-       },
-       "required": [
-        "matchId",
-        "reason"
-       ]
-      }
-     },
-     "roundNumber": {
-      "type": [
-       "number",
-       "null"
-      ]
-     },
-     "stageId": {
-      "type": "string"
-     },
-     "tournamentId": {
-      "type": [
-       "string",
-       "null"
-      ]
-     },
-     "updatedMatchIds": {
-      "type": "array",
-      "items": {
-       "type": "string"
-      }
-     }
-    },
-    "required": [
-     "failed",
-     "stageId",
-     "tournamentId",
-     "updatedMatchIds"
-    ]
+    "additionalProperties": {}
    }
   },
   "POST /api/admin/stages/{stageId}/auto-seed": {
@@ -65847,10 +65487,13 @@
     ]
    }
   },
-  "POST /api/admin/stages/{stageId}/bulk-matches": {
+  "POST /api/admin/stages/{stageId}/batch-scores": {
    "200": {
     "type": "object",
     "properties": {
+     "failureCount": {
+      "type": "number"
+     },
      "results": {
       "type": "array",
       "items": {
@@ -65864,6 +65507,12 @@
         },
         "success": {
          "type": "boolean"
+        },
+        "winnerTeamId": {
+         "type": [
+          "string",
+          "null"
+         ]
         }
        },
        "required": [
@@ -65872,18 +65521,21 @@
        ]
       }
      },
-     "success": {
-      "type": "boolean"
-     },
      "successCount": {
       "type": "number"
      }
     },
     "required": [
+     "failureCount",
      "results",
-     "success",
      "successCount"
     ]
+   }
+  },
+  "POST /api/admin/stages/{stageId}/bulk-matches": {
+   "200": {
+    "type": "object",
+    "additionalProperties": {}
    }
   },
   "POST /api/admin/stages/{stageId}/clone": {
@@ -65903,557 +65555,27 @@
   },
   "POST /api/admin/stages/{stageId}/generate-group-matches": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "createdMatchIds": {
-        "type": "array",
-        "items": {
-         "type": "string"
-        }
-       },
-       "groupCount": {
-        "type": "number"
-       },
-       "perGroupRounds": {
-        "type": "number"
-       },
-       "stageId": {
-        "type": "string"
-       }
-      },
-      "required": [
-       "createdMatchIds",
-       "groupCount",
-       "perGroupRounds",
-       "stageId"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "dryRun": {
-        "type": "boolean",
-        "const": true
-       },
-       "groupCount": {
-        "type": "number"
-       },
-       "perGroupRounds": {
-        "type": "number"
-       },
-       "preview": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "group_key": {
-           "type": "string"
-          },
-          "is_bye": {
-           "type": "boolean"
-          },
-          "round_number": {
-           "type": "number"
-          },
-          "team1_id": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "team2_id": {
-           "type": [
-            "string",
-            "null"
-           ]
-          }
-         },
-         "required": [
-          "group_key",
-          "is_bye",
-          "round_number",
-          "team1_id",
-          "team2_id"
-         ]
-        }
-       },
-       "stageId": {
-        "type": "string"
-       }
-      },
-      "required": [
-       "dryRun",
-       "groupCount",
-       "perGroupRounds",
-       "preview",
-       "stageId"
-      ]
-     }
-    ]
+    "type": "object",
+    "additionalProperties": {}
    }
   },
   "POST /api/admin/stages/{stageId}/generate-swiss-round": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "byeMatchId": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "createdMatches": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "id": {
-           "type": "string"
-          },
-          "is_bye": {
-           "type": "boolean"
-          },
-          "round_number": {
-           "type": "number"
-          },
-          "status": {
-           "type": "string",
-           "enum": [
-            "cancelled",
-            "disputed",
-            "finished",
-            "ongoing",
-            "pending",
-            "postponed",
-            "walkover"
-           ]
-          },
-          "team1_id": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "team2_id": {
-           "type": [
-            "string",
-            "null"
-           ]
-          }
-         },
-         "required": [
-          "id",
-          "is_bye",
-          "round_number",
-          "status",
-          "team1_id",
-          "team2_id"
-         ]
-        }
-       },
-       "dryRun": {
-        "type": "boolean"
-       },
-       "eliminatedTeams": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "losses": {
-           "type": "number"
-          },
-          "reason": {
-           "type": "string",
-           "enum": [
-            "loss_threshold",
-            "win_threshold"
-           ]
-          },
-          "teamId": {
-           "type": "string"
-          },
-          "wins": {
-           "type": "number"
-          }
-         },
-         "required": [
-          "losses",
-          "reason",
-          "teamId",
-          "wins"
-         ]
-        }
-       },
-       "hasRematches": {
-        "type": "boolean"
-       },
-       "preview": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "is_bye": {
-           "type": "boolean"
-          },
-          "team1_id": {
-           "type": "string"
-          },
-          "team1_name": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "team1_score": {
-           "type": "number"
-          },
-          "team2_id": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "team2_name": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "team2_score": {
-           "type": "number"
-          }
-         },
-         "required": [
-          "is_bye",
-          "team1_id",
-          "team1_name",
-          "team1_score",
-          "team2_id",
-          "team2_name",
-          "team2_score"
-         ]
-        }
-       },
-       "roundNumber": {
-        "type": "number"
-       },
-       "stageCompleted": {
-        "type": "boolean"
-       },
-       "stageId": {
-        "type": "string"
-       },
-       "tournamentId": {
-        "type": "string"
-       }
-      },
-      "required": [
-       "hasRematches",
-       "roundNumber",
-       "stageId",
-       "tournamentId"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "dryRun": {
-        "type": "boolean",
-        "const": true
-       },
-       "eliminatedTeams": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "losses": {
-           "type": "number"
-          },
-          "reason": {
-           "type": "string",
-           "enum": [
-            "loss_threshold",
-            "win_threshold"
-           ]
-          },
-          "teamId": {
-           "type": "string"
-          },
-          "wins": {
-           "type": "number"
-          }
-         },
-         "required": [
-          "losses",
-          "reason",
-          "teamId",
-          "wins"
-         ]
-        }
-       },
-       "hasRematches": {
-        "type": "boolean"
-       },
-       "preview": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "is_bye": {
-           "type": "boolean"
-          },
-          "team1_id": {
-           "type": "string"
-          },
-          "team1_name": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "team1_score": {
-           "type": "number"
-          },
-          "team2_id": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "team2_name": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "team2_score": {
-           "type": "number"
-          }
-         },
-         "required": [
-          "is_bye",
-          "team1_id",
-          "team1_name",
-          "team1_score",
-          "team2_id",
-          "team2_name",
-          "team2_score"
-         ]
-        }
-       },
-       "roundNumber": {
-        "type": "number"
-       },
-       "stageId": {
-        "type": "string"
-       },
-       "tournamentId": {
-        "type": "string"
-       }
-      },
-      "required": [
-       "dryRun",
-       "hasRematches",
-       "preview",
-       "roundNumber",
-       "stageId",
-       "tournamentId"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "eliminatedTeams": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "losses": {
-           "type": "number"
-          },
-          "reason": {
-           "type": "string",
-           "enum": [
-            "loss_threshold",
-            "win_threshold"
-           ]
-          },
-          "teamId": {
-           "type": "string"
-          },
-          "wins": {
-           "type": "number"
-          }
-         },
-         "required": [
-          "losses",
-          "reason",
-          "teamId",
-          "wins"
-         ]
-        }
-       },
-       "hasRematches": {
-        "type": "boolean",
-        "const": false
-       },
-       "roundNumber": {
-        "type": "number"
-       },
-       "stageCompleted": {
-        "type": "boolean",
-        "const": true
-       },
-       "stageId": {
-        "type": "string"
-       },
-       "tournamentId": {
-        "type": "string"
-       }
-      },
-      "required": [
-       "eliminatedTeams",
-       "hasRematches",
-       "roundNumber",
-       "stageCompleted",
-       "stageId",
-       "tournamentId"
-      ]
-     }
-    ]
+    "type": "object",
+    "additionalProperties": {}
    }
   },
   "POST /api/admin/stages/{stageId}/groups": {
    "200": {
     "type": "object",
-    "properties": {
-     "groupAssignments": {
-      "type": "object",
-      "additionalProperties": {
-       "type": "array",
-       "items": {
-        "type": "string"
-       }
-      }
-     },
-     "groups": {
-      "type": "object",
-      "additionalProperties": {
-       "type": "array",
-       "items": {
-        "type": "object",
-        "properties": {
-         "logoUrl": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "name": {
-          "type": "string"
-         },
-         "seed": {
-          "type": [
-           "number",
-           "null"
-          ]
-         },
-         "shortName": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "teamId": {
-          "type": "string"
-         }
-        },
-        "required": [
-         "logoUrl",
-         "name",
-         "seed",
-         "shortName",
-         "teamId"
-        ]
-       }
-      }
-     },
-     "stageId": {
-      "type": "string"
-     },
-     "unassigned": {
-      "type": "array",
-      "items": {}
-     }
-    },
-    "required": [
-     "groupAssignments",
-     "groups",
-     "stageId",
-     "unassigned"
-    ]
+    "additionalProperties": {}
    }
   },
   "POST /api/admin/stages/{stageId}/lobbies": {
    "201": {
     "type": "object",
     "properties": {
-     "lobby": {
-      "type": "object",
-      "properties": {
-       "best_of": {
-        "type": [
-         "number",
-         "null"
-        ]
-       },
-       "created_at": {
-        "type": "string"
-       },
-       "id": {
-        "type": "string"
-       },
-       "name": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "round_number": {
-        "type": [
-         "number",
-         "null"
-        ]
-       },
-       "stage_id": {
-        "type": "string"
-       },
-       "status": {
-        "type": "string"
-       },
-       "tenant_id": {
-        "type": "string"
-       },
-       "tournament_id": {
-        "type": "string"
-       }
-      },
-      "required": [
-       "best_of",
-       "created_at",
-       "id",
-       "name",
-       "round_number",
-       "stage_id",
-       "status",
-       "tenant_id",
-       "tournament_id"
-      ]
-     }
+     "lobby": {}
     },
     "required": [
      "lobby"
@@ -66587,18 +65709,7 @@
   "POST /api/admin/stages/{stageId}/teams": {
    "201": {
     "type": "object",
-    "properties": {
-     "stageTeam": {},
-     "warnings": {
-      "type": "array",
-      "items": {
-       "type": "string"
-      }
-     }
-    },
-    "required": [
-     "stageTeam"
-    ]
+    "additionalProperties": {}
    }
   },
   "POST /api/admin/stages/{stageId}/tiebreaker-override": {
@@ -68514,14 +67625,152 @@
       "items": {
        "type": "object",
        "properties": {
+        "bracket_format": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "created_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "default_match_format": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "deleted_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "end_date": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "id": {
          "type": "string"
+        },
+        "is_active": {
+         "type": [
+          "boolean",
+          "null"
+         ]
+        },
+        "is_public": {
+         "type": [
+          "boolean",
+          "null"
+         ]
+        },
+        "name": {
+         "type": "string"
+        },
+        "order_index": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "settings": {
+         "anyOf": [
+          {
+           "type": "boolean"
+          },
+          {
+           "type": "string"
+          },
+          {
+           "type": "number"
+          },
+          {
+           "type": "object",
+           "additionalProperties": {}
+          },
+          {
+           "type": "array",
+           "items": {}
+          },
+          {
+           "type": "null"
+          }
+         ]
+        },
+        "slug": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "stage_type": {
+         "type": "string"
+        },
+        "start_date": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "swiss_rounds": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "tenant_id": {
+         "type": "string"
+        },
+        "tiebreaker_policy": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "tournament_id": {
+         "type": "string"
+        },
+        "updated_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "visible": {
+         "type": [
+          "boolean",
+          "null"
+         ]
         }
        },
        "required": [
-        "id"
-       ],
-       "additionalProperties": {}
+        "bracket_format",
+        "created_at",
+        "default_match_format",
+        "deleted_at",
+        "end_date",
+        "id",
+        "is_active",
+        "is_public",
+        "name",
+        "order_index",
+        "settings",
+        "slug",
+        "stage_type",
+        "start_date",
+        "swiss_rounds",
+        "tenant_id",
+        "tiebreaker_policy",
+        "tournament_id",
+        "updated_at",
+        "visible"
+       ]
       }
      }
     },
@@ -68532,326 +67781,106 @@
   },
   "POST /api/admin/tournament/{id}/auto-schedule": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "conflicts": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "matchId1": {
-           "type": "string"
-          },
-          "matchId2": {
-           "type": "string"
-          },
-          "overlapEnd": {
-           "type": "string"
-          },
-          "overlapStart": {
-           "type": "string"
-          },
-          "teamId": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "matchId1",
-          "matchId2",
-          "overlapEnd",
-          "overlapStart",
-          "teamId"
-         ]
-        }
-       },
-       "constraintCount": {
-        "type": "number"
-       },
-       "dryRun": {
-        "type": "boolean",
-        "const": true
-       },
-       "scheduled": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "endAt": {
-           "type": "string"
-          },
-          "format": {
-           "type": "string",
-           "enum": [
-            "bo1",
-            "bo2",
-            "bo3",
-            "bo5",
-            "bo7"
-           ]
-          },
-          "matchId": {
-           "type": "string"
-          },
-          "resourceId": {
-           "type": "string"
-          },
-          "startAt": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "endAt",
-          "format",
-          "matchId",
-          "resourceId",
-          "startAt"
-         ]
-        }
-       },
-       "tournamentId": {
-        "type": "string"
-       },
-       "unscheduledMatchIds": {
-        "type": "array",
-        "items": {
+    "type": "object",
+    "properties": {
+     "conflicts": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "matchId1": {
+         "type": "string"
+        },
+        "matchId2": {
+         "type": "string"
+        },
+        "overlapEnd": {
+         "type": "string"
+        },
+        "overlapStart": {
+         "type": "string"
+        },
+        "teamId": {
          "type": "string"
         }
        },
-       "warnings": {
-        "type": "array",
-        "items": {
-         "type": "string"
-        }
-       }
-      },
-      "required": [
-       "constraintCount",
-       "dryRun",
-       "scheduled",
-       "tournamentId",
-       "unscheduledMatchIds"
-      ]
+       "required": [
+        "matchId1",
+        "matchId2",
+        "overlapEnd",
+        "overlapStart",
+        "teamId"
+       ]
+      }
      },
-     {
-      "type": "object",
-      "properties": {
-       "conflicts": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "matchId1": {
-           "type": "string"
-          },
-          "matchId2": {
-           "type": "string"
-          },
-          "overlapEnd": {
-           "type": "string"
-          },
-          "overlapStart": {
-           "type": "string"
-          },
-          "teamId": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "matchId1",
-          "matchId2",
-          "overlapEnd",
-          "overlapStart",
-          "teamId"
-         ]
-        }
-       },
-       "constraintCount": {
-        "type": "number"
-       },
-       "dryRun": {
-        "type": "boolean"
-       },
-       "scheduled": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "endAt": {
-           "type": "string"
-          },
-          "format": {
-           "type": "string",
-           "enum": [
-            "bo1",
-            "bo2",
-            "bo3",
-            "bo5",
-            "bo7"
-           ]
-          },
-          "matchId": {
-           "type": "string"
-          },
-          "resourceId": {
-           "type": "string"
-          },
-          "startAt": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "endAt",
-          "format",
-          "matchId",
-          "resourceId",
-          "startAt"
-         ]
-        }
-       },
-       "tournamentId": {
-        "type": "string"
-       },
-       "unscheduledMatchIds": {
-        "type": "array",
-        "items": {
-         "type": "string"
-        }
-       },
-       "warnings": {
-        "type": "array",
-        "items": {
-         "type": "string"
-        }
-       }
-      },
-      "required": [
-       "scheduled",
-       "tournamentId",
-       "unscheduledMatchIds"
-      ]
+     "constraintCount": {
+      "type": "number"
      },
-     {
-      "type": "object",
-      "properties": {
-       "scheduled": {
-        "type": "array",
-        "items": {}
+     "dryRun": {
+      "type": "boolean"
+     },
+     "scheduled": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "endAt": {
+         "type": "string"
+        },
+        "format": {
+         "type": "string",
+         "enum": [
+          "bo1",
+          "bo2",
+          "bo3",
+          "bo5",
+          "bo7"
+         ]
+        },
+        "matchId": {
+         "type": "string"
+        },
+        "resourceId": {
+         "type": "string"
+        },
+        "startAt": {
+         "type": "string"
+        }
        },
-       "tournamentId": {
-        "type": "string"
-       },
-       "unscheduledMatchIds": {
-        "type": "array",
-        "items": {}
-       }
-      },
-      "required": [
-       "scheduled",
-       "tournamentId",
-       "unscheduledMatchIds"
-      ]
+       "required": [
+        "endAt",
+        "format",
+        "matchId",
+        "resourceId",
+        "startAt"
+       ]
+      }
+     },
+     "tournamentId": {
+      "type": "string"
+     },
+     "unscheduledMatchIds": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "warnings": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
      }
+    },
+    "required": [
+     "scheduled",
+     "tournamentId",
+     "unscheduledMatchIds"
     ]
    }
   },
   "POST /api/admin/tournament/{id}/bracket": {
-   "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "cycleMatchIds": {
-        "type": "array",
-        "items": {
-         "type": "string"
-        }
-       },
-       "disconnectedMatchIds": {
-        "type": "array",
-        "items": {
-         "type": "string"
-        }
-       },
-       "orphanMatchIds": {
-        "type": "array",
-        "items": {
-         "type": "string"
-        }
-       },
-       "valid": {
-        "type": "boolean"
-       }
-      },
-      "required": [
-       "cycleMatchIds",
-       "disconnectedMatchIds",
-       "orphanMatchIds",
-       "valid"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "ok": {
-        "type": "boolean"
-       },
-       "updated": {
-        "type": "number"
-       }
-      },
-      "required": [
-       "ok",
-       "updated"
-      ]
-     }
-    ]
-   },
-   "201": {
-    "type": "object",
-    "properties": {
-     "match_count": {
-      "type": "number"
-     },
-     "match_ids": {
-      "type": "array",
-      "items": {
-       "type": "string"
-      }
-     },
-     "ok": {
-      "type": "boolean"
-     }
-    },
-    "required": [
-     "match_count",
-     "match_ids",
-     "ok"
-    ]
-   },
-   "207": {
-    "type": "object",
-    "properties": {
-     "errors": {
-      "type": "array",
-      "items": {
-       "type": "string"
-      }
-     },
-     "ok": {
-      "type": "boolean"
-     },
-     "updated": {
-      "type": "number"
-     }
-    },
-    "required": [
-     "errors",
-     "ok",
-     "updated"
-    ]
-   }
+   "200": {}
   },
   "POST /api/admin/tournament/{id}/bulk-matches": {
    "200": {
@@ -69012,12 +68041,261 @@
      },
      "stages": {
       "type": "array",
-      "items": {
-       "type": "object",
-       "additionalProperties": {}
-      }
+      "items": {}
      },
-     "tournament": {}
+     "tournament": {
+      "type": "object",
+      "properties": {
+       "banner_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "checkin_grace_minutes": {
+        "type": "number"
+       },
+       "created_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "default_stream_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "description_info": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "end_date": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "format": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "format_details": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "format_type": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "game": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "is_featured": {
+        "type": "boolean"
+       },
+       "j1_reminder_sent_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "logo_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "max_players": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "max_teams": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "min_players": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "name": {
+        "type": "string"
+       },
+       "overlay_day_date": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "overlay_day_set_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "pooled_teams": {
+        "type": "boolean"
+       },
+       "registration_fields": {
+        "anyOf": [
+         {
+          "type": "boolean"
+         },
+         {
+          "type": "string"
+         },
+         {
+          "type": "number"
+         },
+         {
+          "type": "object",
+          "additionalProperties": {}
+         },
+         {
+          "type": "array",
+          "items": {}
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "roster_locked_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "roster_unlocked_until": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "rules_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "schedule_details": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "schedule_rules": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "short_name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "slug": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "solo_mode": {
+        "type": "boolean"
+       },
+       "start_date": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string"
+       },
+       "tenant_id": {
+        "type": "string"
+       },
+       "timezone": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "updated_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "visibility": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "banner_url",
+       "checkin_grace_minutes",
+       "created_at",
+       "default_stream_url",
+       "description_info",
+       "end_date",
+       "format",
+       "format_details",
+       "format_type",
+       "game",
+       "id",
+       "is_featured",
+       "j1_reminder_sent_at",
+       "logo_url",
+       "max_players",
+       "max_teams",
+       "min_players",
+       "name",
+       "overlay_day_date",
+       "overlay_day_set_at",
+       "pooled_teams",
+       "registration_fields",
+       "roster_locked_at",
+       "roster_unlocked_until",
+       "rules_url",
+       "schedule_details",
+       "schedule_rules",
+       "short_name",
+       "slug",
+       "solo_mode",
+       "start_date",
+       "status",
+       "tenant_id",
+       "timezone",
+       "updated_at",
+       "visibility"
+      ]
+     }
     },
     "required": [
      "maps",
@@ -69264,17 +68542,28 @@
       "items": {
        "type": "object",
        "properties": {
+        "best_of": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
         "bracket_side": {
          "type": [
           "string",
           "null"
-         ],
-         "enum": [
-          "final",
-          "lb",
-          "none",
-          "wb",
-          null
+         ]
+        },
+        "bracket_slot": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "checkin_email_sent_at": {
+         "type": [
+          "string",
+          "null"
          ]
         },
         "completed_at": {
@@ -69284,7 +68573,94 @@
          ]
         },
         "created_at": {
-         "type": "string"
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "deleted_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "discord_dispute_thread_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "discord_match_channel_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "discord_scheduled_event_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "discord_thread_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "dispute_opened_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "dispute_opened_by": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "dispute_reason": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "dispute_resolution": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "dispute_resolved_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "dispute_resolved_by": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "escalation_pinged_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "forfeit_processed_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "forfeit_team_id": {
+         "type": [
+          "string",
+          "null"
+         ]
         },
         "group_key": {
          "type": [
@@ -69323,11 +68699,6 @@
          "type": [
           "number",
           "null"
-         ],
-         "enum": [
-          1,
-          2,
-          null
          ]
         },
         "next_match_win_id": {
@@ -69340,14 +68711,45 @@
          "type": [
           "number",
           "null"
-         ],
-         "enum": [
-          1,
-          2,
-          null
+         ]
+        },
+        "no_show_reason": {
+         "type": [
+          "string",
+          "null"
          ]
         },
         "notes": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "parent_match_lose_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "parent_match_win_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "reminder_15_sent_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "reminder_30_sent_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "replay_url": {
          "type": [
           "string",
           "null"
@@ -69371,25 +68773,46 @@
           "null"
          ]
         },
+        "scrim_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "stage_id": {
          "type": [
           "string",
           "null"
          ]
         },
-        "status": {
-         "type": "string",
-         "enum": [
-          "cancelled",
-          "disputed",
-          "finished",
-          "ongoing",
-          "pending",
-          "postponed",
-          "walkover"
+        "started_at": {
+         "type": [
+          "string",
+          "null"
          ]
         },
+        "status": {
+         "type": "string"
+        },
         "stream_url": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team1_captain_dm_30_sent_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team1_checked_in_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team1_checkin_token": {
          "type": [
           "string",
           "null"
@@ -69401,13 +68824,55 @@
           "null"
          ]
         },
+        "team1_lineup_dm_sent_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team1_lineup_reminder_sent_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "team1_score": {
          "type": [
           "number",
           "null"
          ]
         },
+        "team2_captain_dm_30_sent_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team2_checked_in_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team2_checkin_token": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "team2_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team2_lineup_dm_sent_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team2_lineup_reminder_sent_at": {
          "type": [
           "string",
           "null"
@@ -69419,10 +68884,22 @@
           "null"
          ]
         },
-        "tournament_id": {
+        "tenant_id": {
          "type": "string"
         },
+        "tournament_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "updated_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "veto_locked_at": {
          "type": [
           "string",
           "null"
@@ -69436,9 +68913,26 @@
         }
        },
        "required": [
+        "best_of",
         "bracket_side",
+        "bracket_slot",
+        "checkin_email_sent_at",
         "completed_at",
         "created_at",
+        "deleted_at",
+        "discord_dispute_thread_id",
+        "discord_match_channel_id",
+        "discord_scheduled_event_id",
+        "discord_thread_id",
+        "dispute_opened_at",
+        "dispute_opened_by",
+        "dispute_reason",
+        "dispute_resolution",
+        "dispute_resolved_at",
+        "dispute_resolved_by",
+        "escalation_pinged_at",
+        "forfeit_processed_at",
+        "forfeit_team_id",
         "group_key",
         "id",
         "is_bye",
@@ -69448,19 +68942,39 @@
         "next_match_lose_slot",
         "next_match_win_id",
         "next_match_win_slot",
+        "no_show_reason",
         "notes",
+        "parent_match_lose_id",
+        "parent_match_win_id",
+        "reminder_15_sent_at",
+        "reminder_30_sent_at",
+        "replay_url",
         "round_name",
         "round_number",
         "scheduled_at",
+        "scrim_id",
         "stage_id",
+        "started_at",
         "status",
         "stream_url",
+        "team1_captain_dm_30_sent_at",
+        "team1_checked_in_at",
+        "team1_checkin_token",
         "team1_id",
+        "team1_lineup_dm_sent_at",
+        "team1_lineup_reminder_sent_at",
         "team1_score",
+        "team2_captain_dm_30_sent_at",
+        "team2_checked_in_at",
+        "team2_checkin_token",
         "team2_id",
+        "team2_lineup_dm_sent_at",
+        "team2_lineup_reminder_sent_at",
         "team2_score",
+        "tenant_id",
         "tournament_id",
         "updated_at",
+        "veto_locked_at",
         "winner_team_id"
        ]
       }
@@ -69665,7 +69179,12 @@
      "minutes": {
       "type": "number"
      },
-     "rosterLockedAt": {},
+     "rosterLockedAt": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
      "rosterUnlockedUntil": {
       "type": "string"
      }
@@ -69684,7 +69203,312 @@
       "type": "object",
       "properties": {
        "applied": {
-        "type": "boolean"
+        "type": "boolean",
+        "const": false
+       },
+       "impact": {
+        "type": "object",
+        "properties": {
+         "after": {
+          "type": "object",
+          "properties": {
+           "blocking": {
+            "type": "number"
+           },
+           "info": {
+            "type": "number"
+           },
+           "warning": {
+            "type": "number"
+           }
+          },
+          "required": [
+           "blocking",
+           "info",
+           "warning"
+          ]
+         },
+         "before": {
+          "type": "object",
+          "properties": {
+           "blocking": {
+            "type": "number"
+           },
+           "info": {
+            "type": "number"
+           },
+           "warning": {
+            "type": "number"
+           }
+          },
+          "required": [
+           "blocking",
+           "info",
+           "warning"
+          ]
+         },
+         "broken": {
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "at": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "kind": {
+             "type": "string",
+             "enum": [
+              "availability",
+              "double_booking",
+              "outside_tournament",
+              "same_evening",
+              "slot_collision",
+              "unscheduled"
+             ]
+            },
+            "matchIds": {
+             "type": "array",
+             "items": {
+              "type": "string"
+             }
+            },
+            "message": {
+             "type": "string"
+            },
+            "severity": {
+             "type": "string",
+             "enum": [
+              "blocking",
+              "info",
+              "warning"
+             ]
+            },
+            "suggestion": {
+             "type": [
+              "object",
+              "null"
+             ],
+             "properties": {
+              "matchId": {
+               "type": "string"
+              },
+              "moveTo": {
+               "type": "string"
+              },
+              "why": {
+               "type": "string"
+              }
+             },
+             "required": [
+              "matchId",
+              "moveTo",
+              "why"
+             ]
+            },
+            "teamId": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
+           },
+           "required": [
+            "at",
+            "kind",
+            "matchIds",
+            "message",
+            "severity",
+            "suggestion",
+            "teamId"
+           ]
+          }
+         },
+         "createsBlocking": {
+          "type": "boolean"
+         },
+         "fixed": {
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "at": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "kind": {
+             "type": "string",
+             "enum": [
+              "availability",
+              "double_booking",
+              "outside_tournament",
+              "same_evening",
+              "slot_collision",
+              "unscheduled"
+             ]
+            },
+            "matchIds": {
+             "type": "array",
+             "items": {
+              "type": "string"
+             }
+            },
+            "message": {
+             "type": "string"
+            },
+            "severity": {
+             "type": "string",
+             "enum": [
+              "blocking",
+              "info",
+              "warning"
+             ]
+            },
+            "suggestion": {
+             "type": [
+              "object",
+              "null"
+             ],
+             "properties": {
+              "matchId": {
+               "type": "string"
+              },
+              "moveTo": {
+               "type": "string"
+              },
+              "why": {
+               "type": "string"
+              }
+             },
+             "required": [
+              "matchId",
+              "moveTo",
+              "why"
+             ]
+            },
+            "teamId": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
+           },
+           "required": [
+            "at",
+            "kind",
+            "matchIds",
+            "message",
+            "severity",
+            "suggestion",
+            "teamId"
+           ]
+          }
+         },
+         "remaining": {
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "at": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "kind": {
+             "type": "string",
+             "enum": [
+              "availability",
+              "double_booking",
+              "outside_tournament",
+              "same_evening",
+              "slot_collision",
+              "unscheduled"
+             ]
+            },
+            "matchIds": {
+             "type": "array",
+             "items": {
+              "type": "string"
+             }
+            },
+            "message": {
+             "type": "string"
+            },
+            "severity": {
+             "type": "string",
+             "enum": [
+              "blocking",
+              "info",
+              "warning"
+             ]
+            },
+            "suggestion": {
+             "type": [
+              "object",
+              "null"
+             ],
+             "properties": {
+              "matchId": {
+               "type": "string"
+              },
+              "moveTo": {
+               "type": "string"
+              },
+              "why": {
+               "type": "string"
+              }
+             },
+             "required": [
+              "matchId",
+              "moveTo",
+              "why"
+             ]
+            },
+            "teamId": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
+           },
+           "required": [
+            "at",
+            "kind",
+            "matchIds",
+            "message",
+            "severity",
+            "suggestion",
+            "teamId"
+           ]
+          }
+         }
+        },
+        "required": [
+         "after",
+         "before",
+         "broken",
+         "createsBlocking",
+         "fixed",
+         "remaining"
+        ]
+       }
+      },
+      "required": [
+       "applied",
+       "impact"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "applied": {
+        "type": "boolean",
+        "const": true
        },
        "impact": {
         "type": "object",
@@ -69989,309 +69813,6 @@
        "impact",
        "moved"
       ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "applied": {
-        "type": "boolean"
-       },
-       "impact": {
-        "type": "object",
-        "properties": {
-         "after": {
-          "type": "object",
-          "properties": {
-           "blocking": {
-            "type": "number"
-           },
-           "info": {
-            "type": "number"
-           },
-           "warning": {
-            "type": "number"
-           }
-          },
-          "required": [
-           "blocking",
-           "info",
-           "warning"
-          ]
-         },
-         "before": {
-          "type": "object",
-          "properties": {
-           "blocking": {
-            "type": "number"
-           },
-           "info": {
-            "type": "number"
-           },
-           "warning": {
-            "type": "number"
-           }
-          },
-          "required": [
-           "blocking",
-           "info",
-           "warning"
-          ]
-         },
-         "broken": {
-          "type": "array",
-          "items": {
-           "type": "object",
-           "properties": {
-            "at": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "kind": {
-             "type": "string",
-             "enum": [
-              "availability",
-              "double_booking",
-              "outside_tournament",
-              "same_evening",
-              "slot_collision",
-              "unscheduled"
-             ]
-            },
-            "matchIds": {
-             "type": "array",
-             "items": {
-              "type": "string"
-             }
-            },
-            "message": {
-             "type": "string"
-            },
-            "severity": {
-             "type": "string",
-             "enum": [
-              "blocking",
-              "info",
-              "warning"
-             ]
-            },
-            "suggestion": {
-             "type": [
-              "object",
-              "null"
-             ],
-             "properties": {
-              "matchId": {
-               "type": "string"
-              },
-              "moveTo": {
-               "type": "string"
-              },
-              "why": {
-               "type": "string"
-              }
-             },
-             "required": [
-              "matchId",
-              "moveTo",
-              "why"
-             ]
-            },
-            "teamId": {
-             "type": [
-              "string",
-              "null"
-             ]
-            }
-           },
-           "required": [
-            "at",
-            "kind",
-            "matchIds",
-            "message",
-            "severity",
-            "suggestion",
-            "teamId"
-           ]
-          }
-         },
-         "createsBlocking": {
-          "type": "boolean"
-         },
-         "fixed": {
-          "type": "array",
-          "items": {
-           "type": "object",
-           "properties": {
-            "at": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "kind": {
-             "type": "string",
-             "enum": [
-              "availability",
-              "double_booking",
-              "outside_tournament",
-              "same_evening",
-              "slot_collision",
-              "unscheduled"
-             ]
-            },
-            "matchIds": {
-             "type": "array",
-             "items": {
-              "type": "string"
-             }
-            },
-            "message": {
-             "type": "string"
-            },
-            "severity": {
-             "type": "string",
-             "enum": [
-              "blocking",
-              "info",
-              "warning"
-             ]
-            },
-            "suggestion": {
-             "type": [
-              "object",
-              "null"
-             ],
-             "properties": {
-              "matchId": {
-               "type": "string"
-              },
-              "moveTo": {
-               "type": "string"
-              },
-              "why": {
-               "type": "string"
-              }
-             },
-             "required": [
-              "matchId",
-              "moveTo",
-              "why"
-             ]
-            },
-            "teamId": {
-             "type": [
-              "string",
-              "null"
-             ]
-            }
-           },
-           "required": [
-            "at",
-            "kind",
-            "matchIds",
-            "message",
-            "severity",
-            "suggestion",
-            "teamId"
-           ]
-          }
-         },
-         "remaining": {
-          "type": "array",
-          "items": {
-           "type": "object",
-           "properties": {
-            "at": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "kind": {
-             "type": "string",
-             "enum": [
-              "availability",
-              "double_booking",
-              "outside_tournament",
-              "same_evening",
-              "slot_collision",
-              "unscheduled"
-             ]
-            },
-            "matchIds": {
-             "type": "array",
-             "items": {
-              "type": "string"
-             }
-            },
-            "message": {
-             "type": "string"
-            },
-            "severity": {
-             "type": "string",
-             "enum": [
-              "blocking",
-              "info",
-              "warning"
-             ]
-            },
-            "suggestion": {
-             "type": [
-              "object",
-              "null"
-             ],
-             "properties": {
-              "matchId": {
-               "type": "string"
-              },
-              "moveTo": {
-               "type": "string"
-              },
-              "why": {
-               "type": "string"
-              }
-             },
-             "required": [
-              "matchId",
-              "moveTo",
-              "why"
-             ]
-            },
-            "teamId": {
-             "type": [
-              "string",
-              "null"
-             ]
-            }
-           },
-           "required": [
-            "at",
-            "kind",
-            "matchIds",
-            "message",
-            "severity",
-            "suggestion",
-            "teamId"
-           ]
-          }
-         }
-        },
-        "required": [
-         "after",
-         "before",
-         "broken",
-         "createsBlocking",
-         "fixed",
-         "remaining"
-        ]
-       }
-      },
-      "required": [
-       "applied",
-       "impact"
-      ]
      }
     ]
    }
@@ -70303,14 +69824,50 @@
      "stage": {
       "type": "object",
       "properties": {
+       "bracket_format": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "created_at": {
-        "type": "string"
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "default_match_format": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "deleted_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "end_date": {
+        "type": [
+         "string",
+         "null"
+        ]
        },
        "id": {
         "type": "string"
        },
+       "is_active": {
+        "type": [
+         "boolean",
+         "null"
+        ]
+       },
        "is_public": {
-        "type": "boolean"
+        "type": [
+         "boolean",
+         "null"
+        ]
        },
        "name": {
         "type": "string"
@@ -70322,104 +69879,28 @@
         ]
        },
        "settings": {
-        "type": [
-         "object",
-         "null"
-        ],
-        "properties": {
-         "advancement_rules": {
-          "type": [
-           "object",
-           "null"
-          ],
-          "properties": {
-           "advance_per_group": {
-            "type": "number"
-           },
-           "advance_top": {
-            "type": "number"
-           },
-           "seed_by": {
-            "type": "string",
-            "enum": [
-             "manual",
-             "none",
-             "standings"
-            ]
-           },
-           "target_stage_id": {
-            "type": "string"
-           }
-          },
-          "required": [
-           "target_stage_id"
-          ]
+        "anyOf": [
+         {
+          "type": "boolean"
          },
-         "group_assignments": {
-          "type": [
-           "object",
-           "null"
-          ],
-          "additionalProperties": {
-           "type": "array",
-           "items": {
-            "type": "string"
-           }
-          }
+         {
+          "type": "string"
          },
-         "home_away": {
-          "type": [
-           "boolean",
-           "null"
-          ]
+         {
+          "type": "number"
          },
-         "loss_threshold": {
-          "type": [
-           "number",
-           "null"
-          ]
+         {
+          "type": "object",
+          "additionalProperties": {}
          },
-         "match_format": {
-          "type": [
-           "string",
-           "null"
-          ]
+         {
+          "type": "array",
+          "items": {}
          },
-         "rounds": {
-          "type": [
-           "number",
-           "null"
-          ]
-         },
-         "standings_tiebreakers": {
-          "type": [
-           "array",
-           "null"
-          ],
-          "items": {
-           "type": "string",
-           "enum": [
-            "head_to_head",
-            "score_diff",
-            "scored",
-            "seed",
-            "wins"
-           ]
-          }
-         },
-         "total_rounds": {
-          "type": [
-           "number",
-           "null"
-          ]
-         },
-         "win_threshold": {
-          "type": [
-           "number",
-           "null"
-          ]
+         {
+          "type": "null"
          }
-        }
+        ]
        },
        "slug": {
         "type": [
@@ -70428,21 +69909,24 @@
         ]
        },
        "stage_type": {
+        "type": "string"
+       },
+       "start_date": {
         "type": [
          "string",
          "null"
-        ],
-        "enum": [
-         "bracket",
-         "group",
-         "other",
-         "round_robin",
-         "showmatch",
-         "swiss",
-         null
         ]
        },
-       "start_date": {
+       "swiss_rounds": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "tenant_id": {
+        "type": "string"
+       },
+       "tiebreaker_policy": {
         "type": [
          "string",
          "null"
@@ -70456,11 +69940,22 @@
          "string",
          "null"
         ]
+       },
+       "visible": {
+        "type": [
+         "boolean",
+         "null"
+        ]
        }
       },
       "required": [
+       "bracket_format",
        "created_at",
+       "default_match_format",
+       "deleted_at",
+       "end_date",
        "id",
+       "is_active",
        "is_public",
        "name",
        "order_index",
@@ -70468,8 +69963,12 @@
        "slug",
        "stage_type",
        "start_date",
+       "swiss_rounds",
+       "tenant_id",
+       "tiebreaker_policy",
        "tournament_id",
-       "updated_at"
+       "updated_at",
+       "visible"
       ]
      }
     },
@@ -70486,26 +69985,34 @@
       "type": "object",
       "properties": {
        "created_at": {
-        "type": "string"
+        "type": [
+         "string",
+         "null"
+        ]
        },
        "field_values": {
-        "type": [
-         "object",
-         "null"
-        ],
-        "additionalProperties": {
-         "anyOf": [
-          {
-           "type": "boolean"
-          },
-          {
-           "type": "string"
-          },
-          {
-           "type": "number"
-          }
-         ]
-        }
+        "anyOf": [
+         {
+          "type": "boolean"
+         },
+         {
+          "type": "string"
+         },
+         {
+          "type": "number"
+         },
+         {
+          "type": "object",
+          "additionalProperties": {}
+         },
+         {
+          "type": "array",
+          "items": {}
+         },
+         {
+          "type": "null"
+         }
+        ]
        },
        "id": {
         "type": "string"
@@ -70528,6 +70035,12 @@
          "id": {
           "type": "string"
          },
+         "is_active": {
+          "type": [
+           "boolean",
+           "null"
+          ]
+         },
          "logo_url": {
           "type": [
            "string",
@@ -70540,6 +70053,7 @@
         },
         "required": [
          "id",
+         "is_active",
          "logo_url",
          "name"
         ]
@@ -70572,7 +70086,259 @@
    "201": {
     "type": "object",
     "properties": {
-     "tournament": {}
+     "tournament": {
+      "type": "object",
+      "properties": {
+       "banner_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "checkin_grace_minutes": {
+        "type": "number"
+       },
+       "created_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "default_stream_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "description_info": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "end_date": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "format": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "format_details": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "format_type": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "game": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "is_featured": {
+        "type": "boolean"
+       },
+       "j1_reminder_sent_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "logo_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "max_players": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "max_teams": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "min_players": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "name": {
+        "type": "string"
+       },
+       "overlay_day_date": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "overlay_day_set_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "pooled_teams": {
+        "type": "boolean"
+       },
+       "registration_fields": {
+        "anyOf": [
+         {
+          "type": "boolean"
+         },
+         {
+          "type": "string"
+         },
+         {
+          "type": "number"
+         },
+         {
+          "type": "object",
+          "additionalProperties": {}
+         },
+         {
+          "type": "array",
+          "items": {}
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "roster_locked_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "roster_unlocked_until": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "rules_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "schedule_details": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "schedule_rules": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "short_name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "slug": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "solo_mode": {
+        "type": "boolean"
+       },
+       "start_date": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string"
+       },
+       "tenant_id": {
+        "type": "string"
+       },
+       "timezone": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "updated_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "visibility": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "banner_url",
+       "checkin_grace_minutes",
+       "created_at",
+       "default_stream_url",
+       "description_info",
+       "end_date",
+       "format",
+       "format_details",
+       "format_type",
+       "game",
+       "id",
+       "is_featured",
+       "j1_reminder_sent_at",
+       "logo_url",
+       "max_players",
+       "max_teams",
+       "min_players",
+       "name",
+       "overlay_day_date",
+       "overlay_day_set_at",
+       "pooled_teams",
+       "registration_fields",
+       "roster_locked_at",
+       "roster_unlocked_until",
+       "rules_url",
+       "schedule_details",
+       "schedule_rules",
+       "short_name",
+       "slug",
+       "solo_mode",
+       "start_date",
+       "status",
+       "tenant_id",
+       "timezone",
+       "updated_at",
+       "visibility"
+      ]
+     }
     },
     "required": [
      "tournament"
@@ -70581,81 +70347,39 @@
   },
   "POST /api/admin/tournaments/notify-captains": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "emailsSent": {
-        "type": "number"
-       },
-       "errors": {
-        "type": "array",
-        "items": {
-         "type": "string"
-        }
-       },
-       "message": {
-        "type": "string"
-       },
-       "messagesSent": {
-        "type": "number"
-       },
-       "notified": {
-        "type": "number"
-       },
-       "success": {
-        "type": "boolean"
-       }
-      },
-      "required": [
-       "emailsSent",
-       "message",
-       "messagesSent",
-       "notified",
-       "success"
-      ]
+    "type": "object",
+    "properties": {
+     "emailsSent": {
+      "type": "number"
      },
-     {
-      "type": "object",
-      "properties": {
-       "message": {
-        "type": "string"
-       },
-       "notified": {
-        "type": "number"
-       },
-       "success": {
-        "type": "boolean"
-       }
-      },
-      "required": [
-       "message",
-       "notified",
-       "success"
-      ]
+     "errors": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "message": {
+      "type": "string"
+     },
+     "messagesSent": {
+      "type": "number"
+     },
+     "notified": {
+      "type": "number"
+     },
+     "success": {
+      "type": "boolean"
      }
+    },
+    "required": [
+     "message",
+     "notified",
+     "success"
     ]
    }
   },
   "POST /api/admin/tournaments/{id}/prize-pool": {
-   "200": {
-    "type": "object",
-    "properties": {
-     "pool": {}
-    },
-    "required": [
-     "pool"
-    ]
-   },
-   "201": {
-    "type": "object",
-    "properties": {
-     "pool": {}
-    },
-    "required": [
-     "pool"
-    ]
-   }
+   "200": {}
   },
   "POST /api/admin/twitch-channels": {
    "201": {
@@ -78624,6 +78348,9 @@
     ]
    }
   },
+  "PUT /api/admin/matches/{matchId}": {
+   "200": {}
+  },
   "PUT /api/admin/news/{id}": {
    "200": {
     "type": "object",
@@ -79267,86 +78994,27 @@
     ]
    }
   },
-  "PUT /api/admin/stages/{stageId}/bulk-matches": {
+  "PUT /api/admin/stages/{stageId}": {
    "200": {
     "type": "object",
     "properties": {
-     "count": {
-      "type": "number"
-     },
-     "fields": {
-      "type": "object",
-      "additionalProperties": {}
-     },
-     "success": {
-      "type": "boolean"
-     },
-     "undoPayload": {
-      "type": "object",
-      "properties": {
-       "snapshots": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "fields": {
-           "type": "object",
-           "additionalProperties": {}
-          },
-          "matchId": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "fields",
-          "matchId"
-         ]
-        }
-       },
-       "type": {
-        "type": "string",
-        "const": "bulk_update"
-       }
-      },
-      "required": [
-       "snapshots",
-       "type"
-      ]
-     }
+     "stage": {}
     },
     "required": [
-     "count",
-     "fields",
-     "success",
-     "undoPayload"
+     "stage"
     ]
+   }
+  },
+  "PUT /api/admin/stages/{stageId}/bulk-matches": {
+   "200": {
+    "type": "object",
+    "additionalProperties": {}
    }
   },
   "PUT /api/admin/stages/{stageId}/groups": {
    "200": {
     "type": "object",
-    "properties": {
-     "groupAssignments": {
-      "type": "object",
-      "additionalProperties": {
-       "type": "array",
-       "items": {
-        "type": "string"
-       }
-      }
-     },
-     "stageId": {
-      "type": "string"
-     },
-     "success": {
-      "type": "boolean"
-     }
-    },
-    "required": [
-     "groupAssignments",
-     "stageId",
-     "success"
-    ]
+    "additionalProperties": {}
    }
   },
   "PUT /api/admin/tcg/overlay-theme": {
@@ -79739,8 +79407,7 @@
     "type": "object",
     "properties": {
      "success": {
-      "type": "boolean",
-      "const": true
+      "type": "boolean"
      },
      "tournament": {
       "type": "object",
@@ -79752,7 +79419,10 @@
         ]
        },
        "created_at": {
-        "type": "string"
+        "type": [
+         "string",
+         "null"
+        ]
        },
        "default_stream_url": {
         "type": [
@@ -79772,7 +79442,19 @@
          "null"
         ]
        },
+       "format": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "format_details": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "format_type": {
         "type": [
          "string",
          "null"
@@ -79824,53 +79506,28 @@
         "type": "boolean"
        },
        "registration_fields": {
-        "type": [
-         "array",
-         "null"
-        ],
-        "items": {
-         "type": "object",
-         "properties": {
-          "help": {
-           "type": "string"
-          },
-          "key": {
-           "type": "string"
-          },
-          "label": {
-           "type": "string"
-          },
-          "maxLength": {
-           "type": "number"
-          },
-          "options": {
-           "type": "array",
-           "items": {
-            "type": "string"
-           }
-          },
-          "required": {
-           "type": "boolean"
-          },
-          "type": {
-           "type": "string",
-           "enum": [
-            "checkbox",
-            "number",
-            "select",
-            "text",
-            "textarea",
-            "url"
-           ]
-          }
+        "anyOf": [
+         {
+          "type": "boolean"
          },
-         "required": [
-          "key",
-          "label",
-          "required",
-          "type"
-         ]
-        }
+         {
+          "type": "string"
+         },
+         {
+          "type": "number"
+         },
+         {
+          "type": "object",
+          "additionalProperties": {}
+         },
+         {
+          "type": "array",
+          "items": {}
+         },
+         {
+          "type": "null"
+         }
+        ]
        },
        "roster_locked_at": {
         "type": [
@@ -79912,10 +79569,7 @@
         ]
        },
        "status": {
-        "type": [
-         "string",
-         "null"
-        ]
+        "type": "string"
        },
        "timezone": {
         "type": [
@@ -79936,7 +79590,9 @@
        "default_stream_url",
        "description_info",
        "end_date",
+       "format",
        "format_details",
+       "format_type",
        "game",
        "id",
        "is_featured",
@@ -80013,24 +79669,7 @@
    }
   },
   "PUT /api/admin/tournaments/{id}/prize-pool": {
-   "200": {
-    "type": "object",
-    "properties": {
-     "pool": {}
-    },
-    "required": [
-     "pool"
-    ]
-   },
-   "201": {
-    "type": "object",
-    "properties": {
-     "pool": {}
-    },
-    "required": [
-     "pool"
-    ]
-   }
+   "200": {}
   },
   "PUT /api/admin/users/{userId}/permissions": {
    "200": {
@@ -80785,11 +80424,6 @@
  "unattributed": [
   "pages/api/admin/documents.ts:179",
   "pages/api/admin/documents.ts:288",
-  "pages/api/admin/matches/[matchId]/lineup.ts:168",
-  "pages/api/admin/matches/[matchId]/lineup.ts:295",
-  "pages/api/admin/matches/[matchId]/mvp-public.ts:125",
-  "pages/api/admin/matches/[matchId]/mvp-public.ts:137",
-  "pages/api/admin/matches/[matchId]/mvp-public.ts:149",
   "pages/api/cron/domain-verify.ts:123",
   "pages/api/cron/quota-alerts.ts:114",
   "pages/api/cron/quota-alerts.ts:211",
