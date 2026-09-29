@@ -40,7 +40,14 @@ on:
 jobs:
   playwright:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Par tranche : ~1/4 de la suite + démarrage Supabase/Next.
+    timeout-minutes: 30
+    strategy:
+      # Une tranche rouge ne doit pas annuler les autres : on veut le bilan
+      # complet de la suite, pas le premier échec.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
 
     steps:
       - uses: actions/checkout@v4
@@ -64,6 +71,8 @@ jobs:
         with:
           version: latest
 
+      # CHAQUE tranche a SA Supabase : les specs sèment et nettoient, deux
+      # tranches sur une même base se marcheraient dessus.
       - name: Démarrer une Supabase locale
         run: supabase start
 
@@ -78,10 +87,29 @@ jobs:
       - name: Installer les dépendances
         run: npm ci
 
+      - name: Version de Playwright
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      # Les navigateurs sont gros et ne dépendent que de la version de
+      # Playwright : sûrs à mettre en cache. Les dépendances système (apt),
+      # elles, ne le sont pas — elles sont réinstallées à chaque fois.
+      - name: Cache des navigateurs Playwright
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
+
       - name: Installer Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
 
-      - name: Jouer la suite
+      - name: Dépendances système de Chromium
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Jouer la tranche ${{ matrix.shard }}/4
         env:
           # La suite ET le serveur Next visent la MÊME instance jetable. C'est
           # tout l'intérêt : plus aucune spec n'a de raison d'être ignorée, et
@@ -96,10 +124,45 @@ jobs:
         # `testDir: './tests'` inclut tests/unit/*.test.ts (Vitest), que
         # Playwright tente de charger et sur lesquels il s'arrête avant la
         # première spec : on restreint explicitement aux e2e.
-        run: npx playwright test tests/e2e/
+        run: npx playwright test tests/e2e/ --shard=${{ matrix.shard }}/4 --reporter=blob
+
+      - name: Conserver le rapport de la tranche
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.shard }}
+          path: blob-report/
+          retention-days: 1
+
+  merge-reports:
+    # Même si des tranches échouent : c'est justement là qu'on veut le rapport.
+    if: always()
+    needs: playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Récupérer les rapports des tranches
+        uses: actions/download-artifact@v4
+        with:
+          path: all-blob-reports
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - name: Fusionner en un rapport HTML
+        run: npx playwright merge-reports --reporter html ./all-blob-reports
 
       - name: Conserver le rapport
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
