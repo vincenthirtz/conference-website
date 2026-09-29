@@ -14,6 +14,13 @@ import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTcgAssociation from '@/lib/i18n/locales/admin-fr/adminTcgAssociation';
 import { FANART_LIMITS } from '@/utils/tcg/fanart';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import {
+  CARD_FLUSH,
+  MUTED,
+  TILE,
+} from '@/features/admin/stages/ui/rubanClasses';
+import { rubanCard } from '@/features/admin/diffusion/ui/rubanClasses';
 
 type Item = {
   id: string;
@@ -46,7 +53,7 @@ type Response = {
 };
 
 const INPUT =
-  'mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white';
+  'mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 export default function TcgAssociationPanel() {
   const t = useAdminT(nsAdminTcgAssociation);
@@ -202,7 +209,7 @@ export default function TcgAssociationPanel() {
     );
 
   if (state === 'loading') {
-    return <p className="text-sm text-neutral-400">{t.working}</p>;
+    return <p className={`text-sm ${MUTED}`}>{t.working}</p>;
   }
   if (state === 'error' || !data) {
     return (
@@ -225,7 +232,7 @@ export default function TcgAssociationPanel() {
       </div>
 
       {/* Logos d'événement */}
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+      <div className={`p-4 ${rubanCard}`}>
         <h3 className="font-semibold">{t.eventLogosTitle}</h3>
         <p className="mt-1 text-sm text-neutral-400">{t.eventLogosIntro}</p>
         {data.eventLogos.length === 0 ? (
@@ -235,13 +242,13 @@ export default function TcgAssociationPanel() {
             {data.eventLogos.map((logo) => (
               <li
                 key={logo.id}
-                className="flex items-center gap-3 rounded-lg border border-neutral-800 p-3"
+                className={`flex items-center gap-3 p-3 ${TILE}`}
               >
                 {/* biome-ignore lint/performance/noImgElement: bucket public ou chemin du site, hors remotePatterns */}
                 <img
                   src={logo.url}
                   alt=""
-                  className="h-14 w-14 shrink-0 rounded bg-neutral-950 object-contain"
+                  className="h-14 w-14 shrink-0 rounded-[3px] bg-[var(--s1,#100812)] object-contain"
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{logo.name}</p>
@@ -250,14 +257,15 @@ export default function TcgAssociationPanel() {
                       {t.eventLogoImported}
                     </p>
                   ) : logo.importable ? (
-                    <button
-                      type="button"
+                    <AdminButton
+                      variant="secondary"
+                      size="xs"
                       disabled={busy !== null}
                       onClick={() => void importLogo(logo)}
-                      className="mt-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
+                      className="mt-1"
                     >
                       {busy === `logo:${logo.id}` ? t.working : t.importLogo}
-                    </button>
+                    </AdminButton>
                   ) : (
                     <p className="text-xs text-amber-200">
                       {t.eventLogoNotImportable}
@@ -272,12 +280,12 @@ export default function TcgAssociationPanel() {
 
       {/* Le logo par défaut, en voxel */}
       {data.voxelLogo && (
-        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+        <div className={`flex flex-wrap items-center gap-4 p-4 ${rubanCard}`}>
           {/* biome-ignore lint/performance/noImgElement: SVG rendu par nos soins — next/image n'optimise pas le SVG */}
           <img
             src={data.voxelLogo.previewUrl}
             alt=""
-            className="h-28 w-20 shrink-0 rounded bg-neutral-950 object-contain"
+            className="h-28 w-20 shrink-0 rounded-[3px] bg-[var(--s2,#1d1520)] object-contain"
           />
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold">{t.voxelTitle}</h3>
@@ -287,21 +295,22 @@ export default function TcgAssociationPanel() {
                 {t.eventLogoImported}
               </p>
             ) : (
-              <button
-                type="button"
+              <AdminButton
+                variant="secondary"
+                size="xs"
                 disabled={busy !== null}
                 onClick={() => void createVoxel()}
-                className="mt-2 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
+                className="mt-2"
               >
                 {busy === 'voxel' ? t.working : t.voxelCreate}
-              </button>
+              </AdminButton>
             )}
           </div>
         </div>
       )}
 
       {/* Dépôt staff */}
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+      <div className={`p-4 ${rubanCard}`}>
         <h3 className="font-semibold">{t.uploadTitle}</h3>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="block text-xs text-neutral-400 sm:col-span-2">
@@ -349,14 +358,14 @@ export default function TcgAssociationPanel() {
             </select>
           </label>
           <div className="flex items-end">
-            <button
-              type="button"
+            <AdminButton
+              variant="primary"
+              size="sm"
               disabled={busy !== null}
               onClick={() => void upload()}
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
             >
               {busy === 'upload' ? t.working : t.upload}
-            </button>
+            </AdminButton>
           </div>
         </div>
       </div>
@@ -373,7 +382,7 @@ export default function TcgAssociationPanel() {
               return (
                 <li
                   key={item.id}
-                  className={`overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/60 ${
+                  className={`${CARD_FLUSH} ${
                     item.status === 'approved' ? '' : 'opacity-70'
                   }`}
                 >
@@ -382,11 +391,11 @@ export default function TcgAssociationPanel() {
                     <img
                       src={item.imageUrl}
                       alt={item.title}
-                      className="aspect-[3/4] w-full bg-neutral-950 object-contain p-4"
+                      className="aspect-[3/4] w-full bg-[var(--s2,#1d1520)] object-contain p-4"
                     />
                   ) : (
                     <div
-                      className="aspect-[3/4] w-full bg-neutral-800"
+                      className="aspect-[3/4] w-full bg-[var(--s2,#1d1520)]"
                       aria-hidden
                     />
                   )}
@@ -436,22 +445,24 @@ export default function TcgAssociationPanel() {
                       </select>
                     </label>
                     <div className="flex flex-wrap gap-2 pt-1">
-                      <button
-                        type="button"
+                      <AdminButton
+                        variant="primary"
+                        size="sm"
                         disabled={busy !== null}
                         onClick={() => void save(item)}
-                        className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
                       >
                         {t.save}
-                      </button>
-                      <button
-                        type="button"
+                      </AdminButton>
+                      <AdminButton
+                        variant={
+                          item.status === 'approved' ? 'danger' : 'ghost'
+                        }
+                        size="sm"
                         disabled={busy !== null}
                         onClick={() => void toggle(item)}
-                        className="rounded-lg border border-amber-500/50 px-3 py-2 text-sm text-amber-100 hover:border-amber-400 disabled:opacity-50"
                       >
                         {item.status === 'approved' ? t.revoke : t.restore}
-                      </button>
+                      </AdminButton>
                     </div>
                   </div>
                 </li>

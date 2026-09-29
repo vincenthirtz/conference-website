@@ -14,6 +14,8 @@ import {
   type DiscordChannelType,
 } from '@/utils/discord/channels';
 import nsAdminSiteSettingsDiscord from '@/lib/i18n/locales/admin-fr/adminSiteSettingsDiscord';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 type WebhookRow = {
   id: string;
@@ -178,7 +180,9 @@ export default function DiscordWebhooksPanel() {
       </p>
       <p className="text-xs text-neutral-500 mb-8">
         {t.reservedPrefix}{' '}
-        <code className="bg-neutral-800 px-1 rounded">admin</code>
+        <code className="bg-[var(--s2,#1d1520)] px-1 rounded-[var(--r-ctrl,4px)]">
+          admin
+        </code>
         {t.reservedSuffix}
       </p>
 
@@ -189,7 +193,7 @@ export default function DiscordWebhooksPanel() {
       )}
 
       {errorMsg && !loading && (
-        <div className="p-4 rounded-xl bg-red-900/40 border border-red-500/50 text-sm">
+        <div className="p-4 rounded-[var(--r-card,14px)] bg-red-900/40 border border-red-500/50 text-sm">
           {errorMsg}
         </div>
       )}
@@ -204,7 +208,7 @@ export default function DiscordWebhooksPanel() {
             return (
               <div
                 key={ct}
-                className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-5"
+                className="bg-[var(--s1,#100812)] backdrop-blur border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] p-5"
               >
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
@@ -215,17 +219,11 @@ export default function DiscordWebhooksPanel() {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {existing && existing.is_active ? (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                        {t.statusActive}
-                      </span>
+                      <Chip tone="ok">{t.statusActive}</Chip>
                     ) : existing && !existing.is_active ? (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30">
-                        {t.statusConfiguredInactive}
-                      </span>
+                      <Chip tone="warn">{t.statusConfiguredInactive}</Chip>
                     ) : (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-600/20 text-neutral-400 border border-neutral-500/30">
-                        {t.statusNotConfigured}
-                      </span>
+                      <Chip>{t.statusNotConfigured}</Chip>
                     )}
                   </div>
                 </div>
@@ -245,7 +243,7 @@ export default function DiscordWebhooksPanel() {
                           [ct]: { ...d[ct], webhookUrl: e.target.value },
                         }))
                       }
-                      className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                      className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
                     />
                   </div>
                   <div className="flex items-end gap-2">
@@ -259,7 +257,7 @@ export default function DiscordWebhooksPanel() {
                             [ct]: { ...d[ct], isActive: e.target.checked },
                           }))
                         }
-                        className="w-4 h-4 rounded border-neutral-600 bg-neutral-900"
+                        className="w-4 h-4 rounded-[var(--r-ctrl,4px)] border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)]"
                       />
                       {t.checkboxActive}
                     </label>
@@ -280,37 +278,40 @@ export default function DiscordWebhooksPanel() {
                         [ct]: { ...d[ct], roleMention: e.target.value },
                       }))
                     }
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                    className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
                   />
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <button
+                  <AdminButton
+                    variant="primary"
+                    size="sm"
                     type="button"
                     onClick={() => save(ct)}
                     disabled={saving[ct] || !draft.webhookUrl.trim()}
-                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
                   >
                     {saving[ct] ? t.saving : t.save}
-                  </button>
-                  <button
+                  </AdminButton>
+                  <AdminButton
+                    variant="ghost"
+                    size="sm"
                     type="button"
                     onClick={() => test(ct)}
                     disabled={saving[ct] || !existing}
                     title={existing ? undefined : t.testDisabledTitle}
-                    className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
                   >
                     {t.test}
-                  </button>
+                  </AdminButton>
                   {existing && (
-                    <button
+                    <AdminButton
+                      variant="danger"
+                      size="sm"
                       type="button"
                       onClick={() => remove(ct)}
                       disabled={saving[ct]}
-                      className="px-4 py-2 rounded-xl bg-red-700/50 hover:bg-red-700 text-sm font-medium transition-colors disabled:opacity-50"
                     >
                       {t.delete}
-                    </button>
+                    </AdminButton>
                   )}
                 </div>
               </div>

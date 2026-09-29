@@ -16,6 +16,14 @@ import { useAdminResource } from '@/hooks/useAdminResource';
 import AdminListShell from '@/components/admin/AdminListShell';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminDisputes from '@/lib/i18n/locales/admin-fr/adminDisputes';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
+import {
+  rubanCard,
+  rubanEyebrow,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 
 type Classification = 'breached' | 'approaching' | 'fresh';
 
@@ -135,19 +143,17 @@ export default function DisputesPanel() {
     <>
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t.heading}</h1>
+          <h1 className="font-[family-name:var(--fd)] text-3xl font-extrabold tracking-tight [font-stretch:75%]">
+            {t.heading}
+          </h1>
           <p className="text-sm text-neutral-400 mt-1">
             {t.introPrefix} <SLAPill cls="breached" />
             {t.introSuffix}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={fetchData}
-          className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors"
-        >
+        <AdminButton variant="ghost" size="sm" onClick={fetchData}>
           {t.refresh}
-        </button>
+        </AdminButton>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -185,7 +191,7 @@ export default function DisputesPanel() {
         <select
           value={tournamentFilter}
           onChange={(e) => changeTournament(e.target.value)}
-          className="rounded-md bg-neutral-950 border border-neutral-700 px-2 py-1 text-sm"
+          className="h-[38px] rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2 text-sm"
         >
           <option value="">{t.tournamentAll}</option>
           {tournaments.map((tour) => (
@@ -224,14 +230,14 @@ export default function DisputesPanel() {
       {/* Pagination */}
       {disputes.length > 0 && (
         <div className="flex justify-between items-center mt-6">
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             disabled={offset === 0}
             onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {t.prev}
-          </button>
+          </AdminButton>
 
           <span className="text-neutral-400 text-sm">
             {format(t.paginationRange, {
@@ -241,14 +247,14 @@ export default function DisputesPanel() {
             {total !== null ? format(t.paginationOf, { total }) : ''}
           </span>
 
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             disabled={total !== null && offset + PAGE_SIZE >= total}
             onClick={() => setOffset(offset + PAGE_SIZE)}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {t.next}
-          </button>
+          </AdminButton>
         </div>
       )}
     </>
@@ -269,51 +275,40 @@ function Stat({
   onClick?: () => void;
 }) {
   const accentMap = {
-    red: 'border-red-500/50 bg-red-900/20 text-red-200',
-    amber: 'border-amber-500/50 bg-amber-900/20 text-amber-200',
-    emerald: 'border-emerald-500/50 bg-emerald-900/20 text-emerald-200',
+    red: 'text-[var(--err,#ff6b6b)]',
+    amber: 'text-[var(--warn,#f5a524)]',
+    emerald: 'text-[var(--lf,#7fca65)]',
   };
-  const accentClass = accent
-    ? accentMap[accent]
-    : 'border-neutral-800 bg-neutral-900/60 text-neutral-200';
+  const accentClass = accent ? accentMap[accent] : 'text-[var(--t1,#f4edf7)]';
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`text-left px-4 py-3 rounded-xl border transition-colors ${accentClass} ${
-        active ? 'ring-2 ring-white/30' : 'hover:brightness-110'
+      className={`rounded-[var(--r-card,14px)] border bg-[var(--s1,#100812)] px-4 py-3 text-left transition-colors ${
+        active
+          ? 'border-[var(--or,#b467d1)]'
+          : 'border-[var(--line2,rgba(194,196,201,.2))] hover:border-[var(--t4,#807984)]'
       }`}
     >
-      <div className="text-xs uppercase tracking-wide opacity-80">{label}</div>
-      <div className="text-2xl font-bold mt-1">{value}</div>
+      <div className={rubanEyebrow}>{label}</div>
+      <div
+        className={`mt-2 font-[family-name:var(--fd)] text-[28px] font-extrabold leading-none [font-stretch:75%] ${accentClass}`}
+      >
+        {value}
+      </div>
     </button>
   );
 }
 
 function SLAPill({ cls }: { cls: Classification }) {
   const t = useAdminT(nsAdminDisputes);
-  const map: Record<Classification, { label: string; className: string }> = {
-    breached: {
-      label: t.statBreached,
-      className: 'bg-red-900/40 text-red-200 border-red-500/40',
-    },
-    approaching: {
-      label: t.statApproaching,
-      className: 'bg-amber-900/30 text-amber-200 border-amber-500/40',
-    },
-    fresh: {
-      label: t.statFresh,
-      className: 'bg-emerald-900/30 text-emerald-200 border-emerald-500/40',
-    },
+  const map: Record<Classification, { label: string; tone: ChipTone }> = {
+    breached: { label: t.statBreached, tone: 'err' },
+    approaching: { label: t.statApproaching, tone: 'warn' },
+    fresh: { label: t.statFresh, tone: 'ok' },
   };
   const s = map[cls];
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${s.className}`}
-    >
-      {s.label}
-    </span>
-  );
+  return <Chip tone={s.tone}>{s.label}</Chip>;
 }
 
 function formatAge(minutes: number | null): string {
@@ -333,7 +328,7 @@ function DisputeCard({ dispute: d }: { dispute: DisputeRow }) {
   const ageLabel = formatAge(d.ageMinutes);
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 px-4 py-3">
+    <div className={`${rubanCard} px-4 py-3`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 text-xs text-neutral-400 mb-1">
@@ -366,12 +361,14 @@ function DisputeCard({ dispute: d }: { dispute: DisputeRow }) {
             </div>
           )}
         </div>
-        <Link
+        <AdminButtonLink
           href={matchHref}
-          className="self-center px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-sm font-medium transition-colors"
+          variant="secondary"
+          size="sm"
+          className="self-center"
         >
           {t.resolve}
-        </Link>
+        </AdminButtonLink>
       </div>
     </div>
   );

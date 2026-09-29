@@ -9,8 +9,11 @@
 // Des FABRIQUES et non des constantes : les colonnes se referment sur le
 // dictionnaire, l'id du tenant et le geste de retrait, qui vivent dans la page.
 
-import Link from 'next/link';
 import type { DataTableColumn } from '@/components/admin/DataTable';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 export type GuildRow = {
   guild_id: string;
@@ -90,12 +93,13 @@ const GUILD_COLUMNS = (
     headerClassName: 'text-right',
     className: 'text-right',
     render: (g) => (
-      <Link
+      <AdminButtonLink
+        variant="ghost"
+        size="xs"
         href={`/admin/tenants/${tenantId}/discord-config/${g.guild_id}`}
-        className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm transition-colors hover:border-neutral-500"
       >
         {t.configure}
-      </Link>
+      </AdminButtonLink>
     ),
   },
 ];
@@ -123,11 +127,7 @@ const STAFF_COLUMNS = (
     key: 'role',
     header: t.colStaffRole,
     value: (row) => row.role,
-    render: (row) => (
-      <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] uppercase tracking-wider text-neutral-300">
-        {row.role}
-      </span>
-    ),
+    render: (row) => <Chip>{row.role}</Chip>,
   },
   {
     key: 'added_at',
@@ -143,13 +143,14 @@ const STAFF_COLUMNS = (
     headerClassName: 'text-right',
     className: 'text-right',
     render: (row) => (
-      <button
+      <AdminButton
+        variant="danger"
+        size="xs"
         type="button"
         onClick={() => onRemove(row)}
-        className="rounded-lg border border-red-500/40 px-3 py-1.5 text-sm text-red-300 transition-colors hover:border-red-400"
       >
         {t.removeStaff}
-      </button>
+      </AdminButton>
     ),
   },
 ];

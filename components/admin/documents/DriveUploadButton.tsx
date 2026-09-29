@@ -13,6 +13,7 @@ import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminDocuments from '@/lib/i18n/locales/admin-fr/adminDocuments';
 import { DRIVE_UPLOAD_MAX_BYTES } from '@/utils/documents/driveLimits';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 export default function DriveUploadButton({
   folderId,
@@ -82,14 +83,14 @@ export default function DriveUploadButton({
           if (file) void handleFile(file);
         }}
       />
-      <button
-        type="button"
+      <AdminButton
+        variant="primary"
+        size="sm"
         disabled={busy}
         onClick={() => inputRef.current?.click()}
-        className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
       >
         {busy ? t.uploading : t.uploadCta}
-      </button>
+      </AdminButton>
       <span className="text-xs text-neutral-500">{t.uploadHint}</span>
     </div>
   );

@@ -9,6 +9,7 @@ import ScrimTeamField, {
   scrimTeamBody,
   type ScrimTeamValue,
 } from '@/components/admin/scrims/ScrimTeamField';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 const NO_EXTERNAL = { external: false, externalName: '' };
 
@@ -159,21 +160,23 @@ export default function ScrimFormModal({
       title={t.heading}
       footer={
         <>
-          <button
+          <AdminButton
+            variant="ghost"
+            size="md"
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium"
           >
             {t.cancel}
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
+            variant="primary"
+            size="md"
             type="submit"
             form={formId}
             disabled={submitting}
-            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium"
           >
             {submitting ? t.submitting : t.submit}
-          </button>
+          </AdminButton>
         </>
       }
     >
@@ -185,7 +188,7 @@ export default function ScrimFormModal({
           <input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+            className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
             required
           />
         </div>
@@ -230,7 +233,7 @@ export default function ScrimFormModal({
               onChange={(e) =>
                 setForm({ ...form, scheduled_date: e.target.value })
               }
-              className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
             />
           </div>
           <div>
@@ -240,7 +243,7 @@ export default function ScrimFormModal({
             <select
               value={form.status}
               onChange={(e) => setForm({ ...form, status: e.target.value })}
-              className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
             >
               <option value="draft">{t.statusDraft}</option>
               <option value="scheduled">{t.statusScheduled}</option>
@@ -259,7 +262,7 @@ export default function ScrimFormModal({
             value={form.game}
             onChange={(e) => setForm({ ...form, game: e.target.value })}
             placeholder="Overwatch"
-            className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+            className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
           />
         </div>
 
@@ -271,7 +274,7 @@ export default function ScrimFormModal({
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={3}
-            className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+            className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
           />
         </div>
 
@@ -283,7 +286,7 @@ export default function ScrimFormModal({
             value={form.stream_url}
             onChange={(e) => setForm({ ...form, stream_url: e.target.value })}
             placeholder="https://twitch.tv/..."
-            className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+            className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
           />
         </div>
 
@@ -297,7 +300,7 @@ export default function ScrimFormModal({
         </label>
 
         {error && (
-          <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm">
+          <div className="rounded-[var(--r-ctrl,4px)] bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm">
             {error}
           </div>
         )}

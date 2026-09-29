@@ -19,6 +19,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
 import { ALL_SCOPES } from '@/utils/apiScopes';
 import nsAdminOnboarding from '@/lib/i18n/locales/admin-fr/adminOnboarding';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type Props = {
   tenantId: string;
@@ -136,7 +137,7 @@ export default function MintApiKeyModal({
     >
       <div
         ref={trapRef}
-        className="w-full max-w-lg rounded-2xl border border-neutral-700 bg-neutral-900 p-5 shadow-xl"
+        className="w-full max-w-lg rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-5 shadow-xl"
       >
         <h2 id="mint-key-title" className="text-lg font-semibold text-white">
           {format(t.mintKeyTitle, { tenant: tenantName })}
@@ -158,7 +159,7 @@ export default function MintApiKeyModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={120}
-              className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+              className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white"
             />
           </div>
 
@@ -176,7 +177,7 @@ export default function MintApiKeyModal({
                     type="checkbox"
                     checked={scopes.includes(scope)}
                     onChange={() => toggleScope(scope)}
-                    className="rounded border-neutral-600 bg-neutral-900"
+                    className="rounded-[var(--r-ctrl,4px)] border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)]"
                   />
                   <code className="text-xs">{scope}</code>
                 </label>
@@ -198,20 +199,20 @@ export default function MintApiKeyModal({
               max={3650}
               value={expiryDays}
               onChange={(e) => setExpiryDays(e.target.value)}
-              className="w-32 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+              className="w-32 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white"
             />
             <p className="mt-1 text-xs text-neutral-500">
               {t.mintKeyExpiryHint}
             </p>
           </div>
 
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+          <div className="rounded-[var(--r-ctrl,4px)] border border-amber-500/30 bg-amber-500/5 p-3">
             <label className="flex items-start gap-2 text-sm text-amber-100">
               <input
                 type="checkbox"
                 checked={comp}
                 onChange={(e) => setComp(e.target.checked)}
-                className="mt-1 rounded border-neutral-600 bg-neutral-900"
+                className="mt-1 rounded-[var(--r-ctrl,4px)] border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)]"
               />
               <span>
                 <span className="font-medium">{t.mintKeyCompLabel}</span>
@@ -226,29 +227,31 @@ export default function MintApiKeyModal({
                 onChange={(e) => setCompNote(e.target.value)}
                 placeholder={t.mintKeyCompNotePlaceholder}
                 maxLength={500}
-                className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+                className="mt-2 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white"
               />
             )}
           </div>
 
           <div className="flex justify-end gap-2 pt-1">
-            <button
+            <AdminButton
+              variant="ghost"
+              size="sm"
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800"
             >
               {t.mintKeyCancel}
-            </button>
-            <button
+            </AdminButton>
+            <AdminButton
+              variant="primary"
+              size="sm"
               type="submit"
               disabled={busy}
               data-testid="mint-key-submit"
-              className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
             >
               {busy
                 ? t.mintKeyBusy
                 : format(t.mintKeySubmit, { tenant: tenantName })}
-            </button>
+            </AdminButton>
           </div>
         </form>
       </div>

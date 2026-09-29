@@ -25,6 +25,7 @@ import {
 } from './campaignShared';
 import { Field } from './campaignUi';
 import CampaignScheduleSection from './CampaignScheduleSection';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 export default function CampaignDrawer({
   campaign,
@@ -367,7 +368,7 @@ export default function CampaignDrawer({
                   type="button"
                   onClick={() => onDelete()}
                   aria-label={format(t.deleteAria, { name: campaign.name })}
-                  className="rounded-lg p-2 text-rose-400 hover:bg-rose-500/15 hover:text-rose-300 transition-colors"
+                  className="rounded-[var(--r-ctrl,4px)] p-2 text-[var(--err,#ff6b6b)] hover:bg-[rgba(255,107,107,.08)] transition-colors"
                 >
                   <svg
                     className="w-5 h-5"
@@ -387,7 +388,7 @@ export default function CampaignDrawer({
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors"
+                className="rounded-[var(--r-ctrl,4px)] p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors"
                 aria-label={t.closeAria}
               >
                 <svg
@@ -424,7 +425,7 @@ export default function CampaignDrawer({
             </section>
 
             {/* Live preview */}
-            <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4">
+            <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
               <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
                 <div>
                   <h3 className="text-sm font-semibold text-neutral-200">
@@ -441,19 +442,19 @@ export default function CampaignDrawer({
                     onChange={(e) => setPreviewLabel(e.target.value)}
                     placeholder="Vincent"
                     maxLength={80}
-                    className="px-3 py-1.5 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs w-32"
+                    className="px-3 py-1.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-xs w-32"
                   />
                   <a
                     href={previewSrc}
                     target="_blank"
                     rel="noreferrer"
-                    className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-xs font-medium transition-colors"
+                    className="inline-flex h-[30px] items-center justify-center gap-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.02em] text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)] disabled:opacity-50"
                   >
                     {t.previewOpen}
                   </a>
                 </div>
               </div>
-              <div className="rounded-xl overflow-hidden border border-neutral-700/50 bg-neutral-950">
+              <div className="overflow-hidden rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)]">
                 <iframe
                   key={previewSrc}
                   src={previewSrc}
@@ -465,7 +466,7 @@ export default function CampaignDrawer({
             </section>
 
             {/* Test send */}
-            <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4">
+            <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
               <h3 className="text-sm font-semibold text-neutral-200 mb-1">
                 {t.testHeading}
               </h3>
@@ -478,27 +479,27 @@ export default function CampaignDrawer({
                     value={testTo}
                     onChange={(e) => setTestTo(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && runTest()}
-                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                   />
                 </div>
-                <button
-                  type="button"
+                <AdminButton
+                  variant="secondary"
+                  size="sm"
                   onClick={runTest}
                   disabled={testSending || !testTo.trim()}
-                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
                 >
                   {testSending ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : null}
                   {t.sendTest}
-                </button>
+                </AdminButton>
               </div>
               {testResult && (
                 <div
-                  className={`mt-3 px-3 py-2 rounded-xl border text-sm ${
+                  className={`mt-3 px-3 py-2 rounded-[var(--r-ctrl,4px)] border text-sm ${
                     testResult.ok
-                      ? 'bg-emerald-900/40 border-emerald-500/50 text-emerald-300'
-                      : 'bg-red-900/40 border-red-500/50 text-red-300'
+                      ? 'bg-[rgba(127,202,101,.08)] border-[rgba(127,202,101,.36)] text-[var(--lf-200,#b3e7a3)]'
+                      : 'bg-[rgba(255,107,107,.08)] border-[rgba(255,107,107,.45)] text-[#ffc2c2]'
                   }`}
                 >
                   {testResult.msg}
@@ -512,7 +513,7 @@ export default function CampaignDrawer({
             />
 
             {/* Broadcast */}
-            <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4 space-y-4">
+            <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 space-y-4">
               <div>
                 <h3 className="text-sm font-semibold text-neutral-200 mb-1">
                   {t.broadcastHeading}
@@ -541,7 +542,7 @@ export default function CampaignDrawer({
                     value={limit}
                     onChange={(e) => setLimit(e.target.value)}
                     placeholder={t.limitPlaceholder}
-                    className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                   />
                 </div>
                 <div>
@@ -554,28 +555,28 @@ export default function CampaignDrawer({
                     value={offset}
                     onChange={(e) => setOffset(e.target.value)}
                     placeholder="0"
-                    className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                   />
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
+                <AdminButton
+                  variant="ghost"
+                  size="sm"
                   onClick={runDryRun}
                   disabled={dryRunBusy || sendBusy}
-                  className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
                 >
                   {dryRunBusy ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : null}
                   {t.dryRunBtn}
-                </button>
-                <button
-                  type="button"
+                </AdminButton>
+                <AdminButton
+                  variant="danger"
+                  size="sm"
                   onClick={() => setConfirming(true)}
                   disabled={dryRunBusy || sendBusy}
-                  className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
                 >
                   <svg
                     className="w-4 h-4"
@@ -591,13 +592,13 @@ export default function CampaignDrawer({
                     />
                   </svg>
                   {t.launchBroadcast}
-                </button>
-                <button
-                  type="button"
+                </AdminButton>
+                <AdminButton
+                  variant="ghost"
+                  size="sm"
                   onClick={runNewSubscribers}
                   disabled={dryRunBusy || sendBusy}
                   title={t.newSubscribersHint}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 border border-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
                 >
                   <svg
                     className="w-4 h-4"
@@ -613,13 +614,13 @@ export default function CampaignDrawer({
                     />
                   </svg>
                   {t.newSubscribersBtn}
-                </button>
-                <button
-                  type="button"
+                </AdminButton>
+                <AdminButton
+                  variant="ghost"
+                  size="sm"
                   onClick={runAudienceDiff}
                   disabled={dryRunBusy || sendBusy}
                   title={t.audienceDiffHint}
-                  className="px-4 py-2.5 rounded-xl bg-indigo-700 hover:bg-indigo-600 border border-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
                 >
                   <svg
                     className="w-4 h-4"
@@ -635,20 +636,20 @@ export default function CampaignDrawer({
                     />
                   </svg>
                   {t.audienceDiffBtn}
-                </button>
+                </AdminButton>
               </div>
 
               <p className="text-xs text-neutral-500">{t.newSubscribersHint}</p>
               <p className="text-xs text-neutral-500">{t.audienceDiffHint}</p>
 
               {actionError && (
-                <div className="px-3 py-2 rounded-xl bg-red-900/40 border border-red-500/50 text-red-300 text-sm">
+                <div className="px-3 py-2 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] text-[#ffc2c2] text-red-300 text-sm">
                   {actionError}
                 </div>
               )}
 
               {dryRun && (
-                <div className="rounded-xl bg-neutral-900/50 border border-neutral-700/40 p-4">
+                <div className="rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-4">
                   <p className="text-xs text-neutral-500 uppercase tracking-wider mb-2">
                     {t.previewResultHeading}
                   </p>
@@ -671,7 +672,7 @@ export default function CampaignDrawer({
               )}
 
               {sendResult && (
-                <div className="rounded-xl bg-emerald-900/30 border border-emerald-500/40 p-4">
+                <div className="rounded-[var(--r-ctrl,4px)] border border-[rgba(127,202,101,.36)] bg-[rgba(127,202,101,.08)] p-4">
                   <p className="text-xs text-emerald-400 uppercase tracking-wider mb-2">
                     {t.broadcastDoneHeading}
                   </p>
@@ -700,13 +701,14 @@ export default function CampaignDrawer({
                       </ul>
                     </details>
                   )}
-                  <button
-                    type="button"
+                  <AdminButton
+                    variant="ghost"
+                    size="xs"
                     onClick={onAfterSend}
-                    className="mt-3 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-medium transition-colors"
+                    className="mt-3"
                   >
                     {t.closeAndRefresh}
-                  </button>
+                  </AdminButton>
                 </div>
               )}
             </section>
@@ -721,31 +723,31 @@ export default function CampaignDrawer({
           disableBackdropClose={sendBusy}
           zIndexClassName="z-[210]"
           backdropClassName="bg-black/70"
-          panelChromeClassName="rounded-2xl bg-neutral-900 border border-neutral-700"
+          panelChromeClassName="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]"
           title={
             <h3 className="text-lg font-semibold">{t.confirmSendTitle}</h3>
           }
           footer={
             <>
-              <button
-                type="button"
+              <AdminButton
+                variant="ghost"
+                size="sm"
                 onClick={() => setConfirming(false)}
                 disabled={sendBusy}
-                className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-sm font-medium transition-colors"
               >
                 {t.cancel}
-              </button>
-              <button
-                type="button"
+              </AdminButton>
+              <AdminButton
+                variant="danger"
+                size="sm"
                 onClick={runSend}
                 disabled={sendBusy}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-sm font-medium transition-colors flex items-center gap-2"
               >
                 {sendBusy ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : null}
                 {t.confirmSendBtn}
-              </button>
+              </AdminButton>
             </>
           }
         >

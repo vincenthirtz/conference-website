@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabaseBrowser';
@@ -11,6 +10,10 @@ import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import Tabs, { tabButtonId, tabPanelId } from '@/components/admin/Tabs';
 import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
 import SectionCard from './ProfileSectionCard';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 import ProfileLinkedAccounts from './ProfileLinkedAccounts';
 
 import { logger } from '@/utils/logger';
@@ -36,18 +39,16 @@ type TabId = 'profile' | 'security' | 'privacy';
 const TAB_ID_BASE = 'admin-profile';
 
 const inputClass =
-  'w-full px-3 py-2.5 rounded-xl bg-neutral-950/50 border border-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500/70 text-sm text-white placeholder:text-neutral-500 transition-shadow';
-const labelClass = 'block text-sm font-medium text-neutral-200 mb-1.5';
-const helpClass = 'text-xs text-neutral-400';
-const primaryBtnClass =
-  'px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-semibold flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60';
+  'w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:border-[var(--or,#b467d1)] text-sm text-[var(--t1,#f4edf7)] placeholder:text-[var(--t4,#807984)]';
+const labelClass = 'block text-sm font-medium text-[var(--t2,#c7bfca)] mb-1.5';
+const helpClass = 'text-xs text-[var(--t3,#a39ba6)]';
 const spinnerClass =
-  'w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin';
+  'w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin';
 
 // Bannière d'erreur réutilisable (mutualise l'icône + le style rouge).
 function ErrorBanner({ message }: { message: string }) {
   return (
-    <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/50 bg-red-900/40 px-4 py-3 text-sm text-red-100">
+    <div className="mb-4 flex items-center gap-2 rounded-[var(--r-ctrl,4px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-sm text-[#ffc2c2]">
       <svg
         className="w-5 h-5 text-red-400 flex-shrink-0"
         fill="currentColor"
@@ -78,16 +79,16 @@ function InfoTile({
 }) {
   return (
     <div
-      className={`rounded-xl bg-neutral-900/50 ring-1 ring-white/10 p-4 ${className}`}
+      className={`rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-4 ${className}`}
     >
-      <div className="mb-1 text-[10px] font-medium uppercase tracking-widest text-neutral-400">
+      <div className="mb-1 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
         {label}
       </div>
       <div
         className={
           mono
-            ? 'font-mono text-xs text-neutral-300 break-all'
-            : 'text-sm font-medium text-white'
+            ? 'font-mono text-xs text-[var(--t2,#c7bfca)] break-all'
+            : 'text-sm font-medium text-[var(--t1,#f4edf7)]'
         }
       >
         {children}
@@ -394,11 +395,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
         {errorMsg && <ErrorBanner message={errorMsg} />}
 
         {/* Hero identité — carte d'accent violet, toujours visible */}
-        <section className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/15 via-neutral-900/30 to-neutral-900/30 p-6">
-          <div
-            className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-purple-500/20 blur-3xl"
-            aria-hidden="true"
-          />
+        <section className="relative overflow-hidden rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6">
           <div className="relative flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-4 min-w-0">
               {profile?.avatar_url ? (
@@ -406,33 +403,28 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                 <img
                   src={profile.avatar_url}
                   alt={t.avatarAlt}
-                  className="w-16 h-16 rounded-2xl border border-white/10 shadow-lg object-cover flex-shrink-0"
+                  className="w-16 h-16 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] object-cover flex-shrink-0"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-2xl border border-white/10 bg-gradient-to-br from-purple-500/40 to-purple-700/40 shadow-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl font-bold text-white">
+                <div className="w-16 h-16 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s3,#2f2732)] flex items-center justify-center flex-shrink-0">
+                  <span className="font-[family-name:var(--fd)] text-2xl font-bold text-[var(--or-200,#eec4ff)]">
                     {displayName.charAt(0).toUpperCase()}
                   </span>
                 </div>
               )}
               <div className="min-w-0">
-                <h2 className="text-2xl font-bold text-white truncate">
+                <h2 className="font-[family-name:var(--fd)] text-2xl font-extrabold uppercase text-[var(--t1,#f4edf7)] truncate">
                   {displayName}
                 </h2>
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-purple-500/20 text-purple-200 border border-purple-400/30">
-                    {roleLabel}
-                  </span>
-                  <span className="text-sm text-neutral-300 truncate">
+                  <Chip tone="brand">{roleLabel}</Chip>
+                  <span className="text-sm text-[var(--t2,#c7bfca)] truncate">
                     {email}
                   </span>
                 </div>
               </div>
             </div>
-            <Link
-              href="/admin/logout"
-              className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 transition-colors hover:bg-red-500/20"
-            >
+            <AdminButtonLink href="/admin/logout" variant="danger" size="sm">
               <svg
                 className="w-4 h-4"
                 fill="none"
@@ -448,7 +440,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                 />
               </svg>
               {t.logout}
-            </Link>
+            </AdminButtonLink>
           </div>
         </section>
 
@@ -463,7 +455,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
 
         {loading && (
           <div className="flex items-center justify-center py-10">
-            <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--or,#b467d1)] rounded-full animate-spin" />
           </div>
         )}
 
@@ -515,11 +507,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                   />
                   <p className={`${helpClass} mt-1.5`}>{t.avatarHelp}</p>
                 </div>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className={primaryBtnClass}
-                >
+                <AdminButton type="submit" variant="primary" disabled={saving}>
                   {saving ? (
                     <>
                       <div className={spinnerClass} />
@@ -528,7 +516,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                   ) : (
                     t.save
                   )}
-                </button>
+                </AdminButton>
               </form>
             </SectionCard>
 
@@ -646,12 +634,12 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                     required
                   />
                 </div>
-                <button
+                <AdminButton
                   type="submit"
+                  variant="primary"
                   disabled={
                     emailChanging || !newEmail || newEmail === profile?.email
                   }
-                  className={primaryBtnClass}
                 >
                   {emailChanging ? (
                     <>
@@ -661,7 +649,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                   ) : (
                     t.emailSubmit
                   )}
-                </button>
+                </AdminButton>
               </form>
               <p className={`${helpClass} mt-3`}>{t.emailConfirmNote}</p>
             </SectionCard>
@@ -712,12 +700,12 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                     required
                   />
                 </div>
-                <button
+                <AdminButton
                   type="submit"
+                  variant="primary"
                   disabled={
                     passwordChanging || !newPassword || !confirmPassword
                   }
-                  className={primaryBtnClass}
                 >
                   {passwordChanging ? (
                     <>
@@ -727,7 +715,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                   ) : (
                     t.passwordSubmit
                   )}
-                </button>
+                </AdminButton>
               </form>
               <p className={`${helpClass} mt-3`}>{t.passwordHelp}</p>
             </SectionCard>
@@ -764,10 +752,10 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
             >
               {dataError && <ErrorBanner message={dataError} />}
 
-              <button
+              <AdminButton
                 onClick={handleExportData}
                 disabled={exporting}
-                className="w-full px-4 py-2.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-neutral-100 transition-colors flex items-center justify-center gap-2 mb-2"
+                className="mb-2 w-full"
               >
                 {exporting ? (
                   <>
@@ -777,19 +765,20 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                 ) : (
                   t.exportBtn
                 )}
-              </button>
+              </AdminButton>
               <p className={`${helpClass} mb-6`}>{t.exportHelp}</p>
 
-              <div className="border-t border-white/10 pt-5">
-                <button
+              <div className="border-t border-[var(--line,rgba(194,196,201,.12))] pt-5">
+                <AdminButton
                   onClick={() => {
                     setDataError(null);
                     setDeleteConfirm(true);
                   }}
-                  className="w-full px-4 py-2.5 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-200 text-sm font-medium transition-colors"
+                  variant="danger"
+                  className="w-full"
                 >
                   {t.deleteBtn}
-                </button>
+                </AdminButton>
                 <p className={`${helpClass} mt-3`}>{t.deleteHelp}</p>
               </div>
             </SectionCard>

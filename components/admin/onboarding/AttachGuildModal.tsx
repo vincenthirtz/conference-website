@@ -32,6 +32,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminOnboarding from '@/lib/i18n/locales/admin-fr/adminOnboarding';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 const GUILD_ID_RE = /^[0-9]{15,25}$/;
 
@@ -178,22 +179,24 @@ export default function AttachGuildModal({
       }
       footer={
         <div className="flex justify-end gap-3">
-          <button
+          <AdminButton
+            variant="ghost"
+            size="sm"
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-neutral-600 px-4 py-2 text-sm text-neutral-200"
           >
             {t.attachGuildCancel}
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
+            variant="primary"
+            size="sm"
             type="button"
             onClick={submit}
             disabled={saving || !GUILD_ID_RE.test(guildId)}
-            className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             data-testid="attach-guild-submit"
           >
             {saving ? t.attachGuildSaving : t.attachGuildSubmit}
-          </button>
+          </AdminButton>
         </div>
       }
     >
@@ -201,7 +204,7 @@ export default function AttachGuildModal({
 
       {/* Étape 0 : le bot est-il sur le serveur ? Tant qu'il n'y est pas, il
           n'y a rien à rattacher — et c'est l'oubli le plus courant. */}
-      <div className="mb-4 rounded-xl border border-violet-500/30 bg-violet-500/5 p-3">
+      <div className="mb-4 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-3">
         <p className="text-sm font-medium text-violet-100">
           {t.attachGuildInviteHeading}
         </p>
@@ -216,7 +219,7 @@ export default function AttachGuildModal({
               href={inviteUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500"
+              className="inline-flex h-[30px] items-center rounded-[var(--r-ctrl,4px)] border border-[rgba(180,103,209,.45)] px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.02em] text-[var(--or-200,#eec4ff)] hover:border-[var(--or,#b467d1)] hover:bg-[rgba(180,103,209,.08)]"
               data-testid="attach-guild-invite"
             >
               {t.attachGuildInviteCta}
@@ -225,15 +228,15 @@ export default function AttachGuildModal({
                 Discord rattache tout seul. Laisser le bouton entretiendrait
                 l'idée qu'il reste une étape. */}
             {inviteMode === 'manual' && (
-              <button
-                type="button"
+              <AdminButton
+                variant="ghost"
+                size="xs"
                 onClick={() => void loadPending()}
                 disabled={refreshing}
-                className="text-xs text-violet-300 underline hover:text-violet-200 disabled:opacity-50"
                 data-testid="attach-guild-refresh"
               >
                 {refreshing ? t.attachGuildRefreshing : t.attachGuildRefresh}
-              </button>
+              </AdminButton>
             )}
           </div>
         ) : (
@@ -254,7 +257,7 @@ export default function AttachGuildModal({
               setChoice(e.target.value);
               if (e.target.value) setManualId('');
             }}
-            className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+            className="mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white"
             data-testid="attach-guild-pending"
           >
             <option value="">{t.attachGuildPendingNone}</option>
@@ -282,7 +285,7 @@ export default function AttachGuildModal({
           }}
           inputMode="numeric"
           placeholder="123456789012345678"
-          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+          className="mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white"
           data-testid="attach-guild-manual"
         />
         <span className="mt-1 block text-xs text-neutral-500">
@@ -290,7 +293,7 @@ export default function AttachGuildModal({
         </span>
       </label>
 
-      <p className="mt-4 rounded-lg border border-neutral-700/60 bg-neutral-900/40 px-3 py-2 text-xs text-neutral-400">
+      <p className="mt-4 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-xs text-neutral-400">
         {t.attachGuildBotDelay}
       </p>
     </Modal>

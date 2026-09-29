@@ -1,4 +1,5 @@
 import type { SimStats } from '@/utils/simulatorStats';
+import { TILE } from '@/features/admin/stages/ui/rubanClasses';
 
 /**
  * Onglet « maps » du simulateur : le pool de maps et le nombre de fois
@@ -20,21 +21,18 @@ export function SimulatorMapsTab({
           const count = stats.mapCount.get(name) ?? 0;
           const maxCount = Math.max(...stats.mapCount.values(), 1);
           return (
-            <div
-              key={name}
-              className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2"
-            >
+            <div key={name} className={`${TILE} space-y-2 p-4`}>
               <div className="text-sm font-semibold">{name}</div>
               <div className="flex items-center gap-2">
-                <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--s3,#2f2732)]">
                   <div
-                    className="h-full bg-purple-500 rounded-full transition-all"
+                    className="h-full rounded-full bg-[var(--or,#b467d1)] transition-all"
                     style={{
                       width: `${(count / maxCount) * 100}%`,
                     }}
                   />
                 </div>
-                <span className="text-xs text-neutral-400 tabular-nums w-8 text-right">
+                <span className="w-8 text-right text-xs tabular-nums text-[var(--t3,#a39ba6)]">
                   {count}x
                 </span>
               </div>

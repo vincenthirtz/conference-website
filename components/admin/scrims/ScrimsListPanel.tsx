@@ -15,6 +15,8 @@ import AdminPagination from '@/components/admin/AdminPagination';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { ScrimStatus } from '@/types/admin';
 import nsAdminScrimsList from '@/lib/i18n/locales/admin-fr/adminScrimsList';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type Dict = typeof nsAdminScrimsList.fr;
 
@@ -54,20 +56,20 @@ function statusLabel(status: string, t: Dict) {
   }
 }
 
-function statusColor(status: string) {
+function statusTone(status: string): ChipTone {
   switch (status) {
     case 'draft':
-      return 'bg-neutral-600 text-neutral-100';
+      return 'neutral';
     case 'scheduled':
-      return 'bg-blue-600 text-white';
+      return 'brand';
     case 'running':
-      return 'bg-emerald-600 text-white';
+      return 'live';
     case 'completed':
-      return 'bg-purple-600 text-white';
+      return 'ok';
     case 'cancelled':
-      return 'bg-red-700 text-red-100';
+      return 'err';
     default:
-      return 'bg-neutral-700 text-neutral-200';
+      return 'neutral';
   }
 }
 
@@ -202,16 +204,17 @@ export default function ScrimsListPanel() {
       />
 
       <div className="mb-6 flex justify-end">
-        <button
+        <AdminButton
+          variant="primary"
+          size="md"
           type="button"
           onClick={() => setModalOpen(true)}
-          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors"
         >
           {t.newScrim}
-        </button>
+        </AdminButton>
       </div>
 
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 mb-6 flex flex-wrap gap-3 items-end">
+      <section className="bg-[var(--s1,#100812)] backdrop-blur border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] p-4 mb-6 flex flex-wrap gap-3 items-end">
         <div className="flex-1 min-w-[220px]">
           <label
             className="block text-sm text-neutral-400 mb-1"
@@ -232,7 +235,7 @@ export default function ScrimsListPanel() {
             }}
             onBlur={submitSearch}
             placeholder={t.searchPlaceholder}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600"
+            className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
           />
         </div>
 
@@ -247,7 +250,7 @@ export default function ScrimsListPanel() {
             id="scrims-status"
             value={statusFilter}
             onChange={(e) => setFilters({ sstatus: e.target.value || null })}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600"
+            className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
           >
             <option value="">{t.filterAll}</option>
             <option value="draft">{t.statusDraft}</option>
@@ -269,7 +272,7 @@ export default function ScrimsListPanel() {
             id="scrims-period"
             value={periodFilter}
             onChange={(e) => setFilters({ speriod: e.target.value || null })}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600"
+            className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
           >
             <option value="">{t.filterAll}</option>
             <option value="upcoming">{t.periodUpcoming}</option>
@@ -288,7 +291,7 @@ export default function ScrimsListPanel() {
             id="scrims-sort"
             value={sortFilter}
             onChange={(e) => setFilters({ ssort: e.target.value || null })}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600"
+            className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
           >
             <option value="created_desc">{t.sortCreatedDesc}</option>
             <option value="scheduled_desc">{t.sortScheduledDesc}</option>
@@ -311,30 +314,18 @@ export default function ScrimsListPanel() {
             <Link
               key={s.id}
               href={`/admin/scrims/${s.id}`}
-              className="block bg-neutral-800/50 hover:bg-neutral-800 border border-neutral-700/50 rounded-xl px-5 py-4 transition-colors"
+              className="block bg-[var(--s1,#100812)] border border-[var(--line2,rgba(194,196,201,.2))] hover:border-[var(--or,#b467d1)] rounded-[var(--r-card,14px)] px-5 py-4 transition-colors"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span
-                    className={`px-2 py-0.5 rounded-md text-xs font-semibold ${statusColor(
-                      s.status
-                    )}`}
-                  >
+                  <Chip tone={statusTone(s.status)}>
                     {statusLabel(s.status, t)}
-                  </span>
+                  </Chip>
                   <span className="font-medium">{s.name}</span>
-                  {s.is_public && (
-                    <span className="text-xs text-emerald-400">
-                      {t.publicBadge}
-                    </span>
-                  )}
+                  {s.is_public && <Chip tone="ok">{t.publicBadge}</Chip>}
                   {/* Un scrim classé compte pour le rating des joueuses et
                       pour la saison : ça ne doit pas se deviner. */}
-                  {s.ranked && (
-                    <span className="text-xs px-1.5 py-0.5 rounded border border-amber-600/60 text-amber-300">
-                      {t.rankedBadge}
-                    </span>
-                  )}
+                  {s.ranked && <Chip tone="warn">{t.rankedBadge}</Chip>}
                 </div>
                 <div className="text-xs text-neutral-400">
                   {formatDate(s.scheduled_date)}

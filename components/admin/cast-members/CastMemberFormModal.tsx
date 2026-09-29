@@ -1,5 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import Modal from '@/components/admin/Modal';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { ERROR_BOX } from '@/features/admin/stages/ui/rubanClasses';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import CastMemberStaffPicker from '@/components/admin/CastMemberStaffPicker';
 import { useAdminT } from '@/lib/i18n/useAdminT';
@@ -107,34 +109,30 @@ export default function CastMemberFormModal({
       subtitle={t.subtitle}
       footer={
         <>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-          >
+          <AdminButton variant="ghost" onClick={onClose}>
             {t.cancel}
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
             type="submit"
+            variant="primary"
             form={formId}
             disabled={saving}
-            className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {saving ? (
               <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                 {t.creating}
               </>
             ) : (
               t.submit
             )}
-          </button>
+          </AdminButton>
         </>
       }
     >
       <form id={formId} onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-start gap-3">
+          <div className={`flex items-start gap-3 ${ERROR_BOX}`}>
             <svg
               className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5"
               fill="currentColor"
@@ -170,7 +168,7 @@ export default function CastMemberFormModal({
                 onChange={(e) => updateField('isActive', e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+              <div className="w-11 h-6 bg-[var(--s3,#2f2732)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--or,#b467d1)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
             </label>
             <span className="text-sm text-neutral-300">{t.activeLabel}</span>
           </div>
@@ -183,7 +181,7 @@ export default function CastMemberFormModal({
                 onChange={(e) => updateField('isPromo', e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+              <div className="w-11 h-6 bg-[var(--s3,#2f2732)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--or,#b467d1)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
             </label>
             <span className="text-sm text-neutral-300">{t.promoLabel}</span>
           </div>

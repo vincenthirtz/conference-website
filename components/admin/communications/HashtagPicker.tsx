@@ -19,6 +19,7 @@ import {
   normalizeHashtag,
   parseHashtagInput,
 } from '@/utils/social/hashtags';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 export type HashtagPickerLabels = {
   label: string;
@@ -99,13 +100,13 @@ export default function HashtagPicker({
         <ul className="flex flex-wrap gap-1.5">
           {value.map((tag) => (
             <li key={tag}>
-              <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/40 bg-purple-500/10 py-1 pl-2.5 pr-1 text-xs text-purple-200">
+              <span className="inline-flex items-center gap-1 rounded-[3px] border border-[rgba(180,103,209,.4)] bg-[rgba(180,103,209,.12)] py-1 pl-2.5 pr-1 text-xs text-[var(--or-200,#eec4ff)]">
                 #{tag}
                 <button
                   type="button"
                   onClick={() => onChange(value.filter((x) => x !== tag))}
                   aria-label={`${labels.remove} #${tag}`}
-                  className="rounded-full px-1 text-purple-300 hover:bg-purple-500/20 hover:text-white"
+                  className="rounded-[3px] px-1 text-[var(--or-300,#dea3f6)] hover:bg-[rgba(180,103,209,.2)] hover:text-white"
                 >
                   ×
                 </button>
@@ -124,29 +125,29 @@ export default function HashtagPicker({
         onKeyDown={handleKeyDown}
         placeholder={full ? labels.full : labels.placeholder}
         aria-label={labels.label}
-        className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-50"
+        className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-[var(--or,#b467d1)] focus:outline-none disabled:opacity-50"
       />
 
       {!full && (query || matches.length > 0) ? (
         <div className="flex flex-wrap gap-1.5">
           {isNew && typed ? (
-            <button
-              type="button"
+            <AdminButton
+              variant="secondary"
+              size="xs"
               onClick={() => add([typed])}
-              className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-200 hover:bg-emerald-500/20"
             >
               {labels.add} #{typed}
-            </button>
+            </AdminButton>
           ) : null}
           {matches.map((tag) => (
-            <button
+            <AdminButton
+              variant="ghost"
+              size="xs"
               key={tag}
-              type="button"
               onClick={() => add([tag])}
-              className="rounded-full border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-xs text-neutral-300 hover:border-purple-500/50 hover:text-white"
             >
               #{tag}
-            </button>
+            </AdminButton>
           ))}
           {!isNew && matches.length === 0 ? (
             <span className="text-xs text-neutral-500">{labels.noMatch}</span>

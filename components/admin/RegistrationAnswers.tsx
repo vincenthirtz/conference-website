@@ -64,7 +64,9 @@ export default function RegistrationAnswers({
 
   return (
     <div className={compact ? 'mt-2' : 'mt-4'}>
-      <div className="text-neutral-500 text-xs mb-2">{tf.answersTitle}</div>
+      <div className="mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
+        {tf.answersTitle}
+      </div>
       <dl className="space-y-2">
         {orderedKeys.map((key) => {
           const def = byKey.get(key);
@@ -83,7 +85,7 @@ export default function RegistrationAnswers({
                 href={raw}
                 target="_blank"
                 rel="noreferrer"
-                className="text-blue-400 hover:underline break-all"
+                className="break-all text-[var(--or-200,#eec4ff)] hover:underline"
               >
                 {raw}
               </a>
@@ -97,9 +99,9 @@ export default function RegistrationAnswers({
           return (
             <div
               key={key}
-              className="px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-700"
+              className="rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-3 py-2"
             >
-              <dt className="text-xs text-neutral-500">{label}</dt>
+              <dt className="text-xs text-[var(--t4,#807984)]">{label}</dt>
               <dd className="text-sm font-medium mt-0.5 whitespace-pre-line">
                 {rendered}
               </dd>

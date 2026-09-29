@@ -36,6 +36,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { format } from '@/lib/i18n/useAdminT';
 import type nsAdminTcgGrant from '@/lib/i18n/locales/admin-fr/adminTcgGrant';
 import { adminUserLabel, isUuid, shortUserId } from './tcgGrantForm';
+import { rubanInset } from '@/features/admin/diffusion/ui/rubanClasses';
 
 type Labels = typeof nsAdminTcgGrant.fr;
 
@@ -238,9 +239,11 @@ export default function TcgPlayerPicker({
   // Compte choisi : on montre QUI, avec l'identifiant pour lever l'homonymie.
   if (value) {
     return (
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+      <div
+        className={`flex flex-wrap items-center gap-3 px-3 py-2 ${rubanInset}`}
+      >
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-white">
+          <p className="truncate text-sm font-medium text-[var(--t1,#f4edf7)]">
             {adminUserLabel(value)}
           </p>
           <p className="truncate text-[11px] text-gray-500">
@@ -254,7 +257,7 @@ export default function TcgPlayerPicker({
           ref={changeButtonRef}
           type="button"
           onClick={clear}
-          className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-300 transition hover:border-white/40 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+          className="inline-flex h-[30px] items-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.02em] text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--or,#b467d1)]"
         >
           {labels.changePlayer}
         </button>
@@ -305,8 +308,10 @@ export default function TcgPlayerPicker({
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={onKeyDown}
-        className={`w-full rounded-lg border bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 ${
-          invalid ? 'border-red-500/60' : 'border-white/10'
+        className={`w-full rounded-[var(--r-ctrl,4px)] border bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] placeholder:text-[var(--t4,#807984)] focus:border-[var(--or,#b467d1)] focus:outline-none ${
+          invalid
+            ? 'border-[rgba(255,107,107,.6)]'
+            : 'border-[var(--line2,rgba(194,196,201,.2))]'
         }`}
       />
       <p id={hintId} className="mt-1 text-[11px] text-gray-500">
@@ -332,7 +337,7 @@ export default function TcgPlayerPicker({
           id={listboxId}
           role="listbox"
           aria-label={labels.resultsLabel}
-          className="absolute left-0 right-0 top-11 z-20 max-h-64 overflow-y-auto rounded-lg border border-white/10 bg-neutral-900 py-1 shadow-xl"
+          className="absolute left-0 right-0 top-11 z-20 max-h-64 overflow-y-auto rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] py-1 shadow-xl"
         >
           {options.map((option, index) => {
             const isTyped = option.id === typedId && index === 0;
@@ -352,7 +357,9 @@ export default function TcgPlayerPicker({
                 }}
                 onMouseEnter={() => setActiveIndex(index)}
                 className={`cursor-pointer px-3 py-2 text-sm ${
-                  active ? 'bg-white/10 text-white' : 'text-gray-300'
+                  active
+                    ? 'bg-[var(--s3,#2f2732)] text-[var(--t1,#f4edf7)]'
+                    : 'text-[var(--t2,#c7bfca)]'
                 }`}
               >
                 {isTyped ? (

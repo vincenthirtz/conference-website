@@ -6,6 +6,7 @@ import type { SimConfig } from '@/utils/simulatorSerialization';
 import { FORMAT_LABELS } from '@/utils/simulatorSerialization';
 import { FAKE_MAPS } from '@/utils/simulatorFakeData';
 import { SEED_COLORS } from './SimMatchCard';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import nsAdminTournamentSimulator from '@/lib/i18n/locales/admin-fr/adminTournamentSimulator';
 
 // WebGL backdrop is browser-only and heavy — load it lazily, client-side only.
@@ -168,9 +169,9 @@ export default function QuizMode({
   /* -------------------------------------------------------------- reveal */
   if (screen.kind === 'rolling') {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-16 flex flex-col items-center justify-center min-h-[480px]">
+      <div className="flex min-h-[480px] flex-col items-center justify-center rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-16">
         <div className="text-7xl animate-bounce">🎲</div>
-        <p className="mt-6 text-lg font-semibold text-neutral-200 animate-pulse">
+        <p className="mt-6 text-lg font-semibold text-[var(--t2,#c7bfca)] animate-pulse">
           {tx.quizRolling}
         </p>
       </div>
@@ -183,18 +184,18 @@ export default function QuizMode({
       (o.championSeed != null && SEED_COLORS[o.championSeed]) ||
       'bg-purple-500/20 text-purple-200 border-purple-500/30';
     return (
-      <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-neutral-900 via-neutral-950 to-neutral-900 overflow-hidden">
+      <div className="overflow-hidden rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]">
         {/* Champion hero with WebGL celebration backdrop */}
         <div className="relative min-h-[380px] flex flex-col items-center justify-center px-6 py-12 text-center">
           <CelebrationCanvas />
           <div className="relative z-10">
-            <p className="text-xs uppercase tracking-[0.28em] text-amber-300/80">
+            <p className="font-[family-name:var(--fd)] text-xs font-bold uppercase tracking-[0.28em] text-[#ffd9a3] [font-stretch:75%]">
               {tx.quizChampionLabel}
             </p>
             <div className="mt-3 text-6xl drop-shadow-[0_4px_24px_rgba(250,204,21,0.4)]">
               🏆
             </div>
-            <h2 className="mt-4 text-4xl font-black text-white drop-shadow">
+            <h2 className="mt-4 text-4xl font-black text-[var(--t1,#f4edf7)] drop-shadow">
               {o.championName ?? tx.quizNoChampion}
             </h2>
             {o.championSeed != null && (
@@ -211,7 +212,7 @@ export default function QuizMode({
           {/* Podium */}
           {o.podium.length > 1 && (
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-purple-200/70 mb-2 text-center">
+              <p className="mb-2 text-center font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
                 {tx.quizPodiumLabel}
               </p>
               <div className="flex items-end justify-center gap-3">
@@ -223,11 +224,11 @@ export default function QuizMode({
                   return (
                     <div key={rank} className="flex flex-col items-center w-28">
                       <div className="text-2xl">{medals[rank]}</div>
-                      <div className="text-sm font-semibold text-white truncate max-w-[7rem] text-center">
+                      <div className="text-sm font-semibold text-[var(--t1,#f4edf7)] truncate max-w-[7rem] text-center">
                         {team.name}
                       </div>
                       <div
-                        className={`mt-2 w-full ${heights[rank]} rounded-t-lg border border-white/10 ${
+                        className={`mt-2 w-full ${heights[rank]} rounded-t-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] ${
                           rank === 0
                             ? 'bg-amber-500/20'
                             : rank === 1
@@ -252,10 +253,12 @@ export default function QuizMode({
             ].map((s) => (
               <div
                 key={s.label}
-                className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-center"
+                className="rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-4 text-center"
               >
-                <div className="text-2xl font-black text-white">{s.value}</div>
-                <div className="text-[11px] uppercase tracking-wide text-neutral-400 mt-1">
+                <div className="text-2xl font-black text-[var(--t1,#f4edf7)]">
+                  {s.value}
+                </div>
+                <div className="mt-1 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
                   {s.label}
                 </div>
               </div>
@@ -264,26 +267,21 @@ export default function QuizMode({
 
           {/* Actions */}
           <div className="flex flex-wrap justify-center gap-3 pt-2">
-            <button
+            <AdminButton
+              variant="primary"
               onClick={handleReplay}
               title={tx.quizReplayTitle}
-              className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold shadow transition-colors"
             >
               🎲 {tx.quizReplay}
-            </button>
-            <button
+            </AdminButton>
+            <AdminButton
+              variant="secondary"
               onClick={onOpenInEditor}
               title={tx.quizOpenEditorTitle}
-              className="px-5 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-sm font-semibold shadow transition-colors"
             >
               {tx.quizOpenEditor}
-            </button>
-            <button
-              onClick={handleRestart}
-              className="px-5 py-2.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold shadow transition-colors"
-            >
-              {tx.quizRestart}
-            </button>
+            </AdminButton>
+            <AdminButton onClick={handleRestart}>{tx.quizRestart}</AdminButton>
           </div>
         </div>
       </div>
@@ -295,7 +293,7 @@ export default function QuizMode({
   const progressIdx = clampedIdx - 1;
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-10 min-h-[480px] flex flex-col">
+    <div className="flex min-h-[480px] flex-col rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6 sm:p-10">
       {/* Progress dots */}
       {!isFirst && (
         <div className="flex items-center justify-center gap-2 mb-8">
@@ -304,10 +302,10 @@ export default function QuizMode({
               key={s}
               className={`h-1.5 rounded-full transition-all ${
                 i === progressIdx
-                  ? 'w-8 bg-purple-500'
+                  ? 'w-8 bg-[var(--or,#b467d1)]'
                   : i < progressIdx
-                    ? 'w-4 bg-purple-500/50'
-                    : 'w-4 bg-white/10'
+                    ? 'w-4 bg-[rgba(180,103,209,.5)]'
+                    : 'w-4 bg-[var(--s3,#2f2732)]'
               }`}
             />
           ))}
@@ -318,16 +316,13 @@ export default function QuizMode({
         {current === 'intro' && (
           <div className="text-center max-w-xl mx-auto">
             <div className="text-6xl mb-4">🏆</div>
-            <h2 className="text-3xl font-black text-white">
+            <h2 className="text-3xl font-black text-[var(--t1,#f4edf7)]">
               {tx.quizIntroTitle}
             </h2>
             <p className="mt-3 text-neutral-400">{tx.quizIntroSubtitle}</p>
-            <button
-              onClick={goNext}
-              className="mt-8 px-8 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-base font-bold shadow-lg transition-colors"
-            >
+            <AdminButton variant="primary" onClick={goNext} className="mt-8">
               {tx.quizStart} →
-            </button>
+            </AdminButton>
           </div>
         )}
 
@@ -514,7 +509,7 @@ export default function QuizMode({
         {current === 'recap' && (
           <div className="text-center max-w-xl mx-auto">
             <div className="text-5xl mb-3">✨</div>
-            <h2 className="text-2xl font-black text-white">
+            <h2 className="text-2xl font-black text-[var(--t1,#f4edf7)]">
               {tx.quizRecapTitle}
             </h2>
             <p className="mt-2 text-neutral-400">{tx.quizRecapSubtitle}</p>
@@ -550,32 +545,27 @@ export default function QuizMode({
                 />
               )}
             </div>
-            <button
+            <AdminButton
+              variant="primary"
               onClick={handleLaunch}
-              className="mt-8 px-10 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-lg font-black shadow-xl transition-all hover:scale-[1.02]"
+              className="mt-8"
             >
               🎲 {tx.quizLaunch}
-            </button>
+            </AdminButton>
           </div>
         )}
       </div>
 
       {/* Footer nav */}
       {!isFirst && (
-        <div className="flex items-center justify-between mt-8 pt-4 border-t border-white/5">
-          <button
-            onClick={goBack}
-            className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm font-medium text-neutral-300 transition-colors"
-          >
+        <div className="mt-8 flex items-center justify-between border-t border-[var(--line,rgba(194,196,201,.12))] pt-4">
+          <AdminButton size="sm" onClick={goBack}>
             ← {tx.quizBack}
-          </button>
+          </AdminButton>
           {!isLast && (
-            <button
-              onClick={goNext}
-              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium text-white transition-colors"
-            >
+            <AdminButton variant="secondary" size="sm" onClick={goNext}>
               {tx.quizNext} →
-            </button>
+            </AdminButton>
           )}
         </div>
       )}
@@ -599,10 +589,12 @@ function QuestionShell({
   return (
     <div>
       <div className="text-center mb-6">
-        <p className="text-xs uppercase tracking-[0.18em] text-purple-200/70">
+        <p className="font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
           {stepLabel}
         </p>
-        <h2 className="mt-1 text-2xl font-black text-white">{title}</h2>
+        <h2 className="mt-1 text-2xl font-black text-[var(--t1,#f4edf7)]">
+          {title}
+        </h2>
         <p className="mt-1 text-sm text-neutral-400">{hint}</p>
       </div>
       {children}
@@ -612,7 +604,7 @@ function QuestionShell({
 
 function RecommendedBadge({ label }: { label: string }) {
   return (
-    <span className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full bg-amber-500 text-[10px] font-bold text-neutral-950 shadow">
+    <span className="absolute -right-2 -top-2 rounded-[3px] border border-[rgba(245,165,36,.38)] bg-[#3a2a12] px-2 py-0.5 text-[10px] font-bold uppercase text-[#ffd9a3]">
       ★ {label}
     </span>
   );
@@ -636,15 +628,15 @@ function ChoiceCard({
   return (
     <button
       onClick={onClick}
-      className={`relative text-left rounded-xl border p-4 transition-all hover:scale-[1.02] ${
+      className={`relative rounded-[var(--r-ctrl,4px)] border p-4 text-left transition-colors ${
         selected
-          ? 'border-purple-500 bg-purple-600/15 ring-1 ring-purple-500/40'
-          : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06]'
+          ? 'border-[var(--or,#b467d1)] bg-[rgba(180,103,209,.14)]'
+          : 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] hover:border-[var(--t4,#807984)]'
       }`}
     >
       {recommended && <RecommendedBadge label={recommended} />}
       {icon && <div className="text-2xl mb-1">{icon}</div>}
-      <div className="font-bold text-white">{title}</div>
+      <div className="font-bold text-[var(--t1,#f4edf7)]">{title}</div>
       {desc && <div className="text-xs text-neutral-400 mt-1">{desc}</div>}
     </button>
   );
@@ -664,10 +656,10 @@ function BigChip({
   return (
     <button
       onClick={onClick}
-      className={`relative min-w-[4.5rem] h-16 rounded-xl border text-2xl font-black transition-all hover:scale-105 ${
+      className={`relative h-16 min-w-[4.5rem] rounded-[var(--r-ctrl,4px)] border font-[family-name:var(--fd)] text-2xl font-black transition-colors ${
         selected
-          ? 'border-purple-500 bg-purple-600/20 text-white ring-1 ring-purple-500/40'
-          : 'border-white/10 bg-white/[0.03] text-neutral-200 hover:bg-white/[0.06]'
+          ? 'border-[var(--or,#b467d1)] bg-[rgba(180,103,209,.14)] text-[var(--t1,#f4edf7)]'
+          : 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-[var(--t2,#c7bfca)] hover:border-[var(--t4,#807984)]'
       }`}
     >
       {recommended && <RecommendedBadge label={recommended} />}
@@ -678,11 +670,13 @@ function BigChip({
 
 function RecapRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3">
-      <div className="text-[11px] uppercase tracking-wide text-neutral-400">
+    <div className="rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-4 py-3">
+      <div className="font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
         {label}
       </div>
-      <div className="text-sm font-semibold text-white mt-0.5">{value}</div>
+      <div className="text-sm font-semibold text-[var(--t1,#f4edf7)] mt-0.5">
+        {value}
+      </div>
     </div>
   );
 }

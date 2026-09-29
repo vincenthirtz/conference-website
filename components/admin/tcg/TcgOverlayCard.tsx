@@ -29,6 +29,11 @@ import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import {
+  rubanErr,
+  rubanInset,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 import { logger } from '../../../utils/logger';
 
 export type TcgOverlayTokenState = {
@@ -152,10 +157,7 @@ export default function TcgOverlayCard({ labels }: Props) {
         </p>
 
         {error && (
-          <div
-            role="alert"
-            className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200"
-          >
+          <div role="alert" className={`mb-4 px-3 py-2 text-xs ${rubanErr}`}>
             {error}
           </div>
         )}
@@ -169,23 +171,17 @@ export default function TcgOverlayCard({ labels }: Props) {
         ) : state === null ? null : state.url ? (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <code className="min-w-0 flex-1 truncate rounded-lg border border-white/10 bg-black/40 px-3 py-2 font-mono text-xs text-gray-300">
+              <code
+                className={`min-w-0 flex-1 truncate px-3 py-2 font-mono text-xs text-[var(--t2,#c7bfca)] ${rubanInset}`}
+              >
                 {revealed ? state.url : '•'.repeat(48)}
               </code>
-              <button
-                type="button"
-                onClick={() => setRevealed((v) => !v)}
-                className="rounded-lg border border-white/15 px-3 py-2 text-xs text-gray-300 transition hover:border-white/40 hover:text-white"
-              >
+              <AdminButton size="sm" onClick={() => setRevealed((v) => !v)}>
                 {revealed ? labels.hide : labels.reveal}
-              </button>
-              <button
-                type="button"
-                onClick={onCopy}
-                className="rounded-lg bg-purple-600 px-3 py-2 text-xs font-medium transition hover:bg-purple-500"
-              >
+              </AdminButton>
+              <AdminButton variant="primary" size="sm" onClick={onCopy}>
                 {labels.copy}
-              </button>
+              </AdminButton>
             </div>
 
             <p className="text-[11px] text-gray-500">{labels.obsHint}</p>
@@ -210,36 +206,31 @@ export default function TcgOverlayCard({ labels }: Props) {
             </div>
 
             <div className="flex flex-wrap justify-end gap-2 pt-1">
-              <button
-                type="button"
+              <AdminButton
+                variant="danger"
+                size="xs"
                 onClick={onRevoke}
                 disabled={busy}
-                className="rounded-lg px-3 py-2 text-xs text-gray-400 transition hover:text-red-200 disabled:opacity-50"
               >
                 {busy ? labels.working : labels.revoke}
-              </button>
-              <button
-                type="button"
-                onClick={onRotate}
-                disabled={busy}
-                className="rounded-lg border border-white/15 px-3 py-2 text-xs text-gray-300 transition hover:border-white/40 hover:text-white disabled:opacity-50"
-              >
+              </AdminButton>
+              <AdminButton size="xs" onClick={onRotate} disabled={busy}>
                 {busy ? labels.working : labels.rotate}
-              </button>
+              </AdminButton>
             </div>
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm text-gray-400">{labels.none}</span>
             <span className="flex-1" />
-            <button
-              type="button"
+            <AdminButton
+              variant="primary"
+              size="sm"
               onClick={() => void mutate('POST')}
               disabled={busy}
-              className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium transition hover:bg-purple-500 disabled:opacity-50"
             >
               {busy ? labels.working : labels.create}
-            </button>
+            </AdminButton>
           </div>
         )}
       </WidgetCard>

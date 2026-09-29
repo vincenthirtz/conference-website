@@ -9,6 +9,8 @@ import {
 } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminDashboardConfirmAdvanceModal from '@/lib/i18n/locales/admin-fr/adminDashboardConfirmAdvanceModal';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { rubanErr } from '@/features/admin/diffusion/ui/rubanClasses';
 
 type Props = {
   open: boolean;
@@ -77,51 +79,51 @@ export default function ConfirmAdvanceModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-neutral-700 bg-neutral-900 p-6 shadow-2xl"
+        className="w-full max-w-md rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-semibold text-white">{t.title}</h3>
-        <p className="mt-2 text-sm text-neutral-300">
+        <h3 className="font-[family-name:var(--fd)] text-lg font-bold text-[var(--t1,#f4edf7)]">
+          {t.title}
+        </h3>
+        <p className="mt-2 text-sm text-[var(--t2,#c7bfca)]">
           {t.bodyBefore}
-          <span className="font-semibold text-white">{stageName}</span>
+          <span className="font-semibold text-[var(--t1,#f4edf7)]">
+            {stageName}
+          </span>
           {t.bodyAfter}
-          <code className="rounded bg-neutral-800 px-1 text-xs">
+          <code className="rounded-[3px] bg-[var(--s3,#2f2732)] px-1 text-xs">
             advancement_rules
           </code>
           {t.bodyClose}
         </p>
-        <p className="mt-2 text-xs text-neutral-500">
+        <p className="mt-2 text-xs text-[var(--t3,#a39ba6)]">
           {t.warningBefore}
           <strong>{t.warningStrong}</strong>
           {t.warningAfter}
         </p>
 
-        {error && (
-          <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-xs text-red-200">
-            {error}
-          </p>
-        )}
+        {error && <p className={`mt-3 p-2 text-xs ${rubanErr}`}>{error}</p>}
 
         <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             onClick={onClose}
-            className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-700"
             disabled={submitting}
           >
             {t.cancel}
-          </button>
-          <button
-            type="button"
+          </AdminButton>
+          <AdminButton
+            variant="primary"
+            size="sm"
             onClick={submit}
             disabled={submitting}
-            className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting && (
-              <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-current/30 border-t-current" />
             )}
             {t.advanceNow}
-          </button>
+          </AdminButton>
         </div>
       </div>
     </div>

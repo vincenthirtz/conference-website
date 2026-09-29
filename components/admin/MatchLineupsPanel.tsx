@@ -23,6 +23,13 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { logger } from '../../utils/logger';
 import nsAdminMatchLineups from '@/lib/i18n/locales/admin-fr/adminMatchLineups';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import {
+  rubanCard,
+  rubanErr,
+  rubanInset,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 
 type LineupPlayer = {
   team_id: string;
@@ -86,14 +93,11 @@ export default function MatchLineupsPanel({ matchId }: { matchId: string }) {
   }
 
   return (
-    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+    <div className={`p-4 ${rubanCard}`}>
       <h2 className="text-lg font-semibold mb-3">{t.heading}</h2>
 
       {error && (
-        <p
-          role="alert"
-          className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-100"
-        >
+        <p role="alert" className={`mb-3 px-3 py-2 text-xs ${rubanErr}`}>
           {error}
         </p>
       )}
@@ -102,28 +106,17 @@ export default function MatchLineupsPanel({ matchId }: { matchId: string }) {
         {lineups.map((l) => {
           const validated = l.status === 'validated';
           return (
-            <div
-              key={l.teamId}
-              className="rounded-xl border border-white/10 bg-black/30 p-3"
-            >
+            <div key={l.teamId} className={`p-3 ${rubanInset}`}>
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-sm">
                   {l.teamName ?? t.unknownTeam}
                 </span>
                 {validated ? (
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-                      l.validatedByKind === 'admin'
-                        ? 'border-amber-400/40 bg-amber-500/10 text-amber-200'
-                        : 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
-                    }`}
-                  >
+                  <Chip tone={l.validatedByKind === 'admin' ? 'warn' : 'ok'}>
                     {l.validatedByKind === 'admin' ? t.badgeAdmin : t.badgeTeam}
-                  </span>
+                  </Chip>
                 ) : (
-                  <span className="rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-gray-400">
-                    {t.badgeDraft}
-                  </span>
+                  <Chip>{t.badgeDraft}</Chip>
                 )}
               </div>
 
@@ -170,24 +163,23 @@ export default function MatchLineupsPanel({ matchId }: { matchId: string }) {
                     ET qu'une composition existe — valider le vide n'aurait
                     aucun sens, et le serveur le refuse de toute façon. */}
                 {!validated && l.open && l.players.length > 0 && (
-                  <button
-                    type="button"
+                  <AdminButton
+                    variant="secondary"
+                    size="xs"
                     onClick={() => act(l.teamId, {})}
                     disabled={busy === l.teamId}
-                    className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-500 disabled:opacity-50"
                   >
                     {t.validateForTeam}
-                  </button>
+                  </AdminButton>
                 )}
                 {validated && (
-                  <button
-                    type="button"
+                  <AdminButton
+                    size="xs"
                     onClick={() => act(l.teamId, { reopen: true })}
                     disabled={busy === l.teamId}
-                    className="rounded-lg border border-white/20 px-3 py-1.5 text-xs text-gray-200 transition hover:bg-white/10 disabled:opacity-50"
                   >
                     {t.reopen}
-                  </button>
+                  </AdminButton>
                 )}
               </div>
             </div>

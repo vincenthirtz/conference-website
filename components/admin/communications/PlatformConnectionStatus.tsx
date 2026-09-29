@@ -43,9 +43,9 @@ const BLUESKY_ENDPOINT = '/api/admin/bluesky/credentials';
 const INSTAGRAM_AUTHORIZE = '/api/admin/instagram/authorize';
 
 const INPUT_CLASS =
-  'rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500';
+  'rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-[var(--or,#b467d1)] focus:outline-none';
 const BUTTON_CLASS =
-  'rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-700 disabled:opacity-50';
+  'inline-flex h-[30px] items-center justify-center gap-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.02em] text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)] disabled:opacity-50';
 
 export default function PlatformConnectionStatus({
   platform,

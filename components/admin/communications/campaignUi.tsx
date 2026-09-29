@@ -12,7 +12,7 @@ export function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-neutral-900/50 rounded-xl p-3 border border-neutral-700/40">
+    <div className="rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-3">
       <div className="text-[10px] text-neutral-500 uppercase tracking-wider mb-0.5">
         {label}
       </div>

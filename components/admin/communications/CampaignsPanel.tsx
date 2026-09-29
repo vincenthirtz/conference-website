@@ -21,6 +21,8 @@ import {
   type Dict,
   type CampaignSummary,
 } from './campaignShared';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type UnsubscribedUser = {
   email: string;
@@ -37,19 +39,19 @@ type SubscriptionsSummary = {
 
 function getStatusStyles(
   t: Dict
-): Record<string, { label: string; className: string }> {
+): Record<string, { label: string; tone: ChipTone }> {
   return {
     active: {
       label: t.statusActive,
-      className: 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30',
+      tone: 'ok',
     },
     draft: {
       label: t.statusDraft,
-      className: 'bg-amber-600/20 text-amber-300 border-amber-500/30',
+      tone: 'warn',
     },
     archived: {
       label: t.statusArchived,
-      className: 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30',
+      tone: 'neutral',
     },
   };
 }
@@ -183,10 +185,10 @@ export default function CampaignsPanel() {
             </p>
           </div>
           <div className="flex flex-col items-end gap-3">
-            <button
-              type="button"
+            <AdminButton
+              variant="primary"
+              size="sm"
               onClick={() => setFormTarget('new')}
-              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-semibold transition-colors flex items-center gap-2"
             >
               <svg
                 className="w-4 h-4"
@@ -202,8 +204,8 @@ export default function CampaignsPanel() {
                 />
               </svg>
               {t.createCampaign}
-            </button>
-            <div className="text-xs text-neutral-500 bg-neutral-800/50 px-3 py-2 rounded-xl border border-neutral-700/50">
+            </AdminButton>
+            <div className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-3 py-2 text-xs text-neutral-500">
               {t.brevoQuota}
             </div>
           </div>
@@ -215,7 +217,7 @@ export default function CampaignsPanel() {
 
       {/* Error */}
       {errorMsg && (
-        <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+        <div className="mb-6 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] text-[#ffc2c2] px-4 py-3 text-sm flex items-center gap-2">
           <svg
             className="w-5 h-5 text-red-400 flex-shrink-0"
             fill="currentColor"
@@ -228,23 +230,23 @@ export default function CampaignsPanel() {
             />
           </svg>
           <span className="flex-1">{errorMsg}</span>
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="xs"
             onClick={() => fetchCampaigns()}
-            className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
           >
             {t.retry}
-          </button>
+          </AdminButton>
         </div>
       )}
 
       {/* Campaign list */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--or,#b467d1)] rounded-full animate-spin" />
         </div>
       ) : campaigns.length === 0 ? (
-        <div className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-10 text-center text-neutral-400">
+        <div className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-10 text-center text-neutral-400">
           {t.emptyTitle}
           <p className="text-xs text-neutral-500 mt-2">
             {t.emptyHintPrefix}
@@ -272,11 +274,11 @@ export default function CampaignsPanel() {
       {/* Pagination */}
       {!loading && campaigns.length > 0 && (
         <div className="flex justify-between items-center mt-6">
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             disabled={offset === 0}
             onClick={() => setOffset(Math.max(0, offset - limit))}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <svg
               className="w-4 h-4"
@@ -292,18 +294,18 @@ export default function CampaignsPanel() {
               />
             </svg>
             {t.prev}
-          </button>
+          </AdminButton>
 
           <span className="text-neutral-400 text-sm">
             {offset + 1} – {offset + campaigns.length}
             {total ? format(t.paginationOf, { total }) : ''}
           </span>
 
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             disabled={total !== null && offset + limit >= total}
             onClick={() => setOffset(offset + limit)}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {t.next}
             <svg
@@ -319,7 +321,7 @@ export default function CampaignsPanel() {
                 d="M9 5l7 7-7 7"
               />
             </svg>
-          </button>
+          </AdminButton>
         </div>
       )}
 
@@ -380,23 +382,19 @@ function CampaignCard({
 
   const status = getStatusStyles(t)[campaign.status] ?? {
     label: campaign.status,
-    className: 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30',
+    tone: 'neutral' as ChipTone,
   };
   const audience = getAudienceLabels(t)[campaign.audience] ?? campaign.audience;
   const isArchived = campaign.status === 'archived';
   const editable = campaign.source === 'db';
 
   return (
-    <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+    <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
         <div className="flex-1 min-w-[260px]">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <h2 className="text-lg font-semibold">{campaign.name}</h2>
-            <span
-              className={`px-2.5 py-0.5 rounded-lg text-[11px] font-semibold border ${status.className}`}
-            >
-              {status.label}
-            </span>
+            <Chip tone={status.tone}>{status.label}</Chip>
           </div>
           <p className="text-sm text-neutral-400 leading-relaxed">
             {campaign.description}
@@ -405,11 +403,7 @@ function CampaignCard({
         <div className="flex flex-wrap items-center gap-2">
           {editable && (
             <>
-              <button
-                type="button"
-                onClick={onEdit}
-                className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors flex items-center gap-2"
-              >
+              <AdminButton variant="ghost" size="sm" onClick={onEdit}>
                 <svg
                   className="w-4 h-4"
                   fill="none"
@@ -424,12 +418,8 @@ function CampaignCard({
                   />
                 </svg>
                 {t.edit}
-              </button>
-              <button
-                type="button"
-                onClick={onDelete}
-                className="px-3 py-2 rounded-xl border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-sm font-medium transition-colors flex items-center gap-2"
-              >
+              </AdminButton>
+              <AdminButton variant="danger" size="sm" onClick={onDelete}>
                 <svg
                   className="w-4 h-4"
                   fill="none"
@@ -444,15 +434,15 @@ function CampaignCard({
                   />
                 </svg>
                 {t.delete}
-              </button>
+              </AdminButton>
             </>
           )}
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             onClick={handleDuplicate}
             disabled={duplicating}
             aria-label={format(t.duplicateAria, { name: campaign.name })}
-            className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
           >
             {duplicating ? (
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -472,12 +462,12 @@ function CampaignCard({
               </svg>
             )}
             {t.duplicate}
-          </button>
-          <button
-            type="button"
+          </AdminButton>
+          <AdminButton
+            variant="secondary"
+            size="sm"
             onClick={onOpen}
             disabled={isArchived}
-            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
           >
             <svg
               className="w-4 h-4"
@@ -493,7 +483,7 @@ function CampaignCard({
               />
             </svg>
             {t.manage}
-          </button>
+          </AdminButton>
         </div>
       </div>
 
@@ -515,8 +505,8 @@ function CampaignCard({
       </div>
 
       {campaign.schedule && (
-        <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-          <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-200 border border-amber-500/30 font-semibold uppercase tracking-wider text-[10px]">
+        <div className="mt-4 rounded-[var(--r-ctrl,4px)] border border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.06)] p-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          <span className="rounded-[3px] border border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.13)] px-2 py-0.5 font-[family-name:var(--fd)] text-[10px] font-bold uppercase tracking-[0.12em] text-[#ffd9a3] [font-stretch:75%]">
             {campaign.schedule.status === 'scheduled'
               ? t.scheduleScheduled
               : campaign.schedule.status === 'completed'
@@ -554,7 +544,7 @@ function CampaignCard({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-neutral-900/50 rounded-xl p-3 border border-neutral-700/40">
+    <div className="rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-3">
       <div className="text-[10px] text-neutral-500 uppercase tracking-wider mb-1">
         {label}
       </div>
@@ -602,7 +592,7 @@ function SubscriptionsCard() {
   const unsubCount = data?.unsubscribed ?? users.length;
 
   return (
-    <section className="mb-6 bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+    <section className="mb-6 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
           <h2 className="text-lg font-semibold">{t.subsHeading}</h2>
@@ -615,15 +605,11 @@ function SubscriptionsCard() {
           <div className="w-6 h-6 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
         </div>
       ) : error ? (
-        <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+        <div className="rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] text-[#ffc2c2] px-4 py-3 text-sm flex items-center gap-2">
           <span className="flex-1">{error}</span>
-          <button
-            type="button"
-            onClick={() => load()}
-            className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
-          >
+          <AdminButton variant="ghost" size="xs" onClick={() => load()}>
             {t.retry}
-          </button>
+          </AdminButton>
         </div>
       ) : data ? (
         <>
@@ -640,12 +626,12 @@ function SubscriptionsCard() {
           </div>
 
           <div className="mt-4">
-            <button
-              type="button"
+            <AdminButton
+              variant="ghost"
+              size="sm"
               onClick={() => setExpanded((v) => !v)}
               aria-expanded={expanded}
               aria-controls={listId}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 text-sm font-medium transition-colors"
             >
               <svg
                 className={`w-4 h-4 transition-transform ${
@@ -664,16 +650,16 @@ function SubscriptionsCard() {
                 />
               </svg>
               {format(t.subsViewUnsubscribed, { count: unsubCount })}
-            </button>
+            </AdminButton>
 
             {expanded && (
               <div id={listId} className="mt-3">
                 {users.length === 0 ? (
-                  <div className="rounded-xl bg-neutral-900/50 border border-neutral-700/40 px-4 py-6 text-center text-sm text-neutral-400">
+                  <div className="rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-4 py-6 text-center text-sm text-neutral-400">
                     {t.subsUnsubEmpty}
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-xl border border-neutral-700/40">
+                  <div className="overflow-x-auto rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))]">
                     <table className="w-full text-sm">
                       <caption className="sr-only">
                         {t.subsUnsubCaption}
@@ -893,7 +879,7 @@ function CampaignFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors"
+            className="rounded-[var(--r-ctrl,4px)] p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors"
             aria-label={t.closeAria}
           >
             <svg
@@ -922,7 +908,7 @@ function CampaignFormModal({
                 onChange={(e) => setName(e.target.value)}
                 maxLength={120}
                 placeholder={t.namePlaceholder}
-                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
               />
             </FormField>
 
@@ -933,7 +919,7 @@ function CampaignFormModal({
                 onChange={(e) => setSubject(e.target.value)}
                 maxLength={200}
                 placeholder={t.subjectPlaceholder}
-                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
               />
             </FormField>
 
@@ -944,7 +930,7 @@ function CampaignFormModal({
                 onChange={(e) => setDescription(e.target.value)}
                 maxLength={280}
                 placeholder={t.descriptionPlaceholder}
-                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
               />
             </FormField>
 
@@ -953,7 +939,7 @@ function CampaignFormModal({
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                 >
                   {getFormStatusOptions(t).map((o) => (
                     <option key={o.value} value={o.value}>
@@ -967,7 +953,7 @@ function CampaignFormModal({
                 <select
                   value={audience}
                   onChange={(e) => setAudience(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                 >
                   {getAudienceOptions(t).map((o) => (
                     <option key={o.value} value={o.value}>
@@ -989,7 +975,7 @@ function CampaignFormModal({
               onChange={(e) => setHeading(e.target.value)}
               maxLength={160}
               placeholder={t.headingPlaceholder}
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
             />
           </FormField>
 
@@ -1012,16 +998,16 @@ function CampaignFormModal({
               majorité des envois ; le mode HTML sert aux campagnes qui ont
               besoin d'images ou d'une vraie mise en page. */}
           <FormField label={t.bodyFormatLabel} hint={t.bodyFormatHint}>
-            <div className="inline-flex rounded-xl bg-neutral-900/50 border border-neutral-600 p-1 gap-1">
+            <div className="inline-flex rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] p-1 gap-1">
               {(['structured', 'html'] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
                   onClick={() => setBodyFormat(mode)}
                   aria-pressed={bodyFormat === mode}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded-[3px] text-sm font-medium transition-colors ${
                     bodyFormat === mode
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-[rgba(180,103,209,.18)] text-[var(--or-200,#eec4ff)]'
                       : 'text-neutral-300 hover:bg-neutral-800'
                   }`}
                 >
@@ -1040,7 +1026,7 @@ function CampaignFormModal({
                 onChange={(e) => setBodyText(e.target.value)}
                 rows={8}
                 placeholder={t.bodyPlaceholder}
-                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-y leading-relaxed"
+                className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm resize-y leading-relaxed"
               />
               <p className="text-xs text-neutral-500 mt-1">
                 {format(
@@ -1059,7 +1045,7 @@ function CampaignFormModal({
                 rows={16}
                 spellCheck={false}
                 placeholder={t.htmlPlaceholder}
-                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs font-mono resize-y leading-relaxed"
+                className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-xs font-mono resize-y leading-relaxed"
               />
               <p className="text-xs text-neutral-500 mt-1">
                 {t.htmlSanitizeNote}
@@ -1077,14 +1063,14 @@ function CampaignFormModal({
                     onChange={(e) => setCtaLabel(e.target.value)}
                     maxLength={80}
                     placeholder={t.ctaLabelPlaceholder}
-                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                   />
                   <input
                     type="url"
                     value={ctaUrl}
                     onChange={(e) => setCtaUrl(e.target.value)}
                     placeholder={t.ctaUrlPlaceholder}
-                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                   />
                 </div>
                 {ctaMismatch && (
@@ -1101,37 +1087,38 @@ function CampaignFormModal({
                   onChange={(e) => setFooterNote(e.target.value)}
                   maxLength={280}
                   placeholder={t.footerPlaceholder}
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                 />
               </FormField>
             </>
           )}
 
           {formError && (
-            <div className="px-3 py-2 rounded-xl bg-red-900/40 border border-red-500/50 text-red-300 text-sm">
+            <div className="px-3 py-2 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] text-[#ffc2c2] text-red-300 text-sm">
               {formError}
             </div>
           )}
 
           <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
+            <AdminButton
+              variant="ghost"
+              size="sm"
               onClick={onClose}
               disabled={submitting}
-              className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-sm font-medium transition-colors disabled:opacity-50"
             >
               {t.cancel}
-            </button>
-            <button
+            </AdminButton>
+            <AdminButton
+              variant="primary"
+              size="sm"
               type="submit"
               disabled={submitting}
-              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold transition-colors flex items-center gap-2"
             >
               {submitting ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : null}
               {isEdit ? t.save : t.createCampaignBtn}
-            </button>
+            </AdminButton>
           </div>
         </form>
       </div>

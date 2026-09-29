@@ -81,12 +81,14 @@ export default function CastMemberStaffPicker({
 
   return (
     <div>
-      <label className="block text-sm text-neutral-300 mb-1">{t.label}</label>
+      <label className="mb-1 block text-sm text-[var(--t2,#c7bfca)]">
+        {t.label}
+      </label>
       <select
         value={value ?? ''}
         onChange={handleChange}
         disabled={disabled || loading}
-        className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm disabled:opacity-50"
+        className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none disabled:opacity-50"
       >
         <option value="">{t.none}</option>
         {selectableCasters.map((c) => {
@@ -101,7 +103,7 @@ export default function CastMemberStaffPicker({
           );
         })}
       </select>
-      <p className="text-xs text-neutral-500 mt-1">
+      <p className="mt-1 text-xs text-[var(--t4,#807984)]">
         {loading
           ? t.loading
           : error

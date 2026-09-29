@@ -1,5 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import Modal from '@/components/admin/Modal';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { ERROR_BOX } from '@/features/admin/stages/ui/rubanClasses';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { POLE_KEYS, POLE_LABELS, type PoleKey } from '@/utils/associationPoles';
 import { useAdminT } from '@/lib/i18n/useAdminT';
@@ -108,30 +110,22 @@ export default function PoleMemberFormModal({
       subtitle={t.subtitle}
       footer={
         <>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-          >
+          <AdminButton variant="ghost" onClick={onClose}>
             {t.cancel}
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
             type="submit"
+            variant="primary"
             form={formId}
             disabled={saving}
-            className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {saving ? t.creating : t.submit}
-          </button>
+          </AdminButton>
         </>
       }
     >
       <form id={formId} onSubmit={handleSubmit} className="space-y-6">
-        {error && (
-          <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
-            {error}
-          </div>
-        )}
+        {error && <div className={ERROR_BOX}>{error}</div>}
 
         <div className="grid gap-6 md:grid-cols-2">
           <div>
@@ -143,7 +137,7 @@ export default function PoleMemberFormModal({
               onChange={(e) =>
                 updateField('poleKey', e.target.value as PoleKey)
               }
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t1,#f4edf7)] focus:outline-none focus:border-[var(--or,#b467d1)] text-sm"
               required
             >
               {POLE_KEYS.map((key) => (
@@ -163,7 +157,7 @@ export default function PoleMemberFormModal({
               value={form.name}
               onChange={(e) => updateField('name', e.target.value)}
               placeholder="ex: Arukdo"
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t1,#f4edf7)] focus:outline-none focus:border-[var(--or,#b467d1)] text-sm"
               required
             />
           </div>
@@ -179,7 +173,7 @@ export default function PoleMemberFormModal({
               value={form.title}
               onChange={(e) => updateField('title', e.target.value)}
               placeholder={t.titlePlaceholder}
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t1,#f4edf7)] focus:outline-none focus:border-[var(--or,#b467d1)] text-sm"
             />
           </div>
 
@@ -192,7 +186,7 @@ export default function PoleMemberFormModal({
               value={form.sortOrder}
               onChange={(e) => updateField('sortOrder', e.target.value)}
               placeholder={t.sortOrderPlaceholder}
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t1,#f4edf7)] focus:outline-none focus:border-[var(--or,#b467d1)] text-sm"
               min="0"
             />
           </div>
@@ -207,7 +201,7 @@ export default function PoleMemberFormModal({
             value={form.imageUrl}
             onChange={(e) => updateField('imageUrl', e.target.value)}
             placeholder="/img/team/nom.jpg ou https://..."
-            className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm font-mono"
+            className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t1,#f4edf7)] focus:outline-none focus:border-[var(--or,#b467d1)] text-sm font-mono"
           />
         </div>
 
@@ -220,7 +214,7 @@ export default function PoleMemberFormModal({
             value={form.linkUrl}
             onChange={(e) => updateField('linkUrl', e.target.value)}
             placeholder="https://www.twitch.tv/..."
-            className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm font-mono"
+            className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t1,#f4edf7)] focus:outline-none focus:border-[var(--or,#b467d1)] text-sm font-mono"
           />
         </div>
 
@@ -233,7 +227,7 @@ export default function PoleMemberFormModal({
             onChange={(e) => updateField('description', e.target.value)}
             placeholder={t.descriptionPlaceholder}
             rows={3}
-            className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm resize-y"
+            className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t1,#f4edf7)] focus:outline-none focus:border-[var(--or,#b467d1)] text-sm resize-y"
           />
         </div>
 
@@ -245,7 +239,7 @@ export default function PoleMemberFormModal({
               onChange={(e) => updateField('isActive', e.target.checked)}
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            <div className="w-11 h-6 bg-[var(--s3,#2f2732)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--or,#b467d1)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
           </label>
           <span className="text-sm text-neutral-300">{t.activeLabel}</span>
         </div>

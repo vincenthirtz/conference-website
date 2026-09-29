@@ -22,24 +22,25 @@ const STYLES: Record<
   { wrapper: string; iconWrap: string; cta: string }
 > = {
   info: {
-    wrapper: 'border-blue-500/30 bg-blue-500/5',
-    iconWrap: 'text-blue-300 bg-blue-500/10',
-    cta: 'text-blue-200 hover:bg-blue-500/15',
+    wrapper:
+      'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]',
+    iconWrap: 'text-[var(--or-300,#dea3f6)] bg-[var(--s3,#2f2732)]',
+    cta: 'text-[var(--t2,#c7bfca)] border-[var(--line2,rgba(194,196,201,.2))] hover:text-[var(--t1,#f4edf7)] hover:border-[var(--t4,#807984)]',
   },
   warning: {
-    wrapper: 'border-amber-500/30 bg-amber-500/5',
-    iconWrap: 'text-amber-300 bg-amber-500/10',
-    cta: 'text-amber-200 hover:bg-amber-500/15',
+    wrapper: 'border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.06)]',
+    iconWrap: 'text-[#ffd9a3] bg-[rgba(245,165,36,.13)]',
+    cta: 'text-[#ffd9a3] border-[rgba(245,165,36,.38)] hover:bg-[rgba(245,165,36,.13)]',
   },
   error: {
-    wrapper: 'border-red-500/30 bg-red-500/5',
-    iconWrap: 'text-red-300 bg-red-500/10',
-    cta: 'text-red-200 hover:bg-red-500/15',
+    wrapper: 'border-[rgba(255,107,107,.4)] bg-[rgba(255,107,107,.06)]',
+    iconWrap: 'text-[#ffc2c2] bg-[rgba(255,107,107,.13)]',
+    cta: 'text-[#ffc2c2] border-[rgba(255,107,107,.4)] hover:bg-[rgba(255,107,107,.13)]',
   },
   critical: {
-    wrapper: 'border-red-600/50 bg-red-600/10 ring-1 ring-red-600/30',
-    iconWrap: 'text-red-200 bg-red-600/20 animate-pulse',
-    cta: 'text-red-100 hover:bg-red-600/20',
+    wrapper: 'border-[rgba(255,107,107,.6)] bg-[rgba(255,107,107,.1)]',
+    iconWrap: 'text-[#ffc2c2] bg-[rgba(255,107,107,.2)] animate-pulse',
+    cta: 'text-[#ffc2c2] border-[rgba(255,107,107,.6)] hover:bg-[rgba(255,107,107,.2)]',
   },
 };
 
@@ -101,19 +102,23 @@ export default function ActionableAlert({
 
   return (
     <div
-      className={`flex flex-wrap items-center gap-3 rounded-xl border p-3 ${s.wrapper}`}
+      className={`flex flex-wrap items-center gap-3 rounded-[var(--r-card,14px)] border p-3 ${s.wrapper}`}
     >
       {icon && (
         <div
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${s.iconWrap}`}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--r-ctrl,4px)] ${s.iconWrap}`}
         >
           {icon}
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-white">{title}</p>
+        <p className="truncate text-sm font-semibold text-[var(--t1,#f4edf7)]">
+          {title}
+        </p>
         {message !== undefined && message !== null && message !== '' && (
-          <p className="mt-0.5 truncate text-xs text-gray-300">{message}</p>
+          <p className="mt-0.5 truncate text-xs text-[var(--t2,#c7bfca)]">
+            {message}
+          </p>
         )}
         {/* Résultat du geste : annoncé (`aria-live`) parce qu'il remplace ce
             que la navigation disait avant — « c'est parti » ou « ça a raté ». */}
@@ -121,7 +126,9 @@ export default function ActionableAlert({
           <p
             aria-live="polite"
             className={`mt-1 text-xs ${
-              outcome.kind === 'ok' ? 'text-emerald-300' : 'text-red-300'
+              outcome.kind === 'ok'
+                ? 'text-[var(--lf-200,#b3e7a3)]'
+                : 'text-[#ffc2c2]'
             }`}
           >
             {outcome.text}
@@ -133,7 +140,7 @@ export default function ActionableAlert({
           type="button"
           onClick={run}
           disabled={busy}
-          className={`shrink-0 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${s.cta}`}
+          className={`inline-flex h-[30px] shrink-0 items-center rounded-[var(--r-ctrl,4px)] border px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.02em] transition-colors disabled:opacity-50 ${s.cta}`}
         >
           {busy ? (action.pendingLabel ?? action.label) : action.label}
         </button>
@@ -141,7 +148,7 @@ export default function ActionableAlert({
       {cta && (
         <Link
           href={cta.href}
-          className={`shrink-0 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium transition-colors ${s.cta}`}
+          className={`inline-flex h-[30px] shrink-0 items-center rounded-[var(--r-ctrl,4px)] border px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.02em] transition-colors ${s.cta}`}
         >
           {cta.label} →
         </Link>

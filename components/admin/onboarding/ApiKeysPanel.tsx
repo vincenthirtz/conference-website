@@ -22,6 +22,8 @@ import AlertBanner from '@/components/admin/AlertBanner';
 import ApiTokenRevealModal from '@/components/admin/ApiTokenRevealModal';
 import MintApiKeyModal from '@/components/admin/onboarding/MintApiKeyModal';
 import nsAdminOnboarding from '@/lib/i18n/locales/admin-fr/adminOnboarding';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 type TenantRow = {
   id: string;
@@ -154,7 +156,7 @@ export default function ApiKeysPanel() {
           return (
             <li
               key={tenant.id}
-              className="rounded-2xl border border-neutral-700/50 bg-neutral-800/40"
+              className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]"
               data-testid="api-keys-tenant-row"
             >
               <div className="flex flex-wrap items-center justify-between gap-3 p-4">
@@ -170,38 +172,32 @@ export default function ApiKeysPanel() {
                   <span className="text-base font-semibold text-white">
                     {tenant.name}
                   </span>
-                  <code className="rounded bg-neutral-900 px-1.5 py-0.5 text-xs text-neutral-400">
+                  <code className="rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] px-1.5 py-0.5 text-xs text-neutral-400">
                     {tenant.slug}
                   </code>
                 </button>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs ${
-                      tenant.apiTokenCount > 0
-                        ? 'bg-emerald-500/15 text-emerald-200'
-                        : 'bg-neutral-700/30 text-neutral-400'
-                    }`}
-                  >
+                  <Chip tone={tenant.apiTokenCount > 0 ? 'ok' : 'neutral'}>
                     {format(t.criterionApiKeys, {
                       count: tenant.apiTokenCount,
                     })}
-                  </span>
+                  </Chip>
                   {soon !== null && soon <= EXPIRY_WARN_DAYS && (
-                    <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs text-amber-100">
+                    <Chip tone="warn">
                       {format(t.apiKeysExpiringSoon, {
                         days: Math.max(0, soon),
                       })}
-                    </span>
+                    </Chip>
                   )}
-                  <button
-                    type="button"
+                  <AdminButton
+                    variant="secondary"
+                    size="xs"
                     onClick={() => setMintFor(tenant)}
-                    className="text-xs text-violet-300 underline hover:text-violet-200"
                     data-testid="api-keys-mint-cta"
                   >
                     {t.mintKeyCta}
-                  </button>
+                  </AdminButton>
                 </div>
               </div>
 
@@ -236,19 +232,13 @@ export default function ApiKeysPanel() {
                                   {token.token_prefix}…
                                 </code>
                                 {token.comp && (
-                                  <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-200">
-                                    {t.apiKeysCompTag}
-                                  </span>
+                                  <Chip tone="warn">{t.apiKeysCompTag}</Chip>
                                 )}
                                 {token.revoked_at && (
-                                  <span className="rounded-full bg-neutral-700/40 px-2 py-0.5 text-[11px] text-neutral-300">
-                                    {t.apiKeysRevokedTag}
-                                  </span>
+                                  <Chip>{t.apiKeysRevokedTag}</Chip>
                                 )}
                                 {expired && !token.revoked_at && (
-                                  <span className="rounded-full bg-neutral-700/40 px-2 py-0.5 text-[11px] text-neutral-300">
-                                    {t.apiKeysExpiredTag}
-                                  </span>
+                                  <Chip>{t.apiKeysExpiredTag}</Chip>
                                 )}
                               </div>
                               <p className="mt-0.5 truncate text-xs text-neutral-500">
@@ -257,13 +247,13 @@ export default function ApiKeysPanel() {
                             </div>
 
                             {!token.revoked_at && (
-                              <button
-                                type="button"
+                              <AdminButton
+                                variant="danger"
+                                size="xs"
                                 onClick={() => void revoke(tenant.id, token)}
-                                className="text-xs text-red-300 underline hover:text-red-200"
                               >
                                 {t.apiKeysRevokeCta}
-                              </button>
+                              </AdminButton>
                             )}
                           </li>
                         );

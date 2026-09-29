@@ -20,6 +20,8 @@ import { useUrlFilters } from '@/utils/useUrlFilters';
 import AdminPagination from '@/components/admin/AdminPagination';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminModerationBlacklist from '@/lib/i18n/locales/admin-fr/adminModerationBlacklist';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 type BlacklistEntry = {
   id: string;
@@ -352,7 +354,7 @@ export default function BlacklistPanel() {
       </div>
 
       {/* Formulaire d'ajout */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-5 mb-6">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-5 mb-6">
         <h2 className="text-sm font-semibold text-neutral-200 mb-3">
           {tx.addHeading}
         </h2>
@@ -392,19 +394,19 @@ export default function BlacklistPanel() {
           />
         </div>
         <div className="flex justify-end">
-          <button
-            type="button"
+          <AdminButton
+            variant="danger"
+            size="sm"
             onClick={createEntry}
             disabled={creating || !hasIdentifier}
-            className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-600 text-sm font-medium transition-colors disabled:opacity-50"
           >
             {creating ? tx.adding : tx.addToBlacklist}
-          </button>
+          </AdminButton>
         </div>
       </section>
 
       {/* Filtres */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 mb-4 flex flex-wrap gap-3 items-center">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 mb-4 flex flex-wrap gap-3 items-center">
         <div className="flex items-center gap-2 flex-1 min-w-[220px]">
           <input
             type="text"
@@ -414,19 +416,15 @@ export default function BlacklistPanel() {
               if (e.key === 'Enter') submitSearch();
             }}
             placeholder={tx.searchPlaceholder}
-            className="flex-1 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className="flex-1 px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
           />
-          <button
-            type="button"
-            onClick={submitSearch}
-            className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
-          >
+          <AdminButton variant="ghost" size="sm" onClick={submitSearch}>
             {tx.searchBtn}
-          </button>
+          </AdminButton>
         </div>
 
         <select
-          className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
+          className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm"
           value={activeFilter}
           onChange={(e) => {
             setFilters({ active: e.target.value || null });
@@ -438,24 +436,20 @@ export default function BlacklistPanel() {
           <option value="false">{tx.filterInactive}</option>
         </select>
 
-        <button
-          type="button"
-          onClick={fetchEntries}
-          className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
-        >
+        <AdminButton variant="ghost" size="sm" onClick={fetchEntries}>
           {tx.refresh}
-        </button>
+        </AdminButton>
       </section>
 
       {errorMsg && (
-        <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
+        <div className="mb-4 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] text-[#ffc2c2] px-4 py-3 text-sm">
           {errorMsg}
         </div>
       )}
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--or,#b467d1)] rounded-full animate-spin" />
         </div>
       ) : entries.length === 0 ? (
         <div className="text-center py-20 text-neutral-500 text-sm">
@@ -470,8 +464,8 @@ export default function BlacklistPanel() {
               })}
             </p>
           )}
-          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-            <div className="divide-y divide-neutral-700/50">
+          <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] overflow-hidden">
+            <div className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
               {entries.map((entry) => {
                 const isEditing = editingId === entry.id;
                 const isBusy = busyId === entry.id;
@@ -481,15 +475,9 @@ export default function BlacklistPanel() {
                       {/* Identifiants */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
-                              entry.active
-                                ? 'bg-red-600/20 text-red-200 border-red-500/40'
-                                : 'bg-neutral-600/20 text-neutral-300 border-neutral-500/40'
-                            }`}
-                          >
+                          <Chip tone={entry.active ? 'err' : 'neutral'}>
                             {entry.active ? tx.statusActive : tx.statusInactive}
-                          </span>
+                          </Chip>
                           <span className="text-xs text-neutral-500">
                             {formatDateFr(entry.created_at)}
                           </span>
@@ -521,32 +509,32 @@ export default function BlacklistPanel() {
                               value={editReason}
                               onChange={(e) => setEditReason(e.target.value)}
                               placeholder={tx.editReasonPlaceholder}
-                              className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                              className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                             />
                             <textarea
                               value={editNotes}
                               onChange={(e) => setEditNotes(e.target.value)}
                               rows={2}
                               placeholder={tx.editNotesPlaceholder}
-                              className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                              className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                             />
                             <div className="flex gap-2">
-                              <button
-                                type="button"
+                              <AdminButton
+                                variant="primary"
+                                size="xs"
                                 onClick={() => saveEdit(entry)}
                                 disabled={savingEdit}
-                                className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-xs font-medium transition-colors disabled:opacity-50"
                               >
                                 {savingEdit ? tx.savingEdit : tx.saveEdit}
-                              </button>
-                              <button
-                                type="button"
+                              </AdminButton>
+                              <AdminButton
+                                variant="ghost"
+                                size="xs"
                                 onClick={cancelEdit}
                                 disabled={savingEdit}
-                                className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs transition-colors disabled:opacity-50"
                               >
                                 {tx.cancel}
-                              </button>
+                              </AdminButton>
                             </div>
                           </div>
                         ) : (
@@ -575,34 +563,31 @@ export default function BlacklistPanel() {
                       {/* Actions */}
                       {!isEditing && (
                         <div className="flex flex-wrap gap-2 flex-shrink-0">
-                          <button
-                            type="button"
+                          <AdminButton
+                            variant="ghost"
+                            size="xs"
                             onClick={() => startEdit(entry)}
                             disabled={isBusy}
-                            className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs transition-colors disabled:opacity-50"
                           >
                             {tx.edit}
-                          </button>
-                          <button
-                            type="button"
+                          </AdminButton>
+                          <AdminButton
+                            variant="ghost"
+                            size="xs"
                             onClick={() => toggleActive(entry)}
                             disabled={isBusy}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 ${
-                              entry.active
-                                ? 'bg-amber-700 hover:bg-amber-600'
-                                : 'bg-emerald-700 hover:bg-emerald-600'
-                            }`}
                           >
-                            {entry.active ? tx.deactivate : tx.reactivate}
-                          </button>
-                          <button
-                            type="button"
+                            {' '}
+                            {entry.active ? tx.deactivate : tx.reactivate}{' '}
+                          </AdminButton>
+                          <AdminButton
+                            variant="danger"
+                            size="xs"
                             onClick={() => deleteEntry(entry)}
                             disabled={isBusy}
-                            className="px-3 py-1.5 rounded-lg bg-red-800 hover:bg-red-700 text-xs font-medium transition-colors disabled:opacity-50"
                           >
                             {tx.delete}
-                          </button>
+                          </AdminButton>
                         </div>
                       )}
                     </div>
@@ -633,11 +618,11 @@ export default function BlacklistPanel() {
       </div>
 
       {/* Filtres alertes */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 mb-4 flex flex-wrap gap-3 items-center">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 mb-4 flex flex-wrap gap-3 items-center">
         <label className="flex items-center gap-2 text-sm">
           <span className="text-neutral-400">{tx.forceLabel}</span>
           <select
-            className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
+            className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm"
             value={alertStrength}
             onChange={(e) =>
               setAlertStrength(e.target.value as '' | AlertStrength)
@@ -652,7 +637,7 @@ export default function BlacklistPanel() {
         <label className="flex items-center gap-2 text-sm">
           <span className="text-neutral-400">{tx.sourceFilterLabel}</span>
           <select
-            className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
+            className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm"
             value={alertSource}
             onChange={(e) => setAlertSource(e.target.value as '' | AlertSource)}
           >
@@ -663,24 +648,24 @@ export default function BlacklistPanel() {
           </select>
         </label>
 
-        <button
-          type="button"
+        <AdminButton
+          variant="ghost"
+          size="sm"
           onClick={() => fetchAlerts(null)}
-          className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
         >
           {tx.refresh}
-        </button>
+        </AdminButton>
       </section>
 
       {alertsError && (
-        <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
+        <div className="mb-4 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] text-[#ffc2c2] px-4 py-3 text-sm">
           {alertsError}
         </div>
       )}
 
       {alertsLoading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--or,#b467d1)] rounded-full animate-spin" />
         </div>
       ) : alerts.length === 0 ? (
         <div className="text-center py-20 text-neutral-500 text-sm">
@@ -688,27 +673,19 @@ export default function BlacklistPanel() {
         </div>
       ) : (
         <>
-          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-            <div className="divide-y divide-neutral-700/50">
+          <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] overflow-hidden">
+            <div className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
               {alerts.map((alert) => (
                 <div key={alert.id} className="px-4 py-3">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
-                        alert.strength === 'strong'
-                          ? 'bg-red-600/20 text-red-200 border-red-500/40'
-                          : 'bg-amber-600/20 text-amber-200 border-amber-500/40'
-                      }`}
-                    >
+                    <Chip tone={alert.strength === 'strong' ? 'err' : 'warn'}>
                       {alert.strength === 'strong'
                         ? tx.alertStrong
                         : alert.strength === 'soft'
                           ? tx.alertSoft
                           : alert.strength}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium border bg-indigo-600/20 text-indigo-200 border-indigo-500/40">
-                      {sourceLabel(alert.source, tx)}
-                    </span>
+                    </Chip>
+                    <Chip tone="brand">{sourceLabel(alert.source, tx)}</Chip>
                     <span className="text-xs text-neutral-500">
                       {formatDateFr(alert.createdAt)}
                     </span>
@@ -752,14 +729,14 @@ export default function BlacklistPanel() {
 
           {alertsCursor && (
             <div className="flex justify-center mt-4">
-              <button
-                type="button"
+              <AdminButton
+                variant="ghost"
+                size="sm"
                 onClick={() => fetchAlerts(alertsCursor)}
                 disabled={alertsLoadingMore}
-                className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {alertsLoadingMore ? tx.loadingMore : tx.loadMore}
-              </button>
+              </AdminButton>
             </div>
           )}
         </>
@@ -789,7 +766,7 @@ function Input({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
       />
     </label>
   );

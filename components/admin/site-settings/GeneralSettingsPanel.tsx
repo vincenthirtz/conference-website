@@ -5,6 +5,7 @@ import { useAdminT } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
 import nsAdminSiteSettings from '@/lib/i18n/locales/admin-fr/adminSiteSettings';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type Dict = typeof nsAdminSiteSettings.fr;
 
@@ -145,7 +146,7 @@ export default function GeneralSettingsPanel() {
         return (
           <section
             key={known.key}
-            className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6"
+            className="bg-[var(--s1,#100812)] backdrop-blur border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] p-6"
           >
             <div className="flex flex-col gap-4">
               <div>
@@ -170,15 +171,16 @@ export default function GeneralSettingsPanel() {
                     }))
                   }
                   placeholder={known.placeholder}
-                  className="flex-1 px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
+                  className="flex-1 px-4 py-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                 />
-                <button
+                <AdminButton
+                  variant="primary"
+                  size="md"
                   onClick={() => saveSetting(known.key)}
                   disabled={saving === known.key || !hasChanged}
-                  className="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors whitespace-nowrap"
                 >
                   {saving === known.key ? t.saving : t.save}
-                </button>
+                </AdminButton>
               </div>
 
               {setting?.updated_at && (
@@ -192,7 +194,7 @@ export default function GeneralSettingsPanel() {
             {known.key === 'about_video_url' && currentValue && (
               <div className="mt-6 pt-6 border-t border-neutral-700">
                 <p className="text-sm text-neutral-400 mb-3">{t.preview}</p>
-                <div className="relative w-full max-w-md aspect-video rounded-xl overflow-hidden bg-neutral-900">
+                <div className="relative w-full max-w-md aspect-video rounded-[var(--r-card,14px)] overflow-hidden bg-[var(--s2,#1d1520)]">
                   {/youtu\.?be/.test(currentValue) ? (
                     <iframe
                       className="absolute inset-0 w-full h-full"

@@ -19,6 +19,7 @@ import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminSiteSettings from '@/lib/i18n/locales/admin-fr/adminSiteSettings';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type State = {
   usesPlatformAccount: boolean;
@@ -111,7 +112,7 @@ export default function EmailSenderPanel() {
 
   if (state.usesPlatformAccount) {
     return (
-      <section className="rounded-2xl border border-neutral-700/50 bg-neutral-800/40 p-6">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6">
         <h2 className="text-lg font-semibold">{t.emailSenderHeading}</h2>
         <p className="mt-2 text-sm text-neutral-300">
           {t.emailSenderPlatformNotice}
@@ -127,12 +128,12 @@ export default function EmailSenderPanel() {
   }
 
   return (
-    <section className="rounded-2xl border border-neutral-700/50 bg-neutral-800/40 p-6">
+    <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6">
       <h2 className="text-lg font-semibold">{t.emailSenderHeading}</h2>
       <p className="mt-2 text-sm text-neutral-300">{t.emailSenderIntro}</p>
 
       <div
-        className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
+        className={`mt-4 rounded-[var(--r-card,14px)] border px-4 py-3 text-sm ${
           state.configured
             ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100'
             : 'border-amber-500/40 bg-amber-500/10 text-amber-100'
@@ -161,7 +162,7 @@ export default function EmailSenderPanel() {
             onChange={(e) => setApiKey(e.target.value)}
             autoComplete="off"
             placeholder="xkeysib-…"
-            className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+            className="mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white"
           />
           <span className="mt-1 block text-xs text-neutral-500">
             {t.emailSenderApiKeyHelp}
@@ -177,7 +178,7 @@ export default function EmailSenderPanel() {
             value={fromEmail}
             onChange={(e) => setFromEmail(e.target.value)}
             placeholder="contact@mon-espace.fr"
-            className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+            className="mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white"
           />
           <span className="mt-1 block text-xs text-neutral-500">
             {t.emailSenderFromEmailHelp}
@@ -194,29 +195,31 @@ export default function EmailSenderPanel() {
             onChange={(e) => setFromName(e.target.value)}
             maxLength={70}
             placeholder="Cup Estivale"
-            className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+            className="mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white"
           />
         </label>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <button
+        <AdminButton
+          variant="primary"
+          size="sm"
           type="button"
           onClick={save}
           disabled={saving || !apiKey || !fromEmail}
-          className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
           {saving ? t.emailSenderSaving : t.emailSenderSave}
-        </button>
+        </AdminButton>
         {state.configured && (
-          <button
+          <AdminButton
+            variant="ghost"
+            size="sm"
             type="button"
             onClick={clear}
             disabled={saving}
-            className="rounded-lg border border-neutral-600 px-4 py-2 text-sm text-neutral-200 disabled:opacity-50"
           >
             {t.emailSenderClear}
-          </button>
+          </AdminButton>
         )}
       </div>
     </section>

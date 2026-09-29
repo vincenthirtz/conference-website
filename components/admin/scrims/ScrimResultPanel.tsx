@@ -18,6 +18,8 @@ import { AdminFetchError } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminScrimDetail from '@/lib/i18n/locales/admin-fr/adminScrimDetail';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 export type ScrimResultPanelScrim = {
   id: string;
@@ -202,14 +204,12 @@ export default function ScrimResultPanel({ scrim, onSaved }: Props) {
   }
 
   return (
-    <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-2xl p-6 space-y-4">
+    <section className="bg-[var(--s1,#100812)] border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] p-6 space-y-4">
       {dialog}
       <h2 className="text-lg font-semibold">{t.resultHeading}</h2>
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
-        <span className="px-2 py-0.5 rounded-md text-xs bg-neutral-700">
-          {statusLabels[scrim.status] ?? scrim.status}
-        </span>
+        <Chip>{statusLabels[scrim.status] ?? scrim.status}</Chip>
         {hasScore ? (
           <span className="font-medium">
             {format(t.resultCurrent, {
@@ -226,7 +226,7 @@ export default function ScrimResultPanel({ scrim, onSaved }: Props) {
       </div>
 
       {isDisputed && (
-        <div className="rounded-lg bg-amber-900/30 border border-amber-500/40 px-3 py-2 text-sm">
+        <div className="rounded-[var(--r-ctrl,4px)] bg-amber-900/30 border border-amber-500/40 px-3 py-2 text-sm">
           {format(t.resultDisputeNotice, {
             reason: scrim.dispute_reason || t.resultDisputeNoReason,
           })}
@@ -260,7 +260,7 @@ export default function ScrimResultPanel({ scrim, onSaved }: Props) {
             value={score1}
             disabled={blocked || submitting || savingLive}
             onChange={(e) => setScore1(clampScore(e.target.value))}
-            className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600 disabled:opacity-50"
+            className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] disabled:opacity-50"
           />
         </div>
         <div>
@@ -280,7 +280,7 @@ export default function ScrimResultPanel({ scrim, onSaved }: Props) {
             value={score2}
             disabled={blocked || submitting || savingLive}
             onChange={(e) => setScore2(clampScore(e.target.value))}
-            className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600 disabled:opacity-50"
+            className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] disabled:opacity-50"
           />
         </div>
       </div>
@@ -300,23 +300,25 @@ export default function ScrimResultPanel({ scrim, onSaved }: Props) {
 
       <div className="flex flex-wrap gap-3 pt-2">
         {canLive && (
-          <button
+          <AdminButton
+            variant="secondary"
+            size="md"
             type="button"
             onClick={submitLive}
             disabled={savingLive || submitting}
-            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
           >
             {savingLive ? t.resultSubmitting : t.resultLiveSubmit}
-          </button>
+          </AdminButton>
         )}
-        <button
+        <AdminButton
+          variant="primary"
+          size="md"
           type="button"
           onClick={submit}
           disabled={blocked || submitting}
-          className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium"
         >
           {submitting ? t.resultSubmitting : t.resultSubmit}
-        </button>
+        </AdminButton>
       </div>
     </section>
   );

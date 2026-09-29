@@ -50,11 +50,11 @@ export function statusLabel(status: TargetStatus | undefined, t: Dict): string {
 export function statusClass(status: TargetStatus | undefined): string {
   switch (status) {
     case 'sent':
-      return 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30';
+      return 'text-[var(--lf-200,#b3e7a3)] bg-[rgba(127,202,101,.13)] border-[rgba(127,202,101,.36)]';
     case 'failed':
-      return 'bg-red-600/20 text-red-300 border-red-500/30';
+      return 'text-[#ffc2c2] bg-[rgba(255,107,107,.13)] border-[rgba(255,107,107,.4)]';
     default:
-      return 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30';
+      return 'text-[var(--t3,#a39ba6)] border-[var(--line2,rgba(194,196,201,.2))]';
   }
 }
 
@@ -77,7 +77,7 @@ export default function SocialPostsHistory({
           {posts.map((post) => (
             <li
               key={post.id}
-              className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4"
+              className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4"
             >
               <p className="mb-2 line-clamp-2 text-sm text-neutral-300">
                 {post.base_text}
@@ -86,7 +86,7 @@ export default function SocialPostsHistory({
                 {post.targets.map((target) => (
                   <span
                     key={target.platform}
-                    className={`rounded border px-2 py-0.5 font-mono text-xs ${statusClass(target.status)}`}
+                    className={`rounded-[3px] border px-2 py-0.5 font-mono text-xs ${statusClass(target.status)}`}
                     title={target.error ?? undefined}
                   >
                     {target.platform} · {statusLabel(target.status, t)}

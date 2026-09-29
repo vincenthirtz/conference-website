@@ -19,7 +19,7 @@ export default function Sparkline({
   values,
   width = 84,
   height = 24,
-  className = 'text-purple-300',
+  className = 'text-[var(--or-300,#dea3f6)]',
   ariaLabel,
 }: Props) {
   const t = useAdminT(nsAdminDashboardSparkline);

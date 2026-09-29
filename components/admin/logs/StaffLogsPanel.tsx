@@ -13,6 +13,8 @@ import type { StaffLogAction } from '@/types/staffLogs';
 import { logger } from '../../../utils/logger';
 import nsAdminLogs from '@/lib/i18n/locales/admin-fr/adminLogs';
 import AuditChangesView from '@/components/admin/AuditChanges';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 /**
  * Shape of a row returned by GET /api/admin/logs. The API selects only these
@@ -258,7 +260,7 @@ export default function StaffLogsPanel() {
       <div className="mb-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+            <h1 className="font-[family-name:var(--fd)] text-3xl md:text-4xl font-extrabold tracking-tight [font-stretch:75%]">
               {t.heading}
             </h1>
             <p className="text-neutral-400 text-sm mt-1">
@@ -272,11 +274,11 @@ export default function StaffLogsPanel() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
+            <AdminButton
+              variant="secondary"
+              size="sm"
               onClick={handleExportCsv}
               disabled={exporting}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {exporting ? (
                 <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -296,9 +298,9 @@ export default function StaffLogsPanel() {
                 </svg>
               )}
               {exporting ? t.exporting : t.exportCsv}
-            </button>
+            </AdminButton>
 
-            <div className="text-xs text-neutral-500 bg-neutral-800/50 px-3 py-2 rounded-xl border border-neutral-700/50">
+            <div className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-3 py-2 text-xs text-neutral-500">
               {t.sortedByDate}
             </div>
           </div>
@@ -307,7 +309,7 @@ export default function StaffLogsPanel() {
 
       {/* Error Message */}
       {(errorMsg || exportError) && (
-        <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+        <div className="mb-6 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] text-[#ffc2c2] px-4 py-3 text-sm flex items-center gap-2">
           <svg
             className="w-5 h-5 text-red-400 flex-shrink-0"
             fill="currentColor"
@@ -324,7 +326,7 @@ export default function StaffLogsPanel() {
       )}
 
       {/* Filters */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6 mb-6">
         <form
           onSubmit={handleFilterSubmit}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 items-end"
@@ -336,7 +338,7 @@ export default function StaffLogsPanel() {
             <input
               type="text"
               placeholder={t.placeholderEntityType}
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
               value={entityType}
               onChange={(e) => setEntityType(e.target.value)}
             />
@@ -347,7 +349,7 @@ export default function StaffLogsPanel() {
               {t.labelAction}
             </label>
             <select
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
               value={action}
               onChange={(e) => setAction(e.target.value)}
             >
@@ -367,7 +369,7 @@ export default function StaffLogsPanel() {
             <input
               type="text"
               placeholder={t.placeholderStaff}
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
               value={staffId}
               onChange={(e) => setStaffId(e.target.value)}
             />
@@ -378,7 +380,7 @@ export default function StaffLogsPanel() {
               {t.labelTournament}
             </label>
             <select
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
               value={tournamentId}
               onChange={(e) => setTournamentId(e.target.value)}
               disabled={loadingTournaments}
@@ -417,7 +419,7 @@ export default function StaffLogsPanel() {
                 type="text"
                 aria-label={t.placeholderSearch}
                 placeholder={t.placeholderSearch}
-                className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="w-full pl-10 pr-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -425,9 +427,11 @@ export default function StaffLogsPanel() {
           </div>
 
           <div className="flex gap-2">
-            <button
+            <AdminButton
+              variant="primary"
+              size="sm"
               type="submit"
-              className="flex-1 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              className="flex-1 justify-center"
             >
               <svg
                 className="w-4 h-4"
@@ -443,7 +447,7 @@ export default function StaffLogsPanel() {
                 />
               </svg>
               {t.filter}
-            </button>
+            </AdminButton>
           </div>
 
           {/* Additional filters row */}
@@ -453,7 +457,7 @@ export default function StaffLogsPanel() {
             </label>
             <input
               type="text"
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm font-mono"
               value={stageId}
               onChange={(e) => setStageId(e.target.value)}
               placeholder={t.placeholderStage}
@@ -466,7 +470,7 @@ export default function StaffLogsPanel() {
             </label>
             <input
               type="text"
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm font-mono"
               value={matchId}
               onChange={(e) => setMatchId(e.target.value)}
               placeholder={t.placeholderMatch}
@@ -479,7 +483,7 @@ export default function StaffLogsPanel() {
             </label>
             <input
               type="text"
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm font-mono"
               value={teamId}
               onChange={(e) => setTeamId(e.target.value)}
               placeholder={t.placeholderTeam}
@@ -492,7 +496,7 @@ export default function StaffLogsPanel() {
             </label>
             <input
               type="date"
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
             />
@@ -504,7 +508,7 @@ export default function StaffLogsPanel() {
             </label>
             <input
               type="date"
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
             />
@@ -513,10 +517,10 @@ export default function StaffLogsPanel() {
       </section>
 
       {/* Logs List */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--or,#b467d1)] rounded-full animate-spin" />
           </div>
         ) : logs.length === 0 ? (
           <div className="text-center py-20 text-neutral-400">
@@ -536,7 +540,7 @@ export default function StaffLogsPanel() {
             {t.empty}
           </div>
         ) : (
-          <div className="divide-y divide-neutral-700/50">
+          <div className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
             {logs.map((log) => (
               <div
                 key={log.id}
@@ -545,21 +549,18 @@ export default function StaffLogsPanel() {
                 {/* Header row */}
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-mono text-neutral-500 bg-neutral-900/50 px-2 py-1 rounded-lg">
+                    <span className="text-xs font-mono text-neutral-500 rounded-[3px] bg-[var(--s2,#1d1520)] px-2 py-1">
                       {formatDateTime(log.created_at, dateLocale)}
                     </span>
-                    <span
-                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600/20 text-blue-300 border border-blue-500/30"
-                      title={log.action}
-                    >
+                    <Chip tone="brand" title={log.action}>
                       {actionLabel(log.action)}
-                    </span>
+                    </Chip>
                     {/* Raw slug kept visible & subtle for debugging. */}
                     <span className="text-[10px] font-mono text-neutral-600">
                       {log.action}
                     </span>
                     {log.entity_type && (
-                      <span className="px-2.5 py-1 rounded-lg text-xs bg-neutral-700/50 text-neutral-300 border border-neutral-600/50">
+                      <span className="rounded-[3px] border border-[var(--line2,rgba(194,196,201,.2))] px-2 py-0.5 font-mono text-xs text-neutral-300">
                         {log.entity_type}
                         {log.entity_id ? ` #${shortId(log.entity_id)}` : ''}
                       </span>
@@ -579,7 +580,7 @@ export default function StaffLogsPanel() {
                 {/* Tags row — only fields that actually exist on staff_logs. */}
                 {log.tournament_id && (
                   <div className="flex flex-wrap gap-2 mb-2">
-                    <span className="px-2 py-0.5 rounded-lg text-[10px] bg-amber-900/30 border border-amber-700/30 text-amber-300">
+                    <span className="rounded-[3px] border border-[var(--line2,rgba(194,196,201,.2))] px-2 py-0.5 text-[10px] text-neutral-300">
                       {format(t.tagTournament, {
                         id: shortId(log.tournament_id),
                       })}
@@ -598,7 +599,7 @@ export default function StaffLogsPanel() {
                       <summary className="cursor-pointer select-none hover:text-neutral-200 transition-colors">
                         {t.detailsPayload}
                       </summary>
-                      <div className="mt-2 max-h-64 overflow-auto rounded-xl border border-neutral-700/50">
+                      <div className="mt-2 max-h-64 overflow-auto rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))]">
                         <AuditChangesView
                           payload={log.payload as Record<string, unknown>}
                         />
@@ -664,11 +665,11 @@ export default function StaffLogsPanel() {
       {/* Pagination */}
       {logs.length > 0 && (
         <div className="flex justify-between items-center mt-6">
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             disabled={offset === 0}
             onClick={() => setOffset(Math.max(0, offset - limit))}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <svg
               className="w-4 h-4"
@@ -684,18 +685,18 @@ export default function StaffLogsPanel() {
               />
             </svg>
             {t.previous}
-          </button>
+          </AdminButton>
 
           <span className="text-neutral-400 text-sm">
             {offset + 1} – {offset + logs.length}
             {total ? format(t.paginationTotal, { total }) : ''}
           </span>
 
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             disabled={total !== null && offset + limit >= total}
             onClick={() => setOffset(offset + limit)}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {t.next}
             <svg
@@ -711,7 +712,7 @@ export default function StaffLogsPanel() {
                 d="M9 5l7 7-7 7"
               />
             </svg>
-          </button>
+          </AdminButton>
         </div>
       )}
     </>

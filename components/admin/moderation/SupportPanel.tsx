@@ -10,8 +10,8 @@ import {
   formatDateFr,
   getCategoryLabels,
   getStatusLabels,
-  severityBadge,
-  statusBadge,
+  severityTone,
+  statusTone,
 } from './supportLabels';
 import EmptyState from '@/components/admin/EmptyState';
 import Modal from '@/components/admin/Modal';
@@ -20,6 +20,9 @@ import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminSupport from '@/lib/i18n/locales/admin-fr/adminSupport';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import StatTile from '@/features/admin/_shared/ui/StatTile';
 
 type Severity = 'low' | 'medium' | 'high';
 type Category = 'dispute' | 'behavior' | 'technical' | 'other';
@@ -448,7 +451,7 @@ export default function SupportPanel() {
       </div>
 
       {/* Filters */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 mb-4 flex flex-wrap gap-3">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 mb-4 flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[220px]">
           <svg
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
@@ -468,12 +471,12 @@ export default function SupportPanel() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder={tx.searchPlaceholder}
-            className="w-full pl-10 pr-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className="w-full pl-10 pr-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
           />
         </div>
 
         <select
-          className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
+          className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm"
           value={status}
           onChange={(e) => setFilters({ status: e.target.value || null })}
         >
@@ -485,7 +488,7 @@ export default function SupportPanel() {
         </select>
 
         <select
-          className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
+          className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm"
           value={severity}
           onChange={(e) => setFilters({ severity: e.target.value || null })}
         >
@@ -496,7 +499,7 @@ export default function SupportPanel() {
         </select>
 
         <select
-          className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
+          className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm"
           value={category}
           onChange={(e) => setFilters({ category: e.target.value || null })}
         >
@@ -507,17 +510,18 @@ export default function SupportPanel() {
           <option value="other">{tx.catFilterOther}</option>
         </select>
 
-        <button
-          type="button"
+        <AdminButton
+          variant="ghost"
+          size="sm"
           onClick={fetchTickets}
-          className="ml-auto px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
+          className="ml-auto"
         >
           {tx.refresh}
-        </button>
+        </AdminButton>
       </section>
 
       {errorMsg && (
-        <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
+        <div className="mb-4 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] text-[#ffc2c2] px-4 py-3 text-sm">
           {errorMsg}
         </div>
       )}
@@ -534,8 +538,8 @@ export default function SupportPanel() {
           }
         />
       ) : (
-        <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-          <div className="divide-y divide-neutral-700/50">
+        <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] overflow-hidden">
+          <div className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
             {tickets.map((t) => (
               <button
                 key={t.id}
@@ -544,16 +548,12 @@ export default function SupportPanel() {
                 className="w-full text-left px-4 py-3 hover:bg-neutral-700/30 transition-colors flex flex-col sm:flex-row sm:items-center gap-3"
               >
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium border ${severityBadge(t.severity)}`}
-                  >
+                  <Chip tone={severityTone(t.severity)}>
                     {t.severity.toUpperCase()}
-                  </span>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium border ${statusBadge(t.status)}`}
-                  >
+                  </Chip>
+                  <Chip tone={statusTone(t.status)}>
                     {statusLabels[t.status]}
-                  </span>
+                  </Chip>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -619,11 +619,11 @@ export default function SupportPanel() {
       {/* Pagination */}
       {(tickets.length > 0 || offset > 0) && (
         <div className="flex justify-between items-center mt-6">
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             disabled={offset === 0 || loading}
             onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <svg
               className="w-4 h-4"
@@ -639,22 +639,22 @@ export default function SupportPanel() {
               />
             </svg>
             {tx.prev}
-          </button>
+          </AdminButton>
 
           <span className="text-neutral-400 text-sm">
             {tickets.length > 0 ? offset + 1 : 0} – {offset + tickets.length}
             {total !== null ? format(tx.paginationOf, { total }) : ''}
           </span>
 
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             disabled={
               loading ||
               (total !== null && offset + PAGE_SIZE >= total) ||
               (total === null && tickets.length < PAGE_SIZE)
             }
             onClick={() => setOffset(offset + PAGE_SIZE)}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {tx.next}
             <svg
@@ -670,7 +670,7 @@ export default function SupportPanel() {
                 d="M9 5l7 7-7 7"
               />
             </svg>
-          </button>
+          </AdminButton>
         </div>
       )}
 
@@ -683,16 +683,12 @@ export default function SupportPanel() {
           title={
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span
-                  className={`px-2 py-0.5 rounded-full text-xs font-medium border ${severityBadge(selected.severity)}`}
-                >
+                <Chip tone={severityTone(selected.severity)}>
                   {selected.severity.toUpperCase()}
-                </span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-xs font-medium border ${statusBadge(selected.status)}`}
-                >
+                </Chip>
+                <Chip tone={statusTone(selected.status)}>
                   {statusLabels[selected.status]}
-                </span>
+                </Chip>
                 <span className="text-xs text-neutral-400">
                   {categoryLabels[selected.category]}
                 </span>
@@ -708,7 +704,7 @@ export default function SupportPanel() {
               <EntityHistoryButton
                 entityType="support_ticket"
                 entityId={selected.id}
-                className="mt-2 rounded-lg border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-white/10"
+                className="mt-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-3 py-1 text-xs font-medium text-[var(--t2,#c7bfca)] transition-colors hover:text-[var(--t1,#f4edf7)]"
               />
             </div>
           }
@@ -764,21 +760,13 @@ export default function SupportPanel() {
                 <Field label={tx.targetLabel}>
                   <div className="flex items-center gap-2 flex-wrap">
                     {selected.reported_target_type && (
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
-                          selected.reported_target_type === 'player'
-                            ? 'bg-indigo-600/20 text-indigo-200 border-indigo-500/40'
-                            : selected.reported_target_type === 'team'
-                              ? 'bg-sky-600/20 text-sky-200 border-sky-500/40'
-                              : 'bg-purple-600/20 text-purple-200 border-purple-500/40'
-                        }`}
-                      >
+                      <Chip tone="neutral">
                         {selected.reported_target_type === 'player'
                           ? tx.targetTypePlayer
                           : selected.reported_target_type === 'team'
                             ? tx.targetTypeTeam
                             : tx.targetTypeOrg}
-                      </span>
+                      </Chip>
                     )}
                     {selected.reported_target_name && (
                       <span className="text-white font-medium">
@@ -794,7 +782,7 @@ export default function SupportPanel() {
                 </Field>
               )}
               <Field label={tx.fieldMessage}>
-                <div className="bg-neutral-900/50 border border-neutral-700 rounded-xl p-3 text-sm whitespace-pre-wrap leading-relaxed">
+                <div className="rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-3 text-sm whitespace-pre-wrap leading-relaxed">
                   {selected.message}
                 </div>
               </Field>
@@ -837,13 +825,13 @@ export default function SupportPanel() {
                 <p className="text-xs text-neutral-400">{tx.convertAllDone}</p>
               ) : !convertOpen ? (
                 <div className="flex justify-end">
-                  <button
-                    type="button"
+                  <AdminButton
+                    variant="danger"
+                    size="sm"
                     onClick={() => setConvertOpen(true)}
-                    className="px-3 py-2 rounded-xl bg-red-700 hover:bg-red-600 text-sm font-medium transition-colors"
                   >
                     {tx.convertOpenBtn}
-                  </button>
+                  </AdminButton>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -856,7 +844,7 @@ export default function SupportPanel() {
                       onChange={(e) =>
                         setConvertKind(e.target.value as ConvertKind)
                       }
-                      className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
+                      className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm"
                     >
                       <option
                         value="player"
@@ -943,22 +931,22 @@ export default function SupportPanel() {
                   </div>
 
                   <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
+                    <AdminButton
+                      variant="ghost"
+                      size="sm"
                       onClick={() => setConvertOpen(false)}
                       disabled={converting}
-                      className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors disabled:opacity-50"
                     >
                       {tx.convertCancel}
-                    </button>
-                    <button
-                      type="button"
+                    </AdminButton>
+                    <AdminButton
+                      variant="danger"
+                      size="sm"
                       onClick={convertToBlacklist}
                       disabled={converting || !convertValid}
-                      className="px-3 py-2 rounded-xl bg-red-700 hover:bg-red-600 text-sm font-medium transition-colors disabled:opacity-50"
                     >
                       {converting ? tx.convertSubmitting : tx.convertSubmit}
-                    </button>
+                    </AdminButton>
                   </div>
                 </div>
               )}
@@ -982,7 +970,7 @@ export default function SupportPanel() {
                       value={row}
                       onChange={(e) => setBlacklistRow(i, e.target.value)}
                       placeholder={tx.blacklistRowPlaceholder}
-                      className="flex-1 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      className="flex-1 px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                     />
                     <button
                       type="button"
@@ -1026,22 +1014,22 @@ export default function SupportPanel() {
                   value={blacklistReason}
                   onChange={(e) => setBlacklistReason(e.target.value)}
                   placeholder={tx.reasonPlaceholder}
-                  className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                 />
               </div>
 
               <div className="flex justify-end">
-                <button
-                  type="button"
+                <AdminButton
+                  variant="danger"
+                  size="sm"
                   onClick={addToBlacklist}
                   disabled={
                     blacklisting ||
                     blacklistRows.every((r) => r.trim().length === 0)
                   }
-                  className="px-3 py-2 rounded-xl bg-red-700 hover:bg-red-600 text-sm font-medium transition-colors disabled:opacity-50"
                 >
                   {blacklisting ? tx.blacklisting : tx.addToBlacklist}
-                </button>
+                </AdminButton>
               </div>
             </div>
 
@@ -1053,34 +1041,34 @@ export default function SupportPanel() {
                 value={resolutionNote}
                 onChange={(e) => setResolutionNote(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                 placeholder={tx.resolutionPlaceholder}
               />
               <div className="flex flex-wrap gap-2 justify-end">
-                <button
-                  type="button"
+                <AdminButton
+                  variant="ghost"
+                  size="sm"
                   onClick={() => updateStatus('in_progress', resolutionNote)}
                   disabled={updating || selected.status === 'in_progress'}
-                  className="px-3 py-2 rounded-xl bg-amber-700 hover:bg-amber-600 text-sm font-medium transition-colors disabled:opacity-50"
                 >
                   {tx.markInProgress}
-                </button>
-                <button
-                  type="button"
+                </AdminButton>
+                <AdminButton
+                  variant="primary"
+                  size="sm"
                   onClick={() => updateStatus('resolved', resolutionNote)}
                   disabled={updating || selected.status === 'resolved'}
-                  className="px-3 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-sm font-medium transition-colors disabled:opacity-50"
                 >
                   {tx.markResolved}
-                </button>
-                <button
-                  type="button"
+                </AdminButton>
+                <AdminButton
+                  variant="ghost"
+                  size="sm"
                   onClick={() => updateStatus('closed', resolutionNote)}
                   disabled={updating || selected.status === 'closed'}
-                  className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors disabled:opacity-50"
                 >
                   {tx.close}
-                </button>
+                </AdminButton>
               </div>
             </div>
           </>
@@ -1099,22 +1087,13 @@ function Stat({
   value: number;
   accent?: 'red' | 'amber' | 'emerald';
 }) {
-  const colors: Record<string, string> = {
-    red: 'text-red-300',
-    amber: 'text-amber-300',
-    emerald: 'text-emerald-300',
-  };
+  const tone = { red: 'err', amber: 'warn', emerald: 'ok' } as const;
   return (
-    <div className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-4 py-3">
-      <p className="text-xs text-neutral-400 uppercase tracking-wide">
-        {label}
-      </p>
-      <p
-        className={`text-2xl font-bold mt-1 ${accent ? colors[accent] : 'text-white'}`}
-      >
-        {value}
-      </p>
-    </div>
+    <StatTile
+      label={label}
+      value={value}
+      tone={accent ? tone[accent] : 'neutral'}
+    />
   );
 }
 
@@ -1142,7 +1121,7 @@ function ConvertInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
-        className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
       />
     </label>
   );

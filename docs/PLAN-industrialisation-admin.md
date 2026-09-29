@@ -14,12 +14,12 @@
 
 ---
 
-## ⏸ Point d'arrêt — 2026-09-29 (changement de machine)
+## ⏸ Point d'arrêt — 2026-09-29
 
-**Où est le travail.** Branche `admin-industrialisation` (poussée sur `origin`), partie de `work`.
-Elle n'est PAS fusionnée dans `work` : `work` déploie en prod sur Netlify. Pour reprendre :
-`git fetch origin && git switch admin-industrialisation`. La fusion dans `work` n'aura lieu
-qu'après la recette ci-dessous et un feu vert explicite.
+**Où est le travail.** Commits LOCAUX sur `work`, non poussés (`work` déploie en prod sur
+Netlify). Une copie au lot 10 existe aussi sur `origin/admin-industrialisation` (poussée pour un
+changement de machine finalement annulé) ; le travail continue sur `work`. Rien ne part en prod
+avant la recette ci-dessous et un feu vert explicite.
 
 **Fait** (L1–L14 socles, cf. sections ; passe visuelle « Le Ruban » lots 1 à 10, cf. L12) :
 - toutes les pages admin sont sur les archétypes Le Ruban ; **plus aucune page > 800 lignes**
@@ -49,10 +49,9 @@ importent les fichiers touchés. Hooks extraits relus contre l'original (corps i
 3. CI GitHub sur la branche (le Mac d'origine ne peut pas lancer `npm run verify`).
 
 **Reste à faire (ordre suggéré)** :
-- composants encore en grammaire d'origine (couleurs déjà corrigées par le pont) :
-  `components/admin/{communications,moderation,dashboard,logs,onboarding,teams,scrims,
-  site-settings,tcg,tenants,partners,association,stats,profile,…}` et `components/admin/simulator/*`,
-  `QuizMode` ;
+- composants admin : tous passés en grammaire Ruban au lot 11 (restent volontairement bruts :
+  quelques contrôles compacts — barre de `SimMatchCard`, outils de `MarkdownEditor`, icônes de
+  `RegistrationFieldsEditor`, `ChoiceCard`/`BigChip` du quiz ; `TenantSwitcher.tsx` non importé) ;
 - remonter les classes Ruban dupliquées (`features/admin/stages/ui/rubanClasses.ts`,
   `features/admin/diffusion/ui/rubanClasses.ts`, `components/admin/caster/fieldClasses.ts`)
   dans `features/admin/_shared/ui/` ; `AdminButtonLink` ne prend pas `target`/`rel`
@@ -726,6 +725,14 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       38 composants régie/diffusion/caster (`diffusion/ui/rubanClasses.ts`,
       `caster/fieldClasses.ts`). Laissés tels quels car rendus côté public :
       `BracketTreeView`, `InlineScoreEditor`, `DraftTimer`, `utils/statusConfig`.
+- [x] **Passe visuelle, lot 11 (tous les composants restants, 126 fichiers)** : communications,
+      modération, journaux, tableau de bord (36) ; onboarding, équipes (modales de membre),
+      scrims, réglages, espaces, partenaires, association (47) ; simulateur + quiz, TCG,
+      stats, profil, pôles, casteuses, facturation, documents, comptes, racine (43). Tables de
+      couleurs → tables de tons `Chip` (`supportLabels.ts` : `severityTone`/`statusTone`) ;
+      couleurs décoratives par catégorie neutralisées (familles Discord, types) ; couleurs de
+      données gardées (donut, calendrier scrims, couleurs d'espace, raretés TCG, seeds).
+      Gels abaissés : CampaignsPanel 1 151, SupportPanel 1 146, ProfileModal 858.
 - [ ] e2e `admin-users.spec.ts` : clique un bouton « Rechercher » qui n'existe pas sur la page
       (recherche automatique) — cassé AVANT le lot 8, à réaligner sur le vrai comportement.
 - [ ] Plusieurs `primary` simultanés possibles sur les matchs du tournoi (panneaux de

@@ -25,6 +25,12 @@ import { useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminBilling from '@/lib/i18n/locales/admin-fr/adminBilling';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { CARD, INPUT, TILE } from '@/features/admin/stages/ui/rubanClasses';
+import {
+  rubanErr,
+  rubanWarn,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 
 type Dict = typeof nsAdminBilling.fr;
 
@@ -133,7 +139,7 @@ export default function NonprofitRnaCard({
   }
 
   return (
-    <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-4">
+    <section className={`space-y-4 ${CARD}`}>
       <div>
         <h2 className="text-lg font-semibold">{t.rnaTitle}</h2>
         <p className="mt-1 text-sm text-neutral-400">{t.rnaIntro}</p>
@@ -141,7 +147,7 @@ export default function NonprofitRnaCard({
 
       {rna ? (
         <div className="space-y-3">
-          <div className="rounded-xl border border-neutral-700/60 bg-neutral-900/40 p-3">
+          <div className={`p-3 ${TILE}`}>
             <p className="font-mono text-sm text-neutral-100">{rna}</p>
             <p className="mt-1 text-xs text-neutral-400">
               {verifiedByRna
@@ -149,14 +155,14 @@ export default function NonprofitRnaCard({
                 : t.rnaAwaitingStaff}
             </p>
           </div>
-          <button
-            type="button"
+          <AdminButton
+            variant="danger"
+            size="sm"
             onClick={remove}
             disabled={busy}
-            className="rounded-xl border border-neutral-600 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800 disabled:opacity-60"
           >
             {t.rnaRemove}
-          </button>
+          </AdminButton>
         </div>
       ) : (
         <form onSubmit={submit} className="flex flex-col gap-3 sm:flex-row">
@@ -166,28 +172,25 @@ export default function NonprofitRnaCard({
             onChange={(e) => setInput(e.target.value)}
             placeholder="W751074179"
             aria-label={t.rnaFieldLabel}
-            className="w-full rounded-xl border border-neutral-600 bg-neutral-900/50 px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:max-w-xs"
+            className={`${INPUT} font-mono sm:max-w-xs`}
           />
-          <button
+          <AdminButton
             type="submit"
+            variant="secondary"
             disabled={busy || input.trim().length === 0}
-            className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-60"
           >
             {busy ? t.rnaChecking : t.rnaSubmit}
-          </button>
+          </AdminButton>
         </form>
       )}
 
       {pending && (
-        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+        <p className={`px-3 py-2 text-sm ${rubanWarn}`}>
           {t[PENDING_KEY[pending]] as string}
         </p>
       )}
       {error && (
-        <p
-          role="alert"
-          className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200"
-        >
+        <p role="alert" className={`px-3 py-2 text-sm ${rubanErr}`}>
           {error}
         </p>
       )}

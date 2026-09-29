@@ -3,6 +3,12 @@ import { computeHeadToHead } from '@/utils/simulator';
 import type { H2HRecord, SimStage, SimTeam } from '@/utils/simulator';
 import type { SimStats } from '@/utils/simulatorStats';
 import nsAdminTournamentSimulator from '@/lib/i18n/locales/admin-fr/adminTournamentSimulator';
+import StatTile from '@/features/admin/_shared/ui/StatTile';
+import { CARD } from '@/features/admin/stages/ui/rubanClasses';
+import {
+  SIM_EYEBROW,
+  SIM_MUTED,
+} from '@/features/admin/simulator/ui/simulatorClasses';
 
 /**
  * Onglet « statistiques » du simulateur : classement avec différence de
@@ -24,12 +30,10 @@ export function SimulatorStatsTab({
   return (
     <div className="space-y-6">
       {/* Standings with score diff */}
-      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-        <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-          {tx.standingsHeading}
-        </h3>
+      <div className={CARD}>
+        <h3 className={`mb-4 ${SIM_EYEBROW}`}>{tx.standingsHeading}</h3>
         <div className="space-y-1">
-          <div className="grid grid-cols-[auto_1fr_50px_50px_50px_70px_50px] gap-2 text-[10px] uppercase tracking-wider text-neutral-600 font-bold px-3 pb-2">
+          <div className="grid grid-cols-[auto_1fr_50px_50px_50px_70px_50px] gap-2 px-3 pb-2 font-[family-name:var(--fd)] text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--t4,#807984)] [font-stretch:75%]">
             <span className="w-6">#</span>
             <span>{tx.thTeam}</span>
             <span className="text-center">{tx.thWins}</span>
@@ -59,11 +63,11 @@ export function SimulatorStatsTab({
               return (
                 <div
                   key={row.team.id}
-                  className={`grid grid-cols-[auto_1fr_50px_50px_50px_70px_50px] gap-2 items-center px-3 py-2 rounded-lg text-sm ${
+                  className={`grid grid-cols-[auto_1fr_50px_50px_50px_70px_50px] gap-2 items-center px-3 py-2 rounded-[var(--r-ctrl,4px)] text-sm ${
                     i < 3
-                      ? 'bg-emerald-500/5 border border-emerald-500/10'
+                      ? 'border border-[rgba(127,202,101,.25)] bg-[rgba(127,202,101,.05)]'
                       : i % 2 === 0
-                        ? 'bg-white/[0.01]'
+                        ? 'bg-[var(--s2,#1d1520)]'
                         : ''
                   }`}
                 >
@@ -107,14 +111,12 @@ export function SimulatorStatsTab({
       </div>
 
       {/* Progression */}
-      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-        <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-          {tx.progressionHeading}
-        </h3>
+      <div className={CARD}>
+        <h3 className={`mb-4 ${SIM_EYEBROW}`}>{tx.progressionHeading}</h3>
         <div className="flex items-center gap-4">
-          <div className="flex-1 h-4 bg-neutral-800 rounded-full overflow-hidden">
+          <div className="h-4 flex-1 overflow-hidden rounded-full bg-[var(--s3,#2f2732)]">
             <div
-              className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all"
+              className="h-full rounded-full bg-[var(--lf,#7fca65)] transition-all"
               style={{
                 width: `${stats.total > 0 ? (stats.finished / stats.total) * 100 : 0}%`,
               }}
@@ -128,7 +130,7 @@ export function SimulatorStatsTab({
           </span>
         </div>
         <div className="flex items-center justify-between mt-2">
-          <p className="text-xs text-neutral-500">
+          <p className={SIM_MUTED}>
             {format(tx.matchesFinishedProgress, {
               finished: stats.finished,
               total: stats.total,
@@ -146,96 +148,58 @@ export function SimulatorStatsTab({
 
       {/* Competitiveness metrics */}
       {stats.finished > 0 && (
-        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-          <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-            {tx.competitivenessHeading}
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="space-y-1">
-              <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                {tx.closeMatches}
-              </div>
-              <div className="text-xl font-bold text-amber-400">
-                {stats.competitiveness.closeMatches}
-              </div>
-              <div className="text-[10px] text-neutral-500">
-                {format(tx.statPctOfMatches, {
-                  pct: stats.competitiveness.closeMatchPct,
-                })}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                {tx.upsets}
-              </div>
-              <div className="text-xl font-bold text-rose-400">
-                {stats.competitiveness.upsets}
-              </div>
-              <div className="text-[10px] text-neutral-500">
-                {format(tx.statPctOfMatches, {
-                  pct: stats.competitiveness.upsetPct,
-                })}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                {tx.mapsPerMatch}
-              </div>
-              <div className="text-xl font-bold text-sky-400">
-                {stats.competitiveness.avgMapsPerMatch}
-              </div>
-              <div className="text-[10px] text-neutral-500">{tx.average}</div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                {tx.longestStreak}
-              </div>
-              <div className="text-xl font-bold text-emerald-400">
-                {stats.competitiveness.maxWinStreak}
-              </div>
-              <div className="text-[10px] text-neutral-500">
-                {tx.consecutiveWins}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                {tx.avgJourney}
-              </div>
-              <div className="text-xl font-bold text-purple-400">
-                {stats.competitiveness.avgTeamJourney}
-              </div>
-              <div className="text-[10px] text-neutral-500">
-                {tx.matchesPerTeam}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                {tx.dominance}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="text-xl font-bold text-neutral-300">
-                  {stats.competitiveness.dominanceScore}%
-                </div>
-              </div>
-              <div className="text-[10px] text-neutral-500">
-                {stats.competitiveness.dominanceScore < 30
+        <div className={CARD}>
+          <h3 className={`mb-4 ${SIM_EYEBROW}`}>{tx.competitivenessHeading}</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <StatTile
+              label={tx.closeMatches}
+              value={stats.competitiveness.closeMatches}
+              hint={format(tx.statPctOfMatches, {
+                pct: stats.competitiveness.closeMatchPct,
+              })}
+            />
+            <StatTile
+              label={tx.upsets}
+              value={stats.competitiveness.upsets}
+              hint={format(tx.statPctOfMatches, {
+                pct: stats.competitiveness.upsetPct,
+              })}
+            />
+            <StatTile
+              label={tx.mapsPerMatch}
+              value={stats.competitiveness.avgMapsPerMatch}
+              hint={tx.average}
+            />
+            <StatTile
+              label={tx.longestStreak}
+              value={stats.competitiveness.maxWinStreak}
+              hint={tx.consecutiveWins}
+            />
+            <StatTile
+              label={tx.avgJourney}
+              value={stats.competitiveness.avgTeamJourney}
+              hint={tx.matchesPerTeam}
+            />
+            <StatTile
+              label={tx.dominance}
+              value={`${stats.competitiveness.dominanceScore}%`}
+              hint={
+                stats.competitiveness.dominanceScore < 30
                   ? tx.domVeryBalanced
                   : stats.competitiveness.dominanceScore < 50
                     ? tx.domBalanced
                     : stats.competitiveness.dominanceScore < 70
                       ? tx.domOneFavorite
-                      : tx.domDomination}
-              </div>
-            </div>
+                      : tx.domDomination
+              }
+            />
           </div>
         </div>
       )}
 
       {/* Round-by-round breakdown */}
-      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-        <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-          {tx.roundDetailHeading}
-        </h3>
+      <div className={CARD}>
+        <h3 className={`mb-4 ${SIM_EYEBROW}`}>{tx.roundDetailHeading}</h3>
         <div className="space-y-2">
           {(() => {
             const allMatches = stages.flatMap((s) => s.matches);
@@ -268,14 +232,14 @@ export function SimulatorStatsTab({
                   <span className="text-xs text-neutral-400 w-32 truncate">
                     {data.name}
                   </span>
-                  <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--s3,#2f2732)]">
                     <div
                       className={`h-full rounded-full transition-all ${
                         pct === 100
                           ? 'bg-emerald-500'
                           : pct > 0
-                            ? 'bg-blue-500'
-                            : 'bg-neutral-700'
+                            ? 'bg-[var(--or,#b467d1)]'
+                            : 'bg-[var(--s3,#2f2732)]'
                       }`}
                       style={{ width: `${pct}%` }}
                     />
@@ -309,17 +273,15 @@ export function SimulatorStatsTab({
           );
 
           return (
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-              <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-                {tx.h2hHeading}
-              </h3>
+            <div className={CARD}>
+              <h3 className={`mb-4 ${SIM_EYEBROW}`}>{tx.h2hHeading}</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b border-white/10">
+                    <tr className="border-b border-[var(--line2,rgba(194,196,201,.2))]">
                       <th
                         scope="col"
-                        className="text-left py-2 pr-2 text-neutral-500 font-semibold sticky left-0 bg-surface-sunken z-10"
+                        className="text-left py-2 pr-2 text-neutral-500 font-semibold sticky left-0 bg-[var(--s1,#100812)] z-10"
                       >
                         {tx.vs}
                       </th>
@@ -336,8 +298,11 @@ export function SimulatorStatsTab({
                   </thead>
                   <tbody>
                     {sortedTeams.map((t1) => (
-                      <tr key={t1.id} className="border-b border-white/[0.03]">
-                        <td className="py-1.5 pr-2 font-medium text-neutral-300 sticky left-0 bg-surface-sunken z-10">
+                      <tr
+                        key={t1.id}
+                        className="border-b border-[var(--line,rgba(194,196,201,.12))]"
+                      >
+                        <td className="py-1.5 pr-2 font-medium text-neutral-300 sticky left-0 bg-[var(--s1,#100812)] z-10">
                           {t1.short_name}
                         </td>
                         {sortedTeams.map((t2) => {

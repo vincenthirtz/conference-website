@@ -19,6 +19,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTcgFanart from '@/lib/i18n/locales/admin-fr/adminTcgFanart';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type Status = 'pending' | 'approved' | 'rejected' | 'revoked';
 
@@ -132,10 +133,10 @@ export default function TcgFanartPanel() {
             type="button"
             aria-pressed={status === value}
             onClick={() => setStatus(value)}
-            className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+            className={`h-[30px] rounded-[var(--r-ctrl,4px)] border px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.12em] transition [font-stretch:75%] ${
               status === value
-                ? 'border-violet-400 bg-violet-600/30 text-white'
-                : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                ? 'border-[var(--or,#b467d1)] text-[var(--or-200,#eec4ff)]'
+                : 'border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t3,#a39ba6)] hover:border-[var(--t4,#807984)]'
             }`}
           >
             {statusLabel[value]}
@@ -157,7 +158,7 @@ export default function TcgFanartPanel() {
           {data.items.map((item) => (
             <li
               key={item.id}
-              className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/60"
+              className="overflow-hidden rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]"
             >
               {item.imageUrl ? (
                 // Bucket public, hors `remotePatterns` de next/image.
@@ -172,7 +173,7 @@ export default function TcgFanartPanel() {
                 />
               ) : (
                 <div
-                  className="aspect-[3/4] w-full bg-neutral-800"
+                  className="aspect-[3/4] w-full bg-[var(--s2,#1d1520)]"
                   aria-hidden
                 />
               )}
@@ -187,7 +188,7 @@ export default function TcgFanartPanel() {
                       href={item.artistUrl}
                       target="_blank"
                       rel="noreferrer nofollow"
-                      className="text-xs text-violet-300 underline underline-offset-2"
+                      className="text-xs text-[var(--or-200,#eec4ff)] underline underline-offset-2"
                     >
                       {t.artistLink}
                     </a>
@@ -217,7 +218,7 @@ export default function TcgFanartPanel() {
                               [item.id]: e.target.value,
                             }))
                           }
-                          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+                          className="mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white focus:border-[var(--or,#b467d1)] focus:outline-none"
                         >
                           {data.rarities.map((rarity) => (
                             <option key={rarity} value={rarity}>
@@ -237,38 +238,38 @@ export default function TcgFanartPanel() {
                             [item.id]: e.target.value,
                           }))
                         }
-                        className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+                        className="mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white focus:border-[var(--or,#b467d1)] focus:outline-none"
                       />
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {item.status === 'pending' ? (
                         <>
-                          <button
-                            type="button"
+                          <AdminButton
+                            variant="secondary"
+                            size="sm"
                             disabled={busy === item.id}
                             onClick={() => void decide(item, 'approve')}
-                            className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
                           >
                             {t.approve}
-                          </button>
-                          <button
-                            type="button"
+                          </AdminButton>
+                          <AdminButton
+                            variant="danger"
+                            size="sm"
                             disabled={busy === item.id}
                             onClick={() => void decide(item, 'reject')}
-                            className="rounded-lg border border-red-500/50 px-3 py-2 text-sm text-red-200 hover:border-red-400 disabled:opacity-50"
                           >
                             {t.reject}
-                          </button>
+                          </AdminButton>
                         </>
                       ) : (
-                        <button
-                          type="button"
+                        <AdminButton
+                          variant="ghost"
+                          size="sm"
                           disabled={busy === item.id}
                           onClick={() => void decide(item, 'revoke')}
-                          className="rounded-lg border border-amber-500/50 px-3 py-2 text-sm text-amber-100 hover:border-amber-400 disabled:opacity-50"
                         >
                           {t.revoke}
-                        </button>
+                        </AdminButton>
                       )}
                     </div>
                   </div>

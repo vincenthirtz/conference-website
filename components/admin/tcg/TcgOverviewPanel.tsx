@@ -71,6 +71,8 @@ import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import StatCard from '@/components/admin/dashboard/StatCard';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 import { RARITY_ORDER } from '@/utils/tcg/rarity';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import {
@@ -336,7 +338,9 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-white">{labels.heading}</h2>
+      <h2 className="text-lg font-semibold text-[var(--t1,#f4edf7)]">
+        {labels.heading}
+      </h2>
       <p className="mt-1 text-sm text-gray-400">{labels.subtitle}</p>
       {measuredAt && (
         <p className="mt-1 text-xs text-gray-500">
@@ -347,13 +351,9 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
       {error && (
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <AlertBanner message={labels.loadError} variant="error" />
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="rounded-full border border-white/15 px-4 py-1.5 text-sm text-gray-200 transition hover:bg-white/5"
-          >
+          <AdminButton size="sm" onClick={() => void load()}>
             {labels.retry}
-          </button>
+          </AdminButton>
         </div>
       )}
 
@@ -467,8 +467,8 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
                 arrivent des matchs, des drops en direct ou d'un cadeau ; la
                 ventilation des paquets ne le dit qu'à moitié, puisqu'un gain
                 en pièces seules (recyclage, ajustement) n'a pas de paquet. */}
-            <div className="mt-4 border-t border-white/10 pt-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            <div className="mt-4 border-t border-[var(--line,rgba(194,196,201,.12))] pt-3">
+              <p className="font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
                 {labels.coinsBySourceTitle}
               </p>
               {data.coins.earnedBySource === null ? null : Object.keys(
@@ -550,7 +550,7 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
             {rarityTotal > 0 && (
               <>
                 <div
-                  className="mt-4 flex h-2 overflow-hidden rounded-full bg-white/5"
+                  className="mt-4 flex h-2 overflow-hidden rounded-full bg-[var(--s3,#2f2732)]"
                   aria-hidden="true"
                 >
                   {RARITY_ORDER.map((rarity) => {
@@ -647,7 +647,7 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
                   return (
                     <li
                       key={`${subject.kind}:${subject.id ?? index}`}
-                      className="flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm odd:bg-white/[0.02]"
+                      className="flex items-center gap-3 rounded-[var(--r-ctrl,4px)] px-2 py-1.5 text-sm odd:bg-[var(--s2,#1d1520)]"
                     >
                       <span className="w-5 shrink-0 text-right text-xs text-gray-500">
                         {index + 1}
@@ -667,7 +667,7 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
                         // portrait inventé (le projet n'utilise pas d'image IA).
                         <span
                           aria-hidden="true"
-                          className="h-7 w-7 shrink-0 rounded-full bg-white/5"
+                          className="h-7 w-7 shrink-0 rounded-full bg-[var(--s3,#2f2732)]"
                         />
                       )}
 
@@ -686,7 +686,7 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
                         )}
                       </span>
 
-                      <span className="shrink-0 rounded-full bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-gray-400">
+                      <Chip>
                         {subject.kind === 'team'
                           ? labels.kindTeam
                           : subject.kind === 'map'
@@ -698,7 +698,7 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
                               : subject.kind === 'mascot'
                                 ? labels.kindMascot
                                 : labels.kindPlayer}
-                      </span>
+                      </Chip>
 
                       {/* Un brillant est un exemplaire, pas une carte de plus :
                           la mention reste secondaire, à côté du total. */}

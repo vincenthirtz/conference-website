@@ -15,6 +15,8 @@ import AdminPagination from '@/components/admin/AdminPagination';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { ScrimPlanning } from '@/types/admin';
 import nsAdminScrimPlanningsList from '@/lib/i18n/locales/admin-fr/adminScrimPlanningsList';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type Dict = typeof nsAdminScrimPlanningsList.fr;
 
@@ -33,18 +35,18 @@ function statusLabel(status: string, t: Dict) {
   }
 }
 
-function statusColor(status: string) {
+function statusTone(status: string): ChipTone {
   switch (status) {
     case 'open':
-      return 'bg-blue-600 text-white';
+      return 'brand';
     case 'validated':
-      return 'bg-emerald-600 text-white';
+      return 'ok';
     case 'closed':
-      return 'bg-neutral-600 text-neutral-100';
+      return 'neutral';
     case 'cancelled':
-      return 'bg-red-700 text-red-100';
+      return 'err';
     default:
-      return 'bg-neutral-700 text-neutral-200';
+      return 'neutral';
   }
 }
 
@@ -192,16 +194,17 @@ export default function ScrimPlanningsListPanel() {
       />
 
       <div className="mb-6 flex justify-end">
-        <button
+        <AdminButton
+          variant="primary"
+          size="md"
           type="button"
           onClick={() => setModalOpen(true)}
-          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors"
         >
           {t.newPlanning}
-        </button>
+        </AdminButton>
       </div>
 
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 mb-6 flex flex-wrap gap-3 items-end">
+      <section className="bg-[var(--s2,#1d1520)] backdrop-blur border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] p-4 mb-6 flex flex-wrap gap-3 items-end">
         <div className="flex-1 min-w-[220px]">
           <label
             className="block text-sm text-neutral-400 mb-1"
@@ -222,7 +225,7 @@ export default function ScrimPlanningsListPanel() {
             }}
             onBlur={submitSearch}
             placeholder={t.searchPlaceholder}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600"
+            className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s1,#100812)] border border-[var(--line2,rgba(194,196,201,.2))]"
           />
         </div>
 
@@ -237,7 +240,7 @@ export default function ScrimPlanningsListPanel() {
             id="plannings-status"
             value={statusFilter}
             onChange={(e) => setFilters({ pstatus: e.target.value || null })}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600"
+            className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s1,#100812)] border border-[var(--line2,rgba(194,196,201,.2))]"
           >
             <option value="">{t.filterAll}</option>
             <option value="open">{t.statusOpen}</option>
@@ -260,17 +263,13 @@ export default function ScrimPlanningsListPanel() {
             <Link
               key={p.id}
               href={`/admin/scrims/plannings/${p.id}`}
-              className="block bg-neutral-800/50 hover:bg-neutral-800 border border-neutral-700/50 rounded-xl px-5 py-4 transition-colors"
+              className="block bg-[var(--s1,#100812)] border border-[var(--line2,rgba(194,196,201,.2))] hover:border-[var(--or,#b467d1)] rounded-[var(--r-card,14px)] px-5 py-4 transition-colors"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span
-                    className={`px-2 py-0.5 rounded-md text-xs font-semibold ${statusColor(
-                      p.status
-                    )}`}
-                  >
+                  <Chip tone={statusTone(p.status)}>
                     {statusLabel(p.status, t)}
-                  </span>
+                  </Chip>
                   <span className="font-medium">{p.title || t.untitled}</span>
                   {p.game && (
                     <span className="text-xs text-neutral-500">{p.game}</span>

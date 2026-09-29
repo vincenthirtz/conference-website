@@ -8,6 +8,8 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { logger } from '../../utils/logger';
 import nsAdminMatchCastAssignments from '@/lib/i18n/locales/admin-fr/adminMatchCastAssignments';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { CARD, TILE } from '@/features/admin/stages/ui/rubanClasses';
 
 type CastMember = {
   id: string;
@@ -176,7 +178,7 @@ export default function MatchCastAssignments({ matchId }: Props) {
   return (
     <>
       {dialog}
-      <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 space-y-4">
+      <section className={`space-y-4 ${CARD}`}>
         <div>
           <h2 className="text-lg font-semibold">{t.heading}</h2>
           <p className="text-xs text-neutral-500 mt-0.5">{t.headingDesc}</p>
@@ -191,10 +193,7 @@ export default function MatchCastAssignments({ matchId }: Props) {
             ) : (
               <ul className="space-y-2">
                 {assignments.map((a) => (
-                  <li
-                    key={a.id}
-                    className="rounded-lg border border-neutral-700 bg-neutral-900/40 p-3"
-                  >
+                  <li key={a.id} className={`p-3 ${TILE}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="text-sm font-medium truncate">
@@ -218,13 +217,13 @@ export default function MatchCastAssignments({ matchId }: Props) {
                           </div>
                         )}
                       </div>
-                      <button
-                        type="button"
+                      <AdminButton
+                        variant="danger"
+                        size="xs"
                         onClick={() => handleDelete(a.id)}
-                        className="text-xs text-red-300 hover:text-red-200 flex-shrink-0"
                       >
                         {t.remove}
-                      </button>
+                      </AdminButton>
                     </div>
                     <div className="mt-2">
                       <input
@@ -236,7 +235,7 @@ export default function MatchCastAssignments({ matchId }: Props) {
                             handleReschedule(a.id, v);
                           }
                         }}
-                        className="w-full text-xs px-2 py-1 rounded bg-neutral-900/70 border border-neutral-700"
+                        className="w-full px-2 py-1 text-xs rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                       />
                     </div>
                   </li>
@@ -247,7 +246,7 @@ export default function MatchCastAssignments({ matchId }: Props) {
             {availableCasters.length > 0 ? (
               <form
                 onSubmit={handleAdd}
-                className="space-y-2 border-t border-neutral-700 pt-3"
+                className="space-y-2 border-t border-[var(--line,rgba(194,196,201,.12))] pt-3"
               >
                 <label className="block text-xs text-neutral-400">
                   {t.addLabel}
@@ -255,7 +254,7 @@ export default function MatchCastAssignments({ matchId }: Props) {
                 <select
                   value={castMemberId}
                   onChange={(e) => setCastMemberId(e.target.value)}
-                  className="w-full px-2 py-1.5 rounded bg-neutral-900/70 border border-neutral-700 text-sm"
+                  className="w-full px-2 py-1.5 text-sm rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                 >
                   <option value="">{t.choosePlaceholder}</option>
                   {availableCasters.map((c) => (
@@ -269,19 +268,21 @@ export default function MatchCastAssignments({ matchId }: Props) {
                   type="datetime-local"
                   value={briefingAt}
                   onChange={(e) => setBriefingAt(e.target.value)}
-                  className="w-full px-2 py-1.5 rounded bg-neutral-900/70 border border-neutral-700 text-sm"
+                  className="w-full px-2 py-1.5 text-sm rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                 />
-                <button
+                <AdminButton
                   type="submit"
+                  variant="primary"
+                  size="sm"
                   disabled={submitting || !castMemberId || !briefingAt}
-                  className="w-full px-3 py-1.5 rounded bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-sm font-medium"
+                  className="w-full"
                 >
                   {submitting ? '…' : t.assign}
-                </button>
+                </AdminButton>
               </form>
             ) : (
               assignments.length > 0 && (
-                <div className="text-xs text-neutral-500 border-t border-neutral-700 pt-3">
+                <div className="border-t border-[var(--line,rgba(194,196,201,.12))] pt-3 text-xs text-[var(--t4,#807984)]">
                   {t.allAssigned}
                 </div>
               )

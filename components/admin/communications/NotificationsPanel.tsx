@@ -31,6 +31,8 @@ import {
   urlBase64ToUint8Array,
 } from '@/utils/webPush';
 import nsAdminNotifications from '@/lib/i18n/locales/admin-fr/adminNotifications';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 type PrefRow = { event_type: WebPushEventType; enabled: boolean };
 type PrefsResponse = { prefs: PrefRow[] };
@@ -487,7 +489,7 @@ export default function NotificationsPanel() {
 
       {/* ===== Section : État ===== */}
       <section
-        className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6"
+        className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6 mb-6"
         data-testid="notifications-status-section"
       >
         <h2 className="text-xl font-semibold mb-1">{t.deviceStatusHeading}</h2>
@@ -496,58 +498,58 @@ export default function NotificationsPanel() {
         </p>
 
         <div className="flex items-center gap-3 mb-4">
-          <span
-            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+          <Chip
+            tone={
               statusInfo.variant === 'success'
-                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                ? 'ok'
                 : statusInfo.variant === 'warning'
-                  ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+                  ? 'warn'
                   : statusInfo.variant === 'error'
-                    ? 'bg-red-500/15 border-red-500/30 text-red-300'
-                    : 'bg-blue-500/15 border-blue-500/30 text-blue-300'
-            }`}
+                    ? 'err'
+                    : 'neutral'
+            }
             data-testid="notifications-status-pill"
           >
             {statusInfo.label}
-          </span>
+          </Chip>
         </div>
 
         <div className="flex flex-wrap gap-3">
           {subStatus.state !== 'subscribed' && (
-            <button
-              type="button"
+            <AdminButton
+              variant="secondary"
+              size="sm"
               onClick={handleSubscribe}
               disabled={
                 subBusy ||
                 subStatus.state === 'unsupported' ||
                 subStatus.state === 'denied'
               }
-              className="px-4 py-2 bg-purple-500 hover:bg-purple-400 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="notifications-subscribe-btn"
             >
               {subBusy ? t.subscribing : t.subscribe}
-            </button>
+            </AdminButton>
           )}
           {subStatus.state === 'subscribed' && (
-            <button
-              type="button"
+            <AdminButton
+              variant="ghost"
+              size="sm"
               onClick={handleUnsubscribe}
               disabled={subBusy}
-              className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
               data-testid="notifications-unsubscribe-btn"
             >
               {subBusy ? t.unsubscribing : t.unsubscribe}
-            </button>
+            </AdminButton>
           )}
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             onClick={handleSendTest}
             disabled={testing || !pwaEnabled}
-            className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
             data-testid="notifications-test-btn"
           >
             {testing ? t.testSending : t.sendTest}
-          </button>
+          </AdminButton>
         </div>
 
         {subStatus.state === 'denied' && (
@@ -557,7 +559,7 @@ export default function NotificationsPanel() {
 
       {/* ===== Section : Préférences ===== */}
       <section
-        className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6"
+        className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6 mb-6"
         data-testid="notifications-prefs-section"
       >
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
@@ -565,15 +567,15 @@ export default function NotificationsPanel() {
             <h2 className="text-xl font-semibold mb-1">{t.prefsHeading}</h2>
             <p className="text-sm text-neutral-400">{t.prefsSubtitle}</p>
           </div>
-          <button
-            type="button"
+          <AdminButton
+            variant="primary"
+            size="sm"
             onClick={savePrefs}
             disabled={loadingPrefs || savingPrefs || !prefs}
-            className="px-4 py-2 bg-purple-500 hover:bg-purple-400 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="notifications-save-btn"
           >
             {savingPrefs ? t.savingPrefs : t.savePrefs}
-          </button>
+          </AdminButton>
         </div>
 
         <AlertBanner
@@ -597,7 +599,7 @@ export default function NotificationsPanel() {
                     {group.description}
                   </p>
                 )}
-                <ul className="divide-y divide-neutral-700/50 rounded-lg border border-neutral-700/50 overflow-hidden">
+                <ul className="divide-y divide-[var(--line,rgba(194,196,201,.12))] rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] overflow-hidden">
                   {group.events.map((evt) => {
                     const enabled = prefsMap.get(evt.type) ?? true;
                     return (

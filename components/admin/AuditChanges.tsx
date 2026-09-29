@@ -38,7 +38,7 @@ export default function AuditChangesView({ payload }: { payload: Payload }) {
     isChanges(changes) || isRecord(before) || isRecord(after);
 
   return (
-    <div className="space-y-2 border-t border-neutral-800 bg-neutral-950 p-3 text-xs text-neutral-300">
+    <div className="space-y-2 border-t border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-3 text-xs text-[var(--t2,#c7bfca)]">
       {isChanges(changes) && Object.keys(changes).length > 0 && (
         <section aria-label={t.changesTitle}>
           <p className="mb-1 font-semibold text-neutral-400">

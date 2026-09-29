@@ -5,6 +5,8 @@ import { useAdminResource } from '@/hooks/useAdminResource';
 import AdminListShell from '@/components/admin/AdminListShell';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminEmailLogs from '@/lib/i18n/locales/admin-fr/adminEmailLogs';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type Dict = typeof nsAdminEmailLogs.fr;
 
@@ -36,46 +38,46 @@ const PAGE_LIMIT = 50;
 
 const getEventLabels = (
   t: Dict
-): Record<string, { label: string; color: string }> => ({
+): Record<string, { label: string; tone: ChipTone }> => ({
   requests: {
     label: t.eventRequests,
-    color: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+    tone: 'neutral',
   },
   delivered: {
     label: t.eventDelivered,
-    color: 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30',
+    tone: 'ok',
   },
   opened: {
     label: t.eventOpened,
-    color: 'bg-violet-600/20 text-violet-300 border-violet-500/30',
+    tone: 'brand',
   },
   clicks: {
     label: t.eventClicks,
-    color: 'bg-cyan-600/20 text-cyan-300 border-cyan-500/30',
+    tone: 'brand',
   },
   softBounces: {
     label: t.eventSoftBounces,
-    color: 'bg-amber-600/20 text-amber-300 border-amber-500/30',
+    tone: 'warn',
   },
   hardBounces: {
     label: t.eventHardBounces,
-    color: 'bg-red-600/20 text-red-300 border-red-500/30',
+    tone: 'err',
   },
   spam: {
     label: t.eventSpam,
-    color: 'bg-red-600/20 text-red-300 border-red-500/30',
+    tone: 'err',
   },
   blocked: {
     label: t.eventBlocked,
-    color: 'bg-red-600/20 text-red-300 border-red-500/30',
+    tone: 'err',
   },
   invalid: {
     label: t.eventInvalid,
-    color: 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30',
+    tone: 'neutral',
   },
   deferred: {
     label: t.eventDeferred,
-    color: 'bg-amber-600/20 text-amber-300 border-amber-500/30',
+    tone: 'warn',
   },
 });
 
@@ -250,12 +252,12 @@ export default function EmailLogsPanel() {
       <div className="mb-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+            <h1 className="font-[family-name:var(--fd)] text-3xl md:text-4xl font-extrabold tracking-tight [font-stretch:75%]">
               {t.heading}
             </h1>
             <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
           </div>
-          <div className="text-xs text-neutral-500 bg-neutral-800/50 px-3 py-2 rounded-xl border border-neutral-700/50">
+          <div className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-3 py-2 text-xs text-neutral-500">
             {t.quota}
           </div>
         </div>
@@ -263,7 +265,7 @@ export default function EmailLogsPanel() {
 
       {/* Error */}
       {errorMsg && (
-        <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+        <div className="mb-6 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] text-[#ffc2c2] px-4 py-3 text-sm flex items-center gap-2">
           <svg
             className="w-5 h-5 text-red-400 flex-shrink-0"
             fill="currentColor"
@@ -276,18 +278,14 @@ export default function EmailLogsPanel() {
             />
           </svg>
           <span className="flex-1">{errorMsg}</span>
-          <button
-            type="button"
-            onClick={() => fetchEvents()}
-            className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
-          >
+          <AdminButton variant="ghost" size="xs" onClick={() => fetchEvents()}>
             {t.retry}
-          </button>
+          </AdminButton>
         </div>
       )}
 
       {/* Test email */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6 mb-6">
         <h2 className="text-sm font-semibold text-neutral-300 mb-3 flex items-center gap-2">
           <svg
             className="w-4 h-4"
@@ -309,17 +307,17 @@ export default function EmailLogsPanel() {
             <input
               type="email"
               placeholder={t.testPlaceholder}
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
               value={testTo}
               onChange={(e) => setTestTo(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendTestEmail()}
             />
           </div>
-          <button
-            type="button"
+          <AdminButton
+            variant="secondary"
+            size="sm"
             onClick={sendTestEmail}
             disabled={testSending || !testTo.trim()}
-            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {testSending ? (
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -339,13 +337,13 @@ export default function EmailLogsPanel() {
               </svg>
             )}
             {t.testSend}
-          </button>
+          </AdminButton>
           {testResult && (
             <span
-              className={`text-sm px-3 py-2 rounded-xl border ${
+              className={`text-sm px-3 py-2 rounded-[var(--r-ctrl,4px)] border ${
                 testResult.ok
-                  ? 'bg-emerald-900/40 border-emerald-500/50 text-emerald-300'
-                  : 'bg-red-900/40 border-red-500/50 text-red-300'
+                  ? 'bg-[rgba(127,202,101,.08)] border-[rgba(127,202,101,.36)] text-[var(--lf-200,#b3e7a3)]'
+                  : 'bg-[rgba(255,107,107,.08)] border-[rgba(255,107,107,.45)] text-[#ffc2c2]'
               }`}
             >
               {testResult.msg}
@@ -355,7 +353,7 @@ export default function EmailLogsPanel() {
       </section>
 
       {/* Filters */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6 mb-6">
         <form
           onSubmit={handleFilterSubmit}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end"
@@ -367,7 +365,7 @@ export default function EmailLogsPanel() {
             <input
               type="text"
               placeholder={t.placeholderEmail}
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
               value={emailFilter}
               onChange={(e) => setEmailFilter(e.target.value)}
             />
@@ -378,7 +376,7 @@ export default function EmailLogsPanel() {
               {t.labelStatus}
             </label>
             <select
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
               value={eventFilter}
               onChange={(e) => setEventFilter(e.target.value)}
             >
@@ -397,7 +395,7 @@ export default function EmailLogsPanel() {
             </label>
             <input
               type="date"
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
             />
@@ -409,15 +407,17 @@ export default function EmailLogsPanel() {
             </label>
             <input
               type="date"
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
             />
           </div>
 
-          <button
+          <AdminButton
+            variant="primary"
+            size="sm"
             type="submit"
-            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+            className="justify-center"
           >
             <svg
               className="w-4 h-4"
@@ -433,7 +433,7 @@ export default function EmailLogsPanel() {
               />
             </svg>
             {t.filter}
-          </button>
+          </AdminButton>
         </form>
       </section>
 
@@ -454,7 +454,7 @@ export default function EmailLogsPanel() {
       />
 
       {/* Liste */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] overflow-hidden">
         <AdminListShell
           loading={loading}
           error={null}
@@ -478,14 +478,14 @@ export default function EmailLogsPanel() {
           }
         >
           {view === 'messages' && (
-            <div className="divide-y divide-neutral-700/50">
+            <div className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
               {messages.map((m) => (
                 <div
                   key={m.messageId}
                   className="p-4 hover:bg-neutral-700/30 transition-colors"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                    <span className="text-xs font-mono text-neutral-500 bg-neutral-900/50 px-2 py-1 rounded-lg">
+                    <span className="text-xs font-mono text-neutral-500 rounded-[3px] bg-[var(--s2,#1d1520)] px-2 py-1">
                       {formatDateTime(m.date)}
                     </span>
                     <span
@@ -509,22 +509,18 @@ export default function EmailLogsPanel() {
                     {STATUS_ORDER.filter((s) => m.statuses[s]).map((s) => {
                       const style = eventLabels[s] || {
                         label: s,
-                        color:
-                          'bg-neutral-600/20 text-neutral-300 border-neutral-500/30',
+                        tone: 'neutral' as ChipTone,
                       };
                       const count = m.statuses[s];
                       return (
-                        <span
-                          key={s}
-                          className={`px-2 py-0.5 rounded-lg text-xs font-semibold border ${style.color}`}
-                        >
+                        <Chip key={s} tone={style.tone}>
                           {style.label}
                           {count > 1 ? ` ×${count}` : ''}
-                        </span>
+                        </Chip>
                       );
                     })}
                     {m.tag && (
-                      <span className="px-2 py-0.5 rounded-lg bg-neutral-700/50 border border-neutral-600/50 text-xs text-neutral-400">
+                      <span className="rounded-[3px] border border-[var(--line2,rgba(194,196,201,.2))] px-2 py-0.5 text-xs text-neutral-400">
                         {m.tag}
                       </span>
                     )}
@@ -535,12 +531,11 @@ export default function EmailLogsPanel() {
           )}
 
           {view === 'events' && (
-            <div className="divide-y divide-neutral-700/50">
+            <div className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
               {events.map((ev, i) => {
                 const style = eventLabels[ev.event] || {
                   label: ev.event,
-                  color:
-                    'bg-neutral-600/20 text-neutral-300 border-neutral-500/30',
+                  tone: 'neutral' as ChipTone,
                 };
                 return (
                   <div
@@ -549,14 +544,10 @@ export default function EmailLogsPanel() {
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-mono text-neutral-500 bg-neutral-900/50 px-2 py-1 rounded-lg">
+                        <span className="text-xs font-mono text-neutral-500 rounded-[3px] bg-[var(--s2,#1d1520)] px-2 py-1">
                           {formatDateTime(ev.date)}
                         </span>
-                        <span
-                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border ${style.color}`}
-                        >
-                          {style.label}
-                        </span>
+                        <Chip tone={style.tone}>{style.label}</Chip>
                       </div>
                       <span
                         className="text-sm font-medium text-white truncate max-w-[240px]"
@@ -590,7 +581,7 @@ export default function EmailLogsPanel() {
                         </span>
                       )}
                       {ev.tag && (
-                        <span className="px-2 py-0.5 rounded-lg bg-neutral-700/50 border border-neutral-600/50">
+                        <span className="rounded-[3px] border border-[var(--line2,rgba(194,196,201,.2))] px-2 py-0.5">
                           {ev.tag}
                         </span>
                       )}
@@ -606,11 +597,11 @@ export default function EmailLogsPanel() {
       {/* Pagination */}
       {events.length > 0 && (
         <div className="flex justify-between items-center mt-6">
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             disabled={offset === 0}
             onClick={prevPage}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <svg
               className="w-4 h-4"
@@ -626,7 +617,7 @@ export default function EmailLogsPanel() {
               />
             </svg>
             {t.previous}
-          </button>
+          </AdminButton>
 
           <span className="text-neutral-400 text-sm">
             {view === 'messages'
@@ -634,11 +625,11 @@ export default function EmailLogsPanel() {
               : `${offset + 1} – ${offset + events.length}`}
           </span>
 
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             disabled={events.length < PAGE_LIMIT}
             onClick={nextPage}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {t.next}
             <svg
@@ -654,7 +645,7 @@ export default function EmailLogsPanel() {
                 d="M9 5l7 7-7 7"
               />
             </svg>
-          </button>
+          </AdminButton>
         </div>
       )}
     </>

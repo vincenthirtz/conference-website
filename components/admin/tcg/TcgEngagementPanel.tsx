@@ -20,6 +20,13 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
 import nsAdminTcgPage from '@/lib/i18n/locales/admin-fr/adminTcgPage';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import {
+  EYEBROW,
+  FAINT,
+  MUTED,
+  STRONG,
+} from '@/features/admin/stages/ui/rubanClasses';
 
 type DormantPlayer = {
   userId: string;
@@ -86,7 +93,7 @@ export default function TcgEngagementPanel() {
   }, [data]);
 
   if (!data && !error) {
-    return <p className="text-sm text-neutral-400">{t.catalogueLoading}</p>;
+    return <p className={`text-sm ${MUTED}`}>{t.catalogueLoading}</p>;
   }
 
   const openRate =
@@ -100,7 +107,7 @@ export default function TcgEngagementPanel() {
 
       {data && (
         <>
-          <p className="mb-6 text-sm text-neutral-300">
+          <p className="mb-6 text-sm text-[var(--t2,#c7bfca)]">
             {format(t.engagementSummary, {
               pending: data.totals.pending,
               granted: data.totals.granted,
@@ -109,11 +116,9 @@ export default function TcgEngagementPanel() {
           </p>
 
           <section className="mb-8">
-            <h3 className="mb-3 text-xs uppercase tracking-wide text-neutral-500">
-              {t.engagementTrendHeading}
-            </h3>
+            <h3 className={`mb-3 ${EYEBROW}`}>{t.engagementTrendHeading}</h3>
             {data.weekly.length === 0 ? (
-              <p className="text-sm text-neutral-400">{t.engagementNoTrend}</p>
+              <p className={`text-sm ${MUTED}`}>{t.engagementNoTrend}</p>
             ) : (
               <ul className="flex flex-wrap items-end gap-3">
                 {data.weekly.map((point) => (
@@ -123,19 +128,19 @@ export default function TcgEngagementPanel() {
                       aria-hidden
                     >
                       <span
-                        className="w-3 rounded-t bg-neutral-600"
+                        className="w-3 rounded-t-[2px] bg-[var(--t4,#807984)]"
                         style={{
                           height: `${(point.granted / maxWeekly) * 100}%`,
                         }}
                       />
                       <span
-                        className="w-3 rounded-t bg-emerald-500/70"
+                        className="w-3 rounded-t-[2px] bg-[var(--lf,#7fca65)]"
                         style={{
                           height: `${(point.opened / maxWeekly) * 100}%`,
                         }}
                       />
                     </div>
-                    <span className="mt-1 block text-[11px] text-neutral-500">
+                    <span className={`mt-1 block text-[11px] ${FAINT}`}>
                       {shortDate(point.week)}
                     </span>
                     <span className="sr-only">
@@ -149,23 +154,23 @@ export default function TcgEngagementPanel() {
                 ))}
               </ul>
             )}
-            <p className="mt-2 text-[11px] text-neutral-500">
+            <p className={`mt-2 text-[11px] ${FAINT}`}>
               {t.engagementTrendLegend}
             </p>
           </section>
 
           <section>
-            <h3 className="mb-3 text-xs uppercase tracking-wide text-neutral-500">
+            <h3 className={`mb-3 ${EYEBROW}`}>
               {format(t.engagementListHeading, {
                 count: data.players.length,
               })}
             </h3>
             {data.players.length === 0 ? (
-              <p className="py-8 text-center text-sm text-neutral-400">
+              <p className={`py-8 text-center text-sm ${MUTED}`}>
                 {t.engagementNobody}
               </p>
             ) : (
-              <ul className="divide-y divide-neutral-700/40">
+              <ul className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
                 {data.players.map((player) => {
                   const days = daysSince(player.oldestPendingAt);
                   return (
@@ -176,16 +181,14 @@ export default function TcgEngagementPanel() {
                     >
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-medium text-white">
+                          <span className={`text-sm font-medium ${STRONG}`}>
                             {player.displayName ?? player.userId}
                           </span>
                           {player.neverOpened && (
-                            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] text-amber-100">
-                              {t.engagementNeverOpened}
-                            </span>
+                            <Chip tone="warn">{t.engagementNeverOpened}</Chip>
                           )}
                         </div>
-                        <p className="mt-0.5 text-xs text-neutral-500">
+                        <p className={`mt-0.5 text-xs ${FAINT}`}>
                           {format(t.engagementPending, {
                             pending: player.pending,
                           })}
@@ -198,7 +201,7 @@ export default function TcgEngagementPanel() {
                           question suivante, une fois qu'on a un nom. */}
                       <Link
                         href={`/admin/tcg?tab=vue`}
-                        className="text-xs text-violet-300 underline hover:text-violet-200"
+                        className="text-xs text-[var(--or-200,#eec4ff)] underline hover:text-[var(--t1,#f4edf7)]"
                       >
                         {t.engagementSeeCollection}
                       </Link>

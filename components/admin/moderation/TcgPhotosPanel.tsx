@@ -42,6 +42,9 @@ import {
   photoOwnerLabel,
   type PendingPhoto,
 } from './tcgPhotoQueue';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import { rubanWarn } from '@/features/admin/diffusion/ui/rubanClasses';
 
 function formatDate(value: string | null, locale: string): string {
   if (!value) return '—';
@@ -161,9 +164,9 @@ export default function TcgPhotosPanel() {
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h2 className="text-lg font-semibold text-white">{t.heading}</h2>
         {photos !== null && photos.length > 0 && (
-          <span className="rounded-full bg-white/5 px-2.5 py-0.5 text-xs text-gray-300">
+          <Chip tone="warn">
             {format(t.pendingCount, { count: photos.length })}
-          </span>
+          </Chip>
         )}
       </div>
       <p className="mt-1 text-sm text-gray-400">{t.subtitle}</p>
@@ -171,14 +174,14 @@ export default function TcgPhotosPanel() {
       {loadFailed && (
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <AlertBanner message={t.loadError} variant="error" />
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             onClick={() => void load()}
             disabled={reloading}
-            className="rounded-full border border-white/15 px-4 py-1.5 text-sm text-gray-200 transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 disabled:opacity-50"
           >
             {t.retry}
-          </button>
+          </AdminButton>
         </div>
       )}
 
@@ -205,7 +208,7 @@ export default function TcgPhotosPanel() {
               <li
                 key={photo.userId}
                 aria-busy={isBusy}
-                className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+                className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4"
               >
                 <div className="flex gap-4">
                   {photo.photoUrl ? (
@@ -216,11 +219,11 @@ export default function TcgPhotosPanel() {
                       alt={format(t.photoAlt, { name })}
                       width={128}
                       height={128}
-                      className="h-32 w-32 shrink-0 rounded-xl object-cover"
+                      className="h-32 w-32 shrink-0 rounded-[var(--r-ctrl,4px)] object-cover"
                       unoptimized
                     />
                   ) : (
-                    <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-xl bg-white/5 px-2 text-center text-[11px] text-gray-500">
+                    <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] px-2 text-center text-[11px] text-gray-500">
                       {t.photoMissing}
                     </div>
                   )}
@@ -238,7 +241,7 @@ export default function TcgPhotosPanel() {
                     {photo.hasPlayerProfile === false && (
                       <p
                         role="note"
-                        className="mt-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-xs text-amber-200"
+                        className={`mt-2 px-2 py-1 text-xs ${rubanWarn}`}
                       >
                         <span className="font-semibold">{t.noCardTitle}</span>{' '}
                         {t.noCardBody}
@@ -275,29 +278,29 @@ export default function TcgPhotosPanel() {
                     }))
                   }
                   placeholder={t.reasonPlaceholder}
-                  className="mt-3 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 disabled:opacity-50"
+                  className="mt-3 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 disabled:opacity-50"
                 />
                 <p id={hintId} className="mt-2 text-xs text-gray-500">
                   {t.rejectHint}
                 </p>
 
                 <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
+                  <AdminButton
+                    variant="secondary"
+                    size="sm"
                     disabled={isBusy}
                     onClick={() => void decide(photo, 'approve')}
-                    className="rounded-full border border-emerald-400/30 px-4 py-1.5 text-sm text-emerald-200 transition hover:bg-emerald-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 disabled:opacity-50"
                   >
                     {isBusy ? t.working : t.approve}
-                  </button>
-                  <button
-                    type="button"
+                  </AdminButton>
+                  <AdminButton
+                    variant="danger"
+                    size="sm"
                     disabled={isBusy}
                     onClick={() => void decide(photo, 'reject')}
-                    className="rounded-full border border-rose-400/30 px-4 py-1.5 text-sm text-rose-200 transition hover:bg-rose-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 disabled:opacity-50"
                   >
                     {isBusy ? t.working : t.reject}
-                  </button>
+                  </AdminButton>
                 </div>
               </li>
             );

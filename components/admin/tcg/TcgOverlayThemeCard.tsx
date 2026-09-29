@@ -26,6 +26,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import {
+  rubanErr,
+  rubanEyebrow,
+  rubanInput,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 import TcgAnnouncement from '@/components/overlay/TcgAnnouncement';
 import {
   DEFAULT_OVERLAY_THEME,
@@ -180,22 +186,17 @@ export default function TcgOverlayThemeCard({ labels }: Props) {
       </p>
 
       {error && (
-        <div
-          role="alert"
-          className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200"
-        >
+        <div role="alert" className={`mb-4 px-3 py-2 text-xs ${rubanErr}`}>
           {error}
         </div>
       )}
 
       {/* --- L'aperçu, en premier : on regarde avant de régler. ------------ */}
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-        {labels.previewTitle}
-      </p>
+      <p className={`mb-2 ${rubanEyebrow}`}>{labels.previewTitle}</p>
       <div
         // Damier discret : une source OBS a un FOND TRANSPARENT, et le montrer
         // sur un aplat opaque laisserait croire à une pastille sur fond noir.
-        className="mb-6 rounded-xl border border-white/10 p-4"
+        className="mb-6 rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] p-4"
         style={{
           backgroundImage:
             'linear-gradient(45deg, #1f2937 25%, transparent 25%, transparent 75%, #1f2937 75%), linear-gradient(45deg, #1f2937 25%, transparent 25%, transparent 75%, #1f2937 75%)',
@@ -232,7 +233,7 @@ export default function TcgOverlayThemeCard({ labels }: Props) {
               setTheme((prev) => ({ ...prev, accentColor: e.target.value }))
             }
             onBlur={(e) => void save({ accentColor: e.target.value })}
-            className="h-9 w-full cursor-pointer rounded-lg border border-white/15 bg-black/40"
+            className="h-9 w-full cursor-pointer rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)]"
           />
         </label>
 
@@ -248,7 +249,7 @@ export default function TcgOverlayThemeCard({ labels }: Props) {
               setTheme((prev) => ({ ...prev, position: next }));
               void save({ position: next });
             }}
-            className="w-full rounded-lg border border-white/15 bg-black/40 px-2 py-2 text-sm"
+            className={rubanInput}
           >
             {OVERLAY_POSITIONS.map((p) => (
               <option key={p} value={p}>
@@ -296,23 +297,22 @@ export default function TcgOverlayThemeCard({ labels }: Props) {
               if (file) onPickMedia(file);
             }}
           />
-          <button
-            type="button"
+          <AdminButton
+            size="sm"
             disabled={busy}
             onClick={() => fileRef.current?.click()}
-            className="rounded-lg border border-white/15 px-3 py-2 text-xs text-gray-300 transition hover:border-white/40 hover:text-white disabled:opacity-50"
           >
             {busy ? labels.saving : labels.mediaChoose}
-          </button>
+          </AdminButton>
           {theme.mediaUrl && (
-            <button
-              type="button"
+            <AdminButton
+              variant="danger"
+              size="sm"
               disabled={busy}
               onClick={() => void save({ media: null })}
-              className="rounded-lg px-3 py-2 text-xs text-gray-400 transition hover:text-red-200 disabled:opacity-50"
             >
               {labels.mediaRemove}
-            </button>
+            </AdminButton>
           )}
         </div>
         <p className="mt-1 text-[11px] text-gray-500">{labels.mediaHint}</p>
@@ -356,7 +356,7 @@ function LineField({
         disabled={disabled}
         onChange={(e) => onChange(e.target.value || null)}
         onBlur={(e) => onCommit(e.target.value || null)}
-        className="w-full rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm"
+        className={rubanInput}
       />
       <span className="mt-1 flex justify-between text-[11px] text-gray-500">
         <span>{hint}</span>

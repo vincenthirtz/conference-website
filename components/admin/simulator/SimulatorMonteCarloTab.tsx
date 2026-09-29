@@ -2,6 +2,13 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { SEED_COLORS } from '@/components/admin/simulator/SimMatchCard';
 import type { MonteCarloResult, SimStage, SimTeam } from '@/utils/simulator';
 import nsAdminTournamentSimulator from '@/lib/i18n/locales/admin-fr/adminTournamentSimulator';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { CARD } from '@/features/admin/stages/ui/rubanClasses';
+import {
+  SIM_EYEBROW,
+  SIM_MUTED,
+  simOptionClass,
+} from '@/features/admin/simulator/ui/simulatorClasses';
 
 /**
  * Onglet « Monte-Carlo » du simulateur : réglage du nombre d'itérations,
@@ -29,11 +36,9 @@ export function SimulatorMonteCarloTab({
   const tx = useAdminT(nsAdminTournamentSimulator);
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-        <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-          {tx.monteCarloHeading}
-        </h3>
-        <p className="text-xs text-neutral-500 mb-4">
+      <div className={CARD}>
+        <h3 className={`mb-4 ${SIM_EYEBROW}`}>{tx.monteCarloHeading}</h3>
+        <p className={`mb-4 ${SIM_MUTED}`}>
           {tx.monteCarloDesc}
           {stages.flatMap((s) => s.matches).some((m) => m.locked) && (
             <span className="text-amber-400 ml-1">{tx.lockedPreserved}</span>
@@ -41,7 +46,7 @@ export function SimulatorMonteCarloTab({
         </p>
         <div className="flex items-center gap-4 mb-6">
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-neutral-500 font-semibold mb-1">
+            <label className={`mb-1 block ${SIM_EYEBROW}`}>
               {tx.iterationsLabel}
             </label>
             <div className="flex gap-2">
@@ -50,37 +55,30 @@ export function SimulatorMonteCarloTab({
                   key={n}
                   type="button"
                   onClick={() => onIterationsChange(n)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                    iterations === n
-                      ? 'bg-purple-600 border-purple-500 text-white'
-                      : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                  }`}
+                  className={simOptionClass(iterations === n)}
                 >
                   {n >= 1000 ? `${n / 1000}k` : n}
                 </button>
               ))}
             </div>
           </div>
-          <button
+          <AdminButton
+            variant="primary"
             onClick={onRun}
             disabled={running}
-            className={`px-6 py-3 rounded-lg text-sm font-semibold shadow transition-colors ${
-              running
-                ? 'bg-neutral-700 text-neutral-400 cursor-wait animate-pulse'
-                : 'bg-purple-600 hover:bg-purple-700 text-white'
-            }`}
+            className={running ? 'animate-pulse' : ''}
           >
             {running
               ? tx.calcInProgress
               : format(tx.runSimulations, {
                   count: iterations,
                 })}
-          </button>
+          </AdminButton>
         </div>
 
         {result && (
           <div className="space-y-6">
-            <p className="text-xs text-neutral-500">
+            <p className={SIM_MUTED}>
               {format(tx.iterationsCompleted, {
                 count: result.iterations,
               })}
@@ -88,9 +86,7 @@ export function SimulatorMonteCarloTab({
 
             {/* Win probability ranking */}
             <div>
-              <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-3">
-                {tx.winProbability}
-              </h4>
+              <h4 className={`mb-3 ${SIM_EYEBROW}`}>{tx.winProbability}</h4>
               <div className="space-y-2">
                 {teams
                   .map((t) => ({
@@ -115,15 +111,15 @@ export function SimulatorMonteCarloTab({
                       <span className="text-sm font-medium w-40 truncate">
                         {row.team.name}
                       </span>
-                      <div className="flex-1 h-3 bg-neutral-800 rounded-full overflow-hidden">
+                      <div className="h-3 flex-1 overflow-hidden rounded-full bg-[var(--s3,#2f2732)]">
                         <div
-                          className="h-full rounded-full transition-all bg-gradient-to-r from-purple-600 to-emerald-500"
+                          className="h-full rounded-full bg-[var(--or,#b467d1)] transition-all"
                           style={{
                             width: `${row.prob * 100}%`,
                           }}
                         />
                       </div>
-                      <span className="text-sm font-bold tabular-nums w-16 text-right text-white">
+                      <span className="text-sm font-bold tabular-nums w-16 text-right text-[var(--t1,#f4edf7)]">
                         {(row.prob * 100).toFixed(1)}%
                       </span>
                       <span className="text-[10px] text-neutral-500 tabular-nums w-16 text-right">
@@ -136,13 +132,11 @@ export function SimulatorMonteCarloTab({
 
             {/* Placement distribution for top 4 */}
             <div>
-              <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-3">
-                {tx.placementDist}
-              </h4>
+              <h4 className={`mb-3 ${SIM_EYEBROW}`}>{tx.placementDist}</h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b border-white/10">
+                    <tr className="border-b border-[var(--line2,rgba(194,196,201,.2))]">
                       <th
                         scope="col"
                         className="text-left py-2 pr-4 text-neutral-500 font-semibold"
@@ -180,7 +174,7 @@ export function SimulatorMonteCarloTab({
                       .map((row) => (
                         <tr
                           key={row.team.id}
-                          className="border-b border-white/[0.03]"
+                          className="border-b border-[var(--line,rgba(194,196,201,.12))]"
                         >
                           <td className="py-2 pr-4 font-medium">
                             {row.team.short_name}

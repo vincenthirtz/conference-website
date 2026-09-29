@@ -22,6 +22,9 @@ import Image from 'next/image';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { rubanCard } from '@/features/admin/diffusion/ui/rubanClasses';
+import { EYEBROW, MUTED } from '@/features/admin/stages/ui/rubanClasses';
 import TcgPlayerPicker, {
   type PickedUser,
 } from '@/components/admin/tcg/TcgPlayerPicker';
@@ -136,9 +139,9 @@ export default function TcgCataloguePanel() {
   return (
     <div>
       <AlertBanner message={error} variant="error" className="mb-4" />
-      <p className="mb-4 text-sm text-neutral-400">{t.catalogueIntro}</p>
+      <p className={`mb-4 text-sm ${MUTED}`}>{t.catalogueIntro}</p>
 
-      <div className="mb-5 rounded-2xl border border-neutral-700/50 bg-neutral-800/40 p-4">
+      <div className={`mb-5 p-4 ${rubanCard}`}>
         <TcgPlayerPicker
           labels={tGrant}
           value={user}
@@ -146,13 +149,14 @@ export default function TcgCataloguePanel() {
           inputId="tcg-catalogue-player"
         />
         {user && (
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="xs"
             onClick={() => setUser(null)}
-            className="mt-3 text-xs text-violet-300 underline hover:text-violet-200"
+            className="mt-3"
           >
             {t.catalogueClearPlayer}
-          </button>
+          </AdminButton>
         )}
       </div>
 
@@ -175,7 +179,7 @@ export default function TcgCataloguePanel() {
               type="checkbox"
               checked={missingOnly}
               onChange={(e) => setMissingOnly(e.target.checked)}
-              className="rounded border-neutral-600 bg-neutral-900"
+              className="accent-[var(--or,#b467d1)]"
             />
             {t.catalogueMissingOnly}
           </label>
@@ -192,7 +196,7 @@ export default function TcgCataloguePanel() {
           key={group.kind}
           className="mb-7 [content-visibility:auto] [contain-intrinsic-size:auto_900px]"
         >
-          <h3 className="mb-2 text-xs uppercase tracking-wide text-neutral-500">
+          <h3 className={`mb-2 ${EYEBROW}`}>
             {kindLabel(group.kind)} · {group.cards.length}
           </h3>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -200,13 +204,13 @@ export default function TcgCataloguePanel() {
               <li
                 key={card.key}
                 data-testid="tcg-catalogue-card"
-                className={`rounded-xl border p-2 ${
+                className={`rounded-[var(--r-ctrl,4px)] border p-2 ${
                   user && card.owned
-                    ? 'border-emerald-500/40 bg-emerald-500/5'
-                    : 'border-neutral-700/50 bg-neutral-800/40'
+                    ? 'border-[rgba(127,202,101,.45)] bg-[rgba(127,202,101,.05)]'
+                    : 'border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)]'
                 }`}
               >
-                <span className="relative block aspect-[3/4] overflow-hidden rounded-lg bg-neutral-900">
+                <span className="relative block aspect-[3/4] overflow-hidden rounded-[3px] bg-[var(--s1,#100812)]">
                   {card.imageUrl && isOptimizableImageUrl(card.imageUrl) ? (
                     <Image
                       src={card.imageUrl}
@@ -249,7 +253,7 @@ export default function TcgCataloguePanel() {
       ))}
 
       {!busy && data && groups.length === 0 && (
-        <p className="py-10 text-center text-sm text-neutral-400">
+        <p className={`py-10 text-center text-sm ${MUTED}`}>
           {missingOnly ? t.catalogueNothingMissing : t.catalogueEmpty}
         </p>
       )}

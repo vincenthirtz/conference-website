@@ -3,6 +3,8 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Modal from '@/components/admin/Modal';
 import type { ImportLine } from './types';
 import nsAdminTeamsImportBattleTagsModal from '@/lib/i18n/locales/admin-fr/adminTeamsImportBattleTagsModal';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 type ImportBattleTagsModalProps = {
   open: boolean;
@@ -32,7 +34,7 @@ function ImportBattleTagsModalComponent({
       onClose={onClose}
       size="2xl"
       backdropClassName="bg-black/70 backdrop-blur-md"
-      panelChromeClassName="bg-gradient-to-b from-neutral-800 to-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl overflow-hidden"
+      panelChromeClassName="bg-[var(--s1,#100812)] border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] shadow-2xl overflow-hidden"
       panelClassName="max-h-[90vh]"
       dataTestId="import-modal"
       title={<h3 className="text-lg font-semibold text-white">{t.title}</h3>}
@@ -55,13 +57,12 @@ function ImportBattleTagsModalComponent({
               : ''}
           </span>
           <div className="flex gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-            >
+            <AdminButton variant="ghost" size="sm" onClick={onClose}>
               {t.cancel}
-            </button>
-            <button
+            </AdminButton>
+            <AdminButton
+              variant="primary"
+              size="md"
               onClick={onApply}
               disabled={
                 importBusy ||
@@ -69,13 +70,12 @@ function ImportBattleTagsModalComponent({
                 importPreview.filter((l) => l.status === 'matched').length === 0
               }
               data-testid="import-apply-btn"
-              className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {importBusy && (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
               {t.apply}
-            </button>
+            </AdminButton>
           </div>
         </div>
       }
@@ -85,22 +85,23 @@ function ImportBattleTagsModalComponent({
           value={importText}
           onChange={(e) => onImportTextChange(e.target.value)}
           data-testid="import-textarea"
-          className="w-full px-3 py-2 rounded-lg bg-neutral-900/70 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono min-h-[140px] resize-y"
+          className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono min-h-[140px] resize-y"
           placeholder={t.textareaPlaceholder}
         />
 
-        <button
+        <AdminButton
+          variant="ghost"
+          size="sm"
           onClick={onBuildPreview}
           disabled={!importText.trim()}
           data-testid="import-preview-btn"
-          className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
         >
           {t.preview}
-        </button>
+        </AdminButton>
 
         {importPreview && (
           <div
-            className="rounded-xl border border-neutral-700 overflow-hidden"
+            className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] overflow-hidden"
             data-testid="import-preview"
           >
             <div className="overflow-x-auto">
@@ -143,24 +144,16 @@ function ImportBattleTagsModalComponent({
                         </td>
                         <td className="px-3 py-2">
                           {line.status === 'matched' && (
-                            <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                              {t.statusMatched}
-                            </span>
+                            <Chip tone="ok">{t.statusMatched}</Chip>
                           )}
                           {line.status === 'invalid' && (
-                            <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-300 border border-red-500/30">
-                              {t.statusInvalid}
-                            </span>
+                            <Chip tone="err">{t.statusInvalid}</Chip>
                           )}
                           {line.status === 'not-found' && (
-                            <span className="px-2 py-0.5 rounded-full text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                              {t.statusNotFound}
-                            </span>
+                            <Chip tone="warn">{t.statusNotFound}</Chip>
                           )}
                           {line.status === 'empty' && (
-                            <span className="px-2 py-0.5 rounded-full text-xs bg-neutral-700 text-neutral-400 border border-neutral-600">
-                              {t.statusEmpty}
-                            </span>
+                            <Chip>{t.statusEmpty}</Chip>
                           )}
                         </td>
                       </tr>

@@ -18,6 +18,7 @@ import {
 } from '@/hooks/useAccessibleTenants';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminPendingGuildLinks from '@/lib/i18n/locales/admin-fr/adminPendingGuildLinks';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -186,7 +187,7 @@ export default function GuildLinksPanel() {
 
       <AlertBanner message={error} className="mb-4" />
 
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+      <section className="bg-[var(--s1,#100812)] backdrop-blur border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] overflow-hidden">
         <AdminListShell
           loading={loading}
           error={null}
@@ -236,21 +237,23 @@ export default function GuildLinksPanel() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2 flex-wrap">
-                        <button
+                        <AdminButton
+                          variant="secondary"
+                          size="xs"
                           type="button"
                           onClick={() => openClaim(g)}
-                          className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm transition-colors"
                           data-testid={`claim-${g.guild_id}`}
                         >
                           {t.assign}
-                        </button>
-                        <button
+                        </AdminButton>
+                        <AdminButton
+                          variant="danger"
+                          size="xs"
                           type="button"
                           onClick={() => handleReject(g)}
-                          className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors"
                         >
                           {t.reject}
-                        </button>
+                        </AdminButton>
                       </div>
                     </td>
                   </tr>
@@ -266,7 +269,7 @@ export default function GuildLinksPanel() {
         onClose={closeModal}
         zIndexClassName="z-[200]"
         backdropClassName="bg-black/70"
-        panelChromeClassName="bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl"
+        panelChromeClassName="bg-[var(--s1,#100812)] border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] shadow-2xl"
         size="lg"
         title={
           <h2 className="text-lg font-semibold text-white">
@@ -278,21 +281,23 @@ export default function GuildLinksPanel() {
         subtitle={t.modalSubtitle}
         footer={
           <>
-            <button
+            <AdminButton
+              variant="ghost"
+              size="sm"
               type="button"
               onClick={closeModal}
-              className="px-4 py-2 rounded-lg border border-neutral-600 text-sm hover:bg-neutral-800 transition-colors"
             >
               {t.cancel}
-            </button>
-            <button
+            </AdminButton>
+            <AdminButton
+              variant="primary"
+              size="sm"
               type="button"
               onClick={submitClaim}
               disabled={modal?.saving}
-              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {modal?.saving ? t.assigning : t.assignBtn}
-            </button>
+            </AdminButton>
           </>
         }
       >
@@ -306,10 +311,10 @@ export default function GuildLinksPanel() {
                   key={m}
                   type="button"
                   onClick={() => setModal({ ...modal, mode: m })}
-                  className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  className={`flex-1 px-3 py-2 rounded-[var(--r-ctrl,4px)] border text-sm transition-colors ${
                     modal.mode === m
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                      ? 'border-[rgba(180,103,209,.45)] bg-[rgba(180,103,209,.12)] text-[var(--or-200,#eec4ff)]'
+                      : 'border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] text-[var(--t2,#c7bfca)] hover:text-[var(--t1,#f4edf7)]'
                   }`}
                 >
                   {m === 'existing' ? t.modeExisting : t.modeNew}
@@ -334,7 +339,7 @@ export default function GuildLinksPanel() {
                       selectedTenantId: e.target.value,
                     })
                   }
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="">{t.selectPlaceholder}</option>
                   {tenants.map((tenant) => (
@@ -365,7 +370,7 @@ export default function GuildLinksPanel() {
                       })
                     }
                     placeholder={t.slugPlaceholder}
-                    className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div>
@@ -383,7 +388,7 @@ export default function GuildLinksPanel() {
                       setModal({ ...modal, newName: e.target.value })
                     }
                     placeholder={t.namePlaceholder}
-                    className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
               </div>

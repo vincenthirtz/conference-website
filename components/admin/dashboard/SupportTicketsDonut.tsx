@@ -5,6 +5,7 @@
 import type { TicketsBreakdown } from '@/utils/dashboard/buildTournamentDashboard';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminDashboardSupportTicketsDonut from '@/lib/i18n/locales/admin-fr/adminDashboardSupportTicketsDonut';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 type Dict = typeof nsAdminDashboardSupportTicketsDonut.fr;
 
@@ -44,12 +45,12 @@ export default function SupportTicketsDonut({
     return (
       <div className="flex flex-col items-center gap-2 py-3">
         <div
-          className="flex items-center justify-center rounded-full border border-dashed border-emerald-500/30 text-emerald-300"
+          className="flex items-center justify-center rounded-full border border-dashed border-[rgba(127,202,101,.36)] text-[var(--lf-200,#b3e7a3)]"
           style={{ width: size, height: size }}
         >
           <span className="text-3xl">✓</span>
         </div>
-        <p className="text-xs text-gray-400">{t.noTickets}</p>
+        <p className="text-xs text-[var(--t3,#a39ba6)]">{t.noTickets}</p>
       </div>
     );
   }
@@ -109,8 +110,10 @@ export default function SupportTicketsDonut({
           {arcs}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="text-2xl font-bold text-white">{total}</div>
-          <div className="text-[9px] uppercase tracking-widest text-gray-500">
+          <div className="font-[family-name:var(--fd)] text-2xl font-extrabold text-[var(--t1,#f4edf7)] [font-stretch:75%]">
+            {total}
+          </div>
+          <div className="text-[9px] uppercase tracking-widest text-[var(--t4,#807984)]">
             {t.open}
           </div>
         </div>
@@ -130,8 +133,10 @@ export default function SupportTicketsDonut({
                 className="h-2 w-2 shrink-0 rounded-full"
                 style={{ backgroundColor: CATEGORY_COLORS[cat] }}
               />
-              <span className="text-gray-300">{categoryLabel[cat]}</span>
-              <span className="ml-auto tabular-nums text-gray-400">
+              <span className="text-[var(--t2,#c7bfca)]">
+                {categoryLabel[cat]}
+              </span>
+              <span className="ml-auto tabular-nums text-[var(--t3,#a39ba6)]">
                 {tickets.byCategory[cat]}
               </span>
             </li>
@@ -142,22 +147,18 @@ export default function SupportTicketsDonut({
       {(tickets.bySeverity.high > 0 ||
         tickets.bySeverity.medium > 0 ||
         tickets.bySeverity.low > 0) && (
-        <div className="flex w-full items-center gap-2 text-[10px] text-gray-400">
-          <span className="text-gray-500">{t.severityLabel}</span>
+        <div className="flex w-full flex-wrap items-center gap-2 text-[10px] text-[var(--t3,#a39ba6)]">
+          <span className="text-[var(--t4,#807984)]">{t.severityLabel}</span>
           {tickets.bySeverity.high > 0 && (
-            <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-red-200">
-              {format(t.sevHigh, { pct: sevPct.high })}
-            </span>
+            <Chip tone="err">{format(t.sevHigh, { pct: sevPct.high })}</Chip>
           )}
           {tickets.bySeverity.medium > 0 && (
-            <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-amber-200">
+            <Chip tone="warn">
               {format(t.sevMedium, { pct: sevPct.medium })}
-            </span>
+            </Chip>
           )}
           {tickets.bySeverity.low > 0 && (
-            <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-blue-200">
-              {format(t.sevLow, { pct: sevPct.low })}
-            </span>
+            <Chip tone="neutral">{format(t.sevLow, { pct: sevPct.low })}</Chip>
           )}
         </div>
       )}

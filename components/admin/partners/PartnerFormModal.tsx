@@ -3,6 +3,7 @@ import Modal from '@/components/admin/Modal';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminPartnersNew from '@/lib/i18n/locales/admin-fr/adminPartnersNew';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type PartnerFormModalProps = {
   open: boolean;
@@ -107,18 +108,20 @@ export default function PartnerFormModal({
       title={t.heading}
       footer={
         <>
-          <button
+          <AdminButton
+            variant="ghost"
+            size="md"
             type="button"
             onClick={onClose}
-            className="px-6 py-3 rounded-xl border border-neutral-600 text-sm font-semibold text-white text-center transition hover:bg-neutral-800"
           >
             {t.cancel}
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
+            variant="primary"
+            size="md"
             type="submit"
             form={formId}
             disabled={saving}
-            className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {saving ? (
               <>
@@ -128,13 +131,13 @@ export default function PartnerFormModal({
             ) : (
               t.submit
             )}
-          </button>
+          </AdminButton>
         </>
       }
     >
       <form id={formId} onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+          <div className="rounded-[var(--r-card,14px)] bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
             <svg
               className="w-5 h-5 text-red-400 flex-shrink-0"
               fill="currentColor"
@@ -159,7 +162,7 @@ export default function PartnerFormModal({
               type="text"
               value={form.name}
               onChange={(e) => updateField('name', e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
+              className="w-full px-4 py-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
               placeholder={t.namePlaceholder}
               required
             />
@@ -174,7 +177,7 @@ export default function PartnerFormModal({
               onChange={(e) =>
                 updateField('category', e.target.value as FormData['category'])
               }
-              className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
+              className="w-full px-4 py-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
               required
             >
               <option value="">{t.categoryPlaceholder}</option>
@@ -192,7 +195,7 @@ export default function PartnerFormModal({
               value={form.description}
               onChange={(e) => updateField('description', e.target.value)}
               rows={3}
-              className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white resize-none"
+              className="w-full px-4 py-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white resize-none"
               placeholder={t.descriptionPlaceholder}
               required
             />
@@ -206,7 +209,7 @@ export default function PartnerFormModal({
               type="url"
               value={form.logoUrl}
               onChange={(e) => updateField('logoUrl', e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
+              className="w-full px-4 py-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
               placeholder="https://..."
             />
           </div>
@@ -219,7 +222,7 @@ export default function PartnerFormModal({
               type="url"
               value={form.websiteUrl}
               onChange={(e) => updateField('websiteUrl', e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
+              className="w-full px-4 py-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
               placeholder="https://www.exemple.com"
             />
           </div>
@@ -232,7 +235,7 @@ export default function PartnerFormModal({
               type="text"
               value={form.note}
               onChange={(e) => updateField('note', e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
+              className="w-full px-4 py-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
               placeholder={t.notePlaceholder}
             />
           </div>
@@ -247,7 +250,7 @@ export default function PartnerFormModal({
               onChange={(e) =>
                 updateField('displayOrder', parseInt(e.target.value) || 0)
               }
-              className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
+              className="w-full px-4 py-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
               placeholder="0"
             />
             <p className="text-xs text-neutral-500 mt-1">
@@ -261,7 +264,7 @@ export default function PartnerFormModal({
                 type="checkbox"
                 checked={form.isActive}
                 onChange={(e) => updateField('isActive', e.target.checked)}
-                className="w-5 h-5 rounded border-neutral-600 bg-neutral-900/50 text-emerald-500 focus:ring-emerald-500"
+                className="w-5 h-5 rounded-[var(--r-ctrl,4px)] border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-emerald-500 focus:ring-emerald-500"
               />
               <span className="text-sm font-medium text-neutral-300">
                 {t.activeLabel}

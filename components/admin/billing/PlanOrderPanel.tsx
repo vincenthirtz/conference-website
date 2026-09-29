@@ -22,6 +22,7 @@
 import { format } from '@/lib/i18n/useAdminT';
 import { CGV_VERSION } from '@/utils/billing/cgv';
 import type { PlanTerm, PurchasablePlan } from '@/utils/billing/planFeatures';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type OrderDict = {
   orderSummaryTitle: string;
@@ -76,33 +77,35 @@ export default function PlanOrderPanel({
 
   return (
     <div
-      className="mt-4 rounded-xl border border-purple-400/40 bg-purple-500/[0.07] p-4"
+      className="mt-4 rounded-[var(--r-card,14px)] border border-[rgba(180,103,209,.45)] bg-[var(--s2,#1d1520)] p-4"
       data-testid={`billing-order-${plan}`}
     >
-      <h4 className="text-sm font-semibold text-purple-100">
+      <h4 className="font-[family-name:var(--fd)] text-sm font-bold uppercase tracking-[0.02em] text-[var(--t1,#f4edf7)]">
         {t.orderSummaryTitle}
       </h4>
 
       <dl className="mt-3 space-y-1.5 text-xs">
         <div className="flex justify-between gap-3">
           <dt className="text-neutral-400">{t.orderOffer}</dt>
-          <dd className="font-medium text-white">{label}</dd>
+          <dd className="font-medium text-[var(--t1,#f4edf7)]">{label}</dd>
         </div>
         <div className="flex justify-between gap-3">
           <dt className="text-neutral-400">{t.orderTerm}</dt>
-          <dd className="font-medium text-white">
+          <dd className="font-medium text-[var(--t1,#f4edf7)]">
             {term === 'month' ? t.orderTermMonth : t.orderTermYear}
           </dd>
         </div>
         <div className="flex justify-between gap-3">
           <dt className="text-neutral-400">{t.orderDuration}</dt>
-          <dd className="font-medium text-white">
+          <dd className="font-medium text-[var(--t1,#f4edf7)]">
             {term === 'month' ? t.orderDurationMonth : t.orderDurationYear}
           </dd>
         </div>
-        <div className="flex justify-between gap-3 border-t border-white/10 pt-2">
+        <div className="flex justify-between gap-3 border-t border-[var(--line,rgba(194,196,201,.12))] pt-2">
           <dt className="text-neutral-300">{t.orderTotal}</dt>
-          <dd className="text-base font-bold text-white">{priceEur} €</dd>
+          <dd className="text-base font-bold text-[var(--t1,#f4edf7)]">
+            {priceEur} €
+          </dd>
         </div>
       </dl>
 
@@ -116,7 +119,7 @@ export default function PlanOrderPanel({
           type="checkbox"
           checked={cgvAccepted}
           onChange={(e) => onCgvChange(e.target.checked)}
-          className="mt-0.5 h-4 w-4 flex-shrink-0 accent-purple-500"
+          className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[var(--or,#b467d1)]"
           data-testid="billing-consent-cgv"
         />
         <span>
@@ -140,7 +143,7 @@ export default function PlanOrderPanel({
           type="checkbox"
           checked={waiverAccepted}
           onChange={(e) => onWaiverChange(e.target.checked)}
-          className="mt-0.5 h-4 w-4 flex-shrink-0 accent-purple-500"
+          className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[var(--or,#b467d1)]"
           data-testid="billing-consent-waiver"
         />
         <span>{t.orderWaiver}</span>
@@ -153,23 +156,18 @@ export default function PlanOrderPanel({
       )}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
+        <AdminButton
+          variant="primary"
           onClick={onSubmit}
           disabled={!ready || busy}
-          className="flex-1 rounded-xl bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex-1"
           data-testid={`billing-order-submit-${plan}`}
         >
           {busy ? t.redirecting : t.orderSubmit}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-xl border border-white/20 px-4 py-3 text-sm font-medium text-neutral-200 transition hover:border-white/40"
-          data-testid="billing-order-cancel"
-        >
+        </AdminButton>
+        <AdminButton onClick={onCancel} data-testid="billing-order-cancel">
           {t.orderModify}
-        </button>
+        </AdminButton>
       </div>
     </div>
   );

@@ -14,7 +14,6 @@
 // minRole 'admin' (miroir des routes API + host).
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
@@ -29,6 +28,7 @@ import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import AdminButton, {
   AdminButtonLink,
 } from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 import StatTile from '@/features/admin/_shared/ui/StatTile';
 import ListToolbar, {
   FilterSelect,
@@ -72,12 +72,12 @@ function getPaymentStatusLabels(t: Dict): Record<string, string> {
   };
 }
 
-const paymentStatusColors: Record<string, string> = {
-  pending: 'bg-amber-600/20 text-amber-300 border-amber-500/30',
-  partial: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
-  paid: 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30',
-  exempt: 'bg-purple-600/20 text-purple-300 border-purple-500/30',
-  overdue: 'bg-red-600/20 text-red-300 border-red-500/30',
+const paymentStatusTones: Record<string, ChipTone> = {
+  pending: 'warn',
+  partial: 'brand',
+  paid: 'ok',
+  exempt: 'neutral',
+  overdue: 'err',
 };
 
 function getRoleLabels(t: Dict): Record<string, string> {
@@ -283,13 +283,9 @@ function AdherentsListPanel() {
       header: t.colPayment,
       value: (a) => paymentStatusLabels[a.payment_status],
       render: (a) => (
-        <span
-          className={`rounded-full border px-2 py-1 text-xs font-medium ${
-            paymentStatusColors[a.payment_status]
-          }`}
-        >
+        <Chip tone={paymentStatusTones[a.payment_status]}>
           {paymentStatusLabels[a.payment_status]}
-        </span>
+        </Chip>
       ),
     },
     {
@@ -317,26 +313,29 @@ function AdherentsListPanel() {
       render: (a) => (
         <span className="flex items-center justify-end gap-2">
           {a.payment_status !== 'paid' && a.payment_status !== 'exempt' && (
-            <button
+            <AdminButton
+              variant="ghost"
+              size="xs"
               onClick={() => updatePaymentStatus(a.id, 'paid', true)}
-              className="rounded-lg border border-emerald-500/40 px-2 py-1 text-xs text-emerald-300 transition-colors hover:border-emerald-400"
               title={t.markPaidTitle}
             >
               {t.markPaidShort}
-            </button>
+            </AdminButton>
           )}
-          <Link
+          <AdminButtonLink
+            variant="ghost"
+            size="xs"
             href={`/admin/adherents/${a.id}`}
-            className="rounded-lg border border-neutral-600 px-2 py-1 text-xs transition-colors hover:border-neutral-500"
           >
             {t.edit}
-          </Link>
-          <button
+          </AdminButtonLink>
+          <AdminButton
+            variant="danger"
+            size="xs"
             onClick={() => onDelete(a.id, `${a.first_name} ${a.last_name}`)}
-            className="rounded-lg border border-red-500/40 px-2 py-1 text-xs text-red-300 transition-colors hover:border-red-400"
           >
             {t.deleteShort}
-          </button>
+          </AdminButton>
         </span>
       ),
     },
@@ -386,7 +385,7 @@ function AdherentsListPanel() {
       {/* Sync result */}
       {syncResult && (
         <div
-          className={`mb-6 rounded-xl border p-4 text-sm ${
+          className={`mb-6 rounded-[var(--r-card,14px)] border p-4 text-sm ${
             syncResult.startsWith('Erreur')
               ? 'border-red-500/30 bg-red-600/10 text-red-300'
               : 'border-emerald-500/30 bg-emerald-600/10 text-emerald-300'
@@ -479,7 +478,7 @@ function AdherentsListPanel() {
       {/* Liste — kit partagé en mode SERVEUR (lot L13) : la table lit tri et
           page dans l'URL, le serveur les applique. Colonnes triables = celles
           que le serveur accepte (`sortable: true`, clé = nom de colonne). */}
-      <section className="overflow-hidden rounded-2xl border border-neutral-700/50 bg-neutral-800/50 p-4 backdrop-blur">
+      <section className="overflow-hidden rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 backdrop-blur">
         <DataTable<AdherentRow>
           rows={adherents}
           columns={columns}

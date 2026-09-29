@@ -11,7 +11,6 @@
 // `?pole=<key>` pré-sélectionne le pôle. minRole 'admin' (miroir API + host).
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { useToast } from '@/components/Toast';
@@ -22,6 +21,10 @@ import PoleMemberFormModal from '@/components/admin/pole-members/PoleMemberFormM
 import { POLE_KEYS, POLE_LABELS, type PoleKey } from '@/utils/associationPoles';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminPoleMembersList from '@/lib/i18n/locales/admin-fr/adminPoleMembersList';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type PoleMemberRow = {
   id: string;
@@ -41,10 +44,8 @@ type ApiResponse = {
   items: PoleMemberRow[];
 };
 
-function statusColor(isActive: boolean) {
-  return isActive
-    ? 'bg-emerald-600 text-white'
-    : 'bg-neutral-600 text-neutral-100';
+function statusTone(isActive: boolean): ChipTone {
+  return isActive ? 'ok' : 'neutral';
 }
 
 export default function PoleMembersListPanel() {
@@ -178,10 +179,11 @@ export default function PoleMembersListPanel() {
             </p>
           </div>
 
-          <button
+          <AdminButton
+            variant="primary"
+            size="md"
             type="button"
             onClick={() => setModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors flex items-center gap-2"
           >
             <svg
               className="w-5 h-5"
@@ -197,12 +199,12 @@ export default function PoleMembersListPanel() {
               />
             </svg>
             {t.addButton}
-          </button>
+          </AdminButton>
         </div>
       </div>
 
       {/* Filters */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+      <section className="bg-[var(--s1,#100812)] backdrop-blur border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] p-6 mb-6">
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex-1 min-w-[200px]">
             <label className="block text-sm text-neutral-400 mb-1">
@@ -211,7 +213,7 @@ export default function PoleMembersListPanel() {
             <input
               type="text"
               placeholder={t.searchPlaceholder}
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-purple-500"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -223,7 +225,7 @@ export default function PoleMembersListPanel() {
             <select
               value={poleFilter}
               onChange={(e) => setPoleFilter(e.target.value as 'all' | PoleKey)}
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
               <option value="all">{t.poleAll}</option>
               {POLE_KEYS.map((key) => (
@@ -249,7 +251,7 @@ export default function PoleMembersListPanel() {
             return (
               <section
                 key={poleKey}
-                className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden"
+                className="bg-[var(--s1,#100812)] backdrop-blur border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] overflow-hidden"
               >
                 <header className="flex items-center justify-between px-6 py-4 border-b border-neutral-700/50">
                   <h2 className="text-lg font-semibold">
@@ -280,10 +282,10 @@ export default function PoleMembersListPanel() {
                               alt={m.name}
                               width={48}
                               height={48}
-                              className="w-12 h-12 rounded-xl object-cover border border-neutral-700"
+                              className="w-12 h-12 rounded-[var(--r-card,14px)] object-cover border border-[var(--line2,rgba(194,196,201,.2))]"
                             />
                           ) : (
-                            <div className="w-12 h-12 rounded-xl bg-purple-600/20 flex items-center justify-center border border-purple-500/30 text-purple-300 font-semibold">
+                            <div className="w-12 h-12 rounded-[var(--r-card,14px)] bg-purple-600/20 flex items-center justify-center border border-purple-500/30 text-purple-300 font-semibold">
                               {m.name.slice(0, 1).toUpperCase()}
                             </div>
                           )}
@@ -294,13 +296,9 @@ export default function PoleMembersListPanel() {
                             <h3 className="font-semibold text-white group-hover:text-purple-400 transition-colors">
                               {m.name}
                             </h3>
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
-                                m.is_active
-                              )}`}
-                            >
+                            <Chip tone={statusTone(m.is_active)}>
                               {m.is_active ? t.statusActive : t.statusInactive}
-                            </span>
+                            </Chip>
                           </div>
                           {m.title && (
                             <p className="text-sm text-neutral-400">
@@ -331,7 +329,7 @@ export default function PoleMembersListPanel() {
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <button
                             onClick={() => onToggleActive(m)}
-                            className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                            className={`px-3 py-1.5 rounded-[var(--r-ctrl,4px)] border text-sm transition-colors ${
                               m.is_active
                                 ? 'border-amber-500/40 text-amber-300 hover:border-amber-400'
                                 : 'border-emerald-500/40 text-emerald-300 hover:border-emerald-400'
@@ -339,18 +337,20 @@ export default function PoleMembersListPanel() {
                           >
                             {m.is_active ? t.deactivate : t.activate}
                           </button>
-                          <Link
+                          <AdminButtonLink
+                            variant="ghost"
+                            size="xs"
                             href={`/admin/pole-members/${m.id}`}
-                            className="px-3 py-1.5 rounded-lg border border-neutral-600 hover:border-neutral-500 text-sm transition-colors"
                           >
                             {t.edit}
-                          </Link>
-                          <button
+                          </AdminButtonLink>
+                          <AdminButton
+                            variant="danger"
+                            size="xs"
                             onClick={() => onDelete(m.id)}
-                            className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors"
                           >
                             {t.delete}
-                          </button>
+                          </AdminButton>
                         </div>
                       </div>
                     ))}

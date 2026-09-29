@@ -24,6 +24,8 @@ import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import AlertBanner from '@/components/admin/AlertBanner';
 import { logger } from '@/utils/logger';
 import nsAdminTeamMessages from '@/lib/i18n/locales/admin-fr/adminTeamMessages';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type RosterKind = 'incomplete' | 'complete_with_warnings' | 'complete';
 
@@ -78,27 +80,27 @@ const ENDPOINT = '/api/admin/team-messages';
 function kindBadge(
   kind: RosterKind | 'custom',
   t: Dict
-): { label: string; className: string } {
+): { label: string; tone: ChipTone } {
   switch (kind) {
     case 'incomplete':
       return {
         label: t.kindIncomplete,
-        className: 'bg-red-600/20 text-red-300 border-red-500/30',
+        tone: 'err',
       };
     case 'complete_with_warnings':
       return {
         label: t.kindWarnings,
-        className: 'bg-amber-600/20 text-amber-300 border-amber-500/30',
+        tone: 'warn',
       };
     case 'complete':
       return {
         label: t.kindComplete,
-        className: 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30',
+        tone: 'ok',
       };
     default:
       return {
         label: t.kindCustom,
-        className: 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30',
+        tone: 'neutral',
       };
   }
 }
@@ -290,7 +292,7 @@ export default function TeamMessagesPanel() {
       )}
 
       {/* --- 1. Ciblage ------------------------------------------------- */}
-      <section className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-400">
           {t.sectionTargets}
         </h3>
@@ -335,10 +337,8 @@ export default function TeamMessagesPanel() {
                     </td>
                     <td className="py-2 font-medium text-white">
                       {team.teamName}
-                      <span
-                        className={`ml-2 rounded border px-1.5 py-0.5 text-xs ${badge.className}`}
-                      >
-                        {badge.label}
+                      <span className="ml-2 align-middle">
+                        <Chip tone={badge.tone}>{badge.label}</Chip>
                       </span>
                     </td>
                     <td className="py-2 text-neutral-300">
@@ -377,7 +377,7 @@ export default function TeamMessagesPanel() {
       </section>
 
       {/* --- 2. Composition ---------------------------------------------- */}
-      <section className="space-y-4 rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+      <section className="space-y-4 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">
           {t.sectionCompose}
         </h3>
@@ -428,7 +428,7 @@ export default function TeamMessagesPanel() {
               }}
               rows={8}
               maxLength={4000}
-              className="w-full rounded border border-neutral-700 bg-neutral-950 p-3 font-mono text-sm text-neutral-100"
+              className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-3 font-mono text-sm text-neutral-100"
               placeholder={t.templatePlaceholder}
             />
             <p className="text-xs text-neutral-500">
@@ -459,7 +459,7 @@ export default function TeamMessagesPanel() {
                 setOnly(e.target.value as typeof only);
                 invalidatePreview();
               }}
-              className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm"
+              className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2 py-1 text-sm"
             >
               <option value="all">{t.onlyAll}</option>
               <option value="needs_attention">{t.onlyNeedsAttention}</option>
@@ -469,29 +469,29 @@ export default function TeamMessagesPanel() {
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             onClick={() => void runPreview()}
             disabled={busy}
-            className="rounded bg-neutral-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             {busy ? t.working : t.previewButton}
-          </button>
-          <button
-            type="button"
+          </AdminButton>
+          <AdminButton
+            variant="secondary"
+            size="sm"
             onClick={() => void send()}
             disabled={busy || !preview || preview.length === 0}
-            className="rounded bg-purple-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             title={!preview ? t.sendDisabledHint : undefined}
           >
             {t.sendButton}
-          </button>
+          </AdminButton>
         </div>
       </section>
 
       {/* --- 3. Aperçu ---------------------------------------------------- */}
       {preview && (
-        <section className="space-y-3 rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+        <section className="space-y-3 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">
             {format(t.sectionPreview, { count: String(preview.length) })}
           </h3>
@@ -500,15 +500,11 @@ export default function TeamMessagesPanel() {
             return (
               <article
                 key={msg.teamId}
-                className="rounded border border-neutral-800 bg-neutral-950 p-3"
+                className="rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-3"
               >
                 <header className="mb-2 flex flex-wrap items-center gap-2">
                   <span className="font-medium text-white">{msg.teamName}</span>
-                  <span
-                    className={`rounded border px-1.5 py-0.5 text-xs ${badge.className}`}
-                  >
-                    {badge.label}
-                  </span>
+                  <Chip tone={badge.tone}>{badge.label}</Chip>
                   {!msg.deliverable && (
                     <span className="text-xs text-red-400">
                       {t.previewNotDeliverable}

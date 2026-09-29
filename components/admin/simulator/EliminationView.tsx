@@ -63,7 +63,7 @@ function EliminationViewComponent({
       <div className="space-y-2">
         {label && (
           <p
-            className={`text-xs uppercase tracking-wider font-semibold ${accentColor ?? 'text-purple-300'}`}
+            className={`font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] [font-stretch:75%] ${accentColor ?? 'text-[var(--t3,#a39ba6)]'}`}
           >
             {label}
           </p>
@@ -79,11 +79,11 @@ function EliminationViewComponent({
           >
             {rounds.map((round) => (
               <div key={round.roundNumber} className="flex flex-col">
-                <div className="mb-3 px-3 py-2 rounded-lg border bg-purple-500/5 border-purple-500/15 text-center">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-purple-300">
+                <div className="mb-3 rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] px-3 py-2 text-center">
+                  <div className="font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t2,#c7bfca)] [font-stretch:75%]">
                     {round.roundName}
                   </div>
-                  <div className="text-[10px] text-neutral-500 mt-0.5">
+                  <div className="mt-0.5 text-[10px] text-[var(--t4,#807984)]">
                     {format(
                       round.matches.length > 1 ? t.match_other : t.match_one,
                       { count: round.matches.length }
@@ -137,7 +137,7 @@ function EliminationViewComponent({
     <div className="space-y-2">
       {label && (
         <p
-          className={`text-xs uppercase tracking-wider font-semibold ${accentColor ?? 'text-purple-300'}`}
+          className={`font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] [font-stretch:75%] ${accentColor ?? 'text-[var(--t3,#a39ba6)]'}`}
         >
           {label}
         </p>
@@ -257,10 +257,10 @@ function EliminationViewComponent({
                     style={{ height: HEADER_H }}
                   >
                     <div
-                      className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border ${
+                      className={`whitespace-nowrap rounded-[3px] border px-3 py-1 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.12em] [font-stretch:75%] ${
                         isFinale
-                          ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-                          : 'bg-purple-500/10 text-purple-300 border-purple-500/20'
+                          ? 'border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.13)] text-[#ffd9a3]'
+                          : 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-[var(--t2,#c7bfca)]'
                       }`}
                     >
                       {isFinale && <span className="mr-1">&#9733;</span>}

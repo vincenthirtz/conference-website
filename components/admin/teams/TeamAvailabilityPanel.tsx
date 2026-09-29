@@ -19,7 +19,7 @@
 // ambiguë.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Button from '@/components/Buttons/button';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
@@ -231,31 +231,30 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
   }
 
   return (
-    <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-6 space-y-4">
+    <section className="bg-[var(--s1,#100812)] border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] p-6 space-y-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="space-y-1">
           <h2 className="text-lg font-semibold">{t.title}</h2>
           <p className="text-sm text-neutral-400 max-w-prose">{t.subtitle}</p>
         </div>
         {!formOpen && (
-          <Button
-            type="button"
-            size="compact"
-            className="px-4"
+          <AdminButton
+            variant="secondary"
+            size="sm"
             onClick={() => {
               resetForm();
               setFormOpen(true);
             }}
           >
             {t.addButton}
-          </Button>
+          </AdminButton>
         )}
       </div>
 
       {error && (
         <p
           role="alert"
-          className="text-sm text-red-200 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2"
+          className="text-sm text-red-200 bg-red-500/10 border border-red-500/30 rounded-[var(--r-ctrl,4px)] px-3 py-2"
         >
           {error}
         </p>
@@ -264,7 +263,7 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
       {formOpen && (
         <form
           onSubmit={handleSubmit}
-          className="space-y-3 border border-neutral-700 rounded-lg p-4 bg-neutral-900/40"
+          className="space-y-3 border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-ctrl,4px)] p-4 bg-[var(--s2,#1d1520)]"
         >
           <label className="block space-y-1">
             <span className="text-xs uppercase tracking-[0.12em] text-neutral-400">
@@ -275,7 +274,7 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
               onChange={(e) =>
                 setKind(e.target.value as AvailabilityConstraintKind)
               }
-              className="w-full bg-neutral-800 border border-neutral-600 rounded-lg px-3 py-2 text-sm"
+              className="w-full bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-ctrl,4px)] px-3 py-2 text-sm"
             >
               {KINDS.map((k) => (
                 <option key={k} value={k}>
@@ -303,7 +302,7 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
                     // même date, sans empêcher de l'étendre.
                     if (!endsOn || endsOn < v) setEndsOn(v);
                   }}
-                  className="w-full bg-neutral-800 border border-neutral-600 rounded-lg px-3 py-2 text-sm"
+                  className="w-full bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-ctrl,4px)] px-3 py-2 text-sm"
                 />
               </label>
               <label className="block space-y-1">
@@ -316,7 +315,7 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
                   min={startsOn || undefined}
                   value={endsOn}
                   onChange={(e) => setEndsOn(e.target.value)}
-                  className="w-full bg-neutral-800 border border-neutral-600 rounded-lg px-3 py-2 text-sm"
+                  className="w-full bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-ctrl,4px)] px-3 py-2 text-sm"
                 />
               </label>
             </div>
@@ -332,7 +331,7 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
                 required
                 value={timeOfDay}
                 onChange={(e) => setTimeOfDay(e.target.value)}
-                className="w-full bg-neutral-800 border border-neutral-600 rounded-lg px-3 py-2 text-sm"
+                className="w-full bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-ctrl,4px)] px-3 py-2 text-sm"
               />
             </label>
           )}
@@ -357,10 +356,10 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
                             : [...prev, d]
                         )
                       }
-                      className={`px-3 py-1.5 rounded-full text-sm border ${
+                      className={`px-3 py-1.5 rounded-[var(--r-ctrl,4px)] text-sm border ${
                         on
-                          ? 'bg-emerald-500/15 text-emerald-200 border-emerald-400/50'
-                          : 'bg-neutral-800 text-neutral-300 border-neutral-600'
+                          ? 'bg-[rgba(180,103,209,.12)] text-[var(--or-200,#eec4ff)] border-[var(--or,#b467d1)]'
+                          : 'bg-[var(--s2,#1d1520)] text-[var(--t2,#c7bfca)] border-[var(--line2,rgba(194,196,201,.2))]'
                       }`}
                     >
                       {weekdayLabels[d]}
@@ -379,7 +378,7 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
               <select
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
-                className="w-full bg-neutral-800 border border-neutral-600 rounded-lg px-3 py-2 text-sm"
+                className="w-full bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-ctrl,4px)] px-3 py-2 text-sm"
               >
                 {TOURNAMENT_TIMEZONES.map((tz) => (
                   <option key={tz.value} value={tz.value}>
@@ -397,7 +396,7 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
               <select
                 value={scope}
                 onChange={(e) => setScope(e.target.value)}
-                className="w-full bg-neutral-800 border border-neutral-600 rounded-lg px-3 py-2 text-sm"
+                className="w-full bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-ctrl,4px)] px-3 py-2 text-sm"
               >
                 <option value="">{t.scopeAll}</option>
                 {tournaments.map((tr) => (
@@ -421,30 +420,30 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder={t.notePlaceholder}
-              className="w-full bg-neutral-800 border border-neutral-600 rounded-lg px-3 py-2 text-sm"
+              className="w-full bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-ctrl,4px)] px-3 py-2 text-sm"
             />
             <span className="text-xs text-neutral-500">{t.noteHint}</span>
           </label>
 
           <div className="flex gap-2 justify-end">
-            <button
-              type="button"
+            <AdminButton
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 setFormOpen(false);
                 resetForm();
               }}
-              className="text-sm underline text-neutral-300 px-3"
             >
               {t.cancel}
-            </button>
-            <Button
+            </AdminButton>
+            <AdminButton
               type="submit"
-              size="compact"
-              className="px-4"
+              variant="primary"
+              size="sm"
               disabled={!canSubmit || busy}
             >
               {busy ? t.saving : t.save}
-            </Button>
+            </AdminButton>
           </div>
         </form>
       )}
@@ -461,7 +460,7 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
           {constraints.map((c) => (
             <li
               key={c.id}
-              className="flex items-start justify-between gap-3 border border-neutral-700 rounded-lg px-3 py-2"
+              className="flex items-start justify-between gap-3 border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-ctrl,4px)] px-3 py-2"
             >
               <div className="space-y-1 min-w-0">
                 <p className="text-sm text-neutral-100">
@@ -475,14 +474,14 @@ export default function TeamAvailabilityPanel({ teamId }: { teamId: string }) {
                   {c.note || ''}
                 </p>
               </div>
-              <button
-                type="button"
+              <AdminButton
+                variant="danger"
+                size="xs"
                 onClick={() => void handleDelete(c)}
                 disabled={busyId === c.id}
-                className="text-xs underline text-red-300 shrink-0 disabled:opacity-50"
               >
                 {t.deleteAction}
-              </button>
+              </AdminButton>
             </li>
           ))}
         </ul>

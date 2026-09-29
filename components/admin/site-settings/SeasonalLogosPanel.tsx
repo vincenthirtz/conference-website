@@ -22,6 +22,8 @@ import {
   SEASONAL_LOGOS_MAX,
   seasonalLogoStatus,
 } from '@/utils/seasonalLogo';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type Payload = {
   logos: SeasonalLogo[];
@@ -29,11 +31,11 @@ type Payload = {
   today: string;
 };
 
-const STATUS_CLASS: Record<SeasonalLogoStatus, string> = {
-  active: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
-  scheduled: 'border-sky-500/40 bg-sky-500/10 text-sky-200',
-  ended: 'border-neutral-600 bg-neutral-800 text-neutral-400',
-  disabled: 'border-neutral-600 bg-neutral-800 text-neutral-400',
+const STATUS_TONE: Record<SeasonalLogoStatus, ChipTone> = {
+  active: 'ok',
+  scheduled: 'brand',
+  ended: 'neutral',
+  disabled: 'neutral',
 };
 
 function newId(): string {
@@ -150,12 +152,12 @@ export default function SeasonalLogosPanel() {
   const badRange = logos.some((l) => l.endDate < l.startDate);
 
   return (
-    <section className="rounded-2xl border border-neutral-700/50 bg-neutral-800/40 p-6">
+    <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6">
       <h2 className="text-lg font-semibold">{t.seasonalHeading}</h2>
       <p className="mt-2 text-sm text-neutral-300">{t.seasonalIntro}</p>
 
       <div
-        className="mt-4 rounded-xl border border-neutral-700/60 bg-neutral-900/60 px-4 py-3 text-sm text-neutral-200"
+        className="mt-4 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-4 py-3 text-sm text-neutral-200"
         data-testid="seasonal-logo-current"
       >
         {activeId && !dirty
@@ -169,30 +171,28 @@ export default function SeasonalLogosPanel() {
           return (
             <li
               key={logo.id}
-              className="rounded-xl border border-neutral-700/60 bg-neutral-900/40 p-4"
+              className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-4"
               data-testid="seasonal-logo-item"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span
-                  className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${STATUS_CLASS[status]}`}
-                >
-                  {statusLabel[status]}
-                </span>
+                <Chip tone={STATUS_TONE[status]}>{statusLabel[status]}</Chip>
                 <div className="flex gap-2">
-                  <button
+                  <AdminButton
+                    variant="ghost"
+                    size="xs"
                     type="button"
                     onClick={() => update(logo.id, { enabled: !logo.enabled })}
-                    className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-200"
                   >
                     {logo.enabled ? t.seasonalDisable : t.seasonalEnable}
-                  </button>
-                  <button
+                  </AdminButton>
+                  <AdminButton
+                    variant="danger"
+                    size="xs"
                     type="button"
                     onClick={() => remove(logo.id)}
-                    className="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs text-red-300"
                   >
                     {t.seasonalRemove}
-                  </button>
+                  </AdminButton>
                 </div>
               </div>
 
@@ -207,7 +207,7 @@ export default function SeasonalLogosPanel() {
                     maxLength={60}
                     placeholder={t.seasonalNamePlaceholder}
                     onChange={(e) => update(logo.id, { name: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+                    className="mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white"
                   />
                 </label>
                 <label className="block">
@@ -220,7 +220,7 @@ export default function SeasonalLogosPanel() {
                     onChange={(e) =>
                       update(logo.id, { startDate: e.target.value })
                     }
-                    className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+                    className="mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white"
                   />
                 </label>
                 <label className="block">
@@ -234,7 +234,7 @@ export default function SeasonalLogosPanel() {
                     onChange={(e) =>
                       update(logo.id, { endDate: e.target.value })
                     }
-                    className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+                    className="mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white"
                   />
                 </label>
                 <p className="self-end text-xs text-neutral-500">
@@ -256,7 +256,7 @@ export default function SeasonalLogosPanel() {
                   <span className="text-xs text-neutral-400">
                     {t.seasonalPreview}
                   </span>
-                  <div className="mt-1 flex h-[75px] items-center rounded-lg bg-neutral-950 px-4">
+                  <div className="mt-1 flex h-[75px] items-center rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] px-4">
                     {/* biome-ignore lint/performance/noImgElement: aperçu d'une
                         image tout juste envoyée, hors de tout optimiseur. */}
                     <img src={logo.url} alt="" className="block h-16 w-auto" />
@@ -279,22 +279,24 @@ export default function SeasonalLogosPanel() {
       )}
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <button
+        <AdminButton
+          variant="ghost"
+          size="sm"
           type="button"
           onClick={add}
           disabled={logos.length >= SEASONAL_LOGOS_MAX}
-          className="rounded-lg border border-neutral-600 px-4 py-2 text-sm text-neutral-200 disabled:opacity-50"
         >
           {t.seasonalAdd}
-        </button>
-        <button
+        </AdminButton>
+        <AdminButton
+          variant="primary"
+          size="sm"
           type="button"
           onClick={save}
           disabled={saving || !dirty || incomplete || badRange}
-          className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
           {saving ? t.seasonalSaving : t.seasonalSave}
-        </button>
+        </AdminButton>
       </div>
       {incomplete && (
         <p className="mt-2 text-xs text-neutral-500">{t.seasonalIncomplete}</p>

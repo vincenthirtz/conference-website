@@ -22,6 +22,12 @@ import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import {
+  rubanCard,
+  rubanInput,
+  rubanLabel,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 import {
   TENANT_STAFF_ROLES,
   TENANT_STAFF_ROLE_HINTS,
@@ -138,11 +144,11 @@ export default function GrantAccessModal({
     >
       <div
         ref={trapRef}
-        className="w-full max-w-md rounded-2xl border border-neutral-700 bg-neutral-900 p-5 shadow-xl"
+        className={`w-full max-w-md p-5 shadow-xl ${rubanCard}`}
       >
         <h2
           id="grant-access-title"
-          className="text-lg font-semibold text-white"
+          className="font-[family-name:var(--fd)] text-lg font-bold text-[var(--t1,#f4edf7)]"
         >
           {format(t.grantAccessTitle, { tenant: tenantName })}
         </h2>
@@ -160,13 +166,9 @@ export default function GrantAccessModal({
                 : t.grantAccessInvitedHint}
             </p>
             <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500"
-              >
+              <AdminButton variant="primary" size="sm" onClick={onClose}>
                 {t.grantAccessClose}
-              </button>
+              </AdminButton>
             </div>
           </>
         ) : (
@@ -179,10 +181,7 @@ export default function GrantAccessModal({
 
             <form onSubmit={submit} className="mt-4 space-y-4">
               <div>
-                <label
-                  htmlFor="grant-access-email"
-                  className="mb-1 block text-xs font-medium text-neutral-400"
-                >
+                <label htmlFor="grant-access-email" className={rubanLabel}>
                   {t.grantAccessEmailLabel}
                 </label>
                 <input
@@ -192,22 +191,19 @@ export default function GrantAccessModal({
                   onChange={(ev) => setEmail(ev.target.value)}
                   maxLength={254}
                   autoComplete="off"
-                  className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+                  className={rubanInput}
                 />
               </div>
 
               <div>
-                <label
-                  htmlFor="grant-access-role"
-                  className="mb-1 block text-xs font-medium text-neutral-400"
-                >
+                <label htmlFor="grant-access-role" className={rubanLabel}>
                   {t.grantAccessRoleLabel}
                 </label>
                 <select
                   id="grant-access-role"
                   value={role}
                   onChange={(ev) => setRole(ev.target.value)}
-                  className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+                  className={rubanInput}
                 >
                   {TENANT_STAFF_ROLES.map((r) => (
                     <option key={r} value={r}>
@@ -221,21 +217,18 @@ export default function GrantAccessModal({
               </div>
 
               <div className="flex justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800"
-                >
+                <AdminButton variant="ghost" size="sm" onClick={onClose}>
                   {t.grantAccessCancel}
-                </button>
-                <button
+                </AdminButton>
+                <AdminButton
                   type="submit"
+                  variant="primary"
+                  size="sm"
                   disabled={busy}
                   data-testid="grant-access-submit"
-                  className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
                 >
                   {busy ? t.grantAccessBusy : t.grantAccessSubmit}
-                </button>
+                </AdminButton>
               </div>
             </form>
           </>

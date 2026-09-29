@@ -18,6 +18,8 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTenantDetail from '@/lib/i18n/locales/admin-fr/adminTenantDetail';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 type Invitation = {
   id: string;
@@ -113,7 +115,7 @@ export default function TenantInvitationsPanel({
 
   return (
     <section
-      className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4"
+      className="bg-[var(--s1,#100812)] backdrop-blur border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] p-4"
       data-testid="tenant-invitations"
     >
       <h2 className="text-sm font-semibold text-neutral-400">
@@ -135,7 +137,7 @@ export default function TenantInvitationsPanel({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="prenom@exemple.fr"
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+            className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
           />
         </div>
         <div>
@@ -149,21 +151,22 @@ export default function TenantInvitationsPanel({
             id="invite-role"
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+            className="px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
           >
             <option value="caster">caster</option>
             <option value="admin">admin</option>
             <option value="owner">owner</option>
           </select>
         </div>
-        <button
+        <AdminButton
+          variant="primary"
+          size="sm"
           type="submit"
           disabled={busy || !email.trim()}
-          className="px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-sm font-semibold text-white disabled:opacity-50"
           data-testid="tenant-invite-submit"
         >
           {busy ? t.inviting : t.inviteCta}
-        </button>
+        </AdminButton>
       </form>
 
       {rows && rows.length > 0 && (
@@ -171,20 +174,20 @@ export default function TenantInvitationsPanel({
           {rows.map((row) => (
             <li
               key={row.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-neutral-900/50 px-3 py-2 text-xs"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] px-3 py-2 text-xs"
             >
               <span className="text-neutral-200">
                 {row.email}
                 <span className="ml-2 text-neutral-500">{row.role}</span>
               </span>
               <span className="flex items-center gap-3">
-                <span
-                  className={
+                <Chip
+                  tone={
                     row.status === 'pending'
-                      ? 'text-amber-300'
+                      ? 'warn'
                       : row.status === 'accepted'
-                        ? 'text-emerald-300'
-                        : 'text-neutral-500'
+                        ? 'ok'
+                        : 'neutral'
                   }
                 >
                   {statusLabel(row.status)}
@@ -194,15 +197,15 @@ export default function TenantInvitationsPanel({
                         'fr-FR'
                       ),
                     })}`}
-                </span>
+                </Chip>
                 {row.status === 'pending' && (
-                  <button
-                    type="button"
+                  <AdminButton
+                    variant="danger"
+                    size="xs"
                     onClick={() => void revoke(row)}
-                    className="underline text-neutral-400 hover:text-white"
                   >
                     {t.inviteRevoke}
-                  </button>
+                  </AdminButton>
                 )}
               </span>
             </li>

@@ -12,7 +12,6 @@
 // minRole 'admin' (miroir des routes API + host).
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -24,6 +23,10 @@ import CastMemberFormModal from '@/components/admin/cast-members/CastMemberFormM
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { logger } from '@/utils/logger';
 import nsAdminCastMembersList from '@/lib/i18n/locales/admin-fr/adminCastMembersList';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type Dict = typeof nsAdminCastMembersList.fr;
 
@@ -53,10 +56,8 @@ function statusLabel(tx: Dict, isActive: boolean) {
   return isActive ? tx.statusActive : tx.statusInactive;
 }
 
-function statusColor(isActive: boolean) {
-  return isActive
-    ? 'bg-emerald-600 text-white'
-    : 'bg-neutral-600 text-neutral-100';
+function statusTone(isActive: boolean): ChipTone {
+  return isActive ? 'ok' : 'neutral';
 }
 
 export default function CastMembersListPanel() {
@@ -254,10 +255,11 @@ export default function CastMembersListPanel() {
             </p>
           </div>
 
-          <button
+          <AdminButton
+            variant="primary"
+            size="md"
             type="button"
             onClick={() => setModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors flex items-center gap-2"
           >
             <svg
               className="w-5 h-5"
@@ -273,12 +275,12 @@ export default function CastMembersListPanel() {
               />
             </svg>
             {tx.addButton}
-          </button>
+          </AdminButton>
         </div>
       </div>
 
       {/* Search + Filters */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+      <section className="bg-[var(--s1,#100812)] backdrop-blur border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] p-6 mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
           <div className="sm:col-span-2">
             <label className="block text-sm text-neutral-400 mb-1">
@@ -301,7 +303,7 @@ export default function CastMembersListPanel() {
               <input
                 type="text"
                 placeholder={tx.searchPlaceholder}
-                className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full pl-10 pr-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-purple-500"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -313,7 +315,7 @@ export default function CastMembersListPanel() {
               {tx.statusLabel}
             </label>
             <select
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
               value={status}
               onChange={(e) =>
                 setStatus(e.target.value as 'all' | 'active' | 'inactive')
@@ -328,7 +330,7 @@ export default function CastMembersListPanel() {
       </section>
 
       {/* Members List */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+      <section className="bg-[var(--s1,#100812)] backdrop-blur border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
@@ -339,13 +341,15 @@ export default function CastMembersListPanel() {
           // un qui existait déjà.
           <div role="alert" className="py-16 text-center">
             <p className="text-sm text-red-200">{tx.loadError}</p>
-            <button
+            <AdminButton
+              variant="ghost"
+              size="sm"
               type="button"
               onClick={() => void fetchData()}
-              className="mt-4 rounded-lg border border-neutral-600 bg-neutral-800 px-4 py-2 text-sm text-white hover:bg-neutral-700"
+              className="mt-4"
             >
               {tx.retry}
-            </button>
+            </AdminButton>
           </div>
         ) : members.length === 0 ? (
           <div className="text-center py-20 text-neutral-400">
@@ -436,10 +440,10 @@ export default function CastMembersListPanel() {
                         alt={m.name}
                         width={48}
                         height={48}
-                        className="w-12 h-12 rounded-xl object-cover border border-neutral-700"
+                        className="w-12 h-12 rounded-[var(--r-card,14px)] object-cover border border-[var(--line2,rgba(194,196,201,.2))]"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-xl bg-purple-600/20 flex items-center justify-center border border-purple-500/30">
+                      <div className="w-12 h-12 rounded-[var(--r-card,14px)] bg-purple-600/20 flex items-center justify-center border border-purple-500/30">
                         <svg
                           className="w-6 h-6 text-purple-400"
                           fill="none"
@@ -463,18 +467,10 @@ export default function CastMembersListPanel() {
                       <h3 className="font-semibold text-white group-hover:text-purple-400 transition-colors">
                         {m.name}
                       </h3>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
-                          m.is_active
-                        )}`}
-                      >
+                      <Chip tone={statusTone(m.is_active)}>
                         {statusLabel(tx, m.is_active)}
-                      </span>
-                      {m.is_promo && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30">
-                          {tx.promo}
-                        </span>
-                      )}
+                      </Chip>
+                      {m.is_promo && <Chip tone="warn">{tx.promo}</Chip>}
                     </div>
                     {m.title && (
                       <p className="text-sm text-neutral-400 mb-1">{m.title}</p>
@@ -529,7 +525,7 @@ export default function CastMembersListPanel() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                       onClick={() => onToggleActive(m)}
-                      className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                      className={`px-3 py-1.5 rounded-[var(--r-ctrl,4px)] border text-sm transition-colors ${
                         m.is_active
                           ? 'border-amber-500/40 text-amber-300 hover:border-amber-400'
                           : 'border-emerald-500/40 text-emerald-300 hover:border-emerald-400'
@@ -537,18 +533,20 @@ export default function CastMembersListPanel() {
                     >
                       {m.is_active ? tx.deactivate : tx.activate}
                     </button>
-                    <Link
+                    <AdminButtonLink
+                      variant="ghost"
+                      size="xs"
                       href={`/admin/cast-members/${m.id}`}
-                      className="px-3 py-1.5 rounded-lg border border-neutral-600 hover:border-neutral-500 text-sm transition-colors"
                     >
                       {tx.edit}
-                    </Link>
-                    <button
+                    </AdminButtonLink>
+                    <AdminButton
+                      variant="danger"
+                      size="xs"
                       onClick={() => onDelete(m.id)}
-                      className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors"
                     >
                       {tx.delete}
-                    </button>
+                    </AdminButton>
                   </div>
                 </div>
               );
@@ -560,11 +558,12 @@ export default function CastMembersListPanel() {
       {/* Pagination */}
       {members.length > 0 && (
         <div className="flex justify-between items-center mt-6">
-          <button
+          <AdminButton
+            variant="ghost"
+            size="md"
             type="button"
             disabled={offset === 0 || loading}
             onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <svg
               className="w-4 h-4"
@@ -580,20 +579,21 @@ export default function CastMembersListPanel() {
               />
             </svg>
             {tx.previous}
-          </button>
+          </AdminButton>
 
           <span className="text-neutral-400 text-sm">
             {offset + 1} – {offset + members.length}
             {total !== null ? format(tx.paginationOf, { total }) : ''}
           </span>
 
-          <button
+          <AdminButton
+            variant="ghost"
+            size="md"
             type="button"
             disabled={
               loading || (total !== null && offset + PAGE_SIZE >= total)
             }
             onClick={() => setOffset(offset + PAGE_SIZE)}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {tx.next}
             <svg
@@ -609,7 +609,7 @@ export default function CastMembersListPanel() {
                 d="M9 5l7 7-7 7"
               />
             </svg>
-          </button>
+          </AdminButton>
         </div>
       )}
     </>

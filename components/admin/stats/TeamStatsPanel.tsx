@@ -4,6 +4,10 @@ import Image from 'next/image';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import { CARD, ERROR_BOX } from '@/features/admin/stages/ui/rubanClasses';
+import { rubanCard } from '@/features/admin/diffusion/ui/rubanClasses';
 
 import { logger } from '../../../utils/logger';
 import nsAdminStatsTeams from '@/lib/i18n/locales/admin-fr/adminStatsTeams';
@@ -187,7 +191,7 @@ export default function TeamStatsPanel() {
                   ? 'bg-neutral-400 text-black'
                   : rank === 3
                     ? 'bg-amber-700 text-white'
-                    : 'bg-neutral-700 text-neutral-300'
+                    : 'bg-[var(--s3,#2f2732)] text-[var(--t3,#a39ba6)]'
             }`}
           >
             {rank}
@@ -210,11 +214,11 @@ export default function TeamStatsPanel() {
               alt={row.team?.name || row.team_id}
               width={32}
               height={32}
-              className="h-8 w-8 rounded-lg border border-neutral-700 object-cover"
+              className="h-8 w-8 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] object-cover"
             />
           )}
           <span>
-            <span className="block font-semibold text-white transition-colors group-hover:text-blue-400">
+            <span className="block font-semibold text-[var(--t1,#f4edf7)] transition-colors group-hover:text-[var(--or-200,#eec4ff)]">
               {row.team?.name || row.team_id}
             </span>
             {row.team?.short_name && (
@@ -234,7 +238,7 @@ export default function TeamStatsPanel() {
         row.tournament ? (
           <Link
             href={`/admin/tournament/${row.tournament_id}`}
-            className="transition-colors hover:text-blue-400"
+            className="transition-colors hover:text-[var(--or-200,#eec4ff)]"
           >
             <span className="block font-medium text-neutral-200">
               {row.tournament.name}
@@ -280,12 +284,12 @@ export default function TeamStatsPanel() {
       value: (row) => row.winrate ?? 0,
       render: (row) => (
         <span
-          className={`rounded-lg px-2 py-1 text-xs font-semibold ${
+          className={`text-xs font-semibold tabular-nums ${
             (row.winrate ?? 0) >= 0.6
-              ? 'bg-emerald-900/50 text-emerald-300'
+              ? 'text-[var(--lf-200,#b3e7a3)]'
               : (row.winrate ?? 0) >= 0.4
-                ? 'bg-amber-900/50 text-amber-300'
-                : 'bg-red-900/50 text-red-300'
+                ? 'text-[var(--t2,#c7bfca)]'
+                : 'text-[#ffc2c2]'
           }`}
         >
           {formatPercent(row.winrate)}
@@ -336,7 +340,7 @@ export default function TeamStatsPanel() {
       headerClassName: 'text-center',
       value: (row) => row.points ?? 0,
       render: (row) => (
-        <span className="font-bold text-white">
+        <span className="font-bold text-[var(--t1,#f4edf7)]">
           {row.points != null ? row.points : '—'}
         </span>
       ),
@@ -353,26 +357,18 @@ export default function TeamStatsPanel() {
   return (
     <>
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              {t.heading}
-            </h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              {total !== null
-                ? format(total > 1 ? t.countRanked_other : t.countRanked_one, {
-                    total,
-                  })
-                : t.loading}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleExportCsv}
-            className="px-4 py-2.5 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm font-medium transition-colors flex items-center gap-2"
-          >
+      <AdminPageHeader
+        level={2}
+        title={t.heading}
+        subtitle={
+          total !== null
+            ? format(total > 1 ? t.countRanked_other : t.countRanked_one, {
+                total,
+              })
+            : t.loading
+        }
+        actions={
+          <AdminButton size="sm" onClick={handleExportCsv}>
             <svg
               className="w-4 h-4"
               fill="none"
@@ -387,13 +383,13 @@ export default function TeamStatsPanel() {
               />
             </svg>
             {t.exportCsv}
-          </button>
-        </div>
-      </div>
+          </AdminButton>
+        }
+      />
 
       {/* Error Message */}
       {errorMsg && (
-        <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+        <div className={`mb-6 flex items-center gap-2 ${ERROR_BOX}`}>
           <svg
             className="w-5 h-5 text-red-400 flex-shrink-0"
             fill="currentColor"
@@ -410,17 +406,17 @@ export default function TeamStatsPanel() {
       )}
 
       {/* Filters */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+      <section className={`mb-6 ${CARD}`}>
         <form
           onSubmit={handleFilterSubmit}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end"
         >
           <div className="lg:col-span-2">
-            <label className="block text-sm text-neutral-400 mb-1">
+            <label className="mb-1 block text-sm text-[var(--t2,#c7bfca)]">
               {t.filterTournamentLabel}
             </label>
             <select
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
               value={tournamentId}
               onChange={(e) => setTournamentId(e.target.value)}
               disabled={loadingTournaments}
@@ -438,13 +434,13 @@ export default function TeamStatsPanel() {
           </div>
 
           <div>
-            <label className="block text-sm text-neutral-400 mb-1">
+            <label className="mb-1 block text-sm text-[var(--t2,#c7bfca)]">
               {t.filterMinMatchesLabel}
             </label>
             <input
               type="number"
               min={0}
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
               value={minMatches}
               onChange={(e) => setMinMatches(e.target.value)}
               placeholder="ex: 3"
@@ -452,7 +448,7 @@ export default function TeamStatsPanel() {
           </div>
 
           <div>
-            <label className="block text-sm text-neutral-400 mb-1">
+            <label className="mb-1 block text-sm text-[var(--t2,#c7bfca)]">
               {t.filterSearchLabel}
             </label>
             <div className="relative">
@@ -472,7 +468,7 @@ export default function TeamStatsPanel() {
               <input
                 type="text"
                 placeholder={t.filterSearchPlaceholder}
-                className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -480,11 +476,11 @@ export default function TeamStatsPanel() {
           </div>
 
           <div>
-            <label className="block text-sm text-neutral-400 mb-1">
+            <label className="mb-1 block text-sm text-[var(--t2,#c7bfca)]">
               {t.sortByLabel}
             </label>
             <select
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
@@ -498,11 +494,11 @@ export default function TeamStatsPanel() {
 
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="block text-sm text-neutral-400 mb-1">
+              <label className="mb-1 block text-sm text-[var(--t2,#c7bfca)]">
                 {t.orderLabel}
               </label>
               <select
-                className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                 value={sortDir}
                 onChange={(e) =>
                   setSortDir(e.target.value === 'asc' ? 'asc' : 'desc')
@@ -513,10 +509,7 @@ export default function TeamStatsPanel() {
               </select>
             </div>
 
-            <button
-              type="submit"
-              className="self-end px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"
-            >
+            <AdminButton type="submit" variant="primary" className="self-end">
               <svg
                 className="w-4 h-4"
                 fill="none"
@@ -531,7 +524,7 @@ export default function TeamStatsPanel() {
                 />
               </svg>
               {t.filterSubmit}
-            </button>
+            </AdminButton>
           </div>
         </form>
       </section>
@@ -540,7 +533,7 @@ export default function TeamStatsPanel() {
       {/* Classement — kit partagé (lot A5). L'export CSV reste celui de
           l'écran : il repart au serveur chercher les 10 000 lignes, là où
           l'export du kit n'exporterait que la page affichée. */}
-      <section className="rounded-2xl border border-neutral-700/50 bg-neutral-800/50 p-4 backdrop-blur">
+      <section className={`p-4 ${rubanCard}`}>
         <DataTable<TeamStatsRow>
           rows={stats}
           columns={columns}

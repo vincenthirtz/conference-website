@@ -7,6 +7,7 @@ import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { ScrimPlanning } from '@/types/admin';
 import nsAdminScrimPlanningsCreate from '@/lib/i18n/locales/admin-fr/adminScrimPlanningsCreate';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type TeamOption = { id: string; name: string; short_name: string | null };
 
@@ -222,21 +223,23 @@ export default function PlanningFormModal({
       subtitle={t.subtitle}
       footer={
         <>
-          <button
+          <AdminButton
+            variant="ghost"
+            size="md"
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium"
           >
             {t.cancel}
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
+            variant="primary"
+            size="md"
             type="submit"
             form={formId}
             disabled={submitting}
-            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium"
           >
             {submitting ? t.submitting : t.submit}
-          </button>
+          </AdminButton>
         </>
       }
     >
@@ -249,7 +252,7 @@ export default function PlanningFormModal({
             <select
               value={form.team1_id}
               onChange={(e) => setForm({ ...form, team1_id: e.target.value })}
-              className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
               required
             >
               <option value="">{t.teamPlaceholder}</option>
@@ -267,7 +270,7 @@ export default function PlanningFormModal({
             <select
               value={form.team2_id}
               onChange={(e) => setForm({ ...form, team2_id: e.target.value })}
-              className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
               required
             >
               <option value="">{t.teamPlaceholder}</option>
@@ -289,7 +292,7 @@ export default function PlanningFormModal({
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               placeholder={t.titlePlaceholder}
-              className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
             />
           </div>
           <div>
@@ -300,7 +303,7 @@ export default function PlanningFormModal({
               value={form.game}
               onChange={(e) => setForm({ ...form, game: e.target.value })}
               placeholder="Overwatch"
-              className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
             />
           </div>
         </div>
@@ -316,7 +319,7 @@ export default function PlanningFormModal({
               onChange={(e) =>
                 setForm({ ...form, horizon_start: e.target.value })
               }
-              className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
             />
           </div>
           <div>
@@ -331,7 +334,7 @@ export default function PlanningFormModal({
               onChange={(e) =>
                 setForm({ ...form, horizon_days: Number(e.target.value) })
               }
-              className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
             />
           </div>
         </div>
@@ -346,7 +349,7 @@ export default function PlanningFormModal({
               onChange={(e) =>
                 setForm({ ...form, slot_minutes: Number(e.target.value) })
               }
-              className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
             >
               <option value={30}>{t.slot30}</option>
               <option value={60}>{t.slot60}</option>
@@ -360,7 +363,7 @@ export default function PlanningFormModal({
               type="time"
               value={form.day_start}
               onChange={(e) => setForm({ ...form, day_start: e.target.value })}
-              className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
             />
           </div>
           <div>
@@ -371,7 +374,7 @@ export default function PlanningFormModal({
               type="time"
               value={form.day_end}
               onChange={(e) => setForm({ ...form, day_end: e.target.value })}
-              className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
             />
           </div>
         </div>
@@ -383,7 +386,7 @@ export default function PlanningFormModal({
           <select
             value={form.timezone}
             onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-            className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+            className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
           >
             {/* Sécurité : si la valeur courante (ex. legacy) n'est pas dans la
                 liste supportée, on l'expose quand même pour ne pas la perdre. */}
@@ -407,7 +410,7 @@ export default function PlanningFormModal({
           </select>
         </div>
 
-        <div className="rounded-lg bg-neutral-900/40 border border-neutral-700/60 px-3 py-3">
+        <div className="rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] px-3 py-3">
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
@@ -415,7 +418,7 @@ export default function PlanningFormModal({
               onChange={(e) =>
                 setForm({ ...form, staff_required: e.target.checked })
               }
-              className="mt-0.5 w-4 h-4 rounded border-neutral-600 bg-neutral-900"
+              className="mt-0.5 w-4 h-4 rounded-[var(--r-ctrl,4px)] border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)]"
             />
             <span>
               <span className="block text-sm font-medium text-neutral-200">
@@ -429,7 +432,7 @@ export default function PlanningFormModal({
         </div>
 
         {error && (
-          <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm">
+          <div className="rounded-[var(--r-ctrl,4px)] bg-red-900/40 border border-red-500/50 px-3 py-2 text-sm">
             {error}
           </div>
         )}

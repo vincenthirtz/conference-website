@@ -23,6 +23,10 @@ import MintApiKeyModal from '@/components/admin/onboarding/MintApiKeyModal';
 import GrantAccessModal from '@/components/admin/onboarding/GrantAccessModal';
 import ApiTokenRevealModal from '@/components/admin/ApiTokenRevealModal';
 import nsAdminOnboarding from '@/lib/i18n/locales/admin-fr/adminOnboarding';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 type Dict = typeof nsAdminOnboarding.fr;
 
@@ -110,16 +114,10 @@ function Pill({
   label: string;
 }): React.ReactElement {
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs ${
-        ok
-          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
-          : 'border-neutral-600/50 bg-neutral-700/20 text-neutral-400'
-      }`}
-    >
+    <Chip tone={ok ? 'ok' : 'neutral'}>
       <span aria-hidden>{ok ? '✓' : '·'}</span>
       {label}
-    </span>
+    </Chip>
   );
 }
 
@@ -194,7 +192,7 @@ export default function TenantReadinessPanel() {
             type="checkbox"
             checked={onlyBlocked}
             onChange={(e) => setOnlyBlocked(e.target.checked)}
-            className="rounded border-neutral-600 bg-neutral-900"
+            className="rounded-[var(--r-ctrl,4px)] border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)]"
           />
           {t.readinessOnlyBlocked}
         </label>
@@ -218,7 +216,7 @@ export default function TenantReadinessPanel() {
             return (
               <li
                 key={r.id}
-                className="rounded-2xl border border-neutral-700/50 bg-neutral-800/40 p-4"
+                className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4"
                 data-testid="tenant-readiness-row"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -230,22 +228,20 @@ export default function TenantReadinessPanel() {
                       >
                         {r.name}
                       </Link>
-                      <code className="rounded bg-neutral-900 px-1.5 py-0.5 text-xs text-neutral-400">
+                      <code className="rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] px-1.5 py-0.5 text-xs text-neutral-400">
                         {r.slug}
                       </code>
                       {r.isTrial && (
-                        <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-0.5 text-xs text-sky-200">
+                        <Chip tone="brand">
                           {r.daysRemaining !== null
                             ? format(t.readinessTrialDays, {
                                 days: Math.max(0, r.daysRemaining),
                               })
                             : t.readinessTrial}
-                        </span>
+                        </Chip>
                       )}
                       {trialSoon && (
-                        <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-xs text-amber-100">
-                          {t.readinessTrialEndingSoon}
-                        </span>
+                        <Chip tone="warn">{t.readinessTrialEndingSoon}</Chip>
                       )}
                     </div>
 
@@ -256,9 +252,10 @@ export default function TenantReadinessPanel() {
                             {/* L'écran de réglages est PAR serveur : on y va
                                 directement, plutôt que de passer par la fiche
                                 de l'espace puis de rechercher le serveur. */}
-                            <Link
+                            <AdminButtonLink
+                              variant="ghost"
+                              size="xs"
                               href={`/admin/tenants/${r.id}/discord-config/${g.guildId}`}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-600/60 bg-neutral-900/40 px-2.5 py-1 text-xs text-neutral-200 hover:border-violet-400/60 hover:text-white"
                               data-testid="readiness-configure-guild"
                             >
                               <span className="font-medium">
@@ -281,7 +278,7 @@ export default function TenantReadinessPanel() {
                                 })}
                               </span>
                               <span aria-hidden>→</span>
-                            </Link>
+                            </AdminButtonLink>
                           </li>
                         ))}
                       </ul>
@@ -327,52 +324,46 @@ export default function TenantReadinessPanel() {
                   </div>
 
                   <div className="flex flex-col items-end gap-2">
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        r.blockers.length === 0
-                          ? 'bg-emerald-500/15 text-emerald-200'
-                          : 'bg-amber-500/15 text-amber-100'
-                      }`}
-                    >
+                    <Chip tone={r.blockers.length === 0 ? 'ok' : 'warn'}>
                       {r.blockers.length === 0
                         ? t.readinessReady
                         : format(t.readinessBlockers, {
                             count: r.blockers.length,
                           })}
-                    </span>
+                    </Chip>
                     {/* Toujours accessible, pas seulement quand le serveur
                         manque : un espace peut légitimement en piloter un
                         second (serveur de staff, édition suivante). */}
-                    <button
-                      type="button"
+                    <AdminButton
+                      variant="ghost"
+                      size="xs"
                       onClick={() => setAttachTo({ id: r.id, name: r.name })}
-                      className="text-xs text-violet-300 underline hover:text-violet-200"
                       data-testid="readiness-attach-guild-cta"
                     >
                       {r.guilds.length === 0
                         ? t.attachGuildInviteCta
                         : t.attachGuildCta}
-                    </button>
+                    </AdminButton>
                     {/* Émettre depuis la LIGNE de l'espace : la cible est
                         nommée dans la modale et dans l'URL appelée. C'est tout
                         l'objet du geste — /admin/api-tokens émet pour l'espace
                         actif du sélecteur, qu'il n'affiche nulle part. */}
-                    <button
-                      type="button"
+                    <AdminButton
+                      variant="ghost"
+                      size="xs"
                       onClick={() => setMintFor({ id: r.id, name: r.name })}
-                      className="text-xs text-violet-300 underline hover:text-violet-200"
                       data-testid="readiness-mint-key-cta"
                     >
                       {t.mintKeyCta}
-                    </button>
-                    <button
-                      type="button"
+                    </AdminButton>
+                    <AdminButton
+                      variant="ghost"
+                      size="xs"
                       onClick={() => setGrantFor({ id: r.id, name: r.name })}
-                      className="text-xs text-violet-300 underline hover:text-violet-200"
                       data-testid="readiness-grant-access-cta"
                     >
                       {t.grantAccessCta}
-                    </button>
+                    </AdminButton>
                   </div>
                 </div>
 
@@ -383,47 +374,49 @@ export default function TenantReadinessPanel() {
                       return (
                         <li key={b}>
                           {meta.action === 'configure_channels' ? (
-                            <Link
+                            <AdminButtonLink
+                              variant="ghost"
+                              size="xs"
                               href={`/admin/tenants/${r.id}/discord-config/${
                                 (r.guilds[0] ?? { guildId: '' }).guildId
                               }`}
-                              className="inline-block rounded-lg border border-amber-500/30 bg-amber-500/5 px-2.5 py-1 text-xs text-amber-100 hover:border-amber-400/60"
                             >
                               {meta.label} →
-                            </Link>
+                            </AdminButtonLink>
                           ) : meta.action === 'grant_access' ? (
-                            <button
+                            <AdminButton
+                              variant="ghost"
+                              size="xs"
                               type="button"
                               onClick={() =>
                                 setGrantFor({ id: r.id, name: r.name })
                               }
-                              className="inline-block rounded-lg border border-amber-500/30 bg-amber-500/5 px-2.5 py-1 text-xs text-amber-100 hover:border-amber-400/60"
                               data-testid="readiness-grant-access"
                             >
                               {meta.label} →
-                            </button>
+                            </AdminButton>
                           ) : meta.action === 'attach_guild' ? (
-                            <button
+                            <AdminButton
+                              variant="ghost"
+                              size="xs"
                               type="button"
                               onClick={() =>
                                 setAttachTo({ id: r.id, name: r.name })
                               }
-                              className="inline-block rounded-lg border border-amber-500/30 bg-amber-500/5 px-2.5 py-1 text-xs text-amber-100 hover:border-amber-400/60"
                               data-testid="readiness-attach-guild"
                             >
                               {meta.label} →
-                            </button>
+                            </AdminButton>
                           ) : meta.href ? (
-                            <Link
+                            <AdminButtonLink
+                              variant="ghost"
+                              size="xs"
                               href={meta.href}
-                              className="inline-block rounded-lg border border-amber-500/30 bg-amber-500/5 px-2.5 py-1 text-xs text-amber-100 hover:border-amber-400/60"
                             >
                               {meta.label} →
-                            </Link>
+                            </AdminButtonLink>
                           ) : (
-                            <span className="inline-block rounded-lg border border-neutral-600/50 px-2.5 py-1 text-xs text-neutral-300">
-                              {meta.label}
-                            </span>
+                            <Chip tone="warn">{meta.label}</Chip>
                           )}
                         </li>
                       );

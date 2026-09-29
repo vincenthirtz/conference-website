@@ -5,6 +5,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTenantsNew from '@/lib/i18n/locales/admin-fr/adminTenantsNew';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type TenantFormModalProps = {
   open: boolean;
@@ -113,18 +114,20 @@ export default function TenantFormModal({
       subtitle={t.subtitle}
       footer={
         <>
-          <button
+          <AdminButton
+            variant="ghost"
+            size="md"
             type="button"
             onClick={onClose}
-            className="px-6 py-3 rounded-xl border border-neutral-600 text-sm font-semibold text-white text-center transition hover:bg-neutral-800"
           >
             {t.cancel}
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
+            variant="primary"
+            size="md"
             type="submit"
             form={formId}
             disabled={saving}
-            className="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
             data-testid="tenant-create-submit"
           >
             {saving ? (
@@ -135,7 +138,7 @@ export default function TenantFormModal({
             ) : (
               t.submit
             )}
-          </button>
+          </AdminButton>
         </>
       }
     >
@@ -154,7 +157,7 @@ export default function TenantFormModal({
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
+            className="w-full px-4 py-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
             placeholder={t.namePlaceholder}
             required
             data-testid="tenant-name-input"
@@ -177,7 +180,7 @@ export default function TenantFormModal({
               setSlug(e.target.value.toLowerCase());
             }}
             pattern="[a-z0-9]+(-[a-z0-9]+)*"
-            className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white font-mono text-sm"
+            className="w-full px-4 py-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-purple-500 text-white font-mono text-sm"
             placeholder={t.slugPlaceholder}
             required
             data-testid="tenant-slug-input"
@@ -196,7 +199,7 @@ export default function TenantFormModal({
             id="tenant-locale"
             value={defaultLocale}
             onChange={(e) => setDefaultLocale(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
+            className="w-full px-4 py-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
           >
             <option value="fr">{t.localeFr}</option>
             <option value="en">{t.localeEn}</option>

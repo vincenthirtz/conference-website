@@ -12,6 +12,8 @@ export type SimStageHandlers = {
   onToggleLock: (id: string) => void;
 };
 import nsAdminTournamentSimulator from '@/lib/i18n/locales/admin-fr/adminTournamentSimulator';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import { SIM_TITLE } from '@/features/admin/simulator/ui/simulatorClasses';
 
 /**
  * Onglet « arbre » du simulateur : chaque phase de l'occurrence courante,
@@ -40,12 +42,10 @@ export function SimulatorBracketTab({
     <div className="space-y-8">
       {stages.map((stage, stageIdx) => (
         <div key={stage.id}>
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-300 border border-purple-500/20">
-              {stage.stage_type}
-            </span>
+          <h3 className={`mb-4 flex items-center gap-2 ${SIM_TITLE}`}>
+            <Chip tone="brand">{stage.stage_type}</Chip>
             {stage.name}
-            <span className="text-sm text-neutral-500 font-normal">
+            <span className="text-sm font-normal normal-case text-[var(--t4,#807984)]">
               {format(tx.matchesCount, {
                 count: stage.matches.length,
               })}

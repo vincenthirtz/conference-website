@@ -8,25 +8,18 @@ import type { ReactNode } from 'react';
 
 export type Accent = 'purple' | 'blue' | 'amber' | 'emerald' | 'red' | 'gray';
 
-// Accents alignés sur StatCard / le dashboard admin (anneau + dégradé).
-const ACCENT_RING: Record<Accent, string> = {
-  purple: 'ring-purple-500/30 from-purple-500/10',
-  blue: 'ring-blue-500/30 from-blue-500/10',
-  amber: 'ring-amber-500/30 from-amber-500/10',
-  emerald: 'ring-emerald-500/30 from-emerald-500/10',
-  red: 'ring-red-500/30 from-red-500/10',
-  gray: 'ring-white/10 from-white/[0.06]',
-};
-const ACCENT_TEXT: Record<Accent, string> = {
-  purple: 'text-purple-300',
-  blue: 'text-blue-300',
-  amber: 'text-amber-300',
-  emerald: 'text-emerald-300',
-  red: 'text-red-300',
-  gray: 'text-neutral-300',
+// Couleur = signal (« Le Ruban ») : seul l'accent rouge, zone sensible,
+// teinte encore la carte ; les autres partagent la surface d'encre.
+const FRAME: Record<Accent, string> = {
+  purple: 'border-[var(--line2,rgba(194,196,201,.2))]',
+  blue: 'border-[var(--line2,rgba(194,196,201,.2))]',
+  amber: 'border-[var(--line2,rgba(194,196,201,.2))]',
+  emerald: 'border-[var(--line2,rgba(194,196,201,.2))]',
+  red: 'border-[rgba(255,107,107,.45)]',
+  gray: 'border-[var(--line2,rgba(194,196,201,.2))]',
 };
 
-// Carte de section — reprend le motif dashboard (anneau + dégradé d'accent).
+// Carte de section.
 export default function SectionCard({
   title,
   icon,
@@ -40,11 +33,15 @@ export default function SectionCard({
 }) {
   return (
     <section
-      className={`rounded-2xl bg-neutral-900/40 bg-gradient-to-br to-transparent ring-1 p-6 ${ACCENT_RING[accent]}`}
+      className={`rounded-[var(--r-card,14px)] border bg-[var(--s1,#100812)] p-6 ${FRAME[accent]}`}
     >
-      <h3 className="mb-4 flex items-center gap-2.5 text-base font-semibold text-white">
+      <h3 className="mb-4 flex items-center gap-2.5 text-base font-semibold text-[var(--t1,#f4edf7)]">
         <span
-          className={`flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06] ring-1 ring-white/10 ${ACCENT_TEXT[accent]}`}
+          className={`flex h-8 w-8 items-center justify-center rounded-[var(--r-ctrl,4px)] bg-[var(--s3,#2f2732)] ${
+            accent === 'red'
+              ? 'text-[var(--err,#ff6b6b)]'
+              : 'text-[var(--or-300,#dea3f6)]'
+          }`}
         >
           {icon}
         </span>

@@ -135,8 +135,8 @@ export default function TournamentAlerts({
             }}
           />
           {sig.conflictsList.length > 0 && (
-            <div className="invisible absolute left-0 right-0 top-full z-30 mt-1 rounded-xl border border-amber-500/30 bg-neutral-900/98 p-3 shadow-2xl backdrop-blur-sm group-hover:visible">
-              <p className="mb-2 text-[10px] uppercase tracking-widest text-amber-300">
+            <div className="invisible absolute left-0 right-0 top-full z-30 mt-1 rounded-[var(--r-card,14px)] border border-[rgba(245,165,36,.38)] bg-[var(--s1,#100812)] p-3 shadow-2xl group-hover:visible">
+              <p className="mb-2 font-[family-name:var(--fd)] text-[10px] font-bold uppercase tracking-widest text-[#ffd9a3]">
                 {tx.conflictsDetailLabel}{' '}
                 {sig.conflictsCount > sig.conflictsList.length
                   ? format(tx.conflictsDetailPartial, {
@@ -161,18 +161,18 @@ export default function TournamentAlerts({
                   return (
                     <li
                       key={i}
-                      className="flex items-start gap-2 rounded-md bg-amber-500/5 p-1.5"
+                      className="flex items-start gap-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] p-1.5"
                     >
-                      <span className="font-semibold text-amber-200">
+                      <span className="font-semibold text-[var(--t1,#f4edf7)]">
                         {c.teamName ?? c.teamId.slice(0, 8)}
                       </span>
-                      <span className="text-neutral-400">
+                      <span className="text-[var(--t3,#a39ba6)]">
                         {format(tx.conflictMatchInfo, {
                           timeA: fmtTime(c.matchAScheduledAt),
                           timeB: fmtTime(c.matchBScheduledAt),
                         })}
                       </span>
-                      <span className="ml-auto rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-medium text-amber-200 tabular-nums">
+                      <span className="ml-auto rounded-[3px] border border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.13)] px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-[#ffd9a3]">
                         ↔ {c.overlapMinutes}min
                       </span>
                     </li>

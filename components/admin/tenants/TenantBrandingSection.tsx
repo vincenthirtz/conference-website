@@ -66,7 +66,7 @@ export default function TenantBrandingSection({
           value={editLogoUrl}
           onChange={(e) => setEditLogoUrl(e.target.value)}
           placeholder={t.logoUrlPlaceholder}
-          className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
+          className="w-full px-4 py-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
           data-testid="tenant-logo-url-input"
         />
         <p className="mt-1.5 text-xs text-neutral-500">{t.logoUrlHint}</p>
@@ -90,7 +90,7 @@ export default function TenantBrandingSection({
                   : '#b24be0'
               }
               onChange={(e) => setEditPrimaryColor(e.target.value)}
-              className="h-11 w-14 rounded-lg border border-neutral-600 bg-neutral-900/50 cursor-pointer p-1"
+              className="h-11 w-14 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] cursor-pointer p-1"
             />
             <input
               id="g-primary-color"
@@ -98,7 +98,7 @@ export default function TenantBrandingSection({
               value={editPrimaryColor}
               onChange={(e) => setEditPrimaryColor(e.target.value)}
               placeholder={t.colorPlaceholder}
-              className="flex-1 px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white font-mono"
+              className="flex-1 px-4 py-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-purple-500 text-white font-mono"
               data-testid="tenant-primary-color-input"
             />
           </div>
@@ -121,7 +121,7 @@ export default function TenantBrandingSection({
                   : '#7bc96a'
               }
               onChange={(e) => setEditAccentColor(e.target.value)}
-              className="h-11 w-14 rounded-lg border border-neutral-600 bg-neutral-900/50 cursor-pointer p-1"
+              className="h-11 w-14 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] cursor-pointer p-1"
             />
             <input
               id="g-accent-color"
@@ -129,7 +129,7 @@ export default function TenantBrandingSection({
               value={editAccentColor}
               onChange={(e) => setEditAccentColor(e.target.value)}
               placeholder={t.colorPlaceholder}
-              className="flex-1 px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white font-mono"
+              className="flex-1 px-4 py-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-purple-500 text-white font-mono"
               data-testid="tenant-accent-color-input"
             />
           </div>
@@ -149,7 +149,7 @@ export default function TenantBrandingSection({
           value={editCustomDomain}
           onChange={(e) => setEditCustomDomain(e.target.value)}
           placeholder={t.customDomainPlaceholder}
-          className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-white font-mono"
+          className="w-full px-4 py-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-purple-500 text-white font-mono"
           data-testid="tenant-custom-domain-input"
         />
         <p className="mt-1.5 text-xs text-neutral-500">{t.customDomainHint}</p>
@@ -161,7 +161,7 @@ export default function TenantBrandingSection({
           {t.previewLabel}
         </p>
         <div
-          className="flex items-center gap-4 rounded-xl border border-neutral-700/50 bg-neutral-900/50 p-4"
+          className="flex items-center gap-4 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-4"
           data-testid="tenant-branding-preview"
         >
           {editLogoUrl.trim() ? (
@@ -169,16 +169,16 @@ export default function TenantBrandingSection({
             <img
               src={editLogoUrl.trim()}
               alt={t.previewLogoAlt}
-              className="h-10 w-10 rounded-lg object-contain bg-neutral-800"
+              className="h-10 w-10 rounded-[var(--r-ctrl,4px)] object-contain bg-[var(--s2,#1d1520)]"
             />
           ) : (
-            <div className="h-10 w-10 rounded-lg bg-neutral-800 flex items-center justify-center text-[10px] text-neutral-500">
+            <div className="h-10 w-10 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] flex items-center justify-center text-[10px] text-neutral-500">
               {t.previewNoLogo}
             </div>
           )}
           <div className="flex items-center gap-2">
             <span
-              className="h-8 w-8 rounded-md border border-white/10"
+              className="h-8 w-8 rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))]"
               style={{
                 backgroundColor: /^#[0-9a-fA-F]{6}$/.test(editPrimaryColor)
                   ? editPrimaryColor
@@ -187,7 +187,7 @@ export default function TenantBrandingSection({
               title={t.primaryColorLabel}
             />
             <span
-              className="h-8 w-8 rounded-md border border-white/10"
+              className="h-8 w-8 rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))]"
               style={{
                 backgroundColor: /^#[0-9a-fA-F]{6}$/.test(editAccentColor)
                   ? editAccentColor

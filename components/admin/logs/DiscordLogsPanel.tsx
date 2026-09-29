@@ -8,7 +8,6 @@ import {
   PLAYER_ACTION_OPTIONS,
   BOT_EVENT_OPTIONS,
   OUTBOX_STATUSES,
-  botEventFamily,
   type DiscordLogRow,
   type DiscordLogSource,
   type OutboxStatus,
@@ -16,6 +15,8 @@ import {
 
 import { logger } from '../../../utils/logger';
 import nsAdminDiscordLogs from '@/lib/i18n/locales/admin-fr/adminDiscordLogs';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type Dict = typeof nsAdminDiscordLogs.fr;
 
@@ -57,10 +58,10 @@ function shortId(id: string | null | undefined) {
   return id.slice(0, 4) + '…' + id.slice(-4);
 }
 
-const STATUS_STYLES: Record<OutboxStatus, string> = {
-  pending: 'bg-amber-600/20 text-amber-300 border-amber-500/30',
-  delivered: 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30',
-  failed: 'bg-red-600/20 text-red-300 border-red-500/30',
+const STATUS_TONE: Record<OutboxStatus, ChipTone> = {
+  pending: 'warn',
+  delivered: 'ok',
+  failed: 'err',
 };
 
 function statusLabel(status: OutboxStatus, t: Dict): string {
@@ -69,26 +70,8 @@ function statusLabel(status: OutboxStatus, t: Dict): string {
   return t.statusPending;
 }
 
-// Couleur du badge d'action : par famille d'event côté sortant, uniforme côté
-// joueuses (les actions y sont déjà lisibles et peu nombreuses).
-const FAMILY_STYLES: Record<string, string> = {
-  match: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
-  team: 'bg-violet-600/20 text-violet-300 border-violet-500/30',
-  scrim: 'bg-cyan-600/20 text-cyan-300 border-cyan-500/30',
-  cast: 'bg-fuchsia-600/20 text-fuchsia-300 border-fuchsia-500/30',
-  task: 'bg-teal-600/20 text-teal-300 border-teal-500/30',
-  checkin: 'bg-amber-600/20 text-amber-300 border-amber-500/30',
-};
-const DEFAULT_ACTION_STYLE =
-  'bg-indigo-600/20 text-indigo-300 border-indigo-500/30';
-
-function actionStyle(log: DiscordLogRow): string {
-  if (log.source !== 'event') return DEFAULT_ACTION_STYLE;
-  return FAMILY_STYLES[botEventFamily(log.action)] ?? DEFAULT_ACTION_STYLE;
-}
-
 const INPUT_CLASS =
-  'w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm';
+  'w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm';
 
 /**
  * "Discord" tab of the merged /admin/logs page.
@@ -238,7 +221,7 @@ export default function DiscordLogsPanel() {
       <div className="mb-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+            <h1 className="font-[family-name:var(--fd)] text-3xl md:text-4xl font-extrabold tracking-tight [font-stretch:75%]">
               {t.heading}
             </h1>
             <p className="text-neutral-400 text-sm mt-1">
@@ -257,7 +240,7 @@ export default function DiscordLogsPanel() {
             <div
               role="group"
               aria-label={t.sourceAriaLabel}
-              className="inline-flex rounded-xl border border-neutral-700/50 bg-neutral-900/50 p-1"
+              className="inline-flex rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-1"
             >
               {(
                 [
@@ -270,9 +253,9 @@ export default function DiscordLogsPanel() {
                   type="button"
                   aria-pressed={source === value}
                   onClick={() => handleSourceChange(value)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`px-4 py-2 rounded-[3px] text-sm font-medium transition-colors ${
                     source === value
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-[rgba(180,103,209,.18)] text-[var(--or-200,#eec4ff)]'
                       : 'text-neutral-300 hover:bg-neutral-700/50'
                   }`}
                 >
@@ -281,11 +264,11 @@ export default function DiscordLogsPanel() {
               ))}
             </div>
 
-            <button
-              type="button"
+            <AdminButton
+              variant="secondary"
+              size="sm"
               onClick={handleExportCsv}
               disabled={exporting}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {exporting ? (
                 <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -305,9 +288,9 @@ export default function DiscordLogsPanel() {
                 </svg>
               )}
               {exporting ? t.exporting : t.exportCsv}
-            </button>
+            </AdminButton>
 
-            <div className="text-xs text-neutral-500 bg-neutral-800/50 px-3 py-2 rounded-xl border border-neutral-700/50">
+            <div className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-3 py-2 text-xs text-neutral-500">
               {t.sortedByDate}
             </div>
           </div>
@@ -315,7 +298,7 @@ export default function DiscordLogsPanel() {
       </div>
 
       {(errorMsg || exportError) && (
-        <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+        <div className="mb-6 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] text-[#ffc2c2] px-4 py-3 text-sm flex items-center gap-2">
           <svg
             className="w-5 h-5 text-red-400 flex-shrink-0"
             fill="currentColor"
@@ -332,7 +315,7 @@ export default function DiscordLogsPanel() {
       )}
 
       {/* Filters */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6 mb-6">
         <form
           onSubmit={handleFilterSubmit}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 items-end"
@@ -493,9 +476,11 @@ export default function DiscordLogsPanel() {
           </div>
 
           <div className="flex gap-2">
-            <button
+            <AdminButton
+              variant="primary"
+              size="sm"
               type="submit"
-              className="flex-1 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              className="flex-1 justify-center"
             >
               <svg
                 className="w-4 h-4"
@@ -511,16 +496,16 @@ export default function DiscordLogsPanel() {
                 />
               </svg>
               {t.filter}
-            </button>
+            </AdminButton>
           </div>
         </form>
       </section>
 
       {/* Liste */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--or,#b467d1)] rounded-full animate-spin" />
           </div>
         ) : logs.length === 0 ? (
           <div className="text-center py-20 text-neutral-400">
@@ -540,7 +525,7 @@ export default function DiscordLogsPanel() {
             {t.empty}
           </div>
         ) : (
-          <div className="divide-y divide-neutral-700/50">
+          <div className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
             {logs.map((log) => (
               <div
                 key={log.id}
@@ -548,15 +533,12 @@ export default function DiscordLogsPanel() {
               >
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-mono text-neutral-500 bg-neutral-900/50 px-2 py-1 rounded-lg">
+                    <span className="text-xs font-mono text-neutral-500 rounded-[3px] bg-[var(--s2,#1d1520)] px-2 py-1">
                       {formatDateTime(log.created_at, dateLocale)}
                     </span>
-                    <span
-                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold border ${actionStyle(log)}`}
-                      title={log.action}
-                    >
+                    <Chip tone="brand" title={log.action}>
                       {log.action_label}
-                    </span>
+                    </Chip>
                     {/* Slug brut conservé, discret, pour le debug / le grep. */}
                     {log.action_label !== log.action && (
                       <span className="text-[10px] font-mono text-neutral-600">
@@ -564,17 +546,15 @@ export default function DiscordLogsPanel() {
                       </span>
                     )}
                     {log.entity_type && (
-                      <span className="px-2.5 py-1 rounded-lg text-xs bg-neutral-700/50 text-neutral-300 border border-neutral-600/50">
+                      <span className="rounded-[3px] border border-[var(--line2,rgba(194,196,201,.2))] px-2 py-0.5 font-mono text-xs text-neutral-300">
                         {log.entity_type}
                         {log.entity_id ? ` #${shortId(log.entity_id)}` : ''}
                       </span>
                     )}
                     {log.status && (
-                      <span
-                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold border ${STATUS_STYLES[log.status]}`}
-                      >
+                      <Chip tone={STATUS_TONE[log.status]}>
                         {statusLabel(log.status, t)}
-                      </span>
+                      </Chip>
                     )}
                     {log.status === 'failed' && log.push_attempts ? (
                       <span className="text-[10px] text-neutral-500">
@@ -631,7 +611,7 @@ export default function DiscordLogsPanel() {
                       <summary className="cursor-pointer select-none hover:text-neutral-200 transition-colors">
                         {t.detailsPayload}
                       </summary>
-                      <pre className="mt-2 bg-neutral-900/70 border border-neutral-700/50 rounded-xl p-3 text-[11px] leading-relaxed overflow-auto max-h-64 whitespace-pre-wrap break-words">
+                      <pre className="mt-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-3 text-[11px] leading-relaxed overflow-auto max-h-64 whitespace-pre-wrap break-words">
                         {JSON.stringify(log.payload, null, 2)}
                       </pre>
                     </details>
@@ -672,11 +652,11 @@ export default function DiscordLogsPanel() {
       {/* Pagination */}
       {logs.length > 0 && (
         <div className="flex justify-between items-center mt-6">
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             disabled={offset === 0}
             onClick={() => setOffset(Math.max(0, offset - limit))}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <svg
               className="w-4 h-4"
@@ -692,18 +672,18 @@ export default function DiscordLogsPanel() {
               />
             </svg>
             {t.previous}
-          </button>
+          </AdminButton>
 
           <span className="text-neutral-400 text-sm">
             {offset + 1} – {offset + logs.length}
             {total ? format(t.paginationTotal, { total }) : ''}
           </span>
 
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             disabled={total !== null && offset + limit >= total}
             onClick={() => setOffset(offset + limit)}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {t.next}
             <svg
@@ -719,7 +699,7 @@ export default function DiscordLogsPanel() {
                 d="M9 5l7 7-7 7"
               />
             </svg>
-          </button>
+          </AdminButton>
         </div>
       )}
     </>

@@ -6,6 +6,7 @@ import { useAdminResource } from '@/hooks/useAdminResource';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminCommentsList from '@/lib/i18n/locales/admin-fr/adminCommentsList';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type CommentRow = {
   id: string;
@@ -128,7 +129,7 @@ export default function CommentsPanel() {
       <div className="mb-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+            <h1 className="font-[family-name:var(--fd)] text-3xl md:text-4xl font-extrabold tracking-tight [font-stretch:75%]">
               {t.heading}
             </h1>
             <p className="text-neutral-400 text-sm mt-1">
@@ -144,7 +145,7 @@ export default function CommentsPanel() {
 
       {/* Messages */}
       {error && (
-        <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+        <div className="mb-6 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] text-[#ffc2c2] px-4 py-3 text-sm flex items-center gap-2">
           <svg
             className="w-5 h-5 text-red-400 flex-shrink-0"
             fill="currentColor"
@@ -161,7 +162,7 @@ export default function CommentsPanel() {
       )}
 
       {/* Filters */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6 mb-6">
         <form
           onSubmit={handleSearchSubmit}
           className="flex gap-4 flex-wrap items-end"
@@ -187,17 +188,14 @@ export default function CommentsPanel() {
               <input
                 type="text"
                 placeholder={t.searchPlaceholder}
-                className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
           </div>
 
-          <button
-            type="submit"
-            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"
-          >
+          <AdminButton variant="ghost" size="sm" type="submit">
             <svg
               className="w-4 h-4"
               fill="none"
@@ -212,15 +210,15 @@ export default function CommentsPanel() {
               />
             </svg>
             {t.searchButton}
-          </button>
+          </AdminButton>
         </form>
       </section>
 
       {/* Comments List */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--or,#b467d1)] rounded-full animate-spin" />
           </div>
         ) : comments.length === 0 ? (
           <div className="text-center py-20 text-neutral-400">
@@ -240,7 +238,7 @@ export default function CommentsPanel() {
             {t.emptyState}
           </div>
         ) : (
-          <div className="divide-y divide-neutral-700/50">
+          <div className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
             {comments.map((c) => (
               <div
                 key={c.id}
@@ -281,7 +279,7 @@ export default function CommentsPanel() {
                       href={`/news/${c.news.slug || c.news.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 bg-neutral-800 px-2 py-1 rounded-lg"
+                      className="flex items-center gap-1 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-2 py-1 text-xs text-[var(--or-200,#eec4ff)] hover:text-[var(--t1,#f4edf7)]"
                     >
                       <svg
                         className="w-3 h-3"
@@ -303,7 +301,7 @@ export default function CommentsPanel() {
 
                 {/* Content */}
                 <textarea
-                  className="w-full rounded-xl bg-neutral-900/50 border border-neutral-600 px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full resize-none rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-4 py-3 text-sm text-white focus:border-[var(--or,#b467d1)] focus:outline-none"
                   value={editing[c.id] ?? c.content}
                   onChange={(e) =>
                     setEditing((prev) => ({
@@ -316,17 +314,12 @@ export default function CommentsPanel() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-3 mt-3">
-                  <button
-                    type="button"
+                  <AdminButton
+                    variant="secondary"
+                    size="sm"
                     onClick={() => handleSave(c)}
                     disabled={saving === c.id || editing[c.id] === undefined}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
-                      saving === c.id
-                        ? 'bg-blue-800 cursor-wait'
-                        : editing[c.id] !== undefined
-                          ? 'bg-blue-600 hover:bg-blue-700'
-                          : 'bg-neutral-700 text-neutral-400 cursor-not-allowed'
-                    }`}
+                    className={saving === c.id ? 'cursor-wait' : ''}
                   >
                     {saving === c.id ? (
                       <>
@@ -351,11 +344,12 @@ export default function CommentsPanel() {
                         {t.save}
                       </>
                     )}
-                  </button>
+                  </AdminButton>
 
                   {editing[c.id] !== undefined && (
-                    <button
-                      type="button"
+                    <AdminButton
+                      variant="ghost"
+                      size="sm"
                       onClick={() =>
                         setEditing((prev) => {
                           const next = { ...prev };
@@ -363,16 +357,15 @@ export default function CommentsPanel() {
                           return next;
                         })
                       }
-                      className="px-3 py-2 rounded-xl text-sm text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors"
                     >
                       {t.cancel}
-                    </button>
+                    </AdminButton>
                   )}
 
                   <button
                     type="button"
                     onClick={() => setDeleteTarget(c)}
-                    className="ml-auto p-2 rounded-lg hover:bg-red-900/50 text-red-400 transition-colors"
+                    className="ml-auto rounded-[var(--r-ctrl,4px)] border border-transparent p-2 text-[var(--err,#ff6b6b)] transition-colors hover:border-[rgba(255,107,107,.45)]"
                     title={t.delete}
                   >
                     <svg
@@ -401,11 +394,11 @@ export default function CommentsPanel() {
               sinon le bouton « Précédent » disparaît et l'offset reste coincé. */}
       {(comments.length > 0 || offset > 0) && (
         <div className="flex justify-between items-center mt-6">
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             disabled={offset === 0 || loading}
             onClick={prevPage}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <svg
               className="w-4 h-4"
@@ -421,18 +414,18 @@ export default function CommentsPanel() {
               />
             </svg>
             {t.previous}
-          </button>
+          </AdminButton>
 
           <span className="text-neutral-400 text-sm">
             {offset + 1} – {offset + comments.length}
             {total ? format(t.paginationOf, { total }) : ''}
           </span>
 
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="sm"
             disabled={loading || (total !== null && offset + limit >= total)}
             onClick={nextPage}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {t.next}
             <svg
@@ -448,7 +441,7 @@ export default function CommentsPanel() {
                 d="M9 5l7 7-7 7"
               />
             </svg>
-          </button>
+          </AdminButton>
         </div>
       )}
 
@@ -461,7 +454,7 @@ export default function CommentsPanel() {
           onCancel={() => setDeleteTarget(null)}
           onConfirm={() => handleDelete(deleteTarget)}
         >
-          <div className="bg-neutral-900/50 rounded-xl p-3">
+          <div className="rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-3">
             <div className="text-xs text-neutral-500 mb-1">
               {format(t.byAuthor, {
                 author: deleteTarget.author_name || t.anonymous,

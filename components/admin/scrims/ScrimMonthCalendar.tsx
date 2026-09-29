@@ -20,6 +20,7 @@ import type {
   CalendarScrim,
   CalendarMatch,
 } from '@/components/admin/scrims/ScrimCalendar';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 export type ScrimMonthLabels = {
   monthPrev: string;
@@ -135,26 +136,28 @@ export default function ScrimMonthCalendar({
   return (
     <div className="select-none">
       <div className="mb-3 flex items-center gap-2 text-sm">
-        <button
+        <AdminButton
+          variant="ghost"
+          size="xs"
           type="button"
           aria-label={labels.monthPrev}
           onClick={prevMonth}
-          className="rounded-lg border border-neutral-700 bg-neutral-900/60 px-2.5 py-1 hover:bg-neutral-800 transition"
         >
           ‹
-        </button>
-        <button
+        </AdminButton>
+        <AdminButton
+          variant="ghost"
+          size="xs"
           type="button"
           aria-label={labels.monthNext}
           onClick={nextMonth}
-          className="rounded-lg border border-neutral-700 bg-neutral-900/60 px-2.5 py-1 hover:bg-neutral-800 transition"
         >
           ›
-        </button>
+        </AdminButton>
         <span className="ml-1 text-neutral-200 capitalize">{monthLabel}</span>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-neutral-800 bg-neutral-900/40 p-2">
+      <div className="overflow-x-auto rounded-[var(--r-card,14px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s1,#100812)] p-2">
         <div className="min-w-[720px]">
           {/* En-têtes de jours */}
           <div className="grid grid-cols-7 gap-1 pb-1">
@@ -183,10 +186,10 @@ export default function ScrimMonthCalendar({
                   type="button"
                   key={day}
                   onClick={() => onSelectDay(day)}
-                  className={`flex min-h-[92px] flex-col rounded-lg border p-1 text-left transition hover:border-neutral-600 ${
+                  className={`flex min-h-[92px] flex-col rounded-[var(--r-ctrl,4px)] border p-1 text-left transition hover:border-neutral-600 ${
                     inMonth
-                      ? 'border-neutral-800 bg-neutral-950/40'
-                      : 'border-neutral-900 bg-neutral-950/20 opacity-50'
+                      ? 'border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)]'
+                      : 'border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] opacity-50'
                   }`}
                 >
                   <span
@@ -226,7 +229,7 @@ export default function ScrimMonthCalendar({
                             }
                           }}
                           title={`${fmtHour(ev.minute)} — ${ev.label}`}
-                          className={`block cursor-pointer truncate rounded px-1 py-0.5 text-[9px] leading-tight hover:brightness-110 ${chipCls}`}
+                          className={`block cursor-pointer truncate rounded-[var(--r-ctrl,4px)] px-1 py-0.5 text-[9px] leading-tight hover:brightness-110 ${chipCls}`}
                         >
                           <span className="tabular-nums">
                             {fmtHour(ev.minute)}
@@ -251,7 +254,7 @@ export default function ScrimMonthCalendar({
                             setExpandedDay(day);
                           }
                         }}
-                        className="cursor-pointer rounded px-1 text-[9px] text-neutral-400 hover:text-neutral-200"
+                        className="cursor-pointer rounded-[var(--r-ctrl,4px)] px-1 text-[9px] text-neutral-400 hover:text-neutral-200"
                       >
                         {labels.moreEvents.replace('{count}', String(overflow))}
                       </span>
@@ -271,7 +274,7 @@ export default function ScrimMonthCalendar({
                             setExpandedDay(null);
                           }
                         }}
-                        className="cursor-pointer rounded px-1 text-[9px] text-neutral-400 hover:text-neutral-200"
+                        className="cursor-pointer rounded-[var(--r-ctrl,4px)] px-1 text-[9px] text-neutral-400 hover:text-neutral-200"
                       >
                         {labels.collapse}
                       </span>

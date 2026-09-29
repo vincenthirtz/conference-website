@@ -39,7 +39,7 @@ export default function TeamAssignmentSummary({
 }: Props) {
   const t = useAdminT(nsAdminUsersNew);
   return (
-    <div className="mt-3 pt-3 border-t border-emerald-500/30">
+    <div className="mt-3 border-t border-[var(--line,rgba(194,196,201,.12))] pt-3">
       <p className="font-medium text-emerald-300 mb-1">
         {assignment.invited ? t.teamInvitedTitle : t.teamAssignedTitle}
       </p>

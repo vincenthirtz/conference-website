@@ -28,7 +28,7 @@ type Props = {
 };
 
 const CHECKBOX_CLASS =
-  'mt-0.5 w-5 h-5 rounded border-neutral-600 bg-neutral-900/50 text-purple-500 focus:ring-purple-500';
+  'mt-0.5 w-5 h-5 rounded-[var(--r-ctrl,4px)] border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-purple-500 focus:ring-purple-500';
 
 export default function TenantNetworkSection({
   shareScrims,

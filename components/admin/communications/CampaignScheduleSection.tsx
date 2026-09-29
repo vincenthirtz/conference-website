@@ -17,6 +17,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminCampaigns from '@/lib/i18n/locales/admin-fr/adminCampaigns';
 import { formatDateTime, type CampaignSummary } from './campaignShared';
 import { Progress } from './campaignUi';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 export default function CampaignScheduleSection({
   campaign,
@@ -176,7 +177,7 @@ export default function CampaignScheduleSection({
   return (
     <>
       {confirmDialog}
-      <section className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4 space-y-3">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 space-y-3">
         <div>
           <h3 className="text-sm font-semibold text-neutral-200">
             {t.waveSchedulingHeading}
@@ -190,9 +191,9 @@ export default function CampaignScheduleSection({
 
         {schedule ? (
           <>
-            <div className="rounded-xl bg-neutral-900/50 border border-neutral-700/40 p-3">
+            <div className="rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-3">
               <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-200 border border-amber-500/30 text-[10px] uppercase tracking-wider font-semibold">
+                <span className="rounded-[3px] border border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.13)] px-2 py-0.5 font-[family-name:var(--fd)] text-[10px] font-bold uppercase tracking-[0.12em] text-[#ffd9a3] [font-stretch:75%]">
                   {schedule.status === 'scheduled'
                     ? t.statusInProgress
                     : schedule.status === 'completed'
@@ -247,33 +248,33 @@ export default function CampaignScheduleSection({
                   max="290"
                   value={waveSize}
                   onChange={(e) => setWaveSize(e.target.value)}
-                  className="px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm w-24"
+                  className="px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm w-24"
                 />
               </div>
-              <button
-                type="button"
+              <AdminButton
+                variant="secondary"
+                size="sm"
                 onClick={postSchedule}
                 disabled={scheduleBusy}
-                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
               >
                 {t.updateBtn}
-              </button>
-              <button
-                type="button"
+              </AdminButton>
+              <AdminButton
+                variant="ghost"
+                size="sm"
                 onClick={triggerWaveNow}
                 disabled={scheduleBusy || schedule.pending === 0}
-                className="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
               >
                 {t.launchWaveNow}
-              </button>
-              <button
-                type="button"
+              </AdminButton>
+              <AdminButton
+                variant="danger"
+                size="sm"
                 onClick={cancelSchedule}
                 disabled={scheduleBusy}
-                className="px-4 py-2 rounded-xl border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 disabled:opacity-50 text-sm font-medium transition-colors"
               >
                 {t.cancel}
-              </button>
+              </AdminButton>
             </div>
           </>
         ) : (
@@ -289,30 +290,30 @@ export default function CampaignScheduleSection({
                 value={waveSize}
                 onChange={(e) => setWaveSize(e.target.value)}
                 placeholder="10"
-                className="px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm w-24"
+                className="px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm w-24"
               />
             </div>
-            <button
-              type="button"
+            <AdminButton
+              variant="secondary"
+              size="sm"
               onClick={postSchedule}
               disabled={scheduleBusy}
-              className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors flex items-center gap-2"
             >
               {scheduleBusy ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : null}
               {t.planWaves}
-            </button>
+            </AdminButton>
           </div>
         )}
 
         {scheduleError && (
-          <div className="px-3 py-2 rounded-xl bg-red-900/40 border border-red-500/50 text-red-300 text-sm">
+          <div className="px-3 py-2 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] text-[#ffc2c2] text-red-300 text-sm">
             {scheduleError}
           </div>
         )}
         {scheduleNotice && (
-          <div className="px-3 py-2 rounded-xl bg-emerald-900/40 border border-emerald-500/50 text-emerald-300 text-sm">
+          <div className="px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[rgba(127,202,101,.36)] bg-[rgba(127,202,101,.08)] text-[var(--lf-200,#b3e7a3)] text-sm">
             {scheduleNotice}
           </div>
         )}

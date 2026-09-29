@@ -32,6 +32,12 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import {
+  rubanErr,
+  rubanOk,
+  rubanWarn,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import nsAdminTcgGrant from '@/lib/i18n/locales/admin-fr/adminTcgGrant';
@@ -129,7 +135,7 @@ function endpointErrorText(
 }
 
 const INPUT_BASE =
-  'w-full rounded-lg border bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400';
+  'w-full rounded-[var(--r-ctrl,4px)] border bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] placeholder:text-[var(--t4,#807984)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 export default function TcgGrantCard() {
   const t = useAdminT(nsAdminTcgGrant);
@@ -361,7 +367,9 @@ export default function TcgGrantCard() {
                     .filter(Boolean)
                     .join(' ')}
                   className={`${INPUT_BASE} tabular-nums ${
-                    amountError ? 'border-red-500/60' : 'border-white/10'
+                    amountError
+                      ? 'border-red-500/60'
+                      : 'border-[var(--line2,rgba(194,196,201,.2))]'
                   }`}
                 />
                 <p
@@ -421,7 +429,9 @@ export default function TcgGrantCard() {
                     .filter(Boolean)
                     .join(' ')}
                   className={`${INPUT_BASE} resize-y ${
-                    reasonError ? 'border-red-500/60' : 'border-white/10'
+                    reasonError
+                      ? 'border-red-500/60'
+                      : 'border-[var(--line2,rgba(194,196,201,.2))]'
                   }`}
                 />
                 <div className="mt-1 flex items-start justify-between gap-3">
@@ -447,12 +457,9 @@ export default function TcgGrantCard() {
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-3">
-              <button
-                type="submit"
-                className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-purple-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 disabled:opacity-50"
-              >
+              <AdminButton type="submit" variant="primary" size="sm">
                 {busy ? t.submitting : t.submit}
-              </button>
+              </AdminButton>
             </div>
           </fieldset>
         </form>
@@ -467,10 +474,10 @@ export default function TcgGrantCard() {
             outcome === null
               ? ''
               : outcome.kind === 'success'
-                ? 'mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200'
+                ? `mt-4 px-3 py-2 text-xs ${rubanOk}`
                 : shouldKeepIdempotencyKey(outcome.error)
-                  ? 'mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200'
-                  : 'mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200'
+                  ? `mt-4 px-3 py-2 text-xs ${rubanWarn}`
+                  : `mt-4 px-3 py-2 text-xs ${rubanErr}`
           }
         >
           {outcomeText}

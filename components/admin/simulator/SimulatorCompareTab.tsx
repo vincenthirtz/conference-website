@@ -11,6 +11,14 @@ import type { SimStageHandlers } from '@/components/admin/simulator/SimulatorBra
 /** Actions vides, stables (module) : la variante comparée est en lecture seule. */
 const NOOP_SIM_ACTION = (_id: string) => {};
 import nsAdminTournamentSimulator from '@/lib/i18n/locales/admin-fr/adminTournamentSimulator';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import { CARD, CARD_FLUSH } from '@/features/admin/stages/ui/rubanClasses';
+import {
+  SIM_EYEBROW,
+  SIM_MUTED,
+  simOptionClass,
+} from '@/features/admin/simulator/ui/simulatorClasses';
 
 /**
  * Onglet « comparer » du simulateur : la configuration courante face à une
@@ -50,11 +58,9 @@ export function SimulatorCompareTab({
   return (
     <div className="space-y-6">
       {/* Config selector for comparison */}
-      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-        <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-          {tx.compareHeading}
-        </h3>
-        <p className="text-xs text-neutral-500 mb-4">
+      <div className={CARD}>
+        <h3 className={`mb-4 ${SIM_EYEBROW}`}>{tx.compareHeading}</h3>
+        <p className={`mb-4 ${SIM_MUTED}`}>
           {format(tx.compareDesc, {
             format: FORMAT_LABELS[config.formatType],
           })}
@@ -77,11 +83,7 @@ export function SimulatorCompareTab({
                       ...(f === 'double_elim' ? { grandFinalReset: true } : {}),
                     })
                   }
-                  className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-colors ${
-                    compareConfig?.formatType === f
-                      ? 'bg-purple-600 border-purple-500 text-white'
-                      : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                  }`}
+                  className={simOptionClass(compareConfig?.formatType === f)}
                 >
                   {tx.vs} {FORMAT_LABELS[f]}
                 </button>
@@ -90,20 +92,12 @@ export function SimulatorCompareTab({
         </div>
         {compareConfig && (
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => onCompare(compareConfig)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 transition-colors"
-            >
+            <AdminButton size="xs" onClick={() => onCompare(compareConfig)}>
               {tx.regenerate}
-            </button>
-            <button
-              type="button"
-              onClick={onClear}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 transition-colors"
-            >
+            </AdminButton>
+            <AdminButton size="xs" onClick={onClear}>
               {tx.clear}
-            </button>
+            </AdminButton>
           </div>
         )}
       </div>
@@ -112,11 +106,9 @@ export function SimulatorCompareTab({
       {compareData && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* Current config */}
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
+          <div className={`${CARD_FLUSH} space-y-4 p-4`}>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                {tx.badgeCurrent}
-              </span>
+              <Chip tone="brand">{tx.badgeCurrent}</Chip>
               <span className="text-sm font-semibold">
                 {FORMAT_LABELS[config.formatType]}
               </span>
@@ -163,11 +155,9 @@ export function SimulatorCompareTab({
           </div>
 
           {/* Compare config */}
-          <div className="rounded-xl border border-sky-500/20 bg-sky-500/[0.02] p-4 space-y-4">
+          <div className={`${CARD_FLUSH} space-y-4 p-4`}>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-sky-500/10 text-sky-300 border border-sky-500/20">
-                {tx.badgeComparison}
-              </span>
+              <Chip tone="neutral">{tx.badgeComparison}</Chip>
               <span className="text-sm font-semibold">
                 {FORMAT_LABELS[compareConfig?.formatType ?? config.formatType]}
               </span>

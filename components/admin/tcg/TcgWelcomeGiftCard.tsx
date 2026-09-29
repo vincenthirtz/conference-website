@@ -33,6 +33,11 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import {
+  rubanErr,
+  rubanWarn,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 import { format } from '@/lib/i18n/useT';
 import { logger } from '../../../utils/logger';
 
@@ -160,10 +165,7 @@ export default function TcgWelcomeGiftCard({
         </p>
 
         {error && (
-          <div
-            role="alert"
-            className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200"
-          >
+          <div role="alert" className={`mb-4 px-3 py-2 text-xs ${rubanErr}`}>
             {error}
           </div>
         )}
@@ -175,10 +177,7 @@ export default function TcgWelcomeGiftCard({
             Après un GET, `granted` vaut 0 : la condition ne se déclenche
             qu'à la suite d'une distribution réelle. */}
         {state && state.granted > state.packsGranted && (
-          <div
-            role="alert"
-            className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
-          >
+          <div role="alert" className={`mb-4 px-3 py-2 text-xs ${rubanWarn}`}>
             {format(labels.partial, {
               granted: state.granted,
               packsGranted: state.packsGranted,
@@ -223,17 +222,17 @@ export default function TcgWelcomeGiftCard({
                     {labels.nothingToDo}
                   </span>
                 )}
-                <button
-                  type="button"
+                <AdminButton
+                  variant="primary"
+                  size="sm"
                   onClick={() => void onGrant()}
                   // Rien à distribuer = rien à cliquer. Le bouton reste
                   // visible pour que l'écran ne change pas de forme, mais
                   // inerte : un clic sans effet ferait douter de l'état.
                   disabled={busy || remaining <= 0}
-                  className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium transition hover:bg-purple-500 disabled:opacity-50"
                 >
                   {busy ? labels.granting : labels.grant}
-                </button>
+                </AdminButton>
               </div>
             </div>
           )

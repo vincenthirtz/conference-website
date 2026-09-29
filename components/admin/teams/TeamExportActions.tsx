@@ -13,6 +13,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
@@ -35,8 +36,10 @@ type TeamExportActionsProps = {
   className?: string;
 };
 
-const BUTTON_CLASS =
-  'px-4 py-2.5 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed';
+// Le lien PDF s'ouvre dans un onglet (target) : AdminButtonLink ne le porte
+// pas, il reprend donc à la main l'allure « ghost » de son voisin.
+const LINK_CLASS =
+  'inline-flex h-[38px] shrink-0 items-center justify-center gap-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-[14px] font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.02em] text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]';
 
 function triggerDownload(blob: Blob, filename: string) {
   const objectUrl = URL.createObjectURL(blob);
@@ -109,13 +112,13 @@ export default function TeamExportActions({
       aria-label={t.groupLabel}
       className={`flex flex-wrap items-center gap-2 print:hidden ${className}`}
     >
-      <button
-        type="button"
+      <AdminButton
+        variant="ghost"
+        size="sm"
         onClick={handleExportCsv}
         disabled={exporting}
         aria-busy={exporting}
         title={single ? t.csvHintTeam : t.csvHintList}
-        className={BUTTON_CLASS}
       >
         {exporting ? (
           <span
@@ -139,13 +142,13 @@ export default function TeamExportActions({
           </svg>
         )}
         {exporting ? t.csvExporting : t.exportCsv}
-      </button>
+      </AdminButton>
       <Link
         href={buildTeamPrintPageUrl(target, { autoprint: true })}
         target="_blank"
         rel="noopener noreferrer"
         title={single ? t.pdfHintTeam : t.pdfHintList}
-        className={BUTTON_CLASS}
+        className={LINK_CLASS}
       >
         <svg
           className="w-4 h-4"

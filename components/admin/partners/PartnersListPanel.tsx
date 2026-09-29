@@ -11,7 +11,6 @@
 // minRole 'admin' (miroir des routes API).
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useToast } from '@/components/Toast';
@@ -21,6 +20,14 @@ import { useAdminResource } from '@/hooks/useAdminResource';
 import PartnerFormModal from '@/components/admin/partners/PartnerFormModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminPartnersList from '@/lib/i18n/locales/admin-fr/adminPartnersList';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import ListToolbar, {
+  FilterSelect,
+  ListSearch,
+} from '@/features/admin/_shared/ui/ListToolbar';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type Dict = typeof nsAdminPartnersList.fr;
 
@@ -53,10 +60,10 @@ const getCategoryLabels = (tx: Dict): Record<string, string> => ({
   cultural: tx.categoryCultural,
 });
 
-const categoryColors: Record<string, string> = {
-  super: 'bg-amber-600 text-white',
-  major: 'bg-purple-600 text-white',
-  cultural: 'bg-emerald-600 text-white',
+const categoryTones: Record<string, ChipTone> = {
+  super: 'brand',
+  major: 'neutral',
+  cultural: 'neutral',
 };
 
 export default function PartnersListPanel() {
@@ -192,10 +199,11 @@ export default function PartnersListPanel() {
             </p>
           </div>
 
-          <button
+          <AdminButton
+            variant="primary"
+            size="md"
             type="button"
             onClick={() => setModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-2"
           >
             <svg
               className="w-5 h-5"
@@ -211,13 +219,13 @@ export default function PartnersListPanel() {
               />
             </svg>
             {tx.newButton}
-          </button>
+          </AdminButton>
         </div>
       </div>
 
       {/* Error Message */}
       {errorMsg && (
-        <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
+        <div className="mb-6 rounded-[var(--r-card,14px)] bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
           <svg
             className="w-5 h-5 text-red-400 flex-shrink-0"
             fill="currentColor"
@@ -234,71 +242,44 @@ export default function PartnersListPanel() {
       )}
 
       {/* Filters */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
-        <div className="flex gap-4 flex-wrap items-end">
-          <div className="min-w-[180px]">
-            <label className="block text-sm text-neutral-400 mb-1">
-              {tx.categoryLabel}
-            </label>
-            <select
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      <ListToolbar
+        search={
+          <ListSearch
+            value={searchInput}
+            onChange={setSearchInput}
+            placeholder={tx.searchPlaceholder}
+            label={tx.searchLabel}
+          />
+        }
+        filters={
+          <>
+            <FilterSelect
+              label={tx.categoryLabel}
+              allLabel={tx.categoryAll}
               value={categoryFilter}
-              onChange={(e) => setFilters({ category: e.target.value || null })}
-            >
-              <option value="">{tx.categoryAll}</option>
-              <option value="super">{tx.categorySuper}</option>
-              <option value="major">{tx.categoryMajor}</option>
-              <option value="cultural">{tx.categoryCultural}</option>
-            </select>
-          </div>
-
-          <div className="min-w-[160px]">
-            <label className="block text-sm text-neutral-400 mb-1">
-              {tx.statusLabel}
-            </label>
-            <select
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(v) => setFilters({ category: v })}
+              options={[
+                { value: 'super', label: tx.categorySuper },
+                { value: 'major', label: tx.categoryMajor },
+                { value: 'cultural', label: tx.categoryCultural },
+              ]}
+            />
+            <FilterSelect
+              label={tx.statusLabel}
+              allLabel={tx.statusAll}
               value={activeFilter}
-              onChange={(e) => setFilters({ active: e.target.value || null })}
-            >
-              <option value="">{tx.statusAll}</option>
-              <option value="true">{tx.statusActive}</option>
-              <option value="false">{tx.statusInactive}</option>
-            </select>
-          </div>
-
-          <div className="min-w-[220px] flex-1">
-            <label className="block text-sm text-neutral-400 mb-1">
-              {tx.searchLabel}
-            </label>
-            <div className="relative">
-              <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              <input
-                type="text"
-                placeholder={tx.searchPlaceholder}
-                className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
+              onChange={(v) => setFilters({ active: v })}
+              options={[
+                { value: 'true', label: tx.statusActive },
+                { value: 'false', label: tx.statusInactive },
+              ]}
+            />
+          </>
+        }
+      />
 
       {/* Partners List */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
+      <section className="bg-[var(--s1,#100812)] backdrop-blur border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
@@ -336,10 +317,10 @@ export default function PartnersListPanel() {
                     <img
                       src={p.logo_url}
                       alt={p.name}
-                      className="w-12 h-12 rounded-xl border border-neutral-700 object-cover bg-white/5"
+                      className="w-12 h-12 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] object-cover bg-white/5"
                     />
                   ) : (
-                    <div className="w-12 h-12 rounded-xl bg-neutral-700/50 flex items-center justify-center border border-neutral-700">
+                    <div className="w-12 h-12 rounded-[var(--r-card,14px)] bg-[var(--s3,#2f2732)] flex items-center justify-center border border-[var(--line2,rgba(194,196,201,.2))]">
                       <svg
                         className="w-6 h-6 text-neutral-400"
                         fill="none"
@@ -363,23 +344,11 @@ export default function PartnersListPanel() {
                     <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors truncate">
                       {p.name}
                     </h3>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        categoryColors[p.category]
-                      }`}
-                    >
+                    <Chip tone={categoryTones[p.category]}>
                       {categoryLabels[p.category]}
-                    </span>
-                    {p.note && (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30">
-                        {p.note}
-                      </span>
-                    )}
-                    {!p.is_active && (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-600 text-neutral-300">
-                        {tx.statusInactive}
-                      </span>
-                    )}
+                    </Chip>
+                    {p.note && <Chip tone="warn">{p.note}</Chip>}
+                    {!p.is_active && <Chip>{tx.statusInactive}</Chip>}
                   </div>
                   <p className="text-sm text-neutral-400 truncate">
                     {p.description}
@@ -406,7 +375,7 @@ export default function PartnersListPanel() {
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     onClick={() => toggleActive(p)}
-                    className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                    className={`px-3 py-1.5 rounded-[var(--r-ctrl,4px)] border text-sm transition-colors ${
                       p.is_active
                         ? 'border-amber-500/40 text-amber-300 hover:border-amber-400'
                         : 'border-emerald-500/40 text-emerald-300 hover:border-emerald-400'
@@ -414,18 +383,20 @@ export default function PartnersListPanel() {
                   >
                     {p.is_active ? tx.deactivate : tx.activate}
                   </button>
-                  <Link
+                  <AdminButtonLink
+                    variant="ghost"
+                    size="xs"
                     href={`/admin/partners/${p.id}`}
-                    className="px-3 py-1.5 rounded-lg border border-neutral-600 hover:border-neutral-500 text-sm transition-colors"
                   >
                     {tx.edit}
-                  </Link>
-                  <button
+                  </AdminButtonLink>
+                  <AdminButton
+                    variant="danger"
+                    size="xs"
                     onClick={() => onDelete(p.id)}
-                    className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors"
                   >
                     {tx.delete}
-                  </button>
+                  </AdminButton>
                 </div>
               </div>
             ))}
@@ -436,11 +407,12 @@ export default function PartnersListPanel() {
       {/* Pagination */}
       {partners.length > 0 && (
         <div className="flex justify-between items-center mt-6">
-          <button
+          <AdminButton
+            variant="ghost"
+            size="md"
             type="button"
             disabled={offset === 0}
             onClick={() => setOffset(Math.max(0, offset - PAGE_LIMIT))}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <svg
               className="w-4 h-4"
@@ -456,18 +428,19 @@ export default function PartnersListPanel() {
               />
             </svg>
             {tx.previous}
-          </button>
+          </AdminButton>
 
           <span className="text-neutral-400 text-sm">
             {showingFrom} – {showingTo}
             {total !== null ? format(tx.paginationOf, { total }) : ''}
           </span>
 
-          <button
+          <AdminButton
+            variant="ghost"
+            size="md"
             type="button"
             disabled={total !== null && offset + PAGE_LIMIT >= total}
             onClick={() => setOffset(offset + PAGE_LIMIT)}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {tx.next}
             <svg
@@ -483,7 +456,7 @@ export default function PartnersListPanel() {
                 d="M9 5l7 7-7 7"
               />
             </svg>
-          </button>
+          </AdminButton>
         </div>
       )}
     </>

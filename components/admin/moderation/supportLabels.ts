@@ -7,6 +7,8 @@
 //
 // Fonctions PURES : elles ne dépendent que du dictionnaire admin.
 
+import type { ChipTone } from '@/features/admin/_shared/ui/Chip';
+
 export type Category = 'dispute' | 'behavior' | 'technical' | 'other';
 export type Status = 'open' | 'in_progress' | 'resolved' | 'closed';
 export type Severity = 'low' | 'medium' | 'high';
@@ -46,26 +48,23 @@ export function formatDateFr(value: string): string {
   }
 }
 
-export function severityBadge(severity: Severity): string {
-  switch (severity) {
-    case 'high':
-      return 'bg-red-700/30 text-red-200 border-red-500/40';
-    case 'medium':
-      return 'bg-amber-700/30 text-amber-200 border-amber-500/40';
-    default:
-      return 'bg-blue-700/30 text-blue-200 border-blue-500/40';
-  }
+/** Ton de puce (Chip) d'une sévérité : seule `high` alerte vraiment. */
+export function severityTone(severity: Severity): ChipTone {
+  if (severity === 'high') return 'err';
+  if (severity === 'medium') return 'warn';
+  return 'neutral';
 }
 
-export function statusBadge(status: Status): string {
+/** Ton de puce (Chip) d'un statut de ticket. */
+export function statusTone(status: Status): ChipTone {
   switch (status) {
     case 'open':
-      return 'bg-red-600/20 text-red-200 border-red-500/40';
+      return 'err';
     case 'in_progress':
-      return 'bg-amber-600/20 text-amber-200 border-amber-500/40';
+      return 'warn';
     case 'resolved':
-      return 'bg-emerald-600/20 text-emerald-200 border-emerald-500/40';
-    case 'closed':
-      return 'bg-neutral-600/20 text-neutral-300 border-neutral-500/40';
+      return 'ok';
+    default:
+      return 'neutral';
   }
 }

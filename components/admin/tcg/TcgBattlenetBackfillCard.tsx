@@ -27,6 +27,12 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import WidgetCard from '@/components/admin/dashboard/WidgetCard';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import {
+  rubanErr,
+  rubanOk,
+  rubanWarn,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTcgBattlenetBackfill from '@/lib/i18n/locales/admin-fr/adminTcgBattlenetBackfill';
 import {
@@ -144,10 +150,10 @@ export default function TcgBattlenetBackfillCard() {
     result === null
       ? ''
       : result.kind === 'error'
-        ? 'mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200'
+        ? `mt-4 px-3 py-2 text-xs ${rubanErr}`
         : outcome === 'partial'
-          ? 'mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200'
-          : 'mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200';
+          ? `mt-4 px-3 py-2 text-xs ${rubanWarn}`
+          : `mt-4 px-3 py-2 text-xs ${rubanOk}`;
 
   return (
     <>
@@ -155,10 +161,7 @@ export default function TcgBattlenetBackfillCard() {
         <p className="mb-4 max-w-prose text-xs text-gray-400">{t.subtitle}</p>
 
         {loadFailed && (
-          <div
-            role="alert"
-            className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200"
-          >
+          <div role="alert" className={`mb-4 px-3 py-2 text-xs ${rubanErr}`}>
             {t.loadError}
           </div>
         )}
@@ -196,14 +199,14 @@ export default function TcgBattlenetBackfillCard() {
               {sim.ready && sim.wouldGrant === 0 && (
                 <span className="text-xs text-gray-500">{t.nothingToDo}</span>
               )}
-              <button
-                type="button"
+              <AdminButton
+                variant="primary"
+                size="sm"
                 onClick={() => void onGrant()}
                 disabled={busy || !canDistribute(sim)}
-                className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-purple-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 disabled:opacity-50"
               >
                 {busy ? t.granting : t.grant}
-              </button>
+              </AdminButton>
             </div>
           </div>
         )}

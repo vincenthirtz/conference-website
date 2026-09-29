@@ -19,6 +19,7 @@ import { useToast } from '@/components/Toast';
 import { format } from '@/lib/i18n/useT';
 import { logger } from '@/utils/logger';
 import type nsAdminSocialPosts from '@/lib/i18n/locales/admin-fr/adminSocialPosts';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 const ENDPOINT = '/api/admin/tiktok/credentials';
 
@@ -34,7 +35,7 @@ type CredentialsState = {
 };
 
 const inputClass =
-  'w-64 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500';
+  'w-64 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-1.5 font-mono text-xs text-white placeholder:text-neutral-600 focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 export default function TiktokMirrorCard({ t }: { t: Dict }) {
   const { adminFetchJson } = useAdminFetch();
@@ -92,7 +93,7 @@ export default function TiktokMirrorCard({ t }: { t: Dict }) {
   const showForm = !credentialsSet || editing;
 
   return (
-    <fieldset className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-5 space-y-3">
+    <fieldset className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-5 space-y-3">
       <legend className="px-2 text-sm font-semibold text-neutral-200">
         {t.tiktokMirrorLegend}
       </legend>
@@ -168,14 +169,14 @@ export default function TiktokMirrorCard({ t }: { t: Dict }) {
               autoComplete="off"
               className={inputClass}
             />
-            <button
-              type="button"
+            <AdminButton
+              variant="ghost"
+              size="xs"
               onClick={save}
               disabled={busy || !clientKey.trim() || !clientSecret.trim()}
-              className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
             >
               {t.secretSaveCta}
-            </button>
+            </AdminButton>
           </div>
           <p className="max-w-2xl text-xs text-neutral-500">{t.tiktokHelp}</p>
         </>

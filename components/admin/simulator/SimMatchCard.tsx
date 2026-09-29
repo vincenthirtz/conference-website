@@ -56,7 +56,7 @@ function SimTeamRow({
             ? 'text-emerald-300 font-semibold'
             : name === 'TBD'
               ? 'text-neutral-600 italic'
-              : 'text-white/80'
+              : 'text-[var(--t1,#f4edf7)]'
         }`}
       >
         {name}
@@ -121,26 +121,26 @@ function SimMatchCardComponent({
 
   return (
     <div
-      className={`rounded-xl border overflow-hidden bg-surface transition-all duration-300 ${
+      className={`overflow-hidden rounded-[var(--r-ctrl,4px)] border bg-[var(--s2,#1d1520)] transition-colors duration-300 ${
         match.locked
-          ? 'border-amber-500/30 ring-1 ring-amber-500/10'
+          ? 'border-[rgba(245,165,36,.45)]'
           : match.status === 'finished'
-            ? 'border-emerald-500/20 shadow-[0_0_12px_-3px_rgba(16,185,129,0.15)]'
-            : 'border-white/[0.06] hover:border-purple-500/20'
+            ? 'border-[rgba(127,202,101,.36)]'
+            : 'border-[var(--line,rgba(194,196,201,.12))] hover:border-[var(--t4,#807984)]'
       }`}
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between px-2.5 py-1 border-b border-white/[0.05]"
+        className="flex items-center justify-between px-2.5 py-1 border-b border-[var(--line,rgba(194,196,201,.12))]"
         style={{ height: 26 }}
       >
         <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-bold text-neutral-600 font-mono">
+          <span className="text-[9px] font-bold text-[var(--t4,#807984)] font-mono">
             #{match.position_in_round}
           </span>
           {match.scheduled_at && (
             <span
-              className="text-[9px] text-purple-300/70 font-mono"
+              className="text-[9px] text-[var(--t3,#a39ba6)] font-mono"
               title={match.scheduled_at}
             >
               {formatMatchDate(match.scheduled_at)}
@@ -149,7 +149,7 @@ function SimMatchCardComponent({
         </div>
         <div className="flex items-center gap-1.5">
           {match.match_format && (
-            <span className="text-[9px] font-semibold uppercase text-neutral-500 bg-white/5 px-1 rounded">
+            <span className="text-[9px] font-semibold uppercase text-[var(--t3,#a39ba6)] bg-[var(--s3,#2f2732)] px-1 rounded-[2px]">
               {match.match_format}
             </span>
           )}
@@ -169,7 +169,7 @@ function SimMatchCardComponent({
         isWinner={w1}
         seed={match.team1?.seed ?? null}
       />
-      <div className="h-px bg-white/[0.04]" />
+      <div className="h-px bg-[var(--line,rgba(194,196,201,.12))]" />
       <SimTeamRow
         name={t2Name}
         score={match.team2_score}
@@ -179,12 +179,12 @@ function SimMatchCardComponent({
 
       {/* Win probability bar */}
       {winProb !== null && match.status === 'pending' && (
-        <div className="px-2.5 py-1 border-t border-white/[0.05]">
+        <div className="px-2.5 py-1 border-t border-[var(--line,rgba(194,196,201,.12))]">
           <div className="flex items-center gap-1.5">
             <span className="text-[8px] tabular-nums text-sky-300 font-semibold w-8 text-right">
               {Math.round(winProb * 100)}%
             </span>
-            <div className="flex-1 h-1.5 rounded-full overflow-hidden bg-neutral-800 flex">
+            <div className="flex-1 h-1.5 rounded-full overflow-hidden bg-[var(--s3,#2f2732)] flex">
               <div
                 className="h-full bg-sky-500/60 rounded-l-full transition-all"
                 style={{ width: `${winProb * 100}%` }}
@@ -202,7 +202,7 @@ function SimMatchCardComponent({
       )}
 
       {/* Actions */}
-      <div className="flex border-t border-white/[0.05]">
+      <div className="flex border-t border-[var(--line,rgba(194,196,201,.12))]">
         {match.status === 'pending' &&
           match.team1 &&
           match.team2 &&
@@ -239,7 +239,7 @@ function SimMatchCardComponent({
             (match.status === 'pending' && match.team1 && match.team2)) && (
             <button
               onClick={() => onToggleLock(match.id)}
-              className={`px-2.5 text-[10px] py-1.5 transition-colors font-semibold border-l border-white/[0.05] ${
+              className={`px-2.5 text-[10px] py-1.5 transition-colors font-semibold border-l border-[var(--line,rgba(194,196,201,.12))] ${
                 match.locked
                   ? 'text-amber-400 hover:bg-amber-500/10'
                   : 'text-neutral-500 hover:bg-white/5 hover:text-neutral-300'
@@ -253,7 +253,7 @@ function SimMatchCardComponent({
 
       {/* Maps with per-map results */}
       {match.maps.length > 0 && (
-        <div className="border-t border-white/[0.05] px-2.5 py-1.5">
+        <div className="border-t border-[var(--line,rgba(194,196,201,.12))] px-2.5 py-1.5">
           <div className="flex flex-wrap gap-1">
             {match.maps.map((map, i) => {
               const mapWon = map.winner_team_id;

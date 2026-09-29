@@ -17,6 +17,8 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminDocuments from '@/lib/i18n/locales/admin-fr/adminDocuments';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { CARD, CARD_TITLE } from '@/features/admin/stages/ui/rubanClasses';
 
 export default function DrivePrivateKeyForm({
   onStored,
@@ -54,8 +56,8 @@ export default function DrivePrivateKeyForm({
   };
 
   return (
-    <div className="max-w-3xl rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-      <h2 className="text-lg font-semibold text-white">{t.keyTitle}</h2>
+    <div className={`max-w-3xl ${CARD}`}>
+      <h2 className={`${CARD_TITLE} font-semibold`}>{t.keyTitle}</h2>
       <p className="mt-2 text-sm text-neutral-300">{t.keyIntro}</p>
       <p className="mt-2 text-xs text-neutral-500">{t.keyHowTo}</p>
 
@@ -66,21 +68,21 @@ export default function DrivePrivateKeyForm({
         spellCheck={false}
         autoComplete="off"
         placeholder={t.keyPlaceholder}
-        className="mt-4 w-full rounded-xl border border-white/10 bg-neutral-950 p-3 font-mono text-xs text-neutral-200 placeholder:text-neutral-600 focus:border-purple-500/50 focus:outline-none"
+        className="mt-4 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-3 font-mono text-xs text-[var(--t1,#f4edf7)] placeholder:text-[var(--t4,#807984)] focus:border-[var(--or,#b467d1)] focus:outline-none"
       />
 
       <div className="mt-4 flex items-center gap-3">
-        <button
-          type="button"
+        <AdminButton
+          variant="primary"
+          size="sm"
           onClick={() => void save()}
           disabled={saving || value.trim().length === 0}
-          className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50"
         >
           {saving ? t.keySaving : t.keySave}
-        </button>
+        </AdminButton>
       </div>
 
-      <p className="mt-4 border-t border-white/10 pt-4 text-xs text-neutral-500">
+      <p className="mt-4 border-t border-[var(--line,rgba(194,196,201,.12))] pt-4 text-xs text-[var(--t4,#807984)]">
         {t.keyWhyHere}
       </p>
     </div>

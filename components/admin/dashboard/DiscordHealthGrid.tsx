@@ -59,19 +59,23 @@ export default function DiscordHealthGrid({ health, nowMs }: Props) {
                   : 'ok';
 
           const styles: Record<typeof status, string> = {
-            ok: 'border-emerald-500/20 bg-emerald-500/5 text-emerald-200',
-            stale: 'border-amber-500/30 bg-amber-500/10 text-amber-100',
-            failed: 'border-red-500/30 bg-red-500/10 text-red-100',
-            inactive: 'border-gray-500/20 bg-gray-500/5 text-gray-400',
-            missing: 'border-neutral-700 bg-neutral-800/40 text-neutral-500',
+            ok: 'border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] text-[var(--t1,#f4edf7)]',
+            stale:
+              'border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.08)] text-[#ffd9a3]',
+            failed:
+              'border-[rgba(255,107,107,.4)] bg-[rgba(255,107,107,.08)] text-[#ffc2c2]',
+            inactive:
+              'border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] text-[var(--t3,#a39ba6)]',
+            missing:
+              'border-dashed border-[var(--line2,rgba(194,196,201,.2))] bg-transparent text-[var(--t4,#807984)]',
           };
 
           const dot: Record<typeof status, string> = {
-            ok: 'bg-emerald-400',
-            stale: 'bg-amber-400 animate-pulse',
-            failed: 'bg-red-400 animate-pulse',
-            inactive: 'bg-gray-500',
-            missing: 'bg-neutral-600',
+            ok: 'bg-[var(--ok,#7fca65)]',
+            stale: 'bg-[var(--warn,#f5a524)] animate-pulse',
+            failed: 'bg-[var(--err,#ff6b6b)] animate-pulse',
+            inactive: 'bg-[var(--t4,#807984)]',
+            missing: 'bg-[var(--line2,rgba(194,196,201,.2))]',
           };
 
           const tip: Record<typeof status, string> = {
@@ -91,7 +95,7 @@ export default function DiscordHealthGrid({ health, nowMs }: Props) {
           return (
             <li
               key={c.channelType}
-              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-[11px] ${styles[status]}`}
+              className={`flex items-center gap-2 rounded-[var(--r-ctrl,4px)] border px-2 py-1.5 text-[11px] ${styles[status]}`}
               title={tip[status]}
             >
               <span
@@ -117,7 +121,7 @@ export default function DiscordHealthGrid({ health, nowMs }: Props) {
         })}
       </ul>
       {health.missingExpectedCount > 0 && (
-        <p className="mt-2 text-[10px] text-amber-300/80">
+        <p className="mt-2 text-[10px] text-[var(--warn,#f5a524)]">
           {format(t.missingWarning, { count: health.missingExpectedCount })}
         </p>
       )}

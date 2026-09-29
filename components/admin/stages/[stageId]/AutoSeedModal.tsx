@@ -2,11 +2,7 @@
 import React from 'react';
 import Modal from '@/components/admin/Modal';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import {
-  INPUT,
-  LABEL,
-  MUTED,
-} from '@/features/admin/stages/ui/rubanClasses';
+import { INPUT, LABEL, MUTED } from '@/features/admin/stages/ui/rubanClasses';
 import type { Dict } from './stageDisplay';
 
 type OtherStage = { id: string; name: string; stage_type: string | null };

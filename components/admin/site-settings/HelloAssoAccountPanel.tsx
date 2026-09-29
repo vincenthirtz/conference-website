@@ -20,6 +20,7 @@ import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminSiteSettings from '@/lib/i18n/locales/admin-fr/adminSiteSettings';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type State = {
   usesPlatformAccount: boolean;
@@ -127,7 +128,7 @@ export default function HelloAssoAccountPanel() {
 
   if (state.usesPlatformAccount) {
     return (
-      <section className="rounded-2xl border border-neutral-700/50 bg-neutral-800/40 p-6">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6">
         <h2 className="text-lg font-semibold">{t.helloassoHeading}</h2>
         <p className="mt-2 text-sm text-neutral-300">
           {t.helloassoPlatformNotice}
@@ -143,15 +144,15 @@ export default function HelloAssoAccountPanel() {
   }
 
   const inputClass =
-    'mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white';
+    'mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white';
 
   return (
-    <section className="rounded-2xl border border-neutral-700/50 bg-neutral-800/40 p-6">
+    <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6">
       <h2 className="text-lg font-semibold">{t.helloassoHeading}</h2>
       <p className="mt-2 text-sm text-neutral-300">{t.helloassoIntro}</p>
 
       <div
-        className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
+        className={`mt-4 rounded-[var(--r-card,14px)] border px-4 py-3 text-sm ${
           state.connected
             ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100'
             : 'border-amber-500/40 bg-amber-500/10 text-amber-100'
@@ -217,28 +218,30 @@ export default function HelloAssoAccountPanel() {
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <button
+        <AdminButton
+          variant="primary"
+          size="sm"
           type="button"
           onClick={save}
           disabled={saving || !clientId || !clientSecret || !orgSlug}
-          className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
           {saving ? t.helloassoSaving : t.helloassoSave}
-        </button>
+        </AdminButton>
         {state.connected && (
-          <button
+          <AdminButton
+            variant="ghost"
+            size="sm"
             type="button"
             onClick={clear}
             disabled={saving}
-            className="rounded-lg border border-neutral-600 px-4 py-2 text-sm text-neutral-200 disabled:opacity-50"
           >
             {t.helloassoClear}
-          </button>
+          </AdminButton>
         )}
       </div>
 
       {state.notificationUrl && (
-        <div className="mt-8 rounded-xl border border-neutral-700 bg-neutral-900/60 p-4">
+        <div className="mt-8 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-4">
           <p className="text-sm font-semibold text-neutral-100">
             {t.helloassoNotificationLabel}
           </p>
@@ -246,18 +249,19 @@ export default function HelloAssoAccountPanel() {
             {t.helloassoNotificationHelp}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <code className="min-w-0 flex-1 break-all rounded-lg bg-black/50 px-3 py-2 text-xs text-neutral-200">
+            <code className="min-w-0 flex-1 break-all rounded-[var(--r-ctrl,4px)] bg-black/50 px-3 py-2 text-xs text-neutral-200">
               {state.notificationUrl}
             </code>
-            <button
+            <AdminButton
+              variant="ghost"
+              size="sm"
               type="button"
               onClick={() =>
                 void copyNotificationUrl(state.notificationUrl as string)
               }
-              className="rounded-lg border border-neutral-600 px-3 py-2 text-sm text-neutral-100"
             >
               {t.helloassoCopy}
-            </button>
+            </AdminButton>
           </div>
         </div>
       )}

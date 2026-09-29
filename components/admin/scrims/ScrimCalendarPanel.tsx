@@ -36,6 +36,7 @@ import {
   zonedTimeToUtcIso,
 } from '@/utils/teams/scrimCalendar';
 import nsAdminScrimsList from '@/lib/i18n/locales/admin-fr/adminScrimsList';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 const TZ = 'Europe/Paris';
 
@@ -484,16 +485,16 @@ export default function ScrimCalendarPanel() {
         <div
           role="group"
           aria-label={`${t.calViewWeek} / ${t.calViewMonth}`}
-          className="inline-flex overflow-hidden rounded-lg border border-neutral-700"
+          className="inline-flex overflow-hidden rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))]"
         >
           <button
             type="button"
             aria-pressed={view === 'week'}
             onClick={() => setView('week')}
-            className={`px-3 py-1 text-xs font-medium transition ${
+            className={`px-3 py-1 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.12em] transition ${
               view === 'week'
-                ? 'bg-neutral-200 text-neutral-900'
-                : 'bg-neutral-900/60 text-neutral-300 hover:bg-neutral-800'
+                ? 'bg-[rgba(180,103,209,.12)] text-[var(--or-200,#eec4ff)]'
+                : 'bg-[var(--s2,#1d1520)] text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]'
             }`}
           >
             {t.calViewWeek}
@@ -502,10 +503,10 @@ export default function ScrimCalendarPanel() {
             type="button"
             aria-pressed={view === 'month'}
             onClick={() => setView('month')}
-            className={`px-3 py-1 text-xs font-medium transition ${
+            className={`px-3 py-1 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.12em] transition ${
               view === 'month'
-                ? 'bg-neutral-200 text-neutral-900'
-                : 'bg-neutral-900/60 text-neutral-300 hover:bg-neutral-800'
+                ? 'bg-[rgba(180,103,209,.12)] text-[var(--or-200,#eec4ff)]'
+                : 'bg-[var(--s2,#1d1520)] text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]'
             }`}
           >
             {t.calViewMonth}
@@ -518,7 +519,7 @@ export default function ScrimCalendarPanel() {
             aria-label={t.calFilterTeam}
             value={teamFilter}
             onChange={(e) => selectTeam(e.target.value)}
-            className="rounded-lg border border-neutral-700 bg-neutral-900/60 px-2 py-1 text-neutral-200"
+            className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2 py-1 text-neutral-200"
           >
             <option value="">{t.calFilterAllTeams}</option>
             {teamOptions.map((o) => (
@@ -542,10 +543,10 @@ export default function ScrimCalendarPanel() {
                 type="button"
                 aria-pressed={on}
                 onClick={() => toggleStatus(status)}
-                className={`rounded-full border px-2 py-0.5 text-[11px] transition ${
+                className={`rounded-[var(--r-ctrl,4px)] border px-2 py-0.5 text-[11px] transition ${
                   on
-                    ? 'border-neutral-500 bg-neutral-700/70 text-neutral-100'
-                    : 'border-neutral-800 bg-neutral-900/40 text-neutral-500 hover:bg-neutral-800'
+                    ? 'border-[var(--or,#b467d1)] bg-[rgba(180,103,209,.12)] text-[var(--or-200,#eec4ff)]'
+                    : 'border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] text-[var(--t4,#807984)] hover:text-[var(--t2,#c7bfca)]'
                 }`}
               >
                 {statusLabel(status)}
@@ -560,20 +561,21 @@ export default function ScrimCalendarPanel() {
       {undoable && (
         <div
           role="status"
-          className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-700 bg-neutral-800/70 px-4 py-2.5 text-sm"
+          className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-4 py-2.5 text-sm"
         >
           <span className="text-neutral-300">
             {undoable.kind === 'move'
               ? t.calUndoMovedHint
               : t.calUndoResizedHint}
           </span>
-          <button
+          <AdminButton
+            variant="ghost"
+            size="xs"
             type="button"
             onClick={undoLastChange}
-            className="rounded-lg bg-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-100 transition-colors hover:bg-neutral-600"
           >
             {t.calUndo}
-          </button>
+          </AdminButton>
         </div>
       )}
 

@@ -19,6 +19,8 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminCircuitPartners from '@/lib/i18n/locales/admin-fr/adminCircuitPartners';
 import { CIRCUIT_PARTNER_OFFER } from '@/config/circuitPartnerOffer';
 import { PLAN_LABELS } from '@/utils/billing/planFeatures';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type Status = 'new' | 'reviewing' | 'approved' | 'rejected';
 
@@ -51,11 +53,11 @@ type ListResponse = {
   counts: Record<Status, number>;
 };
 
-const STATUS_STYLE: Record<Status, string> = {
-  new: 'bg-blue-600/30 text-blue-100',
-  reviewing: 'bg-amber-600/30 text-amber-100',
-  approved: 'bg-emerald-600/30 text-emerald-100',
-  rejected: 'bg-neutral-600/40 text-neutral-200',
+const STATUS_TONE: Record<Status, ChipTone> = {
+  new: 'brand',
+  reviewing: 'warn',
+  approved: 'ok',
+  rejected: 'neutral',
 };
 
 function formatDate(iso: string | null): string {
@@ -156,10 +158,10 @@ export default function CircuitPartnersPanel() {
             type="button"
             aria-pressed={filter === value}
             onClick={() => setFilter(value)}
-            className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+            className={`rounded-[var(--r-ctrl,4px)] border px-3 py-1 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.12em] transition ${
               filter === value
-                ? 'border-violet-400 bg-violet-600/30 text-white'
-                : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                ? 'border-[var(--or,#b467d1)] bg-[rgba(180,103,209,.12)] text-[var(--or-200,#eec4ff)]'
+                : 'border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]'
             }`}
           >
             {value === 'all' ? t.filterAll : statusLabel[value]}
@@ -249,18 +251,14 @@ function ApplicationCard({
   if (item.admin_notes) rows.push([t.fieldNotes, item.admin_notes]);
 
   return (
-    <li className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+    <li className="rounded-[var(--r-card,14px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-semibold text-white">{item.organization_name}</p>
         <div className="flex items-center gap-2 text-xs">
           <span className="text-neutral-400">
             {format(t.receivedOn, { date: formatDate(item.created_at) })}
           </span>
-          <span
-            className={`rounded-full px-2 py-0.5 font-semibold ${STATUS_STYLE[item.status]}`}
-          >
-            {statusLabel}
-          </span>
+          <Chip tone={STATUS_TONE[item.status]}>{statusLabel}</Chip>
         </div>
       </div>
 
@@ -298,7 +296,7 @@ function ApplicationCard({
               id={`slug-${item.id}`}
               value={slug}
               onChange={(e) => setSlug(e.target.value.trim().toLowerCase())}
-              className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white"
             />
           </div>
           <div>
@@ -316,7 +314,7 @@ function ApplicationCard({
                 setNotesError(false);
               }}
               aria-invalid={notesError}
-              className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white"
             />
             {notesError && (
               <p role="alert" className="mt-1 text-xs text-red-300">
@@ -326,7 +324,9 @@ function ApplicationCard({
           </div>
           <div className="flex flex-wrap gap-2 sm:col-span-2">
             {item.status === 'new' && (
-              <button
+              <AdminButton
+                variant="ghost"
+                size="sm"
                 type="button"
                 disabled={busy}
                 onClick={() =>
@@ -335,12 +335,13 @@ function ApplicationCard({
                     t.toastReviewed
                   )
                 }
-                className="rounded-lg border border-neutral-600 px-3 py-2 text-sm text-neutral-100 hover:border-neutral-400 disabled:opacity-50"
               >
                 {t.actionReview}
-              </button>
+              </AdminButton>
             )}
-            <button
+            <AdminButton
+              variant="danger"
+              size="sm"
               type="button"
               disabled={busy}
               onClick={() => {
@@ -350,13 +351,14 @@ function ApplicationCard({
                 }
                 void run({ action: 'reject', notes }, t.toastRejected);
               }}
-              className="rounded-lg border border-red-500/50 px-3 py-2 text-sm text-red-200 hover:border-red-400 disabled:opacity-50"
             >
               {t.actionReject}
-            </button>
+            </AdminButton>
             {confirming ? (
               <>
-                <button
+                <AdminButton
+                  variant="primary"
+                  size="sm"
                   type="button"
                   disabled={busy || slug.length < 2}
                   onClick={() =>
@@ -369,27 +371,28 @@ function ApplicationCard({
                       format(t.toastApproved, { slug })
                     )
                   }
-                  className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
                 >
                   {format(t.confirmApprove, { slug })}
-                </button>
-                <button
+                </AdminButton>
+                <AdminButton
+                  variant="ghost"
+                  size="sm"
                   type="button"
                   onClick={() => setConfirming(false)}
-                  className="rounded-lg px-3 py-2 text-sm text-neutral-300"
                 >
                   {t.cancel}
-                </button>
+                </AdminButton>
               </>
             ) : (
-              <button
+              <AdminButton
+                variant="secondary"
+                size="sm"
                 type="button"
                 disabled={busy || slug.length < 2}
                 onClick={() => setConfirming(true)}
-                className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
               >
                 {t.actionApprove}
-              </button>
+              </AdminButton>
             )}
           </div>
         </div>

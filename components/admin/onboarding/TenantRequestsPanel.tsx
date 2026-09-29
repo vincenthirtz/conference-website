@@ -27,6 +27,8 @@ import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { logger } from '@/utils/logger';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTenantRequestsList from '@/lib/i18n/locales/admin-fr/adminTenantRequestsList';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type Dict = typeof nsAdminTenantRequestsList.fr;
 
@@ -82,27 +84,27 @@ function getStatusTabs(
 
 function getStatusBadge(
   t: Dict
-): Record<TenantRequestStatus, { label: string; className: string }> {
+): Record<TenantRequestStatus, { label: string; tone: ChipTone }> {
   return {
     pending_email_verification: {
       label: t.badgeEmailVerif,
-      className: 'bg-amber-500/15 text-amber-200 border-amber-500/30',
+      tone: 'warn',
     },
     pending_bot_invite: {
       label: t.badgeBotInvite,
-      className: 'bg-blue-500/15 text-blue-200 border-blue-500/30',
+      tone: 'brand',
     },
     completed: {
       label: t.badgeCompleted,
-      className: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30',
+      tone: 'ok',
     },
     rejected: {
       label: t.badgeRejected,
-      className: 'bg-red-500/15 text-red-200 border-red-500/30',
+      tone: 'err',
     },
     expired: {
       label: t.badgeExpired,
-      className: 'bg-neutral-500/15 text-neutral-300 border-neutral-500/30',
+      tone: 'neutral',
     },
   };
 }
@@ -289,11 +291,9 @@ export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
       className: 'align-top',
       render: (row) => (
         <span>
-          <span
-            className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[row.status].className}`}
-          >
+          <Chip tone={STATUS_BADGE[row.status].tone}>
             {STATUS_BADGE[row.status].label}
-          </span>
+          </Chip>
           {row.rejectionReason && (
             <span
               className="mt-1 block max-w-[180px] text-[11px] text-red-300/80"
@@ -338,8 +338,8 @@ export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
             <span>
               {row.requesterDiscordDisplayName ?? '—'}
               {isSelf && (
-                <span className="ml-1.5 rounded-full border border-purple-500/40 bg-purple-600/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-purple-200">
-                  {t.selfBadge}
+                <span className="ml-1.5">
+                  <Chip tone="brand">{t.selfBadge}</Chip>
                 </span>
               )}
             </span>
@@ -383,22 +383,24 @@ export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
       render: (row) =>
         isPending(row.status) ? (
           <span className="flex justify-end gap-2">
-            <button
+            <AdminButton
+              variant="danger"
+              size="xs"
               type="button"
               onClick={() => openReject(row)}
-              className="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/10"
               data-testid={`reject-${row.id}`}
             >
               {t.reject}
-            </button>
-            <button
+            </AdminButton>
+            <AdminButton
+              variant="ghost"
+              size="xs"
               type="button"
               onClick={() => openExpire(row)}
-              className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs font-medium text-neutral-200 transition-colors hover:bg-neutral-700"
               data-testid={`expire-${row.id}`}
             >
               {t.expire}
-            </button>
+            </AdminButton>
           </span>
         ) : (
           <span className="text-xs italic text-neutral-600">{t.readOnly}</span>
@@ -416,30 +418,31 @@ export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
             {summary}
           </p>
         </div>
-        <button
+        <AdminButton
+          variant="ghost"
+          size="sm"
           type="button"
           onClick={fetchPage}
           disabled={refreshing}
-          className="px-4 py-2 rounded-xl border border-neutral-700 hover:border-neutral-500 text-sm font-medium transition-colors inline-flex items-center gap-2 disabled:opacity-50"
           data-testid="tenant-requests-refresh"
         >
           {refreshing ? t.refreshing : t.refresh}
-        </button>
+        </AdminButton>
       </div>
 
       <AlertBanner message={error} className="mb-4" />
 
       {/* Filter tabs */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-2 mb-6 flex flex-wrap gap-1">
+      <section className="bg-[var(--s1,#100812)] backdrop-blur border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] p-2 mb-6 flex flex-wrap gap-1">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.value}
             type="button"
             onClick={() => onChangeStatus(tab.value)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-[var(--r-ctrl,4px)] border font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.12em] transition-colors ${
               status === tab.value
-                ? 'bg-purple-600 text-white'
-                : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]'
+                ? 'border-[var(--or,#b467d1)] bg-[rgba(180,103,209,.12)] text-[var(--or-200,#eec4ff)]'
+                : 'border-transparent text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]'
             }`}
             data-testid={`status-tab-${tab.value}`}
           >
@@ -451,7 +454,7 @@ export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
       {/* List */}
       {/* Demandes de tenant — kit partagé (lot A5). L'écran garde ses filtres
           de statut ; la table apporte colonnes, export et pagination. */}
-      <section className="rounded-2xl border border-neutral-700/50 bg-neutral-800/50 p-4 backdrop-blur">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 backdrop-blur">
         <DataTable<TenantRequestRow>
           rows={visibleRequests}
           columns={columns}
@@ -498,7 +501,7 @@ export default function TenantRequestsPanel({ currentStaffDiscordId }: Props) {
             rows={4}
             maxLength={500}
             placeholder={t.rejectReasonPlaceholder}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+            className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
             data-testid="reject-reason-input"
             disabled={rejectLoading}
           />

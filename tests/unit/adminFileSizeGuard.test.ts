@@ -51,7 +51,7 @@ const BASELINE: Record<string, number> = {
   // `hooks/useAutoSchedule.tsx` (lot 6), et le plafond suit — un gel qui ne
   // descend jamais finit par ne plus rien geler.
   'pages/admin/tournament/[id]/matches.tsx': 763,
-  'components/admin/communications/CampaignsPanel.tsx': 1164,
+  'components/admin/communications/CampaignsPanel.tsx': 1151,
   // 2026-09-21, +2 : `payload: any` → `DemandePayload` (lot 6).
   'pages/admin/teams/my.tsx': 720,
   // 2026-09-21, +1 : `payload: any | null` → `DemandePayload | null` (lot 6).
@@ -66,7 +66,7 @@ const BASELINE: Record<string, number> = {
   // 1259 : passe « Le Ruban » (lot 5C) — les titres de colonne sont partis
   // dans features/admin/events/ui/DirectorSectionTitle.tsx.
   'pages/admin/events/[runId]/director.tsx': 658,
-  'components/admin/moderation/SupportPanel.tsx': 1167,
+  'components/admin/moderation/SupportPanel.tsx': 1146,
   // 1172 : errorCode / withBusy / Spinner partagés (twitchPanelUtils).
   'components/admin/broadcast/TwitchCommandsPanel.tsx': 1144,
   // 959 : en-tête et pastille de connexion partis dans
@@ -110,7 +110,7 @@ const BASELINE: Record<string, number> = {
   // 764 écrites : la fiche a rendu ses secrets bot à un panneau (T8), et le
   // plafond suit — un gel qui ne descend jamais finit par ne plus rien geler.
   'pages/admin/tenants/[id].tsx': 794,
-  'components/admin/profile/ProfileModal.tsx': 869,
+  'components/admin/profile/ProfileModal.tsx': 858,
   'components/admin/navigation/adminNav.ts': 881,
   'pages/admin/stages/[stageId]/groups.tsx': 608,
   'pages/admin/leagues/[id].tsx': 731,

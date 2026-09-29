@@ -26,6 +26,8 @@ import { useUrlFilters } from '@/utils/useUrlFilters';
 import AdminPagination from '@/components/admin/AdminPagination';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminModerationEntityBlacklist from '@/lib/i18n/locales/admin-fr/adminModerationEntityBlacklist';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 type EntityType = 'team' | 'org';
 
@@ -294,7 +296,7 @@ export default function EntityBlacklistPanel() {
       </div>
 
       {/* Formulaire d'ajout */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-5 mb-6">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-5 mb-6">
         <h2 className="text-sm font-semibold text-neutral-200 mb-3">
           {tx.addHeading}
         </h2>
@@ -312,7 +314,7 @@ export default function EntityBlacklistPanel() {
                   entity_type: e.target.value as EntityType,
                 }))
               }
-              className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
             >
               <option value="team">{tx.typeTeam}</option>
               <option value="org">{tx.typeOrg}</option>
@@ -345,19 +347,19 @@ export default function EntityBlacklistPanel() {
           />
         </div>
         <div className="flex justify-end">
-          <button
-            type="button"
+          <AdminButton
+            variant="danger"
+            size="sm"
             onClick={createEntry}
             disabled={creating || !canCreate}
-            className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-600 text-sm font-medium transition-colors disabled:opacity-50"
           >
             {creating ? tx.adding : tx.addToBlacklist}
-          </button>
+          </AdminButton>
         </div>
       </section>
 
       {/* Filtres */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4 mb-4 flex flex-wrap gap-3 items-center">
+      <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 mb-4 flex flex-wrap gap-3 items-center">
         <div className="flex items-center gap-2 flex-1 min-w-[220px]">
           <input
             type="text"
@@ -367,19 +369,15 @@ export default function EntityBlacklistPanel() {
               if (e.key === 'Enter') submitSearch();
             }}
             placeholder={tx.searchPlaceholder}
-            className="flex-1 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className="flex-1 px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
           />
-          <button
-            type="button"
-            onClick={submitSearch}
-            className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
-          >
+          <AdminButton variant="ghost" size="sm" onClick={submitSearch}>
             {tx.searchBtn}
-          </button>
+          </AdminButton>
         </div>
 
         <select
-          className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
+          className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm"
           value={typeFilter}
           onChange={(e) => {
             setFilters({ etype: e.target.value || null });
@@ -392,7 +390,7 @@ export default function EntityBlacklistPanel() {
         </select>
 
         <select
-          className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
+          className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm"
           value={activeFilter}
           onChange={(e) => {
             setFilters({ eactive: e.target.value || null });
@@ -404,24 +402,20 @@ export default function EntityBlacklistPanel() {
           <option value="false">{tx.filterInactive}</option>
         </select>
 
-        <button
-          type="button"
-          onClick={fetchEntries}
-          className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
-        >
+        <AdminButton variant="ghost" size="sm" onClick={fetchEntries}>
           {tx.refresh}
-        </button>
+        </AdminButton>
       </section>
 
       {errorMsg && (
-        <div className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm">
+        <div className="mb-4 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] text-[#ffc2c2] px-4 py-3 text-sm">
           {errorMsg}
         </div>
       )}
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--or,#b467d1)] rounded-full animate-spin" />
         </div>
       ) : entries.length === 0 ? (
         <div className="text-center py-20 text-neutral-500 text-sm">
@@ -436,8 +430,8 @@ export default function EntityBlacklistPanel() {
               })}
             </p>
           )}
-          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-            <div className="divide-y divide-neutral-700/50">
+          <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] overflow-hidden">
+            <div className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
               {entries.map((entry) => {
                 const isEditing = editingId === entry.id;
                 const isBusy = busyId === entry.id;
@@ -446,26 +440,14 @@ export default function EntityBlacklistPanel() {
                     <div className="flex flex-col lg:flex-row lg:items-start gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
-                              entry.entity_type === 'team'
-                                ? 'bg-sky-600/20 text-sky-200 border-sky-500/40'
-                                : 'bg-purple-600/20 text-purple-200 border-purple-500/40'
-                            }`}
-                          >
+                          <Chip tone="neutral">
                             {entry.entity_type === 'team'
                               ? tx.typeTeam
                               : tx.typeOrg}
-                          </span>
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
-                              entry.active
-                                ? 'bg-red-600/20 text-red-200 border-red-500/40'
-                                : 'bg-neutral-600/20 text-neutral-300 border-neutral-500/40'
-                            }`}
-                          >
+                          </Chip>
+                          <Chip tone={entry.active ? 'err' : 'neutral'}>
                             {entry.active ? tx.statusActive : tx.statusInactive}
-                          </span>
+                          </Chip>
                           <span className="text-xs text-neutral-500">
                             {formatDateFr(entry.created_at)}
                           </span>
@@ -485,7 +467,7 @@ export default function EntityBlacklistPanel() {
                                 onChange={(e) =>
                                   setEditType(e.target.value as EntityType)
                                 }
-                                className="px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                className="px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                               >
                                 <option value="team">{tx.typeTeam}</option>
                                 <option value="org">{tx.typeOrg}</option>
@@ -496,7 +478,7 @@ export default function EntityBlacklistPanel() {
                                 onChange={(e) => setEditName(e.target.value)}
                                 maxLength={190}
                                 placeholder={tx.editNamePlaceholder}
-                                className="flex-1 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                className="flex-1 px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                               />
                             </div>
                             <input
@@ -505,7 +487,7 @@ export default function EntityBlacklistPanel() {
                               onChange={(e) => setEditReason(e.target.value)}
                               maxLength={1000}
                               placeholder={tx.editReasonPlaceholder}
-                              className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                              className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                             />
                             <textarea
                               value={editNotes}
@@ -513,25 +495,25 @@ export default function EntityBlacklistPanel() {
                               rows={2}
                               maxLength={2000}
                               placeholder={tx.editNotesPlaceholder}
-                              className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                              className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
                             />
                             <div className="flex gap-2">
-                              <button
-                                type="button"
+                              <AdminButton
+                                variant="primary"
+                                size="xs"
                                 onClick={() => saveEdit(entry)}
                                 disabled={savingEdit}
-                                className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-xs font-medium transition-colors disabled:opacity-50"
                               >
                                 {savingEdit ? tx.savingEdit : tx.saveEdit}
-                              </button>
-                              <button
-                                type="button"
+                              </AdminButton>
+                              <AdminButton
+                                variant="ghost"
+                                size="xs"
                                 onClick={cancelEdit}
                                 disabled={savingEdit}
-                                className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs transition-colors disabled:opacity-50"
                               >
                                 {tx.cancel}
-                              </button>
+                              </AdminButton>
                             </div>
                           </div>
                         ) : (
@@ -558,34 +540,31 @@ export default function EntityBlacklistPanel() {
                       {/* Actions */}
                       {!isEditing && (
                         <div className="flex flex-wrap gap-2 flex-shrink-0">
-                          <button
-                            type="button"
+                          <AdminButton
+                            variant="ghost"
+                            size="xs"
                             onClick={() => startEdit(entry)}
                             disabled={isBusy}
-                            className="px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-xs transition-colors disabled:opacity-50"
                           >
                             {tx.edit}
-                          </button>
-                          <button
-                            type="button"
+                          </AdminButton>
+                          <AdminButton
+                            variant="ghost"
+                            size="xs"
                             onClick={() => toggleActive(entry)}
                             disabled={isBusy}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 ${
-                              entry.active
-                                ? 'bg-amber-700 hover:bg-amber-600'
-                                : 'bg-emerald-700 hover:bg-emerald-600'
-                            }`}
                           >
-                            {entry.active ? tx.deactivate : tx.reactivate}
-                          </button>
-                          <button
-                            type="button"
+                            {' '}
+                            {entry.active ? tx.deactivate : tx.reactivate}{' '}
+                          </AdminButton>
+                          <AdminButton
+                            variant="danger"
+                            size="xs"
                             onClick={() => deleteEntry(entry)}
                             disabled={isBusy}
-                            className="px-3 py-1.5 rounded-lg bg-red-800 hover:bg-red-700 text-xs font-medium transition-colors disabled:opacity-50"
                           >
                             {tx.delete}
-                          </button>
+                          </AdminButton>
                         </div>
                       )}
                     </div>
@@ -636,7 +615,7 @@ function Input({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
-        className="w-full px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
       />
     </label>
   );

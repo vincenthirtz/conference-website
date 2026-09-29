@@ -23,7 +23,7 @@ export type CastMemberFieldValues = {
 };
 
 const INPUT =
-  'w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm';
+  'w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t1,#f4edf7)] focus:outline-none focus:border-[var(--or,#b467d1)] text-sm';
 
 export default function CastMemberFields({
   form,
@@ -36,7 +36,7 @@ export default function CastMemberFields({
   sortOrderPlaceholder?: string;
 }) {
   const t = useAdminT(nsAdminCastMemberFields);
-  const label = 'block text-sm text-neutral-300 mb-1';
+  const label = 'block text-sm text-[var(--t2,#c7bfca)] mb-1';
   return (
     <>
       <div className="grid gap-6 md:grid-cols-2">

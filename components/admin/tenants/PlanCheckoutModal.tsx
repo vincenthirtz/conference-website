@@ -25,6 +25,7 @@ import {
 } from '@/utils/billing/planFeatures';
 import { logger } from '@/utils/logger';
 import nsAdminTenantPlanCheckout from '@/lib/i18n/locales/admin-fr/adminTenantPlanCheckout';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type CheckoutResponse = {
   redirectUrl: string;
@@ -102,7 +103,7 @@ export default function PlanCheckoutModal({ tenant, onClose }: Props) {
       {result ? (
         // ===== Étape 2 : lien généré, copiable =====
         <div className="pb-6 space-y-4">
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          <div className="rounded-[var(--r-card,14px)] border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
             {t.resultHint}
           </div>
 
@@ -132,29 +133,31 @@ export default function PlanCheckoutModal({ tenant, onClose }: Props) {
                 readOnly
                 value={result.redirectUrl}
                 onFocus={(e) => e.currentTarget.select()}
-                className="flex-1 px-3 py-2 rounded-lg bg-neutral-900/80 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs font-mono text-white"
+                className="flex-1 px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs font-mono text-white"
                 data-testid="tenant-plan-checkout-link-input"
               />
-              <button
+              <AdminButton
+                variant="primary"
+                size="xs"
                 type="button"
                 onClick={handleCopy}
-                className="px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-xs font-semibold text-white transition-colors whitespace-nowrap"
                 data-testid="tenant-plan-checkout-copy-btn"
               >
                 {copied ? t.copied : t.copy}
-              </button>
+              </AdminButton>
             </div>
           </div>
 
           <div className="flex justify-end pt-2">
-            <button
+            <AdminButton
+              variant="ghost"
+              size="sm"
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold text-white transition-colors"
               data-testid="tenant-plan-checkout-done-btn"
             >
               {t.close}
-            </button>
+            </AdminButton>
           </div>
         </div>
       ) : (
@@ -164,7 +167,7 @@ export default function PlanCheckoutModal({ tenant, onClose }: Props) {
 
           {error && (
             <div
-              className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200"
+              className="rounded-[var(--r-card,14px)] border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200"
               data-testid="tenant-plan-checkout-error"
             >
               {error}
@@ -181,10 +184,10 @@ export default function PlanCheckoutModal({ tenant, onClose }: Props) {
                 return (
                   <label
                     key={p}
-                    className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-colors ${
+                    className={`flex items-center justify-between gap-3 px-4 py-3 rounded-[var(--r-ctrl,4px)] border cursor-pointer transition-colors ${
                       selected
-                        ? 'bg-purple-600/15 border-purple-500/40'
-                        : 'bg-neutral-900/40 border-neutral-700/50 hover:border-neutral-600'
+                        ? 'bg-[rgba(180,103,209,.12)] border-[var(--or,#b467d1)]'
+                        : 'bg-[var(--s2,#1d1520)] border-[var(--line2,rgba(194,196,201,.2))] hover:border-[var(--t4,#807984)]'
                     }`}
                     data-testid={`tenant-plan-checkout-option-${p}`}
                   >
@@ -211,23 +214,25 @@ export default function PlanCheckoutModal({ tenant, onClose }: Props) {
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
-            <button
+            <AdminButton
+              variant="ghost"
+              size="sm"
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-semibold text-white transition-colors"
               data-testid="tenant-plan-checkout-cancel-btn"
             >
               {t.cancel}
-            </button>
-            <button
+            </AdminButton>
+            <AdminButton
+              variant="primary"
+              size="sm"
               type="button"
               onClick={handleGenerate}
               disabled={generating}
-              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-semibold text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="tenant-plan-checkout-generate-btn"
             >
               {generating ? t.generating : t.generate}
-            </button>
+            </AdminButton>
           </div>
         </div>
       )}

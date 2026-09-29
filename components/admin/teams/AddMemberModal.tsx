@@ -6,6 +6,7 @@ import { roleRequiresBattleTag } from '@/utils/teams/roleKind';
 import type { MemberFormState, SearchResult } from './types';
 import { STAFF_DIRECT_ADD_REASON_MIN } from '@/utils/teams/staffAddMode';
 import nsAdminTeamsAddMemberModal from '@/lib/i18n/locales/admin-fr/adminTeamsAddMemberModal';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type AddMemberModalProps = {
   open: boolean;
@@ -51,13 +52,13 @@ function AddMemberModalComponent({
       onClose={onClose}
       size="2xl"
       backdropClassName="bg-black/70 backdrop-blur-md"
-      panelChromeClassName="bg-gradient-to-b from-neutral-800 to-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl ring-1 ring-emerald-500/10 overflow-hidden"
+      panelChromeClassName="bg-[var(--s1,#100812)] border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] shadow-2xl overflow-hidden"
       panelClassName="max-h-[90vh]"
       title={
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-[var(--r-ctrl,4px)] bg-[var(--s3,#2f2732)] flex items-center justify-center flex-shrink-0">
             <svg
-              className="w-5 h-5 text-emerald-400"
+              className="w-5 h-5 text-[var(--or-300,#dea3f6)]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -78,16 +79,14 @@ function AddMemberModalComponent({
       }
       footer={
         <>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
-          >
+          <AdminButton variant="ghost" size="sm" onClick={onClose}>
             {t.cancel}
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
+            variant="primary"
+            size="md"
             onClick={onSubmit}
             disabled={memberSaving}
-            className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-emerald-900/40"
           >
             {memberSaving ? (
               <>
@@ -112,7 +111,7 @@ function AddMemberModalComponent({
                 {inviting ? t.sendInvite : t.addPlayer}
               </>
             )}
-          </button>
+          </AdminButton>
         </>
       }
     >
@@ -128,7 +127,7 @@ function AddMemberModalComponent({
               type="text"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-neutral-900/70 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
+              className="w-full pl-10 pr-10 py-2.5 rounded-[var(--r-card,14px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
               placeholder={t.searchPlaceholder}
             />
             <svg
@@ -153,7 +152,7 @@ function AddMemberModalComponent({
 
           {/* Search results dropdown */}
           {showSearchResults && (
-            <div className="absolute z-10 w-full mt-1.5 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto ring-1 ring-black/40">
+            <div className="absolute z-10 w-full mt-1.5 bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] shadow-2xl max-h-60 overflow-y-auto ring-1 ring-black/40">
               {searchResults.length === 0 && !searchLoading ? (
                 <div className="px-4 py-3 text-sm text-neutral-400 text-center">
                   {t.noResults}
@@ -166,7 +165,7 @@ function AddMemberModalComponent({
                     onClick={() => onSelectPlayer(player)}
                     className="w-full px-3 py-2.5 text-left hover:bg-neutral-700/70 transition-colors flex items-center gap-3 border-b border-neutral-800 last:border-b-0"
                   >
-                    <div className="w-9 h-9 rounded-lg bg-neutral-700 flex items-center justify-center flex-shrink-0">
+                    <div className="w-9 h-9 rounded-[var(--r-ctrl,4px)] bg-[var(--s3,#2f2732)] flex items-center justify-center flex-shrink-0">
                       <svg
                         className="w-4 h-4 text-neutral-400"
                         fill="none"
@@ -214,7 +213,7 @@ function AddMemberModalComponent({
         </div>
 
         {/* Manual entry */}
-        <div className="rounded-xl bg-neutral-900/40 border border-neutral-700/60 p-4 space-y-4">
+        <div className="rounded-[var(--r-card,14px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] p-4 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-neutral-200 mb-1.5">
@@ -226,7 +225,7 @@ function AddMemberModalComponent({
                 onChange={(e) =>
                   setMemberForm((prev) => ({ ...prev, email: e.target.value }))
                 }
-                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
+                className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
                 placeholder="user@email.com"
               />
             </div>
@@ -241,7 +240,7 @@ function AddMemberModalComponent({
                 onChange={(e) =>
                   setMemberForm((prev) => ({ ...prev, userId: e.target.value }))
                 }
-                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm font-mono placeholder:text-neutral-500 transition-colors"
+                className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm font-mono placeholder:text-neutral-500 transition-colors"
                 placeholder="UUID"
               />
             </div>
@@ -262,7 +261,7 @@ function AddMemberModalComponent({
                   battleTag: e.target.value,
                 }))
               }
-              className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
+              className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
               placeholder="Pseudo#1234"
             />
             <p className="text-xs text-neutral-500 mt-1.5">
@@ -291,7 +290,7 @@ function AddMemberModalComponent({
                     skillRating: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 rounded-lg bg-neutral-700 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 placeholder="3500"
               />
             </div>
@@ -306,7 +305,7 @@ function AddMemberModalComponent({
               onChange={(e) =>
                 setMemberForm((prev) => ({ ...prev, role: e.target.value }))
               }
-              className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
+              className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
             >
               {teamRoles.map((r) => (
                 <option key={r.value} value={r.value}>
@@ -324,10 +323,10 @@ function AddMemberModalComponent({
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label
-              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${
+              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-[var(--r-card,14px)] border cursor-pointer transition-all ${
                 memberForm.setCaptain
                   ? 'bg-amber-500/10 border-amber-500/60 ring-1 ring-amber-500/40'
-                  : 'bg-neutral-900/40 border-neutral-700 hover:border-neutral-600'
+                  : 'bg-[var(--s2,#1d1520)] border-[var(--line2,rgba(194,196,201,.2))] hover:border-neutral-600'
               }`}
             >
               <input
@@ -343,10 +342,10 @@ function AddMemberModalComponent({
                 className="sr-only"
               />
               <div
-                className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                className={`w-8 h-8 rounded-[var(--r-ctrl,4px)] flex items-center justify-center flex-shrink-0 ${
                   memberForm.setCaptain
                     ? 'bg-amber-500/20 text-amber-300'
-                    : 'bg-neutral-800 text-neutral-500'
+                    : 'bg-[var(--s2,#1d1520)] text-neutral-500'
                 }`}
               >
                 <svg
@@ -366,10 +365,10 @@ function AddMemberModalComponent({
             </label>
 
             <label
-              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${
+              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-[var(--r-card,14px)] border cursor-pointer transition-all ${
                 memberForm.isSubstitute
                   ? 'bg-blue-500/10 border-blue-500/60 ring-1 ring-blue-500/40'
-                  : 'bg-neutral-900/40 border-neutral-700 hover:border-neutral-600'
+                  : 'bg-[var(--s2,#1d1520)] border-[var(--line2,rgba(194,196,201,.2))] hover:border-neutral-600'
               }`}
             >
               <input
@@ -385,10 +384,10 @@ function AddMemberModalComponent({
                 className="sr-only"
               />
               <div
-                className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                className={`w-8 h-8 rounded-[var(--r-ctrl,4px)] flex items-center justify-center flex-shrink-0 ${
                   memberForm.isSubstitute
                     ? 'bg-blue-500/20 text-blue-300'
-                    : 'bg-neutral-800 text-neutral-500'
+                    : 'bg-[var(--s2,#1d1520)] text-neutral-500'
                 }`}
               >
                 <svg
@@ -435,10 +434,10 @@ function AddMemberModalComponent({
               return (
                 <label
                   key={value}
-                  className={`flex items-start gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${
+                  className={`flex items-start gap-3 px-3 py-2.5 rounded-[var(--r-card,14px)] border cursor-pointer transition-all ${
                     checked
                       ? 'bg-emerald-500/10 border-emerald-500/60 ring-1 ring-emerald-500/40'
-                      : 'bg-neutral-900/40 border-neutral-700 hover:border-neutral-600'
+                      : 'bg-[var(--s2,#1d1520)] border-[var(--line2,rgba(194,196,201,.2))] hover:border-neutral-600'
                   }`}
                 >
                   <input
@@ -480,7 +479,7 @@ function AddMemberModalComponent({
                 onChange={(e) =>
                   setMemberForm((prev) => ({ ...prev, reason: e.target.value }))
                 }
-                className="w-full px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
+                className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 text-sm placeholder:text-neutral-500 transition-colors"
                 placeholder={t.reasonPlaceholder}
               />
               <p className="text-xs text-neutral-500 mt-1.5">
@@ -491,7 +490,7 @@ function AddMemberModalComponent({
         </fieldset>
 
         {memberError && (
-          <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2.5 text-sm text-red-200 flex items-start gap-2">
+          <div className="rounded-[var(--r-ctrl,4px)] bg-red-900/40 border border-red-500/50 px-3 py-2.5 text-sm text-red-200 flex items-start gap-2">
             <svg
               className="w-4 h-4 mt-0.5 flex-shrink-0"
               fill="none"

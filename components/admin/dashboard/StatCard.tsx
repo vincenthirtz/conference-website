@@ -13,24 +13,16 @@ export type StatAccent =
   | 'red'
   | 'gray';
 
-const ACCENT_RING: Record<StatAccent, string> = {
-  pink: 'ring-pink-500/30 from-pink-500/10',
-  blue: 'ring-blue-500/30 from-blue-500/10',
-  emerald: 'ring-emerald-500/30 from-emerald-500/10',
-  purple: 'ring-purple-500/30 from-purple-500/10',
-  amber: 'ring-amber-500/30 from-amber-500/10',
-  red: 'ring-red-500/30 from-red-500/10',
-  gray: 'ring-white/10 from-white/5',
-};
-
+// Couleur = signal : les teintes décoratives (pink/blue/purple) se rangent
+// sous l'orchidée, seules emerald/amber/red disent un état.
 const ACCENT_TEXT: Record<StatAccent, string> = {
-  pink: 'text-pink-300',
-  blue: 'text-blue-300',
-  emerald: 'text-emerald-300',
-  purple: 'text-purple-300',
-  amber: 'text-amber-300',
-  red: 'text-red-300',
-  gray: 'text-gray-300',
+  pink: 'text-[var(--or-300,#dea3f6)]',
+  blue: 'text-[var(--or-300,#dea3f6)]',
+  emerald: 'text-[var(--lf,#7fca65)]',
+  purple: 'text-[var(--or-300,#dea3f6)]',
+  amber: 'text-[var(--warn,#f5a524)]',
+  red: 'text-[var(--err,#ff6b6b)]',
+  gray: 'text-[var(--t1,#f4edf7)]',
 };
 
 type Props = {
@@ -51,17 +43,24 @@ export default function StatCard({
 }: Props) {
   return (
     <div
-      className={`rounded-xl bg-gradient-to-br to-transparent ring-1 ${ACCENT_RING[accent]} bg-neutral-900/40 p-4`}
+      className={`rounded-[var(--r-card,14px)] border bg-[var(--s1,#100812)] p-4 ${
+        accent === 'red'
+          ? 'border-[rgba(255,107,107,.45)]'
+          : 'border-[var(--line2,rgba(194,196,201,.2))]'
+      }`}
     >
-      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-gray-500 font-medium">
+      <div className="flex items-center gap-1.5 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
         {icon && <span className="opacity-80">{icon}</span>}
         <span>{label}</span>
       </div>
-      <div className={`mt-1.5 text-2xl font-bold ${ACCENT_TEXT[accent]}`}>
+      <div
+        className={`mt-2 font-[family-name:var(--fd)] text-[28px] font-extrabold leading-none [font-stretch:75%] ${ACCENT_TEXT[accent]}`}
+        data-numeric
+      >
         {value}
       </div>
       {hint !== undefined && hint !== null && hint !== '' && (
-        <div className="mt-1 text-[11px] text-gray-500">{hint}</div>
+        <div className="mt-2 text-[11px] text-[var(--t3,#a39ba6)]">{hint}</div>
       )}
     </div>
   );

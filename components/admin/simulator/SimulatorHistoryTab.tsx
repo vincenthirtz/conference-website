@@ -14,6 +14,13 @@ export type SimHistoryEntry = {
   competitiveness: CompetitivenessMetrics;
 };
 import nsAdminTournamentSimulator from '@/lib/i18n/locales/admin-fr/adminTournamentSimulator';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import { CARD, TILE } from '@/features/admin/stages/ui/rubanClasses';
+import {
+  SIM_EYEBROW,
+  SIM_MUTED,
+} from '@/features/admin/simulator/ui/simulatorClasses';
 
 /**
  * Onglet « historique » du simulateur : les simulations passées de la
@@ -31,30 +38,21 @@ export function SimulatorHistoryTab({
   const tx = useAdminT(nsAdminTournamentSimulator);
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+      <div className={CARD}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">
-            {tx.historyHeading}
-          </h3>
+          <h3 className={SIM_EYEBROW}>{tx.historyHeading}</h3>
           {entries.length > 0 && (
-            <button
-              type="button"
-              onClick={onClear}
-              className="text-[10px] text-neutral-500 hover:text-red-400 transition-colors"
-            >
+            <AdminButton variant="danger" size="xs" onClick={onClear}>
               {tx.clearHistory}
-            </button>
+            </AdminButton>
           )}
         </div>
         {entries.length === 0 ? (
-          <p className="text-sm text-neutral-500">{tx.historyEmpty}</p>
+          <p className={SIM_MUTED}>{tx.historyEmpty}</p>
         ) : (
           <div className="space-y-4">
             {entries.map((entry, idx) => (
-              <div
-                key={entry.id}
-                className="rounded-lg border border-white/10 bg-white/[0.01] p-4"
-              >
+              <div key={entry.id} className={`${TILE} p-4`}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-bold text-neutral-500">
@@ -67,9 +65,7 @@ export function SimulatorHistoryTab({
                         second: '2-digit',
                       })}
                     </span>
-                    <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                      {FORMAT_LABELS[entry.formatType]}
-                    </span>
+                    <Chip tone="brand">{FORMAT_LABELS[entry.formatType]}</Chip>
                     <span className="text-[10px] text-neutral-500">
                       {format(tx.teamsBoLabel, {
                         count: entry.teamCount,

@@ -4,6 +4,9 @@
 import Link from 'next/link';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Sparkline from './Sparkline';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { rubanInset } from '@/features/admin/diffusion/ui/rubanClasses';
 import nsAdminDashboardStageProgressBar from '@/lib/i18n/locales/admin-fr/adminDashboardStageProgressBar';
 
 type Dict = typeof nsAdminDashboardStageProgressBar.fr;
@@ -57,29 +60,29 @@ export default function StageProgressBar({
   const typeLabel = stageType ? (stageTypeLabel[stageType] ?? stageType) : null;
 
   return (
-    <div className="rounded-xl border border-white/10 bg-gradient-to-r from-white/5 to-transparent p-3">
+    <div className={`${rubanInset} p-3`}>
       <div className="mb-2 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-white">
+          <p className="truncate text-sm font-semibold text-[var(--t1,#f4edf7)]">
             {name}
             {!isActive && (
-              <span className="ml-2 rounded-full bg-gray-500/20 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-gray-400">
-                inactive
+              <span className="ml-2 align-middle">
+                <Chip tone="neutral">inactive</Chip>
               </span>
             )}
             {isReadyToAdvance && (
-              <span className="ml-2 rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-emerald-300">
-                ready
+              <span className="ml-2 align-middle">
+                <Chip tone="ok">ready</Chip>
               </span>
             )}
           </p>
-          <p className="text-[10px] text-gray-500">
+          <p className="text-[10px] text-[var(--t3,#a39ba6)]">
             {typeLabel ?? '—'} ·{' '}
             {format(teamsCount > 1 ? t.teamsCount_other : t.teamsCount_one, {
               count: teamsCount,
             })}
             {ongoingMatches > 0 && (
-              <span className="ml-1 text-rose-300">
+              <span className="ml-1 text-[var(--lf-200,#b3e7a3)]">
                 {' '}
                 {format(t.ongoingSuffix, { count: ongoingMatches })}
               </span>
@@ -87,42 +90,40 @@ export default function StageProgressBar({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs tabular-nums text-gray-300">
+          <span className="text-xs tabular-nums text-[var(--t2,#c7bfca)]">
             {finishedMatches}/{totalMatches}
           </span>
           {isReadyToAdvance && onAdvance && (
-            <button
-              type="button"
+            <AdminButton
+              variant="secondary"
+              size="xs"
               onClick={onAdvance}
-              className="rounded-md border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/25"
               title={t.advanceTitle}
             >
               {t.advance}
-            </button>
+            </AdminButton>
           )}
           <Link
             href={`/admin/tournament/${tournamentId}/matches?stageId=${stageId}`}
-            className="text-[10px] text-purple-300 hover:text-purple-200"
+            className="text-[10px] text-[var(--or-200,#eec4ff)] hover:text-[var(--t1,#f4edf7)]"
           >
             {t.view}
           </Link>
         </div>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+      <div className="h-1.5 overflow-hidden rounded-full bg-[var(--s3,#2f2732)]">
         <div
           className={`h-full transition-all ${
             percent === 100
-              ? 'bg-emerald-500'
-              : percent >= 50
-                ? 'bg-blue-500'
-                : 'bg-purple-500'
+              ? 'bg-[var(--lf,#7fca65)]'
+              : 'bg-[var(--or,#b467d1)]'
           }`}
           style={{ width: `${percent}%` }}
         />
       </div>
       <div className="mt-1.5 flex items-end justify-between gap-2">
         {remaining > 0 ? (
-          <p className="text-[10px] text-gray-500">
+          <p className="text-[10px] text-[var(--t3,#a39ba6)]">
             {format(remaining > 1 ? t.remaining_other : t.remaining_one, {
               count: remaining,
             })}
@@ -135,7 +136,7 @@ export default function StageProgressBar({
             className="flex items-center gap-1.5"
             title={format(t.cadenceTitle, { values: hourlyBuckets.join(', ') })}
           >
-            <span className="text-[9px] uppercase tracking-wider text-gray-500">
+            <span className="text-[9px] uppercase tracking-wider text-[var(--t4,#807984)]">
               12h
             </span>
             <Sparkline
@@ -144,10 +145,8 @@ export default function StageProgressBar({
               height={20}
               className={
                 percent === 100
-                  ? 'text-emerald-300'
-                  : percent >= 50
-                    ? 'text-blue-300'
-                    : 'text-purple-300'
+                  ? 'text-[var(--lf-200,#b3e7a3)]'
+                  : 'text-[var(--or-300,#dea3f6)]'
               }
             />
           </div>

@@ -42,6 +42,7 @@ import PlatformConnectionStatus, {
   type SetupState,
 } from '@/components/admin/communications/PlatformConnectionStatus';
 import nsAdminSocialPosts from '@/lib/i18n/locales/admin-fr/adminSocialPosts';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type StateResponse = {
   platforms: SocialPlatform[];
@@ -394,7 +395,7 @@ export default function SocialPostsPanel() {
       </p>
 
       {/* ---- Contenu commun ------------------------------------------- */}
-      <fieldset className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-5 space-y-4">
+      <fieldset className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-5 space-y-4">
         <legend className="px-2 text-sm font-semibold text-neutral-200">
           {t.baseLegend}
         </legend>
@@ -420,7 +421,7 @@ export default function SocialPostsPanel() {
             rien d'autre ne sait les afficher. On le DIT ici plutôt que de le
             faire en silence — seule l'autrice peut écrire le nom à la place. */}
         {discordOnlyMentions.length > 0 && hasNonDiscordTarget ? (
-          <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+          <p className="rounded-[var(--r-ctrl,4px)] border border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.08)] px-3 py-2 text-xs text-[#ffd9a3]">
             {format(t.discordMentionsWarning, {
               count: discordOnlyMentions.length,
             })}
@@ -439,7 +440,7 @@ export default function SocialPostsPanel() {
               invalidate();
             }}
             placeholder={t.baseImagePlaceholder}
-            className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+            className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-[var(--or,#b467d1)] focus:outline-none"
           />
           <span className="block text-xs text-neutral-500">
             {t.baseImageHelp}
@@ -462,7 +463,7 @@ export default function SocialPostsPanel() {
           return (
             <div
               key={p.key}
-              className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4 space-y-3"
+              className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 space-y-3"
             >
               <div className="flex flex-wrap items-center gap-3">
                 <label className="flex items-center gap-2.5 cursor-pointer">
@@ -548,7 +549,7 @@ export default function SocialPostsPanel() {
                           patchDraft(p.key, { title: e.target.value })
                         }
                         placeholder={t.targetTitlePlaceholder}
-                        className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                        className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-[var(--or,#b467d1)] focus:outline-none"
                       />
                     </label>
                   ) : null}
@@ -574,7 +575,7 @@ export default function SocialPostsPanel() {
                           patchDraft(p.key, { image: e.target.value })
                         }
                         placeholder={t.baseImagePlaceholder}
-                        className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                        className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-[var(--or,#b467d1)] focus:outline-none"
                       />
                     </label>
                   ) : null}
@@ -587,22 +588,22 @@ export default function SocialPostsPanel() {
 
       {/* ---- Aperçu puis publication ----------------------------------- */}
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
+        <AdminButton
+          variant="ghost"
+          size="sm"
           onClick={runPreview}
           disabled={busy}
-          className="rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
         >
           {t.previewCta}
-        </button>
-        <button
-          type="button"
+        </AdminButton>
+        <AdminButton
+          variant="secondary"
+          size="sm"
           onClick={publish}
           disabled={busy || !preview || blocking.length > 0}
-          className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-500 disabled:opacity-40"
         >
           {busy ? t.publishing : t.publishCta}
-        </button>
+        </AdminButton>
         {!preview ? (
           <span className="text-xs text-neutral-500">{t.publishLocked}</span>
         ) : null}
@@ -616,10 +617,10 @@ export default function SocialPostsPanel() {
           {preview.map((p) => (
             <div
               key={p.platform}
-              className={`rounded-xl border p-4 ${
+              className={`rounded-[var(--r-card,14px)] border p-4 ${
                 p.error
-                  ? 'border-red-500/40 bg-red-950/20'
-                  : 'border-neutral-800 bg-neutral-900/40'
+                  ? 'border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.06)]'
+                  : 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]'
               }`}
             >
               <div className="mb-2 flex items-center gap-2">

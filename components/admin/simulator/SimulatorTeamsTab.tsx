@@ -4,6 +4,10 @@ import { SEED_COLORS } from '@/components/admin/simulator/SimMatchCard';
 import type { SimTeam } from '@/utils/simulator';
 import type { SimStats } from '@/utils/simulatorStats';
 import nsAdminTournamentSimulator from '@/lib/i18n/locales/admin-fr/adminTournamentSimulator';
+import {
+  SIM_CHECKBOX,
+  SIM_MUTED,
+} from '@/features/admin/simulator/ui/simulatorClasses';
 
 /**
  * Onglet « équipes » du simulateur : ordre des têtes de série (glisser-
@@ -29,7 +33,7 @@ export function SimulatorTeamsTab({
   const [dragSeedIdx, setDragSeedIdx] = useState<number | null>(null);
   return (
     <div>
-      <p className="text-xs text-neutral-500 mb-4">{tx.teamsDragHint}</p>
+      <p className={`mb-4 ${SIM_MUTED}`}>{tx.teamsDragHint}</p>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {teams.map((team, teamIdx) => (
           <div
@@ -48,18 +52,18 @@ export function SimulatorTeamsTab({
               setDragSeedIdx(null);
             }}
             onDragEnd={() => setDragSeedIdx(null)}
-            className={`rounded-xl border p-4 space-y-3 cursor-grab active:cursor-grabbing transition-all ${
+            className={`cursor-grab space-y-3 rounded-[var(--r-card,14px)] border p-4 transition-all active:cursor-grabbing ${
               dragSeedIdx === teamIdx
-                ? 'border-purple-500/50 bg-purple-500/10 opacity-50 scale-95'
+                ? 'scale-95 border-[var(--or,#b467d1)] bg-[rgba(180,103,209,.1)] opacity-50'
                 : dragSeedIdx !== null
-                  ? 'border-purple-500/20 bg-white/[0.02] hover:border-purple-500/40 hover:bg-purple-500/5'
-                  : 'border-white/10 bg-white/[0.02]'
+                  ? 'border-[rgba(180,103,209,.3)] bg-[var(--s1,#100812)] hover:border-[var(--or,#b467d1)]'
+                  : 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]'
             }`}
           >
             <div className="flex items-center gap-3">
               {/* Drag handle */}
               <div
-                className="flex flex-col gap-0.5 text-neutral-600 flex-shrink-0 cursor-grab"
+                className="flex flex-shrink-0 cursor-grab flex-col gap-0.5 text-[var(--t4,#807984)]"
                 title={tx.dragToReorder}
               >
                 <div className="flex gap-0.5">
@@ -76,7 +80,7 @@ export function SimulatorTeamsTab({
                 </div>
               </div>
               <div
-                className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold border ${
+                className={`w-10 h-10 rounded-[var(--r-ctrl,4px)] flex items-center justify-center text-sm font-bold border ${
                   SEED_COLORS[team.seed] ??
                   'bg-purple-500/20 text-purple-300 border-purple-500/30'
                 }`}
@@ -101,7 +105,7 @@ export function SimulatorTeamsTab({
               )}
             </div>
             {/* Strength slider */}
-            <div className="flex items-center gap-2 pt-1 border-t border-white/[0.05]">
+            <div className="flex items-center gap-2 border-t border-[var(--line,rgba(194,196,201,.12))] pt-1">
               <span className="text-[10px] text-neutral-500 font-semibold w-10">
                 {tx.strengthLabel}
               </span>
@@ -115,7 +119,7 @@ export function SimulatorTeamsTab({
                 }
                 onClick={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
-                className="flex-1 accent-purple-500 h-1.5"
+                className={`h-1.5 flex-1 ${SIM_CHECKBOX}`}
                 draggable={false}
               />
               <span

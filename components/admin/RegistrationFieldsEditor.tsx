@@ -14,6 +14,8 @@ import type {
   RegistrationFieldType,
 } from '@/utils/registrationFields';
 import nsAdminRegistrationFields from '@/lib/i18n/locales/admin-fr/adminRegistrationFields';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { CARD, TILE } from '@/features/admin/stages/ui/rubanClasses';
 
 const FIELD_TYPES: RegistrationFieldType[] = [
   'text',
@@ -206,10 +208,10 @@ function RegistrationFieldsEditor({
   }
 
   const inputCls =
-    'w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm';
+    'w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t1,#f4edf7)] focus:outline-none focus:border-[var(--or,#b467d1)] text-sm';
 
   return (
-    <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
+    <section className={CARD}>
       <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
         <svg
           className="w-5 h-5 text-neutral-400"
@@ -230,11 +232,11 @@ function RegistrationFieldsEditor({
 
       {presets && presets.length > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
+          <AdminButton
+            variant="secondary"
+            size="sm"
             disabled={disabled || missingPresets.length === 0}
             onClick={addRecommendedFields}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-sm font-medium text-blue-300 disabled:opacity-40 disabled:hover:bg-blue-600/20"
           >
             <svg
               className="w-4 h-4"
@@ -250,7 +252,7 @@ function RegistrationFieldsEditor({
               />
             </svg>
             {t.addRecommended}
-          </button>
+          </AdminButton>
           <span className="text-[11px] text-neutral-500">
             {presetsGameLabel
               ? format(t.presetsHint, { game: presetsGameLabel })
@@ -260,7 +262,7 @@ function RegistrationFieldsEditor({
       )}
 
       {fields.length === 0 && (
-        <div className="rounded-xl border border-dashed border-neutral-700 px-4 py-8 text-center text-sm text-neutral-500">
+        <div className="rounded-[var(--r-card,14px)] border border-dashed border-[var(--line2,rgba(194,196,201,.2))] px-4 py-8 text-center text-sm text-[var(--t4,#807984)]">
           {t.emptyState}
         </div>
       )}
@@ -269,12 +271,9 @@ function RegistrationFieldsEditor({
         {fields.map((field, index) => {
           const rowError = errorsByIndex[index];
           return (
-            <div
-              key={index}
-              className="rounded-xl border border-neutral-700 bg-neutral-900/40 p-4"
-            >
+            <div key={index} className={`${TILE} p-4`}>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs uppercase tracking-wide text-neutral-500">
+                <span className="font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
                   {t.fieldBadge} {index + 1}
                 </span>
                 <div className="flex items-center gap-1">
@@ -284,7 +283,7 @@ function RegistrationFieldsEditor({
                     onClick={() => move(index, -1)}
                     title={t.moveUp}
                     aria-label={t.moveUp}
-                    className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-700/60 disabled:opacity-30 disabled:hover:bg-transparent"
+                    className="p-1.5 rounded-[var(--r-ctrl,4px)] text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)] hover:bg-[var(--s3,#2f2732)] disabled:opacity-30 disabled:hover:bg-transparent"
                   >
                     <svg
                       className="w-4 h-4"
@@ -306,7 +305,7 @@ function RegistrationFieldsEditor({
                     onClick={() => move(index, 1)}
                     title={t.moveDown}
                     aria-label={t.moveDown}
-                    className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-700/60 disabled:opacity-30 disabled:hover:bg-transparent"
+                    className="p-1.5 rounded-[var(--r-ctrl,4px)] text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)] hover:bg-[var(--s3,#2f2732)] disabled:opacity-30 disabled:hover:bg-transparent"
                   >
                     <svg
                       className="w-4 h-4"
@@ -328,7 +327,7 @@ function RegistrationFieldsEditor({
                     onClick={() => removeField(index)}
                     title={t.removeField}
                     aria-label={t.removeField}
-                    className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-900/30 disabled:opacity-30"
+                    className="p-1.5 rounded-[var(--r-ctrl,4px)] text-[var(--err,#ff6b6b)] hover:bg-[rgba(255,107,107,.08)] disabled:opacity-30"
                   >
                     <svg
                       className="w-4 h-4"
@@ -468,7 +467,7 @@ function RegistrationFieldsEditor({
                           onClick={() => removeOption(index, optIndex)}
                           title={t.removeOption}
                           aria-label={t.removeOption}
-                          className="p-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-900/30 disabled:opacity-30 flex-shrink-0"
+                          className="p-2 rounded-[var(--r-ctrl,4px)] text-[var(--err,#ff6b6b)] hover:bg-[rgba(255,107,107,.08)] disabled:opacity-30 flex-shrink-0"
                         >
                           <svg
                             className="w-4 h-4"
@@ -491,7 +490,7 @@ function RegistrationFieldsEditor({
                     type="button"
                     disabled={disabled}
                     onClick={() => addOption(index)}
-                    className="mt-2 inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 disabled:opacity-30"
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs text-[var(--or-200,#eec4ff)] hover:text-[var(--t1,#f4edf7)] disabled:opacity-30"
                   >
                     <svg
                       className="w-3.5 h-3.5"
@@ -514,7 +513,7 @@ function RegistrationFieldsEditor({
               <label className="flex items-center gap-2 mt-3 text-sm text-neutral-300 cursor-pointer">
                 <input
                   type="checkbox"
-                  className="w-4 h-4 rounded border-neutral-500 bg-neutral-700 text-blue-500 focus:ring-blue-500"
+                  className="w-4 h-4 accent-[var(--or,#b467d1)]"
                   checked={field.required}
                   disabled={disabled}
                   onChange={(e) =>
@@ -533,11 +532,11 @@ function RegistrationFieldsEditor({
       </div>
 
       {fields.length < 20 && (
-        <button
-          type="button"
+        <AdminButton
+          size="sm"
           disabled={disabled}
           onClick={addField}
-          className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-neutral-700/60 hover:bg-neutral-700 border border-neutral-600 text-sm font-medium disabled:opacity-40"
+          className="mt-4"
         >
           <svg
             className="w-4 h-4"
@@ -553,7 +552,7 @@ function RegistrationFieldsEditor({
             />
           </svg>
           {t.addField}
-        </button>
+        </AdminButton>
       )}
     </section>
   );

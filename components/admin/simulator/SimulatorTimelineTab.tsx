@@ -2,6 +2,9 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { formatMatchDate } from '@/utils/simulatorFakeData';
 import type { OccurrenceData } from '@/utils/simulatorSerialization';
 import nsAdminTournamentSimulator from '@/lib/i18n/locales/admin-fr/adminTournamentSimulator';
+import StatTile from '@/features/admin/_shared/ui/StatTile';
+import { CARD } from '@/features/admin/stages/ui/rubanClasses';
+import { SIM_EYEBROW } from '@/features/admin/simulator/ui/simulatorClasses';
 
 /**
  * Onglet « calendrier » du simulateur : une carte par occurrence (avancement,
@@ -23,13 +26,11 @@ export function SimulatorTimelineTab({
   const tx = useAdminT(nsAdminTournamentSimulator);
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-        <h3 className="text-sm font-semibold mb-6 uppercase tracking-wider text-neutral-400">
-          {tx.calendarHeading}
-        </h3>
+      <div className={CARD}>
+        <h3 className={`mb-6 ${SIM_EYEBROW}`}>{tx.calendarHeading}</h3>
         <div className="relative">
           {/* Vertical line */}
-          <div className="absolute left-4 top-0 bottom-0 w-px bg-purple-500/20" />
+          <div className="absolute left-4 top-0 bottom-0 w-px bg-[var(--line2,rgba(194,196,201,.2))]" />
 
           <div className="space-y-6">
             {occurrences.map((occ, i) => {
@@ -52,10 +53,10 @@ export function SimulatorTimelineTab({
                   <div
                     className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border-2 text-xs font-bold ${
                       activeOccurrence === i
-                        ? 'bg-purple-600 border-purple-400 text-white'
+                        ? 'border-[var(--or,#b467d1)] bg-[rgba(180,103,209,.2)] text-[var(--or-200,#eec4ff)]'
                         : pct === 100
-                          ? 'bg-emerald-600/30 border-emerald-500/50 text-emerald-300'
-                          : 'bg-neutral-800 border-neutral-600 text-neutral-400'
+                          ? 'border-[rgba(127,202,101,.55)] bg-[rgba(127,202,101,.13)] text-[var(--lf-200,#b3e7a3)]'
+                          : 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-[var(--t3,#a39ba6)]'
                     }`}
                   >
                     {i + 1}
@@ -65,10 +66,10 @@ export function SimulatorTimelineTab({
                   <button
                     type="button"
                     onClick={() => onSelect(i)}
-                    className={`flex-1 rounded-xl border p-4 text-left transition-all ${
+                    className={`flex-1 rounded-[var(--r-ctrl,4px)] border p-4 text-left transition-colors ${
                       activeOccurrence === i
-                        ? 'border-purple-500/30 bg-purple-500/5'
-                        : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.04]'
+                        ? 'border-[rgba(180,103,209,.55)] bg-[rgba(180,103,209,.08)]'
+                        : 'border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] hover:border-[var(--t4,#807984)]'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
@@ -85,7 +86,7 @@ export function SimulatorTimelineTab({
                         {pct}%
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-neutral-400">
+                    <div className="flex items-center gap-4 text-xs text-[var(--t3,#a39ba6)]">
                       {firstDate && (
                         <span>
                           {format(tx.startLabel, {
@@ -112,9 +113,9 @@ export function SimulatorTimelineTab({
                       </span>
                     </div>
                     {/* Progress bar */}
-                    <div className="mt-2 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--s3,#2f2732)]">
                       <div
-                        className="h-full bg-gradient-to-r from-purple-500 to-emerald-400 rounded-full transition-all"
+                        className={`h-full rounded-full transition-all ${pct === 100 ? 'bg-[var(--lf,#7fca65)]' : 'bg-[var(--or,#b467d1)]'}`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -127,73 +128,56 @@ export function SimulatorTimelineTab({
       </div>
 
       {/* Summary across all occurrences */}
-      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-        <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider text-neutral-400">
-          {tx.globalSummary}
-        </h3>
+      <div>
+        <h3 className={`mb-4 ${SIM_EYEBROW}`}>{tx.globalSummary}</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
-            <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-              {tx.totalMatches}
-            </div>
-            <div className="text-2xl font-bold mt-1">
-              {occurrences.reduce(
-                (sum, occ) => sum + occ.stages.flatMap((s) => s.matches).length,
-                0
-              )}
-            </div>
-          </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-              {tx.summaryFinished}
-            </div>
-            <div className="text-2xl font-bold mt-1 text-emerald-400">
-              {occurrences.reduce(
-                (sum, occ) =>
-                  sum +
+          <StatTile
+            label={tx.totalMatches}
+            value={occurrences.reduce(
+              (sum, occ) => sum + occ.stages.flatMap((s) => s.matches).length,
+              0
+            )}
+          />
+          <StatTile
+            label={tx.summaryFinished}
+            tone="ok"
+            value={occurrences.reduce(
+              (sum, occ) =>
+                sum +
+                occ.stages
+                  .flatMap((s) => s.matches)
+                  .filter((m) => m.status === 'finished').length,
+              0
+            )}
+          />
+          <StatTile
+            label={tx.totalDuration}
+            value={(() => {
+              const allDates = occurrences.flatMap(
+                (occ) =>
                   occ.stages
                     .flatMap((s) => s.matches)
-                    .filter((m) => m.status === 'finished').length,
-                0
-              )}
-            </div>
-          </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-              {tx.totalDuration}
-            </div>
-            <div className="text-2xl font-bold mt-1 text-purple-400">
-              {(() => {
-                const allDates = occurrences.flatMap(
-                  (occ) =>
-                    occ.stages
-                      .flatMap((s) => s.matches)
-                      .map((m) => m.scheduled_at)
-                      .filter(Boolean) as string[]
-                );
-                if (allDates.length < 2) return '—';
-                const sorted = allDates.sort();
-                const first = new Date(sorted[0]);
-                const last = new Date(sorted[sorted.length - 1]);
-                const days = Math.ceil(
-                  (last.getTime() - first.getTime()) / (1000 * 60 * 60 * 24)
-                );
-                return `${days}j`;
-              })()}
-            </div>
-          </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-              {tx.uniqueTeams}
-            </div>
-            <div className="text-2xl font-bold mt-1 text-sky-400">
-              {
-                new Set(
-                  occurrences.flatMap((occ) => occ.teams.map((t) => t.name))
-                ).size
-              }
-            </div>
-          </div>
+                    .map((m) => m.scheduled_at)
+                    .filter(Boolean) as string[]
+              );
+              if (allDates.length < 2) return '—';
+              const sorted = allDates.sort();
+              const first = new Date(sorted[0]);
+              const last = new Date(sorted[sorted.length - 1]);
+              const days = Math.ceil(
+                (last.getTime() - first.getTime()) / (1000 * 60 * 60 * 24)
+              );
+              return `${days}j`;
+            })()}
+          />
+          <StatTile
+            label={tx.uniqueTeams}
+            value={
+              new Set(
+                occurrences.flatMap((occ) => occ.teams.map((t) => t.name))
+              ).size
+            }
+          />
         </div>
       </div>
     </div>

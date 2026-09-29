@@ -185,8 +185,8 @@ export default function MarkdownEditor({
   );
 
   return (
-    <div className="rounded-lg border border-neutral-700 bg-neutral-950 focus-within:border-purple-500">
-      <div className="flex flex-wrap items-center gap-1 border-b border-neutral-800 px-2 py-1.5">
+    <div className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus-within:border-[var(--or,#b467d1)]">
+      <div className="flex flex-wrap items-center gap-1 border-b border-[var(--line,rgba(194,196,201,.12))] px-2 py-1.5">
         {actions.map((a) => (
           <button
             key={a.key}
@@ -195,7 +195,7 @@ export default function MarkdownEditor({
             title={a.hint}
             aria-label={a.hint}
             disabled={showPreview}
-            className="h-7 min-w-7 rounded px-2 text-sm font-semibold text-neutral-300 hover:bg-neutral-800 hover:text-white disabled:opacity-40"
+            className="h-7 min-w-7 rounded-[3px] px-2 text-sm font-semibold text-[var(--t2,#c7bfca)] hover:bg-[var(--s3,#2f2732)] hover:text-[var(--t1,#f4edf7)] disabled:opacity-40"
           >
             {a.label}
           </button>
@@ -204,7 +204,7 @@ export default function MarkdownEditor({
           type="button"
           onClick={() => setShowPreview((p) => !p)}
           aria-pressed={showPreview}
-          className="ml-auto rounded px-2 py-1 text-xs text-neutral-400 hover:bg-neutral-800 hover:text-white"
+          className="ml-auto rounded-[3px] px-2 py-1 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--t3,#a39ba6)] hover:bg-[var(--s3,#2f2732)] hover:text-[var(--t1,#f4edf7)] [font-stretch:75%]"
         >
           {showPreview ? labels.write : labels.preview}
         </button>
@@ -213,12 +213,12 @@ export default function MarkdownEditor({
       {showPreview ? (
         <div
           id={`${id}-preview`}
-          className="min-h-32 space-y-3 px-3 py-2 text-sm text-neutral-200 [&_a]:text-purple-300 [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-neutral-600 [&_blockquote]:pl-3 [&_blockquote]:italic [&_code]:rounded [&_code]:bg-white/10 [&_code]:px-1 [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-5"
+          className="min-h-32 space-y-3 px-3 py-2 text-sm text-[var(--t2,#c7bfca)] [&_a]:text-[var(--or-200,#eec4ff)] [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--line2,rgba(194,196,201,.2))] [&_blockquote]:pl-3 [&_blockquote]:italic [&_code]:rounded [&_code]:bg-[var(--s3,#2f2732)] [&_code]:px-1 [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-5"
         >
           {value.trim() ? (
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown>
           ) : (
-            <p className="text-neutral-600">{labels.previewEmpty}</p>
+            <p className="text-[var(--t4,#807984)]">{labels.previewEmpty}</p>
           )}
         </div>
       ) : (
@@ -230,7 +230,7 @@ export default function MarkdownEditor({
           rows={rows}
           placeholder={placeholder}
           aria-label={ariaLabel}
-          className="w-full resize-y bg-transparent px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:outline-none"
+          className="w-full resize-y bg-transparent px-3 py-2 text-sm text-[var(--t1,#f4edf7)] placeholder:text-[var(--t4,#807984)] focus:outline-none"
         />
       )}
     </div>

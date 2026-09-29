@@ -66,7 +66,7 @@ export default function ScrimTeamField({
             onChange({ ...value, teamId: v, external: false });
           }
         }}
-        className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+        className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
       >
         <option value="">{noneLabel}</option>
         {showCurrent && (
@@ -90,7 +90,7 @@ export default function ScrimTeamField({
               onChange({ ...value, externalName: e.target.value })
             }
             placeholder={externalPlaceholder}
-            className="w-full px-3 py-2.5 rounded-lg bg-neutral-900/50 border border-neutral-600"
+            className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))]"
           />
           <p className="mt-1 text-xs text-neutral-500">{externalHint}</p>
         </div>

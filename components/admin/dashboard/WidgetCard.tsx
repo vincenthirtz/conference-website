@@ -3,6 +3,10 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import {
+  rubanCard,
+  rubanEyebrow,
+} from '@/features/admin/diffusion/ui/rubanClasses';
 
 type Props = {
   title: string;
@@ -24,16 +28,12 @@ export default function WidgetCard({
   className = '',
 }: Props) {
   return (
-    <section
-      className={`rounded-2xl border border-white/8 bg-white/[0.03] p-5 backdrop-blur-sm ${className}`}
-    >
+    <section className={`${rubanCard} p-5 ${className}`}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-[11px] font-medium uppercase tracking-widest text-gray-400">
-            {title}
-          </h3>
+          <h3 className={rubanEyebrow}>{title}</h3>
           {badge !== undefined && badge !== null && badge !== '' && (
-            <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-gray-400">
+            <span className="rounded-[3px] border border-[var(--line2,rgba(194,196,201,.2))] px-1.5 py-0.5 text-[10px] tabular-nums text-[var(--t3,#a39ba6)]">
               {badge}
             </span>
           )}
@@ -41,7 +41,7 @@ export default function WidgetCard({
         {ctaHref && ctaLabel && (
           <Link
             href={ctaHref}
-            className="text-[11px] text-purple-300 hover:text-purple-200 transition-colors"
+            className="text-[11px] text-[var(--or-200,#eec4ff)] transition-colors hover:text-[var(--t1,#f4edf7)]"
           >
             {ctaLabel} →
           </Link>

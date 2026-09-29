@@ -18,6 +18,8 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTenantDetail from '@/lib/i18n/locales/admin-fr/adminTenantDetail';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type DomainRecord = {
   type: string;
@@ -82,16 +84,12 @@ export default function TenantDomainPanel({ tenantId }: { tenantId: string }) {
   // panneau qu'on apprend à sauter.
   if (!data?.domain) return null;
 
-  const badge =
-    data.state === 'verified'
-      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-      : data.state === 'failed'
-        ? 'border-red-500/40 bg-red-500/10 text-red-300'
-        : 'border-amber-500/40 bg-amber-500/10 text-amber-200';
+  const badge: ChipTone =
+    data.state === 'verified' ? 'ok' : data.state === 'failed' ? 'err' : 'warn';
 
   return (
     <section
-      className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4"
+      className="bg-[var(--s1,#100812)] backdrop-blur border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] p-4"
       data-testid="tenant-domain"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -101,13 +99,13 @@ export default function TenantDomainPanel({ tenantId }: { tenantId: string }) {
           </h2>
           <p className="mt-1 font-mono text-sm text-white">{data.domain}</p>
         </div>
-        <span className={`rounded-full border px-3 py-1 text-xs ${badge}`}>
+        <Chip tone={badge}>
           {data.state === 'verified'
             ? t.domainStateVerified
             : data.state === 'failed'
               ? t.domainStateFailed
               : t.domainStatePending}
-        </span>
+        </Chip>
       </div>
 
       {data.state !== 'verified' && (
@@ -124,10 +122,10 @@ export default function TenantDomainPanel({ tenantId }: { tenantId: string }) {
         {data.records.map((r) => (
           <li
             key={`${r.type}-${r.name}`}
-            className="rounded-lg bg-neutral-900/50 px-3 py-2 text-xs"
+            className="rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] px-3 py-2 text-xs"
           >
             <div className="flex flex-wrap items-baseline gap-2">
-              <span className="rounded bg-neutral-700/60 px-1.5 py-0.5 font-mono text-[10px] text-neutral-200">
+              <span className="rounded-[var(--r-ctrl,4px)] bg-[var(--s3,#2f2732)] px-1.5 py-0.5 font-mono text-[10px] text-neutral-200">
                 {r.type}
               </span>
               <span className="font-mono text-neutral-200 break-all">
@@ -143,15 +141,16 @@ export default function TenantDomainPanel({ tenantId }: { tenantId: string }) {
       </ul>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <button
+        <AdminButton
+          variant="ghost"
+          size="xs"
           type="button"
           onClick={verify}
           disabled={busy}
-          className="rounded-lg border border-neutral-600 px-3 py-1.5 text-xs text-neutral-200 hover:border-neutral-400 disabled:opacity-50"
           data-testid="tenant-domain-verify"
         >
           {busy ? t.domainChecking : t.domainCheckCta}
-        </button>
+        </AdminButton>
         {data.checkedAt && (
           <span className="text-[11px] text-neutral-500">
             {format(t.domainCheckedAt, {

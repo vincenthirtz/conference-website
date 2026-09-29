@@ -22,6 +22,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
 import nsAdminTenantDetail from '@/lib/i18n/locales/admin-fr/adminTenantDetail';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 type Dict = typeof nsAdminTenantDetail.fr;
 
@@ -104,15 +105,15 @@ function Card({
 }) {
   const border =
     tone === 'stale'
-      ? 'border-amber-500/40'
-      : tone === 'muted'
-        ? 'border-neutral-700/50'
-        : 'border-neutral-700/50';
+      ? 'border-[rgba(245,165,36,.38)]'
+      : 'border-[var(--line2,rgba(194,196,201,.2))]';
   return (
     <div
-      className={`rounded-xl border ${border} bg-neutral-900/40 px-4 py-3 min-w-0`}
+      className={`rounded-[var(--r-card,14px)] border ${border} bg-[var(--s1,#100812)] px-4 py-3 min-w-0`}
     >
-      <div className="text-xs text-neutral-500">{label}</div>
+      <div className="font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
+        {label}
+      </div>
       <div
         className={`mt-1 text-sm font-medium ${
           tone === 'stale'
@@ -184,11 +185,11 @@ export default function TenantOverviewPanel({
   return (
     <div className="space-y-6" data-testid="tenant-overview">
       <section>
-        <h2 className="text-sm font-semibold text-neutral-400 mb-2">
+        <h2 className="mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
           {t.overviewLifeTitle}
         </h2>
         {neverUsed ? (
-          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          <div className="rounded-[var(--r-card,14px)] border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
             {format(t.overviewNeverUsed, {
               days: daysSince(data.createdAt),
             })}
@@ -216,7 +217,7 @@ export default function TenantOverviewPanel({
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold text-neutral-400 mb-2">
+        <h2 className="mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
           {t.overviewVolumesTitle}
         </h2>
         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -236,7 +237,7 @@ export default function TenantOverviewPanel({
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold text-neutral-400 mb-2">
+        <h2 className="mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
           {t.overviewSituationTitle}
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -313,11 +314,8 @@ export default function TenantOverviewPanel({
         {data.readiness.blockers.length > 0 && (
           <ul className="mt-3 flex flex-wrap gap-2">
             {data.readiness.blockers.map((b) => (
-              <li
-                key={b}
-                className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-200"
-              >
-                {blockerLabel(b, t)}
+              <li key={b}>
+                <Chip tone="warn">{blockerLabel(b, t)}</Chip>
               </li>
             ))}
           </ul>

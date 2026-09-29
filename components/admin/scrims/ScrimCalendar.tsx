@@ -21,6 +21,7 @@ import {
 } from '@/utils/teams/scrimCalendar';
 import { fmtHourOfDay as fmtHour } from '@/utils/teams/scrimTime';
 import { keyboardMove } from '@/utils/teams/scrimCalendarState';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 export type CalendarScrim = {
   id: string;
@@ -439,29 +440,32 @@ export default function ScrimCalendar({
       {/* Barre de navigation semaine */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm">
-          <button
+          <AdminButton
+            variant="ghost"
+            size="xs"
             type="button"
             aria-label={labels.prevWeek}
             onClick={() => onWeekChange(shift(weekStart, -7))}
-            className="rounded-lg border border-neutral-700 bg-neutral-900/60 px-2.5 py-1 hover:bg-neutral-800 transition"
           >
             ‹
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
+            variant="ghost"
+            size="xs"
             type="button"
             onClick={() => onWeekChange(mondayToday(tz))}
-            className="rounded-lg border border-neutral-700 bg-neutral-900/60 px-3 py-1 text-xs font-medium hover:bg-neutral-800 transition"
           >
             {labels.thisWeek}
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
+            variant="ghost"
+            size="xs"
             type="button"
             aria-label={labels.nextWeek}
             onClick={() => onWeekChange(shift(weekStart, 7))}
-            className="rounded-lg border border-neutral-700 bg-neutral-900/60 px-2.5 py-1 hover:bg-neutral-800 transition"
           >
             ›
-          </button>
+          </AdminButton>
           <span className="ml-1 text-neutral-300 tabular-nums">
             {labels.weekOf.replace('{date}', weekLabel)}
           </span>
@@ -471,7 +475,7 @@ export default function ScrimCalendar({
         <span className="text-xs text-neutral-500">{labels.keyboardHint}</span>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-neutral-800 bg-neutral-900/40 p-2">
+      <div className="overflow-x-auto rounded-[var(--r-card,14px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s1,#100812)] p-2">
         <div className="flex min-w-[720px]">
           {/* Gouttière d'heures */}
           <div className="w-12 flex-shrink-0 pt-9">
@@ -513,7 +517,7 @@ export default function ScrimCalendar({
                     ref={(el) => {
                       colRefs.current[dayIdx] = el;
                     }}
-                    className="relative cursor-copy rounded-lg border border-neutral-800 bg-neutral-950/40 hover:bg-neutral-900/40"
+                    className="relative cursor-copy rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] hover:bg-neutral-900/40"
                     style={{ height: colHeight }}
                     onClick={handleColClick(day)}
                     title={labels.createHint}
@@ -552,7 +556,7 @@ export default function ScrimCalendar({
                             e.stopPropagation();
                             onOpenMatch(match.id);
                           }}
-                          className="absolute overflow-hidden rounded-md border border-neutral-500/40 px-1.5 py-1 text-left text-[10px] leading-tight text-neutral-300 hover:brightness-125"
+                          className="absolute overflow-hidden rounded-[var(--r-ctrl,4px)] border border-neutral-500/40 px-1.5 py-1 text-left text-[10px] leading-tight text-neutral-300 hover:brightness-125"
                           style={{
                             top,
                             height,
@@ -611,7 +615,7 @@ export default function ScrimCalendar({
                             )
                           }
                           aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Shift+ArrowUp Shift+ArrowDown"
-                          className={`absolute touch-none cursor-grab overflow-hidden rounded-md border px-1.5 py-1 text-left text-[10px] leading-tight shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 hover:brightness-110 active:cursor-grabbing ${cls} ${
+                          className={`absolute touch-none cursor-grab overflow-hidden rounded-[var(--r-ctrl,4px)] border px-1.5 py-1 text-left text-[10px] leading-tight shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 hover:brightness-110 active:cursor-grabbing ${cls} ${
                             dragging ? 'z-20 ring-2 ring-white/60' : ''
                           }`}
                           style={{

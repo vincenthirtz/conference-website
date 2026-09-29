@@ -20,6 +20,7 @@ import { useToast } from '@/components/Toast';
 import BotSecretsRevealModal from '@/components/admin/BotSecretsRevealModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTenantDetail from '@/lib/i18n/locales/admin-fr/adminTenantDetail';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type RotateSecretsResponse = {
   tenantId: string;
@@ -98,7 +99,7 @@ export default function TenantBotSecretsPanel({
   return (
     <>
       <section
-        className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 sm:p-8"
+        className="bg-[var(--s1,#100812)] backdrop-blur border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] p-6 sm:p-8"
         data-testid="tenant-bot-secrets-section"
       >
         <div className="flex items-start gap-3 mb-4">
@@ -125,15 +126,16 @@ export default function TenantBotSecretsPanel({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button
+          <AdminButton
+            variant="danger"
+            size="md"
             type="button"
             onClick={handleRotate}
             disabled={rotating}
-            className="px-4 py-2.5 rounded-xl border border-amber-500/50 text-amber-200 hover:border-amber-400 hover:bg-amber-500/10 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             data-testid="tenant-rotate-secrets-btn"
           >
             {rotating ? t.rotating : t.rotateBtn}
-          </button>
+          </AdminButton>
           {previousKeyUntil && (
             <span className="flex flex-wrap items-center gap-2 text-xs text-neutral-300">
               {format(t.previousKeyValid, {
@@ -142,14 +144,14 @@ export default function TenantBotSecretsPanel({
                   timeStyle: 'short',
                 }),
               })}
-              <button
-                type="button"
+              <AdminButton
+                variant="danger"
+                size="xs"
                 onClick={handleRevokePrevious}
-                className="underline hover:text-white"
                 data-testid="tenant-revoke-prev-key-btn"
               >
                 {t.revokePrev}
-              </button>
+              </AdminButton>
             </span>
           )}
         </div>

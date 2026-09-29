@@ -17,6 +17,8 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTenantDetail from '@/lib/i18n/locales/admin-fr/adminTenantDetail';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type State = 'active' | 'suspended' | 'archived' | 'purge_scheduled' | 'purged';
 
@@ -26,12 +28,12 @@ type Tenant = {
   purge_after: string | null;
 };
 
-const TONE: Record<string, string> = {
-  active: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
-  suspended: 'border-amber-500/40 bg-amber-500/10 text-amber-200',
-  archived: 'border-neutral-500/40 bg-neutral-500/10 text-neutral-300',
-  purge_scheduled: 'border-red-500/40 bg-red-500/10 text-red-300',
-  purged: 'border-red-500/40 bg-red-500/10 text-red-300',
+const TONE: Record<string, ChipTone> = {
+  active: 'ok',
+  suspended: 'warn',
+  archived: 'neutral',
+  purge_scheduled: 'err',
+  purged: 'err',
 };
 
 export default function TenantLifecyclePanel({
@@ -106,19 +108,16 @@ export default function TenantLifecyclePanel({
 
   return (
     <section
-      className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-4"
+      className="bg-[var(--s1,#100812)] backdrop-blur border border-[var(--line2,rgba(194,196,201,.2))] rounded-[var(--r-card,14px)] p-4"
       data-testid="tenant-lifecycle"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-neutral-400">
           {t.lifecycleHeading}
         </h2>
-        <span
-          className={`rounded-full border px-3 py-1 text-xs ${TONE[current]}`}
-          data-testid="tenant-lifecycle-state"
-        >
+        <Chip tone={TONE[current]} data-testid="tenant-lifecycle-state">
           {label(current)}
-        </span>
+        </Chip>
       </div>
 
       {state?.lifecycle_reason && (
@@ -148,7 +147,7 @@ export default function TenantLifecyclePanel({
             id="lifecycle-target"
             value={target}
             onChange={(e) => setTarget(e.target.value as State)}
-            className="px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 text-sm"
+            className="px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-sm"
           >
             <option value="active">{t.lifecycleActive}</option>
             <option value="suspended">{t.lifecycleSuspended}</option>
@@ -169,18 +168,19 @@ export default function TenantLifecyclePanel({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder={t.lifecycleReasonPlaceholder}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 text-sm"
+            className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-sm"
           />
         </div>
-        <button
+        <AdminButton
+          variant="danger"
+          size="sm"
           type="button"
           onClick={apply}
           disabled={busy || target === current}
-          className="px-4 py-2 rounded-lg border border-amber-500/50 text-amber-200 hover:bg-amber-500/10 text-sm font-medium disabled:opacity-40"
           data-testid="tenant-lifecycle-apply"
         >
           {busy ? t.lifecycleApplying : t.lifecycleApply}
-        </button>
+        </AdminButton>
       </div>
     </section>
   );

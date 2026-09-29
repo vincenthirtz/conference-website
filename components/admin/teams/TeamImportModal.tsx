@@ -23,6 +23,7 @@ import Tabs, {
 } from '@/components/ui/Tabs';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTeamsList from '@/lib/i18n/locales/admin-fr/adminTeamsList';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 export type ImportTab = 'csv' | 'toornament' | 'challonge' | 'startgg';
 
@@ -106,7 +107,7 @@ export default function TeamImportModal({
             }}
             title={t.configApiKeysTitle}
             aria-label={t.configApiKeysTitle}
-            className="p-1.5 rounded-lg hover:bg-neutral-700 transition-colors"
+            className="p-1.5 rounded-[var(--r-ctrl,4px)] hover:bg-neutral-700 transition-colors"
           >
             <svg
               className="w-5 h-5"
@@ -132,21 +133,23 @@ export default function TeamImportModal({
       }
       footer={
         <>
-          <button
+          <AdminButton
+            variant="ghost"
+            size="md"
             type="button"
             onClick={() => setShowImportModal(false)}
-            className="px-4 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors"
           >
             {t.close}
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton
+            variant="primary"
+            size="md"
             type="button"
             onClick={handleImport}
             disabled={
               importing ||
               (activeTab === 'csv' ? !csvText.trim() : !platformRef.trim())
             }
-            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
           >
             {importing ? (
               <>
@@ -156,7 +159,7 @@ export default function TeamImportModal({
             ) : (
               t.importAction
             )}
-          </button>
+          </AdminButton>
         </>
       }
     >
@@ -194,12 +197,12 @@ export default function TeamImportModal({
             <>
               <p className="text-sm text-neutral-400 mb-4">
                 {t.csvFormatPrefix}
-                <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                <code className="bg-[var(--s2,#1d1520)] px-1.5 py-0.5 rounded-[var(--r-ctrl,4px)] text-xs">
                   name,short_name,country,joueurs
                 </code>
                 <br />
                 {t.csvPlayersSepBefore}{' '}
-                <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                <code className="bg-[var(--s2,#1d1520)] px-1.5 py-0.5 rounded-[var(--r-ctrl,4px)] text-xs">
                   ;
                 </code>{' '}
                 {t.csvPlayersSepAfter}
@@ -222,7 +225,7 @@ export default function TeamImportModal({
                   {t.csvContentLabel}
                 </label>
                 <textarea
-                  className="w-full h-40 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                  className="w-full h-40 px-3 py-2 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
                   placeholder={`name,short_name,country,joueurs\nTeam Alpha,TA,FR,Player1#1234;Player2#5678\nTeam Beta,TB,BE,Player3#9999`}
                   value={csvText}
                   onChange={(e) => setCsvText(e.target.value)}
@@ -238,11 +241,11 @@ export default function TeamImportModal({
                 {activeTab === 'toornament' && (
                   <>
                     {t.toornamentProseBefore}
-                    <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                    <code className="bg-[var(--s2,#1d1520)] px-1.5 py-0.5 rounded-[var(--r-ctrl,4px)] text-xs">
                       https://www.toornament.com/tournaments/12345/
                     </code>{' '}
                     {t.proseOr}{' '}
-                    <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                    <code className="bg-[var(--s2,#1d1520)] px-1.5 py-0.5 rounded-[var(--r-ctrl,4px)] text-xs">
                       12345
                     </code>
                     {t.prosePeriod}
@@ -251,11 +254,11 @@ export default function TeamImportModal({
                 {activeTab === 'challonge' && (
                   <>
                     {t.challongeProseBefore}
-                    <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                    <code className="bg-[var(--s2,#1d1520)] px-1.5 py-0.5 rounded-[var(--r-ctrl,4px)] text-xs">
                       https://challonge.com/mon-tournoi
                     </code>{' '}
                     {t.proseOr}{' '}
-                    <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                    <code className="bg-[var(--s2,#1d1520)] px-1.5 py-0.5 rounded-[var(--r-ctrl,4px)] text-xs">
                       mon-tournoi
                     </code>
                     {t.prosePeriod}
@@ -264,7 +267,7 @@ export default function TeamImportModal({
                 {activeTab === 'startgg' && (
                   <>
                     {t.startggProseBefore}
-                    <code className="bg-neutral-900 px-1.5 py-0.5 rounded text-xs">
+                    <code className="bg-[var(--s2,#1d1520)] px-1.5 py-0.5 rounded-[var(--r-ctrl,4px)] text-xs">
                       https://www.start.gg/tournament/genesis-9/event/melee-singles
                     </code>
                     {t.prosePeriod}
@@ -282,7 +285,7 @@ export default function TeamImportModal({
                 </label>
                 <input
                   type="text"
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   placeholder={
                     activeTab === 'toornament'
                       ? 'https://www.toornament.com/tournaments/...'
@@ -304,7 +307,7 @@ export default function TeamImportModal({
             {t.registerToTournamentLabel}
           </label>
           <select
-            className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 text-sm"
+            className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-sm"
             value={importTournamentId}
             onFocus={loadTournaments}
             onChange={(e) => setImportTournamentId(e.target.value)}
@@ -320,7 +323,7 @@ export default function TeamImportModal({
 
         {/* Result (commun) */}
         {importResult && (
-          <div className="mb-4 rounded-xl bg-neutral-900/50 border border-neutral-700 p-4 text-sm">
+          <div className="mb-4 rounded-[var(--r-card,14px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] p-4 text-sm">
             <div className="flex gap-4 mb-2">
               <span className="text-emerald-400">
                 {format(t.resultCreated, { count: importResult.created })}

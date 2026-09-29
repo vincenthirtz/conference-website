@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import { CARD, ERROR_BOX } from '@/features/admin/stages/ui/rubanClasses';
+import { rubanCard } from '@/features/admin/diffusion/ui/rubanClasses';
 import nsAdminStatsMaps from '@/lib/i18n/locales/admin-fr/adminStatsMaps';
 
 type MapStatsRow = {
@@ -37,7 +41,7 @@ function rankBadge(rank: number) {
     return 'bg-neutral-400/20 text-neutral-300 border border-neutral-400/30';
   if (rank === 3)
     return 'bg-orange-600/20 text-orange-300 border border-orange-500/30';
-  return 'bg-neutral-700/50 text-neutral-400';
+  return 'bg-[var(--s3,#2f2732)] text-[var(--t3,#a39ba6)]';
 }
 
 /**
@@ -121,7 +125,7 @@ export default function MapStatsPanel() {
         const rank = offset + stats.indexOf(row) + 1;
         return (
           <span
-            className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold ${rankBadge(rank)}`}
+            className={`inline-flex h-8 w-8 items-center justify-center rounded-[var(--r-ctrl,4px)] text-sm font-bold ${rankBadge(rank)}`}
           >
             {rank}
           </span>
@@ -132,7 +136,7 @@ export default function MapStatsPanel() {
       key: 'map',
       header: t.thMap,
       value: (row) => row.map_name,
-      className: 'font-semibold text-white',
+      className: 'font-semibold text-[var(--t1,#f4edf7)]',
     },
     {
       key: 'played',
@@ -141,7 +145,7 @@ export default function MapStatsPanel() {
       className: 'text-center',
       value: (row) => row.matches_played,
       render: (row) => (
-        <span className="rounded-lg bg-neutral-700/50 px-2 py-1 text-sm font-medium text-neutral-200">
+        <span className="text-sm font-medium tabular-nums text-[var(--t1,#f4edf7)]">
           {row.matches_played}
         </span>
       ),
@@ -153,7 +157,7 @@ export default function MapStatsPanel() {
       className: 'text-center',
       value: (row) => row.matches_won_attack ?? 0,
       render: (row) => (
-        <span className="rounded-lg bg-emerald-600/20 px-2 py-1 text-sm font-medium text-emerald-300">
+        <span className="text-sm font-medium tabular-nums text-[var(--t2,#c7bfca)]">
           {row.matches_won_attack ?? 0}
         </span>
       ),
@@ -165,7 +169,7 @@ export default function MapStatsPanel() {
       className: 'text-center',
       value: (row) => row.matches_won_defense ?? 0,
       render: (row) => (
-        <span className="rounded-lg bg-sky-600/20 px-2 py-1 text-sm font-medium text-sky-300">
+        <span className="text-sm font-medium tabular-nums text-[var(--t2,#c7bfca)]">
           {row.matches_won_defense ?? 0}
         </span>
       ),
@@ -178,11 +182,11 @@ export default function MapStatsPanel() {
       value: (row) => row.match_winrate_attack ?? 0,
       render: (row) => (
         <span className="flex items-center justify-center gap-1">
-          <span className="rounded bg-emerald-600/20 px-2 py-0.5 text-xs font-medium text-emerald-300">
+          <span className="text-xs font-medium tabular-nums text-[var(--t2,#c7bfca)]">
             {formatPercent(row.match_winrate_attack)}
           </span>
           <span className="text-neutral-500">/</span>
-          <span className="rounded bg-sky-600/20 px-2 py-0.5 text-xs font-medium text-sky-300">
+          <span className="text-xs font-medium tabular-nums text-[var(--t2,#c7bfca)]">
             {formatPercent(row.match_winrate_defense)}
           </span>
         </span>
@@ -203,7 +207,7 @@ export default function MapStatsPanel() {
       className: 'text-center',
       value: (row) => row.avg_total_rounds ?? 0,
       render: (row) => (
-        <span className="rounded-lg bg-purple-600/20 px-2 py-1 text-sm font-medium text-purple-300">
+        <span className="text-sm font-medium tabular-nums text-[var(--t2,#c7bfca)]">
           {formatNumber(row.avg_total_rounds)}
         </span>
       ),
@@ -213,20 +217,12 @@ export default function MapStatsPanel() {
   return (
     <>
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              {t.heading}
-            </h1>
-            <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleExportCsv}
-            className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors flex items-center gap-2"
-          >
+      <AdminPageHeader
+        level={2}
+        title={t.heading}
+        subtitle={t.subtitle}
+        actions={
+          <AdminButton size="sm" onClick={handleExportCsv}>
             <svg
               className="w-4 h-4"
               fill="none"
@@ -241,18 +237,18 @@ export default function MapStatsPanel() {
               />
             </svg>
             {t.exportCsv}
-          </button>
-        </div>
-      </div>
+          </AdminButton>
+        }
+      />
 
       {/* Filters */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
+      <section className={`mb-6 ${CARD}`}>
         <form
           onSubmit={handleFilterSubmit}
           className="flex gap-4 flex-wrap items-end"
         >
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm text-neutral-400 mb-1">
+            <label className="mb-1 block text-sm text-[var(--t2,#c7bfca)]">
               {t.filterMapLabel}
             </label>
             <div className="relative">
@@ -272,7 +268,7 @@ export default function MapStatsPanel() {
               <input
                 type="text"
                 placeholder={t.filterMapPlaceholder}
-                className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
                 value={searchMap}
                 onChange={(e) => setSearchMap(e.target.value)}
               />
@@ -280,13 +276,13 @@ export default function MapStatsPanel() {
           </div>
 
           <div className="w-36">
-            <label className="block text-sm text-neutral-400 mb-1">
+            <label className="mb-1 block text-sm text-[var(--t2,#c7bfca)]">
               {t.filterMinMatchesLabel}
             </label>
             <input
               type="number"
               min={0}
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
               value={minMatches}
               onChange={(e) => setMinMatches(e.target.value)}
               placeholder="ex: 5"
@@ -294,11 +290,11 @@ export default function MapStatsPanel() {
           </div>
 
           <div className="min-w-[180px]">
-            <label className="block text-sm text-neutral-400 mb-1">
+            <label className="mb-1 block text-sm text-[var(--t2,#c7bfca)]">
               {t.sortByLabel}
             </label>
             <select
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
@@ -312,11 +308,11 @@ export default function MapStatsPanel() {
           </div>
 
           <div className="w-36">
-            <label className="block text-sm text-neutral-400 mb-1">
+            <label className="mb-1 block text-sm text-[var(--t2,#c7bfca)]">
               {t.orderLabel}
             </label>
             <select
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none"
               value={sortDir}
               onChange={(e) =>
                 setSortDir(e.target.value === 'asc' ? 'asc' : 'desc')
@@ -327,10 +323,7 @@ export default function MapStatsPanel() {
             </select>
           </div>
 
-          <button
-            type="submit"
-            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"
-          >
+          <AdminButton type="submit" variant="primary">
             <svg
               className="w-4 h-4"
               fill="none"
@@ -345,13 +338,13 @@ export default function MapStatsPanel() {
               />
             </svg>
             {t.filterSubmit}
-          </button>
+          </AdminButton>
         </form>
       </section>
 
       {/* Error */}
       {errorMsg && (
-        <div className="mb-6 rounded-xl bg-red-900/30 border border-red-600/50 px-4 py-3 flex items-center gap-3">
+        <div className={`mb-6 flex items-center gap-3 ${ERROR_BOX}`}>
           <svg
             className="w-5 h-5 text-red-400 flex-shrink-0"
             fill="none"
@@ -365,14 +358,14 @@ export default function MapStatsPanel() {
               d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <span className="text-sm text-red-200">{errorMsg}</span>
+          <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Table */}
       {/* Classement des maps — kit partagé (lot A5). Même forme que le
           classement d'équipes : pagination serveur, export maison. */}
-      <section className="rounded-2xl border border-neutral-700/50 bg-neutral-800/50 p-4 backdrop-blur">
+      <section className={`p-4 ${rubanCard}`}>
         <DataTable<MapStatsRow>
           rows={stats}
           columns={columns}

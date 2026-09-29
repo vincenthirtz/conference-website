@@ -17,6 +17,7 @@ import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminStaffPermissions from '@/lib/i18n/locales/admin-fr/adminStaffPermissions';
 import { STAFF_PERMISSION_CATALOG } from '@/utils/staffPermissions';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type Payload = {
   displayName: string | null;
@@ -100,8 +101,8 @@ export default function StaffPermissionsDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-neutral-950 p-6">
-        <h2 className="text-lg font-semibold text-white">
+      <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6">
+        <h2 className="font-[family-name:var(--fd)] text-lg font-bold uppercase tracking-[0.02em] text-[var(--t1,#f4edf7)]">
           {format(t.title, { name: userName })}
         </h2>
         <p className="mt-1 text-sm text-neutral-400">{t.intro}</p>
@@ -127,10 +128,10 @@ export default function StaffPermissionsDialog({
                 return (
                   <li
                     key={perm.value}
-                    className={`rounded-xl border p-3 ${
+                    className={`rounded-[var(--r-ctrl,4px)] border p-3 ${
                       disabled
-                        ? 'border-white/5 bg-white/[0.02]'
-                        : 'border-white/10 bg-white/[0.04]'
+                        ? 'border-[var(--line,rgba(194,196,201,.12))] bg-transparent'
+                        : 'border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)]'
                     }`}
                   >
                     <label className="flex cursor-pointer items-start gap-3">
@@ -139,10 +140,10 @@ export default function StaffPermissionsDialog({
                         checked={checked}
                         disabled={disabled}
                         onChange={() => toggle(perm.value)}
-                        className="mt-1 h-4 w-4 accent-purple-500 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="mt-1 h-4 w-4 accent-[var(--or,#b467d1)] disabled:cursor-not-allowed disabled:opacity-40"
                       />
                       <span className="min-w-0">
-                        <span className="block text-sm font-medium text-white">
+                        <span className="block text-sm font-medium text-[var(--t1,#f4edf7)]">
                           {perm.label}
                         </span>
                         <span className="block text-xs text-neutral-400">
@@ -168,21 +169,14 @@ export default function StaffPermissionsDialog({
         )}
 
         <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-white/15 px-4 py-2 text-sm text-neutral-200 transition hover:bg-white/5"
-          >
-            {t.cancel}
-          </button>
-          <button
-            type="button"
+          <AdminButton onClick={onClose}>{t.cancel}</AdminButton>
+          <AdminButton
+            variant="primary"
             onClick={() => void save()}
             disabled={saving || loading || !!error}
-            className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50"
           >
             {saving ? t.saving : t.save}
-          </button>
+          </AdminButton>
         </div>
       </div>
     </div>
