@@ -567,10 +567,19 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       été capturés.
 
 **Reste**
-- [ ] Archétypes exacts (Liste, Fiche, pilotage du jour, tableau de bord tournoi) : avec les lots
-      de découpe L15–L20.
-- [ ] Bouton d'action principal en vert feuille (« NOUVELLE ÉQUIPE » des planches) : aujourd'hui
-      les CTA restent orchidée ; à trancher écran par écran (vert = le jeu).
+- [x] **Archétype Liste** (planche « AdminListes », 24 écrans) :
+      [`features/admin/_shared/ui/`](../features/admin/_shared/ui/) — `AdminPageHeader`,
+      `AdminButton` (primaire vert feuille = l'action qui fait avancer, secondaire orchidée,
+      fantôme, danger), `StatTile`, `ListToolbar` / `ListSearch` / `FilterSelect`
+      (« STATUT : TOUTES ▾ », orchidée quand actif), `Chip` (signal seulement ; halo réservé au
+      direct). `DataTable` : bandeau de sélection orchidée, pied « 8 sur 12 · page 1 sur 2 » +
+      pages numérotées (`pageWindow`), état vide hachuré (`data-empty`). Vérifié en capture.
+- [x] Premier écran sur l'archétype : adhérents (en-tête, tuiles, filtres en puces dans l'URL).
+- [ ] Archétypes Fiche, pilotage du jour, tableau de bord tournoi ; les 23 autres listes : avec
+      les lots de découpe L15–L20.
+- [ ] Bouton d'action principal : `AdminButton variant="primary"` (vert feuille, comme les
+      planches) sur les écrans migrés ; les boutons `bg-purple-600` des autres écrans restent
+      orchidée jusqu'à leur migration.
 - [ ] Captures avant / après sur les écrans réels à chaque lot (garde-fou de la planche) — demande
       une session staff de test.
 - [ ] Libellé du rôle dans le bandeau (« OWNER ») : `formatStaffRoleLabel` renvoie l'anglais.

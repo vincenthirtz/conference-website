@@ -25,6 +25,15 @@ import nsAdminAdherentsList from '@/lib/i18n/locales/admin-fr/adminAdherentsList
 import { useQueryClient } from '@tanstack/react-query';
 import { adminKey, withAdminQuery } from '@/features/admin/_shared/query';
 import { useAdminList } from '@/features/admin/_shared/list';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import StatTile from '@/features/admin/_shared/ui/StatTile';
+import ListToolbar, {
+  FilterSelect,
+  ListSearch,
+} from '@/features/admin/_shared/ui/ListToolbar';
 
 type Dict = typeof nsAdminAdherentsList.fr;
 type AdherentRow = {
@@ -337,74 +346,42 @@ function AdherentsListPanel() {
     <>
       {dialog}
 
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-              {t.heading}
-            </h2>
-            <p className="text-neutral-400 text-sm mt-1">
-              {format(
-                (total !== null ? total : adherents.length) > 1
-                  ? t.countMembers_other
-                  : t.countMembers_one,
-                { count: total !== null ? total : adherents.length }
-              )}
-              {cotisationAmount > 0 && (
-                <span className="ml-2">
-                  •{' '}
-                  {format(t.cotisationInfo, {
-                    amount: cotisationAmount.toFixed(2),
-                  })}
-                </span>
-              )}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
+      <AdminPageHeader
+        level={2}
+        title={t.heading}
+        subtitle={
+          <>
+            {format(
+              (total !== null ? total : adherents.length) > 1
+                ? t.countMembers_other
+                : t.countMembers_one,
+              { count: total !== null ? total : adherents.length }
+            )}
+            {cotisationAmount > 0 && (
+              <span className="ml-2">
+                ·{' '}
+                {format(t.cotisationInfo, {
+                  amount: cotisationAmount.toFixed(2),
+                })}
+              </span>
+            )}
+          </>
+        }
+        actions={
+          <>
+            <AdminButton
+              variant="ghost"
               onClick={syncHelloAsso}
               disabled={syncing}
-              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-sm font-medium transition-colors flex items-center gap-2"
             >
-              <svg
-                className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
               {syncing ? t.syncing : t.syncHelloAsso}
-            </button>
-            <Link
-              href="/admin/adherents/new"
-              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors flex items-center gap-2"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
+            </AdminButton>
+            <AdminButtonLink variant="primary" href="/admin/adherents/new">
               {t.newAdherent}
-            </Link>
-          </div>
-        </div>
-      </div>
+            </AdminButtonLink>
+          </>
+        }
+      />
 
       {/* Sync result */}
       {syncResult && (
@@ -419,125 +396,85 @@ function AdherentsListPanel() {
         </div>
       )}
 
-      {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-xl p-4">
-            <p className="text-neutral-400 text-sm">{t.statTotalActive}</p>
-            <p className="text-2xl font-bold text-white">{stats.total}</p>
-          </div>
-          <div className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-xl p-4">
-            <p className="text-neutral-400 text-sm">
-              {format(t.statYear, { year: currentYear })}
-            </p>
-            <p className="text-2xl font-bold text-blue-400">
-              {stats.currentYear}
-            </p>
-          </div>
-          <div className="bg-neutral-800/50 backdrop-blur border border-emerald-700/30 rounded-xl p-4">
-            <p className="text-neutral-400 text-sm">{t.statPaid}</p>
-            <p className="text-2xl font-bold text-emerald-400">{stats.paid}</p>
-          </div>
-          <div className="bg-neutral-800/50 backdrop-blur border border-amber-700/30 rounded-xl p-4">
-            <p className="text-neutral-400 text-sm">{t.statPending}</p>
-            <p className="text-2xl font-bold text-amber-400">{stats.pending}</p>
-          </div>
-          <div className="bg-neutral-800/50 backdrop-blur border border-red-700/30 rounded-xl p-4">
-            <p className="text-neutral-400 text-sm">{t.statOverdue}</p>
-            <p className="text-2xl font-bold text-red-400">{stats.overdue}</p>
-          </div>
+        <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-5">
+          <StatTile label={t.statTotalActive} value={stats.total} />
+          <StatTile
+            label={format(t.statYear, { year: currentYear })}
+            value={stats.currentYear}
+            tone="brand"
+          />
+          <StatTile label={t.statPaid} value={stats.paid} tone="ok" />
+          <StatTile label={t.statPending} value={stats.pending} tone="warn" />
+          <StatTile
+            label={t.statOverdue}
+            value={stats.overdue}
+            tone={stats.overdue > 0 ? 'err' : 'neutral'}
+          />
         </div>
       )}
 
-      {/* Filters */}
-      <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
-        <div className="flex gap-4 flex-wrap items-end">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm text-neutral-400 mb-1">
-              {t.filterSearch}
-            </label>
-            <input
-              type="text"
-              placeholder={t.searchPlaceholder}
-              value={list.search}
-              onChange={(e) => list.setSearch(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      {/* Archétype Liste : recherche + filtres sur une ligne, jamais ailleurs. */}
+      <ListToolbar
+        search={
+          <ListSearch
+            value={list.search}
+            onChange={list.setSearch}
+            placeholder={t.searchPlaceholder}
+            label={t.filterSearch}
+          />
+        }
+        filters={
+          <>
+            <FilterSelect
+              label={t.filterPaymentStatus}
+              allLabel={t.paymentStatusAll}
+              value={list.filters.paymentStatus}
+              onChange={(v) => list.setFilter('paymentStatus', v)}
+              options={[
+                { value: 'pending', label: t.statusPending },
+                { value: 'partial', label: t.statusPartial },
+                { value: 'paid', label: t.statusPaid },
+                { value: 'exempt', label: t.statusExempt },
+                { value: 'overdue', label: t.statusOverdue },
+              ]}
             />
-          </div>
-
-          <div className="min-w-[160px]">
-            <label className="block text-sm text-neutral-400 mb-1">
-              {t.filterPaymentStatus}
-            </label>
-            <select
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={list.filters.paymentStatus ?? ''}
-              onChange={(e) =>
-                list.setFilter('paymentStatus', e.target.value || null)
-              }
-            >
-              <option value="">{t.paymentStatusAll}</option>
-              <option value="pending">{t.statusPending}</option>
-              <option value="partial">{t.statusPartial}</option>
-              <option value="paid">{t.statusPaid}</option>
-              <option value="exempt">{t.statusExempt}</option>
-              <option value="overdue">{t.statusOverdue}</option>
-            </select>
-          </div>
-
-          <div className="min-w-[120px]">
-            <label className="block text-sm text-neutral-400 mb-1">
-              {t.filterYear}
-            </label>
-            <select
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={list.filters.year ?? ''}
-              onChange={(e) => list.setFilter('year', e.target.value || null)}
-            >
-              <option value="">{t.yearAll}</option>
-              {[currentYear, currentYear - 1, currentYear - 2].map((y) => (
-                <option key={y} value={y.toString()}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="min-w-[140px]">
-            <label className="block text-sm text-neutral-400 mb-1">
-              {t.filterRole}
-            </label>
-            <select
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={list.filters.role ?? ''}
-              onChange={(e) => list.setFilter('role', e.target.value || null)}
-            >
-              <option value="">{t.roleAll}</option>
-              <option value="member">{t.roleMember}</option>
-              <option value="volunteer">{t.roleVolunteer}</option>
-              <option value="board">{t.roleBoard}</option>
-              <option value="president">{t.rolePresident}</option>
-              <option value="treasurer">{t.roleTreasurer}</option>
-              <option value="secretary">{t.roleSecretary}</option>
-            </select>
-          </div>
-
-          <div className="min-w-[140px]">
-            <label className="block text-sm text-neutral-400 mb-1">
-              {t.filterActive}
-            </label>
-            <select
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={list.filters.active ?? ''}
-              onChange={(e) => list.setFilter('active', e.target.value || null)}
-            >
-              <option value="">{t.activeAll}</option>
-              <option value="true">{t.activeYes}</option>
-              <option value="false">{t.activeNo}</option>
-            </select>
-          </div>
-        </div>
-      </section>
+            <FilterSelect
+              label={t.filterYear}
+              allLabel={t.yearAll}
+              value={list.filters.year}
+              onChange={(v) => list.setFilter('year', v)}
+              options={[currentYear, currentYear - 1, currentYear - 2].map(
+                (y) => ({ value: String(y), label: String(y) })
+              )}
+            />
+            <FilterSelect
+              label={t.filterRole}
+              allLabel={t.roleAll}
+              value={list.filters.role}
+              onChange={(v) => list.setFilter('role', v)}
+              options={[
+                { value: 'member', label: t.roleMember },
+                { value: 'volunteer', label: t.roleVolunteer },
+                { value: 'board', label: t.roleBoard },
+                { value: 'president', label: t.rolePresident },
+                { value: 'treasurer', label: t.roleTreasurer },
+                { value: 'secretary', label: t.roleSecretary },
+              ]}
+            />
+            <FilterSelect
+              label={t.filterActive}
+              allLabel={t.activeAll}
+              value={list.filters.active}
+              onChange={(v) => list.setFilter('active', v)}
+              options={[
+                { value: 'true', label: t.activeYes },
+                { value: 'false', label: t.activeNo },
+              ]}
+            />
+          </>
+        }
+      />
 
       {/* Liste — kit partagé en mode SERVEUR (lot L13) : la table lit tri et
           page dans l'URL, le serveur les applique. Colonnes triables = celles

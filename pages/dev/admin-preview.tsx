@@ -16,6 +16,16 @@ import AdminShell from '@/features/admin/_shared/shell/AdminShell';
 import { ADMIN_LINKS, filterAdminLinks } from '@/components/Navbar/adminLinks';
 import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import StatTile from '@/features/admin/_shared/ui/StatTile';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import ListToolbar, {
+  FilterSelect,
+  ListSearch,
+} from '@/features/admin/_shared/ui/ListToolbar';
 import type { MatchStatus } from '@/types/admin';
 
 export const getServerSideProps: GetServerSideProps = async () =>
@@ -114,77 +124,103 @@ export default function AdminPreviewPage() {
           onLogout={() => {}}
         />
         <main id="main-content">
-          {/* Balisage recopié des écrans actuels : c'est lui que le pont traduit. */}
-          <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-            <div className="w-full px-4 pt-header pb-12 sm:px-6 lg:px-8">
-              <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <p className="text-sm text-neutral-400">
-                    Compétition · données d’exemple
-                  </p>
-                  <h1 className="mt-1 text-3xl font-bold tracking-tight md:text-4xl">
-                    Équipes
-                  </h1>
-                  <p className="mt-2 text-sm text-neutral-400">
-                    12 équipes au total · 8 engagées sur la Cup 2026
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="rounded-xl border border-neutral-600 px-4 py-2.5 text-sm font-semibold hover:bg-neutral-800"
-                  >
-                    Importer
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold hover:bg-purple-700"
-                  >
+          <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+            <AdminPageHeader
+              title="Équipes"
+              subtitle="12 équipes au total · 8 engagées sur la Cup 2026"
+              actions={
+                <>
+                  <AdminButton>Importer</AdminButton>
+                  <AdminButtonLink variant="primary" href="#">
                     Nouvelle équipe
-                  </button>
-                </div>
-              </div>
-
-              <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {[
-                  ['Équipes inscrites', '8/8', 'complet', 'text-purple-300'],
-                  ['Matchs joués', '4/28', 'journée 1 terminée', 'text-white'],
-                  [
-                    'Check-in du jour',
-                    '6/8',
-                    '2 équipes en retard',
-                    'text-amber-400',
-                  ],
-                  ['Litiges ouverts', '1', 'depuis 12 min', 'text-red-400'],
-                ].map(([label, value, hint, tone]) => (
-                  <div
-                    key={label}
-                    className="rounded-2xl border border-neutral-700/50 bg-neutral-800/50 p-6 backdrop-blur"
-                  >
-                    <h3 className="text-xs text-neutral-400">{label}</h3>
-                    <p
-                      className={`mt-3 text-3xl font-bold ${tone}`}
-                      data-numeric
-                    >
-                      {value}
-                    </p>
-                    <p className="mt-2 text-sm text-neutral-500">{hint}</p>
-                  </div>
-                ))}
-              </div>
-
-              <section className="rounded-2xl border border-neutral-700/50 bg-neutral-800/50 p-4 backdrop-blur">
-                <h2 className="mb-3 text-lg font-semibold">
-                  Journée 2 — vendredi 25 septembre
-                </h2>
-                <DataTable<Row>
-                  rows={ROWS}
-                  columns={COLUMNS}
-                  rowKey={(r) => r.id}
-                  searchPlaceholder="Nom, capitaine, BattleTag…"
-                  exportFilename="equipes"
+                  </AdminButtonLink>
+                </>
+              }
+            />
+            <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <StatTile
+                label="Équipes inscrites"
+                value="8 / 8"
+                hint="complet"
+                tone="brand"
+              />
+              <StatTile
+                label="Matchs joués"
+                value="4 / 28"
+                hint="journée 1 terminée"
+              />
+              <StatTile
+                label="Check-in du jour"
+                value="6 / 8"
+                hint="2 équipes en retard"
+                tone="warn"
+              />
+              <StatTile
+                label="Litiges ouverts"
+                value="1"
+                hint="depuis 12 min"
+                tone="err"
+              />
+            </div>
+            <ListToolbar
+              search={
+                <ListSearch
+                  value=""
+                  onChange={() => {}}
+                  placeholder="Nom, capitaine, BattleTag…"
+                  label="Rechercher une équipe"
                 />
-              </section>
+              }
+              filters={
+                <>
+                  <FilterSelect
+                    label="Tournoi"
+                    allLabel="Tous"
+                    value={null}
+                    onChange={() => {}}
+                    options={[{ value: 'cup', label: 'Cup 2026' }]}
+                  />
+                  <FilterSelect
+                    label="Statut"
+                    allLabel="Toutes"
+                    value="ok"
+                    onChange={() => {}}
+                    options={[{ value: 'ok', label: 'Validées' }]}
+                  />
+                </>
+              }
+              note="Trié par nom"
+            />
+            <div className="rounded-[var(--r-card)] border border-[var(--line2)] bg-[var(--s1)] p-4">
+              <DataTable<Row>
+                rows={ROWS}
+                columns={COLUMNS}
+                rowKey={(r) => r.id}
+                server={{ total: 12, pageSize: 4 }}
+                selection={{
+                  actions: [
+                    { label: 'Assigner à un tournoi', run: () => {} },
+                    { label: 'Archiver', run: () => {}, variant: 'danger' },
+                  ],
+                  selected: new Set(['1', '2', '3']),
+                  onChange: () => {},
+                }}
+              />
+            </div>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Chip tone="live">En direct</Chip>
+              <Chip tone="ok">Validée</Chip>
+              <Chip tone="warn">Roster incomplet</Chip>
+              <Chip tone="err">Litige</Chip>
+              <Chip>En attente</Chip>
+            </div>
+            <div className="mt-6 rounded-[var(--r-card)] border border-[var(--line2)] bg-[var(--s1)] p-4">
+              <DataTable<Row>
+                rows={[]}
+                columns={COLUMNS}
+                rowKey={(r) => r.id}
+                emptyTitle="Aucune équipe ne correspond à ces filtres"
+              />
             </div>
           </div>
         </main>
