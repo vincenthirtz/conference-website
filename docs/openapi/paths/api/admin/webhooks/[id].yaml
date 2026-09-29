@@ -10,6 +10,7 @@ patch:
     - admin/misc
   summary: Active/désactive un abonnement webhook.
   operationId: adminPatchWebhook
+  x-zod-query: admin.tenants/[id].query
   security:
     - StaffSession: []
   requestBody:
@@ -17,6 +18,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.webhooks/[id].update
           type: object
           required:
             - enabled
@@ -37,6 +39,7 @@ delete:
     - admin/misc
   summary: Supprime un abonnement webhook (CASCADE ses livraisons).
   operationId: adminDeleteWebhook
+  x-zod-query: admin.tenants/[id].query
   security:
     - StaffSession: []
   responses:

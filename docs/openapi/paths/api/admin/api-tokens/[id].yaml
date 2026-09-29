@@ -14,6 +14,7 @@ patch:
     `comp` exige le rôle owner (403 FORBIDDEN_COMP sinon) ; le désactiver est
     permis à un admin.
   operationId: adminUpdateApiTokenComp
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/misc
   security:
@@ -23,6 +24,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.api-tokens/[id].update
           type: object
           properties:
             comp:
@@ -52,6 +54,7 @@ patch:
 delete:
   summary: Revoke (soft) a public API token.
   operationId: adminRevokeApiToken
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/misc
   security:

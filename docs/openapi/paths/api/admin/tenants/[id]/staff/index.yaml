@@ -8,6 +8,7 @@ parameters:
 get:
   summary: List staff members of a tenant.
   operationId: adminListTenantStaff
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:
@@ -27,6 +28,7 @@ get:
 post:
   summary: Add a staff member to a tenant.
   operationId: adminAddTenantStaff
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:
@@ -36,6 +38,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.tenants/[id]/staff.create
           type: object
           additionalProperties: true
   responses:

@@ -21,3 +21,4 @@ post:
       $ref: '#/components/responses/Forbidden'
     '409':
       $ref: '#/components/responses/Conflict'
+  x-zod-query: admin.events/[runId].query

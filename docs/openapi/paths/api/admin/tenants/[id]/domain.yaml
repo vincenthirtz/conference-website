@@ -13,6 +13,7 @@ get:
     the two records: a TXT proof (which authorises) and a CNAME (which does
     not prove anything but without which nothing arrives).
   operationId: adminGetTenantDomain
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:
@@ -39,6 +40,7 @@ post:
     reported as a warning, never as a refusal, because an apex often points
     through A/ALIAS.
   operationId: adminVerifyTenantDomain
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:

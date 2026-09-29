@@ -1,4 +1,5 @@
 get:
+  x-zod-query: admin.tcg/players.query
   summary: Chercher le compte d'une joueuse pour corriger son solde TCG.
   description: |
     `withStaffRoute(handler, { permission: 'manage_tcg' })` — le MEME droit

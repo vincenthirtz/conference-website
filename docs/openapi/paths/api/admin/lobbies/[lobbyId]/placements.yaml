@@ -6,6 +6,7 @@ parameters:
       type: string
       format: uuid
 put:
+  x-zod-query: admin.lobbies/[lobbyId].query
   summary: >-
     Save FFA lobby placements (upsert), compute points from the stage points
     table, and return the lobby plus fresh stage standings.
@@ -19,6 +20,7 @@ put:
     content:
       application/json:
         schema:
+          x-zod: admin.lobbies/[lobbyId]/placements.body
           type: object
           additionalProperties: true
   responses:

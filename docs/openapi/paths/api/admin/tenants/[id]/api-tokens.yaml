@@ -12,6 +12,7 @@ get:
     Revoked keys are included so the operator can tell "there was one, it was
     withdrawn" apart from "there never was one".
   operationId: adminListTenantApiTokens
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:
@@ -46,6 +47,7 @@ post:
     `comp: true` (partner exemption, free API access) is owner-gated inside the
     shared minting module.
   operationId: adminMintTenantApiToken
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:
@@ -82,6 +84,7 @@ delete:
     The tenant filter is not decorative: without it a key id belonging to
     ANOTHER space could be revoked from this hub.
   operationId: adminRevokeTenantApiToken
+  x-zod-query: admin.tenants/[id]/api-tokens.query
   tags:
     - admin/tenants
   security:

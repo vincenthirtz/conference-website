@@ -89,6 +89,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.tcg/photos.update
           type: object
           required: [userId, decision, photoPath]
           properties:

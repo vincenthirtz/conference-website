@@ -10,6 +10,7 @@ get:
     - admin/misc
   summary: Dernières livraisons d'un abonnement webhook (debug).
   operationId: adminListWebhookDeliveries
+  x-zod-query: admin.tenants/[id].query
   security:
     - StaffSession: []
   responses:

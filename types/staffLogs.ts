@@ -209,6 +209,14 @@ export type StaffLogAction =
   | 'create_webhook'
   | 'delete_webhook'
   | 'rotate_bot_secrets'
+  // --- Espaces, webhooks sortants, invitations (ex-`other` + `payload.action`) ---
+  | 'enable_webhook'
+  | 'disable_webhook'
+  | 'revoke_previous_bot_key'
+  | 'export_tenant'
+  | 'verify_custom_domain'
+  | 'invite_tenant_staff'
+  | 'revoke_tenant_invitation'
   // --- Scrims et grilles de dispos (ex-`other` + `payload.subject`) ---
   | 'create_scrim'
   | 'update_scrim'
@@ -256,9 +264,24 @@ export type StaffLogAction =
   // se gagne, elle ne s'achète pas — cette trace distingue une correction
   // d'une création de monnaie à partir de rien.
   | 'tcg_admin_grant'
+  // Régénérer / révoquer le lien PORTEUR de la source OBS du TCG (ex-`other`,
+  // `payload.mode` conservé). Jamais le jeton dans le journal.
+  | 'tcg_overlay_token_rotate'
+  | 'tcg_overlay_token_revoke'
   // --- Broadcast ---
   | 'broadcast_state_update'
   | 'broadcast_next_match'
+  // Campagnes email (ex-`other` + `payload.mode`, conservé) : entity_type
+  // 'broadcast' / 'broadcast_schedule' — les stats de /api/admin/broadcast
+  // lisent ces entrées par entity_type, pas par slug.
+  | 'broadcast_campaign_create'
+  | 'broadcast_campaign_update'
+  | 'broadcast_campaign_delete'
+  | 'broadcast_campaign_duplicate'
+  | 'broadcast_campaign_send'
+  | 'broadcast_wave_send'
+  | 'broadcast_schedule_set'
+  | 'broadcast_schedule_cancel'
   // --- Cockpit caster web (/admin/caster) ---
   // Journalisées via POST /api/admin/caster/audit : le cockpit écrit les scènes
   // en direct dans Supabase (RLS staff), aucune route serveur ne pourrait donc

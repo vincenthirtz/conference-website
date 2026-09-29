@@ -6,6 +6,7 @@ parameters:
       type: string
       format: uuid
 delete:
+  x-zod-query: admin.lobbies/[lobbyId].query
   summary: Delete an FFA lobby (cascade removes its placements).
   operationId: adminDeleteLobby
   tags:

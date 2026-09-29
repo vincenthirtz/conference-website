@@ -24,6 +24,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.webhooks.create
           type: object
           required:
             - url

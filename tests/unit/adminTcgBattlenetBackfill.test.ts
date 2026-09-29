@@ -390,7 +390,8 @@ describe('accès', () => {
     const res = makeRes();
     await handler({ ...makeReq('GET'), method: 'DELETE' }, res);
     expect(res.statusCode).toBe(405);
-    expect(res.headers.Allow).toBe('GET, POST');
+    // Même liste de méthodes ; l'espace après la virgule est facultatif (RFC 9110).
+    expect(String(res.headers.Allow).replace(/\s/g, '')).toBe('GET,POST');
   });
 });
 

@@ -1,4 +1,5 @@
 get:
+  x-zod-query: admin.custom-game-presets.query
   summary: List the active tenant's custom-game presets for a game.
   description: >
     Presets de partie personnalisee : code d'import du jeu + rappel de config,
@@ -62,6 +63,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.custom-game-presets.create
           type: object
           required:
             - name

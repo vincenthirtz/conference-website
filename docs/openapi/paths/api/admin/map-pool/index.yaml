@@ -1,4 +1,5 @@
 get:
+  x-zod-query: admin.map-pool.query
   summary: List the active tenant's editable map pool.
   description: >
     Sans query : toutes les maps du tenant groupées par jeu (`{ pools:
@@ -45,6 +46,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.map-pool.create
           type: object
           required:
             - game

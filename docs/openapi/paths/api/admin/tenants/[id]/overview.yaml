@@ -18,6 +18,7 @@ get:
     attached to this tenant, or a pole admin. A failed aggregation degrades
     to `null` for that line only. Rate-limited 60/min. `no-store`.
   operationId: adminGetTenantOverview
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:

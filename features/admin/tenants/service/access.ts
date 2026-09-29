@@ -1,4 +1,4 @@
-// features/admin/tenants/service.ts
+// features/admin/tenants/service/access.ts
 
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { AdminError } from '@/utils/admin/errors';
@@ -6,7 +6,7 @@ import {
   listAccessibleTenants,
   type AccessibleTenantRow,
 } from '@/utils/adminTenants';
-import * as repo from './repository';
+import * as repo from '../repository/access';
 
 /**
  * Espaces accessibles au staff (switcher de tenant) :

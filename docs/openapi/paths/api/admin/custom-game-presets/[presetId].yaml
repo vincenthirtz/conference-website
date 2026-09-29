@@ -7,6 +7,7 @@ parameters:
       type: string
       format: uuid
 patch:
+  x-zod-query: admin.custom-game-presets/[presetId].query
   summary: Update a custom-game preset (partial).
   description: >
     Met a jour nom / code d'import / description / map_pool / enabled. Le
@@ -23,6 +24,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.custom-game-presets/[presetId].update
           type: object
           properties:
             name:
@@ -56,6 +58,7 @@ patch:
     '404':
       $ref: '#/components/responses/NotFound'
 delete:
+  x-zod-query: admin.custom-game-presets/[presetId].query
   summary: Delete a custom-game preset.
   description: >
     Supprime le preset. Les matchs concernes retombent sur le perimetre

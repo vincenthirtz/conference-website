@@ -9,6 +9,8 @@
 // sous le champ `label` du formulaire.
 
 import { z } from 'zod';
+// Import relatif : ce fichier est lu par l'assemblage OpenAPI (Node seul).
+import { looseBody } from '../../../utils/admin/pathParams';
 
 const optionalText = (max: number) =>
   z
@@ -122,3 +124,20 @@ export function twitchChannelToForm(
     sortOrder: row.sort_order != null ? String(row.sort_order) : '',
   };
 }
+
+/* ---------------------------------------------------------------------------
+ * Régie vidéo : état d'antenne (POST /api/admin/broadcast/state)
+ * ------------------------------------------------------------------------ */
+
+/**
+ * Corps déclaré par la route (champs NOMMÉS pour la spec) ; chaque champ est
+ * validé par le service, avec les messages d'origine
+ * (`on_air must be a boolean`…), dans l'ordre d'origine.
+ */
+export const BroadcastStatePatchDoc = looseBody([
+  'on_air',
+  'lower_third',
+  'pip',
+  'scene',
+  'auto_director',
+]);

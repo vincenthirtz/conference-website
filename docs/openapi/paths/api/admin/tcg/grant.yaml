@@ -59,6 +59,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.tcg/grant.body
           type: object
           required: [userId, amount, reason, idempotencyKey]
           properties:

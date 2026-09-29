@@ -26,11 +26,12 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.active-tenant.body
           type: object
           required:
-            - tenantId
+            - tenant_id
           properties:
-            tenantId:
+            tenant_id:
               type: string
               format: uuid
   responses:

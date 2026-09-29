@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Tenant detail.
   operationId: adminGetTenant
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:
@@ -26,6 +27,7 @@ get:
 patch:
   summary: Update tenant fields.
   operationId: adminPatchTenant
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:
@@ -35,6 +37,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.tenants/[id].update
           type: object
           additionalProperties: true
   responses:
@@ -49,6 +52,7 @@ patch:
 delete:
   summary: Soft-delete a tenant.
   operationId: adminDeleteTenant
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:

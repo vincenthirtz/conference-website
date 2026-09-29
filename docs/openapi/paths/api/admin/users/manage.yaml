@@ -1,4 +1,5 @@
 get:
+  x-zod-query: admin.users/manage.query
   summary: List users with admin metadata (search & paginate).
   operationId: adminManageUsersList
   tags:
@@ -53,6 +54,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.users/manage.update
           type: object
           additionalProperties: true
   responses:
@@ -80,6 +82,12 @@ delete:
       schema:
         type: string
         format: uuid
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.users/manage.delete
   responses:
     '204':
       description: Deleted.

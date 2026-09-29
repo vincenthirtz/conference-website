@@ -15,6 +15,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.users.create
           type: object
           required:
             - email

@@ -18,6 +18,7 @@ delete:
     answers 200 with `revoked: false`. The caller wanted the link dead; it
     is dead.
   operationId: adminRevokeTenantInvitation
+  x-zod-query: admin.tenants/[id]/invitations/[invitationId].query
   tags:
     - admin/tenants
   security:

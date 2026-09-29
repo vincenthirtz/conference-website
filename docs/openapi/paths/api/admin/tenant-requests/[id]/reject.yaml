@@ -8,6 +8,7 @@ parameters:
 post:
   summary: Reject a tenant request.
   operationId: adminRejectTenantRequest
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:
@@ -17,6 +18,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.tenant-requests/[id]/reject.body
           type: object
           additionalProperties: true
   responses:

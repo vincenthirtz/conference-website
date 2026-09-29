@@ -403,20 +403,24 @@ describe('POST /api/admin/tcg/grant — crédit', () => {
   it('journalise `tcg_admin_grant` avec userId, amount, reason, entryId', async () => {
     const res = await callGrant(body({ reason: '  Doublon payé deux fois  ' }));
     expect(logStaffAction).toHaveBeenCalledTimes(1);
-    expect(logStaffAction).toHaveBeenCalledWith({
-      staff_id: STAFF_ROW,
-      action: 'tcg_admin_grant',
-      entity_type: 'user',
-      entity_id: PLAYER,
-      tenant_id: TENANT,
-      payload: {
-        userId: PLAYER,
-        amount: 150,
-        // Rogné : le journal garde le motif tel qu'il a été validé.
-        reason: 'Doublon payé deux fois',
-        entryId: res.body.entryId,
-      },
-    });
+    // objectContaining : la route déclarative ajoute `permission` et
+    // `tournament_id: null` à l'entrée ; le contenu vérifié est inchangé.
+    expect(logStaffAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        staff_id: STAFF_ROW,
+        action: 'tcg_admin_grant',
+        entity_type: 'user',
+        entity_id: PLAYER,
+        tenant_id: TENANT,
+        payload: {
+          userId: PLAYER,
+          amount: 150,
+          // Rogné : le journal garde le motif tel qu'il a été validé.
+          reason: 'Doublon payé deux fois',
+          entryId: res.body.entryId,
+        },
+      })
+    );
   });
 
   it('un journal en échec ne transforme pas une correction écrite en erreur', async () => {

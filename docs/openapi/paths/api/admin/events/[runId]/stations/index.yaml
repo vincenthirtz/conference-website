@@ -28,6 +28,7 @@ get:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: admin.events/[runId].query
 post:
   summary: Append a station to an event run.
   description: |
@@ -56,6 +57,7 @@ post:
             ord:
               type: integer
               minimum: 0
+          x-zod: admin.events/[runId]/stations.create
   responses:
     '201':
       description: Station created.
@@ -76,3 +78,4 @@ post:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: admin.events/[runId].query

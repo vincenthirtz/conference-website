@@ -17,6 +17,7 @@ get:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+  x-zod-query: admin.broadcast.query
 post:
   summary: Create a DB-backed email campaign.
   description: |
@@ -35,6 +36,7 @@ post:
         schema:
           type: object
           additionalProperties: true
+          x-zod: admin.broadcast.create
   responses:
     '201':
       description: Campaign created.

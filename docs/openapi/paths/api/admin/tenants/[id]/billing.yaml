@@ -14,6 +14,7 @@ get:
     recent payment history. Scoped to the staff's active tenant unless the
     caller is a cross-tenant pole-admin (else 403).
   operationId: adminGetTenantBilling
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:

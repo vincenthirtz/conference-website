@@ -20,6 +20,7 @@ post:
     Catalog-priced plans only (`discovery`, `regie`, `circuit`).
     Rate-limited 10/min per IP.
   operationId: adminGenerateTenantPlanCheckout
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:
@@ -29,6 +30,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.tenants/[id]/plan-checkout.body
           type: object
           required:
             - plan

@@ -1,4 +1,5 @@
 get:
+  x-zod-query: admin.tcg/engagement.query
   summary: Who has an unopened pack, and how the distribution is trending.
   description: |
     Requires `manage_tcg`, scoped to the staff's own space. `/overview` counts

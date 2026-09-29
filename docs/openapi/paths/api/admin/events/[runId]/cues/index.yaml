@@ -19,6 +19,7 @@ get:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+  x-zod-query: admin.events/[runId]/cues.query
 post:
   summary: Emit a manual cue (caster cockpit).
   operationId: adminCreateEventCue
@@ -33,6 +34,7 @@ post:
         schema:
           type: object
           additionalProperties: true
+          x-zod: admin.events/[runId]/cues.create
   responses:
     '201':
       description: Cue emitted.
@@ -45,3 +47,4 @@ post:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+  x-zod-query: admin.events/[runId].query

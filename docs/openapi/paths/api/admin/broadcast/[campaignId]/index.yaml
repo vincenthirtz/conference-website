@@ -18,6 +18,7 @@ post:
         schema:
           type: object
           additionalProperties: true
+          x-zod: admin.broadcast/[campaignId].send
   responses:
     '200':
       description: Triggered.
@@ -30,6 +31,7 @@ post:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+  x-zod-query: admin.broadcast/[campaignId].query
 patch:
   summary: Edit a DB-backed email campaign.
   description: |
@@ -47,6 +49,7 @@ patch:
         schema:
           type: object
           additionalProperties: true
+          x-zod: admin.broadcast/[campaignId].update
   responses:
     '200':
       description: Campaign updated.
@@ -63,6 +66,7 @@ patch:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: admin.broadcast/[campaignId].query
 delete:
   summary: Delete a DB-backed email campaign.
   description: |
@@ -87,3 +91,4 @@ delete:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: admin.broadcast/[campaignId].query

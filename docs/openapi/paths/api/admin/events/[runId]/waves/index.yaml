@@ -28,6 +28,7 @@ get:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: admin.events/[runId].query
 post:
   summary: Append a wave to an event run.
   description: |
@@ -57,6 +58,7 @@ post:
             ord:
               type: integer
               minimum: 0
+          x-zod: admin.events/[runId]/waves.create
   responses:
     '201':
       description: Wave created.
@@ -77,3 +79,4 @@ post:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: admin.events/[runId].query

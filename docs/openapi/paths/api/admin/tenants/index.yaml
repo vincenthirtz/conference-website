@@ -33,6 +33,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.tenants.create
           type: object
           additionalProperties: true
   responses:

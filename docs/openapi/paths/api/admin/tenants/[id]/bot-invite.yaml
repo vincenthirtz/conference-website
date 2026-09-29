@@ -19,6 +19,7 @@ get:
     never promises an automatic return that will not happen. `?guildId=`
     pre-selects and locks a server, for re-inviting a known one.
   operationId: adminGetTenantBotInvite
+  x-zod-query: admin.tenants/[id]/discord-config/[guildId].query
   tags:
     - admin/tenants
   security:

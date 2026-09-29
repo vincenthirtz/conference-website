@@ -49,12 +49,8 @@ post:
               type: [string, 'null']
               maxLength: 500
             pip:
-              type: object
-              required:
-                - enabled
-              properties:
-                enabled:
-                  type: boolean
+              description: "Objet { enabled: boolean } (validé par le service : 400 « pip must
+                be { enabled: boolean } »)."
             scene:
               allOf:
                 - $ref: '#/components/schemas/BroadcastScene'
@@ -64,6 +60,7 @@ post:
               description: >-
                 Toggle the auto-director reactor (defaults to true on the stored
                 state).
+          x-zod: admin.broadcast/state.body
   responses:
     '200':
       description: Refreshed live state.

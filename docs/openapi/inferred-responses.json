@@ -15,33 +15,21 @@
   },
   "DELETE /api/admin/api-tokens/{id}": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "id": {
-        "type": "string"
-       },
-       "revokedAt": {
-        "type": "string"
-       }
-      },
-      "required": [
-       "id",
-       "revokedAt"
-      ]
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string"
      },
-     {
-      "type": "object",
-      "properties": {
-       "id": {},
-       "revokedAt": {}
-      },
-      "required": [
-       "id",
-       "revokedAt"
+     "revokedAt": {
+      "type": [
+       "string",
+       "null"
       ]
      }
+    },
+    "required": [
+     "id",
+     "revokedAt"
     ]
    }
   },
@@ -53,7 +41,8 @@
       "type": "string"
      },
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -65,22 +54,7 @@
   "DELETE /api/admin/broadcast/{campaignId}/schedule": {
    "200": {
     "type": "object",
-    "properties": {
-     "campaignId": {
-      "type": "string"
-     },
-     "deletedPending": {
-      "type": "number"
-     },
-     "success": {
-      "type": "boolean"
-     }
-    },
-    "required": [
-     "campaignId",
-     "deletedPending",
-     "success"
-    ]
+    "additionalProperties": {}
    }
   },
   "DELETE /api/admin/comments": {
@@ -102,7 +76,8 @@
     "type": "object",
     "properties": {
      "ok": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -138,81 +113,76 @@
   },
   "DELETE /api/admin/events/{runId}/cues/{cueId}": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "alreadyRetracted": {
-        "type": "boolean"
-       },
-       "cue": {
-        "type": "object",
-        "properties": {
-         "body": {},
-         "created_at": {},
-         "created_by_user_id": {},
-         "dedup_key": {},
-         "event_run_id": {},
-         "expires_at": {},
-         "id": {},
-         "retracted_at": {},
-         "retracted_by_user_id": {},
-         "severity": {}
-        },
-        "required": [
-         "body",
-         "created_at",
-         "created_by_user_id",
-         "dedup_key",
-         "event_run_id",
-         "expires_at",
-         "id",
-         "retracted_at",
-         "retracted_by_user_id",
-         "severity"
-        ]
-       }
-      },
-      "required": [
-       "alreadyRetracted",
-       "cue"
-      ]
+    "type": "object",
+    "properties": {
+     "alreadyRetracted": {
+      "type": "boolean"
      },
-     {
+     "cue": {
       "type": "object",
       "properties": {
-       "cue": {
-        "type": "object",
-        "properties": {
-         "body": {},
-         "created_at": {},
-         "created_by_user_id": {},
-         "dedup_key": {},
-         "event_run_id": {},
-         "expires_at": {},
-         "id": {},
-         "retracted_at": {},
-         "retracted_by_user_id": {},
-         "severity": {}
-        },
-        "required": [
-         "body",
-         "created_at",
-         "created_by_user_id",
-         "dedup_key",
-         "event_run_id",
-         "expires_at",
-         "id",
-         "retracted_at",
-         "retracted_by_user_id",
-         "severity"
+       "body": {
+        "type": "string"
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "created_by_user_id": {
+        "type": [
+         "string",
+         "null"
         ]
+       },
+       "dedup_key": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "event_run_id": {
+        "type": "string"
+       },
+       "expires_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "retracted_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "retracted_by_user_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "severity": {
+        "type": "string"
        }
       },
       "required": [
-       "cue"
+       "body",
+       "created_at",
+       "created_by_user_id",
+       "dedup_key",
+       "event_run_id",
+       "expires_at",
+       "id",
+       "retracted_at",
+       "retracted_by_user_id",
+       "severity"
       ]
      }
+    },
+    "required": [
+     "cue"
     ]
    }
   },
@@ -305,7 +275,8 @@
     "type": "object",
     "properties": {
      "ok": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -1197,18 +1168,54 @@
      "tenant": {
       "type": "object",
       "properties": {
-       "accent_color": {},
-       "created_at": {},
-       "custom_domain": {},
-       "default_locale": {},
-       "id": {},
-       "is_active": {},
-       "logo_url": {},
-       "name": {},
-       "network_share_recruitment": {},
-       "network_share_scrims": {},
-       "primary_color": {},
-       "slug": {}
+       "accent_color": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "custom_domain": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "default_locale": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "is_active": {
+        "type": "boolean"
+       },
+       "logo_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "name": {
+        "type": "string"
+       },
+       "network_share_recruitment": {
+        "type": "boolean"
+       },
+       "network_share_scrims": {
+        "type": "boolean"
+       },
+       "primary_color": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "slug": {
+        "type": "string"
+       }
       },
       "required": [
        "accent_color",
@@ -1233,33 +1240,21 @@
   },
   "DELETE /api/admin/tenants/{id}/api-tokens": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "id": {
-        "type": "string"
-       },
-       "revokedAt": {
-        "type": "string"
-       }
-      },
-      "required": [
-       "id",
-       "revokedAt"
-      ]
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string"
      },
-     {
-      "type": "object",
-      "properties": {
-       "id": {},
-       "revokedAt": {}
-      },
-      "required": [
-       "id",
-       "revokedAt"
+     "revokedAt": {
+      "type": [
+       "string",
+       "null"
       ]
      }
+    },
+    "required": [
+     "id",
+     "revokedAt"
     ]
    }
   },
@@ -1278,15 +1273,49 @@
   },
   "DELETE /api/admin/tenants/{id}/nonprofit-rna": {
    "200": {
-    "type": "object",
-    "properties": {
-     "removed": {
-      "type": "boolean",
-      "const": true
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "orgName": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "pendingReason": {
+        "type": "string",
+        "enum": [
+         "directory_unavailable",
+         "inactive",
+         "not_in_directory"
+        ]
+       },
+       "rna": {
+        "type": "string"
+       },
+       "verified": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "orgName",
+       "rna",
+       "verified"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "removed": {
+        "type": "boolean",
+        "const": true
+       }
+      },
+      "required": [
+       "removed"
+      ]
      }
-    },
-    "required": [
-     "removed"
     ]
    }
   },
@@ -1295,7 +1324,8 @@
     "type": "object",
     "properties": {
      "previousKeyRevoked": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      },
      "tenantId": {
       "type": "string"
@@ -1312,7 +1342,8 @@
     "type": "object",
     "properties": {
      "deleted": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      },
      "staff_id": {
       "type": "string"
@@ -1457,7 +1488,8 @@
     "type": "object",
     "properties": {
      "ok": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -2065,21 +2097,26 @@
     "type": "object",
     "properties": {
      "source": {
-      "type": "string",
-      "enum": [
-       "cookie",
-       "fallback_default",
-       "fallback_first"
-      ]
+      "type": "string"
      },
      "tenant": {
       "type": "object",
       "properties": {
-       "default_locale": {},
-       "id": {},
-       "is_active": {},
-       "name": {},
-       "slug": {}
+       "default_locale": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "is_active": {
+        "type": "boolean"
+       },
+       "name": {
+        "type": "string"
+       },
+       "slug": {
+        "type": "string"
+       }
       },
       "required": [
        "default_locale",
@@ -2304,23 +2341,63 @@
       "items": {
        "type": "object",
        "properties": {
-        "comp": {},
-        "comp_note": {},
-        "created_at": {},
-        "created_by": {},
+        "comp": {
+         "type": "boolean"
+        },
+        "comp_note": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "created_at": {
+         "type": "string"
+        },
+        "created_by": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "created_by_name": {
          "type": [
           "string",
           "null"
          ]
         },
-        "expires_at": {},
-        "id": {},
-        "last_used_at": {},
-        "name": {},
-        "revoked_at": {},
-        "scopes": {},
-        "token_prefix": {}
+        "expires_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "last_used_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "name": {
+         "type": "string"
+        },
+        "revoked_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "scopes": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        },
+        "token_prefix": {
+         "type": "string"
+        }
        },
        "required": [
         "comp",
@@ -2455,207 +2532,187 @@
   },
   "GET /api/admin/broadcast": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "campaigns": {
-        "type": "array",
-        "items": {
-         "type": "object",
+    "type": "object",
+    "properties": {
+     "campaigns": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "audience": {
+         "type": "string"
+        },
+        "body": {
+         "type": [
+          "object",
+          "null"
+         ],
          "properties": {
-          "audience": {
-           "type": "string"
-          },
-          "body": {
-           "type": [
-            "object",
-            "null"
-           ],
-           "properties": {
-            "bodyFormat": {
-             "type": "string",
-             "enum": [
-              "html",
-              "structured"
-             ]
-            },
-            "bodyHtml": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "bodyParagraphs": {
-             "type": "array",
-             "items": {
-              "type": "string"
-             }
-            },
-            "ctaLabel": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "ctaUrl": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "footerNote": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "greetingEnabled": {
-             "type": "boolean"
-            },
-            "heading": {
-             "type": "string"
-            }
-           },
-           "required": [
-            "bodyParagraphs",
-            "heading"
-           ]
-          },
-          "description": {
-           "type": "string"
-          },
-          "id": {
-           "type": "string"
-          },
-          "name": {
-           "type": "string"
-          },
-          "schedule": {
-           "type": [
-            "object",
-            "null"
-           ],
-           "properties": {
-            "failed": {
-             "type": "number"
-            },
-            "lastWaveAt": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "pending": {
-             "type": "number"
-            },
-            "sent": {
-             "type": "number"
-            },
-            "status": {
-             "type": "string",
-             "enum": [
-              "completed",
-              "paused",
-              "scheduled"
-             ]
-            },
-            "totalRecipients": {
-             "type": "number"
-            },
-            "waveSize": {
-             "type": "number"
-            }
-           },
-           "required": [
-            "failed",
-            "lastWaveAt",
-            "pending",
-            "sent",
-            "status",
-            "totalRecipients",
-            "waveSize"
-           ]
-          },
-          "source": {
+          "bodyFormat": {
            "type": "string",
            "enum": [
-            "builtin",
-            "db"
+            "html",
+            "structured"
            ]
           },
-          "stats": {
-           "type": "object",
-           "properties": {
-            "lastRunAt": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "runsCount": {
-             "type": "number"
-            },
-            "totalFailed": {
-             "type": "number"
-            },
-            "totalSent": {
-             "type": "number"
-            }
-           },
-           "required": [
-            "lastRunAt",
-            "runsCount",
-            "totalFailed",
-            "totalSent"
+          "bodyHtml": {
+           "type": [
+            "string",
+            "null"
            ]
           },
-          "status": {
-           "type": "string"
+          "bodyParagraphs": {
+           "type": "array",
+           "items": {
+            "type": "string"
+           }
           },
-          "subject": {
+          "ctaLabel": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "ctaUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "footerNote": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "greetingEnabled": {
+           "type": "boolean"
+          },
+          "heading": {
            "type": "string"
           }
          },
          "required": [
-          "audience",
-          "body",
-          "description",
-          "id",
-          "name",
-          "schedule",
-          "source",
-          "stats",
-          "status",
-          "subject"
+          "bodyParagraphs",
+          "heading"
          ]
+        },
+        "description": {
+         "type": "string"
+        },
+        "id": {
+         "type": "string"
+        },
+        "name": {
+         "type": "string"
+        },
+        "schedule": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "failed": {
+           "type": "number"
+          },
+          "lastWaveAt": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "pending": {
+           "type": "number"
+          },
+          "sent": {
+           "type": "number"
+          },
+          "status": {
+           "type": "string",
+           "enum": [
+            "completed",
+            "paused",
+            "scheduled"
+           ]
+          },
+          "totalRecipients": {
+           "type": "number"
+          },
+          "waveSize": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "failed",
+          "lastWaveAt",
+          "pending",
+          "sent",
+          "status",
+          "totalRecipients",
+          "waveSize"
+         ]
+        },
+        "source": {
+         "type": "string",
+         "enum": [
+          "builtin",
+          "db"
+         ]
+        },
+        "stats": {
+         "type": "object",
+         "properties": {
+          "lastRunAt": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "runsCount": {
+           "type": "number"
+          },
+          "totalFailed": {
+           "type": "number"
+          },
+          "totalSent": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "lastRunAt",
+          "runsCount",
+          "totalFailed",
+          "totalSent"
+         ]
+        },
+        "status": {
+         "type": "string"
+        },
+        "subject": {
+         "type": "string"
         }
        },
-       "total": {
-        "type": "number"
-       }
-      },
-      "required": [
-       "campaigns",
-       "total"
-      ]
+       "required": [
+        "audience",
+        "body",
+        "description",
+        "id",
+        "name",
+        "schedule",
+        "source",
+        "stats",
+        "status",
+        "subject"
+       ]
+      }
      },
-     {
-      "type": "object",
-      "properties": {
-       "campaigns": {
-        "type": "array",
-        "items": {}
-       },
-       "total": {
-        "type": "number"
-       }
-      },
-      "required": [
-       "campaigns",
-       "total"
-      ]
+     "total": {
+      "type": "number"
      }
+    },
+    "required": [
+     "campaigns",
+     "total"
     ]
    }
   },
@@ -3016,6 +3073,9 @@
     ]
    }
   },
+  "GET /api/admin/broadcast/{campaignId}/preview": {
+   "200": {}
+  },
   "GET /api/admin/broadcast/{campaignId}/schedule": {
    "200": {
     "type": "object",
@@ -3045,13 +3105,30 @@
        "null"
       ],
       "properties": {
-       "campaign_id": {},
-       "created_at": {},
-       "last_wave_at": {},
-       "status": {},
-       "total_recipients": {},
-       "updated_at": {},
-       "wave_size": {}
+       "campaign_id": {
+        "type": "string"
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "last_wave_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string"
+       },
+       "total_recipients": {
+        "type": "number"
+       },
+       "updated_at": {
+        "type": "string"
+       },
+       "wave_size": {
+        "type": "number"
+       }
       },
       "required": [
        "campaign_id",
@@ -3675,7 +3752,30 @@
         "import_code": {
          "type": "string"
         },
-        "map_pool": {},
+        "map_pool": {
+         "anyOf": [
+          {
+           "type": "boolean"
+          },
+          {
+           "type": "string"
+          },
+          {
+           "type": "number"
+          },
+          {
+           "type": "object",
+           "additionalProperties": {}
+          },
+          {
+           "type": "array",
+           "items": {}
+          },
+          {
+           "type": "null"
+          }
+         ]
+        },
         "name": {
          "type": "string"
         },
@@ -3699,6 +3799,8 @@
         }
        },
        "required": [
+        "created_at",
+        "created_by",
         "description",
         "enabled",
         "game",
@@ -3708,7 +3810,8 @@
         "name",
         "stage_id",
         "tenant_id",
-        "tournament_id"
+        "tournament_id",
+        "updated_at"
        ]
       }
      }
@@ -4907,8 +5010,16 @@
           "blacklist_add",
           "blacklist_remove",
           "blacklist_update",
+          "broadcast_campaign_create",
+          "broadcast_campaign_delete",
+          "broadcast_campaign_duplicate",
+          "broadcast_campaign_send",
+          "broadcast_campaign_update",
           "broadcast_next_match",
+          "broadcast_schedule_cancel",
+          "broadcast_schedule_set",
           "broadcast_state_update",
+          "broadcast_wave_send",
           "bulk_remove",
           "bulk_roster_update",
           "bulk_schedule",
@@ -4994,6 +5105,7 @@
           "delete_twitch_channel",
           "delete_twitch_reward",
           "delete_webhook",
+          "disable_webhook",
           "disconnect_twitch_broadcaster",
           "discord_delete_channel",
           "discord_delete_role",
@@ -5005,6 +5117,7 @@
           "discord_revoke_access",
           "discord_revoke_role",
           "download_association_document",
+          "enable_webhook",
           "end_event_run",
           "end_event_segment",
           "entity_blacklist_add",
@@ -5016,6 +5129,7 @@
           "event_station_manage",
           "event_wave_manage",
           "expire_tenant_request",
+          "export_tenant",
           "finalize_tournament",
           "forward_scrim_request",
           "generate_group_matches",
@@ -5029,6 +5143,7 @@
           "invite_create",
           "invite_reject",
           "invite_team_member",
+          "invite_tenant_staff",
           "kick_member",
           "leave_team",
           "link_league_tournament",
@@ -5070,8 +5185,10 @@
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_previous_bot_key",
           "revoke_tcg_association_card",
           "revoke_tcg_fanart",
+          "revoke_tenant_invitation",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
           "save_placements",
@@ -5106,6 +5223,8 @@
           "task_update",
           "tcg_admin_grant",
           "tcg_battlenet_backfill",
+          "tcg_overlay_token_revoke",
+          "tcg_overlay_token_rotate",
           "tcg_photo_approve",
           "tcg_photo_reject",
           "tcg_welcome_gift_grant",
@@ -5174,6 +5293,7 @@
           "upload_association_document",
           "validate_match_lineup",
           "validate_scrim_planning",
+          "verify_custom_domain",
           "view_admin_page",
           "view_captain_data",
           "view_player_data"
@@ -5302,16 +5422,45 @@
       "items": {
        "type": "object",
        "properties": {
-        "created_at": {},
-        "description": {},
-        "ended_at": {},
-        "id": {},
-        "name": {},
-        "scheduled_at": {},
-        "slug": {},
-        "started_at": {},
-        "status": {},
-        "updated_at": {}
+        "created_at": {
+         "type": "string"
+        },
+        "description": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "ended_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "name": {
+         "type": "string"
+        },
+        "scheduled_at": {
+         "type": "string"
+        },
+        "slug": {
+         "type": "string"
+        },
+        "started_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": "string"
+        },
+        "updated_at": {
+         "type": "string"
+        }
        },
        "required": [
         "created_at",
@@ -5344,17 +5493,48 @@
      "run": {
       "type": "object",
       "properties": {
-       "created_at": {},
-       "description": {},
-       "ended_at": {},
-       "id": {},
-       "name": {},
-       "scheduled_at": {},
-       "slug": {},
-       "started_at": {},
-       "status": {},
-       "tenant_id": {},
-       "updated_at": {}
+       "created_at": {
+        "type": "string"
+       },
+       "description": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "ended_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "scheduled_at": {
+        "type": "string"
+       },
+       "slug": {
+        "type": "string"
+       },
+       "started_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string"
+       },
+       "tenant_id": {
+        "type": "string"
+       },
+       "updated_at": {
+        "type": "string"
+       }
       },
       "required": [
        "created_at",
@@ -5375,23 +5555,123 @@
       "items": {
        "type": "object",
        "properties": {
-        "broadcast_message": {},
-        "caster_checklist": {},
-        "created_at": {},
-        "duration_min": {},
-        "ended_at": {},
-        "id": {},
-        "match_id": {},
-        "obs_scene": {},
-        "ord": {},
-        "planned_start_at": {},
-        "started_at": {},
-        "station_id": {},
-        "status": {},
-        "title": {},
-        "type": {},
-        "updated_at": {},
-        "wave_id": {}
+        "broadcast_message": {
+         "anyOf": [
+          {
+           "type": "boolean"
+          },
+          {
+           "type": "string"
+          },
+          {
+           "type": "number"
+          },
+          {
+           "type": "object",
+           "additionalProperties": {}
+          },
+          {
+           "type": "array",
+           "items": {}
+          },
+          {
+           "type": "null"
+          }
+         ]
+        },
+        "caster_checklist": {
+         "anyOf": [
+          {
+           "type": "boolean"
+          },
+          {
+           "type": "string"
+          },
+          {
+           "type": "number"
+          },
+          {
+           "type": "object",
+           "additionalProperties": {}
+          },
+          {
+           "type": "array",
+           "items": {}
+          },
+          {
+           "type": "null"
+          }
+         ]
+        },
+        "created_at": {
+         "type": "string"
+        },
+        "duration_min": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "ended_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "match_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "obs_scene": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "ord": {
+         "type": "number"
+        },
+        "planned_start_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "started_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "station_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": "string"
+        },
+        "title": {
+         "type": "string"
+        },
+        "type": {
+         "type": "string"
+        },
+        "updated_at": {
+         "type": "string"
+        },
+        "wave_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
        },
        "required": [
         "broadcast_message",
@@ -5419,16 +5699,42 @@
       "items": {
        "type": "object",
        "properties": {
-        "created_at": {},
-        "event_run_id": {},
-        "id": {},
-        "name": {},
-        "notes": {},
-        "ord": {},
-        "status": {},
-        "stream_url": {},
-        "tenant_id": {},
-        "updated_at": {}
+        "created_at": {
+         "type": "string"
+        },
+        "event_run_id": {
+         "type": "string"
+        },
+        "id": {
+         "type": "string"
+        },
+        "name": {
+         "type": "string"
+        },
+        "notes": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "ord": {
+         "type": "number"
+        },
+        "status": {
+         "type": "string"
+        },
+        "stream_url": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "tenant_id": {
+         "type": "string"
+        },
+        "updated_at": {
+         "type": "string"
+        }
        },
        "required": [
         "created_at",
@@ -5449,18 +5755,54 @@
       "items": {
        "type": "object",
        "properties": {
-        "created_at": {},
-        "duration_min": {},
-        "ended_at": {},
-        "event_run_id": {},
-        "id": {},
-        "ord": {},
-        "planned_start_at": {},
-        "started_at": {},
-        "status": {},
-        "tenant_id": {},
-        "title": {},
-        "updated_at": {}
+        "created_at": {
+         "type": "string"
+        },
+        "duration_min": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "ended_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "event_run_id": {
+         "type": "string"
+        },
+        "id": {
+         "type": "string"
+        },
+        "ord": {
+         "type": "number"
+        },
+        "planned_start_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "started_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": "string"
+        },
+        "tenant_id": {
+         "type": "string"
+        },
+        "title": {
+         "type": "string"
+        },
+        "updated_at": {
+         "type": "string"
+        }
        },
        "required": [
         "created_at",
@@ -5603,72 +5945,56 @@
   },
   "GET /api/admin/events/{runId}/presence": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "presence": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "cast_member_id": {
-           "type": "string"
-          },
-          "image_url": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "last_seen_at": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "name": {
-           "type": "string"
-          },
-          "status": {
-           "type": "string",
-           "enum": [
-            "idle",
-            "offline",
-            "online",
-            "unknown"
-           ]
-          },
-          "user_agent": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "cast_member_id",
-          "image_url",
-          "last_seen_at",
-          "name",
-          "status"
+    "type": "object",
+    "properties": {
+     "presence": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "cast_member_id": {
+         "type": "string"
+        },
+        "image_url": {
+         "type": [
+          "string",
+          "null"
          ]
+        },
+        "last_seen_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "name": {
+         "type": "string"
+        },
+        "status": {
+         "type": "string",
+         "enum": [
+          "idle",
+          "offline",
+          "online",
+          "unknown"
+         ]
+        },
+        "user_agent": {
+         "type": "string"
         }
-       }
-      },
-      "required": [
-       "presence"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "presence": {
-        "type": "array",
-        "items": {}
-       }
-      },
-      "required": [
-       "presence"
-      ]
+       },
+       "required": [
+        "cast_member_id",
+        "image_url",
+        "last_seen_at",
+        "name",
+        "status"
+       ]
+      }
      }
+    },
+    "required": [
+     "presence"
     ]
    }
   },
@@ -5676,24 +6002,123 @@
    "200": {
     "type": "object",
     "properties": {
-     "broadcast_message": {},
-     "caster_checklist": {},
-     "created_at": {},
-     "duration_min": {},
-     "ended_at": {},
-     "event_run_id": {},
-     "id": {},
-     "match_id": {},
-     "obs_scene": {},
-     "ord": {},
-     "started_at": {},
-     "station_id": {},
-     "status": {},
-     "tenant_id": {},
-     "title": {},
-     "type": {},
-     "updated_at": {},
-     "wave_id": {}
+     "broadcast_message": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "number"
+       },
+       {
+        "type": "object",
+        "additionalProperties": {}
+       },
+       {
+        "type": "array",
+        "items": {}
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "caster_checklist": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "number"
+       },
+       {
+        "type": "object",
+        "additionalProperties": {}
+       },
+       {
+        "type": "array",
+        "items": {}
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "created_at": {
+      "type": "string"
+     },
+     "duration_min": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "ended_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "event_run_id": {
+      "type": "string"
+     },
+     "id": {
+      "type": "string"
+     },
+     "match_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "obs_scene": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "ord": {
+      "type": "number"
+     },
+     "started_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "station_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "status": {
+      "type": "string"
+     },
+     "tenant_id": {
+      "type": "string"
+     },
+     "title": {
+      "type": "string"
+     },
+     "type": {
+      "type": "string"
+     },
+     "updated_at": {
+      "type": "string"
+     },
+     "wave_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
     },
     "required": [
      "broadcast_message",
@@ -5726,16 +6151,42 @@
       "items": {
        "type": "object",
        "properties": {
-        "created_at": {},
-        "event_run_id": {},
-        "id": {},
-        "name": {},
-        "notes": {},
-        "ord": {},
-        "status": {},
-        "stream_url": {},
-        "tenant_id": {},
-        "updated_at": {}
+        "created_at": {
+         "type": "string"
+        },
+        "event_run_id": {
+         "type": "string"
+        },
+        "id": {
+         "type": "string"
+        },
+        "name": {
+         "type": "string"
+        },
+        "notes": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "ord": {
+         "type": "number"
+        },
+        "status": {
+         "type": "string"
+        },
+        "stream_url": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "tenant_id": {
+         "type": "string"
+        },
+        "updated_at": {
+         "type": "string"
+        }
        },
        "required": [
         "created_at",
@@ -5766,18 +6217,54 @@
       "items": {
        "type": "object",
        "properties": {
-        "created_at": {},
-        "duration_min": {},
-        "ended_at": {},
-        "event_run_id": {},
-        "id": {},
-        "ord": {},
-        "planned_start_at": {},
-        "started_at": {},
-        "status": {},
-        "tenant_id": {},
-        "title": {},
-        "updated_at": {}
+        "created_at": {
+         "type": "string"
+        },
+        "duration_min": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "ended_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "event_run_id": {
+         "type": "string"
+        },
+        "id": {
+         "type": "string"
+        },
+        "ord": {
+         "type": "number"
+        },
+        "planned_start_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "started_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": "string"
+        },
+        "tenant_id": {
+         "type": "string"
+        },
+        "title": {
+         "type": "string"
+        },
+        "updated_at": {
+         "type": "string"
+        }
        },
        "required": [
         "created_at",
@@ -6461,8 +6948,16 @@
           "blacklist_add",
           "blacklist_remove",
           "blacklist_update",
+          "broadcast_campaign_create",
+          "broadcast_campaign_delete",
+          "broadcast_campaign_duplicate",
+          "broadcast_campaign_send",
+          "broadcast_campaign_update",
           "broadcast_next_match",
+          "broadcast_schedule_cancel",
+          "broadcast_schedule_set",
           "broadcast_state_update",
+          "broadcast_wave_send",
           "bulk_remove",
           "bulk_roster_update",
           "bulk_schedule",
@@ -6548,6 +7043,7 @@
           "delete_twitch_channel",
           "delete_twitch_reward",
           "delete_webhook",
+          "disable_webhook",
           "disconnect_twitch_broadcaster",
           "discord_delete_channel",
           "discord_delete_role",
@@ -6559,6 +7055,7 @@
           "discord_revoke_access",
           "discord_revoke_role",
           "download_association_document",
+          "enable_webhook",
           "end_event_run",
           "end_event_segment",
           "entity_blacklist_add",
@@ -6570,6 +7067,7 @@
           "event_station_manage",
           "event_wave_manage",
           "expire_tenant_request",
+          "export_tenant",
           "finalize_tournament",
           "forward_scrim_request",
           "generate_group_matches",
@@ -6583,6 +7081,7 @@
           "invite_create",
           "invite_reject",
           "invite_team_member",
+          "invite_tenant_staff",
           "kick_member",
           "leave_team",
           "link_league_tournament",
@@ -6624,8 +7123,10 @@
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_previous_bot_key",
           "revoke_tcg_association_card",
           "revoke_tcg_fanart",
+          "revoke_tenant_invitation",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
           "save_placements",
@@ -6660,6 +7161,8 @@
           "task_update",
           "tcg_admin_grant",
           "tcg_battlenet_backfill",
+          "tcg_overlay_token_revoke",
+          "tcg_overlay_token_rotate",
           "tcg_photo_approve",
           "tcg_photo_reject",
           "tcg_welcome_gift_grant",
@@ -6728,6 +7231,7 @@
           "upload_association_document",
           "validate_match_lineup",
           "validate_scrim_planning",
+          "verify_custom_domain",
           "view_admin_page",
           "view_captain_data",
           "view_player_data"
@@ -8439,8 +8943,16 @@
           "blacklist_add",
           "blacklist_remove",
           "blacklist_update",
+          "broadcast_campaign_create",
+          "broadcast_campaign_delete",
+          "broadcast_campaign_duplicate",
+          "broadcast_campaign_send",
+          "broadcast_campaign_update",
           "broadcast_next_match",
+          "broadcast_schedule_cancel",
+          "broadcast_schedule_set",
           "broadcast_state_update",
+          "broadcast_wave_send",
           "bulk_remove",
           "bulk_roster_update",
           "bulk_schedule",
@@ -8526,6 +9038,7 @@
           "delete_twitch_channel",
           "delete_twitch_reward",
           "delete_webhook",
+          "disable_webhook",
           "disconnect_twitch_broadcaster",
           "discord_delete_channel",
           "discord_delete_role",
@@ -8537,6 +9050,7 @@
           "discord_revoke_access",
           "discord_revoke_role",
           "download_association_document",
+          "enable_webhook",
           "end_event_run",
           "end_event_segment",
           "entity_blacklist_add",
@@ -8548,6 +9062,7 @@
           "event_station_manage",
           "event_wave_manage",
           "expire_tenant_request",
+          "export_tenant",
           "finalize_tournament",
           "forward_scrim_request",
           "generate_group_matches",
@@ -8561,6 +9076,7 @@
           "invite_create",
           "invite_reject",
           "invite_team_member",
+          "invite_tenant_staff",
           "kick_member",
           "leave_team",
           "link_league_tournament",
@@ -8602,8 +9118,10 @@
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_previous_bot_key",
           "revoke_tcg_association_card",
           "revoke_tcg_fanart",
+          "revoke_tenant_invitation",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
           "save_placements",
@@ -8638,6 +9156,8 @@
           "task_update",
           "tcg_admin_grant",
           "tcg_battlenet_backfill",
+          "tcg_overlay_token_revoke",
+          "tcg_overlay_token_rotate",
           "tcg_photo_approve",
           "tcg_photo_reject",
           "tcg_welcome_gift_grant",
@@ -8706,6 +9226,7 @@
           "upload_association_document",
           "validate_match_lineup",
           "validate_scrim_planning",
+          "verify_custom_domain",
           "view_admin_page",
           "view_captain_data",
           "view_player_data"
@@ -13275,8 +13796,16 @@
           "blacklist_add",
           "blacklist_remove",
           "blacklist_update",
+          "broadcast_campaign_create",
+          "broadcast_campaign_delete",
+          "broadcast_campaign_duplicate",
+          "broadcast_campaign_send",
+          "broadcast_campaign_update",
           "broadcast_next_match",
+          "broadcast_schedule_cancel",
+          "broadcast_schedule_set",
           "broadcast_state_update",
+          "broadcast_wave_send",
           "bulk_remove",
           "bulk_roster_update",
           "bulk_schedule",
@@ -13362,6 +13891,7 @@
           "delete_twitch_channel",
           "delete_twitch_reward",
           "delete_webhook",
+          "disable_webhook",
           "disconnect_twitch_broadcaster",
           "discord_delete_channel",
           "discord_delete_role",
@@ -13373,6 +13903,7 @@
           "discord_revoke_access",
           "discord_revoke_role",
           "download_association_document",
+          "enable_webhook",
           "end_event_run",
           "end_event_segment",
           "entity_blacklist_add",
@@ -13384,6 +13915,7 @@
           "event_station_manage",
           "event_wave_manage",
           "expire_tenant_request",
+          "export_tenant",
           "finalize_tournament",
           "forward_scrim_request",
           "generate_group_matches",
@@ -13397,6 +13929,7 @@
           "invite_create",
           "invite_reject",
           "invite_team_member",
+          "invite_tenant_staff",
           "kick_member",
           "leave_team",
           "link_league_tournament",
@@ -13438,8 +13971,10 @@
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_previous_bot_key",
           "revoke_tcg_association_card",
           "revoke_tcg_fanart",
+          "revoke_tenant_invitation",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
           "save_placements",
@@ -13474,6 +14009,8 @@
           "task_update",
           "tcg_admin_grant",
           "tcg_battlenet_backfill",
+          "tcg_overlay_token_revoke",
+          "tcg_overlay_token_rotate",
           "tcg_photo_approve",
           "tcg_photo_reject",
           "tcg_welcome_gift_grant",
@@ -13542,6 +14079,7 @@
           "upload_association_document",
           "validate_match_lineup",
           "validate_scrim_planning",
+          "verify_custom_domain",
           "view_admin_page",
           "view_captain_data",
           "view_player_data"
@@ -17540,10 +18078,7 @@
          ]
         },
         "submittedAt": {
-         "type": [
-          "string",
-          "null"
-         ]
+         "type": "string"
         },
         "userId": {
          "type": "string"
@@ -17654,7 +18189,10 @@
       "type": "number"
      },
      "tournamentId": {
-      "type": "string"
+      "type": [
+       "string",
+       "null"
+      ]
      }
     },
     "required": [
@@ -18986,8 +19524,16 @@
           "blacklist_add",
           "blacklist_remove",
           "blacklist_update",
+          "broadcast_campaign_create",
+          "broadcast_campaign_delete",
+          "broadcast_campaign_duplicate",
+          "broadcast_campaign_send",
+          "broadcast_campaign_update",
           "broadcast_next_match",
+          "broadcast_schedule_cancel",
+          "broadcast_schedule_set",
           "broadcast_state_update",
+          "broadcast_wave_send",
           "bulk_remove",
           "bulk_roster_update",
           "bulk_schedule",
@@ -19073,6 +19619,7 @@
           "delete_twitch_channel",
           "delete_twitch_reward",
           "delete_webhook",
+          "disable_webhook",
           "disconnect_twitch_broadcaster",
           "discord_delete_channel",
           "discord_delete_role",
@@ -19084,6 +19631,7 @@
           "discord_revoke_access",
           "discord_revoke_role",
           "download_association_document",
+          "enable_webhook",
           "end_event_run",
           "end_event_segment",
           "entity_blacklist_add",
@@ -19095,6 +19643,7 @@
           "event_station_manage",
           "event_wave_manage",
           "expire_tenant_request",
+          "export_tenant",
           "finalize_tournament",
           "forward_scrim_request",
           "generate_group_matches",
@@ -19108,6 +19657,7 @@
           "invite_create",
           "invite_reject",
           "invite_team_member",
+          "invite_tenant_staff",
           "kick_member",
           "leave_team",
           "link_league_tournament",
@@ -19149,8 +19699,10 @@
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_previous_bot_key",
           "revoke_tcg_association_card",
           "revoke_tcg_fanart",
+          "revoke_tenant_invitation",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
           "save_placements",
@@ -19185,6 +19737,8 @@
           "task_update",
           "tcg_admin_grant",
           "tcg_battlenet_backfill",
+          "tcg_overlay_token_revoke",
+          "tcg_overlay_token_rotate",
           "tcg_photo_approve",
           "tcg_photo_reject",
           "tcg_welcome_gift_grant",
@@ -19253,6 +19807,7 @@
           "upload_association_document",
           "validate_match_lineup",
           "validate_scrim_planning",
+          "verify_custom_domain",
           "view_admin_page",
           "view_captain_data",
           "view_player_data"
@@ -19844,177 +20399,154 @@
   },
   "GET /api/admin/tenants/readiness": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "botInviteUrl": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "tenants": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "apiTokenCount": {
-           "type": "number"
-          },
-          "apiTokenSoonestExpiry": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "blockers": {
-           "type": "array",
-           "items": {
-            "type": "string"
-           }
-          },
-          "botEnabled": {
-           "type": "boolean"
-          },
-          "configuredKeys": {
-           "type": "number"
-          },
-          "createdAt": {
-           "type": "string"
-          },
-          "daysRemaining": {
-           "type": [
-            "number",
-            "null"
-           ]
-          },
-          "effectivePlan": {
-           "type": "string"
-          },
-          "guildCount": {
-           "type": "number"
-          },
-          "guilds": {
-           "type": "array",
-           "items": {
-            "type": "object",
-            "properties": {
-             "configuredKeys": {
-              "type": "number"
-             },
-             "guildId": {
-              "type": "string"
-             },
-             "guildName": {
-              "type": [
-               "string",
-               "null"
-              ]
-             },
-             "isPrimary": {
-              "type": "boolean"
-             }
-            },
-            "required": [
-             "configuredKeys",
-             "guildId",
-             "guildName",
-             "isPrimary"
-            ]
-           }
-          },
-          "hasBotSecrets": {
-           "type": "boolean"
-          },
-          "hasEmailSender": {
-           "type": "boolean"
-          },
-          "id": {
-           "type": "string"
-          },
-          "isActive": {
-           "type": "boolean"
-          },
-          "isTrial": {
-           "type": "boolean"
-          },
-          "name": {
-           "type": "string"
-          },
-          "ownerCount": {
-           "type": "number"
-          },
-          "plan": {
-           "type": "string"
-          },
-          "planExpiresAt": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "planStatus": {
-           "type": "string"
-          },
-          "slug": {
-           "type": "string"
-          },
-          "staffCount": {
-           "type": "number"
-          }
-         },
-         "required": [
-          "apiTokenCount",
-          "apiTokenSoonestExpiry",
-          "blockers",
-          "botEnabled",
-          "configuredKeys",
-          "createdAt",
-          "daysRemaining",
-          "effectivePlan",
-          "guildCount",
-          "guilds",
-          "hasBotSecrets",
-          "hasEmailSender",
-          "id",
-          "isActive",
-          "isTrial",
-          "name",
-          "ownerCount",
-          "plan",
-          "planExpiresAt",
-          "planStatus",
-          "slug",
-          "staffCount"
-         ]
-        }
-       }
-      },
-      "required": [
-       "botInviteUrl",
-       "tenants"
+    "type": "object",
+    "properties": {
+     "botInviteUrl": {
+      "type": [
+       "string",
+       "null"
       ]
      },
-     {
-      "type": "object",
-      "properties": {
-       "botInviteUrl": {
-        "type": [
-         "string",
-         "null"
-        ]
+     "tenants": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "apiTokenCount": {
+         "type": "number"
+        },
+        "apiTokenSoonestExpiry": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "blockers": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        },
+        "botEnabled": {
+         "type": "boolean"
+        },
+        "configuredKeys": {
+         "type": "number"
+        },
+        "createdAt": {
+         "type": "string"
+        },
+        "daysRemaining": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "effectivePlan": {
+         "type": "string"
+        },
+        "guildCount": {
+         "type": "number"
+        },
+        "guilds": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "configuredKeys": {
+            "type": "number"
+           },
+           "guildId": {
+            "type": "string"
+           },
+           "guildName": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "isPrimary": {
+            "type": "boolean"
+           }
+          },
+          "required": [
+           "configuredKeys",
+           "guildId",
+           "guildName",
+           "isPrimary"
+          ]
+         }
+        },
+        "hasBotSecrets": {
+         "type": "boolean"
+        },
+        "hasEmailSender": {
+         "type": "boolean"
+        },
+        "id": {
+         "type": "string"
+        },
+        "isActive": {
+         "type": "boolean"
+        },
+        "isTrial": {
+         "type": "boolean"
+        },
+        "name": {
+         "type": "string"
+        },
+        "ownerCount": {
+         "type": "number"
+        },
+        "plan": {
+         "type": "string"
+        },
+        "planExpiresAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "planStatus": {
+         "type": "string"
+        },
+        "slug": {
+         "type": "string"
+        },
+        "staffCount": {
+         "type": "number"
+        }
        },
-       "tenants": {
-        "type": "array",
-        "items": {}
-       }
-      },
-      "required": [
-       "botInviteUrl",
-       "tenants"
-      ]
+       "required": [
+        "apiTokenCount",
+        "apiTokenSoonestExpiry",
+        "blockers",
+        "botEnabled",
+        "configuredKeys",
+        "createdAt",
+        "daysRemaining",
+        "effectivePlan",
+        "guildCount",
+        "guilds",
+        "hasBotSecrets",
+        "hasEmailSender",
+        "id",
+        "isActive",
+        "isTrial",
+        "name",
+        "ownerCount",
+        "plan",
+        "planExpiresAt",
+        "planStatus",
+        "slug",
+        "staffCount"
+       ]
+      }
      }
+    },
+    "required": [
+     "botInviteUrl",
+     "tenants"
     ]
    }
   },
@@ -20092,7 +20624,8 @@
       }
      },
      "window": {
-      "type": "string"
+      "type": "string",
+      "const": "month"
      },
      "windowKey": {
       "type": "string"
@@ -20114,9 +20647,15 @@
       "items": {
        "type": "object",
        "properties": {
-        "created_at": {},
-        "guild_id": {},
-        "is_primary": {}
+        "created_at": {
+         "type": "string"
+        },
+        "guild_id": {
+         "type": "string"
+        },
+        "is_primary": {
+         "type": "boolean"
+        }
        },
        "required": [
         "created_at",
@@ -20164,18 +20703,54 @@
      "tenant": {
       "type": "object",
       "properties": {
-       "accent_color": {},
-       "created_at": {},
-       "custom_domain": {},
-       "default_locale": {},
-       "id": {},
-       "is_active": {},
-       "logo_url": {},
-       "name": {},
-       "network_share_recruitment": {},
-       "network_share_scrims": {},
-       "primary_color": {},
-       "slug": {}
+       "accent_color": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "custom_domain": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "default_locale": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "is_active": {
+        "type": "boolean"
+       },
+       "logo_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "name": {
+        "type": "string"
+       },
+       "network_share_recruitment": {
+        "type": "boolean"
+       },
+       "network_share_scrims": {
+        "type": "boolean"
+       },
+       "primary_color": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "slug": {
+        "type": "string"
+       }
       },
       "required": [
        "accent_color",
@@ -20209,16 +20784,51 @@
       "items": {
        "type": "object",
        "properties": {
-        "comp": {},
-        "comp_note": {},
-        "created_at": {},
-        "expires_at": {},
-        "id": {},
-        "last_used_at": {},
-        "name": {},
-        "revoked_at": {},
-        "scopes": {},
-        "token_prefix": {}
+        "comp": {
+         "type": "boolean"
+        },
+        "comp_note": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "created_at": {
+         "type": "string"
+        },
+        "expires_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "last_used_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "name": {
+         "type": "string"
+        },
+        "revoked_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "scopes": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        },
+        "token_prefix": {
+         "type": "string"
+        }
        },
        "required": [
         "comp",
@@ -20400,30 +21010,13 @@
          "type": "number"
         },
         "helloassoPaymentId": {
-         "anyOf": [
-          {
-           "type": "string"
-          },
-          {
-           "type": "number"
-          }
-         ]
+         "type": "number"
         },
         "id": {
-         "anyOf": [
-          {
-           "type": "string"
-          },
-          {
-           "type": "number"
-          }
-         ]
+         "type": "number"
         },
         "paidAt": {
-         "type": [
-          "string",
-          "null"
-         ]
+         "type": "string"
         },
         "plan": {
          "type": "string"
@@ -20521,9 +21114,15 @@
      "tenant": {
       "type": "object",
       "properties": {
-       "id": {},
-       "name": {},
-       "slug": {}
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "slug": {
+        "type": "string"
+       }
       },
       "required": [
        "id",
@@ -23417,8 +24016,16 @@
           "blacklist_add",
           "blacklist_remove",
           "blacklist_update",
+          "broadcast_campaign_create",
+          "broadcast_campaign_delete",
+          "broadcast_campaign_duplicate",
+          "broadcast_campaign_send",
+          "broadcast_campaign_update",
           "broadcast_next_match",
+          "broadcast_schedule_cancel",
+          "broadcast_schedule_set",
           "broadcast_state_update",
+          "broadcast_wave_send",
           "bulk_remove",
           "bulk_roster_update",
           "bulk_schedule",
@@ -23504,6 +24111,7 @@
           "delete_twitch_channel",
           "delete_twitch_reward",
           "delete_webhook",
+          "disable_webhook",
           "disconnect_twitch_broadcaster",
           "discord_delete_channel",
           "discord_delete_role",
@@ -23515,6 +24123,7 @@
           "discord_revoke_access",
           "discord_revoke_role",
           "download_association_document",
+          "enable_webhook",
           "end_event_run",
           "end_event_segment",
           "entity_blacklist_add",
@@ -23526,6 +24135,7 @@
           "event_station_manage",
           "event_wave_manage",
           "expire_tenant_request",
+          "export_tenant",
           "finalize_tournament",
           "forward_scrim_request",
           "generate_group_matches",
@@ -23539,6 +24149,7 @@
           "invite_create",
           "invite_reject",
           "invite_team_member",
+          "invite_tenant_staff",
           "kick_member",
           "leave_team",
           "link_league_tournament",
@@ -23580,8 +24191,10 @@
           "restore_tcg_association_card",
           "retract_event_cue",
           "revoke_api_token",
+          "revoke_previous_bot_key",
           "revoke_tcg_association_card",
           "revoke_tcg_fanart",
+          "revoke_tenant_invitation",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
           "save_placements",
@@ -23616,6 +24229,8 @@
           "task_update",
           "tcg_admin_grant",
           "tcg_battlenet_backfill",
+          "tcg_overlay_token_revoke",
+          "tcg_overlay_token_rotate",
           "tcg_photo_approve",
           "tcg_photo_reject",
           "tcg_welcome_gift_grant",
@@ -23684,6 +24299,7 @@
           "upload_association_document",
           "validate_match_lineup",
           "validate_scrim_planning",
+          "verify_custom_domain",
           "view_admin_page",
           "view_captain_data",
           "view_player_data"
@@ -26791,10 +27407,7 @@
       }
      },
      "email": {
-      "type": [
-       "string",
-       "null"
-      ]
+      "type": "string"
      },
      "extraPermissions": {
       "type": "array",
@@ -27101,16 +27714,51 @@
       "items": {
        "type": "object",
        "properties": {
-        "consecutive_failures": {},
-        "created_at": {},
-        "description": {},
-        "disabled_at": {},
-        "enabled": {},
-        "event_types": {},
-        "id": {},
-        "last_delivery_at": {},
-        "last_error": {},
-        "url": {}
+        "consecutive_failures": {
+         "type": "number"
+        },
+        "created_at": {
+         "type": "string"
+        },
+        "description": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "disabled_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "enabled": {
+         "type": "boolean"
+        },
+        "event_types": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        },
+        "id": {
+         "type": "string"
+        },
+        "last_delivery_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "last_error": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "url": {
+         "type": "string"
+        }
        },
        "required": [
         "consecutive_failures",
@@ -27142,14 +27790,39 @@
       "items": {
        "type": "object",
        "properties": {
-        "attempts": {},
-        "created_at": {},
-        "delivered_at": {},
-        "event_name": {},
-        "id": {},
-        "last_error": {},
-        "response_status": {},
-        "status": {}
+        "attempts": {
+         "type": "number"
+        },
+        "created_at": {
+         "type": "string"
+        },
+        "delivered_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "event_name": {
+         "type": "string"
+        },
+        "id": {
+         "type": "string"
+        },
+        "last_error": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "response_status": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "status": {
+         "type": "string"
+        }
        },
        "required": [
         "attempts",
@@ -52088,13 +52761,36 @@
      "token": {
       "type": "object",
       "properties": {
-       "comp": {},
-       "comp_note": {},
-       "id": {},
-       "name": {},
-       "revoked_at": {},
-       "scopes": {},
-       "token_prefix": {}
+       "comp": {
+        "type": "boolean"
+       },
+       "comp_note": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "revoked_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "scopes": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "token_prefix": {
+        "type": "string"
+       }
       },
       "required": [
        "comp",
@@ -52120,7 +52816,8 @@
       "type": "string"
      },
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -52402,7 +53099,30 @@
        "import_code": {
         "type": "string"
        },
-       "map_pool": {},
+       "map_pool": {
+        "anyOf": [
+         {
+          "type": "boolean"
+         },
+         {
+          "type": "string"
+         },
+         {
+          "type": "number"
+         },
+         {
+          "type": "object",
+          "additionalProperties": {}
+         },
+         {
+          "type": "array",
+          "items": {}
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
        "name": {
         "type": "string"
        },
@@ -52426,6 +53146,8 @@
        }
       },
       "required": [
+       "created_at",
+       "created_by",
        "description",
        "enabled",
        "game",
@@ -52435,7 +53157,8 @@
        "name",
        "stage_id",
        "tenant_id",
-       "tournament_id"
+       "tournament_id",
+       "updated_at"
       ]
      }
     },
@@ -52448,16 +53171,45 @@
    "200": {
     "type": "object",
     "properties": {
-     "created_at": {},
-     "description": {},
-     "ended_at": {},
-     "id": {},
-     "name": {},
-     "scheduled_at": {},
-     "slug": {},
-     "started_at": {},
-     "status": {},
-     "updated_at": {}
+     "created_at": {
+      "type": "string"
+     },
+     "description": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "ended_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "id": {
+      "type": "string"
+     },
+     "name": {
+      "type": "string"
+     },
+     "scheduled_at": {
+      "type": "string"
+     },
+     "slug": {
+      "type": "string"
+     },
+     "started_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "status": {
+      "type": "string"
+     },
+     "updated_at": {
+      "type": "string"
+     }
     },
     "required": [
      "created_at",
@@ -52477,23 +53229,123 @@
    "200": {
     "type": "object",
     "properties": {
-     "broadcast_message": {},
-     "caster_checklist": {},
-     "created_at": {},
-     "duration_min": {},
-     "ended_at": {},
-     "id": {},
-     "match_id": {},
-     "obs_scene": {},
-     "ord": {},
-     "planned_start_at": {},
-     "started_at": {},
-     "station_id": {},
-     "status": {},
-     "title": {},
-     "type": {},
-     "updated_at": {},
-     "wave_id": {}
+     "broadcast_message": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "number"
+       },
+       {
+        "type": "object",
+        "additionalProperties": {}
+       },
+       {
+        "type": "array",
+        "items": {}
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "caster_checklist": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "number"
+       },
+       {
+        "type": "object",
+        "additionalProperties": {}
+       },
+       {
+        "type": "array",
+        "items": {}
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "created_at": {
+      "type": "string"
+     },
+     "duration_min": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "ended_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "id": {
+      "type": "string"
+     },
+     "match_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "obs_scene": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "ord": {
+      "type": "number"
+     },
+     "planned_start_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "started_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "station_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "status": {
+      "type": "string"
+     },
+     "title": {
+      "type": "string"
+     },
+     "type": {
+      "type": "string"
+     },
+     "updated_at": {
+      "type": "string"
+     },
+     "wave_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
     },
     "required": [
      "broadcast_message",
@@ -52523,16 +53375,42 @@
      "station": {
       "type": "object",
       "properties": {
-       "created_at": {},
-       "event_run_id": {},
-       "id": {},
-       "name": {},
-       "notes": {},
-       "ord": {},
-       "status": {},
-       "stream_url": {},
-       "tenant_id": {},
-       "updated_at": {}
+       "created_at": {
+        "type": "string"
+       },
+       "event_run_id": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "notes": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "ord": {
+        "type": "number"
+       },
+       "status": {
+        "type": "string"
+       },
+       "stream_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "tenant_id": {
+        "type": "string"
+       },
+       "updated_at": {
+        "type": "string"
+       }
       },
       "required": [
        "created_at",
@@ -52560,18 +53438,54 @@
      "wave": {
       "type": "object",
       "properties": {
-       "created_at": {},
-       "duration_min": {},
-       "ended_at": {},
-       "event_run_id": {},
-       "id": {},
-       "ord": {},
-       "planned_start_at": {},
-       "started_at": {},
-       "status": {},
-       "tenant_id": {},
-       "title": {},
-       "updated_at": {}
+       "created_at": {
+        "type": "string"
+       },
+       "duration_min": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "ended_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "event_run_id": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "ord": {
+        "type": "number"
+       },
+       "planned_start_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "started_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string"
+       },
+       "tenant_id": {
+        "type": "string"
+       },
+       "title": {
+        "type": "string"
+       },
+       "updated_at": {
+        "type": "string"
+       }
       },
       "required": [
        "created_at",
@@ -55263,12 +56177,85 @@
     ]
    }
   },
+  "PATCH /api/admin/tcg/fanart": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "item": {
+      "type": "object",
+      "properties": {
+       "artistName": {
+        "type": "string"
+       },
+       "artistUrl": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "createdAt": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "imageUrl": {
+        "type": "string"
+       },
+       "rarity": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "reviewNotes": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "reviewedAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string"
+       },
+       "title": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "artistName",
+       "artistUrl",
+       "createdAt",
+       "id",
+       "imageUrl",
+       "rarity",
+       "reviewNotes",
+       "reviewedAt",
+       "status",
+       "title"
+      ]
+     }
+    },
+    "required": [
+     "item"
+    ]
+   }
+  },
   "PATCH /api/admin/tcg/photos": {
    "200": {
     "type": "object",
     "properties": {
      "status": {
-      "type": "string"
+      "type": "string",
+      "enum": [
+       "approved",
+       "rejected"
+      ]
      }
     },
     "required": [
@@ -55645,18 +56632,54 @@
      "tenant": {
       "type": "object",
       "properties": {
-       "accent_color": {},
-       "created_at": {},
-       "custom_domain": {},
-       "default_locale": {},
-       "id": {},
-       "is_active": {},
-       "logo_url": {},
-       "name": {},
-       "network_share_recruitment": {},
-       "network_share_scrims": {},
-       "primary_color": {},
-       "slug": {}
+       "accent_color": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "custom_domain": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "default_locale": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "is_active": {
+        "type": "boolean"
+       },
+       "logo_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "name": {
+        "type": "string"
+       },
+       "network_share_recruitment": {
+        "type": "boolean"
+       },
+       "network_share_scrims": {
+        "type": "boolean"
+       },
+       "primary_color": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "slug": {
+        "type": "string"
+       }
       },
       "required": [
        "accent_color",
@@ -56038,265 +57061,8 @@
   },
   "PATCH /api/admin/users/manage": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "banned_until": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "success": {
-        "type": "boolean",
-        "const": true
-       }
-      },
-      "required": [
-       "banned_until",
-       "success"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "membership": {
-        "type": "object",
-        "properties": {
-         "battle_tag": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "battle_tag_mismatch": {
-          "type": "boolean"
-         },
-         "battle_tag_verified_at": {},
-         "team_id": {
-          "type": "string"
-         }
-        },
-        "required": [
-         "battle_tag",
-         "battle_tag_mismatch",
-         "battle_tag_verified_at",
-         "team_id"
-        ]
-       },
-       "success": {
-        "type": "boolean",
-        "const": true
-       }
-      },
-      "required": [
-       "membership",
-       "success"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "success": {
-        "type": "boolean",
-        "const": true
-       },
-       "user": {
-        "type": "object",
-        "properties": {
-         "banned_until": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "created_at": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "discord_user_id": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "discord_username": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "display_name": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "email": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "id": {
-          "type": "string"
-         },
-         "last_sign_in_at": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "role": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "team_memberships": {
-          "type": "array",
-          "items": {
-           "type": "object",
-           "properties": {
-            "battle_tag": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "battle_tag_mismatch": {
-             "type": "boolean"
-            },
-            "battle_tag_verified_at": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "role": {
-             "type": "string"
-            },
-            "team_id": {
-             "type": "string"
-            },
-            "team_name": {
-             "type": "string"
-            }
-           },
-           "required": [
-            "battle_tag",
-            "battle_tag_mismatch",
-            "battle_tag_verified_at",
-            "role",
-            "team_id",
-            "team_name"
-           ]
-          }
-         }
-        },
-        "required": [
-         "created_at",
-         "display_name",
-         "email",
-         "id",
-         "last_sign_in_at",
-         "role"
-        ]
-       }
-      },
-      "required": [
-       "success",
-       "user"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "success": {
-        "type": "boolean",
-        "const": true
-       },
-       "user": {
-        "type": "object",
-        "properties": {
-         "created_at": {
-          "type": "string"
-         },
-         "display_name": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "email": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "id": {
-          "type": "string"
-         },
-         "last_sign_in_at": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "role": {
-          "type": [
-           "string",
-           "null"
-          ]
-         }
-        },
-        "required": [
-         "created_at",
-         "display_name",
-         "email",
-         "id",
-         "last_sign_in_at",
-         "role"
-        ]
-       }
-      },
-      "required": [
-       "success",
-       "user"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "success": {
-        "type": "boolean",
-        "const": true
-       },
-       "warning": {
-        "type": "string"
-       }
-      },
-      "required": [
-       "success",
-       "warning"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "success": {
-        "type": "boolean",
-        "const": true
-       }
-      },
-      "required": [
-       "success"
-      ]
-     }
-    ]
+    "type": "object",
+    "additionalProperties": {}
    }
   },
   "PATCH /api/admin/webhooks/{id}": {
@@ -56306,8 +57072,12 @@
      "subscription": {
       "type": "object",
       "properties": {
-       "enabled": {},
-       "id": {}
+       "enabled": {
+        "type": "boolean"
+       },
+       "id": {
+        "type": "string"
+       }
       },
       "required": [
        "enabled",
@@ -57185,11 +57955,21 @@
      "tenant": {
       "type": "object",
       "properties": {
-       "default_locale": {},
-       "id": {},
-       "is_active": {},
-       "name": {},
-       "slug": {}
+       "default_locale": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "is_active": {
+        "type": "boolean"
+       },
+       "name": {
+        "type": "string"
+       },
+       "slug": {
+        "type": "string"
+       }
       },
       "required": [
        "default_locale",
@@ -57796,177 +58576,8 @@
   },
   "POST /api/admin/broadcast/{campaignId}": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "alreadySent": {
-        "type": "number"
-       },
-       "audienceTotal": {
-        "type": "number"
-       },
-       "campaignId": {
-        "type": "string"
-       },
-       "dryRun": {
-        "type": "boolean"
-       },
-       "emailOnlyExcluded": {
-        "type": "number"
-       },
-       "lastSentAt": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "limit": {
-        "type": [
-         "number",
-         "null"
-        ]
-       },
-       "newCount": {
-        "type": "number"
-       },
-       "offset": {
-        "type": "number"
-       },
-       "onlyNew": {
-        "type": "boolean"
-       },
-       "success": {
-        "type": "boolean"
-       },
-       "totalConfirmedUsers": {
-        "type": "number"
-       },
-       "tracedSent": {
-        "type": "number"
-       },
-       "unsentCount": {
-        "type": "number"
-       },
-       "untracedPreviousSend": {
-        "type": "boolean"
-       },
-       "windowSize": {
-        "type": "number"
-       },
-       "withLabel": {
-        "type": "number"
-       },
-       "withoutLabel": {
-        "type": "number"
-       }
-      },
-      "required": [
-       "campaignId",
-       "dryRun",
-       "limit",
-       "offset",
-       "onlyNew",
-       "success",
-       "totalConfirmedUsers",
-       "windowSize",
-       "withLabel",
-       "withoutLabel"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "alreadySent": {
-        "type": "number"
-       },
-       "campaignId": {
-        "type": "string"
-       },
-       "emailOnlyExcluded": {
-        "type": "number"
-       },
-       "errors": {
-        "type": "array",
-        "items": {
-         "type": "string"
-        }
-       },
-       "failed": {
-        "type": "number"
-       },
-       "limit": {
-        "type": [
-         "number",
-         "null"
-        ]
-       },
-       "newCount": {
-        "type": "number"
-       },
-       "offset": {
-        "type": "number"
-       },
-       "onlyNew": {
-        "type": "boolean"
-       },
-       "onlyUnsent": {
-        "type": "boolean"
-       },
-       "sent": {
-        "type": "number"
-       },
-       "success": {
-        "type": "boolean"
-       },
-       "totalConfirmedUsers": {
-        "type": "number"
-       },
-       "windowSize": {
-        "type": "number"
-       }
-      },
-      "required": [
-       "campaignId",
-       "failed",
-       "limit",
-       "offset",
-       "onlyNew",
-       "onlyUnsent",
-       "sent",
-       "success",
-       "totalConfirmedUsers",
-       "windowSize"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "campaignId": {
-        "type": "string"
-       },
-       "error": {
-        "type": "string"
-       },
-       "id": {
-        "type": "string"
-       },
-       "success": {
-        "type": "boolean"
-       },
-       "test": {
-        "type": "boolean"
-       },
-       "to": {}
-      },
-      "required": [
-       "campaignId",
-       "success",
-       "test",
-       "to"
-      ]
-     }
-    ]
+    "type": "object",
+    "additionalProperties": {}
    }
   },
   "POST /api/admin/broadcast/{campaignId}/duplicate": {
@@ -57993,81 +58604,13 @@
   "POST /api/admin/broadcast/{campaignId}/schedule": {
    "200": {
     "type": "object",
-    "properties": {
-     "campaignId": {
-      "type": "string"
-     },
-     "emailOnlySkipped": {
-      "type": "number"
-     },
-     "newlyInserted": {
-      "type": "number"
-     },
-     "success": {
-      "type": "boolean"
-     },
-     "totalRecipients": {
-      "type": "number"
-     },
-     "waveSize": {
-      "type": "number"
-     }
-    },
-    "required": [
-     "campaignId",
-     "emailOnlySkipped",
-     "newlyInserted",
-     "success",
-     "totalRecipients",
-     "waveSize"
-    ]
+    "additionalProperties": {}
    }
   },
   "POST /api/admin/broadcast/{campaignId}/wave": {
    "200": {
     "type": "object",
-    "properties": {
-     "attempted": {
-      "type": "number"
-     },
-     "campaignId": {
-      "type": "string"
-     },
-     "failed": {
-      "type": "number"
-     },
-     "remainingPending": {
-      "type": "number"
-     },
-     "sent": {
-      "type": "number"
-     },
-     "status": {
-      "type": "string",
-      "enum": [
-       "completed",
-       "idle",
-       "paused",
-       "scheduled"
-      ]
-     },
-     "success": {
-      "type": "boolean"
-     },
-     "waveSize": {
-      "type": "number"
-     }
-    },
-    "required": [
-     "attempted",
-     "campaignId",
-     "failed",
-     "remainingPending",
-     "sent",
-     "status",
-     "success",
-     "waveSize"
-    ]
+    "additionalProperties": {}
    }
   },
   "POST /api/admin/cast-members": {
@@ -58226,7 +58769,30 @@
        "import_code": {
         "type": "string"
        },
-       "map_pool": {},
+       "map_pool": {
+        "anyOf": [
+         {
+          "type": "boolean"
+         },
+         {
+          "type": "string"
+         },
+         {
+          "type": "number"
+         },
+         {
+          "type": "object",
+          "additionalProperties": {}
+         },
+         {
+          "type": "array",
+          "items": {}
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
        "name": {
         "type": "string"
        },
@@ -58250,6 +58816,8 @@
        }
       },
       "required": [
+       "created_at",
+       "created_by",
        "description",
        "enabled",
        "game",
@@ -58259,7 +58827,8 @@
        "name",
        "stage_id",
        "tenant_id",
-       "tournament_id"
+       "tournament_id",
+       "updated_at"
       ]
      }
     },
@@ -58436,16 +59005,45 @@
    "201": {
     "type": "object",
     "properties": {
-     "created_at": {},
-     "description": {},
-     "ended_at": {},
-     "id": {},
-     "name": {},
-     "scheduled_at": {},
-     "slug": {},
-     "started_at": {},
-     "status": {},
-     "updated_at": {}
+     "created_at": {
+      "type": "string"
+     },
+     "description": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "ended_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "id": {
+      "type": "string"
+     },
+     "name": {
+      "type": "string"
+     },
+     "scheduled_at": {
+      "type": "string"
+     },
+     "slug": {
+      "type": "string"
+     },
+     "started_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "status": {
+      "type": "string"
+     },
+     "updated_at": {
+      "type": "string"
+     }
     },
     "required": [
      "created_at",
@@ -58462,137 +59060,41 @@
    }
   },
   "POST /api/admin/events/{runId}/cues": {
-   "200": {
-    "type": "object",
-    "properties": {
-     "cue": {
-      "type": "object",
-      "properties": {
-       "body": {},
-       "created_at": {},
-       "created_by_user_id": {},
-       "dedup_key": {},
-       "event_run_id": {},
-       "expires_at": {},
-       "id": {},
-       "retracted_at": {},
-       "retracted_by_user_id": {},
-       "severity": {}
-      },
-      "required": [
-       "body",
-       "created_at",
-       "created_by_user_id",
-       "dedup_key",
-       "event_run_id",
-       "expires_at",
-       "id",
-       "retracted_at",
-       "retracted_by_user_id",
-       "severity"
-      ]
-     },
-     "dedupReplayed": {
-      "type": "boolean"
-     }
-    },
-    "required": [
-     "cue",
-     "dedupReplayed"
-    ]
-   },
-   "201": {
-    "type": "object",
-    "properties": {
-     "cue": {
-      "type": "object",
-      "properties": {
-       "body": {},
-       "created_at": {},
-       "created_by_user_id": {},
-       "dedup_key": {},
-       "event_run_id": {},
-       "expires_at": {},
-       "id": {},
-       "retracted_at": {},
-       "retracted_by_user_id": {},
-       "severity": {}
-      },
-      "required": [
-       "body",
-       "created_at",
-       "created_by_user_id",
-       "dedup_key",
-       "event_run_id",
-       "expires_at",
-       "id",
-       "retracted_at",
-       "retracted_by_user_id",
-       "severity"
-      ]
-     }
-    },
-    "required": [
-     "cue"
-    ]
-   }
+   "200": {}
   },
   "POST /api/admin/events/{runId}/end": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "alreadyEnded": {
-        "type": "boolean"
-       },
-       "run": {
-        "type": "object",
-        "properties": {
-         "created_at": {},
-         "description": {},
-         "ended_at": {},
-         "id": {},
-         "name": {},
-         "scheduled_at": {},
-         "slug": {},
-         "started_at": {},
-         "status": {},
-         "updated_at": {}
-        },
-        "required": [
-         "created_at",
-         "description",
-         "ended_at",
-         "id",
-         "name",
-         "scheduled_at",
-         "slug",
-         "started_at",
-         "status",
-         "updated_at"
-        ]
-       }
-      },
-      "required": [
-       "alreadyEnded",
-       "run"
-      ]
+    "type": "object",
+    "properties": {
+     "alreadyEnded": {
+      "type": "boolean"
      },
-     {
-      "type": "object",
-      "properties": {
-       "alreadyEnded": {
-        "type": "boolean"
-       },
-       "run": {
+     "run": {
+      "anyOf": [
+       {
         "type": "object",
         "properties": {
-         "ended_at": {},
-         "id": {},
-         "started_at": {},
-         "status": {},
-         "tenant_id": {}
+         "ended_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "id": {
+          "type": "string"
+         },
+         "started_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "status": {
+          "type": "string"
+         },
+         "tenant_id": {
+          "type": "string"
+         }
         },
         "required": [
          "ended_at",
@@ -58601,35 +59103,49 @@
          "status",
          "tenant_id"
         ]
-       }
-      },
-      "required": [
-       "alreadyEnded",
-       "run"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "alreadyEnded": {
-        "type": "boolean"
        },
-       "run": {
-        "type": [
-         "object",
-         "null"
-        ],
+       {
+        "type": "object",
         "properties": {
-         "created_at": {},
-         "description": {},
-         "ended_at": {},
-         "id": {},
-         "name": {},
-         "scheduled_at": {},
-         "slug": {},
-         "started_at": {},
-         "status": {},
-         "updated_at": {}
+         "created_at": {
+          "type": "string"
+         },
+         "description": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "ended_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "id": {
+          "type": "string"
+         },
+         "name": {
+          "type": "string"
+         },
+         "scheduled_at": {
+          "type": "string"
+         },
+         "slug": {
+          "type": "string"
+         },
+         "started_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "status": {
+          "type": "string"
+         },
+         "updated_at": {
+          "type": "string"
+         }
         },
         "required": [
          "created_at",
@@ -58643,13 +59159,16 @@
          "status",
          "updated_at"
         ]
+       },
+       {
+        "type": "null"
        }
-      },
-      "required": [
-       "alreadyEnded",
-       "run"
       ]
      }
+    },
+    "required": [
+     "alreadyEnded",
+     "run"
     ]
    }
   },
@@ -58657,23 +59176,123 @@
    "201": {
     "type": "object",
     "properties": {
-     "broadcast_message": {},
-     "caster_checklist": {},
-     "created_at": {},
-     "duration_min": {},
-     "ended_at": {},
-     "id": {},
-     "match_id": {},
-     "obs_scene": {},
-     "ord": {},
-     "planned_start_at": {},
-     "started_at": {},
-     "station_id": {},
-     "status": {},
-     "title": {},
-     "type": {},
-     "updated_at": {},
-     "wave_id": {}
+     "broadcast_message": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "number"
+       },
+       {
+        "type": "object",
+        "additionalProperties": {}
+       },
+       {
+        "type": "array",
+        "items": {}
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "caster_checklist": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "number"
+       },
+       {
+        "type": "object",
+        "additionalProperties": {}
+       },
+       {
+        "type": "array",
+        "items": {}
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "created_at": {
+      "type": "string"
+     },
+     "duration_min": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "ended_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "id": {
+      "type": "string"
+     },
+     "match_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "obs_scene": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "ord": {
+      "type": "number"
+     },
+     "planned_start_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "started_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "station_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "status": {
+      "type": "string"
+     },
+     "title": {
+      "type": "string"
+     },
+     "type": {
+      "type": "string"
+     },
+     "updated_at": {
+      "type": "string"
+     },
+     "wave_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
     },
     "required": [
      "broadcast_message",
@@ -58698,35 +59317,139 @@
   },
   "POST /api/admin/events/{runId}/segments/from-scrim": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "created": {
-        "type": "number"
+    "type": "object",
+    "properties": {
+     "created": {
+      "type": "number"
+     },
+     "segments": {
+      "anyOf": [
+       {
+        "type": "array",
+        "items": {}
        },
-       "segments": {
+       {
         "type": "array",
         "items": {
          "type": "object",
          "properties": {
-          "broadcast_message": {},
-          "caster_checklist": {},
-          "created_at": {},
-          "duration_min": {},
-          "ended_at": {},
-          "id": {},
-          "match_id": {},
-          "obs_scene": {},
-          "ord": {},
-          "planned_start_at": {},
-          "started_at": {},
-          "station_id": {},
-          "status": {},
-          "title": {},
-          "type": {},
-          "updated_at": {},
-          "wave_id": {}
+          "broadcast_message": {
+           "anyOf": [
+            {
+             "type": "boolean"
+            },
+            {
+             "type": "string"
+            },
+            {
+             "type": "number"
+            },
+            {
+             "type": "object",
+             "additionalProperties": {}
+            },
+            {
+             "type": "array",
+             "items": {}
+            },
+            {
+             "type": "null"
+            }
+           ]
+          },
+          "caster_checklist": {
+           "anyOf": [
+            {
+             "type": "boolean"
+            },
+            {
+             "type": "string"
+            },
+            {
+             "type": "number"
+            },
+            {
+             "type": "object",
+             "additionalProperties": {}
+            },
+            {
+             "type": "array",
+             "items": {}
+            },
+            {
+             "type": "null"
+            }
+           ]
+          },
+          "created_at": {
+           "type": "string"
+          },
+          "duration_min": {
+           "type": [
+            "number",
+            "null"
+           ]
+          },
+          "ended_at": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "id": {
+           "type": "string"
+          },
+          "match_id": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "obs_scene": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "ord": {
+           "type": "number"
+          },
+          "planned_start_at": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "started_at": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "station_id": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "status": {
+           "type": "string"
+          },
+          "title": {
+           "type": "string"
+          },
+          "type": {
+           "type": "string"
+          },
+          "updated_at": {
+           "type": "string"
+          },
+          "wave_id": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
          },
          "required": [
           "broadcast_message",
@@ -58748,71 +59471,155 @@
           "wave_id"
          ]
         }
-       },
-       "skipped": {
-        "type": "number"
        }
-      },
-      "required": [
-       "created",
-       "segments",
-       "skipped"
       ]
      },
-     {
-      "type": "object",
-      "properties": {
-       "created": {
-        "type": "number"
-       },
-       "segments": {
-        "type": "array",
-        "items": {}
-       },
-       "skipped": {
-        "type": "number"
-       }
-      },
-      "required": [
-       "created",
-       "segments",
-       "skipped"
-      ]
+     "skipped": {
+      "type": "number"
      }
+    },
+    "required": [
+     "created",
+     "segments",
+     "skipped"
     ]
    }
   },
   "POST /api/admin/events/{runId}/segments/from-tournament": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "created": {
-        "type": "number"
+    "type": "object",
+    "properties": {
+     "created": {
+      "type": "number"
+     },
+     "segments": {
+      "anyOf": [
+       {
+        "type": "array",
+        "items": {}
        },
-       "segments": {
+       {
         "type": "array",
         "items": {
          "type": "object",
          "properties": {
-          "broadcast_message": {},
-          "caster_checklist": {},
-          "created_at": {},
-          "duration_min": {},
-          "ended_at": {},
-          "id": {},
-          "match_id": {},
-          "obs_scene": {},
-          "ord": {},
-          "planned_start_at": {},
-          "started_at": {},
-          "station_id": {},
-          "status": {},
-          "title": {},
-          "type": {},
-          "updated_at": {},
-          "wave_id": {}
+          "broadcast_message": {
+           "anyOf": [
+            {
+             "type": "boolean"
+            },
+            {
+             "type": "string"
+            },
+            {
+             "type": "number"
+            },
+            {
+             "type": "object",
+             "additionalProperties": {}
+            },
+            {
+             "type": "array",
+             "items": {}
+            },
+            {
+             "type": "null"
+            }
+           ]
+          },
+          "caster_checklist": {
+           "anyOf": [
+            {
+             "type": "boolean"
+            },
+            {
+             "type": "string"
+            },
+            {
+             "type": "number"
+            },
+            {
+             "type": "object",
+             "additionalProperties": {}
+            },
+            {
+             "type": "array",
+             "items": {}
+            },
+            {
+             "type": "null"
+            }
+           ]
+          },
+          "created_at": {
+           "type": "string"
+          },
+          "duration_min": {
+           "type": [
+            "number",
+            "null"
+           ]
+          },
+          "ended_at": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "id": {
+           "type": "string"
+          },
+          "match_id": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "obs_scene": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "ord": {
+           "type": "number"
+          },
+          "planned_start_at": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "started_at": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "station_id": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "status": {
+           "type": "string"
+          },
+          "title": {
+           "type": "string"
+          },
+          "type": {
+           "type": "string"
+          },
+          "updated_at": {
+           "type": "string"
+          },
+          "wave_id": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
          },
          "required": [
           "broadcast_message",
@@ -58834,37 +59641,17 @@
           "wave_id"
          ]
         }
-       },
-       "skipped": {
-        "type": "number"
        }
-      },
-      "required": [
-       "created",
-       "segments",
-       "skipped"
       ]
      },
-     {
-      "type": "object",
-      "properties": {
-       "created": {
-        "type": "number"
-       },
-       "segments": {
-        "type": "array",
-        "items": {}
-       },
-       "skipped": {
-        "type": "number"
-       }
-      },
-      "required": [
-       "created",
-       "segments",
-       "skipped"
-      ]
+     "skipped": {
+      "type": "number"
      }
+    },
+    "required": [
+     "created",
+     "segments",
+     "skipped"
     ]
    }
   },
@@ -58877,20 +59664,105 @@
       "items": {
        "type": "object",
        "properties": {
-        "broadcast_message": {},
-        "caster_checklist": {},
-        "created_at": {},
-        "duration_min": {},
-        "ended_at": {},
-        "id": {},
-        "match_id": {},
-        "obs_scene": {},
-        "ord": {},
-        "started_at": {},
-        "status": {},
-        "title": {},
-        "type": {},
-        "updated_at": {}
+        "broadcast_message": {
+         "anyOf": [
+          {
+           "type": "boolean"
+          },
+          {
+           "type": "string"
+          },
+          {
+           "type": "number"
+          },
+          {
+           "type": "object",
+           "additionalProperties": {}
+          },
+          {
+           "type": "array",
+           "items": {}
+          },
+          {
+           "type": "null"
+          }
+         ]
+        },
+        "caster_checklist": {
+         "anyOf": [
+          {
+           "type": "boolean"
+          },
+          {
+           "type": "string"
+          },
+          {
+           "type": "number"
+          },
+          {
+           "type": "object",
+           "additionalProperties": {}
+          },
+          {
+           "type": "array",
+           "items": {}
+          },
+          {
+           "type": "null"
+          }
+         ]
+        },
+        "created_at": {
+         "type": "string"
+        },
+        "duration_min": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "ended_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "match_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "obs_scene": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "ord": {
+         "type": "number"
+        },
+        "started_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": "string"
+        },
+        "title": {
+         "type": "string"
+        },
+        "type": {
+         "type": "string"
+        },
+        "updated_at": {
+         "type": "string"
+        }
        },
        "required": [
         "broadcast_message",
@@ -58918,74 +59790,82 @@
   },
   "POST /api/admin/events/{runId}/segments/{segId}/end": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "alreadyEnded": {
-        "type": "boolean"
-       },
-       "segment": {
-        "type": "object",
-        "properties": {
-         "broadcast_message": {},
-         "caster_checklist": {},
-         "created_at": {},
-         "duration_min": {},
-         "ended_at": {},
-         "id": {},
-         "match_id": {},
-         "obs_scene": {},
-         "ord": {},
-         "started_at": {},
-         "status": {},
-         "title": {},
-         "type": {},
-         "updated_at": {}
-        },
-        "required": [
-         "broadcast_message",
-         "caster_checklist",
-         "created_at",
-         "duration_min",
-         "ended_at",
-         "id",
-         "match_id",
-         "obs_scene",
-         "ord",
-         "started_at",
-         "status",
-         "title",
-         "type",
-         "updated_at"
-        ]
-       }
-      },
-      "required": [
-       "alreadyEnded",
-       "segment"
-      ]
+    "type": "object",
+    "properties": {
+     "alreadyEnded": {
+      "type": "boolean"
      },
-     {
-      "type": "object",
-      "properties": {
-       "alreadyEnded": {
-        "type": "boolean"
-       },
-       "segment": {
+     "segment": {
+      "anyOf": [
+       {
         "type": "object",
         "properties": {
-         "broadcast_message": {},
-         "duration_min": {},
-         "ended_at": {},
-         "id": {},
-         "match_id": {},
-         "ord": {},
-         "started_at": {},
-         "status": {},
-         "tenant_id": {},
-         "title": {},
-         "type": {}
+         "broadcast_message": {
+          "anyOf": [
+           {
+            "type": "boolean"
+           },
+           {
+            "type": "string"
+           },
+           {
+            "type": "number"
+           },
+           {
+            "type": "object",
+            "additionalProperties": {}
+           },
+           {
+            "type": "array",
+            "items": {}
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "duration_min": {
+          "type": [
+           "number",
+           "null"
+          ]
+         },
+         "ended_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "id": {
+          "type": "string"
+         },
+         "match_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "ord": {
+          "type": "number"
+         },
+         "started_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "status": {
+          "type": "string"
+         },
+         "tenant_id": {
+          "type": "string"
+         },
+         "title": {
+          "type": "string"
+         },
+         "type": {
+          "type": "string"
+         }
         },
         "required": [
          "broadcast_message",
@@ -59000,39 +59880,109 @@
          "title",
          "type"
         ]
-       }
-      },
-      "required": [
-       "alreadyEnded",
-       "segment"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "alreadyEnded": {
-        "type": "boolean"
        },
-       "segment": {
-        "type": [
-         "object",
-         "null"
-        ],
+       {
+        "type": "object",
         "properties": {
-         "broadcast_message": {},
-         "caster_checklist": {},
-         "created_at": {},
-         "duration_min": {},
-         "ended_at": {},
-         "id": {},
-         "match_id": {},
-         "obs_scene": {},
-         "ord": {},
-         "started_at": {},
-         "status": {},
-         "title": {},
-         "type": {},
-         "updated_at": {}
+         "broadcast_message": {
+          "anyOf": [
+           {
+            "type": "boolean"
+           },
+           {
+            "type": "string"
+           },
+           {
+            "type": "number"
+           },
+           {
+            "type": "object",
+            "additionalProperties": {}
+           },
+           {
+            "type": "array",
+            "items": {}
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "caster_checklist": {
+          "anyOf": [
+           {
+            "type": "boolean"
+           },
+           {
+            "type": "string"
+           },
+           {
+            "type": "number"
+           },
+           {
+            "type": "object",
+            "additionalProperties": {}
+           },
+           {
+            "type": "array",
+            "items": {}
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "created_at": {
+          "type": "string"
+         },
+         "duration_min": {
+          "type": [
+           "number",
+           "null"
+          ]
+         },
+         "ended_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "id": {
+          "type": "string"
+         },
+         "match_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "obs_scene": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "ord": {
+          "type": "number"
+         },
+         "started_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "status": {
+          "type": "string"
+         },
+         "title": {
+          "type": "string"
+         },
+         "type": {
+          "type": "string"
+         },
+         "updated_at": {
+          "type": "string"
+         }
         },
         "required": [
          "broadcast_message",
@@ -59050,42 +60000,130 @@
          "type",
          "updated_at"
         ]
+       },
+       {
+        "type": "null"
        }
-      },
-      "required": [
-       "alreadyEnded",
-       "segment"
       ]
      }
+    },
+    "required": [
+     "alreadyEnded",
+     "segment"
     ]
    }
   },
   "POST /api/admin/events/{runId}/segments/{segId}/skip": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "alreadySkipped": {
-        "type": "boolean"
-       },
-       "segment": {
+    "type": "object",
+    "properties": {
+     "alreadySkipped": {
+      "type": "boolean"
+     },
+     "segment": {
+      "anyOf": [
+       {
         "type": "object",
         "properties": {
-         "broadcast_message": {},
-         "caster_checklist": {},
-         "created_at": {},
-         "duration_min": {},
-         "ended_at": {},
-         "id": {},
-         "match_id": {},
-         "obs_scene": {},
-         "ord": {},
-         "started_at": {},
-         "status": {},
-         "title": {},
-         "type": {},
-         "updated_at": {}
+         "broadcast_message": {
+          "anyOf": [
+           {
+            "type": "boolean"
+           },
+           {
+            "type": "string"
+           },
+           {
+            "type": "number"
+           },
+           {
+            "type": "object",
+            "additionalProperties": {}
+           },
+           {
+            "type": "array",
+            "items": {}
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "caster_checklist": {
+          "anyOf": [
+           {
+            "type": "boolean"
+           },
+           {
+            "type": "string"
+           },
+           {
+            "type": "number"
+           },
+           {
+            "type": "object",
+            "additionalProperties": {}
+           },
+           {
+            "type": "array",
+            "items": {}
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "created_at": {
+          "type": "string"
+         },
+         "duration_min": {
+          "type": [
+           "number",
+           "null"
+          ]
+         },
+         "ended_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "id": {
+          "type": "string"
+         },
+         "match_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "obs_scene": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "ord": {
+          "type": "number"
+         },
+         "started_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "status": {
+          "type": "string"
+         },
+         "title": {
+          "type": "string"
+         },
+         "type": {
+          "type": "string"
+         },
+         "updated_at": {
+          "type": "string"
+         }
         },
         "required": [
          "broadcast_message",
@@ -59103,31 +60141,64 @@
          "type",
          "updated_at"
         ]
-       }
-      },
-      "required": [
-       "alreadySkipped",
-       "segment"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "alreadySkipped": {
-        "type": "boolean"
        },
-       "segment": {
+       {
         "type": "object",
         "properties": {
-         "broadcast_message": {},
-         "duration_min": {},
-         "id": {},
-         "match_id": {},
-         "ord": {},
-         "status": {},
-         "tenant_id": {},
-         "title": {},
-         "type": {}
+         "broadcast_message": {
+          "anyOf": [
+           {
+            "type": "boolean"
+           },
+           {
+            "type": "string"
+           },
+           {
+            "type": "number"
+           },
+           {
+            "type": "object",
+            "additionalProperties": {}
+           },
+           {
+            "type": "array",
+            "items": {}
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "duration_min": {
+          "type": [
+           "number",
+           "null"
+          ]
+         },
+         "id": {
+          "type": "string"
+         },
+         "match_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "ord": {
+          "type": "number"
+         },
+         "status": {
+          "type": "string"
+         },
+         "tenant_id": {
+          "type": "string"
+         },
+         "title": {
+          "type": "string"
+         },
+         "type": {
+          "type": "string"
+         }
         },
         "required": [
          "broadcast_message",
@@ -59140,63 +60211,16 @@
          "title",
          "type"
         ]
-       }
-      },
-      "required": [
-       "alreadySkipped",
-       "segment"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "alreadySkipped": {
-        "type": "boolean"
        },
-       "segment": {
-        "type": [
-         "object",
-         "null"
-        ],
-        "properties": {
-         "broadcast_message": {},
-         "caster_checklist": {},
-         "created_at": {},
-         "duration_min": {},
-         "ended_at": {},
-         "id": {},
-         "match_id": {},
-         "obs_scene": {},
-         "ord": {},
-         "started_at": {},
-         "status": {},
-         "title": {},
-         "type": {},
-         "updated_at": {}
-        },
-        "required": [
-         "broadcast_message",
-         "caster_checklist",
-         "created_at",
-         "duration_min",
-         "ended_at",
-         "id",
-         "match_id",
-         "obs_scene",
-         "ord",
-         "started_at",
-         "status",
-         "title",
-         "type",
-         "updated_at"
-        ]
+       {
+        "type": "null"
        }
-      },
-      "required": [
-       "alreadySkipped",
-       "segment"
       ]
      }
+    },
+    "required": [
+     "alreadySkipped",
+     "segment"
     ]
    }
   },
@@ -59220,26 +60244,55 @@
   },
   "POST /api/admin/events/{runId}/start": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "alreadyStarted": {
-        "type": "boolean"
-       },
-       "run": {
+    "type": "object",
+    "properties": {
+     "alreadyStarted": {
+      "type": "boolean"
+     },
+     "run": {
+      "anyOf": [
+       {
         "type": "object",
         "properties": {
-         "created_at": {},
-         "description": {},
-         "ended_at": {},
-         "id": {},
-         "name": {},
-         "scheduled_at": {},
-         "slug": {},
-         "started_at": {},
-         "status": {},
-         "updated_at": {}
+         "created_at": {
+          "type": "string"
+         },
+         "description": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "ended_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "id": {
+          "type": "string"
+         },
+         "name": {
+          "type": "string"
+         },
+         "scheduled_at": {
+          "type": "string"
+         },
+         "slug": {
+          "type": "string"
+         },
+         "started_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "status": {
+          "type": "string"
+         },
+         "updated_at": {
+          "type": "string"
+         }
         },
         "required": [
          "created_at",
@@ -59253,31 +60306,46 @@
          "status",
          "updated_at"
         ]
-       }
-      },
-      "required": [
-       "alreadyStarted",
-       "run"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "alreadyStarted": {
-        "type": "boolean"
        },
-       "run": {
+       {
         "type": "object",
         "properties": {
-         "description": {},
-         "ended_at": {},
-         "id": {},
-         "name": {},
-         "scheduled_at": {},
-         "slug": {},
-         "started_at": {},
-         "status": {},
-         "tenant_id": {}
+         "description": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "ended_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "id": {
+          "type": "string"
+         },
+         "name": {
+          "type": "string"
+         },
+         "scheduled_at": {
+          "type": "string"
+         },
+         "slug": {
+          "type": "string"
+         },
+         "started_at": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "status": {
+          "type": "string"
+         },
+         "tenant_id": {
+          "type": "string"
+         }
         },
         "required": [
          "description",
@@ -59290,55 +60358,16 @@
          "status",
          "tenant_id"
         ]
-       }
-      },
-      "required": [
-       "alreadyStarted",
-       "run"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "alreadyStarted": {
-        "type": "boolean"
        },
-       "run": {
-        "type": [
-         "object",
-         "null"
-        ],
-        "properties": {
-         "created_at": {},
-         "description": {},
-         "ended_at": {},
-         "id": {},
-         "name": {},
-         "scheduled_at": {},
-         "slug": {},
-         "started_at": {},
-         "status": {},
-         "updated_at": {}
-        },
-        "required": [
-         "created_at",
-         "description",
-         "ended_at",
-         "id",
-         "name",
-         "scheduled_at",
-         "slug",
-         "started_at",
-         "status",
-         "updated_at"
-        ]
+       {
+        "type": "null"
        }
-      },
-      "required": [
-       "alreadyStarted",
-       "run"
       ]
      }
+    },
+    "required": [
+     "alreadyStarted",
+     "run"
     ]
    }
   },
@@ -59349,16 +60378,42 @@
      "station": {
       "type": "object",
       "properties": {
-       "created_at": {},
-       "event_run_id": {},
-       "id": {},
-       "name": {},
-       "notes": {},
-       "ord": {},
-       "status": {},
-       "stream_url": {},
-       "tenant_id": {},
-       "updated_at": {}
+       "created_at": {
+        "type": "string"
+       },
+       "event_run_id": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "notes": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "ord": {
+        "type": "number"
+       },
+       "status": {
+        "type": "string"
+       },
+       "stream_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "tenant_id": {
+        "type": "string"
+       },
+       "updated_at": {
+        "type": "string"
+       }
       },
       "required": [
        "created_at",
@@ -59386,18 +60441,54 @@
      "wave": {
       "type": "object",
       "properties": {
-       "created_at": {},
-       "duration_min": {},
-       "ended_at": {},
-       "event_run_id": {},
-       "id": {},
-       "ord": {},
-       "planned_start_at": {},
-       "started_at": {},
-       "status": {},
-       "tenant_id": {},
-       "title": {},
-       "updated_at": {}
+       "created_at": {
+        "type": "string"
+       },
+       "duration_min": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "ended_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "event_run_id": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "ord": {
+        "type": "number"
+       },
+       "planned_start_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "started_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string"
+       },
+       "tenant_id": {
+        "type": "string"
+       },
+       "title": {
+        "type": "string"
+       },
+       "updated_at": {
+        "type": "string"
+       }
       },
       "required": [
        "created_at",
@@ -59432,18 +60523,54 @@
       "items": {
        "type": "object",
        "properties": {
-        "created_at": {},
-        "duration_min": {},
-        "ended_at": {},
-        "event_run_id": {},
-        "id": {},
-        "ord": {},
-        "planned_start_at": {},
-        "started_at": {},
-        "status": {},
-        "tenant_id": {},
-        "title": {},
-        "updated_at": {}
+        "created_at": {
+         "type": "string"
+        },
+        "duration_min": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "ended_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "event_run_id": {
+         "type": "string"
+        },
+        "id": {
+         "type": "string"
+        },
+        "ord": {
+         "type": "number"
+        },
+        "planned_start_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "started_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": "string"
+        },
+        "tenant_id": {
+         "type": "string"
+        },
+        "title": {
+         "type": "string"
+        },
+        "updated_at": {
+         "type": "string"
+        }
        },
        "required": [
         "created_at",
@@ -65907,57 +67034,27 @@
   },
   "POST /api/admin/tcg/grant": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "balance": {
-        "type": "number"
-       },
-       "entryId": {
-        "type": "string"
-       },
-       "ok": {
-        "type": "boolean",
-        "const": true
-       },
-       "replayed": {
-        "type": "boolean",
-        "const": false
-       }
-      },
-      "required": [
-       "balance",
-       "entryId",
-       "ok",
-       "replayed"
-      ]
+    "type": "object",
+    "properties": {
+     "balance": {
+      "type": "number"
      },
-     {
-      "type": "object",
-      "properties": {
-       "balance": {
-        "type": "number"
-       },
-       "entryId": {
-        "type": "string"
-       },
-       "ok": {
-        "type": "boolean",
-        "const": true
-       },
-       "replayed": {
-        "type": "boolean",
-        "const": true
-       }
-      },
-      "required": [
-       "balance",
-       "entryId",
-       "ok",
-       "replayed"
-      ]
+     "entryId": {
+      "type": "string"
+     },
+     "ok": {
+      "type": "boolean",
+      "const": true
+     },
+     "replayed": {
+      "type": "boolean"
      }
+    },
+    "required": [
+     "balance",
+     "entryId",
+     "ok",
+     "replayed"
     ]
    }
   },
@@ -66026,7 +67123,10 @@
       "type": "number"
      },
      "tournamentId": {
-      "type": "string"
+      "type": [
+       "string",
+       "null"
+      ]
      }
     },
     "required": [
@@ -66827,8 +67927,12 @@
    "200": {
     "type": "object",
     "properties": {
-     "id": {},
-     "status": {}
+     "id": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     }
     },
     "required": [
      "id",
@@ -66840,8 +67944,12 @@
    "200": {
     "type": "object",
     "properties": {
-     "id": {},
-     "status": {}
+     "id": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     }
     },
     "required": [
      "id",
@@ -66856,16 +67964,39 @@
      "tenant": {
       "type": "object",
       "properties": {
-       "created_at": {},
-       "default_locale": {},
-       "id": {},
-       "is_active": {},
-       "name": {},
-       "plan": {},
-       "plan_expires_at": {},
-       "plan_is_trial": {},
-       "plan_status": {},
-       "slug": {}
+       "created_at": {
+        "type": "string"
+       },
+       "default_locale": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "is_active": {
+        "type": "boolean"
+       },
+       "name": {
+        "type": "string"
+       },
+       "plan": {
+        "type": "string"
+       },
+       "plan_expires_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "plan_is_trial": {
+        "type": "boolean"
+       },
+       "plan_status": {
+        "type": "string"
+       },
+       "slug": {
+        "type": "string"
+       }
       },
       "required": [
        "created_at",
@@ -67064,12 +68195,24 @@
      "tenant": {
       "type": "object",
       "properties": {
-       "created_at": {},
-       "id": {},
-       "lifecycle_state": {},
-       "name": {},
-       "plan": {},
-       "slug": {}
+       "created_at": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "lifecycle_state": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "plan": {
+        "type": "string"
+       },
+       "slug": {
+        "type": "string"
+       }
       },
       "required": [
        "created_at",
@@ -67090,84 +68233,7 @@
    }
   },
   "POST /api/admin/tenants/{id}/guilds": {
-   "200": {
-    "type": "object",
-    "properties": {
-     "guild_id": {
-      "type": "string"
-     },
-     "is_primary": {
-      "type": "boolean"
-     },
-     "status": {
-      "type": "string"
-     },
-     "tenant": {
-      "type": "object",
-      "properties": {
-       "id": {
-        "type": "string"
-       },
-       "name": {
-        "type": "string"
-       },
-       "slug": {
-        "type": "string"
-       }
-      },
-      "required": [
-       "id",
-       "name",
-       "slug"
-      ]
-     }
-    },
-    "required": [
-     "guild_id",
-     "is_primary",
-     "status",
-     "tenant"
-    ]
-   },
-   "201": {
-    "type": "object",
-    "properties": {
-     "guild_id": {
-      "type": "string"
-     },
-     "is_primary": {
-      "type": "boolean"
-     },
-     "status": {
-      "type": "string"
-     },
-     "tenant": {
-      "type": "object",
-      "properties": {
-       "id": {
-        "type": "string"
-       },
-       "name": {
-        "type": "string"
-       },
-       "slug": {
-        "type": "string"
-       }
-      },
-      "required": [
-       "id",
-       "name",
-       "slug"
-      ]
-     }
-    },
-    "required": [
-     "guild_id",
-     "is_primary",
-     "status",
-     "tenant"
-    ]
-   }
+   "200": {}
   },
   "POST /api/admin/tenants/{id}/invitations": {
    "201": {
@@ -67186,7 +68252,8 @@
       "type": "object",
       "properties": {
        "status": {
-        "type": "string"
+        "type": "string",
+        "const": "pending"
        }
       },
       "required": [
@@ -67211,12 +68278,30 @@
        "null"
       ],
       "properties": {
-       "id": {},
-       "is_active": {},
-       "lifecycle_reason": {},
-       "lifecycle_state": {},
-       "purge_after": {},
-       "slug": {}
+       "id": {
+        "type": "string"
+       },
+       "is_active": {
+        "type": "boolean"
+       },
+       "lifecycle_reason": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "lifecycle_state": {
+        "type": "string"
+       },
+       "purge_after": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "slug": {
+        "type": "string"
+       }
       },
       "required": [
        "id",
@@ -70045,9 +71130,7 @@
      }
     },
     "required": [
-     "info",
-     "success",
-     "teamId"
+     "success"
     ]
    }
   },
@@ -70061,12 +71144,30 @@
      "subscription": {
       "type": "object",
       "properties": {
-       "created_at": {},
-       "description": {},
-       "enabled": {},
-       "event_types": {},
-       "id": {},
-       "url": {}
+       "created_at": {
+        "type": "string"
+       },
+       "description": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "enabled": {
+        "type": "boolean"
+       },
+       "event_types": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "id": {
+        "type": "string"
+       },
+       "url": {
+        "type": "string"
+       }
       },
       "required": [
        "created_at",
@@ -77003,16 +78104,45 @@
    "200": {
     "type": "object",
     "properties": {
-     "created_at": {},
-     "description": {},
-     "ended_at": {},
-     "id": {},
-     "name": {},
-     "scheduled_at": {},
-     "slug": {},
-     "started_at": {},
-     "status": {},
-     "updated_at": {}
+     "created_at": {
+      "type": "string"
+     },
+     "description": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "ended_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "id": {
+      "type": "string"
+     },
+     "name": {
+      "type": "string"
+     },
+     "scheduled_at": {
+      "type": "string"
+     },
+     "slug": {
+      "type": "string"
+     },
+     "started_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "status": {
+      "type": "string"
+     },
+     "updated_at": {
+      "type": "string"
+     }
     },
     "required": [
      "created_at",
@@ -77032,23 +78162,123 @@
    "200": {
     "type": "object",
     "properties": {
-     "broadcast_message": {},
-     "caster_checklist": {},
-     "created_at": {},
-     "duration_min": {},
-     "ended_at": {},
-     "id": {},
-     "match_id": {},
-     "obs_scene": {},
-     "ord": {},
-     "planned_start_at": {},
-     "started_at": {},
-     "station_id": {},
-     "status": {},
-     "title": {},
-     "type": {},
-     "updated_at": {},
-     "wave_id": {}
+     "broadcast_message": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "number"
+       },
+       {
+        "type": "object",
+        "additionalProperties": {}
+       },
+       {
+        "type": "array",
+        "items": {}
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "caster_checklist": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "number"
+       },
+       {
+        "type": "object",
+        "additionalProperties": {}
+       },
+       {
+        "type": "array",
+        "items": {}
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "created_at": {
+      "type": "string"
+     },
+     "duration_min": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "ended_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "id": {
+      "type": "string"
+     },
+     "match_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "obs_scene": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "ord": {
+      "type": "number"
+     },
+     "planned_start_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "started_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "station_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "status": {
+      "type": "string"
+     },
+     "title": {
+      "type": "string"
+     },
+     "type": {
+      "type": "string"
+     },
+     "updated_at": {
+      "type": "string"
+     },
+     "wave_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
     },
     "required": [
      "broadcast_message",
@@ -77078,16 +78308,42 @@
      "station": {
       "type": "object",
       "properties": {
-       "created_at": {},
-       "event_run_id": {},
-       "id": {},
-       "name": {},
-       "notes": {},
-       "ord": {},
-       "status": {},
-       "stream_url": {},
-       "tenant_id": {},
-       "updated_at": {}
+       "created_at": {
+        "type": "string"
+       },
+       "event_run_id": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "notes": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "ord": {
+        "type": "number"
+       },
+       "status": {
+        "type": "string"
+       },
+       "stream_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "tenant_id": {
+        "type": "string"
+       },
+       "updated_at": {
+        "type": "string"
+       }
       },
       "required": [
        "created_at",
@@ -77115,18 +78371,54 @@
      "wave": {
       "type": "object",
       "properties": {
-       "created_at": {},
-       "duration_min": {},
-       "ended_at": {},
-       "event_run_id": {},
-       "id": {},
-       "ord": {},
-       "planned_start_at": {},
-       "started_at": {},
-       "status": {},
-       "tenant_id": {},
-       "title": {},
-       "updated_at": {}
+       "created_at": {
+        "type": "string"
+       },
+       "duration_min": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "ended_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "event_run_id": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "ord": {
+        "type": "number"
+       },
+       "planned_start_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "started_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string"
+       },
+       "tenant_id": {
+        "type": "string"
+       },
+       "title": {
+        "type": "string"
+       },
+       "updated_at": {
+        "type": "string"
+       }
       },
       "required": [
        "created_at",
@@ -77185,10 +78477,12 @@
     "type": "object",
     "properties": {
      "ok": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      },
      "secretSet": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -77229,7 +78523,10 @@
         ]
        },
        "stage_id": {
-        "type": "string"
+        "type": [
+         "string",
+         "null"
+        ]
        },
        "status": {
         "type": "string"
@@ -78131,7 +79428,234 @@
    "200": {
     "type": "object",
     "properties": {
-     "config": {}
+     "config": {
+      "anyOf": [
+       {
+        "type": "object",
+        "additionalProperties": {}
+       },
+       {
+        "type": "object",
+        "properties": {
+         "captain_role_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "created_at": {
+          "type": "string"
+         },
+         "disputes_forum_channel_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "disputes_forum_tag_open_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "disputes_forum_tag_pending_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "disputes_forum_tag_resolved_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "extras": {
+          "anyOf": [
+           {
+            "type": "boolean"
+           },
+           {
+            "type": "string"
+           },
+           {
+            "type": "number"
+           },
+           {
+            "type": "object",
+            "additionalProperties": {}
+           },
+           {
+            "type": "array",
+            "items": {}
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "free_players_channel_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "guild_id": {
+          "type": "string"
+         },
+         "matches_live_channel_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "member_leave_channel_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "mvp_results_channel_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "news_ingest_channel_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "placement_roles": {
+          "anyOf": [
+           {
+            "type": "boolean"
+           },
+           {
+            "type": "string"
+           },
+           {
+            "type": "number"
+           },
+           {
+            "type": "object",
+            "additionalProperties": {}
+           },
+           {
+            "type": "array",
+            "items": {}
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "scrims_announce_channel_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "staff_log_channel_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "staff_role_admin_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "staff_role_caster_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "staff_role_owner_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "substitute_role_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "team_openings_channel_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "teams_voice_category_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "updated_at": {
+          "type": "string"
+         },
+         "welcome_channel_id": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "welcome_dm_message": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "welcome_enabled": {
+          "type": "boolean"
+         },
+         "welcome_message": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
+        },
+        "required": [
+         "captain_role_id",
+         "created_at",
+         "disputes_forum_channel_id",
+         "disputes_forum_tag_open_id",
+         "disputes_forum_tag_pending_id",
+         "disputes_forum_tag_resolved_id",
+         "extras",
+         "free_players_channel_id",
+         "guild_id",
+         "matches_live_channel_id",
+         "member_leave_channel_id",
+         "mvp_results_channel_id",
+         "news_ingest_channel_id",
+         "placement_roles",
+         "scrims_announce_channel_id",
+         "staff_log_channel_id",
+         "staff_role_admin_id",
+         "staff_role_caster_id",
+         "staff_role_owner_id",
+         "substitute_role_id",
+         "team_openings_channel_id",
+         "teams_voice_category_id",
+         "updated_at",
+         "welcome_channel_id",
+         "welcome_dm_message",
+         "welcome_enabled",
+         "welcome_message"
+        ]
+       }
+      ]
+     }
     },
     "required": [
      "config"
@@ -78140,33 +79664,49 @@
   },
   "PUT /api/admin/tenants/{id}/nonprofit-rna": {
    "200": {
-    "type": "object",
-    "properties": {
-     "orgName": {
-      "type": [
-       "string",
-       "null"
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "orgName": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "pendingReason": {
+        "type": "string",
+        "enum": [
+         "directory_unavailable",
+         "inactive",
+         "not_in_directory"
+        ]
+       },
+       "rna": {
+        "type": "string"
+       },
+       "verified": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "orgName",
+       "rna",
+       "verified"
       ]
      },
-     "pendingReason": {
-      "type": "string",
-      "enum": [
-       "directory_unavailable",
-       "inactive",
-       "not_in_directory"
+     {
+      "type": "object",
+      "properties": {
+       "removed": {
+        "type": "boolean",
+        "const": true
+       }
+      },
+      "required": [
+       "removed"
       ]
-     },
-     "rna": {
-      "type": "string"
-     },
-     "verified": {
-      "type": "boolean"
      }
-    },
-    "required": [
-     "orgName",
-     "rna",
-     "verified"
     ]
    }
   },
@@ -78175,13 +79715,16 @@
     "type": "object",
     "properties": {
      "clientKeySet": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      },
      "clientSecretSet": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      },
      "ok": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -79247,8 +80790,6 @@
   "pages/api/admin/matches/[matchId]/mvp-public.ts:125",
   "pages/api/admin/matches/[matchId]/mvp-public.ts:137",
   "pages/api/admin/matches/[matchId]/mvp-public.ts:149",
-  "pages/api/admin/tcg/fanart.ts:233",
-  "pages/api/admin/tcg/welcome-gift.ts:72",
   "pages/api/cron/domain-verify.ts:123",
   "pages/api/cron/quota-alerts.ts:114",
   "pages/api/cron/quota-alerts.ts:211",

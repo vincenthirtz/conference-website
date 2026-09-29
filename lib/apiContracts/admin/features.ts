@@ -101,6 +101,101 @@ import {
   MapStatsQuery,
   TeamStatsQuery,
 } from '../../../features/admin/stats/schemas';
+import {
+  CreateCueDoc,
+  CreateRunDoc,
+  CreateSegmentDoc,
+  CreateStationDoc,
+  CreateWaveDoc,
+  CueIdQuery,
+  CueListQuery,
+  FromScrimDoc,
+  FromTournamentDoc,
+  ReorderSegmentsDoc,
+  ReorderWavesDoc,
+  RunIdQuery,
+  RunListQuery,
+  SegmentIdQuery,
+  StationIdQuery,
+  UpdateRunDoc,
+  UpdateSegmentDoc,
+  UpdateStationDoc,
+  UpdateWaveDoc,
+  WaveIdQuery,
+} from '../../../features/admin/events/schemas';
+import { BroadcastStatePatchDoc } from '../../../features/admin/diffusion/schemas';
+import {
+  CampaignIdQuery,
+  CampaignInputDoc,
+  CampaignListQuery,
+  CampaignPreviewQuery,
+  CampaignScheduleDoc,
+  CampaignSendDoc,
+} from '../../../features/admin/communications/schemas';
+import {
+  MapPoolCreateDoc,
+  MapPoolIdQuery,
+  MapPoolImportDoc,
+  MapPoolListQuery,
+  MapPoolPatchDoc,
+} from '../../../features/admin/map-pool/schemas';
+import {
+  PresetCreateDoc,
+  PresetIdQuery,
+  PresetListQuery,
+  PresetPatchDoc,
+} from '../../../features/admin/custom-game-presets/schemas';
+import {
+  LobbyIdQuery,
+  PlacementsDoc,
+} from '../../../features/admin/lobbies/schemas';
+import {
+  InstagramSecretDoc,
+  TiktokCredentialsDoc,
+} from '../../../features/admin/social/schemas';
+import {
+  CreateUserDoc,
+  PlayerActionDoc,
+  StaffPermissionsDoc,
+  UserIdPathQuery,
+  UsersManageDeleteDoc,
+  UsersManageListQuery,
+  UsersManagePatchDoc,
+} from '../../../features/admin/users/schemas';
+import {
+  TcgCatalogueQuery,
+  TcgEngagementQuery,
+  TcgFanartDecisionDoc,
+  TcgFanartListQuery,
+  TcgGrantDoc,
+  TcgPhotoDecisionDoc,
+  TcgPlayersQuery,
+} from '../../../features/admin/tcg/schemas';
+
+import {
+  ActiveTenantDoc,
+  ApiTokenPatchDoc,
+  AttachGuildDoc,
+  DiscordConfigDoc,
+  IdQuery as TenantsIdQuery,
+  InvitationCreateDoc,
+  LifecycleDoc,
+  NonprofitRnaDoc,
+  PlanCheckoutDoc,
+  RotateSecretsDoc,
+  TenantApiTokensQuery,
+  TenantCreateDoc,
+  TenantGuildQuery,
+  TenantInvitationIdQuery,
+  TenantPatchDoc,
+  TenantRequestListQuery,
+  TenantRequestRejectDoc,
+  TenantStaffAddDoc,
+  TenantStaffIdQuery,
+  TenantUsageQuery,
+  WebhookCreateDoc,
+  WebhookPatchDoc,
+} from '../../../features/admin/tenants/schemas';
 
 export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   'admin.twitchChannels.create': { schema: TwitchChannelBody, io: 'input' },
@@ -188,6 +283,126 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
     io: 'input',
   },
   'admin.circuit-partners/[id].decision': { schema: DecisionDoc, io: 'input' },
+  // Run-of-show, régie et campagnes email (vague 2). Corps « historiques » :
+  // looseBody (champs nommés), validés par le service.
+  'admin.events.create': { schema: CreateRunDoc, io: 'input' },
+  'admin.events/[runId].update': { schema: UpdateRunDoc, io: 'input' },
+  'admin.events/[runId]/segments.create': {
+    schema: CreateSegmentDoc,
+    io: 'input',
+  },
+  'admin.events/[runId]/segments/[segId].update': {
+    schema: UpdateSegmentDoc,
+    io: 'input',
+  },
+  'admin.events/[runId]/segments/reorder.body': {
+    schema: ReorderSegmentsDoc,
+    io: 'input',
+  },
+  'admin.events/[runId]/segments/from-scrim.body': {
+    schema: FromScrimDoc,
+    io: 'input',
+  },
+  'admin.events/[runId]/segments/from-tournament.body': {
+    schema: FromTournamentDoc,
+    io: 'input',
+  },
+  'admin.events/[runId]/cues.create': { schema: CreateCueDoc, io: 'input' },
+  'admin.events/[runId]/waves.create': { schema: CreateWaveDoc, io: 'input' },
+  'admin.events/[runId]/waves/[waveId].update': {
+    schema: UpdateWaveDoc,
+    io: 'input',
+  },
+  'admin.events/[runId]/waves/reorder.body': {
+    schema: ReorderWavesDoc,
+    io: 'input',
+  },
+  'admin.events/[runId]/stations.create': {
+    schema: CreateStationDoc,
+    io: 'input',
+  },
+  'admin.events/[runId]/stations/[stationId].update': {
+    schema: UpdateStationDoc,
+    io: 'input',
+  },
+  'admin.broadcast/state.body': { schema: BroadcastStatePatchDoc, io: 'input' },
+  'admin.broadcast.create': { schema: CampaignInputDoc, io: 'input' },
+  'admin.broadcast/[campaignId].send': { schema: CampaignSendDoc, io: 'input' },
+  'admin.broadcast/[campaignId].update': {
+    schema: CampaignInputDoc,
+    io: 'input',
+  },
+  'admin.broadcast/[campaignId]/schedule.body': {
+    schema: CampaignScheduleDoc,
+    io: 'input',
+  },
+  // Vague serveur 2 / C : map-pool, presets, lobbies, social, users, tcg.
+  'admin.map-pool.create': { schema: MapPoolCreateDoc, io: 'input' },
+  'admin.map-pool/[mapId].update': { schema: MapPoolPatchDoc, io: 'input' },
+  'admin.map-pool/import-defaults.body': {
+    schema: MapPoolImportDoc,
+    io: 'input',
+  },
+  'admin.custom-game-presets.create': { schema: PresetCreateDoc, io: 'input' },
+  'admin.custom-game-presets/[presetId].update': {
+    schema: PresetPatchDoc,
+    io: 'input',
+  },
+  'admin.lobbies/[lobbyId]/placements.body': {
+    schema: PlacementsDoc,
+    io: 'input',
+  },
+  'admin.instagram/secret.body': { schema: InstagramSecretDoc, io: 'input' },
+  'admin.tiktok/credentials.body': {
+    schema: TiktokCredentialsDoc,
+    io: 'input',
+  },
+  'admin.users.create': { schema: CreateUserDoc, io: 'input' },
+  'admin.users/manage.update': { schema: UsersManagePatchDoc, io: 'input' },
+  'admin.users/manage.delete': { schema: UsersManageDeleteDoc, io: 'input' },
+  'admin.users/[userId]/permissions.update': {
+    schema: StaffPermissionsDoc,
+    io: 'input',
+  },
+  'admin.users/[userId]/actions.body': { schema: PlayerActionDoc, io: 'input' },
+  'admin.tcg/grant.body': { schema: TcgGrantDoc, io: 'input' },
+  'admin.tcg/photos.update': { schema: TcgPhotoDecisionDoc, io: 'input' },
+  'admin.tcg/fanart.update': { schema: TcgFanartDecisionDoc, io: 'input' },
+  // Espaces, onboarding, clés d’API, webhooks (features/admin/tenants) :
+  // corps « historiques » NOMMÉS, validés par le service (codes d’origine).
+  'admin.active-tenant.body': { schema: ActiveTenantDoc, io: 'input' },
+  'admin.tenants.create': { schema: TenantCreateDoc, io: 'input' },
+  'admin.tenants/[id].update': { schema: TenantPatchDoc, io: 'input' },
+  'admin.tenants/[id]/lifecycle.body': { schema: LifecycleDoc, io: 'input' },
+  'admin.tenants/[id]/rotate-secrets.body': {
+    schema: RotateSecretsDoc,
+    io: 'input',
+  },
+  'admin.tenants/[id]/guilds.body': { schema: AttachGuildDoc, io: 'input' },
+  'admin.tenants/[id]/plan-checkout.body': {
+    schema: PlanCheckoutDoc,
+    io: 'input',
+  },
+  'admin.tenants/[id]/nonprofit-rna.body': {
+    schema: NonprofitRnaDoc,
+    io: 'input',
+  },
+  'admin.tenants/[id]/staff.create': { schema: TenantStaffAddDoc, io: 'input' },
+  'admin.tenants/[id]/invitations.create': {
+    schema: InvitationCreateDoc,
+    io: 'input',
+  },
+  'admin.tenants/[id]/discord-config/[guildId].update': {
+    schema: DiscordConfigDoc,
+    io: 'input',
+  },
+  'admin.tenant-requests/[id]/reject.body': {
+    schema: TenantRequestRejectDoc,
+    io: 'input',
+  },
+  'admin.api-tokens/[id].update': { schema: ApiTokenPatchDoc, io: 'input' },
+  'admin.webhooks.create': { schema: WebhookCreateDoc, io: 'input' },
+  'admin.webhooks/[id].update': { schema: WebhookPatchDoc, io: 'input' },
 };
 
 export const ADMIN_FEATURE_QUERY_SCHEMAS: Record<string, ApiContractEntry> = {
@@ -291,4 +506,77 @@ export const ADMIN_FEATURE_QUERY_SCHEMAS: Record<string, ApiContractEntry> = {
   },
   'admin.stats/teams.query': { schema: TeamStatsQuery, io: 'input' },
   'admin.stats/maps.query': { schema: MapStatsQuery, io: 'input' },
+  // Run-of-show et campagnes email (vague 2). `events/[runId]` couvre toutes
+  // les sous-routes qui ne lisent que runId ; `broadcast/[campaignId]` couvre
+  // envoi, duplication, planning et vague.
+  'admin.events.query': { schema: RunListQuery, io: 'input' },
+  'admin.events/[runId].query': { schema: RunIdQuery, io: 'input' },
+  'admin.events/[runId]/cues.query': { schema: CueListQuery, io: 'input' },
+  'admin.events/[runId]/cues/[cueId].query': {
+    schema: CueIdQuery,
+    io: 'input',
+  },
+  'admin.events/[runId]/segments/[segId].query': {
+    schema: SegmentIdQuery,
+    io: 'input',
+  },
+  'admin.events/[runId]/waves/[waveId].query': {
+    schema: WaveIdQuery,
+    io: 'input',
+  },
+  'admin.events/[runId]/stations/[stationId].query': {
+    schema: StationIdQuery,
+    io: 'input',
+  },
+  'admin.broadcast.query': { schema: CampaignListQuery, io: 'input' },
+  'admin.broadcast/[campaignId].query': {
+    schema: CampaignIdQuery,
+    io: 'input',
+  },
+  'admin.broadcast/[campaignId]/preview.query': {
+    schema: CampaignPreviewQuery,
+    io: 'input',
+  },
+  // Vague serveur 2 / C : map-pool, presets, lobbies, users, tcg.
+  'admin.map-pool.query': { schema: MapPoolListQuery, io: 'input' },
+  'admin.map-pool/[mapId].query': { schema: MapPoolIdQuery, io: 'input' },
+  'admin.custom-game-presets.query': { schema: PresetListQuery, io: 'input' },
+  'admin.custom-game-presets/[presetId].query': {
+    schema: PresetIdQuery,
+    io: 'input',
+  },
+  // suppression d'un lobby et saisie de ses placements partagent le schéma.
+  'admin.lobbies/[lobbyId].query': { schema: LobbyIdQuery, io: 'input' },
+  'admin.users/manage.query': { schema: UsersManageListQuery, io: 'input' },
+  // permissions et actions d'un compte partagent le même schéma.
+  'admin.users/[userId].query': { schema: UserIdPathQuery, io: 'input' },
+  'admin.tcg/catalogue.query': { schema: TcgCatalogueQuery, io: 'input' },
+  'admin.tcg/engagement.query': { schema: TcgEngagementQuery, io: 'input' },
+  'admin.tcg/players.query': { schema: TcgPlayersQuery, io: 'input' },
+  'admin.tcg/fanart.query': { schema: TcgFanartListQuery, io: 'input' },
+  // Espaces, onboarding, clés d’API, webhooks (features/admin/tenants).
+  // Un seul schéma pour toutes les routes à `[id]` seul (espace, demande,
+  // clé, webhook) ; bot-invite partage celui des routes `[id]/[guildId]`.
+  'admin.tenants/[id].query': { schema: TenantsIdQuery, io: 'input' },
+  'admin.tenants/[id]/discord-config/[guildId].query': {
+    schema: TenantGuildQuery,
+    io: 'input',
+  },
+  'admin.tenants/[id]/api-tokens.query': {
+    schema: TenantApiTokensQuery,
+    io: 'input',
+  },
+  'admin.tenants/[id]/staff/[staffId].query': {
+    schema: TenantStaffIdQuery,
+    io: 'input',
+  },
+  'admin.tenants/[id]/invitations/[invitationId].query': {
+    schema: TenantInvitationIdQuery,
+    io: 'input',
+  },
+  'admin.tenants/usage.query': { schema: TenantUsageQuery, io: 'input' },
+  'admin.tenant-requests.query': {
+    schema: TenantRequestListQuery,
+    io: 'input',
+  },
 };

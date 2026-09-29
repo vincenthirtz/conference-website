@@ -12,6 +12,7 @@ get:
     computed (`pending` / `accepted` / `revoked` / `expired`) rather than
     stored: an expiry needs a date, not a cron.
   operationId: adminListTenantInvitations
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:
@@ -36,6 +37,7 @@ post:
     for the same address is revoked first, so a single revoke always closes
     the door. The invited role may not exceed the inviter's own role.
   operationId: adminCreateTenantInvitation
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:
@@ -45,6 +47,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.tenants/[id]/invitations.create
           type: object
           required: [email, role]
           properties:

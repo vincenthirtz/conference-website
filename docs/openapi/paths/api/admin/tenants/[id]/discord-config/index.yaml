@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Read Discord configuration (linked guilds, channels, roles).
   operationId: adminGetTenantDiscordConfig
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:

@@ -7,6 +7,7 @@ parameters:
       type: string
       format: uuid
 patch:
+  x-zod-query: admin.map-pool/[mapId].query
   summary: Update a map pool entry (partial).
   description: >
     Met à jour une entrée du pool tenant. 404 si la ligne n'appartient pas au
@@ -21,6 +22,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.map-pool/[mapId].update
           type: object
           properties:
             map_name:
@@ -52,6 +54,7 @@ patch:
     '404':
       $ref: '#/components/responses/NotFound'
 delete:
+  x-zod-query: admin.map-pool/[mapId].query
   summary: Delete a map pool entry.
   description: >
     Supprime une entrée du pool tenant. 404 si la ligne n'appartient pas au

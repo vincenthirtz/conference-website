@@ -1,4 +1,5 @@
 get:
+  x-zod-query: admin.tcg/fanart.query
   tags:
     - admin/tcg
   summary: File de moderation des cartes fan art.
@@ -48,6 +49,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.tcg/fanart.update
           type: object
           required: [action, id]
           properties:

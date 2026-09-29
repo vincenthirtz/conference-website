@@ -8,6 +8,7 @@ parameters:
 post:
   summary: Mark a tenant request as expired.
   operationId: adminExpireTenantRequest
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:

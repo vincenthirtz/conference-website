@@ -16,6 +16,7 @@ post:
       application/json:
         schema:
           $ref: '#/components/schemas/CreateEventSegmentInput'
+          x-zod: admin.events/[runId]/segments.create
   responses:
     '201':
       description: Segment created.
@@ -29,3 +30,4 @@ post:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: admin.events/[runId].query

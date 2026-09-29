@@ -44,6 +44,7 @@ patch:
             ended_at:
               type: [string, 'null']
               format: date-time
+          x-zod: admin.events/[runId]/waves/[waveId].update
   responses:
     '200':
       description: Updated.
@@ -64,6 +65,7 @@ patch:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: admin.events/[runId]/waves/[waveId].query
 put:
   summary: Patch wave fields (alias of PATCH).
   description: Requires `manager` role. Same partial-update semantics as PATCH.
@@ -79,6 +81,7 @@ put:
         schema:
           type: object
           additionalProperties: true
+          x-zod: admin.events/[runId]/waves/[waveId].update
   responses:
     '200':
       description: Updated.
@@ -99,6 +102,7 @@ put:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: admin.events/[runId]/waves/[waveId].query
 delete:
   summary: Delete a wave.
   description: |
@@ -121,3 +125,4 @@ delete:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: admin.events/[runId]/waves/[waveId].query

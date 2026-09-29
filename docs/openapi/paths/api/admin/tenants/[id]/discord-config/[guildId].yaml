@@ -14,6 +14,7 @@ parameters:
 put:
   summary: Replace Discord config for a specific guild.
   operationId: adminPutTenantDiscordConfigGuild
+  x-zod-query: admin.tenants/[id]/discord-config/[guildId].query
   tags:
     - admin/tenants
   security:
@@ -23,6 +24,7 @@ put:
     content:
       application/json:
         schema:
+          x-zod: admin.tenants/[id]/discord-config/[guildId].update
           type: object
           additionalProperties: true
   responses:

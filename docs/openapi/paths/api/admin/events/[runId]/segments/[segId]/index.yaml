@@ -19,6 +19,7 @@ get:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: admin.events/[runId]/segments/[segId].query
 patch:
   summary: Patch segment fields.
   operationId: adminPatchEventSegment
@@ -33,6 +34,7 @@ patch:
         schema:
           type: object
           additionalProperties: true
+          x-zod: admin.events/[runId]/segments/[segId].update
   responses:
     '200':
       description: Updated.
@@ -42,6 +44,7 @@ patch:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+  x-zod-query: admin.events/[runId]/segments/[segId].query
 put:
   summary: Replace a segment.
   operationId: adminReplaceEventSegment
@@ -56,6 +59,7 @@ put:
         schema:
           type: object
           additionalProperties: true
+          x-zod: admin.events/[runId]/segments/[segId].update
   responses:
     '200':
       description: Replaced.
@@ -65,6 +69,7 @@ put:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+  x-zod-query: admin.events/[runId]/segments/[segId].query
 delete:
   summary: Delete a segment.
   operationId: adminDeleteEventSegment
@@ -79,3 +84,4 @@ delete:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+  x-zod-query: admin.events/[runId]/segments/[segId].query

@@ -15,22 +15,18 @@ post:
         schema:
           type: object
           required:
-            - order
+            - orderedIds
+          x-zod: admin.events/[runId]/segments/reorder.body
           properties:
-            order:
+            orderedIds:
               type: array
+              minItems: 1
+              maxItems: 200
+              description: TOUS les segments du run, une fois chacun, dans le nouvel ordre
+                (ord = index).
               items:
-                type: object
-                required:
-                  - id
-                  - ord
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                  ord:
-                    type: integer
-                    minimum: 0
+                type: string
+                format: uuid
   responses:
     '200':
       description: Reordered.
@@ -42,3 +38,4 @@ post:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+  x-zod-query: admin.events/[runId].query

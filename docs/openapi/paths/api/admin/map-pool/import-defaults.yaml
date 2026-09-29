@@ -14,6 +14,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.map-pool/import-defaults.body
           type: object
           required:
             - game

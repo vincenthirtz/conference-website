@@ -1,4 +1,5 @@
 get:
+  x-zod-query: admin.tcg/catalogue.query
   summary: The space's TCG catalogue, optionally annotated for one player.
   description: |
     Requires `manage_tcg`. Lists every card a pack can hand out in this space —

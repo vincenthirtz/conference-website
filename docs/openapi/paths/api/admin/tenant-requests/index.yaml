@@ -2,6 +2,7 @@ get:
   summary: List incoming tenant-creation requests.
   description: Requires `owner` role.
   operationId: adminListTenantRequests
+  x-zod-query: admin.tenant-requests.query
   tags:
     - admin/tenants
   security:

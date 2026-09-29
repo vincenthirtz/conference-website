@@ -24,6 +24,7 @@ get:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+  x-zod-query: admin.broadcast/[campaignId].query
 post:
   summary: Set the campaign schedule.
   operationId: adminSetBroadcastSchedule
@@ -38,6 +39,7 @@ post:
         schema:
           type: object
           additionalProperties: true
+          x-zod: admin.broadcast/[campaignId]/schedule.body
   responses:
     '200':
       description: Saved.
@@ -50,6 +52,7 @@ post:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+  x-zod-query: admin.broadcast/[campaignId].query
 delete:
   summary: Cancel a scheduled campaign.
   operationId: adminDeleteBroadcastSchedule
@@ -64,3 +67,4 @@ delete:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+  x-zod-query: admin.broadcast/[campaignId].query

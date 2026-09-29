@@ -18,6 +18,7 @@ get:
     bot pour lister salons + rôles du serveur (sélecteur admin). Nécessite
     manager+ et que le guild appartienne au tenant.
   operationId: adminGetTenantDiscordGuildInventory
+  x-zod-query: admin.tenants/[id]/discord-config/[guildId].query
   tags:
     - admin/tenants
   security:

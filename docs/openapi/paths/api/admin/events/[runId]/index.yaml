@@ -18,6 +18,7 @@ get:
       $ref: '#/components/responses/Forbidden'
     '404':
       $ref: '#/components/responses/NotFound'
+  x-zod-query: admin.events/[runId].query
 patch:
   summary: Patch event run metadata.
   operationId: adminPatchEventRun
@@ -32,6 +33,7 @@ patch:
         schema:
           type: object
           additionalProperties: true
+          x-zod: admin.events/[runId].update
   responses:
     '200':
       description: Updated.
@@ -41,6 +43,7 @@ patch:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+  x-zod-query: admin.events/[runId].query
 put:
   summary: Replace event run metadata.
   operationId: adminReplaceEventRun
@@ -55,6 +58,7 @@ put:
         schema:
           type: object
           additionalProperties: true
+          x-zod: admin.events/[runId].update
   responses:
     '200':
       description: Replaced.
@@ -64,6 +68,7 @@ put:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+  x-zod-query: admin.events/[runId].query
 delete:
   summary: Delete an event run (only if draft).
   operationId: adminDeleteEventRun
@@ -80,3 +85,4 @@ delete:
       $ref: '#/components/responses/Forbidden'
     '409':
       $ref: '#/components/responses/Conflict'
+  x-zod-query: admin.events/[runId].query

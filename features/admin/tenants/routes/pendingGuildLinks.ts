@@ -3,7 +3,7 @@
 // (remplie par `POST /api/bot/v1/tenants/link-guild`).
 
 import { defineAdminRoute, read } from '@/utils/admin/defineAdminRoute';
-import { listPendingGuildLinks } from '../service';
+import { listPendingGuildLinks } from '../service/access';
 
 export default defineAdminRoute({
   key: 'pending-guild-links',

@@ -6,6 +6,7 @@ parameters:
       type: string
       format: uuid
 post:
+  x-zod-query: admin.users/[userId].query
   summary: Admin player actions from the player-view command center.
   description: |
     Server-side player actions that cannot reuse an existing endpoint.
@@ -22,6 +23,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.users/[userId]/actions.body
           type: object
           required:
             - action

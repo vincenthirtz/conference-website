@@ -30,6 +30,7 @@ post:
             tournament_id:
               type: string
               format: uuid
+          x-zod: admin.events/[runId]/segments/from-tournament.body
   responses:
     '200':
       description: Segments created (with per-match skip accounting).
@@ -62,3 +63,4 @@ post:
       $ref: '#/components/responses/NotFound'
     '409':
       $ref: '#/components/responses/Conflict'
+  x-zod-query: admin.events/[runId].query

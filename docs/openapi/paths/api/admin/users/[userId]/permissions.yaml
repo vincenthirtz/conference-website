@@ -1,4 +1,5 @@
 get:
+  x-zod-query: admin.users/[userId].query
   summary: Permissions accordees a l'unite d'un membre du staff.
   description: >
     Renvoie ce que le ROLE couvre, ce qui est accorde EN PLUS, le total
@@ -25,6 +26,7 @@ get:
     '429':
       $ref: '#/components/responses/RateLimited'
 put:
+  x-zod-query: admin.users/[userId].query
   summary: Remplace les permissions accordees a l'unite.
   description: >
     Exige `manage_staff`. REGLE CENTRALE : on ne peut accorder ni retirer qu'un
@@ -54,6 +56,7 @@ put:
     content:
       application/json:
         schema:
+          x-zod: admin.users/[userId]/permissions.update
           type: object
           required:
             - extraPermissions

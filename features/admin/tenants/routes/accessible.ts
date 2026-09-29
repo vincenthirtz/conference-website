@@ -2,7 +2,7 @@
 // Liste des espaces du switcher de tenant ; tout le staff (caster+).
 
 import { defineAdminRoute, read } from '@/utils/admin/defineAdminRoute';
-import { listTenantsForStaff } from '../service';
+import { listTenantsForStaff } from '../service/access';
 
 export default defineAdminRoute({
   key: 'tenants-accessible',

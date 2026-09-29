@@ -1,6 +1,7 @@
 post:
   summary: Rattache un serveur Discord a un espace.
   operationId: adminTenantAttachGuild
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:
@@ -38,6 +39,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.tenants/[id]/guilds.body
           type: object
           required: [guild_id]
           properties:

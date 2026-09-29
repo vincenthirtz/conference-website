@@ -47,6 +47,7 @@ get:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+  x-zod-query: admin.events.query
 post:
   summary: Create an event_run (draft).
   description: Requires `manager` role.
@@ -78,6 +79,7 @@ post:
             scheduled_at:
               type: string
               format: date-time
+          x-zod: admin.events.create
   responses:
     '201':
       description: Event run created (draft).

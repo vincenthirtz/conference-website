@@ -135,3 +135,26 @@ export async function deleteTwitchChannel(
     .eq('tenant_id', tenantId);
   return { error };
 }
+
+/**
+ * Prochain segment `match` encore `upcoming` après l'`ord` courant (pauses,
+ * intros et segments déjà joués sautés) — « match suivant » de la régie.
+ */
+export async function findNextUpcomingMatchSegment(
+  db: AdminDb,
+  tenantId: string,
+  runId: string,
+  afterOrd: number
+) {
+  const { data, error } = await db
+    .from('event_segments')
+    .select('id, ord, type, status, match_id, title')
+    .eq('event_run_id', runId)
+    .eq('tenant_id', tenantId)
+    .eq('type', 'match')
+    .eq('status', 'upcoming')
+    .gt('ord', afterOrd)
+    .order('ord', { ascending: true })
+    .limit(1);
+  return { row: data?.[0] ?? null, error };
+}

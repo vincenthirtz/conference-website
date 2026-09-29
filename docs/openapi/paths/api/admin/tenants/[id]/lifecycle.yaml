@@ -15,6 +15,7 @@ post:
     client in the refusal and stored in the staff log. The platform's own
     tenant cannot leave `active`.
   operationId: adminSetTenantLifecycle
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:
@@ -24,6 +25,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.tenants/[id]/lifecycle.body
           type: object
           required: [state]
           properties:

@@ -8,6 +8,18 @@ import {
   ValidationError,
 } from '@/utils/admin/errors';
 import { sanitizeUrl } from '@/utils/apiHelpers';
+import { LegacyAdminError } from '@/utils/admin/errors';
+import { capabilityDenial } from '@/utils/billing/tenantCapabilityGate';
+import { emitBotEvent } from '@/utils/botEvents';
+import {
+  BROADCAST_SCENES,
+  type BroadcastLiveState,
+  fetchLiveBroadcastState,
+  setBroadcastScene,
+  updateBroadcastState,
+} from '@/utils/broadcast/liveState';
+import { transitionToSegment } from '@/utils/broadcast/segmentTransition';
+import type { Audited } from '../_shared/audited';
 import type { TwitchChannelBody, TwitchChannelPatch } from './schemas';
 import * as repo from './repository';
 
@@ -165,4 +177,232 @@ export async function deleteTwitchChannelById(ctx: ServiceContext, id: string) {
     );
   }
   return { before };
+}
+
+/* ------------------------------------------------------------------------
+ * Régie vidéo : état d'antenne et « match suivant »
+ * (ex-pages/api/admin/broadcast/{state,next-match}.ts)
+ * --------------------------------------------------------------------- */
+
+const STUDIO_DENIAL_MESSAGE =
+  'La régie vidéo (direction automatique et overlays OBS) fait partie de l’offre Éditeur, sur devis.';
+
+/**
+ * La régie vidéo est une capacité de palier (`broadcastStudio`, offre
+ * Éditeur) : 402 `PLAN_CAPABILITY_REQUIRED` sinon. Porte sur la CONSOLE, pas
+ * sur l'overlay (la sortie vidéo). Fail-open si le plan est illisible.
+ */
+async function requireBroadcastStudio(ctx: ServiceContext) {
+  const denial = await capabilityDenial(
+    ctx.tenantId,
+    'broadcastStudio',
+    STUDIO_DENIAL_MESSAGE
+  );
+  if (denial) {
+    const { error, code, ...extra } = denial;
+    throw new LegacyAdminError(402, error, { code, extra });
+  }
+}
+
+/** État agrégé du run live (run, segment courant, match, casters, overlay). */
+export async function getBroadcastState(ctx: ServiceContext) {
+  await requireBroadcastStudio(ctx);
+  return fetchLiveBroadcastState(ctx.tenantId);
+}
+
+const invalid = (error: string) => new LegacyAdminError(400, error);
+
+/**
+ * Mise à jour partielle de `broadcast_state` du run live. Ordre d'origine :
+ * palier → validation → droit d'écriture (`manage_broadcast`, porté par
+ * `canEdit`) → 409 sans run live → écriture → outbox bot (best-effort).
+ */
+export async function patchBroadcastState(
+  ctx: ServiceContext,
+  raw: Record<string, unknown>,
+  canEdit: boolean
+): Promise<Audited<BroadcastLiveState>> {
+  await requireBroadcastStudio(ctx);
+
+  const patch: Record<string, unknown> = {};
+  if (raw.on_air !== undefined) {
+    if (typeof raw.on_air !== 'boolean')
+      throw invalid('on_air must be a boolean');
+    patch.on_air = raw.on_air;
+  }
+  if (raw.lower_third !== undefined) {
+    if (raw.lower_third !== null && typeof raw.lower_third !== 'string') {
+      throw invalid('lower_third must be a string or null');
+    }
+    if (typeof raw.lower_third === 'string' && raw.lower_third.length > 500) {
+      throw invalid('lower_third too long (max 500 chars)');
+    }
+    patch.lower_third = raw.lower_third;
+  }
+  if (raw.pip !== undefined) {
+    const pip = raw.pip as { enabled?: unknown } | null | undefined;
+    if (!pip || typeof pip !== 'object' || typeof pip.enabled !== 'boolean') {
+      throw invalid('pip must be { enabled: boolean }');
+    }
+    patch.pip = { enabled: pip.enabled };
+  }
+  if (raw.scene !== undefined) {
+    if (
+      typeof raw.scene !== 'string' ||
+      !(BROADCAST_SCENES as readonly string[]).includes(raw.scene)
+    ) {
+      throw invalid(`scene must be one of: ${BROADCAST_SCENES.join(', ')}`);
+    }
+    patch.scene = raw.scene;
+  }
+  if (raw.auto_director !== undefined) {
+    if (typeof raw.auto_director !== 'boolean') {
+      throw invalid('auto_director must be a boolean');
+    }
+    patch.auto_director = raw.auto_director;
+  }
+  if (Object.keys(patch).length === 0) throw invalid('No fields to update');
+
+  // Écrire l'état d'antenne = piloter la régie : le DROIT `manage_broadcast`
+  // (pas le rôle caster), comme start/end/next-match.
+  if (!canEdit) throw new LegacyAdminError(403, 'Caster cannot edit state');
+
+  const current = await fetchLiveBroadcastState(ctx.tenantId);
+  if (!current.run) {
+    throw new LegacyAdminError(
+      409,
+      'No live event_run for this tenant. Start a run first.',
+      { code: 'NO_LIVE_RUN' }
+    );
+  }
+
+  const next = await updateBroadcastState(
+    ctx.tenantId,
+    current.run.id,
+    patch as never
+  );
+  if (!next) {
+    throw new LegacyAdminError(500, 'Failed to update broadcast_state');
+  }
+
+  // Outbox best-effort : le bot rafraîchit le panneau lives-board sans
+  // attendre son prochain tick.
+  try {
+    await emitBotEvent(
+      'broadcast.state_changed',
+      {
+        runId: current.run.id,
+        runSlug: current.run.slug,
+        state: next,
+        currentSegmentId: current.currentSegment?.id ?? null,
+        matchId: current.match?.matchId ?? null,
+      },
+      ctx.tenantId
+    );
+  } catch (e) {
+    ctx.logger.error('[broadcast/state] emitBotEvent error', e);
+  }
+
+  return {
+    result: await fetchLiveBroadcastState(ctx.tenantId),
+    audit: {
+      entity_type: 'event_run',
+      entity_id: current.run.id,
+      tournament_id: null,
+      payload: { patch, new_state: next },
+    },
+  };
+}
+
+/**
+ * « Match suivant » en un clic : prochain segment `match` upcoming après le
+ * segment live, bascule atomique (`transitionToSegment`, même code que
+ * segments/[segId]/start), puis scène overlay remise à `starting`
+ * (best-effort) pour que l'auto-director reprenne proprement.
+ */
+export async function goToNextMatch(ctx: ServiceContext) {
+  await requireBroadcastStudio(ctx);
+
+  const live = await fetchLiveBroadcastState(ctx.tenantId);
+  if (!live.run) {
+    throw new LegacyAdminError(
+      409,
+      'No live event_run for this tenant. Start a run first.',
+      { code: 'NO_LIVE_RUN' }
+    );
+  }
+  if (!live.currentSegment) {
+    throw new LegacyAdminError(
+      409,
+      'The live run has no current (live) segment.',
+      { code: 'NO_CURRENT_SEGMENT' }
+    );
+  }
+
+  const runId = live.run.id;
+  const currentOrd = live.currentSegment.ord;
+
+  const { row: next, error } = await repo.findNextUpcomingMatchSegment(
+    ctx.db,
+    ctx.tenantId,
+    runId,
+    currentOrd
+  );
+  if (error) {
+    ctx.logger.error('[admin/broadcast/next-match] lookup error', error);
+    throw new LegacyAdminError(500, 'Failed to resolve next match.');
+  }
+  if (!next) {
+    throw new LegacyAdminError(
+      409,
+      'No upcoming match segment after the current one.',
+      { code: 'NO_NEXT_MATCH' }
+    );
+  }
+
+  const admin = ctx.db as unknown as Parameters<typeof transitionToSegment>[0];
+  const result = await transitionToSegment(admin, {
+    runId,
+    tenantId: ctx.tenantId,
+    segId: next.id,
+  });
+  if (!result.ok) {
+    if (result.reason === 'not_found') {
+      throw new LegacyAdminError(404, 'Next segment not found.');
+    }
+    if (result.reason === 'not_upcoming') {
+      throw new LegacyAdminError(
+        409,
+        `Le segment cible est en status '${result.status}'.`,
+        { code: 'SEGMENT_NOT_UPCOMING', extra: { status: result.status } }
+      );
+    }
+    ctx.logger.error(
+      '[admin/broadcast/next-match] transition error',
+      result.error
+    );
+    throw new LegacyAdminError(500, 'Failed to switch to next match.');
+  }
+
+  await setBroadcastScene(admin, runId, 'starting').catch((e) =>
+    ctx.logger.error('[admin/broadcast/next-match] setBroadcastScene error', e)
+  );
+
+  return {
+    result: {
+      segment: result.segment,
+      alreadyStarted: result.alreadyStarted,
+      runId,
+    },
+    audit: {
+      entity_type: 'event_segment',
+      entity_id: next.id,
+      payload: {
+        action: 'broadcast_next_match',
+        runId,
+        fromOrd: currentOrd,
+        toOrd: next.ord,
+      },
+    },
+  };
 }

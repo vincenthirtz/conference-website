@@ -25,6 +25,7 @@ put:
     keeps its plan and pays for it. Scoped to the staff's active tenant unless
     the caller is a cross-tenant pole-admin. Accepts `Idempotency-Key`.
   operationId: adminPutTenantNonprofitRna
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:
@@ -34,6 +35,7 @@ put:
     content:
       application/json:
         schema:
+          x-zod: admin.tenants/[id]/nonprofit-rna.body
           type: object
           required: [rna]
           properties:
@@ -69,6 +71,7 @@ delete:
     that stamp came from the RNA (`nonprofit_verified_via = 'rna'`): a space
     verified through HelloAsso keeps its waiver, since no proof disappeared.
   operationId: adminDeleteTenantNonprofitRna
+  x-zod-query: admin.tenants/[id].query
   tags:
     - admin/tenants
   security:

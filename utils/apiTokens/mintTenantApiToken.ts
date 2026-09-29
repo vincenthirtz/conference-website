@@ -155,7 +155,7 @@ export async function mintTenantApiToken(params: {
   // plus tard pour qui une clé a été émise depuis le hub.
   await logStaffAction({
     staff_id: params.actor.staffId,
-    action: 'other',
+    action: 'create_api_token',
     entity_type: 'api_token',
     entity_id: data.id as string,
     tenant_id: params.tenantId,

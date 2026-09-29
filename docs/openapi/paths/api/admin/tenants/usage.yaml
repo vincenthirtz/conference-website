@@ -9,6 +9,7 @@ get:
     reason to open this screen. `monthLimit: null` means unlimited, which is
     not the same as a quota of zero.
   operationId: adminListTenantsUsage
+  x-zod-query: admin.tenants/usage.query
   tags:
     - admin/tenants
   security:

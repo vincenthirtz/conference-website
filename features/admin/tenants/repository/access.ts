@@ -1,4 +1,4 @@
-// features/admin/tenants/repository.ts
+// features/admin/tenants/repository/access.ts
 
 import type { AdminDb } from '@/utils/admin/serviceContext';
 
