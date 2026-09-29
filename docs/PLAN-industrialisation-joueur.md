@@ -222,11 +222,31 @@ du même noyau.
 `hooks/admin/useAdminForm.ts` → `hooks/forms/useSchemaForm.ts` (l'admin garde un alias).
 Brouillon, dirty, erreurs par champ depuis `PlayerError.fields`, messages traduits par `code`.
 
+### Un seul « Le Ruban », iso entre l'admin et l'espace joueuse (exigence du 2026-09-29)
+
+**Règle** : l'admin et l'espace joueuse (joueuse, capitaine, manager, coach, supportrice) partagent **un seul kit** — mêmes jetons, mêmes
+briques, mêmes archétypes, même grammaire (couleur = signal, un seul `primary` par zone, deux
+rayons, Archivo / Instrument Sans). Une surface ne diffère des autres **que par sa densité**
+(cibles, corps, espacements) — jamais par ses composants ni sa palette.
+
+- **Kit unique `features/ruban/`** : les briques aujourd'hui dans `features/admin/_shared/ui/`
+  (`AdminButton` → `Button`, `AdminButtonLink` → `ButtonLink`, `Chip`, `StatTile`,
+  `EntityHeader`, `Fiche`, `ListToolbar`, `DangerZone`, `AdminPageHeader` → `PageHeader`, classes
+  `ruban.ts`) y déménagent ; `features/admin/_shared/ui/*` devient un ré-export (puis disparaît).
+  Les primitives `components/ui/*` (Modal, Tabs, Skeleton…) prennent la même grammaire.
+- **Jetons uniques `styles/ruban-tokens.css`** (extraits d'`admin-ruban.css`) ; chaque surface
+  n'ajoute qu'un fichier de **densité** + son pont Tailwind.
+- **Garde « iso »** (test de source) : aucun module `features/player/**` ni `components/player/**`
+  ne définit son propre bouton / puce / carte / en-tête ; ils importent
+  `features/ruban`. Toute nouvelle brique naît dans le kit, jamais dans une surface.
+- **Preuve visuelle** : page `/dev/ruban-kit` (404 en prod) qui rend chaque brique sous les deux
+  surfaces (admin, player) côte à côte ; captures Playwright comparées à chaque lot visuel.
+
 ### « Le Ruban » sur une surface `[data-surface="player"]`
 
 - `pages/_app.tsx` pose `data-surface="player"` quand `appChrome` dit `isPlayer` (même mécanique
-  que l'admin, `:root:has(…)` pour les portails). Le **site public ne bouge pas** : les primitives
-  partagées (Modal, Tabs, Skeleton…) changent sous `[data-surface=admin]` **ou** `player`.
+  que l'admin, `:root:has(…)` pour les portails). Le **site public ne bouge pas** (hors périmètre) :
+  les primitives partagées (Modal, Tabs, Skeleton…) ne changent que sous `[data-surface=admin]` **ou** `player`.
 - `styles/ruban-tokens.css` extrait les jetons communs d'`admin-ruban.css` ; `player-ruban.css`
   ne définit que la **densité** (joueuse : cibles ≥ 44 px, corps 16 px, rayons 14 px) et le pont
   Tailwind (gris → encre, violets → orchidée, signaux → `--ok/--warn/--err`, pas de jaune).
@@ -427,20 +447,28 @@ sujet/inspection/act-as) ; pilote `HeroPreferencesCard`.
 - [ ] Harnais : un test prouve qu'en inspection aucune action n'est rendue sans act-as.
 - [ ] Pilote : 0 `useState` de champ.
 
-### P7 · « Le Ruban » surface joueuse — 🟧 / L
+### P7 · Kit « Le Ruban » unique + surface joueuse — 🟧 / L
 
 **Problème.** 3 963 classes de couleur en dur ; la joueuse ne voit pas la direction verrouillée
 (palette exacte du logo, pas de jaune) ; la surface carte `bg-white/[0.03]` × 111 diverge de
-l'admin.
+l'admin ; les briques Ruban n'existent que sous `features/admin/_shared/ui` — les recopier côté
+joueuse créerait deux kits qui divergeraient.
 
-**Livrable.** `styles/ruban-tokens.css` (commun) + `styles/player-ruban.css` (densité mobile,
-pont Tailwind) ; `data-surface="player"` posé par `_app` via `appChrome` ; primitives partagées
-(`components/ui/*`, Modal, ConfirmDialog, AlertBanner, Skeleton, Tabs) rendues sous admin **ou**
-player ; brique `Card` Ruban remplaçant la surface carte ; aperçu validé avant pose (artifact).
+**Livrable.** `features/ruban/` = le kit unique (briques admin déménagées, renommées sans le
+préfixe `Admin`, API inchangée ; `features/admin/_shared/ui/*` en ré-export) ;
+`styles/ruban-tokens.css` (commun) + `styles/player-ruban.css` (densité mobile + pont Tailwind) ;
+`data-surface="player"` posé par `_app` via `appChrome` ; primitives `components/ui/*` rendues
+sous admin **ou** player avec la même grammaire ; brique `Card` du kit remplaçant la surface
+carte ; page `/dev/ruban-kit` ; garde « iso » (test de source).
 
 **Critères d'acceptation**
+- [ ] L'admin consomme `features/ruban` et ne change PAS d'un pixel (captures avant/après des
+      écrans admin de référence : accueil, liste, fiche, pilotage).
+- [ ] `/dev/ruban-kit` : chaque brique rendue sous `admin` et `player` — seules la densité et la
+      taille des cibles diffèrent.
+- [ ] Garde « iso » verte : aucune brique Ruban redéfinie hors `features/ruban`.
 - [ ] Captures avant/après (Playwright, base locale) : pages publiques **identiques** (accueil,
-      fiche équipe, scrims, TCG vitrine, profil public `[userId]`).
+      fiche équipe, scrims, TCG vitrine, profil public `[userId]`) — le public est hors périmètre.
 - [ ] Inspection admin : `player-view` / `captain-view` rendus sans régression.
 - [ ] Contraste AA sur les puces d'état ; aucune teinte jaune de marque.
 - [ ] Aucun jeton sans repli (un jeton non défini casse toute la déclaration) : tout `var(--x)` a un repli (`var(--x, …)`) — test grep.
@@ -451,8 +479,8 @@ player ; brique `Card` Ruban remplaçant la surface carte ; aperçu validé avan
 `PlayerTopBar` 493 lignes ; l'e2e ne tourne qu'en Desktop Chrome.
 
 **Livrable.** `features/player/_shared/shell/PlayerShell.tsx` (session, redirect, équipe active,
-navigation basse PWA, cloche) ; briques d'archétype Fil / Fiche / Liste / Parcours / Collection
-(`features/player/_shared/ui`) ; page `/dev/player-kit` (404 en prod) ; projet Playwright
+navigation basse PWA, cloche) ; archétypes Fil / Fiche / Liste / Parcours / Collection **composés uniquement de briques
+`features/ruban`** (`features/player/_shared/ui` ne contient que des compositions, aucune brique) ; page `/dev/player-kit` (404 en prod) ; projet Playwright
 `mobile` (Pixel 7 / iPhone 13) appliqué aux specs `player-*`, `captain-*`, `team-*`, `checkin-*`,
 `scrim-*`, `tcg*`.
 
@@ -583,8 +611,8 @@ découverte invisible par défaut, jamais d'annuaire public.
 
 - **Refaire les fonctionnalités.** J1–J7 et S1–S5 sont livrés ; ce plan ne change aucun parcours
   sauf là où P0 l'exige.
-- **Ruban sur le site public.** La direction vaut pour tout le site, mais la vitrine a ses propres
-  enjeux (SEO, ISR, perf) : chantier séparé, après ce plan.
+- **Ruban sur le site public.** Décision du 2026-09-29 : le site public (vitrine, pages anonymes)
+  est hors périmètre ; seules l'admin et l'espace joueuse / staff d'équipe portent « Le Ruban ».
 - **Changer les contrats bot / publics.** Les services partagés sont réutilisés, les formes de
   réponse ne bougent pas — sauf `/api/teams/[teamId]` (P0, réduction de colonnes : consommateurs
   relus).
