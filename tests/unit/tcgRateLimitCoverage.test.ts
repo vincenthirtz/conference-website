@@ -69,6 +69,16 @@ describe('routes TCG joueuse — plafond par méthode', () => {
     const rel = relative(process.cwd(), file);
     it(`${rel} plafonne chacune de ses méthodes`, () => {
       const source = readFileSync(file, 'utf8');
+      // Route MIGRÉE (lot P14) : réexport d'un module `defineSubjectRoute`,
+      // dont le noyau plafonne CHAQUE méthode par défaut (lecture 120/min,
+      // écriture 60/min). Seul un `rateLimit: false` explicite l'en priverait.
+      const migrated = source.match(/from '@\/(features\/player\/[^']+)'/);
+      if (migrated) {
+        const target = readFileSync(`${migrated[1]}.ts`, 'utf8');
+        expect(target).toContain('defineSubjectRoute(');
+        expect(target).not.toMatch(/rateLimit:\s*false/);
+        return;
+      }
       const served = methodsServed(source);
       const guarded = rateLimitCalls(source);
       expect(guarded).toBeGreaterThanOrEqual(served);

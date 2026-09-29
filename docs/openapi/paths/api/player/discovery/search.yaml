@@ -3,7 +3,7 @@ get:
   description: |
     Recherche paginée dans l'annuaire des joueurs `discoverable=true`. Le
     caller ne s'auto-liste jamais. Aucune variante publique / indexable SEO :
-    la route est derrière le login. `withAuthRoute`.
+    la route est derrière le login. `subject: 'self'` (`?as=` → 403 `subject_unsupported`).
   operationId: playerDiscoverySearch
   tags:
     - public/auth

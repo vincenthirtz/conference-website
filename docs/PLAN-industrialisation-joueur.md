@@ -744,6 +744,28 @@ ligne ; report sur permission (fin de S4).
 **Critères** : [ ] `scrim-planning`, `scrim-requests`, `scrim-response`, `scrim-public` verts ;
 [ ] e-mail capitaine best-effort conservé.
 
+**Livré (1re tranche, 2026-09-29).**
+- Serveur : `features/player/scrims` (repository → service → routes) ; 9 routes sur
+  `defineSubjectRoute`, pages/api = réexports : `teams/scrim-requests` (GET/POST, `follow`,
+  `manage_scrims`, double plafond IP + acteur conservé ; geste = `applyScrimRequestAction`,
+  cœur partagé bot, e-mails best-effort inchangés), `teams/scrim-searches` (self,
+  `manage_scrims`, code `INVALID_BODY`/`INVALID_SLOTS` conservés), `teams/scrim-plannings`
+  (liste `follow`) + `[planningId]` / `suggest` / `availability` (self, garde de partie
+  `resolvePlanningParty` conservée, heatmap anonymisée), `player/scrims` (follow) +
+  `[scrimId]/report` (self, `manage_scrims` ; miroir noté Glicko/saison via
+  `applyScrimResult`), `player/teams-directory` (self ; 536 → 3 lignes).
+- Client : `client.ts` + `hooks/useScrimsQueries` (cache joueuse), `usePlanningPainter`,
+  `useTeamsDirectoryScreen`. Écrans : `/player/teams` sur LISTE (719 → ~240 ; « mon
+  annonce » sur `useSchemaForm`), `/player/scrim-planning/[id]` sur FICHE, `MyScrimsCard`
+  = conteneur (report sur `useSchemaForm`), `ScrimPlanningsDashboardCard` sans fetch.
+  `ListeView` gagne `lead` / `after`. Grille (`components/scrim/*`) inchangée.
+
+**Reste.** `ScrimNegotiationCard` (contre-proposition : `useState` de champ, validation au
+parent `usePlayerDashboard`) et `ScrimSlotCalendarPicker` ; client du tableau de bord
+(`dashboard/client.ts` : `scrimRequests`/`scrimPlannings`) à basculer sur `scrimsClient` ;
+`demandes/scrim` (création de demande, avec P11) ; `features/shared/scrim` (négociation
+commune bot/admin) ; `ScrimPlanningPanel` (430) à découper en `ui/` ; e2e mobile/desktop.
+
 ### P14 · TCG joueuse — 🟧 / XL
 
 **Problème.** `player/tcg` 1 795, `tcg/echanges` 1 256, 19 routes TCG joueuse (packs 777,
@@ -757,6 +779,32 @@ clé unique) — l'idempotence HTTP s'ajoute, ne remplace pas.
 `tcgShowcase`, garde `tcgPaidMatchDeleteGuard` verts ; [ ] les 3 garde-fous photo
 (`readCardFaces`) inchangés.
 
+**Livré (1re tranche, 2026-09-29).**
+- Routes : 17 des 19 routes TCG joueuse sur `defineSubjectRoute` (`features/player/tcg/routes`,
+  services dans `service/`, accès base dans `repository/{core,trades}.ts`) — lecture
+  (`collection`, `sets`, `wallet`, `packs` GET, `showcase` GET, `cosmetics` GET, `exclusion` GET,
+  `welcome-gift` GET, `trades` GET/`cards`/`partners`/`settings` GET/`blocks` GET) puis gestes
+  (ouvrir, booster, recycler, forge, habillages, vitrine, retrait, cadeau, proposer / accepter /
+  refuser / annuler, blocages, préférence). Mêmes messages, codes, statuts (201 conservés),
+  plafonds par méthode ; `subject: 'self'` partout (ex-`withAuthRoute`), `welcome-gift` en
+  `follow` sans act-as. Protection monétaire INCHANGÉE (RPC `tcg_purchase_booster`,
+  `tcg_forge_card`, `tcg_buy_cosmetic`, `tcg_propose_trade`, `tcg_accept_trade`, réservations
+  `IS NULL`, registre à clé unique) ; l'`Idempotency-Key` s'y ajoute (défaut du noyau + client).
+- Écrans : `player/tcg` 1 795 → 31 lignes (archétype Collection : vignettes sans lien + fiche
+  plein écran portant lien et recyclage ; `CollectionView` reçoit `lead`/`trail`/`gridRef`),
+  `player/tcg/echanges` 1 256 → 33 (archétype Liste). Kit Ruban seul ; `components/tcg/*`
+  (partagés avec la vitrine publique) intacts.
+- Écarts assumés (« erreur de lecture ≠ valeur absente ») : `GET packs` répond 500 si le solde
+  est illisible (rendait `balance: 0`) ; le composeur d'échanges a un état d'erreur (rendait
+  « personne » / « aucun double »).
+
+**Reste.** `photo` et `fanart` (téléversements base64, laissés tels quels) ; panneaux
+autonomes `components/tcg/{TcgForgePanel,TcgCosmeticsPanel,TcgShowcaseEditor,
+FanartSubmitPanel,TcgSetsPanel,TcgPhotoInvite}` encore sur `useAdminFetch` (à passer sur le
+client du module) ; 3 écrans importent encore les types de `welcome-gift` depuis `pages/api`
+(gel « 7 ») ; sélection du composeur d'échanges en `useState` (sélection, pas saisie) ; e2e
+mobile/desktop en base locale.
+
 ### P15 · Réseau & messages — 🟧 / L
 
 **Problème.** Découverte, suivis, scouting, messages (`messages.tsx` 898), notifications ; routes
@@ -767,7 +815,29 @@ explicite sur les routes privées de réseau (la décision de `utils/subject.ts`
 découverte invisible par défaut, jamais d'annuaire public.
 
 **Critères** : [ ] `player-discovery`, `captain-messages`, `player-notifications` verts ;
-[ ] test : `?as=` → 403 sur découverte/suivis/scouting/annuaire.
+[x] test : `?as=` → 403 sur découverte/suivis/scouting/annuaire (`playerNetworkSubject`).
+
+**Livré (1re tranche, 2026-09-29).**
+- Routes : 13 fichiers sur `defineSubjectRoute`, même contrat (codes historiques
+  `INVALID_BODY` / `INVALID_QUERY` / `NOT_DISCOVERABLE`… conservés, corps validés au service).
+  `features/player/network` (discovery, search, profile, head-to-head, follows, scouting,
+  network-status) : tout `subject: 'self'` DÉCLARÉ — avant, `withAuthRoute` ignorait `?as=`
+  et le staff lisait ses propres données. `features/player/notifications` : compteurs
+  `follow` (inchangé), prefs / subscribe / unsubscribe `self`. `features/player/messages` :
+  boîte GET `follow` (`view_captain_data`), envoi `self` (403 `subject_unsupported` au lieu
+  de `subject_read_only`), fil `[conversationId]` `self`.
+- Écrans : Notifications (Fil) et Réseau joueuses (Liste) sur le kit ; carte « Découverte »
+  du profil → `network/ui/DiscoverySettingsPanel` (accroche sur `useSchemaForm`), composée
+  par la page ; messagerie → `messages/ui` (Fil) + `useCaptainMessages` — mécanique de
+  rafraîchissement inchangée (temps réel + relecture silencieuse), rédaction sur
+  `useSchemaForm` (équipe destinataire = champ). `messages.tsx` 899 → 27 lignes.
+- Cloche : inchangée (relevé, annonce) ; elle n'importe plus que le TYPE depuis
+  `notifications/schemas.ts` (bundle public intact). `FollowButton` et la couche sociale de
+  `/player/[userId]` (page publique) restent sur leur mécanisme.
+
+**Reste.** Dossier d'adversaire (`scouting/[teamId].tsx`, 420, `useAdminFetch`) à passer sur
+Fiche + client ; lectures `network-status` du tableau de bord (`NetworkOnboardingCard`,
+`RegistrationDeadlineBanner`, avec P12) ; e2e mobile/desktop en base locale.
 
 ---
 

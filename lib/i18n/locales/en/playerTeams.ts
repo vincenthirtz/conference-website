@@ -83,4 +83,9 @@ export default {
   reasonNeverPlayed: 'not played recently',
   reasonPlayedRecently: 'played several times already',
   scoutCta: 'Dossier',
+  listFilters: 'Filters',
+  listCloseFilters: 'Close',
+  listLoadMore: 'Show more',
+  listLoading: 'Loading the directory…',
+  listSummary: '{count} team(s)',
 };

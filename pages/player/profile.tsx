@@ -1,14 +1,14 @@
-// pages/player/profile.tsx — coquille de « Mon profil » : SEO, cache joueuse,
-// coquille (session + redirection). L'écran vit dans le module
-// features/player/profile (lot P9, archétype Fiche).
+// pages/player/profile.tsx — coquille de « Mon profil » (SEO, cache, session) :
+// écran features/player/profile (P9, Fiche) + section réseau (P15).
 
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
 import { withPlayerQuery } from '@/features/player/_shared/query';
 import ProfileScreen from '@/features/player/profile/ui/ProfileScreen';
+import DiscoverySettingsPanel from '@/features/player/network/ui/DiscoverySettingsPanel';
 
 function PlayerProfile() {
-  return <ProfileScreen />;
+  return <ProfileScreen discovery={<DiscoverySettingsPanel />} />;
 }
 
 const playerProfileSeo: SeoProps = {

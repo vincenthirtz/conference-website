@@ -10,6 +10,7 @@ put:
     - public/teams
   summary: Upsert the caller's painted availability on a planning grid.
   operationId: putScrimPlanningAvailability
+  x-zod-query: player.teams.scrim-plannings.planning-id.query
   security:
     - PlayerBearer: []
   requestBody:

@@ -4,7 +4,7 @@ get:
     Liste `following` (joueurs suivis) ou `followers` (qui me suivent),
     enrichie comme l'annuaire. Ne renvoie QUE les joueurs actuellement
     `discoverable=true` (un opt-out disparaît sans supprimer l'arête).
-    `withAuthRoute`.
+    `subject: 'self'` (`?as=` → 403 `subject_unsupported`).
   operationId: playerListFollows
   tags:
     - public/auth
@@ -79,7 +79,7 @@ post:
     Suit un joueur `discoverable=true`. Rejette l'auto-suivi
     (`CANNOT_FOLLOW_SELF`) ; cible inconnue ou non découvrable → 404
     (anti-énumération). Idempotent sur `(follower_id, followee_id)`.
-    `withAuthRoute`.
+    `subject: 'self'` (`?as=` → 403 `subject_unsupported`).
   operationId: playerFollow
   tags:
     - public/auth
@@ -126,7 +126,7 @@ delete:
   description: |
     Supprime l'arête de suivi `follower_id = current user`. Idempotent :
     ré-appeler sur une arête inexistante renvoie quand même `following:false`.
-    `withAuthRoute`.
+    `subject: 'self'` (`?as=` → 403 `subject_unsupported`).
   operationId: playerUnfollow
   tags:
     - public/auth

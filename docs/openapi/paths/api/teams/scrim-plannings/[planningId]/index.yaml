@@ -10,6 +10,7 @@ get:
     - public/teams
   summary: Get a planning the caller participates in (anonymised heatmap).
   operationId: getScrimPlanning
+  x-zod-query: player.teams.scrim-plannings.planning-id.query
   security:
     - PlayerBearer: []
   responses:

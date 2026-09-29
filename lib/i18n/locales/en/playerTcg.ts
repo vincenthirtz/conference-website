@@ -256,4 +256,7 @@ export default {
   twitchEarnLink: 'Link Twitch',
 
   guideLink: 'How does it work?',
+
+  collectionTileAria: 'View the {name} card ({rarity})',
+  collectionDetailClose: 'Close card',
 };

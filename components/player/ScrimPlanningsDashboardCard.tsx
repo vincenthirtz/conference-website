@@ -1,75 +1,30 @@
 // components/player/ScrimPlanningsDashboardCard.tsx
 //
 // Carte du dashboard joueur listant les grilles de disponibilités (scrim
-// plannings) OUVERTES visibles par l'appelant. Fetch client-side autonome
-// (GET /api/teams/scrim-plannings, Bearer). Se masque totalement (null) tant
-// qu'aucune session ouverte n'est visible — donc invisible pour la majorité
-// des joueurs.
+// plannings) OUVERTES visibles par l'appelant. Présentationnelle : les entrées
+// sont chargées une seule fois par le tableau de bord (GET
+// /api/teams/scrim-plannings, partagé avec ScrimsHubCard pour le compteur).
+// Se masque totalement (null) tant qu'aucune session ouverte n'est visible —
+// donc invisible pour la majorité des joueurs.
 //
-// Style aligné sur le bloc « Scrims en attente » de pages/player/index.tsx.
+// Style aligné sur le bloc « Scrims en attente » du tableau de bord.
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useTeamNames } from '@/hooks/useTeamNames';
-import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useT, format } from '@/lib/i18n/useT';
-import type { ScrimPlanningSummary, ScrimPlanningParty } from '@/types/admin';
-
-import { logger } from '../../utils/logger';
+import type { ScrimPlanningEntry } from '@/features/player/scrims/schemas';
 import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';
-import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 
-export type PlanningEntry = {
-  planning: ScrimPlanningSummary;
-  myParty: ScrimPlanningParty | null;
-  myAvailability: string[];
-};
+export type PlanningEntry = ScrimPlanningEntry;
+type Party = PlanningEntry['myParty'];
 
 export default function ScrimPlanningsDashboardCard({
-  token,
-  entries: entriesProp,
+  entries,
 }: {
-  token: string | null;
-  /**
-   * Optionnel : entrées déjà chargées par la page (fetch remonté une seule
-   * fois et partagée avec ScrimsHubCard pour le compteur de grilles). Quand
-   * fourni, la carte n'effectue AUCUNE requête. Sinon elle garde son fetch
-   * autonome (rétro-compatibilité pour tout autre appelant).
-   */
-  entries?: PlanningEntry[];
+  /** Entrées chargées par le tableau de bord (aucune requête ici). */
+  entries: PlanningEntry[];
 }) {
   const t = useT(nsScrimPlanning);
-  const { withSubject } = usePlayerArea();
-  const { withTeam } = useActiveTeam();
-  const [fetchedEntries, setFetchedEntries] = useState<PlanningEntry[]>([]);
-  const controlled = entriesProp !== undefined;
-  const entries = controlled ? entriesProp : fetchedEntries;
-
-  useEffect(() => {
-    if (controlled) return; // la page fournit les entrées : pas de fetch.
-    if (!token) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(
-          withTeam(withSubject('/api/teams/scrim-plannings')),
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && Array.isArray(data?.plannings)) {
-          setFetchedEntries(data.plannings as PlanningEntry[]);
-        }
-      } catch (err) {
-        logger.error('[scrim-plannings] dashboard load error:', err);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [token, controlled, withSubject, withTeam]);
 
   const teamNames = useTeamNames(
     entries.flatMap((e) => [e.planning.team1_id, e.planning.team2_id])
@@ -77,7 +32,7 @@ export default function ScrimPlanningsDashboardCard({
 
   if (entries.length === 0) return null;
 
-  const partyLabel = (party: ScrimPlanningParty | null) =>
+  const partyLabel = (party: Party) =>
     party === 'team1'
       ? t.myPartyTeam1
       : party === 'team2'

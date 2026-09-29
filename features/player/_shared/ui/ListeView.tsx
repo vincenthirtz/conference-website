@@ -7,7 +7,13 @@
 // `rubanRowLink` / `rubanSpinner`) — aucune brique définie ici.
 
 import Link from 'next/link';
-import { useCallback, useId, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useId,
+  useState,
+  type HTMLAttributes,
+  type ReactNode,
+} from 'react';
 import {
   Button,
   ListToolbar,
@@ -40,6 +46,9 @@ export default function ListeView({
   hasMore = false,
   loadingMore = false,
   onLoadMore,
+  lead,
+  after,
+  resultsProps,
   children,
 }: {
   title: ReactNode;
@@ -57,6 +66,16 @@ export default function ListeView({
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
+  /** Bloc entre l'en-tête et les filtres (ex. « mon annonce », lot P13). */
+  lead?: ReactNode;
+  /** Section après la liste, jamais mêlée à ses lignes (lot P13). */
+  after?: ReactNode;
+  /**
+   * Attributs du bloc des résultats (liste + « Charger plus ») — ex.
+   * `role="tabpanel"` quand des onglets (passés dans `lead`) le pilotent
+   * (lot P15).
+   */
+  resultsProps?: HTMLAttributes<HTMLDivElement>;
   /** Des `ListeRow`. */
   children?: ReactNode;
 }) {
@@ -72,6 +91,7 @@ export default function ListeView({
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col px-4 pb-6 lg:px-6">
       <PageHeader title={title} subtitle={subtitle} />
+      {lead}
       <ListToolbar
         search={search}
         filters={
@@ -100,33 +120,37 @@ export default function ListeView({
         }
       />
 
-      {loading ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className="flex min-h-32 items-center justify-center"
-        >
-          <span className={rubanSpinner} aria-hidden />
-          <span className="sr-only">{labels.loading}</span>
-        </div>
-      ) : hasRows ? (
-        <ul className="flex flex-col gap-2">{children}</ul>
-      ) : (
-        empty
-      )}
-
-      {!loading && hasMore && onLoadMore && (
-        <div className="mt-4 flex justify-center">
-          <Button
-            variant="secondary"
-            onClick={onLoadMore}
-            disabled={loadingMore}
-            aria-busy={loadingMore || undefined}
+      <div {...resultsProps}>
+        {loading ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex min-h-32 items-center justify-center"
           >
-            {labels.loadMore}
-          </Button>
-        </div>
-      )}
+            <span className={rubanSpinner} aria-hidden />
+            <span className="sr-only">{labels.loading}</span>
+          </div>
+        ) : hasRows ? (
+          <ul className="flex flex-col gap-2">{children}</ul>
+        ) : (
+          empty
+        )}
+
+        {!loading && hasMore && onLoadMore && (
+          <div className="mt-4 flex justify-center">
+            <Button
+              variant="secondary"
+              onClick={onLoadMore}
+              disabled={loadingMore}
+              aria-busy={loadingMore || undefined}
+            >
+              {labels.loadMore}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {after}
 
       {sheetOpen && filters && (
         <div className="fixed inset-0 z-[140] flex items-end bg-black/60 lg:hidden">

@@ -14,6 +14,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type Ref,
 } from 'react';
 import { Button, PageHeader } from '@/features/ruban';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
@@ -33,6 +34,9 @@ export default function CollectionView<T>({
   empty,
   labels,
   pageSize = 24,
+  lead,
+  trail,
+  gridRef,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
@@ -47,6 +51,12 @@ export default function CollectionView<T>({
   empty?: ReactNode;
   labels: CollectionLabels;
   pageSize?: number;
+  /** Panneaux entre l'en-tête et la grille (paquets, solde…). */
+  lead?: ReactNode;
+  /** Après la grille (page suivante servie par l'API, panneaux annexes). */
+  trail?: ReactNode;
+  /** Conteneur de la grille : l'écran y pose le focus après un ajout. */
+  gridRef?: Ref<HTMLDivElement>;
 }) {
   const [shown, setShown] = useState(pageSize);
   const [openKey, setOpenKey] = useState<string | null>(null);
@@ -103,38 +113,42 @@ export default function CollectionView<T>({
           </span>
         }
       />
-      {items.length === 0 ? (
-        empty
-      ) : (
-        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6 lg:gap-3">
-          {items.slice(0, shown).map((item) => {
-            const key = getKey(item);
-            return (
-              <li key={key}>
-                <button
-                  type="button"
-                  data-case="normal"
-                  aria-label={tileLabel(item)}
-                  onClick={(e) => {
-                    opener.current = e.currentTarget;
-                    setOpenKey(key);
-                  }}
-                  className="block min-h-11 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-1 transition-colors hover:border-[var(--or,#b467d1)]"
-                >
-                  {renderTile(item)}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      {hasMore && (
-        <div ref={sentinel} className="mt-4 flex justify-center">
-          <Button variant="secondary" onClick={more}>
-            {labels.more}
-          </Button>
-        </div>
-      )}
+      {lead}
+      <div ref={gridRef}>
+        {items.length === 0 ? (
+          empty
+        ) : (
+          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6 lg:gap-3">
+            {items.slice(0, shown).map((item) => {
+              const key = getKey(item);
+              return (
+                <li key={key}>
+                  <button
+                    type="button"
+                    data-case="normal"
+                    aria-label={tileLabel(item)}
+                    onClick={(e) => {
+                      opener.current = e.currentTarget;
+                      setOpenKey(key);
+                    }}
+                    className="block min-h-11 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-1 transition-colors hover:border-[var(--or,#b467d1)]"
+                  >
+                    {renderTile(item)}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {hasMore && (
+          <div ref={sentinel} className="mt-4 flex justify-center">
+            <Button variant="secondary" onClick={more}>
+              {labels.more}
+            </Button>
+          </div>
+        )}
+      </div>
+      {trail}
 
       {selected !== null && (
         <div

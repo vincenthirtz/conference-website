@@ -5,7 +5,7 @@ get:
     (`side b`) sur TOUS les tenants où ils se sont rencontrés. L'opponent
     DOIT être `discoverable=true` (sinon 404). Résultat approximé au niveau
     ÉQUIPE (aucun résultat individuel joueur-vs-joueur dans le modèle).
-    `withAuthRoute`.
+    `subject: 'self'` (`?as=` → 403 `subject_unsupported`).
   operationId: playerDiscoveryHeadToHead
   tags:
     - public/auth

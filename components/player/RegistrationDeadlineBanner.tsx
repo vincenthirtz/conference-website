@@ -37,7 +37,7 @@ import {
   TOURNAMENT_2026_REGISTRATION_DEADLINE,
   type RegistrationDeadlineState,
 } from '@/utils/registrationDeadline';
-import type { NetworkStatus } from '../../pages/api/player/network-status';
+import type { NetworkStatus } from '@/features/player/network/schemas';
 import { logger } from '../../utils/logger';
 import nsRegistrationDeadline from '@/lib/i18n/locales/fr/registrationDeadline';
 import { socialUrl } from '@/config/socials';

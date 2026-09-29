@@ -84,9 +84,6 @@ const FROZEN = {
   importsPagesApi: [
     'components/player/AgendaCard.tsx',
     'components/player/MatchPrepCard.tsx',
-    'components/player/MyScrimsCard.tsx',
-    'components/player/NetworkOnboardingCard.tsx',
-    'components/player/RegistrationDeadlineBanner.tsx',
     'components/player/SupporterWelcomeCard.tsx',
     'components/player/TeamHealthCard.tsx',
     'components/player/TeamMemoryCard.tsx',
@@ -95,9 +92,6 @@ const FROZEN = {
     'components/player/WelcomeGiftCard.tsx',
     'components/player/screens/PlayerDashboardScreen.tsx',
     'components/player/screens/PlayerMyTeamsScreen.tsx',
-    'components/player/screens/PlayerNotificationsScreen.tsx',
-    'pages/player/scouting/[teamId].tsx',
-    'pages/player/teams.tsx',
   ],
   // Règle 8 — appels `/api/admin/*` depuis l'UI joueuse (hors commentaire) :
   // nombre d'appels par fichier.

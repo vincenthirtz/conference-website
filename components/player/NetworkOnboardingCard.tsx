@@ -18,7 +18,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useT } from '@/lib/i18n/useT';
-import type { NetworkStatus } from '../../pages/api/player/network-status';
+import type { NetworkStatus } from '@/features/player/network/schemas';
 import { logger } from '../../utils/logger';
 import nsNetworkOnboarding from '@/lib/i18n/locales/fr/networkOnboarding';
 

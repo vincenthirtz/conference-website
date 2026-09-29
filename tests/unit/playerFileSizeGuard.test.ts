@@ -39,23 +39,21 @@ const ZONES: { roots: string[]; max: number }[] = [
 const BASELINE: Record<string, number> = {
   // Pages (> 800)
   'pages/team/create.tsx': 1984,
-  'pages/player/tcg.tsx': 1796,
-  'pages/player/tcg/echanges.tsx': 1257,
+  'pages/player/tcg.tsx': 32,
+  'pages/player/tcg/echanges.tsx': 34,
   'pages/team/[slug]/edit.tsx': 1126,
   'pages/player/profile.tsx': 33,
-  'pages/player/messages.tsx': 899,
   // Composants (> 600)
   'components/player/screens/PlayerManageTeamScreen.tsx': 255,
-  'components/player/screens/PlayerDashboardScreen.tsx': 450,
+  'components/player/screens/PlayerDashboardScreen.tsx': 447,
   'components/player/screens/PlayerMatchScreen.tsx': 195,
   // Routes (> 500)
   'pages/api/teams/create-with-member.ts': 1387,
-  'pages/api/player/tcg/packs.ts': 778,
+  'pages/api/player/tcg/packs.ts': 4,
   'pages/api/player/dashboard.ts': 5,
   'pages/api/player/matches/[matchId]/report-score.ts': 4,
-  'pages/api/player/tcg/collection.ts': 539,
-  'pages/api/player/teams-directory.ts': 537,
-  'pages/api/demandes/register-team.ts': 517,
+  'pages/api/player/tcg/collection.ts': 4,
+  'pages/api/demandes/register-team.ts': 508,
 };
 
 const countLines = (file: string) =>

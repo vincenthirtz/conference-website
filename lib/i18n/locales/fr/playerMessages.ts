@@ -40,4 +40,6 @@ export default ns('playerMessages', {
   // proposait quand même le champ.
   readOnlyHint:
     "Ton rôle te permet de suivre les conversations de l'équipe, pas d'y répondre.",
+  openError: 'Impossible d’ouvrir la conversation. Réessaie plus tard.',
+  sendError: 'Impossible d’envoyer le message. Réessaie plus tard.',
 });

@@ -23,7 +23,7 @@ import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import type { ScoutingResponse } from '../../api/player/scouting';
+import type { ScoutingResponse } from '@/features/player/network/schemas';
 import type { GameResult } from '../../../utils/teams/scouting';
 import { logger } from '../../../utils/logger';
 import nsScouting from '@/lib/i18n/locales/fr/scouting';

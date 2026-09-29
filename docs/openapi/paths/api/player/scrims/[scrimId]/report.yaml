@@ -18,6 +18,7 @@ post:
     il en faut deux nouveaux. Permission requise : `manage_scrims` sur une des
     deux equipes.
   operationId: playerReportScrimScore
+  x-zod-query: player.scrims.report.query
   security:
     - PlayerBearer: []
   parameters:

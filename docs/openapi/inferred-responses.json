@@ -1818,7 +1818,8 @@
       "type": "null"
      },
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -43249,7 +43250,8 @@
       "type": "object",
       "properties": {
        "discoverable": {
-        "type": "boolean"
+        "type": "boolean",
+        "const": true
        },
        "followerCount": {
         "type": "number"
@@ -43400,154 +43402,118 @@
   },
   "GET /api/player/follows": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "limit": {
-        "type": "number"
-       },
-       "offset": {
-        "type": "number"
-       },
-       "players": {
-        "type": "array",
-        "items": {
+    "type": "object",
+    "properties": {
+     "limit": {
+      "type": "number"
+     },
+     "offset": {
+      "type": "number"
+     },
+     "players": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "authUserId": {
+         "type": "string"
+        },
+        "avatarUrl": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "discordUsername": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "displayName": {
+         "type": "string"
+        },
+        "followerCount": {
+         "type": "number"
+        },
+        "isFollowing": {
+         "type": "boolean"
+        },
+        "stats": {
          "type": "object",
          "properties": {
-          "authUserId": {
-           "type": "string"
-          },
-          "avatarUrl": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "discordUsername": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "displayName": {
-           "type": "string"
-          },
-          "followerCount": {
+          "games": {
            "type": "number"
           },
-          "isFollowing": {
-           "type": "boolean"
+          "peakRating": {
+           "type": "number"
           },
-          "stats": {
-           "type": "object",
-           "properties": {
-            "games": {
-             "type": "number"
-            },
-            "peakRating": {
-             "type": "number"
-            },
-            "tenants": {
-             "type": "number"
-            }
-           },
-           "required": [
-            "games",
-            "peakRating",
-            "tenants"
-           ]
-          },
-          "tagline": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "teams": {
-           "type": "array",
-           "items": {
-            "type": "object",
-            "properties": {
-             "name": {
-              "type": "string"
-             },
-             "slug": {
-              "type": [
-               "string",
-               "null"
-              ]
-             }
-            },
-            "required": [
-             "name",
-             "slug"
-            ]
-           }
+          "tenants": {
+           "type": "number"
           }
          },
          "required": [
-          "authUserId",
-          "avatarUrl",
-          "discordUsername",
-          "displayName",
-          "followerCount",
-          "isFollowing",
-          "tagline"
+          "games",
+          "peakRating",
+          "tenants"
          ]
+        },
+        "tagline": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "teams": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "name": {
+            "type": "string"
+           },
+           "slug": {
+            "type": [
+             "string",
+             "null"
+            ]
+           }
+          },
+          "required": [
+           "name",
+           "slug"
+          ]
+         }
         }
        },
-       "total": {
-        "type": "number"
-       },
-       "type": {
-        "type": "string",
-        "enum": [
-         "followers",
-         "following"
-        ]
-       }
-      },
-      "required": [
-       "limit",
-       "offset",
-       "players",
-       "total",
-       "type"
-      ]
+       "required": [
+        "authUserId",
+        "avatarUrl",
+        "discordUsername",
+        "displayName",
+        "followerCount",
+        "isFollowing",
+        "tagline"
+       ]
+      }
      },
-     {
-      "type": "object",
-      "properties": {
-       "limit": {
-        "type": "number"
-       },
-       "offset": {
-        "type": "number"
-       },
-       "players": {
-        "type": "array",
-        "items": {}
-       },
-       "total": {
-        "type": "number"
-       },
-       "type": {
-        "type": "string",
-        "enum": [
-         "followers",
-         "following"
-        ]
-       }
-      },
-      "required": [
-       "limit",
-       "offset",
-       "players",
-       "total",
-       "type"
+     "total": {
+      "type": "number"
+     },
+     "type": {
+      "type": "string",
+      "enum": [
+       "followers",
+       "following"
       ]
      }
+    },
+    "required": [
+     "limit",
+     "offset",
+     "players",
+     "total",
+     "type"
     ]
    }
   },
@@ -44267,17 +44233,26 @@
       "items": {
        "type": "object",
        "properties": {
-        "content": {},
-        "createdAt": {},
+        "content": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "createdAt": {
+         "type": "string"
+        },
         "fromTeamName": {},
-        "id": {},
+        "id": {
+         "type": "string"
+        },
         "isRead": {
          "type": "boolean"
         },
-        "senderId": {},
-        "senderName": {
-         "type": "object"
+        "senderId": {
+         "type": "string"
         },
+        "senderName": {},
         "senderTeamId": {}
        },
        "required": [
@@ -44296,37 +44271,30 @@
       "type": "string"
      },
      "otherTeam": {
-      "anyOf": [
-       {
-        "type": "object",
-        "properties": {
-         "id": {},
-         "logo_url": {},
-         "name": {},
-         "short_name": {}
-        },
-        "required": [
-         "id",
-         "logo_url",
-         "name",
-         "short_name"
+      "type": "object",
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "logo_url": {
+        "type": [
+         "string",
+         "null"
         ]
        },
-       {
-        "type": "object",
-        "properties": {
-         "id": {
-          "type": "string"
-         },
-         "name": {
-          "type": "string"
-         }
-        },
-        "required": [
-         "id",
-         "name"
+       "name": {
+        "type": "string"
+       },
+       "short_name": {
+        "type": [
+         "string",
+         "null"
         ]
        }
+      },
+      "required": [
+       "id",
+       "name"
       ]
      }
     },
@@ -45778,945 +45746,875 @@
   },
   "GET /api/player/scrims": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "recent": {
-        "type": "array",
-        "items": {
-         "type": "object",
+    "type": "object",
+    "properties": {
+     "recent": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "disputeReason": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "isTeam1": {
+         "type": "boolean"
+        },
+        "myReport": {
+         "type": [
+          "object",
+          "null"
+         ],
          "properties": {
-          "disputeReason": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "id": {
-           "type": "string"
-          },
-          "isTeam1": {
-           "type": "boolean"
-          },
-          "myReport": {
-           "type": [
-            "object",
-            "null"
-           ],
-           "properties": {
-            "team1Score": {
-             "type": "number"
-            },
-            "team2Score": {
-             "type": "number"
-            }
-           },
-           "required": [
-            "team1Score",
-            "team2Score"
-           ]
-          },
-          "name": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "opponentName": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "ranked": {
-           "type": "boolean"
-          },
-          "scheduledDate": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "status": {
-           "type": "string"
-          },
           "team1Score": {
-           "type": [
-            "number",
-            "null"
-           ]
+           "type": "number"
           },
           "team2Score": {
-           "type": [
-            "number",
-            "null"
-           ]
-          },
-          "winnerTeamId": {
-           "type": [
-            "string",
-            "null"
-           ]
+           "type": "number"
           }
          },
          "required": [
-          "disputeReason",
-          "id",
-          "isTeam1",
-          "myReport",
-          "name",
-          "opponentName",
-          "ranked",
-          "scheduledDate",
-          "status",
           "team1Score",
-          "team2Score",
-          "winnerTeamId"
+          "team2Score"
+         ]
+        },
+        "name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "opponentName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "ranked": {
+         "type": "boolean"
+        },
+        "scheduledDate": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": "string"
+        },
+        "team1Score": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "team2Score": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "winnerTeamId": {
+         "type": [
+          "string",
+          "null"
          ]
         }
        },
-       "teamId": {
-        "type": "string"
-       },
-       "toReport": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "disputeReason": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "id": {
-           "type": "string"
-          },
-          "isTeam1": {
-           "type": "boolean"
-          },
-          "myReport": {
-           "type": [
-            "object",
-            "null"
-           ],
-           "properties": {
-            "team1Score": {
-             "type": "number"
-            },
-            "team2Score": {
-             "type": "number"
-            }
-           },
-           "required": [
-            "team1Score",
-            "team2Score"
-           ]
-          },
-          "name": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "opponentName": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "ranked": {
-           "type": "boolean"
-          },
-          "scheduledDate": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "status": {
-           "type": "string"
-          },
-          "team1Score": {
-           "type": [
-            "number",
-            "null"
-           ]
-          },
-          "team2Score": {
-           "type": [
-            "number",
-            "null"
-           ]
-          },
-          "winnerTeamId": {
-           "type": [
-            "string",
-            "null"
-           ]
-          }
-         },
-         "required": [
-          "disputeReason",
-          "id",
-          "isTeam1",
-          "myReport",
-          "name",
-          "opponentName",
-          "ranked",
-          "scheduledDate",
-          "status",
-          "team1Score",
-          "team2Score",
-          "winnerTeamId"
-         ]
-        }
-       },
-       "upcoming": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "properties": {
-          "disputeReason": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "id": {
-           "type": "string"
-          },
-          "isTeam1": {
-           "type": "boolean"
-          },
-          "myReport": {
-           "type": [
-            "object",
-            "null"
-           ],
-           "properties": {
-            "team1Score": {
-             "type": "number"
-            },
-            "team2Score": {
-             "type": "number"
-            }
-           },
-           "required": [
-            "team1Score",
-            "team2Score"
-           ]
-          },
-          "name": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "opponentName": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "ranked": {
-           "type": "boolean"
-          },
-          "scheduledDate": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "status": {
-           "type": "string"
-          },
-          "team1Score": {
-           "type": [
-            "number",
-            "null"
-           ]
-          },
-          "team2Score": {
-           "type": [
-            "number",
-            "null"
-           ]
-          },
-          "winnerTeamId": {
-           "type": [
-            "string",
-            "null"
-           ]
-          }
-         },
-         "required": [
-          "disputeReason",
-          "id",
-          "isTeam1",
-          "myReport",
-          "name",
-          "opponentName",
-          "ranked",
-          "scheduledDate",
-          "status",
-          "team1Score",
-          "team2Score",
-          "winnerTeamId"
-         ]
-        }
-       }
-      },
-      "required": [
-       "recent",
-       "teamId",
-       "toReport",
-       "upcoming"
+       "required": [
+        "disputeReason",
+        "id",
+        "isTeam1",
+        "myReport",
+        "name",
+        "opponentName",
+        "ranked",
+        "scheduledDate",
+        "status",
+        "team1Score",
+        "team2Score",
+        "winnerTeamId"
+       ]
+      }
+     },
+     "teamId": {
+      "type": [
+       "string",
+       "null"
       ]
      },
-     {
-      "type": "object",
-      "properties": {
-       "recent": {
-        "type": "array",
-        "items": {}
+     "toReport": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "disputeReason": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "isTeam1": {
+         "type": "boolean"
+        },
+        "myReport": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "team1Score": {
+           "type": "number"
+          },
+          "team2Score": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "team1Score",
+          "team2Score"
+         ]
+        },
+        "name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "opponentName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "ranked": {
+         "type": "boolean"
+        },
+        "scheduledDate": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": "string"
+        },
+        "team1Score": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "team2Score": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "winnerTeamId": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
        },
-       "teamId": {
-        "type": "null"
+       "required": [
+        "disputeReason",
+        "id",
+        "isTeam1",
+        "myReport",
+        "name",
+        "opponentName",
+        "ranked",
+        "scheduledDate",
+        "status",
+        "team1Score",
+        "team2Score",
+        "winnerTeamId"
+       ]
+      }
+     },
+     "upcoming": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "disputeReason": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "isTeam1": {
+         "type": "boolean"
+        },
+        "myReport": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "team1Score": {
+           "type": "number"
+          },
+          "team2Score": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "team1Score",
+          "team2Score"
+         ]
+        },
+        "name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "opponentName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "ranked": {
+         "type": "boolean"
+        },
+        "scheduledDate": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": "string"
+        },
+        "team1Score": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "team2Score": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "winnerTeamId": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
        },
-       "toReport": {
-        "type": "array",
-        "items": {}
-       },
-       "upcoming": {
-        "type": "array",
-        "items": {}
-       }
-      },
-      "required": [
-       "recent",
-       "teamId",
-       "toReport",
-       "upcoming"
-      ]
+       "required": [
+        "disputeReason",
+        "id",
+        "isTeam1",
+        "myReport",
+        "name",
+        "opponentName",
+        "ranked",
+        "scheduledDate",
+        "status",
+        "team1Score",
+        "team2Score",
+        "winnerTeamId"
+       ]
+      }
      }
+    },
+    "required": [
+     "recent",
+     "teamId",
+     "toReport",
+     "upcoming"
     ]
    }
   },
   "GET /api/player/tcg/collection": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "cards": {
-        "type": "array",
-        "items": {
-         "anyOf": [
-          {
-           "type": "object",
+    "type": "object",
+    "properties": {
+     "cards": {
+      "type": "array",
+      "items": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "artistName": {},
+          "artistUrl": {},
+          "cardImageUrl": {},
+          "category": {},
+          "count": {
+           "type": "number"
+          },
+          "displayName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "engagedCopies": {
+           "type": "number"
+          },
+          "fanartId": {},
+          "figure": {
+           "type": [
+            "object",
+            "null"
+           ],
            "properties": {
-            "artistName": {},
-            "artistUrl": {},
-            "cardImageUrl": {},
-            "category": {},
-            "count": {
-             "type": "number"
-            },
-            "displayName": {
+            "color": {
              "type": [
               "string",
               "null"
              ]
             },
-            "engagedCopies": {
-             "type": "number"
-            },
-            "fanartId": {},
-            "figure": {
+            "heroName": {
              "type": [
-              "object",
+              "string",
+              "null"
+             ]
+            },
+            "heroSource": {
+             "type": [
+              "string",
               "null"
              ],
-             "properties": {
-              "color": {
-               "type": [
-                "string",
-                "null"
-               ]
-              },
-              "heroName": {
-               "type": [
-                "string",
-                "null"
-               ]
-              },
-              "heroSource": {
-               "type": [
-                "string",
-                "null"
-               ],
-               "enum": [
-                "pick",
-                "role",
-                null
-               ]
-              },
-              "role": {
-               "type": "string",
-               "enum": [
-                "damage",
-                "support",
-                "tank"
-               ]
-              }
-             },
-             "required": [
-              "color",
-              "heroName",
-              "heroSource",
-              "role"
+             "enum": [
+              "pick",
+              "role",
+              null
              ]
             },
-            "imageUrl": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "isFoil": {
-             "type": "boolean"
-            },
-            "kind": {
-             "type": "string",
-             "const": "player"
-            },
-            "logoCredit": {},
-            "logoUrl": {},
-            "name": {},
-            "rarity": {
+            "role": {
              "type": "string",
              "enum": [
-              "common",
-              "epic",
-              "legendary",
-              "rare"
+              "damage",
+              "support",
+              "tank"
              ]
-            },
-            "recyclable": {
-             "type": [
-              "object",
-              "null"
-             ],
-             "properties": {
-              "packId": {
-               "type": "string"
-              },
-              "position": {
-               "type": "number"
-              }
-             },
-             "required": [
-              "packId",
-              "position"
-             ]
-            },
-            "recyclableEngaged": {
-             "type": "boolean"
-            },
-            "slug": {},
-            "teamId": {},
-            "title": {},
-            "userId": {
-             "type": "string"
             }
            },
            "required": [
-            "count",
-            "displayName",
-            "engagedCopies",
-            "figure",
-            "imageUrl",
-            "isFoil",
-            "kind",
-            "rarity",
-            "recyclable",
-            "recyclableEngaged",
-            "userId"
+            "color",
+            "heroName",
+            "heroSource",
+            "role"
            ]
           },
-          {
-           "type": "object",
-           "properties": {
-            "artistName": {},
-            "artistUrl": {},
-            "cardImageUrl": {},
-            "category": {},
-            "count": {
-             "type": "number"
-            },
-            "displayName": {},
-            "engagedCopies": {
-             "type": "number"
-            },
-            "fanartId": {},
-            "figure": {},
-            "imageUrl": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "isFoil": {
-             "type": "boolean"
-            },
-            "kind": {
-             "type": "string",
-             "const": "map"
-            },
-            "logoCredit": {},
-            "logoUrl": {},
-            "name": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "rarity": {
-             "type": "string",
-             "enum": [
-              "common",
-              "epic",
-              "legendary",
-              "rare"
-             ]
-            },
-            "recyclable": {
-             "type": [
-              "object",
-              "null"
-             ],
-             "properties": {
-              "packId": {
-               "type": "string"
-              },
-              "position": {
-               "type": "number"
-              }
-             },
-             "required": [
-              "packId",
-              "position"
-             ]
-            },
-            "recyclableEngaged": {
-             "type": "boolean"
-            },
-            "slug": {
-             "type": "string"
-            },
-            "teamId": {},
-            "title": {},
-            "userId": {}
-           },
-           "required": [
-            "count",
-            "engagedCopies",
-            "imageUrl",
-            "isFoil",
-            "kind",
-            "name",
-            "rarity",
-            "recyclable",
-            "recyclableEngaged",
-            "slug"
+          "imageUrl": {
+           "type": [
+            "string",
+            "null"
            ]
           },
-          {
-           "type": "object",
-           "properties": {
-            "artistName": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "artistUrl": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "cardImageUrl": {},
-            "category": {
-             "type": "string",
-             "enum": [
-              "association",
-              "fanart"
-             ]
-            },
-            "count": {
-             "type": "number"
-            },
-            "displayName": {},
-            "engagedCopies": {
-             "type": "number"
-            },
-            "fanartId": {
-             "type": "string"
-            },
-            "figure": {},
-            "imageUrl": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "isFoil": {
-             "type": "boolean"
-            },
-            "kind": {
-             "type": "string",
-             "const": "fanart"
-            },
-            "logoCredit": {},
-            "logoUrl": {},
-            "name": {},
-            "rarity": {
-             "type": "string",
-             "enum": [
-              "common",
-              "epic",
-              "legendary",
-              "rare"
-             ]
-            },
-            "recyclable": {
-             "type": [
-              "object",
-              "null"
-             ],
-             "properties": {
-              "packId": {
-               "type": "string"
-              },
-              "position": {
-               "type": "number"
-              }
-             },
-             "required": [
-              "packId",
-              "position"
-             ]
-            },
-            "recyclableEngaged": {
-             "type": "boolean"
-            },
-            "slug": {},
-            "teamId": {},
-            "title": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "userId": {}
-           },
-           "required": [
-            "artistName",
-            "artistUrl",
-            "category",
-            "count",
-            "engagedCopies",
-            "fanartId",
-            "imageUrl",
-            "isFoil",
-            "kind",
-            "rarity",
-            "recyclable",
-            "recyclableEngaged",
-            "title"
+          "isFoil": {
+           "type": "boolean"
+          },
+          "kind": {
+           "type": "string",
+           "const": "player"
+          },
+          "logoCredit": {},
+          "logoUrl": {},
+          "name": {},
+          "rarity": {
+           "type": "string",
+           "enum": [
+            "common",
+            "epic",
+            "legendary",
+            "rare"
            ]
           },
-          {
-           "type": "object",
+          "recyclable": {
+           "type": [
+            "object",
+            "null"
+           ],
            "properties": {
-            "artistName": {},
-            "artistUrl": {},
-            "cardImageUrl": {},
-            "category": {},
-            "count": {
-             "type": "number"
-            },
-            "displayName": {},
-            "engagedCopies": {
-             "type": "number"
-            },
-            "fanartId": {},
-            "figure": {},
-            "imageUrl": {},
-            "isFoil": {
-             "type": "boolean"
-            },
-            "kind": {
-             "type": "string",
-             "const": "mascot"
-            },
-            "logoCredit": {},
-            "logoUrl": {},
-            "name": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "rarity": {
-             "type": "string",
-             "enum": [
-              "common",
-              "epic",
-              "legendary",
-              "rare"
-             ]
-            },
-            "recyclable": {
-             "type": [
-              "object",
-              "null"
-             ],
-             "properties": {
-              "packId": {
-               "type": "string"
-              },
-              "position": {
-               "type": "number"
-              }
-             },
-             "required": [
-              "packId",
-              "position"
-             ]
-            },
-            "recyclableEngaged": {
-             "type": "boolean"
-            },
-            "slug": {
+            "packId": {
              "type": "string"
             },
-            "teamId": {},
-            "title": {},
-            "userId": {}
+            "position": {
+             "type": "number"
+            }
            },
            "required": [
-            "count",
-            "engagedCopies",
-            "isFoil",
-            "kind",
-            "name",
-            "rarity",
-            "recyclable",
-            "recyclableEngaged",
-            "slug"
+            "packId",
+            "position"
            ]
           },
-          {
-           "type": "object",
-           "properties": {
-            "artistName": {},
-            "artistUrl": {},
-            "cardImageUrl": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "category": {},
-            "count": {
-             "type": "number"
-            },
-            "displayName": {},
-            "engagedCopies": {
-             "type": "number"
-            },
-            "fanartId": {},
-            "figure": {},
-            "imageUrl": {},
-            "isFoil": {
-             "type": "boolean"
-            },
-            "kind": {
-             "type": "string",
-             "const": "team"
-            },
-            "logoCredit": {
-             "type": [
-              "object",
-              "null"
-             ],
-             "properties": {
-              "name": {
-               "type": "string"
-              },
-              "url": {
-               "type": [
-                "string",
-                "null"
-               ]
-              }
-             },
-             "required": [
-              "name",
-              "url"
-             ]
-            },
-            "logoUrl": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "name": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "rarity": {
-             "type": "string",
-             "enum": [
-              "common",
-              "epic",
-              "legendary",
-              "rare"
-             ]
-            },
-            "recyclable": {
-             "type": [
-              "object",
-              "null"
-             ],
-             "properties": {
-              "packId": {
-               "type": "string"
-              },
-              "position": {
-               "type": "number"
-              }
-             },
-             "required": [
-              "packId",
-              "position"
-             ]
-            },
-            "recyclableEngaged": {
-             "type": "boolean"
-            },
-            "slug": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "teamId": {
-             "type": "string"
-            },
-            "title": {},
-            "userId": {}
-           },
-           "required": [
-            "cardImageUrl",
-            "count",
-            "engagedCopies",
-            "isFoil",
-            "kind",
-            "logoCredit",
-            "logoUrl",
-            "name",
-            "rarity",
-            "recyclable",
-            "recyclableEngaged",
-            "slug",
-            "teamId"
-           ]
+          "recyclableEngaged": {
+           "type": "boolean"
+          },
+          "slug": {},
+          "teamId": {},
+          "title": {},
+          "userId": {
+           "type": "string"
           }
+         },
+         "required": [
+          "count",
+          "displayName",
+          "engagedCopies",
+          "figure",
+          "imageUrl",
+          "isFoil",
+          "kind",
+          "rarity",
+          "recyclable",
+          "recyclableEngaged",
+          "userId"
+         ]
+        },
+        {
+         "type": "object",
+         "properties": {
+          "artistName": {},
+          "artistUrl": {},
+          "cardImageUrl": {},
+          "category": {},
+          "count": {
+           "type": "number"
+          },
+          "displayName": {},
+          "engagedCopies": {
+           "type": "number"
+          },
+          "fanartId": {},
+          "figure": {},
+          "imageUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "isFoil": {
+           "type": "boolean"
+          },
+          "kind": {
+           "type": "string",
+           "const": "map"
+          },
+          "logoCredit": {},
+          "logoUrl": {},
+          "name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "rarity": {
+           "type": "string",
+           "enum": [
+            "common",
+            "epic",
+            "legendary",
+            "rare"
+           ]
+          },
+          "recyclable": {
+           "type": [
+            "object",
+            "null"
+           ],
+           "properties": {
+            "packId": {
+             "type": "string"
+            },
+            "position": {
+             "type": "number"
+            }
+           },
+           "required": [
+            "packId",
+            "position"
+           ]
+          },
+          "recyclableEngaged": {
+           "type": "boolean"
+          },
+          "slug": {
+           "type": "string"
+          },
+          "teamId": {},
+          "title": {},
+          "userId": {}
+         },
+         "required": [
+          "count",
+          "engagedCopies",
+          "imageUrl",
+          "isFoil",
+          "kind",
+          "name",
+          "rarity",
+          "recyclable",
+          "recyclableEngaged",
+          "slug"
+         ]
+        },
+        {
+         "type": "object",
+         "properties": {
+          "artistName": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "artistUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "cardImageUrl": {},
+          "category": {
+           "type": "string",
+           "enum": [
+            "association",
+            "fanart"
+           ]
+          },
+          "count": {
+           "type": "number"
+          },
+          "displayName": {},
+          "engagedCopies": {
+           "type": "number"
+          },
+          "fanartId": {
+           "type": "string"
+          },
+          "figure": {},
+          "imageUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "isFoil": {
+           "type": "boolean"
+          },
+          "kind": {
+           "type": "string",
+           "const": "fanart"
+          },
+          "logoCredit": {},
+          "logoUrl": {},
+          "name": {},
+          "rarity": {
+           "type": "string",
+           "enum": [
+            "common",
+            "epic",
+            "legendary",
+            "rare"
+           ]
+          },
+          "recyclable": {
+           "type": [
+            "object",
+            "null"
+           ],
+           "properties": {
+            "packId": {
+             "type": "string"
+            },
+            "position": {
+             "type": "number"
+            }
+           },
+           "required": [
+            "packId",
+            "position"
+           ]
+          },
+          "recyclableEngaged": {
+           "type": "boolean"
+          },
+          "slug": {},
+          "teamId": {},
+          "title": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "userId": {}
+         },
+         "required": [
+          "artistName",
+          "artistUrl",
+          "category",
+          "count",
+          "engagedCopies",
+          "fanartId",
+          "imageUrl",
+          "isFoil",
+          "kind",
+          "rarity",
+          "recyclable",
+          "recyclableEngaged",
+          "title"
+         ]
+        },
+        {
+         "type": "object",
+         "properties": {
+          "artistName": {},
+          "artistUrl": {},
+          "cardImageUrl": {},
+          "category": {},
+          "count": {
+           "type": "number"
+          },
+          "displayName": {},
+          "engagedCopies": {
+           "type": "number"
+          },
+          "fanartId": {},
+          "figure": {},
+          "imageUrl": {},
+          "isFoil": {
+           "type": "boolean"
+          },
+          "kind": {
+           "type": "string",
+           "const": "mascot"
+          },
+          "logoCredit": {},
+          "logoUrl": {},
+          "name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "rarity": {
+           "type": "string",
+           "enum": [
+            "common",
+            "epic",
+            "legendary",
+            "rare"
+           ]
+          },
+          "recyclable": {
+           "type": [
+            "object",
+            "null"
+           ],
+           "properties": {
+            "packId": {
+             "type": "string"
+            },
+            "position": {
+             "type": "number"
+            }
+           },
+           "required": [
+            "packId",
+            "position"
+           ]
+          },
+          "recyclableEngaged": {
+           "type": "boolean"
+          },
+          "slug": {
+           "type": "string"
+          },
+          "teamId": {},
+          "title": {},
+          "userId": {}
+         },
+         "required": [
+          "count",
+          "engagedCopies",
+          "isFoil",
+          "kind",
+          "name",
+          "rarity",
+          "recyclable",
+          "recyclableEngaged",
+          "slug"
+         ]
+        },
+        {
+         "type": "object",
+         "properties": {
+          "artistName": {},
+          "artistUrl": {},
+          "cardImageUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "category": {},
+          "count": {
+           "type": "number"
+          },
+          "displayName": {},
+          "engagedCopies": {
+           "type": "number"
+          },
+          "fanartId": {},
+          "figure": {},
+          "imageUrl": {},
+          "isFoil": {
+           "type": "boolean"
+          },
+          "kind": {
+           "type": "string",
+           "const": "team"
+          },
+          "logoCredit": {
+           "type": [
+            "object",
+            "null"
+           ],
+           "properties": {
+            "name": {
+             "type": "string"
+            },
+            "url": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
+           },
+           "required": [
+            "name",
+            "url"
+           ]
+          },
+          "logoUrl": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "rarity": {
+           "type": "string",
+           "enum": [
+            "common",
+            "epic",
+            "legendary",
+            "rare"
+           ]
+          },
+          "recyclable": {
+           "type": [
+            "object",
+            "null"
+           ],
+           "properties": {
+            "packId": {
+             "type": "string"
+            },
+            "position": {
+             "type": "number"
+            }
+           },
+           "required": [
+            "packId",
+            "position"
+           ]
+          },
+          "recyclableEngaged": {
+           "type": "boolean"
+          },
+          "slug": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "teamId": {
+           "type": "string"
+          },
+          "title": {},
+          "userId": {}
+         },
+         "required": [
+          "cardImageUrl",
+          "count",
+          "engagedCopies",
+          "isFoil",
+          "kind",
+          "logoCredit",
+          "logoUrl",
+          "name",
+          "rarity",
+          "recyclable",
+          "recyclableEngaged",
+          "slug",
+          "teamId"
          ]
         }
-       },
-       "distinct": {
-        "type": "number"
-       },
-       "nextCursor": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "pool": {
-        "type": [
-         "object",
-         "null"
-        ],
-        "properties": {
-         "distinct": {
-          "type": "number"
-         }
-        },
-        "required": [
-         "distinct"
-        ]
-       },
-       "total": {
-        "type": "number"
-       }
-      },
-      "required": [
-       "cards",
-       "distinct",
-       "nextCursor",
-       "pool",
-       "total"
+       ]
+      }
+     },
+     "distinct": {
+      "type": "number"
+     },
+     "nextCursor": {
+      "type": [
+       "string",
+       "null"
       ]
      },
-     {
-      "type": "object",
+     "pool": {
+      "type": [
+       "object",
+       "null"
+      ],
       "properties": {
-       "cards": {
-        "type": "array",
-        "items": {}
-       },
        "distinct": {
-        "type": "number"
-       },
-       "nextCursor": {
-        "type": "null"
-       },
-       "pool": {
-        "type": [
-         "object",
-         "null"
-        ],
-        "properties": {
-         "distinct": {
-          "type": "number"
-         }
-        },
-        "required": [
-         "distinct"
-        ]
-       },
-       "total": {
         "type": "number"
        }
       },
       "required": [
-       "cards",
-       "distinct",
-       "nextCursor",
-       "pool",
-       "total"
+       "distinct"
       ]
+     },
+     "total": {
+      "type": "number"
      }
+    },
+    "required": [
+     "cards",
+     "distinct",
+     "nextCursor",
+     "pool",
+     "total"
     ]
    }
   },
@@ -48876,7 +48774,8 @@
         }
        },
        "owner": {
-        "type": "string"
+        "type": "string",
+        "const": "me"
        }
       },
       "required": [
@@ -49206,7 +49105,8 @@
         ]
        },
        "owner": {
-        "type": "string"
+        "type": "string",
+        "const": "partner"
        }
       },
       "required": [
@@ -52717,117 +52617,101 @@
   },
   "GET /api/teams/scrim-plannings": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "plannings": {
-        "type": "array",
-        "items": {
+    "type": "object",
+    "properties": {
+     "plannings": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "myAvailability": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        },
+        "myParty": {
+         "type": [
+          "string",
+          "null"
+         ],
+         "enum": [
+          "staff",
+          "team1",
+          "team2",
+          null
+         ]
+        },
+        "planning": {
          "type": "object",
          "properties": {
-          "myAvailability": {
-           "type": "array",
-           "items": {
-            "type": "string"
-           }
-          },
-          "myParty": {
+          "game": {
            "type": [
             "string",
             "null"
-           ],
-           "enum": [
-            "staff",
-            "team1",
-            "team2",
-            null
            ]
           },
-          "planning": {
-           "type": "object",
-           "properties": {
-            "game": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "horizon_days": {
-             "type": "number"
-            },
-            "horizon_start": {
-             "type": "string"
-            },
-            "id": {
-             "type": "string"
-            },
-            "scrim_id": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "status": {
-             "type": "string"
-            },
-            "team1_id": {
-             "type": "string"
-            },
-            "team2_id": {
-             "type": "string"
-            },
-            "title": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "validated_slot": {
-             "type": [
-              "string",
-              "null"
-             ]
-            }
-           },
-           "required": [
-            "game",
-            "horizon_days",
-            "horizon_start",
-            "id",
-            "scrim_id",
-            "status",
-            "team1_id",
-            "team2_id",
-            "title",
-            "validated_slot"
+          "horizon_days": {
+           "type": "number"
+          },
+          "horizon_start": {
+           "type": "string"
+          },
+          "id": {
+           "type": "string"
+          },
+          "scrim_id": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "status": {
+           "type": "string"
+          },
+          "team1_id": {
+           "type": "string"
+          },
+          "team2_id": {
+           "type": "string"
+          },
+          "title": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "validated_slot": {
+           "type": [
+            "string",
+            "null"
            ]
           }
          },
          "required": [
-          "myAvailability",
-          "myParty",
-          "planning"
+          "game",
+          "horizon_days",
+          "horizon_start",
+          "id",
+          "scrim_id",
+          "status",
+          "team1_id",
+          "team2_id",
+          "title",
+          "validated_slot"
          ]
         }
-       }
-      },
-      "required": [
-       "plannings"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "plannings": {
-        "type": "array",
-        "items": {}
-       }
-      },
-      "required": [
-       "plannings"
-      ]
+       },
+       "required": [
+        "myAvailability",
+        "myParty",
+        "planning"
+       ]
+      }
      }
+    },
+    "required": [
+     "plannings"
     ]
    }
   },
@@ -52878,19 +52762,51 @@
      "planning": {
       "type": "object",
       "properties": {
-       "day_end_min": {},
-       "day_start_min": {},
-       "horizon_days": {},
-       "horizon_start": {},
-       "id": {},
-       "slot_minutes": {},
-       "staff_required": {},
-       "status": {},
-       "team1_id": {},
-       "team2_id": {},
-       "timezone": {},
-       "title": {},
-       "validated_slot": {}
+       "day_end_min": {
+        "type": "number"
+       },
+       "day_start_min": {
+        "type": "number"
+       },
+       "horizon_days": {
+        "type": "number"
+       },
+       "horizon_start": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "slot_minutes": {
+        "type": "number"
+       },
+       "staff_required": {
+        "type": "boolean"
+       },
+       "status": {
+        "type": "string"
+       },
+       "team1_id": {
+        "type": "string"
+       },
+       "team2_id": {
+        "type": "string"
+       },
+       "timezone": {
+        "type": "string"
+       },
+       "title": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "validated_slot": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
       },
       "required": [
        "day_end_min",
@@ -52919,33 +52835,17 @@
   },
   "GET /api/teams/scrim-plannings/{planningId}/suggest": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "slots": {
-        "type": "array",
-        "items": {
-         "type": "string"
-        }
-       }
-      },
-      "required": [
-       "slots"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "slots": {
-        "type": "array",
-        "items": {}
-       }
-      },
-      "required": [
-       "slots"
-      ]
+    "type": "object",
+    "properties": {
+     "slots": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
      }
+    },
+    "required": [
+     "slots"
     ]
    }
   },
@@ -52957,7 +52857,125 @@
       "type": "array",
       "items": {
        "type": "object",
-       "additionalProperties": {}
+       "properties": {
+        "comment": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "created_at": {
+         "type": "string"
+        },
+        "iAmRequester": {
+         "type": "boolean"
+        },
+        "id": {
+         "type": "string"
+        },
+        "myTeamId": {
+         "type": "string"
+        },
+        "payload": {},
+        "scrimNego": {
+         "type": "object",
+         "properties": {
+          "agreedSlot": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "proposedBy": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "rounds": {
+           "type": "number"
+          },
+          "slots": {
+           "type": "array",
+           "items": {
+            "type": "string"
+           }
+          }
+         },
+         "required": [
+          "agreedSlot",
+          "proposedBy",
+          "rounds",
+          "slots"
+         ]
+        },
+        "source": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": "string"
+        },
+        "user": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "discord": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "display_name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "email": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "id": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "discord",
+          "display_name",
+          "email",
+          "id"
+         ]
+        },
+        "user_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "comment",
+        "created_at",
+        "iAmRequester",
+        "id",
+        "myTeamId",
+        "payload",
+        "scrimNego",
+        "source",
+        "status",
+        "user",
+        "user_id"
+       ]
       }
      }
     },
@@ -52968,97 +52986,66 @@
   },
   "GET /api/teams/scrim-searches": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
+    "type": "object",
+    "properties": {
+     "search": {
+      "type": [
+       "object",
+       "null"
+      ],
       "properties": {
-       "search": {
-        "type": "null"
-       }
-      },
-      "required": [
-       "search"
-      ]
-     },
-     {
-      "type": "object",
-      "properties": {
-       "search": {
+       "created_at": {
+        "type": "string"
+       },
+       "expires_at": {
+        "type": "string"
+       },
+       "format": {
         "type": [
-         "object",
+         "string",
          "null"
-        ],
-        "properties": {
-         "created_at": {
-          "type": "string"
-         },
-         "created_by": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "expires_at": {
-          "type": "string"
-         },
-         "format": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "id": {
-          "type": "string"
-         },
-         "note": {
-          "type": [
-           "string",
-           "null"
-          ]
-         },
-         "slots": {
-          "type": "array",
-          "items": {
-           "type": "string"
-          }
-         },
-         "status": {
-          "type": "string",
-          "enum": [
-           "active",
-           "cancelled",
-           "fulfilled"
-          ]
-         },
-         "team_id": {
-          "type": "string"
-         },
-         "tenant_id": {
-          "type": "string"
-         },
-         "updated_at": {
-          "type": "string"
-         }
-        },
-        "required": [
-         "created_at",
-         "created_by",
-         "expires_at",
-         "format",
-         "id",
-         "note",
-         "slots",
-         "status",
-         "team_id",
-         "tenant_id",
-         "updated_at"
         ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "note": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "slots": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "status": {
+        "type": "string"
+       },
+       "team_id": {
+        "type": "string"
+       },
+       "updated_at": {
+        "type": "string"
        }
       },
       "required": [
-       "search"
+       "created_at",
+       "expires_at",
+       "format",
+       "id",
+       "note",
+       "slots",
+       "status",
+       "team_id",
+       "updated_at"
       ]
      }
+    },
+    "required": [
+     "search"
     ]
    }
   },
@@ -59479,7 +59466,8 @@
       "type": "number"
      },
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -77789,28 +77777,15 @@
       "type": "string"
      },
      "message": {
-      "type": "object",
-      "properties": {
-       "comment": {},
-       "created_at": {},
-       "id": {},
-       "payload": {},
-       "status": {},
-       "team_id": {},
-       "type": {}
-      },
-      "required": [
-       "comment",
-       "created_at",
-       "id",
-       "payload",
-       "status",
-       "team_id",
-       "type"
-      ]
+      "type": [
+       "object",
+       "null"
+      ],
+      "additionalProperties": {}
      },
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -77820,6 +77795,9 @@
     ]
    }
   },
+  "POST /api/player/push/subscribe": {
+   "200": {}
+  },
   "POST /api/player/scrims/{scrimId}/report": {
    "200": {
     "anyOf": [
@@ -77827,10 +77805,8 @@
       "type": "object",
       "properties": {
        "outcome": {
-        "type": "string"
-       },
-       "reason": {
-        "type": "string"
+        "type": "string",
+        "const": "awaiting_opponent"
        },
        "scrimStatus": {
         "type": "string"
@@ -77838,7 +77814,6 @@
       },
       "required": [
        "outcome",
-       "reason",
        "scrimStatus"
       ]
      },
@@ -77846,10 +77821,12 @@
       "type": "object",
       "properties": {
        "outcome": {
-        "type": "string"
+        "type": "string",
+        "const": "completed"
        },
        "scrimStatus": {
-        "type": "string"
+        "type": "string",
+        "const": "completed"
        },
        "winnerTeamId": {
         "type": [
@@ -77868,12 +77845,20 @@
       "type": "object",
       "properties": {
        "outcome": {
+        "type": "string",
+        "const": "disputed"
+       },
+       "reason": {
         "type": "string"
        },
-       "scrimStatus": {}
+       "scrimStatus": {
+        "type": "string",
+        "const": "disputed"
+       }
       },
       "required": [
        "outcome",
+       "reason",
        "scrimStatus"
       ]
      }
@@ -78044,13 +78029,7 @@
            "type": "number"
           },
           "rarity": {
-           "type": "string",
-           "enum": [
-            "common",
-            "epic",
-            "legendary",
-            "rare"
-           ]
+           "type": "string"
           },
           "teamId": {
            "type": "null"
@@ -78122,13 +78101,7 @@
            "type": "number"
           },
           "rarity": {
-           "type": "string",
-           "enum": [
-            "common",
-            "epic",
-            "legendary",
-            "rare"
-           ]
+           "type": "string"
           },
           "teamId": {
            "type": "null"
@@ -78181,13 +78154,7 @@
            "type": "number"
           },
           "rarity": {
-           "type": "string",
-           "enum": [
-            "common",
-            "epic",
-            "legendary",
-            "rare"
-           ]
+           "type": "string"
           },
           "slug": {
            "type": [
@@ -78242,13 +78209,7 @@
            "type": "number"
           },
           "rarity": {
-           "type": "string",
-           "enum": [
-            "common",
-            "epic",
-            "legendary",
-            "rare"
-           ]
+           "type": "string"
           },
           "slug": {
            "type": [
@@ -78331,13 +78292,7 @@
            "type": "number"
           },
           "rarity": {
-           "type": "string",
-           "enum": [
-            "common",
-            "epic",
-            "legendary",
-            "rare"
-           ]
+           "type": "string"
           },
           "slug": {
            "type": [
@@ -79131,6 +79086,12 @@
     ]
    }
   },
+  "POST /api/teams/scrim-requests": {
+   "200": {
+    "type": "object",
+    "additionalProperties": {}
+   }
+  },
   "POST /api/teams/scrim-searches": {
    "201": {
     "type": "object",
@@ -79139,16 +79100,13 @@
       "type": "number"
      },
      "search": {
-      "type": "object",
+      "type": [
+       "object",
+       "null"
+      ],
       "properties": {
        "created_at": {
         "type": "string"
-       },
-       "created_by": {
-        "type": [
-         "string",
-         "null"
-        ]
        },
        "expires_at": {
         "type": "string"
@@ -79175,17 +79133,9 @@
         }
        },
        "status": {
-        "type": "string",
-        "enum": [
-         "active",
-         "cancelled",
-         "fulfilled"
-        ]
-       },
-       "team_id": {
         "type": "string"
        },
-       "tenant_id": {
+       "team_id": {
         "type": "string"
        },
        "updated_at": {
@@ -79194,7 +79144,6 @@
       },
       "required": [
        "created_at",
-       "created_by",
        "expires_at",
        "format",
        "id",
@@ -79202,7 +79151,6 @@
        "slots",
        "status",
        "team_id",
-       "tenant_id",
        "updated_at"
       ]
      }
@@ -82358,7 +82306,20 @@
   "PUT /api/player/tcg/cosmetics": {
    "200": {
     "type": "object",
-    "additionalProperties": {}
+    "properties": {
+     "background": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "frame": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    }
    }
   },
   "PUT /api/player/tcg/showcase": {
@@ -82808,7 +82769,8 @@
       }
      },
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [

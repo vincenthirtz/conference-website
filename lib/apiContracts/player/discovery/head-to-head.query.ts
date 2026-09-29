@@ -1,9 +1,4 @@
-// Paramètres de requête de /api/player/discovery/head-to-head — déplacés depuis le handler.
-// Source unique handler ↔ spec OpenAPI (`x-zod-query: player.discovery/head-to-head.query`).
-// Module sans effet de bord : zod et utilitaires purs seulement.
+// Source unique : features/player/network/schemas.ts (lot P15). Réexport
+// conservé pour le registre des queries (lib/apiContracts/queries.ts).
 
-import { z } from 'zod';
-
-export const querySchema = z.object({
-  opponentId: z.string().uuid(),
-});
+export { HeadToHeadQuery as querySchema } from '../../../../features/player/network/schemas';

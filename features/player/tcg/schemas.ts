@@ -85,3 +85,42 @@ export const FanartSubmitBody = z.object({
   licenceAccepted: z.unknown().optional(),
 });
 export type FanartSubmitInput = z.infer<typeof FanartSubmitBody>;
+
+/**
+ * PUT /api/player/tcg/showcase (lot P14) — refus `invalid_body`. Les clés de
+ * carte sont ensuite vérifiées une à une (`invalid_card`) puis contre la
+ * possession (`not_owned`) par le service.
+ */
+/**
+ * `MAX_SHOWCASE_CARDS` (utils/tcg/showcase.ts) RECOPIÉ, à dessein : ce module
+ * est lu par le navigateur, et l'util traîne `supabaseAdmin` avec lui. La
+ * parité est tenue par tests/unit/tcgShowcase.test.ts.
+ */
+export const SHOWCASE_MAX_CARDS = 3;
+
+export const ShowcaseBody = z.object({
+  enabled: z.boolean(),
+  cards: z.array(z.string()).max(SHOWCASE_MAX_CARDS),
+});
+export type ShowcaseInput = z.infer<typeof ShowcaseBody>;
+
+/** GET /api/player/tcg/welcome-gift — le cadeau reçu, s'il y en a un. */
+export type PlayerWelcomeGift = {
+  coins: number;
+  receivedAt: string;
+};
+
+export type PlayerWelcomeGiftResponse = {
+  gift: PlayerWelcomeGift | null;
+  /**
+   * Le cadeau d'accueil SUPPORTRICE est-il réclamable par ce compte ?
+   * Calculé par `grantSelfWelcome({ dryRun: true })`, donc avec exactement
+   * les conditions du chemin d'écriture.
+   */
+  welcomeClaimable: boolean;
+};
+
+/** POST /api/player/tcg/welcome-gift — `status` suffit à la carte pour brancher. */
+export type PlayerWelcomeClaimResponse =
+  | { status: 'granted'; coins: number; packGranted: boolean }
+  | { status: 'already' | 'not_eligible' | 'on_roster' };

@@ -61,7 +61,7 @@ import {
 } from '@/features/player/dashboard/ui/quickActions';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
-import type { NetworkStatus } from '@/pages/api/player/network-status';
+import type { NetworkStatus } from '@/features/player/network/schemas';
 import type { PlayerWelcomeGiftResponse } from '@/pages/api/player/tcg/welcome-gift';
 import {
   DASHBOARD_ANCHORS,
@@ -347,10 +347,7 @@ export default function PlayerDashboardScreen() {
               />
               {/* Ancre ciblée par le CTA « Voir les grilles » du hub. */}
               <div id="scrim-plannings" className="scroll-mt-24">
-                <ScrimPlanningsDashboardCard
-                  token={token}
-                  entries={d.scrimPlannings}
-                />
+                <ScrimPlanningsDashboardCard entries={d.scrimPlannings} />
               </div>
             </CategorySection>
           )}

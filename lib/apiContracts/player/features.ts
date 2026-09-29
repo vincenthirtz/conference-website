@@ -15,6 +15,10 @@ import {
   ToggleScrimOpenBody,
 } from '../../../features/player/teamSettings/schemas';
 import { TeamInfoPatchBody } from '../../../features/player/team/schemas';
+import {
+  PlanningIdQuery,
+  ScrimIdQuery,
+} from '../../../features/player/scrims/schemas';
 
 export const PLAYER_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   'player.teams.toggle-joinable.body': {
@@ -29,4 +33,10 @@ export const PLAYER_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
     schema: TeamInfoPatchBody,
     io: 'input',
   },
+  // P13 — scrims
+  'player.teams.scrim-plannings.planning-id.query': {
+    schema: PlanningIdQuery,
+    io: 'input',
+  },
+  'player.scrims.report.query': { schema: ScrimIdQuery, io: 'input' },
 };

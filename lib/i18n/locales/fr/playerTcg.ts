@@ -327,4 +327,8 @@ export default ns('playerTcg', {
   // viennent les paquets, ce que devient ma photo — se posent en regardant
   // cette page, pas depuis le tableau de bord.
   guideLink: 'Comment ça marche ?',
+
+  // Archétype COLLECTION (lot P14) : chaque carte s'ouvre en plein écran.
+  collectionTileAria: 'Voir la carte {name} ({rarity})',
+  collectionDetailClose: 'Fermer la carte',
 });

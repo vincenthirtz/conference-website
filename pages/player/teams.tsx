@@ -1,6 +1,6 @@
 // pages/player/teams.tsx
 //
-// Annuaire d'équipes connecté (R4 + R5 + R7).
+// Annuaire d'équipes connecté (R4 + R5 + R7), archétype LISTE (lot P13).
 //
 // C'est la page qui manquait : jusqu'ici, « je cherche un adversaire » passait
 // par /scrim — une page publique en ISR 10 min qui liste les équipes sans dire
@@ -8,73 +8,39 @@
 //
 // Trois choses s'y croisent :
 //   1. MON annonce (créneaux datés qui expirent seuls) — je la pose ici ;
-//   2. les équipes qui cherchent un scrim, triées par créneaux EN COMMUN avec
-//      la mienne — le signal le plus actionnable du réseau ;
-//   3. les équipes qui recrutent, pour une joueuse sans équipe (R7). Deux
-//      signaux distincts : « Annonce publiée » (une capitaine a posé une annonce
-//      dans `team_openings` — elle CHERCHE) et « Accepte les demandes »
-//      (`is_joinable`, vrai par défaut — elle ne dit pas non, sans rien promettre).
+//   2. les équipes qui cherchent un scrim, triées par compatibilité (créneaux
+//      EN COMMUN avec la mienne en tête) ;
+//   3. les équipes qui recrutent, pour une joueuse sans équipe (R7) : « Annonce
+//      publiée » (elle CHERCHE) vs « Accepte les demandes » (`is_joinable`,
+//      vrai par défaut — elle ne dit pas non, sans rien promettre).
+//
+// État et gestes : features/player/scrims/hooks/useTeamsDirectoryScreen ;
+// panneaux : features/player/scrims/ui.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
-import ScrimSlotCalendarPicker from '@/components/player/ScrimSlotCalendarPicker';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import type {
-  DirectoryTeam,
-  NetworkDirectoryTeam,
-} from '../api/player/teams-directory';
-import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
-import type { ResolvedTeamSkillRating } from '@/utils/overwatchRank';
-import type { OpponentReason } from '../../utils/teams/opponentMatch';
-
-import { logger } from '../../utils/logger';
+import type { OpponentReason } from '@/utils/teams/opponentMatch';
 import nsPlayerTeams from '@/lib/i18n/locales/fr/playerTeams';
 import nsSpecialty from '@/lib/i18n/locales/fr/specialty';
-import {
-  acceptsRequests,
-  isRecruiting,
-  sortRecruitingFirst,
-} from '@/utils/teams/directoryRecruitment';
-import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
-
-type DirectoryResponse = {
-  teams: DirectoryTeam[];
-  networkTeams?: NetworkDirectoryTeam[];
-  mySkillAverage?: ResolvedTeamSkillRating | null;
-  myTeamId: string | null;
-  hasOwnSearch: boolean;
-};
-
-type MySearch = {
-  id: string;
-  slots: string[];
-  format: string | null;
-  note: string | null;
-  expires_at: string;
-} | null;
-
-type Filter = 'all' | 'scrim' | 'recruiting' | 'level';
-
-/**
- * Couleur du badge de score. Trois bandes seulement : au-delà, la nuance
- * devient du bruit — le score sert à trier, pas à noter au point près.
- */
-function scoreTone(score: number): string {
-  if (score >= 70)
-    return 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200';
-  if (score >= 45) return 'border-sky-400/40 bg-sky-500/15 text-sky-200';
-  return 'border-white/15 bg-white/5 text-gray-300';
-}
+import { withPlayerQuery } from '@/features/player/_shared/query';
+import { ListeView } from '@/features/player/_shared/ui';
+import { usePlayerErrorText } from '@/features/player/_shared/useErrorText';
+import { Button, Card, ListSearch } from '@/features/ruban';
+import {
+  useTeamsDirectoryScreen,
+  type DirectoryFilter,
+} from '@/features/player/scrims/hooks/useTeamsDirectoryScreen';
+import MyScrimSearchPanel from '@/features/player/scrims/ui/MyScrimSearchPanel';
+import DirectoryTeamRow from '@/features/player/scrims/ui/DirectoryTeamRow';
+import NetworkTeamsSection from '@/features/player/scrims/ui/NetworkTeamsSection';
 
 function PlayerTeamsPage() {
   const t = useT(nsPlayerTeams);
@@ -83,126 +49,18 @@ function PlayerTeamsPage() {
   const locale = useLocale();
   const router = useRouter();
   const { ready, loading: authLoading } = usePlayerSession();
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
-  const { withTeam } = useActiveTeam();
   const { data: managedTeam } = useManagedTeam();
   const { addToast } = useToast();
+  const errorText = usePlayerErrorText();
 
-  const [teams, setTeams] = useState<DirectoryTeam[]>([]);
-  // Équipes des autres espaces volontaires : vide tant que mon espace n'a pas
-  // ouvert le sien (cf. utils/tenants/networkSharing.ts).
-  const [networkTeams, setNetworkTeams] = useState<NetworkDirectoryTeam[]>([]);
-  const [myTeamId, setMyTeamId] = useState<string | null>(null);
-  const [mySkillAverage, setMySkillAverage] =
-    useState<ResolvedTeamSkillRating | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-
-  const [mySearch, setMySearch] = useState<MySearch>(null);
-  const [slots, setSlots] = useState<string[]>([]);
-  const [note, setNote] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const [filter, setFilter] = useState<Filter>('all');
-  const [query, setQuery] = useState('');
-
-  // Pré-filtrage depuis l'URL : `?filter=recruiting` (lien « parcourir les
-  // équipes » d'une joueuse sans équipe) ou `?filter=scrim`.
-  useEffect(() => {
-    const raw = router.query.filter;
-    if (raw === 'recruiting' || raw === 'scrim') setFilter(raw);
-  }, [router.query.filter]);
-
-  // Poser une annonce demande la permission `manage_scrims` — le serveur la
-  // re-vérifie ; ici on ne fait qu'éviter d'afficher un formulaire inutile.
+  // Poser une annonce demande `manage_scrims` — le serveur la re-vérifie ;
+  // ici on évite seulement d'afficher un formulaire inutile.
   const managesTeam = !!(managedTeam?.isCaptain || managedTeam?.isManager);
-
-  const loadDirectory = useCallback(async () => {
-    setLoading(true);
-    setLoadError(false);
-    try {
-      const data = await adminFetchJson<DirectoryResponse>(
-        withTeam('/api/player/teams-directory')
-      );
-      setTeams(data.teams ?? []);
-      setNetworkTeams(data.networkTeams ?? []);
-      setMyTeamId(data.myTeamId ?? null);
-      setMySkillAverage(data.mySkillAverage ?? null);
-    } catch (err) {
-      logger.error('[player/teams] directory error', err);
-      setLoadError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [adminFetchJson, withTeam]);
-
-  const loadMySearch = useCallback(async () => {
-    if (!managesTeam) return;
-    try {
-      const data = await adminFetchJson<{ search: MySearch }>(
-        withTeam('/api/teams/scrim-searches')
-      );
-      setMySearch(data.search ?? null);
-      if (data.search?.slots?.length) setSlots(data.search.slots);
-      if (data.search?.note) setNote(data.search.note);
-    } catch (err) {
-      logger.error('[player/teams] my search error', err);
-    }
-  }, [adminFetchJson, managesTeam, withTeam]);
-
-  useEffect(() => {
-    if (!ready) return;
-    void loadDirectory();
-    void loadMySearch();
-  }, [ready, loadDirectory, loadMySearch]);
-
-  const publishSearch = async () => {
-    const filled = slots.filter(Boolean);
-    if (filled.length === 0) {
-      addToast(t.errorNoSlot, 'error');
-      return;
-    }
-    setSaving(true);
-    try {
-      const data = await adminFetchJson<{
-        search: MySearch;
-        matchedTeams: number;
-      }>(withTeam('/api/teams/scrim-searches'), {
-        method: 'POST',
-        body: JSON.stringify({ slots: filled, note: note.trim() || null }),
-      });
-      setMySearch(data.search);
-      addToast(
-        data.matchedTeams > 0
-          ? format(t.publishedWithMatches, { count: data.matchedTeams })
-          : t.published,
-        'success'
-      );
-      await loadDirectory();
-    } catch (err) {
-      addToast((err as Error).message || t.errorPublish, 'error');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const closeSearch = async () => {
-    setSaving(true);
-    try {
-      await adminFetchJson(withTeam('/api/teams/scrim-searches'), {
-        method: 'DELETE',
-      });
-      setMySearch(null);
-      setSlots([]);
-      setNote('');
-      addToast(t.closed, 'success');
-      await loadDirectory();
-    } catch (err) {
-      addToast((err as Error).message || t.errorClose, 'error');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const s = useTeamsDirectoryScreen({
+    ready,
+    managesTeam,
+    urlFilter: router.query.filter,
+  });
 
   // `useLocale()` renvoie déjà un tag BCP-47 ('fr-FR' | 'en-GB').
   const fmtSlot = (iso: string) =>
@@ -214,7 +72,7 @@ function PlayerTeamsPage() {
       minute: '2-digit',
     });
 
-  /** Libellé d'une raison de score. Les codes viennent de l'API, jamais le texte. */
+  /** Libellé d'une raison de score. Les codes viennent de l'API. */
   const reasonLabel = (code: OpponentReason): string =>
     ({
       common_slots: t.reasonCommonSlots,
@@ -228,477 +86,141 @@ function PlayerTeamsPage() {
       played_recently: t.reasonPlayedRecently,
     })[code] ?? '';
 
-  // « À mon niveau » : un palier d'écart de part et d'autre. Un palier se joue
-  // encore et reste formateur ; au-delà le scrim n'apprend plus rien à
-  // personne. Le filtre n'est proposé que si j'ai moi-même un niveau déclaré —
-  // sans point de comparaison il ne voudrait rien dire.
-  const LEVEL_FILTER_SPAN = 500;
+  if (authLoading || s.directory.isPending) {
+    return <PlayerPageSkeleton rows={4} />;
+  }
 
-  const visibleTeams = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const filtered = teams.filter((team) => {
-      if (filter === 'scrim' && !team.scrim_search) return false;
-      if (filter === 'recruiting' && !isRecruiting(team)) return false;
-      if (filter === 'level') {
-        const mine = mySkillAverage?.average;
-        const theirs = team.skill_average?.average;
-        if (mine == null || theirs == null) return false;
-        if (Math.abs(mine - theirs) > LEVEL_FILTER_SPAN) return false;
-      }
-      if (!q) return true;
-      return (
-        team.name.toLowerCase().includes(q) ||
-        (team.short_name ?? '').toLowerCase().includes(q) ||
-        (team.country ?? '').toLowerCase().includes(q)
-      );
-    });
-    // Sous « recrutent », une annonce publiée passe devant une équipe qui se
-    // contente d'accepter les demandes : c'est la seule qui répondra à coup sûr.
-    // Les autres filtres gardent l'ordre de compatibilité de l'API.
-    return filter === 'recruiting' ? sortRecruitingFirst(filtered) : filtered;
-  }, [teams, filter, query, mySkillAverage]);
-
-  const scrimCount = teams.filter((x) => x.scrim_search).length;
-  const recruitingCount = teams.filter(isRecruiting).length;
-  const levelCount =
-    mySkillAverage == null
-      ? 0
-      : teams.filter(
-          (x) =>
-            x.skill_average != null &&
-            Math.abs(x.skill_average.average - mySkillAverage.average) <=
-              LEVEL_FILTER_SPAN
-        ).length;
-
-  if (authLoading || loading) return <PlayerPageSkeleton rows={4} />;
+  const filters: { key: DirectoryFilter; label: string; count: number }[] = [
+    { key: 'all', label: t.filterAll, count: s.counts.all },
+    { key: 'scrim', label: t.filterScrim, count: s.counts.scrim },
+    {
+      key: 'recruiting',
+      label: t.filterRecruiting,
+      count: s.counts.recruiting,
+    },
+    // Seulement si MON équipe a déclaré un niveau : sans point de comparaison,
+    // « à mon niveau » ne voudrait rien dire.
+    ...(s.mySkill
+      ? [{ key: 'level' as const, label: t.filterLevel, count: s.counts.level }]
+      : []),
+  ];
 
   return (
     <>
       <Head>
         <title>{t.pageTitle}</title>
       </Head>
-      <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black px-4 py-20 text-white">
-        <div className="mx-auto max-w-4xl">
-          <h1 className="text-2xl font-black sm:text-3xl">{t.heading}</h1>
-          <p className="mt-2 text-sm text-gray-400">{t.subtitle}</p>
-
-          {/* ── Mon annonce ─────────────────────────────────────────────── */}
-          {managesTeam && (
-            <section className="mt-6 rounded-2xl border border-blue-400/20 bg-blue-500/[0.06] p-5">
-              <h2 className="text-lg font-semibold">{t.mySearchTitle}</h2>
-              <p className="mt-1 text-sm text-gray-400">{t.mySearchHelp}</p>
-
-              {mySearch && (
-                <div className="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3">
-                  <p className="text-sm font-semibold text-emerald-100">
-                    {t.mySearchActive}
-                  </p>
-                  <ul className="mt-2 flex flex-wrap gap-1.5">
-                    {mySearch.slots.map((s) => (
-                      <li
-                        key={s}
-                        className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] text-emerald-100"
-                      >
-                        {fmtSlot(s)}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-2 text-[11px] text-emerald-100/70">
-                    {format(t.expiresAt, {
-                      date: fmtSlot(mySearch.expires_at),
-                    })}
-                  </p>
-                </div>
-              )}
-
-              <div className="mt-4">
-                <ScrimSlotCalendarPicker
-                  slots={slots}
-                  onChange={setSlots}
-                  accent="blue"
-                  maxSlots={10}
-                  labels={{
-                    slotsLabel: t.slotsLabel,
-                    removeSlot: t.removeSlot,
-                    maxSlotsHint: t.maxSlotsHint,
-                    timezoneNote: t.timezoneNote,
-                    prevWeek: t.prevWeek,
-                    nextWeek: t.nextWeek,
-                    weekOf: t.weekOf,
-                    maxReached: t.maxReached,
-                    empty: t.slotsEmpty,
-                  }}
-                />
-              </div>
-
-              <label
-                htmlFor="scrim-note"
-                className="mt-4 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-300"
-              >
-                {t.noteLabel}
-              </label>
-              <input
-                id="scrim-note"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                maxLength={280}
-                placeholder={t.notePlaceholder}
-                className="mt-2 w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-blue-400/70 focus:outline-none focus:ring-2 focus:ring-blue-400/60"
-              />
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={publishSearch}
-                  disabled={saving}
-                  className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold transition hover:bg-blue-500 disabled:opacity-50"
-                >
-                  {mySearch ? t.relaunchCta : t.publishCta}
-                </button>
-                {mySearch && (
-                  <button
-                    type="button"
-                    onClick={closeSearch}
-                    disabled={saving}
-                    className="rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold transition hover:bg-white/10 disabled:opacity-50"
-                  >
-                    {t.closeCta}
-                  </button>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* ── Filtres ─────────────────────────────────────────────────── */}
-          <div className="mt-8 flex flex-wrap items-center gap-2">
-            {(
-              [
-                {
-                  key: 'all' as const,
-                  label: t.filterAll,
-                  count: teams.length,
-                },
-                {
-                  key: 'scrim' as const,
-                  label: t.filterScrim,
-                  count: scrimCount,
-                },
-                {
-                  key: 'recruiting' as const,
-                  label: t.filterRecruiting,
-                  count: recruitingCount,
-                },
-                // Proposé seulement quand MON équipe a déclaré un niveau :
-                // sans point de comparaison, « à mon niveau » ne veut rien
-                // dire et ne renverrait jamais que zéro résultat.
-                ...(mySkillAverage
-                  ? [
-                      {
-                        key: 'level' as const,
-                        label: t.filterLevel,
-                        count: levelCount,
-                      },
-                    ]
-                  : []),
-              ] satisfies Array<{ key: Filter; label: string; count: number }>
-            ).map((f) => (
-              <button
-                key={f.key}
-                type="button"
-                onClick={() => setFilter(f.key)}
-                aria-pressed={filter === f.key}
-                className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
-                  filter === f.key
-                    ? 'border-blue-400/60 bg-blue-500/20 text-blue-100'
-                    : 'border-white/15 text-gray-300 hover:border-white/30'
-                }`}
-              >
-                {f.label} ({f.count})
-              </button>
-            ))}
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t.searchPlaceholder}
-              aria-label={t.searchPlaceholder}
-              className="ml-auto w-full max-w-[220px] rounded-xl border border-white/15 bg-black/50 px-3 py-1.5 text-sm text-white placeholder:text-gray-500 focus:border-blue-400/70 focus:outline-none"
+      <ListeView
+        title={t.heading}
+        subtitle={t.subtitle}
+        labels={{
+          filters: t.listFilters,
+          closeFilters: t.listCloseFilters,
+          loadMore: t.listLoadMore,
+          loading: t.listLoading,
+        }}
+        summary={format(t.listSummary, { count: s.visibleTeams.length })}
+        lead={
+          managesTeam ? (
+            <MyScrimSearchPanel
+              t={t}
+              pickerLabels={{
+                slotsLabel: t.slotsLabel,
+                removeSlot: t.removeSlot,
+                maxSlotsHint: t.maxSlotsHint,
+                timezoneNote: t.timezoneNote,
+                prevWeek: t.prevWeek,
+                nextWeek: t.nextWeek,
+                weekOf: t.weekOf,
+                maxReached: t.maxReached,
+                empty: t.slotsEmpty,
+              }}
+              search={s.search}
+              busy={s.busy}
+              fmtSlot={fmtSlot}
+              format={format}
+              onPublish={async (values) => {
+                const data = await s.save.mutateAsync(values);
+                addToast(
+                  data.matchedTeams > 0
+                    ? format(t.publishedWithMatches, {
+                        count: data.matchedTeams,
+                      })
+                    : t.published,
+                  'success'
+                );
+              }}
+              onClose={async () => {
+                try {
+                  await s.close.mutateAsync();
+                  addToast(t.closed, 'success');
+                  return true;
+                } catch (err) {
+                  addToast(errorText(err, t.errorClose), 'error');
+                  return false;
+                }
+              }}
             />
-          </div>
-
-          {/* ── Liste ───────────────────────────────────────────────────── */}
-          {loadError ? (
-            <div className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-4">
-              <p className="text-sm text-red-200">{t.errorLoad}</p>
-              <button
-                type="button"
-                onClick={() => void loadDirectory()}
-                className="mt-3 rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold transition hover:bg-red-500"
+          ) : null
+        }
+        search={
+          <ListSearch
+            value={s.query}
+            onChange={s.setQuery}
+            placeholder={t.searchPlaceholder}
+            label={t.searchPlaceholder}
+          />
+        }
+        filters={filters.map((f) => (
+          <Button
+            key={f.key}
+            size="sm"
+            variant={s.filter === f.key ? 'primary' : 'secondary'}
+            aria-pressed={s.filter === f.key}
+            onClick={() => s.setFilter(f.key)}
+          >
+            {f.label} ({f.count})
+          </Button>
+        ))}
+        empty={
+          s.directory.isError ? (
+            <Card role="alert">
+              <p className="text-sm">{t.errorLoad}</p>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="mt-3"
+                onClick={() => void s.directory.refetch()}
               >
                 {t.retry}
-              </button>
-            </div>
-          ) : visibleTeams.length === 0 ? (
-            <p className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-6 text-center text-sm text-gray-400">
-              {t.empty}
-            </p>
+              </Button>
+            </Card>
           ) : (
-            <ul className="mt-6 space-y-3">
-              {visibleTeams.map((team) => (
-                <li
-                  key={team.id}
-                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-white">
-                          {team.name}
-                        </span>
-                        {team.scrim_search && (
-                          <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">
-                            {t.badgeScrim}
-                          </span>
-                        )}
-                        {/* Signal FORT : une annonce existe. Couleur pleine et
-                            postes recherchés, parce que c'est la seule équipe
-                            de la liste qui attend réellement une candidature. */}
-                        {team.opening && (
-                          <span
-                            data-test="badge-opening"
-                            className="rounded-full border border-violet-300/70 bg-violet-600 px-2 py-0.5 text-[10px] font-bold text-white"
-                          >
-                            {team.opening.roles.length > 0
-                              ? format(t.badgeOpeningRoles, {
-                                  roles: team.opening.roles
-                                    .map((r) => tRole[r])
-                                    .join(', '),
-                                })
-                              : t.badgeOpening}
-                          </span>
-                        )}
-                        {/* Signal DISCRET : `is_joinable` vaut true par défaut.
-                            Masqué quand une annonce existe (redondant), et
-                            volontairement terne pour ne rien promettre. */}
-                        {!team.opening && acceptsRequests(team) && (
-                          <span
-                            data-test="badge-accepts-requests"
-                            title={t.badgeAcceptsRequestsHelp}
-                            className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] text-gray-300"
-                          >
-                            {t.badgeAcceptsRequests}
-                          </span>
-                        )}
-                        {/* Score de compatibilité (N4) : il porte le tri, donc
-                            il doit être visible — un classement qu'on ne voit
-                            pas est un classement auquel on ne croit pas. */}
-                        <span
-                          title={t.matchScoreHelp}
-                          className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${scoreTone(
-                            team.match.score
-                          )}`}
-                        >
-                          {format(t.matchScore, { score: team.match.score })}
-                        </span>
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                        {team.country && <span>{team.country}</span>}
-                        <span>
-                          {format(t.membersCount, { count: team.member_count })}
-                        </span>
-                        {typeof team.rating === 'number' && (
-                          <span>
-                            {format(t.ratingLabel, {
-                              rating: Math.round(team.rating),
-                            })}
-                          </span>
-                        )}
-                        {/* Niveau déclaré : le seul repère disponible pour une
-                            équipe qui n'a encore joué aucun match ici. */}
-                        <SkillRatingBadge
-                          skillRating={team.skill_average?.average}
-                        />
-                        {/* Fiabilité (R10) : affichée seulement au-dessus du
-                            seuil d'échantillon — un taux calculé sur deux
-                            demandes serait trompeur. */}
-                        {team.reliability?.responseRate !== null &&
-                          team.reliability?.responseRate !== undefined && (
-                            <span
-                              className={
-                                team.reliability.responseRate >= 70
-                                  ? 'text-emerald-300'
-                                  : 'text-amber-300'
-                              }
-                            >
-                              {format(t.responseRate, {
-                                rate: team.reliability.responseRate,
-                              })}
-                            </span>
-                          )}
-                      </div>
-
-                      {/* Les raisons du score : sans elles, le classement est
-                          un oracle. Codes machine côté API, libellés ici. */}
-                      {team.match.reasons.length > 0 && (
-                        <p className="mt-1 text-xs text-gray-400">
-                          {team.match.reasons
-                            .map((code) => reasonLabel(code))
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </p>
-                      )}
-
-                      {/* Créneaux d'habitude en commun (N1) : le repli quand
-                          personne n'a d'annonce vivante — le cas normal. */}
-                      {!team.scrim_search &&
-                        team.common_rhythm_slots.length > 0 && (
-                          <p className="mt-1 text-xs text-sky-200">
-                            {format(t.commonRhythm, {
-                              count: team.common_rhythm_slots.length,
-                            })}
-                          </p>
-                        )}
-
-                      {team.scrim_search && (
-                        <div className="mt-2">
-                          {team.scrim_search.common_slots.length > 0 ? (
-                            <p className="text-xs font-semibold text-emerald-200">
-                              {format(t.commonSlots, {
-                                count: team.scrim_search.common_slots.length,
-                              })}{' '}
-                              <span className="font-normal text-emerald-100/80">
-                                {team.scrim_search.common_slots
-                                  .slice(0, 3)
-                                  .map(fmtSlot)
-                                  .join(' · ')}
-                              </span>
-                            </p>
-                          ) : (
-                            <p className="text-xs text-gray-400">
-                              {team.scrim_search.slots
-                                .slice(0, 3)
-                                .map(fmtSlot)
-                                .join(' · ')}
-                            </p>
-                          )}
-                          {team.scrim_search.note && (
-                            <p className="mt-1 text-xs italic text-gray-500">
-                              « {team.scrim_search.note} »
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-shrink-0 flex-wrap gap-2">
-                      {managesTeam && (
-                        <Link
-                          href={`/player/requests?tab=scrim&team=${encodeURIComponent(team.id)}`}
-                          className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold transition hover:bg-blue-500"
-                        >
-                          {t.proposeCta}
-                        </Link>
-                      )}
-                      {/* L'annonce vit sur /recrutement, qui porte le contact
-                          (réservé aux personnes connectées). Pas d'ancre : la
-                          liste (components/TeamOpenings/TeamOpeningsList) ne
-                          pose aucun `id` DOM par annonce. */}
-                      {team.opening && (
-                        <Link
-                          href="/recrutement"
-                          className="rounded-xl border border-violet-400/50 px-4 py-2 text-xs font-semibold text-violet-100 transition hover:bg-violet-500/15"
-                        >
-                          {t.viewOpeningCta}
-                        </Link>
-                      )}
-                      {!myTeamId && acceptsRequests(team) && (
-                        <Link
-                          href="/player/join-team"
-                          className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold transition hover:bg-violet-500"
-                        >
-                          {t.joinCta}
-                        </Link>
-                      )}
-                      {/* Dossier d'adversaire (N5) — réservé à qui a une
-                          équipe : sans la sienne, il n'y a ni confrontation
-                          directe ni adversaire commun à comparer. */}
-                      {myTeamId && (
-                        <Link
-                          href={`/player/scouting/${encodeURIComponent(team.id)}`}
-                          className="rounded-xl border border-white/15 px-4 py-2 text-xs font-semibold transition hover:bg-white/10"
-                        >
-                          {t.scoutCta}
-                        </Link>
-                      )}
-                      {team.slug && (
-                        <Link
-                          href={`/team/${team.slug}`}
-                          className="rounded-xl border border-white/15 px-4 py-2 text-xs font-semibold transition hover:bg-white/10"
-                        >
-                          {t.viewCta}
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {/* Le réseau. Une SECTION à part, jamais mélangée à l'annuaire de
-              l'espace : ces équipes n'ont ni fiabilité ni historique commun
-              mesurables ici, et les ranger côte à côte laisserait croire
-              qu'elles se comparent. */}
-          {networkTeams.length > 0 && (
-            <section className="mt-10" data-test="network-teams">
-              <h2 className="text-lg font-bold text-white">{t.networkTitle}</h2>
-              <p className="mt-1 text-sm text-gray-400">{t.networkIntro}</p>
-              <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-                {networkTeams.map((team) => (
-                  <li
-                    key={`${team.tenant.slug ?? 'x'}-${team.id}`}
-                    className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold text-white">
-                        {team.name}
-                      </span>
-                      <span className="rounded-full border border-white/15 px-2 py-0.5 text-[11px] text-gray-300">
-                        {format(t.networkFrom, { name: team.tenant.name })}
-                      </span>
-                    </div>
-                    {team.scrim_search.common_slots.length > 0 && (
-                      <p className="mt-2 text-xs font-semibold text-emerald-300">
-                        {format(t.networkCommonSlots, {
-                          n: team.scrim_search.common_slots.length,
-                        })}
-                      </p>
-                    )}
-                    {team.scrim_search.note && (
-                      <p className="mt-2 text-sm text-gray-300">
-                        {team.scrim_search.note}
-                      </p>
-                    )}
-                    {team.discord ? (
-                      <a
-                        href={team.discord}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-3 inline-flex rounded-xl border border-white/15 px-3 py-1.5 text-xs font-semibold transition hover:bg-white/10"
-                      >
-                        {t.networkContactCta}
-                      </a>
-                    ) : (
-                      <p className="mt-3 text-xs text-gray-500">
-                        {t.networkNoContact}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </div>
-      </div>
+            <Card>
+              <p className="text-center text-sm text-[var(--t3,#a39ba6)]">
+                {t.empty}
+              </p>
+            </Card>
+          )
+        }
+        after={
+          <NetworkTeamsSection teams={s.networkTeams} t={t} format={format} />
+        }
+      >
+        {s.visibleTeams.map((team) => (
+          <DirectoryTeamRow
+            key={team.id}
+            team={team}
+            t={t}
+            roleLabel={(r) => tRole[r as keyof typeof tRole] ?? r}
+            reasonLabel={reasonLabel}
+            fmtSlot={fmtSlot}
+            format={format}
+            managesTeam={managesTeam}
+            hasTeam={Boolean(s.myTeamId)}
+          />
+        ))}
+      </ListeView>
     </>
   );
 }
@@ -714,6 +236,6 @@ const playerTeamsSeo: SeoProps = {
 
 PlayerTeamsPage.seo = playerTeamsSeo;
 
-// Coquille joueuse (lot P8) : navigation basse / rail. La page garde sa
-// propre redirection de session (pas encore migrée) : `redirectTo` absent.
-export default withPlayerShell(PlayerTeamsPage);
+// Cache joueuse (lot P13) + coquille (lot P8). La page garde sa propre
+// session (pas de redirection imposée) : `redirectTo` absent.
+export default withPlayerQuery(withPlayerShell(PlayerTeamsPage));

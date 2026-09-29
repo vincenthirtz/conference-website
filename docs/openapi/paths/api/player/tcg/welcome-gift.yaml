@@ -27,13 +27,15 @@ get:
     a connaitre le vocabulaire du registre et a esperer que le cadeau soit
     encore dans la fenetre.
 
-    ⚠️ SEULE ROUTE `tcg/` A HONORER `?as=`. Elle passe par
-    `withSubjectRoute` parce que le tableau de bord est PARTAGE avec la vue
-    d'inspection staff : une route lisant `user.id` afficherait le cadeau de
-    l'admin sur la page de la joueuse inspectee. Les autres routes `tcg/`
-    lisent encore `user.id` et sont donc fausses sur cet ecran. Le wrapper
-    force `private, no-store` en inspection. Rate-limit 60 / min.
+    ⚠️ SEULE ROUTE `tcg/` A SUIVRE `?as=` (`subject: 'follow'`, lot P14) :
+    le tableau de bord est PARTAGE avec la vue d'inspection staff, une route
+    lisant `user.id` afficherait le cadeau de l'admin sur la page de la
+    joueuse inspectee. Les autres routes `tcg/` sont `subject: 'self'` et
+    REFUSENT `?as=` (403 `subject_unsupported`). Reponse d'inspection
+    `private, no-store`. Rate-limit 60 / min.
   operationId: readPlayerTcgWelcomeGift
+  parameters:
+    - $ref: '#/components/parameters/SubjectAs'
   security:
     - PlayerBearer: []
   responses:
@@ -87,6 +89,8 @@ post:
     les pieces sont deja ecrites et ne seront pas rejouees, et l'ecran doit
     le dire au lieu d'afficher un succes. Rate-limit 6 / min.
   operationId: claimSelfTcgWelcomeGift
+  parameters:
+    - $ref: '#/components/parameters/SubjectAs'
   security:
     - PlayerBearer: []
   responses:

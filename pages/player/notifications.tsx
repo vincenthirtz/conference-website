@@ -1,18 +1,19 @@
 // pages/player/notifications.tsx
 //
-// Coquille : SEO + provider de zone. Le contenu vit dans
-// components/player/screens/PlayerNotificationsScreen, partagé avec la vue
-// d'inspection admin (cf. docs/PLAN-espace-unifie.md).
+// Coquille : SEO + provider de zone + cache joueuse. L'écran vit dans le
+// module features/player/notifications (lot P15, archétype Fil), partagé avec
+// la vue d'inspection admin (cf. docs/PLAN-espace-unifie.md).
 
-import PlayerNotificationsScreen from '@/components/player/screens/PlayerNotificationsScreen';
+import NotificationsScreen from '@/features/player/notifications/ui/NotificationsScreen';
 import { PlayerAreaProvider } from '@/components/player/PlayerAreaContext';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
+import { withPlayerQuery } from '@/features/player/_shared/query';
 
 function PlayerNotifications() {
   return (
     <PlayerAreaProvider>
-      <PlayerNotificationsScreen />
+      <NotificationsScreen />
     </PlayerAreaProvider>
   );
 }
@@ -33,6 +34,8 @@ PlayerNotifications.seo = playerNotificationsSeo;
 
 // Coquille joueuse (lot P8) : session + redirection (même adresse que
 // l'écran), navigation basse / rail.
-export default withPlayerShell(PlayerNotifications, {
-  redirectTo: '/login?next=/player/notifications',
-});
+export default withPlayerQuery(
+  withPlayerShell(PlayerNotifications, {
+    redirectTo: '/login?next=/player/notifications',
+  })
+);

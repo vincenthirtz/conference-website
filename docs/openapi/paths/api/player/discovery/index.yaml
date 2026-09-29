@@ -4,7 +4,7 @@ get:
     Renvoie la carte de découverte GLOBALE (opt-in, invisible par défaut,
     derrière le login). Convention « absent = défaut » : un joueur sans row
     est non découvrable (`discoverable=false`) mais expose les défauts de
-    visibilité (`showRatings=true`, `showTeams=true`). `withAuthRoute`.
+    visibilité (`showRatings=true`, `showTeams=true`). `subject: 'self'` (`?as=` → 403 `subject_unsupported`).
   operationId: playerGetDiscovery
   tags:
     - public/auth
@@ -29,7 +29,7 @@ put:
     Patch partiel de la carte de découverte. `opted_in_at` (audit RGPD) est
     posé au PREMIER passage `discoverable=true` et n'est jamais effacé. Le
     kill-switch (`discoverable=false`) conserve la row et l'horodatage de
-    consentement. `withAuthRoute`.
+    consentement. `subject: 'self'` (`?as=` → 403 `subject_unsupported`).
   operationId: playerPutDiscovery
   tags:
     - public/auth

@@ -38,4 +38,6 @@ export default {
   conversationLabel: 'Conversation thread',
   readOnlyHint:
     "Your role lets you follow the team's conversations, but not reply to them.",
+  openError: 'Could not open the conversation. Try again later.',
+  sendError: 'Could not send the message. Try again later.',
 };

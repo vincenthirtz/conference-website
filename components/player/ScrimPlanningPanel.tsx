@@ -5,14 +5,14 @@
 // créneaux déjà peints (mySlots) et, optionnellement, la heatmap ANONYMISÉE
 // (counts/parties seulement — aucune attribution nominative côté joueur).
 //
-// Il gère lui-même son état local de peinture + le PUT vers
-// `/api/teams/scrim-plannings/[planningId]/availability` (optimiste : la
-// peinture est instantanée, la sauvegarde persiste et notifie via toast).
+// L'état de peinture (créneaux, sauvegarde automatique, « dispos
+// habituelles ») vit dans `usePlanningPainter` (features/player/scrims, lot
+// P13) : la peinture est instantanée, la sauvegarde persiste et notifie.
 //
 // Idiome dark aligné sur les composants scrim joueur : rounded-xl,
 // border-white/15, bg-black/60.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AvailabilityGrid, {
   type AvailabilityGridLabels,
 } from '@/components/scrim/AvailabilityGrid';
@@ -39,19 +39,20 @@ import {
 } from '@/utils/teams/scrimPlanningOverlap';
 import { buildScrimIcs, downloadIcs } from '@/utils/teams/scrimIcs';
 import { formatInstant } from '@/utils/teams/scrimTime';
-import type { ScrimPlanning, ScrimPlanningParty } from '@/types/admin';
 import type {
   PlanningConfig,
-  PlanningParty,
   Heatmap,
 } from '@/utils/teams/scrimPlanningOverlap';
 import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';
+import type {
+  AnonHeatmap,
+  PlanningParty,
+  ScrimPlanningDetailDto,
+} from '@/features/player/scrims/schemas';
+import { usePlanningPainter } from '@/features/player/scrims/hooks/usePlanningPainter';
+import { usePlayerErrorText } from '@/features/player/_shared/useErrorText';
 
-/** Heatmap joueur : counts/parties seulement (pas de noms). */
-export type AnonHeatmap = Record<
-  string,
-  { count: number; parties: PlanningParty[] }
->;
+export type { AnonHeatmap };
 
 export type ScrimPlanningTeamNames = {
   team1?: string | null;
@@ -64,15 +65,13 @@ export default function ScrimPlanningPanel({
   mySlots,
   heatmap,
   teamNames,
-  token,
   onSaved,
 }: {
-  planning: ScrimPlanning;
-  myParty: ScrimPlanningParty;
+  planning: ScrimPlanningDetailDto;
+  myParty: PlanningParty;
   mySlots: string[];
   heatmap?: AnonHeatmap;
   teamNames?: ScrimPlanningTeamNames;
-  token: string | null;
   onSaved?: (slots: string[]) => void;
 }) {
   const t = useT(nsScrimPlanning);
@@ -81,15 +80,24 @@ export default function ScrimPlanningPanel({
 
   const readOnly = planning.status !== 'open';
 
-  const [slots, setSlots] = useState<string[]>(() =>
-    Array.isArray(mySlots) ? mySlots : []
-  );
-  // Dernier état persisté (pour détecter les modifications non enregistrées).
-  const [savedSlots, setSavedSlots] = useState<string[]>(() =>
-    Array.isArray(mySlots) ? mySlots : []
-  );
-  const [saving, setSaving] = useState(false);
-  const [loadingSuggest, setLoadingSuggest] = useState(false);
+  const errorText = usePlayerErrorText();
+  const {
+    slots,
+    setSlots,
+    dirty,
+    saving,
+    loadingSuggest,
+    handleSave,
+    reuseUsual,
+  } = usePlanningPainter({
+    planningId: planning.id,
+    initialSlots: mySlots,
+    readOnly,
+    t,
+    toast: addToast,
+    errorText,
+    onSaved,
+  });
   const [mode, setMode] = useState<'paint' | 'heatmap'>('paint');
   const [view, setView] = useState<'grid' | 'calendar' | 'month'>('calendar');
   // Jour ciblé par la vue mois « overview » → repagine le calendrier dessus.
@@ -115,27 +123,6 @@ export default function ScrimPlanningPanel({
     }),
     [planning]
   );
-
-  // Modifications non enregistrées : la peinture locale diffère du dernier état
-  // persisté. Comparaison ensembliste (l'ordre canonique peut varier).
-  const dirty = useMemo(() => {
-    if (slots.length !== savedSlots.length) return true;
-    const saved = new Set(savedSlots);
-    return slots.some((s) => !saved.has(s));
-  }, [slots, savedSlots]);
-
-  // Garde-fou navigateur : avertit avant de quitter/recharger si des dispos
-  // peintes ne sont pas sauvegardées (les navigateurs affichent un message
-  // générique ; le texte custom est ignoré).
-  useEffect(() => {
-    if (readOnly || !dirty) return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = '';
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [dirty, readOnly]);
 
   // Adapte la heatmap anonymisée au type attendu par la grille (participants
   // vides = aucune fuite nominative, la tooltip n'affichera que le compteur).
@@ -245,32 +232,6 @@ export default function ScrimPlanningPanel({
     setSlots(copyFirstPaintedDayAcrossHorizon(config, slots));
   const clearAll = () => setSlots([]);
 
-  // Reprendre mes dispos habituelles (P4-12) : rejoue les derniers créneaux
-  // peints par l'appelant sur une autre grille, remontés par l'API.
-  const reuseUsual = async () => {
-    if (loadingSuggest) return;
-    setLoadingSuggest(true);
-    try {
-      const res = await fetch(
-        `/api/teams/scrim-plannings/${planning.id}/suggest`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || t.reuseError);
-      const suggested: string[] = Array.isArray(data?.slots) ? data.slots : [];
-      if (suggested.length === 0) {
-        addToast(t.reuseNone, 'info');
-        return;
-      }
-      setSlots(suggested);
-      addToast(t.reuseApplied, 'success');
-    } catch (err) {
-      addToast((err as Error).message || t.reuseError, 'error');
-    } finally {
-      setLoadingSuggest(false);
-    }
-  };
-
   // Ajouter le scrim validé à mon agenda (.ics, P3-10).
   const addToCalendar = () => {
     if (!planning.validated_slot) return;
@@ -313,53 +274,6 @@ export default function ScrimPlanningPanel({
       : mode === 'heatmap' && hasHeatmap
         ? 'heatmap'
         : 'paint';
-
-  const handleSave = useCallback(
-    async (opts?: { silent?: boolean }) => {
-      if (saving || readOnly) return;
-      setSaving(true);
-      try {
-        const res = await fetch(
-          `/api/teams/scrim-plannings/${planning.id}/availability`,
-          {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ slots }),
-          }
-        );
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data?.error || t.saveError);
-        const saved: string[] = Array.isArray(data?.mySlots)
-          ? data.mySlots
-          : slots;
-        setSlots(saved);
-        setSavedSlots(saved);
-        onSaved?.(saved);
-        // Auto-save silencieux : pas de toast à chaque frappe (le témoin
-        // « enregistré » suffit) ; toast seulement sur sauvegarde explicite.
-        if (!opts?.silent) addToast(t.saveSuccess, 'success');
-      } catch (err) {
-        addToast((err as Error).message || t.saveError, 'error');
-      } finally {
-        setSaving(false);
-      }
-    },
-    [saving, readOnly, planning.id, token, slots, onSaved, addToast, t]
-  );
-
-  // Auto-save (debounce) : persiste les dispos ~1,2 s après la dernière
-  // modification. Le témoin « non enregistré » + la garde beforeunload couvrent
-  // la fenêtre avant l'écriture ; la sauvegarde manuelle reste possible.
-  useEffect(() => {
-    if (readOnly || !dirty || saving) return;
-    const id = setTimeout(() => {
-      void handleSave({ silent: true });
-    }, 1200);
-    return () => clearTimeout(id);
-  }, [dirty, readOnly, saving, handleSave]);
 
   const formatSlot = (iso: string) =>
     formatInstant(iso, { locale, timeZone: planning.timezone });

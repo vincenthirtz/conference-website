@@ -83,4 +83,9 @@ export default ns('playerTeams', {
   reasonNeverPlayed: 'jamais affrontée récemment',
   reasonPlayedRecently: 'déjà affrontée plusieurs fois',
   scoutCta: 'Dossier',
+  listFilters: 'Filtres',
+  listCloseFilters: 'Fermer',
+  listLoadMore: 'Voir plus',
+  listLoading: "Chargement de l'annuaire…",
+  listSummary: '{count} équipe(s)',
 });

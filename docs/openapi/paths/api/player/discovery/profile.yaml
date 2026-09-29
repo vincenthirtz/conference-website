@@ -9,7 +9,7 @@ get:
 
     N'est PAS un oracle : joueuse non découvrable, compte inexistant et id
     malformé renvoient TOUS `{ discoverable: false }` en 200. Distinguer ces
-    cas permettrait d'énumérer les comptes du réseau. `withAuthRoute`.
+    cas permettrait d'énumérer les comptes du réseau. `subject: 'self'` (`?as=` → 403 `subject_unsupported`).
   operationId: playerDiscoveryProfile
   tags:
     - public/auth

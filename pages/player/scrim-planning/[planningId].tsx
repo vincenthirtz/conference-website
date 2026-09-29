@@ -1,51 +1,47 @@
 // pages/player/scrim-planning/[planningId].tsx
-// Espace joueur/capitaine : détail d'une grille de disponibilités de scrim.
-// Gate client (usePlayerSession), fetch Bearer du détail, rendu du panneau de
-// peinture. Gère : chargement (skeleton), 403 (non participant), 404
-// (introuvable) et statut ≠ open (lecture seule via le panneau).
+// Espace joueur/capitaine : détail d'une grille de disponibilités de scrim,
+// archétype FICHE (lot P13). Lecture sur le cache joueuse
+// (features/player/scrims), rendu du panneau de peinture. Gère : chargement
+// (skeleton), 403 (non participant), 404 (introuvable) et statut ≠ open
+// (lecture seule via le panneau).
 
-import { useCallback, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useTeamNames } from '@/hooks/useTeamNames';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
-import ScrimPlanningPanel, {
-  type AnonHeatmap,
-} from '@/components/player/ScrimPlanningPanel';
+import ScrimPlanningPanel from '@/components/player/ScrimPlanningPanel';
 import { useT } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import type { ScrimPlanning, ScrimPlanningParty } from '@/types/admin';
-
-import { logger } from '../../../utils/logger';
 import nsScrimPlanning from '@/lib/i18n/locales/fr/scrimPlanning';
 import { loginHrefFor } from '@/utils/player/sessionExpiry';
 import { withPlayerShell } from '@/features/player/_shared/shell/PlayerShell';
+import { withPlayerQuery } from '@/features/player/_shared/query';
+import { FicheView } from '@/features/player/_shared/ui';
+import { Card, EntityHeader } from '@/features/ruban';
+import { useScrimPlanning } from '@/features/player/scrims/hooks/useScrimsQueries';
 
-type DetailResponse = {
-  planning: ScrimPlanning;
-  myParty: ScrimPlanningParty;
-  mySlots: string[];
-  heatmap: AnonHeatmap;
-};
+const statusOf = (err: unknown) =>
+  (err as { status?: number } | null)?.status ?? null;
 
-type LoadState =
-  | { kind: 'loading' }
-  | { kind: 'ok'; data: DetailResponse }
-  | { kind: 'forbidden' }
-  | { kind: 'notfound' }
-  | { kind: 'error' };
+function Notice({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <Card as="section" role="status">
+      {title && <p className="mb-1 font-semibold">{title}</p>}
+      <p className="text-sm text-[var(--t2,#d6cfd9)]">{children}</p>
+    </Card>
+  );
+}
 
 function ScrimPlanningDetailPage() {
   const router = useRouter();
   // Retour à CETTE page après connexion (`?next=`), requête comprise — sans
-  // quoi un lien partagé (`?tab=scrim&team=…`, un mail, une notification)
-  // perdait sa destination. Avant hydratation `asPath` n'est pas fiable :
-  // repli sur `/player`.
+  // quoi un lien partagé (un mail, une notification) perdait sa destination.
+  // Avant hydratation `asPath` n'est pas fiable : repli sur `/player`.
   const {
     user,
-    token,
     loading: authLoading,
     ready,
   } = usePlayerSession({
@@ -54,43 +50,10 @@ function ScrimPlanningDetailPage() {
   const t = useT(nsScrimPlanning);
 
   const rawId = router.query.planningId;
-  const planningId = Array.isArray(rawId) ? rawId[0] : rawId;
+  const planningId = (Array.isArray(rawId) ? rawId[0] : rawId) ?? null;
 
-  const [state, setState] = useState<LoadState>({ kind: 'loading' });
-
-  const load = useCallback(async () => {
-    if (!planningId || !token) return;
-    setState({ kind: 'loading' });
-    try {
-      const res = await fetch(`/api/teams/scrim-plannings/${planningId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.status === 403) {
-        setState({ kind: 'forbidden' });
-        return;
-      }
-      if (res.status === 404) {
-        setState({ kind: 'notfound' });
-        return;
-      }
-      if (!res.ok) {
-        setState({ kind: 'error' });
-        return;
-      }
-      const data = (await res.json()) as DetailResponse;
-      setState({ kind: 'ok', data });
-    } catch (err) {
-      logger.error('[scrim-planning] load error:', err);
-      setState({ kind: 'error' });
-    }
-  }, [planningId, token]);
-
-  useEffect(() => {
-    if (!ready || !planningId) return;
-    load();
-  }, [ready, planningId, load]);
-
-  const okData = state.kind === 'ok' ? state.data : null;
+  const detail = useScrimPlanning(ready ? planningId : null);
+  const okData = detail.data ?? null;
   const teamNames = useTeamNames([
     okData?.planning.team1_id,
     okData?.planning.team2_id,
@@ -99,89 +62,75 @@ function ScrimPlanningDetailPage() {
   if (authLoading || (!router.isReady && !planningId)) {
     return <PlayerPageSkeleton rows={2} />;
   }
-
   if (!user) return null;
+  if (!okData && !detail.isError) return <PlayerPageSkeleton rows={2} />;
 
-  const Shell = ({ children }: { children: React.ReactNode }) => (
-    <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <main className="max-w-3xl mx-auto px-4 py-10 pt-header">
-        <Link
-          href="/player"
-          className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-6"
-        >
-          &larr; {t.back}
-        </Link>
-        {children}
-      </main>
-    </div>
+  const back = (
+    <Link
+      href="/player"
+      className="mb-4 inline-flex min-h-11 items-center gap-2 text-sm text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]"
+    >
+      &larr; {t.back}
+    </Link>
   );
 
-  if (state.kind === 'loading') {
-    return <PlayerPageSkeleton rows={2} />;
-  }
-
-  if (state.kind === 'forbidden') {
+  if (!okData) {
+    const status = statusOf(detail.error);
+    const title =
+      status === 403
+        ? t.notParticipantTitle
+        : status === 404
+          ? t.notFoundTitle
+          : undefined;
     return (
       <>
-        <Head>
-          <title>{t.notParticipantTitle}</title>
-        </Head>
-        <Shell>
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-5 text-sm text-amber-100">
-            <p className="font-semibold mb-1">{t.notParticipantTitle}</p>
-            <p>{t.notParticipant}</p>
-          </div>
-        </Shell>
+        {title && (
+          <Head>
+            <title>{title}</title>
+          </Head>
+        )}
+        <FicheView header={back}>
+          <Notice title={title}>
+            {status === 403
+              ? t.notParticipant
+              : status === 404
+                ? t.notFound
+                : t.loadError}
+          </Notice>
+        </FicheView>
       </>
-    );
-  }
-
-  if (state.kind === 'notfound') {
-    return (
-      <>
-        <Head>
-          <title>{t.notFoundTitle}</title>
-        </Head>
-        <Shell>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-5 text-sm text-gray-300">
-            <p className="font-semibold mb-1 text-white">{t.notFoundTitle}</p>
-            <p>{t.notFound}</p>
-          </div>
-        </Shell>
-      </>
-    );
-  }
-
-  if (state.kind === 'error' || !okData) {
-    return (
-      <Shell>
-        <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-5 py-5 text-sm text-red-100">
-          {t.loadError}
-        </div>
-      </Shell>
     );
   }
 
   const { planning, myParty, mySlots, heatmap } = okData;
+  const title = planning.title || t.pageTitle;
 
   return (
     <>
       <Head>
-        <title>{planning.title || t.pageTitle}</title>
+        <title>{title}</title>
       </Head>
-      <Shell>
-        <header className="mb-6">
-          <h1 className="text-2xl font-bold">
-            {planning.title || t.pageTitle}
-          </h1>
-          <p className="mt-1 text-sm text-gray-400">
-            {teamNames[planning.team1_id] || t.dashUnknownTeam}
-            <span className="mx-1.5 text-gray-600">vs</span>
-            {teamNames[planning.team2_id] || t.dashUnknownTeam}
-          </p>
-        </header>
-
+      <FicheView
+        header={
+          <div>
+            {back}
+            <EntityHeader
+              title={title}
+              meta={
+                <>
+                  {teamNames[planning.team1_id] || t.dashUnknownTeam}
+                  <span className="mx-1.5">vs</span>
+                  {teamNames[planning.team2_id] || t.dashUnknownTeam}
+                </>
+              }
+            />
+          </div>
+        }
+      >
         <ScrimPlanningPanel
+          // Remonté à chaque session : la peinture locale repart de ses
+          // créneaux persistés.
+          key={planning.id}
           planning={planning}
           myParty={myParty}
           mySlots={mySlots}
@@ -190,9 +139,8 @@ function ScrimPlanningDetailPage() {
             team1: teamNames[planning.team1_id] ?? null,
             team2: teamNames[planning.team2_id] ?? null,
           }}
-          token={token}
         />
-      </Shell>
+      </FicheView>
     </>
   );
 }
@@ -211,6 +159,6 @@ const scrimPlanningSeo: SeoProps = {
 
 ScrimPlanningDetailPage.seo = scrimPlanningSeo;
 
-// Coquille joueuse (lot P8) : navigation basse / rail. La page garde sa
-// propre redirection de session (pas encore migrée) : `redirectTo` absent.
-export default withPlayerShell(ScrimPlanningDetailPage);
+// Cache joueuse (lot P13) + coquille (lot P8). La page garde sa propre
+// redirection de session (retour `?next=` exact) : `redirectTo` absent.
+export default withPlayerQuery(withPlayerShell(ScrimPlanningDetailPage));

@@ -1,7 +1,4 @@
-// Paramètres de requête de /api/player/discovery/profile — déplacés depuis le handler.
-// Source unique handler ↔ spec OpenAPI (`x-zod-query: player.discovery/profile.query`).
-// Module sans effet de bord : zod et utilitaires purs seulement.
+// Source unique : features/player/network/schemas.ts (lot P15). Réexport
+// conservé pour le registre des queries (lib/apiContracts/queries.ts).
 
-import { z } from 'zod';
-
-export const querySchema = z.object({ userId: z.string().uuid() });
+export { DiscoveryProfileQuery as querySchema } from '../../../../features/player/network/schemas';

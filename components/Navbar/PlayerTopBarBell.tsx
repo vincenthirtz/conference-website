@@ -14,7 +14,9 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import type { PlayerNotificationsPayload } from '@/pages/api/player/notifications';
+// Type seul (effacé) : schemas.ts est zod pur, hors TanStack — le bundle
+// public reste intact (tests/unit/adminBoundariesGuard.test.ts).
+import type { PlayerNotificationsPayload } from '@/features/player/notifications/schemas';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useDocumentVisible } from '@/hooks/useDocumentVisible';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';

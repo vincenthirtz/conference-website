@@ -12,6 +12,7 @@
 // Rendu sous l'inspection staff, il montrerait le compte DU STAFF sous le nom
 // de la joueuse inspectée — il ne rend donc rien.
 
+import type { ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -20,7 +21,6 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import nsPlayerProfile from '@/lib/i18n/locales/fr/playerProfile';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
-import DiscoveryCard from '@/components/player/DiscoveryCard';
 import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
 import TcgPhotoCard from '@/components/player/TcgPhotoCard';
 import HeroPreferencesCard from '@/components/player/HeroPreferencesCard';
@@ -50,13 +50,22 @@ const TcgExclusionCard = dynamic(
   { ssr: false, loading: () => null }
 );
 
-export default function ProfileScreen() {
+export default function ProfileScreen({
+  discovery,
+}: {
+  /**
+   * Section « Découverte / Réseau joueurs » : elle appartient au module
+   * features/player/network, composée par la page (un module n'entre pas
+   * dans l'ui/ d'un autre).
+   */
+  discovery?: ReactNode;
+}) {
   const { isInspecting } = usePlayerArea();
   if (isInspecting) return null;
-  return <ProfileFiche />;
+  return <ProfileFiche discovery={discovery} />;
 }
 
-function ProfileFiche() {
+function ProfileFiche({ discovery }: { discovery?: ReactNode }) {
   const router = useRouter();
   const t = useT(nsPlayerProfile);
   const locale = useLocale();
@@ -172,7 +181,7 @@ function ProfileFiche() {
           needsBattleTagSetup={needsBattleTagSetup}
         />
         {/* Découverte / Réseau joueurs — opt-in global, invisible par défaut. */}
-        <DiscoveryCard />
+        {discovery}
         {/* Battle.net OAuth — ne rend rien si la fonctionnalité dort. */}
         <BattlenetVerifyCard variant="section" />
         {/* Twitch AVANT les cartes TCG : c'en est la condition d'accès. */}

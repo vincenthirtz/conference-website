@@ -25,12 +25,14 @@ import {
 } from './__helpers__/supabaseMock';
 import { DEFAULT_TENANT_ID } from '../../utils/tenant';
 import {
+  MAX_SHOWCASE_CARDS,
   parseShowcaseKey,
   readPublicShowcase,
   readShowcaseOwnersShowing,
 } from '../../utils/tcg/showcase';
 import { revalidatePlayerCard } from '../../utils/tcg/revalidatePlayerCard';
 import handler from '../../pages/api/player/tcg/showcase';
+import { SHOWCASE_MAX_CARDS } from '../../features/player/tcg/schemas';
 import { getStaticProps } from '@/pages/player/[userId]';
 
 const TENANT = DEFAULT_TENANT_ID;
@@ -180,6 +182,12 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe('borne de la vitrine', () => {
+  it('le schéma partagé (lu par le navigateur) recopie la borne serveur', () => {
+    expect(SHOWCASE_MAX_CARDS).toBe(MAX_SHOWCASE_CARDS);
+  });
 });
 
 describe('clés de sujet', () => {
