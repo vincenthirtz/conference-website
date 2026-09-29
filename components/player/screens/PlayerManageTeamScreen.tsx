@@ -43,6 +43,10 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
+import {
+  useToggleJoinable,
+  useToggleScrimOpen,
+} from '@/features/player/teamSettings/hooks/useTeamSettings';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 import ActiveTeamSwitcher from '@/components/player/ActiveTeamSwitcher';
 import Switch from '@/components/ui/Switch';
@@ -259,6 +263,9 @@ export default function PlayerManageTeamScreen() {
     ready,
   } = usePlayerSession({ redirectTo: loginHref });
   const { adminFetchJson } = useAdminFetch({ loginPath: loginHref });
+  // Bascules recrutement / scrims : client typé, portée sujet + équipe (P5).
+  const toggleJoinable = useToggleJoinable();
+  const toggleScrimOpen = useToggleScrimOpen();
   const {
     data: managedTeam,
     loading: teamLoading,
@@ -604,13 +611,9 @@ export default function PlayerManageTeamScreen() {
     setActionLoading('joinable');
     setError(null);
     try {
-      const data = await adminFetchJson<{ is_joinable: boolean }>(
-        withTeam('/api/teams/toggle-joinable'),
-        {
-          method: 'POST',
-          body: JSON.stringify({ joinable: !team?.is_joinable }),
-        }
-      );
+      const data = await toggleJoinable.mutateAsync({
+        joinable: !team?.is_joinable,
+      });
       setTeam((prev) =>
         prev ? { ...prev, is_joinable: data.is_joinable } : prev
       );
@@ -627,13 +630,9 @@ export default function PlayerManageTeamScreen() {
     setActionLoading('scrim-open');
     setError(null);
     try {
-      const data = await adminFetchJson<{ open_for_scrim: boolean }>(
-        withTeam('/api/teams/toggle-scrim-open'),
-        {
-          method: 'POST',
-          body: JSON.stringify({ open: !team?.open_for_scrim }),
-        }
-      );
+      const data = await toggleScrimOpen.mutateAsync({
+        open: !team?.open_for_scrim,
+      });
       setTeam((prev) =>
         prev ? { ...prev, open_for_scrim: data.open_for_scrim } : prev
       );

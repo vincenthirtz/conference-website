@@ -7,6 +7,7 @@
 import PlayerManageTeamScreen from '@/components/player/screens/PlayerManageTeamScreen';
 import { PlayerAreaProvider } from '@/components/player/PlayerAreaContext';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { withPlayerQuery } from '@/features/player/_shared/query';
 
 function ManageTeamPage() {
   return (
@@ -30,4 +31,5 @@ const manageTeamSeo: SeoProps = {
 
 ManageTeamPage.seo = manageTeamSeo;
 
-export default ManageTeamPage;
+// Cache joueuse (lot P5) : `seo` est recopié sur l'enveloppe.
+export default withPlayerQuery(ManageTeamPage);

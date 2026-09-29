@@ -53,6 +53,7 @@ import ScrimsHubCard from '@/components/player/ScrimsHubCard';
 import SupportAssoCard from '@/components/player/SupportAssoCard';
 import PushOptIn from '@/components/shared/PushOptIn';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
+import { useToggleScrimOpen } from '@/features/player/teamSettings/hooks/useTeamSettings';
 import {
   useActiveTeam,
   type ActiveTeamOption,
@@ -516,7 +517,8 @@ export default function PlayerDashboardScreen() {
   // partagé — le compteur alimente ScrimsHubCard et les entrées alimentent
   // ScrimPlanningsDashboardCard (qui ne re-fetch donc pas).
   const [scrimPlannings, setScrimPlannings] = useState<PlanningEntry[]>([]);
-  const [togglingScrim, setTogglingScrim] = useState(false);
+  // Bascule scrims : client typé + portée sujet/équipe automatique (lot P5).
+  const toggleScrimOpen = useToggleScrimOpen();
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [nextMatch, setNextMatch] = useState<NextMatchData | null>(null);
   const [todo, setTodo] = useState<TodoItem[]>([]);
@@ -757,16 +759,11 @@ export default function PlayerDashboardScreen() {
   // Bascule la disponibilité aux scrims. L'état vit ici (page) : mise à jour
   // optimiste de team.open_for_scrim + feedback toast, cohérent avec le reste.
   const handleToggleScrimOpen = useCallback(async () => {
-    if (togglingScrim) return;
-    setTogglingScrim(true);
+    if (toggleScrimOpen.isPending) return;
     try {
-      const data = await adminFetchJson<{ open_for_scrim: boolean }>(
-        withTeam('/api/teams/toggle-scrim-open'),
-        {
-          method: 'POST',
-          body: JSON.stringify({ open: !team?.open_for_scrim }),
-        }
-      );
+      const data = await toggleScrimOpen.mutateAsync({
+        open: !team?.open_for_scrim,
+      });
       setTeam((prev) =>
         prev ? { ...prev, open_for_scrim: data.open_for_scrim } : prev
       );
@@ -777,17 +774,8 @@ export default function PlayerDashboardScreen() {
     } catch (err) {
       logger.error('[player] toggle scrim-open error:', err);
       addToast(t.scrimsHubToggleError, 'error');
-    } finally {
-      setTogglingScrim(false);
     }
-  }, [
-    adminFetchJson,
-    addToast,
-    t,
-    team?.open_for_scrim,
-    togglingScrim,
-    withTeam,
-  ]);
+  }, [toggleScrimOpen, addToast, t, team?.open_for_scrim]);
 
   const handleLeaveTeam = async () => {
     setError(null);
@@ -1048,7 +1036,7 @@ export default function PlayerDashboardScreen() {
                 gridsCount={scrimPlannings.length}
                 openForScrim={!!team.open_for_scrim}
                 onToggle={readOnly ? undefined : handleToggleScrimOpen}
-                toggling={togglingScrim}
+                toggling={toggleScrimOpen.isPending}
                 t={t}
               />
 

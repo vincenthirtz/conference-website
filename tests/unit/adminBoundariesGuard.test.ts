@@ -150,12 +150,15 @@ describe('frontières des modules features/admin', () => {
     expect(v).toEqual([]);
   });
 
-  it('TanStack Query ne sort pas de l’admin (bundle public intact)', () => {
-    // La librairie est autorisée pour l'admin seul (lot L10). Un import depuis
-    // une page publique, un composant partagé ou `_app` la ferait entrer dans
-    // le premier chargement de tout le site — sans erreur, sans alerte.
+  it('TanStack Query ne sort pas de l’admin et de l’espace joueuse (bundle public intact)', () => {
+    // La librairie est autorisée pour l'admin (lot L10) et pour la couche
+    // client des modules joueuse (lot P5, `features/player/**`). Un import
+    // depuis une page publique, un composant partagé ou `_app` la ferait
+    // entrer dans le premier chargement de tout le site — sans erreur, sans
+    // alerte. Les composants joueuse n'y accèdent qu'À TRAVERS un hook de
+    // `features/player` ; le test transitif ci-dessous garde le public.
     const allowed =
-      /^(pages[/\\]admin|features[/\\]admin|components[/\\]admin|tests)[/\\]/;
+      /^(pages[/\\]admin|features[/\\]admin|features[/\\]player|components[/\\]admin|tests)[/\\]/;
     const offenders = [
       'pages',
       'components',
@@ -171,6 +174,87 @@ describe('frontières des modules features/admin', () => {
           .readFileSync(path.join(ROOT, rel), 'utf8')
           .includes('@tanstack/react-query')
       );
+    expect(offenders).toEqual([]);
+  });
+
+  // Garde TRANSITIVE du site public (lot P5). La règle précédente ne lit que
+  // la source : depuis que `components/player/*` consomme des hooks de
+  // `features/player` (donc TanStack), une page publique qui importerait une
+  // carte joueuse embarquerait la librairie sans jamais écrire son nom. On
+  // suit donc les imports (hors `import type`, effacés à la compilation)
+  // depuis chaque page publique et `_app` / `_document`.
+  it('aucune page publique n’atteint TanStack ni features/player', () => {
+    const exts = ['', '.ts', '.tsx', '/index.ts', '/index.tsx'];
+    const resolveLocal = (from: string, spec: string): string | null => {
+      let base: string;
+      if (spec.startsWith('@/')) base = spec.slice(2);
+      else if (spec.startsWith('.'))
+        base = path.posix.join(path.posix.dirname(from), spec);
+      else return null;
+      for (const ext of exts) {
+        const cand = path.posix.normalize(base + ext);
+        const abs = path.join(ROOT, cand);
+        if (fs.existsSync(abs) && fs.statSync(abs).isFile()) return cand;
+      }
+      return null;
+    };
+    const valueImports = (src: string): string[] => {
+      const out: string[] = [];
+      const re =
+        /(?:import|export)\s+(?!type\s)[^'"]*?from\s+['"]([^'"]+)['"]|import\s+['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)/g;
+      for (const m of src.matchAll(re)) out.push(m[1] ?? m[2] ?? m[3]);
+      return out;
+    };
+    const posix = (rel: string) => rel.split(path.sep).join('/');
+    const publicEntries = walk('pages')
+      .map(posix)
+      .filter(
+        (rel) =>
+          !/^pages\/(admin|api|dev)\//.test(rel) &&
+          (!rel.startsWith('pages/player/') ||
+            rel === 'pages/player/[userId].tsx')
+      );
+    expect(publicEntries.length).toBeGreaterThan(10);
+
+    // `features/admin` / `components/admin` ne sont PAS cherchés ici : des
+    // pages publiques en tirent déjà des briques (bracket, timer de draft) ou
+    // des schémas côté serveur (`getServerSideProps` du portail développeur),
+    // ce qu'une lecture statique ne sait pas départager.
+    // Les `schemas.ts` joueuse (zod pur, contrat client + serveur) et leur
+    // brique commune `_shared/zod.ts` restent atteignables : le registre
+    // OpenAPI les lit pour le portail développeur.
+    const forbidden = (rel: string, src: string) =>
+      (rel.startsWith('features/player/') &&
+        !rel.endsWith('/schemas.ts') &&
+        rel !== 'features/player/_shared/zod.ts') ||
+      src.includes('@tanstack/react-query');
+
+    const reach = (entry: string): string[] => {
+      const found: string[] = [];
+      const seen = new Set<string>();
+      const stack: Array<{ rel: string; via: string[] }> = [
+        { rel: entry, via: [] },
+      ];
+      while (stack.length) {
+        const { rel, via } = stack.pop() as { rel: string; via: string[] };
+        if (seen.has(rel)) continue;
+        seen.add(rel);
+        const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+        if (forbidden(rel, src)) {
+          found.push([...via, rel].join(' → '));
+          continue;
+        }
+        for (const spec of valueImports(src)) {
+          const next = resolveLocal(rel, spec);
+          if (next) stack.push({ rel: next, via: [...via, rel] });
+        }
+      }
+      return found;
+    };
+
+    // Le détecteur mord : la page joueuse, elle, atteint le cache.
+    expect(reach('pages/player/index.tsx').length).toBeGreaterThan(0);
+    const offenders = publicEntries.flatMap(reach);
     expect(offenders).toEqual([]);
   });
 

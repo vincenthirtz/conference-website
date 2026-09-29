@@ -17,10 +17,7 @@
 // tracé antérieur. Les valeurs restent en encre de texte, jamais en couleur de
 // série.
 
-import { useCallback, useEffect, useState } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { usePlayerArea } from '@/components/player/PlayerAreaContext';
-import { useActiveTeam } from '@/components/player/ActiveTeamContext';
+import { useProgression } from '@/features/player/progression/hooks/useProgression';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import {
@@ -29,36 +26,15 @@ import {
   SPARK_WIDTH,
 } from '../../utils/teams/progression';
 import type { Milestone, MilestoneCode } from '../../utils/teams/progression';
-import type { ProgressionResponse } from '../../pages/api/player/progression';
-import { logger } from '../../utils/logger';
 import nsProgression from '@/lib/i18n/locales/fr/progression';
 
 export default function ProgressionCard() {
   const t = useT(nsProgression);
   const locale = useLocale();
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
-  const { withSubject } = usePlayerArea();
-  // Les jalons sont ceux de l'équipe ACTIVE : la route lit `?teamId=`. Sans
-  // lui, une joueuse de deux équipes voyait les jalons de la première sous le
-  // prochain match de celle qu'elle avait choisie.
-  const { withTeam } = useActiveTeam();
-  const [data, setData] = useState<ProgressionResponse | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      const payload = await adminFetchJson<ProgressionResponse>(
-        withTeam(withSubject('/api/player/progression')),
-        { skipAuthRedirect: true }
-      );
-      setData(payload);
-    } catch (err) {
-      logger.error('[ProgressionCard] load error', err);
-    }
-  }, [adminFetchJson, withSubject, withTeam]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // Lecture en cache (lot P5) : la portée sujet (`?as=`) et équipe active
+  // (`?teamId=`) est posée par le client — les jalons sont ceux de l'équipe
+  // ACTIVE, et changer d'équipe change la clé, donc relit.
+  const { data } = useProgression();
 
   const fmtDate = (iso?: string) =>
     iso

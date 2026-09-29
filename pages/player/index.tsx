@@ -9,6 +9,7 @@
 import PlayerDashboardScreen from '@/components/player/screens/PlayerDashboardScreen';
 import { PlayerAreaProvider } from '@/components/player/PlayerAreaContext';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { withPlayerQuery } from '@/features/player/_shared/query';
 
 function PlayerDashboard() {
   return (
@@ -35,4 +36,5 @@ const playerSeo: SeoProps = {
 
 PlayerDashboard.seo = playerSeo;
 
-export default PlayerDashboard;
+// Cache joueuse (lot P5) : `seo` est recopié sur l'enveloppe.
+export default withPlayerQuery(PlayerDashboard);

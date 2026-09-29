@@ -17,7 +17,7 @@ import {
   type QueryKey,
 } from '@tanstack/react-query';
 import type { ComponentType } from 'react';
-import { AdminHttpError } from '@/utils/admin/adminHttp';
+import { ApiHttpError } from '@/utils/http/authedRequest';
 
 function makeClient() {
   return new QueryClient({
@@ -27,9 +27,11 @@ function makeClient() {
         // requête ; au-delà, elle se rafraîchit en arrière-plan.
         staleTime: 30_000,
         // Une erreur 4xx ne se corrige pas en réessayant (droit, validation,
-        // introuvable) ; une 5xx ou une coupure réseau, peut-être.
+        // introuvable) ; une 5xx ou une coupure réseau, peut-être. La base
+        // commune couvre aussi les écrans joueuse rendus sous l'admin
+        // (inspection player-view / captain-view, lot P5).
         retry: (count, err) =>
-          err instanceof AdminHttpError && err.status < 500 ? false : count < 2,
+          err instanceof ApiHttpError && err.status < 500 ? false : count < 2,
       },
       mutations: { retry: false },
     },

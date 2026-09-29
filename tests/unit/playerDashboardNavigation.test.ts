@@ -17,6 +17,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const session = vi.hoisted(() => ({
   value: {
@@ -158,8 +159,13 @@ describe('CategorySection', () => {
 
 describe('PlayerDashboardScreen — déconnectée', () => {
   function render() {
+    // La page réelle est enveloppée par `withPlayerQuery` (P5).
     return renderToString(
-      createElement(ToastProvider, null, createElement(PlayerDashboardScreen))
+      createElement(
+        QueryClientProvider,
+        { client: new QueryClient() },
+        createElement(ToastProvider, null, createElement(PlayerDashboardScreen))
+      )
     );
   }
 
