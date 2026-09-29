@@ -94,7 +94,9 @@ test.describe('Admin API - Additional protection checks', () => {
     { method: 'GET' as const, path: '/api/admin/tournament-templates' },
     { method: 'GET' as const, path: '/api/admin/recycle-bin' },
     { method: 'POST' as const, path: '/api/admin/tournaments' },
-    { method: 'POST' as const, path: '/api/admin/teams' },
+    // `/api/admin/teams` n'a jamais accepté POST (405 avant la garde) : on vise
+    // une vraie écriture protégée.
+    { method: 'POST' as const, path: '/api/admin/teams/add-member' },
   ];
 
   for (const { method, path } of protectedEndpoints) {
