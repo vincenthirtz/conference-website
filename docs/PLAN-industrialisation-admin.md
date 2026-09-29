@@ -613,6 +613,14 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       garde-fous et ordre des étapes inchangés. Le garde de taille a refusé la croissance de la
       configuration Discord (fichier gelé) : la rangée de champs est sortie
       (`features/admin/tenants/ui/SnowflakeField.tsx`), gel abaissé 693 → 690.
+- [x] **Passe visuelle, lot 4 (18 écrans)** : accueil admin, statistiques, partenaires, scrims,
+      journaux, réglages du site, joueuses libres, aide-tournoi ; vues staff et capitaine d'un
+      compte, fiche d'équipe, draft d'une manche, cockpit caster ; équipes et rondes suisses
+      d'une phase, édition du tournoi, fiche d'un match, facturation. Les fichiers proches du
+      gel ont maigri par extraction présentationnelle (`stages/ui/SwissRounds.tsx`,
+      `matches/ui/MatchDetailBlocks.tsx`, `billing/ui/PlanCapabilities.tsx`) : édition du
+      tournoi 773 → 624 lignes. Aucun appel réseau, `data-testid` ni confirmation perdu (diff
+      comparé) ; cliquet inchangé.
 - [ ] À trancher : « Notifier les capitaines » (outils du tournoi) est un envoi en masse sans
       confirmation — désormais en rouge ; faut-il ajouter une confirmation ?
 - [ ] L'archivage d'un espace reste un bouton rouge (data-testid, confirm, blocage de l'espace

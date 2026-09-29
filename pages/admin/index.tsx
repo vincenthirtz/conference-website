@@ -8,14 +8,14 @@ import type { StaffRole } from '@/utils/staff';
 import type { TenantKind } from '@/utils/tenantKind';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import StatCard, {
-  type StatAccent,
-} from '@/components/admin/dashboard/StatCard';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import { AdminButtonLink } from '@/features/admin/_shared/ui/AdminButton';
+import StatTile, { type StatTone } from '@/features/admin/_shared/ui/StatTile';
 import ActionableAlert, {
   type AlertSeverity,
 } from '@/components/admin/dashboard/ActionableAlert';
-import { Skeleton } from '@/components/admin/Skeleton';
-import EmptyState from '@/components/admin/EmptyState';
+import { Skeleton } from '@/components/ui/Skeleton';
+import EmptyState from '@/components/ui/EmptyState';
 import {
   collectAdminNavCardGroups,
   type AdminNavCard,
@@ -27,6 +27,16 @@ import { logger } from '../../utils/logger';
 import nsAdminDashboard from '@/lib/i18n/locales/admin-fr/adminDashboard';
 
 type Dict = typeof nsAdminDashboard.fr;
+
+// Jetons « Le Ruban » partagés par les sections de l'accueil.
+const SECTION_LABEL =
+  'mb-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]';
+
+/** Un compteur à zéro reste neutre : la couleur ne signale que ce qui attend. */
+const toneIf = (v: number | null, tone: StatTone): StatTone =>
+  v !== null && v > 0 ? tone : 'neutral';
 
 type StaffShape = {
   id: string;
@@ -411,32 +421,47 @@ function AdminDashboardPage({ staff, activeTenantKind }: Props) {
 
   const fmt = (v: number | null) => (v === null ? '—' : v.toLocaleString());
 
+  const kpiTiles: { label: string; value: number | null; tone: StatTone }[] = [
+    {
+      label: t.kpiTournamentsActive,
+      value: kpis.tournamentsActive,
+      tone: toneIf(kpis.tournamentsActive, 'brand'),
+    },
+    { label: t.kpiTeams, value: kpis.teams, tone: 'neutral' },
+    {
+      label: t.kpiDemandesPending,
+      value: kpis.demandesPending,
+      tone: toneIf(kpis.demandesPending, 'warn'),
+    },
+    { label: t.kpiSupportOpen, value: kpis.supportOpen, tone: 'neutral' },
+    {
+      label: t.kpiSupportHigh,
+      value: kpis.supportHigh,
+      tone: toneIf(kpis.supportHigh, 'warn'),
+    },
+    {
+      label: t.kpiDisputesOpen,
+      value: kpis.disputesOpen,
+      tone: toneIf(kpis.disputesOpen, 'err'),
+    },
+  ];
+
   return (
     <>
       <Head>
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          {/* Header */}
-          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-sm text-neutral-400">{t.espaceStaff}</p>
-              <h1 className="mt-1 text-3xl font-bold tracking-tight md:text-4xl">
-                {t.heading}
-              </h1>
-              <p className="mt-2 text-sm text-neutral-400">
-                {format(t.greeting, {
-                  name: greetName,
-                  role: getRoleLabel(staff.role),
-                })}
-              </p>
-            </div>
-            <Link
-              href="/admin?profile=1"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-medium text-neutral-200 transition-colors hover:bg-white/[0.08]"
-            >
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <p className={SECTION_LABEL}>{t.espaceStaff}</p>
+        <AdminPageHeader
+          title={t.heading}
+          subtitle={format(t.greeting, {
+            name: greetName,
+            role: getRoleLabel(staff.role),
+          })}
+          actions={
+            <AdminButtonLink href="/admin?profile=1" variant="ghost">
               <svg
                 className="h-4 w-4"
                 fill="none"
@@ -452,215 +477,172 @@ function AdminDashboardPage({ staff, activeTenantKind }: Props) {
                 />
               </svg>
               {t.myProfile}
-            </Link>
-          </div>
+            </AdminButtonLink>
+          }
+        />
 
-          {errorMsg && (
-            <div className="mb-6 flex items-center gap-2 rounded-xl border border-red-500/50 bg-red-900/40 px-4 py-3 text-sm">
-              <svg
-                className="h-5 w-5 flex-shrink-0 text-red-400"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                aria-hidden="true"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
+        {errorMsg && (
+          <div className="mb-6 flex items-center gap-2 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-[14px] text-[#ffc2c2]">
+            <svg
+              className="h-5 w-5 flex-shrink-0 text-[var(--err,#ff6b6b)]"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
+            </svg>
+            {errorMsg}
+          </div>
+        )}
+
+        {/* Alertes actionnables */}
+        <section className="mb-8" aria-labelledby="alerts-heading">
+          <h2 id="alerts-heading" className={SECTION_LABEL}>
+            {t.alertsHeading}
+          </h2>
+          {loading ? (
+            <div className="space-y-2">
+              <Skeleton
+                className="h-16 w-full"
+                rounded="rounded-[var(--r-card,14px)]"
+              />
+              <Skeleton
+                className="h-16 w-full"
+                rounded="rounded-[var(--r-card,14px)]"
+              />
+            </div>
+          ) : alerts.length === 0 ? (
+            <div className="rounded-[var(--r-card,14px)] border border-[rgba(127,202,101,.36)] bg-[rgba(127,202,101,.08)] px-4 py-4">
+              <p className="flex items-center gap-2 text-[14px] text-[var(--lf-200,#b3e7a3)]">
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                {t.noAlerts}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {alerts.map((a, i) => (
+                <ActionableAlert
+                  key={`${a.title}-${i}`}
+                  severity={a.severity}
+                  title={a.title}
+                  message={a.message}
+                  cta={a.cta}
                 />
-              </svg>
-              {errorMsg}
+              ))}
             </div>
           )}
+        </section>
 
-          {/* Alertes actionnables */}
-          <section className="mb-8" aria-labelledby="alerts-heading">
-            <h2
-              id="alerts-heading"
-              className="mb-3 text-[11px] font-medium uppercase tracking-widest text-gray-400"
-            >
-              {t.alertsHeading}
+        {/* KPI globaux */}
+        {canManage && (
+          <section className="mb-8" aria-labelledby="kpis-heading">
+            <h2 id="kpis-heading" className={SECTION_LABEL}>
+              {t.overviewHeading}
             </h2>
-            {loading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-16 w-full" rounded="rounded-xl" />
-                <Skeleton className="h-16 w-full" rounded="rounded-xl" />
-              </div>
-            ) : alerts.length === 0 ? (
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-4">
-                <p className="flex items-center gap-2 text-sm text-emerald-200">
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  {t.noAlerts}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {alerts.map((a, i) => (
-                  <ActionableAlert
-                    key={`${a.title}-${i}`}
-                    severity={a.severity}
-                    title={a.title}
-                    message={a.message}
-                    cta={a.cta}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* KPI globaux */}
-          {canManage && (
-            <section className="mb-8" aria-labelledby="kpis-heading">
-              <h2
-                id="kpis-heading"
-                className="mb-3 text-[11px] font-medium uppercase tracking-widest text-gray-400"
-              >
-                {t.overviewHeading}
-              </h2>
-              {loading ? (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                  {Array.from({ length: 6 }).map((_, i) => (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {loading
+                ? Array.from({ length: 6 }).map((_, i) => (
                     <Skeleton
                       key={i}
-                      className="h-24 w-full"
-                      rounded="rounded-xl"
+                      className="h-[118px] w-full"
+                      rounded="rounded-[var(--r-card,14px)]"
                     />
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                  {(
-                    [
-                      {
-                        label: t.kpiTournamentsActive,
-                        value: kpis.tournamentsActive,
-                        accent: 'pink',
-                      },
-                      {
-                        label: t.kpiTeams,
-                        value: kpis.teams,
-                        accent: 'blue',
-                      },
-                      {
-                        label: t.kpiDemandesPending,
-                        value: kpis.demandesPending,
-                        accent: 'emerald',
-                      },
-                      {
-                        label: t.kpiSupportOpen,
-                        value: kpis.supportOpen,
-                        accent: 'purple',
-                      },
-                      {
-                        label: t.kpiSupportHigh,
-                        value: kpis.supportHigh,
-                        accent: 'amber',
-                      },
-                      {
-                        label: t.kpiDisputesOpen,
-                        value: kpis.disputesOpen,
-                        accent: 'red',
-                      },
-                    ] as {
-                      label: string;
-                      value: number | null;
-                      accent: StatAccent;
-                    }[]
-                  ).map((k) => (
-                    <StatCard
+                  ))
+                : kpiTiles.map((k) => (
+                    <StatTile
                       key={k.label}
                       label={k.label}
                       value={fmt(k.value)}
-                      accent={k.accent}
+                      tone={k.tone}
                     />
                   ))}
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* Raccourcis de navigation */}
-          <section aria-labelledby="nav-heading">
-            <h2
-              id="nav-heading"
-              className="mb-3 text-[11px] font-medium uppercase tracking-widest text-gray-400"
-            >
-              {t.sectionsHeading}
-            </h2>
-            {navGroups.length === 0 ? (
-              <EmptyState
-                title={t.emptySectionsTitle}
-                description={t.emptySectionsDesc}
-                action={
-                  <Link
-                    href="/admin?profile=1"
-                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-                  >
-                    {t.myProfile}
-                  </Link>
-                }
-              />
-            ) : (
-              <div className="space-y-8">
-                {navGroups.map((group) => (
-                  <section
-                    key={group.categoryId}
-                    aria-labelledby={`nav-cat-${group.categoryId}`}
-                  >
-                    <h3
-                      id={`nav-cat-${group.categoryId}`}
-                      className="mb-3 text-[11px] font-medium uppercase tracking-widest text-gray-500"
-                    >
-                      {group.label}
-                    </h3>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {group.cards.map((card) => (
-                        <Link
-                          key={card.href + card.title}
-                          href={card.href}
-                          className={`group rounded-2xl border bg-gradient-to-br to-transparent p-5 transition-all hover:-translate-y-0.5 hover:bg-white/[0.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${card.accent}`}
-                        >
-                          <div className="mb-3 flex items-center gap-3">
-                            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5">
-                              <svg
-                                className="h-5 w-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                aria-hidden="true"
-                              >
-                                {card.icon}
-                              </svg>
-                            </span>
-                            <h4 className="text-base font-semibold text-white">
-                              {card.title}
-                            </h4>
-                          </div>
-                          <p className="text-sm text-neutral-400">
-                            {card.description}
-                          </p>
-                        </Link>
-                      ))}
-                    </div>
-                  </section>
-                ))}
-              </div>
-            )}
+            </div>
           </section>
-        </div>
+        )}
+
+        {/* Raccourcis de navigation */}
+        <section aria-labelledby="nav-heading">
+          <h2 id="nav-heading" className={SECTION_LABEL}>
+            {t.sectionsHeading}
+          </h2>
+          {navGroups.length === 0 ? (
+            <EmptyState
+              title={t.emptySectionsTitle}
+              description={t.emptySectionsDesc}
+              action={
+                <AdminButtonLink
+                  href="/admin?profile=1"
+                  variant="primary"
+                  size="sm"
+                >
+                  {t.myProfile}
+                </AdminButtonLink>
+              }
+            />
+          ) : (
+            <div className="space-y-8">
+              {navGroups.map((group) => (
+                <section
+                  key={group.categoryId}
+                  aria-labelledby={`nav-cat-${group.categoryId}`}
+                >
+                  <h3
+                    id={`nav-cat-${group.categoryId}`}
+                    className="mb-3 border-b border-[var(--line2,rgba(194,196,201,.2))] pb-2 font-[family-name:var(--fd)] text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--t2,#c7bfca)] [font-stretch:75%]"
+                  >
+                    {group.label}
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {group.cards.map((card) => (
+                      <Link
+                        key={card.href + card.title}
+                        href={card.href}
+                        className={`group ${CARD} p-4 transition-colors hover:border-[var(--or,#b467d1)] focus:outline-none focus-visible:border-[var(--or,#b467d1)] focus-visible:ring-2 focus-visible:ring-[rgba(180,103,209,.45)]`}
+                      >
+                        <div className="mb-2.5 flex items-center gap-3">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] text-[var(--or-300,#dea3f6)] transition-colors group-hover:border-[rgba(180,103,209,.45)]">
+                            <svg
+                              className="h-[18px] w-[18px]"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                            >
+                              {card.icon}
+                            </svg>
+                          </span>
+                          <h4 className="font-[family-name:var(--fd)] text-[15px] font-bold uppercase leading-tight tracking-[0.02em] text-[var(--t1,#f4edf7)]">
+                            {card.title}
+                          </h4>
+                        </div>
+                        <p className="text-[13.5px] leading-snug text-[var(--t3,#a39ba6)]">
+                          {card.description}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </>
   );

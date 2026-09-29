@@ -16,6 +16,7 @@ import { withStaffPage } from '@/utils/staff';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import nsAdminFreePlayers from '@/lib/i18n/locales/admin-fr/adminFreePlayers';
 import { adminErrorMessage } from '@/utils/admin/adminHttp';
 import { withAdminQuery } from '@/features/admin/_shared/query';
@@ -63,34 +64,33 @@ function AdminFreePlayersPage(_props: StaffProps) {
         <title>{t.headTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 pt-header pb-12 sm:px-6 lg:px-8">
-          <div className="mb-6">
-            <p className="text-sm text-neutral-400">{t.eyebrow}</p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight md:text-4xl">
-              {t.heading}
-            </h1>
-            <p className="mt-2 max-w-3xl text-sm text-neutral-400">{t.intro}</p>
-            <p className="mt-2 max-w-3xl text-xs text-neutral-500">
-              {t.selfServiceNote}
-            </p>
-          </div>
-
-          {list.isSuccess && items.length > 0 && (
-            <p className="mb-3 text-sm text-neutral-400">
-              {format(t.count, { count: items.length })}
-            </p>
-          )}
-
-          <FreePlayersTable
-            items={items}
-            loading={list.isPending}
-            error={list.isError}
-            onRetry={() => void list.refetch()}
-            onRemove={(i) => void handleRemove(i)}
-            removingId={remove.isPending ? (remove.variables ?? null) : null}
-          />
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <p className="mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
+          {t.eyebrow}
+        </p>
+        <AdminPageHeader
+          title={t.heading}
+          subtitle={
+            list.isSuccess && items.length > 0
+              ? format(t.count, { count: items.length })
+              : undefined
+          }
+        />
+        <div className="mb-6 max-w-3xl -mt-3">
+          <p className="text-[14px] text-[var(--t2,#c7bfca)]">{t.intro}</p>
+          <p className="mt-2 text-[12.5px] text-[var(--t3,#a39ba6)]">
+            {t.selfServiceNote}
+          </p>
         </div>
+
+        <FreePlayersTable
+          items={items}
+          loading={list.isPending}
+          error={list.isError}
+          onRetry={() => void list.refetch()}
+          onRemove={(i) => void handleRemove(i)}
+          removingId={remove.isPending ? (remove.variables ?? null) : null}
+        />
       </div>
       {dialog}
     </>

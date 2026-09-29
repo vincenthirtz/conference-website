@@ -35,6 +35,15 @@ import Breadcrumb from '@/components/admin/Breadcrumb';
 import { roleColor, roleLabel } from '@/components/admin/users/roleDisplay';
 import type { StaffProps } from '@/types/admin';
 import nsAdminStaffView from '@/lib/i18n/locales/admin-fr/adminStaffView';
+import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
+import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
+import {
+  FicheLayout,
+  FicheSection,
+  MetaList,
+} from '@/features/admin/_shared/ui/Fiche';
+import { AdminButtonLink } from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 // Les libellés de rôles vivent avec l'écran qui les édite : en recopier une
 // seconde table ici la ferait diverger au premier rôle ajouté.
 import nsAdminUsersManage from '@/lib/i18n/locales/admin-fr/adminUsersManage';
@@ -87,6 +96,7 @@ function formatDate(iso: string | null): string {
 export default function AdminStaffViewPage(_props: StaffProps) {
   const t = useAdminT(nsAdminStaffView);
   const tRoles = useAdminT(nsAdminUsersManage);
+  const tf = useAdminT(nsAdminFiche);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
 
@@ -148,186 +158,205 @@ export default function AdminStaffViewPage(_props: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          <Breadcrumb
-            items={[
-              { label: t.breadcrumbAdmin, href: '/admin' },
-              { label: t.breadcrumbUsers, href: '/admin/users/manage' },
-              { label: t.breadcrumbCurrent },
-            ]}
-          />
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <Breadcrumb
+          items={[
+            { label: t.breadcrumbAdmin, href: '/admin' },
+            { label: t.breadcrumbUsers, href: '/admin/users/manage' },
+            { label: t.breadcrumbCurrent },
+          ]}
+        />
 
-          <AlertBanner message={error} variant="error" className="mb-4" />
+        <AlertBanner message={error} variant="error" className="mb-4" />
 
-          {loading ? (
-            <p className="text-sm text-neutral-400">{t.loading}</p>
-          ) : !record ? (
-            <p className="py-10 text-center text-sm text-neutral-400">
-              {t.notStaff}
-            </p>
-          ) : (
-            <>
-              <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <p className="text-sm text-neutral-400">{t.subtitle}</p>
-                  <h1 className="mt-1 text-3xl font-bold tracking-tight md:text-4xl">
-                    {name}
-                  </h1>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs ${roleColor(record.role ?? '')}`}
-                    >
-                      {roleLabel(tRoles, record.role ?? '')}
-                    </span>
-                    {record.isActive === false && (
-                      <span className="rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs text-red-200">
-                        {t.suspended}
-                      </span>
-                    )}
-                    {record.isPoleAdmin && (
-                      <span className="rounded-full bg-sky-500/15 px-2.5 py-0.5 text-xs text-sky-200">
-                        {t.poleAdmin}
-                      </span>
-                    )}
-                    <span className="text-xs text-neutral-500">
-                      {format(t.since, { date: formatDate(record.createdAt) })}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Les gestes vivent là où ils sont déjà gardés et audités. */}
-                <Link
-                  href="/admin/users/manage"
-                  className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
-                >
+        {loading ? (
+          <p className="text-sm text-[var(--t3,#a39ba6)]">{t.loading}</p>
+        ) : !record ? (
+          <p className="py-10 text-center text-sm text-[var(--t3,#a39ba6)]">
+            {t.notStaff}
+          </p>
+        ) : (
+          <>
+            {/* Les gestes vivent là où ils sont déjà gardés et audités. */}
+            <EntityHeader
+              crest={name.slice(0, 3).toUpperCase()}
+              title={name}
+              meta={
+                <>
+                  {t.subtitle} ·{' '}
+                  {format(t.since, { date: formatDate(record.createdAt) })}
+                </>
+              }
+              status={
+                <>
+                  <span
+                    className={`inline-flex h-[22px] items-center rounded-[3px] px-2 text-[11px] font-bold uppercase tracking-[0.12em] ${roleColor(record.role ?? '')}`}
+                  >
+                    {roleLabel(tRoles, record.role ?? '')}
+                  </span>
+                  {record.isActive === false && (
+                    <Chip tone="err">{t.suspended}</Chip>
+                  )}
+                  {record.isPoleAdmin && (
+                    <Chip tone="brand">{t.poleAdmin}</Chip>
+                  )}
+                </>
+              }
+              actions={
+                <AdminButtonLink href="/admin/users/manage" size="sm">
                   {t.manageCta}
-                </Link>
-              </div>
+                </AdminButtonLink>
+              }
+            />
 
-              <section className="mb-8">
-                <h2 className="mb-3 text-lg font-semibold">
-                  {t.spacesHeading}
-                </h2>
-                <p className="mb-3 max-w-2xl text-sm text-neutral-400">
-                  {t.spacesHint}
-                </p>
-                {spaces.length === 0 ? (
-                  <p className="text-sm text-neutral-400">{t.spacesEmpty}</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {spaces.map((space) => (
-                      <li
-                        key={space.tenantId}
-                        data-testid="staff-view-space"
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-700/50 bg-neutral-800/40 px-4 py-3"
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Link
-                            href={`/admin/tenants/${space.tenantId}`}
-                            className="font-medium text-white hover:text-violet-300"
-                          >
-                            {space.name ?? space.tenantId}
-                          </Link>
-                          {space.slug && (
-                            <code className="rounded bg-neutral-900 px-1.5 py-0.5 text-xs text-neutral-400">
-                              {space.slug}
-                            </code>
-                          )}
-                          {space.isActive === false && (
-                            <span className="rounded-full bg-neutral-700/40 px-2 py-0.5 text-[11px] text-neutral-300">
-                              {t.spaceInactive}
-                            </span>
-                          )}
-                        </div>
-                        <span
-                          className={`rounded-full px-2.5 py-0.5 text-xs ${roleColor(space.role ?? '')}`}
-                        >
-                          {roleLabel(tRoles, space.role ?? '')}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-
-              <section className="mb-8">
-                <h2 className="mb-3 text-lg font-semibold">
-                  {t.permissionsHeading}
-                </h2>
-                {!perms ? (
-                  <p className="text-sm text-neutral-400">
-                    {t.permissionsUnavailable}
-                  </p>
-                ) : (
-                  <>
-                    <p className="mb-2 text-sm text-neutral-400">
-                      {format(t.permissionsCount, {
-                        count: perms.effective.length,
-                      })}
+            <FicheLayout
+              main={
+                <>
+                  <FicheSection title={t.spacesHeading}>
+                    <p className="mb-4 max-w-2xl text-sm text-[var(--t3,#a39ba6)]">
+                      {t.spacesHint}
                     </p>
-                    <ul className="flex flex-wrap gap-1.5">
-                      {perms.effective.map((perm) => {
-                        const extra = perms.extraPermissions.includes(perm);
-                        return (
+                    {spaces.length === 0 ? (
+                      <p className="text-sm text-[var(--t3,#a39ba6)]">
+                        {t.spacesEmpty}
+                      </p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {spaces.map((space) => (
                           <li
-                            key={perm}
-                            title={extra ? t.permissionExtra : t.permissionRole}
-                            className={`rounded-full border px-2.5 py-0.5 text-xs ${
-                              extra
-                                ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
-                                : 'border-neutral-600/50 bg-neutral-700/20 text-neutral-300'
-                            }`}
+                            key={space.tenantId}
+                            data-testid="staff-view-space"
+                            className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-4 py-3"
                           >
-                            {perm}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    <p className="mt-2 text-xs text-neutral-500">
-                      {t.permissionsLegend}
-                    </p>
-                  </>
-                )}
-              </section>
-
-              <section>
-                <h2 className="mb-3 text-lg font-semibold">{t.logsHeading}</h2>
-                {logs.length === 0 ? (
-                  <p className="text-sm text-neutral-400">{t.logsEmpty}</p>
-                ) : (
-                  <ul className="divide-y divide-neutral-700/40">
-                    {logs.map((log) => (
-                      <li
-                        key={log.id}
-                        className="flex flex-wrap items-center justify-between gap-3 py-2"
-                      >
-                        <span className="text-sm text-neutral-200">
-                          {log.action}
-                          {log.entity_type ? (
-                            <span className="text-neutral-500">
-                              {' '}
-                              · {log.entity_type}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Link
+                                href={`/admin/tenants/${space.tenantId}`}
+                                className="font-medium text-[var(--t1,#f4edf7)] hover:text-[var(--or-200,#eec4ff)]"
+                              >
+                                {space.name ?? space.tenantId}
+                              </Link>
+                              {space.slug && (
+                                <code className="rounded-[3px] bg-[var(--s1,#100812)] px-1.5 py-0.5 text-xs text-[var(--t3,#a39ba6)]">
+                                  {space.slug}
+                                </code>
+                              )}
+                              {space.isActive === false && (
+                                <Chip>{t.spaceInactive}</Chip>
+                              )}
+                            </div>
+                            <span
+                              className={`inline-flex h-[22px] items-center rounded-[3px] px-2 text-[11px] font-bold uppercase tracking-[0.12em] ${roleColor(space.role ?? '')}`}
+                            >
+                              {roleLabel(tRoles, space.role ?? '')}
                             </span>
-                          ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </FicheSection>
+
+                  <FicheSection
+                    title={t.permissionsHeading}
+                    aside={
+                      perms ? (
+                        <span className="text-xs text-[var(--t3,#a39ba6)]">
+                          {format(t.permissionsCount, {
+                            count: perms.effective.length,
+                          })}
                         </span>
-                        <span className="text-xs text-neutral-500">
-                          {formatDate(log.created_at)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <Link
-                  href={`/admin/logs?staffId=${encodeURIComponent(record.id)}`}
-                  className="mt-3 inline-block text-xs text-violet-300 underline hover:text-violet-200"
-                >
-                  {t.logsAll}
-                </Link>
-              </section>
-            </>
-          )}
-        </div>
+                      ) : undefined
+                    }
+                  >
+                    {!perms ? (
+                      <p className="text-sm text-[var(--t3,#a39ba6)]">
+                        {t.permissionsUnavailable}
+                      </p>
+                    ) : (
+                      <>
+                        <ul className="flex flex-wrap gap-1.5">
+                          {perms.effective.map((perm) => {
+                            const extra = perms.extraPermissions.includes(perm);
+                            return (
+                              <li
+                                key={perm}
+                                title={
+                                  extra ? t.permissionExtra : t.permissionRole
+                                }
+                                className={`rounded-[3px] border px-2 py-0.5 font-mono text-[11.5px] ${
+                                  extra
+                                    ? 'border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.13)] text-[#ffd9a3]'
+                                    : 'border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t2,#c7bfca)]'
+                                }`}
+                              >
+                                {perm}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                        <p className="mt-3 text-xs text-[var(--t4,#807984)]">
+                          {t.permissionsLegend}
+                        </p>
+                      </>
+                    )}
+                  </FicheSection>
+                </>
+              }
+              aside={
+                <>
+                  <FicheSection eyebrow title={t.logsHeading}>
+                    {logs.length === 0 ? (
+                      <p className="text-sm text-[var(--t3,#a39ba6)]">
+                        {t.logsEmpty}
+                      </p>
+                    ) : (
+                      <ul className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
+                        {logs.map((log) => (
+                          <li
+                            key={log.id}
+                            className="flex flex-wrap items-baseline justify-between gap-3 py-2"
+                          >
+                            <span className="text-[13px] text-[var(--t1,#f4edf7)]">
+                              {log.action}
+                              {log.entity_type ? (
+                                <span className="text-[var(--t4,#807984)]">
+                                  {' '}
+                                  · {log.entity_type}
+                                </span>
+                              ) : null}
+                            </span>
+                            <span className="font-mono text-[11.5px] text-[var(--t3,#a39ba6)]">
+                              {formatDate(log.created_at)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <Link
+                      href={`/admin/logs?staffId=${encodeURIComponent(record.id)}`}
+                      className="mt-4 inline-block text-xs text-[var(--or-200,#eec4ff)] underline hover:text-[var(--t1,#f4edf7)]"
+                    >
+                      {t.logsAll}
+                    </Link>
+                  </FicheSection>
+                  <FicheSection eyebrow title={tf.metaTitle}>
+                    <MetaList
+                      items={[
+                        {
+                          label: tf.metaId,
+                          value: `${record.id.slice(0, 8)}…`,
+                        },
+                        {
+                          label: tf.metaCreated,
+                          value: formatDate(record.createdAt),
+                        },
+                      ]}
+                    />
+                  </FicheSection>
+                </>
+              }
+            />
+          </>
+        )}
       </div>
     </>
   );

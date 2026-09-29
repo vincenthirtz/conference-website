@@ -12,10 +12,23 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
-import type { MatchStatus } from '@/types/admin';
 import nsAdminStageSwiss from '@/lib/i18n/locales/admin-fr/adminStageSwiss';
+import {
+  SwissRoundBlock,
+  type SwissRound,
+  type TeamMini,
+} from '@/features/admin/stages/ui/SwissRounds';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
-type Dict = typeof nsAdminStageSwiss.fr;
+const CARD =
+  'overflow-hidden rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]';
+const CARD_HEAD =
+  'flex items-center justify-between border-b border-[var(--line2,rgba(194,196,201,.2))] px-4 py-3';
+const CARD_TITLE = 'text-[15px] text-[var(--t1,#f4edf7)]';
+const COUNT = 'font-mono text-xs text-[var(--t3,#a39ba6)]';
+const MUTED = 'text-sm text-[var(--t3,#a39ba6)]';
 
 type StaffShape = {
   id: string;
@@ -35,13 +48,6 @@ type StageType =
   | 'showmatch'
   | 'other';
 
-type TeamMini = {
-  id: string;
-  name: string;
-  short_name: string | null;
-  logo_url: string | null;
-};
-
 type SwissStanding = {
   team_id: string;
   team: TeamMini | null;
@@ -57,28 +63,6 @@ type SwissStanding = {
   opp_score_sum: number | null;
   opp_winrate: number | null;
   match_count: number;
-};
-
-type SwissRoundMatch = {
-  id: string;
-  round_number: number;
-  tournament_id: string;
-  stage_id: string | null;
-  status: MatchStatus;
-  best_of: number | null;
-  scheduled_at: string | null;
-  team1_id: string | null;
-  team2_id: string | null;
-  team1: TeamMini | null;
-  team2: TeamMini | null;
-  team1_score: number | null;
-  team2_score: number | null;
-  winner_team_id: string | null;
-};
-
-type SwissRound = {
-  round_number: number;
-  matches: SwissRoundMatch[];
 };
 
 type StageMini = {
@@ -103,45 +87,6 @@ type SwissApiResponse = {
 export const getServerSideProps = withStaffPage({
   permission: 'manage_tournaments',
 });
-
-function formatDateTime(iso: string | null) {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
-}
-
-function statusLabel(status: MatchStatus, t: Dict) {
-  switch (status) {
-    case 'pending':
-      return t.statusPending;
-    case 'ongoing':
-      return t.statusOngoing;
-    case 'finished':
-      return t.statusFinished;
-    case 'cancelled':
-      return t.statusCancelled;
-    default:
-      return status;
-  }
-}
-
-function statusColor(status: MatchStatus) {
-  switch (status) {
-    case 'pending':
-      return 'bg-neutral-700 text-neutral-100';
-    case 'ongoing':
-      return 'bg-amber-600/80 text-neutral-900';
-    case 'finished':
-      return 'bg-emerald-600/80 text-white';
-    case 'cancelled':
-      return 'bg-red-700/80 text-white';
-    default:
-      return 'bg-neutral-700 text-neutral-100';
-  }
-}
 
 function AdminSwissStagePage(_props: StaffProps) {
   const t = useAdminT(nsAdminStageSwiss);
@@ -311,8 +256,7 @@ function AdminSwissStagePage(_props: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-header">
-        {/* Header */}
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
         <StageTabsNav
           stageId={String(stageId ?? '')}
           active="swiss"
@@ -320,96 +264,84 @@ function AdminSwissStagePage(_props: StaffProps) {
           tournamentId={tournament?.id}
           tournamentName={tournament?.name}
         />
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">{t.heading}</h1>
-
-            {stage && (
-              <p className="text-neutral-400 text-sm mt-1">
+        <AdminPageHeader
+          title={t.heading}
+          subtitle={
+            stage && (
+              <>
                 {t.phaseLabel}{' '}
-                <span className="font-semibold">{stage.name}</span>
-                {stage.stage_type && (
-                  <span className="ml-2 text-[10px] uppercase tracking-wide bg-neutral-800 border border-neutral-700 px-1.5 py-0.5 rounded">
-                    {stage.stage_type}
-                  </span>
-                )}
+                <span className="font-semibold text-[var(--t1,#f4edf7)]">
+                  {stage.name}
+                </span>
                 {tournament && (
                   <>
                     {' '}
                     {t.tournamentLabel}{' '}
                     <Link
                       href={backTournamentUrl}
-                      className="font-semibold hover:underline"
+                      className="font-semibold text-[var(--t1,#f4edf7)] hover:underline"
                     >
                       {tournament.name}
                     </Link>
                   </>
                 )}
-              </p>
-            )}
-            {!!rounds.length && (
-              <p className="text-xs text-neutral-500 mt-1">
-                {format(t.currentRound, { round: currentRoundNumber() })}
-              </p>
-            )}
-          </div>
-        </div>
+                {!!rounds.length && (
+                  <span className="ml-3 font-mono text-[13px] text-[var(--t3,#a39ba6)]">
+                    {format(t.currentRound, { round: currentRoundNumber() })}
+                  </span>
+                )}
+              </>
+            )
+          }
+          badge={
+            stage?.stage_type && <Chip tone="neutral">{stage.stage_type}</Chip>
+          }
+          actions={
+            <>
+              <AdminButton
+                variant="ghost"
+                size="sm"
+                onClick={fetchSwissData}
+                disabled={loading || loadingGenerate}
+              >
+                {t.refreshData}
+              </AdminButton>
+              <AdminButton
+                variant="ghost"
+                size="sm"
+                onClick={handleExportCsv}
+                disabled={!stageId || standings.length === 0}
+              >
+                {t.exportCsv}
+              </AdminButton>
+              <AdminButton
+                variant="secondary"
+                size="sm"
+                onClick={handlePreviewNextRound}
+                disabled={loadingPreview || loadingGenerate}
+              >
+                {loadingPreview ? t.previewCalculating : t.previewNextRound}
+              </AdminButton>
+            </>
+          }
+        />
 
-        {/* Messages */}
         {errorMsg && (
-          <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
+          <div className="mb-4 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-sm text-[#ffc2c2]">
             {errorMsg}
           </div>
         )}
-        {/* Toolbar */}
-        <div className="flex flex-wrap gap-3 items-center mb-6">
-          <button
-            type="button"
-            onClick={fetchSwissData}
-            disabled={loading || loadingGenerate}
-            className={`px-4 py-2 rounded text-sm border border-neutral-600 ${
-              loading
-                ? 'bg-neutral-800 cursor-wait'
-                : 'bg-neutral-800 hover:bg-neutral-700'
-            }`}
-          >
-            {t.refreshData}
-          </button>
-
-          <button
-            type="button"
-            onClick={handlePreviewNextRound}
-            disabled={loadingPreview || loadingGenerate}
-            className={`px-4 py-2 rounded text-sm font-semibold ${
-              loadingPreview
-                ? 'bg-blue-800 cursor-wait'
-                : 'bg-blue-600 hover:bg-blue-700'
-            }`}
-          >
-            {loadingPreview ? t.previewCalculating : t.previewNextRound}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleExportCsv}
-            disabled={!stageId || standings.length === 0}
-            className="px-4 py-2 rounded text-sm border border-neutral-600 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {t.exportCsv}
-          </button>
-
-          <p className="text-xs text-neutral-500">{t.toolbarHelp}</p>
-        </div>
+        <p className="mb-6 text-xs text-[var(--t3,#a39ba6)]">{t.toolbarHelp}</p>
 
         {/* Swiss round preview panel */}
         {preview && preview.length > 0 && (
-          <section className="bg-neutral-800/80 border border-blue-500/40 rounded-xl p-5 mb-6">
-            <div className="flex items-center justify-between mb-4">
+          <section className="mb-6 rounded-[var(--r-card,14px)] border border-[rgba(180,103,209,.45)] bg-[var(--s1,#100812)] p-5">
+            <div className="mb-4 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-semibold">
+                <h3 className="text-[17px] text-[var(--t1,#f4edf7)]">
                   {format(t.previewTitle, { round: previewRound ?? '?' })}
                 </h3>
-                <p className="text-xs text-neutral-400 mt-0.5">
+                <p className="mt-0.5 font-mono text-xs text-[var(--t3,#a39ba6)]">
                   {format(
                     preview.length > 1
                       ? t.previewMatchCount_other
@@ -417,7 +349,7 @@ function AdminSwissStagePage(_props: StaffProps) {
                     { count: preview.length }
                   )}
                   {previewHasRematches && (
-                    <span className="ml-2 text-amber-400 font-medium">
+                    <span className="ml-2 font-sans font-medium text-[var(--warn,#f5a524)]">
                       {t.previewHasRematches}
                     </span>
                   )}
@@ -425,25 +357,25 @@ function AdminSwissStagePage(_props: StaffProps) {
               </div>
             </div>
 
-            <div className="divide-y divide-neutral-700/50 mb-4">
+            <div className="mb-4 divide-y divide-[var(--line,rgba(194,196,201,.12))]">
               {preview.map((p, idx) => (
                 <div
                   key={idx}
                   className="flex items-center gap-4 py-2.5 text-sm"
                 >
-                  <span className="w-8 text-center text-neutral-500 text-xs font-mono">
+                  <span className="w-8 text-center font-mono text-xs text-[var(--t4,#807984)]">
                     {idx + 1}
                   </span>
                   <span className="flex-1 font-medium">
                     {p.team1_name || p.team1_id.slice(0, 8)}
                   </span>
                   {p.is_bye ? (
-                    <span className="px-2 py-0.5 rounded bg-neutral-700 text-xs text-neutral-400">
-                      BYE
-                    </span>
+                    <Chip tone="neutral">BYE</Chip>
                   ) : (
                     <>
-                      <span className="text-neutral-500 text-xs">{t.vs}</span>
+                      <span className="text-xs text-[var(--t3,#a39ba6)]">
+                        {t.vs}
+                      </span>
                       <span className="flex-1 font-medium">
                         {p.team2_name || (p.team2_id ?? 'TBD').slice(0, 8)}
                       </span>
@@ -454,45 +386,39 @@ function AdminSwissStagePage(_props: StaffProps) {
             </div>
 
             <div className="flex gap-3">
-              <button
-                type="button"
+              <AdminButton
+                variant="primary"
                 onClick={handleConfirmGenerate}
                 disabled={loadingGenerate}
-                className={`px-4 py-2 rounded text-sm font-semibold ${
-                  loadingGenerate
-                    ? 'bg-emerald-800 cursor-wait'
-                    : 'bg-emerald-600 hover:bg-emerald-700'
-                }`}
               >
                 {loadingGenerate ? t.generating : t.confirmGenerate}
-              </button>
-              <button
-                type="button"
+              </AdminButton>
+              <AdminButton
+                variant="ghost"
                 onClick={() => {
                   setPreview(null);
                   setPreviewRound(null);
                 }}
-                className="px-4 py-2 rounded text-sm bg-neutral-700 hover:bg-neutral-600"
               >
                 {t.cancel}
-              </button>
+              </AdminButton>
             </div>
           </section>
         )}
 
-        {loading && <div className="text-neutral-300">{t.loadingData}</div>}
+        {loading && <div className={MUTED}>{t.loadingData}</div>}
 
         {!loading && !stage && !errorMsg && (
-          <div className="text-neutral-300">{t.stageNotFound}</div>
+          <div className={MUTED}>{t.stageNotFound}</div>
         )}
 
         {!loading && stage && (
-          <div className="grid gap-6 pt-20 lg:grid-cols-[1.5fr_2fr] xl:grid-cols-[1.3fr_2fr]">
+          <div className="grid gap-6 lg:grid-cols-[1.5fr_2fr] xl:grid-cols-[1.3fr_2fr]">
             {/* Standings */}
-            <section className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
-                <h2 className="text-sm font-semibold">{t.standingsTitle}</h2>
-                <span className="text-xs text-neutral-400">
+            <section className={CARD}>
+              <div className={CARD_HEAD}>
+                <h2 className={CARD_TITLE}>{t.standingsTitle}</h2>
+                <span className={COUNT}>
                   {format(
                     standings.length > 1 ? t.teamCount_other : t.teamCount_one,
                     { count: standings.length }
@@ -501,13 +427,11 @@ function AdminSwissStagePage(_props: StaffProps) {
               </div>
 
               {standings.length === 0 ? (
-                <div className="px-4 py-6 text-sm text-neutral-400">
-                  {t.emptyStandings}
-                </div>
+                <div className={`px-4 py-6 ${MUTED}`}>{t.emptyStandings}</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-xs">
-                    <thead className="bg-neutral-750 text-neutral-300">
+                    <thead className="bg-[var(--s2,#1d1520)] font-[family-name:var(--fd)] text-[11px] uppercase tracking-[0.12em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
                       <tr>
                         <th scope="col" className="px-3 py-2 text-left">
                           #
@@ -538,7 +462,7 @@ function AdminSwissStagePage(_props: StaffProps) {
                         </th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="font-mono text-[var(--t2,#c7bfca)]">
                       {standings.map((s) => {
                         const display = s.team?.name || s.team_id;
                         const diff = (s.games_won ?? 0) - (s.games_lost ?? 0);
@@ -550,12 +474,12 @@ function AdminSwissStagePage(_props: StaffProps) {
                         return (
                           <tr
                             key={s.team_id}
-                            className="border-t border-neutral-700"
+                            className="border-t border-[var(--line,rgba(194,196,201,.12))]"
                           >
-                            <td className="px-3 py-2 text-center font-semibold">
+                            <td className="px-3 py-2 text-center font-mono font-semibold">
                               {s.rank}
                             </td>
-                            <td className="px-3 py-2">
+                            <td className="px-3 py-2 font-sans">
                               <div className="flex items-center gap-2">
                                 {s.team?.logo_url && (
                                   <Image
@@ -563,15 +487,15 @@ function AdminSwissStagePage(_props: StaffProps) {
                                     alt={display}
                                     width={24}
                                     height={24}
-                                    className="w-6 h-6 rounded object-cover border border-neutral-700"
+                                    className="h-6 w-6 rounded-[3px] border border-[var(--line2,rgba(194,196,201,.2))] object-cover"
                                   />
                                 )}
                                 <div>
-                                  <div className="font-semibold text-neutral-50">
+                                  <div className="font-semibold text-[var(--t1,#f4edf7)]">
                                     {display}
                                   </div>
                                   {s.team?.short_name && (
-                                    <div className="text-[10px] text-neutral-400">
+                                    <div className="text-[10px] text-[var(--t3,#a39ba6)]">
                                       {s.team.short_name}
                                     </div>
                                   )}
@@ -591,10 +515,10 @@ function AdminSwissStagePage(_props: StaffProps) {
                               <span
                                 className={
                                   diff > 0
-                                    ? 'text-emerald-300'
+                                    ? 'text-[var(--lf,#7fca65)]'
                                     : diff < 0
-                                      ? 'text-red-300'
-                                      : 'text-neutral-300'
+                                      ? 'text-[var(--err,#ff6b6b)]'
+                                      : 'text-[var(--t3,#a39ba6)]'
                                 }
                               >
                                 ({diff > 0 ? '+' : ''}
@@ -615,10 +539,10 @@ function AdminSwissStagePage(_props: StaffProps) {
             </section>
 
             {/* Rounds & matches */}
-            <section className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-neutral-700 flex justify-between items-center">
-                <h2 className="text-sm font-semibold">{t.roundsTitle}</h2>
-                <span className="text-xs text-neutral-400">
+            <section className={CARD}>
+              <div className={CARD_HEAD}>
+                <h2 className={CARD_TITLE}>{t.roundsTitle}</h2>
+                <span className={COUNT}>
                   {format(
                     rounds.length > 1 ? t.roundCount_other : t.roundCount_one,
                     { count: rounds.length }
@@ -627,9 +551,7 @@ function AdminSwissStagePage(_props: StaffProps) {
               </div>
 
               {rounds.length === 0 ? (
-                <div className="px-4 py-6 text-sm text-neutral-400">
-                  {t.emptyRounds}
-                </div>
+                <div className={`px-4 py-6 ${MUTED}`}>{t.emptyRounds}</div>
               ) : (
                 <div className="max-h-[70vh] overflow-y-auto">
                   {rounds
@@ -645,118 +567,6 @@ function AdminSwissStagePage(_props: StaffProps) {
         )}
       </div>
     </>
-  );
-}
-
-type RoundBlockProps = {
-  round: SwissRound;
-};
-
-function SwissRoundBlock({ round }: RoundBlockProps) {
-  const t = useAdminT(nsAdminStageSwiss);
-  return (
-    <div className="border-b border-neutral-700 last:border-b-0">
-      <div className="px-4 py-2 bg-neutral-825 flex justify-between items-center">
-        <div className="text-sm font-semibold">
-          {format(t.roundTitle, { round: round.round_number })}
-        </div>
-        <div className="text-xs text-neutral-400">
-          {format(
-            round.matches.length > 1 ? t.matchCount_other : t.matchCount_one,
-            { count: round.matches.length }
-          )}
-        </div>
-      </div>
-      <div className="divide-y divide-neutral-800">
-        {round.matches.map((m) => (
-          <SwissMatchRow key={m.id} match={m} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-type SwissMatchRowProps = {
-  match: SwissRoundMatch;
-};
-
-function SwissMatchRow({ match }: SwissMatchRowProps) {
-  const t = useAdminT(nsAdminStageSwiss);
-  const label1 = match.team1?.name || match.team1_id || 'TBD';
-  const label2 = match.team2?.name || match.team2_id || 'TBD';
-
-  const scoreStr =
-    match.status === 'finished' || match.status === 'ongoing'
-      ? `${match.team1_score ?? 0} - ${match.team2_score ?? 0}`
-      : '—';
-
-  const isBo = match.best_of ? `BO${match.best_of}` : '';
-
-  return (
-    <div className="px-4 py-2 text-xs flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-      <div className="flex items-center gap-3">
-        <div className="hidden md:block text-[11px] text-neutral-500 font-mono">
-          #{match.id.slice(0, 6)}
-        </div>
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            {match.team1?.logo_url && (
-              <Image
-                src={match.team1.logo_url}
-                alt={label1}
-                width={20}
-                height={20}
-                className="w-5 h-5 rounded object-cover border border-neutral-700"
-              />
-            )}
-            <span className="font-semibold text-neutral-50">{label1}</span>
-            <span className="text-neutral-400">{t.vs}</span>
-            {match.team2?.logo_url && (
-              <Image
-                src={match.team2.logo_url}
-                alt={label2}
-                width={20}
-                height={20}
-                className="w-5 h-5 rounded object-cover border border-neutral-700"
-              />
-            )}
-            <span className="font-semibold text-neutral-50">{label2}</span>
-          </div>
-          <div className="flex items-center gap-3 text-[11px] text-neutral-500">
-            <span>
-              {isBo && <>{isBo} • </>}
-              {t.scorePrefix}{' '}
-              <span className="text-neutral-200">{scoreStr}</span>
-            </span>
-            <span>|</span>
-            <span>{formatDateTime(match.scheduled_at)}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 md:justify-end">
-        <span
-          className={`px-2 py-1 rounded-full text-[10px] font-semibold ${statusColor(
-            match.status
-          )}`}
-        >
-          {statusLabel(match.status, t)}
-        </span>
-        <Link
-          href={`/admin/matches/${match.id}`}
-          className="px-2 py-1 rounded bg-neutral-750 hover:bg-neutral-700 text-[11px]"
-        >
-          {t.openAdmin}
-        </Link>
-        <Link
-          href={`/match/${match.id}`}
-          target="_blank"
-          className="px-2 py-1 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-[11px]"
-        >
-          {t.publicLink}
-        </Link>
-      </div>
-    </div>
   );
 }
 

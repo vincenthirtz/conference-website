@@ -17,6 +17,21 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../../utils/logger';
 import nsAdminStageTeams from '@/lib/i18n/locales/admin-fr/adminStageTeams';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import { FicheSection } from '@/features/admin/_shared/ui/Fiche';
+
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4';
+const EYEBROW =
+  'mb-1 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
+const LABEL = 'mb-1 text-xs text-[var(--t3,#a39ba6)]';
+const INPUT =
+  'rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
+const ERR_BOX =
+  'rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-sm text-[#ffc2c2]';
 type StaffShape = {
   id: string;
   role: string;
@@ -372,22 +387,18 @@ function AdminStageTeamsPage(_props: StaffProps) {
           <input
             type="number"
             aria-label={t.thSeed}
-            className="w-16 rounded border border-neutral-600 bg-neutral-700 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className={`${INPUT} w-16 px-2 py-1 font-mono text-xs`}
             value={seedInputs[st.team_id] ?? ''}
             onChange={(e) => onSeedInputChange(st.team_id, e.target.value)}
           />
-          <button
-            type="button"
+          <AdminButton
+            variant="ghost"
+            size="xs"
             onClick={() => handleUpdateSeed(st.team_id)}
             disabled={updatingSeedId === st.team_id}
-            className={`rounded px-2 py-1 text-xs ${
-              updatingSeedId === st.team_id
-                ? 'cursor-wait bg-blue-800'
-                : 'bg-blue-600 hover:bg-blue-700'
-            }`}
           >
             {updatingSeedId === st.team_id ? t.seedOkSaving : t.seedOk}
-          </button>
+          </AdminButton>
         </span>
       ),
     },
@@ -403,7 +414,7 @@ function AdminStageTeamsPage(_props: StaffProps) {
               alt={st.team.name}
               width={32}
               height={32}
-              className="h-8 w-8 rounded border border-neutral-700 object-cover"
+              className="h-8 w-8 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] object-cover"
             />
           )}
           <span>
@@ -411,7 +422,7 @@ function AdminStageTeamsPage(_props: StaffProps) {
               {st.team ? st.team.name : st.team_id}
             </span>
             {st.team?.short_name && (
-              <span className="block text-xs text-neutral-400">
+              <span className="block text-xs text-[var(--t3,#a39ba6)]">
                 {st.team.short_name}
               </span>
             )}
@@ -423,7 +434,7 @@ function AdminStageTeamsPage(_props: StaffProps) {
       key: 'notes',
       header: t.thNotes,
       value: (st) => st.notes ?? '',
-      className: 'text-xs text-neutral-300',
+      className: 'text-xs text-[var(--t2,#c7bfca)]',
       render: (st) => <>{st.notes || '—'}</>,
     },
     {
@@ -435,25 +446,22 @@ function AdminStageTeamsPage(_props: StaffProps) {
       render: (st) => (
         <span className="flex justify-end gap-2">
           {st.team && (
-            <Link
+            <AdminButtonLink
               href={`/admin/teams/${st.team.id}`}
-              className="rounded bg-neutral-700 px-2 py-1 text-xs hover:bg-neutral-600"
+              variant="ghost"
+              size="xs"
             >
               {t.viewTeam}
-            </Link>
+            </AdminButtonLink>
           )}
-          <button
-            type="button"
+          <AdminButton
+            variant="danger"
+            size="xs"
             onClick={() => handleRemoveTeam(st.team_id)}
             disabled={removingTeamId === st.team_id}
-            className={`rounded px-2 py-1 text-xs ${
-              removingTeamId === st.team_id
-                ? 'cursor-wait bg-red-900'
-                : 'bg-red-700 hover:bg-red-800'
-            }`}
           >
             {removingTeamId === st.team_id ? t.removing : t.remove}
-          </button>
+          </AdminButton>
         </span>
       ),
     },
@@ -481,8 +489,7 @@ function AdminStageTeamsPage(_props: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-header">
-        {/* Header */}
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
         <StageTabsNav
           stageId={String(stageId ?? '')}
           active="teams"
@@ -490,43 +497,39 @@ function AdminStageTeamsPage(_props: StaffProps) {
           tournamentId={stage?.tournament_id ?? tournament?.id}
           tournamentName={tournament?.name}
         />
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">{t.heading}</h1>
-            <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
-          </div>
-        </div>
+        <AdminPageHeader title={t.heading} subtitle={t.subtitle} />
 
-        {/* Messages */}
-        {errorMsg && (
-          <div className="mb-4 rounded bg-red-900/60 border border-red-600 px-4 py-3 text-sm">
-            {errorMsg}
+        {errorMsg && <div className={`mb-4 ${ERR_BOX}`}>{errorMsg}</div>}
+        {loading && (
+          <div className={`${CARD} text-sm text-[var(--t3,#a39ba6)]`}>
+            {t.loadingTeams}
           </div>
         )}
-        {loading && <div className="text-neutral-300">{t.loadingTeams}</div>}
 
         {!loading && stage && (
           <div className="space-y-6">
             {/* Contexte stage / tournoi */}
-            <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+            <section
+              className={`${CARD} flex flex-wrap items-center justify-between gap-4`}
+            >
               <div>
-                <div className="text-xs text-neutral-400 mb-1">
-                  {t.phaseLabel}
+                <p className={EYEBROW}>{t.phaseLabel}</p>
+                <div className="font-semibold text-[var(--t1,#f4edf7)]">
+                  {stage.name}
                 </div>
-                <div className="font-semibold">{stage.name}</div>
                 {tournament && (
-                  <div className="text-xs text-neutral-400 mt-1">
+                  <div className="mt-1 text-xs text-[var(--t3,#a39ba6)]">
                     {t.tournamentPrefix}{' '}
                     <Link
                       href={backUrl}
-                      className="underline underline-offset-2 hover:text-white"
+                      className="underline underline-offset-2 hover:text-[var(--t1,#f4edf7)]"
                     >
                       {tournament.name}
                     </Link>
                     {tournament.slug && (
                       <>
                         {' '}
-                        <span className="font-mono bg-neutral-900 border border-neutral-700 px-1.5 py-0.5 rounded">
+                        <span className="rounded-[3px] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-1.5 py-0.5 font-mono">
                           {tournament.slug}
                         </span>
                       </>
@@ -535,26 +538,26 @@ function AdminStageTeamsPage(_props: StaffProps) {
                 )}
               </div>
 
-              <div className="text-sm text-neutral-300">
-                <span className="text-neutral-400">{t.teamsInPhaseLabel}</span>{' '}
-                <span className="font-semibold">{stageTeams.length}</span>
+              <div className="text-sm text-[var(--t2,#c7bfca)]">
+                <span className="text-[var(--t3,#a39ba6)]">
+                  {t.teamsInPhaseLabel}
+                </span>{' '}
+                <span className="font-mono font-semibold text-[var(--t1,#f4edf7)]">
+                  {stageTeams.length}
+                </span>
               </div>
             </section>
 
             {/* Formulaire d'ajout */}
-            <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
-              <h2 className="text-lg font-semibold mb-3">{t.addTeamTitle}</h2>
-
+            <FicheSection title={t.addTeamTitle}>
               <form
                 onSubmit={handleAddTeam}
-                className="flex flex-wrap gap-4 items-end"
+                className="flex flex-wrap items-end gap-4"
               >
-                <div className="flex flex-col min-w-[220px]">
-                  <label className="text-xs text-neutral-400 mb-1">
-                    {t.teamSelectLabel}
-                  </label>
+                <div className="flex min-w-[220px] flex-col">
+                  <label className={LABEL}>{t.teamSelectLabel}</label>
                   <select
-                    className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={INPUT}
                     value={addTeamId}
                     onChange={(e) => setAddTeamId(e.target.value)}
                     disabled={adding || loadingTeams || !tournament}
@@ -571,46 +574,36 @@ function AdminStageTeamsPage(_props: StaffProps) {
                   </select>
                 </div>
 
-                <div className="flex flex-col w-24">
-                  <label className="text-xs text-neutral-400 mb-1">
-                    {t.seedOptionalLabel}
-                  </label>
+                <div className="flex w-24 flex-col">
+                  <label className={LABEL}>{t.seedOptionalLabel}</label>
                   <input
                     type="number"
-                    className="px-3 py-2 rounded bg-neutral-700 border border-neutral-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`${INPUT} font-mono`}
                     value={addSeed}
                     onChange={(e) => setAddSeed(e.target.value)}
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={adding}
-                  className={`px-4 py-2 rounded font-semibold text-sm ${
-                    adding
-                      ? 'bg-blue-800 cursor-wait'
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-                >
+                <AdminButton type="submit" variant="primary" disabled={adding}>
                   {adding ? t.adding : t.addTeamSubmit}
-                </button>
+                </AdminButton>
               </form>
 
               {availableTeamsForAdd.length === 0 &&
                 !loadingTeams &&
                 tournamentTeams.length > 0 && (
-                  <p className="mt-2 text-xs text-neutral-400">
+                  <p className="mt-2 text-xs text-[var(--t3,#a39ba6)]">
                     {t.allTeamsAttached}
                   </p>
                 )}
-            </section>
+            </FicheSection>
 
             {/* Tableau des équipes de la phase */}
-            <section className="bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-neutral-700 flex flex-wrap justify-between items-center gap-3">
-                <h2 className="text-sm font-semibold">
+            <section className="overflow-hidden rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line2,rgba(194,196,201,.2))] px-4 py-3">
+                <h2 className="text-[15px] text-[var(--t1,#f4edf7)]">
                   {t.attachedTeamsTitle}
-                  <span className="ml-2 text-xs text-neutral-400 font-normal">
+                  <span className="ml-2 font-mono text-xs font-normal text-[var(--t3,#a39ba6)]">
                     {format(
                       stageTeams.length > 1
                         ? t.teamCount_other
@@ -621,38 +614,30 @@ function AdminStageTeamsPage(_props: StaffProps) {
                 </h2>
 
                 {stageTeams.length > 0 && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <button
-                      type="button"
+                  <div className="flex flex-wrap items-center gap-2">
+                    <AdminButton
+                      variant="ghost"
+                      size="xs"
                       onClick={handleAutoSeed}
-                      className="px-3 py-1.5 text-xs rounded bg-neutral-700 hover:bg-neutral-600 border border-neutral-600"
                       title={t.autoSeedTitle}
                     >
                       {t.autoSeed}
-                    </button>
-                    <button
-                      type="button"
+                    </AdminButton>
+                    <AdminButton
+                      variant="secondary"
+                      size="xs"
                       onClick={handleBulkSeedSave}
                       disabled={bulkSeedSaving}
-                      className={`px-3 py-1.5 text-xs rounded font-semibold ${
-                        bulkSeedSaving
-                          ? 'bg-blue-800 cursor-wait'
-                          : 'bg-blue-600 hover:bg-blue-700'
-                      }`}
                     >
                       {bulkSeedSaving ? t.bulkSeedSaving : t.bulkSeedSave}
-                    </button>
+                    </AdminButton>
 
                     {selectedTeamIds.size > 0 && (
-                      <button
-                        type="button"
+                      <AdminButton
+                        variant="danger"
+                        size="xs"
                         onClick={handleBulkRemoveTeams}
                         disabled={bulkRemoving}
-                        className={`px-3 py-1.5 text-xs rounded font-semibold ${
-                          bulkRemoving
-                            ? 'bg-red-900 cursor-wait'
-                            : 'bg-red-700 hover:bg-red-800'
-                        }`}
                       >
                         {bulkRemoving
                           ? t.bulkRemoving
@@ -662,7 +647,7 @@ function AdminStageTeamsPage(_props: StaffProps) {
                                 : t.bulkRemove_one,
                               { count: selectedTeamIds.size }
                             )}
-                      </button>
+                      </AdminButton>
                     )}
                   </div>
                 )}
@@ -673,7 +658,9 @@ function AdminStageTeamsPage(_props: StaffProps) {
                 columns={teamColumns}
                 rowKey={(st) => st.team_id}
                 rowClassName={(st) =>
-                  selectedTeamIds.has(st.team_id) ? 'bg-blue-900/20' : ''
+                  selectedTeamIds.has(st.team_id)
+                    ? 'bg-[rgba(180,103,209,.08)]'
+                    : ''
                 }
                 loading={false}
                 error={null}
@@ -690,7 +677,9 @@ function AdminStageTeamsPage(_props: StaffProps) {
         )}
 
         {!loading && !stage && !errorMsg && (
-          <div className="text-neutral-300">{t.stageNotFound}</div>
+          <div className={`${CARD} text-sm text-[var(--t3,#a39ba6)]`}>
+            {t.stageNotFound}
+          </div>
         )}
       </div>
     </>

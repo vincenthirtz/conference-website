@@ -16,4 +16,12 @@ export default adminNs('adminMatchDraft', {
   blockNotDraftable:
     "Ce match n'a pas de jeu draftable{detail}. Le draft est uniquement disponible pour LoL et Dota 2.",
   blockNotDraftableDetail: ' (jeu actuel : {detail})',
+  eyebrow: 'Draft MOBA',
+  headTitle: 'Draft · match {id}… · partie {game}',
+  title: 'Match {id}… · Partie {game}',
+  loadingDraft: 'Chargement du draft…',
+  loadingHeroes: 'Chargement du pool de héros…',
+  invalidHeading: 'URL de draft invalide',
+  invalidBody:
+    'matchId doit être un UUID et gameIndex un entier strictement positif.',
 });

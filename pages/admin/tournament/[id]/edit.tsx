@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
@@ -20,6 +19,24 @@ import { getGame } from '@/config/games';
 import { TOURNAMENT_TIMEZONES } from '@/utils/timezone';
 import nsAdminTournamentEdit from '@/lib/i18n/locales/admin-fr/adminTournamentEdit';
 import nsAdminRegistrationFields from '@/lib/i18n/locales/admin-fr/adminRegistrationFields';
+import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
+import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import {
+  FicheLayout,
+  FicheSection,
+  MetaList,
+} from '@/features/admin/_shared/ui/Fiche';
+
+const FORM_ID = 'tournament-edit-form';
+const LABEL = 'mb-1 block text-sm text-[var(--t2,#c7bfca)]';
+const HELP = 'mt-1 text-xs text-[var(--t3,#a39ba6)]';
+const INPUT =
+  'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
+const TOGGLE =
+  'flex cursor-pointer items-center gap-3 rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-3 transition-colors hover:border-[var(--line2,rgba(194,196,201,.2))]';
 
 type ApiResponse = {
   tournament: Tournament;
@@ -58,6 +75,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
   const { adminFetchJson } = useAdminFetch();
   const t = useAdminT(nsAdminTournamentEdit);
   const tf = useAdminT(nsAdminRegistrationFields);
+  const tFiche = useAdminT(nsAdminFiche);
 
   const [formReady, setFormReady] = useState(false);
 
@@ -282,115 +300,90 @@ function AdminTournamentEditPage(_props: StaffProps) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          {/* Header */}
-          <div className="mb-8">
-            <TournamentTabsNav
-              tournamentId={String(id ?? '')}
-              active="settings"
-            />
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <TournamentTabsNav tournamentId={String(id ?? '')} active="settings" />
 
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  {t.heading}
-                </h1>
-                <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
-              </div>
-            </div>
+        <EntityHeader
+          title={(formReady && form.name) || t.heading}
+          meta={t.subtitle}
+          actions={
+            !loading &&
+            formReady && (
+              <>
+                <AdminButtonLink
+                  href={`/admin/tournament/${id}`}
+                  variant="ghost"
+                  size="sm"
+                  className={saving ? 'pointer-events-none opacity-50' : ''}
+                >
+                  {t.cancel}
+                </AdminButtonLink>
+                <AdminButton
+                  type="submit"
+                  form={FORM_ID}
+                  variant="primary"
+                  size="sm"
+                  disabled={saving}
+                >
+                  {saving ? t.saving : t.saveChanges}
+                </AdminButton>
+              </>
+            )
+          }
+        />
+
+        {errorMsg && (
+          <div className="mb-6 rounded-[var(--r-card,14px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-sm text-[#ffc2c2]">
+            {errorMsg}
           </div>
+        )}
 
-          {/* Messages */}
-          {errorMsg && (
-            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-red-400 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {errorMsg}
-            </div>
-          )}
+        {loading && !formReady && (
+          <div className="flex items-center justify-center py-20">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--or,#b467d1)]" />
+          </div>
+        )}
 
-          {loading && !formReady && (
-            <div className="flex items-center justify-center py-20">
-              <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-            </div>
-          )}
-
-          {!loading && formReady && (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <fieldset disabled={saving} className="space-y-6">
-                {/* Grid layout like dashboard */}
-                <div className="grid gap-6 lg:grid-cols-3">
-                  {/* Left Column - Main fields */}
-                  <div className="lg:col-span-2 space-y-6">
-                    {/* Informations générales */}
-                    <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                      <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <svg
-                          className="w-5 h-5 text-neutral-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        {t.sectionGeneral}
-                      </h2>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {!loading && formReady && (
+          <form id={FORM_ID} onSubmit={handleSubmit}>
+            <fieldset disabled={saving}>
+              <FicheLayout
+                main={
+                  <>
+                    <FicheSection title={t.sectionGeneral}>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
+                          <label className={LABEL}>
                             {t.nameLabel}{' '}
-                            <span className="text-red-400">*</span>
+                            <span className="text-[var(--err,#ff6b6b)]">*</span>
                           </label>
                           <input
                             type="text"
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={INPUT}
                             value={form.name}
                             onChange={(e) =>
                               updateField('name', e.target.value)
                             }
                           />
                         </div>
-
                         <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
-                            {t.slugLabel}
-                          </label>
+                          <label className={LABEL}>{t.slugLabel}</label>
                           <input
                             type="text"
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={INPUT}
                             value={form.slug}
                             onChange={(e) =>
                               updateField('slug', e.target.value)
                             }
                             placeholder="owl-womens-cup-1"
                           />
-                          <p className="text-xs text-neutral-500 mt-1">
-                            {t.slugHelp}
-                          </p>
+                          <p className={HELP}>{t.slugHelp}</p>
                         </div>
-
                         <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
-                            {t.gameLabel}
-                          </label>
+                          <label className={LABEL}>{t.gameLabel}</label>
                           <input
                             type="text"
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={INPUT}
                             value={form.game}
                             onChange={(e) =>
                               updateField('game', e.target.value)
@@ -398,13 +391,10 @@ function AdminTournamentEditPage(_props: StaffProps) {
                             placeholder="Overwatch"
                           />
                         </div>
-
                         <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
-                            {t.statusLabel}
-                          </label>
+                          <label className={LABEL}>{t.statusLabel}</label>
                           <select
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={INPUT}
                             value={form.status}
                             onChange={(e) =>
                               updateField('status', e.target.value)
@@ -422,52 +412,27 @@ function AdminTournamentEditPage(_props: StaffProps) {
                           </select>
                         </div>
                       </div>
-                    </section>
+                    </FicheSection>
 
-                    {/* Planning & format */}
-                    <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                      <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <svg
-                          className="w-5 h-5 text-neutral-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                        {t.sectionSchedule}
-                      </h2>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FicheSection title={t.sectionSchedule}>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
-                            {t.startDateLabel}
-                          </label>
+                          <label className={LABEL}>{t.startDateLabel}</label>
                           <input
                             type="datetime-local"
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={INPUT}
                             value={form.start_date}
                             onChange={(e) =>
                               updateField('start_date', e.target.value)
                             }
                           />
                         </div>
-
                         <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
-                            {t.endDateLabel}
-                          </label>
+                          <label className={LABEL}>{t.endDateLabel}</label>
                           <input
                             type="datetime-local"
-                            className={`w-full px-3 py-2 rounded-lg bg-neutral-900/50 border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                              dateError
-                                ? 'border-red-500'
-                                : 'border-neutral-600'
+                            className={`${INPUT} ${
+                              dateError ? '!border-[var(--err,#ff6b6b)]' : ''
                             }`}
                             value={form.end_date}
                             onChange={(e) => {
@@ -476,35 +441,27 @@ function AdminTournamentEditPage(_props: StaffProps) {
                             }}
                           />
                           {dateError && (
-                            <p className="text-xs text-red-400 mt-1">
+                            <p className="mt-1 text-xs text-[var(--err,#ff6b6b)]">
                               {dateError}
                             </p>
                           )}
                         </div>
-
                         <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
-                            {t.rosterLockLabel}
-                          </label>
+                          <label className={LABEL}>{t.rosterLockLabel}</label>
                           <input
                             type="datetime-local"
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={INPUT}
                             value={form.roster_locked_at}
                             onChange={(e) =>
                               updateField('roster_locked_at', e.target.value)
                             }
                           />
-                          <p className="text-xs text-neutral-500 mt-1">
-                            {t.rosterLockHelp}
-                          </p>
+                          <p className={HELP}>{t.rosterLockHelp}</p>
                         </div>
-
                         <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
-                            {t.timezoneLabel}
-                          </label>
+                          <label className={LABEL}>{t.timezoneLabel}</label>
                           <select
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={INPUT}
                             value={form.timezone}
                             onChange={(e) =>
                               updateField('timezone', e.target.value)
@@ -516,17 +473,14 @@ function AdminTournamentEditPage(_props: StaffProps) {
                               </option>
                             ))}
                           </select>
-                          <p className="text-xs text-neutral-500 mt-1">
-                            {t.timezoneHelp}
-                          </p>
+                          <p className={HELP}>{t.timezoneHelp}</p>
                         </div>
-
                         <TournamentFormatFields
                           form={form}
                           updateField={updateField}
                         />
                       </div>
-                    </section>
+                    </FicheSection>
 
                     {/* Visuels : logo, bannière, règlement, chaîne de diffusion */}
                     <TournamentVisualsSection
@@ -534,36 +488,16 @@ function AdminTournamentEditPage(_props: StaffProps) {
                       updateField={updateField}
                     />
 
-                    {/* Informations publiques */}
-                    <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                      <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <svg
-                          className="w-5 h-5 text-neutral-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                        {t.sectionPublic}
-                      </h2>
-                      <p className="text-xs text-neutral-500 mb-4">
+                    <FicheSection title={t.sectionPublic}>
+                      <p className="-mt-3 mb-4 text-xs text-[var(--t3,#a39ba6)]">
                         {t.publicHelp}
                       </p>
-
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
-                            {t.descriptionLabel}
-                          </label>
+                          <label className={LABEL}>{t.descriptionLabel}</label>
                           <textarea
                             rows={4}
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={INPUT}
                             value={form.description_info}
                             onChange={(e) =>
                               updateField('description_info', e.target.value)
@@ -571,14 +505,13 @@ function AdminTournamentEditPage(_props: StaffProps) {
                             placeholder={t.descriptionPlaceholder}
                           />
                         </div>
-
                         <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
+                          <label className={LABEL}>
                             {t.scheduleDetailsLabel}
                           </label>
                           <textarea
                             rows={4}
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={INPUT}
                             value={form.schedule_details}
                             onChange={(e) =>
                               updateField('schedule_details', e.target.value)
@@ -586,14 +519,13 @@ function AdminTournamentEditPage(_props: StaffProps) {
                             placeholder={t.scheduleDetailsPlaceholder}
                           />
                         </div>
-
                         <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
+                          <label className={LABEL}>
                             {t.scheduleRulesLabel}
                           </label>
                           <textarea
                             rows={4}
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={INPUT}
                             value={form.schedule_rules}
                             onChange={(e) =>
                               updateField('schedule_rules', e.target.value)
@@ -601,14 +533,13 @@ function AdminTournamentEditPage(_props: StaffProps) {
                             placeholder={t.scheduleRulesPlaceholder}
                           />
                         </div>
-
                         <div>
-                          <label className="block text-sm mb-1 text-neutral-300">
+                          <label className={LABEL}>
                             {t.formatDetailsLabel}
                           </label>
                           <textarea
                             rows={4}
-                            className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={INPUT}
                             value={form.format_details}
                             onChange={(e) =>
                               updateField('format_details', e.target.value)
@@ -617,7 +548,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
                           />
                         </div>
                       </div>
-                    </section>
+                    </FicheSection>
 
                     {/* Champs d'inscription personnalisés */}
                     <RegistrationFieldsEditor
@@ -627,144 +558,64 @@ function AdminTournamentEditPage(_props: StaffProps) {
                       presets={registrationPresets}
                       presetsGameLabel={gameConfig?.label}
                     />
-                  </div>
-
-                  {/* Right Column - Visibility & Actions */}
-                  <div className="space-y-6">
-                    {/* Visibilité */}
-                    <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                      <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <svg
-                          className="w-5 h-5 text-neutral-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                          />
-                        </svg>
-                        {t.sectionVisibility}
-                      </h2>
-
+                  </>
+                }
+                aside={
+                  <>
+                    <FicheSection title={t.sectionVisibility} eyebrow>
                       <div className="space-y-3">
-                        <label className="flex items-center gap-3 p-3 rounded-xl bg-neutral-900/50 hover:bg-neutral-900 transition-colors cursor-pointer">
+                        <label className={TOGGLE}>
                           <input
                             type="checkbox"
-                            className="w-5 h-5 rounded border-neutral-500 bg-neutral-700 text-emerald-500 focus:ring-emerald-500"
+                            className="h-5 w-5 accent-[var(--lf,#7fca65)]"
                             checked={form.is_public}
                             onChange={(e) =>
                               updateField('is_public', e.target.checked)
                             }
                           />
                           <div>
-                            <span className="text-sm font-medium">
+                            <span className="text-sm font-medium text-[var(--t1,#f4edf7)]">
                               {t.publicToggle}
                             </span>
-                            <p className="text-xs text-neutral-500">
+                            <p className="text-xs text-[var(--t3,#a39ba6)]">
                               {t.publicToggleHelp}
                             </p>
                           </div>
                         </label>
-
-                        <label className="flex items-center gap-3 p-3 rounded-xl bg-neutral-900/50 hover:bg-neutral-900 transition-colors cursor-pointer">
+                        <label className={TOGGLE}>
                           <input
                             type="checkbox"
-                            className="w-5 h-5 rounded border-neutral-500 bg-neutral-700 text-amber-500 focus:ring-amber-500"
+                            className="h-5 w-5 accent-[var(--or,#b467d1)]"
                             checked={form.is_featured}
                             onChange={(e) =>
                               updateField('is_featured', e.target.checked)
                             }
                           />
                           <div>
-                            <span className="text-sm font-medium">
+                            <span className="text-sm font-medium text-[var(--t1,#f4edf7)]">
                               {t.featuredToggle}
                             </span>
-                            <p className="text-xs text-neutral-500">
+                            <p className="text-xs text-[var(--t3,#a39ba6)]">
                               {t.featuredToggleHelp}
                             </p>
                           </div>
                         </label>
                       </div>
-                    </section>
+                    </FicheSection>
 
-                    {/* Actions */}
-                    <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6">
-                      <h2 className="text-lg font-semibold mb-4">
-                        {t.sectionActions}
-                      </h2>
-
-                      <div className="space-y-3">
-                        <button
-                          type="submit"
-                          disabled={saving}
-                          className={`w-full px-4 py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-                            saving
-                              ? 'bg-blue-800 cursor-wait'
-                              : 'bg-blue-600 hover:bg-blue-700'
-                          }`}
-                        >
-                          {saving ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              {t.saving}
-                            </>
-                          ) : (
-                            <>
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                              {t.saveChanges}
-                            </>
-                          )}
-                        </button>
-
-                        <Link
-                          href={`/admin/tournament/${id}`}
-                          className={`w-full px-4 py-3 rounded-xl border border-neutral-600 text-neutral-200 hover:bg-neutral-700/50 text-sm font-medium transition-colors flex items-center justify-center gap-2${saving ? ' pointer-events-none opacity-50' : ''}`}
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                          {t.cancel}
-                        </Link>
-                      </div>
-                    </section>
-                  </div>
-                </div>
-              </fieldset>
-            </form>
-          )}
-        </div>
+                    <FicheSection title={tFiche.metaTitle} eyebrow>
+                      <MetaList
+                        items={[
+                          { label: tFiche.metaId, value: String(id ?? '') },
+                        ]}
+                      />
+                    </FicheSection>
+                  </>
+                }
+              />
+            </fieldset>
+          </form>
+        )}
       </div>
     </>
   );

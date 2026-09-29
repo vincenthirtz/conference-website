@@ -70,6 +70,9 @@ import dynamic from 'next/dynamic';
 import EmptyState from '@/components/admin/EmptyState';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import RealtimeStatusBadge from '@/components/admin/RealtimeStatusBadge';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import Chip from '@/features/admin/_shared/ui/Chip';
 import Tabs, {
   useQueryTab,
   tabPanelId,
@@ -452,213 +455,198 @@ function CasterScenesPage({ staff }: PageProps) {
         <title>{t.docTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-black text-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          <DiffusionTabsNav active="scenes" />
-          {/* En-tête */}
-          <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-extrabold tracking-tight">
-                  {t.heading}
-                </h1>
-                <RealtimeStatusBadge
-                  connected={realtimeConnected}
-                  connectedLabel={t.realtimeConnected}
-                  degradedLabel={t.realtimeDegraded}
-                />
-              </div>
-              <p className="text-sm text-neutral-400 mt-1">{t.subtitle}</p>
-            </div>
-
-            {/* Présence multi-caster (canal partagé avec l'app desktop). */}
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <DiffusionTabsNav active="scenes" />
+        {/* En-tête — à droite, la présence multi-caster (canal partagé avec
+              l'app desktop). */}
+        <AdminPageHeader
+          title={t.heading}
+          badge={
+            <RealtimeStatusBadge
+              connected={realtimeConnected}
+              connectedLabel={t.realtimeConnected}
+              degradedLabel={t.realtimeDegraded}
+            />
+          }
+          subtitle={t.subtitle}
+          actions={
             <CasterPresenceBar
               users={presenceUsers}
               selfStaffId={staff?.id ?? null}
               sceneNameById={sceneNameById}
               connected={presenceConnected}
             />
+          }
+        />
+
+        {/* Erreur de chargement (bandeau + retry, non bloquant) */}
+        {error && (
+          <div
+            role="alert"
+            className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-[var(--r-card,14px)] border border-red-500/50 bg-red-900/40 px-4 py-3 text-sm text-[var(--t1,#f4edf7)]"
+          >
+            <span>{format(t.loadError, { message: error })}</span>
+            <AdminButton size="xs" onClick={() => void reload()}>
+              {t.retry}
+            </AdminButton>
           </div>
+        )}
 
-          {/* Erreur de chargement (bandeau + retry, non bloquant) */}
-          {error && (
-            <div
-              role="alert"
-              className="mb-4 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-2"
-            >
-              <span>{format(t.loadError, { message: error })}</span>
-              <button
-                type="button"
-                onClick={() => void reload()}
-                className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-medium"
-              >
-                {t.retry}
-              </button>
+        <Tabs
+          tabs={tabs}
+          active={activeTab}
+          onChange={setActiveTab}
+          ariaLabel={t.tabsAriaLabel}
+          idBase={ID_BASE}
+          className="mb-6"
+        />
+
+        {/* --- Onglet « Scènes » : liste + CRUD, aperçu, match picker, éditeur */}
+        <div {...panelProps('scenes')}>
+          {loading ? (
+            <div className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] py-16">
+              <LoadingSpinner label={t.loadingScenes} />
             </div>
-          )}
-
-          <Tabs
-            tabs={tabs}
-            active={activeTab}
-            onChange={setActiveTab}
-            ariaLabel={t.tabsAriaLabel}
-            idBase={ID_BASE}
-            className="mb-6"
-          />
-
-          {/* --- Onglet « Scènes » : liste + CRUD, aperçu, match picker, éditeur */}
-          <div {...panelProps('scenes')}>
-            {loading ? (
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/50 py-16">
-                <LoadingSpinner label={t.loadingScenes} />
-              </div>
-            ) : (
-              // `minmax(0,1fr)` et non `1fr` : l'iframe d'aperçu fait
-              // physiquement 1920 px de large, et `1fr` = `minmax(auto,1fr)`
-              // laisserait son min-content faire exploser la colonne (l'échelle
-              // convergerait alors vers 1 et le panneau déborderait de l'écran).
-              <div className="grid grid-cols-1 md:grid-cols-[280px_minmax(0,1fr)] gap-4 items-start">
-                {/* Colonne gauche : liste + CRUD (tri sort_order via le hook).
+          ) : (
+            // `minmax(0,1fr)` et non `1fr` : l'iframe d'aperçu fait
+            // physiquement 1920 px de large, et `1fr` = `minmax(auto,1fr)`
+            // laisserait son min-content faire exploser la colonne (l'échelle
+            // convergerait alors vers 1 et le panneau déborderait de l'écran).
+            <div className="grid grid-cols-1 md:grid-cols-[280px_minmax(0,1fr)] gap-4 items-start">
+              {/* Colonne gauche : liste + CRUD (tri sort_order via le hook).
                     Rendue même sur liste vide : c'est elle qui porte le bouton
                     « + Nouvelle scène ». */}
-                <SceneList
-                  scenes={scenes}
-                  selectedId={selected?.id ?? null}
-                  onSelect={setSelectedId}
-                  othersByScene={othersByScene}
-                  typeLabel={typeLabel}
-                  crud={crud}
-                />
+              <SceneList
+                scenes={scenes}
+                selectedId={selected?.id ?? null}
+                onSelect={setSelectedId}
+                othersByScene={othersByScene}
+                typeLabel={typeLabel}
+                crud={crud}
+              />
 
-                {/* Panneau droit : éditeur de la scène sélectionnée */}
-                {/* `min-w-0` : même raison que le minmax ci-dessus — sans lui,
+              {/* Panneau droit : éditeur de la scène sélectionnée */}
+              {/* `min-w-0` : même raison que le minmax ci-dessus — sans lui,
                     l'iframe 1920 px imposerait sa largeur au panneau. */}
-                <section
-                  className="min-w-0 rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4"
-                  data-testid="caster-scene-panel"
-                >
-                  {selected ? (
-                    <>
-                      <div className="flex items-center gap-2 mb-4">
-                        <h2 className="text-lg font-bold truncate">
-                          {selected.name}
-                        </h2>
-                        <span className="shrink-0 rounded-full border border-neutral-700 bg-neutral-950/70 px-2 py-0.5 text-[10px] uppercase tracking-wide text-neutral-400">
-                          {typeLabel(selected.type)}
-                        </span>
-                      </div>
+              <section
+                className="min-w-0 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4"
+                data-testid="caster-scene-panel"
+              >
+                {selected ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-4">
+                      <h2 className="truncate text-[19px] text-[var(--t1,#f4edf7)]">
+                        {selected.name}
+                      </h2>
+                      <Chip>{typeLabel(selected.type)}</Chip>
+                    </div>
 
-                      {/* Aperçu live (lot 7) : vraie page overlay en iframe,
+                    {/* Aperçu live (lot 7) : vraie page overlay en iframe,
                           ciblée par UUID. PAS de key={selected.id} ici : ce
                           serait la même clé que l'éditeur plus bas (frères dans
                           le même fragment ⇒ collision, React duplique/omet des
                           enfants). Le composant gère lui-même le changement de
                           scène (clé interne de l'iframe), et garder l'instance
                           préserve le pli/dépli et l'échelle mesurée. */}
-                      <OverlayPreview scene={selected} />
+                    <OverlayPreview scene={selected} />
 
-                      {/* URL Browser Source (overlay hébergé) — type match. */}
-                      {overlayUrl && (
-                        <div className="mb-4 rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2.5">
-                          <p className="text-[11px] text-neutral-500 mb-1.5">
-                            {t.overlayUrlLabel}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <code className="text-xs text-cyan-200 break-all">
-                              {overlayUrl}
-                            </code>
-                            <button
-                              type="button"
-                              onClick={() => void copyOverlayUrl()}
-                              className="shrink-0 px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-[11px] font-medium"
-                              data-testid="caster-copy-overlay-url"
-                            >
-                              {t.copy}
-                            </button>
-                          </div>
-                          <p className="text-[11px] text-neutral-600 mt-1.5">
-                            {t.overlayUrlHint}
-                          </p>
+                    {/* URL Browser Source (overlay hébergé) — type match. */}
+                    {overlayUrl && (
+                      <div className="mb-4 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2.5">
+                        <p className="mb-1.5 text-[11px] text-[var(--t3,#a39ba6)]">
+                          {t.overlayUrlLabel}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <code className="break-all font-mono text-xs text-[var(--or-200,#eec4ff)]">
+                            {overlayUrl}
+                          </code>
+                          <AdminButton
+                            size="xs"
+                            onClick={() => void copyOverlayUrl()}
+                            data-testid="caster-copy-overlay-url"
+                          >
+                            {t.copy}
+                          </AdminButton>
                         </div>
-                      )}
+                        <p className="mt-1.5 text-[11px] text-[var(--t4,#807984)]">
+                          {t.overlayUrlHint}
+                        </p>
+                      </div>
+                    )}
 
-                      {/* Édition simultanée : avertissement là où on tape. */}
-                      <CasterCollabBanner
-                        others={othersByScene[selected.id] || []}
-                      />
+                    {/* Édition simultanée : avertissement là où on tape. */}
+                    <CasterCollabBanner
+                      others={othersByScene[selected.id] || []}
+                    />
 
-                      {/* Match picker (lot 5) — scènes match / results
+                    {/* Match picker (lot 5) — scènes match / results
                           seulement, comme toggleMatchPicker côté desktop. */}
-                      {showPicker && (
-                        <MatchPickerPanel
-                          scene={selected}
-                          picker={picker}
-                          linkedMatch={
-                            trackedMatches[linkedMatchIdOf(selected) || ''] ??
-                            null
-                          }
-                          onImport={importMatch}
-                          onDetach={detachMatch}
-                        />
-                      )}
-
-                      {(() => {
-                        const Editor = EDITORS[selected.type];
-                        if (!Editor) {
-                          return (
-                            <EmptyState
-                              title={t.placeholderTitle}
-                              description={format(t.placeholderBody, {
-                                type: typeLabel(selected.type),
-                              })}
-                            />
-                          );
+                    {showPicker && (
+                      <MatchPickerPanel
+                        scene={selected}
+                        picker={picker}
+                        linkedMatch={
+                          trackedMatches[linkedMatchIdOf(selected) || ''] ??
+                          null
                         }
-                        // key={id} : remonte l'éditeur (draft ré-initialisé) au
-                        // changement de scène sélectionnée.
+                        onImport={importMatch}
+                        onDetach={detachMatch}
+                      />
+                    )}
+
+                    {(() => {
+                      const Editor = EDITORS[selected.type];
+                      if (!Editor) {
                         return (
-                          <Editor
-                            key={selected.id}
-                            scene={selected}
-                            onSave={saveSceneData}
-                            tournamentMaps={picker.maps}
+                          <EmptyState
+                            title={t.placeholderTitle}
+                            description={format(t.placeholderBody, {
+                              type: typeLabel(selected.type),
+                            })}
                           />
                         );
-                      })()}
-                    </>
-                  ) : (
-                    <EmptyState
-                      title={t.emptyTitle}
-                      description={t.emptyBody}
-                    />
-                  )}
-                </section>
-              </div>
-            )}
-          </div>
+                      }
+                      // key={id} : remonte l'éditeur (draft ré-initialisé) au
+                      // changement de scène sélectionnée.
+                      return (
+                        <Editor
+                          key={selected.id}
+                          scene={selected}
+                          onSave={saveSceneData}
+                          tournamentMaps={picker.maps}
+                        />
+                      );
+                    })()}
+                  </>
+                ) : (
+                  <EmptyState title={t.emptyTitle} description={t.emptyBody} />
+                )}
+              </section>
+            </div>
+          )}
+        </div>
 
-          {/* --- Onglet « OBS » (lot 3). MONTÉ EN PERMANENCE : la WebSocket OBS
+        {/* --- Onglet « OBS » (lot 3). MONTÉ EN PERMANENCE : la WebSocket OBS
               ne doit pas se couper en changeant d'onglet. */}
-          <div {...panelProps('obs')}>
-            <ObsPanel />
-          </div>
+        <div {...panelProps('obs')}>
+          <ObsPanel />
+        </div>
 
-          {/* --- Onglet « Chat & MVP » (lot 4). MONTÉ EN PERMANENCE : la
+        {/* --- Onglet « Chat & MVP » (lot 4). MONTÉ EN PERMANENCE : la
               connexion IRC/EventSub et les votes en cours ne survivraient pas à
               un démontage. `mvpScene` est la cible de publication du tally. */}
-          <div {...panelProps('chat')}>
-            <CasterChatSection mvpScene={mvpScene} onSave={saveSceneData} />
-          </div>
+        <div {...panelProps('chat')}>
+          <CasterChatSection mvpScene={mvpScene} onSave={saveSceneData} />
+        </div>
 
-          {/* --- Onglet « Habillage » (lot 5) — transverse aux scènes. Monté en
+        {/* --- Onglet « Habillage » (lot 5) — transverse aux scènes. Monté en
               permanence aussi : son auto-save des couleurs est débouncé. */}
-          <div {...panelProps('theme')}>
-            <ThemePanel
-              themes={themes}
-              activeId={activeThemeId}
-              reload={reloadThemes}
-            />
-          </div>
+        <div {...panelProps('theme')}>
+          <ThemePanel
+            themes={themes}
+            activeId={activeThemeId}
+            reload={reloadThemes}
+          />
         </div>
       </div>
     </>

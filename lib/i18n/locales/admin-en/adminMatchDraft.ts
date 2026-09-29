@@ -17,4 +17,12 @@ export default {
   blockNotDraftable:
     'This match has no draftable game{detail}. Draft is only available for LoL and Dota 2.',
   blockNotDraftableDetail: ' (current game: {detail})',
+  eyebrow: 'MOBA Draft',
+  headTitle: 'Draft · match {id}… · game {game}',
+  title: 'Match {id}… · Game {game}',
+  loadingDraft: 'Loading draft…',
+  loadingHeroes: 'Loading hero pool…',
+  invalidHeading: 'Invalid draft URL',
+  invalidBody:
+    'matchId must be a UUID and gameIndex must be a positive integer.',
 };

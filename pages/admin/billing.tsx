@@ -27,6 +27,20 @@ import { CGV_VERSION } from '@/utils/billing/cgv';
 import { logger } from '../../utils/logger';
 import nsAdminBilling from '@/lib/i18n/locales/admin-fr/adminBilling';
 import NonprofitRnaCard from '@/components/admin/billing/NonprofitRnaCard';
+import PlanCapabilities from '@/features/admin/billing/ui/PlanCapabilities';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
+
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]';
+const EYEBROW =
+  'font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
+const H2 = 'mb-4 text-[19px] text-[var(--t1,#f4edf7)]';
+const WARN_BOX =
+  'rounded-[var(--r-card,14px)] border border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.08)]';
+const INFO_BOX =
+  'rounded-[var(--r-card,14px)] border border-[rgba(180,103,209,.4)] bg-[rgba(180,103,209,.08)]';
 
 type CatalogItem = {
   plan: PurchasablePlan;
@@ -116,40 +130,6 @@ function formatAmount(cents: number): string {
     currency: 'EUR',
   }).format(cents / 100);
 }
-
-const CheckIcon = () => (
-  <svg
-    className="w-4 h-4 text-emerald-400 flex-shrink-0"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-    aria-hidden="true"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2.5}
-      d="M5 13l4 4L19 7"
-    />
-  </svg>
-);
-
-const DashIcon = () => (
-  <svg
-    className="w-4 h-4 text-neutral-600 flex-shrink-0"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-    aria-hidden="true"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2.5}
-      d="M18 12H6"
-    />
-  </svg>
-);
 
 function AdminBillingPage({ staff }: Props) {
   const t = useAdminT(nsAdminBilling);
@@ -284,29 +264,14 @@ function AdminBillingPage({ staff }: Props) {
   const statusMeta = (status: PlanStatus) => {
     switch (status) {
       case 'active':
-        return {
-          label: t.statusActive,
-          className:
-            'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30',
-        };
+        return { label: t.statusActive, tone: 'ok' as ChipTone };
       case 'past_due':
-        return {
-          label: t.statusPastDue,
-          className:
-            'bg-amber-600/20 text-amber-300 border border-amber-500/30',
-        };
+        return { label: t.statusPastDue, tone: 'warn' as ChipTone };
       case 'canceled':
       default:
-        return {
-          label: t.statusCanceled,
-          className:
-            'bg-neutral-700/40 text-neutral-400 border border-neutral-600/40',
-        };
+        return { label: t.statusCanceled, tone: 'neutral' as ChipTone };
     }
   };
-
-  const eventOpsLabel = (v: PlanFeatures['discordEventOps']) =>
-    v === 'full' ? t.capEventOpsFull : t.capEventOpsNone;
 
   // CTA libellé selon le plan courant vs cible.
   const ctaLabel = (targetPlan: PurchasablePlan): string => {
@@ -325,58 +290,6 @@ function AdminBillingPage({ staff }: Props) {
     return t.subscribe;
   };
 
-  const capabilityRow = (
-    label: string,
-    value: boolean | string,
-    key: string
-  ) => (
-    <li key={key} className="flex items-center gap-2 text-sm">
-      {typeof value === 'boolean' ? (
-        value ? (
-          <CheckIcon />
-        ) : (
-          <DashIcon />
-        )
-      ) : (
-        <CheckIcon />
-      )}
-      <span
-        className={
-          typeof value === 'boolean' && !value
-            ? 'text-neutral-500'
-            : 'text-neutral-200'
-        }
-      >
-        {label}
-        {typeof value === 'string' && (
-          <span className="ml-1 text-neutral-400">— {value}</span>
-        )}
-      </span>
-    </li>
-  );
-
-  const renderCapabilities = (f: PlanFeatures, keyPrefix: string) => (
-    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-      {capabilityRow(t.capApiRead, f.apiRead, `${keyPrefix}-apiread`)}
-      {capabilityRow(t.capApiWrite, f.apiWrite, `${keyPrefix}-apiwrite`)}
-      {capabilityRow(t.capDiscordBot, f.discordBot, `${keyPrefix}-bot`)}
-      {capabilityRow(
-        `${t.capEventOps} (${eventOpsLabel(f.discordEventOps)})`,
-        f.discordEventOps !== 'none',
-        `${keyPrefix}-ops`
-      )}
-      {capabilityRow(t.capWhiteLabel, f.whiteLabel, `${keyPrefix}-wl`)}
-      {capabilityRow(t.capMultiTenant, f.multiTenant, `${keyPrefix}-mt`)}
-      {capabilityRow(t.capArbitration, f.arbitration, `${keyPrefix}-arb`)}
-      {capabilityRow(t.capRatings, f.ratings, `${keyPrefix}-rat`)}
-      {capabilityRow(
-        t.capBroadcastStudio,
-        f.broadcastStudio,
-        `${keyPrefix}-obs`
-      )}
-    </ul>
-  );
-
   const loading =
     tenantLoading || (tenantId !== null && data === null && error === null);
 
@@ -385,32 +298,28 @@ function AdminBillingPage({ staff }: Props) {
       key: 'date',
       header: t.colDate,
       value: (p) => p.paidAt ?? '',
-      className: 'text-neutral-300',
+      className: 'font-mono text-[var(--t2,#c7bfca)]',
       render: (p) => <>{formatDate(p.paidAt)}</>,
     },
     {
       key: 'plan',
       header: t.colPlan,
       value: (p) => p.plan,
-      render: (p) => (
-        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] uppercase tracking-wider text-neutral-300">
-          {p.plan}
-        </span>
-      ),
+      render: (p) => <Chip tone="neutral">{p.plan}</Chip>,
     },
     {
       key: 'amount',
       header: t.colAmount,
       value: (p) => p.amountCents,
       headerClassName: 'text-right',
-      className: 'text-right font-medium text-white',
+      className: 'text-right font-mono font-medium text-[var(--t1,#f4edf7)]',
       render: (p) => <>{formatAmount(p.amountCents)}</>,
     },
     {
       key: 'helloasso',
       header: t.colHelloasso,
       value: (p) => String(p.helloassoPaymentId),
-      className: 'font-mono text-xs text-purple-300',
+      className: 'font-mono text-xs text-[var(--or-300,#dea3f6)]',
     },
   ];
 
@@ -420,8 +329,8 @@ function AdminBillingPage({ staff }: Props) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <div>
           <Breadcrumb
             items={[
               { label: t.breadcrumbAdmin, href: '/admin' },
@@ -429,11 +338,8 @@ function AdminBillingPage({ staff }: Props) {
             ]}
           />
 
-          <div className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              {t.heading}
-            </h1>
-            <p className="mt-1 text-sm text-neutral-400">{t.subheading}</p>
+          <div className="mt-4">
+            <AdminPageHeader title={t.heading} subtitle={t.subheading} />
           </div>
 
           <AlertBanner message={error ?? tenantError} className="mb-4" />
@@ -455,7 +361,7 @@ function AdminBillingPage({ staff }: Props) {
                   laisser découvrir la rétrogradation par la panne. */}
               {data.inGrace && (
                 <div
-                  className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
+                  className={`${WARN_BOX} px-4 py-3 text-sm text-[#ffd9a3]`}
                   role="status"
                   data-testid="billing-grace-banner"
                 >
@@ -470,57 +376,54 @@ function AdminBillingPage({ staff }: Props) {
               )}
 
               <section
-                className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 sm:p-8"
+                className={`${CARD} p-6 sm:p-8`}
                 data-testid="billing-current-plan"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-neutral-500">
-                      {t.currentPlanHeading}
-                    </p>
+                    <p className={EYEBROW}>{t.currentPlanHeading}</p>
                     <div className="mt-1 flex items-center gap-3 flex-wrap">
-                      <h2 className="text-2xl font-bold">{data.planLabel}</h2>
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${statusMeta(data.planStatus).className}`}
+                      <h2 className="text-[26px] text-[var(--t1,#f4edf7)]">
+                        {data.planLabel}
+                      </h2>
+                      <Chip
+                        tone={statusMeta(data.planStatus).tone}
                         data-testid="billing-status-badge"
                       >
                         {statusMeta(data.planStatus).label}
-                      </span>
+                      </Chip>
                       {data.isTrial && (
-                        <span
-                          className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-500/15 text-sky-200 border border-sky-500/30"
-                          data-testid="billing-trial-badge"
-                        >
+                        <Chip tone="brand" data-testid="billing-trial-badge">
                           {t.trialBadge}
-                        </span>
+                        </Chip>
                       )}
                       {/* Découverte offerte (association vérifiée). À côté du
                           palier, pas en note de bas de page : c'est la première
                           question qu'on se pose devant un écran de
                           facturation. */}
                       {data.nonprofitFree && (
-                        <span
-                          className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-200 border border-emerald-500/30"
+                        <Chip
+                          tone="ok"
                           data-testid="billing-nonprofit-badge"
                           title={data.nonprofitOrgName ?? undefined}
                         >
                           {t.nonprofitBadge}
-                        </span>
+                        </Chip>
                       )}
                     </div>
                   </div>
                   <div className="text-right text-sm">
                     {data.planStartedAt && (
-                      <p className="text-neutral-400">
+                      <p className="text-[var(--t3,#a39ba6)]">
                         {t.startedAtLabel}{' '}
-                        <span className="text-neutral-200">
+                        <span className="font-mono text-[var(--t1,#f4edf7)]">
                           {formatDate(data.planStartedAt)}
                         </span>
                       </p>
                     )}
-                    <p className="text-neutral-400 mt-0.5">
+                    <p className="mt-0.5 text-[var(--t3,#a39ba6)]">
                       {t.expiresAtLabel}{' '}
-                      <span className="text-neutral-200">
+                      <span className="font-mono text-[var(--t1,#f4edf7)]">
                         {data.planExpiresAt
                           ? formatDate(data.planExpiresAt)
                           : t.noExpiry}
@@ -528,7 +431,7 @@ function AdminBillingPage({ staff }: Props) {
                     </p>
                     {data.daysRemaining !== null && (
                       <p
-                        className={`mt-0.5 font-medium ${data.daysRemaining <= 0 ? 'text-red-300' : 'text-neutral-300'}`}
+                        className={`mt-0.5 font-medium ${data.daysRemaining <= 0 ? 'text-[var(--err,#ff6b6b)]' : 'text-[var(--t2,#c7bfca)]'}`}
                       >
                         {data.daysRemaining <= 0
                           ? t.expired
@@ -542,32 +445,32 @@ function AdminBillingPage({ staff }: Props) {
 
                 {data.isTrial && (
                   <div
-                    className="mt-5 rounded-xl border border-sky-500/40 bg-sky-500/10 p-4"
+                    className={`mt-5 p-4 ${INFO_BOX}`}
                     data-testid="billing-trial-notice"
                   >
-                    <p className="text-sm text-sky-100">{t.trialNotice}</p>
+                    <p className="text-sm text-[var(--or-200,#eec4ff)]">
+                      {t.trialNotice}
+                    </p>
                   </div>
                 )}
 
                 {isDowngraded && (
                   <div
-                    className="mt-5 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4"
+                    className={`mt-5 p-4 ${WARN_BOX}`}
                     data-testid="billing-downgrade-notice"
                   >
-                    <p className="text-sm font-semibold text-amber-200">
+                    <p className="text-sm font-semibold text-[#ffd9a3]">
                       {t.downgradeNoticeTitle}
                     </p>
-                    <p className="mt-1 text-sm text-amber-100/80">
+                    <p className="mt-1 text-sm text-[var(--t2,#c7bfca)]">
                       {format(t.downgradeNoticeMsg, { plan: data.planLabel })}
                     </p>
                   </div>
                 )}
 
-                <div className="mt-6 border-t border-neutral-700/50 pt-5">
-                  <p className="text-xs font-medium uppercase tracking-wider text-neutral-500 mb-3">
-                    {t.capabilitiesHeading}
-                  </p>
-                  {renderCapabilities(data.capabilities, 'current')}
+                <div className="mt-6 border-t border-[var(--line2,rgba(194,196,201,.2))] pt-5">
+                  <p className={`mb-3 ${EYEBROW}`}>{t.capabilitiesHeading}</p>
+                  <PlanCapabilities features={data.capabilities} />
                 </div>
               </section>
 
@@ -588,15 +491,15 @@ function AdminBillingPage({ staff }: Props) {
                   `foundation` est la Coupe elle-même, hors facturation. */}
               {!canSelfServeBill && (
                 <section
-                  className="rounded-2xl border border-sky-500/40 bg-sky-500/10 p-6"
+                  className={`p-6 ${INFO_BOX}`}
                   data-testid="billing-not-billable"
                 >
-                  <h2 className="text-lg font-semibold text-sky-100">
+                  <h2 className="text-[19px] text-[var(--t1,#f4edf7)]">
                     {isAssociationPlan
                       ? t.associationNoticeTitle
                       : t.customNoticeTitle}
                   </h2>
-                  <p className="mt-1 text-sm text-sky-100/80">
+                  <p className="mt-1 text-sm text-[var(--t2,#c7bfca)]">
                     {isAssociationPlan
                       ? t.associationNoticeMsg
                       : t.customNoticeMsg}
@@ -607,11 +510,9 @@ function AdminBillingPage({ staff }: Props) {
               {/* Catalog / upgrade */}
               {canSelfServeBill && (
                 <section data-testid="billing-catalog">
-                  <h2 className="text-lg font-semibold mb-4">
-                    {t.catalogHeading}
-                  </h2>
+                  <h2 className={H2}>{t.catalogHeading}</h2>
                   {!isOwner && (
-                    <p className="mb-4 text-sm text-neutral-400">
+                    <p className="mb-4 text-sm text-[var(--t3,#a39ba6)]">
                       {t.ownerOnlyNote}
                     </p>
                   )}
@@ -621,7 +522,7 @@ function AdminBillingPage({ staff }: Props) {
                       propose au mois sur la page publique. */}
                   <div className="mb-4 flex flex-wrap items-center gap-3">
                     <div
-                      className="inline-flex rounded-xl border border-neutral-700/50 bg-neutral-800/50 p-1"
+                      className="inline-flex rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-1"
                       role="group"
                       aria-label={t.termSwitchLabel}
                     >
@@ -634,10 +535,10 @@ function AdminBillingPage({ staff }: Props) {
                             setTerm(value);
                           }}
                           aria-pressed={term === value}
-                          className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+                          className={`rounded-[3px] px-4 py-1.5 font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.04em] transition ${
                             term === value
-                              ? 'bg-purple-600 text-white'
-                              : 'text-neutral-300 hover:text-white'
+                              ? 'bg-[var(--s3,#2f2732)] text-[var(--t1,#f4edf7)]'
+                              : 'text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]'
                           }`}
                           data-testid={`billing-term-${value}`}
                         >
@@ -645,7 +546,7 @@ function AdminBillingPage({ staff }: Props) {
                         </button>
                       ))}
                     </div>
-                    <p className="text-xs text-neutral-400">
+                    <p className="text-xs text-[var(--t3,#a39ba6)]">
                       {data.planTerm === 'month'
                         ? t.currentTermMonthly
                         : t.currentTermYearly}
@@ -660,32 +561,35 @@ function AdminBillingPage({ staff }: Props) {
                       return (
                         <div
                           key={item.plan}
-                          className={`rounded-2xl border p-6 flex flex-col ${
+                          className={`flex flex-col rounded-[var(--r-card,14px)] border bg-[var(--s1,#100812)] p-6 ${
                             isCurrent
-                              ? 'border-emerald-500/40 bg-emerald-500/5'
-                              : 'border-neutral-700/50 bg-neutral-800/50'
+                              ? 'border-[rgba(127,202,101,.45)]'
+                              : 'border-[var(--line2,rgba(194,196,201,.2))]'
                           }`}
                           data-testid={`billing-plan-${item.plan}`}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <h3 className="text-xl font-bold">
+                              <h3 className="text-[19px] text-[var(--t1,#f4edf7)]">
                                 {item.label}
                               </h3>
                               <p className="mt-1">
-                                <span className="text-2xl font-bold">
+                                <span
+                                  className="font-[family-name:var(--fd)] text-[30px] font-extrabold text-[var(--t1,#f4edf7)] [font-stretch:75%]"
+                                  data-numeric
+                                >
                                   {term === 'month'
                                     ? item.monthlyPriceEur
                                     : item.priceEur}{' '}
                                   €
                                 </span>
-                                <span className="text-sm text-neutral-400">
+                                <span className="text-sm text-[var(--t3,#a39ba6)]">
                                   {' '}
                                   {term === 'month' ? t.perMonth : t.perYear}
                                 </span>
                               </p>
                               {term === 'month' && (
-                                <p className="mt-1 text-xs text-neutral-400">
+                                <p className="mt-1 text-xs text-[var(--t3,#a39ba6)]">
                                   {format(t.termYearlySaving, {
                                     months: String(12 - YEARLY_MONTHS_BILLED),
                                     monthly: `${item.monthlyPriceEur} €`,
@@ -696,29 +600,27 @@ function AdminBillingPage({ staff }: Props) {
                               )}
                             </div>
                             {isCurrent && (
-                              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                                {t.currentBadge}
-                              </span>
+                              <Chip tone="ok">{t.currentBadge}</Chip>
                             )}
                           </div>
 
                           <div className="mt-5 flex-1">
-                            {renderCapabilities(features, `cat-${item.plan}`)}
+                            <PlanCapabilities features={features} />
                           </div>
 
                           <div className="mt-6">
                             {/* PREMIER clic : il n'achète rien, il ouvre le
                                 récapitulatif. */}
-                            <button
-                              type="button"
+                            <AdminButton
+                              variant="secondary"
+                              className="w-full"
                               onClick={() => openOrder(item.plan)}
                               disabled={!isOwner || busy || ordering}
                               title={!isOwner ? t.ownerOnlyNote : undefined}
-                              className="w-full px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
                               data-testid={`billing-checkout-${item.plan}`}
                             >
                               {busy ? t.redirecting : ctaLabel(item.plan)}
-                            </button>
+                            </AdminButton>
                           </div>
 
                           {orderPlan === item.plan && (
@@ -752,10 +654,8 @@ function AdminBillingPage({ staff }: Props) {
                   facturation : pas d'historique commercial. */}
               {!isAssociationPlan && (
                 <section data-testid="billing-payments">
-                  <h2 className="text-lg font-semibold mb-4">
-                    {t.paymentsHeading}
-                  </h2>
-                  <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/50 p-4 backdrop-blur">
+                  <h2 className={H2}>{t.paymentsHeading}</h2>
+                  <div className={`${CARD} p-4`}>
                     {/* Historique de paiement — kit partagé (lot A5). L'export
                         CSV arrive avec, et c'est justement le tableau qu'on
                         veut sortir pour la compta. */}

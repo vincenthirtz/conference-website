@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import Button from '@/components/Buttons/button';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import Breadcrumb from '@/components/admin/Breadcrumb';
@@ -11,6 +10,14 @@ import { isNonPlayingTeamRole, splitTeamMembers } from '@/utils/teams/roleKind';
 import nsAdminTeamDetail from '@/lib/i18n/locales/admin-fr/adminTeamDetail';
 import TeamAvailabilityPanel from '@/components/admin/teams/TeamAvailabilityPanel';
 import TeamExportActions from '@/components/admin/teams/TeamExportActions';
+import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
+import {
+  FicheLayout,
+  FicheSection,
+  MetaList,
+} from '@/features/admin/_shared/ui/Fiche';
+import { AdminButtonLink } from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 
 type StaffShape = {
   id: string;
@@ -131,283 +138,264 @@ function AdminTeamDetailPage(_props: StaffProps) {
         <title>{t.headTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-header">
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
         <Breadcrumb
           items={[
             { label: t.breadcrumbTeams, href: '/admin/teams' },
             { label: team?.name || t.breadcrumbTeam },
           ]}
         />
-        <header className="flex items-center justify-between flex-wrap gap-4 mb-6">
-          <div>
-            <button
-              type="button"
-              onClick={() => router.push(backUrl)}
-              className="mb-2 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
-            >
-              {t.backToList}
-            </button>
-            <h1 className="text-3xl font-bold">
-              {team?.name || t.teamFallback}{' '}
-              {team?.short_name ? `(${team.short_name})` : ''}
-            </h1>
-            <p className="text-sm text-neutral-400 mt-1">{t.overview}</p>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {teamId && (
+        <button
+          type="button"
+          onClick={() => router.push(backUrl)}
+          className="mb-3 inline-flex items-center gap-2 text-sm text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]"
+        >
+          {t.backToList}
+        </button>
+
+        <EntityHeader
+          crest={
+            team?.logo_url ? (
+              // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
+              <img
+                src={team.logo_url}
+                alt={team.name}
+                className="h-full w-full object-cover"
+              />
+            ) : team ? (
+              (team.short_name || team.name).slice(0, 3).toUpperCase()
+            ) : undefined
+          }
+          title={team?.name || t.teamFallback}
+          meta={
+            <>
+              {t.overview}
+              {team?.short_name
+                ? ` · ${format(t.tagLabel, { tag: team.short_name })}`
+                : ''}
+            </>
+          }
+          status={
+            team ? (
+              <Chip tone={team.is_active ? 'ok' : 'err'}>
+                {team.is_active ? t.active : t.inactive}
+              </Chip>
+            ) : undefined
+          }
+          actions={
+            teamId ? (
               <>
                 <TeamExportActions teamId={teamId} />
-                <Link href={`/admin/teams/${teamId}/edit`}>
-                  <Button type="button" size="compact" className="px-4">
-                    {t.edit}
-                  </Button>
-                </Link>
-                <Link href={`/admin/teams/${teamId}/edit?add-member=1`}>
-                  <Button type="button" size="compact" className="px-4">
-                    {t.addMember}
-                  </Button>
-                </Link>
+                <AdminButtonLink
+                  href={`/admin/teams/${teamId}/edit?add-member=1`}
+                  size="sm"
+                >
+                  {t.addMember}
+                </AdminButtonLink>
+                <AdminButtonLink
+                  href={`/admin/teams/${teamId}/edit`}
+                  variant="primary"
+                  size="sm"
+                >
+                  {t.edit}
+                </AdminButtonLink>
               </>
-            )}
-          </div>
-        </header>
+            ) : undefined
+          }
+        />
 
         {errorMsg && (
-          <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
+          <div className="mb-4 rounded-[var(--r-ctrl,4px)] border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
             {errorMsg}
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr] items-start">
-          <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-6 space-y-4">
-            {loading ? (
-              <p className="text-neutral-300 text-sm">{t.loadingTeam}</p>
-            ) : !team ? (
-              <p className="text-neutral-300 text-sm">{t.teamNotFound}</p>
-            ) : (
-              <>
-                <div className="flex items-center gap-4 flex-wrap">
-                  {team.logo_url && (
-                    // biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint)
-                    <img
-                      src={team.logo_url}
-                      alt={team.name}
-                      className="w-20 h-20 rounded-full border border-white/10 object-cover bg-white/5"
-                    />
-                  )}
-                  <div className="space-y-1">
-                    <p className="text-xs uppercase tracking-[0.12em] text-neutral-400">
-                      {t.informations}
-                    </p>
-                    <p className="text-2xl font-semibold">{team.name}</p>
-                    {team.short_name && (
-                      <p className="text-sm text-neutral-300">
-                        {format(t.tagLabel, { tag: team.short_name })}
-                      </p>
-                    )}
-                    <p className="text-sm text-neutral-400">
-                      {t.statusLabel}{' '}
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          team.is_active
-                            ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-400/50'
-                            : 'bg-red-500/15 text-red-200 border border-red-400/50'
-                        }`}
-                      >
-                        {team.is_active ? t.active : t.inactive}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <InfoRow label={t.countryLabel} value={team.country || '—'} />
-                  <InfoRow label={t.websiteLabel} value={team.website || '—'} />
-                  <InfoRow label={t.twitterLabel} value={team.twitter || '—'} />
-                  <InfoRow label={t.discordLabel} value={team.discord || '—'} />
-                </div>
-
-                <div className="grid gap-2">
-                  <p className="text-xs uppercase tracking-[0.12em] text-neutral-400">
-                    {t.description}
-                  </p>
-                  <p className="text-sm text-neutral-200 whitespace-pre-wrap">
-                    {team.description || '—'}
-                  </p>
-                </div>
-              </>
-            )}
-          </section>
-
-          <section className="bg-neutral-800 border border-neutral-700 rounded-xl p-6 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold">{t.members}</h2>
-                {(() => {
-                  const unverified = members.filter(
-                    (m) => m.battle_tag && !m.battle_tag_verified_at
-                  ).length;
-                  if (unverified === 0) return null;
-                  return (
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-neutral-700/60 text-neutral-300 border border-neutral-600">
-                      {format(t.unverifiedCount, { count: unverified })}
-                    </span>
-                  );
-                })()}
-              </div>
-              <Link
-                href={`/admin/teams/${teamId}/edit?add-member=1`}
-                className="text-sm underline"
+        <FicheLayout
+          main={
+            <>
+              <FicheSection
+                title={
+                  <span className="flex items-center gap-2">
+                    {t.members}
+                    {(() => {
+                      const unverified = members.filter(
+                        (m) => m.battle_tag && !m.battle_tag_verified_at
+                      ).length;
+                      if (unverified === 0) return null;
+                      return (
+                        <Chip>
+                          {format(t.unverifiedCount, { count: unverified })}
+                        </Chip>
+                      );
+                    })()}
+                  </span>
+                }
+                aside={
+                  <Link
+                    href={`/admin/teams/${teamId}/edit?add-member=1`}
+                    className="text-sm text-[var(--or-200,#eec4ff)] underline hover:text-[var(--t1,#f4edf7)]"
+                  >
+                    {t.addMember}
+                  </Link>
+                }
               >
-                {t.addMember}
-              </Link>
-            </div>
-            {membersLoading ? (
-              <p className="text-neutral-300 text-sm">{t.loadingMembers}</p>
-            ) : membersError ? (
-              <p className="text-red-200 text-sm">{membersError}</p>
-            ) : members.length === 0 ? (
-              <p className="text-neutral-300 text-sm">{t.noMembers}</p>
-            ) : (
-              <div className="space-y-2">
-                {/* Encadrement en fin de liste : coach et manager ne sont pas
-                    des joueuses (même règle que l'écran d'édition). */}
-                {orderedMembers.map((m) => {
-                  const isCaptain = team?.captain_id === m.user_id;
-                  const isManager = !isCaptain && isNonPlayingTeamRole(m.role);
-                  const containerClass = isCaptain
-                    ? 'bg-amber-900/20 border border-amber-500/30'
-                    : isManager
-                      ? 'bg-sky-900/20 border border-sky-500/30'
-                      : 'bg-neutral-900/60 border border-neutral-700';
-                  const iconBgClass = isCaptain
-                    ? 'bg-amber-500/20'
-                    : isManager
-                      ? 'bg-sky-500/20'
-                      : 'bg-neutral-700';
-                  return (
-                    <div
-                      key={m.id}
-                      className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${containerClass}`}
-                    >
-                      <div className="flex items-center gap-3">
+                {membersLoading ? (
+                  <p className="text-sm text-[var(--t3,#a39ba6)]">
+                    {t.loadingMembers}
+                  </p>
+                ) : membersError ? (
+                  <p className="text-sm text-red-200">{membersError}</p>
+                ) : members.length === 0 ? (
+                  <p className="text-sm text-[var(--t3,#a39ba6)]">
+                    {t.noMembers}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {/* Encadrement en fin de liste : coach et manager ne sont pas
+                        des joueuses (même règle que l'écran d'édition). */}
+                    {orderedMembers.map((m) => {
+                      const isCaptain = team?.captain_id === m.user_id;
+                      const isManager =
+                        !isCaptain && isNonPlayingTeamRole(m.role);
+                      const containerClass = isCaptain
+                        ? 'border-l-[3px] border-[var(--or,#b467d1)]'
+                        : 'border border-[var(--line2,rgba(194,196,201,.2))]';
+                      const iconClass = isCaptain
+                        ? 'text-[var(--or-200,#eec4ff)]'
+                        : isManager
+                          ? 'text-[var(--t2,#c7bfca)]'
+                          : 'text-[var(--t3,#a39ba6)]';
+                      return (
                         <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconBgClass}`}
+                          key={m.id}
+                          className={`flex items-center justify-between gap-3 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm ${containerClass}`}
                         >
-                          {isCaptain ? (
-                            <svg
-                              className="w-4 h-4 text-amber-400"
-                              fill="currentColor"
-                              viewBox="0 0 24 24"
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`flex h-8 w-8 items-center justify-center rounded-[var(--r-ctrl,4px)] bg-[var(--s3,#2f2732)] ${iconClass}`}
                             >
-                              <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
-                            </svg>
-                          ) : isManager ? (
-                            <svg
-                              className="w-4 h-4 text-sky-400"
-                              fill="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path d="M12 2l3.5 7.5L23 11l-5.5 5 1.3 7.5L12 19.5 5.2 23.5 6.5 16 1 11l7.5-1.5L12 2z" />
-                            </svg>
-                          ) : (
-                            <svg
-                              className="w-4 h-4 text-neutral-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                              />
-                            </svg>
-                          )}
-                        </div>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">
-                              {(isNonPlayingTeamRole(m.role)
-                                ? m.display_name || m.battle_tag
-                                : m.battle_tag || m.display_name) ||
-                                m.user_id.slice(0, 8) + '...'}
-                            </span>
-                            {isCaptain && (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
-                                {t.captain}
-                              </span>
-                            )}
-                            {isManager && (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/30 font-semibold">
-                                {t.manager}
-                              </span>
-                            )}
-                            {m.battle_tag &&
-                              (m.battle_tag_verified_at ? (
-                                <span
-                                  title={format(t.battleTagVerifiedTitle, {
-                                    date: formatVerifiedDate(
-                                      m.battle_tag_verified_at
-                                    ),
-                                  })}
-                                  className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-600/25 text-emerald-200 border border-emerald-400/40 font-medium"
+                              {isCaptain ? (
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="currentColor"
+                                  viewBox="0 0 24 24"
                                 >
-                                  {t.battleTagVerified}
-                                </span>
+                                  <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
+                                </svg>
+                              ) : isManager ? (
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path d="M12 2l3.5 7.5L23 11l-5.5 5 1.3 7.5L12 19.5 5.2 23.5 6.5 16 1 11l7.5-1.5L12 2z" />
+                                </svg>
                               ) : (
-                                <span
-                                  title={t.battleTagUnverifiedTitle}
-                                  className="px-1.5 py-0.5 rounded text-[10px] bg-neutral-700/60 text-neutral-300 border border-neutral-600"
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
                                 >
-                                  {t.battleTagUnverified}
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                            <div className="flex flex-col">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-semibold text-[var(--t1,#f4edf7)]">
+                                  {(isNonPlayingTeamRole(m.role)
+                                    ? m.display_name || m.battle_tag
+                                    : m.battle_tag || m.display_name) ||
+                                    m.user_id.slice(0, 8) + '...'}
                                 </span>
-                              ))}
-                            {m.battle_tag_mismatch && (
-                              <span
-                                title={t.battleTagMismatchTitle}
-                                className="px-1.5 py-0.5 rounded text-[10px] bg-amber-600/20 text-amber-300 border border-amber-500/40 font-medium"
-                              >
-                                {t.battleTagMismatch}
+                                {isCaptain && (
+                                  <Chip tone="brand">{t.captain}</Chip>
+                                )}
+                                {isManager && <Chip>{t.manager}</Chip>}
+                                {m.battle_tag &&
+                                  (m.battle_tag_verified_at ? (
+                                    <Chip
+                                      tone="ok"
+                                      title={format(t.battleTagVerifiedTitle, {
+                                        date: formatVerifiedDate(
+                                          m.battle_tag_verified_at
+                                        ),
+                                      })}
+                                    >
+                                      {t.battleTagVerified}
+                                    </Chip>
+                                  ) : (
+                                    <Chip title={t.battleTagUnverifiedTitle}>
+                                      {t.battleTagUnverified}
+                                    </Chip>
+                                  ))}
+                                {m.battle_tag_mismatch && (
+                                  <Chip
+                                    tone="warn"
+                                    title={t.battleTagMismatchTitle}
+                                  >
+                                    {t.battleTagMismatch}
+                                  </Chip>
+                                )}
+                              </div>
+                              <span className="text-xs text-[var(--t3,#a39ba6)]">
+                                {m.role || '—'}
                               </span>
-                            )}
+                            </div>
                           </div>
-                          <span className="text-neutral-400 text-xs">
-                            {m.role || '—'}
+                          <span className="font-mono text-xs text-[var(--t4,#807984)]">
+                            {new Date(m.created_at).toLocaleDateString()}
                           </span>
                         </div>
-                      </div>
-                      <span className="text-xs text-neutral-500">
-                        {new Date(m.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </FicheSection>
 
-        {teamId && (
-          <div className="mt-6">
-            <TeamAvailabilityPanel teamId={teamId} />
-          </div>
-        )}
+              {teamId && <TeamAvailabilityPanel teamId={teamId} />}
+            </>
+          }
+          aside={
+            <FicheSection eyebrow title={t.informations}>
+              {loading ? (
+                <p className="text-sm text-[var(--t3,#a39ba6)]">
+                  {t.loadingTeam}
+                </p>
+              ) : !team ? (
+                <p className="text-sm text-[var(--t3,#a39ba6)]">
+                  {t.teamNotFound}
+                </p>
+              ) : (
+                <>
+                  <MetaList
+                    items={[
+                      { label: t.countryLabel, value: team.country || '—' },
+                      { label: t.websiteLabel, value: team.website || '—' },
+                      { label: t.twitterLabel, value: team.twitter || '—' },
+                      { label: t.discordLabel, value: team.discord || '—' },
+                    ]}
+                  />
+                  <p className="mt-5 mb-2 font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
+                    {t.description}
+                  </p>
+                  <p className="whitespace-pre-wrap text-sm text-[var(--t2,#c7bfca)]">
+                    {team.description || '—'}
+                  </p>
+                </>
+              )}
+            </FicheSection>
+          }
+        />
       </div>
     </>
   );
 }
 
 export default AdminTeamDetailPage;
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-neutral-900/60 border border-neutral-700 rounded-lg px-3 py-2">
-      <p className="text-[11px] uppercase tracking-[0.14em] text-neutral-400">
-        {label}
-      </p>
-      <p className="text-sm text-neutral-100 break-words">{value || '—'}</p>
-    </div>
-  );
-}

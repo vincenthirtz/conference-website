@@ -11,6 +11,9 @@ import Breadcrumb from '@/components/admin/Breadcrumb';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import tournamentHelp from '@/config/tournament-help.json';
 import nsAdminAideTournoi from '@/lib/i18n/locales/admin-fr/adminAideTournoi';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 type Dict = typeof nsAdminAideTournoi.fr;
 
@@ -86,12 +89,20 @@ const roleLabel = (role: CommandRole, t: Dict): string => {
   }
 };
 
-const ROLE_BADGE_CLASS: Record<CommandRole, string> = {
-  admin: 'bg-red-500/15 text-red-300 border-red-500/40',
-  captain: 'bg-blue-500/15 text-blue-300 border-blue-500/40',
-  player: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40',
-  public: 'bg-neutral-500/15 text-neutral-300 border-neutral-500/40',
+const ROLE_TONE: Record<CommandRole, ChipTone> = {
+  admin: 'err',
+  captain: 'brand',
+  player: 'ok',
+  public: 'neutral',
 };
+
+// Jetons « Le Ruban » de la page.
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]';
+const LABEL =
+  'font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
+const CODE =
+  'block font-mono rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] break-words';
 
 /**
  * Slug stable d'une commande utilisé pour l'ancre `id="cmd-<slug>"`.
@@ -159,29 +170,22 @@ function CommandCard({ command }: { command: HelpCommand }) {
   }
 
   return (
-    <article
-      id={`cmd-${anchor}`}
-      className="scroll-mt-24 rounded-2xl border border-neutral-700/60 bg-neutral-800/40 p-5 shadow-sm"
-    >
+    <article id={`cmd-${anchor}`} className={`scroll-mt-24 ${CARD} p-5`}>
       <header className="flex items-start justify-between gap-4 flex-wrap mb-3">
         <div className="min-w-0 flex-1">
-          <code className="block font-mono text-sm md:text-base text-white bg-neutral-900/70 border border-neutral-700/60 rounded-lg px-3 py-2 break-words">
+          <code
+            className={`${CODE} px-3 py-2 text-sm text-[var(--t1,#f4edf7)] md:text-base`}
+          >
             {command.signature}
           </code>
         </div>
-        <span
-          className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${ROLE_BADGE_CLASS[command.role]}`}
-        >
-          {roleLabel(command.role, t)}
-        </span>
+        <Chip tone={ROLE_TONE[command.role]}>{roleLabel(command.role, t)}</Chip>
       </header>
 
       {command.prereqs.length > 0 && (
         <div className="mt-4">
-          <h4 className="text-xs uppercase tracking-wider text-neutral-500 mb-1.5">
-            {t.prereqs}
-          </h4>
-          <ul className="list-disc list-inside text-sm text-neutral-300 space-y-1">
+          <h4 className={`${LABEL} mb-1.5`}>{t.prereqs}</h4>
+          <ul className="list-inside list-disc space-y-1 text-sm text-[var(--t2,#c7bfca)]">
             {command.prereqs.map((p, i) => (
               <li key={i}>{p}</li>
             ))}
@@ -190,47 +194,43 @@ function CommandCard({ command }: { command: HelpCommand }) {
       )}
 
       <div className="mt-4">
-        <h4 className="text-xs uppercase tracking-wider text-neutral-500 mb-1.5">
-          {t.endpoint}
-        </h4>
+        <h4 className={`${LABEL} mb-1.5`}>{t.endpoint}</h4>
         {command.endpoint ? (
-          <code className="block font-mono text-xs md:text-sm text-emerald-300 bg-neutral-900/70 border border-neutral-700/60 rounded-md px-2.5 py-1.5 break-all">
+          <code
+            className={`${CODE} break-all px-2.5 py-1.5 text-xs text-[var(--lf-200,#b3e7a3)] md:text-sm`}
+          >
             {command.endpoint}
           </code>
         ) : (
-          <p className="text-sm text-neutral-400">
-            <span className="font-mono text-neutral-500">—</span>{' '}
-            <span className="text-amber-300/80">Discord-only</span> {t.apiNote}
+          <p className="text-sm text-[var(--t3,#a39ba6)]">
+            <span className="font-mono text-[var(--t4,#807984)]">—</span>{' '}
+            <span className="text-[var(--warn,#f5a524)]">Discord-only</span>{' '}
+            {t.apiNote}
           </p>
         )}
       </div>
 
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <h4 className="text-xs uppercase tracking-wider text-neutral-500 mb-1.5">
-            {t.impactDb}
-          </h4>
+          <h4 className={`${LABEL} mb-1.5`}>{t.impactDb}</h4>
           {command.impact.db.length > 0 ? (
-            <ul className="text-sm text-neutral-300 space-y-1">
+            <ul className="space-y-1 text-sm text-[var(--t2,#c7bfca)]">
               {command.impact.db.map((row, i) => (
-                <li
-                  key={i}
-                  className="font-mono text-xs bg-neutral-900/50 border border-neutral-700/40 rounded px-2 py-1"
-                >
+                <li key={i} className={`${CODE} px-2 py-1 text-xs`}>
                   {row}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-neutral-500 italic">{t.noneReadOnly}</p>
+            <p className="text-sm italic text-[var(--t4,#807984)]">
+              {t.noneReadOnly}
+            </p>
           )}
         </div>
         <div>
-          <h4 className="text-xs uppercase tracking-wider text-neutral-500 mb-1.5">
-            {t.uiPages}
-          </h4>
+          <h4 className={`${LABEL} mb-1.5`}>{t.uiPages}</h4>
           {command.impact.ui.length > 0 ? (
-            <ul className="text-sm text-neutral-300 space-y-1">
+            <ul className="space-y-1 text-sm text-[var(--t2,#c7bfca)]">
               {command.impact.ui.map((label, i) => {
                 const href = uiImpactToHref(label);
                 return (
@@ -240,12 +240,12 @@ function CommandCard({ command }: { command: HelpCommand }) {
                         href={href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-mono text-xs text-sky-300 hover:text-sky-200 underline underline-offset-2"
+                        className="font-mono text-xs text-[var(--or-300,#dea3f6)] underline underline-offset-2 hover:text-[var(--or-200,#eec4ff)]"
                       >
                         {label}
                       </Link>
                     ) : (
-                      <span className="font-mono text-xs text-neutral-400">
+                      <span className="font-mono text-xs text-[var(--t3,#a39ba6)]">
                         {label}
                       </span>
                     )}
@@ -254,14 +254,16 @@ function CommandCard({ command }: { command: HelpCommand }) {
               })}
             </ul>
           ) : (
-            <p className="text-sm text-neutral-500 italic">{t.noneFem}</p>
+            <p className="text-sm italic text-[var(--t4,#807984)]">
+              {t.noneFem}
+            </p>
           )}
         </div>
       </div>
 
       {command.examples.length > 0 && (
         <div className="mt-5">
-          <h4 className="text-xs uppercase tracking-wider text-neutral-500 mb-2">
+          <h4 className={`${LABEL} mb-2`}>
             {format(t.examplesLabel, { count: command.examples.length })}
           </h4>
           <ul className="space-y-2">
@@ -271,19 +273,19 @@ function CommandCard({ command }: { command: HelpCommand }) {
               return (
                 <li
                   key={idx}
-                  className="rounded-xl border border-neutral-700/50 bg-neutral-900/40"
+                  className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)]"
                 >
                   <button
                     type="button"
                     onClick={() =>
                       setOpenExampleIdx((v) => (v === idx ? null : idx))
                     }
-                    className="w-full flex items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-neutral-800/40 rounded-xl"
+                    className="flex w-full items-center justify-between gap-3 rounded-[var(--r-ctrl,4px)] px-3 py-2 text-left text-sm transition-colors hover:bg-[rgba(180,103,209,.08)]"
                     aria-expanded={isOpen}
                   >
                     <span className="flex items-center gap-2 min-w-0">
                       <svg
-                        className={`w-3.5 h-3.5 shrink-0 text-neutral-400 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+                        className={`h-3.5 w-3.5 shrink-0 text-[var(--t3,#a39ba6)] transition-transform ${isOpen ? 'rotate-90' : ''}`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -295,36 +297,34 @@ function CommandCard({ command }: { command: HelpCommand }) {
                           d="M9 5l7 7-7 7"
                         />
                       </svg>
-                      <span className="truncate text-neutral-200">
+                      <span className="truncate text-[var(--t1,#f4edf7)]">
                         {ex.label}
                       </span>
                     </span>
                   </button>
 
                   {isOpen && (
-                    <div className="px-3 pb-3 pt-1 border-t border-neutral-700/40 space-y-3">
+                    <div className="space-y-3 border-t border-[var(--line2,rgba(194,196,201,.2))] px-3 pb-3 pt-2">
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs uppercase tracking-wider text-neutral-500">
-                            {t.payload}
-                          </span>
-                          <button
-                            type="button"
+                          <span className={LABEL}>{t.payload}</span>
+                          <AdminButton
+                            variant="ghost"
+                            size="xs"
                             onClick={() => copyPayload(payloadText, idx)}
-                            className="text-xs px-2 py-0.5 rounded-md border border-neutral-700 bg-neutral-800 hover:bg-neutral-700 text-neutral-200"
                           >
                             {copied === idx ? t.copied : t.copy}
-                          </button>
+                          </AdminButton>
                         </div>
-                        <pre className="font-mono text-xs text-neutral-200 bg-neutral-950 border border-neutral-800 rounded-md p-3 overflow-x-auto whitespace-pre">
+                        <pre className="overflow-x-auto whitespace-pre rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-3 font-mono text-xs text-[var(--t2,#c7bfca)]">
                           {payloadText}
                         </pre>
                       </div>
                       <div>
-                        <span className="block text-xs uppercase tracking-wider text-neutral-500 mb-1">
+                        <span className={`${LABEL} mb-1 block`}>
                           {t.expectedResult}
                         </span>
-                        <p className="text-sm text-neutral-300 leading-relaxed">
+                        <p className="text-sm leading-relaxed text-[var(--t2,#c7bfca)]">
                           {ex.expected}
                         </p>
                       </div>
@@ -353,11 +353,9 @@ function TableOfContents({
   return (
     <nav
       aria-label={t.tocAriaLabel}
-      className="lg:sticky lg:top-24 rounded-2xl border border-neutral-700/60 bg-neutral-900/50 backdrop-blur p-4"
+      className={`${CARD} p-4 lg:sticky lg:top-24`}
     >
-      <p className="text-xs uppercase tracking-wider text-neutral-500 mb-3">
-        {t.tocTitle}
-      </p>
+      <p className={`${LABEL} mb-3`}>{t.tocTitle}</p>
       <ol className="space-y-1">
         {sections.map((s) => {
           const isActive = activeId === s.id;
@@ -369,10 +367,10 @@ function TableOfContents({
                   e.preventDefault();
                   onJump(s.id);
                 }}
-                className={`block rounded-lg px-3 py-2 text-sm transition-colors ${
+                className={`block rounded-[var(--r-ctrl,4px)] border px-3 py-2 text-sm transition-colors ${
                   isActive
-                    ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30'
-                    : 'text-neutral-300 hover:bg-neutral-800/70 border border-transparent'
+                    ? 'border-[rgba(180,103,209,.45)] bg-[rgba(180,103,209,.12)] text-[var(--or-200,#eec4ff)]'
+                    : 'border-transparent text-[var(--t2,#c7bfca)] hover:bg-[var(--s2,#1d1520)] hover:text-[var(--t1,#f4edf7)]'
                 }`}
               >
                 {s.title}
@@ -467,71 +465,64 @@ function AdminAideTournoiPage({ inventory }: Props) {
         <meta name="description" content={t.metaDescription} />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12 max-w-7xl mx-auto">
-          <Breadcrumb
-            items={[
-              { label: t.breadcrumbAdmin, href: '/admin' },
-              { label: t.breadcrumbCurrent },
-            ]}
-          />
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <Breadcrumb
+          items={[
+            { label: t.breadcrumbAdmin, href: '/admin' },
+            { label: t.breadcrumbCurrent },
+          ]}
+        />
 
-          {/* Header */}
-          <header className="mb-8">
-            <p className="text-sm text-neutral-400">{t.docLabel}</p>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mt-1">
-              {t.heading}
-            </h1>
-            <p className="text-sm text-neutral-400 mt-2 max-w-3xl">{t.intro}</p>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-300 font-mono">
-                {format(t.versionLabel, { version })}
-              </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-400">
-                {format(t.sectionsCount, {
-                  sections: sections.length,
-                  commands: totalCommands,
-                })}
-              </span>
-            </div>
-          </header>
+        <p className={`${LABEL} mb-2`}>{t.docLabel}</p>
+        <AdminPageHeader
+          title={t.heading}
+          subtitle={format(t.sectionsCount, {
+            sections: sections.length,
+            commands: totalCommands,
+          })}
+          badge={
+            <Chip tone="neutral">{format(t.versionLabel, { version })}</Chip>
+          }
+        />
+        <p className="-mt-3 mb-8 max-w-3xl text-[14px] text-[var(--t2,#c7bfca)]">
+          {t.intro}
+        </p>
 
-          {/* Layout 2 colonnes sur grand écran : TOC sticky + corps */}
-          <div className="grid grid-cols-1 lg:grid-cols-[16rem_1fr] gap-6">
-            <aside>
-              <TableOfContents
-                sections={sections}
-                activeId={activeId}
-                onJump={jumpToSection}
-              />
-            </aside>
+        {/* Layout 2 colonnes sur grand écran : TOC sticky + corps */}
+        <div className="grid grid-cols-1 lg:grid-cols-[16rem_1fr] gap-6">
+          <aside>
+            <TableOfContents
+              sections={sections}
+              activeId={activeId}
+              onJump={jumpToSection}
+            />
+          </aside>
 
-            <main className="space-y-12 min-w-0">
-              {sections.map((section) => (
-                <section
-                  key={section.id}
-                  id={section.id}
-                  ref={(el) => {
-                    sectionRefs.current[section.id] = el;
-                  }}
-                  className="scroll-mt-24"
-                >
-                  <h2 className="text-2xl font-bold tracking-tight">
-                    {section.title}
-                  </h2>
-                  <p className="text-sm text-neutral-400 mt-2 max-w-3xl">
-                    {section.description}
-                  </p>
+          <main className="space-y-12 min-w-0">
+            {sections.map((section) => (
+              <section
+                key={section.id}
+                id={section.id}
+                ref={(el) => {
+                  sectionRefs.current[section.id] = el;
+                }}
+                className="scroll-mt-24"
+              >
+                <h2 className="font-[family-name:var(--fd)] text-[22px] font-extrabold uppercase leading-tight tracking-[-0.01em] text-[var(--t1,#f4edf7)] [font-stretch:125%]">
+                  {section.title}
+                </h2>
+                <p className="mt-2 max-w-3xl text-sm text-[var(--t3,#a39ba6)]">
+                  {section.description}
+                </p>
 
-                  <div className="mt-5 space-y-4">
-                    {section.commands.map((command) => (
-                      <CommandCard key={command.name} command={command} />
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </main>
-          </div>
+                <div className="mt-5 space-y-4">
+                  {section.commands.map((command) => (
+                    <CommandCard key={command.name} command={command} />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </main>
         </div>
       </div>
     </>

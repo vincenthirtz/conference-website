@@ -26,7 +26,6 @@ import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import EmptyState from '@/components/ui/EmptyState';
-import Badge from '@/components/ui/Badge';
 import Switch from '@/components/ui/Switch';
 import { PlayerAreaProvider } from '@/components/player/PlayerAreaContext';
 import PlayerManageTeamScreen from '@/components/player/screens/PlayerManageTeamScreen';
@@ -36,6 +35,11 @@ import type { AdminUserProfilePayload } from '@/pages/api/admin/users/[userId]/p
 import { logger } from '../../../../utils/logger';
 import nsAdminUserCaptainView from '@/lib/i18n/locales/admin-fr/adminUserCaptainView';
 import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import { FicheSection } from '@/features/admin/_shared/ui/Fiche';
 
 type StaffShape = {
   id: string;
@@ -254,15 +258,35 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
         <title>{format(t.headTitle, { name: headerName })}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          <AdminBreadcrumbs />
-          {/* Back link + cross-link to the player view */}
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <Link
-              href="/admin/users/manage"
-              className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <AdminBreadcrumbs />
+        {/* Back link + cross-link to the player view */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <Link
+            href="/admin/users/manage"
+            className="inline-flex items-center gap-2 text-sm text-[var(--t3,#a39ba6)] transition-colors hover:text-[var(--t1,#f4edf7)]"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            {t.backLink}
+          </Link>
+          {userId && (
+            <AdminButtonLink
+              href={`/admin/users/${encodeURIComponent(userId)}/player-view`}
+              size="sm"
+            >
+              {t.viewPlayerLink}
               <svg
                 className="w-4 h-4"
                 fill="none"
@@ -273,138 +297,114 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
+                  d="M9 5l7 7-7 7"
                 />
               </svg>
-              {t.backLink}
-            </Link>
-            {userId && (
-              <Link
-                href={`/admin/users/${encodeURIComponent(userId)}/player-view`}
-                className="inline-flex items-center gap-2 rounded-xl border border-neutral-700/60 bg-neutral-800/60 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-700/60 hover:text-white transition-colors"
-              >
-                {t.viewPlayerLink}
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
+            </AdminButtonLink>
+          )}
+        </div>
+
+        {/* Banner */}
+        <div
+          role="status"
+          className="mb-8 rounded-[var(--r-card,14px)] border border-emerald-500/40 bg-emerald-500/10 px-5 py-4"
+        >
+          <div className="flex items-start gap-3">
+            <svg
+              className="w-6 h-6 text-emerald-300 flex-shrink-0 mt-0.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div>
+              <h1 className="text-lg md:text-xl font-bold text-emerald-100">
+                {format(t.bannerTitle, { name: headerName })}
+              </h1>
+              <p className="text-sm text-emerald-100/80 mt-1">
+                {t.bannerDescBefore}
+                <strong>{t.bannerDescStrong}</strong>
+                {t.bannerDescAfter}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="space-y-4">
+            <div className="h-12 animate-pulse rounded-[var(--r-card,14px)] bg-[var(--s2,#1d1520)]" />
+            <div className="h-40 animate-pulse rounded-[var(--r-card,14px)] bg-[var(--s2,#1d1520)]" />
+          </div>
+        ) : notFound ? (
+          <EmptyState title={t.notFoundTitle} description={t.notFoundDesc} />
+        ) : error ? (
+          <div className="rounded-[var(--r-card,14px)] border border-red-500/40 bg-red-500/10 px-5 py-4 text-sm text-red-100">
+            {error}
+          </div>
+        ) : profile && userId ? (
+          <>
+            {/* Identity summary */}
+            <div
+              aria-label={t.identitySummaryLabel}
+              className="mb-6 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 sm:p-5"
+            >
+              <div className="flex flex-wrap items-center gap-4">
+                {profile.user.avatarUrl ? (
+                  <Image
+                    src={profile.user.avatarUrl}
+                    alt=""
+                    width={48}
+                    height={48}
+                    className="h-12 w-12 rounded-[var(--r-ctrl,4px)] border-l-[3px] border-[var(--or,#b467d1)] object-cover"
+                    unoptimized
                   />
-                </svg>
-              </Link>
-            )}
-          </div>
-
-          {/* Banner */}
-          <div
-            role="status"
-            className="mb-8 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-5 py-4"
-          >
-            <div className="flex items-start gap-3">
-              <svg
-                className="w-6 h-6 text-emerald-300 flex-shrink-0 mt-0.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <div>
-                <h1 className="text-lg md:text-xl font-bold text-emerald-100">
-                  {format(t.bannerTitle, { name: headerName })}
-                </h1>
-                <p className="text-sm text-emerald-100/80 mt-1">
-                  {t.bannerDescBefore}
-                  <strong>{t.bannerDescStrong}</strong>
-                  {t.bannerDescAfter}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="space-y-4">
-              <div className="h-12 rounded-xl bg-neutral-800/60 animate-pulse" />
-              <div className="h-40 rounded-2xl bg-neutral-800/60 animate-pulse" />
-            </div>
-          ) : notFound ? (
-            <EmptyState title={t.notFoundTitle} description={t.notFoundDesc} />
-          ) : error ? (
-            <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-5 py-4 text-sm text-red-100">
-              {error}
-            </div>
-          ) : profile && userId ? (
-            <>
-              {/* Identity summary */}
-              <div
-                aria-label={t.identitySummaryLabel}
-                className="mb-6 rounded-2xl border border-neutral-700/60 bg-neutral-800/40 p-4 sm:p-5"
-              >
-                <div className="flex flex-wrap items-center gap-4">
-                  {profile.user.avatarUrl ? (
-                    <Image
-                      src={profile.user.avatarUrl}
-                      alt=""
-                      width={48}
-                      height={48}
-                      className="w-12 h-12 rounded-xl object-cover border border-neutral-700"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center font-bold text-emerald-200">
-                      {initials(profile.user.displayName, profile.user.email)}
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <span className="font-semibold text-white">
-                      {profile.user.displayName || t.noName}
-                    </span>
-                    {managed?.team && (
-                      <p className="mt-1 text-sm text-neutral-400">
-                        {managed.team.name}
-                        <Badge tone="emerald" className="ml-2">
-                          {managed.isCaptain
-                            ? t.teamCaptainBadge
-                            : t.teamManagerBadge}
-                        </Badge>
-                      </p>
-                    )}
+                ) : (
+                  <div className="flex h-12 w-12 items-center justify-center rounded-[var(--r-ctrl,4px)] border-l-[3px] border-[var(--or,#b467d1)] bg-[var(--s3,#2f2732)] font-[family-name:var(--fd)] font-extrabold text-[var(--t1,#f4edf7)] [font-stretch:75%]">
+                    {initials(profile.user.displayName, profile.user.email)}
                   </div>
+                )}
+                <div className="min-w-0">
+                  <span className="font-semibold text-[var(--t1,#f4edf7)]">
+                    {profile.user.displayName || t.noName}
+                  </span>
+                  {managed?.team && (
+                    <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-[var(--t3,#a39ba6)]">
+                      {managed.team.name}
+                      <Chip tone="ok">
+                        {managed.isCaptain
+                          ? t.teamCaptainBadge
+                          : t.teamManagerBadge}
+                      </Chip>
+                    </p>
+                  )}
                 </div>
               </div>
+            </div>
 
-              {!managed?.team ? (
-                <EmptyState
-                  title={t.notCaptainTitle}
-                  description={t.notCaptainDesc}
-                />
-              ) : (
-                <>
-                  {/* Actions staff — hors périmètre de l'UI capitaine */}
-                  <section className="mb-6 rounded-2xl border border-neutral-700/50 bg-neutral-800/40 p-6">
-                    <h2 className="text-xs uppercase tracking-wide text-neutral-500 mb-3">
-                      {t.staffActionsTitle}
-                    </h2>
-
+            {!managed?.team ? (
+              <EmptyState
+                title={t.notCaptainTitle}
+                description={t.notCaptainDesc}
+              />
+            ) : (
+              <>
+                {/* Actions staff — hors périmètre de l'UI capitaine */}
+                <div className="mb-6">
+                  <FicheSection eyebrow title={t.staffActionsTitle}>
                     {/* Bascule « agir en tant que » : rend l'écran capitaine
-                        ci-dessous de nouveau actionnable. */}
-                    <div className="mb-6 flex items-start justify-between gap-4 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+                          ci-dessous de nouveau actionnable. */}
+                    <div className="mb-6 flex items-start justify-between gap-4 rounded-[var(--r-ctrl,4px)] border border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.06)] px-4 py-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-amber-100">
+                        <p className="text-sm font-medium text-[#ffd9a3]">
                           {t.actAsToggleLabel}
                         </p>
-                        <p className="mt-0.5 text-xs text-amber-100/70">
+                        <p className="mt-0.5 text-xs text-[#ffd9a3]/70">
                           {format(t.actAsToggleHelp, { name: headerName })}
                         </p>
                       </div>
@@ -419,27 +419,27 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
 
                     {/* Promotion capitaine */}
                     <div className="mb-6">
-                      <h3 className="text-sm font-medium text-white mb-2">
+                      <h3 className="mb-2 text-sm font-medium text-[var(--t1,#f4edf7)]">
                         {t.promoteCaptainBtn}
                       </h3>
                       {promotableMembers.length === 0 ? (
-                        <p className="text-sm text-neutral-500">
+                        <p className="text-sm text-[var(--t4,#807984)]">
                           {t.noMembers}
                         </p>
                       ) : (
                         <div className="flex flex-wrap gap-2">
                           {promotableMembers.map((m) => (
-                            <button
+                            <AdminButton
                               key={m.id}
-                              type="button"
+                              size="sm"
+                              variant="secondary"
                               onClick={() => promoteMember(m)}
                               disabled={busy === `captain-${m.id}`}
-                              className="px-3 py-2 rounded-xl bg-emerald-700/80 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-40"
                             >
                               {busy === `captain-${m.id}`
                                 ? t.promoting
                                 : m.display_name || m.battle_tag || t.noName}
-                            </button>
+                            </AdminButton>
                           ))}
                         </div>
                       )}
@@ -447,86 +447,90 @@ function CaptainViewPage({ staff: _staff }: { staff: StaffShape }) {
 
                     {/* Demandes d'adhésion en attente */}
                     <div>
-                      <h3 className="text-sm font-medium text-white mb-2">
+                      <h3 className="mb-2 text-sm font-medium text-[var(--t1,#f4edf7)]">
                         {t.tabJoinRequests}
                       </h3>
                       {joinRequests.length === 0 ? (
-                        <p className="text-sm text-neutral-500">
+                        <p className="text-sm text-[var(--t4,#807984)]">
                           {t.noJoinRequestsDesc}
                         </p>
                       ) : (
-                        <div className="rounded-xl border border-neutral-700/50 divide-y divide-neutral-700/40">
+                        <div className="divide-y divide-[var(--line,rgba(194,196,201,.12))] rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))]">
                           {joinRequests.map((d) => (
                             <div
                               key={d.id}
                               className="flex flex-wrap items-center justify-between gap-3 p-3"
                             >
                               <div className="min-w-0">
-                                <p className="text-sm text-white">
+                                <p className="text-sm text-[var(--t1,#f4edf7)]">
                                   {t.demandeTypeJoin}
                                 </p>
-                                <p className="text-xs text-neutral-500">
+                                <p className="font-mono text-xs text-[var(--t3,#a39ba6)]">
                                   {formatDate(d.created_at)}
                                 </p>
                               </div>
                               <div className="flex gap-2">
-                                <button
-                                  type="button"
+                                <AdminButton
+                                  size="xs"
+                                  variant="secondary"
                                   onClick={() =>
                                     processDemande(d.id, 'approved')
                                   }
                                   disabled={busy === `demande-${d.id}`}
-                                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold transition-colors disabled:opacity-50"
                                 >
                                   {t.approve}
-                                </button>
-                                <button
-                                  type="button"
+                                </AdminButton>
+                                <AdminButton
+                                  size="xs"
+                                  variant="danger"
                                   onClick={() =>
                                     processDemande(d.id, 'rejected')
                                   }
                                   disabled={busy === `demande-${d.id}`}
-                                  className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-semibold transition-colors disabled:opacity-50"
                                 >
                                   {t.reject}
-                                </button>
+                                </AdminButton>
                               </div>
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
-                  </section>
+                  </FicheSection>
+                </div>
 
-                  {/* L'écran capitaine réel — consultable, et actionnable
+                {/* L'écran capitaine réel — consultable, et actionnable
                       seulement si le staff a basculé « agir en tant que ». */}
-                  <p
-                    className={`mb-3 text-xs ${
-                      actAs ? 'font-medium text-amber-200' : 'text-neutral-500'
-                    }`}
+                <p
+                  className={`mb-3 text-xs ${
+                    actAs
+                      ? 'font-medium text-[#ffd9a3]'
+                      : 'text-[var(--t4,#807984)]'
+                  }`}
+                >
+                  {format(actAs ? t.actAsNotice : t.inspectionNotice, {
+                    name: headerName,
+                  })}
+                </p>
+                <div
+                  className={`overflow-hidden rounded-[var(--r-card,14px)] border ${
+                    actAs
+                      ? 'border-[rgba(245,165,36,.45)]'
+                      : 'border-[var(--line2,rgba(194,196,201,.2))]'
+                  }`}
+                >
+                  <PlayerAreaProvider
+                    subjectId={userId}
+                    subjectName={headerName}
+                    actAs={actAs}
                   >
-                    {format(actAs ? t.actAsNotice : t.inspectionNotice, {
-                      name: headerName,
-                    })}
-                  </p>
-                  <div
-                    className={`overflow-hidden rounded-2xl border ${
-                      actAs ? 'border-amber-500/40' : 'border-neutral-700/50'
-                    }`}
-                  >
-                    <PlayerAreaProvider
-                      subjectId={userId}
-                      subjectName={headerName}
-                      actAs={actAs}
-                    >
-                      <PlayerManageTeamScreen />
-                    </PlayerAreaProvider>
-                  </div>
-                </>
-              )}
-            </>
-          ) : null}
-        </div>
+                    <PlayerManageTeamScreen />
+                  </PlayerAreaProvider>
+                </div>
+              </>
+            )}
+          </>
+        ) : null}
       </div>
     </>
   );

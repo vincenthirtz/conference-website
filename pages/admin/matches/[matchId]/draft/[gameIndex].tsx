@@ -35,6 +35,7 @@ import { SidePicker } from '@/components/admin/draft/SidePicker';
 import { HeroPool } from '@/components/admin/draft/HeroPool';
 import type { GameHero } from '@/types/draft';
 import nsAdminMatchDraft from '@/lib/i18n/locales/admin-fr/adminMatchDraft';
+import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
 
 type PageProps = {
   /** Set when the match can't host a draft — page renders a clean explainer. */
@@ -78,11 +79,11 @@ function AdminDraftPage({ blockReason }: PageProps) {
                 : '',
             });
     return (
-      <main className="mx-auto max-w-3xl p-6 text-neutral-200">
-        <h1 className="text-2xl font-bold text-white">
-          {t.unavailableHeading}
-        </h1>
-        <p className="mt-3 text-neutral-300">{label}</p>
+      <main className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <EntityHeader title={t.unavailableHeading} />
+        <p className="max-w-3xl rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6 text-sm text-[var(--t2,#c7bfca)]">
+          {label}
+        </p>
       </main>
     );
   }
@@ -90,6 +91,7 @@ function AdminDraftPage({ blockReason }: PageProps) {
 }
 
 function AdminDraftPageContent() {
+  const t = useAdminT(nsAdminMatchDraft);
   const router = useRouter();
   const matchIdRaw = router.query.matchId;
   const gameIndexRaw = router.query.gameIndex;
@@ -240,9 +242,11 @@ function AdminDraftPageContent() {
 
   if (!validIds) {
     return (
-      <main className="mx-auto max-w-3xl p-6 text-neutral-300">
-        <h1 className="text-2xl font-bold">Invalid draft URL</h1>
-        <p>matchId must be a UUID and gameIndex must be a positive integer.</p>
+      <main className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <EntityHeader title={t.invalidHeading} />
+        <p className="max-w-3xl rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6 text-sm text-[var(--t2,#c7bfca)]">
+          {t.invalidBody}
+        </p>
       </main>
     );
   }
@@ -251,27 +255,23 @@ function AdminDraftPageContent() {
     <>
       <Head>
         <title>
-          Draft · match {matchId.slice(0, 8)}… · game {gameIndex}
+          {format(t.headTitle, { id: matchId.slice(0, 8), game: gameIndex })}
         </title>
       </Head>
-      <main className="mx-auto max-w-6xl space-y-6 p-6 text-neutral-200">
-        <header>
-          <div className="text-xs uppercase tracking-wider text-neutral-500">
-            MOBA Draft
-          </div>
-          <h1 className="mt-1 text-2xl font-bold text-white">
-            Match {matchId.slice(0, 8)}… · Game {gameIndex}
-          </h1>
-        </header>
+      <main className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px] space-y-6">
+        <EntityHeader
+          title={format(t.title, { id: matchId.slice(0, 8), game: gameIndex })}
+          meta={t.eyebrow}
+        />
 
         {loading && !state ? (
-          <div className="rounded-2xl border border-neutral-700/50 bg-neutral-900/40 p-6 text-center text-neutral-400">
-            Loading draft…
+          <div className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-6 text-center text-sm text-[var(--t3,#a39ba6)]">
+            {t.loadingDraft}
           </div>
         ) : null}
 
         {error ? (
-          <div className="rounded-2xl border border-red-700/50 bg-red-900/30 p-4 text-sm text-red-200">
+          <div className="rounded-[var(--r-card,14px)] border border-red-700/50 bg-red-900/30 p-4 text-sm text-red-200">
             {error}
           </div>
         ) : null}
@@ -300,7 +300,9 @@ function AdminDraftPageContent() {
 
         {state && game ? (
           heroesLoading ? (
-            <div className="text-sm text-neutral-500">Loading hero pool…</div>
+            <div className="text-sm text-[var(--t3,#a39ba6)]">
+              {t.loadingHeroes}
+            </div>
           ) : (
             <HeroPool
               heroes={heroes}
