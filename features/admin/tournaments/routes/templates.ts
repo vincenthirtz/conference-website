@@ -1,5 +1,5 @@
 // features/admin/tournaments/routes/templates.ts — /api/admin/tournament-templates
-//   GET    : modèles personnalisés
+//   GET    : modèles de l'espace + modèles partagés du tenant par défaut
 //   POST   : crée un modèle (201)
 //   DELETE : supprime un modèle (`templateId` dans le corps)
 
@@ -30,6 +30,13 @@ export default defineAdminRoute({
     body: TournamentTemplateDeleteDoc,
     audit: 'update_tournament_template',
     handler: ({ body, ctx }) =>
-      audited(ctx, deleteTournamentTemplate(ctx, body)),
+      audited(
+        ctx,
+        deleteTournamentTemplate(ctx, body, {
+          isPoleAdmin:
+            (ctx.staff.staff as { is_pole_admin?: boolean }).is_pole_admin ===
+            true,
+        })
+      ),
   }),
 });

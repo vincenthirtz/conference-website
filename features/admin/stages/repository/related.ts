@@ -10,12 +10,17 @@ import { LOBBY_COLUMNS, TIEBREAKER_OVERRIDE_COLUMNS } from '../schemas';
 
 /* ------------------------------ tournoi -------------------------------- */
 
-/** Statut du tournoi, SANS filtre d'espace (batch-scores d'origine). */
-export async function tournamentStatusUnscoped(db: AdminDb, id: string) {
+/** Statut du tournoi de l'espace (batch-scores). */
+export async function tournamentStatus(
+  db: AdminDb,
+  tenantId: string,
+  id: string
+) {
   const { data } = await db
     .from('tournaments')
     .select('status')
     .eq('id', id)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
   return data;
 }

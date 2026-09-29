@@ -12,7 +12,6 @@ import { z } from 'zod';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { LegacyAdminError } from '@/utils/admin/errors';
 import { isValidUUID } from '@/utils/apiHelpers';
-import { hasAtLeastRole } from '@/utils/staffRoles';
 import { mintTenantApiToken } from '@/utils/apiTokens/mintTenantApiToken';
 import { invalidateBotApiKeyCache } from '@/utils/botAuth';
 import {
@@ -26,6 +25,7 @@ import * as tenantsRepo from '../repository/tenants';
 import {
   type StaffScope,
   assertTenantInScope,
+  isPlatformOwner,
   requireUuid,
   serverError,
 } from './scope';
@@ -75,7 +75,11 @@ export async function mintApiToken(
 ) {
   const result = await mintTenantApiToken({
     tenantId,
-    actor: { staffId: scope.staffId, role: scope.role },
+    actor: {
+      staffId: scope.staffId,
+      role: scope.role,
+      canGrantComp: isPlatformOwner(scope),
+    },
     body,
   });
   if (!result.ok) {
@@ -169,7 +173,7 @@ async function revokeToken(
 
 /**
  * PATCH /api/admin/api-tokens/[id] — exemption partenaire. Poser
- * `comp = true` exige le rôle `owner` (effectif).
+ * `comp = true` exige le pôle-admin ou l'owner GLOBAL (`isPlatformOwner`).
  */
 export async function patchActiveTenantApiToken(
   ctx: ServiceContext,
@@ -182,7 +186,7 @@ export async function patchActiveTenantApiToken(
   if (!parsed.success) {
     throw new LegacyAdminError(400, 'Invalid body.', { code: 'INVALID_BODY' });
   }
-  if (parsed.data.comp === true && !hasAtLeastRole(scope.role, 'owner')) {
+  if (parsed.data.comp === true && !isPlatformOwner(scope)) {
     throw new LegacyAdminError(
       403,
       'Seul un owner peut activer une clé partenaire (comp).',

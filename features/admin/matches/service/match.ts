@@ -122,6 +122,7 @@ export async function updateMatch(
     if (matchForGuard?.tournament_id) {
       const tournament = await repo.getTournamentStatus(
         ctx.db,
+        ctx.tenantId,
         matchForGuard.tournament_id
       );
       if (tournament?.status === 'completed') {
@@ -329,7 +330,16 @@ async function updateMeta(
     { field: 'tournament_id', table: 'tournaments' },
     { field: 'team1_id', table: 'teams' },
     { field: 'team2_id', table: 'teams' },
+    { field: 'stage_id', table: 'tournament_stages' },
+    { field: 'next_match_win_id', table: 'matches' },
+    { field: 'next_match_lose_id', table: 'matches' },
   ] as const;
+  const REF_LABEL = {
+    tournaments: 'tournament',
+    teams: 'team',
+    tournament_stages: 'stage',
+    matches: 'match',
+  } as const;
   for (const { field, table } of refChecks) {
     if (!(field in updatePayload)) continue;
     const value = updatePayload[field];
@@ -340,9 +350,7 @@ async function updateMeta(
     if (!(await repo.refExistsInTenant(ctx.db, ctx.tenantId, table, value))) {
       throw new LegacyAdminError(
         400,
-        `${field} does not reference a ${
-          table === 'teams' ? 'team' : 'tournament'
-        } of this tenant`,
+        `${field} does not reference a ${REF_LABEL[table]} of this tenant`,
         { code: 'CROSS_TENANT_REF' }
       );
     }
@@ -357,6 +365,7 @@ async function updateMeta(
   if (scheduledAtValue && before.tournament_id) {
     const tournament = await repo.getTournamentDates(
       ctx.db,
+      ctx.tenantId,
       before.tournament_id
     );
     if (tournament) {

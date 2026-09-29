@@ -18,14 +18,20 @@ import {
 
 const LIMIT = { max: 30, windowMs: 60_000 };
 
+// Rôle GLOBAL : « ce qu'on détient » se juge sur la plateforme, pas sur
+// l'espace actif (sinon l'élévation `tenant_staff` se convertirait en droits
+// accordés globalement).
 const callerOf = (ctx: AdminRouteContext) => ({
-  role: ctx.staff.role,
+  role: ctx.staff.globalRole,
   extraPermissions: ctx.staff.staff.extra_permissions,
 });
 
 export default defineAdminRoute({
   key: 'users-permissions',
-  guard: { permission: 'manage_staff' },
+  // Portée PLATEFORME : `staff.role` / `extra_permissions` sont GLOBAUX. Un
+  // owner EFFECTIF (élevé par `tenant_staff`, compte développeur compris) ne
+  // redistribue pas un pouvoir qui dépasse son espace.
+  guard: { permission: 'manage_staff', scope: 'platform' },
   GET: read({
     query: UserIdPathQuery,
     rateLimit: LIMIT,

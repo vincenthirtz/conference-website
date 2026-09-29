@@ -124,6 +124,21 @@ export async function activeWebhook(
   return data;
 }
 
+/** Le tournoi appartient-il au tenant ? (recoupement avant écriture) */
+export async function tournamentInTenant(
+  db: AdminDb,
+  tenantId: string,
+  tournamentId: string
+) {
+  const { data, error } = await db
+    .from('tournaments')
+    .select('id')
+    .eq('id', tournamentId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+  return { exists: !!data, error };
+}
+
 export async function findWebhookId(
   db: AdminDb,
   tenantId: string,

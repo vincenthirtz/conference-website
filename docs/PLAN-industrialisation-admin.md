@@ -357,6 +357,16 @@ routes de lecture pour éprouver l'API, puis domaine par domaine (lots 15–20).
       `tournament-templates` sous le tenant par défaut ; `teams/bulk assign`, `availability` PATCH,
       `import-platform` (clé API du tenant par défaut), `teams/[teamId]` PUT `captain_id` ;
       `eventsub/tcg-drop` (`featuredFanartId` non recoupé) ; + la liste de la vague 3.
+- [x] **Lot sécurité (2026-09-29)** — corrige TOUS les défauts préexistants listés aux vagues 2-4
+      (commits 8467a881 + lots A/B) : `staff/[staffId]/pole-admin` réservé à l'owner GLOBAL (plus
+      d'auto-promotion) ; users/manage, création de compte et permissions en portée plateforme ;
+      corbeille (éléments globaux → plateforme) ; modèles de tournoi par espace (+ partagés en
+      lecture) ; clé d'import par espace ; clé « comp » réservée ; et recoupement tenant de tout
+      id reçu (litiges, cast, lineups, auto-byes, batch-scores, clone, stage teams, bracket,
+      matches POST, discord-webhooks, inscriptions) ; undo de bulk-matches en liste blanche de
+      colonnes par type d'opération. Tests : `securityIsolationLot{A,B}`, `tenantScopeRegression`.
+      Restent (décision produit) : approuver une `caster_application` crée un staff GLOBAL
+      caster ; bouton Supprimer encore affiché sur les modèles partagés (le serveur refuse).
 - [ ] Temps de réponse inchangé (± 5 ms) — **non mesuré** : demande la prod ; le wrapper
       n'ajoute aucune requête, seulement la résolution de garde que faisait déjà
       `withStaffRoute`.

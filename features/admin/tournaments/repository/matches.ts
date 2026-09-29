@@ -172,6 +172,54 @@ export async function insertMatches(
   return db.from('matches').insert(rows).select(TOURNAMENT_MATCH_ROW_COLUMNS);
 }
 
+/* ---- Recoupement des ids reçus (URL / corps) avec le tenant ---- */
+
+/** Ids de `ids` qui sont des phases de CE tournoi, dans le tenant. */
+export async function stageIdsOfTournament(
+  db: AdminDb,
+  tenantId: string,
+  tournamentId: string,
+  ids: string[]
+) {
+  const { data, error } = await db
+    .from('tournament_stages')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('tournament_id', tournamentId)
+    .in('id', ids);
+  return { ids: new Set((data ?? []).map((r) => r.id)), error };
+}
+
+/** Ids de `ids` qui sont des équipes du tenant. */
+export async function teamIdsInTenant(
+  db: AdminDb,
+  tenantId: string,
+  ids: string[]
+) {
+  const { data, error } = await db
+    .from('teams')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .in('id', ids);
+  return { ids: new Set((data ?? []).map((r) => r.id)), error };
+}
+
+/** Ids de `ids` qui sont des matchs de CE tournoi, dans le tenant. */
+export async function matchIdsOfTournament(
+  db: AdminDb,
+  tenantId: string,
+  tournamentId: string,
+  ids: string[]
+) {
+  const { data, error } = await db
+    .from('matches')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('tournament_id', tournamentId)
+    .in('id', ids);
+  return { ids: new Set((data ?? []).map((r) => r.id)), error };
+}
+
 /* ---- Bracket ---- */
 
 export async function updateTournamentMatch(

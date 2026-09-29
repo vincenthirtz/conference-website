@@ -2,9 +2,8 @@
 // liste, assignation, reprogrammation du briefing, retrait. Chaque geste
 // part au bot (utils/castEvents) pour les rappels et les embeds.
 //
-// ⚠️ DÉFAUT PRÉEXISTANT CONSERVÉ : l'assignation ne vérifie pas que
-// `matchId` appartient au tenant du staff (seul le caster l'est) — on peut
-// créer, dans son espace, une assignation pointant un match d'un autre.
+// Isolation : l'assignation recoupe `matchId` ET le caster avec le tenant du
+// staff avant toute écriture (match d'un autre espace → 404).
 
 import { LegacyAdminError } from '@/utils/admin/errors';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
@@ -56,6 +55,14 @@ export async function assignCaster(
     throw new LegacyAdminError(400, 'castMemberId invalide');
   }
   const briefingDate = parseBriefingAt(body.briefingAt);
+
+  const { exists: matchExists, error: matchErr } =
+    await repo.matchExistsInTenant(ctx.db, ctx.tenantId, matchId);
+  if (matchErr) {
+    ctx.logger.error('[admin/cast-assignments] match lookup error', matchErr);
+    throw new LegacyAdminError(500, 'Échec de la vérification');
+  }
+  if (!matchExists) throw new LegacyAdminError(404, 'Match introuvable.');
 
   // Un caster désactivé ne recevrait pas son rappel.
   const { row: castMember, error: castMemberErr } =

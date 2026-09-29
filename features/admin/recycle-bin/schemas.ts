@@ -17,6 +17,16 @@ export const DELETED_TYPES = [
 
 export type DeletedType = (typeof DELETED_TYPES)[number];
 
+/**
+ * Sources GLOBALES (sans `tenant_id`) : réservées au pôle-admin et à l'owner
+ * GLOBAL. Un staff d'espace n'en voit ni n'en restaure rien.
+ */
+export const PLATFORM_DELETED_TYPES: readonly DeletedType[] = [
+  'partner',
+  'adherent',
+  'staff',
+];
+
 /** GET /api/admin/recycle-bin — `type` vérifié par le service (400 `Unknown type`). */
 export const RecycleBinQuery = looseQuery(['type', 'limit', 'offset']);
 

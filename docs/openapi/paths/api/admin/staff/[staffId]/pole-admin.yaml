@@ -7,7 +7,9 @@ parameters:
       format: uuid
 post:
   summary: Grant pole-admin role to a staff member.
-  description: Requires `owner` role.
+  description: >-
+    Requires the GLOBAL `owner` role (a tenant-level owner via tenant_staff is
+    not enough). Changing one's own flag is reserved to pole-admins.
   operationId: adminGrantPoleAdmin
   x-zod-query: admin.staff/[staffId]/pole-admin.query
   tags:
@@ -32,7 +34,9 @@ post:
       $ref: '#/components/responses/Forbidden'
 delete:
   summary: Revoke pole-admin role from a staff member.
-  description: Requires `owner` role.
+  description: >-
+    Requires the GLOBAL `owner` role (a tenant-level owner via tenant_staff is
+    not enough). Changing one's own flag is reserved to pole-admins.
   operationId: adminRevokePoleAdmin
   x-zod-query: admin.staff/[staffId]/pole-admin.query
   tags:

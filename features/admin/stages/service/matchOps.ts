@@ -7,12 +7,11 @@
 // réouverture), utils/matches/scheduleEvents (bot prévenu d'un déplacement),
 // utils/tcg/paidMatches (un match qui a payé des récompenses ne se supprime pas).
 //
-// ⚠️ Défauts PRÉEXISTANTS conservés (signalés, non corrigés) :
-//   * auto-byes et batch-scores lisent la phase, ses matchs et le tournoi SANS
-//     filtre d'espace — un staff peut viser la phase d'un autre espace par son
-//     id ; auto-byes écrit aussi les matchs sans filtre d'espace.
-//   * l'undo en masse écrit `snapshots[].fields` TEL QUEL sur `matches` : le
-//     client choisit librement les colonnes écrites (dans la phase et l'espace).
+// Isolation : phase, tournoi et matchs sont TOUJOURS lus et écrits sous
+// `ctx.tenantId` (auto-byes, batch-scores compris). L'undo n'écrit que les
+// colonnes que l'opération en lot d'origine a modifiées (UNDO_RESTORABLE_FIELDS)
+// et seulement sur des matchs de la phase : tout autre champ ou match → 400,
+// rien d'écrit.
 
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import type { TablesUpdate } from '@/types/database.generated';
@@ -52,13 +51,17 @@ export async function autoByes(
     typeof body.scoreForBye === 'number' ? body.scoreForBye : 1;
   const propagate = body.propagate !== false;
 
-  const { row: stageRow, error: stageErr } =
-    await stages.getStageTournamentUnscoped(ctx.db, id);
+  const { row: stageRow, error: stageErr } = await stages.getStageTournament(
+    ctx.db,
+    ctx.tenantId,
+    id
+  );
   if (stageErr || !stageRow) throw stageNotFound();
   const tournamentId: string | null = stageRow.tournament_id ?? null;
 
-  const { rows, error: mErr } = await matches.activeStageMatchesUnscoped(
+  const { rows, error: mErr } = await matches.activeStageMatchesInRound(
     ctx.db,
+    ctx.tenantId,
     id,
     roundFilter
   );
@@ -97,8 +100,9 @@ export async function autoByes(
 
       await resetPropagationForMatch(ctx.tenantId, matchId);
 
-      const { error: updErr } = await matches.finishAsByeUnscoped(
+      const { error: updErr } = await matches.finishAsBye(
         ctx.db,
+        ctx.tenantId,
         matchId,
         {
           is_bye: true,
@@ -206,12 +210,16 @@ export async function batchScores(
   stageId: string,
   body: Body
 ): Promise<Audited<BatchScoresOutcome>> {
-  const { row: stage, error: stageErr } =
-    await stages.getStageTournamentUnscoped(ctx.db, stageId);
+  const { row: stage, error: stageErr } = await stages.getStageTournament(
+    ctx.db,
+    ctx.tenantId,
+    stageId
+  );
   if (stageErr || !stage) throw stageNotFound();
 
-  const tournament = await related.tournamentStatusUnscoped(
+  const tournament = await related.tournamentStatus(
     ctx.db,
+    ctx.tenantId,
     stage.tournament_id
   );
   if (tournament?.status === 'completed') {
@@ -245,8 +253,9 @@ export async function batchScores(
     validated.push({ ...entry, status });
   }
 
-  const { rows, error: matchErr } = await matches.matchStagesUnscoped(
+  const { rows, error: matchErr } = await matches.matchStages(
     ctx.db,
+    ctx.tenantId,
     scores.map((s) => s.matchId)
   );
   if (matchErr) throw fail(500, 'Failed to verify matches');
@@ -698,6 +707,34 @@ export async function bulkDelete(
   };
 }
 
+/**
+ * Colonnes restaurables par type d'opération : exactement celles que
+ * l'opération écrit (et donc capture dans son `undoPayload`).
+ *   * bulk_schedule → bulkSchedule n'écrit que `scheduled_at` ;
+ *   * bulk_update   → la liste blanche de bulkUpdate (BULK_EDITABLE_FIELDS) ;
+ *   * bulk_cancel   → bulkDelete (soft) remet statut, scores et vainqueur.
+ */
+const UNDO_RESTORABLE_FIELDS: Record<string, readonly string[]> = {
+  bulk_schedule: ['scheduled_at'],
+  bulk_update: BULK_EDITABLE_FIELDS,
+  bulk_cancel: ['status', 'team1_score', 'team2_score', 'winner_team_id'],
+};
+
+function isWellFormedSnapshot(snap: unknown): snap is {
+  matchId: string;
+  fields: Record<string, unknown>;
+} {
+  if (!snap || typeof snap !== 'object') return false;
+  const s = snap as { matchId?: unknown; fields?: unknown };
+  return (
+    typeof s.matchId === 'string' &&
+    s.matchId.length > 0 &&
+    !!s.fields &&
+    typeof s.fields === 'object' &&
+    !Array.isArray(s.fields)
+  );
+}
+
 /** POST : annulation d'une opération en masse (`action: 'undo'`). */
 export async function bulkUndo(
   ctx: ServiceContext,
@@ -724,23 +761,73 @@ export async function bulkUndo(
     );
   }
 
-  const snapshots = undoPayload.snapshots as Array<{
-    matchId: string;
-    fields: Record<string, unknown>;
-  }>;
+  const snapshots = undoPayload.snapshots as unknown[];
   const results: ItemResult[] = [];
+
+  // Liste blanche : le client ne choisit pas les colonnes écrites.
+  const restorable =
+    typeof undoPayload.type === 'string'
+      ? UNDO_RESTORABLE_FIELDS[undoPayload.type]
+      : undefined;
+  if (!restorable) {
+    throw fail(
+      400,
+      `Invalid undoPayload type. Allowed: ${Object.keys(UNDO_RESTORABLE_FIELDS).join(', ')}`
+    );
+  }
+  const wellFormed = snapshots.filter(isWellFormedSnapshot);
+  for (const snap of wellFormed) {
+    for (const key of Object.keys(snap.fields)) {
+      if (!restorable.includes(key)) {
+        throw fail(400, `Field not restorable: ${key}`);
+      }
+    }
+    if ('status' in snap.fields && !isMatchStatus(snap.fields.status)) {
+      throw fail(400, `Invalid status: ${String(snap.fields.status)}`);
+    }
+  }
+
+  // Recoupement : chaque match visé appartient à la phase ET à l'espace.
+  const targetIds = [...new Set(wellFormed.map((s) => s.matchId))];
+  const teamsOf = new Map<
+    string,
+    { team1_id: string | null; team2_id: string | null }
+  >();
+  if (targetIds.length > 0) {
+    const { rows, error } = await matches.stageMatchesByIds(
+      ctx.db,
+      ctx.tenantId,
+      stageId,
+      targetIds
+    );
+    if (error) throw fail(500, 'Failed to verify matches');
+    for (const r of rows ?? []) teamsOf.set(r.id, r);
+  }
+  for (const snap of wellFormed) {
+    const teams = teamsOf.get(snap.matchId);
+    if (!teams) {
+      throw fail(
+        400,
+        `Match ${snap.matchId} does not belong to stage ${stageId}`
+      );
+    }
+    // Le vainqueur restauré ne peut être qu'une des deux équipes du match.
+    const w = snap.fields.winner_team_id;
+    if (
+      w !== undefined &&
+      w !== null &&
+      w !== teams.team1_id &&
+      w !== teams.team2_id
+    ) {
+      throw fail(400, `Invalid winner_team_id for match ${snap.matchId}`);
+    }
+  }
 
   // Un undo qui restaure `scheduled_at` DÉPLACE des matchs : le bot doit en
   // être prévenu. On relit les créneaux actuels avant d'écrire.
   const restoredSchedule = new Map<string, string | null>();
-  for (const snap of snapshots) {
-    if (
-      snap &&
-      typeof snap.matchId === 'string' &&
-      snap.fields &&
-      typeof snap.fields === 'object' &&
-      'scheduled_at' in snap.fields
-    ) {
+  for (const snap of wellFormed) {
+    if ('scheduled_at' in snap.fields) {
       const v = snap.fields.scheduled_at;
       restoredSchedule.set(snap.matchId, typeof v === 'string' ? v : null);
     }
@@ -758,9 +845,9 @@ export async function bulkUndo(
   }
 
   for (const snap of snapshots) {
-    if (!snap.matchId || typeof snap.matchId !== 'string' || !snap.fields) {
+    if (!isWellFormedSnapshot(snap)) {
       results.push({
-        matchId: snap.matchId,
+        matchId: (snap as { matchId?: string } | null)?.matchId as string,
         success: false,
         error: 'Invalid snapshot entry',
       });

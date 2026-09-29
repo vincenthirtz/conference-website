@@ -148,6 +148,10 @@ const TEAM_ID = '550e8400-e29b-41d4-a716-446655440004';
  * ---------------------------------------------------------*/
 
 describe('POST /api/admin/tournament/[id]/bracket — generate_double_elim', () => {
+  // Le tournoi de l'URL est recoupé avec le tenant avant toute écriture.
+  beforeEach(() => {
+    store.tournaments = [{ id: TID }] as any;
+  });
   it('400 on invalid size', async () => {
     const res = makeRes();
     await bracketHandler(
@@ -248,6 +252,10 @@ describe('POST /api/admin/tournament/[id]/bracket — generate_double_elim', () 
  * ---------------------------------------------------------*/
 
 describe('POST /api/admin/tournament/[id]/bracket — save', () => {
+  // Le tournoi de l'URL est recoupé avec le tenant avant toute écriture.
+  beforeEach(() => {
+    store.tournaments = [{ id: TID }] as any;
+  });
   it('400 when matches is missing or empty', async () => {
     const res = makeRes();
     await bracketHandler(
@@ -275,6 +283,11 @@ describe('POST /api/admin/tournament/[id]/bracket — save', () => {
   });
 
   it('200 saves team slots and scheduling', async () => {
+    // Équipes réelles du tenant (UUID) : les équipes placées sont recoupées.
+    const [TX, TY, TZ] = ['x', 'y', 'z'].map(
+      (_, i) => `3c3c3c3c-000${i}-4000-8000-00000000000${i}`
+    );
+    store.teams = [TX, TY, TZ].map((id) => ({ id })) as any;
     store.matches = [
       { id: 'm1', tournament_id: TID, team1_id: null, team2_id: null },
       { id: 'm2', tournament_id: TID, team1_id: null, team2_id: null },
@@ -289,11 +302,11 @@ describe('POST /api/admin/tournament/[id]/bracket — save', () => {
           matches: [
             {
               id: 'm1',
-              team1_id: 'team-x',
-              team2_id: 'team-y',
+              team1_id: TX,
+              team2_id: TY,
               scheduled_at: '2026-04-01T10:00:00Z',
             },
-            { id: 'm2', team1_id: null, team2_id: 'team-z' },
+            { id: 'm2', team1_id: null, team2_id: TZ },
           ],
         },
       }),
@@ -301,8 +314,8 @@ describe('POST /api/admin/tournament/[id]/bracket — save', () => {
     );
     expect(res.statusCode).toBe(200);
     const m1 = (store.matches as any).find((m: any) => m.id === 'm1');
-    expect(m1.team1_id).toBe('team-x');
-    expect(m1.team2_id).toBe('team-y');
+    expect(m1.team1_id).toBe(TX);
+    expect(m1.team2_id).toBe(TY);
     expect(m1.scheduled_at).toBe('2026-04-01T10:00:00Z');
     expect(logStaffActionMock).toHaveBeenCalledOnce();
   });
@@ -313,6 +326,10 @@ describe('POST /api/admin/tournament/[id]/bracket — save', () => {
  * ---------------------------------------------------------*/
 
 describe('POST /api/admin/tournament/[id]/bracket — validate', () => {
+  // Le tournoi de l'URL est recoupé avec le tenant avant toute écriture.
+  beforeEach(() => {
+    store.tournaments = [{ id: TID }] as any;
+  });
   it('200 returns validation result for empty bracket', async () => {
     store.matches = [];
     const res = makeRes();
@@ -361,11 +378,12 @@ describe('POST /api/admin/tournament/[id]/bracket — validate', () => {
   });
 
   it('200 validates with stageId filter', async () => {
+    store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.matches = [
       {
         id: 'm1',
         tournament_id: TID,
-        stage_id: 's1',
+        stage_id: STAGE_ID,
         round_number: 1,
         bracket_side: 'wb',
         status: 'pending',
@@ -376,7 +394,7 @@ describe('POST /api/admin/tournament/[id]/bracket — validate', () => {
       makeReq({
         method: 'POST',
         query: { id: TID },
-        body: { action: 'validate', stageId: 's1' },
+        body: { action: 'validate', stageId: STAGE_ID },
       }),
       res
     );

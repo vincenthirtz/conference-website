@@ -112,19 +112,14 @@ export const TournamentDetailQuery = z.looseObject({
   id: uuidPathParam('Missing or invalid tournament id'),
 });
 
-/** Chaîne non vide, sans contrôle de format (dashboard, équipes inscrites). */
-function presentPathParam(message: string) {
-  return z.string({ error: message }).min(1, { error: message });
-}
-
-/** Dashboard : l'id n'était pas contrôlé en UUID (seulement présent). */
+/** Dashboard : UUID, message historique de la route. */
 export const DashboardQuery = z.looseObject({
-  id: presentPathParam('Invalid tournament id'),
+  id: uuidPathParam('Invalid tournament id'),
 });
 
-/** Équipes inscrites : même absence de contrôle UUID. */
+/** Équipes inscrites : UUID, message historique de la route. */
 export const TournamentTeamsQuery = z.looseObject({
-  id: presentPathParam('Invalid tournament ID'),
+  id: uuidPathParam('Invalid tournament ID'),
 });
 
 /** `[id]/teams/[teamId]` : `teamId` est l'id de l'INSCRIPTION. */

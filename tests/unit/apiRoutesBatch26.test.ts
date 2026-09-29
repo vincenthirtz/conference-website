@@ -171,6 +171,8 @@ describe('/api/admin/stages/[stageId]/teams', () => {
   });
 
   it('POST 201 inserts a stage_team and reports min_players warning', async () => {
+    // L'équipe doit exister dans le tenant (recoupement avant insertion).
+    store.teams = [{ id: TEAM_ID, name: 'Alpha' }] as any;
     store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.tournaments = [{ id: TID, min_players: 5 }] as any;
     store.team_members = [{ user_id: 'u1', team_id: TEAM_ID }] as any;
@@ -384,6 +386,8 @@ describe('/api/admin/stages/[stageId]/teams', () => {
   });
 
   it('POST 201 without warnings when min_players satisfied', async () => {
+    // L'équipe doit exister dans le tenant (recoupement avant insertion).
+    store.teams = [{ id: TEAM_ID, name: 'Alpha' }] as any;
     store.tournament_stages = [{ id: STAGE_ID, tournament_id: TID }] as any;
     store.tournaments = [{ id: TID, min_players: 1 }] as any;
     store.team_members = [

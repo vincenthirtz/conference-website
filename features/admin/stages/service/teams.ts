@@ -4,8 +4,8 @@
 //
 // Journal : slug `manage_team`, verbe précis dans `payload.action` (origine).
 //
-// ⚠️ Défaut PRÉEXISTANT conservé (signalé, non corrigé) : à l'ajout, `teamId`
-// n'est pas vérifié contre l'espace du staff avant l'insertion.
+// Isolation : à l'ajout, `teamId` est recoupé avec l'espace du staff AVANT
+// l'insertion (équipe d'un autre espace → 404, rien d'écrit).
 
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { countPlayingMembers } from '@/utils/teams/roleKind';
@@ -78,6 +78,14 @@ export async function addStageTeam(
   if (!teamId || typeof teamId !== 'string') throw fail(400, 'Missing teamId');
 
   const stage = await loadStage(ctx, stageId);
+
+  const { ids: knownTeam, error: teamErr } = await related.existingTeamIds(
+    ctx.db,
+    ctx.tenantId,
+    [teamId]
+  );
+  if (teamErr) throw fail(500, 'Failed to verify team');
+  if (!knownTeam.includes(teamId)) throw fail(404, 'Team not found');
 
   // --- Contrôles de roster (avertissements, jamais bloquants) ---
   const warnings: string[] = [];

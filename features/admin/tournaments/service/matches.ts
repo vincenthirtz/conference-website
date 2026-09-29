@@ -26,7 +26,7 @@ import {
 import type { Audited } from '../../_shared/audited';
 import type { AuditDetails } from '@/utils/admin/defineAdminRoute';
 import * as repo from '../repository/matches';
-import { fail, type StatusResult } from './common';
+import { fail, failWith, type StatusResult } from './common';
 
 const truthy = (v: unknown) => v === '1' || v === 'true';
 const str = (v: unknown) => (typeof v === 'string' && v ? v : null);
@@ -164,6 +164,83 @@ export async function listMatches(
 }
 
 /* ---------------------------------------------------------------------------
+ * Isolation : tout id reçu (URL ou corps) est recoupé avec le tenant — et
+ * avec le tournoi de l'URL pour les phases et les matchs liés — AVANT toute
+ * écriture. Le client service bypasse la RLS.
+ * ------------------------------------------------------------------------ */
+
+async function assertTournamentInTenant(
+  ctx: ServiceContext,
+  tournamentId: string
+) {
+  const { data, error } = await repo.tournamentHeader(
+    ctx.db,
+    ctx.tenantId,
+    tournamentId
+  );
+  if (error) {
+    ctx.logger.error('admin tournament lookup error:', error);
+    fail(500, 'Failed to verify tournament');
+  }
+  if (!data) fail(404, 'Tournament not found');
+}
+
+type RefKind = 'stage' | 'team' | 'match';
+type Ref = { kind: RefKind; field: string; value: unknown };
+
+/** Refus 404 `CROSS_TENANT_REF` si une référence n'est pas du tenant. */
+async function assertRefsInTenant(
+  ctx: ServiceContext,
+  tournamentId: string,
+  refs: Ref[]
+) {
+  const wanted: Record<RefKind, Set<string>> = {
+    stage: new Set(),
+    team: new Set(),
+    match: new Set(),
+  };
+  const present = refs.filter((r) => r.value !== null && r.value !== undefined);
+  for (const r of present) {
+    if (typeof r.value !== 'string' || !isValidUUID(r.value)) {
+      fail(400, `Invalid ${r.field}`);
+    }
+    wanted[r.kind].add(r.value);
+  }
+  const lookups = {
+    stage: repo.stageIdsOfTournament,
+    team: (db: typeof ctx.db, tenantId: string, _t: string, ids: string[]) =>
+      repo.teamIdsInTenant(db, tenantId, ids),
+    match: repo.matchIdsOfTournament,
+  };
+  const found: Record<RefKind, Set<string>> = {
+    stage: new Set(),
+    team: new Set(),
+    match: new Set(),
+  };
+  for (const kind of ['stage', 'team', 'match'] as const) {
+    if (wanted[kind].size === 0) continue;
+    const { ids, error } = await lookups[kind](
+      ctx.db,
+      ctx.tenantId,
+      tournamentId,
+      [...wanted[kind]]
+    );
+    if (error) {
+      ctx.logger.error('admin tournament refs lookup error:', error);
+      fail(500, 'Failed to verify references');
+    }
+    found[kind] = ids;
+  }
+  for (const r of present) {
+    if (!found[r.kind].has(r.value as string)) {
+      failWith(404, `${r.field} not found`, 'CROSS_TENANT_REF', {
+        field: r.field,
+      });
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
  * Création en lot
  * ------------------------------------------------------------------------ */
 
@@ -178,6 +255,30 @@ export async function createMatches(
   if (!Array.isArray(matches) || matches.length === 0) {
     fail(400, "Body must include non-empty array 'matches'");
   }
+  await assertTournamentInTenant(ctx, tournamentId);
+  const refs: Ref[] = [];
+  (matches as unknown[]).forEach((raw, i) => {
+    if (!raw || typeof raw !== 'object') {
+      fail(400, `Invalid matches[${i}]`);
+    }
+    const m = raw as MatchCreateInput;
+    refs.push(
+      { kind: 'stage', field: `matches[${i}].stage_id`, value: m.stage_id },
+      { kind: 'team', field: `matches[${i}].team1_id`, value: m.team1_id },
+      { kind: 'team', field: `matches[${i}].team2_id`, value: m.team2_id },
+      {
+        kind: 'match',
+        field: `matches[${i}].next_match_win_id`,
+        value: m.next_match_win_id,
+      },
+      {
+        kind: 'match',
+        field: `matches[${i}].next_match_lose_id`,
+        value: m.next_match_lose_id,
+      }
+    );
+  });
+  await assertRefsInTenant(ctx, tournamentId, refs);
   const nowIso = new Date().toISOString();
   const v = <T>(x: unknown) => (x as T | undefined) ?? null;
   const rows = (matches as MatchCreateInput[]).map((m) => ({
@@ -276,6 +377,10 @@ async function generate(
   if (!VALID_BRACKET_SIZES.includes(size)) {
     fail(400, `size must be one of: ${VALID_BRACKET_SIZES.join(', ')}`);
   }
+  await assertTournamentInTenant(ctx, tournamentId);
+  await assertRefsInTenant(ctx, tournamentId, [
+    { kind: 'stage', field: 'stageId', value: stageId },
+  ]);
 
   const double = body.action === 'generate_double_elim';
   const grandFinalReset = (
@@ -343,6 +448,24 @@ async function saveBracket(
   if (!Array.isArray(matches) || matches.length === 0) {
     fail(400, "Body must include non-empty array 'matches'");
   }
+  // Équipes placées : du tenant, sinon rien n'est écrit (les matchs, eux,
+  // sont filtrés par tenant + tournoi à l'écriture).
+  await assertRefsInTenant(
+    ctx,
+    tournamentId,
+    matches.flatMap((m, i) => [
+      {
+        kind: 'team' as const,
+        field: `matches[${i}].team1_id`,
+        value: m?.team1_id,
+      },
+      {
+        kind: 'team' as const,
+        field: `matches[${i}].team2_id`,
+        value: m?.team2_id,
+      },
+    ])
+  );
   const errors: string[] = [];
   for (const m of matches) {
     const patch: Record<string, unknown> = {};
@@ -391,6 +514,12 @@ async function validateBracket(
   body: Record<string, unknown>
 ): Promise<BracketOutcome> {
   const stageId = typeof body.stageId === 'string' ? body.stageId : null;
+  await assertTournamentInTenant(ctx, tournamentId);
+  if (stageId) {
+    await assertRefsInTenant(ctx, tournamentId, [
+      { kind: 'stage', field: 'stageId', value: stageId },
+    ]);
+  }
   const { data, error } = await repo.bracketGraphRows(
     ctx.db,
     ctx.tenantId,

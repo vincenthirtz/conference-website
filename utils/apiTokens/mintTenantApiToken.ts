@@ -22,7 +22,7 @@
 import crypto from 'node:crypto';
 import { mintTokenBodySchema } from '@/lib/apiContracts/admin/apiTokens';
 import { supabaseAdmin } from '@/utils/supabase';
-import { hasAtLeastRole, type StaffRole } from '@/utils/staff';
+import type { StaffRole } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
 import { parseScopes, ALL_SCOPES } from '@/utils/apiScopes';
@@ -68,7 +68,12 @@ export type MintResult =
  */
 export async function mintTenantApiToken(params: {
   tenantId: string;
-  actor: { staffId: string; role: StaffRole };
+  /**
+   * `canGrantComp` : l'appelant peut-il émettre une clé partenaire (gratuite) ?
+   * Réservé au pôle-admin et à l'owner GLOBAL — un owner d'espace (élevé par
+   * `tenant_staff`, compte développeur compris) ne s'offre pas l'API gratuite.
+   */
+  actor: { staffId: string; role: StaffRole; canGrantComp: boolean };
   body: unknown;
 }): Promise<MintResult> {
   if (!supabaseAdmin) {
@@ -102,7 +107,7 @@ export async function mintTenantApiToken(params: {
   }
 
   const comp = parsed.data.comp === true;
-  if (comp && !hasAtLeastRole(params.actor.role, 'owner')) {
+  if (comp && !params.actor.canGrantComp) {
     return {
       ok: false,
       status: 403,

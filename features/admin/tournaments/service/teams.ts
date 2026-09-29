@@ -35,7 +35,13 @@ export async function addEntry(
   body: Record<string, unknown>
 ) {
   const { seed, status } = body;
-  if (!body.team_id) fail(400, 'team_id is required');
+  if (
+    !body.team_id ||
+    typeof body.team_id !== 'string' ||
+    !isValidUUID(body.team_id)
+  ) {
+    fail(400, 'team_id is required');
+  }
   const teamId = body.team_id as string;
 
   const { data: tournament, error: tErr } = await tRepo.findTournament(
@@ -146,8 +152,18 @@ export async function addEntry(
   } satisfies Audited<unknown>;
 }
 
-export async function getEntry(ctx: ServiceContext, entryId: string) {
-  const { data, error } = await repo.getEntry(ctx.db, ctx.tenantId, entryId);
+/** L'inscription doit appartenir au tournoi de l'URL (sinon 404). */
+export async function getEntry(
+  ctx: ServiceContext,
+  tournamentId: string,
+  entryId: string
+) {
+  const { data, error } = await repo.getEntry(
+    ctx.db,
+    ctx.tenantId,
+    tournamentId,
+    entryId
+  );
   if (error || !data) fail(404, 'Tournament team entry not found');
   return { team: data };
 }
@@ -166,6 +182,7 @@ export async function patchEntry(
   const { data: before, error: fetchErr } = await repo.getEntryBefore(
     ctx.db,
     ctx.tenantId,
+    tournamentId,
     entryId
   );
   if (fetchErr || !before) fail(404, 'Tournament team entry not found');
@@ -178,6 +195,7 @@ export async function patchEntry(
   const { data, error } = await repo.updateEntry(
     ctx.db,
     ctx.tenantId,
+    tournamentId,
     entryId,
     patch as TablesUpdate<'tournament_teams'>
   );
@@ -191,7 +209,6 @@ export async function patchEntry(
     audit: {
       entity_type: 'tournament_team',
       entity_id: entryId,
-      // ⚠ Id d'URL non recoupé avec l'inscription (défaut préexistant).
       tournament_id: tournamentId,
       payload: {
         before: { seed: before.seed, status: before.status },
@@ -210,11 +227,17 @@ export async function deleteEntry(
   const { data: before, error: fetchErr } = await repo.getEntryBefore(
     ctx.db,
     ctx.tenantId,
+    tournamentId,
     entryId
   );
   if (fetchErr || !before) fail(404, 'Tournament team entry not found');
 
-  const { error } = await repo.deleteEntry(ctx.db, ctx.tenantId, entryId);
+  const { error } = await repo.deleteEntry(
+    ctx.db,
+    ctx.tenantId,
+    tournamentId,
+    entryId
+  );
   if (error) {
     ctx.logger.error('admin DELETE tournament team error:', error);
     fail(500, 'Failed to remove team from tournament');

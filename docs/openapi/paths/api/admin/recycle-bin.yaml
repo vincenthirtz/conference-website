@@ -1,6 +1,8 @@
 get:
   summary: List soft-deleted entities (stages, teams, matches, etc.).
-  description: Requires `admin` role.
+  description: >-
+    Requires `admin` role. Global sources (`partner`, `adherent`, `staff`) are
+    reserved to pole-admins and global owners (403 `PLATFORM_SCOPE`).
   operationId: adminListRecycleBin
   x-zod-query: admin.recycle-bin.query
   tags:
@@ -44,7 +46,9 @@ get:
       $ref: '#/components/responses/Forbidden'
 patch:
   summary: Restore a soft-deleted entity.
-  description: Requires `admin` role.
+  description: >-
+    Requires `admin` role. Global sources (`partner`, `adherent`, `staff`) are
+    reserved to pole-admins and global owners (403 `PLATFORM_SCOPE`).
   operationId: adminRestoreFromRecycleBin
   tags:
     - admin/misc

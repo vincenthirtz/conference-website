@@ -21,6 +21,21 @@ export async function listMatchCastAssignments(
   return { rows: data, error };
 }
 
+/** Le match appartient-il au tenant du staff ? (recoupement avant écriture) */
+export async function matchExistsInTenant(
+  db: AdminDb,
+  tenantId: string,
+  matchId: string
+) {
+  const { data, error } = await db
+    .from('matches')
+    .select('id')
+    .eq('id', matchId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+  return { exists: !!data, error };
+}
+
 export async function getCastMemberActive(
   db: AdminDb,
   tenantId: string,

@@ -355,6 +355,19 @@ export async function upsertWebhook(
       ? roleMention.trim()
       : null;
 
+  // Le tournoi de l'URL doit être du tenant : sinon on créerait, dans cet
+  // espace, un webhook rattaché au tournoi d'un autre.
+  const { exists, error: tErr } = await repo.tournamentInTenant(
+    ctx.db,
+    ctx.tenantId,
+    tournamentId
+  );
+  if (tErr) {
+    ctx.logger.error('[discord-webhooks] tournament lookup error:', tErr);
+    fail(500, 'Failed to verify tournament');
+  }
+  if (!exists) fail(404, 'Tournament not found');
+
   const existing = await repo.findWebhookId(
     ctx.db,
     ctx.tenantId,

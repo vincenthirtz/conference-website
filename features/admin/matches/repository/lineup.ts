@@ -22,8 +22,8 @@ export async function getMatchForLineup(
 }
 
 /**
- * En-têtes et noms d'équipes : lus SANS filtre tenant, comme à l'origine
- * (le match, lui, est scopé ; ses équipes et ses feuilles en découlent).
+ * En-têtes, participants et noms d'équipes : tous lus sous le tenant du
+ * staff (défense en profondeur : le match est déjà scopé).
  */
 export async function readLineupSheets(
   db: AdminDb,
@@ -36,6 +36,7 @@ export async function readLineupSheets(
       db
         .from('match_lineups')
         .select('team_id, status, validated_at, validated_by_kind')
+        .eq('tenant_id', tenantId)
         .eq('match_id', matchId),
       db
         .from('match_participants')
@@ -45,6 +46,7 @@ export async function readLineupSheets(
       db
         .from('teams')
         .select('id, name')
+        .eq('tenant_id', tenantId)
         .in(
           'id',
           teamIds.length ? teamIds : ['00000000-0000-0000-0000-000000000000']
@@ -55,6 +57,7 @@ export async function readLineupSheets(
 
 export async function reopenLineup(
   db: AdminDb,
+  tenantId: string,
   matchId: string,
   teamId: string
 ) {
@@ -67,6 +70,7 @@ export async function reopenLineup(
       validated_at: null,
       updated_at: new Date().toISOString(),
     })
+    .eq('tenant_id', tenantId)
     .eq('match_id', matchId)
     .eq('team_id', teamId);
   return { error };

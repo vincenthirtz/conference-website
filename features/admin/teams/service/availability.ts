@@ -214,8 +214,8 @@ export async function createTeamAvailability(
 }
 
 /**
- * DÉFAUT PRÉEXISTANT, conservé : contrairement à la création, un
- * `tournament_id` modifié n'est pas recoupé avec l'espace du staff.
+ * Comme la création : un `tournament_id` modifié est recoupé avec l'espace
+ * du staff avant toute écriture (404 `TOURNAMENT_NOT_FOUND`).
  */
 export async function updateTeamAvailability(
   ctx: ServiceContext,
@@ -238,8 +238,16 @@ export async function updateTeamAvailability(
   const update: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   };
-  if ('tournament_id' in body)
-    update.tournament_id = body.tournament_id ?? null;
+  if ('tournament_id' in body) {
+    const tournamentId = body.tournament_id ?? null;
+    if (
+      tournamentId &&
+      !(await teams.tournamentExists(ctx.db, ctx.tenantId, tournamentId))
+    ) {
+      throw fail(404, 'Tournament not found', 'TOURNAMENT_NOT_FOUND');
+    }
+    update.tournament_id = tournamentId;
+  }
   if (body.timezone !== undefined) update.timezone = body.timezone;
   if (body.note !== undefined) update.note = body.note ?? null;
   if (existing.kind === 'blackout') {

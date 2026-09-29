@@ -275,10 +275,18 @@ export async function cloneStage(
 
   const includeMatches = body.includeMatches ?? false;
   const name = body.name;
-  // ⚠️ Défaut préexistant (signalé, non corrigé) : `targetTournamentId` n'est
-  // pas vérifié contre l'espace du staff.
   const tournamentId = (body.targetTournamentId ||
     source.tournament_id) as string;
+  // Tournoi cible fourni par le client : il doit appartenir à l'espace du
+  // staff, sinon rien n'est créé.
+  if (body.targetTournamentId) {
+    if (
+      typeof body.targetTournamentId !== 'string' ||
+      !(await related.tournamentSummary(ctx.db, ctx.tenantId, tournamentId))
+    ) {
+      throw fail(404, 'Tournament not found');
+    }
+  }
 
   const existingStages = await stages.maxStageOrder(
     ctx.db,

@@ -9,7 +9,10 @@ import { createUser } from '../service/accounts';
 
 export default defineAdminRoute({
   key: 'users-create',
-  guard: { permission: 'manage_staff' },
+  // Portée PLATEFORME : `staff.role` / `extra_permissions` sont GLOBAUX. Un
+  // owner EFFECTIF (élevé par `tenant_staff`, compte développeur compris) ne
+  // redistribue pas un pouvoir qui dépasse son espace.
+  guard: { permission: 'manage_staff', scope: 'platform' },
   POST: mutate({
     body: CreateUserDoc,
     status: 201,

@@ -96,6 +96,16 @@ export async function assertAdminOfTenant(
   await assertTenantInScope(scope, tenantId);
 }
 
+/**
+ * Privilège de PLATEFORME : pôle-admin ou owner GLOBAL (`staff.role`). Un
+ * owner EFFECTIF (élevé par `tenant_staff`, compte développeur compris) ne
+ * l'est pas — sans quoi chaque propriétaire d'espace s'offrirait un droit qui
+ * dépasse son espace (clé partenaire gratuite, drapeau pôle-admin…).
+ */
+export function isPlatformOwner(scope: StaffScope): boolean {
+  return scope.isPoleAdmin || scope.globalRole === 'owner';
+}
+
 /** Espace ACTIF seulement, sauf pôle-admin : 403 `TENANT_SCOPE`. */
 export function assertActiveTenant(scope: StaffScope, tenantId: string): void {
   if (tenantId !== scope.tenantId && !scope.isPoleAdmin) {

@@ -178,6 +178,41 @@ export async function bulkUpdateTeams(
   return { rows: data ?? [], error };
 }
 
+/**
+ * `userId` peut-il être capitaine de `teamId` ? Même règle d'intégrité que
+ * la RPC `reassign_captain` : membre de l'équipe, dans l'espace, non-coach.
+ */
+export async function isEligibleCaptain(
+  db: AdminDb,
+  tenantId: string,
+  teamId: string,
+  userId: string
+) {
+  const { data, error } = await db
+    .from('team_members')
+    .select('user_id')
+    .eq('team_id', teamId)
+    .eq('tenant_id', tenantId)
+    .eq('user_id', userId)
+    .neq('role', 'coach')
+    .limit(1);
+  return { eligible: (data ?? []).length > 0, error };
+}
+
+/** Ids de `ids` qui sont des équipes de `tenantId`. */
+export async function teamIdsInTenant(
+  db: AdminDb,
+  tenantId: string,
+  ids: string[]
+) {
+  const { data, error } = await db
+    .from('teams')
+    .select('id')
+    .in('id', ids)
+    .eq('tenant_id', tenantId);
+  return { ids: new Set((data ?? []).map((r) => r.id)), error };
+}
+
 export async function tournamentExists(
   db: AdminDb,
   tenantId: string,

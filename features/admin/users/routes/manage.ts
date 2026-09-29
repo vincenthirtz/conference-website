@@ -32,7 +32,10 @@ const actorOf = (ctx: AdminRouteContext): AccountActor => ({
 
 export default defineAdminRoute({
   key: 'users-manage',
-  guard: { permission: 'manage_staff' },
+  // Portée PLATEFORME : `staff.role` / `extra_permissions` sont GLOBAUX. Un
+  // owner EFFECTIF (élevé par `tenant_staff`, compte développeur compris) ne
+  // redistribue pas un pouvoir qui dépasse son espace.
+  guard: { permission: 'manage_staff', scope: 'platform' },
   GET: read({
     query: UsersManageListQuery,
     rateLimit: LIMIT,

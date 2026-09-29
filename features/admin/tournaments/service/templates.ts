@@ -1,5 +1,11 @@
 // features/admin/tournaments/service/templates.ts — modèles de tournoi
 // personnalisés (liste, création, suppression).
+//
+// PÉRIMÈTRE. Chaque espace lit SES modèles + ceux du tenant par défaut
+// (partagés, marqués `shared: true`, lecture seule). Il ne crée et ne
+// supprime que chez lui. Seul le pôle-admin supprime un modèle partagé.
+// Avant : tout était rangé sous le tenant par défaut, donc n'importe quel
+// espace réécrivait la liste de tous.
 
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { LegacyAdminError } from '@/utils/admin/errors';
@@ -7,6 +13,7 @@ import type {
   TournamentTemplate,
   TemplateStage,
 } from '@/config/tournament-templates';
+import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import type { Audited } from '../../_shared/audited';
 import * as repo from '../repository/templates';
 
@@ -20,9 +27,10 @@ const VALID_STAGE_TYPES = [
 ];
 
 async function readTemplates(
-  ctx: ServiceContext
+  ctx: ServiceContext,
+  tenantId: string = ctx.tenantId
 ): Promise<TournamentTemplate[]> {
-  const raw = await repo.readTemplatesBlob(ctx.db);
+  const raw = await repo.readTemplatesBlob(ctx.db, tenantId);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
@@ -33,7 +41,13 @@ async function readTemplates(
 }
 
 export async function listTournamentTemplates(ctx: ServiceContext) {
-  return { templates: await readTemplates(ctx) };
+  const own = await readTemplates(ctx);
+  if (ctx.tenantId === DEFAULT_TENANT_ID) return { templates: own };
+  const shared = (await readTemplates(ctx, DEFAULT_TENANT_ID)).map((t) => ({
+    ...t,
+    shared: true as const,
+  }));
+  return { templates: [...own, ...shared] };
 }
 
 export async function createTournamentTemplate(
@@ -72,7 +86,11 @@ export async function createTournamentTemplate(
     })),
   };
   templates.push(template);
-  await repo.writeTemplatesBlob(ctx.db, JSON.stringify(templates));
+  await repo.writeTemplatesBlob(
+    ctx.db,
+    ctx.tenantId,
+    JSON.stringify(templates)
+  );
 
   return {
     result: { template },
@@ -90,18 +108,34 @@ export async function createTournamentTemplate(
 
 export async function deleteTournamentTemplate(
   ctx: ServiceContext,
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
+  caller: { isPoleAdmin: boolean } = { isPoleAdmin: false }
 ): Promise<Audited<{ deleted: true }>> {
   const { templateId } = body;
   if (!templateId || typeof templateId !== 'string') {
     throw new LegacyAdminError(400, 'templateId est requis.');
   }
-  const templates = await readTemplates(ctx);
-  const filtered = templates.filter((t) => t.id !== templateId);
+  let tenantId = ctx.tenantId;
+  let templates = await readTemplates(ctx);
+  let filtered = templates.filter((t) => t.id !== templateId);
+  if (filtered.length === templates.length && tenantId !== DEFAULT_TENANT_ID) {
+    // Modèle partagé (tenant par défaut) : lecture seule, sauf pôle-admin.
+    const shared = await readTemplates(ctx, DEFAULT_TENANT_ID);
+    if (shared.some((t) => t.id === templateId)) {
+      if (!caller.isPoleAdmin) {
+        throw new LegacyAdminError(403, 'Forbidden.', {
+          code: 'SHARED_TEMPLATE',
+        });
+      }
+      tenantId = DEFAULT_TENANT_ID;
+      templates = shared;
+      filtered = shared.filter((t) => t.id !== templateId);
+    }
+  }
   if (filtered.length === templates.length) {
     throw new LegacyAdminError(404, 'Template non trouve.');
   }
-  await repo.writeTemplatesBlob(ctx.db, JSON.stringify(filtered));
+  await repo.writeTemplatesBlob(ctx.db, tenantId, JSON.stringify(filtered));
   return {
     result: { deleted: true },
     audit: {

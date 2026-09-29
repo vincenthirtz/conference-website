@@ -1,6 +1,10 @@
 // features/admin/tenants/service/staffFlags.ts — bascule du drapeau
 // `staff.is_pole_admin` (accès à TOUS les espaces).
 //
+// Qui : la route exige l'owner GLOBAL. On ne se modifie pas soi-même, sauf à
+// être déjà pôle-admin (pour se retirer le drapeau) — un owner global qui ne
+// l'est pas ne s'auto-promeut pas.
+//
 // Garde-fou : on ne retire pas le drapeau au dernier owner actif pole_admin
 // (`LAST_POLE_OWNER`) — sinon plus personne n'administre la plateforme.
 
@@ -9,6 +13,7 @@ import { LegacyAdminError } from '@/utils/admin/errors';
 import { invalidateStaffCache } from '@/utils/staff';
 import type { Audited } from '../../_shared/audited';
 import * as repo from '../repository/staffFlags';
+import type { StaffScope } from './scope';
 
 type PoleAdminResult = {
   staff_id: string;
@@ -18,12 +23,19 @@ type PoleAdminResult = {
 
 export async function togglePoleAdmin(
   ctx: ServiceContext,
+  caller: StaffScope,
   staffId: string | undefined,
   desired: boolean
 ): Promise<Audited<PoleAdminResult>> {
   if (!staffId) {
     throw new LegacyAdminError(400, 'Invalid staff id.', {
       code: 'INVALID_STAFF_ID',
+    });
+  }
+  // Avant toute lecture : se modifier soi-même n'est permis qu'au pôle-admin.
+  if (staffId === caller.staffId && !caller.isPoleAdmin) {
+    throw new LegacyAdminError(403, 'Forbidden.', {
+      code: 'SELF_POLE_ADMIN',
     });
   }
 

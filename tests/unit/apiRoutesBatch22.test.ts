@@ -644,6 +644,15 @@ describe('/api/admin/tournament/[id]/matches', () => {
   });
 
   it('POST 201 inserts batch + logs', async () => {
+    // Tournoi, phase et équipes seedés : les références du corps sont
+    // désormais recoupées avec le tenant (et le tournoi) avant l'insertion.
+    const S1 = '5a5a5a5a-1111-4111-8111-111111111111';
+    const [T1, T2, T3, T4] = [1, 2, 3, 4].map(
+      (n) => `7e7e7e7e-000${n}-4000-8000-00000000000${n}`
+    );
+    store.tournaments = [{ id: TID, name: 'T' }] as any;
+    store.tournament_stages = [{ id: S1, tournament_id: TID }] as any;
+    store.teams = [T1, T2, T3, T4].map((id) => ({ id })) as any;
     store.matches = [];
     const res = makeRes();
     await tournamentMatchesHandler(
@@ -654,16 +663,16 @@ describe('/api/admin/tournament/[id]/matches', () => {
           body: {
             matches: [
               {
-                stage_id: 's1',
+                stage_id: S1,
                 round_number: 1,
-                team1_id: 't1',
-                team2_id: 't2',
+                team1_id: T1,
+                team2_id: T2,
               },
               {
-                stage_id: 's1',
+                stage_id: S1,
                 round_number: 1,
-                team1_id: 't3',
-                team2_id: 't4',
+                team1_id: T3,
+                team2_id: T4,
               },
             ],
           },

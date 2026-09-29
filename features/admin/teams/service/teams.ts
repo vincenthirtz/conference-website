@@ -11,7 +11,7 @@
 
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import type { TablesUpdate } from '@/types/database.generated';
-import { sanitizeSearch, sanitizeUrl } from '@/utils/apiHelpers';
+import { isValidUUID, sanitizeSearch, sanitizeUrl } from '@/utils/apiHelpers';
 import { emitBotEvent } from '@/utils/botEvents';
 import {
   SKILL_RATING_MAX,
@@ -248,6 +248,37 @@ export async function updateTeam(
   );
   if (fetchErr || !before) throw fail(404, 'Team not found');
 
+  // Capitanat : la cible doit être membre (non-coach) de CETTE équipe, comme
+  // l'exige `reassign_captain`. Sans ce recoupement, n'importe quel compte —
+  // d'un autre espace compris — devenait capitaine. NULL reste légitime, et
+  // la valeur déjà en place est laissée telle quelle (formulaire renvoyé).
+  const nextCaptain = updatePayload.captain_id;
+  if (
+    'captain_id' in updatePayload &&
+    nextCaptain != null &&
+    nextCaptain !== before.captain_id
+  ) {
+    if (typeof nextCaptain !== 'string' || !isValidUUID(nextCaptain)) {
+      throw fail(400, 'captain_id doit être un identifiant valide ou null');
+    }
+    const { eligible, error: capErr } = await teams.isEligibleCaptain(
+      ctx.db,
+      ctx.tenantId,
+      id,
+      nextCaptain
+    );
+    if (capErr) {
+      ctx.logger.error('admin PUT team captain lookup error:', capErr);
+      throw fail(500, 'Failed to update team');
+    }
+    if (!eligible) {
+      throw fail(
+        400,
+        "Ce joueur n'est pas un membre valide de cette équipe (ou est coach)."
+      );
+    }
+  }
+
   const { row: team, error } = await teams.updateTeamRow(
     ctx.db,
     ctx.tenantId,
@@ -384,9 +415,8 @@ type BulkAction = 'delete' | 'activate' | 'deactivate' | 'assign';
 /**
  * `delete` / `activate` / `deactivate` / `assign` sur ≤ 200 équipes.
  *
- * DÉFAUT PRÉEXISTANT, conservé : `assign` vérifie le tournoi dans l'espace
- * mais pas les `teamIds` — des équipes d'un autre espace peuvent être
- * inscrites (la ligne porte le tenant du staff).
+ * `assign` vérifie le tournoi ET chaque `teamIds` dans l'espace du staff,
+ * avant toute écriture : une seule équipe étrangère → 404, rien d'inscrit.
  */
 export async function bulkTeams(
   ctx: ServiceContext,
@@ -444,6 +474,14 @@ export async function bulkTeams(
         }
         if (!(await teams.tournamentExists(ctx.db, ctx.tenantId, tournamentId)))
           throw fail(404, 'Tournoi introuvable');
+        const owned = await teams.teamIdsInTenant(
+          ctx.db,
+          ctx.tenantId,
+          teamIds
+        );
+        if (owned.error) throw owned.error;
+        if (teamIds.some((tid) => !owned.ids.has(tid)))
+          throw fail(404, 'Equipe introuvable');
 
         const { rows, error } =
           await teams.upsertRegistrationsIgnoringDuplicates(

@@ -9,7 +9,25 @@ import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { LegacyAdminError } from '@/utils/admin/errors';
 import type { Audited } from '../_shared/audited';
 import * as repo from './repository';
-import { DELETED_TYPES, type DeletedType } from './schemas';
+import {
+  DELETED_TYPES,
+  PLATFORM_DELETED_TYPES,
+  type DeletedType,
+} from './schemas';
+
+/**
+ * Ce que l'appelant peut toucher : `platform` = pôle-admin ou owner GLOBAL
+ * (`isPlatformOwner`). Sans lui, les sources globales (`partners`,
+ * `adherents`, `staff`) sont hors périmètre : un owner d'espace restaurait
+ * un compte staff ou un adhérent de toute la plateforme.
+ */
+export type RecycleBinCaller = { platform: boolean };
+
+function assertTypeInScope(caller: RecycleBinCaller, type: DeletedType): void {
+  if (!caller.platform && PLATFORM_DELETED_TYPES.includes(type)) {
+    throw new LegacyAdminError(403, 'Forbidden.', { code: 'PLATFORM_SCOPE' });
+  }
+}
 
 function deletedAtTime(item: repo.DeletedItem): number {
   return item.deleted_at ? new Date(item.deleted_at).getTime() : 0;
@@ -17,6 +35,7 @@ function deletedAtTime(item: repo.DeletedItem): number {
 
 export async function listRecycleBin(
   ctx: ServiceContext,
+  caller: RecycleBinCaller,
   q: Record<string, unknown>,
   page: { limit: number; offset: number }
 ): Promise<{ items: repo.DeletedItem[]; total: number }> {
@@ -30,6 +49,7 @@ export async function listRecycleBin(
     if (!DELETED_TYPES.includes(typeFilter)) {
       throw new LegacyAdminError(400, `Unknown type: ${typeFilter}`);
     }
+    assertTypeInScope(caller, typeFilter);
     try {
       const { count, error } = await repo.countDeleted(
         ctx.db,
@@ -55,11 +75,14 @@ export async function listRecycleBin(
     }
   }
 
+  const types = DELETED_TYPES.filter(
+    (t) => caller.platform || !PLATFORM_DELETED_TYPES.includes(t)
+  );
   try {
     const bounded = offset + limit;
     const [counts, slices] = await Promise.all([
       Promise.all(
-        DELETED_TYPES.map((t) =>
+        types.map((t) =>
           Promise.resolve(repo.countDeleted(ctx.db, ctx.tenantId, t)).then(
             (r) => {
               if (r.error) throw r.error;
@@ -69,7 +92,7 @@ export async function listRecycleBin(
         )
       ),
       Promise.all(
-        DELETED_TYPES.map((t) =>
+        types.map((t) =>
           repo.fetchDeletedSlice(ctx.db, ctx.tenantId, t, bounded)
         )
       ),
@@ -88,6 +111,7 @@ export async function listRecycleBin(
 
 export async function restoreFromRecycleBin(
   ctx: ServiceContext,
+  caller: RecycleBinCaller,
   body: Record<string, unknown>
 ): Promise<Audited<{ restored: true; type: string; id: string }>> {
   const { id, type } = body as { id?: string; type?: string };
@@ -97,6 +121,8 @@ export async function restoreFromRecycleBin(
   if (!(DELETED_TYPES as readonly string[]).includes(type)) {
     throw new LegacyAdminError(400, `Unknown type: ${type}`);
   }
+  // Avant toute écriture.
+  assertTypeInScope(caller, type as DeletedType);
 
   const nowIso = new Date().toISOString();
   let error: unknown;
@@ -113,10 +139,8 @@ export async function restoreFromRecycleBin(
   }
   if (error) {
     ctx.logger.error('[/api/admin/recycle-bin] restore error:', error);
-    throw new LegacyAdminError(
-      500,
-      (error as Error)?.message || 'Failed to restore item'
-    );
+    // Jamais le message brut de la base (schéma, contraintes) dans la réponse.
+    throw new LegacyAdminError(500, 'Failed to restore item');
   }
 
   return {

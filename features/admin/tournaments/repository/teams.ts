@@ -36,12 +36,18 @@ export async function listEntries(
     .order('seed', { ascending: true, nullsFirst: false });
 }
 
-export async function getEntry(db: AdminDb, tenantId: string, entryId: string) {
+export async function getEntry(
+  db: AdminDb,
+  tenantId: string,
+  tournamentId: string,
+  entryId: string
+) {
   return db
     .from('tournament_teams')
     .select(TOURNAMENT_TEAM_ENTRY_COLUMNS)
     .eq('id', entryId)
     .eq('tenant_id', tenantId)
+    .eq('tournament_id', tournamentId)
     .maybeSingle();
 }
 
@@ -49,6 +55,7 @@ export async function getEntry(db: AdminDb, tenantId: string, entryId: string) {
 export async function getEntryBefore(
   db: AdminDb,
   tenantId: string,
+  tournamentId: string,
   entryId: string
 ) {
   return db
@@ -56,12 +63,14 @@ export async function getEntryBefore(
     .select('id, team_id, seed, status, team:teams(name)')
     .eq('id', entryId)
     .eq('tenant_id', tenantId)
+    .eq('tournament_id', tournamentId)
     .maybeSingle();
 }
 
 export async function updateEntry(
   db: AdminDb,
   tenantId: string,
+  tournamentId: string,
   entryId: string,
   patch: TablesUpdate<'tournament_teams'>
 ) {
@@ -70,6 +79,7 @@ export async function updateEntry(
     .update(patch)
     .eq('id', entryId)
     .eq('tenant_id', tenantId)
+    .eq('tournament_id', tournamentId)
     .select(TOURNAMENT_TEAM_ENTRY_COLUMNS)
     .single();
 }
@@ -77,13 +87,15 @@ export async function updateEntry(
 export async function deleteEntry(
   db: AdminDb,
   tenantId: string,
+  tournamentId: string,
   entryId: string
 ) {
   return db
     .from('tournament_teams')
     .delete()
     .eq('id', entryId)
-    .eq('tenant_id', tenantId);
+    .eq('tenant_id', tenantId)
+    .eq('tournament_id', tournamentId);
 }
 
 export async function findTeam(db: AdminDb, tenantId: string, teamId: string) {

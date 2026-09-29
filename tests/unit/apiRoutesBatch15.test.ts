@@ -283,6 +283,9 @@ describe('/api/teams/scrim-requests', () => {
  * ---------------------------------------------------------*/
 
 describe('/api/admin/tournament/[id]/teams', () => {
+  // UUID réels : `team_id` est désormais validé en UUID (400 sinon).
+  const TEAM_A = '1a1a1a1a-1111-4111-8111-111111111111';
+  const TEAM_B = '2b2b2b2b-2222-4222-8222-222222222222';
   beforeEach(() => {
     setAuthUser({ id: 'user-1' });
     store.staff = [makeStaffRow('admin')] as any;
@@ -302,11 +305,11 @@ describe('/api/admin/tournament/[id]/teams', () => {
       {
         id: 'tt1',
         tournament_id: TID,
-        team_id: 't1',
+        team_id: TEAM_A,
         seed: 1,
         status: 'registered',
         created_at: '2026',
-        team: { id: 't1', name: 'Alpha', logo_url: null },
+        team: { id: TEAM_A, name: 'Alpha', logo_url: null },
       },
     ] as any;
     const res = makeRes();
@@ -332,7 +335,7 @@ describe('/api/admin/tournament/[id]/teams', () => {
     const res = makeRes();
     await tournamentTeamsHandler(
       makeReq(
-        { method: 'POST', query: { id: TID }, body: { team_id: 't1' } },
+        { method: 'POST', query: { id: TID }, body: { team_id: TEAM_A } },
         true
       ),
       res
@@ -348,7 +351,7 @@ describe('/api/admin/tournament/[id]/teams', () => {
     const res = makeRes();
     await tournamentTeamsHandler(
       makeReq(
-        { method: 'POST', query: { id: TID }, body: { team_id: 't1' } },
+        { method: 'POST', query: { id: TID }, body: { team_id: TEAM_A } },
         true
       ),
       res
@@ -360,15 +363,15 @@ describe('/api/admin/tournament/[id]/teams', () => {
     store.tournaments = [
       { id: TID, name: 'Cup', max_teams: null, min_players: 5 },
     ] as any;
-    store.teams = [{ id: 't1', name: 'Alpha' }] as any;
+    store.teams = [{ id: TEAM_A, name: 'Alpha' }] as any;
     store.team_members = [
-      { id: 'm1', team_id: 't1' },
-      { id: 'm2', team_id: 't1' },
+      { id: 'm1', team_id: TEAM_A },
+      { id: 'm2', team_id: TEAM_A },
     ] as any;
     const res = makeRes();
     await tournamentTeamsHandler(
       makeReq(
-        { method: 'POST', query: { id: TID }, body: { team_id: 't1' } },
+        { method: 'POST', query: { id: TID }, body: { team_id: TEAM_A } },
         true
       ),
       res
@@ -380,14 +383,14 @@ describe('/api/admin/tournament/[id]/teams', () => {
     store.tournaments = [
       { id: TID, name: 'Cup', max_teams: null, min_players: null },
     ] as any;
-    store.teams = [{ id: 't1', name: 'Alpha' }] as any;
+    store.teams = [{ id: TEAM_A, name: 'Alpha' }] as any;
     store.tournament_teams = [
-      { id: 'tt1', tournament_id: TID, team_id: 't1' },
+      { id: 'tt1', tournament_id: TID, team_id: TEAM_A },
     ] as any;
     const res = makeRes();
     await tournamentTeamsHandler(
       makeReq(
-        { method: 'POST', query: { id: TID }, body: { team_id: 't1' } },
+        { method: 'POST', query: { id: TID }, body: { team_id: TEAM_A } },
         true
       ),
       res
@@ -400,16 +403,16 @@ describe('/api/admin/tournament/[id]/teams', () => {
       { id: TID, name: 'Cup', max_teams: 1, min_players: null },
     ] as any;
     store.teams = [
-      { id: 't1', name: 'Alpha' },
-      { id: 't2', name: 'Beta' },
+      { id: TEAM_A, name: 'Alpha' },
+      { id: TEAM_B, name: 'Beta' },
     ] as any;
     store.tournament_teams = [
-      { id: 'tt1', tournament_id: TID, team_id: 't2' },
+      { id: 'tt1', tournament_id: TID, team_id: TEAM_B },
     ] as any;
     const res = makeRes();
     await tournamentTeamsHandler(
       makeReq(
-        { method: 'POST', query: { id: TID }, body: { team_id: 't1' } },
+        { method: 'POST', query: { id: TID }, body: { team_id: TEAM_A } },
         true
       ),
       res
@@ -421,7 +424,7 @@ describe('/api/admin/tournament/[id]/teams', () => {
     store.tournaments = [
       { id: TID, name: 'Cup', max_teams: null, min_players: null },
     ] as any;
-    store.teams = [{ id: 't1', name: 'Alpha', logo_url: null }] as any;
+    store.teams = [{ id: TEAM_A, name: 'Alpha', logo_url: null }] as any;
     store.tournament_teams = [];
     store.news = [];
 
@@ -431,7 +434,7 @@ describe('/api/admin/tournament/[id]/teams', () => {
         {
           method: 'POST',
           query: { id: TID },
-          body: { team_id: 't1', seed: 4, status: 'registered' },
+          body: { team_id: TEAM_A, seed: 4, status: 'registered' },
         },
         true
       ),

@@ -83,6 +83,10 @@ const TID = '550e8400-e29b-41d4-a716-446655440000';
  * ---------------------------------------------------------*/
 
 describe('POST /api/admin/tournament/[id]/bracket', () => {
+  // Le tournoi de l'URL est recoupé avec le tenant avant toute écriture.
+  beforeEach(() => {
+    store.tournaments = [{ id: TID }] as any;
+  });
   it('400 on invalid id', async () => {
     const res = makeRes();
     await bracketHandler(
@@ -414,6 +418,9 @@ describe('PATCH /api/admin/recycle-bin', () => {
   });
 
   it('PATCH restores a soft-deleted partner', async () => {
+    // Sources GLOBALES : réservées au pôle-admin / owner global (lot A sécu).
+    store.staff = [makeStaffRow('owner')] as any;
+    invalidateStaffCache();
     store.partners = [
       { id: 'p-soft', name: 'Sponsor', deleted_at: '2026-04-01' },
     ] as any;
@@ -444,6 +451,9 @@ describe('PATCH /api/admin/recycle-bin', () => {
   });
 
   it('PATCH restores a soft-deleted adherent', async () => {
+    // Sources GLOBALES : réservées au pôle-admin / owner global (lot A sécu).
+    store.staff = [makeStaffRow('owner')] as any;
+    invalidateStaffCache();
     store.adherents = [
       { id: 'ad-soft', first_name: 'A', deleted_at: '2026-04-01' },
     ] as any;
@@ -486,6 +496,9 @@ describe('PATCH /api/admin/recycle-bin', () => {
   });
 
   it('GET lists soft-deleted partners, cast_members, adherents', async () => {
+    // Sources GLOBALES : réservées au pôle-admin / owner global (lot A sécu).
+    store.staff = [makeStaffRow('owner')] as any;
+    invalidateStaffCache();
     store.partners = [
       { id: 'p1', name: 'Sponsor', deleted_at: '2026-04-01' },
     ] as any;

@@ -7,8 +7,8 @@
 // score (applyMatchScore), purge des reports (scoreReports), outbox bot,
 // régie auto. Messages et codes : ceux de la route d'origine.
 //
-// ⚠️ DÉFAUT PRÉEXISTANT CONSERVÉ : lecture et écriture du match SANS filtre
-// tenant (cf. repository/matches.ts, « Litige »).
+// Lecture et écriture du match filtrées par tenant (id d'un autre espace →
+// 404 « Match not found », rien d'écrit).
 
 import { LegacyAdminError } from '@/utils/admin/errors';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
@@ -89,12 +89,12 @@ export async function openDispute(
       throw new LegacyAdminError(400, 'reason is too long (max 2000 chars)');
     }
 
-    const { row: match, error: fetchErr } =
-      await repo.getMatchForDisputeUnscoped(
-        ctx.db,
-        matchId,
-        'id, tournament_id, status, dispute_reason, dispute_opened_at'
-      );
+    const { row: match, error: fetchErr } = await repo.getMatchForDispute(
+      ctx.db,
+      ctx.tenantId,
+      matchId,
+      'id, tournament_id, status, dispute_reason, dispute_opened_at'
+    );
     if (fetchErr || !match) {
       throw new LegacyAdminError(404, 'Match not found');
     }
@@ -127,7 +127,7 @@ export async function openDispute(
     const staffId = staffIdOf(ctx);
 
     const { row: updated, error: updErr } =
-      await repo.updateMatchReturningUnscoped(ctx.db, matchId, {
+      await repo.updateMatchReturningInTenant(ctx.db, ctx.tenantId, matchId, {
         status: 'disputed',
         dispute_reason: reason.trim(),
         dispute_opened_by: staffId,
@@ -208,12 +208,12 @@ export async function resolveDispute(
       );
     }
 
-    const { row: match, error: fetchErr } =
-      await repo.getMatchForDisputeUnscoped(
-        ctx.db,
-        matchId,
-        'id, tournament_id, status, team1_id, team2_id, team1_score, team2_score'
-      );
+    const { row: match, error: fetchErr } = await repo.getMatchForDispute(
+      ctx.db,
+      ctx.tenantId,
+      matchId,
+      'id, tournament_id, status, team1_id, team2_id, team1_score, team2_score'
+    );
     if (fetchErr || !match) {
       throw new LegacyAdminError(404, 'Match not found');
     }
@@ -249,8 +249,9 @@ export async function resolveDispute(
     ) {
       // applyMatchScore refuse un match disputed : on repasse 'pending' le
       // temps de l'appel, résolution enregistrée au passage.
-      const { error: clearErr } = await repo.updateMatchUnscoped(
+      const { error: clearErr } = await repo.updateMatchInTenant(
         ctx.db,
+        ctx.tenantId,
         matchId,
         {
           status: 'pending',
@@ -294,7 +295,7 @@ export async function resolveDispute(
         });
       } catch (e: unknown) {
         // Retour en 'disputed' : la dispute en cours n'est pas perdue.
-        await repo.updateMatchUnscoped(ctx.db, matchId, {
+        await repo.updateMatchInTenant(ctx.db, ctx.tenantId, matchId, {
           status: 'disputed',
           dispute_resolution: null,
           dispute_resolved_by: null,
@@ -346,7 +347,7 @@ export async function resolveDispute(
     }
 
     const { row: updated, error: updErr } =
-      await repo.updateMatchReturningUnscoped(ctx.db, matchId, {
+      await repo.updateMatchReturningInTenant(ctx.db, ctx.tenantId, matchId, {
         status: resumeStatus,
         dispute_resolution: trimmedResolution,
         dispute_resolved_by: resolverId,
@@ -402,12 +403,12 @@ export async function cancelDispute(
       resumeStatus = rawResumeStatus as MatchStatus;
     }
 
-    const { row: match, error: fetchErr } =
-      await repo.getMatchForDisputeUnscoped(
-        ctx.db,
-        matchId,
-        'id, tournament_id, status, dispute_reason'
-      );
+    const { row: match, error: fetchErr } = await repo.getMatchForDispute(
+      ctx.db,
+      ctx.tenantId,
+      matchId,
+      'id, tournament_id, status, dispute_reason'
+    );
     if (fetchErr || !match) {
       throw new LegacyAdminError(404, 'Match not found');
     }
@@ -427,7 +428,7 @@ export async function cancelDispute(
     }
 
     const { row: updated, error: updErr } =
-      await repo.updateMatchReturningUnscoped(ctx.db, matchId, {
+      await repo.updateMatchReturningInTenant(ctx.db, ctx.tenantId, matchId, {
         status: resumeStatus,
         dispute_reason: null,
         dispute_opened_by: null,

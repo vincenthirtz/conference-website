@@ -28,6 +28,7 @@ import { EVENTSUB_SECRET_ENV } from '@/utils/twitch/eventsubRequest';
 import { ALERT_SUBSCRIPTIONS } from '@/utils/twitch/alertEventMapping';
 import type { Audited } from '../../_shared/audited';
 import {
+  findPublishedAssociationCard,
   findTcgRewardIds,
   listFeaturedCandidates,
   saveTcgReward,
@@ -583,6 +584,19 @@ export async function subscribeTcgDrop(ctx: ServiceContext, rawBody: unknown) {
     });
   }
   const { rewardId, featuredFanartId } = parsed.data;
+  // Mêmes vérifications que `tcg-drop/setup` : la carte garantie existe, est
+  // PUBLIÉE et appartient à l'espace — sinon un id d'un autre espace (ou un
+  // brouillon) était distribué par le drop.
+  if (featuredFanartId) {
+    const card = await findPublishedAssociationCard(
+      ctx.db,
+      ctx.tenantId,
+      featuredFanartId
+    );
+    if (!card?.title) {
+      throw fail(404, 'Carte introuvable ou non publiée.', 'card_not_found');
+    }
+  }
   if (!secret) {
     throw fail(
       503,

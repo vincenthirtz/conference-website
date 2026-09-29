@@ -20,7 +20,6 @@ import {
   PlatformImportError,
   type PlatformSource,
 } from '@/utils/tournamentImport/types';
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import * as imports from '../repository/imports';
 import { fail } from './common';
 
@@ -214,9 +213,11 @@ export async function importTeamsFromPlatform(
   }
 
   const settingKey = SETTING_KEYS[source];
+  // Clé de l'espace du staff — jamais celle du tenant par défaut, qui faisait
+  // importer chaque espace avec le compte (et le quota) de l'association.
   const setting = await imports.getSiteSetting(
     ctx.db,
-    DEFAULT_TENANT_ID,
+    ctx.tenantId,
     settingKey
   );
   const rawValue = setting?.value as unknown;

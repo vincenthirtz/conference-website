@@ -1,7 +1,6 @@
 // features/admin/matches/repository/matches.ts — accès base de la fiche d'un
 // match côté staff (lecture, méta, annulation / suppression, litige).
-// `tenantId` est un paramètre OBLIGATOIRE des fonctions scopées ; les
-// exceptions (litige) sont nommées `…Unscoped` et commentées.
+// `tenantId` est un paramètre OBLIGATOIRE de toutes les fonctions.
 
 import type { AdminDb } from '@/utils/admin/serviceContext';
 import type { TablesUpdate } from '@/types/database.generated';
@@ -74,25 +73,32 @@ export async function getMatchTournamentAndStatus(
   return data;
 }
 
-/**
- * Statut d'un tournoi par son id. Pas de filtre tenant : l'id vient d'un match
- * déjà lu dans le tenant du staff (comportement d'origine).
- */
-export async function getTournamentStatus(db: AdminDb, tournamentId: string) {
+/** Statut d'un tournoi du tenant (garde « tournoi terminé »). */
+export async function getTournamentStatus(
+  db: AdminDb,
+  tenantId: string,
+  tournamentId: string
+) {
   const { data } = await db
     .from('tournaments')
     .select('status')
     .eq('id', tournamentId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
   return data;
 }
 
-/** Bornes du tournoi (avertissement de planification). Même remarque. */
-export async function getTournamentDates(db: AdminDb, tournamentId: string) {
+/** Bornes du tournoi du tenant (avertissement de planification). */
+export async function getTournamentDates(
+  db: AdminDb,
+  tenantId: string,
+  tournamentId: string
+) {
   const { data } = await db
     .from('tournaments')
     .select('start_date, end_date')
     .eq('id', tournamentId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
   return data;
 }
@@ -101,7 +107,7 @@ export async function getTournamentDates(db: AdminDb, tournamentId: string) {
 export async function refExistsInTenant(
   db: AdminDb,
   tenantId: string,
-  table: 'tournaments' | 'teams',
+  table: 'tournaments' | 'teams' | 'tournament_stages' | 'matches',
   id: string
 ) {
   const { data } = await db
@@ -192,14 +198,14 @@ export async function cancelMatch(
 
 /* ---- Litige ----
  *
- * ⚠️ DÉFAUT PRÉEXISTANT, CONSERVÉ À LA MIGRATION (signalé, non corrigé) : la
- * route d'origine lit ET écrit le match par son seul id, sans filtre tenant —
- * un staff `arbitrate_matches` d'un espace peut ouvrir / résoudre / annuler
- * le litige d'un match d'un autre espace s'il en connaît l'id.
+ * Lectures ET écritures filtrées par tenant : un staff `arbitrate_matches`
+ * d'un espace ne peut ni ouvrir, ni résoudre, ni annuler le litige d'un match
+ * d'un autre espace (id inconnu → 404 « Match not found »).
  */
 
-export async function getMatchForDisputeUnscoped(
+export async function getMatchForDispute(
   db: AdminDb,
+  tenantId: string,
   matchId: string,
   columns:
     | 'id, tournament_id, status, dispute_reason, dispute_opened_at'
@@ -210,6 +216,7 @@ export async function getMatchForDisputeUnscoped(
     .from('matches')
     .select(columns)
     .eq('id', matchId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
   return {
     row: data as {
@@ -222,17 +229,23 @@ export async function getMatchForDisputeUnscoped(
   };
 }
 
-export async function updateMatchUnscoped(
+export async function updateMatchInTenant(
   db: AdminDb,
+  tenantId: string,
   matchId: string,
   patch: TablesUpdate<'matches'>
 ) {
-  const { error } = await db.from('matches').update(patch).eq('id', matchId);
+  const { error } = await db
+    .from('matches')
+    .update(patch)
+    .eq('id', matchId)
+    .eq('tenant_id', tenantId);
   return { error };
 }
 
-export async function updateMatchReturningUnscoped(
+export async function updateMatchReturningInTenant(
   db: AdminDb,
+  tenantId: string,
   matchId: string,
   patch: TablesUpdate<'matches'>
 ) {
@@ -240,6 +253,7 @@ export async function updateMatchReturningUnscoped(
     .from('matches')
     .update(patch)
     .eq('id', matchId)
+    .eq('tenant_id', tenantId)
     .select(MATCH_ROW_COLUMNS)
     .maybeSingle();
   return { row: data, error };

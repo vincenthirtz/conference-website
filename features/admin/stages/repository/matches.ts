@@ -1,9 +1,7 @@
 // features/admin/stages/repository/matches.ts — accès aux matchs d'une phase
 // (lecture, génération, seeding, opérations en masse).
 //
-// Mêmes requêtes que les routes d'origine. Les fonctions `Unscoped`
-// reproduisent des accès historiques SANS filtre d'espace (auto-byes,
-// batch-scores) : défaut préexistant signalé, conservé tel quel.
+// Mêmes requêtes que les routes d'origine, toutes filtrées par espace.
 
 import type { AdminDb } from '@/utils/admin/serviceContext';
 import type { TablesInsert, TablesUpdate } from '@/types/database.generated';
@@ -28,15 +26,17 @@ export async function activeStageMatches(
   return { rows: data, error };
 }
 
-/** Idem, SANS filtre d'espace, éventuellement limité à un round (auto-byes). */
-export async function activeStageMatchesUnscoped(
+/** Idem, éventuellement limité à un round (auto-byes). */
+export async function activeStageMatchesInRound(
   db: AdminDb,
+  tenantId: string,
   stageId: string,
   round: number | undefined
 ) {
   let query = db
     .from('matches')
     .select(STAGE_MATCH_COLUMNS)
+    .eq('tenant_id', tenantId)
     .eq('stage_id', stageId)
     .neq('status', 'cancelled');
   if (round !== undefined) query = query.eq('round_number', round);
@@ -73,11 +73,16 @@ export async function matchesByIds(
   return { rows: data, error };
 }
 
-/** Phase de chaque match, SANS filtre d'espace (batch-scores d'origine). */
-export async function matchStagesUnscoped(db: AdminDb, ids: string[]) {
+/** Phase de chaque match de l'espace (batch-scores). */
+export async function matchStages(
+  db: AdminDb,
+  tenantId: string,
+  ids: string[]
+) {
   const { data, error } = await db
     .from('matches')
     .select('id, stage_id')
+    .eq('tenant_id', tenantId)
     .in('id', ids);
   return { rows: data, error };
 }
@@ -213,13 +218,18 @@ export async function clearTeamSlots(
   ]);
 }
 
-/** BYE figé, SANS filtre d'espace (auto-byes d'origine). */
-export async function finishAsByeUnscoped(
+/** BYE figé (auto-byes). */
+export async function finishAsBye(
   db: AdminDb,
+  tenantId: string,
   matchId: string,
   patch: TablesUpdate<'matches'>
 ) {
-  const { error } = await db.from('matches').update(patch).eq('id', matchId);
+  const { error } = await db
+    .from('matches')
+    .update(patch)
+    .eq('id', matchId)
+    .eq('tenant_id', tenantId);
   return { error };
 }
 
@@ -238,6 +248,22 @@ export async function scheduleSnapshots(
     .eq('stage_id', stageId)
     .in('id', ids);
   return data ?? [];
+}
+
+/** Matchs de la phase parmi `ids` (undo : recoupement avant écriture). */
+export async function stageMatchesByIds(
+  db: AdminDb,
+  tenantId: string,
+  stageId: string,
+  ids: string[]
+) {
+  const { data, error } = await db
+    .from('matches')
+    .select('id, team1_id, team2_id')
+    .eq('tenant_id', tenantId)
+    .eq('stage_id', stageId)
+    .in('id', ids);
+  return { rows: data, error };
 }
 
 /** Écrit un patch sur UN match de la phase. */

@@ -248,6 +248,8 @@ describe('GET /api/admin/tournament/[id]/conflicts', () => {
 describe('/api/admin/tournament/[id]/discord-webhooks', () => {
   beforeEach(() => {
     store.staff = [makeStaffRow('admin')] as any;
+    // Le PUT recoupe le tournoi de l'URL avec le tenant avant d'écrire.
+    store.tournaments = [{ id: TID }] as any;
   });
 
   it('400 on invalid id', async () => {

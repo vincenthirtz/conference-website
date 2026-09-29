@@ -1,6 +1,6 @@
 // features/admin/tournaments/routes/teamEntry.ts — …/[id]/teams/[teamId]
-// `teamId` est l'id de l'INSCRIPTION (tournament_teams). GET, PATCH
-// (seed / statut), DELETE (retrait du tournoi).
+// `teamId` est l'id de l'INSCRIPTION (tournament_teams), qui doit appartenir
+// au tournoi `[id]` (sinon 404). GET, PATCH (seed / statut), DELETE.
 
 import { defineAdminRoute, mutate, read } from '@/utils/admin/defineAdminRoute';
 import { audited } from '../../_shared/audited';
@@ -12,7 +12,7 @@ export default defineAdminRoute({
   guard: { permission: 'manage_tournaments' },
   GET: read({
     query: TournamentTeamEntryQuery,
-    handler: ({ query, ctx }) => getEntry(ctx, query.teamId),
+    handler: ({ query, ctx }) => getEntry(ctx, query.id, query.teamId),
   }),
   PATCH: mutate({
     query: TournamentTeamEntryQuery,

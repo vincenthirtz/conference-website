@@ -81,7 +81,12 @@ export async function actOnLineup(
   // Rouvrir : réservé au staff — une composition qu'une équipe pourrait
   // réécrire après coup ne prouverait rien.
   if (reopen === true) {
-    const { error } = await repo.reopenLineup(ctx.db, matchId, teamId);
+    const { error } = await repo.reopenLineup(
+      ctx.db,
+      ctx.tenantId,
+      matchId,
+      teamId
+    );
     if (error) {
       ctx.logger.error('[admin/lineup] reopen error', error);
       throw new LegacyAdminError(500, 'Échec de la réouverture.');

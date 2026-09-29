@@ -3,9 +3,7 @@
 //
 // Les requêtes sont celles des routes d'origine, à l'identique (colonnes,
 // filtres, ordre) : la migration déplace, elle ne réécrit pas. `tenantId` est
-// un paramètre obligatoire — SAUF pour les fonctions suffixées `Unscoped`, qui
-// reproduisent des lectures historiques sans filtre d'espace (défaut
-// préexistant signalé, cf. service/matchOps.ts).
+// un paramètre obligatoire de toutes les fonctions.
 
 import type { AdminDb } from '@/utils/admin/serviceContext';
 import type { TablesInsert, TablesUpdate } from '@/types/database.generated';
@@ -36,12 +34,17 @@ export async function getStageCore(db: AdminDb, tenantId: string, id: string) {
   return { row: data, error };
 }
 
-/** Lecture SANS filtre d'espace (auto-byes, batch-scores d'origine). */
-export async function getStageTournamentUnscoped(db: AdminDb, id: string) {
+/** Phase → tournoi, dans l'espace (auto-byes, batch-scores). */
+export async function getStageTournament(
+  db: AdminDb,
+  tenantId: string,
+  id: string
+) {
   const { data, error } = await db
     .from('tournament_stages')
     .select('id, tournament_id')
     .eq('id', id)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
   return { row: data, error };
 }
