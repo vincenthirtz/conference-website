@@ -30,4 +30,12 @@ export default {
   logout: 'Log out',
   alertsActive_one: '{count} active alert',
   alertsActive_other: '{count} active alerts',
+  shellNavAria: 'Admin navigation',
+  search: 'Search…',
+  searchAria: 'Search (⌘K)',
+  openMenu: 'Open menu',
+  closeMenu: 'Close menu',
+  orgKicker: 'Administration',
+  siteLink: 'View site',
+  alertsLink: 'Open the current tournament',
 };

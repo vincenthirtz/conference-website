@@ -83,7 +83,7 @@ function startPolling(): () => void {
     if (cancelled) return;
     load();
     // Onglet en arrière-plan = on saute le tick (même garde que PlayerBell /
-    // AdminTopBar) : personne ne regarde la pastille ni le logo.
+    // AdminShell) : personne ne regarde la pastille ni le logo.
     intervalId = setInterval(() => {
       if (
         typeof document !== 'undefined' &&

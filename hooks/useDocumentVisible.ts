@@ -3,7 +3,7 @@
 // Visibilité de l'onglet, comme état React.
 //
 // Le motif « ne rien faire quand l'onglet est en arrière-plan » était recopié à
-// la main dans plusieurs pollers (PlayerBell, AdminTopBar, PlayerTopBar,
+// la main dans plusieurs pollers (PlayerBell, AdminShell, PlayerTopBar,
 // useTwitchLive…) sous la forme d'un test `document.visibilityState` au moment
 // du tick. Ça suffit pour SAUTER un tick, mais pas pour COUPER un abonnement
 // temps réel — il faut pour ça une valeur réactive qui déclenche un rendu.

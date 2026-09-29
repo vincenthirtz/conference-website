@@ -19,7 +19,14 @@ import nsNavbar from '@/lib/i18n/locales/fr/navbar';
 
 const DEFAULT_LOGO_SRC = '/img/logos/2026-logo.png';
 
-const AdminTopBar = dynamic(() => import('./AdminTopBar'), { ssr: false });
+// Coquille admin « Le Ruban » (barre latérale + bandeau), qui a remplacé
+// l'ancienne barre à menus déroulants le 2026-09-29.
+const AdminShell = dynamic(
+  () => import('@/features/admin/_shared/shell/AdminShell'),
+  {
+    ssr: false,
+  }
+);
 // Palette ⌘K (lot A4) : montée avec la barre admin, donc jamais chargée côté
 // public. `ssr:false` — elle n'existe qu'à partir d'un raccourci clavier.
 const CommandPalette = dynamic(
@@ -30,7 +37,8 @@ const PlayerTopBar = dynamic(() => import('./PlayerTopBar'), { ssr: false });
 const NavDrop = dynamic(() => import('./navDrop'), { ssr: false });
 
 const NAV_HEIGHT = 75;
-const ADMIN_BAR_HEIGHT = 44;
+// Bandeau de la coquille admin (planches Le Ruban : 60 px).
+const ADMIN_BAR_HEIGHT = 60;
 const PLAYER_BAR_HEIGHT = 44;
 
 function Navbar(): JSX.Element {
@@ -108,7 +116,7 @@ function Navbar(): JSX.Element {
   //
   // Pour la barre admin, `visibleAdminLinks.length > 0` n'est PAS une
   // précaution décorative :
-  // `AdminTopBar` se supprime elle-même quand elle n'a rien à montrer
+  // `AdminShell` se supprime elle-même quand elle n'a rien à montrer
   // (`categories.length === 0 && singleLinks.length === 0` → `return null`).
   // Avec `isStaff` seul, un compte staff dont aucun lien ne passe le filtre —
   // rôle hors barème, cache amorcé avec un rôle non-staff — obtenait
@@ -164,7 +172,7 @@ function Navbar(): JSX.Element {
 
   // Masquer la nav publique est conditionné EXACTEMENT à ce qui la remplace.
   // Avec `isStaff` seul, la fenêtre `isStaff && loading` (ou un chunk
-  // AdminTopBar — `dynamic(ssr:false)` — qui n'arrive pas) laissait la page
+  // AdminShell — `dynamic(ssr:false)` — qui n'arrive pas) laissait la page
   // sans AUCUN en-tête : ni nav publique, ni top-bar.
   // `pendingBar` : session en cours de résolution dans /admin ou /player. On
   // réserve la barre de l'espace plutôt que d'afficher le menu public, qui
@@ -215,7 +223,7 @@ function Navbar(): JSX.Element {
 
       {showAdminBar && (
         <>
-          <AdminTopBar
+          <AdminShell
             staffName={staffName}
             staffRole={staffRole}
             links={visibleAdminLinks}

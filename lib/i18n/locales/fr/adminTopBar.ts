@@ -29,4 +29,12 @@ export default ns('adminTopBar', {
   logout: 'Déconnexion',
   alertsActive_one: '{count} alerte active',
   alertsActive_other: '{count} alertes actives',
+  shellNavAria: 'Navigation de l’administration',
+  search: 'Rechercher…',
+  searchAria: 'Rechercher (⌘K)',
+  openMenu: 'Ouvrir le menu',
+  closeMenu: 'Fermer le menu',
+  orgKicker: 'Administration',
+  siteLink: 'Voir le site',
+  alertsLink: 'Ouvrir le tournoi en cours',
 });

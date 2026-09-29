@@ -3,7 +3,7 @@
 // UNE PAGE N'EST JAMAIS SANS EN-TÊTE.
 //
 // `components/Navbar/navbar.tsx` masque la nav publique quand une barre la
-// remplace (`hideMarketingNav`). Mais `AdminTopBar` SE SUPPRIME ELLE-MÊME
+// remplace (`hideMarketingNav`). Mais `AdminShell` (la coquille admin) SE SUPPRIME ELLE-MÊME
 // lorsqu'elle n'a aucun lien à montrer (`return null`). Conditionner le masquage
 // au seul `isStaff` a donc un mode d'échec silencieux : un compte staff dont
 // aucun lien ne passe le filtre voit la nav publique disparaître au profit
@@ -46,7 +46,7 @@ describe('la nav publique ne se masque que si une barre la remplace', () => {
     expect(
       empty,
       `Ces rôles de staff n'ont plus aucune entrée de menu : ${empty.join(', ')}.\n` +
-        'AdminTopBar se supprimerait, et la nav publique resterait masquée : page sans en-tête.'
+        'AdminShell se supprimerait, et la nav publique resterait masquée : page sans en-tête.'
     ).toEqual([]);
   });
 

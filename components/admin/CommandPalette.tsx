@@ -24,6 +24,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useStaffSession } from '@/hooks/useStaffSession';
 import { canAccess } from '@/utils/admin/adminAccess';
 import { PALETTE_ACTIONS } from './commandPaletteActions';
+import { OPEN_COMMAND_PALETTE_EVENT } from './commandPaletteEvents';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminCommandPalette from '@/lib/i18n/locales/admin-fr/adminCommandPalette';
 import type { AdminSearchPayload, SearchHit } from '@/pages/api/admin/search';
@@ -120,8 +121,18 @@ export default function CommandPalette() {
       setRecent(readRecent());
       setOpen(true);
     };
+    // Même ouverture depuis un bouton (champ « Rechercher… » de la coquille).
+    const onOpen = () => {
+      restoreRef.current = document.activeElement as HTMLElement | null;
+      setRecent(readRecent());
+      setOpen(true);
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, onOpen);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, onOpen);
+    };
   }, []);
 
   useEffect(() => {
