@@ -39,4 +39,5 @@ export default {
   errorDescriptionRequired: 'Description is required.',
   errorCategoryRequired: 'Category is required.',
   errorGeneric: 'An error occurred.',
+  identitySection: 'Identity',
 };

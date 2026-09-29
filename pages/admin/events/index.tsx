@@ -27,11 +27,12 @@ import { useToast } from '@/components/Toast';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import {
-  runStatusBadgeClasses,
-  runStatusDotClasses,
-  runStatusLabel,
-} from '@/utils/eventSegmentLabels';
+import { runStatusLabel } from '@/utils/eventSegmentLabels';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 import type { StaffProps } from '@/types/admin';
 import type { EventRun, EventRunStatus } from '@/types/events';
 import nsAdminEventsList from '@/lib/i18n/locales/admin-fr/adminEventsList';
@@ -39,6 +40,16 @@ import nsAdminEventsList from '@/lib/i18n/locales/admin-fr/adminEventsList';
 export const getServerSideProps = withStaffPage({
   permission: 'manage_broadcast',
 });
+
+// Pastille d'état « Le Ruban » : seul le run EN DIRECT porte la lueur.
+const RUN_STATUS_TONE: Record<EventRunStatus, ChipTone> = {
+  draft: 'neutral',
+  live: 'live',
+  done: 'ok',
+};
+
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]';
 
 type ListResponse = {
   items: EventRun[];
@@ -142,199 +153,182 @@ function AdminEventsIndexPage(_props: StaffProps) {
       <Head>
         <title>{t.pageTitle}</title>
       </Head>
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          <Breadcrumb
-            items={[
-              { label: t.breadcrumbAdmin, href: '/admin' },
-              { label: t.breadcrumbRunOfShow },
-            ]}
-          />
-          <DiffusionTabsNav active="runofshow" />
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <Breadcrumb
+          items={[
+            { label: t.breadcrumbAdmin, href: '/admin' },
+            { label: t.breadcrumbRunOfShow },
+          ]}
+        />
+        <DiffusionTabsNav active="runofshow" />
 
-          <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                {t.heading}
-              </h1>
-              <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
-            </div>
-            <button
-              type="button"
+        <AdminPageHeader
+          title={t.heading}
+          subtitle={t.subtitle}
+          actions={
+            <AdminButton
+              variant="primary"
               onClick={() => setCreateOpen(true)}
               data-testid="events-new"
-              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors"
             >
               {t.newEvent}
+            </AdminButton>
+          }
+        />
+
+        {/* Tabs status */}
+        <div className="mb-6 flex flex-wrap gap-2">
+          {(
+            [
+              { v: 'all', label: t.tabAll, count: items.length },
+              { v: 'draft', label: t.tabDraft, count: counts.draft },
+              { v: 'live', label: t.tabLive, count: counts.live },
+              { v: 'done', label: t.tabDone, count: counts.done },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.v}
+              type="button"
+              onClick={() => setStatusFilter(tab.v)}
+              aria-pressed={statusFilter === tab.v}
+              className={`inline-flex h-[38px] items-center rounded-[var(--r-ctrl,4px)] border px-[13px] font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.12em] transition-colors [font-stretch:75%] ${
+                statusFilter === tab.v
+                  ? 'border-[var(--or,#b467d1)] text-[var(--or-200,#eec4ff)]'
+                  : 'border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]'
+              }`}
+            >
+              {tab.label}
+              {tab.v !== 'all' && (
+                <span className="ml-2 text-[var(--t4,#807984)]" data-numeric>
+                  {tab.count}
+                </span>
+              )}
             </button>
-          </div>
-
-          {/* Tabs status */}
-          <div className="mb-6 flex flex-wrap gap-2">
-            {(
-              [
-                { v: 'all', label: t.tabAll, count: items.length },
-                { v: 'draft', label: t.tabDraft, count: counts.draft },
-                { v: 'live', label: t.tabLive, count: counts.live },
-                { v: 'done', label: t.tabDone, count: counts.done },
-              ] as const
-            ).map((tab) => (
-              <button
-                key={tab.v}
-                type="button"
-                onClick={() => setStatusFilter(tab.v)}
-                aria-pressed={statusFilter === tab.v}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                  statusFilter === tab.v
-                    ? 'bg-purple-600/30 border-purple-500/60 text-white'
-                    : 'bg-neutral-800/50 border-neutral-700/60 text-neutral-300 hover:bg-neutral-800'
-                }`}
-              >
-                {tab.label}
-                {tab.v !== 'all' && (
-                  <span className="ml-2 text-xs text-neutral-400">
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          <AlertBanner
-            message={errorMsg}
-            variant="error"
-            onDismiss={() => setErrorDismissed(true)}
-            className="mb-4"
-          />
-
-          {loading ? (
-            <div className="py-16">
-              <LoadingSpinner label={t.loading} />
-            </div>
-          ) : items.length > 0 && visible.length === 0 ? (
-            // Des runs existent, aucun sous CE filtre : pas d'invitation à
-            // « créer le premier run ».
-            <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30">
-              <EmptyState
-                title={t.emptyFilteredTitle}
-                description={t.emptyFilteredDescription}
-              />
-            </div>
-          ) : items.length === 0 ? (
-            <div className="rounded-2xl border border-neutral-700/50 bg-neutral-800/30">
-              <EmptyState
-                title={t.emptyTitle}
-                description={t.emptyDescription}
-                action={
-                  <button
-                    type="button"
-                    onClick={() => setCreateOpen(true)}
-                    className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-medium"
-                  >
-                    {t.emptyAction}
-                  </button>
-                }
-              />
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-2xl border border-neutral-700/50 bg-neutral-800/30">
-              <table className="w-full text-sm">
-                <thead className="text-left text-neutral-400 border-b border-neutral-700/50">
-                  <tr>
-                    <th scope="col" className="px-4 py-3 font-medium">
-                      {t.colName}
-                    </th>
-                    <th scope="col" className="px-4 py-3 font-medium">
-                      {t.colSlug}
-                    </th>
-                    <th scope="col" className="px-4 py-3 font-medium">
-                      {t.colScheduled}
-                    </th>
-                    <th scope="col" className="px-4 py-3 font-medium">
-                      {t.colStatus}
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-4 py-3 font-medium text-right"
-                    >
-                      {t.colActions}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visible.map((r) => (
-                    <tr
-                      key={r.id}
-                      data-testid={`event-row-${r.id}`}
-                      data-event-status={r.status}
-                      data-event-slug={r.slug}
-                      className="border-b border-neutral-700/30 last:border-0 hover:bg-neutral-800/40"
-                    >
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/admin/events/${r.id}/director`}
-                          className="font-medium text-white hover:text-purple-300"
-                        >
-                          {r.name}
-                        </Link>
-                        {r.description && (
-                          <div className="text-xs text-neutral-400 truncate max-w-[300px]">
-                            {r.description}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-neutral-400">
-                        <code className="text-xs">{r.slug}</code>
-                      </td>
-                      <td className="px-4 py-3 text-neutral-300">
-                        {formatDate(r.scheduled_at)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${runStatusBadgeClasses(
-                            r.status
-                          )}`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${runStatusDotClasses(
-                              r.status
-                            )}`}
-                          />
-                          {runStatusLabel(r.status)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link
-                            href={`/admin/events/${r.id}/director`}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/40"
-                          >
-                            {t.openDirector}
-                          </Link>
-                          {/* Pas de suppression d'un run EN DIRECT : l'antenne le
-                              suit (l'API refuse aussi, 409). */}
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(r)}
-                            disabled={r.status === 'live'}
-                            title={
-                              r.status === 'live'
-                                ? t.deleteLiveBlocked
-                                : undefined
-                            }
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-700/50 hover:bg-red-700/40 text-neutral-300 hover:text-red-200 border border-neutral-600/40 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-neutral-700/50 disabled:hover:text-neutral-300"
-                          >
-                            {t.delete}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          ))}
         </div>
+
+        <AlertBanner
+          message={errorMsg}
+          variant="error"
+          onDismiss={() => setErrorDismissed(true)}
+          className="mb-4"
+        />
+
+        {loading ? (
+          <div className="py-16">
+            <LoadingSpinner label={t.loading} />
+          </div>
+        ) : items.length > 0 && visible.length === 0 ? (
+          // Des runs existent, aucun sous CE filtre : pas d'invitation à
+          // « créer le premier run ».
+          <div className={CARD}>
+            <EmptyState
+              title={t.emptyFilteredTitle}
+              description={t.emptyFilteredDescription}
+            />
+          </div>
+        ) : items.length === 0 ? (
+          <div className={CARD}>
+            <EmptyState
+              title={t.emptyTitle}
+              description={t.emptyDescription}
+              action={
+                <AdminButton size="sm" onClick={() => setCreateOpen(true)}>
+                  {t.emptyAction}
+                </AdminButton>
+              }
+            />
+          </div>
+        ) : (
+          <div className={`overflow-x-auto ${CARD}`}>
+            <table className="w-full text-sm">
+              <thead className="border-b border-[var(--line,rgba(194,196,201,.12))] text-left text-xs uppercase tracking-wide text-[var(--t3,#a39ba6)]">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t.colName}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t.colSlug}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t.colScheduled}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t.colStatus}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium text-right">
+                    {t.colActions}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((r) => (
+                  <tr
+                    key={r.id}
+                    data-testid={`event-row-${r.id}`}
+                    data-event-status={r.status}
+                    data-event-slug={r.slug}
+                    className="border-b border-[var(--line,rgba(194,196,201,.12))] last:border-0 hover:bg-white/[0.03]"
+                  >
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/admin/events/${r.id}/director`}
+                        className="font-medium text-[var(--t1,#f4edf7)] hover:text-[var(--or-200,#eec4ff)]"
+                      >
+                        {r.name}
+                      </Link>
+                      {r.description && (
+                        <div className="max-w-[300px] truncate text-xs text-[var(--t3,#a39ba6)]">
+                          {r.description}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--t3,#a39ba6)]">
+                      <code className="text-xs">{r.slug}</code>
+                    </td>
+                    <td
+                      className="px-4 py-3 text-[var(--t2,#c7bfca)]"
+                      data-numeric
+                    >
+                      {formatDate(r.scheduled_at)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Chip tone={RUN_STATUS_TONE[r.status] ?? 'neutral'}>
+                        {runStatusLabel(r.status)}
+                      </Chip>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
+                        <AdminButtonLink
+                          href={`/admin/events/${r.id}/director`}
+                          variant="secondary"
+                          size="xs"
+                        >
+                          {t.openDirector}
+                        </AdminButtonLink>
+                        {/* Pas de suppression d'un run EN DIRECT : l'antenne le
+                              suit (l'API refuse aussi, 409). */}
+                        <AdminButton
+                          variant="danger"
+                          size="xs"
+                          onClick={() => handleDelete(r)}
+                          disabled={r.status === 'live'}
+                          title={
+                            r.status === 'live'
+                              ? t.deleteLiveBlocked
+                              : undefined
+                          }
+                        >
+                          {t.delete}
+                        </AdminButton>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {createOpen && (
@@ -440,7 +434,7 @@ function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
     >
       <div
         ref={ref}
-        className="w-full max-w-lg bg-neutral-900 border border-neutral-700/60 rounded-2xl shadow-xl"
+        className="w-full max-w-lg rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] shadow-xl"
         onClick={(e) => e.stopPropagation()}
         data-testid="create-run-modal"
       >
@@ -513,22 +507,18 @@ function CreateRunModal({ onClose, onCreated }: CreateRunModalProps) {
             </div>
           )}
           <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={submitting}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 disabled:opacity-50"
-            >
+            <AdminButton size="sm" onClick={onClose} disabled={submitting}>
               {t.cancel}
-            </button>
-            <button
+            </AdminButton>
+            <AdminButton
               type="submit"
+              variant="primary"
+              size="sm"
               disabled={submitting}
               data-testid="create-run-submit"
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
             >
               {submitting ? t.submitting : t.submit}
-            </button>
+            </AdminButton>
           </div>
         </form>
       </div>

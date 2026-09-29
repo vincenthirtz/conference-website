@@ -30,4 +30,5 @@ export default adminNs('adminPoleMemberEdit', {
   errorLoad: 'Erreur de chargement.',
   errorNameRequired: 'Le nom est obligatoire.',
   errorGeneric: 'Erreur inattendue.',
+  identitySection: 'Identité',
 });

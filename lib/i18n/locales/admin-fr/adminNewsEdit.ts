@@ -34,4 +34,6 @@ export default adminNs('adminNewsEdit', {
   submit: 'Mettre à jour',
   back: 'Retour',
   errorGeneric: 'Erreur inattendue.',
+  contentSection: 'Contenu',
+  publicationSection: 'Publication',
 });

@@ -66,6 +66,7 @@ export default {
   searchPlaceholder: 'Filter by team name…',
   filterAll: 'All',
   filterIssues: 'Needs attention',
+  filterLabel: 'Show',
   summary: '{ok} in order · {issues} to handle · {never} never seen',
   refreshTeam: 'Refresh',
   stale: 'Snapshot older than 24 h — refresh before acting.',

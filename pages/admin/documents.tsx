@@ -21,6 +21,18 @@ import nsAdminDocuments from '@/lib/i18n/locales/admin-fr/adminDocuments';
 import DataTable, { type DataTableColumn } from '@/components/admin/DataTable';
 import type { StaffProps } from '@/types/admin';
 import { formatDriveSize, driveTypeKey } from '@/utils/documents/driveDisplay';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+
+// Planche « Le Ruban », archétype Liste. Les deux liens de ligne sont des <a>
+// (téléchargement servi par une route API, ouverture dans Drive en nouvel
+// onglet) : AdminButtonLink passe par next/link, on reprend donc son allure.
+const ROW_LINK =
+  'inline-flex h-[30px] shrink-0 items-center justify-center rounded-[var(--r-ctrl,4px)] border px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.02em] transition-colors';
+const ROW_LINK_SECONDARY = `${ROW_LINK} border-[rgba(180,103,209,.45)] text-[var(--or-200,#eec4ff)] hover:border-[var(--or,#b467d1)] hover:bg-[rgba(180,103,209,.08)]`;
+const ROW_LINK_GHOST = `${ROW_LINK} border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t2,#c7bfca)] hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]`;
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4';
 
 // La page se garde sur la LECTURE. L'écriture est un supplément, tranché par
 // le serveur à chaque appel (`canWrite` dans la réponse) et re-vérifié par la
@@ -161,7 +173,7 @@ export default function AdminDocumentsPage(_props: StaffProps) {
           <button
             type="button"
             onClick={() => setFolderId(f.id)}
-            className="text-left text-purple-200 underline-offset-2 hover:underline"
+            className="text-left text-[var(--or-200,#eec4ff)] underline-offset-2 hover:underline"
           >
             📁 {f.name}
           </button>
@@ -218,7 +230,7 @@ export default function AdminDocumentsPage(_props: StaffProps) {
                 (folderId ? `&folderId=${encodeURIComponent(folderId)}` : '')
               }
               title={format(t.downloadTitle, { name: f.name })}
-              className="rounded-lg border border-purple-400/40 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold text-purple-200 transition-colors hover:bg-purple-500/20"
+              className={ROW_LINK_SECONDARY}
             >
               {t.download}
             </a>
@@ -228,7 +240,7 @@ export default function AdminDocumentsPage(_props: StaffProps) {
               href={f.webViewLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10"
+              className={ROW_LINK_GHOST}
             >
               {t.openInDrive}
             </a>
@@ -236,14 +248,14 @@ export default function AdminDocumentsPage(_props: StaffProps) {
           {canWrite && !f.isFolder && (
             // Pas de corbeille sur un DOSSIER : jeter un dossier emporte tout
             // ce qu'il contient, et rien dans cette page ne montre ce que c'est.
-            <button
-              type="button"
+            <AdminButton
+              size="xs"
+              variant="danger"
               onClick={() => void handleTrash(f)}
               disabled={trashing === f.id}
-              className="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs font-semibold text-red-200 transition hover:bg-red-500/10 disabled:opacity-50"
             >
               {trashing === f.id ? t.trashing : t.trash}
-            </button>
+            </AdminButton>
           )}
         </div>
       ),
@@ -256,18 +268,30 @@ export default function AdminDocumentsPage(_props: StaffProps) {
         <title>{t.headTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 pt-header pb-12 sm:px-6 lg:px-8">
-          <div className="mb-6">
-            <p className="text-sm text-neutral-400">{t.eyebrow}</p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight md:text-4xl">
-              {t.heading}
-            </h1>
-            <p className="mt-2 max-w-3xl text-sm text-neutral-400">{t.intro}</p>
-            <p className="mt-2 max-w-3xl text-xs text-neutral-500">
-              {t.downloadNote}
-            </p>
-          </div>
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <div>
+          <p className="mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
+            {t.eyebrow}
+          </p>
+          <AdminPageHeader
+            title={t.heading}
+            subtitle={
+              <>
+                <span className="block max-w-3xl">{t.intro}</span>
+                <span className="mt-2 block max-w-3xl text-xs text-[var(--t4,#807984)]">
+                  {t.downloadNote}
+                </span>
+              </>
+            }
+            actions={
+              configured && canWrite ? (
+                <DriveUploadButton
+                  folderId={folderId}
+                  onUploaded={() => void load(folderId)}
+                />
+              ) : undefined
+            }
+          />
 
           {!configured && awaitingKey && canStoreKey ? (
             // Le compte de service est là, seule la clé manque : proposer de la
@@ -294,18 +318,20 @@ export default function AdminDocumentsPage(_props: StaffProps) {
               {breadcrumb.length > 0 && (
                 <nav
                   aria-label={t.breadcrumbAria}
-                  className="mb-3 flex flex-wrap items-center gap-1 text-sm text-neutral-400"
+                  className="mb-3 flex flex-wrap items-center gap-1 text-sm text-[var(--t3,#a39ba6)]"
                 >
                   {breadcrumb.map((crumb, i) => (
                     <span key={crumb.id} className="flex items-center gap-1">
                       {i > 0 && <span aria-hidden="true">/</span>}
                       {i === breadcrumb.length - 1 ? (
-                        <span className="text-white">{crumb.name}</span>
+                        <span className="text-[var(--t1,#f4edf7)]">
+                          {crumb.name}
+                        </span>
                       ) : (
                         <button
                           type="button"
                           onClick={() => setFolderId(crumb.id)}
-                          className="text-purple-200 underline-offset-2 hover:underline"
+                          className="text-[var(--or-200,#eec4ff)] underline-offset-2 hover:underline"
                         >
                           {crumb.name}
                         </button>
@@ -315,34 +341,36 @@ export default function AdminDocumentsPage(_props: StaffProps) {
                 </nav>
               )}
 
-              <div className="mb-4">
-                {canWrite ? (
-                  <DriveUploadButton
-                    folderId={folderId}
-                    onUploaded={() => void load(folderId)}
-                  />
-                ) : (
-                  <p className="text-xs text-neutral-500">{t.readOnlyNote}</p>
-                )}
-              </div>
+              {/* L'import vit dans les actions de l'en-tête ; en lecture seule,
+                  on le dit à la place. */}
+              {!canWrite && (
+                <p className="mb-4 text-xs text-[var(--t4,#807984)]">
+                  {t.readOnlyNote}
+                </p>
+              )}
 
               {!loading && !error && rows.length > 0 && (
-                <p className="mb-3 text-sm text-neutral-400">
+                <p
+                  className="mb-3 text-sm text-[var(--t3,#a39ba6)]"
+                  data-numeric
+                >
                   {format(t.count, { count: rows.length })}
                 </p>
               )}
 
-              <DataTable<DriveRow>
-                rows={rows}
-                columns={columns}
-                rowKey={(f) => f.id}
-                loading={loading}
-                error={error}
-                onRetry={() => void load(folderId)}
-                emptyTitle={t.empty}
-                searchPlaceholder={t.searchPlaceholder}
-                exportFilename="documents-asso"
-              />
+              <div className={CARD}>
+                <DataTable<DriveRow>
+                  rows={rows}
+                  columns={columns}
+                  rowKey={(f) => f.id}
+                  loading={loading}
+                  error={error}
+                  onRetry={() => void load(folderId)}
+                  emptyTitle={t.empty}
+                  searchPlaceholder={t.searchPlaceholder}
+                  exportFilename="documents-asso"
+                />
+              </div>
             </>
           )}
         </div>

@@ -24,4 +24,7 @@ export default adminNs('adminTenantsUsage', {
   downgraded: '→ appliqué : {plan}',
   unlimited: '{used} appels — illimité',
   never: 'jamais',
+  statSpaces: 'Espaces suivis',
+  statAtRisk: 'Au-delà de 80 %',
+  statAtLimit: 'Au plafond',
 });

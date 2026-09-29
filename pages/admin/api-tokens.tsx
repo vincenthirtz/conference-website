@@ -30,6 +30,20 @@ import ApiTokenRevealModal from '@/components/admin/ApiTokenRevealModal';
 import { ALL_SCOPES } from '@/utils/apiScopes';
 import { logger } from '@/utils/logger';
 import nsAdminApiTokens from '@/lib/i18n/locales/admin-fr/adminApiTokens';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+
+// Planche « Le Ruban », archétype Liste : classes partagées par les deux cartes.
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4';
+const SECTION_TITLE =
+  'font-[family-name:var(--fd)] text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--t1,#f4edf7)] [font-stretch:75%]';
+const EYEBROW =
+  'mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
+const LABEL = 'mb-1 block text-sm text-[var(--t3,#a39ba6)]';
+const INPUT =
+  'rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 type ApiTokenRow = {
   id: string;
@@ -343,11 +357,10 @@ function AdminApiTokensPage({ staff }: Props) {
           <span>{tk.name}</span>
           {tk.comp && (
             <span
-              className="whitespace-nowrap rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-300"
               title={tk.comp_note || undefined}
               data-testid={`api-token-comp-badge-${tk.id}`}
             >
-              {t.badgePartner}
+              <Chip tone="brand">{t.badgePartner}</Chip>
             </span>
           )}
         </span>
@@ -358,7 +371,7 @@ function AdminApiTokensPage({ staff }: Props) {
       header: t.colPrefix,
       value: (tk) => tk.token_prefix,
       render: (tk) => (
-        <code className="font-mono text-xs text-neutral-300">
+        <code className="font-mono text-xs text-[var(--t2,#c7bfca)]">
           {tk.token_prefix}…
         </code>
       ),
@@ -372,7 +385,7 @@ function AdminApiTokensPage({ staff }: Props) {
           {tk.scopes.map((scope) => (
             <span
               key={scope}
-              className="rounded-full border border-neutral-600/50 bg-neutral-700/50 px-2 py-0.5 font-mono text-[11px] text-neutral-300"
+              className="rounded-[3px] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2 py-0.5 font-mono text-[11px] text-[var(--t2,#c7bfca)]"
             >
               {scope}
             </span>
@@ -384,12 +397,12 @@ function AdminApiTokensPage({ staff }: Props) {
       key: 'created',
       header: t.colCreated,
       value: (tk) => tk.created_at ?? '',
-      className: 'whitespace-nowrap text-neutral-400',
+      className: 'whitespace-nowrap text-[var(--t3,#a39ba6)]',
       render: (tk) => (
         <span>
           <span className="block">{formatDate(tk.created_at, '—')}</span>
           {tk.created_by_name && (
-            <span className="block text-xs text-neutral-500">
+            <span className="block text-xs text-[var(--t4,#807984)]">
               {t.byCreator.replace('{name}', tk.created_by_name)}
             </span>
           )}
@@ -404,19 +417,23 @@ function AdminApiTokensPage({ staff }: Props) {
       render: (tk) =>
         tk.expires_at ? (
           <span
-            className={isExpired(tk) ? 'text-amber-300' : 'text-neutral-400'}
+            className={
+              isExpired(tk)
+                ? 'text-[var(--warn,#f5a524)]'
+                : 'text-[var(--t3,#a39ba6)]'
+            }
           >
             {formatDate(tk.expires_at, '—')}
           </span>
         ) : (
-          <span className="text-neutral-500">{t.expiryNever}</span>
+          <span className="text-[var(--t4,#807984)]">{t.expiryNever}</span>
         ),
     },
     {
       key: 'last_used',
       header: t.colLastUsed,
       value: (tk) => tk.last_used_at ?? '',
-      className: 'whitespace-nowrap text-neutral-400',
+      className: 'whitespace-nowrap text-[var(--t3,#a39ba6)]',
       render: (tk) => <>{formatDate(tk.last_used_at, t.neverUsed)}</>,
     },
     {
@@ -430,20 +447,13 @@ function AdminApiTokensPage({ staff }: Props) {
             : t.statusActive,
       render: (tk) =>
         tk.revoked_at ? (
-          <span className="rounded-full border border-neutral-500/40 bg-neutral-600/40 px-2 py-0.5 text-xs font-medium text-neutral-300">
-            {t.statusRevoked}
-          </span>
+          <Chip tone="err">{t.statusRevoked}</Chip>
         ) : isExpired(tk) ? (
-          <span
-            className="rounded-full border border-amber-500/30 bg-amber-600/20 px-2 py-0.5 text-xs font-medium text-amber-300"
-            data-testid={`api-token-expired-badge-${tk.id}`}
-          >
-            {t.statusExpired}
+          <span data-testid={`api-token-expired-badge-${tk.id}`}>
+            <Chip tone="warn">{t.statusExpired}</Chip>
           </span>
         ) : (
-          <span className="rounded-full border border-emerald-500/30 bg-emerald-600/20 px-2 py-0.5 text-xs font-medium text-emerald-300">
-            {t.statusActive}
-          </span>
+          <Chip tone="ok">{t.statusActive}</Chip>
         ),
     },
     {
@@ -458,15 +468,11 @@ function AdminApiTokensPage({ staff }: Props) {
             {/* Exemption partenaire : un owner l'active ou la retire ; un admin
                 non-owner ne peut que retirer une exemption existante. */}
             {(tk.comp || isOwner) && (
-              <button
-                type="button"
+              <AdminButton
+                size="xs"
+                variant={tk.comp ? 'ghost' : 'secondary'}
                 onClick={() => handleToggleComp(tk)}
                 disabled={togglingCompId === tk.id}
-                className={`rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                  tk.comp
-                    ? 'border-neutral-500/40 text-neutral-300 hover:border-neutral-400'
-                    : 'border-amber-500/40 text-amber-300 hover:border-amber-400'
-                }`}
                 data-testid={`api-token-comp-toggle-btn-${tk.id}`}
               >
                 {togglingCompId === tk.id
@@ -474,17 +480,17 @@ function AdminApiTokensPage({ staff }: Props) {
                   : tk.comp
                     ? t.compDisableButton
                     : t.compEnableButton}
-              </button>
+              </AdminButton>
             )}
-            <button
-              type="button"
+            <AdminButton
+              size="xs"
+              variant="danger"
               onClick={() => handleRevoke(tk)}
               disabled={revokingId === tk.id}
-              className="rounded-lg border border-red-500/40 px-3 py-1.5 text-sm text-red-300 transition-colors hover:border-red-400 disabled:cursor-not-allowed disabled:opacity-50"
               data-testid={`api-token-revoke-btn-${tk.id}`}
             >
               {revokingId === tk.id ? t.revoking : t.revokeButton}
-            </button>
+            </AdminButton>
           </span>
         ),
     },
@@ -503,8 +509,8 @@ function AdminApiTokensPage({ staff }: Props) {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12 max-w-5xl mx-auto">
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <div>
           <Breadcrumb
             items={[
               { label: t.breadcrumbAdmin, href: '/admin' },
@@ -512,21 +518,18 @@ function AdminApiTokensPage({ staff }: Props) {
             ]}
           />
 
-          <div className="mb-8">
-            <p className="text-sm text-neutral-400">{t.kicker}</p>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mt-1">
-              {t.heading}
-            </h1>
-            <p className="text-sm text-neutral-400 mt-2 max-w-2xl">{t.intro}</p>
-          </div>
+          <p className={EYEBROW}>{t.kicker}</p>
+          <AdminPageHeader title={t.heading} subtitle={t.intro} />
 
           {/* ===== Création ===== */}
           <section
-            className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6"
+            className={`${CARD} mb-6`}
             data-testid="api-tokens-create-section"
           >
-            <h2 className="text-xl font-semibold mb-1">{t.createHeading}</h2>
-            <p className="text-sm text-neutral-400 mb-4">{t.createSubtitle}</p>
+            <h2 className={SECTION_TITLE}>{t.createHeading}</h2>
+            <p className="mt-1 mb-4 text-sm text-[var(--t3,#a39ba6)]">
+              {t.createSubtitle}
+            </p>
 
             <AlertBanner
               message={formError}
@@ -537,10 +540,7 @@ function AdminApiTokensPage({ staff }: Props) {
 
             <form onSubmit={handleCreate} className="space-y-5">
               <div>
-                <label
-                  htmlFor="api-token-name"
-                  className="block text-sm text-neutral-400 mb-1"
-                >
+                <label htmlFor="api-token-name" className={LABEL}>
                   {t.nameLabel}
                 </label>
                 <input
@@ -550,26 +550,26 @@ function AdminApiTokensPage({ staff }: Props) {
                   onChange={(e) => setName(e.target.value)}
                   placeholder={t.namePlaceholder}
                   maxLength={120}
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  className={`${INPUT} w-full`}
                   data-testid="api-token-name-input"
                 />
               </div>
 
               <div>
-                <span className="block text-sm text-neutral-400 mb-1">
-                  {t.scopesLabel}
-                </span>
-                <p className="text-xs text-neutral-500 mb-3">{t.scopesHint}</p>
+                <span className={LABEL}>{t.scopesLabel}</span>
+                <p className="mb-3 text-xs text-[var(--t4,#807984)]">
+                  {t.scopesHint}
+                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {sortedScopes.map((scope) => {
                     const checked = selectedScopes.has(scope);
                     return (
                       <label
                         key={scope}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${
+                        className={`flex cursor-pointer items-center gap-3 rounded-[var(--r-ctrl,4px)] border px-3 py-2.5 transition-colors ${
                           checked
-                            ? 'bg-purple-600/15 border-purple-500/40'
-                            : 'bg-neutral-900/40 border-neutral-700/50 hover:border-neutral-600'
+                            ? 'border-[rgba(180,103,209,.45)] bg-[rgba(180,103,209,.1)]'
+                            : 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] hover:border-[var(--t4,#807984)]'
                         }`}
                         data-testid={`api-token-scope-${scope}`}
                       >
@@ -577,9 +577,9 @@ function AdminApiTokensPage({ staff }: Props) {
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleScope(scope)}
-                          className="w-4 h-4 rounded border-neutral-600 bg-neutral-900 text-purple-500 focus:ring-purple-500/50"
+                          className="h-4 w-4 accent-[var(--or,#b467d1)]"
                         />
-                        <span className="text-sm font-mono text-neutral-200">
+                        <span className="font-mono text-sm text-[var(--t1,#f4edf7)]">
                           {scope}
                         </span>
                       </label>
@@ -590,17 +590,14 @@ function AdminApiTokensPage({ staff }: Props) {
 
               {/* ===== Expiration ===== */}
               <div>
-                <label
-                  htmlFor="api-token-ttl"
-                  className="block text-sm text-neutral-400 mb-1"
-                >
+                <label htmlFor="api-token-ttl" className={LABEL}>
                   {t.expiryLabel}
                 </label>
                 <select
                   id="api-token-ttl"
                   value={ttlDays}
                   onChange={(e) => setTtlDays(Number(e.target.value))}
-                  className="w-full sm:w-auto px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  className={`${INPUT} w-full sm:w-auto`}
                   data-testid="api-token-ttl-select"
                 >
                   {TTL_OPTIONS.map((d) => (
@@ -611,14 +608,14 @@ function AdminApiTokensPage({ staff }: Props) {
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-neutral-500 mt-1.5">
+                <p className="mt-1.5 text-xs text-[var(--t4,#807984)]">
                   {t.expiryHint}
                 </p>
               </div>
 
               {/* ===== Exemption partenaire (owner uniquement) ===== */}
               <div
-                className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-3"
+                className="rounded-[var(--r-ctrl,4px)] border border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.06)] p-3"
                 data-testid="api-token-comp-section"
               >
                 <label
@@ -632,14 +629,14 @@ function AdminApiTokensPage({ staff }: Props) {
                     checked={comp}
                     disabled={!isOwner}
                     onChange={(e) => setComp(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 rounded border-neutral-600 bg-neutral-900 text-amber-500 focus:ring-amber-500/50 disabled:cursor-not-allowed"
+                    className="mt-0.5 h-4 w-4 accent-[var(--warn,#f5a524)] disabled:cursor-not-allowed"
                     data-testid="api-token-comp-checkbox"
                   />
                   <span>
                     <span className="block text-sm font-medium text-amber-200">
                       {t.compLabel}
                     </span>
-                    <span className="block text-xs text-neutral-400 mt-0.5">
+                    <span className="mt-0.5 block text-xs text-[var(--t3,#a39ba6)]">
                       {t.compHint}
                     </span>
                     {!isOwner && (
@@ -657,7 +654,7 @@ function AdminApiTokensPage({ staff }: Props) {
                   <div className="mt-3">
                     <label
                       htmlFor="api-token-comp-note"
-                      className="block text-xs text-neutral-400 mb-1"
+                      className="mb-1 block text-xs text-[var(--t3,#a39ba6)]"
                     >
                       {t.compNoteLabel}
                     </label>
@@ -668,7 +665,7 @@ function AdminApiTokensPage({ staff }: Props) {
                       onChange={(e) => setCompNote(e.target.value)}
                       placeholder={t.compNotePlaceholder}
                       maxLength={500}
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+                      className={`${INPUT} w-full`}
                       data-testid="api-token-comp-note-input"
                     />
                   </div>
@@ -676,31 +673,26 @@ function AdminApiTokensPage({ staff }: Props) {
               </div>
 
               <div className="flex justify-end">
-                <button
+                <AdminButton
                   type="submit"
+                  variant="primary"
                   disabled={creating}
-                  className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="api-token-create-btn"
                 >
                   {creating ? t.creating : t.createButton}
-                </button>
+                </AdminButton>
               </div>
             </form>
           </section>
 
           {/* ===== Liste ===== */}
-          <section
-            className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden"
-            data-testid="api-tokens-list-section"
-          >
-            <div className="px-6 py-4 border-b border-neutral-700/50">
-              <h2 className="text-xl font-semibold">{t.listHeading}</h2>
-            </div>
+          <section className={CARD} data-testid="api-tokens-list-section">
+            <h2 className={`${SECTION_TITLE} mb-3`}>{t.listHeading}</h2>
 
             <AlertBanner
               message={loadError}
               variant="error"
-              className="m-4"
+              className="mb-4"
               onDismiss={() => setLoadError(null)}
             />
 

@@ -25,4 +25,6 @@ export default {
   errorLoad: 'Loading error.',
   errorNameRequired: 'Name is required.',
   errorGeneric: 'Unexpected error.',
+  identitySection: 'Identity',
+  visibilitySection: 'Account & visibility',
 };

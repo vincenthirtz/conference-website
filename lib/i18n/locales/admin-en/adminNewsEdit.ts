@@ -35,4 +35,6 @@ export default {
   submit: 'Update',
   back: 'Back',
   errorGeneric: 'Unexpected error.',
+  contentSection: 'Content',
+  publicationSection: 'Publishing',
 };

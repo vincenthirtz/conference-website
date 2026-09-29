@@ -21,6 +21,15 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import Breadcrumb from '@/components/admin/Breadcrumb';
+import EmptyState from '@/components/ui/EmptyState';
+import LoadingSpinner from '@/components/admin/LoadingSpinner';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import ListToolbar, {
+  FilterSelect,
+  ListSearch,
+} from '@/features/admin/_shared/ui/ListToolbar';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StaffProps } from '@/types/admin';
 import nsAdminDiscordTeamChannels from '@/lib/i18n/locales/admin-fr/adminDiscordTeamChannels';
@@ -92,33 +101,20 @@ function StatusPill({
 }) {
   if (!live) {
     return (
-      <span className="rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-[11px] text-neutral-400">
+      <Chip tone="neutral">
         {storedId ? t.statusUnknown : t.notProvisioned}
-      </span>
+      </Chip>
     );
   }
-  if (!storedId) {
-    return (
-      <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[11px] text-amber-200">
-        {t.notProvisioned}
-      </span>
-    );
-  }
+  if (!storedId) return <Chip tone="warn">{t.notProvisioned}</Chip>;
   if (!exists) {
     return (
-      <span
-        title={t.storedButGone}
-        className="rounded-full border border-red-400/30 bg-red-400/10 px-2 py-0.5 text-[11px] text-red-200"
-      >
-        {t.statusMissing}
+      <span title={t.storedButGone} className="inline-flex">
+        <Chip tone="err">{t.statusMissing}</Chip>
       </span>
     );
   }
-  return (
-    <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[11px] text-emerald-200">
-      {t.statusOk}
-    </span>
-  );
+  return <Chip tone="ok">{t.statusOk}</Chip>;
 }
 
 function DiscordTeamChannelsPage(_props: StaffProps) {
@@ -351,71 +347,60 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
       <Head>
         <title>{t.pageTitle}</title>
       </Head>
-      <div className="mx-auto max-w-6xl px-4 py-8 text-white">
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
         <Breadcrumb items={[{ label: t.pageTitle }]} />
 
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">{t.pageTitle}</h1>
-            <p className="mt-1 max-w-2xl text-sm text-neutral-400">{t.intro}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => act({ action: 'refresh' }, 'refresh')}
-            disabled={busy !== null}
-            className="rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-semibold transition hover:bg-purple-500 disabled:opacity-50"
-          >
-            {busy === 'refresh' ? t.refreshing : t.refreshAll}
-          </button>
-        </div>
+        <AdminPageHeader
+          title={t.pageTitle}
+          subtitle={<span className="block max-w-2xl">{t.intro}</span>}
+          actions={
+            <AdminButton
+              variant="secondary"
+              onClick={() => act({ action: 'refresh' }, 'refresh')}
+              disabled={busy !== null}
+            >
+              {busy === 'refresh' ? t.refreshing : t.refreshAll}
+            </AdminButton>
+          }
+        />
 
         {!loading && teams.length > 0 && (
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t.searchPlaceholder}
-              className="w-64 rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm"
-            />
-            <div className="flex overflow-hidden rounded-xl border border-white/15">
-              {[
-                [false, t.filterAll],
-                [true, t.filterIssues],
-              ].map(([value, label]) => (
-                <button
-                  key={String(value)}
-                  type="button"
-                  onClick={() => setOnlyIssues(value as boolean)}
-                  aria-pressed={onlyIssues === value}
-                  className={`px-3 py-2 text-xs transition ${
-                    onlyIssues === value
-                      ? 'bg-white/15 text-white'
-                      : 'text-neutral-400 hover:bg-white/5'
-                  }`}
-                >
-                  {label as string}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-neutral-500">
-              {format(t.summary, {
-                ok: String(counters.ok),
-                issues: String(counters.issues),
-                never: String(counters.never),
-              })}
-            </p>
-          </div>
+          <ListToolbar
+            search={
+              <ListSearch
+                value={search}
+                onChange={setSearch}
+                placeholder={t.searchPlaceholder}
+                label={t.searchPlaceholder}
+              />
+            }
+            filters={
+              <FilterSelect
+                label={t.filterLabel}
+                allLabel={t.filterAll}
+                value={onlyIssues ? 'issues' : null}
+                onChange={(v) => setOnlyIssues(v === 'issues')}
+                options={[{ value: 'issues', label: t.filterIssues }]}
+              />
+            }
+            note={format(t.summary, {
+              ok: String(counters.ok),
+              issues: String(counters.issues),
+              never: String(counters.never),
+            })}
+          />
         )}
 
         {loading ? (
-          <p className="text-sm text-neutral-500">{t.loading}</p>
+          <LoadingSpinner label={t.loading} />
         ) : teams.length === 0 ? (
-          <p className="text-sm text-neutral-500">{t.empty}</p>
+          <div className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]">
+            <EmptyState title={t.empty} />
+          </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-white/10">
+          <div className="overflow-x-auto rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]">
             <table className="w-full min-w-[860px] text-sm">
-              <thead className="bg-white/[0.03] text-left text-xs uppercase tracking-wide text-neutral-400">
+              <thead className="border-b border-[var(--line,rgba(194,196,201,.12))] text-left text-xs uppercase tracking-wide text-[var(--t3,#a39ba6)]">
                 <tr>
                   <th className="px-4 py-3">{t.colTeam}</th>
                   <th className="px-4 py-3">{t.colRole}</th>
@@ -432,11 +417,16 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                   return (
                     <tr
                       key={team.teamId}
-                      className="border-t border-white/[0.06] align-top"
+                      className="border-t border-[var(--line,rgba(194,196,201,.12))] align-top"
                     >
                       <td className="px-4 py-3">
-                        <div className="font-medium">{team.name || '—'}</div>
-                        <div className="mt-0.5 text-xs text-neutral-500">
+                        <div className="font-medium text-[var(--t1,#f4edf7)]">
+                          {team.name || '—'}
+                        </div>
+                        <div
+                          className="mt-0.5 text-xs text-[var(--t4,#807984)]"
+                          data-numeric
+                        >
                           {live
                             ? format(t.capturedAt, {
                                 date: new Date(live.capturedAt).toLocaleString(
@@ -446,9 +436,9 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                             : t.neverRefreshed}
                         </div>
                         {!team.isActive && (
-                          <span className="mt-1 inline-block rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-[10px] text-neutral-400">
-                            {t.inactiveBadge}
-                          </span>
+                          <div className="mt-1">
+                            <Chip tone="neutral">{t.inactiveBadge}</Chip>
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -475,13 +465,16 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                           t={t}
                         />
                       </td>
-                      <td className="px-4 py-3 text-neutral-300">
+                      <td
+                        className="px-4 py-3 text-[var(--t2,#c7bfca)]"
+                        data-numeric
+                      >
                         {live ? live.access.length : '—'}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
+                          <AdminButton
+                            size="xs"
                             onClick={() =>
                               act(
                                 { action: 'provision', teamId: team.teamId },
@@ -489,12 +482,11 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                               )
                             }
                             disabled={busy !== null}
-                            className="rounded-lg border border-white/15 px-3 py-1.5 text-xs transition hover:bg-white/10 disabled:opacity-50"
                           >
                             {t.actionProvision}
-                          </button>
-                          <button
-                            type="button"
+                          </AdminButton>
+                          <AdminButton
+                            size="xs"
                             onClick={() =>
                               act(
                                 { action: 'repair', teamId: team.teamId },
@@ -502,12 +494,11 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                               )
                             }
                             disabled={busy !== null}
-                            className="rounded-lg border border-white/15 px-3 py-1.5 text-xs transition hover:bg-white/10 disabled:opacity-50"
                           >
                             {t.actionRepair}
-                          </button>
-                          <button
-                            type="button"
+                          </AdminButton>
+                          <AdminButton
+                            size="xs"
                             onClick={() =>
                               act(
                                 { action: 'refresh', teamId: team.teamId },
@@ -515,31 +506,29 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                               )
                             }
                             disabled={busy !== null}
-                            className="rounded-lg border border-white/15 px-3 py-1.5 text-xs transition hover:bg-white/10 disabled:opacity-50"
                           >
                             {t.refreshTeam}
-                          </button>
-                          <button
-                            type="button"
+                          </AdminButton>
+                          <AdminButton
+                            size="xs"
                             onClick={() =>
                               setOpenTeamId(open ? null : team.teamId)
                             }
-                            className="rounded-lg border border-white/15 px-3 py-1.5 text-xs transition hover:bg-white/10"
                           >
                             {open ? t.actionClose : t.actionManage}
-                          </button>
+                          </AdminButton>
                         </div>
 
                         {open && (
-                          <div className="mt-4 space-y-4 rounded-xl border border-white/10 bg-black/30 p-4">
+                          <div className="mt-4 space-y-4 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-4">
                             {live && isStale(live.capturedAt) && (
-                              <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
+                              <p className="rounded-[var(--r-ctrl,4px)] border border-[rgba(245,165,36,.38)] bg-[rgba(245,165,36,.13)] px-3 py-2 text-xs text-[#ffd9a3]">
                                 {t.stale}
                               </p>
                             )}
 
                             {live?.warnings?.length ? (
-                              <ul className="space-y-1 text-xs text-amber-200">
+                              <ul className="space-y-1 text-xs text-[#ffd9a3]">
                                 {live.warnings.map((w) => (
                                   <li key={w}>⚠ {w}</li>
                                 ))}
@@ -552,15 +541,15 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                                 assigner quelqu'un suppose de connaitre son ID
                                 Discord par coeur. */}
                             <div>
-                              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--t3,#a39ba6)]">
                                 {t.rosterTitle}
                               </p>
                               {!live ? (
-                                <p className="text-xs text-neutral-500">
+                                <p className="text-xs text-[var(--t4,#807984)]">
                                   {t.rosterUnknownAccess}
                                 </p>
                               ) : missingRoster(team).length === 0 ? (
-                                <p className="text-xs text-emerald-300">
+                                <p className="text-xs text-[var(--lf-200,#b3e7a3)]">
                                   {t.rosterAllIn}
                                 </p>
                               ) : (
@@ -570,30 +559,29 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                                       key={entry.userId || entry.label || ''}
                                       className="flex items-center justify-between gap-3 text-xs"
                                     >
-                                      <span className="text-neutral-200">
+                                      <span className="text-[var(--t1,#f4edf7)]">
                                         {entry.label || '—'}
                                         {entry.isCaptain && (
-                                          <span className="ml-1 text-neutral-500">
+                                          <span className="ml-1 text-[var(--t4,#807984)]">
                                             ({t.rosterCaptain})
                                           </span>
                                         )}
                                         {!entry.discordUserId && (
-                                          <span className="ml-2 text-amber-300/80">
+                                          <span className="ml-2 text-[#ffd9a3]">
                                             {t.rosterNoDiscord}
                                           </span>
                                         )}
                                       </span>
                                       {entry.discordUserId && (
-                                        <button
-                                          type="button"
+                                        <AdminButton
+                                          size="xs"
                                           onClick={() =>
                                             grantToMember(team, entry)
                                           }
                                           disabled={busy !== null}
-                                          className="shrink-0 rounded-lg border border-white/15 px-2 py-1 transition hover:bg-white/10 disabled:opacity-50"
                                         >
                                           {t.rosterGrantRole}
-                                        </button>
+                                        </AdminButton>
                                       )}
                                     </li>
                                   ))}
@@ -602,11 +590,11 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                             </div>
 
                             <div>
-                              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--t3,#a39ba6)]">
                                 {t.accessTitle}
                               </p>
                               {!live || live.access.length === 0 ? (
-                                <p className="text-xs text-neutral-500">
+                                <p className="text-xs text-[var(--t4,#807984)]">
                                   {t.accessNone}
                                 </p>
                               ) : (
@@ -616,20 +604,19 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                                       key={`${entry.source}:${entry.discordUserId}`}
                                       className="flex items-center justify-between gap-3 text-xs"
                                     >
-                                      <span className="text-neutral-200">
+                                      <span className="text-[var(--t1,#f4edf7)]">
                                         {entry.username || entry.discordUserId}{' '}
-                                        <span className="text-neutral-500">
+                                        <span className="text-[var(--t4,#807984)]">
                                           — {sourceLabel(entry.source)}
                                         </span>
                                       </span>
-                                      <button
-                                        type="button"
+                                      <AdminButton
+                                        size="xs"
                                         onClick={() => revoke(team, entry)}
                                         disabled={busy !== null}
-                                        className="rounded-lg border border-white/15 px-2 py-1 transition hover:bg-white/10 disabled:opacity-50"
                                       >
                                         {t.accessRevoke}
-                                      </button>
+                                      </AdminButton>
                                     </li>
                                   ))}
                                 </ul>
@@ -637,10 +624,10 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                             </div>
 
                             <div>
-                              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[var(--t3,#a39ba6)]">
                                 {t.grantTitle}
                               </p>
-                              <p className="mb-2 text-xs text-neutral-500">
+                              <p className="mb-2 text-xs text-[var(--t4,#807984)]">
                                 {t.grantHelp}
                               </p>
                               <div className="flex flex-wrap items-center gap-2">
@@ -655,7 +642,7 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                                   }
                                   placeholder={t.grantUserPlaceholder}
                                   aria-label={t.grantUserLabel}
-                                  className="w-56 rounded-lg border border-white/15 bg-black/50 px-3 py-2 text-xs"
+                                  className="h-[30px] w-56 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] px-3 text-xs text-[var(--t1,#f4edf7)]"
                                 />
                                 <select
                                   value={grantMode[team.teamId] ?? 'role'}
@@ -668,7 +655,7 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                                         | 'voice',
                                     }))
                                   }
-                                  className="rounded-lg border border-white/15 bg-black/50 px-3 py-2 text-xs"
+                                  className="h-[30px] rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] px-3 text-xs text-[var(--t1,#f4edf7)]"
                                 >
                                   <option value="role">
                                     {t.grantModeRole}
@@ -680,42 +667,42 @@ function DiscordTeamChannelsPage(_props: StaffProps) {
                                     {t.grantModeVoice}
                                   </option>
                                 </select>
-                                <button
-                                  type="button"
+                                <AdminButton
+                                  variant="secondary"
+                                  size="xs"
                                   onClick={() => grant(team)}
                                   disabled={busy !== null}
-                                  className="rounded-lg bg-purple-600 px-3 py-2 text-xs font-semibold transition hover:bg-purple-500 disabled:opacity-50"
                                 >
                                   {t.grantSubmit}
-                                </button>
+                                </AdminButton>
                               </div>
                             </div>
 
-                            <div className="flex flex-wrap gap-2 border-t border-white/10 pt-3">
-                              <button
-                                type="button"
+                            <div className="flex flex-wrap gap-2 border-t border-[var(--line,rgba(194,196,201,.12))] pt-3">
+                              <AdminButton
+                                variant="danger"
+                                size="xs"
                                 onClick={() => deleteChannel(team, 'text')}
                                 disabled={busy !== null}
-                                className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-200 transition hover:bg-red-500/10 disabled:opacity-50"
                               >
                                 {t.actionDeleteText}
-                              </button>
-                              <button
-                                type="button"
+                              </AdminButton>
+                              <AdminButton
+                                variant="danger"
+                                size="xs"
                                 onClick={() => deleteChannel(team, 'voice')}
                                 disabled={busy !== null}
-                                className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-200 transition hover:bg-red-500/10 disabled:opacity-50"
                               >
                                 {t.actionDeleteVoice}
-                              </button>
-                              <button
-                                type="button"
+                              </AdminButton>
+                              <AdminButton
+                                variant="danger"
+                                size="xs"
                                 onClick={() => deleteRole(team)}
                                 disabled={busy !== null || !team.stored.roleId}
-                                className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-200 transition hover:bg-red-500/10 disabled:opacity-50"
                               >
                                 {t.actionDeleteRole}
-                              </button>
+                              </AdminButton>
                             </div>
                           </div>
                         )}

@@ -1,5 +1,4 @@
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import slugify from 'slugify';
@@ -9,6 +8,17 @@ import Breadcrumb from '@/components/admin/Breadcrumb';
 import LogoUpload from '@/components/admin/LogoUpload';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminNewsEdit from '@/lib/i18n/locales/admin-fr/adminNewsEdit';
+import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
+import { FormError } from '@/components/admin/form/FormField';
+import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import {
+  FicheLayout,
+  FicheSection,
+  MetaList,
+} from '@/features/admin/_shared/ui/Fiche';
 
 type FormState = {
   title: string;
@@ -28,16 +38,33 @@ export const getServerSideProps = withStaffPage({
 const slugifyValue = (value: string) =>
   slugify(value, { lower: true, strict: true });
 
+const day = (iso: string | null | undefined) =>
+  iso
+    ? new Date(iso).toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : '—';
+
 export default function AdminNewsEdit() {
   const t = useAdminT(nsAdminNewsEdit);
+  const tf = useAdminT(nsAdminFiche);
   const router = useRouter();
   const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
 
   const [form, setForm] = useState<FormState | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Chargement ET horodatages de la fiche, en UN état : « en cours », puis
+  // les dates lues dans la même réponse (null si le chargement a échoué).
+  // Un `loading` à part ne disait rien de plus que « pas encore de réponse ».
+  const [stamps, setStamps] = useState<
+    { createdAt: string | null; updatedAt: string | null } | 'loading' | null
+  >('loading');
+  const loading = stamps === 'loading';
+  const meta = stamps === 'loading' ? null : stamps;
 
   const updateField = (key: keyof FormState, value: string) =>
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
@@ -45,7 +72,7 @@ export default function AdminNewsEdit() {
   useEffect(() => {
     const fetchItem = async () => {
       if (!id) return;
-      setLoading(true);
+      setStamps('loading');
       setError(null);
       try {
         const json = await adminFetchJson<{
@@ -57,6 +84,8 @@ export default function AdminNewsEdit() {
           content?: string;
           status?: 'draft' | 'published';
           published_at?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
         }>(`/api/admin/news/${id}`);
 
         setForm({
@@ -71,10 +100,14 @@ export default function AdminNewsEdit() {
             ? new Date(json.published_at).toISOString().slice(0, 16)
             : '',
         });
+        setStamps({
+          createdAt: json.created_at ?? null,
+          updatedAt: json.updated_at ?? null,
+        });
       } catch (err: unknown) {
         setError((err as Error)?.message || t.errorGeneric);
       } finally {
-        setLoading(false);
+        setStamps((prev) => (prev === 'loading' ? null : prev));
       }
     };
     fetchItem();
@@ -105,144 +138,193 @@ export default function AdminNewsEdit() {
     }
   };
 
+  const newsId = typeof id === 'string' ? id : null;
+  const formId = 'news-edit-form';
+
   return (
     <>
       <Head>
         <title>{t.pageTitle}</title>
       </Head>
-      <div className="min-h-screen bg-neutral-900 text-white p-6 pt-header">
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
         <Breadcrumb
           items={[
             { label: t.breadcrumbNews, href: '/admin/news' },
             { label: t.breadcrumbEdit },
           ]}
         />
-        <header className="flex items-center justify-between flex-wrap gap-4 mb-6">
-          <div>
-            <p className="text-sm text-neutral-400">{t.staffSpace}</p>
-            <h1 className="text-3xl font-bold mt-1">{t.heading}</h1>
-            <p className="text-sm text-neutral-400 mt-1">{t.subtitle}</p>
-          </div>
-        </header>
 
-        {loading && <div className="text-neutral-300">{t.loading}</div>}
-        {error && (
-          <div className="text-red-200 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
-            {error}
-          </div>
-        )}
+        <EntityHeader
+          crest={
+            form?.imageUrl ? (
+              // biome-ignore lint/performance/noImgElement: storage URL, outside next/image remotePatterns
+              <img
+                src={form.imageUrl}
+                alt={form.title}
+                className="h-full w-full object-cover"
+              />
+            ) : form?.title ? (
+              form.title.slice(0, 3).toUpperCase()
+            ) : undefined
+          }
+          title={form?.title || t.heading}
+          meta={
+            meta?.createdAt
+              ? `${t.heading} · ${tf.metaCreated} ${day(meta.createdAt)}`
+              : t.subtitle
+          }
+          actions={
+            <>
+              <AdminButtonLink
+                href="/admin/news"
+                className={saving ? 'pointer-events-none opacity-50' : ''}
+              >
+                {tf.cancel}
+              </AdminButtonLink>
+              <AdminButton
+                variant="primary"
+                type="submit"
+                form={formId}
+                disabled={!form || saving}
+              >
+                {saving ? tf.saving : tf.save}
+              </AdminButton>
+            </>
+          }
+        />
+
+        {loading && <div className="text-[var(--t3,#a39ba6)]">{t.loading}</div>}
+        {!form && <FormError message={error} />}
         {form && (
-          <form
-            onSubmit={onSubmit}
-            className="bg-neutral-800 border border-neutral-700 rounded-xl p-6 max-w-5xl"
-          >
-            <fieldset disabled={saving} className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field
-                  label={t.titleLabel}
-                  required
-                  value={form.title}
-                  onChange={(v) => updateField('title', v)}
-                />
-                <Field
-                  label={t.slugLabel}
-                  placeholder={t.slugPlaceholder}
-                  value={form.slug}
-                  onChange={(v) => updateField('slug', slugifyValue(v))}
-                />
-              </div>
+          <FicheLayout
+            main={
+              <form
+                id={formId}
+                onSubmit={onSubmit}
+                className="flex flex-col gap-6"
+              >
+                <fieldset disabled={saving} className="contents">
+                  <FormError message={error} />
 
-              <div className="grid gap-2">
-                <Field
-                  label={t.tagLabel}
-                  placeholder={t.tagPlaceholder}
-                  value={form.tag}
-                  onChange={(v) => updateField('tag', slugifyValue(v))}
-                  required
-                />
-                <p className="text-xs text-neutral-400">{t.tagHint}</p>
-              </div>
+                  <FicheSection title={t.contentSection}>
+                    <div className="space-y-4">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <Field
+                          label={t.titleLabel}
+                          required
+                          value={form.title}
+                          onChange={(v) => updateField('title', v)}
+                        />
+                        <Field
+                          label={t.slugLabel}
+                          placeholder={t.slugPlaceholder}
+                          value={form.slug}
+                          onChange={(v) => updateField('slug', slugifyValue(v))}
+                        />
+                      </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <LogoUpload
-                  value={form.imageUrl}
-                  onChange={(url) => updateField('imageUrl', url)}
-                  label={t.imageLabel}
-                  hint={t.imageHint}
-                />
-                <div className="grid gap-2">
-                  <label className="text-sm text-neutral-300">
-                    {t.statusLabel}
-                  </label>
-                  <select
-                    className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white"
-                    value={form.status}
-                    onChange={(e) =>
-                      updateField(
-                        'status',
-                        e.target.value as FormState['status']
-                      )
-                    }
-                  >
-                    <option value="draft">{t.statusDraft}</option>
-                    <option value="published">{t.statusPublished}</option>
-                  </select>
-                  <div className="grid gap-1">
-                    <label className="text-sm text-neutral-300">
-                      {t.publishDateLabel}
-                    </label>
-                    <input
-                      type="datetime-local"
-                      className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white"
-                      value={form.publishedAt}
-                      onChange={(e) =>
-                        updateField('publishedAt', e.target.value)
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
+                      <div className="grid gap-2">
+                        <Field
+                          label={t.tagLabel}
+                          placeholder={t.tagPlaceholder}
+                          value={form.tag}
+                          onChange={(v) => updateField('tag', slugifyValue(v))}
+                          required
+                        />
+                        <p className="text-xs text-[var(--t3,#a39ba6)]">
+                          {t.tagHint}
+                        </p>
+                      </div>
 
-              <div className="grid gap-2">
-                <label className="text-sm text-neutral-300">
-                  {t.excerptLabel}
-                </label>
-                <textarea
-                  className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white min-h-[80px]"
-                  value={form.excerpt}
-                  onChange={(e) => updateField('excerpt', e.target.value)}
-                />
-              </div>
+                      <div className="grid gap-2">
+                        <label className="text-sm text-[var(--t2,#c7bfca)]">
+                          {t.excerptLabel}
+                        </label>
+                        <textarea
+                          className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white min-h-[80px]"
+                          value={form.excerpt}
+                          onChange={(e) =>
+                            updateField('excerpt', e.target.value)
+                          }
+                        />
+                      </div>
 
-              <div className="grid gap-2">
-                <label className="text-sm text-neutral-300">
-                  {t.contentLabel}
-                </label>
-                <textarea
-                  className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white min-h-[220px]"
-                  value={form.content}
-                  required
-                  onChange={(e) => updateField('content', e.target.value)}
-                />
-              </div>
+                      <div className="grid gap-2">
+                        <label className="text-sm text-[var(--t2,#c7bfca)]">
+                          {t.contentLabel}
+                        </label>
+                        <textarea
+                          className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white min-h-[220px]"
+                          value={form.content}
+                          required
+                          onChange={(e) =>
+                            updateField('content', e.target.value)
+                          }
+                        />
+                      </div>
+                    </div>
+                  </FicheSection>
 
-              <div className="flex items-center gap-3">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition disabled:opacity-60"
-                >
-                  {saving ? t.saving : t.submit}
-                </button>
-                <Link
-                  href="/admin/news"
-                  className={`px-4 py-2 rounded-lg border border-white/15 hover:border-white/30${saving ? ' pointer-events-none opacity-50' : ''}`}
-                >
-                  {t.back}
-                </Link>
-              </div>
-            </fieldset>
-          </form>
+                  <FicheSection title={t.publicationSection}>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <LogoUpload
+                        value={form.imageUrl}
+                        onChange={(url) => updateField('imageUrl', url)}
+                        label={t.imageLabel}
+                        hint={t.imageHint}
+                      />
+                      <div className="grid gap-2">
+                        <label className="text-sm text-[var(--t2,#c7bfca)]">
+                          {t.statusLabel}
+                        </label>
+                        <select
+                          className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white"
+                          value={form.status}
+                          onChange={(e) =>
+                            updateField(
+                              'status',
+                              e.target.value as FormState['status']
+                            )
+                          }
+                        >
+                          <option value="draft">{t.statusDraft}</option>
+                          <option value="published">{t.statusPublished}</option>
+                        </select>
+                        <div className="grid gap-1">
+                          <label className="text-sm text-[var(--t2,#c7bfca)]">
+                            {t.publishDateLabel}
+                          </label>
+                          <input
+                            type="datetime-local"
+                            className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white"
+                            value={form.publishedAt}
+                            onChange={(e) =>
+                              updateField('publishedAt', e.target.value)
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </FicheSection>
+                </fieldset>
+              </form>
+            }
+            aside={
+              <FicheSection eyebrow title={tf.metaTitle}>
+                <MetaList
+                  items={[
+                    {
+                      label: tf.metaId,
+                      value: newsId ? `${newsId.slice(0, 8)}…` : '—',
+                    },
+                    { label: t.slugLabel, value: form.slug || '—' },
+                    { label: tf.metaCreated, value: day(meta?.createdAt) },
+                    { label: tf.metaUpdated, value: day(meta?.updatedAt) },
+                  ]}
+                />
+              </FicheSection>
+            }
+          />
         )}
       </div>
     </>
@@ -264,7 +346,7 @@ function Field({
 }) {
   return (
     <div className="grid gap-2">
-      <label className="text-sm text-neutral-300">
+      <label className="text-sm text-[var(--t2,#c7bfca)]">
         {label} {required && <span className="text-red-300">*</span>}
       </label>
       <input

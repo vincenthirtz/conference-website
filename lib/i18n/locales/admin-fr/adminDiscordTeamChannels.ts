@@ -74,6 +74,7 @@ export default adminNs('adminDiscordTeamChannels', {
   searchPlaceholder: 'Filtrer par nom d’équipe…',
   filterAll: 'Toutes',
   filterIssues: 'À traiter',
+  filterLabel: 'Affichage',
   summary: '{ok} en ordre · {issues} à traiter · {never} jamais vues',
   refreshTeam: 'Rafraîchir',
   stale: 'Photo datant de plus de 24 h — rafraîchis avant d’agir.',

@@ -22,4 +22,7 @@ export default {
   downgraded: '→ applied: {plan}',
   unlimited: '{used} calls — unlimited',
   never: 'never',
+  statSpaces: 'Tracked spaces',
+  statAtRisk: 'Past 80%',
+  statAtLimit: 'At the cap',
 };

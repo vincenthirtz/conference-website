@@ -593,8 +593,17 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       qui gagne le retrait en zone sensible ; `twitch_channel` rejoint les types d'historique.
 - [x] Cascade : les règles typographiques globales passent en `@layer base` — hors couche,
       elles écrasaient les classes explicites des composants Le Ruban (vu en capture).
-- [ ] Tableau de bord tournoi à onglets ; les 23 autres listes et 21 autres fiches : avec les
-      lots de découpe L15–L20.
+- [x] **Passe visuelle, lot 1 (12 écrans)** — briques d'archétype sans toucher à la logique
+      de données (appels, routes, `data-testid` identiques, vérifié au diff) :
+      fiches casteuse, membre de pôle, partenaire, actualité ; listes webhooks, clés d'API,
+      documents, classements, événements, espaces, consommation d'API, salons Discord d'équipe.
+      Faite par trois agents en parallèle sur des fichiers disjoints, vérifiée ensuite (tsc,
+      gardes). Le cliquet a refusé 4 `useState` ajoutés pour les dates des fiches : fusionnés
+      avec l'état `loading` qu'ils rendaient redondant.
+- [ ] Constat du lot : `Chip` et `AdminButtonLink` n'acceptent ni `title` ni `data-testid` —
+      les écrans les enveloppent d'un `<span>`. À ouvrir dans le kit.
+- [ ] Tableau de bord tournoi à onglets ; les autres listes et fiches : avec les lots de
+      découpe L15–L20.
 - [ ] Bouton d'action principal : `AdminButton variant="primary"` (vert feuille, comme les
       planches) sur les écrans migrés ; les boutons `bg-purple-600` des autres écrans restent
       orchidée jusqu'à leur migration.

@@ -45,9 +45,9 @@ export default {
   coverageDesc:
     'A finished match only produces ratings if BOTH teams have members linked to an account. Otherwise it stays unrated, with no error — this is where you see it.',
   coverageUnavailable: 'Coverage unavailable right now.',
-  coverageFinished: '{count} finished match(es)',
-  coverageRated: '{count} rated',
-  coverageUnrated: '{count} unrated',
+  coverageFinished: 'Finished matches',
+  coverageRated: 'Rated',
+  coverageUnrated: 'Unrated',
   coverageColMatch: 'Match',
   coverageColReason: 'Why',
   coverageReasonNoParticipants: 'No linked roster (both teams)',

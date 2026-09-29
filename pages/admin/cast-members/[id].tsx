@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
@@ -12,6 +11,24 @@ import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminCastMemberEdit from '@/lib/i18n/locales/admin-fr/adminCastMemberEdit';
 import CastMemberFields from '@/components/admin/cast-members/CastMemberFields';
 import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
+import { FormError } from '@/components/admin/form/FormField';
+import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
+import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import {
+  FicheLayout,
+  FicheSection,
+  MetaList,
+} from '@/features/admin/_shared/ui/Fiche';
+
+const day = (iso: string | null | undefined) =>
+  iso
+    ? new Date(iso).toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : '—';
 
 type Props = {
   staff: {
@@ -23,12 +40,12 @@ type Props = {
 
 function AdminCastMemberEditPage(_props: Props) {
   const t = useAdminT(nsAdminCastMemberEdit);
+  const tf = useAdminT(nsAdminFiche);
   const router = useRouter();
   const { id } = router.query;
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
 
-  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
     name: '',
     title: '',
@@ -44,10 +61,18 @@ function AdminCastMemberEditPage(_props: Props) {
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Chargement ET horodatages de la fiche, en UN état : « en cours », puis
+  // les dates lues dans la même réponse (null si le chargement a échoué).
+  // Un `loading` à part ne disait rien de plus que « pas encore de réponse ».
+  const [stamps, setStamps] = useState<
+    { createdAt: string | null; updatedAt: string | null } | 'loading' | null
+  >('loading');
+  const loading = stamps === 'loading';
+  const meta = stamps === 'loading' ? null : stamps;
 
   const fetchMember = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
+    setStamps('loading');
     setError(null);
 
     try {
@@ -65,10 +90,14 @@ function AdminCastMemberEditPage(_props: Props) {
         sortOrder: data.sort_order?.toString() || '',
         authUserId: data.auth_user_id ?? null,
       });
+      setStamps({
+        createdAt: data.created_at ?? null,
+        updatedAt: data.updated_at ?? null,
+      });
     } catch (err: unknown) {
       setError((err as Error)?.message || t.errorLoad);
     } finally {
-      setLoading(false);
+      setStamps((prev) => (prev === 'loading' ? null : prev));
     }
   }, [id, adminFetchJson, t]);
 
@@ -120,184 +149,170 @@ function AdminCastMemberEditPage(_props: Props) {
     }
   };
 
+  const memberId = typeof id === 'string' ? id : null;
+  const formId = 'cast-member-edit-form';
+
   return (
     <>
       <Head>
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          <AdminBreadcrumbs />
-          <DiffusionTabsNav active="casters" />
-          {/* Header */}
-          <div className="mb-8">
-            <Link
-              href="/admin/diffusion/casteuses"
-              className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <AdminBreadcrumbs />
+        <DiffusionTabsNav active="casters" />
+
+        <EntityHeader
+          crest={
+            form.imageUrl ? (
+              <Image
+                src={form.imageUrl}
+                alt={form.name}
+                width={52}
+                height={52}
+                className="h-full w-full object-cover"
+              />
+            ) : form.name ? (
+              form.name.slice(0, 3).toUpperCase()
+            ) : undefined
+          }
+          title={form.name || t.loading}
+          meta={
+            meta?.createdAt
+              ? `${t.heading} · ${tf.metaCreated} ${day(meta.createdAt)}`
+              : t.heading
+          }
+          actions={
+            <>
+              <AdminButton
+                disabled={saving}
+                onClick={() => router.push('/admin/diffusion/casteuses')}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              {t.back}
-            </Link>
+                {tf.cancel}
+              </AdminButton>
+              <AdminButton
+                variant="primary"
+                type="submit"
+                form={formId}
+                disabled={loading || saving}
+              >
+                {saving ? tf.saving : tf.save}
+              </AdminButton>
+            </>
+          }
+        />
 
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              {t.heading}
-            </h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              {form.name || t.loading}
-            </p>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--t1,#f4edf7)]" />
           </div>
+        ) : (
+          <FicheLayout
+            main={
+              <form
+                id={formId}
+                onSubmit={handleSubmit}
+                className="flex flex-col gap-6"
+              >
+                <fieldset disabled={saving} className="contents">
+                  <FicheSection title={t.identitySection}>
+                    <div className="flex flex-col gap-6">
+                      <FormError message={error} />
 
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <fieldset disabled={saving} className="contents">
-                <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 space-y-6 max-w-2xl">
-                  {error && (
-                    <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-start gap-3">
-                      <svg
-                        className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      {error}
-                    </div>
-                  )}
-
-                  {/* Preview */}
-                  {form.imageUrl && (
-                    <div className="flex items-center gap-4 p-4 bg-neutral-900/50 rounded-xl border border-neutral-700">
-                      <Image
-                        src={form.imageUrl}
-                        alt={form.name}
-                        width={64}
-                        height={64}
-                        className="w-16 h-16 rounded-xl object-cover"
-                      />
-                      <div>
-                        <div className="font-semibold text-white">
-                          {form.name || t.previewNameFallback}
-                        </div>
-                        <div className="text-sm text-neutral-400">
-                          {form.title || t.previewTitleFallback}
-                        </div>
-                        {form.city && (
-                          <div className="text-sm text-neutral-500">
-                            {form.city}
+                      {/* Aperçu */}
+                      {form.imageUrl && (
+                        <div className="flex items-center gap-4 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-4">
+                          <Image
+                            src={form.imageUrl}
+                            alt={form.name}
+                            width={64}
+                            height={64}
+                            className="h-16 w-16 rounded-[var(--r-ctrl,4px)] object-cover"
+                          />
+                          <div>
+                            <div className="font-semibold text-[var(--t1,#f4edf7)]">
+                              {form.name || t.previewNameFallback}
+                            </div>
+                            <div className="text-sm text-[var(--t3,#a39ba6)]">
+                              {form.title || t.previewTitleFallback}
+                            </div>
+                            {form.city && (
+                              <div className="text-sm text-[var(--t4,#807984)]">
+                                {form.city}
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
+                      )}
+
+                      <CastMemberFields form={form} onField={updateField} />
+                    </div>
+                  </FicheSection>
+
+                  <FicheSection title={t.visibilitySection}>
+                    <div className="flex flex-col gap-6">
+                      <CastMemberStaffPicker
+                        value={form.authUserId}
+                        currentCastMemberId={memberId}
+                        onChange={(next) => updateField('authUserId', next)}
+                      />
+
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <label className="relative inline-flex cursor-pointer items-center">
+                            <input
+                              type="checkbox"
+                              checked={form.isActive}
+                              onChange={(e) =>
+                                updateField('isActive', e.target.checked)
+                              }
+                              className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                          </label>
+                          <span className="text-sm text-[var(--t2,#c7bfca)]">
+                            {t.activeLabel}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <label className="relative inline-flex cursor-pointer items-center">
+                            <input
+                              type="checkbox"
+                              checked={form.isPromo}
+                              onChange={(e) =>
+                                updateField('isPromo', e.target.checked)
+                              }
+                              className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                          </label>
+                          <span className="text-sm text-[var(--t2,#c7bfca)]">
+                            {t.promoLabel}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  )}
-
-                  <CastMemberFields form={form} onField={updateField} />
-
-                  <CastMemberStaffPicker
-                    value={form.authUserId}
-                    currentCastMemberId={typeof id === 'string' ? id : null}
-                    onChange={(next) => updateField('authUserId', next)}
-                  />
-
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={form.isActive}
-                          onChange={(e) =>
-                            updateField('isActive', e.target.checked)
-                          }
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                      </label>
-                      <span className="text-sm text-neutral-300">
-                        {t.activeLabel}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={form.isPromo}
-                          onChange={(e) =>
-                            updateField('isPromo', e.target.checked)
-                          }
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
-                      </label>
-                      <span className="text-sm text-neutral-300">
-                        {t.promoLabel}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-3 pt-4 border-t border-neutral-700">
-                    <button
-                      type="button"
-                      onClick={() => router.push('/admin/diffusion/casteuses')}
-                      className={`px-5 py-2.5 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm font-medium transition-colors${saving ? ' pointer-events-none opacity-50' : ''}`}
-                    >
-                      {t.cancel}
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      {saving ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          {t.saving}
-                        </>
-                      ) : (
-                        <>
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                          {t.submit}
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </section>
-              </fieldset>
-            </form>
-          )}
-        </div>
+                  </FicheSection>
+                </fieldset>
+              </form>
+            }
+            aside={
+              <FicheSection eyebrow title={tf.metaTitle}>
+                <MetaList
+                  items={[
+                    {
+                      label: tf.metaId,
+                      value: memberId ? `${memberId.slice(0, 8)}…` : '—',
+                    },
+                    { label: tf.metaCreated, value: day(meta?.createdAt) },
+                    { label: tf.metaUpdated, value: day(meta?.updatedAt) },
+                  ]}
+                />
+              </FicheSection>
+            }
+          />
+        )}
       </div>
     </>
   );

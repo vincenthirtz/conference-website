@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
@@ -8,6 +7,26 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminPartnerEdit from '@/lib/i18n/locales/admin-fr/adminPartnerEdit';
 import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
+import { FormError } from '@/components/admin/form/FormField';
+import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
+import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
+import AdminButton, {
+  AdminButtonLink,
+} from '@/features/admin/_shared/ui/AdminButton';
+import {
+  FicheLayout,
+  FicheSection,
+  MetaList,
+} from '@/features/admin/_shared/ui/Fiche';
+
+const day = (iso: string | null | undefined) =>
+  iso
+    ? new Date(iso).toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : '—';
 
 type Props = {
   staff: {
@@ -30,14 +49,22 @@ type FormData = {
 
 function AdminEditPartnerPage(_props: Props) {
   const t = useAdminT(nsAdminPartnerEdit);
+  const tf = useAdminT(nsAdminFiche);
   const router = useRouter();
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch();
   const { id } = router.query;
 
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Chargement ET horodatages de la fiche, en UN état : « en cours », puis
+  // les dates lues dans la même réponse (null si le chargement a échoué).
+  // Un `loading` à part ne disait rien de plus que « pas encore de réponse ».
+  const [stamps, setStamps] = useState<
+    { createdAt: string | null; updatedAt: string | null } | 'loading' | null
+  >('loading');
+  const loading = stamps === 'loading';
+  const meta = stamps === 'loading' ? null : stamps;
 
   const [form, setForm] = useState<FormData>({
     name: '',
@@ -54,7 +81,7 @@ function AdminEditPartnerPage(_props: Props) {
     if (!id || typeof id !== 'string') return;
 
     async function fetchPartner() {
-      setLoading(true);
+      setStamps('loading');
       try {
         const json = await adminFetchJson<{
           name?: string;
@@ -65,6 +92,8 @@ function AdminEditPartnerPage(_props: Props) {
           note?: string;
           display_order?: number;
           is_active?: boolean;
+          created_at?: string | null;
+          updated_at?: string | null;
         }>(`/api/admin/partners/${id}`);
 
         setForm({
@@ -77,10 +106,14 @@ function AdminEditPartnerPage(_props: Props) {
           displayOrder: json.display_order || 0,
           isActive: json.is_active ?? true,
         });
+        setStamps({
+          createdAt: json.created_at ?? null,
+          updatedAt: json.updated_at ?? null,
+        });
       } catch (err: unknown) {
         setError((err as Error).message || t.errorLoad);
       } finally {
-        setLoading(false);
+        setStamps((prev) => (prev === 'loading' ? null : prev));
       }
     }
 
@@ -129,10 +162,13 @@ function AdminEditPartnerPage(_props: Props) {
     }
   };
 
+  const partnerId = typeof id === 'string' ? id : null;
+  const formId = 'partner-edit-form';
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+      <div className="flex min-h-screen items-center justify-center px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--t1,#f4edf7)]" />
       </div>
     );
   }
@@ -143,215 +179,215 @@ function AdminEditPartnerPage(_props: Props) {
         <title>{format(t.pageTitle, { name: form.name })}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          <AdminBreadcrumbs />
-          {/* Header */}
-          <div className="mb-8">
-            <Link
-              href="/admin/partners"
-              className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition mb-4"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <AdminBreadcrumbs />
+
+        <EntityHeader
+          crest={
+            form.logoUrl ? (
+              // biome-ignore lint/performance/noImgElement: free-form URL, outside next/image remotePatterns
+              <img
+                src={form.logoUrl}
+                alt={form.name}
+                className="h-full w-full object-contain p-1"
+              />
+            ) : form.name ? (
+              form.name.slice(0, 3).toUpperCase()
+            ) : undefined
+          }
+          title={form.name || t.heading}
+          meta={
+            meta?.createdAt
+              ? `${t.heading} · ${tf.metaCreated} ${day(meta.createdAt)}`
+              : t.heading
+          }
+          actions={
+            <>
+              <AdminButtonLink
+                href="/admin/partners"
+                className={saving ? 'pointer-events-none opacity-50' : ''}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              {t.back}
-            </Link>
-            <h1 className="text-3xl font-bold tracking-tight">{t.heading}</h1>
-          </div>
+                {tf.cancel}
+              </AdminButtonLink>
+              <AdminButton
+                variant="primary"
+                type="submit"
+                form={formId}
+                disabled={saving}
+              >
+                {saving ? tf.saving : tf.save}
+              </AdminButton>
+            </>
+          }
+        />
 
-          <form
-            onSubmit={handleSubmit}
-            className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 sm:p-8"
-          >
-            <fieldset disabled={saving} className="space-y-6">
-              {error && (
-                <div className="rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5 text-red-400 flex-shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  {error}
-                </div>
-              )}
+        <FicheLayout
+          main={
+            <FicheSection title={t.identitySection}>
+              <form id={formId} onSubmit={handleSubmit}>
+                <fieldset disabled={saving} className="space-y-6">
+                  <FormError message={error} />
 
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    {t.nameLabel}
-                  </label>
-                  <input
-                    type="text"
-                    value={form.name}
-                    onChange={(e) => updateField('name', e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                    placeholder={t.namePlaceholder}
-                    required
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    {t.categoryLabel}
-                  </label>
-                  <select
-                    value={form.category}
-                    onChange={(e) =>
-                      updateField(
-                        'category',
-                        e.target.value as FormData['category']
-                      )
-                    }
-                    className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                    required
-                  >
-                    <option value="">{t.categoryPlaceholder}</option>
-                    <option value="super">{t.categorySuper}</option>
-                    <option value="major">{t.categoryMajor}</option>
-                    <option value="cultural">{t.categoryCultural}</option>
-                  </select>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    {t.descriptionLabel}
-                  </label>
-                  <textarea
-                    value={form.description}
-                    onChange={(e) => updateField('description', e.target.value)}
-                    rows={3}
-                    className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white resize-none"
-                    placeholder={t.descriptionPlaceholder}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    {t.logoUrlLabel}
-                  </label>
-                  <input
-                    type="url"
-                    value={form.logoUrl}
-                    onChange={(e) => updateField('logoUrl', e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                    placeholder="https://..."
-                  />
-                  {form.logoUrl && (
-                    <div className="mt-2 p-2 bg-white/5 rounded-lg border border-neutral-700">
-                      {/* biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */}
-                      <img
-                        src={form.logoUrl}
-                        alt={t.logoPreviewAlt}
-                        className="max-h-16 w-auto mx-auto object-contain"
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-[var(--t2,#c7bfca)] mb-2">
+                        {t.nameLabel}
+                      </label>
+                      <input
+                        type="text"
+                        value={form.name}
+                        onChange={(e) => updateField('name', e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
+                        placeholder={t.namePlaceholder}
+                        required
                       />
                     </div>
-                  )}
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    {t.websiteLabel}
-                  </label>
-                  <input
-                    type="url"
-                    value={form.websiteUrl}
-                    onChange={(e) => updateField('websiteUrl', e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                    placeholder="https://www.exemple.com"
-                  />
-                </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-[var(--t2,#c7bfca)] mb-2">
+                        {t.categoryLabel}
+                      </label>
+                      <select
+                        value={form.category}
+                        onChange={(e) =>
+                          updateField(
+                            'category',
+                            e.target.value as FormData['category']
+                          )
+                        }
+                        className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
+                        required
+                      >
+                        <option value="">{t.categoryPlaceholder}</option>
+                        <option value="super">{t.categorySuper}</option>
+                        <option value="major">{t.categoryMajor}</option>
+                        <option value="cultural">{t.categoryCultural}</option>
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    {t.noteLabel}
-                  </label>
-                  <input
-                    type="text"
-                    value={form.note}
-                    onChange={(e) => updateField('note', e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                    placeholder={t.notePlaceholder}
-                  />
-                </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-[var(--t2,#c7bfca)] mb-2">
+                        {t.descriptionLabel}
+                      </label>
+                      <textarea
+                        value={form.description}
+                        onChange={(e) =>
+                          updateField('description', e.target.value)
+                        }
+                        rows={3}
+                        className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white resize-none"
+                        placeholder={t.descriptionPlaceholder}
+                        required
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    {t.displayOrderLabel}
-                  </label>
-                  <input
-                    type="number"
-                    value={form.displayOrder}
-                    onChange={(e) =>
-                      updateField('displayOrder', parseInt(e.target.value) || 0)
-                    }
-                    className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
-                    placeholder="0"
-                  />
-                  <p className="text-xs text-neutral-500 mt-1">
-                    {t.displayOrderHint}
-                  </p>
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--t2,#c7bfca)] mb-2">
+                        {t.logoUrlLabel}
+                      </label>
+                      <input
+                        type="url"
+                        value={form.logoUrl}
+                        onChange={(e) => updateField('logoUrl', e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
+                        placeholder="https://..."
+                      />
+                      {form.logoUrl && (
+                        <div className="mt-2 p-2 bg-white/5 rounded-lg border border-neutral-700">
+                          {/* biome-ignore lint/performance/noImgElement: image hors next/image (exclusion reprise d’ESLint) */}
+                          <img
+                            src={form.logoUrl}
+                            alt={t.logoPreviewAlt}
+                            className="max-h-16 w-auto mx-auto object-contain"
+                          />
+                        </div>
+                      )}
+                    </div>
 
-                <div className="sm:col-span-2">
-                  <label className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={form.isActive}
-                      onChange={(e) =>
-                        updateField('isActive', e.target.checked)
-                      }
-                      className="w-5 h-5 rounded border-neutral-600 bg-neutral-900/50 text-emerald-500 focus:ring-emerald-500"
-                    />
-                    <span className="text-sm font-medium text-neutral-300">
-                      {t.activeLabel}
-                    </span>
-                  </label>
-                </div>
-              </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--t2,#c7bfca)] mb-2">
+                        {t.websiteLabel}
+                      </label>
+                      <input
+                        type="url"
+                        value={form.websiteUrl}
+                        onChange={(e) =>
+                          updateField('websiteUrl', e.target.value)
+                        }
+                        className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
+                        placeholder="https://www.exemple.com"
+                      />
+                    </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {saving ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      {t.saving}
-                    </>
-                  ) : (
-                    t.submit
-                  )}
-                </button>
-                <Link
-                  href="/admin/partners"
-                  className={`px-6 py-3 rounded-xl border border-neutral-600 text-sm font-semibold text-white text-center transition hover:bg-neutral-800${saving ? ' pointer-events-none opacity-50' : ''}`}
-                >
-                  {t.backButton}
-                </Link>
-              </div>
-            </fieldset>
-          </form>
-        </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--t2,#c7bfca)] mb-2">
+                        {t.noteLabel}
+                      </label>
+                      <input
+                        type="text"
+                        value={form.note}
+                        onChange={(e) => updateField('note', e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
+                        placeholder={t.notePlaceholder}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--t2,#c7bfca)] mb-2">
+                        {t.displayOrderLabel}
+                      </label>
+                      <input
+                        type="number"
+                        value={form.displayOrder}
+                        onChange={(e) =>
+                          updateField(
+                            'displayOrder',
+                            parseInt(e.target.value) || 0
+                          )
+                        }
+                        className="w-full px-4 py-3 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white"
+                        placeholder="0"
+                      />
+                      <p className="text-xs text-neutral-500 mt-1">
+                        {t.displayOrderHint}
+                      </p>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={form.isActive}
+                          onChange={(e) =>
+                            updateField('isActive', e.target.checked)
+                          }
+                          className="w-5 h-5 rounded border-neutral-600 bg-neutral-900/50 text-emerald-500 focus:ring-emerald-500"
+                        />
+                        <span className="text-sm font-medium text-[var(--t2,#c7bfca)]">
+                          {t.activeLabel}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </fieldset>
+              </form>
+            </FicheSection>
+          }
+          aside={
+            <FicheSection eyebrow title={tf.metaTitle}>
+              <MetaList
+                items={[
+                  {
+                    label: tf.metaId,
+                    value: partnerId ? `${partnerId.slice(0, 8)}…` : '—',
+                  },
+                  { label: tf.metaCreated, value: day(meta?.createdAt) },
+                  { label: tf.metaUpdated, value: day(meta?.updatedAt) },
+                ]}
+              />
+            </FicheSection>
+          }
+        />
       </div>
     </>
   );

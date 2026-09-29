@@ -45,9 +45,9 @@ export default adminNs('adminRatings', {
   coverageDesc:
     "Un match terminé ne produit un rating que si les DEUX équipes ont des membres rattachés à un compte. Sinon il reste non noté, sans erreur — c'est ici qu'on le voit.",
   coverageUnavailable: 'Couverture indisponible pour le moment.',
-  coverageFinished: '{count} match(s) terminé(s)',
-  coverageRated: '{count} noté(s)',
-  coverageUnrated: '{count} non noté(s)',
+  coverageFinished: 'Matchs terminés',
+  coverageRated: 'Notés',
+  coverageUnrated: 'Non notés',
   coverageColMatch: 'Match',
   coverageColReason: 'Pourquoi',
   coverageReasonNoParticipants: 'Aucun roster rattaché (les deux équipes)',

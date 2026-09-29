@@ -39,4 +39,5 @@ export default adminNs('adminPartnerEdit', {
   errorDescriptionRequired: 'La description est requise.',
   errorCategoryRequired: 'La catégorie est requise.',
   errorGeneric: 'Une erreur est survenue.',
+  identitySection: 'Identité',
 });

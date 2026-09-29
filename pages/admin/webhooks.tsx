@@ -27,6 +27,20 @@ import EmptyState from '@/components/admin/EmptyState';
 import ApiTokenRevealModal from '@/components/admin/ApiTokenRevealModal';
 import { logger } from '@/utils/logger';
 import nsAdminWebhooks from '@/lib/i18n/locales/admin-fr/adminWebhooks';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+
+// Planche « Le Ruban », archétype Liste : classes partagées par les deux cartes.
+const CARD =
+  'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4';
+const SECTION_TITLE =
+  'font-[family-name:var(--fd)] text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--t1,#f4edf7)] [font-stretch:75%]';
+const EYEBROW =
+  'mb-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
+const LABEL = 'mb-1 block text-sm text-[var(--t3,#a39ba6)]';
+const INPUT =
+  'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 type Subscription = {
   id: string;
@@ -269,295 +283,276 @@ function AdminWebhooksPage() {
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12 max-w-5xl mx-auto">
-          <Breadcrumb
-            items={[
-              { label: t.breadcrumbAdmin, href: '/admin' },
-              { label: t.breadcrumbTitle },
-            ]}
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <Breadcrumb
+          items={[
+            { label: t.breadcrumbAdmin, href: '/admin' },
+            { label: t.breadcrumbTitle },
+          ]}
+        />
+
+        <p className={EYEBROW}>{t.kicker}</p>
+        <AdminPageHeader title={t.heading} subtitle={t.intro} />
+
+        {/* ===== Création ===== */}
+        <section className={`${CARD} mb-6`}>
+          <h2 className={SECTION_TITLE}>{t.createHeading}</h2>
+          <p className="mt-1 mb-4 text-sm text-[var(--t3,#a39ba6)]">
+            {t.createSubtitle}
+          </p>
+
+          <AlertBanner
+            message={formError}
+            variant="error"
+            className="mb-4"
+            onDismiss={() => setFormError(null)}
           />
 
-          <div className="mb-8">
-            <p className="text-sm text-neutral-400">{t.kicker}</p>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mt-1">
-              {t.heading}
-            </h1>
-            <p className="text-sm text-neutral-400 mt-2 max-w-2xl">{t.intro}</p>
-          </div>
-
-          {/* ===== Création ===== */}
-          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-1">{t.createHeading}</h2>
-            <p className="text-sm text-neutral-400 mb-4">{t.createSubtitle}</p>
-
-            <AlertBanner
-              message={formError}
-              variant="error"
-              className="mb-4"
-              onDismiss={() => setFormError(null)}
-            />
-
-            <form onSubmit={handleCreate} className="space-y-5">
-              <div>
-                <label
-                  htmlFor="wh-url"
-                  className="block text-sm text-neutral-400 mb-1"
-                >
-                  {t.urlLabel}
-                </label>
-                <input
-                  id="wh-url"
-                  type="url"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://exemple.com/webhooks/conference"
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm font-mono"
-                  data-testid="webhook-url-input"
-                />
-              </div>
-
-              <div>
-                <span className="block text-sm text-neutral-400 mb-1">
-                  {t.eventsLabel}
-                </span>
-                <p className="text-xs text-neutral-500 mb-3">{t.eventsHint}</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {available.map((ev) => {
-                    const checked = selected.has(ev);
-                    return (
-                      <label
-                        key={ev}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${
-                          checked
-                            ? 'bg-purple-600/15 border-purple-500/40'
-                            : 'bg-neutral-900/40 border-neutral-700/50 hover:border-neutral-600'
-                        }`}
-                        data-testid={`webhook-event-${ev}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleEvent(ev)}
-                          className="w-4 h-4 rounded border-neutral-600 bg-neutral-900 text-purple-500 focus:ring-purple-500/50"
-                        />
-                        <span className="text-sm font-mono text-neutral-200">
-                          {ev}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="wh-desc"
-                  className="block text-sm text-neutral-400 mb-1"
-                >
-                  {t.descriptionLabel}
-                </label>
-                <input
-                  id="wh-desc"
-                  type="text"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder={t.descriptionPlaceholder}
-                  maxLength={200}
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                />
-              </div>
-
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  data-testid="webhook-create-btn"
-                >
-                  {creating ? t.creating : t.createButton}
-                </button>
-              </div>
-            </form>
-          </section>
-
-          {/* ===== Liste ===== */}
-          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-neutral-700/50">
-              <h2 className="text-xl font-semibold">{t.listHeading}</h2>
+          <form onSubmit={handleCreate} className="space-y-5">
+            <div>
+              <label htmlFor="wh-url" className={LABEL}>
+                {t.urlLabel}
+              </label>
+              <input
+                id="wh-url"
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://exemple.com/webhooks/conference"
+                className={`${INPUT} font-mono`}
+                data-testid="webhook-url-input"
+              />
             </div>
 
-            <AlertBanner
-              message={loadError}
-              variant="error"
-              className="m-4"
-              onDismiss={() => setLoadError(null)}
-            />
+            <div>
+              <span className={LABEL}>{t.eventsLabel}</span>
+              <p className="mb-3 text-xs text-[var(--t4,#807984)]">
+                {t.eventsHint}
+              </p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {available.map((ev) => {
+                  const checked = selected.has(ev);
+                  return (
+                    <label
+                      key={ev}
+                      className={`flex cursor-pointer items-center gap-3 rounded-[var(--r-ctrl,4px)] border px-3 py-2.5 transition-colors ${
+                        checked
+                          ? 'border-[rgba(180,103,209,.45)] bg-[rgba(180,103,209,.1)]'
+                          : 'border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] hover:border-[var(--t4,#807984)]'
+                      }`}
+                      data-testid={`webhook-event-${ev}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleEvent(ev)}
+                        className="h-4 w-4 accent-[var(--or,#b467d1)]"
+                      />
+                      <span className="font-mono text-sm text-[var(--t1,#f4edf7)]">
+                        {ev}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
 
-            {subs === null ? (
-              <LoadingSpinner label={t.loading} className="py-16" />
-            ) : subs.length === 0 ? (
-              <EmptyState title={t.emptyState} className="py-16" />
-            ) : (
-              <ul className="divide-y divide-neutral-700/50">
-                {subs.map((sub) => (
-                  <li
-                    key={sub.id}
-                    className="px-6 py-4"
-                    data-testid={`webhook-row-${sub.id}`}
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <code className="text-sm font-mono text-white break-all">
-                            {sub.url}
-                          </code>
-                          {sub.enabled ? (
-                            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
-                              {t.statusActive}
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-600/20 text-amber-300 border border-amber-500/30 whitespace-nowrap">
-                              {t.statusDisabled}
-                            </span>
-                          )}
-                        </div>
-                        {sub.description && (
-                          <p className="text-xs text-neutral-400 mt-1">
-                            {sub.description}
-                          </p>
-                        )}
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          {sub.event_types.map((ev) => (
-                            <span
-                              key={ev}
-                              className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-neutral-700/50 border border-neutral-600/50 text-neutral-300"
-                            >
-                              {ev}
-                            </span>
-                          ))}
-                        </div>
-                        <p className="text-[11px] text-neutral-500 mt-2">
-                          {t.lastDelivery}:{' '}
-                          {formatDate(sub.last_delivery_at, t.never)}
-                          {sub.consecutive_failures > 0 && (
-                            <span className="text-amber-400/80">
-                              {' · '}
-                              {t.failures.replace(
-                                '{n}',
-                                String(sub.consecutive_failures)
-                              )}
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => toggleDeliveries(sub)}
-                          className="px-3 py-1.5 rounded-lg border border-neutral-500/40 text-neutral-300 hover:border-neutral-400 text-sm transition-colors"
-                          data-testid={`webhook-deliveries-btn-${sub.id}`}
-                        >
-                          {openId === sub.id
-                            ? t.hideDeliveries
-                            : t.viewDeliveries}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleToggle(sub)}
-                          disabled={busyId === sub.id}
-                          className="px-3 py-1.5 rounded-lg border border-neutral-500/40 text-neutral-300 hover:border-neutral-400 text-sm transition-colors disabled:opacity-50"
-                          data-testid={`webhook-toggle-btn-${sub.id}`}
-                        >
-                          {sub.enabled ? t.disable : t.enable}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(sub)}
-                          disabled={busyId === sub.id}
-                          className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:border-red-400 text-sm transition-colors disabled:opacity-50"
-                          data-testid={`webhook-delete-btn-${sub.id}`}
-                        >
-                          {t.delete}
-                        </button>
-                      </div>
-                    </div>
+            <div>
+              <label htmlFor="wh-desc" className={LABEL}>
+                {t.descriptionLabel}
+              </label>
+              <input
+                id="wh-desc"
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t.descriptionPlaceholder}
+                maxLength={200}
+                className={INPUT}
+              />
+            </div>
 
-                    {openId === sub.id && (
-                      <div className="mt-4 rounded-xl border border-neutral-700/50 bg-neutral-900/40 p-3">
-                        {!deliveries[sub.id] ? (
-                          <LoadingSpinner label={t.loading} className="py-4" />
-                        ) : deliveries[sub.id].length === 0 ? (
-                          <p className="text-xs text-neutral-500 py-2">
-                            {t.noDeliveries}
-                          </p>
+            <div className="flex justify-end">
+              <AdminButton
+                type="submit"
+                variant="primary"
+                disabled={creating}
+                data-testid="webhook-create-btn"
+              >
+                {creating ? t.creating : t.createButton}
+              </AdminButton>
+            </div>
+          </form>
+        </section>
+
+        {/* ===== Liste ===== */}
+        <section className={CARD}>
+          <h2 className={`${SECTION_TITLE} mb-2`}>{t.listHeading}</h2>
+
+          <AlertBanner
+            message={loadError}
+            variant="error"
+            className="my-4"
+            onDismiss={() => setLoadError(null)}
+          />
+
+          {subs === null ? (
+            <LoadingSpinner label={t.loading} className="py-16" />
+          ) : subs.length === 0 ? (
+            <EmptyState title={t.emptyState} className="py-16" />
+          ) : (
+            <ul className="divide-y divide-[var(--line2,rgba(194,196,201,.2))]">
+              {subs.map((sub) => (
+                <li
+                  key={sub.id}
+                  className="py-4"
+                  data-testid={`webhook-row-${sub.id}`}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <code className="break-all font-mono text-sm text-[var(--t1,#f4edf7)]">
+                          {sub.url}
+                        </code>
+                        {sub.enabled ? (
+                          <Chip tone="ok">{t.statusActive}</Chip>
                         ) : (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
-                              <thead>
-                                <tr className="text-left text-neutral-500">
-                                  <th className="py-1.5 pr-3 font-medium">
-                                    {t.colEvent}
-                                  </th>
-                                  <th className="py-1.5 pr-3 font-medium">
-                                    {t.colStatus}
-                                  </th>
-                                  <th className="py-1.5 pr-3 font-medium">
-                                    {t.colAttempts}
-                                  </th>
-                                  <th className="py-1.5 pr-3 font-medium">
-                                    HTTP
-                                  </th>
-                                  <th className="py-1.5 font-medium">
-                                    {t.colWhen}
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-neutral-800">
-                                {deliveries[sub.id].map((d) => (
-                                  <tr key={d.id}>
-                                    <td className="py-1.5 pr-3 font-mono text-neutral-300">
-                                      {d.event_name}
-                                    </td>
-                                    <td className="py-1.5 pr-3">
-                                      <span
-                                        className={
-                                          d.status === 'delivered'
-                                            ? 'text-emerald-300'
-                                            : d.status === 'failed'
-                                              ? 'text-red-300'
-                                              : 'text-neutral-400'
-                                        }
-                                      >
-                                        {d.status}
-                                      </span>
-                                    </td>
-                                    <td className="py-1.5 pr-3 text-neutral-400">
-                                      {d.attempts}
-                                    </td>
-                                    <td className="py-1.5 pr-3 text-neutral-400">
-                                      {d.response_status ?? '—'}
-                                    </td>
-                                    <td className="py-1.5 text-neutral-400 whitespace-nowrap">
-                                      {formatDate(
-                                        d.delivered_at ?? d.created_at,
-                                        '—'
-                                      )}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                          <Chip tone="warn">{t.statusDisabled}</Chip>
                         )}
                       </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </div>
+                      {sub.description && (
+                        <p className="mt-1 text-xs text-[var(--t3,#a39ba6)]">
+                          {sub.description}
+                        </p>
+                      )}
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {sub.event_types.map((ev) => (
+                          <span
+                            key={ev}
+                            className="rounded-[3px] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2 py-0.5 font-mono text-[11px] text-[var(--t2,#c7bfca)]"
+                          >
+                            {ev}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-[11px] text-[var(--t4,#807984)]">
+                        {t.lastDelivery}:{' '}
+                        {formatDate(sub.last_delivery_at, t.never)}
+                        {sub.consecutive_failures > 0 && (
+                          <span className="text-[var(--warn,#f5a524)]">
+                            {' · '}
+                            {t.failures.replace(
+                              '{n}',
+                              String(sub.consecutive_failures)
+                            )}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex flex-shrink-0 items-center gap-2">
+                      <AdminButton
+                        size="sm"
+                        onClick={() => toggleDeliveries(sub)}
+                        data-testid={`webhook-deliveries-btn-${sub.id}`}
+                      >
+                        {openId === sub.id
+                          ? t.hideDeliveries
+                          : t.viewDeliveries}
+                      </AdminButton>
+                      <AdminButton
+                        size="sm"
+                        onClick={() => handleToggle(sub)}
+                        disabled={busyId === sub.id}
+                        data-testid={`webhook-toggle-btn-${sub.id}`}
+                      >
+                        {sub.enabled ? t.disable : t.enable}
+                      </AdminButton>
+                      <AdminButton
+                        size="sm"
+                        variant="danger"
+                        onClick={() => handleDelete(sub)}
+                        disabled={busyId === sub.id}
+                        data-testid={`webhook-delete-btn-${sub.id}`}
+                      >
+                        {t.delete}
+                      </AdminButton>
+                    </div>
+                  </div>
+
+                  {openId === sub.id && (
+                    <div className="mt-4 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-3">
+                      {!deliveries[sub.id] ? (
+                        <LoadingSpinner label={t.loading} className="py-4" />
+                      ) : deliveries[sub.id].length === 0 ? (
+                        <p className="py-2 text-xs text-[var(--t4,#807984)]">
+                          {t.noDeliveries}
+                        </p>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="text-left text-[var(--t3,#a39ba6)]">
+                                <th className="py-1.5 pr-3 font-medium">
+                                  {t.colEvent}
+                                </th>
+                                <th className="py-1.5 pr-3 font-medium">
+                                  {t.colStatus}
+                                </th>
+                                <th className="py-1.5 pr-3 font-medium">
+                                  {t.colAttempts}
+                                </th>
+                                <th className="py-1.5 pr-3 font-medium">
+                                  HTTP
+                                </th>
+                                <th className="py-1.5 font-medium">
+                                  {t.colWhen}
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[var(--line2,rgba(194,196,201,.2))]">
+                              {deliveries[sub.id].map((d) => (
+                                <tr key={d.id}>
+                                  <td className="py-1.5 pr-3 font-mono text-[var(--t2,#c7bfca)]">
+                                    {d.event_name}
+                                  </td>
+                                  <td className="py-1.5 pr-3">
+                                    <Chip
+                                      tone={
+                                        d.status === 'delivered'
+                                          ? 'ok'
+                                          : d.status === 'failed'
+                                            ? 'err'
+                                            : 'neutral'
+                                      }
+                                    >
+                                      {d.status}
+                                    </Chip>
+                                  </td>
+                                  <td className="py-1.5 pr-3 text-[var(--t3,#a39ba6)]">
+                                    {d.attempts}
+                                  </td>
+                                  <td className="py-1.5 pr-3 text-[var(--t3,#a39ba6)]">
+                                    {d.response_status ?? '—'}
+                                  </td>
+                                  <td className="whitespace-nowrap py-1.5 text-[var(--t3,#a39ba6)]">
+                                    {formatDate(
+                                      d.delivered_at ?? d.created_at,
+                                      '—'
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
     </>
   );
