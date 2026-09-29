@@ -105,7 +105,7 @@ export default function TeamPage({
   const locale = useLocale();
   // `canEdit` is auth-dependent and therefore not part of the statically
   // generated payload. We resolve it client-side after hydration: a captain
-  // or manager of *this* team (per /api/admin/teams/my) may edit its public
+  // or manager of *this* team (per /api/player/team) may edit its public
   // page. Defaults to false so the SSG markup never leaks an edit affordance.
   // Le visiteur gère-t-il cette équipe (édition) ou une AUTRE (scrim depuis
   // son espace, R3) ? Appel seulement pour une session ouverte.

@@ -17,7 +17,7 @@
 import Link from 'next/link';
 import { useT, format } from '@/lib/i18n/useT';
 import nsPlayerIndex from '@/lib/i18n/locales/fr/playerIndex';
-import type { TodoItem } from '@/pages/api/player/dashboard';
+import type { TodoItem } from '@/features/player/dashboard/schemas';
 
 type T = typeof nsPlayerIndex.fr;
 

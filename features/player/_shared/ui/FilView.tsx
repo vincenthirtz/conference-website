@@ -16,6 +16,7 @@ export default function FilView({
   actions,
   status,
   primaryAction,
+  columns = 2,
   children,
 }: {
   title: ReactNode;
@@ -26,6 +27,11 @@ export default function FilView({
   status?: ReactNode;
   /** L'action principale, collée en bas du pouce. */
   primaryAction?: ReactNode;
+  /**
+   * 1 pour un fil SÉQUENTIEL (le fil du match : les étapes se lisent dans
+   * l'ordre), 2 (défaut) pour des cartes indépendantes (tableau de bord).
+   */
+  columns?: 1 | 2;
   children: ReactNode;
 }) {
   return (
@@ -38,7 +44,13 @@ export default function FilView({
       >
         {status}
       </p>
-      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start">
+      <div
+        className={
+          columns === 2
+            ? 'flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start'
+            : 'flex flex-col gap-4'
+        }
+      >
         {children}
       </div>
       {primaryAction && (

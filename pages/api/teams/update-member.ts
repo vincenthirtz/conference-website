@@ -184,7 +184,10 @@ export default withSubjectRoute(
         return res.status(400).json({ error: 'role invalide.' });
       }
       newRole = validateRole(body.role);
-      const teamRoles = await loadTeamRolesFromSupabase(supabaseAdmin);
+      const teamRoles = await loadTeamRolesFromSupabase(
+        supabaseAdmin,
+        tenantId
+      );
 
       // Anti-escalation, MÊME RÈGLE que /api/teams/update-member-role : les
       // deux routes font le même geste (changer le rôle d'un membre) et

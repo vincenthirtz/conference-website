@@ -15,9 +15,8 @@ import { withAuthRoute } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { isValidUUID, sanitizeUrl } from '@/utils/apiHelpers';
-import { hasTeamPermission } from '@/utils/teams/permissions';
+import { hasTeamPermission, readTeamTenantId } from '@/utils/teams/permissions';
 import { isValidTwitchValue } from '@/utils/social/profileHandles';
-import { resolveTenantIdForUserRequest } from '@/utils/tenant';
 import {
   normalizeMemberSpecialty,
   type MemberSpecialty,
@@ -79,7 +78,14 @@ export default withAuthRoute(async function handler(
     return res.status(400).json({ error: 'memberId invalide.' });
   }
 
-  const tenantId = resolveTenantIdForUserRequest(req, { authUserId: user.id });
+  // Tenant DE L'ÉQUIPE (P10), pas celui du chemin (tenant par défaut) :
+  // sinon le membre d'une équipe d'un autre tenant était « introuvable ».
+  const tenantId = await readTeamTenantId(teamId);
+  if (!tenantId) {
+    return res
+      .status(404)
+      .json({ error: 'Membre introuvable dans cette équipe.' });
+  }
 
   // Look up the member to confirm she belongs to the team and to get her
   // user_id (needed for the self-edit allowance).

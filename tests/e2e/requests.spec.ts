@@ -7,7 +7,7 @@
 //     over the captaincy before requesting their own transfer).
 //
 // Auth = real player login (see _helpers/playerSession.ts). The page resolves
-// the player context from /api/admin/teams/my (Bearer fetch) and the team list
+// the player context from /api/player/team (Bearer fetch) and the team list
 // from /api/teams; both are route-mocked so the UI is deterministic.
 import { test, expect, type Page } from '@playwright/test';
 import { createTestPlayer, deleteTestUser } from '../utils/supabaseTestClient';
@@ -57,8 +57,8 @@ test.describe('Player requests inbox', () => {
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
-    // User has no team → /api/admin/teams/my returns no team.
-    await mockApiJson(page, '/api/admin/teams/my', {
+    // User has no team → /api/player/team returns no team.
+    await mockApiJson(page, '/api/player/team', {
       team: null,
       isCaptain: false,
       isManager: false,
@@ -96,7 +96,7 @@ test.describe('Player requests inbox', () => {
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
-    await mockApiJson(page, '/api/admin/teams/my', {
+    await mockApiJson(page, '/api/player/team', {
       team: null,
       isCaptain: false,
       isManager: false,
@@ -129,7 +129,7 @@ test.describe('Player requests inbox', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     // Captain of a team → mode toggle (Proposer / Mon transfert) is shown, and
     // the self ("Mon transfert") mode is blocked for captains.
-    await mockApiJson(page, '/api/admin/teams/my', {
+    await mockApiJson(page, '/api/player/team', {
       team: { id: 'team-req-captain', name: 'Captain Squad' },
       isCaptain: true,
       isManager: false,

@@ -75,3 +75,109 @@ export const HeroPreferencesForm = z
     bans: z.array(z.string()).optional(),
   })
   .pipe(HeroPreferencesBody);
+
+/* -------------------------------------------------------------------------
+ * Lot P9 — contrats de lecture/écriture du profil et formulaires de l'écran.
+ * ---------------------------------------------------------------------- */
+
+/** Origine de la chaîne Twitch publiée (cf. utils/rating/readPlayerProfile). */
+export type TwitchOrigin = 'self' | 'roster';
+
+/** Réponse de GET /api/player/update-profile. */
+export type TwitchSourceResponse = {
+  twitch: string | null;
+  twitchOrigin: TwitchOrigin | null;
+};
+
+/** Réponse de PATCH /api/player/update-profile (champs modifiés en écho). */
+export type UpdateProfileResponse = {
+  success: true;
+  rosterSynced: boolean;
+} & Record<string, unknown>;
+
+/** Réponse de DELETE /api/player/delete-account. */
+export type DeleteAccountResponse = { success: true };
+
+/**
+ * Formulaire « Modifier mon profil » : ses valeurs sont des CHAÎNES (les
+ * champs) ; les règles partagées du corps de la route (`UpdatePlayerProfileBody`)
+ * s'appliquent avant l'envoi, sous le champ en faute. (Pas de `.pipe()` : le
+ * corps accepte `unknown` par champ, zod refuse de le brancher sur des chaînes.) `twitch` n'est envoyé que s'il a changé : c'est l'écran qui
+ * compose le corps final (cf. `buildProfilePatch`).
+ */
+export const ProfileEditForm = z
+  .object({
+    display_name: z.string(),
+    battle_tag: z.string(),
+    specialty: z.string(),
+    skill_rating: z.string(),
+    twitch: z.string(),
+    avatar_url: z.string(),
+  })
+  .superRefine((values, ctx) => {
+    const parsed = UpdatePlayerProfileBody.safeParse(values);
+    if (parsed.success) return;
+    for (const issue of parsed.error.issues)
+      ctx.addIssue({
+        code: 'custom',
+        message: issue.message,
+        path: issue.path,
+      });
+  });
+export type ProfileEditValues = z.input<typeof ProfileEditForm>;
+
+/**
+ * Corps du PATCH à partir des valeurs du formulaire — MÊME corps qu'avant la
+ * migration : chaîne vide = effacer le SR / le poste ; Twitch seulement s'il
+ * a CHANGÉ (vider = retirer le lien publié, roster compris).
+ */
+export function buildProfilePatch(
+  values: ProfileEditValues,
+  twitchInitial: string
+): Record<string, unknown> {
+  const nextTwitch = values.twitch.trim();
+  const twitchChanged = nextTwitch !== twitchInitial.trim();
+  return {
+    display_name: values.display_name,
+    battle_tag: values.battle_tag,
+    skill_rating: values.skill_rating.trim() || null,
+    specialty: values.specialty || null,
+    ...(twitchChanged
+      ? nextTwitch
+        ? { twitch: nextTwitch }
+        : { twitch: null, clear_twitch: true }
+      : {}),
+    avatar_url: values.avatar_url,
+  };
+}
+
+/** Messages (traduits) des formulaires de sécurité du compte. */
+export type AccountFormMessages = {
+  currentPasswordRequired: string;
+  passwordTooShort: string;
+  passwordMismatch: string;
+};
+
+/**
+ * « Changer mon email » : ré-authentification par le mot de passe actuel
+ * AVANT tout changement (une session volée ne doit pas pouvoir détourner le
+ * compte). Pas de route : Supabase Auth côté navigateur.
+ */
+export const makeEmailChangeForm = (m: AccountFormMessages) =>
+  z.object({
+    current_password: z.string().min(1, m.currentPasswordRequired),
+    new_email: z.string().trim().min(1),
+  });
+
+/** « Changer mon mot de passe » : même ordre de contrôles qu'avant. */
+export const makePasswordChangeForm = (m: AccountFormMessages) =>
+  z
+    .object({
+      current_password: z.string().min(1, m.currentPasswordRequired),
+      new_password: z.string().min(8, m.passwordTooShort),
+      confirm_password: z.string(),
+    })
+    .refine((d) => d.new_password === d.confirm_password, {
+      message: m.passwordMismatch,
+      path: ['confirm_password'],
+    });

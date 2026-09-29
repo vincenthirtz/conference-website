@@ -34,7 +34,7 @@ const TEAM = {
 };
 
 async function mockManageTeam(page: Page) {
-  await mockApiJson(page, '/api/admin/teams/my', {
+  await mockApiJson(page, '/api/player/team', {
     team: TEAM,
     members: [
       {

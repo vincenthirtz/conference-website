@@ -216,7 +216,7 @@ export default withSubjectRoute(
 
     const { data: team } = await supabaseAdmin
       .from('teams')
-      .select('id, name, captain_id')
+      .select('id, name')
       .eq('id', teamId)
       .eq('tenant_id', tenantId)
       .maybeSingle();
@@ -239,7 +239,7 @@ export default withSubjectRoute(
 
     // Anti-escalade, identique à l'invitation par email : un rôle À PRIVILÈGES
     // ne se distribue pas par un lien qu'un manager aurait fabriqué lui-même.
-    const roles = await loadTeamRolesFromSupabase(supabaseAdmin);
+    const roles = await loadTeamRolesFromSupabase(supabaseAdmin, tenantId);
     if (roleHasAnyPermission(roles, body.role) && !access.isCaptain) {
       return res.status(403).json({
         error:

@@ -62,7 +62,7 @@ type StaffShape = {
 
 export const getServerSideProps = withStaffPage({ permission: 'manage_staff' });
 
-/** Membre tel que renvoyé par GET /api/admin/teams/my. */
+/** Membre tel que renvoyé par GET /api/player/team. */
 type RosterMember = {
   id: string;
   user_id: string | null;

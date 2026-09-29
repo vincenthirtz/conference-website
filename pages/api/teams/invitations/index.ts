@@ -216,7 +216,7 @@ export default withSubjectRoute(
       });
     }
 
-    const roles = await loadTeamRolesFromSupabase(supabaseAdmin);
+    const roles = await loadTeamRolesFromSupabase(supabaseAdmin, tenantId);
 
     // Anti-escalade : seul le capitaine accorde un rôle à privilèges.
     if (roleHasAnyPermission(roles, body.role) && !access.isCaptain) {

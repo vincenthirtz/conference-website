@@ -40,7 +40,8 @@ import {
   sectionPanelId,
   shouldExpandForHash,
 } from '../../utils/player/dashboardAnchors';
-import { buildTodo, EMPTY_NEXT_MATCH } from '../../pages/api/player/dashboard';
+import { buildTodo } from '../../features/player/dashboard/service/todo';
+import { EMPTY_NEXT_MATCH } from '../../features/player/dashboard/schemas';
 import PlayerDashboardScreen, {
   CategorySection,
 } from '../../components/player/screens/PlayerDashboardScreen';

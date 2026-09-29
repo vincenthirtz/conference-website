@@ -103,7 +103,7 @@ export default withAuthRoute(async function handler(
   // L'équipe existe bien dans ce tenant ?
   const { data: team, error: teamErr } = await supabaseAdmin
     .from('teams')
-    .select('id, captain_id')
+    .select('id')
     .eq('id', teamId)
     .eq('tenant_id', tenantId)
     .maybeSingle();

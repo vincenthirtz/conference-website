@@ -1,8 +1,12 @@
 get:
   summary: Read the team(s) that the current user captains/operates.
+  description: >-
+    Deprecated alias of `GET /api/player/team` (same handler, lot P10).
+  deprecated: true
   operationId: adminGetMyTeams
   parameters:
     - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
   tags:
     - admin/teams
   security:
@@ -21,8 +25,13 @@ patch:
   summary: Patch the team(s) the current user captains/operates.
   description: >-
     Requires the `manage_team_info` team permission (a captain has every
-    permission; a privileged role only has its own).
+    permission; a privileged role only has its own). Deprecated alias of
+    `PATCH /api/player/team` (same handler, lot P10).
+  deprecated: true
   operationId: adminPatchMyTeams
+  parameters:
+    - $ref: '#/components/parameters/SubjectAs'
+    - $ref: '#/components/parameters/ActAs'
   tags:
     - admin/teams
   security:
@@ -32,8 +41,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: player.team.patch.body
   responses:
     '200':
       description: Updated.

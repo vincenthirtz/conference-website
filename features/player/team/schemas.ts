@@ -12,6 +12,7 @@
 import { z } from 'zod';
 import { looseUuid } from '../_shared/zod';
 import { REVIEW_SUBJECT_TYPES } from '../../../utils/teams/teamReviews';
+import type { TeamPermission } from '../../../utils/teamRoles';
 
 const DEMANDE_ACTION = 'Action invalide. Utilise "approve" ou "reject".';
 
@@ -275,3 +276,188 @@ export const TeamRhythmBody = z.object(
   { error: 'Créneaux invalides.' }
 );
 export type TeamRhythmInput = z.infer<typeof TeamRhythmBody>;
+
+/* ------------------------------------------------------------------------
+ * « Mon équipe » : lecture de la tranche équipe, édition de son identité
+ * (GET / PATCH /api/player/team — ex-/api/admin/teams/my, lot P10)
+ * ---------------------------------------------------------------------- */
+
+const TEAM_ID_REQUIRED = 'teamId required.';
+
+/**
+ * Corps de PATCH /api/player/team. Seul `teamId` est typé ici : les bornes
+ * (nom 2-100, sigle ≤ 16, pays ≤ 56, description ≤ 2000, SR, URL http(s))
+ * gardent leurs messages historiques dans le service, dans l'ordre où la
+ * route les testait. Une clé ABSENTE ne touche à rien ; `null` efface.
+ */
+export const TeamInfoPatchBody = z.object({
+  teamId: z.string({ error: TEAM_ID_REQUIRED }).trim().min(1, TEAM_ID_REQUIRED),
+  name: z.unknown().optional(),
+  short_name: z.unknown().optional(),
+  logo_url: z.unknown().optional(),
+  country: z.unknown().optional(),
+  description: z.unknown().optional(),
+  discord: z.unknown().optional(),
+  website: z.unknown().optional(),
+  skill_rating: z.unknown().optional(),
+});
+export type TeamInfoPatchInput = z.infer<typeof TeamInfoPatchBody>;
+
+export type TeamSpecialty = 'tank' | 'dps' | 'support' | 'flex' | null;
+
+/** Membre tel que le renvoie GET /api/player/team. */
+export type ManagedTeamMemberDto = {
+  id: string;
+  user_id: string | null;
+  role: string | null;
+  /** Pseudo affichable — l'encadrement n'a pas forcément de BattleTag. */
+  display_name?: string | null;
+  battle_tag: string | null;
+  is_substitute: boolean;
+  is_captain?: boolean;
+  specialty?: TeamSpecialty;
+  /** SR Overwatch déclaré (0-5000), `null` si non renseigné. */
+  skill_rating?: number | null;
+  /** `null` = non vérifié, date = vérifié ; absent = non communiqué. */
+  battle_tag_verified_at?: string | null;
+  /**
+   * Compte Discord lié. TRI-état : absent/`null` quand le serveur ne l'a pas
+   * communiqué (il ne le fait que pour qui GÈRE l'équipe) — jamais « non
+   * lié » ; cf. utils/teams/rosterReadiness.ts.
+   */
+  discord_linked?: boolean | null;
+  /** Présence constatée sur le serveur Discord par le bot ; `null` = non constaté. */
+  discord_in_guild?: boolean | null;
+  /** Date (ISO) du constat ci-dessus. */
+  discord_checked_at?: string | null;
+};
+
+/** Équipe telle que la renvoie GET /api/player/team. */
+export type ManagedTeamInfoDto = {
+  id: string;
+  slug?: string | null;
+  name: string;
+  short_name: string | null;
+  logo_url: string | null;
+  country: string | null;
+  description: string | null;
+  is_joinable?: boolean;
+  open_for_scrim?: boolean;
+  /** SR d'ensemble déclaré. Court-circuite la moyenne des fiches. */
+  skill_rating?: number | null;
+};
+
+/** Champs d'identité éditables depuis l'écran capitaine. */
+export type TeamIdentityField = 'name' | 'short_name' | 'country';
+
+/**
+ * Invitation SORTANTE en attente (GET /api/teams/invitations). À ne pas
+ * confondre avec `TeamJoinRequestDto`, qui va dans l'autre sens.
+ */
+export type SentInvitationDto = {
+  id: string;
+  email: string | null;
+  role: string | null;
+  battle_tag: string | null;
+  set_captain: boolean;
+  created_at: string;
+  expires_at: string | null;
+  expired: boolean;
+  has_invite_link: boolean;
+  /** Canal de l'invitation (`website`, `discord_bot`…). */
+  source: string | null;
+};
+
+/** Demande ENTRANTE à rejoindre l'équipe (GET /api/teams/join-requests). */
+export type TeamJoinRequestDto = {
+  id: string;
+  user_id: string;
+  status: string;
+  comment: string | null;
+  payload: {
+    user_display_name?: string;
+    user_battle_tag?: string;
+    desired_role?: string;
+  } | null;
+  created_at: string;
+  user: {
+    id: string;
+    email: string | null;
+    display_name: string | null;
+    battle_tag: string | null;
+  } | null;
+};
+
+/** Rôle proposé à l'invitation ; `captain` = désigner la capitaine. */
+export type InviteRoleChoice =
+  | 'player'
+  | 'substitute'
+  | 'coach'
+  | 'manager'
+  | 'captain';
+
+/** Réponse de POST /api/teams/invitations (et de la relance). */
+export type InvitationSentDto = {
+  invite_url: string;
+  email_sent: boolean;
+  expires_at?: string | null;
+};
+
+const INVITE_ROLES = [
+  'player',
+  'substitute',
+  'coach',
+  'manager',
+  'captain',
+] as const satisfies readonly InviteRoleChoice[];
+
+/**
+ * Formulaire « Inviter par e-mail » (useSchemaForm). L'adresse est vérifiée
+ * par le serveur, qui porte ses messages ; le client n'exige qu'une saisie
+ * (le bouton reste désactivé tant qu'elle est vide, comme avant).
+ */
+export const InviteFormSchema = z.object({
+  email: z.string().trim().min(1),
+  role: z.enum(INVITE_ROLES),
+});
+
+/* ------------------------------------------------------------------------
+ * Droits délégués (J3) — GET / POST / DELETE /api/teams/member-permissions
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Droits d'UN membre, décomposés par SOURCE : « vient de son rôle » (non
+ * retirable ici) vs « délégué » (révocable) — sans que l'écran connaisse la
+ * config des rôles, qui vit côté serveur.
+ */
+export type TeamMemberPermissionState = {
+  userId: string;
+  role: string | null;
+  fromRole: TeamPermission[];
+  granted: TeamPermission[];
+  effective: TeamPermission[];
+};
+
+export type TeamPermissionGrant = {
+  userId: string;
+  permission: TeamPermission;
+  grantedBy: string | null;
+  createdAt: string;
+  revokedAt: string | null;
+};
+
+/** Réponse de GET /api/teams/member-permissions. */
+export type TeamMemberRightsResponse = {
+  teamId: string;
+  grants: TeamPermissionGrant[];
+  members: TeamMemberPermissionState[];
+  /** Ce que l'appelant peut déléguer : jamais plus que ce qu'il a. */
+  delegatable: TeamPermission[];
+};
+
+/** Réponse de POST / DELETE /api/teams/member-permissions. */
+export type TeamMemberRightChange = {
+  granted: boolean;
+  permission: TeamPermission;
+  userId: string;
+};

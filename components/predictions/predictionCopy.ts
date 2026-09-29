@@ -5,6 +5,7 @@
 
 import { format } from '@/lib/i18n/useT';
 import { AdminFetchError } from '@/hooks/useAdminFetch';
+import { ApiHttpError } from '@/utils/http/authedRequest';
 import type nsMatchPrediction from '@/lib/i18n/locales/fr/matchPrediction';
 
 export type PredictionDict = typeof nsMatchPrediction.fr;
@@ -43,7 +44,7 @@ export function resultTone(result: PredictionResultValue): string {
 /** Message d'échec d'une écriture, selon le code rendu par l'API. */
 export function writeErrorLabel(err: unknown, t: PredictionDict): string {
   const payload =
-    err instanceof AdminFetchError
+    err instanceof AdminFetchError || err instanceof ApiHttpError
       ? (err.payload as { code?: unknown } | null)
       : null;
   return payload?.code === 'locked' ? t.errorLocked : t.errorGeneric;

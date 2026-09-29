@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import Link from 'next/link';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { predictionsClient } from '@/features/player/predictions/client';
 import { useToast } from '@/components/Toast';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useT, format } from '@/lib/i18n/useT';
@@ -43,7 +43,6 @@ export default function PredictionsPanel({
   const t = useT(nsMatchPrediction);
   const locale = useLocale();
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
 
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [data, setData] = useState<PlayerPredictionsResponse | null>(null);
@@ -52,16 +51,14 @@ export default function PredictionsPanel({
 
   const load = useCallback(async () => {
     try {
-      const res = await adminFetchJson<PlayerPredictionsResponse>(
-        '/api/player/predictions'
-      );
+      const res: PlayerPredictionsResponse = await predictionsClient.list();
       setData(res);
       loadedOnce.current = true;
       setState('ready');
     } catch {
       if (!loadedOnce.current) setState('error');
     }
-  }, [adminFetchJson]);
+  }, []);
 
   useEffect(() => {
     void load();
@@ -71,11 +68,7 @@ export default function PredictionsPanel({
     async (matchId: string, teamId: string) => {
       setSavingMatch(matchId);
       try {
-        await adminFetchJson(`/api/player/predictions/${matchId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ teamId }),
-        });
+        await predictionsClient.pick(matchId, teamId);
         addToast(t.saved, 'success');
       } catch (err) {
         addToast(writeErrorLabel(err, t), 'error');
@@ -84,7 +77,7 @@ export default function PredictionsPanel({
         void load();
       }
     },
-    [adminFetchJson, addToast, t, load]
+    [addToast, t, load]
   );
 
   const dateOf = (iso: string | null) =>

@@ -12,6 +12,8 @@ import {
 } from '@/utils/adminTenants';
 import { STAFF_ROLE_RANK } from '@/utils/staffRoles';
 import { getTenantKind, type TenantKind } from '@/utils/tenantKind';
+import { getManagedTeams } from '@/utils/teams/managementAccess';
+import { resolveTenantIdForUserRequestAsync } from '@/utils/tenant';
 
 const patchProfileSchema = z.object({
   displayName: z.string().trim().max(80).optional(),
@@ -204,13 +206,23 @@ export default withAuthRoute(async function handler(
   }
 
   if (staffError || !staff) {
-    // Pas staff → vérifier si capitaine d'une équipe
-    const { data: captainTeam } = await adminClient
-      .from('teams')
-      .select('id, name')
-      .eq('captain_id', user.id)
-      .limit(1)
-      .maybeSingle();
+    // Pas staff → vérifier s'il ENCADRE une équipe. Capitaine, mais aussi
+    // manager ou délégataire (surcharges J3) : `getManagedTeams` est le seul
+    // modèle de droit d'équipe (P10 · S4) ; l'ancien test `captain_id` ne
+    // voyait ni le manager d'une équipe créée sans capitaine, ni une
+    // délégation. Tenant = celui de l'équipe de l'appelant.
+    const tenantId = await resolveTenantIdForUserRequestAsync(req, {
+      authUserId: user.id,
+    });
+    const [managed] = await getManagedTeams(user.id, tenantId);
+    const { data: captainTeam } = managed
+      ? await adminClient
+          .from('teams')
+          .select('id, name')
+          .eq('id', managed.teamId)
+          .eq('tenant_id', tenantId)
+          .maybeSingle()
+      : { data: null };
 
     if (captainTeam) {
       return res.status(200).json({

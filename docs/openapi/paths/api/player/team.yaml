@@ -1,0 +1,67 @@
+get:
+  summary: Tranche « mon équipe » (équipe gérée ou d'appartenance, roster, droits).
+  description: >-
+    Source canonique équipe / capitanat (`loadManagedTeamSlice`). `?teamId=`
+    choisit l'équipe quand l'appelante en gère plusieurs. Inspectable par le
+    staff (`?as=`, journal `view_captain_data`). Remplace
+    `/api/admin/teams/my` (lot P10), même contrat.
+  operationId: playerGetMyTeam
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
+  tags:
+    - public/teams
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Équipe, membres, capitanat, permissions effectives et équipes gérées.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+patch:
+  summary: Édite l'identité de l'équipe (nom, sigle, logo, pays, description, liens, SR).
+  description: >-
+    Exige la permission d'équipe `manage_team_info` sur l'équipe désignée par
+    `teamId` (corps). Act-as staff journalisé (`?as=…&act=1`) : droit du
+    sujet.
+  operationId: playerPatchMyTeam
+  parameters:
+    - $ref: '#/components/parameters/SubjectAs'
+    - $ref: '#/components/parameters/ActAs'
+  tags:
+    - public/teams
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: player.team.patch.body
+  responses:
+    '200':
+      description: Équipe mise à jour.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'

@@ -99,7 +99,7 @@ export default withSubjectRoute(
 
     // Anti-escalation : un membre privilegie (role accordant des permissions)
     // ne peut etre retire que par le capitaine.
-    const teamRoles = await loadTeamRolesFromSupabase(supabaseAdmin);
+    const teamRoles = await loadTeamRolesFromSupabase(supabaseAdmin, tenantId);
     if (roleHasAnyPermission(teamRoles, member.role) && !access.isCaptain) {
       return res.status(403).json({
         error: 'Seul le capitaine peut retirer un autre membre privilégié.',

@@ -28,9 +28,8 @@ import {
   setAuthUser,
 } from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
-import dashboardHandler, {
-  DEMANDES_HISTORY_LIMIT,
-} from '../../pages/api/player/dashboard';
+import dashboardHandler from '../../pages/api/player/dashboard';
+import { DEMANDES_HISTORY_LIMIT } from '../../features/player/dashboard/schemas';
 import notificationsHandler from '../../pages/api/player/notifications';
 import { isTeamsTurn } from '../../utils/teams/scrimsAwaitingTeam';
 

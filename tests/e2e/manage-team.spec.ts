@@ -6,7 +6,7 @@
 // access-denied state.
 //
 // Auth = real player login (see _helpers/playerSession.ts). The page reads its
-// data from /api/admin/teams/my and /api/teams/join-requests via adminFetchJson;
+// data from /api/player/team and /api/teams/join-requests via adminFetchJson;
 // we route-mock those so the roster is deterministic and independent of DB
 // state. We deliberately stop the destructive flows (promote / remove) AT the
 // confirm affordance — we assert the two-step confirm renders without
@@ -65,7 +65,7 @@ const TEAM = {
 
 /** Mock the page data as a captain owning a 3-member team. */
 async function mockAsCaptain(page: Page) {
-  await mockApiJson(page, '/api/admin/teams/my', {
+  await mockApiJson(page, '/api/player/team', {
     team: TEAM,
     members: [CAPTAIN_MEMBER, PLAYER_MEMBER, SUB_MEMBER],
     isCaptain: true,
@@ -258,7 +258,7 @@ test.describe('Manage-team roster console', () => {
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     // No team at all → access denied branch.
-    await mockApiJson(page, '/api/admin/teams/my', {
+    await mockApiJson(page, '/api/player/team', {
       team: null,
       members: [],
       isCaptain: false,

@@ -673,6 +673,39 @@ S4 résolu pour ce domaine.
 `admin-captain-view` verts ; [ ] act-as des 12 routes inchangé (tests S4) ;
 [ ] règles « capitaine toujours tout » et « coach jamais roster » testées au service.
 
+**Livré (1re tranche, 2026-09-29).**
+- Écran : `PlayerManageTeamScreen` 2 220 → ~250 lignes, coquille `FicheView` ; état et gestes
+  dans `features/player/team/hooks/useManageTeamScreen.ts` ; panneaux composés du kit dans
+  `features/player/team/ui/` (en-tête `EntityHeader`, périmètre, ouverture, invitation par
+  e-mail sur `useSchemaForm`, roster = alertes + niveau/identité + lignes, invitations
+  envoyées, demandes reçues, droits J3). Champs de ligne (BattleTag, SR, identité) NON
+  contrôlés, enregistrés au blur : plus de `useState` de champ. Listes (invitations,
+  demandes, droits) sur le cache joueuse, invalidées par leurs gestes ; gestes portés par la
+  portée (`?as=…&act=1`) — avant, en act-as depuis `captain-view`, ils partaient au nom du
+  staff.
+- `/api/admin/teams/my` → **`/api/player/team`** (`defineSubjectRoute`, même contrat ; ancienne
+  URL = réexport). Appelants basculés (écran, `useManagedTeam`, `useTeamPageAccess`, mocks
+  e2e) : règle 8 à **0**. PATCH ouvert à l'act-as journalisé (droit du SUJET).
+- Droits délégués : `teams/member-permissions` migrée (service `service/rights.ts`,
+  `team: { permission: 'manage_roster' }`), `MemberRightsPanel` = conteneur de
+  `ui/MemberRightsList` (sort de la règle 7).
+- Tenant de l'équipe : rôles chargés avec le tenant (6 routes + `notificationAudience`) ;
+  `public-page` et `members/[memberId]/profile` sur le tenant DE L'ÉQUIPE
+  (`resolveTeamPermission` / `readTeamTenantId`) au lieu du tenant par défaut ; écritures de
+  `tcg-image` scopées tenant.
+- S4 : `admin/me` suit `getManagedTeams` (manager / délégation vus) ; `captain_id` retiré des
+  selects « lecture sans décision » (`invite-free-player`, `invite-links`, `teams/my`).
+- Act-as staff sur `public-page`, `upload-image`, `tcg-image` (`withSubjectRoute` +
+  `allowActAs`, droit du sujet, équipe du tenant actif du staff) — testé
+  (`playerSecurityP0`). **Reste** : l'entrée UI (SSR de `team/[slug]/edit` n'accepte pas
+  `?as=`).
+
+**Reste.** Migration `defineSubjectRoute` des routes roster/capitanat/invitations
+(`update-member*`, `[teamId]/members`, `transfer-captain`, `join-requests`, `invitations/*`,
+`invite-links/*`, `add-member`, `leave`, `search-players`, `free-players`,
+`invite-free-player`, `transfer-requests`) et `features/shared/team-roster` ;
+`team/[slug]/edit` sur Fiche sans base en page (+ act-as staff) ; e2e mobile/desktop.
+
 ### P11 · Création d'équipe & adhésion — 🟥 / XL
 
 **Problème.** `team/create` 1 983 lignes (parcours anonyme + pont magic-link) et
@@ -752,6 +785,20 @@ découverte invisible par défaut, jamais d'annuaire public.
       `/api/admin/teams/my`).
 
 ---
+
+## Points ouverts (2026-09-29)
+
+- [ ] **Garde des colonnes aveugle sur `features/`** : `tests/unit/supabaseSelectSchema.test.ts`
+      ne scanne pas `features/`, où vivent désormais les repositories de tous les modules migrés
+      (admin et joueuse). L'y ajouter révèle 17 filtres/écritures sur des colonnes absentes du
+      schéma et un ratio de `select` dynamiques > 10 % (`features/admin/events/repository.ts`).
+      Probablement surtout des faux positifs du scanner (une même fonction qui filtre des tables
+      différentes), mais à trier un par un — candidats sérieux : `team_availability_constraints.
+      {stage_id,round_number}` (tournaments/repository/matches.ts), `tasks.is_archived`,
+      `map_stats_view.tournament_id`. Liste complète : logs (staff_logs.status,
+      actor/target_discord_user_id), moderation (blacklist_alerts.{active,name,entity_type}),
+      news (news_comments.{status,tag}), partners (partnership_requests.{is_active,name,
+      display_order}), stats, tasks, tournaments.
 
 ## 4. Ce qu'on ne fait pas (et pourquoi)
 

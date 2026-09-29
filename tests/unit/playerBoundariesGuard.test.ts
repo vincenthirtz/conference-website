@@ -84,7 +84,6 @@ const FROZEN = {
   importsPagesApi: [
     'components/player/AgendaCard.tsx',
     'components/player/MatchPrepCard.tsx',
-    'components/player/MemberRightsPanel.tsx',
     'components/player/MyScrimsCard.tsx',
     'components/player/NetworkOnboardingCard.tsx',
     'components/player/RegistrationDeadlineBanner.tsx',
@@ -93,25 +92,19 @@ const FROZEN = {
     'components/player/TeamMemoryCard.tsx',
     'components/player/TeamRegistrationCard.tsx',
     'components/player/TeamRhythmCard.tsx',
-    'components/player/TodoBanner.tsx',
     'components/player/WelcomeGiftCard.tsx',
     'components/player/screens/PlayerDashboardScreen.tsx',
-    'components/player/screens/PlayerMatchScreen.tsx',
-    'components/player/screens/PlayerMatchesScreen.tsx',
     'components/player/screens/PlayerMyTeamsScreen.tsx',
     'components/player/screens/PlayerNotificationsScreen.tsx',
-    'pages/player/checkin.tsx',
     'pages/player/scouting/[teamId].tsx',
     'pages/player/teams.tsx',
   ],
-  // Règle 8 — appels `/api/admin/*` depuis l'UI joueuse (hors commentaire),
-  // tous vers `admin/teams/my` : nombre d'appels par fichier.
-  callsAdminApi: {
-    'components/Team/useTeamPageAccess.ts': 1,
-    'components/player/screens/PlayerManageTeamScreen.tsx': 2,
-  } as Record<string, number>,
+  // Règle 8 — appels `/api/admin/*` depuis l'UI joueuse (hors commentaire) :
+  // nombre d'appels par fichier.
+  // À ZÉRO depuis P10 : `admin/teams/my` → `/api/player/team`.
+  callsAdminApi: {} as Record<string, number>,
   // Règle 9 — client Supabase navigateur importé par une page joueuse.
-  pagesImportSupabase: ['pages/player/profile.tsx'],
+  pagesImportSupabase: [] as string[],
 };
 
 /** Briques du kit « Le Ruban » : elles vivent dans `features/ruban/` (P7). */

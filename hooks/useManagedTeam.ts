@@ -1,7 +1,7 @@
 // hooks/useManagedTeam.ts
 //
 // Shared accessor for the captain/manager's team payload exposed at
-// `/api/admin/teams/my` ({ team, members, isCaptain, isManager }).
+// `/api/player/team` ({ team, members, isCaptain, isManager }) — ex-/api/admin/teams/my (P10).
 //
 // Several player pages (manage-team, requests, messages) each used to fire
 // their own GET against this endpoint on mount, so navigating between them
@@ -39,7 +39,7 @@ export type ManagedTeamInfo = {
   is_joinable?: boolean;
 };
 
-// The /api/admin/teams/my endpoint returns a superset of TeamMemberLite
+// The /api/player/team endpoint returns a superset of TeamMemberLite
 // (it also carries user_id / battle_tag / specialty), which manage-team needs.
 // We keep TeamMemberLite as the structural base so TeamCard consumers stay
 // type-compatible.
@@ -201,7 +201,7 @@ export function useManagedTeam(
       }
 
       const promise = adminFetchJson<ApiPayload>(
-        withTeam(withSubject('/api/admin/teams/my')),
+        withTeam(withSubject('/api/player/team')),
         { skipAuthRedirect: true }
       )
         .then((payload) => {

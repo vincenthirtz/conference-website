@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { predictionsClient } from '@/features/player/predictions/client';
 import { useToast } from '@/components/Toast';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useT, format } from '@/lib/i18n/useT';
@@ -31,7 +31,6 @@ export default function PredictionLeaderboard({
   className?: string;
 }): JSX.Element {
   const t = useT(nsMatchPrediction);
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { addToast } = useToast();
 
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -41,16 +40,14 @@ export default function PredictionLeaderboard({
 
   const load = useCallback(async () => {
     try {
-      const res = await adminFetchJson<PredictionLeaderboardResponse>(
-        '/api/player/predictions/leaderboard'
-      );
+      const res = await predictionsClient.leaderboard();
       setData(res);
       loadedOnce.current = true;
       setState('ready');
     } catch {
       if (!loadedOnce.current) setState('error');
     }
-  }, [adminFetchJson]);
+  }, []);
 
   useEffect(() => {
     void load();
@@ -60,11 +57,7 @@ export default function PredictionLeaderboard({
     async (show: boolean) => {
       setSaving(true);
       try {
-        await adminFetchJson('/api/player/predictions/leaderboard', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ showInLeaderboard: show }),
-        });
+        await predictionsClient.setLeaderboardVisibility(show);
         addToast(t.leaderboardOptInSaved, 'success');
         await load();
       } catch {
@@ -73,7 +66,7 @@ export default function PredictionLeaderboard({
         setSaving(false);
       }
     },
-    [adminFetchJson, addToast, t, load]
+    [addToast, t, load]
   );
 
   if (state === 'loading') {

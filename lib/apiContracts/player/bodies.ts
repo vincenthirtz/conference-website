@@ -15,6 +15,7 @@ import {
   RegisterTeamDemandeBody,
   TransferDemandeBody,
 } from '../../../features/player/demandes/schemas';
+import { LineupBody } from '../../../features/player/matches/schemas';
 import { SendMessageBody } from '../../../features/player/messages/schemas';
 import { LeaderboardVisibilityBody } from '../../../features/player/predictions/schemas';
 import { UpdatePlayerProfileBody } from '../../../features/player/profile/schemas';
@@ -68,6 +69,7 @@ export const PLAYER_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   'player.teams.public-page': input(TeamPublicPageBody),
   'player.teams.member-profile': input(TeamMemberProfileBody),
   'player.predictions.leaderboard': input(LeaderboardVisibilityBody),
+  'player.teams.matches.lineup': input(LineupBody),
   'player.team-reviews.put': input(TeamReviewBody),
   'player.team-rhythm.put': input(TeamRhythmBody),
   'player.update-profile': input(UpdatePlayerProfileBody),

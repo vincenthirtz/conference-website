@@ -11,7 +11,7 @@
 //
 // Le contexte porte trois choses :
 //   - `managedTeams` : la liste, publiée par `useManagedTeam` à partir de la
-//     réponse serveur (`/api/admin/teams/my` renvoie `managedTeams`). Pas de
+//     réponse serveur (`/api/player/team` renvoie `managedTeams`). Pas de
 //     requête dédiée : la liste voyage avec la tranche équipe, donc elle est
 //     toujours cohérente avec l'équipe affichée ;
 //   - `activeTeamId` : le choix, mémorisé en localStorage pour survivre à la

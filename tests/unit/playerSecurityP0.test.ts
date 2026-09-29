@@ -18,6 +18,7 @@ import {
   setCookieUser,
   storageUploads,
   setStorageUploadResult,
+  setAdminUser,
   CONFERENCE_TENANT_ID,
 } from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
@@ -298,6 +299,97 @@ describe('S1 — un staff admin global sans act-as est un compte comme un autre'
       res
     );
     expect(res.statusCode).toBe(200);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* P10 — l'édition staff passe par l'act-as journalisé                  */
+/* ------------------------------------------------------------------ */
+
+describe('P10 — act-as staff sur page publique / images d’équipe', () => {
+  beforeEach(() => {
+    setAuthUser({ id: STAFF_ADMIN });
+    // Un sujet inconnu est un 404 (`resolveSubject`) : on les déclare.
+    for (const id of [MANAGER_A, MANAGER_B, STAFF_ADMIN]) {
+      setAdminUser(id, `${id.slice(0, 4)}@example.com`);
+    }
+  });
+
+  const staffLogs = () =>
+    ((store as any).staff_logs ?? []) as Array<{ action: string }>;
+
+  it('PATCH public-page ?as=<manager>&act=1 → écrit, journalisé act_as_player', async () => {
+    const res = makeRes();
+    await publicPageHandler(
+      makeReq({
+        method: 'PATCH',
+        query: { teamId: TEAM_A, as: MANAGER_A, act: '1' },
+        body: { description: 'edited as manager' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const row = (store.teams as any[]).find((t) => t.id === TEAM_A);
+    expect(row.description).toBe('edited as manager');
+    expect(staffLogs().some((l) => l.action === 'act_as_player')).toBe(true);
+  });
+
+  it('sans la seconde clé (`act=1`) : lecture seule, rien n’est écrit', async () => {
+    const res = makeRes();
+    await publicPageHandler(
+      makeReq({
+        method: 'PATCH',
+        query: { teamId: TEAM_A, as: MANAGER_A },
+        body: { description: 'nope' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    const row = (store.teams as any[]).find((t) => t.id === TEAM_A);
+    expect(row.description).toBe('original');
+  });
+
+  it('le droit est celui du SUJET : représenter une simple joueuse → 403', async () => {
+    const res = makeRes();
+    await tcgImageHandler(
+      makeReq({
+        method: 'POST',
+        query: { teamId: TEAM_A, as: STAFF_ADMIN, act: '1' },
+        body: { data: PNG_BASE64, mimeType: 'image/png' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    expect(storageUploads).toHaveLength(0);
+  });
+
+  it('équipe d’un autre tenant que celui du staff → refus, rien n’est écrit', async () => {
+    const res = makeRes();
+    await publicPageHandler(
+      makeReq({
+        method: 'PATCH',
+        query: { teamId: TEAM_B, as: MANAGER_B, act: '1' },
+        body: { description: 'cross-tenant' },
+      }),
+      res
+    );
+    expect([403, 404]).toContain(res.statusCode);
+    const row = (store.teams as any[]).find((t) => t.id === TEAM_B);
+    expect(row.description).toBe('original');
+  });
+
+  it('POST upload-image ?as=<manager>&act=1 → déposé', async () => {
+    const res = makeRes();
+    await uploadImageHandler(
+      makeReq({
+        method: 'POST',
+        query: { teamId: TEAM_A, as: MANAGER_A, act: '1' },
+        body: { data: PNG_BASE64, mimeType: 'image/png' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(storageUploads.length).toBeGreaterThan(0);
   });
 });
 

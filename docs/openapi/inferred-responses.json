@@ -1575,7 +1575,8 @@
     "type": "object",
     "properties": {
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
@@ -1593,6 +1594,19 @@
     },
     "required": [
      "following"
+    ]
+   }
+  },
+  "DELETE /api/player/predictions/{matchId}": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "ok": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "ok"
     ]
    }
   },
@@ -1711,10 +1725,16 @@
       "type": "boolean"
      },
      "linkedAt": {
-      "type": "null"
+      "type": [
+       "string",
+       "null"
+      ]
      },
      "twitchLogin": {
-      "type": "null"
+      "type": [
+       "string",
+       "null"
+      ]
      }
     },
     "required": [
@@ -42313,7 +42333,6 @@
      "battleTag",
      "configured",
      "linked",
-     "reward",
      "verifiedAt"
     ]
    }
@@ -42424,29 +42443,8 @@
          ]
         },
         "captain": {
-         "type": "boolean"
-        },
-        "discord_checked_at": {
-         "type": [
-          "string",
-          "null"
-         ]
-        },
-        "discord_in_guild": {
          "type": [
           "boolean",
-          "null"
-         ]
-        },
-        "discord_linked": {
-         "type": [
-          "boolean",
-          "null"
-         ]
-        },
-        "display_name": {
-         "type": [
-          "string",
           "null"
          ]
         },
@@ -42454,7 +42452,10 @@
          "type": "string"
         },
         "is_captain": {
-         "type": "boolean"
+         "type": [
+          "boolean",
+          "null"
+         ]
         },
         "is_substitute": {
          "type": "boolean"
@@ -42486,14 +42487,7 @@
        },
        "required": [
         "battle_tag",
-        "battle_tag_verified_at",
-        "captain",
-        "discord_checked_at",
-        "discord_in_guild",
-        "discord_linked",
-        "display_name",
         "id",
-        "is_captain",
         "is_substitute",
         "role",
         "skill_rating",
@@ -42869,12 +42863,6 @@
        "null"
       ],
       "properties": {
-       "captain_id": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
        "country": {
         "type": [
          "string",
@@ -42911,12 +42899,6 @@
          "null"
         ]
        },
-       "skill_rating": {
-        "type": [
-         "number",
-         "null"
-        ]
-       },
        "slug": {
         "type": [
          "string",
@@ -42925,16 +42907,12 @@
        }
       },
       "required": [
-       "captain_id",
        "country",
        "description",
        "id",
-       "is_joinable",
        "logo_url",
        "name",
-       "open_for_scrim",
        "short_name",
-       "skill_rating",
        "slug"
       ]
      },
@@ -43669,243 +43647,226 @@
   },
   "GET /api/player/matches": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
-      "properties": {
-       "matches": {
-        "type": "array",
-        "items": {
-         "type": "object",
+    "type": "object",
+    "properties": {
+     "matches": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "bestOf": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "canReportScore": {
+         "type": "boolean"
+        },
+        "checkin": {
+         "type": [
+          "object",
+          "null"
+         ],
          "properties": {
-          "bestOf": {
+          "alreadyCheckedIn": {
+           "type": "boolean"
+          },
+          "canCheckIn": {
+           "type": "boolean"
+          },
+          "closesAt": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "isOpen": {
+           "type": "boolean"
+          },
+          "isPassed": {
+           "type": "boolean"
+          },
+          "opensAt": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "token": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "alreadyCheckedIn",
+          "canCheckIn",
+          "closesAt",
+          "isOpen",
+          "isPassed",
+          "opensAt",
+          "token"
+         ]
+        },
+        "format": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "opponent": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "name": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "id",
+          "name"
+         ]
+        },
+        "result": {
+         "type": [
+          "string",
+          "null"
+         ],
+         "enum": [
+          "draw",
+          "loss",
+          "win",
+          null
+         ]
+        },
+        "roundName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "scheduledAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "score": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "mine": {
            "type": [
             "number",
             "null"
            ]
           },
-          "canReportScore": {
-           "type": "boolean"
-          },
-          "checkin": {
-           "type": [
-            "object",
-            "null"
-           ],
-           "properties": {
-            "alreadyCheckedIn": {
-             "type": "boolean"
-            },
-            "canCheckIn": {
-             "type": "boolean"
-            },
-            "closesAt": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "isOpen": {
-             "type": "boolean"
-            },
-            "isPassed": {
-             "type": "boolean"
-            },
-            "opensAt": {
-             "type": [
-              "string",
-              "null"
-             ]
-            },
-            "token": {
-             "type": [
-              "string",
-              "null"
-             ]
-            }
-           },
-           "required": [
-            "alreadyCheckedIn",
-            "canCheckIn",
-            "closesAt",
-            "isOpen",
-            "isPassed",
-            "opensAt",
-            "token"
-           ]
-          },
-          "format": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "id": {
-           "type": "string"
-          },
           "opponent": {
            "type": [
-            "object",
+            "number",
             "null"
-           ],
-           "properties": {
-            "id": {
-             "type": "string"
-            },
-            "name": {
-             "type": "string"
-            }
-           },
-           "required": [
-            "id",
-            "name"
-           ]
-          },
-          "result": {
-           "type": [
-            "string",
-            "null"
-           ],
-           "enum": [
-            "draw",
-            "loss",
-            "win",
-            null
-           ]
-          },
-          "roundName": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "scheduledAt": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "score": {
-           "type": [
-            "object",
-            "null"
-           ],
-           "properties": {
-            "mine": {
-             "type": [
-              "number",
-              "null"
-             ]
-            },
-            "opponent": {
-             "type": [
-              "number",
-              "null"
-             ]
-            }
-           },
-           "required": [
-            "mine",
-            "opponent"
-           ]
-          },
-          "slot": {
-           "type": "number",
-           "enum": [
-            1,
-            2
-           ]
-          },
-          "status": {
-           "type": "string"
-          },
-          "streamUrl": {
-           "type": [
-            "string",
-            "null"
-           ]
-          },
-          "tournament": {
-           "type": [
-            "object",
-            "null"
-           ],
-           "properties": {
-            "id": {
-             "type": "string"
-            },
-            "name": {
-             "type": "string"
-            },
-            "slug": {
-             "type": [
-              "string",
-              "null"
-             ]
-            }
-           },
-           "required": [
-            "id",
-            "name",
-            "slug"
            ]
           }
          },
          "required": [
-          "bestOf",
-          "canReportScore",
-          "checkin",
-          "format",
+          "mine",
+          "opponent"
+         ]
+        },
+        "slot": {
+         "type": "number",
+         "enum": [
+          1,
+          2
+         ]
+        },
+        "status": {
+         "type": "string"
+        },
+        "streamUrl": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "tournament": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "name": {
+           "type": "string"
+          },
+          "slug": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
           "id",
-          "opponent",
-          "result",
-          "roundName",
-          "scheduledAt",
-          "score",
-          "slot",
-          "status",
-          "streamUrl",
-          "tournament"
+          "name",
+          "slug"
          ]
         }
        },
-       "team": {
-        "type": "object",
-        "properties": {
-         "id": {
-          "type": "string"
-         },
-         "name": {
-          "type": "string"
-         }
-        },
-        "required": [
-         "id",
-         "name"
-        ]
-       }
-      },
-      "required": [
-       "matches",
-       "team"
-      ]
+       "required": [
+        "bestOf",
+        "canReportScore",
+        "checkin",
+        "format",
+        "id",
+        "opponent",
+        "result",
+        "roundName",
+        "scheduledAt",
+        "score",
+        "slot",
+        "status",
+        "streamUrl",
+        "tournament"
+       ]
+      }
      },
-     {
-      "type": "object",
+     "team": {
+      "type": [
+       "object",
+       "null"
+      ],
       "properties": {
-       "matches": {
-        "type": "array",
-        "items": {}
+       "id": {
+        "type": "string"
        },
-       "team": {
-        "type": "null"
+       "name": {
+        "type": "string"
        }
       },
       "required": [
-       "matches",
-       "team"
+       "id",
+       "name"
       ]
      }
+    },
+    "required": [
+     "matches",
+     "team"
     ]
    }
   },
@@ -44060,7 +44021,10 @@
       ],
       "properties": {
        "minPlayers": {
-        "type": "number"
+        "type": [
+         "number",
+         "null"
+        ]
        },
        "rosterSize": {
         "type": "number"
@@ -44654,7 +44618,10 @@
         ]
        },
        "match": {
-        "type": "object",
+        "type": [
+         "object",
+         "null"
+        ],
         "properties": {
          "bestOf": {
           "type": [
@@ -45120,137 +45087,218 @@
    "200": {
     "type": "object",
     "properties": {
+     "me": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "accuracy": {
+        "type": "number"
+       },
+       "coins": {
+        "type": "number"
+       },
+       "correct": {
+        "type": "number"
+       },
+       "missing": {
+        "type": "number"
+       },
+       "rank": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "settled": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "accuracy",
+       "coins",
+       "correct",
+       "missing",
+       "rank",
+       "settled"
+      ]
+     },
+     "minSettled": {
+      "type": "number"
+     },
+     "participants": {
+      "type": "number"
+     },
+     "reward": {
+      "type": "number"
+     },
+     "rows": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "accuracy": {
+         "type": "number"
+        },
+        "coins": {
+         "type": "number"
+        },
+        "correct": {
+         "type": "number"
+        },
+        "displayName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "isMe": {
+         "type": "boolean"
+        },
+        "rank": {
+         "type": "number"
+        },
+        "settled": {
+         "type": "number"
+        }
+       },
+       "required": [
+        "accuracy",
+        "coins",
+        "correct",
+        "displayName",
+        "isMe",
+        "rank",
+        "settled"
+       ]
+      }
+     },
      "showsMyName": {
+      "type": "boolean"
+     },
+     "truncated": {
       "type": "boolean"
      }
     },
     "required": [
-     "showsMyName"
+     "me",
+     "minSettled",
+     "participants",
+     "reward",
+     "rows",
+     "showsMyName",
+     "truncated"
     ]
    }
   },
   "GET /api/player/predictions/{matchId}": {
    "200": {
-    "anyOf": [
-     {
-      "type": "object",
+    "type": "object",
+    "properties": {
+     "distribution": {
+      "type": [
+       "object",
+       "null"
+      ],
       "properties": {
-       "distribution": {
-        "type": [
-         "object",
-         "null"
-        ],
-        "properties": {
-         "team1": {
-          "type": "number"
-         },
-         "team2": {
-          "type": "number"
-         }
-        },
-        "required": [
-         "team1",
-         "team2"
-        ]
+       "team1": {
+        "type": "number"
        },
-       "ineligibility": {
+       "team2": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "team1",
+       "team2"
+      ]
+     },
+     "ineligibility": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "participant",
+       "staff",
+       null
+      ]
+     },
+     "locksAt": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "matchId": {
+      "type": "string"
+     },
+     "prediction": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "result": {
         "type": [
          "string",
          "null"
         ],
         "enum": [
-         "participant",
-         "staff",
+         "lost",
+         "void",
+         "won",
          null
         ]
        },
-       "locksAt": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "matchId": {
+       "teamId": {
         "type": "string"
        },
-       "prediction": {
-        "type": [
-         "object",
-         "null"
-        ],
-        "properties": {
-         "result": {
-          "type": [
-           "string",
-           "null"
-          ],
-          "enum": [
-           "lost",
-           "void",
-           "won",
-           null
-          ]
-         },
-         "teamId": {
-          "type": "string"
-         },
-         "updatedAt": {
-          "type": "string"
-         }
-        },
-        "required": [
-         "result",
-         "teamId",
-         "updatedAt"
-        ]
-       },
-       "reward": {
-        "type": "number"
-       },
-       "team1Id": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "team2Id": {
-        "type": [
-         "string",
-         "null"
-        ]
-       },
-       "window": {
-        "type": "string",
-        "enum": [
-         "locked",
-         "not_predictable",
-         "open"
-        ]
+       "updatedAt": {
+        "type": "string"
        }
       },
       "required": [
-       "distribution",
-       "ineligibility",
-       "locksAt",
-       "matchId",
-       "prediction",
-       "reward",
-       "team1Id",
-       "team2Id",
-       "window"
+       "result",
+       "teamId",
+       "updatedAt"
       ]
      },
-     {
-      "type": "object",
-      "properties": {
-       "ok": {
-        "type": "boolean"
-       }
-      },
-      "required": [
-       "ok"
+     "reward": {
+      "type": "number"
+     },
+     "team1Id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "team2Id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "window": {
+      "type": "string",
+      "enum": [
+       "locked",
+       "not_predictable",
+       "open"
       ]
      }
+    },
+    "required": [
+     "distribution",
+     "ineligibility",
+     "locksAt",
+     "matchId",
+     "prediction",
+     "reward",
+     "team1Id",
+     "team2Id",
+     "window"
     ]
    }
   },
@@ -49392,6 +49440,278 @@
     "required": [
      "gift",
      "welcomeClaimable"
+    ]
+   }
+  },
+  "GET /api/player/team": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "isCaptain": {
+      "type": "boolean"
+     },
+     "isManager": {
+      "type": "boolean"
+     },
+     "managedTeams": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "isCaptain": {
+         "type": "boolean"
+        },
+        "isManager": {
+         "type": "boolean"
+        },
+        "logo_url": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "name": {
+         "type": "string"
+        },
+        "permissions": {
+         "type": "array",
+         "items": {
+          "type": "string",
+          "enum": [
+           "edit_public_page",
+           "manage_join_requests",
+           "manage_roster",
+           "manage_scrims",
+           "manage_team_info",
+           "register_tournaments",
+           "send_captain_messages",
+           "validate_lineup"
+          ]
+         }
+        },
+        "short_name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "slug": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "id",
+        "isCaptain",
+        "isManager",
+        "logo_url",
+        "name",
+        "permissions",
+        "short_name",
+        "slug"
+       ]
+      }
+     },
+     "members": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "battle_tag": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "battle_tag_verified_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "captain": {
+         "type": "boolean"
+        },
+        "discord_checked_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "discord_in_guild": {
+         "type": [
+          "boolean",
+          "null"
+         ]
+        },
+        "discord_linked": {
+         "type": [
+          "boolean",
+          "null"
+         ]
+        },
+        "display_name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "id": {
+         "type": "string"
+        },
+        "is_captain": {
+         "type": "boolean"
+        },
+        "is_substitute": {
+         "type": "boolean"
+        },
+        "role": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "skill_rating": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "specialty": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "user_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "battle_tag",
+        "battle_tag_verified_at",
+        "captain",
+        "discord_checked_at",
+        "discord_in_guild",
+        "discord_linked",
+        "display_name",
+        "id",
+        "is_captain",
+        "is_substitute",
+        "role",
+        "skill_rating",
+        "specialty",
+        "user_id"
+       ]
+      }
+     },
+     "permissions": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": [
+        "edit_public_page",
+        "manage_join_requests",
+        "manage_roster",
+        "manage_scrims",
+        "manage_team_info",
+        "register_tournaments",
+        "send_captain_messages",
+        "validate_lineup"
+       ]
+      }
+     },
+     "team": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "captain_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "country": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "description": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "is_joinable": {
+        "type": "boolean"
+       },
+       "logo_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "name": {
+        "type": "string"
+       },
+       "open_for_scrim": {
+        "type": "boolean"
+       },
+       "short_name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "skill_rating": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "slug": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "captain_id",
+       "country",
+       "description",
+       "id",
+       "is_joinable",
+       "logo_url",
+       "name",
+       "open_for_scrim",
+       "short_name",
+       "skill_rating",
+       "slug"
+      ]
+     }
+    },
+    "required": [
+     "isCaptain",
+     "isManager",
+     "managedTeams",
+     "members",
+     "permissions",
+     "team"
     ]
    }
   },
@@ -57241,7 +57561,95 @@
       "type": "array",
       "items": {}
      },
-     "team": {}
+     "team": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "country": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "description": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "discord": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "is_joinable": {
+        "type": "boolean"
+       },
+       "logo_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "name": {
+        "type": "string"
+       },
+       "open_for_scrim": {
+        "type": "boolean"
+       },
+       "short_name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "skill_rating": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "slug": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "updated_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "website": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "country",
+       "description",
+       "discord",
+       "id",
+       "is_joinable",
+       "logo_url",
+       "name",
+       "open_for_scrim",
+       "short_name",
+       "skill_rating",
+       "slug",
+       "updated_at",
+       "website"
+      ]
+     }
     },
     "required": [
      "isCaptain",
@@ -59080,6 +59488,118 @@
     ]
    }
   },
+  "PATCH /api/player/team": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "isCaptain": {
+      "type": "boolean"
+     },
+     "isManager": {
+      "type": "boolean"
+     },
+     "members": {
+      "type": "array",
+      "items": {}
+     },
+     "team": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "country": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "description": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "discord": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "is_joinable": {
+        "type": "boolean"
+       },
+       "logo_url": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "name": {
+        "type": "string"
+       },
+       "open_for_scrim": {
+        "type": "boolean"
+       },
+       "short_name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "skill_rating": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "slug": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "updated_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "website": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "country",
+       "description",
+       "discord",
+       "id",
+       "is_joinable",
+       "logo_url",
+       "name",
+       "open_for_scrim",
+       "short_name",
+       "skill_rating",
+       "slug",
+       "updated_at",
+       "website"
+      ]
+     }
+    },
+    "required": [
+     "isCaptain",
+     "isManager",
+     "members",
+     "team"
+    ]
+   }
+  },
   "PATCH /api/player/update-profile": {
    "200": {
     "type": "object",
@@ -59088,13 +59608,15 @@
       "type": "boolean"
      },
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      }
     },
     "required": [
      "rosterSynced",
      "success"
-    ]
+    ],
+    "additionalProperties": {}
    }
   },
   "PATCH /api/teams/transfer-captain": {
@@ -77073,18 +77595,26 @@
          "null"
         ],
         "properties": {
-         "reported_at": {},
-         "team1_score": {},
-         "team2_score": {},
-         "team_side": {},
-         "updated_at": {}
+         "reported_at": {
+          "type": "string"
+         },
+         "team1_score": {
+          "type": "number"
+         },
+         "team2_score": {
+          "type": "number"
+         },
+         "team_side": {
+          "type": "number"
+         },
+         "updated_at": {
+          "type": "string"
+         }
         },
         "required": [
-         "reported_at",
          "team1_score",
          "team2_score",
-         "team_side",
-         "updated_at"
+         "team_side"
         ]
        },
        "mySide": {
@@ -77097,24 +77627,41 @@
        "opponentReport": {
         "type": "object",
         "properties": {
-         "reported_at": {},
-         "team1_score": {},
-         "team2_score": {},
-         "team_side": {},
-         "updated_at": {}
+         "reported_at": {
+          "type": "string"
+         },
+         "team1_score": {
+          "type": "number"
+         },
+         "team2_score": {
+          "type": "number"
+         },
+         "team_side": {
+          "type": "number"
+         },
+         "updated_at": {
+          "type": "string"
+         }
         },
         "required": [
-         "reported_at",
          "team1_score",
          "team2_score",
-         "team_side",
-         "updated_at"
+         "team_side"
         ]
        },
-       "scrimId": {},
+       "opponentSide": {},
+       "scrimId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "status": {
         "type": "string"
-       }
+       },
+       "team1Score": {},
+       "team2Score": {},
+       "winnerTeamId": {}
       },
       "required": [
        "matchId",
@@ -77137,18 +77684,26 @@
          "null"
         ],
         "properties": {
-         "reported_at": {},
-         "team1_score": {},
-         "team2_score": {},
-         "team_side": {},
-         "updated_at": {}
+         "reported_at": {
+          "type": "string"
+         },
+         "team1_score": {
+          "type": "number"
+         },
+         "team2_score": {
+          "type": "number"
+         },
+         "team_side": {
+          "type": "number"
+         },
+         "updated_at": {
+          "type": "string"
+         }
         },
         "required": [
-         "reported_at",
          "team1_score",
          "team2_score",
-         "team_side",
-         "updated_at"
+         "team_side"
         ]
        },
        "mySide": {
@@ -77158,6 +77713,7 @@
          2
         ]
        },
+       "opponentReport": {},
        "opponentSide": {
         "type": "number",
         "enum": [
@@ -77165,9 +77721,13 @@
          2
         ]
        },
+       "scrimId": {},
        "status": {
         "type": "string"
-       }
+       },
+       "team1Score": {},
+       "team2Score": {},
+       "winnerTeamId": {}
       },
       "required": [
        "matchId",
@@ -77183,12 +77743,25 @@
        "matchId": {
         "type": "string"
        },
-       "scrimId": {},
+       "myReport": {},
+       "mySide": {},
+       "opponentReport": {},
+       "opponentSide": {},
+       "scrimId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "status": {
         "type": "string"
        },
-       "team1Score": {},
-       "team2Score": {},
+       "team1Score": {
+        "type": "number"
+       },
+       "team2Score": {
+        "type": "number"
+       },
        "winnerTeamId": {
         "type": [
          "string",
@@ -81704,6 +82277,57 @@
     ]
    }
   },
+  "PUT /api/player/predictions/leaderboard": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "showsMyName": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "showsMyName"
+    ]
+   }
+  },
+  "PUT /api/player/predictions/{matchId}": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "prediction": {
+      "type": "object",
+      "properties": {
+       "result": {
+        "type": [
+         "string",
+         "null"
+        ],
+        "enum": [
+         "lost",
+         "void",
+         "won",
+         null
+        ]
+       },
+       "teamId": {
+        "type": "string"
+       },
+       "updatedAt": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "result",
+       "teamId",
+       "updatedAt"
+      ]
+     }
+    },
+    "required": [
+     "prediction"
+    ]
+   }
+  },
   "PUT /api/player/push/prefs": {
    "200": {
     "type": "object",
@@ -82284,8 +82908,6 @@
   "pages/api/cron/quota-alerts.ts:211",
   "pages/api/cron/tenant-purge.ts:163",
   "pages/api/invitations/[token].ts:145",
-  "pages/api/player/predictions/[matchId].ts:193",
-  "pages/api/player/predictions/leaderboard.ts:93",
   "pages/api/player/team-reviews.ts:384",
   "pages/api/teams/invitations/index.ts:314",
   "pages/api/teams/invite-links/by-token.ts:229",

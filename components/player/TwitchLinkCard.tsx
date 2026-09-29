@@ -22,19 +22,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { playerRequest } from '@/utils/player/playerHttp';
+import {
+  linkedAccountsUrls,
+  type TwitchLinkStatus,
+} from '@/features/player/linked-accounts/schemas';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { logger } from '../../utils/logger';
 import nsPlayerTwitchLink from '@/lib/i18n/locales/fr/playerTwitchLink';
 
-export type TwitchLinkStatus = {
-  configured: boolean;
-  linked: boolean;
-  twitchLogin: string | null;
-  linkedAt: string | null;
-};
+export type { TwitchLinkStatus };
 
 type Props = {
   /** Où renvoyer sur 401. `/login` côté joueuse. */
@@ -83,15 +82,15 @@ export default function TwitchLinkCard({
   const t = useT(nsPlayerTwitchLink);
   const locale = useLocale();
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch({ loginPath });
 
   const [status, setStatus] = useState<TwitchLinkStatus | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
+      // Sans redirection sur 401 : une carte n'arrache pas toute la page.
       setStatus(
-        await adminFetchJson<TwitchLinkStatus>('/api/player/twitch-status', {
+        await playerRequest<TwitchLinkStatus>(linkedAccountsUrls.twitch, {
           skipAuthRedirect: true,
         })
       );
@@ -101,7 +100,7 @@ export default function TwitchLinkCard({
       // (« aucun compte lié » alors qu'il y en a peut-être un).
       setStatus(null);
     }
-  }, [adminFetchJson]);
+  }, []);
 
   useEffect(() => {
     void load();
@@ -138,8 +137,10 @@ export default function TwitchLinkCard({
     setBusy(true);
     try {
       setStatus(
-        await adminFetchJson<TwitchLinkStatus>('/api/player/twitch-status', {
+        await playerRequest<TwitchLinkStatus>(linkedAccountsUrls.twitch, {
           method: 'DELETE',
+          idempotent: true,
+          loginPath,
         })
       );
       addToast(t.toastUnlinked, 'success');

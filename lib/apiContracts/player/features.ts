@@ -14,6 +14,7 @@ import {
   ToggleJoinableBody,
   ToggleScrimOpenBody,
 } from '../../../features/player/teamSettings/schemas';
+import { TeamInfoPatchBody } from '../../../features/player/team/schemas';
 
 export const PLAYER_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   'player.teams.toggle-joinable.body': {
@@ -22,6 +23,10 @@ export const PLAYER_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   },
   'player.teams.toggle-scrim-open.body': {
     schema: ToggleScrimOpenBody,
+    io: 'input',
+  },
+  'player.team.patch.body': {
+    schema: TeamInfoPatchBody,
     io: 'input',
   },
 };

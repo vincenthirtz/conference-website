@@ -23,20 +23,20 @@ import {
 } from '@/utils/teams/managementAccess';
 import type { TeamPermission } from '@/utils/teamRoles';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
+import type { SubjectContext } from '@/utils/subject';
 
-export async function hasTeamPermission(
-  userId: string | null | undefined,
-  teamId: string | null | undefined,
-  permission: TeamPermission
-): Promise<boolean> {
-  if (!userId || !teamId) return false;
+/**
+ * Tenant d'une équipe (celui qui fait foi pour ses rôles, ses surcharges et
+ * toute écriture la concernant), `null` si l'équipe est introuvable.
+ */
+export async function readTeamTenantId(
+  teamId: string | null | undefined
+): Promise<string | null> {
+  if (!teamId) return null;
   if (!supabaseAdmin) {
     logger.error('[hasTeamPermission] supabaseAdmin unavailable');
-    return false;
+    return null;
   }
-
-  // Le tenant qui fait foi est celui de l'équipe : c'est sa config de rôles
-  // et ses surcharges qui s'appliquent, pas celles du tenant par défaut.
   const { data: team, error: teamErr } = await supabaseAdmin
     .from('teams')
     .select('id, tenant_id')
@@ -45,12 +45,59 @@ export async function hasTeamPermission(
 
   if (teamErr) {
     logger.error('[hasTeamPermission] team lookup error', teamErr);
-    return false;
+    return null;
   }
-  if (!team) return false;
+  if (!team) return null;
+  return (team as { tenant_id?: string | null }).tenant_id || DEFAULT_TENANT_ID;
+}
 
-  const tenantId =
-    (team as { tenant_id?: string | null }).tenant_id || DEFAULT_TENANT_ID;
+/**
+ * Accès de `userId` à `teamId` pour `permission`, résolu dans le TENANT DE
+ * L'ÉQUIPE. Rend ce tenant quand le droit est acquis (les écritures qui
+ * suivent s'y scopent), `null` sinon — équipe absente comprise.
+ *
+ * Pourquoi rendre le tenant : les routes `teams/[teamId]/*` le prenaient de
+ * `resolveTenantIdForUserRequest` (tenant du chemin, donc par défaut) ; pour
+ * une équipe d'un autre tenant, le droit passait ici mais la lecture
+ * `.eq('tenant_id', …)` qui suivait ne trouvait rien (P10).
+ */
+export async function resolveTeamPermission(
+  userId: string | null | undefined,
+  teamId: string | null | undefined,
+  permission: TeamPermission
+): Promise<{ tenantId: string } | null> {
+  if (!userId || !teamId) return null;
+  const tenantId = await readTeamTenantId(teamId);
+  if (!tenantId) return null;
   const access = await getManagedTeam(userId, tenantId, teamId);
-  return assertTeamPermission(access, permission) === null;
+  return assertTeamPermission(access, permission) === null
+    ? { tenantId }
+    : null;
+}
+
+export async function hasTeamPermission(
+  userId: string | null | undefined,
+  teamId: string | null | undefined,
+  permission: TeamPermission
+): Promise<boolean> {
+  return (await resolveTeamPermission(userId, teamId, permission)) !== null;
+}
+
+/**
+ * `resolveTeamPermission` pour le SUJET d'une route `withSubjectRoute`
+ * (`allowActAs`) : le droit est celui de la personne représentée, jamais du
+ * staff. Sous act-as, l'équipe doit en plus appartenir au tenant ACTIF du
+ * staff (celui où `resolveSubject` a validé l'act-as et écrit le journal
+ * `act_as_player`) : une capitaine présente dans deux tenants ne fait pas
+ * passer le staff de l'un sur une équipe de l'autre.
+ */
+export async function resolveSubjectTeamPermission(
+  subject: Pick<SubjectContext, 'userId' | 'tenantId' | 'isInspection'>,
+  teamId: string | null | undefined,
+  permission: TeamPermission
+): Promise<{ tenantId: string } | null> {
+  const grant = await resolveTeamPermission(subject.userId, teamId, permission);
+  if (!grant) return null;
+  if (subject.isInspection && grant.tenantId !== subject.tenantId) return null;
+  return grant;
 }

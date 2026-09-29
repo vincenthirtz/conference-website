@@ -419,12 +419,16 @@ describe('buildTodo', () => {
   };
 
   it('ne rend rien quand il n’y a rien à faire', async () => {
-    const { buildTodo } = await import('../../pages/api/player/dashboard');
+    const { buildTodo } = await import(
+      '../../features/player/dashboard/service/todo'
+    );
     expect(buildTodo(base)).toEqual([]);
   });
 
   it('met le check-in en tête : c’est la seule échéance qui se referme seule', async () => {
-    const { buildTodo } = await import('../../pages/api/player/dashboard');
+    const { buildTodo } = await import(
+      '../../features/player/dashboard/service/todo'
+    );
     const todo = buildTodo({
       ...base,
       unreadMessages: 4,
@@ -443,7 +447,9 @@ describe('buildTodo', () => {
   });
 
   it('plafonne à trois items', async () => {
-    const { buildTodo } = await import('../../pages/api/player/dashboard');
+    const { buildTodo } = await import(
+      '../../features/player/dashboard/service/todo'
+    );
     const todo = buildTodo({
       ...base,
       unreadMessages: 3,
@@ -462,7 +468,9 @@ describe('buildTodo', () => {
   });
 
   it('ne propose la feuille de match qu’avec la permission ET le check-in fait', async () => {
-    const { buildTodo } = await import('../../pages/api/player/dashboard');
+    const { buildTodo } = await import(
+      '../../features/player/dashboard/service/todo'
+    );
     const withPermission = buildTodo({
       ...base,
       nextMatch: {

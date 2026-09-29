@@ -28,27 +28,23 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { playerRequest } from '@/utils/player/playerHttp';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import nsBattlenetVerify from '@/lib/i18n/locales/fr/battlenetVerify';
 import {
-  type BattlenetRewardOffer,
+  linkedAccountsUrls,
+  type BattlenetStatus,
+} from '@/features/player/linked-accounts/schemas';
+import {
   TCG_REWARD_BATTLENET,
   TCG_REWARD_QUERY_PARAM,
   creditedRewardCoins,
   rewardHintCoins,
 } from '../../utils/tcg/battlenetRewardDisplay';
 
-export type BattlenetStatus = {
-  configured: boolean;
-  linked: boolean;
-  battleTag: string | null;
-  verifiedAt: string | null;
-  /** Additif : absent d'une API plus ancienne, `null` si non activée. */
-  reward?: BattlenetRewardOffer | null;
-};
+export type { BattlenetStatus };
 
 type Props = {
   variant?: 'section' | 'onboarding';
@@ -85,7 +81,6 @@ export default function BattlenetVerifyCard({
   const t = useT(nsBattlenetVerify);
   const locale = useLocale();
   const { addToast } = useToast();
-  const { adminFetchJson } = useAdminFetch({ loginPath });
 
   const [status, setStatus] = useState<BattlenetStatus | null>(null);
   // Le retour d'OAuth annonce un crédit, mais le MONTANT vient de l'état relu :
@@ -94,8 +89,9 @@ export default function BattlenetVerifyCard({
 
   const loadStatus = useCallback(async () => {
     try {
-      const next = await adminFetchJson<BattlenetStatus>(
-        '/api/player/battlenet-status'
+      const next = await playerRequest<BattlenetStatus>(
+        linkedAccountsUrls.battlenet,
+        { loginPath }
       );
       setStatus(next);
     } catch {
@@ -103,7 +99,7 @@ export default function BattlenetVerifyCard({
       // plutôt que d'afficher un bouton qui échouerait.
       setStatus(null);
     }
-  }, [adminFetchJson]);
+  }, [loginPath]);
 
   useEffect(() => {
     void loadStatus();

@@ -44,7 +44,8 @@ import {
 import matchDetailHandler from '../../pages/api/player/matches/[matchId]';
 import nextMatchHandler from '../../pages/api/player/next-match';
 import matchesHandler from '../../pages/api/player/matches';
-import dashboardHandler, { buildTodo } from '../../pages/api/player/dashboard';
+import dashboardHandler from '../../pages/api/player/dashboard';
+import { buildTodo } from '../../features/player/dashboard/service/todo';
 import botCheckinHandler from '../../pages/api/bot/v1/matches/[matchId]/checkin';
 import botNextMatchHandler from '../../pages/api/bot/v1/players/by-discord/[discordUserId]/next-match';
 import publicCheckinHandler from '../../pages/api/checkin/[token]';

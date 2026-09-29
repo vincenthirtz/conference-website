@@ -14,6 +14,7 @@ import {
   setAuthUser,
   setRpcResult,
   rpcCalls,
+  CONFERENCE_TENANT_ID,
 } from './__helpers__/supabaseMock';
 
 import { invalidateStaffCache } from '../../utils/staff';
@@ -116,13 +117,47 @@ describe('/api/admin/me', () => {
     });
     store.staff = [];
     store.teams = [
-      { id: 'team-1', name: 'Alpha', captain_id: 'user-2' },
+      {
+        id: 'team-1',
+        tenant_id: CONFERENCE_TENANT_ID,
+        name: 'Alpha',
+        captain_id: 'user-2',
+      },
     ] as any;
     const res = makeRes();
     await meHandler(makeReq({ method: 'GET' }, true), res);
     expect(res.statusCode).toBe(200);
     expect((res.body as any).role).toBe('captain');
     expect((res.body as any).id).toBe('team-1');
+  });
+
+  // P10 · S4 : l'accès « capitaine » suit la PERMISSION d'équipe, pas le seul
+  // `captain_id` — une manager d'une équipe sans capitaine y est vue.
+  it('GET gives the "captain" virtual role to a team manager (no captain_id)', async () => {
+    setAuthUser({ id: 'user-4', email: 'mgr@example.com' });
+    store.staff = [];
+    store.teams = [
+      {
+        id: 'team-2',
+        tenant_id: CONFERENCE_TENANT_ID,
+        name: 'Beta',
+        captain_id: null,
+      },
+    ] as any;
+    store.team_members = [
+      {
+        id: 'tm-4',
+        tenant_id: CONFERENCE_TENANT_ID,
+        team_id: 'team-2',
+        user_id: 'user-4',
+        role: 'manager',
+      },
+    ] as any;
+    const res = makeRes();
+    await meHandler(makeReq({ method: 'GET' }, true), res);
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).role).toBe('captain');
+    expect((res.body as any).id).toBe('team-2');
   });
 
   it('GET 403 when neither staff nor captain', async () => {

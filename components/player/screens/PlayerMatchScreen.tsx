@@ -1,137 +1,65 @@
 // components/player/screens/PlayerMatchScreen.tsx
 //
-// LE FIL DU MATCH (docs/PLAN-espace-joueur.md § J1).
+// LE FIL DU MATCH (docs/PLAN-espace-joueur.md § J1) — archétype FIL du kit
+// « Le Ruban » (lot P12, docs/PLAN-industrialisation-joueur.md).
 //
-// Un match se jouait sur trois surfaces : le check-in sur /player/checkin, le
-// rappel sur le dashboard, le report du score sur /player/matches. Une
-// capitaine devait donc connaître trois écrans qu'elle n'a aucune raison de
-// connaître à l'avance — et la saison en compte 69, joués par une dizaine de
-// capitaines qui n'en ont jamais vu un seul.
-//
-// Cet écran ne réinvente rien : il recompose les briques déjà livrées
-// (MatchLineupCard, ReportScoreModal, POST /api/checkin/{token}) derrière une
-// URL unique et partageable, dans l'ordre où les gestes arrivent réellement :
+// Un match se jouait sur trois surfaces (check-in, rappel, report). Cet écran
+// les recompose derrière une URL unique et partageable — celle qu'une
+// capitaine colle dans le fil Discord de son match — dans l'ordre où les
+// gestes arrivent réellement :
 //
 //   préparation → check-in → feuille de match → live → score → revue
 //
-// Deux règles :
-//   1. On n'affiche JAMAIS un geste que le serveur refusera. Les permissions
-//      viennent de la réponse (`permissions`), calculées avec les règles des
-//      routes d'écriture — pas devinées ici.
-//   2. Une étape sans objet se tait ou s'explique, mais ne propose pas un
-//      bouton mort : « la feuille s'ouvre après le check-in » est actionnable,
-//      un bouton grisé ne l'est pas.
+// L'écran ne fait plus que composer :
+//   * l'état vivant (chargement, cadence, check-in) : usePlayerMatchThread ;
+//   * ce qui s'affiche (étapes, action principale) : matchThreadState, pur ;
+//   * les étapes : features/player/matches/ui, briques du kit.
+// L'action principale du moment (check-in, sinon report du score) est collée
+// en bas du pouce (ActionDock) : c'est un geste fait au téléphone, le soir.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { useState } from 'react';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
-import { useToast } from '@/components/Toast';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
-import MatchLineupCard, {
-  MATCH_CHECKIN_ANCHOR,
-} from '@/components/player/MatchLineupCard';
-import MatchPrepCard from '@/components/player/MatchPrepCard';
 import ReportScoreModal, {
   type LocalReport,
 } from '@/components/player/ReportScoreModal';
+import { ButtonLink, Chip } from '@/features/ruban';
+import { FilView } from '@/features/player/_shared/ui';
+import { usePlayerMatchThread } from '@/features/player/matches/hooks/usePlayerMatchThread';
+import { matchThreadState } from '@/features/player/matches/threadState';
+import MatchThreadSteps, {
+  CheckinButton,
+  ReportButton,
+} from '@/features/player/matches/ui/MatchThreadSteps';
+import {
+  MatchLoadFailure,
+  MatchSessionNotice,
+  MatchSignInPrompt,
+} from '@/features/player/matches/ui/MatchThreadStates';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import nsPlayerMatch from '@/lib/i18n/locales/fr/playerMatch';
 import nsPlayerMatches from '@/lib/i18n/locales/fr/playerMatches';
-import type { PlayerMatchDetail } from '@/pages/api/player/matches/[matchId]';
 import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
-import {
-  canOfferScoreReport,
-  isCheckinStillOpen,
-  matchThreadRefreshMs,
-} from '@/utils/matches/playerMatchLive';
-import { isLineupClosedStatus } from '@/utils/matches/lineup';
-import {
-  isSessionExpiredError,
-  loginHrefFor,
-} from '@/utils/player/sessionExpiry';
+import { loginHrefFor } from '@/utils/player/sessionExpiry';
 
-import { logger } from '../../../utils/logger';
+const PAGE =
+  'min-h-screen bg-[var(--canvas,#07030a)] pt-header text-[var(--t1,#f4edf7)]';
 
-type T = typeof nsPlayerMatch.fr;
-
-const FINISHED = new Set(['finished', 'completed', 'finalized', 'walkover']);
-
-/**
- * Heure de PARIS, pas celle du téléphone : le calendrier, les annonces Discord
- * et le cron de check-in raisonnent tous en Europe/Paris. Sans fuseau épinglé,
- * « le check-in ouvre à 18:00 » s'affichait 12:00 à Montréal.
- */
-function formatDateTime(iso: string | null, locale: string, t: T): string {
-  return formatMatchDateTime(iso, locale, 'long', t.dateTbd);
-}
-
-/**
- * Une étape du fil. `state` porte la seule information qui compte au premier
- * coup d'œil : est-ce à moi de faire quelque chose, est-ce fait, ou est-ce
- * encore fermé.
- */
-function Step({
-  index,
-  title,
-  state,
-  children,
-  id,
-}: {
-  index: number;
-  title: string;
-  state: 'done' | 'active' | 'idle';
-  children: ReactNode;
-  /** Ancre (ex. `#checkin`, visée par la feuille de match). */
-  id?: string;
-}) {
-  const ring =
-    state === 'active'
-      ? 'border-purple-400/40 bg-purple-500/[0.07]'
-      : state === 'done'
-        ? 'border-emerald-500/25 bg-emerald-500/[0.04]'
-        : 'border-white/10 bg-white/[0.03]';
-  const badge =
-    state === 'active'
-      ? 'bg-purple-500 text-white'
-      : state === 'done'
-        ? 'bg-emerald-500/20 text-emerald-200'
-        : 'bg-white/10 text-gray-400';
-
-  return (
-    <section
-      id={id}
-      className={`scroll-mt-24 rounded-2xl border p-5 backdrop-blur-xl ${ring}`}
-    >
-      <h2 className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.14em] text-gray-300">
-        <span
-          className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold tabular-nums ${badge}`}
-          aria-hidden
-        >
-          {state === 'done' ? '✓' : index}
-        </span>
-        {title}
-      </h2>
-      {/* Les étapes changent d'état sous le doigt (check-in confirmé, feuille
-          validée) : sans `aria-live`, un lecteur d'écran ne dit rien de ce qui
-          vient de se passer et la personne reclique. `polite` : on n'interrompt
-          pas une lecture en cours pour ça. */}
-      <div className="mt-3 text-sm text-gray-300" aria-live="polite">
-        {children}
-      </div>
-    </section>
-  );
-}
+const STATUS_TONE = {
+  disputed: 'warn',
+  finished: 'ok',
+  ongoing: 'live',
+  upcoming: 'neutral',
+} as const;
 
 export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
   const t = useT(nsPlayerMatch);
   const tMatches = useT(nsPlayerMatches);
   const locale = useLocale();
-  // C'est l'URL collée dans le fil Discord du match : une personne pas encore
-  // connectée doit y REVENIR après la connexion, pas atterrir sur /player.
+  // L'URL collée dans le fil Discord : une personne pas encore connectée doit
+  // y REVENIR après la connexion, pas atterrir sur /player.
   const loginHref = loginHrefFor(
     `/player/match/${encodeURIComponent(matchId)}`
   );
@@ -140,508 +68,102 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
     loading: authLoading,
     ready,
   } = usePlayerSession({ redirectTo: loginHref });
-  const { adminFetchJson } = useAdminFetch({ loginPath: loginHref });
-  const { withSubject, readOnly } = usePlayerArea();
-  const { addToast } = useToast();
-
-  const [data, setData] = useState<PlayerMatchDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [sessionExpired, setSessionExpired] = useState(false);
-  const [checkinBusy, setCheckinBusy] = useState(false);
+  const { readOnly } = usePlayerArea();
+  const thread = usePlayerMatchThread(matchId, ready, t);
   const [reportOpen, setReportOpen] = useState(false);
-  // Horloge LOCALE : fait basculer les états qui dépendent de l'heure (fin de
-  // la fenêtre de check-in, bouton de report au coup d'envoi) et décide de la
-  // cadence réseau. Aucun appel réseau à chaque tick.
-  const [now, setNow] = useState<number>(() => Date.now());
-  // Un rafraîchissement en arrière-plan ne doit jamais en chevaucher un autre
-  // (réseau mobile lent + intervalle de 30 s).
-  const inFlight = useRef(false);
 
-  /**
-   * `background` : rafraîchissement silencieux. Un échec y GARDE l'écran tel
-   * quel — remplacer le fil par « erreur de chargement » parce qu'une requête
-   * a échoué en 4G, c'est perdre le bouton de check-in au pire moment. Seul
-   * le premier chargement (ou « Réessayer ») affiche l'erreur.
-   */
-  const load = useCallback(
-    async ({ background = false }: { background?: boolean } = {}) => {
-      if (background && inFlight.current) return;
-      inFlight.current = true;
-      if (!background) setError(null);
-      try {
-        const payload = await adminFetchJson<PlayerMatchDetail>(
-          withSubject(`/api/player/matches/${encodeURIComponent(matchId)}`),
-          { skipAuthRedirect: true }
-        );
-        setData(payload);
-        setSessionExpired(false);
-      } catch (err) {
-        if (isSessionExpiredError(err)) {
-          // Pas de redirection sèche en plein écran : on dit ce qui se passe
-          // et on donne le lien qui ramène ICI.
-          setSessionExpired(true);
-        } else if (!background) {
-          logger.error('[player/match] load error:', err);
-          setData(null);
-          setError(t.loadError);
-        } else {
-          logger.warn('[player/match] background refresh failed:', err);
-        }
-      } finally {
-        inFlight.current = false;
-        setNow(Date.now());
-        setLoading(false);
-      }
-    },
-    [adminFetchJson, matchId, withSubject, t]
-  );
+  // Heure de PARIS, pas celle du téléphone (calendrier, annonces Discord et
+  // cron de check-in raisonnent tous en Europe/Paris).
+  const formatDate = (iso: string | null) =>
+    formatMatchDateTime(iso, locale, 'long', t.dateTbd);
 
-  useEffect(() => {
-    if (!ready) return;
-    load();
-  }, [ready, load]);
-
-  // Tick local (30 s, onglet visible seulement) + rattrapage au retour sur
-  // l'onglet — même triptyque que NextMatchCard. Le téléphone verrouillé
-  // entre deux matchs est LE cas nominal d'un vendredi soir.
-  useEffect(() => {
-    if (!ready) return;
-    const clockId = setInterval(() => {
-      if (document.visibilityState !== 'visible') return;
-      setNow(Date.now());
-    }, 30_000);
-    const onVisible = () => {
-      if (document.visibilityState !== 'visible') return;
-      setNow(Date.now());
-      void load({ background: true });
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      clearInterval(clockId);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  }, [ready, load]);
-
-  // Cadence réseau : rapprochée seulement quand quelque chose PEUT bouger
-  // (fenêtre de check-in, match en cours). Recalculée à chaque tick : un fil
-  // ouvert à T-2 h passe tout seul en 30 s à T-70 min, et s'arrête une fois le
-  // match terminé. Rien du tout sur un match lointain.
-  const refreshMs = data
-    ? matchThreadRefreshMs(
-        {
-          status: data.match.status,
-          checkinOpensAt: data.checkin.opensAt,
-          checkinClosesAt: data.checkin.closesAt,
-        },
-        now
-      )
-    : null;
-  useEffect(() => {
-    if (!ready || refreshMs === null || sessionExpired) return;
-    const id = setInterval(() => {
-      if (document.visibilityState !== 'visible') return;
-      void load({ background: true });
-    }, refreshMs);
-    return () => clearInterval(id);
-  }, [ready, refreshMs, sessionExpired, load]);
-
-  // Le check-in passe par la route PUBLIQUE à jeton (idempotente) : c'est la
-  // même que /player/checkin et que le lien envoyé par le bot. Un second envoi
-  // répond `alreadyCheckedIn` sans double écriture — on distingue les deux
-  // pour que le retour soit honnête.
-  const handleCheckin = useCallback(async () => {
-    const token = data?.checkin.token;
-    if (!token || checkinBusy) return;
-    setCheckinBusy(true);
-    try {
-      const res = await fetch(`/api/checkin/${encodeURIComponent(token)}`, {
-        method: 'POST',
-      });
-      const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error || t.checkinFailed);
-      addToast(
-        json?.alreadyCheckedIn === true ? t.checkinAlready : t.checkinSuccess,
-        json?.alreadyCheckedIn === true ? 'info' : 'success'
-      );
-      await load({ background: true });
-    } catch (err) {
-      addToast(err instanceof Error ? err.message : t.checkinFailed, 'error');
-    } finally {
-      setCheckinBusy(false);
-    }
-  }, [addToast, checkinBusy, data?.checkin.token, load, t]);
-
-  if (authLoading || loading) return <PlayerPageSkeleton rows={3} />;
+  if (authLoading || thread.loading) return <PlayerPageSkeleton rows={3} />;
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-        <main className="mx-auto max-w-md px-4 py-10 pt-header-xl text-center">
-          <p className="text-gray-300">{t.connectPrompt}</p>
-          <Link
-            href={loginHref}
-            className="mt-8 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-6 py-3 text-sm font-bold text-white"
-          >
-            {t.signIn}
-          </Link>
-        </main>
+      <div className={PAGE}>
+        <MatchSignInPrompt t={t} loginHref={loginHref} />
       </div>
     );
   }
 
-  // Session expirée : ni « erreur de chargement », ni « Réessayer » (qui
-  // échouerait à l'infini) — le seul geste utile est de se reconnecter.
-  const sessionNotice = sessionExpired ? (
-    <div
-      role="alert"
-      className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
-    >
-      <span>{t.sessionExpired}</span>
-      <Link
-        href={loginHref}
-        className="inline-flex min-h-[44px] items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-900"
-      >
-        {t.signinAgain}
-      </Link>
-    </div>
+  const sessionNotice = thread.sessionExpired ? (
+    <MatchSessionNotice t={t} loginHref={loginHref} />
   ) : null;
 
-  if (!data && sessionExpired) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-        <main className="mx-auto max-w-2xl px-4 py-10 pt-header-lg">
-          {sessionNotice}
-        </main>
-      </div>
-    );
-  }
-
+  const { data } = thread;
   if (!data) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-        <main className="mx-auto max-w-2xl px-4 py-10 pt-header-lg">
-          <div
-            role="alert"
-            className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-4 text-sm text-red-100"
-          >
-            {error ?? t.notFound}
-          </div>
-          <div className="mt-6 flex gap-4 text-sm">
-            <button
-              onClick={() => {
-                setLoading(true);
-                load();
-              }}
-              className="text-purple-300 hover:text-purple-200"
-            >
-              {t.retry}
-            </button>
-            <Link
-              href="/player/matches"
-              className="text-gray-400 hover:text-white"
-            >
-              {t.back}
-            </Link>
-          </div>
-        </main>
+      <div className={PAGE}>
+        <div className="mx-auto max-w-2xl px-4 py-10">
+          {sessionNotice ?? (
+            <MatchLoadFailure
+              t={t}
+              error={thread.error}
+              onRetry={thread.retry}
+            />
+          )}
+        </div>
       </div>
     );
   }
 
-  const { match, team, opponent, tournament, checkin, readiness, report } =
-    data;
-  const isFinished = FINISHED.has(match.status);
-  // Restreint par l'horloge locale, jamais élargi (cf. isCheckinStillOpen) :
-  // le forfait tombe au coup d'envoi, un bouton encore ouvert mentirait.
-  const checkinOpen = isCheckinStillOpen(checkin, now);
-  const checkinPassed =
-    checkin.isPassed ||
-    (!!checkin.closesAt && now > new Date(checkin.closesAt).getTime());
-  const isDisputed = match.status === 'disputed';
+  const { match, team, opponent, tournament, report } = data;
   const canAct = !readOnly;
-  const showReportCta =
-    canAct &&
-    canOfferScoreReport(
-      {
-        status: match.status,
-        scheduledAt: match.scheduledAt,
-        canReport: data.permissions.reportScore,
-        hasOpponent: !!opponent,
-      },
-      now
-    );
+  const view = matchThreadState(data, thread.now, canAct);
+  const statusLabel = {
+    disputed: t.statusDisputed,
+    finished: t.statusFinished,
+    ongoing: t.statusOngoing,
+    upcoming: t.statusUpcoming,
+  }[view.status];
+  const openReport = () => setReportOpen(true);
 
-  const statusLabel = isDisputed
-    ? t.statusDisputed
-    : isFinished
-      ? t.statusFinished
-      : match.status === 'ongoing'
-        ? t.statusOngoing
-        : t.statusUpcoming;
-
-  // État de l'étape check-in : fait / à faire maintenant / pas encore ouvert /
-  // manqué. C'est la seule étape dont la fenêtre se referme toute seule.
-  const checkinState: 'done' | 'active' | 'idle' = checkin.alreadyCheckedIn
-    ? 'done'
-    : checkinOpen
-      ? 'active'
-      : 'idle';
-
-  const scoreState: 'done' | 'active' | 'idle' =
-    report.state === 'agreed' || (isFinished && !isDisputed)
-      ? 'done'
-      : isFinished || report.state === 'awaiting_me' || isDisputed
-        ? 'active'
-        : 'idle';
+  const primaryAction =
+    view.primary === 'checkin' ? (
+      <CheckinButton t={t} busy={thread.checkinBusy} onClick={thread.checkIn} />
+    ) : view.primary === 'report' ? (
+      <ReportButton t={t} hasReport={!!report.mine} onClick={openReport} />
+    ) : undefined;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-[#050509] to-black text-white">
-      <main className="mx-auto max-w-2xl px-4 py-10 pt-header">
-        {sessionNotice}
-        <Link
-          href="/player/matches"
-          className="mb-6 inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white"
-        >
-          &larr; {t.back}
-        </Link>
-
-        {/* Affiche du match : qui, quand, dans quoi. */}
-        <header className="mb-8">
-          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+    <div className={PAGE}>
+      <div className="mx-auto max-w-2xl px-4 pt-6 lg:px-6">{sessionNotice}</div>
+      <FilView
+        columns={1}
+        title={format(t.pageTitle, {
+          team: team.name,
+          opponent: opponent?.name ?? '—',
+        })}
+        subtitle={
+          <>
             {[tournament?.name, match.roundName].filter(Boolean).join(' · ')}
-          </p>
-          <h1 className="mt-2 text-3xl font-bold text-gradient text-balance">
-            {format(t.pageTitle, {
-              team: team.name,
-              opponent: opponent?.name ?? '—',
-            })}
-          </h1>
-          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-400">
-            <span>{formatDateTime(match.scheduledAt, locale, t)}</span>
-            {match.format && (
-              <span className="rounded border border-white/15 px-1.5 py-0.5 font-mono text-[10px] uppercase">
-                {match.format}
-              </span>
-            )}
-            <span
-              className={
-                isDisputed
-                  ? 'text-amber-300'
-                  : isFinished
-                    ? 'text-emerald-300'
-                    : 'text-gray-300'
-              }
-            >
-              {statusLabel}
-            </span>
-          </p>
-        </header>
-
-        <div className="flex flex-col gap-4">
-          {/* 1 — Préparation */}
-          <Step index={1} title={t.stepPrepare} state="idle">
-            {opponent ? (
-              <>
-                <p>{t.prepareBody}</p>
-                <div className="mt-3 flex flex-wrap gap-4">
-                  <Link
-                    href={`/player/scouting/${encodeURIComponent(opponent.id)}`}
-                    className="text-purple-300 hover:text-purple-200"
-                  >
-                    {t.prepareScouting}
-                  </Link>
-                  <Link
-                    href={`/team/${encodeURIComponent(opponent.slug || opponent.id)}`}
-                    className="text-gray-400 hover:text-white"
-                  >
-                    {t.prepareTeamPage}
-                  </Link>
-                </div>
-              </>
-            ) : (
-              <p className="text-gray-400">{t.prepareNoOpponent}</p>
-            )}
-
-            {/* Objectifs du match (J5) : la moitié « avant » de la boucle du
-                coach. Lecture ouverte au roster, écriture sur `validate_lineup`. */}
-            <MatchPrepCard
-              matchId={match.id}
-              canEdit={data.permissions.validateLineup && canAct}
-            />
-
-            {/* L'effectif ne vaut avertissement que sous le minimum : sur un
-                tournoi sans minimum, `readiness` est nul et on se tait. */}
-            {readiness && readiness.shortfall > 0 && (
-              <p className="mt-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-100">
-                {format(t.rosterWarning, { n: readiness.shortfall })}
-              </p>
-            )}
-          </Step>
-
-          {/* 2 — Check-in */}
-          <Step
-            index={2}
-            title={t.stepCheckin}
-            state={checkinState}
-            id={MATCH_CHECKIN_ANCHOR}
-          >
-            {checkin.alreadyCheckedIn ? (
-              <p className="text-emerald-200">
-                {format(t.checkinDone, {
-                  date: formatDateTime(checkin.checkedInAt, locale, t),
-                })}
-              </p>
-            ) : checkinOpen ? (
-              <>
-                <p>{t.checkinOpenNow}</p>
-                {/* Membre qui ne peut pas pointer (ni capitaine, ni coach, ni
-                    manager) : le serveur ne lui envoie pas de jeton. On le dit
-                    AVANT le cas « pas de jeton », sinon elle lirait que le
-                    check-in n'est pas géré ici — faux pour son équipe.
-                    `=== false` : une réponse sans le champ garde l'ancien
-                    affichage plutôt que de masquer un bouton légitime. */}
-                {checkin.canCheckIn === false ? (
-                  <p className="mt-2 text-gray-400">{t.checkinRestricted}</p>
-                ) : !checkin.token ? (
-                  <p className="mt-2 text-gray-400">{t.checkinNoToken}</p>
-                ) : canAct ? (
-                  <button
-                    onClick={handleCheckin}
-                    disabled={checkinBusy}
-                    className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-neutral-900 transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 disabled:opacity-50"
-                  >
-                    {checkinBusy ? t.checkinPending : t.checkinCta}
-                  </button>
-                ) : (
-                  <p className="mt-2 text-gray-400">{t.checkinReadOnly}</p>
-                )}
-              </>
-            ) : checkinPassed ? (
-              <p className="text-amber-200">{t.checkinMissed}</p>
-            ) : (
-              <p className="text-gray-400">
-                {format(t.checkinOpensAt, {
-                  date: formatDateTime(checkin.opensAt, locale, t),
-                })}
-              </p>
-            )}
-          </Step>
-
-          {/* 3 — Feuille de match. La carte se tait d'elle-même sans permission
-              `validate_lineup` ou tant que le check-in n'est pas fait : on ne
-              double pas sa règle ici, on la laisse parler. */}
-          {data.permissions.validateLineup && (
-            <Step
-              index={3}
-              title={t.stepLineup}
-              state={checkin.alreadyCheckedIn ? 'active' : 'idle'}
-            >
-              {/* `key` : la carte charge une fois, au montage. Sans remontage,
-                  elle affichait encore « fais ton check-in » après le
-                  check-in (ou restait éditable après la fin du match) jusqu'à
-                  un rechargement manuel. On ne remonte QUE sur ces deux
-                  bascules — pas sur pending → ongoing, qui effacerait une
-                  sélection en cours de saisie. */}
-              <MatchLineupCard
-                key={`${checkin.alreadyCheckedIn}-${isLineupClosedStatus(match.status)}`}
-                matchId={match.id}
-                teamId={team.id}
-              />
-            </Step>
-          )}
-
-          {/* 4 — Pendant le match */}
-          <Step
-            index={4}
-            title={t.stepLive}
-            state={match.status === 'ongoing' ? 'active' : 'idle'}
-          >
-            <div className="flex flex-wrap gap-4">
-              {match.streamUrl ? (
-                <a
-                  href={match.streamUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="text-purple-300 hover:text-purple-200"
-                >
-                  {t.liveWatch}
-                </a>
-              ) : (
-                <span className="text-gray-400">{t.liveNoStream}</span>
-              )}
-              <Link
-                href={`/match/${encodeURIComponent(match.id)}`}
-                className="text-gray-400 hover:text-white"
-              >
-                {t.liveMatchPage}
-              </Link>
-            </div>
-          </Step>
-
-          {/* 5 — Score et revue */}
-          <Step index={5} title={t.stepScore} state={scoreState}>
-            {report.state === 'disputed' ? (
-              <p className="text-amber-200">{t.scoreDisputed}</p>
-            ) : report.state === 'agreed' ? (
-              <p className="text-emerald-200">{t.scoreAgreed}</p>
-            ) : report.state === 'awaiting_opponent' && report.mine ? (
-              <p>
-                {format(t.scoreAwaitingOpponent, {
-                  mine: report.mine.mine,
-                  opponent: report.mine.opponent,
-                })}
-              </p>
-            ) : report.state === 'awaiting_me' ? (
-              <p className="text-amber-200">{t.scoreAwaitingMe}</p>
-            ) : (
-              <p className="text-gray-400">{t.scoreNone}</p>
-            )}
-
-            {data.score && data.score.mine !== null && (
-              <p className="mt-2 font-mono text-sm tabular-nums text-white">
-                {format(t.scoreFinal, {
-                  mine: data.score.mine,
-                  opponent: data.score.opponent ?? 0,
-                })}
-              </p>
-            )}
-
-            {/* Le rapport de score est réservé à la capitaine au sens strict
-                (teams.captain_id) — même règle que la route qui l'enregistre. */}
-            {showReportCta ? (
-              <button
-                onClick={() => setReportOpen(true)}
-                className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
-              >
-                {report.mine ? t.scoreEditCta : t.scoreReportCta}
-              </button>
-            ) : (
-              !isFinished && (
-                <p className="mt-2 text-xs text-gray-500">
-                  {/* Capitaine, mais trop tôt : le dire, plutôt que « réservé
-                      à la capitaine » à la capitaine elle-même. */}
-                  {data.permissions.reportScore && canAct
-                    ? t.scoreAfterKickoff
-                    : t.scoreCaptainOnly}
-                </p>
-              )
-            )}
-
-            {isFinished && (
-              <div className="mt-4 border-t border-white/10 pt-3">
-                <p className="text-gray-400">{t.reviewBody}</p>
-                <Link
-                  href="/player#team-memory"
-                  className="mt-2 inline-block text-purple-300 hover:text-purple-200"
-                >
-                  {t.reviewCta}
-                </Link>
-              </div>
-            )}
-          </Step>
-        </div>
-      </main>
+            {(tournament?.name || match.roundName) && ' — '}
+            {formatDate(match.scheduledAt)}
+            {match.format && ` · ${match.format}`}
+          </>
+        }
+        actions={
+          <>
+            <Chip tone={STATUS_TONE[view.status]}>{statusLabel}</Chip>
+            <ButtonLink size="sm" href="/player/matches">
+              &larr; {t.back}
+            </ButtonLink>
+          </>
+        }
+        primaryAction={primaryAction}
+      >
+        <MatchThreadSteps
+          data={data}
+          view={view}
+          t={t}
+          canAct={canAct}
+          formatDate={formatDate}
+          checkinBusy={thread.checkinBusy}
+          onCheckin={thread.checkIn}
+          onReport={openReport}
+        />
+      </FilView>
 
       {data.permissions.reportScore && opponent && (
         <ReportScoreModal
@@ -663,7 +185,7 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
           t={tMatches}
           onReported={() => {
             setReportOpen(false);
-            void load();
+            void thread.load();
           }}
         />
       )}

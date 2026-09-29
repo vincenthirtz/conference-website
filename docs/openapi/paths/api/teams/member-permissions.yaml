@@ -14,6 +14,7 @@ get:
     - PlayerBearer: []
   parameters:
     - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
   responses:
     '200':
       description: '{ teamId, grants[], members[], delegatable[] }'
@@ -34,6 +35,9 @@ post:
     Refuse (403) si l'appelant ne possede pas lui-meme la permission :
     sans cette regle, un role partiel s'auto-elargirait. Idempotent.
   operationId: grantTeamMemberPermission
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
   security:
     - PlayerBearer: []
   requestBody:
@@ -63,6 +67,9 @@ delete:
     - public/auth
   summary: Revoquer une delegation (soft — la ligne reste, comme journal).
   operationId: revokeTeamMemberPermission
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
   security:
     - PlayerBearer: []
   requestBody:

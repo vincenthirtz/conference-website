@@ -46,15 +46,7 @@ put:
     content:
       application/json:
         schema:
-          type: object
-          required:
-            - starters
-          properties:
-            starters:
-              type: array
-              items:
-                type: string
-                format: uuid
+          x-zod: player.teams.matches.lineup
   responses:
     '200':
       description: Composition enregistree.
@@ -79,13 +71,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            starters:
-              type: array
-              items:
-                type: string
-                format: uuid
+          x-zod: player.teams.matches.lineup
   responses:
     '200':
       description: Feuille validee.

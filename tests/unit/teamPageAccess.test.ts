@@ -1,6 +1,6 @@
 // Droits du visiteur sur la fiche équipe publique. Le hook n'est pas rendu
 // (pas de jsdom dans le harnais) : on verrouille les deux fonctions pures qui
-// décident (1) si l'appel à /api/admin/teams/my part, (2) ce qu'on en tire.
+// décident (1) si l'appel à /api/player/team part, (2) ce qu'on en tire.
 import { describe, it, expect } from 'vitest';
 import {
   NO_TEAM_PAGE_ACCESS,

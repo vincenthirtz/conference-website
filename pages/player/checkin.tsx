@@ -6,14 +6,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
 import { localeTag } from '@/lib/i18n/useLocale';
 import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import type { NextMatchPayload } from '@/pages/api/player/next-match';
+import type { NextMatchPayload } from '@/features/player/checkin/schemas';
+import { fetchNextMatch, postCheckin } from '@/features/player/checkin/client';
 import MatchLineupCard from '@/components/player/MatchLineupCard';
 import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
 import {
@@ -66,9 +66,8 @@ function PlayerCheckin() {
   } = usePlayerSession({
     redirectTo: loginHrefFor(CHECKIN_PATH),
   });
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
-  const { withTeam } = useActiveTeam();
-  // Sélecteur d'équipe : cet écran applique `withTeam()`, il doit donc dire
+  const { activeTeamId } = useActiveTeam();
+  // Sélecteur d'équipe : cet écran porte l'équipe active (`?teamId=`), il doit donc dire
   // QUELLE équipe il montre et permettre d'en changer. `useManagedTeam` publie
   // la liste des équipes gérées dans ActiveTeamContext (lecture partagée et
   // mise en cache avec les autres écrans) — c'est aussi ce qui efface un choix
@@ -99,10 +98,7 @@ function PlayerCheckin() {
       if (background && inFlight.current) return;
       inFlight.current = true;
       try {
-        const json = await adminFetchJson<NextMatchPayload>(
-          withTeam('/api/player/next-match'),
-          { skipAuthRedirect: true }
-        );
+        const json: NextMatchPayload = await fetchNextMatch(activeTeamId);
         setData(json);
         setLoadError(null);
         setSessionExpired(false);
@@ -123,7 +119,7 @@ function PlayerCheckin() {
         setLoading(false);
       }
     },
-    [adminFetchJson, t, withTeam]
+    [activeTeamId, t]
   );
 
   useEffect(() => {
@@ -181,13 +177,7 @@ function PlayerCheckin() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch(`/api/checkin/${encodeURIComponent(token)}`, {
-        method: 'POST',
-      });
-      const json = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(json?.error || t.submitFailed);
-      }
+      const json = await postCheckin(token, t.submitFailed);
       // The POST is idempotent: a second submit returns alreadyCheckedIn:true
       // without a double write. Differentiate the two so feedback is honest.
       const wasAlready = json?.alreadyCheckedIn === true;

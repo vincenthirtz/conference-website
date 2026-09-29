@@ -37,6 +37,8 @@ import {
   type LineupStatus,
 } from '@/utils/matches/lineup';
 import { resolveMissingDisplayNames } from '@/utils/teams/memberDisplayName';
+import { parseBody } from '@/utils/player/errors';
+import { LineupBody } from '../../../../../features/player/matches/schemas';
 
 import { logger } from '../../../../../utils/logger';
 
@@ -205,13 +207,11 @@ export default withSubjectRoute(
       });
     }
 
-    const rawStarters = (req.body || {}).starters;
-    const wantsSave = Array.isArray(rawStarters);
+    const parsed = parseBody(LineupBody, req.body);
+    if (!parsed.ok) return res.status(400).json(parsed.body);
 
     // POST sans `starters` = « valide ce qui est déjà enregistré ».
-    const proposed: string[] = wantsSave
-      ? rawStarters.map((v: unknown) => String(v))
-      : currentStarters;
+    const proposed: string[] = parsed.data.starters ?? currentStarters;
 
     const check = validateLineup(proposed, eligibleIds);
     if (!check.ok) {

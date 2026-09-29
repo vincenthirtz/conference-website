@@ -90,7 +90,7 @@ export default withSubjectRoute(
       });
     }
 
-    const teamRoles = await loadTeamRolesFromSupabase(supabaseAdmin);
+    const teamRoles = await loadTeamRolesFromSupabase(supabaseAdmin, tenantId);
 
     // ACCORDER un rôle privilégié est ouvert à qui gère l'équipe — capitaine
     // OU manager (décision produit du 2026-08-20).

@@ -5,8 +5,8 @@
 //  - `canProposeScrim` : gère une AUTRE équipe → proposition de scrim depuis
 //    son espace, adversaire pré-sélectionné (R3), au lieu du formulaire public.
 //
-// L'appel à /api/admin/teams/my ne part QUE pour une session ouverte. Il
-// partait pour tous les visiteurs, anonymes compris — l'immense majorité des
+// L'appel à /api/player/team (ex-/api/admin/teams/my) ne part QUE pour une
+// session ouverte. Il partait pour tous les visiteurs, anonymes compris — l'immense majorité des
 // vues — et coûtait à chaque affichage une fonction serverless qui répondait
 // 401.
 //
@@ -35,7 +35,7 @@ export function shouldCheckTeamPageAccess(session: {
   return !session.loading && !!session.userId;
 }
 
-/** Réponse de GET /api/admin/teams/my → droits sur la fiche `teamId`. */
+/** Réponse de GET /api/player/team → droits sur la fiche `teamId`. */
 export function resolveTeamPageAccess(
   data: {
     team?: { id?: string } | null;
@@ -64,7 +64,7 @@ export function useTeamPageAccess(teamId: string): TeamPageAccess {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/admin/teams/my', {
+        const res = await fetch('/api/player/team', {
           credentials: 'include',
           // Bearer : résolu par le cache jeton côté serveur, sans repasser
           // par la lecture des cookies Supabase.

@@ -207,7 +207,7 @@ export async function loadCaptainManagerUserIdsForTeams(
   }
 
   // 2. Membres au rôle privilégié (>=1 permission) dans ces équipes.
-  const roles = await loadTeamRolesFromSupabase(supabaseAdmin);
+  const roles = await loadTeamRolesFromSupabase(supabaseAdmin, tenantId);
   const privileged = privilegedRoleValues(roles);
   if (privileged.length > 0) {
     const { data: mgrRows, error: mgrErr } = await supabaseAdmin

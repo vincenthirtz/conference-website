@@ -8,12 +8,11 @@
 // En lecture seule (inspection admin), le report de score disparaît : l'API
 // refuse de toute façon `?as=` sur les écritures.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import AgendaCard from '@/components/player/AgendaCard';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
-import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import MatchLineupCard from '@/components/player/MatchLineupCard';
 import ReportScoreModal, {
@@ -30,7 +29,8 @@ import {
 } from '@/utils/player/sessionExpiry';
 import { useT, format } from '@/lib/i18n/useT';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
-import type { PlayerMatchesPayload } from '@/pages/api/player/matches';
+import type { PlayerMatchesPayload } from '@/features/player/matches/schemas';
+import { matchesClient } from '@/features/player/matches/client';
 
 import { logger } from '../../../utils/logger';
 import nsPlayerMatches from '@/lib/i18n/locales/fr/playerMatches';
@@ -318,9 +318,13 @@ export default function PlayerMatchesScreen() {
   } = usePlayerSession({
     redirectTo: '/login?next=/player/matches',
   });
-  const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
-  const { withSubject, readOnly } = usePlayerArea();
-  const { withTeam } = useActiveTeam();
+  const { subjectId, isActingAs, readOnly } = usePlayerArea();
+  const { activeTeamId } = useActiveTeam();
+  // Portée sujet + équipe active : `?as=` puis `?teamId=`, posés par le client.
+  const scope = useMemo(
+    () => ({ subjectId, actAs: isActingAs, teamId: activeTeamId }),
+    [subjectId, isActingAs, activeTeamId]
+  );
   // Sélecteur d'équipe : cet écran applique `withTeam()`, il doit donc dire
   // QUELLE équipe il montre et permettre d'en changer. `useManagedTeam` publie
   // la liste des équipes gérées dans ActiveTeamContext (lecture partagée et
@@ -350,10 +354,7 @@ export default function PlayerMatchesScreen() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const json = await adminFetchJson<PlayerMatchesPayload>(
-        withTeam(withSubject('/api/player/matches')),
-        { skipAuthRedirect: true }
-      );
+      const json: PlayerMatchesPayload = await matchesClient.list(scope);
       setData(json);
       setSessionExpired(false);
       setNow(Date.now());
@@ -369,7 +370,7 @@ export default function PlayerMatchesScreen() {
     } finally {
       setLoading(false);
     }
-  }, [adminFetchJson, t, withSubject, withTeam]);
+  }, [scope, t]);
 
   useEffect(() => {
     if (!ready) return;
