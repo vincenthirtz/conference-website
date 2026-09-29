@@ -16,7 +16,7 @@
 # supabase/seed.sql (tenant par défaut). Voir docs/E2E-LOCAL-SUPABASE.md.
 # Si le socle manque, le job échoue AVEC UN MESSAGE explicite.
 #
-# QUATRE TRANCHES en parallèle, chacune avec sa Supabase ; un job final
+# SIX TRANCHES en parallèle, chacune avec sa Supabase ; un job final
 # fusionne leurs rapports en un seul rapport HTML (artefact playwright-report).
 #
 # DÉCLENCHEMENT MANUEL ET NOCTURNE, pas à chaque push : la suite est longue, et
@@ -47,7 +47,7 @@ jobs:
       # complet de la suite, pas le premier échec.
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
 
     steps:
       - uses: actions/checkout@v4
@@ -73,8 +73,12 @@ jobs:
 
       # CHAQUE tranche a SA Supabase : les specs sèment et nettoient, deux
       # tranches sur une même base se marcheraient dessus.
+      # Seuls les services dont l'app a besoin : auth, rest (PostgREST), kong,
+      # realtime (cockpit / régie), storage (téléversements), mailpit (e-mails
+      # de changement d'adresse). Studio, analytics et edge-runtime sont déjà
+      # coupés dans supabase/config.toml ; `-x` écarte le reste.
       - name: Démarrer une Supabase locale
-        run: supabase start
+        run: supabase start -x studio,postgres-meta,imgproxy,edge-runtime,logflare,vector,supavisor
 
       - name: Relever l'URL et les clés de l'instance
         id: sb
@@ -119,7 +123,7 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ms-playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
 
-      - name: Jouer la tranche ${{ matrix.shard }}/4
+      - name: Jouer la tranche ${{ matrix.shard }}/6
         env:
           # La suite ET le serveur Next visent la MÊME instance jetable. C'est
           # tout l'intérêt : plus aucune spec n'a de raison d'être ignorée, et
@@ -131,7 +135,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ env.SERVICE_ROLE_KEY }}
           JWT_SECRET: e2e-jwt-secret-not-a-real-one
           NODE_ENV: test
-        run: npx playwright test --shard=${{ matrix.shard }}/4 --reporter=blob
+        run: npx playwright test --shard=${{ matrix.shard }}/6 --reporter=blob
 
       - name: Conserver le rapport de la tranche
         if: always()
