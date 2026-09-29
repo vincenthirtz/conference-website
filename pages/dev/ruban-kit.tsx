@@ -3,15 +3,16 @@
 // features/ruban/, rendue une colonne par surface. 404 en production ;
 // « bare » (utils/layout/appChrome.ts, préfixe /dev/) : pas de coquille.
 //
-// Aujourd'hui une seule surface (admin). La surface joueuse s'ajoutera en
-// ajoutant `'player'` à SURFACES une fois styles/player-ruban.css posé : les
-// deux colonnes ne doivent alors différer QUE par la densité.
+// Deux surfaces côte à côte : admin et espace joueuse (styles/player-ruban.css).
+// Les deux colonnes ne doivent différer QUE par la densité (cibles ≥ 44 px,
+// corps 16 px côté joueuse) — jamais par les briques ni la palette.
 
 import { useState, type ReactNode } from 'react';
 import type { GetServerSideProps } from 'next';
 import {
   Button,
   ButtonLink,
+  Card,
   Chip,
   DangerZone,
   EntityHeader,
@@ -43,8 +44,8 @@ import {
 export const getServerSideProps: GetServerSideProps = async () =>
   process.env.NODE_ENV === 'production' ? { notFound: true } : { props: {} };
 
-/** Surfaces rendues côte à côte. `player` : lot P7, seconde moitié. */
-const SURFACES = ['admin'] as const;
+/** Surfaces rendues côte à côte (lot P7). */
+const SURFACES = ['admin', 'player'] as const;
 
 const VARIANTS: ButtonVariant[] = ['primary', 'secondary', 'ghost', 'danger'];
 const SIZES: ButtonSize[] = ['md', 'sm', 'xs'];
@@ -76,7 +77,7 @@ function KitColumn({ surface }: { surface: (typeof SURFACES)[number] }) {
       <main aria-label={surface} className="flex flex-col gap-10">
         <PageHeader
           title="Le Ruban"
-          subtitle={`Surface ${surface} · 9 briques`}
+          subtitle={`Surface ${surface} · 10 briques`}
           badge={<Chip tone="live">En direct</Chip>}
           actions={
             <>
@@ -106,6 +107,23 @@ function KitColumn({ surface }: { surface: (typeof SURFACES)[number] }) {
               </ButtonLink>
             </div>
           ))}
+        </Block>
+
+        <Block name="Card">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Card>
+              <p className={rubanEyebrow}>padding md</p>
+              <p className="mt-2">Carte de premier niveau.</p>
+            </Card>
+            <Card padding="sm" as="section">
+              <p className={rubanEyebrow}>padding sm</p>
+              <p className="mt-2">Section en carte.</p>
+            </Card>
+            <Card padding="sm" live>
+              <p className={rubanEyebrow}>live</p>
+              <p className="mt-2">Match à l’antenne.</p>
+            </Card>
+          </div>
         </Block>
 
         <Block name="Chip">

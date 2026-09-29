@@ -79,4 +79,56 @@ describe('resolveAppChrome', () => {
     });
     expect(resolveAppChrome('/403').noindex).toBe(true);
   });
+
+  describe('surface « Le Ruban » (lot P7)', () => {
+    it('admin : surface admin, y compris l’inspection d’un écran joueuse', () => {
+      expect(resolveAppChrome('/admin').surface).toBe('admin');
+      expect(resolveAppChrome('/admin/tcg').surface).toBe('admin');
+      expect(
+        resolveAppChrome('/admin/users/[userId]/player-view').surface
+      ).toBe('admin');
+      expect(
+        resolveAppChrome('/admin/users/[userId]/captain-view').surface
+      ).toBe('admin');
+    });
+
+    it('espace joueuse : /player/* et les parcours du périmètre', () => {
+      for (const route of [
+        '/player',
+        '/player/matches',
+        '/player/tcg/echanges',
+        '/espace-capitaine',
+        '/team/create',
+        '/team/[slug]/edit',
+        '/checkin/[token]',
+        '/invitation/[token]',
+        '/rejoindre/[token]',
+      ]) {
+        expect(resolveAppChrome(route).surface, route).toBe('player');
+      }
+    });
+
+    it('site public : aucune surface, il ne bouge pas', () => {
+      for (const route of [
+        '/',
+        '/player/[userId]',
+        '/team/[slug]',
+        '/team/[slug]/stats',
+        '/rejoindre',
+        '/scrims',
+        '/caster/cockpit',
+        '/embed/bracket',
+      ]) {
+        expect(resolveAppChrome(route).surface, route).toBeNull();
+      }
+    });
+
+    it('la surface ne change ni l’indexation ni le manifeste du parcours', () => {
+      expect(resolveAppChrome('/team/create')).toMatchObject({
+        noindex: false,
+        appScope: false,
+        manifest: '/site.webmanifest',
+      });
+    });
+  });
 });

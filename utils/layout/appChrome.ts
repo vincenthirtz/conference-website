@@ -11,6 +11,27 @@
 //
 // PUR : ne lit que le motif de route (`router.pathname`).
 
+/**
+ * Surface « Le Ruban » posée par `_app` (`data-surface`) : l'admin, l'espace
+ * joueuse, ou aucune (site public, qui ne bouge pas).
+ */
+export type RubanSurface = 'admin' | 'player';
+
+/**
+ * Pages de l'espace joueuse HORS `/player/*` : le périmètre de
+ * docs/PLAN-industrialisation-joueur.md § 1 (scripts/player-metrics.ts,
+ * `PAGES`). Motifs de route exacts (`router.pathname`) : `/team/[slug]` (fiche
+ * publique) et `/rejoindre` (marché public) n'en sont pas.
+ */
+const PLAYER_SPACE_ROUTES: ReadonlySet<string> = new Set([
+  '/espace-capitaine',
+  '/team/create',
+  '/team/[slug]/edit',
+  '/checkin/[token]',
+  '/invitation/[token]',
+  '/rejoindre/[token]',
+]);
+
 export type AppChrome = {
   /** Page nue : ni en-tête, ni pied, ni bannière (iframes, overlays OBS). */
   bare: boolean;
@@ -21,6 +42,8 @@ export type AppChrome = {
   noindex: boolean;
   /** Surface « application » (admin, cockpit caster, espace joueuse). */
   appScope: boolean;
+  /** `data-surface` « Le Ruban » (null : site public). */
+  surface: RubanSurface | null;
   manifest: string;
 };
 
@@ -42,6 +65,14 @@ export function resolveAppChrome(pathname: string): AppChrome {
 
   const bare = isEmbed || isOverlay || isDevPreview;
   const appScope = isAdmin || isCaster || isPlayer;
+  // Distinct d'`isPlayer` : la surface couvre aussi les parcours joueuse hors
+  // /player (création d'équipe, check-in à jeton…) sans toucher à leur
+  // indexation ni à leur manifeste.
+  const surface: RubanSurface | null = isAdmin
+    ? 'admin'
+    : isPlayer || PLAYER_SPACE_ROUTES.has(pathname)
+      ? 'player'
+      : null;
 
   return {
     bare,
@@ -56,6 +87,7 @@ export function resolveAppChrome(pathname: string): AppChrome {
     analytics: !bare && !isCaster && !isAdmin,
     noindex: appScope || bare || isTechnical,
     appScope,
+    surface,
     manifest: isAdmin
       ? '/admin/manifest.webmanifest'
       : isCaster

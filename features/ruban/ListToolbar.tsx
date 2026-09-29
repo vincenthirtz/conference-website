@@ -72,7 +72,7 @@ export function FilterSelect({
   const active = !!value;
   return (
     <div
-      className={`relative inline-flex h-[38px] items-center gap-1.5 rounded-[var(--r-ctrl,4px)] border px-[13px] font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.12em] [font-stretch:75%] ${
+      className={`relative inline-flex h-[38px] items-center gap-1.5 rounded-[var(--r-ctrl,4px)] border px-[13px] font-[family-name:var(--fd,Archivo,sans-serif)] text-[11px] font-bold uppercase tracking-[0.12em] [font-stretch:75%] ${
         active
           ? 'border-[var(--or,#b467d1)] text-[var(--or-200,#eec4ff)]'
           : 'border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t3,#a39ba6)]'

@@ -137,8 +137,9 @@ function MyApp({ Component, pageProps, router, branding }: AppPropsWithSeo) {
               <ToastProvider>
                 <div
                   className={`${workSans.variable} ${archivo.variable} ${instrumentSans.variable}`}
-                  // Espace admin en Le Ruban (styles/admin-ruban.css).
-                  data-surface={isAdmin ? 'admin' : undefined}
+                  // « Le Ruban » : admin (styles/admin-ruban.css) ou espace
+                  // joueuse (styles/player-ruban.css) ; rien sur le site public.
+                  data-surface={chrome.surface ?? undefined}
                 >
                   <Head>
                     <link key="manifest" rel="manifest" href={manifestHref} />

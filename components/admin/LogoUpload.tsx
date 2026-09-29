@@ -8,19 +8,18 @@ import nsAdminLogoUpload from '@/lib/i18n/locales/admin-fr/adminLogoUpload';
 
 // « Le Ruban » dans l'admin SANS toucher la page publique d'édition d'équipe
 // (pages/team/[slug]/edit.tsx), qui réutilise ce composant hors de l'admin :
-// les classes Ruban ne s'appliquent que sous `:root:has([data-surface=admin])`
-// — la portée de styles/admin-ruban.css — et l'emportent alors (plus
+// les classes Ruban ne s'appliquent que sous la variante `ruban:`
+// — admin ou espace joueuse, la portée de styles/ruban-tokens.css — et l'emportent alors (plus
 // spécifiques) sur l'allure historique, laissée intacte en classes de base.
 const RUBAN_LABEL =
-  '[:root:has([data-surface=admin])_&]:font-[family-name:var(--fd)] [:root:has([data-surface=admin])_&]:text-[11px] [:root:has([data-surface=admin])_&]:font-bold [:root:has([data-surface=admin])_&]:uppercase [:root:has([data-surface=admin])_&]:tracking-[0.2em] [:root:has([data-surface=admin])_&]:text-[var(--t3)] [:root:has([data-surface=admin])_&]:[font-stretch:75%]';
-const RUBAN_TOGGLE_ON =
-  '[:root:has([data-surface=admin])_&]:bg-[var(--s3)] [:root:has([data-surface=admin])_&]:text-[var(--t1)]';
+  'ruban:font-[family-name:var(--fd)] ruban:text-[11px] ruban:font-bold ruban:uppercase ruban:tracking-[0.2em] ruban:text-[var(--t3)] ruban:[font-stretch:75%]';
+const RUBAN_TOGGLE_ON = 'ruban:bg-[var(--s3)] ruban:text-[var(--t1)]';
 const RUBAN_TOGGLE_OFF =
-  '[:root:has([data-surface=admin])_&]:bg-transparent [:root:has([data-surface=admin])_&]:text-[var(--t3)] [:root:has([data-surface=admin])_&]:hover:text-[var(--t1)]';
+  'ruban:bg-transparent ruban:text-[var(--t3)] ruban:hover:text-[var(--t1)]';
 const RUBAN_DROP =
-  '[:root:has([data-surface=admin])_&]:border [:root:has([data-surface=admin])_&]:border-[var(--line2)] [:root:has([data-surface=admin])_&]:bg-[var(--s2)] [:root:has([data-surface=admin])_&]:hover:border-[var(--t4)]';
+  'ruban:border ruban:border-[var(--line2)] ruban:bg-[var(--s2)] ruban:hover:border-[var(--t4)]';
 const RUBAN_INPUT =
-  '[:root:has([data-surface=admin])_&]:rounded-[var(--r-ctrl)] [:root:has([data-surface=admin])_&]:bg-[var(--s2)] [:root:has([data-surface=admin])_&]:border-[var(--line2)] [:root:has([data-surface=admin])_&]:text-[var(--t1)] [:root:has([data-surface=admin])_&]:focus:ring-0 [:root:has([data-surface=admin])_&]:focus:border-[var(--or)]';
+  'ruban:rounded-[var(--r-ctrl)] ruban:bg-[var(--s2)] ruban:border-[var(--line2)] ruban:text-[var(--t1)] ruban:focus:ring-0 ruban:focus:border-[var(--or)]';
 
 type LogoUploadProps = {
   value: string; // URL actuelle (externe ou locale)
@@ -142,7 +141,7 @@ export default function LogoUpload({
         <label className={`block text-sm text-neutral-300 ${RUBAN_LABEL}`}>
           {resolvedLabel}
         </label>
-        <div className="flex gap-1 text-xs [:root:has([data-surface=admin])_&]:rounded-[var(--r-ctrl)] [:root:has([data-surface=admin])_&]:border [:root:has([data-surface=admin])_&]:border-[var(--line2)] [:root:has([data-surface=admin])_&]:p-0.5">
+        <div className="flex gap-1 text-xs ruban:rounded-[var(--r-ctrl)] ruban:border ruban:border-[var(--line2)] ruban:p-0.5">
           <button
             type="button"
             onClick={() => setMode('upload')}
@@ -177,7 +176,7 @@ export default function LogoUpload({
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
-          className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed [:root:has([data-surface=admin])_&]:rounded-[var(--r-card)] p-4 cursor-pointer transition-colors ${
+          className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed ruban:rounded-[var(--r-card)] p-4 cursor-pointer transition-colors ${
             dragOver
               ? 'border-blue-500 bg-blue-500/10'
               : `border-neutral-600 bg-neutral-900/50 hover:border-neutral-500 ${RUBAN_DROP}`
@@ -243,7 +242,7 @@ export default function LogoUpload({
               width={48}
               height={48}
               loading="lazy"
-              className="w-12 h-12 rounded-lg object-cover border border-neutral-600 [:root:has([data-surface=admin])_&]:border-[var(--line2)]"
+              className="w-12 h-12 rounded-lg object-cover border border-neutral-600 ruban:border-[var(--line2)]"
               onError={() => setImgError(true)}
             />
           )}

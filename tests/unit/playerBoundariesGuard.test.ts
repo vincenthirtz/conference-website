@@ -87,7 +87,6 @@ const FROZEN = {
     'components/player/MemberRightsPanel.tsx',
     'components/player/MyScrimsCard.tsx',
     'components/player/NetworkOnboardingCard.tsx',
-    'components/player/ProgressionCard.tsx',
     'components/player/RegistrationDeadlineBanner.tsx',
     'components/player/SupporterWelcomeCard.tsx',
     'components/player/TeamHealthCard.tsx',
@@ -342,6 +341,7 @@ describe('garde « iso » : un seul kit Le Ruban', () => {
     for (const name of [
       'Button',
       'ButtonLink',
+      'Card',
       'Chip',
       'StatTile',
       'EntityHeader',

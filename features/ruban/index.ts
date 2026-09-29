@@ -14,6 +14,7 @@ export {
   type ButtonSize,
   type ButtonVariant,
 } from './Button';
+export { default as Card, type CardPadding } from './Card';
 export { default as Chip, type ChipTone } from './Chip';
 export {
   default as DangerZone,

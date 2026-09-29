@@ -39,7 +39,7 @@ const SIZE: Record<ButtonSize, string> = {
 };
 
 function classes(variant: ButtonVariant, size: ButtonSize) {
-  return `inline-flex shrink-0 items-center justify-center gap-2 rounded-[var(--r-ctrl,4px)] border font-[family-name:var(--fd)] font-bold uppercase tracking-[0.02em] transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${VARIANT[variant]} ${SIZE[size]}`;
+  return `inline-flex shrink-0 items-center justify-center gap-2 rounded-[var(--r-ctrl,4px)] border font-[family-name:var(--fd,Archivo,sans-serif)] font-bold uppercase tracking-[0.02em] transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${VARIANT[variant]} ${SIZE[size]}`;
 }
 
 type Common = {
@@ -65,6 +65,9 @@ export default function Button({
     <button
       ref={ref}
       type={type}
+      // Cible tactile : la densité joueuse (styles/player-ruban.css) la
+      // porte à 44 px ; sans effet sous l'admin.
+      data-ruban-target=""
       className={`${classes(variant, size)} ${className}`}
       {...rest}
     >
@@ -98,6 +101,9 @@ export function ButtonLink({
       target={target}
       rel={rel ?? (target === '_blank' ? 'noopener noreferrer' : undefined)}
       {...rest}
+      // Cible tactile : la densité joueuse (styles/player-ruban.css) la
+      // porte à 44 px ; sans effet sous l'admin.
+      data-ruban-target=""
       className={`${classes(variant, size)} ${className}`}
     >
       {children}

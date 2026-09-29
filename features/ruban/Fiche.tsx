@@ -38,7 +38,7 @@ export function FicheSection({
         <h2
           className={
             eyebrow
-              ? 'font-[family-name:var(--fd)] text-[12px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]'
+              ? 'font-[family-name:var(--fd,Archivo,sans-serif)] text-[12px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]'
               : 'text-[19px] text-[var(--t1,#f4edf7)]'
           }
         >

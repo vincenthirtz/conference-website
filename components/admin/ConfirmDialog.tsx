@@ -20,47 +20,47 @@ type ConfirmDialogProps = {
 };
 
 // « Le Ruban » SANS changer le rendu public. Ce dialogue sert aussi l'espace
-// joueuse (hooks/useConfirmDialog), où les jetons Ruban n'existent pas : les
-// classes ci-dessous ne s'appliquent que sous `:root:has([data-surface=admin])`
-// — la portée exacte de styles/admin-ruban.css — et, plus spécifiques, elles
-// l'emportent sur l'allure historique (restée en classes de base, intacte hors
-// admin). Même grammaire que features/admin/_shared/ui/AdminButton (taille sm) :
+// joueuse (hooks/useConfirmDialog) et le site public, où les jetons Ruban
+// n'existent pas : les classes ci-dessous ne s'appliquent que sous la variante
+// `ruban:` (admin ou espace joueuse, la portée de styles/ruban-tokens.css) et,
+// plus spécifiques, l'emportent sur l'allure historique (restée en classes de
+// base, intacte sur le site public). Même grammaire que features/admin/_shared/ui/AdminButton (taille sm) :
 // un seul bouton plein (primary), le destructif en contour erreur (danger).
 const RUBAN_BTN_BASE = [
-  '[:root:has([data-surface=admin])_&]:h-[38px]',
-  '[:root:has([data-surface=admin])_&]:py-0',
-  '[:root:has([data-surface=admin])_&]:px-[14px]',
-  '[:root:has([data-surface=admin])_&]:text-[12px]',
-  '[:root:has([data-surface=admin])_&]:rounded-[var(--r-ctrl)]',
-  '[:root:has([data-surface=admin])_&]:border',
-  '[:root:has([data-surface=admin])_&]:font-[family-name:var(--fd)]',
-  '[:root:has([data-surface=admin])_&]:font-bold',
-  '[:root:has([data-surface=admin])_&]:uppercase',
-  '[:root:has([data-surface=admin])_&]:tracking-[0.02em]',
-  '[:root:has([data-surface=admin])_&]:disabled:opacity-50',
+  'ruban:h-[38px]',
+  'ruban:py-0',
+  'ruban:px-[14px]',
+  'ruban:text-[12px]',
+  'ruban:rounded-[var(--r-ctrl)]',
+  'ruban:border',
+  'ruban:font-[family-name:var(--fd)]',
+  'ruban:font-bold',
+  'ruban:uppercase',
+  'ruban:tracking-[0.02em]',
+  'ruban:disabled:opacity-50',
 ].join(' ');
 const RUBAN_BTN_GHOST = [
   RUBAN_BTN_BASE,
-  '[:root:has([data-surface=admin])_&]:bg-transparent',
-  '[:root:has([data-surface=admin])_&]:text-[var(--t2)]',
-  '[:root:has([data-surface=admin])_&]:border-[var(--line2)]',
-  '[:root:has([data-surface=admin])_&]:hover:bg-transparent',
-  '[:root:has([data-surface=admin])_&]:hover:text-[var(--t1)]',
-  '[:root:has([data-surface=admin])_&]:hover:border-[var(--t4)]',
+  'ruban:bg-transparent',
+  'ruban:text-[var(--t2)]',
+  'ruban:border-[var(--line2)]',
+  'ruban:hover:bg-transparent',
+  'ruban:hover:text-[var(--t1)]',
+  'ruban:hover:border-[var(--t4)]',
 ].join(' ');
 const RUBAN_BTN_PRIMARY = [
   RUBAN_BTN_BASE,
-  '[:root:has([data-surface=admin])_&]:bg-[var(--lf)]',
-  '[:root:has([data-surface=admin])_&]:text-[#0f0a12]',
-  '[:root:has([data-surface=admin])_&]:border-[var(--lf-300)]',
-  '[:root:has([data-surface=admin])_&]:hover:bg-[var(--lf-300)]',
+  'ruban:bg-[var(--lf)]',
+  'ruban:text-[#0f0a12]',
+  'ruban:border-[var(--lf-300)]',
+  'ruban:hover:bg-[var(--lf-300)]',
 ].join(' ');
 const RUBAN_BTN_DANGER = [
   RUBAN_BTN_BASE,
-  '[:root:has([data-surface=admin])_&]:bg-transparent',
-  '[:root:has([data-surface=admin])_&]:text-[var(--err)]',
-  '[:root:has([data-surface=admin])_&]:border-[rgba(255,107,107,.45)]',
-  '[:root:has([data-surface=admin])_&]:hover:bg-[rgba(255,107,107,.08)]',
+  'ruban:bg-transparent',
+  'ruban:text-[var(--err)]',
+  'ruban:border-[rgba(255,107,107,.45)]',
+  'ruban:hover:bg-[rgba(255,107,107,.08)]',
 ].join(' ');
 // Panneau : surface s1, filet, rayon carte, ombre haute. Hors admin, les
 // replis `var(--color-neutral-…)` redonnent exactement bg-neutral-800 /
@@ -193,7 +193,7 @@ export default function ConfirmDialog({
       <div ref={trapRef} className={PANEL}>
         <div className="flex items-center gap-3 mb-4">
           <div
-            className={`w-10 h-10 rounded-full [:root:has([data-surface=admin])_&]:rounded-[var(--r-ctrl)] ${styles.iconBg} flex items-center justify-center ${styles.iconColor}`}
+            className={`w-10 h-10 rounded-full ruban:rounded-[var(--r-ctrl)] ${styles.iconBg} flex items-center justify-center ${styles.iconColor}`}
           >
             {VARIANT_ICONS[variant]}
           </div>
@@ -245,7 +245,7 @@ export default function ConfirmDialog({
           >
             {loading ? (
               <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white [:root:has([data-surface=admin])_&]:border-current [:root:has([data-surface=admin])_&]:border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white ruban:border-current ruban:border-t-transparent rounded-full animate-spin" />
                 {resolvedConfirmingLabel}
               </>
             ) : (

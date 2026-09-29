@@ -167,7 +167,7 @@ export default function Modal({
         </div>
 
         {footer && (
-          <div className="flex justify-end gap-3 p-6 pt-4 border-t border-neutral-700/60 [:root:has([data-surface=admin])_&]:border-[var(--line)]">
+          <div className="flex justify-end gap-3 p-6 pt-4 border-t border-neutral-700/60 ruban:border-[var(--line)]">
             {footer}
           </div>
         )}

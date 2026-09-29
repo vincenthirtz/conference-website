@@ -1,30 +1,26 @@
 /* ─────────────────────────────────────────────────────────────────────────
- * styles/admin-ruban.css — l'espace admin en « Le Ruban »
+ * styles/player-ruban.css — l'espace joueuse en « Le Ruban »
  *
- * Identité verrouillée le 2026-09-05 (canvas « Le Ruban », 28 planches) ;
- * pose décidée le 2026-09-29 (docs/PLAN-industrialisation-admin.md, L12).
- * Les valeurs ci-dessous sont celles de la planche « Du dessin au code »,
- * recopiées telles quelles — aucune n'est estimée.
+ * docs/PLAN-industrialisation-joueur.md, lot P7. UN SEUL kit pour l'admin et
+ * l'espace joueuse (joueuse, capitaine, manager, coach, supportrice) : mêmes
+ * jetons (styles/ruban-tokens.css), mêmes briques (features/ruban/), même
+ * grammaire. Cette feuille ne porte que ce qui est PROPRE à la surface :
+ *   - sa DENSITÉ : mobile d'abord (375 px de référence), cibles ≥ 44 px,
+ *     corps 16 px (et champs à 16 px : iOS zoome en dessous) ;
+ *   - son pont Tailwind, IDENTIQUE à celui d'admin-ruban.css (vérifié par
+ *     tests/unit/rubanTokensFallback.test.ts) : une palette unique.
  *
- * PORTÉE : uniquement quand la page porte un `[data-surface="admin"]`
- * (posé par pages/_app.tsx sur les routes /admin). `:root:has(…)` et non le
- * seul conteneur : les modales et menus rendus en portail, hors du conteneur,
- * doivent voir les mêmes jetons. Le site public ne bouge pas.
- *
- * COMPROMIS ASSUMÉ (validé le 2026-09-29) : la planche demande de cesser de
- * détourner les rampes Tailwind. Pour que les 133 écrans changent d'un coup,
- * l'admin redéfinit ici ses gris (→ encre) et ses violets (→ orchidée). Un
- * écran migré sur ses archétypes (lots L15–L20) passe aux jetons nommés
- * (`var(--s1, #100812)`, `var(--or, #b467d1)`…) et n'a plus besoin de ce pont.
+ * PORTÉE : `[data-surface="player"]`, posé par pages/_app.tsx sur les routes
+ * de l'espace joueuse (utils/layout/appChrome.ts → `surface`). Le site public
+ * ne porte aucune surface : il ne bouge pas. Les écrans joueuse rendus en
+ * inspection sous l'admin (player-view, captain-view) restent sous
+ * `[data-surface="admin"]` : même rendu, à densité près.
  * ───────────────────────────────────────────────────────────────────────── */
 
-/* Jetons communs (encre, orchidée, feuille, surfaces, texte, signaux,
- * rayons, ombres, polices) : styles/ruban-tokens.css, importé AVANT ce
- * fichier. Ici : ce qui est PROPRE à l'admin — coquille, pont Tailwind,
- * règles de mise en forme de la surface admin. */
-:root:has([data-surface="admin"]) {
-  /* Coquille (features/admin/_shared/shell) */
-  --admin-sidebar-w: 236px;
+:root:has([data-surface="player"]) {
+  /* Densité joueuse */
+  --target-min: 44px;
+  --body-size: 16px;
 
   /* ── Pont Tailwind (cf. COMPROMIS en tête) ─────────────────────────── */
   /* Gris de structure → encre, pas pour pas. */
@@ -216,38 +212,32 @@
 }
 
 /* ── Le fond, le texte, la police ──────────────────────────────────────── */
-:root:has([data-surface="admin"]) body {
+:root:has([data-surface="player"]) body {
   background: var(--canvas, #07030a);
 }
-[data-surface="admin"] {
+[data-surface="player"] {
   background: var(--canvas, #07030a);
   color: var(--t1, #f4edf7);
   font-family: var(
     --fu,
-    var(--font-instrument, "Instrument Sans"),
+    "Instrument Sans",
     ui-sans-serif,
     system-ui,
-    "Helvetica Neue",
-    Arial,
     sans-serif
   );
+  font-size: var(--body-size, 16px);
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── Typographie des écrans (planches Admin*) ──────────────────────────── */
-/* ── Typographie par défaut des écrans, en couche `base` ──────────────────
- * En couche et non « nue » : une règle hors couche l'emporte sur TOUTES les
- * classes Tailwind (rangées dans `@layer utilities`). Ici, elle s'applique aux
- * écrans existants mais laisse gagner les classes explicites des composants
- * Le Ruban (un titre « eyebrow », une graisse choisie). Elle passe quand même
- * devant le reset de Tailwind (même couche, plus spécifique, déclarée après).
- */
+/* ── Typographie des écrans : la grammaire de l'admin ─────────────────────
+ * Mêmes règles qu'admin-ruban.css (et pour la même raison, en couche `base` :
+ * les classes explicites des briques l'emportent). C'est ce que voit déjà le
+ * staff en inspection (player-view) : les deux surfaces doivent coïncider. */
 @layer base {
-  /* Titre de page : Archivo large, capitales. */
-  [data-surface="admin"] main h1 {
+  [data-surface="player"] main h1 {
     font-family: var(
       --fd,
-      var(--font-archivo, "Archivo"),
+      "Archivo",
       "Helvetica Neue",
       Helvetica,
       Arial,
@@ -260,11 +250,10 @@
     line-height: 0.95;
     text-wrap: balance;
   }
-  /* Titres de cartes et de sections. */
-  [data-surface="admin"] main :is(h2, h3) {
+  [data-surface="player"] main :is(h2, h3) {
     font-family: var(
       --fd,
-      var(--font-archivo, "Archivo"),
+      "Archivo",
       "Helvetica Neue",
       Helvetica,
       Arial,
@@ -276,12 +265,10 @@
     letter-spacing: 0.01em;
     line-height: 1.15;
   }
-  /* Boutons d'action : capitales, Archivo — la voix des planches (« OUVRIR LA
- * RÉGIE », « EXPORTER EN CSV »). `data-case="normal"` pour s'en exclure. */
-  [data-surface="admin"] main button:not([data-case="normal"]) {
+  [data-surface="player"] main button:not([data-case="normal"]) {
     font-family: var(
       --fd,
-      var(--font-archivo, "Archivo"),
+      "Archivo",
       "Helvetica Neue",
       Helvetica,
       Arial,
@@ -293,11 +280,10 @@
   }
 }
 
-/* En-têtes de table : « eyebrow » Archivo étroit, espacé. */
-[data-surface="admin"] main th {
+[data-surface="player"] main th {
   font-family: var(
     --fd,
-    var(--font-archivo, "Archivo"),
+    "Archivo",
     "Helvetica Neue",
     Helvetica,
     Arial,
@@ -305,43 +291,41 @@
   );
   font-stretch: 75%;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--t3, #a39ba6);
 }
-/* Onglets (components/ui/Tabs et toute barre en role="tab") : capitales,
- * soulignement orchidée sous l'onglet actif. */
-[data-surface="admin"] [role="tablist"] {
+[data-surface="player"] [role="tablist"] {
   border-bottom: 1px solid var(--line, rgba(194, 196, 201, 0.12));
 }
-[data-surface="admin"] [role="tab"] {
+[data-surface="player"] [role="tab"] {
   font-family: var(
     --fd,
-    var(--font-archivo, "Archivo"),
+    "Archivo",
     "Helvetica Neue",
     Helvetica,
     Arial,
     sans-serif
   );
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   border-radius: 0;
+  min-height: var(--target-min, 44px);
 }
-[data-surface="admin"] [role="tab"][aria-selected="true"] {
+[data-surface="player"] [role="tab"][aria-selected="true"] {
   color: var(--t1, #f4edf7);
   box-shadow: inset 0 -2px 0 var(--or, #b467d1);
 }
 
-/* Puces d'état (components/ui/StatusBadge → `data-chip`) : rectangulaires,
- * capitales étroites, comme « EN DIRECT » / « LITIGE » des planches. */
-[data-surface="admin"] [data-chip] {
+/* Puces d'état (components/ui/StatusBadge → `data-chip`). */
+[data-surface="player"] [data-chip] {
   border-radius: var(--r-ctrl, 4px);
   font-family: var(
     --fd,
-    var(--font-archivo, "Archivo"),
+    "Archivo",
     "Helvetica Neue",
     Helvetica,
     Arial,
@@ -349,14 +333,13 @@
   );
   font-stretch: 75%;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
-/* État vide (components/ui/EmptyState → `data-empty`) : hachures orchidée,
- * phrase en casse normale — « Aucune équipe ne correspond à ces filtres ». */
-[data-surface="admin"] [data-empty] {
+/* État vide (components/ui/EmptyState → `data-empty`). */
+[data-surface="player"] [data-empty] {
   border-radius: 8px;
   background-image: repeating-linear-gradient(
     115deg,
@@ -364,14 +347,12 @@
     transparent 2px 16px
   );
 }
-[data-surface="admin"] main [data-empty] h3 {
+[data-surface="player"] main [data-empty] h3 {
   font-family: var(
     --fu,
-    var(--font-instrument, "Instrument Sans"),
+    "Instrument Sans",
     ui-sans-serif,
     system-ui,
-    "Helvetica Neue",
-    Arial,
     sans-serif
   );
   font-stretch: 100%;
@@ -381,49 +362,56 @@
   color: var(--t3, #a39ba6);
 }
 
-/* Un en-tête triable est un bouton : il doit garder l'allure de l'en-tête
- * (le reset de Tailwind remet les boutons en casse et police normales). */
-[data-surface="admin"] main th :is(button, a) {
+[data-surface="player"] main th :is(button, a) {
   font: inherit;
   text-transform: inherit;
   letter-spacing: inherit;
 }
-/* Chasse tabulaire OBLIGATOIRE sur toute donnée de compétition. */
-[data-surface="admin"] :is(table, output, time, [data-numeric], .font-mono) {
+[data-surface="player"] :is(table, output, time, [data-numeric], .font-mono) {
   font-variant-numeric: tabular-nums;
 }
-[data-surface="admin"] main table td {
+[data-surface="player"] main table td {
   border-color: var(--line, rgba(194, 196, 201, 0.12));
 }
 
+/* ── Densité : cibles tactiles ≥ 44 px ─────────────────────────────────────
+ * Les briques du kit (features/ruban : Button, ButtonLink) portent
+ * `data-ruban-target` ; sous la joueuse, leurs tailles compactes (sm 38 px,
+ * xs 30 px) montent à la cible tactile. Les écrans pas encore migrés sur le
+ * kit gardent leurs tailles : ils y passent aux lots P8+. */
+[data-surface="player"] [data-ruban-target] {
+  min-height: var(--target-min, 44px);
+}
+/* Champs à 16 px : sous cette taille, iOS zoome la page au focus. */
+[data-surface="player"]
+:is(
+  input:not([type="checkbox"], [type="radio"], [type="range"]),
+  select,
+  textarea
+) {
+  font-size: max(var(--body-size, 16px), 1em);
+}
+
 /* ── Contrôles ─────────────────────────────────────────────────────────── */
-[data-surface="admin"] :focus-visible {
+[data-surface="player"] :focus-visible {
   outline: 2px solid var(--or-400, #ca85e6);
   outline-offset: 2px;
 }
-[data-surface="admin"] :is(input, select, textarea)::placeholder {
+[data-surface="player"] :is(input, select, textarea)::placeholder {
   color: var(--t4, #807984);
 }
-[data-surface="admin"] input[type="checkbox"],
-[data-surface="admin"] input[type="radio"] {
+[data-surface="player"] input[type="checkbox"],
+[data-surface="player"] input[type="radio"] {
   accent-color: var(--or, #b467d1);
 }
 
-/* ── Défilement fin, discret ───────────────────────────────────────────── */
-[data-surface="admin"] * {
+[data-surface="player"] * {
   scrollbar-width: thin;
   scrollbar-color: var(--ink-700, #453d48) transparent;
 }
 
-/* ── Place de la barre latérale (features/admin/_shared/shell) ───────────────── */
-@media (min-width: 1024px) {
-  [data-surface="admin"] main#main-content {
-    padding-left: var(--admin-sidebar-w, 236px);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  [data-surface="admin"] * {
+  [data-surface="player"] * {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }

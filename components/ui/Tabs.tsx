@@ -55,13 +55,13 @@ export function useQueryTab(
 // Variante `segmented` dans l'admin (« Le Ruban ») : un cadre s1 + filet et
 // une pastille active pleine en s3 — pas de dégradé ni de halo, la seule lueur
 // de la plateforme étant l'état EN DIRECT. Classes limitées à la portée de
-// styles/admin-ruban.css (`:root:has([data-surface=admin])`) : hors admin,
-// classement, demandes et découverte joueuse gardent leur rendu à l'identique.
+// la variante `ruban:` (admin ou espace joueuse) : sur le site public
+// (classement…), le rendu reste à l'identique.
 // (La variante `underline` est déjà habillée par styles/admin-ruban.css.)
 const RUBAN_SEGMENTED_FRAME =
-  '[:root:has([data-surface=admin])_&]:rounded-[var(--r-ctrl)] [:root:has([data-surface=admin])_&]:border-[var(--line2)] [:root:has([data-surface=admin])_&]:bg-[var(--s1)]';
+  'ruban:rounded-[var(--r-ctrl)] ruban:border-[var(--line2)] ruban:bg-[var(--s1)]';
 const RUBAN_SEGMENTED_ON =
-  '[:root:has([data-surface=admin])_&]:bg-none [:root:has([data-surface=admin])_&]:bg-[var(--s3)] [:root:has([data-surface=admin])_&]:shadow-none [:root:has([data-surface=admin])_&]:text-[var(--t1)]';
+  'ruban:bg-none ruban:bg-[var(--s3)] ruban:shadow-none ruban:text-[var(--t1)]';
 
 type TabsProps = {
   tabs: TabItem[];

@@ -37,7 +37,7 @@ export const rubanInset =
 
 /** Carte « à l'antenne » : filet feuille + la lueur du direct. */
 export const rubanLiveFrame =
-  'border-[rgba(127,202,101,.55)] shadow-[var(--glow-live)]';
+  'border-[rgba(127,202,101,.55)] shadow-[var(--glow-live,0_0_0_1px_rgba(127,202,101,.55),0_0_26px_-6px_rgba(127,202,101,.6))]';
 
 /**
  * Rangée dont le filet dépend de l'état : l'antenne (`rubanLiveFrame`) ou le
@@ -61,11 +61,11 @@ export const rubanRowIcon =
 
 /** Titre de section : capitales étroites espacées (planche « Liste »). */
 export const rubanEyebrow =
-  'font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
+  'font-[family-name:var(--fd,Archivo,sans-serif)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
 
 /** Variante resserrée (tracking 0.18em) des écrans de phase. */
 export const rubanEyebrowSnug =
-  'font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
+  'font-[family-name:var(--fd,Archivo,sans-serif)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]';
 
 export const rubanStrong = 'text-[var(--t1,#f4edf7)]';
 export const rubanMuted = 'text-[var(--t3,#a39ba6)]';

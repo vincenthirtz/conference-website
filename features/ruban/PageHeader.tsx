@@ -28,7 +28,7 @@ export default function PageHeader({
     <header className="mb-7 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-3">
-          <Heading className="font-[family-name:var(--fd)] text-[clamp(28px,4vw,44px)] font-extrabold uppercase leading-[.95] tracking-[-0.022em] text-[var(--t1,#f4edf7)] [font-stretch:125%]">
+          <Heading className="font-[family-name:var(--fd,Archivo,sans-serif)] text-[clamp(28px,4vw,44px)] font-extrabold uppercase leading-[.95] tracking-[-0.022em] text-[var(--t1,#f4edf7)] [font-stretch:125%]">
             {title}
           </Heading>
           {badge}

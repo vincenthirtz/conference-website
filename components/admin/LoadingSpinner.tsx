@@ -32,7 +32,7 @@ export default function LoadingSpinner({
         aria-hidden="true"
         // Dans l'admin (« Le Ruban ») : piste en filet, tête orchidée. Hors
         // admin (portail développeur), les classes de base restent le rendu.
-        className={`${SIZE_CLASSES[size]} border-purple-500/30 border-t-purple-400 [:root:has([data-surface=admin])_&]:border-[var(--line2)] [:root:has([data-surface=admin])_&]:border-t-[var(--or)] rounded-full animate-spin`}
+        className={`${SIZE_CLASSES[size]} border-purple-500/30 border-t-purple-400 ruban:border-[var(--line2)] ruban:border-t-[var(--or)] rounded-full animate-spin`}
       />
       {label ? (
         <span className="text-sm text-[var(--t3,var(--color-neutral-400))]">

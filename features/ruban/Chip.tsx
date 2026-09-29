@@ -14,7 +14,7 @@ const TONE: Record<ChipTone, string> = {
   brand:
     'text-[var(--or-200,#eec4ff)] bg-[rgba(180,103,209,.12)] border-[rgba(180,103,209,.4)]',
   // La SEULE lueur de la plateforme : l'état en direct.
-  live: 'text-[var(--lf-200,#b3e7a3)] bg-[rgba(127,202,101,.13)] border-[rgba(127,202,101,.55)] shadow-[var(--glow-live)]',
+  live: 'text-[var(--lf-200,#b3e7a3)] bg-[rgba(127,202,101,.13)] border-[rgba(127,202,101,.55)] shadow-[var(--glow-live,0_0_0_1px_rgba(127,202,101,.55),0_0_26px_-6px_rgba(127,202,101,.6))]',
 };
 
 export default function Chip({
@@ -33,7 +33,7 @@ export default function Chip({
     <span
       title={title}
       data-testid={testId}
-      className={`inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap rounded-[3px] border px-2 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.12em] [font-stretch:75%] ${TONE[tone]}`}
+      className={`inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap rounded-[3px] border px-2 font-[family-name:var(--fd,Archivo,sans-serif)] text-[11px] font-bold uppercase tracking-[0.12em] [font-stretch:75%] ${TONE[tone]}`}
     >
       {children}
     </span>

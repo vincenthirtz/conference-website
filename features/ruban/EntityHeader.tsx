@@ -25,7 +25,7 @@ export default function EntityHeader({
     <header className="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
       <div className="flex min-w-0 items-center gap-4">
         {crest != null && (
-          <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center overflow-hidden rounded-[var(--r-ctrl,4px)] border-l-[3px] border-[var(--or,#b467d1)] bg-[var(--s3,#2f2732)] font-[family-name:var(--fd)] text-[18px] font-extrabold text-[var(--t1,#f4edf7)] [font-stretch:75%]">
+          <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center overflow-hidden rounded-[var(--r-ctrl,4px)] border-l-[3px] border-[var(--or,#b467d1)] bg-[var(--s3,#2f2732)] font-[family-name:var(--fd,Archivo,sans-serif)] text-[18px] font-extrabold text-[var(--t1,#f4edf7)] [font-stretch:75%]">
             {crest}
           </span>
         )}

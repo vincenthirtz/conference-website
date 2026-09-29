@@ -11,10 +11,9 @@ type SkeletonProps = {
 
 // Dans l'admin (« Le Ruban », portée de styles/admin-ruban.css) : blocs sur la
 // surface s3, cadres en s1 + filet, carte au rayon --r-card. Classes posées
-// sous `:root:has([data-surface=admin])` seulement — hors admin (espace joueuse,
-// TCG, pronostics), le rendu reste celui d'avant, à l'identique.
-const RUBAN_FRAME =
-  '[:root:has([data-surface=admin])_&]:bg-[var(--s1)] [:root:has([data-surface=admin])_&]:border-[var(--line)]';
+// sous la variante `ruban:` (admin ou espace joueuse) seulement — sur le
+// site public (TCG vitrine, pronostics), le rendu reste celui d'avant.
+const RUBAN_FRAME = 'ruban:bg-[var(--s1)] ruban:border-[var(--line)]';
 
 /**
  * Bloc gris animé. À combiner via `className` (largeur, hauteur, marges).
@@ -29,7 +28,7 @@ export function Skeleton({
 }: SkeletonProps) {
   return (
     <div
-      className={`bg-neutral-700/40 [:root:has([data-surface=admin])_&]:bg-[var(--s3)] animate-pulse ${rounded} ${className}`}
+      className={`bg-neutral-700/40 ruban:bg-[var(--s3)] animate-pulse ${rounded} ${className}`}
       aria-hidden="true"
     />
   );
@@ -60,7 +59,7 @@ export function SkeletonListRow({ className = '' }: { className?: string }) {
 export function SkeletonCard({ className = '' }: { className?: string }) {
   return (
     <div
-      className={`p-4 bg-neutral-900/50 border border-neutral-700/40 rounded-xl [:root:has([data-surface=admin])_&]:rounded-[var(--r-card)] ${RUBAN_FRAME} space-y-3 ${className}`}
+      className={`p-4 bg-neutral-900/50 border border-neutral-700/40 rounded-xl ruban:rounded-[var(--r-card)] ${RUBAN_FRAME} space-y-3 ${className}`}
       aria-hidden="true"
     >
       <Skeleton className="h-5 w-2/5" />

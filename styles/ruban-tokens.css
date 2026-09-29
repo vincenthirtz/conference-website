@@ -11,7 +11,7 @@
  * pour que les modales et menus rendus en portail voient les mêmes jetons.
  * Le site public ne porte aucune surface : il ne bouge pas.
  *
- * AJOUTER UNE SURFACE (ex. `player`) :
+ * AJOUTER UNE SURFACE (comme `player` au lot P7) :
  *   1. ajouter son sélecteur à la liste ci-dessous
  *      (`:root:has([data-surface="player"])`) ;
  *   2. créer `styles/<surface>-ruban.css` : sa densité (cibles, corps,
@@ -21,8 +21,9 @@
  * Ce fichier ne contient QUE des jetons — aucune règle de mise en forme.
  * ───────────────────────────────────────────────────────────────────────── */
 
-/* Surfaces portant « Le Ruban » (aujourd'hui : l'admin seule). */
-:root:has([data-surface="admin"]) {
+/* Surfaces portant « Le Ruban » : l'admin et l'espace joueuse (P7). */
+:root:has([data-surface="admin"]),
+:root:has([data-surface="player"]) {
   color-scheme: dark;
 
   /* Encre — neutre teinté à la teinte du violet du logo (h 316) */
@@ -67,9 +68,9 @@
   --s1: #100812;
   --s2: #1d1520;
   --s3: #2f2732;
-  --line: rgba(var(--sl-200-rgb), 0.12);
-  --line2: rgba(var(--sl-200-rgb), 0.2);
-  --line-strong: var(--slate);
+  --line: rgba(var(--sl-200-rgb, 194, 196, 201), 0.12);
+  --line2: rgba(var(--sl-200-rgb, 194, 196, 201), 0.2);
+  --line-strong: var(--slate, #4b4c50);
   /* Texte — quatre niveaux, tous ≥ 4,8:1 */
   --t1: #f4edf7;
   --t2: #c7bfca;

@@ -34,11 +34,11 @@ export default function StatTile({
           : 'border-[var(--line2,rgba(194,196,201,.2))]'
       }`}
     >
-      <p className="font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
+      <p className="font-[family-name:var(--fd,Archivo,sans-serif)] text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
         {label}
       </p>
       <p
-        className={`mt-3 font-[family-name:var(--fd)] text-[36px] font-extrabold leading-none [font-stretch:75%] ${VALUE[tone]}`}
+        className={`mt-3 font-[family-name:var(--fd,Archivo,sans-serif)] text-[36px] font-extrabold leading-none [font-stretch:75%] ${VALUE[tone]}`}
         data-numeric
       >
         {value}
