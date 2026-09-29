@@ -19,6 +19,8 @@ export const twitchChannelsClient = {
       json: body,
       idempotent: true,
     }),
+  remove: (id: string) =>
+    adminRequest<null>(one(id), { method: 'DELETE', idempotent: true }),
   update: (id: string, patch: TwitchChannelPatch) =>
     adminRequest<TwitchChannelRow>(one(id), {
       method: 'PATCH',

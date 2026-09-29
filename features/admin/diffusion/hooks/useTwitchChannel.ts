@@ -18,6 +18,17 @@ export function useTwitchChannel(id: string | undefined) {
   });
 }
 
+export function useDeleteTwitchChannel(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => twitchChannelsClient.remove(id),
+    onSuccess: () => {
+      qc.removeQueries({ queryKey: twitchChannelKeys.one(id) });
+      void qc.invalidateQueries({ queryKey: twitchChannelKeys.all });
+    },
+  });
+}
+
 export function useUpdateTwitchChannel(id: string) {
   const qc = useQueryClient();
   return useMutation({

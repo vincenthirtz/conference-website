@@ -226,25 +226,43 @@
 }
 
 /* ── Typographie des écrans (planches Admin*) ──────────────────────────── */
-/* Titre de page : Archivo large, capitales. */
-[data-surface="admin"] main h1 {
-  font-family: var(--fd);
-  font-stretch: 125%;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: -0.022em;
-  line-height: 0.95;
-  text-wrap: balance;
+/* ── Typographie par défaut des écrans, en couche `base` ──────────────────
+ * En couche et non « nue » : une règle hors couche l'emporte sur TOUTES les
+ * classes Tailwind (rangées dans `@layer utilities`). Ici, elle s'applique aux
+ * écrans existants mais laisse gagner les classes explicites des composants
+ * Le Ruban (un titre « eyebrow », une graisse choisie). Elle passe quand même
+ * devant le reset de Tailwind (même couche, plus spécifique, déclarée après).
+ */
+@layer base {
+  /* Titre de page : Archivo large, capitales. */
+  [data-surface="admin"] main h1 {
+    font-family: var(--fd);
+    font-stretch: 125%;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.022em;
+    line-height: 0.95;
+    text-wrap: balance;
+  }
+  /* Titres de cartes et de sections. */
+  [data-surface="admin"] main :is(h2, h3) {
+    font-family: var(--fd);
+    font-stretch: 112%;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    line-height: 1.15;
+  }
+  /* Boutons d'action : capitales, Archivo — la voix des planches (« OUVRIR LA
+ * RÉGIE », « EXPORTER EN CSV »). `data-case="normal"` pour s'en exclure. */
+  [data-surface="admin"] main button:not([data-case="normal"]) {
+    font-family: var(--fd);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
 }
-/* Titres de cartes et de sections. */
-[data-surface="admin"] main :is(h2, h3) {
-  font-family: var(--fd);
-  font-stretch: 112%;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.01em;
-  line-height: 1.15;
-}
+
 /* En-têtes de table : « eyebrow » Archivo étroit, espacé. */
 [data-surface="admin"] main th {
   font-family: var(--fd);
@@ -255,15 +273,6 @@
   text-transform: uppercase;
   color: var(--t3);
 }
-/* Boutons d'action : capitales, Archivo — la voix des planches (« OUVRIR LA
- * RÉGIE », « EXPORTER EN CSV »). `data-case="normal"` pour s'en exclure. */
-[data-surface="admin"] main button:not([data-case="normal"]) {
-  font-family: var(--fd);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 /* Onglets (components/ui/Tabs et toute barre en role="tab") : capitales,
  * soulignement orchidée sous l'onglet actif. */
 [data-surface="admin"] [role="tablist"] {

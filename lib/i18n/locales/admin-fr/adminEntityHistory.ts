@@ -19,4 +19,5 @@ export default adminNs('adminEntityHistory', {
   yes: 'oui',
   no: 'non',
   rawDetails: 'Détails bruts',
+  seeAll: 'Tout voir',
 });

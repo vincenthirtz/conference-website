@@ -18,8 +18,9 @@ import {
   type FieldProps,
 } from '@/hooks/admin/useAdminForm';
 
+/** Champ de la planche « AdminFiches » : 44 px, fond s2, trait, rayon 4 px. */
 export const inputClass =
-  'w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm aria-[invalid=true]:border-red-500';
+  'w-full min-h-11 px-3.5 py-2.5 rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] border border-[var(--line2,rgba(194,196,201,.2))] text-[15px] text-[var(--t1,#f4edf7)] focus:outline-none focus:border-[var(--or,#b467d1)] aria-[invalid=true]:border-[var(--err,#ff6b6b)]';
 
 type Props<N extends string> = {
   form: AdminFormHandle<N>;
@@ -56,7 +57,10 @@ export default function FormField<N extends string>({
 
   return (
     <div>
-      <label htmlFor={props.id} className="block text-sm text-neutral-300 mb-1">
+      <label
+        htmlFor={props.id}
+        className="mb-2 block font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--t3,#a39ba6)] [font-stretch:75%]"
+      >
         {label}
         {required && (
           <span className="text-red-400" aria-hidden="true">
@@ -69,7 +73,7 @@ export default function FormField<N extends string>({
       {hint && (
         <p
           id={hintDomId(formId, name)}
-          className="text-xs text-neutral-500 mt-1"
+          className="mt-1.5 text-[12.5px] text-[var(--t4,#807984)]"
         >
           {hint}
         </p>
@@ -78,7 +82,7 @@ export default function FormField<N extends string>({
         <p
           id={errorDomId(formId, name)}
           role="alert"
-          className="text-xs text-red-400 mt-1"
+          className="mt-1.5 text-[12.5px] text-[var(--err,#ff6b6b)]"
         >
           {error}
         </p>

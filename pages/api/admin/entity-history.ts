@@ -40,6 +40,9 @@ export const HISTORY_ENTITY_TYPES = [
   // L'espace lui-même (T9) : suspension, changement de plan, rotation de clé,
   // vérification de domaine. Cas particulier assumé — voir le scope plus bas.
   'tenant',
+  // Fiche Le Ruban des chaînes Twitch : le journal (L8) y écrit déjà l'avant /
+  // après de chaque modification.
+  'twitch_channel',
 ] as const;
 
 export type HistoryEntityType = (typeof HISTORY_ENTITY_TYPES)[number];

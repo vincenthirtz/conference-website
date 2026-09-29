@@ -176,13 +176,18 @@ describe('types d’entité acceptés vs journalisés', () => {
       '../../pages/api/admin/entity-history'
     );
 
-    const roots = [path.join(process.cwd(), 'pages', 'api', 'admin')];
+    // Les routes migrées (defineAdminRoute) journalisent depuis leur module,
+    // via `ctx.audit({ entity_type: … })`.
+    const roots = [
+      path.join(process.cwd(), 'pages', 'api', 'admin'),
+      path.join(process.cwd(), 'features', 'admin'),
+    ];
     const sources: string[] = [];
     const walk = (dir: string) => {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const full = path.join(dir, entry.name);
         if (entry.isDirectory()) walk(full);
-        else if (entry.name.endsWith('.ts'))
+        else if (/\.tsx?$/.test(entry.name))
           sources.push(fs.readFileSync(full, 'utf8'));
       }
     };

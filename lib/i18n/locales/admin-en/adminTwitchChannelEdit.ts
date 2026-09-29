@@ -30,5 +30,14 @@ export default {
   updateSuccess: 'Channel updated successfully.',
   errorLoad: 'Loading error.',
   errorRequired: 'The channel name and label are required.',
+  identitySection: 'Channel',
+  deleteTitle: 'Remove the channel',
+  deleteDesc:
+    'It disappears from the site and embeds; its history stays in the log.',
+  deleteDone: 'Channel removed.',
+  metaOrder: 'Display order',
+  metaActive: 'Visible',
+  yes: 'yes',
+  no: 'no',
   errorGeneric: 'Unexpected error.',
 };

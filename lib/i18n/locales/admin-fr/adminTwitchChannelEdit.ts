@@ -30,4 +30,13 @@ export default adminNs('adminTwitchChannelEdit', {
   errorLoad: 'Erreur de chargement.',
   errorRequired: 'Le nom de la chaîne et le label sont obligatoires.',
   errorGeneric: 'Erreur inattendue.',
+  identitySection: 'Chaîne',
+  deleteTitle: 'Retirer la chaîne',
+  deleteDesc:
+    'Elle disparaît du site et des embeds ; son historique reste au journal.',
+  deleteDone: 'Chaîne retirée.',
+  metaOrder: 'Ordre d’affichage',
+  metaActive: 'Visible',
+  yes: 'oui',
+  no: 'non',
 });

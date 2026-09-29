@@ -584,8 +584,17 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       rapides ; rafraîchi toutes les 30 s ; tuiles sur 2 colonnes dès le téléphone. Vérifié en
       capture (vraie vue, vraie file, données d'exemple). Limite : un litige n'affiche pas son
       numéro de manche (absent de `disputesOpen`).
-- [ ] Archétypes Fiche, pilotage du jour, tableau de bord tournoi ; les 23 autres listes : avec
-      les lots de découpe L15–L20.
+- [x] **Archétype Fiche** (planche « AdminFiches », 22 écrans) : `EntityHeader` (écusson, état
+      « MODIFICATIONS NON ENREGISTRÉES », Annuler / Enregistrer), `FicheLayout` / `FicheSection` /
+      `MetaList`, `DangerZone` (confirmation par **saisie du nom**, testée),
+      `EntityHistoryCard` (3 dernières entrées + tiroir complet ; masquée sans droit de lecture) ;
+      champs de formulaire restylés (libellé étroit, 44 px). Premier écran : la fiche d'une
+      chaîne Twitch ([`TwitchChannelFiche`](../features/admin/diffusion/TwitchChannelFiche.tsx)),
+      qui gagne le retrait en zone sensible ; `twitch_channel` rejoint les types d'historique.
+- [x] Cascade : les règles typographiques globales passent en `@layer base` — hors couche,
+      elles écrasaient les classes explicites des composants Le Ruban (vu en capture).
+- [ ] Tableau de bord tournoi à onglets ; les 23 autres listes et 21 autres fiches : avec les
+      lots de découpe L15–L20.
 - [ ] Bouton d'action principal : `AdminButton variant="primary"` (vert feuille, comme les
       planches) sur les écrans migrés ; les boutons `bg-purple-600` des autres écrans restent
       orchidée jusqu'à leur migration.

@@ -16,4 +16,5 @@ export default {
   yes: 'yes',
   no: 'no',
   rawDetails: 'Raw details',
+  seeAll: 'See all',
 };
