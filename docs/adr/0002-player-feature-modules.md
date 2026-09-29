@@ -1,7 +1,7 @@
 # ADR 0002 — Modules joueuse par domaine (`features/player/<domaine>/`)
 
 - **Statut** : accepté, 2026-09-29
-- **Plan** : [PLAN-industrialisation-joueur.md](../PLAN-industrialisation-joueur.md), lots P1 et P2
+- **Plan** : [PLAN-industrialisation-joueur.md](../PLAN-industrialisation-joueur.md), lots P1, P2 et P3
 - **Précédent** : [ADR 0001 — modules admin](0001-admin-feature-modules.md), dont celui-ci reprend la forme
 - **Pilote prévu** : `features/player/notifications/` (écran 354 lignes, route 319, prefs push)
 
@@ -40,6 +40,23 @@ même garde (staff vs sujet, `?as=` en lecture seule) ni la même coquille, et l
 frontière sont plus simples par préfixe. Un service réellement partagé descend dans
 `features/shared/` ; l'admin et la joueuse importent son **service**, jamais son `ui/` ni son
 `repository`.
+
+### Routes : `defineSubjectRoute` (lot P3)
+
+Une route de module passe par [`utils/player/defineSubjectRoute.ts`](../../utils/player/defineSubjectRoute.ts),
+garde « sujet » sur le même noyau que l'admin ([`utils/http/defineRoute.ts`](../../utils/http/defineRoute.ts) :
+méthodes + 405/`Allow`, rate-limit par préréglages, idempotence par défaut sur les mutations,
+zod, erreurs `{ error, code, fields?, requestId }`). Par méthode :
+
+- `subject: 'self'` (défaut) — le sujet est l'appelant ; `?as=<autre>` → 403 `subject_unsupported` ;
+- `subject: 'follow'` — sémantique de `withSubjectRoute` (inspection staff en lecture, tenant actif
+  du staff, journal, réponse `no-store`) ; une écriture `?as=` exige `actAs: true` sur la méthode
+  **et** `&act=1` / `X-Staff-Act-As: 1` côté appelant (journal `act_as_player`) ;
+- `team: { permission, param? }` — `getManagedTeam` dans le tenant du sujet (surcharges J3
+  comprises) puis `assertTeamPermission` ; l'accès arrive dans `ctx.team`.
+
+Pas de CSRF (Bearer uniquement). `tenantResolution` reprend celle de la route migrée. La route
+expose `handler.subjectRoute`, lu par la matrice de permissions et le contrat OpenAPI.
 
 ### Surfaces
 

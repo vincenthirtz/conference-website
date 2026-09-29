@@ -163,7 +163,9 @@ export type SubjectErrorCode =
   | 'invalid_subject'
   | 'subject_read_only'
   | 'subject_forbidden'
-  | 'subject_not_found';
+  | 'subject_not_found'
+  /** `?as=` sur une route déclarée `subject: 'self'` (defineSubjectRoute). */
+  | 'subject_unsupported';
 
 /**
  * Le client demande-t-il explicitement d'AGIR à la place du sujet ?

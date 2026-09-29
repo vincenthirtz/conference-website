@@ -354,11 +354,17 @@ function toSchema(type, checker, stack = [], depth = 0) {
 
 /* ------------------------------------------------------------------------ *
  * Routes déclaratives (`defineAdminRoute`, lot L3 du plan d'industrialisation
- * de l'admin). Pas de `res.json` à lire : la réponse est la VALEUR DE RETOUR
+ * de l'admin ; `defineSubjectRoute`, lot P3 du plan joueuse). Pas de `res.json` à lire : la réponse est la VALEUR DE RETOUR
  * du handler de chaque méthode. On suit l'export par défaut (souvent un
  * réexport de `features/admin/<domaine>/routes`) jusqu'à l'appel
  * `defineAdminRoute({...})`, puis on type le retour de chaque `handler`.
  * ------------------------------------------------------------------------ */
+
+/** Définisseurs reconnus : même forme `{ key, GET, POST… }`, même noyau. */
+const DECLARATIVE_DEFINERS = new Set([
+  'defineAdminRoute',
+  'defineSubjectRoute',
+]);
 
 function declarativeRouteObject(sf, checker) {
   const modSym = checker.getSymbolAtLocation(sf);
@@ -378,7 +384,7 @@ function declarativeRouteObject(sf, checker) {
       expr &&
       ts.isCallExpression(expr) &&
       ts.isIdentifier(expr.expression) &&
-      expr.expression.text === 'defineAdminRoute' &&
+      DECLARATIVE_DEFINERS.has(expr.expression.text) &&
       expr.arguments[0] &&
       ts.isObjectLiteralExpression(expr.arguments[0])
     ) {
@@ -412,7 +418,7 @@ function declarativeResponses(obj, checker) {
       if (decl && ts.isVariableDeclaration(decl) && decl.initializer)
         spec = decl.initializer;
     }
-    // `read({...})` / `mutate({...})` : aides d'inférence, transparentes.
+    // `read` / `mutate` / `readSubject` / `mutateSubject` : aides d'inférence, transparentes.
     if (ts.isCallExpression(spec) && spec.arguments[0])
       spec = spec.arguments[0];
     if (!ts.isObjectLiteralExpression(spec)) continue;

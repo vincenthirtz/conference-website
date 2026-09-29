@@ -435,11 +435,26 @@ Migration pilote : `teams/toggle-joinable`, `teams/toggle-scrim-open` (act-as), 
 (lecture suivie), `checkin/[token]` (jeton).
 
 **Critères d'acceptation**
-- [ ] Tests du pipeline : 405 + `Allow`, `?as=` refusé si `subject: 'self'`, écriture act-as
+- [x] Tests du pipeline : 405 + `Allow`, `?as=` refusé si `subject: 'self'`, écriture act-as
       refusée sans double clé, permission d'équipe tenant-scopée, zod → 400 `fields`, idempotence.
-- [ ] `defineAdminRoute` : tests existants verts sans modification.
-- [ ] Route migrée ≤ 5 lignes de code dans `pages/api` (réexport).
-- [ ] Cliquet : `withAuthRoute` + `withSubjectRoute` + `hasTeamPermission` ne peuvent que baisser.
+      *`tests/unit/defineSubjectRoute.test.ts` (surcharges J3 comprises) + matrice
+      `subjectRoutePermissionMatrix` et contrat `subjectRouteContracts`, pendants des tests admin :
+      toute route `defineSubjectRoute` y est découverte le jour de sa migration.*
+- [x] `defineAdminRoute` : tests existants verts sans modification.
+      *Noyau `utils/http/defineRoute.ts` ; `defineAdminRoute` = garde staff dessus (CSRF,
+      `resolveGuard`, journal `staff_logs`). Idempotence rendue générique
+      (`withIdempotency` + portée), `withAdminIdempotency` inchangé.*
+- [x] Route migrée ≤ 5 lignes de code dans `pages/api` (réexport).
+      *Pilotes : `teams/toggle-joinable` et `teams/toggle-scrim-open` (`features/player/teamSettings`,
+      `follow` + `actAs` + `team`), `player/progression` (`features/player/progression`, lecture
+      suivie). `checkin/[token]` NON migré : jour de match, et gardes `token` / `public` reportées
+      (sémantiques d'erreur propres à chaque route à jeton — à concevoir avec leur premier pilote).
+      Reportés aussi : option `audit` (l'act-as reste tracé `act_as_player` par `resolveSubject`),
+      `team.from: 'body'|'active'` et `role: 'captain'`. L'inféreur OpenAPI reconnaît
+      `defineSubjectRoute`.*
+- [x] Cliquet : `withAuthRoute` + `withSubjectRoute` + `hasTeamPermission` ne peuvent que baisser.
+      *Indicateurs `api.withAuthRoute` / `api.withSubjectRoute` / `api.hasTeamPermission` du cliquet
+      P1 ; les pilotes font baisser le gel (regel orchestrateur).*
 
 ### P4 · Erreurs typées, schémas partagés, fin du `select('*')` — 🟥 / L
 

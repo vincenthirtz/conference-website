@@ -9,6 +9,13 @@ post:
   operationId: toggleTeamScrimOpen
   security:
     - PlayerBearer: []
+  requestBody:
+    required: false
+    description: "`open` absent : bascule de l'etat courant."
+    content:
+      application/json:
+        schema:
+          x-zod: player.teams.toggle-scrim-open.body
   responses:
     '200':
       description: Nouveau flag applique.
@@ -17,7 +24,13 @@ post:
           schema:
             type: object
             additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      $ref: '#/components/responses/RateLimited'

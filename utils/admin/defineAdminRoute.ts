@@ -34,23 +34,26 @@
 //     explicitement : le type refuse l'oubli ;
 //   * toute erreur sort au format `AdminErrorBody` avec un `requestId`
 //     qu'on retrouve dans les logs.
+//
+// Depuis le lot P3 (docs/PLAN-industrialisation-joueur.md), le pipeline vit
+// dans le noyau `utils/http/defineRoute.ts`, partagé avec
+// `defineSubjectRoute` ; ce fichier n'est plus que la GARDE STAFF (CSRF,
+// `resolveGuard`, contexte staff, journal `staff_logs`) — sans changement
+// de comportement.
 
-import { randomUUID } from 'node:crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { z, type ZodType } from 'zod';
-import { supabaseAdmin } from '@/utils/supabase';
-import { csrfCheck, resolveGuard, type StaffGuard } from '@/utils/staff';
-import {
-  StaffUnauthenticatedError,
-  StaffUnauthorizedError,
-} from '@/utils/staffRoles';
-import { applyRateLimit } from '@/utils/rateLimit';
-import { withAdminIdempotency } from '@/utils/adminIdempotency';
+import type { z, ZodType } from 'zod';
+import { resolveGuard, type StaffGuard } from '@/utils/staff';
 import { logStaffAction, type StaffLogAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
 import type { AuthenticatedStaffContext } from '@/types/staff';
-import { AdminError, type AdminErrorBody, type AdminErrorCode } from './errors';
-import type { AdminDb, ServiceContext } from './serviceContext';
+import {
+  createRoute,
+  RESPONSE_SENT,
+  ROUTE_METHODS,
+  type RateLimitSpec,
+} from '@/utils/http/defineRoute';
+import type { ServiceContext } from './serviceContext';
 import { type AuditRecord, auditPayloadFromStates } from './auditDiff';
 
 /** Payload écrit au journal : celui du handler + ce qui a changé. */
@@ -64,24 +67,18 @@ function auditPayload(d: AuditDetails): Record<string, unknown> | null {
  * Types publics
  * ---------------------------------------------------------------------- */
 
-export const ADMIN_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const;
+export const ADMIN_METHODS = ROUTE_METHODS;
 export type AdminMethod = (typeof ADMIN_METHODS)[number];
 type MutatingMethod = Exclude<AdminMethod, 'GET'>;
 
-/** Préréglages nommés : pas de nombres magiques recopiés route par route. */
-export const RATE_LIMIT_PRESETS = {
-  read: { max: 120, windowMs: 60_000 },
-  write: { max: 60, windowMs: 60_000 },
-  /** Gestes lourds : génération de ronde, envoi de campagne, import. */
-  heavy: { max: 10, windowMs: 60_000 },
-} as const;
-export type RateLimitPreset = keyof typeof RATE_LIMIT_PRESETS;
-
-export const DEFAULT_CACHE_CONTROL = 'private, no-store';
-type RateLimitSpec =
-  | RateLimitPreset
-  | { max: number; windowMs: number }
-  | false;
+// Préréglages, `Cache-Control` par défaut et `RESPONSE_SENT` vivent dans le
+// noyau : réexportés ici pour les routes admin existantes.
+export {
+  RATE_LIMIT_PRESETS,
+  DEFAULT_CACHE_CONTROL,
+  RESPONSE_SENT,
+  type RateLimitPreset,
+} from '@/utils/http/defineRoute';
 
 /** Détail d'une entrée de journal, fourni par le handler via `ctx.audit`. */
 export type AuditDetails = {
@@ -142,12 +139,6 @@ type HandlerArgs<Q, B> = {
   req: NextApiRequest;
   res: NextApiResponse;
 };
-
-/**
- * Valeur de retour qui signale que le handler a écrit la réponse lui-même
- * (export CSV, redirection, flux). Échappatoire, pas la norme.
- */
-export const RESPONSE_SENT: unique symbol = Symbol('adminRouteResponseSent');
 
 type MethodSpecBase<
   QS extends ZodType | undefined,
@@ -255,59 +246,15 @@ export function mutate<
  * Implémentation
  * ---------------------------------------------------------------------- */
 
-function sendError(
-  res: NextApiResponse,
-  status: number,
-  body: AdminErrorBody
-): void {
-  res.status(status).json(body);
-}
-
-function errorBody(
-  code: AdminErrorCode,
-  error: string,
-  requestId: string
-): AdminErrorBody {
-  return { error, code, requestId };
-}
-
-/** `a.b` → message ; le premier message par champ gagne. */
-function zodFields(error: z.ZodError): Record<string, string> {
-  const fields: Record<string, string> = {};
-  for (const issue of error.issues) {
-    const key = issue.path.map(String).join('.') || '_';
-    if (!(key in fields)) fields[key] = issue.message;
-  }
-  return fields;
-}
-
-function readRequestId(req: NextApiRequest): string {
-  const raw = req.headers?.['x-request-id'];
-  const v = Array.isArray(raw) ? raw[0] : raw;
-  // On accepte un identifiant fourni par le proxy s'il est raisonnable.
-  if (typeof v === 'string' && /^[\w-]{8,100}$/.test(v)) return v;
-  return randomUUID();
-}
-
-function resolveRateLimit(
-  method: AdminMethod,
-  spec: RateLimitSpec | undefined
-): { max: number; windowMs: number } | null {
-  if (spec === false) return null;
-  if (spec === undefined) {
-    return RATE_LIMIT_PRESETS[method === 'GET' ? 'read' : 'write'];
-  }
-  return typeof spec === 'string' ? RATE_LIMIT_PRESETS[spec] : spec;
-}
-
 export function defineAdminRoute(def: AdminRouteDefinition): AdminRouteHandler {
   const declared = ADMIN_METHODS.filter((m) => def[m]);
-  const allow = declared.join(',');
 
   const meta: AdminRouteMeta = { key: def.key, methods: {} };
+  const methods: Partial<Record<AdminMethod, AnyRead | AnyMutating>> = {};
   for (const m of declared) {
     const spec = def[m] as AnyRead | AnyMutating;
     const mutating = m !== 'GET';
+    methods[m] = spec;
     meta.methods[m] = {
       guard: spec.guard ?? def.guard,
       audit: mutating ? (spec as AnyMutating).audit : null,
@@ -317,198 +264,55 @@ export function defineAdminRoute(def: AdminRouteDefinition): AdminRouteHandler {
     };
   }
 
-  const route = async (req: NextApiRequest, res: NextApiResponse) => {
-    const requestId = readRequestId(req);
-    res.setHeader('X-Request-Id', requestId);
-    const method = (req.method ?? 'GET').toUpperCase() as AdminMethod;
-    const spec = (ADMIN_METHODS as readonly string[]).includes(method)
-      ? (def[method] as AnyRead | AnyMutating | undefined)
-      : undefined;
-
-    if (!spec) {
-      res.setHeader('Allow', allow);
-      return sendError(
-        res,
-        405,
-        errorBody('method_not_allowed', 'Method not allowed', requestId)
-      );
-    }
-
-    const methodMeta = meta.methods[method]!;
-    if (spec.cache !== false) {
-      res.setHeader('Cache-Control', spec.cache ?? DEFAULT_CACHE_CONTROL);
-    }
-
-    try {
-      if (!csrfCheck(req)) {
-        return sendError(
-          res,
-          403,
-          errorBody('forbidden', 'Forbidden: origin mismatch', requestId)
-        );
-      }
-
-      const staff = await resolveGuard(req, res, methodMeta.guard);
-
-      const limit = resolveRateLimit(method, spec.rateLimit);
-      if (limit) {
-        const bucket = method === 'GET' ? 'read' : 'write';
-        // `applyRateLimit` écrit lui-même le 429 (forme historique).
-        if (applyRateLimit(req, res, limit, `admin:${def.key}:${bucket}`)) {
-          return;
-        }
-      }
-
-      if (!supabaseAdmin) {
-        return sendError(
-          res,
-          503,
-          errorBody(
-            'service_unavailable',
-            'Database service unavailable (missing service role).',
-            requestId
-          )
-        );
-      }
-
-      const run = async (
-        rq: NextApiRequest,
-        rs: NextApiResponse,
-        st: AuthenticatedStaffContext
-      ) => {
-        const q = spec.query
-          ? spec.query.safeParse(rq.query ?? {})
-          : { success: true as const, data: {} };
-        if (!q.success) {
-          throw new ValidationErrorFromZod(q.error);
-        }
-        const b = spec.body
-          ? spec.body.safeParse(rq.body ?? {})
-          : { success: true as const, data: undefined };
-        if (!b.success) {
-          throw new ValidationErrorFromZod(b.error);
-        }
-
-        let auditDetails: AuditDetails | null = null;
-        const ctx: AdminRouteContext = {
-          // `supabaseAdmin` reste non typé pour le code historique : seul le
-          // chemin des modules migrés reçoit le client typé.
-          db: supabaseAdmin as unknown as AdminDb,
-          tenantId: st.tenantId,
-          actor: { kind: 'staff', staffId: st.staff.id, userId: st.user.id },
-          logger,
-          staff: st,
-          requestId,
-          audit: (details) => {
-            auditDetails = { ...(auditDetails ?? {}), ...details };
-          },
-        };
-
-        const result = await spec.handler({
-          query: q.data as never,
-          body: b.data as never,
-          ctx,
-          req: rq,
-          res: rs,
+  const route = createRoute<
+    AuthenticatedStaffContext,
+    AnyRead | AnyMutating,
+    AuditDetails
+  >(def.key, methods, {
+    namespace: 'admin',
+    // Auth par cookie : l'origine est vérifiée sur les mutations.
+    csrf: true,
+    authorize: (req, res, method) =>
+      resolveGuard(req, res, meta.methods[method]!.guard),
+    idempotent: (method) => meta.methods[method]!.idempotent,
+    idempotencyScope: (st) => ({ actorId: st.staff.id, tenantId: st.tenantId }),
+    context: (st, base): AdminRouteContext => ({
+      db: base.db,
+      tenantId: st.tenantId,
+      actor: { kind: 'staff', staffId: st.staff.id, userId: st.user.id },
+      logger,
+      staff: st,
+      requestId: base.requestId,
+      audit: base.audit,
+    }),
+    afterResponse: async (st, { method, audit, requestId }) => {
+      // Best effort : un journal en panne ne transforme pas un succès en
+      // erreur.
+      const methodMeta = meta.methods[method]!;
+      const d: AuditDetails = audit ?? {};
+      const action = methodMeta.audit ? (d.action ?? methodMeta.audit) : null;
+      if (!action || d.skip) return;
+      try {
+        await logStaffAction({
+          staff_id: st.staff.id,
+          action,
+          entity_type: d.entity_type ?? null,
+          entity_id: d.entity_id ?? null,
+          tournament_id: d.tournament_id ?? null,
+          payload: auditPayload(d),
+          tenant_id: d.tenant_id ?? st.tenantId,
+          permission: st.permission ?? null,
         });
-
-        if (result !== RESPONSE_SENT) {
-          const status = spec.status ?? 200;
-          // 204 = pas de corps : `.end()` et non `.json(null)`, qui en écrirait un.
-          if (status === 204) rs.status(204).end();
-          else rs.status(status).json(result ?? null);
-        }
-
-        // Journal APRÈS la réponse réussie : une mutation échouée n'est pas
-        // tracée comme faite. Best effort : un journal en panne ne transforme
-        // pas un succès en erreur.
-        const d: AuditDetails = auditDetails ?? {};
-        const action = methodMeta.audit ? (d.action ?? methodMeta.audit) : null;
-        if (action && !d.skip) {
-          try {
-            await logStaffAction({
-              staff_id: st.staff.id,
-              action,
-              entity_type: d.entity_type ?? null,
-              entity_id: d.entity_id ?? null,
-              tournament_id: d.tournament_id ?? null,
-              payload: auditPayload(d),
-              tenant_id: d.tenant_id ?? st.tenantId,
-              permission: st.permission ?? null,
-            });
-          } catch (logErr) {
-            logger.error(`[admin:${def.key}] logStaffAction(${action})`, {
-              requestId,
-              error: logErr,
-            });
-          }
-        }
-      };
-
-      if (methodMeta.idempotent) {
-        await withAdminIdempotency(run, { key: `admin:${def.key}` })(
-          req,
-          res,
-          staff
-        );
-      } else {
-        await run(req, res, staff);
-      }
-    } catch (err: unknown) {
-      if (err instanceof ValidationErrorFromZod) {
-        return sendError(res, 400, {
-          error: err.message,
-          code: 'validation',
-          fields: err.fields,
+      } catch (logErr) {
+        logger.error(`[admin:${def.key}] logStaffAction(${action})`, {
           requestId,
+          error: logErr,
         });
       }
-      if (err instanceof AdminError) {
-        if (err.status >= 500) {
-          logger.error(`[admin:${def.key}] ${err.code}`, { requestId, err });
-        }
-        return sendError(res, err.status, err.toBody(requestId));
-      }
-      if (err instanceof StaffUnauthenticatedError) {
-        return sendError(
-          res,
-          401,
-          errorBody('unauthenticated', err.message, requestId)
-        );
-      }
-      if (err instanceof StaffUnauthorizedError) {
-        return sendError(
-          res,
-          err.statusCode || 403,
-          errorBody('forbidden', err.message, requestId)
-        );
-      }
-      logger.error(`[admin:${def.key}] ${method} erreur inattendue`, {
-        requestId,
-        error: err,
-      });
-      return sendError(
-        res,
-        500,
-        errorBody('internal', 'Erreur serveur', requestId)
-      );
-    }
-  };
+    },
+  });
 
   return Object.assign(route, { adminRoute: meta });
-}
-
-/**
- * Erreur de validation zod, traduite en `code: 'validation'` + `fields`.
- * Le message est celui de la première issue : les schémas du projet posent
- * des messages métier en français (`{ error: '…' }`), cf. utils/validation.
- */
-class ValidationErrorFromZod extends Error {
-  readonly fields: Record<string, string>;
-  constructor(error: z.ZodError) {
-    super(error.issues[0]?.message ?? 'Requête invalide.');
-    this.fields = zodFields(error);
-  }
 }
 
 export type { MutatingMethod };

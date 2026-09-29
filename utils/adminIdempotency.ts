@@ -99,11 +99,11 @@ function readKeyHeader(req: NextApiRequest): string | null {
 
 function buildCacheKey(
   req: NextApiRequest,
-  staffId: string,
+  actorId: string,
   routeKey: string,
   userKey: string
 ): string {
-  // Scope = staff_id + route + clé + hash du body. Le body hash protège
+  // Scope = acteur (staff_id, ou appelant>sujet) + route + clé + hash du body. Le body hash protège
   // contre la réutilisation accidentelle de la même clé avec un payload
   // différent (ex: 2e auto-schedule avec params différents) — sinon on
   // replayerait silencieusement la première réponse.
@@ -112,7 +112,7 @@ function buildCacheKey(
     .update(JSON.stringify(req.body ?? null))
     .digest('hex')
     .slice(0, 8);
-  return `${staffId} ${req.method ?? 'POST'} ${routeKey} ${userKey} ${bodyHash}`;
+  return `${actorId} ${req.method ?? 'POST'} ${routeKey} ${userKey} ${bodyHash}`;
 }
 
 export type AdminIdempotencyOptions = {
@@ -127,13 +127,25 @@ export type StaffHandler = (
 ) => Promise<unknown>;
 
 /**
- * Enveloppe un handler staff pour honorer l'`Idempotency-Key` header.
- * Ne fait rien si le header est absent : le handler s'exécute normalement.
+ * Portée d'une entrée de cache : QUI agit et DANS QUEL tenant. Le staff
+ * (`withAdminIdempotency`) et le sujet (`defineSubjectRoute`) partagent la
+ * même table et la même logique ; seule la portée change.
  */
-export function withAdminIdempotency(
-  handler: StaffHandler,
-  options: AdminIdempotencyOptions
-): StaffHandler {
+export type IdempotencyScope = { actorId: string; tenantId: string };
+
+/**
+ * Honore `Idempotency-Key` pour un handler dont le contexte fournit sa
+ * portée. Ne fait rien si le header est absent : le handler s'exécute
+ * normalement.
+ */
+export function withIdempotency<C>(
+  handler: (
+    req: NextApiRequest,
+    res: NextApiResponse,
+    ctx: C
+  ) => Promise<unknown>,
+  options: AdminIdempotencyOptions & { scope: (ctx: C) => IdempotencyScope }
+): (req: NextApiRequest, res: NextApiResponse, ctx: C) => Promise<unknown> {
   return async (req, res, ctx): Promise<unknown> => {
     const method = (req.method ?? '').toUpperCase();
 
@@ -149,12 +161,11 @@ export function withAdminIdempotency(
       return handler(req, res, ctx);
     }
 
-    const cacheKey = buildCacheKey(req, ctx.staff.id, options.key, userKey);
-    // S7 : scope cache idempotency par tenant actif du staff (resolu via
-    // cookie / fallback dans `requireStaffRoleFromRequest`). La colonne
-    // tenant_id est NOT NULL en DB et fait partie du UNIQUE composite
-    // (tenant_id, cache_key).
-    const tenantId = ctx.tenantId;
+    const { actorId, tenantId } = options.scope(ctx);
+    const cacheKey = buildCacheKey(req, actorId, options.key, userKey);
+    // S7 : scope cache idempotency par tenant (actif du staff, ou du sujet).
+    // La colonne tenant_id est NOT NULL en DB et fait partie du UNIQUE
+    // composite (tenant_id, cache_key).
     const cached = await readCache(cacheKey, tenantId);
     if (cached) {
       res.setHeader('Idempotency-Replay', 'true');
@@ -178,6 +189,21 @@ export function withAdminIdempotency(
 
     return handler(req, res, ctx);
   };
+}
+
+/**
+ * Enveloppe un handler staff pour honorer l'`Idempotency-Key` header.
+ * Ne fait rien si le header est absent : le handler s'exécute normalement.
+ * Portée = staff + tenant actif du staff (résolu par la garde).
+ */
+export function withAdminIdempotency(
+  handler: StaffHandler,
+  options: AdminIdempotencyOptions
+): StaffHandler {
+  return withIdempotency(handler, {
+    key: options.key,
+    scope: (ctx) => ({ actorId: ctx.staff.id, tenantId: ctx.tenantId }),
+  });
 }
 
 /* ---------------------------------------------------------------------------

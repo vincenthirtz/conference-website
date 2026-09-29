@@ -78226,9 +78226,12 @@
       "type": "string"
      },
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      },
-     "teamId": {}
+     "teamId": {
+      "type": "string"
+     }
     },
     "required": [
      "is_joinable",
@@ -78249,9 +78252,12 @@
       "type": "boolean"
      },
      "success": {
-      "type": "boolean"
+      "type": "boolean",
+      "const": true
      },
-     "teamId": {}
+     "teamId": {
+      "type": "string"
+     }
     },
     "required": [
      "message",
