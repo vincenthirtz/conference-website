@@ -8,11 +8,13 @@
 // calculé), fallback gris neutre si le nom n'a pas de définition (ex. label
 // supprimé mais toujours porté par la carte).
 import { useEffect, useState } from 'react';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
 import {
   groupMyTasks,
   humanizeActivity,
-  priorityClasses,
   priorityLabel,
+  priorityTone,
   readableTextColor,
   relativeTime,
   type BoardLabel,
@@ -20,6 +22,9 @@ import {
   type MyTask,
   type TaskActivity,
 } from '@/components/admin/tasks/taskBoardModel';
+
+const SURFACE =
+  'rounded-[var(--r-card,14px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s1,#100812)]';
 
 export function LabelPill({
   name,
@@ -35,7 +40,7 @@ export function LabelPill({
   if (!def) {
     return (
       <span
-        className={`rounded ${pad} bg-white/5 border border-white/10 text-neutral-300`}
+        className={`rounded-[3px] ${pad} border border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t3,#a39ba6)]`}
       >
         {name}
       </span>
@@ -43,7 +48,7 @@ export function LabelPill({
   }
   return (
     <span
-      className={`rounded ${pad} font-medium`}
+      className={`rounded-[3px] ${pad} font-medium`}
       style={{
         backgroundColor: def.color,
         color: readableTextColor(def.color),
@@ -77,13 +82,13 @@ export function LabelManagerRow({
   const trimmed = name.trim();
   const dirty = trimmed !== label.name || color !== label.color;
   return (
-    <li className="flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 p-2">
+    <li className={`flex items-center gap-2 p-2 ${SURFACE}`}>
       <input
         type="color"
         value={color}
         onChange={(e) => setColor(e.target.value)}
         aria-label={`${t.labelColorField} : ${label.name}`}
-        className="h-8 w-10 rounded bg-transparent border border-white/20 cursor-pointer flex-shrink-0"
+        className="h-8 w-10 flex-shrink-0 cursor-pointer rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-transparent"
       />
       <input
         type="text"
@@ -91,30 +96,31 @@ export function LabelManagerRow({
         maxLength={40}
         onChange={(e) => setName(e.target.value)}
         aria-label={`${t.labelNameField} : ${label.name}`}
-        className="flex-1 min-w-0 px-2 py-1 rounded bg-white/10 border border-white/20 text-white text-sm"
+        className="min-w-0 flex-1 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2 py-1 text-sm text-[var(--t1,#f4edf7)] outline-none focus:border-[var(--or,#b467d1)]"
       />
       <LabelPill
         name={trimmed || label.name}
         def={{ ...label, name: trimmed || label.name, color }}
       />
-      <button
-        type="button"
+      <AdminButton
+        variant="secondary"
+        size="xs"
         disabled={busy || !dirty || !trimmed}
         onClick={() => onSave({ name: trimmed, color })}
-        className="px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-xs font-medium"
       >
         {t.labelRenameSave}
-      </button>
-      <button
-        type="button"
+      </AdminButton>
+      <AdminButton
+        variant="danger"
+        size="xs"
         disabled={busy}
         onClick={onDelete}
         title={t.labelDeleteAction}
         aria-label={`${t.labelDeleteAction} : ${label.name}`}
-        className="px-2 py-1 rounded bg-red-600/20 border border-red-500/30 text-red-200 text-xs hover:bg-red-600/40 disabled:opacity-40"
+        className="!px-2"
       >
         ✕
-      </button>
+      </AdminButton>
     </li>
   );
 }
@@ -133,15 +139,15 @@ export function MyTasksView({
 }) {
   if (loading) {
     return (
-      <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-sm text-neutral-300">
+      <div className={`p-4 text-sm text-[var(--t3,#a39ba6)] ${SURFACE}`}>
         {t.loading}
       </div>
     );
   }
   if (tasks.length === 0) {
     return (
-      <div className="p-8 rounded-xl bg-white/5 border border-white/10 text-center">
-        <p className="text-sm text-neutral-200">{t.myTasksEmpty}</p>
+      <div className={`p-8 text-center ${SURFACE}`}>
+        <p className="text-sm text-[var(--t2,#c7bfca)]">{t.myTasksEmpty}</p>
       </div>
     );
   }
@@ -156,37 +162,41 @@ export function MyTasksView({
       key: 'overdue',
       label: t.myGroupOverdue,
       items: groups.overdue,
-      tone: 'text-red-300',
+      tone: 'text-[var(--err,#ff6b6b)]',
     },
     {
       key: 'today',
       label: t.myGroupToday,
       items: groups.today,
-      tone: 'text-amber-300',
+      tone: 'text-[var(--warn,#f5a524)]',
     },
     {
       key: 'upcoming',
       label: t.myGroupUpcoming,
       items: groups.upcoming,
-      tone: 'text-neutral-200',
+      tone: 'text-[var(--t1,#f4edf7)]',
     },
     {
       key: 'noDue',
       label: t.myGroupNoDue,
       items: groups.noDue,
-      tone: 'text-neutral-400',
+      tone: 'text-[var(--t3,#a39ba6)]',
     },
   ];
   return (
     <div className="space-y-6">
-      <p className="text-sm text-neutral-400">{t.myTasksSubtitle}</p>
+      <p className="text-sm text-[var(--t3,#a39ba6)]">{t.myTasksSubtitle}</p>
       {sections
         .filter((s) => s.items.length > 0)
         .map((s) => (
           <section key={s.key}>
-            <h2 className={`text-sm font-semibold mb-2 ${s.tone}`}>
+            <h2
+              className={`mb-2 font-[family-name:var(--fd)] text-sm font-bold uppercase tracking-[0.04em] ${s.tone}`}
+            >
               {s.label}{' '}
-              <span className="text-neutral-500">({s.items.length})</span>
+              <span className="text-[var(--t4,#807984)]" data-numeric>
+                ({s.items.length})
+              </span>
             </h2>
             <ul className="space-y-2">
               {s.items.map((task) => (
@@ -195,44 +205,30 @@ export function MyTasksView({
                     type="button"
                     onClick={() => onOpen(task)}
                     title={t.myTaskOpen}
-                    className="w-full text-left rounded-lg bg-neutral-900/80 border border-white/10 p-3 hover:border-indigo-500/40 transition-colors"
+                    className="w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-3 text-left transition-colors hover:border-[var(--or,#b467d1)]"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium leading-snug flex-1">
+                      <p className="flex-1 text-sm font-medium leading-snug text-[var(--t1,#f4edf7)]">
                         {task.title}
                       </p>
-                      <span
-                        className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] border ${priorityClasses(
-                          task.priority
-                        )}`}
-                      >
+                      <Chip tone={priorityTone(task.priority)}>
                         {priorityLabel(t, task.priority)}
-                      </span>
+                      </Chip>
                     </div>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-neutral-400">
-                      {task.boardName && (
-                        <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10">
-                          {task.boardName}
-                        </span>
-                      )}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-[var(--t3,#a39ba6)]">
+                      {task.boardName && <Chip>{task.boardName}</Chip>}
                       {task.columnName && (
-                        <span
-                          className={`px-1.5 py-0.5 rounded border ${
-                            task.columnIsDone
-                              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-                              : 'bg-white/5 border-white/10'
-                          }`}
-                        >
+                        <Chip tone={task.columnIsDone ? 'ok' : 'neutral'}>
                           {task.columnName}
                           {task.columnIsDone ? ` · ${t.myTaskDone}` : ''}
-                        </span>
+                        </Chip>
                       )}
                       {task.dueDate && (
                         <span
                           className={
                             s.key === 'overdue'
-                              ? 'text-red-400 font-medium'
-                              : 'text-neutral-300'
+                              ? 'font-medium text-[var(--err,#ff6b6b)]'
+                              : 'text-[var(--t2,#c7bfca)]'
                           }
                         >
                           {task.dueDate.slice(0, 10)}
@@ -269,32 +265,32 @@ export function ActivitySection({
   const visible = expanded ? activity : activity.slice(0, COLLAPSED);
   return (
     <section>
-      <h3 className="text-sm font-semibold text-neutral-200 mb-2">
+      <h3 className="mb-2 text-sm font-semibold text-[var(--t1,#f4edf7)]">
         {t.activityTitle}
       </h3>
       {loading ? (
-        <p className="text-xs text-neutral-500">{t.loading}</p>
+        <p className="text-xs text-[var(--t4,#807984)]">{t.loading}</p>
       ) : activity.length === 0 ? (
-        <p className="text-xs text-neutral-500">{t.activityEmpty}</p>
+        <p className="text-xs text-[var(--t4,#807984)]">{t.activityEmpty}</p>
       ) : (
         <>
           <ol className="space-y-2">
             {visible.map((a, i) => (
               <li key={i} className="flex items-start gap-2 text-xs">
                 <span
-                  className="mt-1 w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"
+                  className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[var(--or,#b467d1)]"
                   aria-hidden="true"
                 />
                 <div className="flex-1">
-                  <span className="text-neutral-200 font-medium">
+                  <span className="font-medium text-[var(--t1,#f4edf7)]">
                     {a.actorName ?? t.unknownAuthor}
                   </span>{' '}
-                  <span className="text-neutral-400">
+                  <span className="text-[var(--t3,#a39ba6)]">
                     {humanizeActivity(t, a.action)}
                   </span>
-                  <span className="text-neutral-600"> · </span>
+                  <span className="text-[var(--t4,#807984)]"> · </span>
                   <time
-                    className="text-neutral-500"
+                    className="text-[var(--t4,#807984)]"
                     dateTime={a.createdAt}
                     title={a.createdAt}
                   >
@@ -308,7 +304,7 @@ export function ActivitySection({
             <button
               type="button"
               onClick={onToggleExpanded}
-              className="mt-2 text-xs text-indigo-300 hover:text-indigo-200"
+              className="mt-2 text-xs text-[var(--or-200,#eec4ff)] hover:text-[var(--t1,#f4edf7)]"
             >
               {expanded ? t.activityShowLess : t.activityShowMore}
             </button>

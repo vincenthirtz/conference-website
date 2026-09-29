@@ -11,10 +11,10 @@
     "api.manualLogStaffAction": 353,
     "api.relativeLoggerImport": 125,
     "ui.pagesImportSupabase": 12,
-    "ui.useState": 1730,
-    "ui.inlineStyle": 73,
-    "ui.rawAdminUrl": 630,
-    "size.pagesOver800": 9,
+    "ui.useState": 1723,
+    "ui.inlineStyle": 71,
+    "ui.rawAdminUrl": 599,
+    "size.pagesOver800": 6,
     "size.componentsOver600": 27,
     "size.apiOver500": 14
   }

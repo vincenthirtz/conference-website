@@ -34,8 +34,9 @@ type Props = {
 };
 
 const ICON_CLASS = 'w-4 h-4';
+// Même allure que les boutons-icônes `ghost` de la ligne (« Le Ruban »).
 const LINK_BASE =
-  'p-2 rounded-lg text-neutral-400 hover:bg-white/[0.06] transition-colors';
+  'inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] text-[var(--t2,#c7bfca)] transition-colors';
 
 export default function UserViewLinks({
   userId,
@@ -49,7 +50,7 @@ export default function UserViewLinks({
         href={`/admin/users/${userId}/player-view`}
         title={labels.playerViewTitle}
         aria-label={labels.playerViewTitle}
-        className={`${LINK_BASE} hover:text-emerald-400`}
+        className={`${LINK_BASE} hover:border-[var(--lf,#7fca65)] hover:text-[var(--lf-200,#b3e7a3)]`}
       >
         <svg
           className={ICON_CLASS}
@@ -78,7 +79,7 @@ export default function UserViewLinks({
           href={`/admin/users/${userId}/captain-view`}
           title={labels.captainViewTitle}
           aria-label={labels.captainViewTitle}
-          className={`${LINK_BASE} hover:text-amber-400`}
+          className={`${LINK_BASE} hover:border-[var(--warn,#f5a524)] hover:text-[#ffd9a3]`}
         >
           <svg
             className={ICON_CLASS}
@@ -102,7 +103,7 @@ export default function UserViewLinks({
           href={`/admin/users/${userId}/staff-view`}
           title={labels.staffViewTitle}
           aria-label={labels.staffViewTitle}
-          className={`${LINK_BASE} hover:text-violet-400`}
+          className={`${LINK_BASE} hover:border-[var(--or,#b467d1)] hover:text-[var(--or-200,#eec4ff)]`}
         >
           <svg
             className={ICON_CLASS}

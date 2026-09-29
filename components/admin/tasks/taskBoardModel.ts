@@ -5,6 +5,7 @@
 
 import { formatDateHeader, formatTime } from '@/utils/dateFormatters';
 import type nsAdminTaskBoard from '@/lib/i18n/locales/admin-fr/adminTaskBoard';
+import type { ChipTone } from '@/features/admin/_shared/ui/Chip';
 
 export type Dict = typeof nsAdminTaskBoard.fr;
 
@@ -167,16 +168,18 @@ export function priorityLabel(t: Dict, p: Priority): string {
   }
 }
 
-export function priorityClasses(p: Priority): string {
+// Ton de puce « Le Ruban » par priorité (couleur de signal ; « moyenne » en
+// marque, faute de signal dédié).
+export function priorityTone(p: Priority): ChipTone {
   switch (p) {
     case 'low':
-      return 'border-neutral-500/40 bg-neutral-500/10 text-neutral-300';
+      return 'neutral';
     case 'medium':
-      return 'border-blue-500/40 bg-blue-500/10 text-blue-300';
+      return 'brand';
     case 'high':
-      return 'border-amber-500/40 bg-amber-500/10 text-amber-300';
+      return 'warn';
     case 'urgent':
-      return 'border-red-500/40 bg-red-500/10 text-red-300';
+      return 'err';
   }
 }
 

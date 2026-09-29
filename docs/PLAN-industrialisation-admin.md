@@ -644,6 +644,16 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       Pages > 800 lignes : 12 → 9. NB : le cliquet (useState −5, URLs en dur −7) ne mesure que
       `pages/` et `components/` ; une partie de la baisse est un DÉPLACEMENT vers `features/`,
       pas une suppression — c'est la cible d'architecture, pas encore une dette remboursée.
+- [x] **Passe visuelle, lot 8 (les 3 plus gros écrans)** : matchs du tournoi 2 247 → 763
+      (`tournaments/ui/TournamentMatches*`, hooks conflits + import CSV), gestion des inscrits
+      2 380 → 797 (`users/ui/UsersManage*`, `users/manageModel.ts`, hook des actions en lot),
+      Kanban 2 684 → 797 (`tasks/ui/TaskBoard*`, 5 hooks d'actions/dérivés ; `useState` restés
+      dans la page). Corps des hooks relus contre l'original : identiques hors paramètres.
+      Pages > 800 lignes : 9 → 6.
+- [ ] e2e `admin-users.spec.ts` : clique un bouton « Rechercher » qui n'existe pas sur la page
+      (recherche automatique) — cassé AVANT le lot 8, à réaligner sur le vrai comportement.
+- [ ] Plusieurs `primary` simultanés possibles sur les matchs du tournoi (panneaux de
+      planification / édition en lot / import CSV ouverts ensemble).
 - [ ] Code mort laissé par le lot 5 : `stageTypeBadgeClass`, `runStatusBadgeClasses` /
       `runStatusDotClasses`, clés i18n `breadcrumb*` des fiches phase et ligue.
 - [ ] À trancher : « Notifier les capitaines » (outils du tournoi) est un envoi en masse sans
