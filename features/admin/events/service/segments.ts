@@ -151,9 +151,10 @@ export async function updateSegment(
     );
   }
 
-  // `obs_scene` est accepté par le schéma mais n'était PAS écrit par la route
-  // d'origine : conservé tel quel (cf. rapport de migration).
   const patch: TablesUpdate<'event_segments'> = {};
+  // Accepté par le schéma mais jamais écrit avant : un PATCH `{ obs_scene }`
+  // seul répondait 400 EMPTY_UPDATE.
+  if (body.obs_scene !== undefined) patch.obs_scene = body.obs_scene;
   if (body.title !== undefined) patch.title = body.title;
   if (body.duration_min !== undefined) patch.duration_min = body.duration_min;
   if (body.planned_start_at !== undefined)

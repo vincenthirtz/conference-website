@@ -243,6 +243,13 @@ describe('/api/admin/events/[runId]/segments', () => {
     );
     expect(patch.statusCode).toBe(200);
     expect(patch.body.title).toBe('Longue pause');
+    // `obs_scene` seul était accepté puis ignoré (400 EMPTY_UPDATE).
+    const scene = await call(
+      segmentHandler,
+      req('PATCH', { runId: RUN, segId: SEG }, { obs_scene: 'Pause caméra' })
+    );
+    expect(scene.statusCode).toBe(200);
+    expect(scene.body.obs_scene).toBe('Pause caméra');
     const invalid = await call(
       segmentHandler,
       req('PATCH', { runId: RUN, segId: SEG }, {})
