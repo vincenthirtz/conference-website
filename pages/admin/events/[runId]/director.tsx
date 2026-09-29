@@ -15,7 +15,6 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import AlertBanner from '@/components/admin/AlertBanner';
-import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
 import RunStatusHeader from '@/components/admin/director/RunStatusHeader';
 import TimelineBuilder from '@/components/admin/director/TimelineBuilder';
@@ -24,15 +23,11 @@ import CasterStatusPanel from '@/components/admin/director/CasterStatusPanel';
 import CueComposer from '@/components/admin/director/CueComposer';
 import CueFeed from '@/components/admin/director/CueFeed';
 import AddSegmentModal from '@/components/admin/director/AddSegmentModal';
-import WaveBoard, {
-  type WaveFormPatch,
-} from '@/components/admin/director/WaveBoard';
-import StationBoard, {
-  type StationFormPatch,
-} from '@/components/admin/director/StationBoard';
+import WaveBoard from '@/components/admin/director/WaveBoard';
+import StationBoard from '@/components/admin/director/StationBoard';
 import ScheduleConflictsBanner from '@/components/admin/director/ScheduleConflictsBanner';
-import RealtimeStatusBadge from '@/components/admin/RealtimeStatusBadge';
-import DirectorSectionTitle from '@/features/admin/events/ui/DirectorSectionTitle';
+import DirectorToolbar from '@/features/admin/events/ui/DirectorToolbar';
+import DirectorWorkspace from '@/features/admin/events/ui/DirectorWorkspace';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -50,18 +45,18 @@ import {
 } from '@/utils/eventScheduleConflicts';
 import type { StaffProps } from '@/types/admin';
 import type {
-  EventBroadcastMessage,
-  EventCasterChecklistItem,
   EventCue,
   EventRun,
   EventRunWithSegments,
   EventSegment,
-  EventSegmentType,
   EventStation,
-  EventStationStatus,
   EventWave,
-  EventWaveStatus,
 } from '@/types/events';
+import {
+  useDirectorSegmentActions,
+  type LocalReorderRecord,
+} from '@/features/admin/events/hooks/useDirectorSegmentActions';
+import { useDirectorWaveStationActions } from '@/features/admin/events/hooks/useDirectorWaveStationActions';
 import nsAdminEventDirector from '@/lib/i18n/locales/admin-fr/adminEventDirector';
 
 export const getServerSideProps = withStaffPage({
@@ -132,11 +127,7 @@ function DirectorPage(_props: StaffProps) {
   // propre reorder porte les memes `ord` que l'ordre attendu -> aucun faux
   // positif. On passe par des refs pour ne PAS reabonner les canaux realtime
   // (handleSegmentChange doit garder des deps vides).
-  const lastLocalReorderRef = useRef<{
-    expected: Map<string, number>;
-    at: number;
-    conflictShown: boolean;
-  } | null>(null);
+  const lastLocalReorderRef = useRef<LocalReorderRecord | null>(null);
   const addToastRef = useRef(addToast);
   const reorderConflictMsgRef = useRef('');
   useEffect(() => {
@@ -454,613 +445,65 @@ function DirectorPage(_props: StaffProps) {
   });
 
   /* -----------------------------------------------------------
-   * Actions: run-level
+   * Actions run / segments / waves / stations — corps déplacés à l'identique
+   * dans features/admin/events/hooks/ (lot 9C). La page garde l'état.
    * ---------------------------------------------------------*/
+  const {
+    handleStartRun,
+    handleEndRun,
+    handleStartSegment,
+    handleSkipSegment,
+    handleEndSegment,
+    handleDeleteSegment,
+    handleReorder,
+    handleAddSegment,
+    handleSaveSegment,
+    handleAssignSegment,
+  } = useDirectorSegmentActions({
+    t,
+    runId,
+    run,
+    segments,
+    selectedId,
+    selectedSegment,
+    setRun,
+    setSegments,
+    setSelectedId,
+    setBusy,
+    setShowAddModal,
+    mutate,
+    mutateJson,
+    regenerate,
+    confirm,
+    addToast,
+    fetchData,
+    lastLocalReorderRef,
+  });
 
-  async function handleStartRun() {
-    if (!runId || !run) return;
-    setBusy(true);
-    regenerate();
-    try {
-      const res = await mutate(`/api/admin/events/${runId}/start`, {
-        method: 'POST',
-      });
-      const payload = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(
-          payload?.error ?? format(t.startFailedStatus, { status: res.status })
-        );
-      }
-      if (payload?.alreadyStarted) {
-        addToast(t.runAlreadyLive, 'info');
-      } else {
-        addToast(t.runStarted, 'success');
-      }
-      if (payload?.run) setRun(payload.run);
-    } catch (err) {
-      addToast((err as Error)?.message ?? t.startFailed, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleEndRun() {
-    if (!runId || !run) return;
-    const ok = await confirm({
-      title: t.confirmEndRunTitle,
-      subtitle: t.confirmEndRunSubtitle,
-      variant: 'warning',
-      confirmLabel: t.confirmEndRunLabel,
-    });
-    if (!ok) return;
-    setBusy(true);
-    regenerate();
-    try {
-      const res = await mutate(`/api/admin/events/${runId}/end`, {
-        method: 'POST',
-      });
-      const payload = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(
-          payload?.error ?? format(t.endFailedStatus, { status: res.status })
-        );
-      }
-      addToast(
-        payload?.alreadyEnded ? t.runAlreadyEnded : t.runEnded,
-        payload?.alreadyEnded ? 'info' : 'success'
-      );
-      if (payload?.run) setRun(payload.run);
-      // Refresh segments aussi (l'API les a force en done).
-      fetchData();
-    } catch (err) {
-      addToast((err as Error)?.message ?? t.endFailed, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /* -----------------------------------------------------------
-   * Actions: segment-level
-   * ---------------------------------------------------------*/
-
-  async function handleStartSegment(segment: EventSegment) {
-    if (!runId) return;
-    setBusy(true);
-    regenerate();
-    try {
-      const res = await mutate(
-        `/api/admin/events/${runId}/segments/${segment.id}/start`,
-        { method: 'POST' }
-      );
-      const payload = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(
-          payload?.error ?? format(t.startFailedStatus, { status: res.status })
-        );
-      }
-      addToast(
-        payload?.alreadyStarted ? t.segmentAlreadyLive : t.segmentStarted,
-        payload?.alreadyStarted ? 'info' : 'success'
-      );
-      // Realtime mettra a jour les autres segments forces en done.
-      if (payload?.segment) {
-        setSegments((prev) =>
-          prev.map((s) => (s.id === payload.segment.id ? payload.segment : s))
-        );
-      }
-    } catch (err) {
-      addToast((err as Error)?.message ?? t.startFailed, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleSkipSegment(segment: EventSegment) {
-    if (!runId) return;
-    const ok = await confirm({
-      title: format(t.confirmSkipTitle, { title: segment.title }),
-      subtitle: t.confirmSkipSubtitle,
-      variant: 'warning',
-      confirmLabel: t.confirmSkipLabel,
-    });
-    if (!ok) return;
-    setBusy(true);
-    regenerate();
-    try {
-      const res = await mutate(
-        `/api/admin/events/${runId}/segments/${segment.id}/skip`,
-        { method: 'POST' }
-      );
-      const payload = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(
-          payload?.error ?? format(t.skipFailedStatus, { status: res.status })
-        );
-      }
-      addToast(t.segmentSkipped, 'success');
-      if (payload?.segment) {
-        setSegments((prev) =>
-          prev.map((s) => (s.id === payload.segment.id ? payload.segment : s))
-        );
-      }
-    } catch (err) {
-      addToast((err as Error)?.message ?? t.skipFailed, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleEndSegment(segment: EventSegment) {
-    if (!runId) return;
-    setBusy(true);
-    regenerate();
-    try {
-      const res = await mutate(
-        `/api/admin/events/${runId}/segments/${segment.id}/end`,
-        { method: 'POST' }
-      );
-      const payload = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(
-          payload?.error ?? format(t.endFailedStatus, { status: res.status })
-        );
-      }
-      addToast(t.segmentEnded, 'success');
-      if (payload?.segment) {
-        setSegments((prev) =>
-          prev.map((s) => (s.id === payload.segment.id ? payload.segment : s))
-        );
-      }
-    } catch (err) {
-      addToast((err as Error)?.message ?? t.endFailed, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleDeleteSegment(segment: EventSegment) {
-    if (!runId) return;
-    const ok = await confirm({
-      title: format(t.confirmDeleteSegTitle, { title: segment.title }),
-      subtitle: t.confirmDeleteSegSubtitle,
-      variant: 'danger',
-      confirmLabel: t.confirmDeleteLabel,
-    });
-    if (!ok) return;
-    setBusy(true);
-    regenerate();
-    try {
-      const res = await mutate(
-        `/api/admin/events/${runId}/segments/${segment.id}`,
-        { method: 'DELETE' }
-      );
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        throw new Error(
-          payload?.error ?? format(t.deleteFailedStatus, { status: res.status })
-        );
-      }
-      addToast(t.segmentDeleted, 'success');
-      setSegments((prev) => prev.filter((s) => s.id !== segment.id));
-      if (selectedId === segment.id) setSelectedId(null);
-    } catch (err) {
-      addToast((err as Error)?.message ?? t.deleteFailed, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /* -----------------------------------------------------------
-   * Reorder + add
-   * ---------------------------------------------------------*/
-
-  async function handleReorder(orderedIds: string[]) {
-    if (!runId) return;
-    // Optimistic UI : on a deja decale localement dans TimelineBuilder. Ici on
-    // committe et rollback en cas d'erreur.
-    const prevOrder = segments.map((s) => s.id);
-    // Memorise l'ordre attendu (id -> index) pour detecter un reorder
-    // concurrent d'un autre regisseur via le realtime (cf. handleSegmentChange).
-    lastLocalReorderRef.current = {
-      expected: new Map(orderedIds.map((id, idx) => [id, idx])),
-      at: Date.now(),
-      conflictShown: false,
-    };
-    // Update local state to match the new order (preserve ord values).
-    setSegments((prev) => {
-      const byId = new Map(prev.map((s) => [s.id, s]));
-      return orderedIds
-        .map((id, idx) => {
-          const seg = byId.get(id);
-          return seg ? { ...seg, ord: idx } : null;
-        })
-        .filter((s): s is EventSegment => s !== null);
-    });
-
-    setBusy(true);
-    regenerate();
-    try {
-      const json = await mutateJson<{ segments: EventSegment[] }>(
-        `/api/admin/events/${runId}/segments/reorder`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ orderedIds }),
-        }
-      );
-      // L'API renvoie l'etat canonique — on l'applique. On realigne aussi
-      // l'ordre attendu sur ce canonique : les echos realtime de NOTRE reorder
-      // porteront ces `ord` et ne declencheront donc pas de faux conflit.
-      if (json.segments) {
-        setSegments(json.segments);
-        const rec = lastLocalReorderRef.current;
-        if (rec) {
-          rec.expected = new Map(json.segments.map((s) => [s.id, s.ord]));
-          rec.at = Date.now();
-        }
-      }
-    } catch (err) {
-      addToast((err as Error)?.message ?? t.reorderFailed, 'error');
-      // Rollback : remet les segments dans l'ordre precedent.
-      setSegments((prev) => {
-        const byId = new Map(prev.map((s) => [s.id, s]));
-        return prevOrder
-          .map((id) => byId.get(id))
-          .filter((s): s is EventSegment => !!s);
-      });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleAddSegment(payload: {
-    type: EventSegmentType;
-    title: string;
-    match_id?: string | null;
-    duration_min?: number | null;
-  }) {
-    if (!runId) throw new Error(t.errorRunNotFound);
-    regenerate();
-    const json = await mutateJson<EventSegment>(
-      `/api/admin/events/${runId}/segments`,
-      {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }
-    );
-    setSegments((prev) => {
-      // Si realtime a deja insere, on ne duplique pas.
-      if (prev.some((s) => s.id === json.id)) return prev;
-      const next = [...prev, json];
-      next.sort((a, b) => a.ord - b.ord);
-      return next;
-    });
-    setShowAddModal(false);
-    addToast(t.segmentAdded, 'success');
-  }
-
-  const handleSaveSegment = useCallback(
-    async (patch: {
-      title?: string;
-      duration_min?: number | null;
-      planned_start_at?: string | null;
-      broadcast_message?: EventBroadcastMessage | null;
-      caster_checklist?: EventCasterChecklistItem[];
-    }) => {
-      if (!runId || !selectedSegment) throw new Error(t.errorNoSegment);
-      regenerate();
-      const json = await mutateJson<EventSegment>(
-        `/api/admin/events/${runId}/segments/${selectedSegment.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify(patch),
-        }
-      );
-      setSegments((prev) => prev.map((s) => (s.id === json.id ? json : s)));
-      addToast(t.segmentSaved, 'success');
-    },
-    [runId, selectedSegment, regenerate, mutateJson, addToast, t]
-  );
-
-  /* -----------------------------------------------------------
-   * Assignation wave/station d'un segment (PATCH immediat).
-   * ---------------------------------------------------------*/
-
-  const handleAssignSegment = useCallback(
-    async (patch: { wave_id?: string | null; station_id?: string | null }) => {
-      if (!runId || !selectedSegment) throw new Error(t.errorNoSegment);
-      regenerate();
-      const json = await mutateJson<EventSegment>(
-        `/api/admin/events/${runId}/segments/${selectedSegment.id}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify(patch),
-        }
-      );
-      setSegments((prev) => prev.map((s) => (s.id === json.id ? json : s)));
-      addToast(t.assignmentUpdated, 'success');
-    },
-    [runId, selectedSegment, regenerate, mutateJson, addToast, t]
-  );
-
-  /* -----------------------------------------------------------
-   * Waves — CRUD + statut + reorder. Toutes les mutations regenerent la clef
-   * d'idempotence (intentions distinctes) et maj l'etat local depuis la
-   * reponse canonique de l'API.
-   * ---------------------------------------------------------*/
-
-  const handleCreateWave = useCallback(
-    async (patch: WaveFormPatch) => {
-      if (!runId) return;
-      setBusy(true);
-      regenerate();
-      try {
-        const json = await mutateJson<{ wave: EventWave }>(
-          `/api/admin/events/${runId}/waves`,
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              title: patch.title,
-              planned_start_at: patch.planned_start_at,
-              duration_min: patch.duration_min,
-            }),
-          }
-        );
-        setWaves((prev) => [...prev, json.wave].sort((a, b) => a.ord - b.ord));
-        addToast(t.waveCreated, 'success');
-      } catch (err) {
-        addToast((err as Error)?.message ?? t.createFailed, 'error');
-      } finally {
-        setBusy(false);
-      }
-    },
-    [runId, regenerate, mutateJson, addToast, t]
-  );
-
-  const handleUpdateWave = useCallback(
-    async (waveId: string, patch: Partial<WaveFormPatch>) => {
-      if (!runId) return;
-      setBusy(true);
-      regenerate();
-      try {
-        const json = await mutateJson<{ wave: EventWave }>(
-          `/api/admin/events/${runId}/waves/${waveId}`,
-          { method: 'PATCH', body: JSON.stringify(patch) }
-        );
-        setWaves((prev) =>
-          prev
-            .map((w) => (w.id === json.wave.id ? json.wave : w))
-            .sort((a, b) => a.ord - b.ord)
-        );
-        addToast(t.waveUpdated, 'success');
-      } catch (err) {
-        addToast((err as Error)?.message ?? t.updateFailed, 'error');
-      } finally {
-        setBusy(false);
-      }
-    },
-    [runId, regenerate, mutateJson, addToast, t]
-  );
-
-  const handleSetWaveStatus = useCallback(
-    async (wave: EventWave, status: EventWaveStatus) => {
-      if (!runId) return;
-      if (status === 'skipped') {
-        const ok = await confirm({
-          title: format(t.confirmSkipWaveTitle, { title: wave.title }),
-          subtitle: t.confirmSkipWaveSubtitle,
-          variant: 'warning',
-          confirmLabel: t.skipWaveLabel,
-        });
-        if (!ok) return;
-      }
-      setBusy(true);
-      regenerate();
-      try {
-        const json = await mutateJson<{ wave: EventWave }>(
-          `/api/admin/events/${runId}/waves/${wave.id}`,
-          { method: 'PATCH', body: JSON.stringify({ status }) }
-        );
-        setWaves((prev) =>
-          prev.map((w) => (w.id === json.wave.id ? json.wave : w))
-        );
-        addToast(t.waveStatusUpdated, 'success');
-      } catch (err) {
-        addToast((err as Error)?.message ?? t.statusChangeFailed, 'error');
-      } finally {
-        setBusy(false);
-      }
-    },
-    [runId, confirm, regenerate, mutateJson, addToast, t]
-  );
-
-  const handleDeleteWave = useCallback(
-    async (wave: EventWave) => {
-      if (!runId) return;
-      const ok = await confirm({
-        title: format(t.confirmDeleteWaveTitle, { title: wave.title }),
-        subtitle: t.confirmDeleteWaveSubtitle,
-        variant: 'danger',
-        confirmLabel: t.confirmDeleteLabel,
-      });
-      if (!ok) return;
-      setBusy(true);
-      regenerate();
-      try {
-        const res = await mutate(
-          `/api/admin/events/${runId}/waves/${wave.id}`,
-          {
-            method: 'DELETE',
-          }
-        );
-        if (!res.ok) {
-          const payload = await res.json().catch(() => null);
-          throw new Error(
-            payload?.error ??
-              format(t.deleteFailedStatus, { status: res.status })
-          );
-        }
-        setWaves((prev) => prev.filter((w) => w.id !== wave.id));
-        // Les segments rattaches ont wave_id remis a NULL cote DB (FK SET NULL).
-        setSegments((prev) =>
-          prev.map((s) => (s.wave_id === wave.id ? { ...s, wave_id: null } : s))
-        );
-        addToast(t.waveDeleted, 'success');
-      } catch (err) {
-        addToast((err as Error)?.message ?? t.deleteFailed, 'error');
-      } finally {
-        setBusy(false);
-      }
-    },
-    [runId, confirm, regenerate, mutate, addToast, t]
-  );
-
-  const handleReorderWaves = useCallback(
-    async (orderedIds: string[]) => {
-      if (!runId) return;
-      const prev = waves;
-      // Optimistic : reassigne ord selon la nouvelle position.
-      setWaves(() =>
-        orderedIds
-          .map((id, idx) => {
-            const w = prev.find((x) => x.id === id);
-            return w ? { ...w, ord: idx } : null;
-          })
-          .filter((w): w is EventWave => w !== null)
-      );
-      setBusy(true);
-      regenerate();
-      try {
-        const json = await mutateJson<{ waves: EventWave[] }>(
-          `/api/admin/events/${runId}/waves/reorder`,
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              order: orderedIds.map((id, idx) => ({ id, ord: idx })),
-            }),
-          }
-        );
-        if (json.waves) setWaves(json.waves);
-      } catch (err) {
-        addToast((err as Error)?.message ?? t.reorderFailed, 'error');
-        setWaves(prev);
-      } finally {
-        setBusy(false);
-      }
-    },
-    [runId, waves, regenerate, mutateJson, addToast, t]
-  );
-
-  /* -----------------------------------------------------------
-   * Stations — CRUD + statut.
-   * ---------------------------------------------------------*/
-
-  const handleCreateStation = useCallback(
-    async (patch: StationFormPatch) => {
-      if (!runId) return;
-      setBusy(true);
-      regenerate();
-      try {
-        const json = await mutateJson<{ station: EventStation }>(
-          `/api/admin/events/${runId}/stations`,
-          { method: 'POST', body: JSON.stringify(patch) }
-        );
-        setStations((prev) =>
-          [...prev, json.station].sort((a, b) => a.ord - b.ord)
-        );
-        addToast(t.stationCreated, 'success');
-      } catch (err) {
-        addToast((err as Error)?.message ?? t.createFailed, 'error');
-      } finally {
-        setBusy(false);
-      }
-    },
-    [runId, regenerate, mutateJson, addToast, t]
-  );
-
-  const handleUpdateStation = useCallback(
-    async (stationId: string, patch: Partial<StationFormPatch>) => {
-      if (!runId) return;
-      setBusy(true);
-      regenerate();
-      try {
-        const json = await mutateJson<{ station: EventStation }>(
-          `/api/admin/events/${runId}/stations/${stationId}`,
-          { method: 'PATCH', body: JSON.stringify(patch) }
-        );
-        setStations((prev) =>
-          prev.map((s) => (s.id === json.station.id ? json.station : s))
-        );
-        addToast(t.stationUpdated, 'success');
-      } catch (err) {
-        addToast((err as Error)?.message ?? t.updateFailed, 'error');
-      } finally {
-        setBusy(false);
-      }
-    },
-    [runId, regenerate, mutateJson, addToast, t]
-  );
-
-  const handleSetStationStatus = useCallback(
-    async (station: EventStation, status: EventStationStatus) => {
-      if (!runId) return;
-      setBusy(true);
-      regenerate();
-      try {
-        const json = await mutateJson<{ station: EventStation }>(
-          `/api/admin/events/${runId}/stations/${station.id}`,
-          { method: 'PATCH', body: JSON.stringify({ status }) }
-        );
-        setStations((prev) =>
-          prev.map((s) => (s.id === json.station.id ? json.station : s))
-        );
-      } catch (err) {
-        addToast((err as Error)?.message ?? t.statusChangeFailed, 'error');
-      } finally {
-        setBusy(false);
-      }
-    },
-    [runId, regenerate, mutateJson, addToast, t]
-  );
-
-  const handleDeleteStation = useCallback(
-    async (station: EventStation) => {
-      if (!runId) return;
-      const ok = await confirm({
-        title: format(t.confirmDeleteStationTitle, { name: station.name }),
-        subtitle: t.confirmDeleteStationSubtitle,
-        variant: 'danger',
-        confirmLabel: t.confirmDeleteLabel,
-      });
-      if (!ok) return;
-      setBusy(true);
-      regenerate();
-      try {
-        const res = await mutate(
-          `/api/admin/events/${runId}/stations/${station.id}`,
-          { method: 'DELETE' }
-        );
-        if (!res.ok) {
-          const payload = await res.json().catch(() => null);
-          throw new Error(
-            payload?.error ??
-              format(t.deleteFailedStatus, { status: res.status })
-          );
-        }
-        setStations((prev) => prev.filter((s) => s.id !== station.id));
-        setSegments((prev) =>
-          prev.map((s) =>
-            s.station_id === station.id ? { ...s, station_id: null } : s
-          )
-        );
-        addToast(t.stationDeleted, 'success');
-      } catch (err) {
-        addToast((err as Error)?.message ?? t.deleteFailed, 'error');
-      } finally {
-        setBusy(false);
-      }
-    },
-    [runId, confirm, regenerate, mutate, addToast, t]
-  );
+  const {
+    handleCreateWave,
+    handleUpdateWave,
+    handleSetWaveStatus,
+    handleDeleteWave,
+    handleReorderWaves,
+    handleCreateStation,
+    handleUpdateStation,
+    handleSetStationStatus,
+    handleDeleteStation,
+  } = useDirectorWaveStationActions({
+    t,
+    runId,
+    waves,
+    setWaves,
+    setStations,
+    setSegments,
+    setBusy,
+    mutate,
+    mutateJson,
+    regenerate,
+    confirm,
+    addToast,
+  });
 
   /* -----------------------------------------------------------
    * Render
@@ -1096,23 +539,12 @@ function DirectorPage(_props: StaffProps) {
             />
           ) : (
             <div className="space-y-6">
-              <div className="flex items-center justify-end gap-3">
-                {/* Lot A6 : la régie journalise désormais ses gestes sous des
-                    slugs typés — autant pouvoir les relire d'ici, sur le run
-                    concerné, plutôt que dans le journal global. */}
-                {runId && (
-                  <EntityHistoryButton
-                    entityType="event_run"
-                    entityId={runId}
-                    className="inline-flex h-[30px] items-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-3 font-[family-name:var(--fd)] text-[11px] font-bold uppercase text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]"
-                  />
-                )}
-                <RealtimeStatusBadge
-                  connected={realtimeConnected}
-                  connectedLabel={t.realtimeConnected}
-                  degradedLabel={t.realtimeDegraded}
-                />
-              </div>
+              <DirectorToolbar
+                runId={runId}
+                connected={realtimeConnected}
+                connectedLabel={t.realtimeConnected}
+                degradedLabel={t.realtimeDegraded}
+              />
               <RunStatusHeader
                 run={run}
                 segments={segments}
@@ -1133,19 +565,8 @@ function DirectorPage(_props: StaffProps) {
                 />
               )}
 
-              {/*
-                Layout desktop (lg+) : 3 colonnes 40/30/30 via grid-cols-10.
-                Layout mobile : tout empile (Timeline → Editor → Comms →
-                Casters). L'ordre est expose via `order-*` classes en mobile,
-                pas via le DOM (le DOM reste : timeline, editor+casters,
-                comms, ce qui correspond a l'ordre desktop).
-              */}
-              <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
-                {/* Gauche : Timeline (40%) */}
-                <div className="lg:col-span-4 order-1">
-                  <DirectorSectionTitle note={t.dragToReorder}>
-                    {t.timelineHeading}
-                  </DirectorSectionTitle>
+              <DirectorWorkspace
+                timeline={
                   <TimelineBuilder
                     segments={segments}
                     selectedId={selectedId}
@@ -1159,64 +580,40 @@ function DirectorPage(_props: StaffProps) {
                     onDelete={handleDeleteSegment}
                     onAddClick={() => setShowAddModal(true)}
                   />
-                </div>
-
-                {/* Centre : Editor + Casters (30%) */}
-                <div className="lg:col-span-3 space-y-6 order-2 lg:order-2">
-                  <div>
-                    <DirectorSectionTitle>
-                      {t.editionHeading}
-                    </DirectorSectionTitle>
-                    <SegmentEditorMemo
-                      segment={selectedSegment}
-                      run={run}
-                      busy={busy}
-                      waves={waves}
-                      stations={stations}
-                      onSave={handleSaveSegment}
-                      onAssign={handleAssignSegment}
-                    />
-                  </div>
-                  <div className="order-4 lg:order-none">
-                    <DirectorSectionTitle>
-                      {t.castersHeading}
-                    </DirectorSectionTitle>
-                    <CasterStatusPanel
-                      segments={segments}
-                      runId={runId ?? ''}
-                      onAssignedCastersChange={setCasters}
-                    />
-                  </div>
-                </div>
-
-                {/* Droite : Comms (30%) — composer sticky + feed scrollable */}
-                <div className="lg:col-span-3 space-y-6 order-3 lg:order-3">
-                  <div>
-                    <DirectorSectionTitle>
-                      {t.commsHeading}
-                    </DirectorSectionTitle>
-                    <div className="lg:sticky lg:top-20">
-                      <CueComposer
-                        runId={runId ?? ''}
-                        runStatus={run.status}
-                        onCueCreated={setOptimisticCue}
-                      />
-                    </div>
-                  </div>
+                }
+                editor={
+                  <SegmentEditorMemo
+                    segment={selectedSegment}
+                    run={run}
+                    busy={busy}
+                    waves={waves}
+                    stations={stations}
+                    onSave={handleSaveSegment}
+                    onAssign={handleAssignSegment}
+                  />
+                }
+                casters={
+                  <CasterStatusPanel
+                    segments={segments}
+                    runId={runId ?? ''}
+                    onAssignedCastersChange={setCasters}
+                  />
+                }
+                composer={
+                  <CueComposer
+                    runId={runId ?? ''}
+                    runStatus={run.status}
+                    onCueCreated={setOptimisticCue}
+                  />
+                }
+                feed={
                   <CueFeed
                     runId={runId ?? ''}
                     casters={casters}
                     optimisticCue={optimisticCue}
                   />
-                </div>
-              </div>
-
-              {/* Waves + Stations — regroupements logiques et postes de prod. */}
-              <div>
-                <DirectorSectionTitle>
-                  {t.wavesStationsHeading}
-                </DirectorSectionTitle>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                }
+                waves={
                   <WaveBoardMemo
                     waves={waves}
                     segments={segments}
@@ -1227,6 +624,8 @@ function DirectorPage(_props: StaffProps) {
                     onDelete={handleDeleteWave}
                     onReorder={handleReorderWaves}
                   />
+                }
+                stations={
                   <StationBoardMemo
                     stations={stations}
                     segments={segments}
@@ -1236,8 +635,8 @@ function DirectorPage(_props: StaffProps) {
                     onSetStatus={handleSetStationStatus}
                     onDelete={handleDeleteStation}
                   />
-                </div>
-              </div>
+                }
+              />
             </div>
           )}
         </div>

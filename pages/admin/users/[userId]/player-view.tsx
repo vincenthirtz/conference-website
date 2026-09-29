@@ -28,34 +28,38 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
-import {
-  STAFF_ROLE_RANK,
-  hasAtLeastRole,
-  type StaffRole,
-} from '@/utils/staffRoles';
+import { hasAtLeastRole, type StaffRole } from '@/utils/staffRoles';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
-import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import Modal from '@/components/ui/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import EmptyState from '@/components/ui/EmptyState';
 import Chip from '@/features/admin/_shared/ui/Chip';
-import AdminButton, {
-  AdminButtonLink,
-} from '@/features/admin/_shared/ui/AdminButton';
+import { AdminButtonLink } from '@/features/admin/_shared/ui/AdminButton';
 import {
   InspectionFrame,
-  MODAL_FIELD_CLASS,
-  MODAL_LABEL_CLASS,
-  ModalActions,
   PanelHeading,
   PendingDemandesList,
   PlayerIdentitySummary,
   PlayerProfileFacts,
   PlayerViewBanner,
-  roleChipTone,
 } from '@/features/admin/users/ui/PlayerViewBlocks';
+import PlayerViewStaffActions, {
+  PlayerRoleBadge,
+} from '@/features/admin/users/ui/PlayerViewStaffActions';
+import {
+  PlayerViewBattleTagModal,
+  PlayerViewNameModal,
+  PlayerViewTransferModal,
+} from '@/features/admin/users/ui/PlayerViewModals';
+import {
+  canGrantRole,
+  getTabs,
+  isTargetProtected,
+  roleLabel,
+  type PendingDemande,
+  type TabKey,
+} from '@/features/admin/users/playerViewModel';
 import { lazyPanel } from '@/components/admin/lazyPanel';
 // Les trois écrans de l'espace joueur sont montés UN À LA FOIS, et jamais sur
 // l'onglet par défaut ('profil') : les importer statiquement faisait de cette
@@ -77,8 +81,6 @@ import { logger } from '../../../../utils/logger';
 import nsAdminUserPlayerView from '@/lib/i18n/locales/admin-fr/adminUserPlayerView';
 import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 
-type Dict = typeof nsAdminUserPlayerView.fr;
-
 type StaffShape = {
   id: string;
   role: string;
@@ -86,69 +88,6 @@ type StaffShape = {
 };
 
 export const getServerSideProps = withStaffPage({ permission: 'manage_staff' });
-
-/* ----------------------------------------------------------------------- */
-/* Role helpers — mirror manage.tsx so the UI never offers a forbidden      */
-/* change (the API enforces the same guards too).                           */
-/* ----------------------------------------------------------------------- */
-
-const ROLE_OPTIONS = ['member', 'player', 'caster', 'admin', 'owner'];
-
-function roleLabel(t: Dict, role: string | null): string {
-  switch ((role || '').toLowerCase()) {
-    case 'owner':
-      return t.roleOwner;
-    case 'admin':
-      return t.roleAdmin;
-    case 'manager':
-      return t.roleManager;
-    case 'caster':
-      return t.roleCaster;
-    case 'player':
-      return t.rolePlayer;
-    default:
-      return t.roleMember;
-  }
-}
-
-/** Un compte owner/admin ne se touche qu'en owner. */
-function isTargetProtected(targetRole: string | null): boolean {
-  const r = (targetRole || '').toLowerCase();
-  return r === 'owner' || r === 'admin';
-}
-
-/** Pas d'octroi d'un rôle supérieur ou égal au sien. */
-function canGrantRole(requesterRole: string | null, role: string): boolean {
-  const requesterRank = STAFF_ROLE_RANK[requesterRole as StaffRole] ?? 0;
-  const targetRank = STAFF_ROLE_RANK[role as StaffRole] ?? 0;
-  if (targetRank === 0) return true; // member / player : pas un rôle staff
-  return requesterRank > targetRank || requesterRole === 'owner';
-}
-
-type TabKey = 'profil' | 'espace' | 'matchs' | 'notifications';
-
-function getTabs(t: Dict): Array<{ key: TabKey; label: string }> {
-  return [
-    { key: 'profil', label: t.tabProfil },
-    { key: 'espace', label: t.tabEspace },
-    { key: 'matchs', label: t.tabMatchs },
-    { key: 'notifications', label: t.tabNotifications },
-  ];
-}
-
-/** Demande telle que renvoyée par GET /api/admin/demandes. */
-type PendingDemande = {
-  id: string;
-  type: string;
-  status: string;
-  created_at: string;
-  comment?: string | null;
-  team?: { id: string; name: string } | null;
-};
-
-function RoleBadge({ t, role }: { t: Dict; role: string | null }) {
-  return <Chip tone={roleChipTone(role)}>{roleLabel(t, role)}</Chip>;
-}
 
 function PlayerViewPage({ staff }: { staff: StaffShape }) {
   const t = useAdminT(nsAdminUserPlayerView);
@@ -561,7 +500,7 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
               {/* Identity summary — quick glance, visible on every tab */}
               <PlayerIdentitySummary
                 profile={profile}
-                roleBadge={<RoleBadge t={t} role={profile.user.role} />}
+                roleBadge={<PlayerRoleBadge role={profile.user.role} />}
                 captainBadge={<Chip tone="ok">{t.teamRoleCaptain}</Chip>}
               />
 
@@ -601,122 +540,29 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
                 >
                   <PlayerProfileFacts
                     profile={profile}
-                    roleBadge={<RoleBadge t={t} role={profile.user.role} />}
+                    roleBadge={<PlayerRoleBadge role={profile.user.role} />}
                   />
 
-                  {/* Actions staff */}
-                  <div className="mt-6 border-t border-[var(--line,rgba(194,196,201,.12))] pt-6">
-                    <PanelHeading>{t.actionsTitle}</PanelHeading>
-                    <div className="flex flex-wrap gap-2">
-                      {/* Lot A6 : l'historique se lit SUR la fiche. */}
-                      {userId && (
-                        <EntityHistoryButton
-                          entityType="user"
-                          entityId={userId}
-                          className="inline-flex h-[38px] items-center rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-[14px] text-[12px] font-bold uppercase text-[var(--t2,#c7bfca)] transition-colors hover:border-[var(--t4,#807984)] hover:text-[var(--t1,#f4edf7)]"
-                        />
-                      )}
-
-                      <AdminButton
-                        size="sm"
-                        onClick={() => {
-                          setNameDraft(profile.user.displayName || '');
-                          setEditingName(true);
-                        }}
-                      >
-                        {t.editDisplayName}
-                      </AdminButton>
-
-                      <AdminButton
-                        size="sm"
-                        variant="secondary"
-                        onClick={resendCredentials}
-                        disabled={!profile.user.email || busy === 'resend'}
-                      >
-                        {busy === 'resend' ? t.sending : t.resendCredentials}
-                      </AdminButton>
-
-                      {profile.team && (
-                        <>
-                          <AdminButton
-                            size="sm"
-                            onClick={() => {
-                              setTagDraft(profile.user.battleTag || '');
-                              setTagError(null);
-                              setEditingTag(true);
-                            }}
-                          >
-                            {t.editBattleTag}
-                          </AdminButton>
-
-                          {profile.team.role !== 'captain' && (
-                            <AdminButton
-                              size="sm"
-                              variant="secondary"
-                              onClick={assignCaptain}
-                              disabled={busy === 'captain'}
-                            >
-                              {busy === 'captain'
-                                ? t.assigning
-                                : t.assignCaptainBtn}
-                            </AdminButton>
-                          )}
-                        </>
-                      )}
-
-                      <AdminButton
-                        size="sm"
-                        variant="secondary"
-                        onClick={openTransfer}
-                      >
-                        {t.transferBtn}
-                      </AdminButton>
-                    </div>
-
-                    {/* Role change — admin+ only, mirrors manage.tsx guards */}
-                    {isAdmin && (
-                      <div className="mt-4">
-                        <label className={MODAL_LABEL_CLASS}>
-                          {t.fieldRole}
-                        </label>
-                        {(() => {
-                          const targetLocked =
-                            isTargetProtected(profile.user.role) &&
-                            staff.role !== 'owner';
-                          return (
-                            <select
-                              aria-label={t.roleSelectAria}
-                              value={(
-                                profile.user.role || 'member'
-                              ).toLowerCase()}
-                              onChange={(e) => changeRole(e.target.value)}
-                              disabled={busy === 'role' || targetLocked}
-                              title={targetLocked ? t.errOwnerOnly : undefined}
-                              className={`${MODAL_FIELD_CLASS} sm:w-auto`}
-                            >
-                              {ROLE_OPTIONS.map((r) => {
-                                const grantable =
-                                  r ===
-                                    (
-                                      profile.user.role || 'member'
-                                    ).toLowerCase() ||
-                                  canGrantRole(staff.role, r);
-                                return (
-                                  <option
-                                    key={r}
-                                    value={r}
-                                    disabled={!grantable}
-                                  >
-                                    {roleLabel(t, r)}
-                                  </option>
-                                );
-                              })}
-                            </select>
-                          );
-                        })()}
-                      </div>
-                    )}
-                  </div>
+                  <PlayerViewStaffActions
+                    profile={profile}
+                    userId={userId}
+                    staffRole={staff.role}
+                    isAdmin={isAdmin}
+                    busy={busy}
+                    onEditName={() => {
+                      setNameDraft(profile.user.displayName || '');
+                      setEditingName(true);
+                    }}
+                    onResendCredentials={resendCredentials}
+                    onEditBattleTag={() => {
+                      setTagDraft(profile.user.battleTag || '');
+                      setTagError(null);
+                      setEditingTag(true);
+                    }}
+                    onAssignCaptain={assignCaptain}
+                    onOpenTransfer={openTransfer}
+                    onChangeRole={changeRole}
+                  />
 
                   {/* Demandes en attente — modération (geste staff, pas une
                       lecture de l'espace joueur). */}
@@ -754,107 +600,33 @@ function PlayerViewPage({ staff }: { staff: StaffShape }) {
         </div>
       </div>
 
-      {/* Edit display name modal */}
-      <Modal
+      <PlayerViewNameModal
         open={editingName}
+        busy={busy}
+        draft={nameDraft}
+        onDraftChange={setNameDraft}
         onClose={() => setEditingName(false)}
-        title={t.editDisplayName}
-        footer={
-          <ModalActions
-            cancelLabel={t.cancel}
-            confirmLabel={busy === 'name' ? t.saving : t.save}
-            onCancel={() => setEditingName(false)}
-            onConfirm={saveName}
-            disabled={busy === 'name'}
-          />
-        }
-      >
-        <label className={MODAL_LABEL_CLASS}>{t.displayNameLabel}</label>
-        <input
-          type="text"
-          value={nameDraft}
-          onChange={(e) => setNameDraft(e.target.value)}
-          className={MODAL_FIELD_CLASS}
-          placeholder={t.displayNamePlaceholder}
-        />
-      </Modal>
-
-      {/* Edit battle tag modal */}
-      <Modal
+        onSave={saveName}
+      />
+      <PlayerViewBattleTagModal
         open={editingTag}
+        busy={busy}
+        draft={tagDraft}
+        error={tagError}
+        onDraftChange={setTagDraft}
         onClose={() => setEditingTag(false)}
-        title={t.editBattleTag}
-        footer={
-          <ModalActions
-            cancelLabel={t.cancel}
-            confirmLabel={busy === 'tag' ? t.saving : t.save}
-            onCancel={() => setEditingTag(false)}
-            onConfirm={saveBattleTag}
-            disabled={busy === 'tag'}
-          />
-        }
-      >
-        <label className={MODAL_LABEL_CLASS}>{t.battleTagLabel}</label>
-        <input
-          type="text"
-          value={tagDraft}
-          onChange={(e) => setTagDraft(e.target.value)}
-          className={MODAL_FIELD_CLASS}
-          placeholder={t.battleTagPlaceholder}
-        />
-        <p className="mt-1 text-xs text-[var(--t4,#807984)]">
-          {t.battleTagHelp}
-        </p>
-        {tagError && (
-          <div className="mt-3 rounded-[var(--r-ctrl,4px)] border border-[rgba(255,107,107,.4)] bg-[rgba(255,107,107,.08)] px-3 py-2 text-sm text-[#ffc2c2]">
-            {tagError}
-          </div>
-        )}
-      </Modal>
-
-      {/* Transfer team modal */}
-      <Modal
+        onSave={saveBattleTag}
+      />
+      <PlayerViewTransferModal
         open={transferOpen}
+        busy={busy}
+        teamsLoading={teamsLoading}
+        teamOptions={teamOptions}
+        teamId={transferTeamId}
+        onTeamChange={setTransferTeamId}
         onClose={() => setTransferOpen(false)}
-        title={t.transferModalTitle}
-        footer={
-          <ModalActions
-            cancelLabel={t.cancel}
-            confirmLabel={
-              busy === 'transfer' ? t.transferring : t.transferConfirmBtn
-            }
-            onCancel={() => setTransferOpen(false)}
-            onConfirm={transferTeam}
-            disabled={busy === 'transfer' || !transferTeamId}
-          />
-        }
-      >
-        <label className={MODAL_LABEL_CLASS}>{t.destTeamLabel}</label>
-        {teamsLoading ? (
-          <div className="flex items-center gap-2 py-2 text-sm text-[var(--t3,#a39ba6)]">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--line2,rgba(194,196,201,.2))] border-t-[var(--t1,#f4edf7)]" />
-            {t.loadingTeams}
-          </div>
-        ) : teamOptions.length === 0 ? (
-          <p className="py-2 text-sm text-[var(--t4,#807984)]">
-            {t.noOtherTeam}
-          </p>
-        ) : (
-          <select
-            aria-label={t.destTeamLabel}
-            value={transferTeamId}
-            onChange={(e) => setTransferTeamId(e.target.value)}
-            className={MODAL_FIELD_CLASS}
-          >
-            <option value="">{t.selectTeam}</option>
-            {teamOptions.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name}
-              </option>
-            ))}
-          </select>
-        )}
-      </Modal>
+        onConfirm={transferTeam}
+      />
     </>
   );
 }

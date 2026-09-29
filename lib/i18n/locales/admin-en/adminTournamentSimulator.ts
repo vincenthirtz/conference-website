@@ -23,8 +23,6 @@ export default {
   errorNoActiveTeams: 'No active teams found',
   errorCreateTournament: 'Tournament creation error: {status}',
   pageTitle: 'Admin · Tournament Simulator',
-  backAdmin: 'Back to admin',
-  badgeAdmin: 'Admin',
   heading: 'Tournament Simulator',
   subtitle: 'Test configurations with dummy data',
   nextRoundTitle: 'Simulates only the next playable round',
@@ -187,6 +185,7 @@ export default {
   uniqueTeams: 'Unique teams',
   quizModeToggle: 'Quiz Mode',
   formModeToggle: 'Form Mode',
+  viewModeLabel: 'Input mode',
   quizModeTitle: 'Build your tournament in Quiz mode',
   quizIntroTitle: 'Build your tournament',
   quizIntroSubtitle:

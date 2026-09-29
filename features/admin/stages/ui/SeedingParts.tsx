@@ -32,6 +32,13 @@ export type RatingBreakdownRow = {
 export const SEED_SELECT =
   'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-2 py-1.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none disabled:opacity-40';
 
+/** Libellé d'un champ du comparateur (source, pattern, méthode…). */
+export const SEED_FIELD_LABEL = 'mb-1 block text-xs text-[var(--t3,#a39ba6)]';
+
+/** Message d'état vide / de chargement d'une colonne. */
+export const SEED_EMPTY =
+  'px-4 py-8 text-center text-sm text-[var(--t3,#a39ba6)]';
+
 const SEED_TAG =
   'rounded-[3px] bg-[var(--s3,#2f2732)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--t2,#c7bfca)]';
 

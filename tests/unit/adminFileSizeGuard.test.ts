@@ -44,7 +44,7 @@ const BASELINE: Record<string, number> = {
   // chiffres ci-dessous ont été recalés sur le rendu Biome, à la hausse comme
   // à la baisse. `tournaments/create.tsx` est entré à 801 par ce seul effet.
   'pages/admin/tournaments/create.tsx': 573,
-  'pages/admin/tournament-simulator.tsx': 2434,
+  'pages/admin/tournament-simulator.tsx': 489,
   'pages/admin/tasks/index.tsx': 797,
   'pages/admin/users/manage.tsx': 797,
   // 2281 écrites : le flux de l'auto-scheduler est parti dans
@@ -59,13 +59,13 @@ const BASELINE: Record<string, number> = {
   // 2026-09-22, +1 : `hasAtLeastRole` importé de `utils/staffRoles` et non plus
   // de `utils/staff`, qui embarquait le client Supabase serveur (lot 8).
   'pages/admin/tournament/[id]/dashboard.tsx': 799,
-  'pages/admin/teams/[teamId]/edit.tsx': 1087,
+  'pages/admin/teams/[teamId]/edit.tsx': 707,
   'pages/admin/matches/[matchId]/edit.tsx': 705,
   'pages/admin/teams/index.tsx': 653,
   // 1263 : sondage de secours mutualisé (hooks/useVisiblePoll).
   // 1259 : passe « Le Ruban » (lot 5C) — les titres de colonne sont partis
   // dans features/admin/events/ui/DirectorSectionTitle.tsx.
-  'pages/admin/events/[runId]/director.tsx': 1259,
+  'pages/admin/events/[runId]/director.tsx': 658,
   'components/admin/moderation/SupportPanel.tsx': 1167,
   // 1172 : errorCode / withBusy / Spinner partagés (twitchPanelUtils).
   'components/admin/broadcast/TwitchCommandsPanel.tsx': 1172,
@@ -76,7 +76,7 @@ const BASELINE: Record<string, number> = {
   // 740 : passe « Le Ruban » (lot 5C) — le panneau « run préparé » est parti
   // dans features/admin/diffusion/StartPreparedPanel.tsx.
   'pages/admin/regie.tsx': 740,
-  'pages/admin/users/[userId]/player-view.tsx': 863,
+  'pages/admin/users/[userId]/player-view.tsx': 635,
   // 860 écrites : le panneau « Visuels » (logo, bannière, règlement PDF, et
   // désormais la chaîne de diffusion par défaut) est parti dans
   // `components/admin/tournament/TournamentVisualsSection.tsx`, avec l'upload
@@ -86,7 +86,7 @@ const BASELINE: Record<string, number> = {
   // 2026-09-21, +4 : `{} as any` → un `Partial` nommé (lot 6). Le cast cachait
   // que les deux camps se remplissent l'un après l'autre, donc que l'un des
   // deux manque forcément à mi-parcours.
-  'pages/admin/stages/[stageId]/seeding.tsx': 808,
+  'pages/admin/stages/[stageId]/seeding.tsx': 649,
   // 692 écrites : la liste des champs et le type de la config sont partis dans
   // `utils/discord/discordConfigFields.ts` — non pour gagner des lignes, mais
   // pour que le test de whitelist puisse les confronter au handler PUT sans
@@ -104,7 +104,7 @@ const BASELINE: Record<string, number> = {
   'pages/admin/tenants/[id]/discord-config/[guildId].tsx': 690,
   // 2026-09-21 : de 952 à 969 en typant quatre lectures, puis RAMENÉ à 953 en
   // sortant `StageOption` dans `utils/stages/stageOption.ts` (règle A7).
-  'pages/admin/stages/[stageId].tsx': 922,
+  'pages/admin/stages/[stageId].tsx': 792,
   'pages/admin/users/new.tsx': 645,
   'pages/admin/demandes/[id].tsx': 443,
   // 764 écrites : la fiche a rendu ses secrets bot à un panneau (T8), et le

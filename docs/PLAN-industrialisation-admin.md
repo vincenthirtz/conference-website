@@ -650,6 +650,12 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       Kanban 2 684 → 797 (`tasks/ui/TaskBoard*`, 5 hooks d'actions/dérivés ; `useState` restés
       dans la page). Corps des hooks relus contre l'original : identiques hors paramètres.
       Pages > 800 lignes : 9 → 6.
+- [x] **Passe visuelle, lot 9 (fin des pages géantes)** : simulateur 2 434 → 489 (Ruban +
+      `simulator/{ui,hooks}`) ; découpe pure de seeding 808 → 649, fiche de phase 922 → 792,
+      édition d'équipe 1 087 → 707, vue joueuse 863 → 635, Director 1 259 → 658 (blocs de
+      mise en page du Director en Ruban). Corps des hooks relus contre l'original.
+      **Pages admin > 800 lignes : 0** (20 au début de la passe visuelle).
+- [ ] Code mort : `components/admin/simulator/SummaryCard.tsx` n'est plus importé.
 - [ ] e2e `admin-users.spec.ts` : clique un bouton « Rechercher » qui n'existe pas sur la page
       (recherche automatique) — cassé AVANT le lot 8, à réaligner sur le vrai comportement.
 - [ ] Plusieurs `primary` simultanés possibles sur les matchs du tournoi (panneaux de

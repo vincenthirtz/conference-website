@@ -10,7 +10,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
@@ -26,28 +25,22 @@ import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import {
   DraftSelect,
-  RatingRow,
-  type RatingBreakdownRow,
+  SEED_EMPTY as EMPTY,
+  SEED_FIELD_LABEL as FIELD_LABEL,
   SEED_SELECT,
   SeedColumn,
   SlotRow,
   type TeamLite,
 } from '@/features/admin/stages/ui/SeedingParts';
-import {
-  ERROR_BOX,
-  MUTED,
-  TILE,
-  WARN_BOX,
-} from '@/features/admin/stages/ui/rubanClasses';
+import SeedingRatingSection, {
+  type RatingMethod,
+  type RatingPreviewResponse,
+  type SeedingPattern as Pattern,
+} from '@/features/admin/stages/ui/SeedingRatingSection';
+import { ERROR_BOX, TILE } from '@/features/admin/stages/ui/rubanClasses';
 
-const FIELD_LABEL = 'mb-1 block text-xs text-[var(--t3,#a39ba6)]';
 const MATCH_LABEL = 'text-xs text-[var(--t4,#807984)]';
-const EMPTY = 'px-4 py-8 text-center text-sm text-[var(--t3,#a39ba6)]';
 const DIVIDED = 'divide-y divide-[var(--line,rgba(194,196,201,.12))]';
-const SECTION_ROW =
-  'border-b border-[var(--line2,rgba(194,196,201,.2))] px-4 py-3';
-const INLINE_LINK =
-  'text-[var(--or-200,#eec4ff)] underline hover:text-[var(--t1,#f4edf7)]';
 
 type ProposedSlot = {
   matchId: string;
@@ -85,20 +78,9 @@ type PreviewResponse = {
   availableTeams: TeamLite[];
 };
 
-type Pattern = 'standard' | 'sequential';
-
 // --- Seed par rating (Glicko + SoS) -----------------------------------------
-
-type RatingMethod = 'rating' | 'rating_sos';
-
-type RatingPreviewResponse = {
-  proposed: { matchId: string; slot: 1 | 2; teamId: string; seed: number }[];
-  breakdown: RatingBreakdownRow[];
-  bracketMatchCount: number;
-  lock: { locked: boolean; reasons: string[] };
-  method: RatingMethod;
-  pattern: Pattern;
-};
+// `Pattern`, `RatingMethod` et `RatingPreviewResponse` vivent avec la section
+// (features/admin/stages/ui/SeedingRatingSection.tsx).
 
 type RatingSeedResponse = {
   seeded: { matchId: string; slot: 1 | 2; teamId: string; seed: number }[];
@@ -625,164 +607,23 @@ function SeedingComparatorPage(_: StaffProps) {
             </div>
 
             {/* Section SEED PAR RATING (Glicko + SoS) */}
-            <SeedColumn
-              className="mt-6"
-              title={t.ratingTitle}
-              count={format(t.ratingRankedCount, {
-                count: ratingData?.breakdown.length ?? 0,
-              })}
-              footer={
-                <AdminButton
-                  variant="primary"
-                  className="w-full"
-                  onClick={onApplyRating}
-                  disabled={
-                    submitting ||
-                    ratingLoading ||
-                    ratingLocked ||
-                    ratingNoBracket ||
-                    ratingEmpty ||
-                    !ratingData
-                  }
-                >
-                  {submitting ? t.applying : t.applyRating}
-                </AdminButton>
-              }
-            >
-              <div
-                className={`${SECTION_ROW} text-xs leading-relaxed ${MUTED}`}
-              >
-                {t.ratingIntroBefore}{' '}
-                <Link href="/admin/ratings" className={INLINE_LINK}>
-                  {t.ratingIntroLink}
-                </Link>{' '}
-                {t.ratingIntroAfter}
-              </div>
-
-              {/* Contrôles */}
-              <div
-                className={`${SECTION_ROW} grid grid-cols-1 gap-3 md:grid-cols-3`}
-              >
-                <label className="text-sm">
-                  <span className={FIELD_LABEL}>{t.methodLabel}</span>
-                  <select
-                    value={ratingMethod}
-                    onChange={(e) =>
-                      setRatingMethod(e.target.value as RatingMethod)
-                    }
-                    disabled={submitting}
-                    className={SEED_SELECT}
-                  >
-                    <option value="rating_sos">{t.methodRatingSos}</option>
-                    <option value="rating">{t.methodRating}</option>
-                  </select>
-                </label>
-                <label className="text-sm">
-                  <span className={FIELD_LABEL}>{t.patternLabel}</span>
-                  <select
-                    value={ratingPattern}
-                    onChange={(e) =>
-                      setRatingPattern(e.target.value as Pattern)
-                    }
-                    disabled={submitting}
-                    className={SEED_SELECT}
-                  >
-                    <option value="standard">{t.patternStandard}</option>
-                    <option value="sequential">{t.patternSequential}</option>
-                  </select>
-                </label>
-                <label className="text-sm">
-                  <span className={FIELD_LABEL}>
-                    {t.sosWeightLabel}{' '}
-                    <span className="text-[var(--t4,#807984)]">
-                      {t.sosWeightHint}
-                    </span>
-                  </span>
-                  <input
-                    type="number"
-                    step="0.1"
-                    inputMode="decimal"
-                    value={sosWeight}
-                    onChange={(e) => setSosWeight(e.target.value)}
-                    disabled={submitting || ratingMethod === 'rating'}
-                    placeholder={t.sosWeightPlaceholder}
-                    className={SEED_SELECT}
-                  />
-                </label>
-              </div>
-
-              {/* Lock / garde-fous */}
-              {ratingData && ratingLocked && (
-                <div className={`mx-4 mt-3 !text-xs ${ERROR_BOX}`}>
-                  {ratingData.lock.reasons.length > 0
-                    ? ratingData.lock.reasons.join(' ')
-                    : t.ratingLockReason}
-                </div>
-              )}
-              {ratingData && !ratingLocked && ratingNoBracket && (
-                <div className={`mx-4 mt-3 !text-xs ${WARN_BOX}`}>
-                  {t.ratingNoBracketNotice}
-                </div>
-              )}
-
-              {/* Tableau breakdown */}
-              <div className="px-4 py-3">
-                {ratingLoading && <div className={EMPTY}>{t.loadingShort}</div>}
-
-                {!ratingLoading && ratingError && (
-                  <div className={ERROR_BOX}>{ratingError}</div>
-                )}
-
-                {!ratingLoading && !ratingError && ratingEmpty && (
-                  <div className={EMPTY}>
-                    {t.ratingEmptyBefore}{' '}
-                    <button
-                      type="button"
-                      data-case="normal"
-                      onClick={() => router.push(`/admin/stages/${id}`)}
-                      className={INLINE_LINK}
-                    >
-                      {t.ratingEmptyLink}
-                    </button>
-                    .
-                  </div>
-                )}
-
-                {!ratingLoading &&
-                  !ratingError &&
-                  ratingData &&
-                  !ratingEmpty && (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-[var(--line2,rgba(194,196,201,.2))] text-left">
-                            <th scope="col" className="py-2 pr-3">
-                              {t.thRank}
-                            </th>
-                            <th scope="col" className="py-2 pr-3">
-                              {t.thTeam}
-                            </th>
-                            <th scope="col" className="py-2 pr-3 text-right">
-                              {t.thRating}
-                            </th>
-                            <th scope="col" className="py-2 pr-3 text-right">
-                              {t.thSos}
-                            </th>
-                            <th scope="col" className="py-2 pr-3 text-right">
-                              {t.thScore}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
-                          {ratingData.breakdown.map((row) => (
-                            <RatingRow key={row.teamId} row={row} />
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-              </div>
-            </SeedColumn>
+            <SeedingRatingSection
+              ratingData={ratingData}
+              ratingMethod={ratingMethod}
+              onRatingMethodChange={setRatingMethod}
+              ratingPattern={ratingPattern}
+              onRatingPatternChange={setRatingPattern}
+              sosWeight={sosWeight}
+              onSosWeightChange={setSosWeight}
+              ratingLoading={ratingLoading}
+              ratingError={ratingError}
+              ratingLocked={ratingLocked}
+              ratingNoBracket={ratingNoBracket}
+              ratingEmpty={ratingEmpty}
+              submitting={submitting}
+              onApply={onApplyRating}
+              onGoToStage={() => router.push(`/admin/stages/${id}`)}
+            />
           </>
         )}
 

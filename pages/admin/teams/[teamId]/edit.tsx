@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
@@ -12,12 +12,6 @@ import MembersSection from '@/components/admin/teams/MembersSection';
 import AddMemberModal from '@/components/admin/teams/AddMemberModal';
 import EditMemberModal from '@/components/admin/teams/EditMemberModal';
 import ImportBattleTagsModal from '@/components/admin/teams/ImportBattleTagsModal';
-import { BATTLE_TAG_REGEX, isNonPlayingTeamRole } from '@/utils/teams/roleKind';
-import {
-  addMemberSuccessToast,
-  buildAddMemberBody,
-  validateAddMemberForm,
-} from '@/components/admin/teams/staffAddMember';
 import type {
   MemberFormState,
   SearchResult,
@@ -52,8 +46,10 @@ import TeamEditHeader, {
 } from '@/features/admin/teams/ui/TeamEditHeader';
 import TeamEditInfoForm from '@/features/admin/teams/ui/TeamEditInfoForm';
 import TeamEditTournamentsSection from '@/features/admin/teams/ui/TeamEditTournamentsSection';
+import { useTeamEditMemberActions } from '@/features/admin/teams/hooks/useTeamEditMemberActions';
+import { useTeamEditRosterBulk } from '@/features/admin/teams/hooks/useTeamEditRosterBulk';
+import { useTeamEditModals } from '@/features/admin/teams/hooks/useTeamEditModals';
 
-const BATTLE_TAG_RE = BATTLE_TAG_REGEX;
 const FORM_ID = 'team-edit-form';
 
 export const getServerSideProps = withStaffPage<{ teamRoles: TeamRole[] }>(
@@ -401,26 +397,49 @@ function AdminEditTeamPage({
   const selectedRosterGap =
     selectedMinPlayers > 0 ? Math.max(0, selectedMinPlayers - playingCount) : 0;
 
-  // Member handlers
-  const openAddMemberModal = useCallback(() => {
-    setMemberForm({
-      email: '',
-      userId: '',
-      role: 'player',
-      battleTag: '',
-      specialty: '',
-      skillRating: '',
-      setCaptain: false,
-      isSubstitute: false,
-      addMode: 'invite',
-      reason: '',
-    });
-    setMemberError(null);
-    setSearchQuery('');
-    setSearchResults([]);
-    setShowSearchResults(false);
-    setShowAddMemberModal(true);
-  }, []);
+  // Actions de membre (modales, recherche joueur, capitanat, échange) :
+  // features/admin/teams/hooks/useTeamEditMemberActions.ts.
+  const {
+    openAddMemberModal,
+    handleSearchPlayers,
+    selectPlayer,
+    openEditMemberModal,
+    handleAddMember,
+    handleEditMember,
+    handleDeleteMember,
+    handleSetCaptain,
+    handleStartSwap,
+    handleCancelSwap,
+    handleSwapWithSource,
+  } = useTeamEditMemberActions({
+    t,
+    teamId,
+    memberForm,
+    editingMember,
+    swapSource,
+    adminFetch,
+    adminFetchJson,
+    addMemberMutate,
+    addToast,
+    confirm,
+    fetchMembers,
+    fetchTeam,
+    searchDebounceRef,
+    searchAbortRef,
+    setMemberForm,
+    setMemberError,
+    setMemberSaving,
+    setSearchQuery,
+    setSearchResults,
+    setSearchLoading,
+    setShowSearchResults,
+    setShowAddMemberModal,
+    setShowEditMemberModal,
+    setEditingMember,
+    setTeam,
+    setErrorMsg,
+    setSwapSource,
+  });
 
   // Deep-link : `?add-member=1` (ancienne route /admin/teams/add-member, et
   // liens « Ajouter un membre » de la fiche équipe) ouvre la modale d'ajout.
@@ -439,464 +458,65 @@ function AdminEditTeamPage({
     }
   }, [router.isReady, router.query, router, openAddMemberModal]);
 
-  // La recherche joueur tape une API coûteuse (listUsers + jointures + N
-  // getUserById). On débounce la frappe et on annule la requête précédente pour
-  // ne lancer qu'un fetch par pause de saisie, et ignorer les réponses périmées.
-  const runSearch = useCallback(async (query: string) => {
-    if (searchAbortRef.current) searchAbortRef.current.abort();
-    const controller = new AbortController();
-    searchAbortRef.current = controller;
-    setSearchLoading(true);
-    setShowSearchResults(true);
-    try {
-      const res = await fetch(
-        `/api/admin/users/search?q=${encodeURIComponent(query)}`,
-        { signal: controller.signal }
-      );
-      const json = await res.json();
-      if (res.ok && json.players) {
-        setSearchResults(json.players);
-      } else {
-        setSearchResults([]);
-      }
-    } catch (err) {
-      if ((err as Error)?.name !== 'AbortError') setSearchResults([]);
-    } finally {
-      // Ne relâche le spinner que si c'est toujours la requête active.
-      if (searchAbortRef.current === controller) setSearchLoading(false);
-    }
-  }, []);
-
-  const handleSearchPlayers = useCallback(
-    (query: string) => {
-      setSearchQuery(query);
-      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-      const trimmed = query.trim();
-      if (trimmed.length < 2) {
-        if (searchAbortRef.current) searchAbortRef.current.abort();
-        setSearchResults([]);
-        setShowSearchResults(false);
-        setSearchLoading(false);
-        return;
-      }
-      // Feedback immédiat pendant l'attente du debounce.
-      setShowSearchResults(true);
-      setSearchLoading(true);
-      searchDebounceRef.current = setTimeout(() => runSearch(trimmed), 300);
-    },
-    [runSearch]
-  );
-
-  const selectPlayer = useCallback((player: SearchResult) => {
-    setMemberForm((prev) => ({
-      ...prev,
-      email: player.email || '',
-      userId: player.id,
-      battleTag: player.battle_tag || '',
-    }));
-    setShowSearchResults(false);
-    setSearchQuery(
-      player.email || player.battle_tag || player.display_name || ''
-    );
-  }, []);
-
-  const openEditMemberModal = useCallback((member: TeamMemberRow) => {
-    setEditingMember(member);
-    setMemberForm({
-      email: '',
-      userId: member.user_id,
-      role: member.role,
-      battleTag: member.battle_tag || '',
-      specialty: member.specialty || '',
-      skillRating:
-        member.skill_rating != null ? String(member.skill_rating) : '',
-      setCaptain: false,
-      isSubstitute: member.is_substitute ?? false,
-      addMode: 'invite',
-      reason: '',
-    });
-    setMemberError(null);
-    setShowEditMemberModal(true);
-  }, []);
-
-  const handleAddMember = useCallback(async () => {
-    if (!teamId) return;
-    const invalid = validateAddMemberForm(memberForm, t);
-    if (invalid) {
-      setMemberError(invalid);
-      return;
-    }
-    setMemberSaving(true);
-    setMemberError(null);
-    try {
-      const res = await addMemberMutate(`/api/admin/teams/${teamId}/members`, {
-        method: 'POST',
-        body: buildAddMemberBody(memberForm),
-      });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || t.errAddMember);
-      }
-      setShowAddMemberModal(false);
-      addToast(...addMemberSuccessToast(json, t));
-      await fetchMembers();
-    } catch (err: unknown) {
-      setMemberError((err as Error)?.message ?? t.errUnexpected);
-    } finally {
-      setMemberSaving(false);
-    }
-  }, [teamId, memberForm, addMemberMutate, addToast, fetchMembers, t]);
-
-  const handleEditMember = useCallback(async () => {
-    if (!teamId || !editingMember) return;
-
-    setMemberSaving(true);
-    setMemberError(null);
-
-    try {
-      await adminFetchJson(`/api/admin/teams/${teamId}/members`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          memberId: editingMember.id,
-          role: memberForm.role.trim() || 'player',
-          battleTag: memberForm.battleTag.trim() || null,
-          // Chaîne vide = effacer le poste (validateSpecialty la rend null).
-          specialty: memberForm.specialty,
-          // Champ vide = effacer, pas « ne rien changer » : c'est la seule
-          // façon de retirer un SR devenu faux depuis l'écran staff.
-          skillRating: memberForm.skillRating.trim() || null,
-          isSubstitute: memberForm.isSubstitute,
-        }),
-      });
-
-      setShowEditMemberModal(false);
-      setEditingMember(null);
-      addToast(t.toastMemberEdited, 'success');
-      await fetchMembers();
-    } catch (err: unknown) {
-      setMemberError((err as Error)?.message ?? t.errUnexpected);
-    } finally {
-      setMemberSaving(false);
-    }
-  }, [
+  // Sélection multiple + actions groupées :
+  // features/admin/teams/hooks/useTeamEditRosterBulk.ts.
+  const {
+    captainUserId,
+    selectionHasCaptain,
+    rosterMembers,
+    subMembers,
+    staffMembers,
+    handleBulkRemove,
+    handleSelectAll,
+    handleBulkSetRole,
+    handleBulkSetSubstitute,
+  } = useTeamEditRosterBulk({
+    t,
     teamId,
-    editingMember,
-    memberForm,
+    team,
+    members,
+    selectedIds,
+    setSelectedIds,
+    bulkRole,
+    setBulkRole,
+    setBulkBusy,
+    setErrorMsg,
+    adminFetchJson,
+    addToast,
+    confirm,
+    clearSelection,
+    fetchMembers,
+    fetchTeam,
+  });
+
+  // Import de BattleTags + ouverture / fermeture des modales :
+  // features/admin/teams/hooks/useTeamEditModals.ts.
+  const {
+    buildImportPreview,
+    applyImport,
+    openImportModal,
+    closeImportModal,
+    handleImportTextChange,
+    closeAddMemberModal,
+    closeEditMemberModal,
+  } = useTeamEditModals({
+    t,
+    teamId,
+    members,
+    importText,
+    setImportText,
+    importPreview,
+    setImportPreview,
+    setImportBusy,
+    setShowImportModal,
+    setShowAddMemberModal,
+    setShowEditMemberModal,
+    setEditingMember,
+    setErrorMsg,
     adminFetchJson,
     addToast,
     fetchMembers,
-    t,
-  ]);
-
-  const handleDeleteMember = useCallback(
-    async (member: TeamMemberRow) => {
-      if (!teamId) return;
-      const ok = await confirm({
-        title: format(t.confirmDeleteMember, {
-          member: member.battle_tag || member.user_id,
-        }),
-        variant: 'danger',
-      });
-      if (!ok) return;
-
-      try {
-        const res = await adminFetch(`/api/admin/teams/${teamId}/members`, {
-          method: 'DELETE',
-          body: JSON.stringify({ memberId: member.id }),
-        });
-
-        if (res.ok) {
-          addToast(t.toastMemberRemoved, 'success');
-          await fetchMembers();
-          await fetchTeam();
-        }
-      } catch {
-        // Silently fail
-      }
-    },
-    [teamId, adminFetch, addToast, fetchMembers, fetchTeam, confirm, t]
-  );
-
-  const handleSetCaptain = useCallback(
-    async (member: TeamMemberRow) => {
-      if (!teamId) return;
-      const ok = await confirm({
-        title: format(t.confirmSetCaptain, {
-          member: member.battle_tag || member.user_id,
-        }),
-        variant: 'warning',
-      });
-      if (!ok) return;
-
-      try {
-        const json = await adminFetchJson<{ team: TeamRow }>(
-          `/api/admin/teams/${teamId}`,
-          {
-            method: 'PATCH',
-            body: JSON.stringify({ captain_id: member.user_id }),
-          }
-        );
-
-        setTeam(json.team);
-        addToast(t.toastCaptainSet, 'success');
-      } catch (err: unknown) {
-        setErrorMsg((err as Error)?.message ?? t.errUnexpected);
-      }
-    },
-    [teamId, adminFetchJson, addToast, confirm, t]
-  );
-
-  const handleSwap = useCallback(
-    async (memberA: TeamMemberRow, memberB: TeamMemberRow) => {
-      if (!teamId) return;
-
-      try {
-        await adminFetchJson(`/api/admin/teams/${teamId}/members`, {
-          method: 'PATCH',
-          body: JSON.stringify({
-            memberId: memberA.id,
-            swapWithMemberId: memberB.id,
-          }),
-        });
-
-        setSwapSource(null);
-        addToast(t.toastSwapDone, 'success');
-        await fetchMembers();
-      } catch (err: unknown) {
-        setErrorMsg((err as Error)?.message ?? t.errUnexpected);
-      }
-    },
-    [teamId, adminFetchJson, addToast, fetchMembers, t]
-  );
-
-  // Amorce d'un échange depuis une ligne (bouton "Échanger").
-  const handleStartSwap = useCallback((member: TeamMemberRow) => {
-    setSwapSource(member);
-  }, []);
-
-  const handleCancelSwap = useCallback(() => setSwapSource(null), []);
-
-  // Cible d'échange cliquée : échange avec la source courante.
-  const handleSwapWithSource = useCallback(
-    (member: TeamMemberRow) => {
-      if (swapSource) handleSwap(swapSource, member);
-    },
-    [swapSource, handleSwap]
-  );
-
-  // --- Bulk actions -------------------------------------------------------
-  const captainUserId = team?.captain_id ?? null;
-  // Mémoïsés : sinon ces filtres O(n) tournaient à chaque frappe (re-render).
-  const selectedMembers = useMemo(
-    () => members.filter((m) => selectedIds.has(m.id)),
-    [members, selectedIds]
-  );
-  const selectionHasCaptain = useMemo(
-    () =>
-      selectedMembers.some(
-        (m) => captainUserId !== null && m.user_id === captainUserId
-      ),
-    [selectedMembers, captainUserId]
-  );
-  // Roster / remplaçantes / encadrement — mémoïsés pour la section Membres.
-  //
-  // Coach et manager ne sont pas des joueuses : les afficher dans le roster
-  // gonflait l'effectif visible et les rendait échangeables avec une
-  // remplaçante. Même définition que la règle BattleTag côté API
-  // (`isNonPlayingTeamRole`), pour que les deux ne divergent pas.
-  const { rosterMembers, subMembers, staffMembers } = useMemo(() => {
-    const staff = members.filter((m) => isNonPlayingTeamRole(m.role));
-    const playing = members.filter((m) => !isNonPlayingTeamRole(m.role));
-    return {
-      rosterMembers: playing.filter((m) => !m.is_substitute),
-      subMembers: playing.filter((m) => m.is_substitute),
-      staffMembers: staff,
-    };
-  }, [members]);
-
-  const runBulk = useCallback(
-    async (
-      operation: 'set_role' | 'set_substitute' | 'remove',
-      extra: Record<string, unknown> = {}
-    ) => {
-      if (!teamId || selectedIds.size === 0) return;
-      setBulkBusy(true);
-      setErrorMsg(null);
-      try {
-        const json = await adminFetchJson<{
-          successCount?: number;
-          failureCount?: number;
-        }>(`/api/admin/teams/${teamId}/roster-bulk`, {
-          method: 'POST',
-          body: JSON.stringify({
-            operation,
-            memberIds: Array.from(selectedIds),
-            ...extra,
-          }),
-        });
-        const { successCount = 0, failureCount = 0 } = json;
-        addToast(
-          failureCount > 0
-            ? format(t.bulkPartial, {
-                success: successCount,
-                failure: failureCount,
-              })
-            : format(t.bulkSuccess, { success: successCount }),
-          failureCount > 0 ? 'info' : 'success'
-        );
-        clearSelection();
-        setBulkRole('');
-        await fetchMembers();
-        await fetchTeam();
-      } catch (err: unknown) {
-        setErrorMsg((err as Error)?.message ?? t.errUnexpected);
-      } finally {
-        setBulkBusy(false);
-      }
-    },
-    [
-      teamId,
-      selectedIds,
-      adminFetchJson,
-      addToast,
-      clearSelection,
-      fetchMembers,
-      fetchTeam,
-      t,
-    ]
-  );
-
-  const handleBulkRemove = useCallback(async () => {
-    if (selectedIds.size === 0) return;
-    const ok = await confirm({
-      title: format(t.confirmBulkRemove, { count: selectedIds.size }),
-      variant: 'danger',
-    });
-    if (!ok) return;
-    await runBulk('remove');
-  }, [selectedIds, runBulk, confirm, t]);
-
-  // Handlers bulk stables passés à MembersSection.
-  const handleSelectAll = useCallback(
-    (checked: boolean) => {
-      if (checked) setSelectedIds(new Set(members.map((m) => m.id)));
-      else clearSelection();
-    },
-    [members, clearSelection]
-  );
-
-  const handleBulkSetRole = useCallback(
-    () => runBulk('set_role', { role: bulkRole }),
-    [runBulk, bulkRole]
-  );
-
-  const handleBulkSetSubstitute = useCallback(
-    (isSubstitute: boolean) => runBulk('set_substitute', { isSubstitute }),
-    [runBulk]
-  );
-
-  // --- BattleTag import ---------------------------------------------------
-  const buildImportPreview = useCallback(() => {
-    const lines = importText
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
-
-    const preview: ImportLine[] = lines.map((raw) => {
-      const parts = raw.split(',').map((p) => p.trim());
-      const key = parts[0] ?? '';
-      const tag = parts[1] ?? '';
-      if (!key || !tag) {
-        return { raw, key, tag, status: 'empty' };
-      }
-      if (!BATTLE_TAG_RE.test(tag)) {
-        return { raw, key, tag, status: 'invalid' };
-      }
-      const keyLower = key.toLowerCase();
-      const match = members.find(
-        (m) =>
-          m.id === key ||
-          m.user_id === key ||
-          (m.battle_tag && m.battle_tag.toLowerCase() === keyLower)
-      );
-      if (!match) {
-        return { raw, key, tag, status: 'not-found' };
-      }
-      return {
-        raw,
-        key,
-        tag,
-        status: 'matched',
-        memberId: match.id,
-        memberLabel: match.battle_tag || match.user_id,
-      };
-    });
-    setImportPreview(preview);
-  }, [importText, members]);
-
-  const applyImport = useCallback(async () => {
-    if (!teamId || !importPreview) return;
-    const items = importPreview
-      .filter((l) => l.status === 'matched' && l.memberId)
-      .map((l) => ({ memberId: l.memberId as string, battleTag: l.tag }));
-    if (items.length === 0) {
-      setErrorMsg(t.errNoValidImport);
-      return;
-    }
-    setImportBusy(true);
-    setErrorMsg(null);
-    try {
-      const json = await adminFetchJson<{
-        successCount?: number;
-        failureCount?: number;
-      }>(`/api/admin/teams/${teamId}/roster-bulk`, {
-        method: 'POST',
-        body: JSON.stringify({ operation: 'import_battle_tags', items }),
-      });
-      const { successCount = 0, failureCount = 0 } = json;
-      addToast(
-        failureCount > 0
-          ? format(t.importPartial, {
-              success: successCount,
-              failure: failureCount,
-            })
-          : format(t.importSuccess, { success: successCount }),
-        failureCount > 0 ? 'info' : 'success'
-      );
-      setShowImportModal(false);
-      setImportText('');
-      setImportPreview(null);
-      await fetchMembers();
-    } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
-    } finally {
-      setImportBusy(false);
-    }
-  }, [teamId, importPreview, adminFetchJson, addToast, fetchMembers, t]);
-
-  // Ouverture / fermeture des modales (handlers stables pour les React.memo).
-  const openImportModal = useCallback(() => {
-    setImportText('');
-    setImportPreview(null);
-    setShowImportModal(true);
-  }, []);
-
-  const closeImportModal = useCallback(() => setShowImportModal(false), []);
-
-  const handleImportTextChange = useCallback((value: string) => {
-    setImportText(value);
-    setImportPreview(null);
-  }, []);
-
-  const closeAddMemberModal = useCallback(
-    () => setShowAddMemberModal(false),
-    []
-  );
-
-  const closeEditMemberModal = useCallback(() => {
-    setShowEditMemberModal(false);
-    setEditingMember(null);
-  }, []);
+  });
 
   return (
     <>

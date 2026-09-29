@@ -13,8 +13,8 @@
     "ui.pagesImportSupabase": 12,
     "ui.useState": 1723,
     "ui.inlineStyle": 71,
-    "ui.rawAdminUrl": 599,
-    "size.pagesOver800": 6,
+    "ui.rawAdminUrl": 564,
+    "size.pagesOver800": 0,
     "size.componentsOver600": 27,
     "size.apiOver500": 14
   }

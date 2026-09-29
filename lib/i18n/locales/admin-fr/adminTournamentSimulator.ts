@@ -22,8 +22,6 @@ export default adminNs('adminTournamentSimulator', {
   errorNoActiveTeams: 'Aucune equipe active trouvee',
   errorCreateTournament: 'Erreur creation tournoi: {status}',
   pageTitle: 'Admin · Simulateur de Tournoi',
-  backAdmin: 'Retour admin',
-  badgeAdmin: 'Admin',
   heading: 'Simulateur de Tournoi',
   subtitle: 'Testez les configurations avec des données fictives',
   nextRoundTitle: 'Simule uniquement le prochain round jouable',
@@ -186,6 +184,7 @@ export default adminNs('adminTournamentSimulator', {
   uniqueTeams: 'Equipes uniques',
   quizModeToggle: 'Mode Quiz',
   formModeToggle: 'Mode Formulaire',
+  viewModeLabel: 'Mode de saisie',
   quizModeTitle: 'Composez votre tournoi en mode Quiz',
   quizIntroTitle: 'Composez votre tournoi',
   quizIntroSubtitle:
