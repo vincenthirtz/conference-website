@@ -1,7 +1,7 @@
 # Bot ↔ Site API Contract — `/api/bot/v1/`
 
 Canonical contract for the HTTP API consumed by the Discord bot
-([docker-box `services/discord-bot/`](https://github.com/) — sibling repo).
+([`owwc-discord-bot`](https://github.com/vincenthirtz/owwc-discord-bot) — private sibling repo, formerly `owwc-discord-bot`).
 The website is the source of truth for shapes; the bot is the only authorised
 consumer.
 
@@ -69,7 +69,7 @@ returns the two plain values **once** in the response body. The operator:
    > with the **global** `BOT_API_KEY` and selects the target tenant from the
    > client `x-tenant-id` header (the key is **not** per-tenant authoritative
    > here, unlike `/api/bot/v1/*`). The caller
-   > `services/discord-bot/news-forwarder.js` sends `x-api-key: BOT_API_KEY` +
+   > `owwc-discord-bot/news-forwarder.js` sends `x-api-key: BOT_API_KEY` +
    > a guild-resolved `x-tenant-id`. It is **not** migrated to `withBotRoute`
    > because that would require a per-tenant key seeded in `tenant_secrets`,
    > which this caller does not send → migrate bot **and** site together. As a
@@ -112,7 +112,7 @@ stashes it on `req.botContext.tenantId`. The `x-tenant-id` header is now
 
   The plan gate is evaluated on the **effective** tenant, never the key's.
   The bot sends `x-guild-id` on every tenant-scoped call, from the ambient
-  guild of the Discord event (`services/discord-bot/request-context.js`).
+  guild of the Discord event (`owwc-discord-bot/request-context.js`).
 
 - **Discord guild mapping**: the bot also resolves the UUID locally from
   `discord_guilds.guild_id` → `tenant_id` for its own routing.
@@ -282,7 +282,7 @@ future finer tiers). The baseline denial fires first for a tenant with no bot.
 | `discordEventOps:full`  | `runs/current`, `cast/assignments`, `cast/[assignmentId]/ack`, `matches/[matchId]/cast`, `matches/[matchId]/discord`, `matches/[matchId]/drafts`, `matches/[matchId]/veto` | Régie+              |
 | `arbitration`           | `disputes`, `disputes/escalations`, `matches/[matchId]/dispute`, `matches/[matchId]/resolve-dispute`, `moderation/blacklist-alert`                                         | Régie+              |
 
-**Bot client (docker-box `services/discord-bot/api-client.js`) — à gérer** : traiter
+**Bot client (owwc-discord-bot `api-client.js`) — à gérer** : traiter
 un **403 `plan_required`** comme un refus de capacité (ne pas retenter, désactiver
 la feature pour ce tenant, logguer) plutôt qu'une erreur transitoire.
 
@@ -348,7 +348,7 @@ catalog can grow without forcing a bot deploy.
 | `registration.entity_blacklisted` | `utils/moderation/entityBlacklist.ts` (`alertIfEntityBlacklisted`) at team create                                                                                                                           | `{ context, entityName, matchedOn: 'name', entityType, matchedName, strength, reason, matchCount, matches[] }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `tcg.pack_granted`                | `utils/tcg/grantVictoryRewards.ts` (`announceNewPacks`) — victoire en match ou en scrim                                                                                                                     | `{ userId, discordUserId, discordUsername, matchId, isScrim, coins, ctaUrl }` — **UN event PAR gagnante**, et seulement à la PREMIÈRE attribution : l'écriture est un `ON CONFLICT DO NOTHING` dont le `RETURNING` ne rend que l'inséré, donc un rejeu (reprise de cron, correction de score) ne renotifie personne. **Scrim** (2026-09-15) : la première attribution est celle du SCRIM, pas de son match miroir — pièces clées `scrim:<scrimId>` et paquet accordé aux seules joueuses que cette écriture vient de créditer ; un miroir retiré puis recréé ne réannonce rien (`matchId` reste l'id du miroir qui a payé). Le bot en fait un DM (`tcg-events.js`). `discordUserId` peut être `null` — pas une erreur, juste un canal indisponible.                                                                                                                                                                |
 | `tcg.drop_granted`                | `pages/api/webhooks/twitch/tcg-drop.ts` (`announceTwitchDrop`) — carte réclamée EN DIRECT via les points de chaîne Twitch                                                                                   | `{ userId, discordUserId, discordUsername, twitchLogin, coins, pack, ctaUrl }` — `pack: { id: string } \| null` est un **ajout rétrocompatible** (2026-09-15) : le paquet `drop` créé avec les pièces, `null` s'il n'a pas pu l'être (pièces seules). Émis **uniquement sur `granted`**, jamais sur `replayed` : Twitch retente volontiers une livraison, et renotifier à chaque tentative transformerait un incident réseau en spam de DM. ⚠️ **Hors `WEB_PUSH_EVENT_TYPES` à dessein** : la branche par défaut du dispatcher préviendrait tout le staff du tenant et les pole admins pour un gain qui ne regarde qu'une personne — laquelle vient précisément de dépenser ses points devant son écran. Le DM est donc le seul canal privé ; l'overlay OBS fait le reste à l'antenne. |
-| `tcg.reward_granted`              | `utils/tcg/announceReward.ts` (`announceTcgRewards`) — série de check-ins (`utils/tcg/grantCheckinStreak.ts`), palmarès de fin de tournoi (`utils/tcg/grantPlacementRewards.ts`) et vérification d'un compte Battle.net (`utils/tcg/grantBattlenetVerified.ts`) | `{ userId, discordUserId, discordUsername, reason: 'checkin_streak' \| 'tournament_placement' \| 'battlenet_verified', coins, packs, tournamentId, tournamentName, rank, streak, sourceRef, ctaUrl }` — **UN event PAR joueuse créditée**, émis sur les seules lignes que l'insertion a rendues (jamais sur un rejeu : finalisation relancée, check-in rejoué). `packs` = paquets **réellement** créés (0 si refusés). `rank` renseigné pour le palmarès, `streak` pour la série (sinon `null`). **`reason: 'battlenet_verified'` (ajout additif, 2026-09-15)** : gain SANS tournoi — `tournamentId` et `tournamentName` valent `null`, `packs` vaut `0`, `rank` et `streak` `null` ; une fois à vie par joueuse et par compte Blizzard ; `sourceRef = bnet:<sha256>` (jamais l'identifiant Blizzard en clair). ⚠️ Le bot écarte toute `reason` inconnue sans DM : il doit apprendre celle-ci (`REWARD_REASONS`, `buildRewardGrantedDm`, clé de dédoublonnage) **avant** le déploiement du site, sinon ces DM sont perdus. `sourceRef` = la référence du registre, clé de dédoublonnage côté bot. Hors `WEB_PUSH_EVENT_TYPES`. Consommé par `services/discord-bot/tcg-events.js` (DM). |
+| `tcg.reward_granted`              | `utils/tcg/announceReward.ts` (`announceTcgRewards`) — série de check-ins (`utils/tcg/grantCheckinStreak.ts`), palmarès de fin de tournoi (`utils/tcg/grantPlacementRewards.ts`) et vérification d'un compte Battle.net (`utils/tcg/grantBattlenetVerified.ts`) | `{ userId, discordUserId, discordUsername, reason: 'checkin_streak' \| 'tournament_placement' \| 'battlenet_verified', coins, packs, tournamentId, tournamentName, rank, streak, sourceRef, ctaUrl }` — **UN event PAR joueuse créditée**, émis sur les seules lignes que l'insertion a rendues (jamais sur un rejeu : finalisation relancée, check-in rejoué). `packs` = paquets **réellement** créés (0 si refusés). `rank` renseigné pour le palmarès, `streak` pour la série (sinon `null`). **`reason: 'battlenet_verified'` (ajout additif, 2026-09-15)** : gain SANS tournoi — `tournamentId` et `tournamentName` valent `null`, `packs` vaut `0`, `rank` et `streak` `null` ; une fois à vie par joueuse et par compte Blizzard ; `sourceRef = bnet:<sha256>` (jamais l'identifiant Blizzard en clair). ⚠️ Le bot écarte toute `reason` inconnue sans DM : il doit apprendre celle-ci (`REWARD_REASONS`, `buildRewardGrantedDm`, clé de dédoublonnage) **avant** le déploiement du site, sinon ces DM sont perdus. `sourceRef` = la référence du registre, clé de dédoublonnage côté bot. Hors `WEB_PUSH_EVENT_TYPES`. Consommé par `owwc-discord-bot/tcg-events.js` (DM). |
 | `tcg.set_completed`               | `utils/tcg/grantCollectionSets.ts` (`announceSetCompleted`) — une **série** de cartes vient d'être complétée et sa récompense écrite (ouverture de paquet `POST /api/player/tcg/packs` ou vérification paresseuse `GET /api/player/tcg/sets`) | `{ userId, discordUserId, discordUsername, setKey, setLabel, coins, ctaUrl }` — **contrat FIXE (2026-09-15)**. **UN event PAR joueuse**, émis sur la seule ligne que l'insertion au registre a rendue (`ON CONFLICT DO NOTHING ... RETURNING` sur `source_kind = collection_set`, `source_ref = setKey`) : jamais sur un rejeu, ni quand la lecture paresseuse retombe sur une récompense déjà versée. `setKey` = identifiant stable de la série (`maps:<mode>`, `tournament:<tournoi>`, `roster:<tournoi>:<équipe>`), clé de dédoublonnage côté bot. `setLabel` = libellé **français** composé par le site (`Maps — Contrôle`, `Équipes — Cup 2026`, `Roster Hinode Sparkles — Cup 2026`) : il ne nomme **JAMAIS une joueuse** (un DM se lit par-dessus l'épaule), seulement le mode, l'édition ou l'équipe. `coins` = `COLLECTION_SET_COINS` (pièces seules, pas de paquet). `ctaUrl` absolue vers `/player/tcg`. `discordUserId` peut être `null`. Hors `WEB_PUSH_EVENT_TYPES`. ⚠️ Le bot doit connaître l'événement **avant** le déploiement du site, sinon ces DM sont perdus (l'outbox ne les rejoue pas). |
 | `tcg.trade_proposed`              | `utils/tcg/trades.ts` (`announceTradeProposed`) — une proposition d'**échange de cartes** vient d'être créée (`POST /api/player/tcg/trades`, statut `proposed` rendu par la fonction SQL `tcg_propose_trade`) | `{ tradeId, recipientUserId, recipientDiscordUserId: string \| null, proposerDisplayName: string \| null, offeredCount: number, requestedCount: number, expiresAt: string (ISO), ctaUrl: string }` — **UN event, à la DESTINATAIRE**, à la création seulement : jamais sur un refus de la base ni sur un rejeu. `proposerDisplayName` = pseudo, sinon BattleTag **masqué** (jamais d'email). **Aucun sujet de carte ni aucune image** dans la charge : le DM invite à venir voir, la page relit les faces (filtre de consentement). `ctaUrl` = URL absolue de `/player/tcg/echanges`. Hors `WEB_PUSH_EVENT_TYPES`. |
 | `tcg.trade_resolved`              | `utils/tcg/trades.ts` (`announceTradeResolved`) — acceptation (`tcg_accept_trade`), refus, expiration (paresseuse ou cron `/api/cron/tcg-trades-expire`), annulation par le système | `{ tradeId, proposerUserId, proposerDiscordUserId: string \| null, outcome: 'accepted' \| 'declined' \| 'expired' \| 'cancelled', counterpartDisplayName: string \| null, ctaUrl: string }` — **UN event par proposition close, à la PROPOSANTE**, émis sur la seule transition réellement écrite (écriture conditionnelle `status = 'pending'` ou verdict de la fonction SQL) : un double clic, un retry réseau ou deux déclencheurs d'expiration ne renotifient pas. `cancelled` **uniquement quand le système annule** : carte offerte plus disponible à l'acceptation (`offered_unavailable`), carte offerte partie dans un autre échange accepté (`card_unavailable`), destinataire qui désactive les échanges (`trading_disabled`) — **jamais** quand la proposante retire elle-même sa proposition. `counterpartDisplayName` = la destinataire. Aucune image. Hors `WEB_PUSH_EVENT_TYPES`. |
@@ -1831,10 +1831,10 @@ bloc, sans duplication de rendu cote bot.
 tenant). **Rate limit** : 60/min (`bot-match-preset`). **Idempotency** : n/a (GET).
 
 **Cote bot** : `api-client.getMatchPreset()`, consomme par
-[`preset-command.js`](../../docker-box/services/discord-bot/preset-command.js)
-(`/preset`), [`match-thread.js`](../../docker-box/services/discord-bot/match-thread.js)
+[`preset-command.js`](https://github.com/vincenthirtz/owwc-discord-bot/blob/main/preset-command.js)
+(`/preset`), [`match-thread.js`](https://github.com/vincenthirtz/owwc-discord-bot/blob/main/match-thread.js)
 (message epingle a la creation du thread) et
-[`match-preset-notify.js`](../../docker-box/services/discord-bot/match-preset-notify.js)
+[`match-preset-notify.js`](https://github.com/vincenthirtz/owwc-discord-bot/blob/main/match-preset-notify.js)
 (push dans les salons des deux equipes sur `match.scheduled`).
 
 **Admin** : les presets se gerent sur `/admin/custom-game-presets`
@@ -2095,7 +2095,7 @@ y puise pour `/mvp ajouter`). Côté bot : `/mvp ajouter` et `/mvp retirer`
 >   coach ou une manager doit passer le `match-id` à `/checkin`), et
 >   `GET /api/bot/v1/reminders` (DM T-30 à la capitaine seule).
 >
-> Côté bot (`services/discord-bot/`, rien d'obligatoire pour ce déploiement) :
+> Côté bot (`owwc-discord-bot/`, rien d'obligatoire pour ce déploiement) :
 > le bouton `checkin:<matchId>` du salon privé du match reste cliquable par
 > toute l'équipe — le refus vient de l'API et s'affiche via `formatResultLine`.
 
@@ -2229,7 +2229,7 @@ Etat complet « qui doit avoir quel role Discord » pour le tenant. Reponse
   plusieurs : l'index unique `(tenant_id, user_id)` est PARTIEL et exempte le
   role `manager`, donc une manager peut encadrer deux equipes. Le bot attend
   alors les DEUX roles d'equipe simultanement
-  (`services/discord-bot/role-sync.js`, `teamsOf()`), et les etiquettes
+  (`owwc-discord-bot/role-sync.js`, `teamsOf()`), et les etiquettes
   transverses (Capitaine / Manager / Remplacante) valent des UNE equipe.
   N'en servir qu'une faisait retirer le role de l'autre a chaque cycle.
 - **`team`** reste servi : c'est l'appartenance principale (cf.
@@ -3538,7 +3538,7 @@ comptee dans `skipped`, jamais droppee en silence.
 **Idempotency** : oui.
 
 Cote docker-box, le script one-shot
-`services/discord-bot/scripts/send-team-roster-reminder.js` appelle cet endpoint
+`owwc-discord-bot/scripts/send-team-roster-reminder.js` appelle cet endpoint
 (`--send` pour sortir du dry-run, `--mention`, `--only=`, `--teams=`,
 `--template-file=`).
 
@@ -3570,7 +3570,7 @@ Par defaut seules les equipes avec un motif reel sont notifiees
 
 #### Event `social.mirror` (site → bot, via outbox/webhook)
 
-Consomme par `services/discord-bot/social-mirror.js`.
+Consomme par `owwc-discord-bot/social-mirror.js`.
 
 **Payload** (construit par `buildMirrorPayload`, `utils/social/feedMirror.ts`) :
 
@@ -3736,7 +3736,7 @@ l'API Meta — le bot n'est pas dans la boucle, contrairement a la cible Discord
 #### Event `social.post` (site → bot, via outbox/webhook)
 
 Emis par `/api/admin/social-posts` (onglet « Reseaux » de
-/admin/communications). Consomme par `services/discord-bot/social-post.js`.
+/admin/communications). Consomme par `owwc-discord-bot/social-post.js`.
 
 **Payload** : `{ postId, platform, content, imageUrl }`.
 
@@ -4156,7 +4156,7 @@ Toutes les mutations (init/sides/start/commit/auto-pick) passent par `useIdempot
 ### Bot endpoint + slash command (Lot 6)
 
 Le bot Discord initialise les drafts via une commande slash
-`/draft-init` (sibling repo `docker-box/services/discord-bot`). Le
+`/draft-init` (sibling repo `owwc-discord-bot`). Le
 endpoint bot côté site est un wrapper de `initDraft` qui résout en
 plus les Discord IDs des deux capitaines, pour permettre au bot de
 DM directement.
@@ -4172,7 +4172,7 @@ Résolution capitaines :
 - Si le capitaine n'a pas lié son Discord (`discordUserId: null`),
   le bot tombe sur un message dans le canal au lieu d'un DM.
 
-Slash command côté bot (`services/discord-bot/draft-init.js`) :
+Slash command côté bot (`owwc-discord-bot/draft-init.js`) :
 
 - Options : `match-id` (string + autocomplete via `acMatches`),
   `game-index` (integer, min 1), `fearless` (boolean optionnel).
@@ -4569,7 +4569,7 @@ réponse là où on se la pose.
 - **Maintenance toggle** — [`utils/maintenance.ts`](../utils/maintenance.ts).
 - **Idempotency DDL** — [`database/migrations/`](../database/migrations/)
   (`add_bot_idempotency_table.sql`).
-- **Consumer (bot)** — `docker-box/services/discord-bot/` (sibling repo).
+- **Consumer (bot)** — `owwc-discord-bot` (sibling repo).
 
 ## Extending the contract
 

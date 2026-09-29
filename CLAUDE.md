@@ -36,7 +36,7 @@ For Playwright: never use `--ignore-pattern` (invalid flag), use `--grep-invert`
 The site sits at the center of a small ecosystem:
 
 - **`conference-website`** (this repo) — public site, admin dashboard, REST API, PWA, caster cockpit.
-- **`docker-box/services/discord-bot`** (sibling) — Discord bot that consumes `/api/bot/v1/*`.
+- **`owwc-discord-bot`** (private sibling repo `vincenthirtz/owwc-discord-bot`, local clone `C:\Users\hirtz\workspace\owwc-discord-bot`; formerly `docker-box/services/discord-bot`) — Discord bot that consumes `/api/bot/v1/*`.
 - **`womenscup-caster`** (sibling) — separate caster-tooling repo.
 
 ### Directory Structure

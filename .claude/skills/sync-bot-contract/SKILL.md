@@ -1,6 +1,6 @@
 ---
 name: sync-bot-contract
-description: Audit the cross-repo bot ↔ site API contract for drift. Compares the three sources of truth — site handlers under `conference-website/pages/api/bot/v1/*`, the contract doc at `conference-website/docs/BOT_API_CONTRACT.md`, and the bot client at `docker-box/services/discord-bot/api-client.js` — and reports missing/mismatched routes and shape divergences. Use when the user says "/sync-bot-contract" or before merging a PR that touches `/api/bot/v1/*`.
+description: Audit the cross-repo bot ↔ site API contract for drift. Compares the three sources of truth — site handlers under `conference-website/pages/api/bot/v1/*`, the contract doc at `conference-website/docs/BOT_API_CONTRACT.md`, and the bot client at `owwc-discord-bot/api-client.js` — and reports missing/mismatched routes and shape divergences. Use when the user says "/sync-bot-contract" or before merging a PR that touches `/api/bot/v1/*`.
 ---
 
 # Sync bot contract audit
@@ -9,7 +9,7 @@ The bot ↔ site API contract is the most load-bearing cross-repo coupling in th
 
 1. **Site handlers** (canonical) — `conference-website/pages/api/bot/v1/**/*.ts`
 2. **Contract doc** — `conference-website/docs/BOT_API_CONTRACT.md`
-3. **Bot client** (consumer) — `docker-box/services/discord-bot/api-client.js`
+3. **Bot client** (consumer) — `owwc-discord-bot/api-client.js`
 
 Drift between the three causes silent bot breakage in production. This skill produces a diff report; it does NOT auto-fix.
 
@@ -71,8 +71,8 @@ For each route mentioned in the doc, capture: path, methods, idempotent flag, su
 ## Step 3 — enumerate calls in the bot client
 
 ```bash
-grep -nE "/api/bot/v1/" <docker-box>/services/discord-bot/api-client.js
-grep -nE "fetch|axios|http\." <docker-box>/services/discord-bot/api-client.js
+grep -nE "/api/bot/v1/" <owwc-discord-bot>/api-client.js
+grep -nE "fetch|axios|http\." <owwc-discord-bot>/api-client.js
 ```
 
 For each `/api/bot/v1/*` URL the bot calls, capture: path template, method, body shape (from the surrounding code).

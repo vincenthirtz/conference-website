@@ -12,7 +12,7 @@ set -uo pipefail
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$ROOT" || exit 1
 OUT="${1:-/dev/stdout}"
-BOT="$ROOT/../docker-box/services/discord-bot"
+BOT="${BOT_DIR:-$ROOT/../../workspace/owwc-discord-bot}"
 
 {
 echo "# Inventaire produit — $(date +%Y-%m-%d) (commit $(git rev-parse --short HEAD))"
@@ -57,7 +57,7 @@ for area in bot/v1 admin public/v1 player teams cron; do
   printf -- "- Routes API \`/api/%s\` : %s\n" "$area" "$(find "pages/api/$area" -name '*.ts' 2>/dev/null | wc -l | tr -d ' ')"
 done
 if [ -d "$BOT" ]; then
-  printf -- "- Bot Discord : %s commandes slash de premier niveau déclarées (\`services/discord-bot\`)\n" \
+  printf -- "- Bot Discord : %s commandes slash de premier niveau déclarées (\`owwc-discord-bot\`)\n" \
     "$(grep -h -A2 'new SlashCommandBuilder' "$BOT"/*.js | grep -oE "setName\('[a-z0-9-]+'\)" | sort -u | wc -l | tr -d ' ')"
 fi
 echo
