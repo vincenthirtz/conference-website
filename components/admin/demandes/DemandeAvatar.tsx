@@ -36,7 +36,7 @@ export default function DemandeAvatar({
           alt={name || 'User'}
           width={48}
           height={48}
-          className="w-12 h-12 rounded-xl object-cover border border-neutral-700"
+          className="w-12 h-12 rounded-[var(--r-ctrl,4px)] object-cover border border-[var(--line,rgba(194,196,201,.12))]"
         />
       </div>
     );
@@ -45,14 +45,14 @@ export default function DemandeAvatar({
   return (
     <div className="flex-shrink-0">
       <div
-        className={`w-12 h-12 rounded-xl flex items-center justify-center border ${
+        className={`w-12 h-12 rounded-[var(--r-ctrl,4px)] flex items-center justify-center border ${
           isNotification
-            ? 'bg-sky-600/10 border-sky-500/40'
-            : 'bg-neutral-700/50 border-neutral-700'
+            ? 'bg-[rgba(180,103,209,.10)] border-[rgba(180,103,209,.4)]'
+            : 'bg-[var(--s3,#2f2732)] border-[var(--line,rgba(194,196,201,.12))]'
         }`}
       >
         <svg
-          className={`w-6 h-6 ${isNotification ? 'text-sky-300' : 'text-neutral-500'}`}
+          className={`w-6 h-6 ${isNotification ? 'text-[var(--or-200,#eec4ff)]' : 'text-[var(--t4,#807984)]'}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

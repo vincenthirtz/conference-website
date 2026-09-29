@@ -5,6 +5,12 @@ import SkillRatingBadge from '@/components/Team/SkillRatingBadge';
 import SpecialtyBadge from '@/components/Team/SpecialtyBadge';
 import type { Member } from './types';
 import nsAdminTeamsMy from '@/lib/i18n/locales/admin-fr/adminTeamsMy';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import Chip from '@/features/admin/_shared/ui/Chip';
+
+/** Bouton-icône d'action de ligne (même allure que MemberRow). */
+const ICON_BTN =
+  'p-1.5 rounded-[var(--r-ctrl,4px)] text-[var(--t3,#a39ba6)] hover:bg-[var(--s3,#2f2732)] hover:text-[var(--t1,#f4edf7)] transition-colors';
 
 type MemberRosterRowProps = {
   member: Member;
@@ -69,48 +75,42 @@ function MemberRosterRowInner({
   // avait exactement l'apparence d'une joueuse.
   const isStaff = !isCaptain && isNonPlayingTeamRole(m.role);
   const isManager = isStaff;
+  // « Le Ruban » : capitaine = liseré orchidée (comme MemberRow), encadrement
+  // = contour orchidée pâle, joueuse = simple surface.
   const containerClass = isCaptain
-    ? 'bg-amber-900/20 border border-amber-500/30'
+    ? 'bg-[var(--s2,#1d1520)] border-l-[3px] border-[var(--or,#b467d1)]'
     : isManager
-      ? 'bg-sky-900/20 border border-sky-500/30'
-      : 'bg-neutral-900/50 border border-neutral-700/50 hover:bg-neutral-800/50';
+      ? 'bg-[var(--s2,#1d1520)] border border-[rgba(180,103,209,.25)]'
+      : 'bg-[var(--s2,#1d1520)] border border-transparent hover:border-[var(--line2,rgba(194,196,201,.2))]';
   const iconBgClass = isCaptain
-    ? 'bg-amber-500/20'
+    ? 'bg-[var(--s3,#2f2732)] text-[var(--or-200,#eec4ff)]'
     : isManager
-      ? 'bg-sky-500/20'
-      : 'bg-neutral-700/50';
+      ? 'bg-[var(--s3,#2f2732)] text-[var(--t2,#c7bfca)]'
+      : 'bg-[var(--s3,#2f2732)] text-[var(--t3,#a39ba6)]';
   const isSubstitute = !!m.is_substitute;
 
   return (
     <div
       data-testid={`member-row-${m.id}`}
-      className={`p-3 rounded-xl transition-colors ${containerClass} ${
-        isSwapSource ? 'ring-2 ring-emerald-500/60' : ''
+      className={`p-3 rounded-[var(--r-ctrl,4px)] transition-colors ${containerClass} ${
+        isSwapSource ? 'ring-2 ring-[rgba(180,103,209,.6)]' : ''
       }`}
     >
       <div className="flex items-center gap-3">
         <div
-          className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBgClass}`}
+          className={`w-10 h-10 rounded-[var(--r-ctrl,4px)] flex items-center justify-center flex-shrink-0 ${iconBgClass}`}
         >
           {isCaptain ? (
-            <svg
-              className="w-5 h-5 text-amber-400"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
             </svg>
           ) : isManager ? (
-            <svg
-              className="w-5 h-5 text-sky-400"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2l3.5 7.5L23 11l-5.5 5 1.3 7.5L12 19.5 5.2 23.5 6.5 16 1 11l7.5-1.5L12 2z" />
             </svg>
           ) : (
             <svg
-              className="w-5 h-5 text-neutral-400"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -126,32 +126,25 @@ function MemberRosterRowInner({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-white font-semibold truncate">
+            <span className="text-[var(--t1,#f4edf7)] font-semibold truncate">
               {m.display_name || m.user_id || m.id}
             </span>
-            {isCaptain && (
-              <span className="text-[10px] uppercase tracking-wide bg-amber-500/20 text-amber-300 rounded-lg px-2 py-0.5 border border-amber-500/30 font-semibold">
-                {t.captain}
-              </span>
-            )}
+            {isCaptain && <Chip tone="brand">{t.captain}</Chip>}
             {isStaff && (
-              <span className="text-[10px] uppercase tracking-wide bg-sky-500/20 text-sky-300 rounded-lg px-2 py-0.5 border border-sky-500/30 font-semibold">
+              <Chip>
                 {(m.role || '').toLowerCase() === 'coach' ? t.coach : t.manager}
-              </span>
+              </Chip>
             )}
             {isSubstitute && (
-              <span
-                data-testid="substitute-badge"
-                className="text-[10px] uppercase tracking-wide bg-purple-500/20 text-purple-300 rounded-lg px-2 py-0.5 border border-purple-500/30 font-semibold"
-              >
-                {t.substitute}
-              </span>
+              <Chip data-testid="substitute-badge">{t.substitute}</Chip>
             )}
           </div>
-          <div className="text-xs text-neutral-400 truncate">
+          <div className="text-xs text-[var(--t3,#a39ba6)] truncate">
             {m.role || t.defaultRole}
             {m.battle_tag && !isEditingTag && (
-              <span className="text-blue-400 ml-2">{m.battle_tag}</span>
+              <span className="font-mono text-[var(--t2,#c7bfca)] ml-2">
+                {m.battle_tag}
+              </span>
             )}
             <SpecialtyBadge
               specialty={m.specialty}
@@ -193,28 +186,24 @@ function MemberRosterRowInner({
                 aria-label={t.skillRatingLabel}
                 title={t.skillRatingLabel}
                 placeholder="3500"
-                className="w-20 rounded-lg border border-neutral-600 bg-neutral-900 px-2 py-1 text-xs text-neutral-100 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                className="w-20 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] px-2 py-1 text-xs text-[var(--t1,#f4edf7)] placeholder:text-[var(--t4,#807984)] focus:border-[var(--or,#b467d1)] focus:outline-none disabled:opacity-50"
               />
             )}
             {swapMode ? (
               isSwapSource ? (
-                <button
-                  type="button"
-                  onClick={onCancelSwap}
-                  className="px-2 py-1 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-[11px] transition-colors"
-                >
+                <AdminButton variant="ghost" size="xs" onClick={onCancelSwap}>
                   {t.cancel}
-                </button>
+                </AdminButton>
               ) : (
-                <button
-                  type="button"
+                <AdminButton
+                  variant="secondary"
+                  size="xs"
                   data-testid={`swap-target-${m.id}`}
                   disabled={busy}
                   onClick={() => onSwapWith(m)}
-                  className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-[11px] transition-colors disabled:opacity-50"
                 >
                   {t.swapHere}
-                </button>
+                </AdminButton>
               )
             ) : (
               <>
@@ -223,7 +212,7 @@ function MemberRosterRowInner({
                   title={t.editBattleTagTitle}
                   data-testid={`edit-battletag-${m.id}`}
                   onClick={() => onStartEditBattleTag(m)}
-                  className="p-1.5 rounded-lg hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
+                  className={ICON_BTN}
                 >
                   <svg
                     className="w-4 h-4"
@@ -247,10 +236,10 @@ function MemberRosterRowInner({
                   data-testid={`toggle-substitute-${m.id}`}
                   disabled={busy}
                   onClick={() => onToggleSubstitute(m)}
-                  className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
+                  className={`p-1.5 rounded-[var(--r-ctrl,4px)] transition-colors disabled:opacity-50 ${
                     isSubstitute
-                      ? 'text-purple-300 hover:bg-purple-500/20'
-                      : 'text-neutral-400 hover:text-white hover:bg-neutral-700'
+                      ? 'text-[var(--or-200,#eec4ff)] hover:bg-[rgba(180,103,209,.12)]'
+                      : ICON_BTN
                   }`}
                 >
                   <svg
@@ -273,7 +262,7 @@ function MemberRosterRowInner({
                     title={t.startSwapTitle}
                     data-testid={`start-swap-${m.id}`}
                     onClick={() => onStartSwap(m)}
-                    className="p-1.5 rounded-lg hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
+                    className={ICON_BTN}
                   >
                     <svg
                       className="w-4 h-4"
@@ -297,7 +286,7 @@ function MemberRosterRowInner({
                     data-testid={`make-captain-${m.id}`}
                     disabled={busy}
                     onClick={() => onTransferCaptain(m)}
-                    className="p-1.5 rounded-lg hover:bg-amber-500/20 text-neutral-400 hover:text-amber-300 transition-colors disabled:opacity-50"
+                    className="p-1.5 rounded-[var(--r-ctrl,4px)] text-[var(--t3,#a39ba6)] hover:bg-[rgba(180,103,209,.12)] hover:text-[var(--or-200,#eec4ff)] transition-colors disabled:opacity-50"
                   >
                     <svg
                       className="w-4 h-4"
@@ -328,25 +317,25 @@ function MemberRosterRowInner({
               if (e.key === 'Enter') onSaveBattleTag(m, battleTagDraft);
               if (e.key === 'Escape') onCancelEditBattleTag();
             }}
-            className="flex-1 px-3 py-2 rounded-xl bg-neutral-900/70 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className="flex-1 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] placeholder:text-[var(--t4,#807984)] focus:border-[var(--or,#b467d1)] focus:outline-none"
           />
           <div className="flex gap-2">
-            <button
-              type="button"
+            <AdminButton
+              variant="secondary"
+              size="sm"
               data-testid={`save-battletag-${m.id}`}
               disabled={busy}
               onClick={() => onSaveBattleTag(m, battleTagDraft)}
-              className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
             >
               {busy ? '...' : t.saveShort}
-            </button>
-            <button
-              type="button"
+            </AdminButton>
+            <AdminButton
+              variant="ghost"
+              size="sm"
               onClick={onCancelEditBattleTag}
-              className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
             >
               {t.cancel}
-            </button>
+            </AdminButton>
           </div>
         </div>
       )}

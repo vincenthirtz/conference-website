@@ -1,11 +1,12 @@
 // components/admin/demandes/demandeChips.tsx
 //
-// Libellés et couleurs des pastilles de la liste des demandes : type, statut,
-// et le format de date qui les accompagne.
+// Libellés des pastilles de la liste des demandes : type, statut, et le format
+// de date qui les accompagne. Les couleurs sont passées aux jetons « Le Ruban »
+// (lot 7A) : tons de `Chip`, choisis par features/admin/demandes/ui.
 //
 // Extrait de `pages/admin/demandes/index.tsx` quand celle-ci a franchi le
 // plafond de taille des écrans admin (cf. tests/unit/adminFileSizeGuard.test.ts).
-// La coupe est naturelle : quatre fonctions PURES, sans état ni requête, dont
+// La coupe est naturelle : des fonctions PURES, sans état ni requête, dont
 // le seul lien avec la page est le dictionnaire i18n qu'on leur passe.
 //
 // Elles tolèrent une valeur inconnue plutôt que de lever : `demandes.type` et
@@ -62,27 +63,6 @@ export function typeLabel(type: DemandeType | string, t: Dict) {
   }
 }
 
-export function typeColor(type: DemandeType | string) {
-  switch (type) {
-    case 'join':
-    case 'join_team':
-      return 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30';
-    case 'leave':
-    case 'leave_team':
-      return 'bg-amber-600/20 text-amber-300 border border-amber-500/30';
-    case 'captain_request':
-      return 'bg-purple-600/20 text-purple-300 border border-purple-500/30';
-    case 'team_registration':
-      return 'bg-blue-600/20 text-blue-300 border border-blue-500/30';
-    case 'scrim':
-      return 'bg-cyan-600/20 text-cyan-300 border border-cyan-500/30';
-    case 'other':
-      return 'bg-neutral-500/20 text-neutral-300 border border-neutral-500/30';
-    default:
-      return 'bg-neutral-700 text-neutral-100';
-  }
-}
-
 export function statusLabel(status: DemandeStatus, t: Dict) {
   switch (status) {
     case 'pending':
@@ -95,20 +75,5 @@ export function statusLabel(status: DemandeStatus, t: Dict) {
       return t.statusCancelled;
     default:
       return status;
-  }
-}
-
-export function statusColor(status: DemandeStatus) {
-  switch (status) {
-    case 'pending':
-      return 'bg-blue-600 text-white';
-    case 'approved':
-      return 'bg-emerald-600 text-white';
-    case 'rejected':
-      return 'bg-red-600 text-white';
-    case 'cancelled':
-      return 'bg-neutral-600 text-neutral-200';
-    default:
-      return 'bg-neutral-700 text-neutral-100';
   }
 }

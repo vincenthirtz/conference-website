@@ -636,6 +636,14 @@ https://claude.ai/artifact/BqZnJEFewX798q4NzQBwJb.
       relié par `form=`). Pages > 800 lignes : 14 → 12. Restent à l'ancienne palette :
       `MatchGamesPanel`, `MatchReadinessChecklist`, `MatchCastAssignments`, `ConfirmDialog`,
       `LogoUpload`, modales de membre, `EntityHistoryDrawer`.
+- [x] **Passe visuelle, lot 7 (3 écrans de 1 600 à 1 750 lignes, avec découpe)** : liste des
+      demandes 1 615 → 756 (`demandes/ui/DemandesList*`, `demandes/listModel.ts`), hub du
+      tournoi 1 615 → 799 (`tournaments/ui/TournamentDashboard*`, modales réseau hors `ui/`),
+      « mon équipe » 1 752 → 720 (`teams/ui/MyTeam*` ; les handlers de roster passent dans
+      `teams/hooks/useMyTeamMemberActions.ts`, corps relus ligne à ligne contre l'original).
+      Pages > 800 lignes : 12 → 9. NB : le cliquet (useState −5, URLs en dur −7) ne mesure que
+      `pages/` et `components/` ; une partie de la baisse est un DÉPLACEMENT vers `features/`,
+      pas une suppression — c'est la cible d'architecture, pas encore une dette remboursée.
 - [ ] Code mort laissé par le lot 5 : `stageTypeBadgeClass`, `runStatusBadgeClasses` /
       `runStatusDotClasses`, clés i18n `breadcrumb*` des fiches phase et ligue.
 - [ ] À trancher : « Notifier les capitaines » (outils du tournoi) est un envoi en masse sans

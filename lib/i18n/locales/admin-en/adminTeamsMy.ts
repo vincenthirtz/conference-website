@@ -82,6 +82,7 @@ export default {
   addMemberModalTitle: 'Add a member',
   adding: 'Adding...',
   searchLabel: 'Search by email or BattleTag',
+  searchPlaceholder: 'email@example.com or Name#1234',
   searching: 'Searching...',
   noResult: 'No results',
   userFallback: 'User',

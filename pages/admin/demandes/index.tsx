@@ -1,90 +1,48 @@
 // pages/admin/demandes/index.tsx
+//
+// Liste staff des demandes (« Le Ruban », lot 7A). La page garde le chargement
+// SSR, l'état (sélection, modales) et tous les appels ; l'affichage vit dans
+// features/admin/demandes/ui/DemandesList*.tsx, les types et règles pures dans
+// features/admin/demandes/listModel.ts.
 
 import { useState } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
-import Image from 'next/image';
-import DemandeAvatar from '@/components/admin/demandes/DemandeAvatar';
-import { isSystemNotification } from '@/utils/demandes/systemNotification';
 import { useRouter } from 'next/router';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
-import Modal from '@/components/admin/Modal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
 import nsAdminDemandesList from '@/lib/i18n/locales/admin-fr/adminDemandesList';
-import {
-  formatDateTime,
-  statusColor,
-  statusLabel,
-  typeColor,
-  typeLabel,
-  type DemandeStatus,
-  type DemandeType,
-} from '@/components/admin/demandes/demandeChips';
+import type { DemandeStatus } from '@/components/admin/demandes/demandeChips';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
-import type { DemandePayload } from '@/utils/teams/demandeRows';
-
-type TournamentMini = {
-  id: string;
-  name: string;
-  slug: string | null;
-};
-
-type TeamMini = {
-  id: string;
-  name: string;
-  short_name: string | null;
-  logo_url: string | null;
-};
-
-type UserMini = {
-  id: string;
-  email: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
-  battle_tag: string | null;
-  discord: string | null;
-};
-
-type StaffMini = {
-  id: string;
-  display_name: string | null;
-};
-
-type Demande = {
-  id: string;
-  type: DemandeType | string;
-  status: DemandeStatus;
-  created_at: string;
-  updated_at: string | null;
-  tournament_id: string | null;
-  team_id: string | null;
-  user_id: string | null;
-  comment: string | null;
-  staff_note: string | null;
-  source: string | null;
-  payload: DemandePayload | null;
-  processed_at: string | null;
-  processed_by_staff_id: string | null;
-
-  tournament?: TournamentMini | null;
-  team?: TeamMini | null;
-  user?: UserMini | null;
-  processed_by?: StaffMini | null;
-};
-
-type StatusCounts = {
-  pending: number;
-  approved: number;
-  rejected: number;
-  cancelled: number;
-  total: number;
-};
+import {
+  isBattleTagFlagged,
+  resolveDemandeBattleTag,
+  sanitizeSearchInput,
+  type Demande,
+  type StaffMini,
+  type StatusCounts,
+  type TournamentMini,
+  type UserMini,
+} from '@/features/admin/demandes/listModel';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
+import DemandesListStats from '@/features/admin/demandes/ui/DemandesListStats';
+import DemandesListFilters from '@/features/admin/demandes/ui/DemandesListFilters';
+import DemandesListTable from '@/features/admin/demandes/ui/DemandesListTable';
+import {
+  DemandesListBulkBar,
+  DemandesListErrorBanner,
+  DemandesListPagination,
+} from '@/features/admin/demandes/ui/DemandesListBars';
+import {
+  DemandesListInfoModal,
+  DemandesListTagModal,
+} from '@/features/admin/demandes/ui/DemandesListModals';
 
 type Props = {
   staff: {
@@ -120,35 +78,6 @@ const EMPTY_COUNTS: StatusCounts = {
   cancelled: 0,
   total: 0,
 };
-
-function sanitizeSearchInput(raw: string) {
-  // Strip characters that break PostgREST `or(...)` parsing
-  return raw.replace(/[,()*\\]/g, ' ').trim();
-}
-
-// Only join / captain_request demandes carry a player BattleTag that gets
-// written when the membership is created.
-function demandeCarriesBattleTag(d: Demande) {
-  return d.type === 'join' || d.type === 'captain_request';
-}
-
-// Resolve the BattleTag a demande would write: payload first (join stores
-// `user_battle_tag`), falling back to the requester's auth metadata tag.
-function resolveDemandeBattleTag(d: Demande): string | null {
-  const fromPayload =
-    typeof d.payload?.user_battle_tag === 'string'
-      ? d.payload.user_battle_tag
-      : null;
-  return fromPayload || d.user?.battle_tag || null;
-}
-
-// A demande is flagged when it carries a BattleTag slot but the stored tag is
-// missing or fails the format check.
-function isBattleTagFlagged(d: Demande): boolean {
-  if (!demandeCarriesBattleTag(d)) return false;
-  const tag = resolveDemandeBattleTag(d);
-  return !tag || !BATTLE_TAG_REGEX.test(tag.trim());
-}
 
 export const getServerSideProps = withStaffPage(
   { permission: 'manage_teams' },
@@ -648,49 +577,10 @@ function AdminDemandesPage({
     }
   }
 
-  const statCards: Array<{
-    key: string;
-    label: string;
-    value: number;
-    accent: string;
-    statusValue: string | null;
-  }> = [
-    {
-      key: 'all',
-      label: t.statTotal,
-      value: statusCounts.total,
-      accent: 'text-white',
-      statusValue: '',
-    },
-    {
-      key: 'pending',
-      label: t.statPending,
-      value: statusCounts.pending,
-      accent: 'text-blue-300',
-      statusValue: 'pending',
-    },
-    {
-      key: 'approved',
-      label: t.statApproved,
-      value: statusCounts.approved,
-      accent: 'text-emerald-300',
-      statusValue: 'approved',
-    },
-    {
-      key: 'rejected',
-      label: t.statRejected,
-      value: statusCounts.rejected,
-      accent: 'text-red-300',
-      statusValue: 'rejected',
-    },
-    {
-      key: 'cancelled',
-      label: t.statCancelled,
-      value: statusCounts.cancelled,
-      accent: 'text-neutral-300',
-      statusValue: 'cancelled',
-    },
-  ];
+  const REFRESH_ICON =
+    'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15';
+  const EXPORT_ICON =
+    'M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z';
 
   return (
     <>
@@ -698,396 +588,33 @@ function AdminDemandesPage({
         <title>{t.pageTitle}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-header pb-12">
-          {/* Header */}
-          <div className="mb-8">
-            <button
-              type="button"
-              onClick={() => router.push('/admin')}
-              className="mb-4 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              {t.backToDashboard}
-            </button>
+      <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
+        <AdminButton
+          variant="ghost"
+          size="xs"
+          className="mb-4"
+          onClick={() => router.push('/admin')}
+        >
+          <span aria-hidden>‹</span>
+          {t.backToDashboard}
+        </AdminButton>
 
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  {t.heading}
-                </h1>
-                <p className="text-neutral-400 text-sm mt-1">
-                  {total !== null
-                    ? format(
-                        total > 1
-                          ? t.countForFilter_other
-                          : t.countForFilter_one,
-                        { count: total }
-                      )
-                    : t.loading}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={refresh}
-                  className="px-3 py-2.5 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm font-medium transition-colors flex items-center gap-2"
-                  title={t.refresh}
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
-                  {t.refresh}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleExportCsv}
-                  className="px-4 py-2.5 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm font-medium transition-colors flex items-center gap-2"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  {t.exportCsv}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-            {statCards.map((card) => {
-              const active =
-                (card.statusValue ?? '') === (statusFilter ?? 'pending') ||
-                (card.statusValue === '' && statusFilter === '');
-              return (
-                <button
-                  key={card.key}
-                  type="button"
-                  onClick={() =>
-                    applyFilters({
-                      status: card.statusValue || null,
-                      offset: null,
-                    })
-                  }
-                  className={`text-left bg-neutral-800/50 backdrop-blur border rounded-2xl p-4 transition-colors hover:bg-neutral-800/80 ${
-                    active
-                      ? 'border-blue-500/60 ring-1 ring-blue-500/40'
-                      : 'border-neutral-700/50'
-                  }`}
-                >
-                  <div className="text-xs uppercase tracking-wide text-neutral-500">
-                    {card.label}
-                  </div>
-                  <div className={`mt-1 text-2xl font-bold ${card.accent}`}>
-                    {card.value}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Error Message */}
-          {errorMsg && (
-            <div className="mb-6 rounded-xl bg-red-900/40 border border-red-500/50 px-4 py-3 text-sm flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-red-400 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <span className="flex-1">{errorMsg}</span>
-              <button
-                type="button"
-                onClick={() => refresh()}
-                className="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium transition-colors"
-              >
-                {t.retry}
-              </button>
-            </div>
-          )}
-
-          {/* Filters */}
-          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 mb-6">
-            <form
-              onSubmit={handleFilterSubmit}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 items-end"
-            >
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  {t.filterType}
-                </label>
-                <select
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  value={typeFilter}
-                  onChange={(e) =>
-                    applyFilters({
-                      type: e.target.value || null,
-                      offset: null,
-                    })
-                  }
-                >
-                  <option value="">{t.typeAll}</option>
-                  <option value="captain_request">
-                    {t.typeCaptainRequest}
-                  </option>
-                  <option value="join">{t.typeJoin}</option>
-                  <option value="leave">{t.typeLeave}</option>
-                  <option value="team_registration">
-                    {t.typeTeamRegistration}
-                  </option>
-                  <option value="scrim">{t.typeScrim}</option>
-                  <option value="other">{t.typeOther}</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  {t.filterStatus}
-                </label>
-                <select
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  value={statusFilter}
-                  onChange={(e) =>
-                    applyFilters({
-                      status: e.target.value || null,
-                      offset: null,
-                    })
-                  }
-                >
-                  <option value="">{t.statusAll}</option>
-                  <option value="pending">{t.statusPending}</option>
-                  <option value="approved">{t.statusApproved}</option>
-                  <option value="rejected">{t.statusRejected}</option>
-                  <option value="cancelled">{t.statusCancelled}</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  {t.filterTournament}
-                </label>
-                <select
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  value={tournamentFilter}
-                  onChange={(e) =>
-                    applyFilters({
-                      tournamentId: e.target.value || null,
-                      offset: null,
-                    })
-                  }
-                >
-                  <option value="">{t.tournamentAll}</option>
-                  {tournaments.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                      {t.slug ? ` (${t.slug})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  {t.filterSearch}
-                </label>
-                <div className="relative">
-                  <svg
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                  <input
-                    type="text"
-                    aria-label={t.searchPlaceholder}
-                    placeholder={t.searchPlaceholder}
-                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  {t.filterFrom}
-                </label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  value={dateFrom}
-                  onChange={(e) =>
-                    applyFilters({
-                      from: e.target.value || null,
-                      offset: null,
-                    })
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  {t.filterTo}
-                </label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  value={dateTo}
-                  onChange={(e) =>
-                    applyFilters({ to: e.target.value || null, offset: null })
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">
-                  {t.filterSort}
-                </label>
-                <select
-                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  value={`${orderBy}:${orderDir}`}
-                  onChange={(e) => {
-                    const [ob, od] = e.target.value.split(':');
-                    applyFilters({
-                      orderBy: ob === 'created_at' ? null : ob,
-                      orderDir: od === 'desc' ? null : od,
-                      offset: null,
-                    });
-                  }}
-                >
-                  <option value="created_at:desc">{t.sortDateRecent}</option>
-                  <option value="created_at:asc">{t.sortDateOld}</option>
-                  <option value="processed_at:desc">
-                    {t.sortProcessedRecent}
-                  </option>
-                  <option value="processed_at:asc">{t.sortProcessedOld}</option>
-                </select>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                  {t.searchBtn}
-                </button>
-                {hasActiveFilters && (
-                  <button
-                    type="button"
-                    onClick={handleResetFilters}
-                    title={t.resetFiltersTitle}
-                    className="px-3 py-2.5 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm transition-colors"
-                  >
-                    {t.reset}
-                  </button>
-                )}
-              </div>
-            </form>
-          </section>
-
-          {/* Batch action bar */}
-          {selected.size > 0 && (
-            <div className="mb-4 flex items-center gap-3 bg-blue-900/30 border border-blue-500/30 rounded-xl px-4 py-3">
-              <span className="text-sm font-medium">
-                {format(
-                  selected.size > 1
-                    ? t.selectedCount_other
-                    : t.selectedCount_one,
-                  { count: selected.size }
-                )}
-              </span>
-              <div className="flex-1" />
-              <button
-                type="button"
-                onClick={() => handleBatchAction('approved')}
-                disabled={batchProcessing}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
-              >
-                {t.approve}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleBatchAction('rejected')}
-                disabled={batchProcessing}
-                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-sm font-medium transition-colors disabled:opacity-50"
-              >
-                {t.reject}
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelected(new Set())}
-                className="px-3 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 text-sm transition-colors"
-              >
-                {t.deselect}
-              </button>
-            </div>
-          )}
-
-          {/* Demandes List */}
-          <section className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl overflow-hidden">
-            {demandes.length === 0 ? (
-              <div className="text-center py-20 text-neutral-400">
+        <AdminPageHeader
+          title={t.heading}
+          subtitle={
+            total !== null
+              ? format(
+                  total > 1 ? t.countForFilter_other : t.countForFilter_one,
+                  { count: total }
+                )
+              : t.loading
+          }
+          actions={
+            <>
+              <AdminButton variant="ghost" onClick={refresh} title={t.refresh}>
                 <svg
-                  className="w-12 h-12 mx-auto mb-4 text-neutral-600"
+                  aria-hidden
+                  className="h-4 w-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1096,517 +623,131 @@ function AdminDemandesPage({
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    d={REFRESH_ICON}
                   />
                 </svg>
-                {t.emptyTitle}
-                {hasActiveFilters && (
-                  <div className="mt-4">
-                    <button
-                      type="button"
-                      onClick={handleResetFilters}
-                      className="px-4 py-2 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm font-medium transition-colors"
-                    >
-                      {t.resetFilters}
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="divide-y divide-neutral-700/50">
-                {/* Select all header */}
-                <div className="px-4 py-3 bg-neutral-800/80 flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={
-                      selected.size === demandes.length && demandes.length > 0
-                    }
-                    onChange={toggleSelectAll}
-                    className="w-4 h-4 rounded border-neutral-600 bg-neutral-900"
+                {t.refresh}
+              </AdminButton>
+              <AdminButton variant="ghost" onClick={handleExportCsv}>
+                <svg
+                  aria-hidden
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d={EXPORT_ICON}
                   />
-                  <span className="text-xs text-neutral-400 uppercase tracking-wide font-medium">
-                    {t.selectAll}
-                  </span>
-                </div>
+                </svg>
+                {t.exportCsv}
+              </AdminButton>
+            </>
+          }
+        />
 
-                {demandes.map((d) => {
-                  const isPending = d.status === 'pending';
-                  const isProcessing = singleProcessing === d.id;
-                  return (
-                    <div
-                      key={d.id}
-                      className={`flex items-center gap-4 p-4 hover:bg-neutral-700/30 transition-colors group ${
-                        selected.has(d.id) ? 'bg-blue-900/10' : ''
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selected.has(d.id)}
-                        onChange={() => toggleSelect(d.id)}
-                        className="w-4 h-4 rounded border-neutral-600 bg-neutral-900 flex-shrink-0"
-                      />
+        <DemandesListStats
+          counts={statusCounts}
+          statusFilter={statusFilter}
+          onSelect={(status) => applyFilters({ status, offset: null })}
+        />
 
-                      <Link
-                        href={`/admin/demandes/${d.id}`}
-                        className="flex items-center gap-4 flex-1 min-w-0"
-                      >
-                        <DemandeAvatar
-                          avatarUrl={d.user?.avatar_url ?? null}
-                          name={d.user?.display_name ?? null}
-                          isNotification={isSystemNotification(d)}
-                        />
+        {errorMsg && (
+          <DemandesListErrorBanner
+            message={errorMsg}
+            onRetry={() => refresh()}
+          />
+        )}
 
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors truncate">
-                              {isSystemNotification(d)
-                                ? d.payload?.from_team_name ||
-                                  d.team?.name ||
-                                  t.systemNotification
-                                : d.user?.display_name ||
-                                  d.user?.email ||
-                                  d.user_id ||
-                                  t.unknownUser}
-                            </h3>
-                            {isSystemNotification(d) && (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wide bg-sky-600/20 text-sky-300 border border-sky-500/40">
-                                {t.systemNotification}
-                              </span>
-                            )}
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(
-                                d.status
-                              )}`}
-                            >
-                              {statusLabel(d.status, t)}
-                            </span>
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeColor(
-                                d.type
-                              )}`}
-                            >
-                              {typeLabel(d.type, t)}
-                            </span>
-                            {d.source && d.source !== 'website' && (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wide bg-neutral-700/60 text-neutral-300 border border-neutral-600/50">
-                                {d.source}
-                              </span>
-                            )}
-                            {isBattleTagFlagged(d) && (
-                              <span
-                                title={t.battleTagWarnTitle}
-                                data-testid="battletag-warning"
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-600/20 text-orange-300 border border-orange-500/40"
-                              >
-                                <svg
-                                  className="w-3 h-3"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
-                                  />
-                                </svg>
-                                {t.battleTagLabel}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3 text-sm text-neutral-400 flex-wrap">
-                            {(d.type === 'scrim' || isSystemNotification(d)) &&
-                              d.payload?.from_team_name && (
-                                <>
-                                  <span className="flex items-center gap-1.5">
-                                    <span className="text-cyan-300">
-                                      {d.payload.from_team_name}
-                                    </span>
-                                    <span className="text-neutral-500">→</span>
-                                    <span>
-                                      {d.team?.name ||
-                                        d.payload.target_team_name ||
-                                        t.targetTeamFallback}
-                                    </span>
-                                  </span>
-                                  {d.payload.preferred_date && (
-                                    <>
-                                      <span>•</span>
-                                      <span className="text-cyan-300/80 text-xs">
-                                        {new Date(
-                                          d.payload.preferred_date
-                                        ).toLocaleDateString('fr-FR', {
-                                          day: 'numeric',
-                                          month: 'short',
-                                          year: 'numeric',
-                                        })}
-                                      </span>
-                                    </>
-                                  )}
-                                  <span>•</span>
-                                </>
-                              )}
-                            {d.team && d.type !== 'scrim' && (
-                              <>
-                                <span className="flex items-center gap-1">
-                                  {d.team.logo_url && (
-                                    <Image
-                                      src={d.team.logo_url}
-                                      alt={d.team.name}
-                                      width={16}
-                                      height={16}
-                                      className="w-4 h-4 rounded object-cover"
-                                    />
-                                  )}
-                                  {d.team.name}
-                                </span>
-                                <span>•</span>
-                              </>
-                            )}
-                            {d.type === 'captain_request' &&
-                              d.payload &&
-                              !d.team && (
-                                <>
-                                  <span className="text-purple-300">
-                                    {d.payload.request_type === 'existing_team'
-                                      ? d.payload.existing_team_name
-                                      : d.payload.team_name}
-                                    {d.payload.request_type === 'new_team' &&
-                                      t.toCreate}
-                                  </span>
-                                  <span>•</span>
-                                </>
-                              )}
-                            {d.tournament && (
-                              <>
-                                <span>{d.tournament.name}</span>
-                                <span>•</span>
-                              </>
-                            )}
-                            <span className="text-xs">
-                              {formatDateTime(d.created_at)}
-                            </span>
-                          </div>
-                          {d.comment && (
-                            <p className="text-xs text-neutral-500 mt-1 truncate max-w-xl">
-                              {d.comment}
-                            </p>
-                          )}
-                        </div>
+        <DemandesListFilters
+          typeFilter={typeFilter}
+          statusFilter={statusFilter}
+          tournamentFilter={tournamentFilter}
+          tournaments={tournaments}
+          searchInput={searchInput}
+          onSearchInputChange={setSearchInput}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          sortValue={`${orderBy}:${orderDir}`}
+          hasActiveFilters={hasActiveFilters}
+          onFilterChange={(key, value) =>
+            applyFilters({ [key]: value, offset: null } as Partial<
+              Record<FilterKey, string | null>
+            >)
+          }
+          onSortChange={(value) => {
+            const [ob, od] = value.split(':');
+            applyFilters({
+              orderBy: ob === 'created_at' ? null : ob,
+              orderDir: od === 'desc' ? null : od,
+              offset: null,
+            });
+          }}
+          onSubmit={handleFilterSubmit}
+          onReset={handleResetFilters}
+        />
 
-                        {/* Handler info */}
-                        {d.processed_by && (
-                          <div className="hidden sm:block text-xs text-neutral-500 text-right flex-shrink-0">
-                            <div>
-                              {t.by}{' '}
-                              <span className="text-neutral-300">
-                                {d.processed_by.display_name ||
-                                  d.processed_by.id}
-                              </span>
-                            </div>
-                            {d.processed_at && (
-                              <div className="text-neutral-600">
-                                {formatDateTime(d.processed_at)}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </Link>
+        {selected.size > 0 && (
+          <DemandesListBulkBar
+            count={selected.size}
+            processing={batchProcessing}
+            onApprove={() => handleBatchAction('approved')}
+            onReject={() => handleBatchAction('rejected')}
+            onClear={() => setSelected(new Set())}
+          />
+        )}
 
-                      {/* Quick actions for pending demandes */}
-                      {isPending && (
-                        <div className="hidden md:flex items-center gap-1 flex-shrink-0">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setInfoModal({ demande: d, note: '' })
-                            }
-                            disabled={isProcessing || batchProcessing}
-                            title={t.requestMoreInfoTitle}
-                            data-testid="request-more-info"
-                            className="p-2 rounded-lg bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/30 hover:border-amber-500 text-xs transition-colors disabled:opacity-50"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                              />
-                            </svg>
-                          </button>
-                          {/* Relance Discord : seules les demandes de scrim
-                              déclenchent des DM aux capitaines. */}
-                          {d.type === 'scrim' && (
-                            <button
-                              type="button"
-                              onClick={() => handleNotifyCaptains(d.id)}
-                              disabled={isProcessing || batchProcessing}
-                              title={t.notifyCaptainsTitle}
-                              data-testid="notify-captains"
-                              className="p-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 hover:border-indigo-500 text-xs transition-colors disabled:opacity-50"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 3v-3z"
-                                />
-                              </svg>
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleSingleAction(d.id, 'approved')}
-                            disabled={isProcessing || batchProcessing}
-                            title={t.approveTitle}
-                            className="p-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 hover:border-emerald-500 text-xs transition-colors disabled:opacity-50"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSingleAction(d.id, 'rejected')}
-                            disabled={isProcessing || batchProcessing}
-                            title={t.rejectTitle}
-                            className="p-2 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/30 hover:border-red-500 text-xs transition-colors disabled:opacity-50"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
-                            </svg>
-                          </button>
-                        </div>
-                      )}
+        <DemandesListTable
+          demandes={demandes}
+          selected={selected}
+          processingId={singleProcessing}
+          batchProcessing={batchProcessing}
+          hasActiveFilters={hasActiveFilters}
+          onToggleSelectAll={toggleSelectAll}
+          onResetFilters={handleResetFilters}
+          actions={{
+            onToggle: toggleSelect,
+            onRequestInfo: (d) => setInfoModal({ demande: d, note: '' }),
+            onNotifyCaptains: handleNotifyCaptains,
+            onApprove: (id) => handleSingleAction(id, 'approved'),
+            onReject: (id) => handleSingleAction(id, 'rejected'),
+          }}
+        />
 
-                      <Link
-                        href={`/admin/demandes/${d.id}`}
-                        className="flex-shrink-0"
-                        aria-label={t.viewDetail}
-                      >
-                        <svg
-                          className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      </Link>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-
-          {/* Pagination */}
-          <div className="flex justify-between items-center mt-6">
-            <button
-              type="button"
-              disabled={offset === 0}
-              onClick={() =>
-                applyFilter(
-                  'offset',
-                  String(Math.max(0, offset - limit)) || null
-                )
-              }
-              className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              {t.previous}
-            </button>
-
-            <span className="text-neutral-400 text-sm">
-              {demandes.length === 0 ? 0 : offset + 1} –{' '}
-              {offset + demandes.length}
-              {total ? format(t.paginationTotal, { total }) : ''}
-            </span>
-
-            <button
-              type="button"
-              disabled={total !== null && offset + limit >= total}
-              onClick={() => applyFilter('offset', String(offset + limit))}
-              className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {t.next}
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
+        <DemandesListPagination
+          offset={offset}
+          shown={demandes.length}
+          total={total}
+          nextDisabled={total !== null && offset + limit >= total}
+          onPrev={() =>
+            applyFilter('offset', String(Math.max(0, offset - limit)) || null)
+          }
+          onNext={() => applyFilter('offset', String(offset + limit))}
+        />
       </div>
 
       {/* BattleTag fix / approve-confirm modal */}
-      <Modal
+      <DemandesListTagModal
         open={Boolean(tagModal)}
+        value={tagModal ? tagModal.value : null}
+        processing={singleProcessing === tagModal?.demande.id}
+        onChange={(value) => setTagModal((m) => (m ? { ...m, value } : m))}
         onClose={() => setTagModal(null)}
-        backdropClassName="bg-black/60"
-        panelChromeClassName="rounded-2xl border border-neutral-700 bg-neutral-900 shadow-xl"
-        dataTestId="battletag-modal"
-        title={
-          <h2 className="text-lg font-semibold text-white">
-            {t.tagModalTitle}
-          </h2>
-        }
-        subtitle={t.tagModalSubtitle}
-        footer={
-          <>
-            <button
-              type="button"
-              onClick={() => setTagModal(null)}
-              className="px-4 py-2 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm transition-colors"
-            >
-              {t.cancel}
-            </button>
-            <button
-              type="button"
-              data-testid="battletag-confirm"
-              disabled={singleProcessing === tagModal?.demande.id}
-              onClick={confirmTagApproval}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              {t.approve}
-            </button>
-          </>
-        }
-      >
-        {tagModal && (
-          <>
-            <label className="block text-sm text-neutral-400 mb-1">
-              {t.tagInputLabel}
-            </label>
-            <input
-              type="text"
-              data-testid="battletag-input"
-              autoFocus
-              value={tagModal.value}
-              onChange={(e) =>
-                setTagModal((m) => (m ? { ...m, value: e.target.value } : m))
-              }
-              placeholder={t.tagInputPlaceholder}
-              className="w-full px-3 py-2.5 rounded-xl bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
-            />
-            {tagModal.value.trim() &&
-              !BATTLE_TAG_REGEX.test(tagModal.value.trim()) && (
-                <p className="mt-2 text-xs text-orange-300">
-                  {t.tagFormatInvalid}
-                </p>
-              )}
-          </>
-        )}
-      </Modal>
+        onConfirm={confirmTagApproval}
+      />
 
       {/* "Demander plus d'infos" modal */}
-      <Modal
+      <DemandesListInfoModal
         open={Boolean(infoModal)}
+        note={infoModal ? infoModal.note : null}
+        processing={infoProcessing}
+        onChange={(note) => setInfoModal((m) => (m ? { ...m, note } : m))}
         onClose={() => setInfoModal(null)}
-        backdropClassName="bg-black/60"
-        panelChromeClassName="rounded-2xl border border-neutral-700 bg-neutral-900 shadow-xl"
-        dataTestId="info-modal"
-        title={
-          <h2 className="text-lg font-semibold text-white">
-            {t.infoModalTitle}
-          </h2>
-        }
-        subtitle={t.infoModalSubtitle}
-        footer={
-          <>
-            <button
-              type="button"
-              onClick={() => setInfoModal(null)}
-              className="px-4 py-2 rounded-xl border border-neutral-600 hover:bg-neutral-800 text-sm transition-colors"
-            >
-              {t.cancel}
-            </button>
-            <button
-              type="button"
-              data-testid="info-submit"
-              disabled={infoProcessing}
-              onClick={submitRequestMoreInfo}
-              className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              {t.send}
-            </button>
-          </>
-        }
-      >
-        {infoModal && (
-          <textarea
-            data-testid="info-note"
-            autoFocus
-            rows={4}
-            value={infoModal.note}
-            onChange={(e) =>
-              setInfoModal((m) => (m ? { ...m, note: e.target.value } : m))
-            }
-            placeholder={t.infoNotePlaceholder}
-            className="w-full px-3 py-2.5 rounded-xl bg-neutral-800 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
-          />
-        )}
-      </Modal>
+        onSubmit={submitRequestMoreInfo}
+      />
     </>
   );
 }

@@ -83,6 +83,7 @@ export default adminNs('adminTeamsMy', {
   addMemberModalTitle: 'Ajouter un membre',
   adding: 'Ajout...',
   searchLabel: 'Rechercher par email ou BattleTag',
+  searchPlaceholder: 'email@example.com ou Pseudo#1234',
   searching: 'Recherche...',
   noResult: 'Aucun resultat',
   userFallback: 'Utilisateur',
