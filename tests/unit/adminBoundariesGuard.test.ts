@@ -120,8 +120,9 @@ describe('frontières des modules features/admin', () => {
     expect(v).toEqual([]);
   });
 
-  // `_shared` est le kit commun (coquille, briques d'archétype, cache) : il
-  // est FAIT pour être importé par tous les modules.
+  // `_shared` est le kit commun de l'admin (coquille, cache ; les briques
+  // d'archétype vivent dans `features/ruban`, ré-exportées par `_shared/ui`) :
+  // il est FAIT pour être importé par tous les modules.
   it('4. un module n’entre pas dans l’ui/ ni le repository d’un autre', () => {
     const v = violations(({ rel, src }) => {
       const own = moduleOf(rel);
@@ -171,6 +172,33 @@ describe('frontières des modules features/admin', () => {
           .includes('@tanstack/react-query')
       );
     expect(offenders).toEqual([]);
+  });
+
+  // `features/ruban` (lot P7) : LE kit Le Ruban, commun à l'admin et à
+  // l'espace joueuse. Importable par les deux, il ne tire donc rien de
+  // l'admin (ni TanStack, ni `features/admin`, ni `components/admin`) ni de la
+  // base : sinon le bundle joueuse embarquerait l'admin.
+  it('le kit commun features/ruban ne tire ni l’admin, ni TanStack, ni la base', () => {
+    const kit = walk('features/ruban');
+    expect(kit.length).toBeGreaterThan(0);
+    const v = kit.flatMap((rel) =>
+      importsOf(fs.readFileSync(path.join(ROOT, rel), 'utf8'))
+        .filter((spec) => {
+          const t = spec.startsWith('.')
+            ? path.posix.join(
+                path.posix.dirname(rel.split(path.sep).join('/')),
+                spec
+              )
+            : spec.replace(/^@\//, '');
+          return (
+            /^@tanstack\//.test(spec) ||
+            /^(features|components|pages)\/admin(\/|$)/.test(t) ||
+            /(^|\/)utils\/supabase/.test(t)
+          );
+        })
+        .map((spec) => `${rel} — importe ${spec}`)
+    );
+    expect(v).toEqual([]);
   });
 
   it('les pages/api migrées ne font que réexporter leur module', () => {

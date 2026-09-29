@@ -1,0 +1,99 @@
+/* ─────────────────────────────────────────────────────────────────────────
+ * styles/ruban-tokens.css — les jetons UNIQUES de « Le Ruban »
+ *
+ * Un seul kit pour l'admin et l'espace joueuse
+ * (docs/PLAN-industrialisation-joueur.md, lot P7) : mêmes jetons, mêmes
+ * briques (features/ruban/). Une surface ne diffère des autres que par sa
+ * DENSITÉ — jamais par sa palette. Extraits tels quels d'admin-ruban.css :
+ * valeurs de la planche « Du dessin au code », aucune n'est estimée.
+ *
+ * PORTÉE : `:root:has([data-surface="<surface>"])` et non le seul conteneur,
+ * pour que les modales et menus rendus en portail voient les mêmes jetons.
+ * Le site public ne porte aucune surface : il ne bouge pas.
+ *
+ * AJOUTER UNE SURFACE (ex. `player`) :
+ *   1. ajouter son sélecteur à la liste ci-dessous
+ *      (`:root:has([data-surface="player"])`) ;
+ *   2. créer `styles/<surface>-ruban.css` : sa densité (cibles, corps,
+ *      espacements, rayons s'ils diffèrent) + son pont Tailwind, sur le modèle
+ *      d'admin-ruban.css, et l'importer dans globals.css APRÈS ce fichier ;
+ *   3. poser `data-surface="<surface>"` dans pages/_app.tsx (via appChrome).
+ * Ce fichier ne contient QUE des jetons — aucune règle de mise en forme.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+/* Surfaces portant « Le Ruban » (aujourd'hui : l'admin seule). */
+:root:has([data-surface="admin"]) {
+  color-scheme: dark;
+
+  /* Encre — neutre teinté à la teinte du violet du logo (h 316) */
+  --ink-1000: #030104;
+  --ink-975: #07030a;
+  --ink-950: #100812;
+  --ink-900: #1d1520;
+  --ink-800: #2f2732;
+  --ink-700: #453d48;
+  --ink-600: #5f5763;
+  --ink-500: #807984;
+  --ink-400: #a39ba6;
+  --ink-300: #c7bfca;
+  --ink-200: #e2dbe5;
+  --ink-100: #f4edf7;
+  --ink-50: #fdf8ff;
+  /* Orchidée — violet du logo */
+  --or-100: #f6e1ff;
+  --or-200: #eec4ff;
+  --or-300: #dea3f6;
+  --or-400: #ca85e6;
+  --or: #b467d1;
+  --or-600: #9e4dbb;
+  --or-700: #81309d;
+  --or-800: #63157c;
+  --or-900: #47005c;
+  /* Feuille — vert du logo */
+  --lf-100: #d4f5c9;
+  --lf-200: #b3e7a3;
+  --lf-300: #8ed377;
+  --lf: #7fca65;
+  --lf-500: #4ca722;
+  --lf-600: #368c00;
+  --lf-700: #286e00;
+  --lf-800: #1b5100;
+  --lf-900: #0f3700;
+  /* Ardoise du logo : LE TRAIT, jamais un aplat ni du texte */
+  --sl-200-rgb: 194, 196, 201;
+  --slate: #4b4c50;
+  /* Surfaces */
+  --canvas: #07030a;
+  --s1: #100812;
+  --s2: #1d1520;
+  --s3: #2f2732;
+  --line: rgba(var(--sl-200-rgb), 0.12);
+  --line2: rgba(var(--sl-200-rgb), 0.2);
+  --line-strong: var(--slate);
+  /* Texte — quatre niveaux, tous ≥ 4,8:1 */
+  --t1: #f4edf7;
+  --t2: #c7bfca;
+  --t3: #a39ba6;
+  --t4: #807984;
+  /* Sémantique — découplée de la marque */
+  --ok: #30d07e;
+  --warn: #f5a524;
+  --err: #ff6b6b;
+  /* Forme */
+  --r-ctrl: 4px;
+  --r-card: 14px;
+  --sh1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --sh2:
+    0 10px 28px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(194, 196, 201, 0.08);
+  --sh3:
+    0 28px 64px -24px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(194, 196, 201, 0.1);
+  /* La SEULE lueur de la plateforme : l'état EN DIRECT. */
+  --glow-live:
+    0 0 0 1px rgba(127, 202, 101, 0.55), 0 0 26px -6px rgba(127, 202, 101, 0.6);
+  --fd:
+    var(--font-archivo, "Archivo"), "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  --fu:
+    var(--font-instrument, "Instrument Sans"), ui-sans-serif, system-ui,
+    "Helvetica Neue", Arial, sans-serif;
+}

@@ -11,7 +11,7 @@ import {
   render,
   screen,
 } from '@testing-library/react';
-import DangerZone from '../../features/admin/_shared/ui/DangerZone';
+import DangerZone from '../../features/ruban/DangerZone';
 
 afterEach(cleanup);
 

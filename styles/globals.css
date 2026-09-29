@@ -1,5 +1,8 @@
 @import "tailwindcss";
-/* Espace admin en « Le Ruban » — portée [data-surface="admin"] seulement. */
+/* « Le Ruban » — portée [data-surface=…] seulement (le site public ne bouge
+ * pas). Jetons communs d'abord, puis une feuille par surface : sa densité et
+ * son pont Tailwind (aujourd'hui l'admin seule ; la joueuse viendra au lot P7). */
+@import "./ruban-tokens.css";
 @import "./admin-ruban.css";
 
 /* ─────────────────────────────────────────────────────────

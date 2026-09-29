@@ -7,10 +7,11 @@
 // échoue, et un contrevenant corrigé doit sortir de sa liste (le gel ne
 // descend pas tout seul). Puis deux gardes de bundle / de design :
 //
-//   * le bundle joueuse n'importe pas `features/admin` (le kit commun viendra
+//   * le bundle joueuse n'importe pas `features/admin` (le kit commun vit
 //     dans `features/ruban/`, lot P7) ;
-//   * garde « iso » : aucune brique « Le Ruban » n'est DÉFINIE dans
-//     `features/player/**` ni `components/player/**` — elle naît dans le kit.
+//   * garde « iso » : aucune brique « Le Ruban » n'est DÉFINIE hors du kit
+//     `features/ruban/` (espace joueuse ET admin ; `features/admin/_shared/ui`
+//     n'y est qu'un ré-export de compatibilité) — elle naît dans le kit.
 //
 // Ce test lit la SOURCE. Le site public est hors périmètre.
 
@@ -271,13 +272,42 @@ describe('frontières des modules features/player', () => {
     );
     expect(
       v,
-      'Le kit commun vit dans features/ruban/ (lot P7), pas dans features/admin.'
+      'Le kit commun vit dans features/ruban/, pas dans features/admin (features/admin/_shared/ui n’est qu’un ré-export).'
     ).toEqual([]);
   });
 });
 
+/** Le kit unique (P7) et sa couche de compatibilité admin. */
+const RUBAN_KIT = 'features/ruban';
+const RUBAN_COMPAT = 'features/admin/_shared/ui';
+
+/**
+ * Briques déjà définies HORS du kit dans l'admin avant P7 — gel : la liste ne
+ * peut que DÉCROÎTRE (une brique migrée vers features/ruban sort d'ici).
+ * Le site public (components/ui, components/Buttons…) est hors périmètre.
+ */
+const FROZEN_ADMIN_BRICKS = [
+  'components/admin/caster/ChatPanel.tsx — Badge',
+  'components/admin/onboarding/TenantReadinessPanel.tsx — Pill',
+  'components/admin/tenants/TenantOverviewPanel.tsx — Card',
+  'features/admin/pilotage/ui/PilotageView.tsx — Card',
+];
+
+/** Un fichier de compatibilité ne fait QUE ré-exporter (aucune déclaration). */
+const isPureReexport = (src: string) =>
+  /^(?:\s*export\s+(?:\*|\{[^}]*\})\s+from\s+'[^']+';)+\s*$/.test(
+    stripComments(src)
+  );
+
 describe('garde « iso » : un seul kit Le Ruban', () => {
-  const scanned = [...walk(FEATURES), ...walk('components/player')];
+  // Les deux surfaces qui portent Le Ruban : l'espace joueuse ET l'admin.
+  const scanned = [
+    ...walk('features').filter((rel) => !rel.startsWith(`${RUBAN_KIT}/`)),
+    ...walk('components/player'),
+    ...walk('components/admin'),
+    ...walk('pages/player'),
+    ...walk('pages/admin'),
+  ];
 
   it('le détecteur mord (sinon la garde passerait à vide)', () => {
     expect(
@@ -296,15 +326,72 @@ describe('garde « iso » : un seul kit Le Ruban', () => {
         'export default function TeamCard() {}\nfunction RoleBadge() {}'
       )
     ).toEqual([]);
+    // La compatibilité ne tolère qu'un ré-export pur.
+    expect(
+      isPureReexport("// c\nexport { default } from '@/features/ruban/Chip';")
+    ).toBe(true);
+    expect(
+      isPureReexport(
+        "export { default } from '@/features/ruban/Chip';\nexport function Chip() {}"
+      )
+    ).toBe(false);
   });
 
-  it('aucune brique Ruban définie dans features/player ni components/player', () => {
-    const v = scanned.flatMap((rel) =>
-      rubanBricksDefined(rel, read(rel)).map((b) => `${rel} — ${b}`)
-    );
+  it('le kit features/ruban expose chaque brique', async () => {
+    const kit = await import('../../features/ruban');
+    for (const name of [
+      'Button',
+      'ButtonLink',
+      'Chip',
+      'StatTile',
+      'EntityHeader',
+      'FicheLayout',
+      'FicheSection',
+      'MetaList',
+      'ListToolbar',
+      'ListSearch',
+      'FilterSelect',
+      'DangerZone',
+      'PageHeader',
+    ])
+      expect(typeof (kit as Record<string, unknown>)[name], name).toBe(
+        'function'
+      );
+  });
+
+  it('features/admin/_shared/ui ne fait que ré-exporter le kit', () => {
+    const v = walk(RUBAN_COMPAT).filter((rel) => {
+      const src = read(rel);
+      return (
+        !isPureReexport(src) ||
+        importsOf(src).some((spec) => !spec.startsWith(`@/${RUBAN_KIT}/`))
+      );
+    });
     expect(
       v,
-      'Une brique (bouton, puce, carte, en-tête…) naît dans features/ruban/, jamais dans une surface.'
+      'Une brique se définit dans features/ruban/ ; features/admin/_shared/ui n’est qu’une couche de compatibilité.'
     ).toEqual([]);
+  });
+
+  it('aucune brique Ruban définie hors features/ruban (admin et joueuse)', () => {
+    const v = scanned
+      .filter((rel) => !rel.startsWith(`${RUBAN_COMPAT}/`))
+      .flatMap((rel) =>
+        rubanBricksDefined(rel, read(rel)).map((b) => `${rel} — ${b}`)
+      )
+      .sort();
+    expect(
+      v,
+      'Une brique (bouton, puce, carte, en-tête…) naît dans features/ruban/, jamais dans une surface. Brique migrée : retire-la de FROZEN_ADMIN_BRICKS.'
+    ).toEqual([...FROZEN_ADMIN_BRICKS].sort());
+  });
+
+  it('aucune brique Ruban dans l’espace joueuse (zéro, pas de gel)', () => {
+    const v = scanned
+      .filter((rel) =>
+        /^(features\/player|components\/player|pages\/player)\//.test(rel)
+      )
+      .flatMap((rel) => rubanBricksDefined(rel, read(rel)));
+    expect(v).toEqual([]);
   });
 });
