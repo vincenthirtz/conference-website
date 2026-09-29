@@ -3,6 +3,7 @@ parameters:
 get:
   summary: List cast assignments for a scrim.
   operationId: adminListScrimCastAssignments
+  x-zod-query: admin.scrims/[scrimId].query
   tags:
     - admin/scrims
   security:
@@ -22,6 +23,7 @@ get:
 post:
   summary: Assign a caster to a scrim.
   operationId: adminCreateScrimCastAssignment
+  x-zod-query: admin.scrims/[scrimId].query
   tags:
     - admin/scrims
   security:
@@ -31,8 +33,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.scrims/[scrimId]/cast-assignments.create
   responses:
     '201':
       description: Assignment created.

@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Détail d'une league.
   operationId: adminGetLeague
+  x-zod-query: admin.leagues/[id].query
   tags:
     - admin/leagues
   security:
@@ -28,6 +29,7 @@ get:
 patch:
   summary: Met à jour partiellement une league.
   operationId: adminUpdateLeague
+  x-zod-query: admin.leagues/[id].query
   tags:
     - admin/leagues
   security:
@@ -58,6 +60,7 @@ patch:
 delete:
   summary: Supprime une league.
   operationId: adminDeleteLeague
+  x-zod-query: admin.leagues/[id].query
   tags:
     - admin/leagues
   security:

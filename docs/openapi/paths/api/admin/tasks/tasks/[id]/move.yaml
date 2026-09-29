@@ -4,6 +4,7 @@ patch:
   summary: Deplace une carte (moveTaskCore). Emet task.moved + task.board_changed.
     Idempotent.
   operationId: adminMoveTask
+  x-zod-query: admin.tasks/tasks/[id].query
   security:
     - StaffSession: []
   parameters:
@@ -16,11 +17,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          required: [columnId]
-          properties:
-            columnId: {type: string, format: uuid}
-            position: {type: integer, minimum: 0}
+          x-zod: admin.tasks.tasks.move
   responses:
     '200':
       description: Carte deplacee.

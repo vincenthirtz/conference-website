@@ -96,6 +96,22 @@ export type AuditDetails = {
    */
   before?: AuditRecord | null;
   after?: AuditRecord | null;
+  /**
+   * Issue du geste, quand une même méthode en a plusieurs (accord / refus
+   * d'une candidature…) : remplace le slug déclaré pour CETTE entrée. Le slug
+   * déclaré reste celui de la méthode (matrice, OpenAPI).
+   */
+  action?: AdminAuditAction;
+  /**
+   * Espace où ranger l'entrée, s'il n'est pas celui du staff : une route de
+   * portée plateforme qui agit sur un espace tiers le journalise chez lui.
+   */
+  tenant_id?: string;
+  /**
+   * Rien à journaliser pour cet appel (rejeu idempotent d'un geste déjà
+   * tracé, simple passage d'état sans décision).
+   */
+  skip?: boolean;
 };
 
 /**
@@ -406,9 +422,9 @@ export function defineAdminRoute(def: AdminRouteDefinition): AdminRouteHandler {
         // Journal APRÈS la réponse réussie : une mutation échouée n'est pas
         // tracée comme faite. Best effort : un journal en panne ne transforme
         // pas un succès en erreur.
-        const action = methodMeta.audit;
-        if (action) {
-          const d: AuditDetails = auditDetails ?? {};
+        const d: AuditDetails = auditDetails ?? {};
+        const action = methodMeta.audit ? (d.action ?? methodMeta.audit) : null;
+        if (action && !d.skip) {
           try {
             await logStaffAction({
               staff_id: st.staff.id,
@@ -417,7 +433,7 @@ export function defineAdminRoute(def: AdminRouteDefinition): AdminRouteHandler {
               entity_id: d.entity_id ?? null,
               tournament_id: d.tournament_id ?? null,
               payload: auditPayload(d),
-              tenant_id: st.tenantId,
+              tenant_id: d.tenant_id ?? st.tenantId,
               permission: st.permission ?? null,
             });
           } catch (logErr) {

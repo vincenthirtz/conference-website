@@ -8,6 +8,7 @@ parameters:
 post:
   summary: Preview slot conflicts for candidate slots before validation.
   operationId: adminPreviewScrimPlanningConflicts
+  x-zod-query: admin.scrim-plannings/[planningId].query
   tags:
     - admin/scrims
   security:
@@ -17,6 +18,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.scrim-plannings/[planningId]/conflicts.body
           type: object
           required:
             - slots

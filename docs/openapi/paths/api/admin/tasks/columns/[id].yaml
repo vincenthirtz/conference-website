@@ -4,6 +4,7 @@ patch:
   summary: Edite une colonne (name, wipLimit, isDone, position/reorder). Emet
     task.board_changed.
   operationId: adminUpdateTaskColumn
+  x-zod-query: admin.tasks/columns/[id].query
   security:
     - StaffSession: []
   parameters:
@@ -16,12 +17,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            name: {type: string}
-            wipLimit: {type: [integer, 'null']}
-            isDone: {type: boolean}
-            position: {type: integer, minimum: 0}
+          x-zod: admin.tasks.columns.update
   responses:
     '200':
       description: Colonne mise a jour.
@@ -42,6 +38,7 @@ delete:
   summary: Supprime une colonne. 409 column_not_empty si des cartes vivantes y
     sont. Emet task.board_changed.
   operationId: adminDeleteTaskColumn
+  x-zod-query: admin.tasks/columns/[id].query
   security:
     - StaffSession: []
   parameters:

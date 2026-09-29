@@ -19,6 +19,13 @@ export type StaffLogAction =
   | 'update_tournament_template'
   | 'apply_template'
   | 'save_placements'
+  // --- Ligues (classement multi-tournois) ---
+  | 'create_league'
+  | 'update_league'
+  | 'delete_league'
+  | 'link_league_tournament'
+  | 'unlink_league_tournament'
+  | 'recompute_league_standings'
   // --- Phases / stages ---
   | 'create_stage'
   | 'update_stage'
@@ -202,6 +209,18 @@ export type StaffLogAction =
   | 'create_webhook'
   | 'delete_webhook'
   | 'rotate_bot_secrets'
+  // --- Scrims et grilles de dispos (ex-`other` + `payload.subject`) ---
+  | 'create_scrim'
+  | 'update_scrim'
+  | 'delete_scrim'
+  | 'record_scrim_result'
+  | 'forward_scrim_request'
+  | 'create_scrim_planning'
+  | 'update_scrim_planning'
+  | 'delete_scrim_planning'
+  | 'validate_scrim_planning'
+  // --- Rating joueur ---
+  | 'rebuild_ratings'
   // --- Support / demandes ---
   | 'update_support_ticket'
   | 'ticket_closed'

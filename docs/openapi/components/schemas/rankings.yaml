@@ -168,6 +168,9 @@ LeagueTournamentLink:
       format: uuid
     weight:
       type: number
+    created_at:
+      type: string
+      format: date-time
 LeagueDetailResponse:
   # Généré depuis lib/apiContracts/public/v1 (type TS du handler vérifié par test).
   x-zod: response.LeagueDetailResponse

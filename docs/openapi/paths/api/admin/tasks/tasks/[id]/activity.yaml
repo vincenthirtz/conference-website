@@ -3,6 +3,7 @@ get:
     - admin/tasks
   summary: Timeline d'activite d'une carte (staff_logs, created_at DESC).
   operationId: adminGetTaskActivity
+  x-zod-query: admin.tasks/tasks/[id].query
   description: |
     Historique des actions staff portant sur la carte : actions « carte »
     (entity_type='task', entity_id=taskId) + actions « commentaire »

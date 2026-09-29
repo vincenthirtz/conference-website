@@ -9,6 +9,7 @@ patch:
   summary: Update an entity blacklist entry (name / entity_type / reason / notes /
     active toggle).
   operationId: adminUpdateEntityBlacklist
+  x-zod-query: admin.moderation/blacklist/[id].query
   tags:
     - admin/content
   security:
@@ -18,8 +19,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.moderation/entity-blacklist/[id].update
   responses:
     '200':
       description: Updated.
@@ -39,6 +39,7 @@ patch:
 delete:
   summary: Delete an entity blacklist entry.
   operationId: adminDeleteEntityBlacklist
+  x-zod-query: admin.moderation/blacklist/[id].query
   tags:
     - admin/content
   security:

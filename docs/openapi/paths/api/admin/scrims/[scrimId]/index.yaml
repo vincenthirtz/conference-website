@@ -3,6 +3,7 @@ parameters:
 get:
   summary: Scrim detail.
   operationId: adminGetScrim
+  x-zod-query: admin.scrims/[scrimId].query
   tags:
     - admin/scrims
   security:
@@ -21,6 +22,7 @@ get:
 patch:
   summary: Patch scrim fields.
   operationId: adminPatchScrim
+  x-zod-query: admin.scrims/[scrimId].query
   tags:
     - admin/scrims
   security:
@@ -30,15 +32,12 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.scrims/[scrimId].update
   responses:
     '200':
       description: Updated.
       content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Scrim'
+        application/json: {}
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':
@@ -46,6 +45,7 @@ patch:
 put:
   summary: Replace scrim fields (full update).
   operationId: adminPutScrim
+  x-zod-query: admin.scrims/[scrimId].query
   tags:
     - admin/scrims
   security:
@@ -55,8 +55,7 @@ put:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.scrims/[scrimId].update
   responses:
     '200':
       description: Updated.
@@ -69,6 +68,7 @@ put:
 delete:
   summary: Soft-delete a scrim.
   operationId: adminDeleteScrim
+  x-zod-query: admin.scrims/[scrimId].query
   tags:
     - admin/scrims
   security:

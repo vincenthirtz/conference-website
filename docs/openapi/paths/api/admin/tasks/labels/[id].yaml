@@ -3,6 +3,7 @@ patch:
     - admin/tasks
   summary: Edite un label (name, color, position). Cascade le rename sur les cartes.
   operationId: adminUpdateTaskLabel
+  x-zod-query: admin.tasks/labels/[id].query
   description: |
     Si `name` change, le renommage est repercute dans `tasks.labels[]` de
     toutes les cartes du board (jointure par nom). 409 `label_exists` si le
@@ -19,11 +20,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            name: {type: string, minLength: 1, maxLength: 40}
-            color: {type: string, pattern: '^#[0-9a-fA-F]{6}$'}
-            position: {type: integer, minimum: 0}
+          x-zod: admin.tasks.labels.update
   responses:
     '200':
       description: '`{ label: { id, name, color, position } }`.'
@@ -52,6 +49,7 @@ delete:
     - admin/tasks
   summary: Supprime une definition de label (ne strippe PAS le nom des cartes).
   operationId: adminDeleteTaskLabel
+  x-zod-query: admin.tasks/labels/[id].query
   description: |
     La definition est supprimee ; les occurrences du nom dans `tasks.labels[]`
     restent inertes et retombent en couleur neutre cote UI (choix assume).

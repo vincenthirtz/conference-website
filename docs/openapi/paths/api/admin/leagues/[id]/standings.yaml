@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Standings + tournois liés d'une league (admin, visible même en draft/privé).
   operationId: adminGetLeagueStandings
+  x-zod-query: admin.leagues/[id]/sub.query
   tags:
     - admin/leagues
   security:

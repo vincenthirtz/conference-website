@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Partner detail.
   operationId: adminGetPartner
+  x-zod-query: admin.partners/[id].query
   tags:
     - admin/content
   security:
@@ -29,6 +30,7 @@ get:
 patch:
   summary: Update a partner.
   operationId: adminUpdatePartner
+  x-zod-query: admin.partners/[id].query
   tags:
     - admin/content
   security:
@@ -55,6 +57,7 @@ patch:
 delete:
   summary: Delete a partner.
   operationId: adminDeletePartner
+  x-zod-query: admin.partners/[id].query
   tags:
     - admin/content
   security:

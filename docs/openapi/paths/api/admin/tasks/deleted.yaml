@@ -3,6 +3,7 @@ get:
     - admin/tasks
   summary: Corbeille — cartes soft-deleted du tenant (deleted_at IS NOT NULL).
   operationId: adminListDeletedTasks
+  x-zod-query: admin.tasks/deleted.query
   description: |
     Cartes supprimees (`deleted_at IS NOT NULL`) du tenant, filtrees par
     `boardId` si fourni, triees `deleted_at` DESC, plafonnees (defaut 100).

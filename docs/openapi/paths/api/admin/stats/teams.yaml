@@ -1,6 +1,7 @@
 get:
   summary: Team-level statistics across the tenant.
   operationId: adminStatsTeams
+  x-zod-query: admin.stats/teams.query
   tags:
     - admin/misc
   security:

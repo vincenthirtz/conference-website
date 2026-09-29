@@ -1,6 +1,7 @@
 get:
   summary: List scrims for the active tenant.
   operationId: adminListScrims
+  x-zod-query: admin.scrims.query
   tags:
     - admin/scrims
   security:
@@ -29,8 +30,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.scrims.create
   responses:
     '201':
       description: Created.

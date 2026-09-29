@@ -8,6 +8,7 @@ parameters:
 get:
   summary: My (staff) availability slots on this planning grid.
   operationId: adminGetScrimPlanningStaffAvailability
+  x-zod-query: admin.scrim-plannings/[planningId].query
   tags:
     - admin/scrims
   security:
@@ -29,6 +30,7 @@ get:
 put:
   summary: Upsert my (staff) availability slots on this planning grid.
   operationId: adminPutScrimPlanningStaffAvailability
+  x-zod-query: admin.scrim-plannings/[planningId].query
   tags:
     - admin/scrims
   security:
@@ -38,6 +40,7 @@ put:
     content:
       application/json:
         schema:
+          x-zod: admin.scrim-plannings/[planningId]/availability.update
           type: object
           required:
             - slots

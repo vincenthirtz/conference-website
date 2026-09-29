@@ -8,6 +8,7 @@ get:
     recentes d'abord, avec le compte par statut et le slug de l'espace qui a
     recu l'offre. L'IP et l'agent utilisateur ne sortent pas.
   operationId: adminListCircuitPartnerApplications
+  x-zod-query: admin.circuit-partners.query
   security:
     - StaffSession: []
   parameters:

@@ -9,6 +9,7 @@ post:
   summary: Convert a support ticket into a player or entity blacklist entry
     (kind-discriminated body).
   operationId: adminConvertSupportTicketBlacklist
+  x-zod-query: admin.support/tickets/[id]/convert-blacklist.query
   tags:
     - admin/misc
   security:
@@ -18,8 +19,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.support/tickets/[id]/convert-blacklist.body
   responses:
     '201':
       description: Blacklist entry created and linked to the ticket.

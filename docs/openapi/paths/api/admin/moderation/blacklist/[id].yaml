@@ -8,6 +8,7 @@ parameters:
 patch:
   summary: Update a blacklist entry (reason / notes / active toggle).
   operationId: adminUpdateBlacklist
+  x-zod-query: admin.moderation/blacklist/[id].query
   tags:
     - admin/content
   security:
@@ -17,8 +18,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.moderation/blacklist/[id].update
   responses:
     '200':
       description: Updated.
@@ -38,6 +38,7 @@ patch:
 delete:
   summary: Delete a blacklist entry.
   operationId: adminDeleteBlacklist
+  x-zod-query: admin.moderation/blacklist/[id].query
   tags:
     - admin/content
   security:

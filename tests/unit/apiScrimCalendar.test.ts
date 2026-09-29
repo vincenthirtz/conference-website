@@ -2,7 +2,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const logStaffActionMock = vi.fn(async () => undefined);
+// `vi.hoisted` : `vi.mock` est hissé au-dessus des déclarations ; la route
+// (defineAdminRoute) importe `utils/staffLogs` dès son chargement.
+const { logStaffActionMock } = vi.hoisted(() => ({
+  logStaffActionMock: vi.fn(async () => undefined),
+}));
 vi.mock('@/utils/staffLogs', () => ({ logStaffAction: logStaffActionMock }));
 
 import {

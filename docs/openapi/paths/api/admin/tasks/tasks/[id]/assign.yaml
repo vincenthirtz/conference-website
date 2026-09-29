@@ -4,6 +4,7 @@ patch:
   summary: (Des)assigne une carte (assignTaskCore). Emet task.assigned +
     task.board_changed. Idempotent.
   operationId: adminAssignTask
+  x-zod-query: admin.tasks/tasks/[id].query
   security:
     - StaffSession: []
   parameters:
@@ -16,10 +17,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          required: [assigneeStaffId]
-          properties:
-            assigneeStaffId: {type: [string, 'null'], format: uuid}
+          x-zod: admin.tasks.tasks.assign
   responses:
     '200':
       description: Carte (des)assignee.

@@ -8,6 +8,7 @@ parameters:
 post:
   summary: Recalcule les standings d'une league depuis les final_rankings liés.
   operationId: adminRecomputeLeagueStandings
+  x-zod-query: admin.leagues/[id]/sub.query
   tags:
     - admin/leagues
   security:

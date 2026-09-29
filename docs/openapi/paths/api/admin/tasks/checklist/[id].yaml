@@ -3,6 +3,7 @@ patch:
     - admin/tasks
   summary: Edite un item de checklist (label, isDone, position).
   operationId: adminUpdateTaskChecklistItem
+  x-zod-query: admin.tasks/checklist/[id].query
   security:
     - StaffSession: []
   parameters:
@@ -15,11 +16,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            label: {type: string, minLength: 1, maxLength: 500}
-            isDone: {type: boolean}
-            position: {type: integer, minimum: 0}
+          x-zod: admin.tasks.checklist.update
   responses:
     '200':
       description: Item mis a jour.
@@ -41,6 +38,7 @@ delete:
     - admin/tasks
   summary: Supprime un item de checklist.
   operationId: adminDeleteTaskChecklistItem
+  x-zod-query: admin.tasks/checklist/[id].query
   security:
     - StaffSession: []
   parameters:

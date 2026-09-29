@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Get a planning with all availabilities and the overlap heatmap.
   operationId: adminGetScrimPlanning
+  x-zod-query: admin.scrim-plannings/[planningId].query
   tags:
     - admin/scrims
   security:
@@ -29,6 +30,7 @@ get:
 patch:
   summary: Update a scrim planning (title, game, status, grid config).
   operationId: adminUpdateScrimPlanning
+  x-zod-query: admin.scrim-plannings/[planningId].query
   tags:
     - admin/scrims
   security:
@@ -38,8 +40,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.scrim-plannings/[planningId].update
   responses:
     '200':
       description: Updated.
@@ -57,6 +58,7 @@ patch:
 put:
   summary: Alias of PATCH — update a scrim planning.
   operationId: adminUpdateScrimPlanningPut
+  x-zod-query: admin.scrim-plannings/[planningId].query
   tags:
     - admin/scrims
   security:
@@ -66,8 +68,7 @@ put:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.scrim-plannings/[planningId].update
   responses:
     '200':
       description: Updated.
@@ -85,6 +86,7 @@ put:
 delete:
   summary: Soft-delete a scrim planning.
   operationId: adminDeleteScrimPlanning
+  x-zod-query: admin.scrim-plannings/[planningId].query
   tags:
     - admin/scrims
   security:

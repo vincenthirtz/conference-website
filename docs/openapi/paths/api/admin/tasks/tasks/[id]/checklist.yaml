@@ -3,6 +3,7 @@ get:
     - admin/tasks
   summary: Checklist (sous-taches) d'une carte, triee par position.
   operationId: adminListTaskChecklist
+  x-zod-query: admin.tasks/tasks/[id].query
   security:
     - StaffSession: []
   parameters:
@@ -29,6 +30,7 @@ post:
     - admin/tasks
   summary: Ajoute un item de checklist (position = max+1).
   operationId: adminCreateTaskChecklistItem
+  x-zod-query: admin.tasks/tasks/[id].query
   security:
     - StaffSession: []
   parameters:
@@ -41,10 +43,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required: [label]
-          properties:
-            label: {type: string, minLength: 1, maxLength: 500}
+          x-zod: admin.tasks.checklist.create
   responses:
     '201':
       description: Item cree.

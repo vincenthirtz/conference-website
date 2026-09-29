@@ -46,6 +46,7 @@ put:
 delete:
   summary: Clear all Discord webhooks.
   operationId: adminDeleteSiteSettingsDiscordWebhooks
+  x-zod-query: admin.site-settings/discord-webhooks.query
   tags:
     - admin/misc
   security:

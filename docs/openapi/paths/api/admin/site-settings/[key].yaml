@@ -7,6 +7,7 @@ parameters:
 get:
   summary: Read a single site setting by key.
   operationId: adminGetSiteSetting
+  x-zod-query: admin.site-settings/[key].query
   tags:
     - admin/misc
   security:
@@ -28,6 +29,7 @@ get:
 patch:
   summary: Patch a site setting.
   operationId: adminPatchSiteSetting
+  x-zod-query: admin.site-settings/[key].query
   tags:
     - admin/misc
   security:
@@ -54,6 +56,7 @@ patch:
 delete:
   summary: Delete a site setting key.
   operationId: adminDeleteSiteSetting
+  x-zod-query: admin.site-settings/[key].query
   tags:
     - admin/misc
   security:

@@ -405,6 +405,13 @@ function declarativeResponses(obj, checker) {
     const prop = propOf(obj, method);
     if (!prop || !ts.isPropertyAssignment(prop)) continue;
     let spec = prop.initializer;
+    // `PATCH: update, PUT: update` : deux méthodes partagent une constante.
+    // Sans ce suivi, la seconde perdait ses réponses du contrat.
+    if (ts.isIdentifier(spec)) {
+      const decl = checker.getSymbolAtLocation(spec)?.valueDeclaration;
+      if (decl && ts.isVariableDeclaration(decl) && decl.initializer)
+        spec = decl.initializer;
+    }
     // `read({...})` / `mutate({...})` : aides d'inférence, transparentes.
     if (ts.isCallExpression(spec) && spec.arguments[0])
       spec = spec.arguments[0];

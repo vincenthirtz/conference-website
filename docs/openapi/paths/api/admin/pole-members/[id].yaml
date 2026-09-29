@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Pole member detail.
   operationId: adminGetPoleMember
+  x-zod-query: admin.pole-members/[id].query
   tags:
     - admin/users
   security:
@@ -29,6 +30,7 @@ get:
 patch:
   summary: Update a pole member.
   operationId: adminUpdatePoleMember
+  x-zod-query: admin.pole-members/[id].query
   tags:
     - admin/users
   security:
@@ -55,6 +57,7 @@ patch:
 delete:
   summary: Delete a pole member.
   operationId: adminDeletePoleMember
+  x-zod-query: admin.pole-members/[id].query
   tags:
     - admin/users
   security:

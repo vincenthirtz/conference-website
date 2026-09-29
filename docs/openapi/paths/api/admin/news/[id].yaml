@@ -8,6 +8,7 @@ parameters:
 get:
   summary: News post detail.
   operationId: adminGetNews
+  x-zod-query: admin.news/[id].query
   tags:
     - admin/content
   security:
@@ -29,6 +30,7 @@ get:
 put:
   summary: Replace a news post.
   operationId: adminReplaceNews
+  x-zod-query: admin.news/[id].query
   tags:
     - admin/content
   security:
@@ -55,6 +57,7 @@ put:
 delete:
   summary: Delete a news post.
   operationId: adminDeleteNews
+  x-zod-query: admin.news/[id].query
   tags:
     - admin/content
   security:

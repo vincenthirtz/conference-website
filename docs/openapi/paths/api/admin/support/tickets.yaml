@@ -1,6 +1,7 @@
 get:
   summary: List support tickets.
   operationId: adminListSupportTickets
+  x-zod-query: admin.support/tickets.query
   tags:
     - admin/misc
   security:

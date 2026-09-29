@@ -10,13 +10,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required: [boardId, name]
-          properties:
-            boardId: {type: string, format: uuid}
-            name: {type: string}
-            wipLimit: {type: [integer, 'null']}
-            isDone: {type: boolean}
+          x-zod: admin.tasks.columns.create
   responses:
     '201':
       description: Colonne creee.

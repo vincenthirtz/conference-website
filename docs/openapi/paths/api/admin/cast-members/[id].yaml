@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Cast member detail.
   operationId: adminGetCastMember
+  x-zod-query: admin.cast-members/[id].query
   tags:
     - admin/content
   security:
@@ -29,6 +30,7 @@ get:
 patch:
   summary: Update a cast member.
   operationId: adminUpdateCastMember
+  x-zod-query: admin.cast-members/[id].query
   tags:
     - admin/content
   security:
@@ -55,6 +57,7 @@ patch:
 delete:
   summary: Soft-delete a cast member.
   operationId: adminDeleteCastMember
+  x-zod-query: admin.cast-members/[id].query
   tags:
     - admin/content
   security:

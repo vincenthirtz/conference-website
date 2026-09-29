@@ -3,6 +3,7 @@ get:
     - admin/tasks
   summary: Liste des boards Kanban (colonnes ordonnees + compte de cartes).
   operationId: adminListTaskBoards
+  x-zod-query: admin.tasks/boards.query
   security:
     - StaffSession: []
   parameters:
@@ -34,11 +35,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required: [name]
-          properties:
-            name: {type: string}
-            description: {type: string}
+          x-zod: admin.tasks.boards.create
   responses:
     '201':
       description: Board cree.

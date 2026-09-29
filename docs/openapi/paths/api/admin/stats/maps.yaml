@@ -1,6 +1,7 @@
 get:
   summary: Map-level statistics across matches.
   operationId: adminStatsMaps
+  x-zod-query: admin.stats/maps.query
   tags:
     - admin/misc
   security:

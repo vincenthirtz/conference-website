@@ -4,6 +4,7 @@ patch:
   summary: Restaure une carte de la corbeille (restoreTaskCore). Loggue
     task_restore. Emet task.board_changed.
   operationId: adminRestoreTask
+  x-zod-query: admin.tasks/tasks/[id].query
   description: |
     Repositionne une carte soft-deleted comme active : `deleted_at = NULL`
     + `position = max(position dans sa colonne)+1`. 404 `task_not_found` si

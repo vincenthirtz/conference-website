@@ -38,6 +38,13 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   update_tournament_template: 'Modification template de tournoi',
   apply_template: 'Application template',
   save_placements: 'Enregistrement des placements',
+  // Ligues
+  create_league: 'Création ligue',
+  update_league: 'Modification ligue',
+  delete_league: 'Suppression ligue',
+  link_league_tournament: 'Tournoi rattaché à une ligue',
+  unlink_league_tournament: 'Tournoi détaché d’une ligue',
+  recompute_league_standings: 'Recalcul du classement de ligue',
   // Phases / stages
   create_stage: 'Création phase',
   update_stage: 'Modification phase',
@@ -186,6 +193,18 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   create_webhook: 'Création webhook',
   delete_webhook: 'Suppression webhook',
   rotate_bot_secrets: 'Rotation des secrets bot',
+  // Scrims et grilles de dispos
+  create_scrim: 'Création scrim',
+  update_scrim: 'Modification scrim',
+  delete_scrim: 'Suppression scrim',
+  record_scrim_result: 'Score de scrim saisi',
+  forward_scrim_request: 'Demande de scrim transférée',
+  create_scrim_planning: 'Ouverture grille de dispos (scrim)',
+  update_scrim_planning: 'Modification grille de dispos (scrim)',
+  delete_scrim_planning: 'Suppression grille de dispos (scrim)',
+  validate_scrim_planning: 'Créneau de scrim validé',
+  // Rating joueur
+  rebuild_ratings: 'Recalcul du classement joueur',
   // Support / demandes
   update_support_ticket: 'Ticket support modifié',
   ticket_closed: 'Ticket fermé',

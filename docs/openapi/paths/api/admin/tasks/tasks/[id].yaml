@@ -3,6 +3,7 @@ get:
     - admin/tasks
   summary: Detail d'une carte.
   operationId: adminGetTask
+  x-zod-query: admin.tasks/tasks/[id].query
   security:
     - StaffSession: []
   parameters:
@@ -30,6 +31,7 @@ patch:
   summary: Edite une carte (title, description, priority, dueDate, labels). Emet
     task.board_changed.
   operationId: adminUpdateTask
+  x-zod-query: admin.tasks/tasks/[id].query
   security:
     - StaffSession: []
   parameters:
@@ -42,15 +44,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            title: {type: string}
-            description: {type: [string, 'null']}
-            priority: {type: string, enum: [low, medium, high, urgent]}
-            dueDate: {type: [string, 'null']}
-            labels:
-              type: array
-              items: {type: string}
+          x-zod: admin.tasks.tasks.update
   responses:
     '200':
       description: Carte mise a jour.
@@ -70,6 +64,7 @@ delete:
     - admin/tasks
   summary: Soft-delete d'une carte (deleted_at = now()). Emet task.board_changed.
   operationId: adminDeleteTask
+  x-zod-query: admin.tasks/tasks/[id].query
   security:
     - StaffSession: []
   parameters:

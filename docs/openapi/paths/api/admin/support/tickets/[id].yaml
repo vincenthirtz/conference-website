@@ -8,6 +8,7 @@ parameters:
 get:
   summary: Support ticket detail.
   operationId: adminGetSupportTicket
+  x-zod-query: admin.support/tickets/[id].query
   tags:
     - admin/misc
   security:
@@ -29,6 +30,7 @@ get:
 patch:
   summary: Update a support ticket (status, assignment, reply).
   operationId: adminPatchSupportTicket
+  x-zod-query: admin.support/tickets/[id].query
   tags:
     - admin/misc
   security:
@@ -38,8 +40,7 @@ patch:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.support/tickets/[id].update
   responses:
     '200':
       description: Updated.
@@ -55,6 +56,7 @@ patch:
 delete:
   summary: Delete a support ticket.
   operationId: adminDeleteSupportTicket
+  x-zod-query: admin.support/tickets/[id].query
   tags:
     - admin/misc
   security:

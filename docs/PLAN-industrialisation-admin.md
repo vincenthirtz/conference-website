@@ -54,8 +54,9 @@ importent les fichiers touchés. Hooks extraits relus contre l'original (corps i
   `RegistrationFieldsEditor`, `ChoiceCard`/`BigChip` du quiz ; `TenantSwitcher.tsx` non importé) ;
 - `TenantSwitcher.tsx` : non monté depuis 28afe291 (mai 2026) mais gardé exprès « au cas où » —
   NON supprimé ; à trancher (le garder = le passer en Ruban le jour où on le remonte) ;
-- phases 1–2 non terminées : migration des routes vers `defineAdminRoute` (L3), `select('*')`
-  (L5), service/repository (L7), cache client généralisé (L10).
+- phases 1–2 : vague serveur 1 faite (71 routes) ; restent 237 routes hors `defineAdminRoute` —
+  gros domaines : tournament (32), stages (22), tenants (22), matches (20), events (20), twitch
+  (17), teams (14), tcg (12)… ; `select('*')` 64 ; cache client généralisé (L10).
 
 **Décisions produit en attente (à trancher par Vincent)** : confirmation sur « Notifier les
 capitaines » ; Dashboard visible ou non pour helper/referee ; plusieurs `primary` simultanés
@@ -308,6 +309,23 @@ routes de lecture pour éprouver l'API, puis domaine par domaine (lots 15–20).
       `pending-guild-links`, `diffusion/{live-status,twitch-channels,overlay-presence}`,
       `broadcast/subscriptions`, `alerts-summary`, `users/search`, `caster/recent-matches`.
       Leurs tests existants passent sans modification, à une exception près (ci-dessous).
+- [x] **Vague serveur 1 (2026-09-29) — 71 routes** migrées en modules : `leagues`, `site-settings`,
+      `notifications`, `news`, `partners` (+ `partnership-requests/index`), `pole-members`,
+      `cast-members`, `scrims`, `scrim-plannings`, `moderation`, `support`, `circuit-partners`,
+      `ratings`, `stats`, `tasks`. Routes hors `defineAdminRoute` 309 → 237, `supabaseAdmin` direct
+      270 → 201, `select('*')` 100 → 64, `logStaffAction` manuels 353 → 279. Laissées (raison
+      écrite) : `documents` (base64 36 Mo, GET journalisé), `documents/download` (flux),
+      `partnership-requests/[id]` (deux journaux, GET qui écrit).
+      Outils ajoutés : `LegacyAdminError` (préserve les `code` métier historiques lus par les
+      écrans : `wip_exceeded`, `SLOT_CONFLICT`…), `utils/admin/pathParams.ts` (zod pur, importable
+      par `openapi:build` qui tourne SANS alias `@/`), `features/admin/_shared/{audited,legacyParse}.ts`,
+      `ctx.audit({ action, tenant_id, skip })`. L'inféreur OpenAPI suit désormais `PUT: update`
+      (constante partagée) — sans quoi une méthode perdait ses réponses.
+      Écarts de contrat assumés : `Cache-Control: private, no-store`, `requestId`/`code` dans les
+      erreurs, 405 avant la validation d'id, rate-limit par défaut là où il n'y en avait pas
+      (scrims, support, tasks, webhooks Discord…), journal écrit APRÈS la réponse et best-effort,
+      `tenant_id` du journal toujours renseigné (corrige les scrims en multi-tenant).
+      Défaut CONSERVÉ, commenté : `team-roles` GET lit le tenant par défaut, PUT écrit celui du staff.
 - [ ] Temps de réponse inchangé (± 5 ms) — **non mesuré** : demande la prod ; le wrapper
       n'ajoute aucune requête, seulement la résolution de garde que faisait déjà
       `withStaffRoute`.

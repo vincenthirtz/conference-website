@@ -1,6 +1,7 @@
 get:
   summary: List scrim planning sessions (shared availability grids).
   operationId: adminListScrimPlannings
+  x-zod-query: admin.scrim-plannings.query
   tags:
     - admin/scrims
   security:
@@ -29,8 +30,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.scrim-plannings.create
   responses:
     '201':
       description: Planning created.

@@ -25,6 +25,7 @@ post:
     sinon `409 SCRIM_NOT_LIVE`. La reponse vaut alors `{ success, live: true,
     started, scrim }`.
   operationId: adminRecordScrimResult
+  x-zod-query: admin.scrims/[scrimId]/result.query
   tags:
     - admin/scrims
   security:
@@ -34,6 +35,7 @@ post:
     content:
       application/json:
         schema:
+          x-zod: admin.scrims/[scrimId]/result.body
           type: object
           required:
             - team1_score

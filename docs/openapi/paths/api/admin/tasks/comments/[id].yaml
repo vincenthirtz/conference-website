@@ -3,6 +3,7 @@ delete:
     - admin/tasks
   summary: Supprime un commentaire de carte. Loggue task_comment_delete.
   operationId: adminDeleteTaskComment
+  x-zod-query: admin.tasks/comments/[id].query
   security:
     - StaffSession: []
   parameters:

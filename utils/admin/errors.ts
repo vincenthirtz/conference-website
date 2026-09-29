@@ -139,3 +139,40 @@ export function adminErrorFromStatus(
 ): AdminError {
   return new AdminError(status, CODE_BY_STATUS[status] ?? 'internal', message);
 }
+
+/**
+ * Erreur d'une route MIGRÉE qui garde son corps d'erreur historique : `code`
+ * métier (`INVALID_BODY`, `SLUG_CONFLICT`, `LOGO_REHOST_FAILED`…) et champs
+ * annexes (`details`, `fields`…) que les écrans, le bot ou les tests lisent
+ * déjà. Le statut et la classe restent ceux d'une `AdminError` —
+ * `defineAdminRoute` la sérialise comme les autres, `requestId` compris.
+ *
+ * Sans code historique, c'est une `adminErrorFromStatus` : n'en créer une que
+ * pour préserver un contrat existant, jamais pour un nouveau code.
+ */
+export class LegacyAdminError extends AdminError {
+  readonly legacyCode?: string;
+  readonly extra?: Record<string, unknown>;
+
+  constructor(
+    status: number,
+    message: string,
+    legacy: { code?: string; extra?: Record<string, unknown> } = {}
+  ) {
+    super(status, CODE_BY_STATUS[status] ?? 'internal', message);
+    this.name = 'LegacyAdminError';
+    this.legacyCode = legacy.code;
+    this.extra = legacy.extra;
+  }
+
+  override toBody(requestId?: string): AdminErrorBody {
+    const body = super.toBody(requestId);
+    return {
+      ...body,
+      ...(this.extra ?? {}),
+      // Hors catalogue `AdminErrorCode` : c'est voulu, c'est le contrat
+      // historique de la route.
+      ...(this.legacyCode ? { code: this.legacyCode as AdminErrorCode } : {}),
+    };
+  }
+}

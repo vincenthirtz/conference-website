@@ -1,6 +1,7 @@
 get:
   summary: Scrims (editable) + matches (read-only) in a date range for the admin agenda.
   operationId: adminScrimsCalendar
+  x-zod-query: admin.scrims/calendar.query
   tags:
     - admin/scrims
   security:

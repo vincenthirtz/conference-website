@@ -3,6 +3,7 @@ parameters:
 get:
   summary: List matches in a scrim.
   operationId: adminListScrimMatches
+  x-zod-query: admin.scrims/[scrimId].query
   tags:
     - admin/scrims
   security:
@@ -22,6 +23,7 @@ get:
 post:
   summary: Add a match to a scrim.
   operationId: adminCreateScrimMatch
+  x-zod-query: admin.scrims/[scrimId].query
   tags:
     - admin/scrims
   security:
@@ -31,8 +33,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          additionalProperties: true
+          x-zod: admin.scrims/[scrimId]/matches.create
   responses:
     '201':
       description: Created.

@@ -10,19 +10,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required: [boardId, columnId, title]
-          properties:
-            boardId: {type: string, format: uuid}
-            columnId: {type: string, format: uuid}
-            title: {type: string}
-            description: {type: string}
-            priority: {type: string, enum: [low, medium, high, urgent]}
-            assigneeStaffId: {type: [string, 'null'], format: uuid}
-            dueDate: {type: string}
-            labels:
-              type: array
-              items: {type: string}
+          x-zod: admin.tasks.tasks.create
   responses:
     '201':
       description: Carte creee.

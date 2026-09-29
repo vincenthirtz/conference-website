@@ -8,6 +8,7 @@ parameters:
 post:
   summary: Lie un tournoi à une league.
   operationId: adminLinkLeagueTournament
+  x-zod-query: admin.leagues/[id]/sub.query
   tags:
     - admin/leagues
   security:

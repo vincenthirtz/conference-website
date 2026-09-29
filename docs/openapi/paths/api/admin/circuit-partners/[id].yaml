@@ -10,6 +10,7 @@ patch:
     plan ne peut pas etre pose. Journalise dans `staff_logs`
     (`approve_circuit_partner`, `reject_circuit_partner`).
   operationId: adminDecideCircuitPartnerApplication
+  x-zod-query: admin.circuit-partners/[id].query
   security:
     - StaffSession: []
   parameters:
@@ -23,6 +24,7 @@ patch:
     content:
       application/json:
         schema:
+          x-zod: admin.circuit-partners/[id].decision
           type: object
           required: [action]
           properties:

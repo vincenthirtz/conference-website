@@ -3,6 +3,7 @@ get:
     - admin/tasks
   summary: Fil de commentaires d'une carte (triés created_at asc).
   operationId: adminListTaskComments
+  x-zod-query: admin.tasks/tasks/[id].query
   security:
     - StaffSession: []
   parameters:
@@ -29,6 +30,7 @@ post:
     - admin/tasks
   summary: Ajoute un commentaire (auteur = staff courant). Loggue task_comment_create.
   operationId: adminCreateTaskComment
+  x-zod-query: admin.tasks/tasks/[id].query
   security:
     - StaffSession: []
   parameters:
@@ -41,10 +43,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required: [body]
-          properties:
-            body: {type: string, minLength: 1, maxLength: 5000}
+          x-zod: admin.tasks.comments.create
   responses:
     '201':
       description: Commentaire cree.
