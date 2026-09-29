@@ -93,7 +93,10 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ env.SERVICE_ROLE_KEY }}
           JWT_SECRET: e2e-jwt-secret-not-a-real-one
           NODE_ENV: test
-        run: npx playwright test
+        # `testDir: './tests'` inclut tests/unit/*.test.ts (Vitest), que
+        # Playwright tente de charger et sur lesquels il s'arrête avant la
+        # première spec : on restreint explicitement aux e2e.
+        run: npx playwright test tests/e2e/
 
       - name: Conserver le rapport
         if: always()
