@@ -7,7 +7,9 @@ port = 54322
 major_version = 17
 
 [db.seed]
-enabled = false
+# Seed minimal de TEST (tenant par défaut) — voir supabase/seed.sql.
+enabled = true
+sql_paths = ["./seed.sql"]
 
 [api]
 port = 54321
@@ -17,6 +19,17 @@ extra_search_path = ["public", "extensions"]
 [auth]
 site_url = "http://localhost:3000"
 enable_signup = true
+
+# La suite ouvre des centaines de sessions depuis 127.0.0.1 : avec les
+# plafonds par défaut de GoTrue (30 connexions / 5 min par IP), la connexion
+# échoue en 429, que la page /login affiche « Email ou mot de passe
+# incorrect ». Plafonds relevés — base jetable, jamais exposée.
+[auth.rate_limit]
+email_sent = 1000
+sign_in_sign_ups = 100000
+token_refresh = 100000
+token_verifications = 100000
+anonymous_users = 100000
 
 [auth.email]
 enable_signup = true
