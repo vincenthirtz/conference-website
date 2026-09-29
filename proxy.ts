@@ -37,9 +37,35 @@ const ANALYTICS_ORIGIN = sanitizeAnalyticsOrigin(
 );
 const ANALYTICS_SRC = ANALYTICS_ORIGIN ? ` ${ANALYTICS_ORIGIN}` : '';
 
+// Supabase LOCALE (`supabase start`, e2e en CI) : l'API écoute en clair sur la
+// boucle locale (http://127.0.0.1:54321), que `https://*.supabase.co` ne couvre
+// pas. Sans cette ouverture, le navigateur bloque la connexion par mot de
+// passe — la page /login affiche « Email ou mot de passe incorrect » et toute
+// spec qui se connecte échoue. Réservé au loopback HTTP : en production l'URL
+// est https://<ref>.supabase.co, cette chaîne vaut '' et la CSP est inchangée.
+function localSupabaseConnectSrc(raw: string | undefined): string {
+  if (!raw) return '';
+  try {
+    const u = new URL(raw);
+    if (
+      u.protocol === 'http:' &&
+      (u.hostname === '127.0.0.1' || u.hostname === 'localhost')
+    ) {
+      return ` ${u.origin} ws://${u.host}`;
+    }
+  } catch {
+    // URL invalide : rien à autoriser.
+  }
+  return '';
+}
+const LOCAL_SUPABASE_SRC = localSupabaseConnectSrc(
+  process.env.NEXT_PUBLIC_SUPABASE_URL
+);
+
 const CONNECT_SRC_BASE =
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.twitch.tv https://id.twitch.tv https://challenges.cloudflare.com" +
-  ANALYTICS_SRC;
+  ANALYTICS_SRC +
+  LOCAL_SUPABASE_SRC;
 // Cockpit caster web (/admin/caster) UNIQUEMENT : pilotage d'OBS en local
 // (obs-websocket sur ws://localhost:4455) + chat IRC et EventSub Twitch en
 // WebSocket direct. Le loopback en clair depuis une page HTTPS est permis par
