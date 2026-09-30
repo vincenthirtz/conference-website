@@ -286,9 +286,13 @@ export async function loginRubanPlayer(
   next: string
 ) {
   await page.goto(`/login?next=${encodeURIComponent(next)}`);
-  await page.locator('input#email').fill(email);
-  await page.locator('input#password').fill(RUBAN_PASSWORD);
-  await page.locator('button[type="submit"]').click();
+  // Le formulaire de connexion seul (le pied de page a son propre submit).
+  const form = page
+    .locator('form')
+    .filter({ has: page.locator('input#password') });
+  await form.locator('input#email').fill(email);
+  await form.locator('input#password').fill(RUBAN_PASSWORD);
+  await form.locator('button[type="submit"]').click();
   const left = await page
     .waitForURL((url) => !url.pathname.startsWith('/login'), {
       timeout: 30000,
