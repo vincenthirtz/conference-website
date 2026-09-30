@@ -21,7 +21,8 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { listMvpCandidates } from '@/utils/mvp/service';
 import { readPublicVotes } from '@/utils/mvp/publicVote';
-import { tallySource } from '@/utils/mvp/awards';
+import { MIN_VOTES_FOR_AWARD, tallySource } from '@/utils/mvp/awards';
+import { buildDemoPoll } from './publicMvpDemo';
 import { withoutBattleTagId } from '@/utils/mvp/publicLabel';
 
 /**
@@ -54,14 +55,60 @@ export type OverlayPublicMvpPoll = {
   bySource: { twitch: number; discord: number };
   winnerMemberId: string | null;
   winnerLabel: string | null;
+  /** Faux vote de TEST (utils/overlay/publicMvpDemo.ts) : la source le signale. */
+  isDemo?: boolean;
+  /** Réglages d'affichage (public_mvp_overlay_settings), défauts sinon. */
+  display?: PublicMvpDisplay;
 };
+
+export type PublicMvpDisplay = {
+  position: 'top' | 'center' | 'bottom';
+  showSources: boolean;
+};
+
+export const DEFAULT_PUBLIC_MVP_DISPLAY: PublicMvpDisplay = {
+  position: 'top',
+  showSources: true,
+};
+
+type OverlaySettingsRow = {
+  position: string | null;
+  show_sources: boolean | null;
+  demo_started_at: string | null;
+  demo_until: string | null;
+};
+
+function displayOf(row: OverlaySettingsRow | null): PublicMvpDisplay {
+  const position =
+    row?.position === 'center' || row?.position === 'bottom'
+      ? row.position
+      : 'top';
+  return { position, showSources: row?.show_sources !== false };
+}
+
+/**
+ * Élue « provisoire » d'un scrutin dont la fenêtre est passée mais que
+ * personne n'a clôturé : la tête du classement, si elle est seule en tête et
+ * a réuni le minimum de voix d'une élection (MIN_VOTES_FOR_AWARD). Sinon
+ * personne — l'écran montre alors le décompte sans couronne.
+ */
+export function provisionalWinner(
+  rows: readonly OverlayPublicMvpCandidate[],
+  total: number
+): OverlayPublicMvpCandidate | null {
+  const [first, second] = rows;
+  if (!first || total < MIN_VOTES_FOR_AWARD) return null;
+  if (second && second.votes === first.votes) return null;
+  return first;
+}
 
 /**
  * Le scrutin À L'ÉCRAN d'un espace : celui qui est ouvert, ou celui qui vient
  * de fermer. `null` quand il n'y en a aucun — la source n'affiche alors rien.
  *
- * COÛT : une requête quand rien n'est ouvert, six quand un scrutin tourne.
- * C'est la raison pour laquelle le cas « rien à l'écran » sort tôt.
+ * COÛT : deux requêtes en parallèle quand rien n'est ouvert (scrutins +
+ * réglages d'affichage, qui portent aussi le TEST), six quand un scrutin
+ * tourne. C'est la raison pour laquelle le cas « rien à l'écran » sort tôt.
  */
 export async function readPublicMvpFeed(
   tenantId: string,
@@ -69,20 +116,28 @@ export async function readPublicMvpFeed(
 ): Promise<OverlayPublicMvpPoll | null> {
   const depuis = new Date(nowMs - RESULT_LINGER_MS).toISOString();
 
-  const { data: polls, error } = await supabaseAdmin
-    .from('match_public_mvp_polls')
-    .select(
-      'match_id, closes_at, closed_at, candidate_member_ids, winner_member_id'
-    )
-    .eq('tenant_id', tenantId)
-    .or(`closed_at.is.null,closed_at.gte.${depuis}`)
-    .order('opened_at', { ascending: false })
-    .limit(5);
+  const [{ data: polls, error }, { data: settings }] = await Promise.all([
+    supabaseAdmin
+      .from('match_public_mvp_polls')
+      .select(
+        'match_id, closes_at, closed_at, candidate_member_ids, winner_member_id'
+      )
+      .eq('tenant_id', tenantId)
+      .or(`closed_at.is.null,closed_at.gte.${depuis}`)
+      .order('opened_at', { ascending: false })
+      .limit(5),
+    supabaseAdmin
+      .from('public_mvp_overlay_settings')
+      .select('position, show_sources, demo_started_at, demo_until')
+      .eq('tenant_id', tenantId)
+      .maybeSingle(),
+  ]);
 
   if (error) {
     logger.error('[overlay/mvp] read error', error);
     return null;
   }
+  const display = displayOf((settings as OverlaySettingsRow | null) ?? null);
 
   // Un scrutin OUVERT prime sur un résultat rémanent : si la régie enchaîne
   // deux matchs, c'est le vote en cours qui doit être à l'écran.
@@ -92,8 +147,30 @@ export async function readPublicMvpFeed(
       p.closes_at &&
       new Date(p.closes_at as string).getTime() > nowMs
   );
+  // Fenêtre passée SANS clôture (personne n'a cliqué « clôturer ») : on le
+  // montre comme clos pendant RESULT_LINGER_MS après l'heure de fin, au lieu
+  // de vider l'écran au moment où le public attend le résultat.
+  const echu = (polls ?? []).find(
+    (p) =>
+      !p.closed_at &&
+      p.closes_at &&
+      new Date(p.closes_at as string).getTime() <= nowMs &&
+      new Date(p.closes_at as string).getTime() > nowMs - RESULT_LINGER_MS
+  );
   const recent = (polls ?? []).find((p) => p.closed_at);
-  const poll = ouvert ?? recent ?? null;
+  const poll = ouvert ?? recent ?? echu ?? null;
+
+  // Le TEST ne passe jamais devant un vrai vote ouvert : un clic « Tester »
+  // oublié ne doit pas masquer le vote du public en plein direct.
+  const s = settings as OverlaySettingsRow | null;
+  if (!ouvert && s?.demo_started_at && s.demo_until) {
+    const until = new Date(s.demo_until).getTime();
+    const demo =
+      until > nowMs
+        ? buildDemoPoll(new Date(s.demo_started_at).getTime(), nowMs)
+        : null;
+    if (demo) return { ...demo, display };
+  }
   if (!poll) return null;
 
   const matchId = poll.match_id as string;
@@ -147,7 +224,11 @@ export async function readPublicMvpFeed(
         : a.memberId.localeCompare(b.memberId)
     );
 
-  const winnerMemberId = (poll.winner_member_id as string | null) ?? null;
+  // Clôturé : l'élue du dépouillement. Échu sans clôture : la tête du
+  // classement, si elle l'emporte nettement (cf. provisionalWinner).
+  const winnerMemberId =
+    (poll.winner_member_id as string | null) ??
+    (poll === echu ? (provisionalWinner(rows, total)?.memberId ?? null) : null);
 
   return {
     matchId,
@@ -161,5 +242,6 @@ export async function readPublicMvpFeed(
     bySource: { twitch: twitch.total, discord: discord.total },
     winnerMemberId,
     winnerLabel: rows.find((r) => r.memberId === winnerMemberId)?.label ?? null,
+    display,
   };
 }

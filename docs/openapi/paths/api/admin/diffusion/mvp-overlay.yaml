@@ -1,0 +1,119 @@
+get:
+  summary: Crowd MVP poll overlay settings and test state.
+  description: >
+    Reglages du sondage « coup de cœur du public » dans la source OBS
+    `/overlay/regie` (duree de vote par defaut, position, detail par
+    plateforme) et test en cours. Absents = valeurs par defaut. Regie (caster).
+  operationId: adminReadMvpOverlay
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Reglages et test.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              settings:
+                type: object
+                properties:
+                  window_minutes:
+                    type: integer
+                  position:
+                    type: string
+                    enum: [top, center, bottom]
+                  show_sources:
+                    type: boolean
+              demo:
+                type: object
+                properties:
+                  active:
+                    type: boolean
+                  until:
+                    type: [string, 'null']
+                    format: date-time
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+put:
+  summary: Save the crowd MVP poll overlay settings.
+  description: >
+    Enregistre la duree de vote par defaut (1-360 min), la position de la carte
+    dans la source Regie et l'affichage du detail Twitch / Discord. Journalise.
+    Reserve a `manage_broadcast`.
+  operationId: adminSaveMvpOverlay
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.diffusion/mvp-overlay.update
+          type: object
+          required: [window_minutes, position, show_sources]
+          properties:
+            window_minutes:
+              type: integer
+              minimum: 1
+              maximum: 360
+            position:
+              type: string
+              enum: [top, center, bottom]
+            show_sources:
+              type: boolean
+  responses:
+    '200':
+      description: Reglages enregistres.
+      content:
+        application/json:
+          schema:
+            type: object
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Start or stop the crowd MVP poll test in the Régie source.
+  description: >
+    `test-start` affiche pendant 55 s un faux vote anime, marque TEST, dans la
+    source `/overlay/regie` ; `test-stop` l'arrete. Aucune voix n'est ecrite,
+    et un vrai vote ouvert passe toujours devant. Regie (caster).
+  operationId: adminTestMvpOverlay
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.diffusion/mvp-overlay.body
+          type: object
+          required: [action]
+          properties:
+            action:
+              type: string
+              enum: [test-start, test-stop]
+  responses:
+    '200':
+      description: Etat apres le geste.
+      content:
+        application/json:
+          schema:
+            type: object
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

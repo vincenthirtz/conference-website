@@ -343,6 +343,8 @@ export type StaffLogAction =
   | 'delete_custom_game_preset'
   // --- Planning du staff ---
   | 'create_staff_planning_slot'
+  // --- Sondage MVP du public (overlay) ---
+  | 'update_mvp_overlay_settings'
   | 'update_staff_planning_slot'
   | 'delete_staff_planning_slot'
   | 'import_staff_planning'

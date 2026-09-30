@@ -9,6 +9,7 @@
 // Paramètres :
 //   alertes      0 pour masquer la boîte d'alertes
 //   mvp          0 pour masquer le scrutin public
+//   mvpPosition  top · center · bottom — sinon le réglage de Diffusion › Overlays
 //   partenaires  0 pour masquer le bandeau
 //   don          0 pour masquer le QR · `carte` pour le panneau centré
 //   scale        0.5 → 2 (applique à tout)
@@ -94,6 +95,10 @@ function parseAccent(raw: string | undefined): string {
 /** Un interrupteur d'élément : absent = allumé, `0` = éteint. */
 const actif = (raw: string | undefined) => raw !== '0';
 
+/** Position forcée du scrutin, ou `undefined` (réglage de l'espace). */
+const mvpPositionOf = (raw: string | undefined) =>
+  raw === 'top' || raw === 'center' || raw === 'bottom' ? raw : undefined;
+
 export default function RegieOverlayPage() {
   const router = useRouter();
   // Signal de présence (Diffusion › Overlays : « affichée »).
@@ -104,6 +109,7 @@ export default function RegieOverlayPage() {
   const q = router.query;
   const avecAlertes = actif(firstParam(q.alertes));
   const avecMvp = actif(firstParam(q.mvp));
+  const mvpPosition = mvpPositionOf(firstParam(q.mvpPosition));
   const avecPartenaires = actif(firstParam(q.partenaires));
   const donParam = firstParam(q.don);
   const avecDon = actif(donParam);
@@ -221,15 +227,16 @@ export default function RegieOverlayPage() {
               />
             )}
 
-            {/* Le scrutin, en haut à gauche : il cohabite avec une alerte qui
-                surgit au centre, sans se recouvrir. */}
+            {/* Le scrutin : en haut par défaut (il cohabite avec une alerte
+                qui surgit au centre), sinon là où Diffusion › Overlays le
+                pose, ou `?mvpPosition=`. */}
             {avecMvp && (
               <div className="pointer-events-none absolute inset-0">
                 <PublicMvpSource
                   poll={data?.publicMvp ?? null}
                   scale={scale * 0.85}
                   accent={accent}
-                  position="top"
+                  position={mvpPosition}
                 />
               </div>
             )}

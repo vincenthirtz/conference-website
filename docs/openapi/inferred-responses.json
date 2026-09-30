@@ -4337,6 +4337,59 @@
     ]
    }
   },
+  "GET /api/admin/diffusion/mvp-overlay": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "demo": {
+      "type": "object",
+      "properties": {
+       "active": {
+        "type": "boolean"
+       },
+       "until": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "active",
+       "until"
+      ]
+     },
+     "settings": {
+      "type": "object",
+      "properties": {
+       "position": {
+        "type": "string",
+        "enum": [
+         "bottom",
+         "center",
+         "top"
+        ]
+       },
+       "show_sources": {
+        "type": "boolean"
+       },
+       "window_minutes": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "position",
+       "show_sources",
+       "window_minutes"
+      ]
+     }
+    },
+    "required": [
+     "demo",
+     "settings"
+    ]
+   }
+  },
   "GET /api/admin/diffusion/overlay-presence": {
    "200": {
     "type": "object",
@@ -5446,6 +5499,7 @@
           "update_map_pool_entry",
           "update_match",
           "update_member_profile",
+          "update_mvp_overlay_settings",
           "update_player_battle_tag",
           "update_player_skill_rating",
           "update_pole_member",
@@ -7366,6 +7420,7 @@
           "update_map_pool_entry",
           "update_match",
           "update_member_profile",
+          "update_mvp_overlay_settings",
           "update_player_battle_tag",
           "update_player_skill_rating",
           "update_pole_member",
@@ -9413,6 +9468,7 @@
           "update_map_pool_entry",
           "update_match",
           "update_member_profile",
+          "update_mvp_overlay_settings",
           "update_player_battle_tag",
           "update_player_skill_rating",
           "update_pole_member",
@@ -14497,6 +14553,7 @@
           "update_map_pool_entry",
           "update_match",
           "update_member_profile",
+          "update_mvp_overlay_settings",
           "update_player_battle_tag",
           "update_player_skill_rating",
           "update_pole_member",
@@ -20743,6 +20800,7 @@
           "update_map_pool_entry",
           "update_match",
           "update_member_profile",
+          "update_mvp_overlay_settings",
           "update_player_battle_tag",
           "update_player_skill_rating",
           "update_pole_member",
@@ -25379,6 +25437,7 @@
           "update_map_pool_entry",
           "update_match",
           "update_member_profile",
+          "update_mvp_overlay_settings",
           "update_player_battle_tag",
           "update_player_skill_rating",
           "update_pole_member",
@@ -40504,6 +40563,29 @@
          "null"
         ]
        },
+       "display": {
+        "type": "object",
+        "properties": {
+         "position": {
+          "type": "string",
+          "enum": [
+           "bottom",
+           "center",
+           "top"
+          ]
+         },
+         "showSources": {
+          "type": "boolean"
+         }
+        },
+        "required": [
+         "position",
+         "showSources"
+        ]
+       },
+       "isDemo": {
+        "type": "boolean"
+       },
        "isOpen": {
         "type": "boolean"
        },
@@ -41338,6 +41420,29 @@
          "string",
          "null"
         ]
+       },
+       "display": {
+        "type": "object",
+        "properties": {
+         "position": {
+          "type": "string",
+          "enum": [
+           "bottom",
+           "center",
+           "top"
+          ]
+         },
+         "showSources": {
+          "type": "boolean"
+         }
+        },
+        "required": [
+         "position",
+         "showSources"
+        ]
+       },
+       "isDemo": {
+        "type": "boolean"
        },
        "isOpen": {
         "type": "boolean"
@@ -60802,6 +60907,59 @@
     ]
    }
   },
+  "POST /api/admin/diffusion/mvp-overlay": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "demo": {
+      "type": "object",
+      "properties": {
+       "active": {
+        "type": "boolean"
+       },
+       "until": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "active",
+       "until"
+      ]
+     },
+     "settings": {
+      "type": "object",
+      "properties": {
+       "position": {
+        "type": "string",
+        "enum": [
+         "bottom",
+         "center",
+         "top"
+        ]
+       },
+       "show_sources": {
+        "type": "boolean"
+       },
+       "window_minutes": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "position",
+       "show_sources",
+       "window_minutes"
+      ]
+     }
+    },
+    "required": [
+     "demo",
+     "settings"
+    ]
+   }
+  },
   "POST /api/admin/discord/team-channels": {
    "202": {
     "type": "object",
@@ -79862,6 +80020,59 @@
      "configured",
      "handle",
      "ok"
+    ]
+   }
+  },
+  "PUT /api/admin/diffusion/mvp-overlay": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "demo": {
+      "type": "object",
+      "properties": {
+       "active": {
+        "type": "boolean"
+       },
+       "until": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "active",
+       "until"
+      ]
+     },
+     "settings": {
+      "type": "object",
+      "properties": {
+       "position": {
+        "type": "string",
+        "enum": [
+         "bottom",
+         "center",
+         "top"
+        ]
+       },
+       "show_sources": {
+        "type": "boolean"
+       },
+       "window_minutes": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "position",
+       "show_sources",
+       "window_minutes"
+      ]
+     }
+    },
+    "required": [
+     "demo",
+     "settings"
     ]
    }
   },

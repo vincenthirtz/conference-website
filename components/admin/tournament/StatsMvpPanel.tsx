@@ -98,12 +98,21 @@ function sourceLabel(t: Dict, s: string | null): string {
 
 export default function StatsMvpPanel({
   kind = 'teams',
+  tournamentId: tournamentIdProp,
+  defaultMinutes = DEFAULT_PUBLIC_MINUTES,
 }: {
   kind?: StatsMvpKind;
+  /**
+   * Tournoi suivi. Absent : `?id=` de la page (onglet Résultats du tournoi).
+   * Diffusion › Overlays le passe depuis son sélecteur (`?tournament=`).
+   */
+  tournamentId?: string;
+  /** Durée proposée à l'ouverture (réglage du sondage de l'espace). */
+  defaultMinutes?: number;
 }) {
   const router = useRouter();
   const { id } = router.query;
-  const tournamentId = Array.isArray(id) ? id[0] : id;
+  const tournamentId = tournamentIdProp ?? (Array.isArray(id) ? id[0] : id);
 
   const t = useAdminT(nsAdminTournamentMvpVotes);
   const locale = useLocale();
@@ -118,7 +127,12 @@ export default function StatsMvpPanel({
   );
   const data = votesQuery.data ?? null;
   const [openMatchId, setOpenMatchId] = useState('');
-  const [minutes, setMinutes] = useState(String(DEFAULT_PUBLIC_MINUTES));
+  const [minutes, setMinutes] = useState(String(defaultMinutes));
+  // Le réglage de l'espace arrive après le premier rendu : il remplace la
+  // valeur proposée tant que personne ne l'a modifiée à la main.
+  useEffect(() => {
+    setMinutes(String(defaultMinutes));
+  }, [defaultMinutes]);
   const [busy, setBusy] = useState(false);
   const loading = votesQuery.isPending;
   const error = votesQuery.error

@@ -19,6 +19,15 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import dynamic from 'next/dynamic';
+
+// Chargé à la demande : le panneau (cache de requêtes + suivi en direct)
+// pèserait ~45 ko sur le premier chargement d'une page qu'on ouvre surtout
+// pour copier une URL (bundle-budget).
+const PublicMvpOverlayPanel = dynamic(
+  () => import('@/features/admin/diffusion/ui/PublicMvpOverlayPanel'),
+  { ssr: false }
+);
 import { withStaffPage } from '@/utils/staff';
 import type { StaffProps } from '@/types/admin';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -208,6 +217,19 @@ export default function DiffusionOverlaysPage({
         {canTuneAlerts && (
           <section className="mt-6 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
             <StreamAlertsPanel />
+          </section>
+        )}
+
+        {/* Le sondage MVP du public : tester, régler, piloter — il vit dans
+            la source Régie, comme la boîte d'alertes au-dessus. */}
+        {canUseMatchOverlays && (
+          <section className="mt-6 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
+            <PublicMvpOverlayPanel
+              tournamentId={selected?.id ?? null}
+              canTuneSettings={(staff?.permissions ?? []).includes(
+                'manage_broadcast'
+              )}
+            />
           </section>
         )}
 

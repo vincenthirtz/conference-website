@@ -122,7 +122,15 @@ export async function openPublicVote(
   if (!match) return null;
 
   const existing = await readPublicPoll(tenantId, matchId);
-  if (existing && !existing.closed_at) {
+  // « Déjà ouvert » = pas clôturé ET fenêtre encore en cours. Un scrutin dont
+  // la fenêtre est passée sans clôture se ROUVRE : sans ça, la régie qui
+  // n'avait pas cliqué « clôturer » ne pouvait plus relancer le vote.
+  const stillOpen =
+    !!existing &&
+    !existing.closed_at &&
+    !!existing.closes_at &&
+    new Date(existing.closes_at).getTime() > Date.now();
+  if (existing && stillOpen) {
     // Déjà ouvert : on complète seulement l'ancrage Discord s'il manque, sans
     // toucher à la fenêtre ni aux candidates.
     const patch: Record<string, unknown> = {};

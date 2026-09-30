@@ -1096,6 +1096,16 @@
       "prize_pool_id",
       "tenant_id"
     ],
+    "public_mvp_overlay_settings": [
+      "demo_started_at",
+      "demo_until",
+      "position",
+      "show_sources",
+      "tenant_id",
+      "updated_at",
+      "updated_by",
+      "window_minutes"
+    ],
     "push_subscriptions": [
       "auth",
       "created_at",
@@ -2814,6 +2824,10 @@
     },
     "prize_pool_contributions_tenant_id_fkey": {
       "source": "prize_pool_contributions",
+      "target": "tenants"
+    },
+    "public_mvp_overlay_settings_tenant_id_fkey": {
+      "source": "public_mvp_overlay_settings",
       "target": "tenants"
     },
     "push_subscriptions_tenant_id_fkey": {

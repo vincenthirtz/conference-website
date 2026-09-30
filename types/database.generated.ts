@@ -4511,6 +4511,47 @@ export type Database = {
           },
         ]
       }
+      public_mvp_overlay_settings: {
+        Row: {
+          demo_started_at: string | null
+          demo_until: string | null
+          position: string
+          show_sources: boolean
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+          window_minutes: number
+        }
+        Insert: {
+          demo_started_at?: string | null
+          demo_until?: string | null
+          position?: string
+          show_sources?: boolean
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+          window_minutes?: number
+        }
+        Update: {
+          demo_started_at?: string | null
+          demo_until?: string | null
+          position?: string
+          show_sources?: boolean
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          window_minutes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_mvp_overlay_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       push_subscriptions: {
         Row: {
           auth: string

@@ -72,9 +72,13 @@ export default ns('overlay', {
   // Coup de cœur du public : le scrutin des viewers Twitch et des supporters
   // Discord, à l'antenne.
   publicMvpDocTitle: 'Source de stream — coup de cœur du public',
-  publicMvpTitleOpen: 'Votez : coup de cœur du public',
+  publicMvpTitleOpen: 'Votez pour votre MVP',
   publicMvpTitleClosed: 'Coup de cœur du public',
-  publicMvpHowTo: '!mvp <numéro> dans le chat',
+  publicMvpHowTo: 'Twitch : !mvp <pseudo> · Discord : menu du vote',
+  publicMvpTestBadge: 'Test',
+  publicMvpWinner: 'Élue par le public',
+  publicMvpNoWinner: 'Pas assez de voix pour élire une joueuse',
+  publicMvpVotes: '{count} voix',
   publicMvpTotals: '{total} voix · {twitch} Twitch · {discord} Discord',
 
   partnersDocTitle: 'Source de stream — partenaires',

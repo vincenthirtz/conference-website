@@ -144,3 +144,32 @@ export const BroadcastStatePatchDoc = looseBody([
 
 /** POST /api/admin/stream-alert-test — type d'alerte Twitch + pseudo affiché. */
 export const StreamAlertTestDoc = looseBody(['kind', 'name']);
+
+/* ---------------------------------------------------------------------------
+ * Sondage MVP du public dans /overlay/regie (/api/admin/diffusion/mvp-overlay)
+ * ------------------------------------------------------------------------ */
+
+/** PUT — réglages d'affichage et durée par défaut du vote. */
+export const MvpOverlaySettingsBody = z.object({
+  window_minutes: z.number().int().min(1).max(360),
+  position: z.enum(['top', 'center', 'bottom']),
+  show_sources: z.boolean(),
+});
+
+/** POST — lancer ou arrêter le TEST (faux vote dans la source). */
+export const MvpOverlayTestBody = z.object({
+  action: z.enum(['test-start', 'test-stop']),
+});
+
+/** Réglages et test tels que la route les rend (ui, hooks, service). */
+export type MvpOverlaySettings = {
+  window_minutes: number;
+  position: 'top' | 'center' | 'bottom';
+  show_sources: boolean;
+};
+
+export type MvpOverlayState = {
+  settings: MvpOverlaySettings;
+  /** TEST à l'écran, et jusqu'à quand. */
+  demo: { active: boolean; until: string | null };
+};

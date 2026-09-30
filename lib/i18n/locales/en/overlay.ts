@@ -64,9 +64,13 @@ export default {
 
   alertsDocTitle: 'Stream source — alert box',
   publicMvpDocTitle: 'Stream source — crowd favourite',
-  publicMvpTitleOpen: 'Vote: crowd favourite',
+  publicMvpTitleOpen: 'Vote for your MVP',
   publicMvpTitleClosed: 'Crowd favourite',
-  publicMvpHowTo: '!mvp <number> in chat',
+  publicMvpHowTo: 'Twitch: !mvp <name> · Discord: vote menu',
+  publicMvpTestBadge: 'Test',
+  publicMvpWinner: 'Crowd pick',
+  publicMvpNoWinner: 'Not enough votes to elect a player',
+  publicMvpVotes: '{count} votes',
   publicMvpTotals: '{total} votes · {twitch} Twitch · {discord} Discord',
 
   partnersDocTitle: 'Stream source — partners',

@@ -58,8 +58,13 @@ function parseAccent(raw: string | undefined): string {
   return /^[0-9a-fA-F]{6}$/.test(value) ? `#${value}` : DEFAULT_ACCENT;
 }
 
-function parsePosition(raw: string | undefined): 'top' | 'center' | 'bottom' {
-  return raw === 'top' || raw === 'bottom' ? raw : 'center';
+/** Position forcée par l'URL, sinon `undefined` : le réglage de l'espace. */
+function parsePosition(
+  raw: string | undefined
+): 'top' | 'center' | 'bottom' | undefined {
+  return raw === 'top' || raw === 'center' || raw === 'bottom'
+    ? raw
+    : undefined;
 }
 
 function parseLimit(raw: string | undefined): number {

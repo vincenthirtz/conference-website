@@ -57,6 +57,8 @@ import {
   TwitchChannelIdQuery,
   TwitchChannelListQuery,
   TwitchChannelPatch,
+  MvpOverlaySettingsBody,
+  MvpOverlayTestBody,
 } from '../../../features/admin/diffusion/schemas';
 import { RemoveFreePlayerQuery } from '../../../features/admin/free-players/schemas';
 import { UserSearchQuery } from '../../../features/admin/users/schemas';
@@ -657,6 +659,14 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   },
   'admin.staff-planning/[slotId].update': {
     schema: StaffPlanningSlotPatch,
+    io: 'input',
+  },
+  'admin.diffusion/mvp-overlay.update': {
+    schema: MvpOverlaySettingsBody,
+    io: 'input',
+  },
+  'admin.diffusion/mvp-overlay.body': {
+    schema: MvpOverlayTestBody,
     io: 'input',
   },
   'admin.staff-planning/import.body': {
