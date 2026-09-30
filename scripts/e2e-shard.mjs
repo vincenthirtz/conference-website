@@ -87,7 +87,12 @@ if (args[0] === '--durations') {
 } else {
   const index = Number(args[0]);
   const total = Number(args[1]);
-  if (!Number.isInteger(index) || !Number.isInteger(total) || index < 1 || index > total) {
+  if (
+    !Number.isInteger(index) ||
+    !Number.isInteger(total) ||
+    index < 1 ||
+    index > total
+  ) {
     process.stderr.write('usage: node scripts/e2e-shard.mjs <i> <N>\n');
     process.exit(2);
   }

@@ -86,11 +86,7 @@ export default function MatchGamePickBans({
               bans.filter((_, j) => j !== i).map((b) => b.hero)
             );
             return (
-              <div
-                // biome-ignore lint/suspicious/noArrayIndexKey: l'ordre EST l'identité d'un ban
-                key={i}
-                className="flex flex-wrap items-center gap-2"
-              >
+              <div key={i} className="flex flex-wrap items-center gap-2">
                 <span className="w-5 font-mono text-xs text-[var(--t4,#807984)]">
                   {i + 1}.
                 </span>
