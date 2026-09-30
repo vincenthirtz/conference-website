@@ -1,4 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { DEFAULT_TENANT_ID } from '../../utils/tenantId';
 
 const supabaseUrl =
   process.env.TEST_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -111,19 +114,103 @@ if (!envReady) {
   );
 }
 
-export const supabaseTestClient = envReady
-  ? createClient(supabaseUrl, serviceRoleKey)
-  : null;
+/**
+ * Tables dont `tenant_id` est NOT NULL SANS défaut, lues dans le socle.
+ *
+ * Depuis la bascule multi-tenant, ~130 tables exigent un `tenant_id` et aucune
+ * n'a de défaut ni de trigger qui le pose. Les specs écrites avant insèrent
+ * sans lui : l'insert échoue (23502), `data` vaut `null`, et la spec tombe plus
+ * loin sur « Cannot read properties of null (reading 'id') » — loin de la
+ * cause. Plutôt que de retoucher chaque spec (et d'attendre la prochaine qui
+ * l'oubliera), le client de seed pose le tenant par défaut à la place de
+ * l'appelant, SEULEMENT quand la ligne n'en porte pas déjà un.
+ *
+ * La liste est DÉRIVÉE du socle et non recopiée : une table qui gagne la
+ * colonne au prochain socle est couverte sans qu'on y pense.
+ */
+function readTenantScopedTables(): Set<string> {
+  try {
+    const sql = readFileSync(
+      join(process.cwd(), 'supabase/migrations/00000000000000_baseline.sql'),
+      'utf8'
+    );
+    const tables = new Set<string>();
+    const re = /CREATE TABLE IF NOT EXISTS public\.(\w+) \(([\s\S]*?)\n\);/g;
+    for (let m = re.exec(sql); m; m = re.exec(sql)) {
+      if (/^\s*tenant_id uuid NOT NULL(?! DEFAULT)/m.test(m[2]))
+        tables.add(m[1]);
+    }
+    return tables;
+  } catch {
+    return new Set();
+  }
+}
+
+export const TENANT_SCOPED_TABLES = readTenantScopedTables();
+
+function withDefaultTenant<T>(values: T): T {
+  const fill = (row: unknown) =>
+    row && typeof row === 'object' && !('tenant_id' in row)
+      ? { tenant_id: DEFAULT_TENANT_ID, ...(row as object) }
+      : row;
+  return (Array.isArray(values) ? values.map(fill) : fill(values)) as T;
+}
+
+/** Options communes : aucun client de test ne garde de session sur disque. */
+const NO_SESSION = {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+  },
+} as const;
+
+function createSeedClient(): SupabaseClient {
+  const client = createClient(supabaseUrl, serviceRoleKey, NO_SESSION);
+
+  // UNE CONNEXION NE DOIT JAMAIS PASSER PAR LE CLIENT DE SEED.
+  //
+  // supabase-js envoie à PostgREST le jeton de la session courante s'il y en a
+  // une, et la clé service seulement à défaut. Une spec qui appelait
+  // `supabaseTestClient.auth.signInWithPassword(...)` pour récupérer le jeton
+  // d'une joueuse transformait donc ce client partagé en client de CETTE
+  // joueuse, pour tout le reste du fichier : les écritures suivantes passaient
+  // sous RLS — `createTestStaff` échouait en 42501 sur `staff`. La connexion
+  // est déléguée à un client jetable ; la réponse (session, jeton) est la même.
+  client.auth.signInWithPassword = ((credentials) =>
+    createClient(
+      supabaseUrl,
+      serviceRoleKey,
+      NO_SESSION
+    ).auth.signInWithPassword(
+      credentials
+    )) as typeof client.auth.signInWithPassword;
+
+  const from = client.from.bind(client);
+  client.from = ((table: string) => {
+    const builder = from(table);
+    if (!TENANT_SCOPED_TABLES.has(table)) return builder;
+    const insert = builder.insert.bind(builder);
+    const upsert = builder.upsert.bind(builder);
+    builder.insert = ((values: unknown, options?: unknown) =>
+      (insert as any)(withDefaultTenant(values), options)) as typeof insert;
+    builder.upsert = ((values: unknown, options?: unknown) =>
+      (upsert as any)(withDefaultTenant(values), options)) as typeof upsert;
+    return builder;
+  }) as typeof client.from;
+
+  return client;
+}
+
+export const supabaseTestClient = envReady ? createSeedClient() : null;
 
 /**
- * Default tenant UUID — the "conference" tenant. Mirrors `DEFAULT_TENANT_ID`
- * in `utils/tenant.ts` (same env override, same hardcoded fallback). Several
- * tables (incl. `tournaments`) now carry a NOT NULL `tenant_id` after the
- * multi-tenant migration, so any direct-supabase seed MUST set it. Use this
- * constant (or `seedTournament`) instead of inlining a literal UUID.
+ * Tenant par défaut — réexporté de `utils/tenantId.ts` (module feuille, même
+ * surcharge par env) pour qu'il n'existe qu'UNE valeur. Toute écriture directe
+ * sur une table tenant-scopée doit le porter ; le client de seed le pose tout
+ * seul quand il manque (voir TENANT_SCOPED_TABLES).
  */
-export const DEFAULT_TENANT_ID: string =
-  process.env.DEFAULT_TENANT_ID || 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
+export { DEFAULT_TENANT_ID };
 
 /**
  * Insert a tournament fixture scoped to the default tenant and return its id.
@@ -266,6 +353,22 @@ export async function createTestStaff(
     // If staff insert fails, delete the user
     await supabaseTestClient.auth.admin.deleteUser(userData.user.id);
     throw staffError;
+  }
+
+  // Comme en prod, le staff du tenant par défaut y est rattaché. Best-effort :
+  // sans cette ligne la résolution retombe déjà sur DEFAULT_TENANT_ID.
+  const { data: staffRow } = await supabaseTestClient
+    .from('staff')
+    .select('id')
+    .eq('auth_user_id', userData.user.id)
+    .maybeSingle();
+  if (staffRow?.id) {
+    await supabaseTestClient
+      .from('tenant_staff')
+      .upsert(
+        { tenant_id: DEFAULT_TENANT_ID, staff_id: staffRow.id, role },
+        { onConflict: 'tenant_id,staff_id' }
+      );
   }
 
   return userData.user;

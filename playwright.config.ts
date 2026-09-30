@@ -28,6 +28,38 @@ const serverCommand =
     ? `npm run start -- --hostname 0.0.0.0 --port ${PORT}`
     : `npm run dev -- --hostname 0.0.0.0 --port ${PORT}`;
 
+// Consentement cookies PRÉ-DONNÉ dans chaque contexte. La bannière est un
+// `role="dialog"` modal fixé en bas d'écran : sur une base neuve (CI), elle
+// ouvrait sur chaque page, interceptait les clics (délais expirés sur la
+// navigation, les menus) et doublait tout `getByRole('dialog')` / « Tout ».
+// Forme = `useCookieConsent` (clé, version). Mesure d'audience et marketing
+// refusés : rien d'externe ne se charge pendant les tests. Aucune spec ne
+// teste la bannière elle-même ; celle qui le voudra passera
+// `test.use({ storageState: { cookies: [], origins: [] } })`.
+const cookieConsentState = {
+  cookies: [],
+  origins: [
+    {
+      origin: new URL(baseURL).origin,
+      localStorage: [
+        {
+          name: 'cookie_consent',
+          value: JSON.stringify({
+            version: '1.0',
+            preferences: {
+              essential: true,
+              functional: true,
+              analytics: false,
+              marketing: false,
+            },
+            consentDate: '2026-01-01T00:00:00.000Z',
+          }),
+        },
+      ],
+    },
+  ],
+};
+
 export default defineConfig({
   testDir: './tests/e2e',
   timeout: CI ? 60_000 : 120_000,
@@ -38,6 +70,7 @@ export default defineConfig({
   },
   use: {
     baseURL,
+    storageState: cookieConsentState,
     trace: CI ? 'retain-on-failure' : 'on-first-retry',
     video: CI ? 'off' : 'retain-on-failure',
     screenshot: 'only-on-failure',
