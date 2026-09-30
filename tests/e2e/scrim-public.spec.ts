@@ -147,10 +147,20 @@ test.describe('Public scrim requests API (/api/public/scrim-requests)', () => {
     expect(ours.user?.display_name).toBe('Alice External');
     expect(ours.user?.discord).toBe('alice#1234');
 
-    // Captain accepts.
-    const approveRes = await request.post('/api/teams/scrim-requests', {
+    // La demande publique n'a pas de date (champ facultatif) : accepter sans
+    // en fixer une est refusé avec un message explicite…
+    const noSlotRes = await request.post('/api/teams/scrim-requests', {
       headers: { Authorization: `Bearer ${captainToken}` },
       data: { demandeId: ours.id, action: 'approve' },
+    });
+    expect(noSlotRes.status()).toBe(400);
+    expect((await noSlotRes.json()).error).toMatch(/aucun créneau/);
+
+    // …et la capitaine accepte en FIXANT la date du scrim.
+    const slot = new Date(Date.now() + 3 * 86_400_000).toISOString();
+    const approveRes = await request.post('/api/teams/scrim-requests', {
+      headers: { Authorization: `Bearer ${captainToken}` },
+      data: { demandeId: ours.id, action: 'approve', slot },
     });
     expect(approveRes.status(), await approveRes.text()).toBe(200);
     const approveBody = await approveRes.json();

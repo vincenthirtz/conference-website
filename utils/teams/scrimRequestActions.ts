@@ -319,16 +319,30 @@ export async function applyScrimRequestAction(
 
   let agreedSlot: string | null = null;
   const rawSlot = input.slot;
+  // Demande SANS créneau (formulaire public : date facultative). Personne n'a
+  // rien proposé : c'est l'équipe qui accepte qui fixe la date. Une
+  // contre-proposition serait une impasse — le demandeur externe n'a pas de
+  // compte pour y répondre ; il est prévenu par e-mail / Discord.
+  const noSlotYet = currentSlots.length === 0;
   if (typeof rawSlot === 'string' && rawSlot.trim()) {
     const d = new Date(rawSlot.trim());
     if (Number.isNaN(d.getTime())) return fail(400, 'Créneau invalide.');
     agreedSlot = d.toISOString();
-    if (!currentSlots.includes(agreedSlot)) {
+    if (noSlotYet) {
+      if (d.getTime() < Date.now()) {
+        return fail(400, 'La date du scrim doit être dans le futur.');
+      }
+    } else if (!currentSlots.includes(agreedSlot)) {
       return fail(400, 'Ce créneau ne fait pas partie des créneaux proposés.');
     }
   } else if (currentSlots.length === 1) {
     // Demande mono-créneau : accepter sans préciser accepte le seul en lice.
     agreedSlot = currentSlots[0];
+  } else if (noSlotYet) {
+    return fail(
+      400,
+      'Cette demande ne propose aucun créneau : choisis la date du scrim (slot).'
+    );
   } else {
     return fail(400, 'Précise le créneau accepté (slot).');
   }
@@ -343,8 +357,8 @@ export async function applyScrimRequestAction(
         ...payload,
         preferred_date: agreedSlot,
         scrim_nego: {
-          slots: currentSlots,
-          proposed_by: proposer,
+          slots: noSlotYet ? [agreedSlot] : currentSlots,
+          proposed_by: noSlotYet ? myTeamId : proposer,
           rounds: nego.rounds,
           agreed_slot: agreedSlot,
         },

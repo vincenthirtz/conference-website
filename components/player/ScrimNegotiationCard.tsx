@@ -91,10 +91,20 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
     () => makeCounterProposalSchema(t.atLeastOneSlot),
     [t.atLeastOneSlot]
   );
+  // Demande SANS créneau (formulaire public, date facultative) : il n'y a
+  // rien à choisir ni à contre-proposer — le demandeur externe n'a pas de
+  // compte pour répondre. Le sélecteur sert alors à FIXER la date, et sa
+  // soumission accepte (utils/teams/scrimRequestActions, cas « noSlotYet »).
+  const noSlotYet =
+    !(scrim.scrimNego?.agreedSlot ?? null) &&
+    (scrim.scrimNego?.slots ?? []).length === 0;
   const counter = useSchemaForm({
     schema: counterSchema,
     initialValues: { slots: [''] },
-    onSubmit: ({ slots }) => onAction?.(scrim.id, 'counter', { slots }),
+    onSubmit: ({ slots }) =>
+      noSlotYet
+        ? onAction?.(scrim.id, 'accept', { slot: slots[0] })
+        : onAction?.(scrim.id, 'counter', { slots }),
   });
   const counterError = counter.errors.slots;
 
@@ -260,6 +270,7 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
             slots={counter.values.slots}
             onChange={(next) => counter.setValue('slots', next)}
             accent="blue"
+            maxSlots={noSlotYet ? 1 : undefined}
             labels={{
               slotsLabel: t.slotsLabel,
               removeSlot: t.removeSlot,
@@ -289,14 +300,14 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
             }
             className="mt-3 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-xs font-medium text-white"
           >
-            {t.counterSubmit}
+            {noSlotYet ? t.acceptSlot : t.counterSubmit}
           </button>
         </form>
       )}
 
       {onAction && (
         <div className="flex flex-wrap gap-2">
-          {!agreedSlot && (
+          {!agreedSlot && !noSlotYet && (
             <button
               type="button"
               disabled={busy || !selectedSlot}
@@ -317,7 +328,7 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
               onClick={() => setCounterOpen((open) => !open)}
               className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-50 text-xs"
             >
-              {t.counterCta}
+              {noSlotYet ? t.acceptSlot : t.counterCta}
             </button>
           )}
           <button
