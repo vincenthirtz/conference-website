@@ -25,15 +25,16 @@ Bot : le commit de textes « capitaine ou manager » est sur `docker-box` branch
 refaire là-bas (report-score.js / preuve.js / ma-dispute.js), puis `npm run deploy-commands`.
 
 **État des vérifications (2026-09-30).** e2e : **vert** (run 36685028011, 8 tranches, ~5 min,
-chromium + mobile). CI rapide : typecheck, Biome, tests unitaires **verts** ; **seul rouge :
-`Bundle budget`** (run 36685832415) — +100 à +113 ko sur les pages joueuse et certaines admin
-(`/player` 282 → 392 ko, `/player/manage-team` 266 → 379, `captain-view` 273 → 386…). Bien plus
-que les ~12 ko attendus de TanStack : **à analyser AVANT la prod** (piste : zod / useSchemaForm /
-un util serveur tiré côté client — cf. mémoire « Bundle client pollué par un util serveur »),
-alléger, puis `npm run bundle:budget -- --update` (en CI ou sur une machine qui supporte un build).
+chromium + mobile). CI rapide : typecheck, Biome, tests unitaires **verts**. `Bundle budget`
+(rouge au run 36685832415, `/player` 282 → 392 ko) **résolu** : la cause était zod entier dans le
+premier chargement (88,8 ko gzip, ≈40 locales comprises) — `import { z } from 'zod'` fait
+matérialiser tout l'objet `z` par Turbopack. Passé en `import * as z from 'zod'` (252 fichiers) :
+chunk zod 31 ko, `/player` 334 ko. Le reste de la hausse (~+50 ko : cœur de zod + TanStack) est
+assumé et gelé (`bundle-budget.json`). **Ne pas réintroduire `import { z } from 'zod'`.**
+Aller plus bas = `zod/mini` (réécriture des schémas, ~25 ko de gain) — écarté pour l'instant.
 
 **Avant / pendant la mise en prod (dans l'ordre).**
-1. Résoudre le budget JS (ci-dessus). Déployer hors soir de match (Cup 2026 : mer/ven 19 h).
+1. ~~Résoudre le budget JS~~ (fait, cf. ci-dessus ; vérifier le job CI `Bundle budget`). Déployer hors soir de match (Cup 2026 : mer/ven 19 h).
 2. Pousser `work` (prod). 3. Appliquer à la main, après relecture :
    `supabase/migrations/20260930090000_demandes_type_captain_message.sql` et
    `supabase/migrations/20260930090100_teams_rls_public_read.sql`.
