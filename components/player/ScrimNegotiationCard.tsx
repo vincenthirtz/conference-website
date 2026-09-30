@@ -21,6 +21,8 @@ import { useSchemaForm, errorDomId } from '@/hooks/forms/useSchemaForm';
 import { makeCounterProposalSchema } from '@/features/player/scrims/negotiationForm';
 import { format } from '@/lib/i18n/useT';
 import nsPlayerIndex from '@/lib/i18n/locales/fr/playerIndex';
+import { formatSkillRating } from '@/utils/overwatchRank';
+import { announcedSrOf, broadcastOf } from '@/utils/teams/scrimBroadcast';
 
 type Tr = typeof nsPlayerIndex.fr;
 
@@ -42,6 +44,10 @@ export type PendingScrim = {
     format?: string | null;
     requester_email?: string | null;
     requester_discord?: string | null;
+    /** SR annoncé par l'équipe demandeuse (demande groupée ou non). */
+    announced_sr?: number | null;
+    /** Demande groupée (utils/teams/scrimBroadcast.ts). */
+    broadcast?: { id: string; audience: string; target_count: number } | null;
   };
   user: {
     display_name: string | null;
@@ -129,6 +135,9 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
   // The proposer of the *current* slots is the opponent when I am the requester
   // (they countered), and "me" otherwise.
   const proposedByOpponent = !!scrim.iAmRequester;
+  const payloadRecord = scrim.payload as Record<string, unknown> | undefined;
+  const announcedSr = announcedSrOf(payloadRecord);
+  const broadcast = broadcastOf(payloadRecord);
 
   return (
     <div className="p-4 rounded-xl border border-white/10 bg-black/30 space-y-3">
@@ -143,7 +152,24 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
                 {t.external}
               </span>
             )}
+            {announcedSr !== null && (
+              <span className="rounded-full border border-[var(--line2,rgba(194,196,201,.2))] px-2 py-0.5 text-[10px] font-semibold text-[var(--t1,#f4edf7)]">
+                {format(t.announcedSrBadge, {
+                  sr: formatSkillRating(announcedSr),
+                })}
+              </span>
+            )}
+            {broadcast && (
+              <span className="rounded-full border border-[var(--or,#b467d1)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--or-300,#dea3f6)]">
+                {t.broadcastBadge}
+              </span>
+            )}
           </div>
+          {broadcast && !scrim.iAmRequester && (
+            <p className="mt-0.5 text-xs text-[var(--t3,#a39ba6)]">
+              {format(t.broadcastHint, { count: broadcast.target_count })}
+            </p>
+          )}
           {scrim.user?.display_name && !isExternal && (
             <p className="text-xs text-gray-400 mt-0.5">
               {format(t.captainLabel, { name: scrim.user.display_name })}

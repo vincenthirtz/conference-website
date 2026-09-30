@@ -105,6 +105,53 @@ export async function insertDemande(
   return { demande: data as unknown as Record<string, unknown> | null, error };
 }
 
+/**
+ * Équipes que `userId` a déjà sollicitées pour un scrim encore en attente :
+ * un envoi groupé les saute (une seule demande en attente par équipe cible).
+ */
+export async function listPendingScrimTargets(
+  db: AdminDb,
+  tenantId: string,
+  userId: string
+) {
+  const { data, error } = await db
+    .from('demandes')
+    .select('team_id')
+    .eq('tenant_id', tenantId)
+    .eq('user_id', userId)
+    .eq('type', 'scrim')
+    .eq('status', 'pending');
+  return {
+    teamIds: new Set(
+      (data ?? []).map((r) => r.team_id as string | null).filter(Boolean)
+    ) as Set<string>,
+    error,
+  };
+}
+
+/** Crée plusieurs demandes `pending` d'origine site, en une insertion. */
+export async function insertDemandes(
+  db: AdminDb,
+  tenantId: string,
+  rows: DemandeInsert[]
+) {
+  const { data, error } = await db
+    .from('demandes')
+    .insert(
+      rows.map((row) => ({
+        ...row,
+        status: 'pending',
+        source: 'website',
+        tenant_id: tenantId,
+      })) as never
+    )
+    .select('id, team_id');
+  return {
+    demandes: (data ?? []) as unknown as { id: string; team_id: string }[],
+    error,
+  };
+}
+
 /** Propriétaire d'une demande (contrôle d'accès de l'annulation). */
 export async function readDemandeOwner(
   db: AdminDb,

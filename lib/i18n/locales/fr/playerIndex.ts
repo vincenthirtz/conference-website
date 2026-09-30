@@ -63,6 +63,10 @@ export default ns('playerIndex', {
   scrimsHubEmptyNudge:
     'Tout est calme : lance une proposition pour trouver un adversaire.',
   unknownTeam: 'Équipe inconnue',
+  announcedSrBadge: 'SR annoncé {sr}',
+  broadcastBadge: 'Demande groupée',
+  broadcastHint:
+    'Envoyée à {count} équipes : la première qui accepte décroche le scrim.',
   external: 'Externe',
   captainLabel: 'Capitaine : {name}',
   contactLabel: 'Contact : {name}',

@@ -15,6 +15,9 @@ export default {
   subtitle:
     'Who is looking for a scrim, who is recruiting, and on which slots. Teams whose slots overlap yours come first.',
   mySearchTitle: 'Our scrim search',
+  broadcastCta: 'Ask every team for a scrim',
+  broadcastHelp:
+    'Got a slot in mind? Send your request to several teams at once, with your announced SR: the first one to accept gets the scrim.',
   mySearchHelp:
     'Announce concrete slots: the listing expires on its own after the last slot, and matching teams are notified.',
   mySearchActive: 'Listing is live',

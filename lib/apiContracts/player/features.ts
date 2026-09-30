@@ -15,6 +15,7 @@ import {
   ToggleScrimOpenBody,
 } from '../../../features/player/teamSettings/schemas';
 import { TeamInfoPatchBody } from '../../../features/player/team/schemas';
+import { ScrimBroadcastPreviewQuery } from '../../../features/player/demandes/schemas';
 import {
   PlanningIdQuery,
   ScrimIdQuery,
@@ -39,4 +40,9 @@ export const PLAYER_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
     io: 'input',
   },
   'player.scrims.report.query': { schema: ScrimIdQuery, io: 'input' },
+  // Demande de scrim groupée — aperçu des destinataires.
+  'player.demandes.scrim-broadcast.query': {
+    schema: ScrimBroadcastPreviewQuery,
+    io: 'input',
+  },
 };

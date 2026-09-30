@@ -23,8 +23,60 @@ import { notifyScrimCounterProposal } from '@/utils/discord';
 import { emitScrimEvent } from '@/utils/scrimEvents';
 import { emitBotEvent } from '@/utils/botEvents';
 import { logger } from '@/utils/logger';
+import { broadcastOf } from './scrimBroadcast';
 
 type DemandeRow = Record<string, unknown>;
+
+/**
+ * Demande de scrim GROUPÉE (utils/teams/scrimBroadcast.ts) : la première
+ * équipe qui accepte décroche le scrim. Les autres demandes du même envoi
+ * encore en attente sont annulées — y compris celles en pleine
+ * contre-proposition. Best-effort : un échec est journalisé, l'acceptation
+ * reste acquise.
+ */
+async function cancelBroadcastSiblings(
+  tenantId: string,
+  row: DemandeRow,
+  broadcastId: string,
+  acceptedByName: string
+): Promise<number> {
+  const requesterId = (row.user_id as string | null) ?? null;
+  if (!requesterId) return 0;
+  const { data, error } = await supabaseAdmin
+    .from('demandes')
+    .select('id, payload')
+    .eq('tenant_id', tenantId)
+    .eq('user_id', requesterId)
+    .eq('type', 'scrim')
+    .eq('status', 'pending');
+  if (error) {
+    logger.error('[scrimActions] broadcast siblings read error:', error);
+    return 0;
+  }
+  const siblings = (data ?? [])
+    .filter(
+      (d) =>
+        d.id !== row.id &&
+        broadcastOf(d.payload as Record<string, unknown>)?.id === broadcastId
+    )
+    .map((d) => d.id as string);
+  if (siblings.length === 0) return 0;
+  const { error: updErr } = await supabaseAdmin
+    .from('demandes')
+    .update({
+      status: 'cancelled',
+      processed_at: new Date().toISOString(),
+      staff_note: `Demande groupée pourvue : scrim pris par ${acceptedByName}.`,
+    })
+    .eq('tenant_id', tenantId)
+    .eq('status', 'pending')
+    .in('id', siblings);
+  if (updErr) {
+    logger.error('[scrimActions] broadcast siblings cancel error:', updErr);
+    return 0;
+  }
+  return siblings.length;
+}
 
 export const SCRIM_ACTIONS = [
   'accept',
@@ -347,7 +399,7 @@ export async function applyScrimRequestAction(
     return fail(400, 'Précise le créneau accepté (slot).');
   }
 
-  const { error: updateErr } = await supabaseAdmin
+  const { data: approvedRows, error: updateErr } = await supabaseAdmin
     .from('demandes')
     .update({
       status: 'approved',
@@ -365,11 +417,30 @@ export async function applyScrimRequestAction(
       },
     })
     .eq('id', demandeId)
-    .eq('tenant_id', tenantId);
+    .eq('tenant_id', tenantId)
+    // Encore en attente AU MOMENT d'écrire : deux acceptations simultanées
+    // d'une demande groupée ne peuvent pas passer toutes les deux.
+    .eq('status', 'pending')
+    .select('id');
 
   if (updateErr) {
     logger.error('[scrimActions] accept error:', updateErr);
     return fail(500, 'Echec de la mise a jour.');
+  }
+  if (!approvedRows || approvedRows.length === 0) {
+    return fail(
+      409,
+      'Cette demande n’est plus en attente : une autre équipe a peut-être déjà pris ce scrim.'
+    );
+  }
+
+  const broadcast = broadcastOf(payload);
+  if (broadcast) {
+    const acceptedBy =
+      myTeamId === targetTeamId
+        ? (payload.target_team_name as string) || actor.teamName
+        : actor.teamName;
+    await cancelBroadcastSiblings(tenantId, row, broadcast.id, acceptedBy);
   }
 
   const fromTeamName = (payload.from_team_name as string) || 'Equipe inconnue';

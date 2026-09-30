@@ -61,6 +61,10 @@ export default {
     'Turn on availability so other teams can propose scrims to you.',
   scrimsHubEmptyNudge: 'All quiet: send a proposal to find an opponent.',
   unknownTeam: 'Unknown team',
+  announcedSrBadge: 'Announced SR {sr}',
+  broadcastBadge: 'Group request',
+  broadcastHint:
+    'Sent to {count} teams: the first one to accept gets the scrim.',
   external: 'External',
   captainLabel: 'Captain: {name}',
   contactLabel: 'Contact: {name}',

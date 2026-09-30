@@ -38,6 +38,7 @@ export type TransferTeamMember = {
 };
 
 type Texts = typeof nsPlayerRequests.fr;
+export type RequestsTexts = Texts;
 
 function transferSchema(t: Texts) {
   return z

@@ -38558,6 +38558,69 @@
     ]
    }
   },
+  "GET /api/demandes/scrim-broadcast": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "alreadyPending": {
+      "type": "number"
+     },
+     "audience": {
+      "type": "string",
+      "enum": [
+       "all",
+       "level",
+       "searching"
+      ]
+     },
+     "count": {
+      "type": "number"
+     },
+     "teamSkillRating": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "teams": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "name": {
+         "type": "string"
+        },
+        "searching": {
+         "type": "boolean"
+        },
+        "skillRating": {
+         "type": [
+          "number",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "id",
+        "name",
+        "searching",
+        "skillRating"
+       ]
+      }
+     }
+    },
+    "required": [
+     "alreadyPending",
+     "audience",
+     "count",
+     "teamSkillRating",
+     "teams"
+    ]
+   }
+  },
   "GET /api/demandes/transfer": {
    "200": {
     "type": "object",
@@ -77034,6 +77097,42 @@
      "demande",
      "message",
      "success"
+    ]
+   }
+  },
+  "POST /api/demandes/scrim-broadcast": {
+   "201": {
+    "type": "object",
+    "properties": {
+     "alreadyPending": {
+      "type": "number"
+     },
+     "broadcastId": {
+      "type": "string"
+     },
+     "message": {
+      "type": "string"
+     },
+     "sent": {
+      "type": "number"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "teams": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     }
+    },
+    "required": [
+     "alreadyPending",
+     "broadcastId",
+     "message",
+     "sent",
+     "success",
+     "teams"
     ]
    }
   },

@@ -28,6 +28,45 @@ export async function readTeam(
   return { team: data as unknown as TeamLookup | null, error };
 }
 
+/**
+ * Équipes actives du tenant avec de quoi résoudre leur SR (déclaré, sinon
+ * moyenne du roster) : l'audience d'une demande de scrim groupée.
+ */
+export async function listActiveTeamsWithSkill(db: AdminDb, tenantId: string) {
+  const { data, error } = await db
+    .from('teams')
+    .select('id, name, skill_rating, team_members(role, skill_rating)')
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .is('deleted_at', null)
+    .limit(1000);
+  return {
+    teams: (data ?? []) as unknown as {
+      id: string;
+      name: string;
+      skill_rating: number | null;
+      team_members:
+        | { role: string | null; skill_rating: number | null }[]
+        | null;
+    }[],
+    error,
+  };
+}
+
+/** Équipes qui ont une recherche de scrim en cours (non expirée). */
+export async function listSearchingTeamIds(db: AdminDb, tenantId: string) {
+  const { data, error } = await db
+    .from('scrim_searches')
+    .select('team_id')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
+    .gt('expires_at', new Date().toISOString());
+  return {
+    ids: new Set((data ?? []).map((r) => r.team_id as string)),
+    error,
+  };
+}
+
 /** Ligne de roster de `userId` dans `teamId`. */
 export async function readTeamMembership(
   db: AdminDb,

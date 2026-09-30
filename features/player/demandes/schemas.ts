@@ -91,6 +91,39 @@ export const ScrimDemandeBody = z.object({
 export type ScrimDemandeInput = z.infer<typeof ScrimDemandeBody>;
 
 /**
+ * Demande de scrim GROUPÉE (utils/teams/scrimBroadcast.ts) : mêmes créneaux
+ * et message pour chaque équipe de l'audience, niveau annoncé.
+ */
+const BROADCAST_AUDIENCE = z.enum(['all', 'level', 'searching'], {
+  error: 'Audience inconnue.',
+});
+const ANNOUNCED_SR = z
+  .number({ error: 'SR entre 0 et 5000.' })
+  .int('SR entre 0 et 5000.')
+  .min(0, 'SR entre 0 et 5000.')
+  .max(5000, 'SR entre 0 et 5000.');
+
+/** GET /api/demandes/scrim-broadcast — aperçu des destinataires. */
+export const ScrimBroadcastPreviewQuery = z.looseObject({
+  audience: BROADCAST_AUDIENCE,
+  /** SR de référence de « à mon niveau » (défaut : SR de l'équipe). */
+  announcedSr: z.coerce.number().pipe(ANNOUNCED_SR).optional(),
+});
+
+/** POST /api/demandes/scrim-broadcast. */
+export const ScrimBroadcastBody = z.object({
+  audience: BROADCAST_AUDIENCE,
+  /** 1..5 dates ISO, comme une demande simple. */
+  proposedSlots: z
+    .array(z.string())
+    .min(1, 'Propose au moins un créneau.')
+    .max(5, '5 créneaux au plus.'),
+  message: z.string().trim().max(1000).optional().nullable(),
+  announcedSr: ANNOUNCED_SR.nullable().optional(),
+});
+export type ScrimBroadcastInput = z.infer<typeof ScrimBroadcastBody>;
+
+/**
  * Corps de POST /api/demandes/caster-application (lot P11 : quitte la
  * route). Validé par le service : l'erreur historique est `Invalid body.` +
  * `fieldErrors` (forme `flatten()`), pas le `fields` du noyau.

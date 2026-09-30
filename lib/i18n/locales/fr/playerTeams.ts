@@ -14,6 +14,9 @@ export default ns('playerTeams', {
   subtitle:
     'Qui cherche un scrim, qui recrute, et sur quels créneaux. Les équipes dont les créneaux recoupent les tiens remontent en premier.',
   mySearchTitle: 'Notre recherche de scrim',
+  broadcastCta: 'Demander un scrim à toutes les équipes',
+  broadcastHelp:
+    'Un créneau en tête ? Envoie ta demande à plusieurs équipes d’un coup, avec ton SR annoncé : la première qui accepte décroche le scrim.',
   mySearchHelp:
     "Annonce des créneaux concrets : l'annonce expire toute seule après le dernier créneau, et les équipes compatibles sont prévenues.",
   mySearchActive: 'Annonce en ligne',

@@ -11,7 +11,7 @@ import FormField, {
   FormFieldset,
   inputClass,
 } from '@/features/ruban/FormField';
-import { Button, Card, Chip } from '@/features/ruban';
+import { Button, ButtonLink, Card, Chip } from '@/features/ruban';
 import ScrimSlotCalendarPicker, {
   type ScrimSlotCalendarLabels,
 } from '@/components/player/ScrimSlotCalendarPicker';
@@ -31,6 +31,9 @@ export type MyScrimSearchTexts = {
   errorNoSlot: string;
   errorPublish: string;
   slotsLabel: string;
+  /** Raccourci vers la demande de scrim groupée. */
+  broadcastCta: string;
+  broadcastHelp: string;
 };
 
 export type MyScrimSearchValues = { slots: string[]; note: string | null };
@@ -160,6 +163,18 @@ export default function MyScrimSearchPanel({
         </div>
         <FormError message={form.formError} />
       </form>
+
+      <div className="mt-5 border-t border-[var(--line,rgba(194,196,201,.12))] pt-4">
+        <p className="text-sm text-[var(--t3,#a39ba6)]">{t.broadcastHelp}</p>
+        <ButtonLink
+          href="/player/requests?tab=scrim&mode=broadcast"
+          variant="secondary"
+          className="mt-2"
+          data-testid="scrim-broadcast-cta"
+        >
+          {t.broadcastCta}
+        </ButtonLink>
+      </div>
     </Card>
   );
 }

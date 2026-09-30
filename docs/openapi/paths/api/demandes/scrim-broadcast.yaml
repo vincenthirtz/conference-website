@@ -1,0 +1,125 @@
+get:
+  x-zod-query: player.demandes.scrim-broadcast.query
+  tags:
+    - public/teams
+  summary: Apercu des destinataires d'une demande de scrim groupee.
+  description: >
+    Qui recevrait la demande groupee pour cette audience : `all` (toutes les
+    equipes actives du tenant, 40 au plus), `level` (un palier de SR autour de
+    `announcedSr`, sinon du SR de l'equipe), `searching` (equipes avec une
+    recherche de scrim en cours). Les equipes deja sollicitees (demande en
+    attente) sont retirees et comptees dans `alreadyPending`. Exige
+    `manage_scrims` sur l'equipe geree.
+  operationId: previewScrimBroadcast
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - name: audience
+      in: query
+      required: true
+      schema:
+        type: string
+        enum: [all, level, searching]
+    - name: announcedSr
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 5000
+  security:
+    - PlayerBearer: []
+  responses:
+    '200':
+      description: Destinataires de l'audience.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              audience:
+                type: string
+              teamSkillRating:
+                type: [integer, 'null']
+              count:
+                type: integer
+              alreadyPending:
+                type: integer
+              teams:
+                type: array
+                items:
+                  type: object
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  tags:
+    - public/teams
+  summary: Envoie une demande de scrim a plusieurs equipes d'un coup.
+  description: >
+    Une demande de scrim ordinaire par equipe de l'audience, reliees par
+    `payload.broadcast.id`, avec le SR annonce (`announcedSr`, 0-5000). La
+    PREMIERE equipe qui accepte decroche le scrim : les autres demandes du
+    groupe encore en attente sont annulees. Creneaux futurs uniquement (1 a
+    5). MP du bot et e-mail a chaque equipe destinataire, un seul message au
+    staff. Exige `manage_scrims`. 5 envois par heure.
+  operationId: submitScrimBroadcast
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  security:
+    - PlayerBearer: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - audience
+            - proposedSlots
+          properties:
+            audience:
+              type: string
+              enum: [all, level, searching]
+            proposedSlots:
+              type: array
+              minItems: 1
+              maxItems: 5
+              items:
+                type: string
+                format: date-time
+            message:
+              type: [string, 'null']
+            announcedSr:
+              type: [integer, 'null']
+              minimum: 0
+              maximum: 5000
+  responses:
+    '201':
+      description: Demandes creees.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              broadcastId:
+                type: string
+                format: uuid
+              sent:
+                type: integer
+              alreadyPending:
+                type: integer
+              teams:
+                type: array
+                items:
+                  type: string
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      description: Trop d'envois groupes (5 par heure).

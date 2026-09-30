@@ -29,6 +29,39 @@ export type ScrimDemandeRequest = {
 
 type DemandeCreated = { success: true; message: string };
 
+/** Audience d'une demande de scrim groupée (utils/teams/scrimBroadcast.ts). */
+export type ScrimBroadcastAudience = 'all' | 'level' | 'searching';
+
+export type ScrimBroadcastRequest = {
+  audience: ScrimBroadcastAudience;
+  proposedSlots: string[];
+  message?: string;
+  announcedSr: number | null;
+};
+
+export type ScrimBroadcastPreview = {
+  audience: ScrimBroadcastAudience;
+  /** SR de l'équipe (préremplit le niveau annoncé), ou null. */
+  teamSkillRating: number | null;
+  count: number;
+  alreadyPending: number;
+  teams: {
+    id: string;
+    name: string;
+    skillRating: number | null;
+    searching: boolean;
+  }[];
+};
+
+export type ScrimBroadcastCreated = {
+  success: true;
+  broadcastId: string;
+  sent: number;
+  alreadyPending: number;
+  teams: string[];
+  message: string;
+};
+
 const teamOnly = (s: PlayerScope): PlayerScope => ({
   subjectId: null,
   actAs: false,
@@ -38,6 +71,7 @@ const teamOnly = (s: PlayerScope): PlayerScope => ({
 export const demandesUrls = {
   transfer: '/api/demandes/transfer',
   scrim: '/api/demandes/scrim',
+  scrimBroadcast: '/api/demandes/scrim-broadcast',
   teams: '/api/teams',
 };
 
@@ -51,6 +85,26 @@ export const demandesClient = {
     }),
   scrim: (body: ScrimDemandeRequest, scope: PlayerScope) =>
     playerRequest<DemandeCreated>(demandesUrls.scrim, {
+      method: 'POST',
+      json: body,
+      idempotent: true,
+      scope: teamOnly(scope),
+    }),
+  /** Aperçu d'un envoi groupé : destinataires de l'audience. */
+  scrimBroadcastPreview: (
+    audience: ScrimBroadcastAudience,
+    announcedSr: number | null,
+    scope: PlayerScope
+  ) => {
+    const params = new URLSearchParams({ audience });
+    if (announcedSr !== null) params.set('announcedSr', String(announcedSr));
+    return playerRequest<ScrimBroadcastPreview>(
+      `${demandesUrls.scrimBroadcast}?${params.toString()}`,
+      { scope: teamOnly(scope) }
+    );
+  },
+  scrimBroadcast: (body: ScrimBroadcastRequest, scope: PlayerScope) =>
+    playerRequest<ScrimBroadcastCreated>(demandesUrls.scrimBroadcast, {
       method: 'POST',
       json: body,
       idempotent: true,
