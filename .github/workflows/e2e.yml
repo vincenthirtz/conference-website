@@ -41,7 +41,7 @@ on:
   # `e2e-baseline` = code de prod + infra e2e seule : la référence qui
   # départage régressions d'un chantier et échecs préexistants.
   push:
-    branches: [admin-industrialisation, e2e-baseline]
+    branches: [admin-industrialisation, e2e-baseline, e2e-ruban-specs]
   schedule:
     # 04:12 UTC — tôt, et pas à l'heure pile, pour éviter la cohue des runners.
     - cron: '12 4 * * *'
