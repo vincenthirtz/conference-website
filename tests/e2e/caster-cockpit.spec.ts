@@ -350,10 +350,18 @@ test.describe('Caster cockpit — golden path', () => {
     test.skip(!!setupFailedReason, setupFailedReason ?? '');
     await loginAsCaster(page);
     await page.goto('/caster/cockpit');
-    await page.waitForLoadState('networkidle');
+    // Même attente que le test précédent : `networkidle` pouvait se résoudre
+    // AVANT la redirection client vers /admin/regie, et les 10 s restantes ne
+    // couvraient pas toujours redirection + chargement du run courant (échec
+    // intermittent, vert au run précédent). On attend l'état qui fait
+    // apparaître la checklist : la page Régie rendue.
+    await page.waitForURL(/\/admin\/regie/, { timeout: 15_000 });
+    await expect(
+      page.getByRole('heading', { name: 'Régie', level: 1 })
+    ).toBeVisible({ timeout: 15_000 });
 
     const item = page.getByTestId('checklist-item-mic_ok');
-    await expect(item).toBeVisible({ timeout: 10_000 });
+    await expect(item).toBeVisible({ timeout: 20_000 });
 
     // Initially not pressed.
     await expect(item).toHaveAttribute('aria-pressed', 'false');
