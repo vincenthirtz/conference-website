@@ -49,7 +49,7 @@ export default function MemberControls(p: MemberControlsProps) {
 
   if (p.confirmingRemoval) {
     return (
-      <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <div className="flex flex-wrap items-center justify-end gap-2">
           <span className="text-xs text-red-200 basis-full sm:basis-auto">
             {format(t.removeConfirm, { name: p.label })}
@@ -79,7 +79,7 @@ export default function MemberControls(p: MemberControlsProps) {
   }
 
   return (
-    <div className="flex items-center gap-2 flex-shrink-0">
+    <div className="flex flex-wrap items-center justify-end gap-2">
       {/* BattleTag : la capitaine le connaît mieux que quiconque. */}
       <InlineCommitInput
         type="text"

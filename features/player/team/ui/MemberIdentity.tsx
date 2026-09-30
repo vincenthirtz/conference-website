@@ -33,7 +33,9 @@ export default function MemberIdentity({
     : null;
 
   return (
-    <div className="flex items-center gap-3 min-w-0">
+    // Largeur plancher : le nom et le BattleTag restent lisibles (tronqués au
+    // besoin) quels que soient les contrôles voisins.
+    <div className="flex min-w-[12rem] flex-1 items-center gap-3">
       <div className="w-8 h-8 rounded-full bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0">
         <span className="text-xs text-gray-400">
           {label.slice(0, 2).toUpperCase()}

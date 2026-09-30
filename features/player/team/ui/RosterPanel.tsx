@@ -135,7 +135,9 @@ export default function RosterPanel({
                 })}
               </h3>
             )}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
+            {/* `flex-wrap` : les contrôles (champs, rôle, actions) passent SOUS
+                l'identité quand la ligne manque de place, au lieu de l'écraser. */}
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
               <MemberIdentity
                 t={t}
                 member={m}
