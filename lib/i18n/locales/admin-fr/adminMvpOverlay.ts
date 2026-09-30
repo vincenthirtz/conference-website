@@ -34,10 +34,15 @@ export default adminNs('adminMvpOverlay', {
   readOnlySettings:
     'Réglages réservés à la gestion de la diffusion ; vous pouvez tester et piloter le vote.',
   liveTitle: 'En direct',
+  twitchReconnect: 'Reconnecter la chaîne Twitch',
+  twitchConnect: 'Connecter la chaîne Twitch',
+  twitchRedirecting: 'Redirection vers Twitch…',
+  twitchConnectError: 'Connexion Twitch impossible.',
+  twitchConnected: 'Chaîne Twitch reconnectée.',
   twitchReady:
     'Chat Twitch : les !mvp sont comptés automatiquement pendant le vote, sans cockpit ouvert.',
   twitchMissingScope:
-    'Chat Twitch : reconnectez la chaîne (Admin › Twitch) pour autoriser la lecture du chat. D’ici là, seuls le cockpit et Discord comptent les votes.',
+    'Chat Twitch : reconnectez la chaîne pour autoriser la lecture du chat. D’ici là, seuls le cockpit et Discord comptent les votes.',
   twitchNotConnected:
     'Chat Twitch : aucune chaîne connectée pour cet espace — seuls Discord et le cockpit comptent les votes.',
   twitchNotConfigured:

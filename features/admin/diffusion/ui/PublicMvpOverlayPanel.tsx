@@ -8,6 +8,7 @@
 //      décompte qui se rafraîchit) — le panneau de l'onglet Résultats.
 
 import { useEffect, useState, type FormEvent } from 'react';
+import { useRouter } from 'next/router';
 import * as z from 'zod';
 import { useToast } from '@/components/Toast';
 import { useOverlayPresence } from '@/hooks/useOverlayPresence';
@@ -66,7 +67,7 @@ function PublicMvpOverlayPanel({
   const t = useAdminT(nsAdminMvpOverlay);
   const { addToast } = useToast();
   const presence = useOverlayPresence();
-  const { query, save, test } = useMvpOverlay();
+  const { query, save, test, reconnectTwitch } = useMvpOverlay();
   const state = query.data ?? null;
   const [draft, setDraft] = useState<MvpOverlaySettings | null>(null);
   const [busy, setBusy] = useState(false);
@@ -76,6 +77,26 @@ function PublicMvpOverlayPanel({
   );
   const testing = !!state?.demo.active && secondsLeft > 0;
   const regieLive = presence?.isLive('regie') ?? false;
+
+  // Retour de l'autorisation Twitch (`?twitch=connected|error`) : on le dit,
+  // on relit l'état, puis on retire le paramètre de l'URL.
+  const router = useRouter();
+  const twitchReturn =
+    typeof router.query.twitch === 'string' ? router.query.twitch : null;
+  const refetch = query.refetch;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: une fois par retour de Twitch — pas à chaque rendu (toast, routeur)
+  useEffect(() => {
+    if (!twitchReturn) return;
+    addToast(
+      twitchReturn === 'connected' ? t.twitchConnected : t.twitchConnectError,
+      twitchReturn === 'connected' ? 'success' : 'error'
+    );
+    void refetch();
+    const { twitch: _drop, ...rest } = router.query;
+    void router.replace({ pathname: router.pathname, query: rest }, undefined, {
+      shallow: true,
+    });
+  }, [twitchReturn]);
 
   async function run(fn: () => Promise<unknown>, ok: string, ko: string) {
     setBusy(true);
@@ -257,6 +278,28 @@ function PublicMvpOverlayPanel({
                   : t.twitchNotConfigured}
           </p>
         )}
+        {(state?.twitchChat?.status === 'missing_scope' ||
+          state?.twitchChat?.status === 'not_connected') &&
+          canTuneSettings && (
+            <AdminButton
+              variant="secondary"
+              size="sm"
+              className="mb-4"
+              disabled={busy}
+              onClick={() =>
+                void run(
+                  reconnectTwitch,
+                  t.twitchRedirecting,
+                  t.twitchConnectError
+                )
+              }
+              data-testid="mvp-overlay-twitch-reconnect"
+            >
+              {state.twitchChat.status === 'missing_scope'
+                ? t.twitchReconnect
+                : t.twitchConnect}
+            </AdminButton>
+          )}
         {tournamentId ? (
           <StatsMvpPanel
             kind="public"

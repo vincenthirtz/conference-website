@@ -27,10 +27,15 @@ export default {
   readOnlySettings:
     'Settings are reserved to broadcast management; you can still test and run the vote.',
   liveTitle: 'Live',
+  twitchReconnect: 'Reconnect the Twitch channel',
+  twitchConnect: 'Connect the Twitch channel',
+  twitchRedirecting: 'Redirecting to Twitch…',
+  twitchConnectError: 'Could not connect to Twitch.',
+  twitchConnected: 'Twitch channel reconnected.',
   twitchReady:
     'Twitch chat: !mvp votes are counted automatically during the vote, no cockpit needed.',
   twitchMissingScope:
-    'Twitch chat: reconnect the channel (Admin › Twitch) to allow reading the chat. Until then, only the cockpit and Discord count votes.',
+    'Twitch chat: reconnect the channel to allow reading the chat. Until then, only the cockpit and Discord count votes.',
   twitchNotConnected:
     'Twitch chat: no channel connected for this space — only Discord and the cockpit count votes.',
   twitchNotConfigured:

@@ -32,6 +32,17 @@ export function useMvpOverlay() {
           body: JSON.stringify(settings),
         })
       ),
+    /**
+     * Reconnecte la chaîne Twitch (nouveaux scopes du chat) et REVIENT sur la
+     * page courante : l'autorisation Twitch se fait en pleine page.
+     */
+    reconnectTwitch: async () => {
+      const returnTo = `${window.location.pathname}${window.location.search}`;
+      const { url } = await adminRequest<{ url: string }>(
+        `/api/admin/twitch/connect?returnTo=${encodeURIComponent(returnTo)}`
+      );
+      window.location.assign(url);
+    },
     test: async (action: 'test-start' | 'test-stop') =>
       set(
         await testMutation.mutateJson<MvpOverlayState>(MVP_OVERLAY_URL, {
