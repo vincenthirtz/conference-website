@@ -33,8 +33,27 @@ function optionalTournament(raw: unknown): string | undefined {
 
 /* --------------------------------- CSV --------------------------------- */
 
-/** Ligne CSV, champs entre guillemets compris (`,` `;` ou tabulation). */
-function parseCsvLine(line: string): string[] {
+export type CsvDelimiter = ',' | ';' | '\t';
+
+/**
+ * Séparateur de colonnes, déduit de l'EN-TÊTE : `,` s'il y figure, sinon `;`
+ * (export Excel FR), sinon tabulation. Un seul séparateur par fichier : le
+ * `;` qui sépare les joueuses d'une cellule n'est PAS une fin de colonne
+ * dans un CSV à virgules — le parser coupait « Alice#1;Bob#2 » en deux
+ * colonnes et Bob disparaissait sans erreur.
+ */
+export function detectCsvDelimiter(headerLine: string): CsvDelimiter {
+  if (headerLine.includes(',')) return ',';
+  if (headerLine.includes(';')) return ';';
+  if (headerLine.includes('\t')) return '\t';
+  return ',';
+}
+
+/** Ligne CSV, champs entre guillemets compris, sur UN séparateur. */
+export function parseCsvLine(
+  line: string,
+  delimiter: CsvDelimiter = ','
+): string[] {
   const result: string[] = [];
   let current = '';
   let inQuotes = false;
@@ -54,7 +73,7 @@ function parseCsvLine(line: string): string[] {
       }
     } else if (ch === '"') {
       inQuotes = true;
-    } else if (ch === ',' || ch === ';' || ch === '\t') {
+    } else if (ch === delimiter) {
       result.push(current);
       current = '';
     } else {
@@ -127,7 +146,9 @@ export async function importTeamsFromCsv(
     );
   }
 
-  const colMap = detectColumns(parseCsvLine(lines[0].toLowerCase()));
+  const delimiter = detectCsvDelimiter(lines[0]);
+  const headers = parseCsvLine(lines[0].toLowerCase(), delimiter);
+  const colMap = detectColumns(headers);
   if (colMap.name < 0) {
     throw fail(
       400,
@@ -143,9 +164,16 @@ export async function importTeamsFromCsv(
 
   const rows: TeamImportRow[] = [];
   for (let i = 1; i < lines.length; i++) {
-    const cols = parseCsvLine(lines[i]);
-    const playersRaw =
-      colMap.players >= 0 ? cols[colMap.players]?.trim() || '' : '';
+    const cols = parseCsvLine(lines[i], delimiter);
+    // Joueuses en DERNIÈRE colonne d'un CSV à `;` : leurs propres `;` ont
+    // découpé la cellule — on recolle le reste de la ligne.
+    const playersCell =
+      colMap.players < 0
+        ? ''
+        : delimiter === ';' && colMap.players === headers.length - 1
+          ? cols.slice(colMap.players).join(';')
+          : cols[colMap.players];
+    const playersRaw = playersCell?.trim() || '';
     rows.push({
       name: cols[colMap.name]?.trim() || '',
       short_name:

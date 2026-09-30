@@ -24,6 +24,10 @@ const TEAM_PREFIX = `E2EImp-${TS}`;
 // Seule joueuse de l'import qui a un compte (BattleTag lié) : les deux autres
 // n'en ont pas et doivent être remontées, pas insérées sans `user_id`.
 const LINKED_TAG = `Alice${TS}#1234`;
+// BattleTags SANS compte, uniques au run (aucune collision possible avec un
+// compte semé ou laissé par une autre spec).
+const BOB_TAG = `Bob${TS}#5678`;
+const CHARLIE_TAG = `Charlie${TS}#9999`;
 let linkedUserId: string | null = null;
 
 const supabaseUrl =
@@ -182,8 +186,8 @@ test.describe('Teams import E2E (CSV + platform)', () => {
     }) => {
       const csv = [
         'name,short_name,country,joueurs',
-        `${TEAM_PREFIX}-Alpha,A1,FR,${LINKED_TAG};Bob#5678`,
-        `${TEAM_PREFIX}-Beta,B1,BE,Charlie#9999`,
+        `${TEAM_PREFIX}-Alpha,A1,FR,${LINKED_TAG};${BOB_TAG}`,
+        `${TEAM_PREFIX}-Beta,B1,BE,${CHARLIE_TAG}`,
         `${TEAM_PREFIX}-Gamma,G1,LU,`,
       ].join('\n');
 
@@ -213,12 +217,9 @@ test.describe('Teams import E2E (CSV + platform)', () => {
       const rosterErrors = (body.errors as { message: string }[]).filter((e) =>
         /aucun compte/.test(e.message)
       );
-      expect(rosterErrors.map((e) => e.message).join(' | ')).toMatch(
-        /Bob#5678/
-      );
-      expect(rosterErrors.map((e) => e.message).join(' | ')).toMatch(
-        /Charlie#9999/
-      );
+      const all = JSON.stringify(body.errors);
+      expect(all, all).toContain(BOB_TAG);
+      expect(all, all).toContain(CHARLIE_TAG);
       expect(rosterErrors).toHaveLength(2);
 
       const { data: registrations } = await supabaseTestClient!
