@@ -6,6 +6,7 @@
 // leurs références ne seraient pas maîtrisées (polices, rendu du runner).
 
 import { expect, type Locator, type Page } from '@playwright/test';
+import { loginStaff as loginStaffThroughForm } from './playerSession';
 
 export const RUBAN_PASSWORD = 'TestPassw0rd!';
 
@@ -108,13 +109,14 @@ export async function expectSurface(
   }
 }
 
-/** Connexion staff par le vrai formulaire → atterrit sur /admin. */
+/**
+ * Connexion staff par le vrai formulaire → atterrit sur /admin. Passe par le
+ * helper partagé : /login a DEUX boutons submit (celui du pied de page), et le
+ * formulaire se remonte à l'hydratation — un `click('button[type=submit]')`
+ * nu échouait par intermittence.
+ */
 export async function loginStaff(page: Page, email: string) {
-  await page.goto('/login');
-  await page.fill('input#email', email);
-  await page.fill('input#password', RUBAN_PASSWORD);
-  await page.click('button[type="submit"]');
-  await page.waitForURL(/\/admin(?!\/login)/, { timeout: 20000 });
+  await loginStaffThroughForm(page, email, RUBAN_PASSWORD);
 }
 
 /** Styles calculés qui font la « grammaire » d'une brique. */
