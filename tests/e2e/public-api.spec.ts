@@ -1,43 +1,54 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Public API - JSON responses', () => {
-  test('GET /api/news returns JSON array', async ({ request }) => {
+  test('GET /api/news returns a JSON list envelope', async ({ request }) => {
     const response = await request.get('/api/news');
     expect(response.status()).toBeLessThan(400);
     const contentType = response.headers()['content-type'] ?? '';
     expect(contentType).toContain('json');
     const body = await response.json();
-    expect(Array.isArray(body)).toBe(true);
+    // Contrat actuel : liste enveloppée `{ items, … }`, plus un tableau nu.
+    expect(Array.isArray(body.items)).toBe(true);
   });
 
-  test('GET /api/teams returns JSON array', async ({ request }) => {
+  test('GET /api/teams returns a JSON list envelope', async ({ request }) => {
     const response = await request.get('/api/teams');
     expect(response.status()).toBeLessThan(400);
     const contentType = response.headers()['content-type'] ?? '';
     expect(contentType).toContain('json');
     const body = await response.json();
-    expect(Array.isArray(body)).toBe(true);
+    // Contrat actuel : liste enveloppée `{ teams, … }`, plus un tableau nu.
+    expect(Array.isArray(body.teams)).toBe(true);
   });
 
-  test('GET /api/tournaments returns JSON array', async ({ request }) => {
+  test('GET /api/tournaments returns a JSON list envelope', async ({
+    request,
+  }) => {
     const response = await request.get('/api/tournaments');
     expect(response.status()).toBeLessThan(400);
     const body = await response.json();
-    expect(Array.isArray(body)).toBe(true);
+    // Contrat actuel : liste enveloppée `{ tournaments, … }`, plus un tableau nu.
+    expect(Array.isArray(body.tournaments)).toBe(true);
   });
 
-  test('GET /api/partners returns JSON array', async ({ request }) => {
+  test('GET /api/partners returns a JSON list envelope', async ({
+    request,
+  }) => {
     const response = await request.get('/api/partners');
     expect(response.status()).toBeLessThan(400);
     const body = await response.json();
-    expect(Array.isArray(body)).toBe(true);
+    // Contrat actuel : liste enveloppée `{ items, … }`, plus un tableau nu.
+    expect(Array.isArray(body.items)).toBe(true);
   });
 
-  test('GET /api/cast-members returns JSON array', async ({ request }) => {
+  test('GET /api/cast-members returns a JSON list envelope', async ({
+    request,
+  }) => {
     const response = await request.get('/api/cast-members');
     expect(response.status()).toBeLessThan(400);
     const body = await response.json();
-    expect(Array.isArray(body)).toBe(true);
+    // Contrat actuel : liste enveloppée `{ items, … }`, plus un tableau nu.
+    expect(Array.isArray(body.items)).toBe(true);
   });
 
   test('GET /api/site-settings returns JSON object', async ({ request }) => {

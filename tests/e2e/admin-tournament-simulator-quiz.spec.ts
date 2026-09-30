@@ -45,7 +45,9 @@ test.describe('Simulateur de tournoi — mode Quiz', () => {
     await page.waitForLoadState('networkidle');
     // Form mode is the default: the config panel is visible.
     await expect(
-      page.getByRole('heading', { name: 'Configuration' })
+      page
+        .locator('#main-content')
+        .getByRole('heading', { name: 'Configuration' })
     ).toBeVisible();
 
     // --- Switch to Quiz mode --------------------------------------------
@@ -97,7 +99,9 @@ test.describe('Simulateur de tournoi — mode Quiz', () => {
     // --- Open in editor: back to form mode with a simulated bracket ------
     await page.getByRole('button', { name: /Ouvrir dans l'éditeur/ }).click();
     await expect(
-      page.getByRole('heading', { name: 'Configuration' })
+      page
+        .locator('#main-content')
+        .getByRole('heading', { name: 'Configuration' })
     ).toBeVisible();
   });
 });

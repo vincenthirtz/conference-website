@@ -53,8 +53,11 @@ test.describe('Bot teams — auth & method', () => {
     expect([401, 500]).toContain(res.status());
   });
 
-  test('GET → 405', async ({ request }) => {
-    const res = await request.get('/api/bot/v1/teams', {
+  // GET est devenu la liste des équipes (methods: ['GET', 'POST']) ; la
+  // porte « méthode » se vérifie sur une méthode hors liste. Elle passe AVANT
+  // la clé (utils/botAuth.ts), donc sans BOT_API_KEY aussi.
+  test('DELETE → 405', async ({ request }) => {
+    const res = await request.delete('/api/bot/v1/teams', {
       headers: { 'x-api-key': API_KEY ?? '' },
     });
     expect(res.status()).toBe(405);

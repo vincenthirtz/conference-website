@@ -65,7 +65,10 @@ test.describe('Contact page', () => {
     await page.goto('/contact');
     // Should have form inputs
     await expect(
-      page.locator('input[type="email"], input[name="email"]')
+      // Contenu principal seulement : le pied de page a un champ newsletter.
+      page
+        .locator('#main-content')
+        .locator('input[type="email"], input[name="email"]')
     ).toBeVisible({
       timeout: 10000,
     });

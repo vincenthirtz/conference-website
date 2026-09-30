@@ -23,52 +23,44 @@ test.describe('Admin menu categories', () => {
     }
   });
 
+  // La barre « Contenu > Partenaires > Partenaires – liste » a laissé place à
+  // la barre latérale de l'AdminShell : une section « Contenu » (titre h2) et
+  // UNE entrée « Partenaires » vers le hub à onglets /admin/partners
+  // (fusion liste + demandes, cf. components/admin/navigation/adminNav.ts).
+  async function loginAsAdmin(page: import('@playwright/test').Page) {
+    await page.goto('/login');
+    await page.fill('input#email', STAFF_EMAIL);
+    await page.fill('input#password', password);
+    await page.click('#main-content button[type="submit"]');
+    await page.waitForURL(/\/admin(?!\/login)/, { timeout: 20_000 });
+  }
+
+  function contentSection(page: import('@playwright/test').Page) {
+    return page
+      .getByRole('navigation', { name: /Navigation de l.administration/ })
+      .first()
+      .locator('section')
+      .filter({ has: page.getByRole('heading', { name: 'Contenu' }) });
+  }
+
   test('Le menu admin expose les liens partenaires sous Contenu', async ({
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
-    // Login
-    await page.goto('/login');
-    await page.fill('input#email', STAFF_EMAIL);
-    await page.fill('input#password', password);
-    await page.click('button[type="submit"]');
-
-    // Wait for redirect to admin dashboard
-    await page.waitForTimeout(3000);
-    await expect(page).toHaveURL(/\/admin(?!\/login)/);
-
-    // Wait for the page to fully load
-    await page.waitForLoadState('networkidle');
-
-    // Ouvre la catégorie "Contenu" du top-bar, puis la sous-section "Partenaires"
-    await page.getByRole('button', { name: 'Contenu' }).click();
-    await page.getByRole('button', { name: 'Partenaires' }).click();
-
-    // Les liens partenaires de la sous-section sont visibles
-    await expect(page.getByText('Partenaires – liste')).toBeVisible({
-      timeout: 10000,
-    });
-    await expect(page.getByText('Demandes de partenariat')).toBeVisible();
+    await loginAsAdmin(page);
+    await expect(
+      contentSection(page).getByRole('link', { name: 'Partenaires' })
+    ).toHaveAttribute('href', '/admin/partners');
   });
 
   test('Les liens partenaires fonctionnent', async ({ page }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
-    // Login
-    await page.goto('/login');
-    await page.fill('input#email', STAFF_EMAIL);
-    await page.fill('input#password', password);
-    await page.click('button[type="submit"]');
-
-    await page.waitForTimeout(3000);
-    await page.waitForLoadState('networkidle');
-
-    // Déploie Contenu > Partenaires puis clique sur "Partenaires – liste"
-    await page.getByRole('button', { name: 'Contenu' }).click();
-    await page.getByRole('button', { name: 'Partenaires' }).click();
-    await page.getByText('Partenaires – liste').click();
-    await page.waitForTimeout(1000);
-    expect(page.url()).toContain('/admin/partners');
+    await loginAsAdmin(page);
+    await contentSection(page)
+      .getByRole('link', { name: 'Partenaires' })
+      .click();
+    await page.waitForURL(/\/admin\/partners/);
   });
 });

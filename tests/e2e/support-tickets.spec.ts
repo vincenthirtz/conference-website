@@ -17,6 +17,19 @@ const TS = Date.now();
 
 const createdTicketIds: string[] = [];
 
+// La route limite à 5 tickets/heure PAR IP, AVANT la validation : au-delà du
+// 5e appel du fichier, tout sortait en 429 au lieu du 400 attendu. Chaque
+// requête se présente donc comme un client distinct, via l'en-tête IP que
+// pose l'edge Netlify (lu en priorité par utils/rateLimit#getClientIp). La
+// limite elle-même n'est pas l'objet de cette spec.
+let clientSeq = 0;
+function freshClient(): Record<string, string> {
+  clientSeq += 1;
+  return {
+    'x-nf-client-connection-ip': `10.${(TS >> 8) & 255}.${TS & 255}.${clientSeq}`,
+  };
+}
+
 test.describe('Support tickets — public API', () => {
   test.describe.configure({ mode: 'serial' });
   test.skip(!HAS_SUPABASE, 'Supabase service role manquant');
@@ -40,6 +53,7 @@ test.describe('Support tickets — public API', () => {
 
   test('rejette une catégorie invalide', async ({ request }) => {
     const res = await request.post('/api/support/ticket', {
+      headers: freshClient(),
       data: {
         category: 'spam',
         severity: 'low',
@@ -54,6 +68,7 @@ test.describe('Support tickets — public API', () => {
 
   test('rejette une sévérité invalide', async ({ request }) => {
     const res = await request.post('/api/support/ticket', {
+      headers: freshClient(),
       data: {
         category: 'other',
         severity: 'critical',
@@ -68,6 +83,7 @@ test.describe('Support tickets — public API', () => {
 
   test('rejette un message trop court', async ({ request }) => {
     const res = await request.post('/api/support/ticket', {
+      headers: freshClient(),
       data: {
         category: 'other',
         severity: 'low',
@@ -82,6 +98,7 @@ test.describe('Support tickets — public API', () => {
 
   test('rejette un message > 5000 chars', async ({ request }) => {
     const res = await request.post('/api/support/ticket', {
+      headers: freshClient(),
       data: {
         category: 'other',
         severity: 'low',
@@ -96,6 +113,7 @@ test.describe('Support tickets — public API', () => {
 
   test('rejette un sujet > 200 chars', async ({ request }) => {
     const res = await request.post('/api/support/ticket', {
+      headers: freshClient(),
       data: {
         category: 'other',
         severity: 'low',
@@ -111,6 +129,7 @@ test.describe('Support tickets — public API', () => {
 
   test('rejette un tournamentId non-UUID', async ({ request }) => {
     const res = await request.post('/api/support/ticket', {
+      headers: freshClient(),
       data: {
         category: 'other',
         severity: 'low',
@@ -128,6 +147,7 @@ test.describe('Support tickets — public API', () => {
     request,
   }) => {
     const res = await request.post('/api/support/ticket', {
+      headers: freshClient(),
       data: {
         category: 'other',
         severity: 'low',
@@ -147,6 +167,7 @@ test.describe('Support tickets — public API', () => {
     request,
   }) => {
     const res = await request.post('/api/support/ticket', {
+      headers: freshClient(),
       data: {
         category: 'dispute',
         severity: 'medium',
@@ -190,6 +211,7 @@ test.describe('Support tickets — public API', () => {
     request,
   }) => {
     const res = await request.post('/api/support/ticket', {
+      headers: freshClient(),
       data: {
         category: 'behavior',
         severity: 'high',
@@ -219,6 +241,7 @@ test.describe('Support tickets — public API', () => {
 
   test('persiste le sujet trimmé', async ({ request }) => {
     const res = await request.post('/api/support/ticket', {
+      headers: freshClient(),
       data: {
         category: 'technical',
         severity: 'low',
@@ -245,6 +268,7 @@ test.describe('Support tickets — public API', () => {
     request,
   }) => {
     const res = await request.post('/api/support/ticket', {
+      headers: freshClient(),
       data: {
         category: 'other',
         severity: 'low',

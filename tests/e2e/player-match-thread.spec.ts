@@ -197,15 +197,18 @@ test.describe('Fil du match', () => {
     await mockApiJson(
       page,
       PATH,
+      // `ongoing` : un match `finished` n'accepte plus de report
+      // (REPORT_CLOSED_STATUSES, utils/matches/playerMatchLive.ts) — la route
+      // le refuserait, l'écran ne le propose donc plus.
       detail({
-        status: 'finished',
+        status: 'ongoing',
         permissions: { validateLineup: true, reportScore: true },
       })
     );
     await loginPlayer(page, PLAYER_EMAIL, `/player/match/${MATCH_ID}`);
 
     await expect(
-      page.getByRole('button', { name: /Rapporter le score/i })
+      page.getByRole('button', { name: /Rapporter le score/i }).first()
     ).toBeVisible({ timeout: 10000 });
   });
 });

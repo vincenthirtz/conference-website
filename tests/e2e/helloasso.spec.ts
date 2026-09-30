@@ -2,66 +2,46 @@ import { test, expect } from '@playwright/test';
 
 // ─── Page de don (frontend) ────────────────────────────────────
 
-test.describe('Page de don — coming soon', () => {
-  test('La page /don affiche le bandeau "coming soon" sur le formulaire', async ({
+test.describe('Page de don — paiement en ligne ouvert', () => {
+  // Le « coming soon » est levé (`COMING_SOON = false` dans pages/don.tsx) :
+  // ces tests vérifient désormais que le formulaire est UTILISABLE. Pas de
+  // soumission — elle redirigerait vers HelloAsso.
+  test('La page /don n’affiche plus le bandeau "coming soon"', async ({
     page,
   }) => {
     await page.goto('/don');
-
-    // The overlay on the form section
-    await expect(page.getByText('Coming soon')).toBeVisible();
-    // "Paiement en ligne bientôt disponible" appears in hero + overlay — check at least one
-    await expect(
-      page.getByText('Paiement en ligne bientôt disponible').first()
-    ).toBeVisible();
+    await expect(page.locator('#don-prenom')).toBeVisible();
+    await expect(page.getByText('Coming soon')).toHaveCount(0);
   });
 
-  test('Le formulaire de don est désactivé (inputs disabled)', async ({
-    page,
-  }) => {
+  test('Le formulaire de don est actif', async ({ page }) => {
     await page.goto('/don');
 
-    await expect(page.locator('#don-prenom')).toBeDisabled();
-    await expect(page.locator('#don-nom')).toBeDisabled();
-    await expect(page.locator('#don-email')).toBeDisabled();
-    await expect(page.getByPlaceholder('Autre (€)')).toBeDisabled();
+    await expect(page.locator('#don-prenom')).toBeEnabled();
+    await expect(page.locator('#don-nom')).toBeEnabled();
+    await expect(page.locator('#don-email')).toBeEnabled();
+    await expect(page.getByPlaceholder('Autre (€)')).toBeEnabled();
     await expect(
       page.getByRole('button', { name: /Donner.*HelloAsso/ })
-    ).toBeDisabled();
+    ).toBeEnabled();
   });
 
-  test('Les boutons de montant prédéfini sont désactivés', async ({ page }) => {
+  test('Les boutons de montant prédéfini sont actifs', async ({ page }) => {
     await page.goto('/don');
 
-    await expect(
-      page.getByRole('button', { name: '25 €', exact: true })
-    ).toBeDisabled();
-    await expect(
-      page.getByRole('button', { name: '50 €', exact: true })
-    ).toBeDisabled();
-    await expect(
-      page.getByRole('button', { name: '100 €', exact: true })
-    ).toBeDisabled();
-    await expect(
-      page.getByRole('button', { name: '250 €', exact: true })
-    ).toBeDisabled();
+    for (const amount of ['20 €', '50 €', '100 €', '150 €']) {
+      await expect(
+        page.getByRole('button', { name: amount, exact: true })
+      ).toBeEnabled();
+    }
   });
 
-  test('Le CTA hero affiche "bientôt disponible" au lieu du lien', async ({
-    page,
-  }) => {
+  test('Le CTA hero mène au formulaire en ligne', async ({ page }) => {
     await page.goto('/don');
 
-    // The CTA should NOT be a link
     await expect(
       page.getByRole('link', { name: 'Faire un don en ligne' })
-    ).not.toBeVisible();
-
-    // Instead, it should be a static text
-    const heroBanner = page.locator('span', {
-      hasText: 'Paiement en ligne bientôt disponible',
-    });
-    await expect(heroBanner.first()).toBeVisible();
+    ).toHaveAttribute('href', '#don-en-ligne');
   });
 
   test("Le bandeau de succès s'affiche avec ?status=success", async ({

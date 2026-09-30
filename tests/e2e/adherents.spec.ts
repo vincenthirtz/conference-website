@@ -270,7 +270,9 @@ test.describe('Adherents CRUD (supabase)', () => {
     if (!supabaseTestClient) return;
 
     const timestamp = Date.now();
-    const validStatuses = ['pending', 'paid', 'overdue', 'waived', 'refunded'];
+    // Miroir de la contrainte adherents_payment_status_check (socle) :
+    // `waived`/`refunded` n'existent plus, `partial`/`exempt` les remplacent.
+    const validStatuses = ['pending', 'partial', 'paid', 'exempt', 'overdue'];
 
     for (const status of validStatuses) {
       const { data, error } = await supabaseTestClient

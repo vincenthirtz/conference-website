@@ -5,9 +5,12 @@ test.describe('Formulaire de contact', () => {
     await page.goto('/contact');
 
     // Vérifier que les champs du formulaire sont présents
-    await expect(page.locator('input[name="name"], input#name')).toBeVisible();
+    // Limité au contenu principal : le pied de page porte aussi un champ email
+    // (inscription à la newsletter) et un bouton submit.
+    const main = page.locator('#main-content');
+    await expect(main.locator('input[name="name"], input#name')).toBeVisible();
     await expect(
-      page.locator('input[name="email"], input#email, input[type="email"]')
+      main.locator('input[name="email"], input#email, input[type="email"]')
     ).toBeVisible();
   });
 
@@ -17,7 +20,9 @@ test.describe('Formulaire de contact', () => {
     await page.goto('/contact');
 
     // Essayer de soumettre sans remplir
-    const submitButton = page.locator('button[type="submit"]');
+    const submitButton = page
+      .locator('#main-content')
+      .locator('button[type="submit"]');
     if (await submitButton.isVisible()) {
       await submitButton.click();
 
@@ -59,7 +64,10 @@ test.describe("Formulaire d'inscription", () => {
     await page.goto('/register');
 
     // Le lien vers la page de connexion doit être visible
-    const loginLink = page.getByRole('link', { name: 'Connexion' });
+    // Dans le formulaire, pas l'entrée « Connexion » de la barre de navigation.
+    const loginLink = page
+      .locator('#main-content')
+      .getByRole('link', { name: 'Connexion' });
     await expect(loginLink).toBeVisible({ timeout: 5000 });
 
     // Vérifier que le lien pointe vers /login
@@ -81,19 +89,25 @@ test.describe("Formulaire de création d'équipe", () => {
   test('Bouton ajouter un membre fonctionne', async ({ page }) => {
     await page.goto('/team/create');
 
+    // Le roster est l'étape 2 de l'assistant : l'étape 1 exige un nom.
+    await page.getByPlaceholder('Ex : Phénix').fill('E2E Forms');
+    await page.getByRole('button', { name: 'Suivant' }).click();
+
     // Compter les champs email initiaux
+    await expect(
+      page.getByPlaceholder('joueuse@email.tld').first()
+    ).toBeVisible();
     const initialEmailInputs = await page
       .getByPlaceholder('joueuse@email.tld')
       .count();
 
     // Cliquer sur ajouter un membre
-    await page.click('button:has-text("Ajouter")');
+    await page.getByRole('button', { name: 'Ajouter une personne' }).click();
 
     // Il devrait y avoir un champ email de plus
-    const newEmailInputs = await page
-      .getByPlaceholder('joueuse@email.tld')
-      .count();
-    expect(newEmailInputs).toBeGreaterThan(initialEmailInputs);
+    await expect(page.getByPlaceholder('joueuse@email.tld')).toHaveCount(
+      initialEmailInputs + 1
+    );
   });
 });
 
@@ -103,7 +117,9 @@ test.describe('Page admin login', () => {
 
     await expect(page.locator('input#email')).toBeVisible();
     await expect(page.locator('input#password')).toBeVisible();
-    await expect(page.locator('button[type="submit"]')).toBeVisible();
+    await expect(
+      page.locator('#main-content').locator('button[type="submit"]')
+    ).toBeVisible();
   });
 
   test('Erreur avec identifiants invalides', async ({ page }) => {

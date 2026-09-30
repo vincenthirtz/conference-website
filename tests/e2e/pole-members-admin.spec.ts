@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { supabaseTestClient } from '../utils/supabaseTestClient';
+import {
+  supabaseTestClient,
+  createTestStaff,
+  deleteTestStaff,
+} from '../utils/supabaseTestClient';
 
 test.describe('Admin pole-members pages (sans auth)', () => {
   test('GET /admin/association?tab=poles redirige vers login', async ({
@@ -195,7 +199,7 @@ test.describe('Page association affiche les pôles', () => {
 
     await expect(page.getByText(/direction & admin/i).first()).toBeVisible();
     await expect(page.getByText(/tournoi & arbitrage/i).first()).toBeVisible();
-    await expect(page.getByText(/production & cast/i).first()).toBeVisible();
+    await expect(page.getByText(/multimédia/i).first()).toBeVisible();
     await expect(page.getByText(/communauté/i).first()).toBeVisible();
   });
 });
@@ -206,29 +210,54 @@ test.describe('Pôle Multimédia inclut les casteuses', () => {
     'Supabase service role manquant pour insérer une casteuse de test'
   );
 
+  const TS = Date.now();
+  const STAFF_EMAIL = `e2e-pole-cast-${TS}@test.local`;
+  const STAFF_PASSWORD = 'TestPassw0rd!42';
+
+  test.afterAll(async () => {
+    await deleteTestStaff(STAFF_EMAIL);
+  });
+
   test('Une casteuse active apparaît dans la carte du pôle production', async ({
     page,
+    request,
   }) => {
     if (!supabaseTestClient) return;
 
-    const uniqueName = `E2E Caster ${Date.now()}`;
-    const { data: created } = await supabaseTestClient
-      .from('cast_members')
-      .insert({
+    // /association est en ISR (revalidate 3600) : une insertion directe en
+    // base reste invisible sous `next start` (la query de cache-busting n'y
+    // change rien). On crée donc la casteuse par l'API admin, qui régénère
+    // la page à la demande (revalidateAssociationPages) — le vrai parcours.
+    await createTestStaff(STAFF_EMAIL, STAFF_PASSWORD, 'admin');
+    const { data: auth } = await supabaseTestClient.auth.signInWithPassword({
+      email: STAFF_EMAIL,
+      password: STAFF_PASSWORD,
+    });
+    const token = auth.session?.access_token;
+    expect(token).toBeTruthy();
+
+    const uniqueName = `E2E Caster ${TS}`;
+    const res = await request.post('/api/admin/cast-members', {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
         name: uniqueName,
         title: 'Test Cast',
-        is_active: true,
-        is_promo: false,
-        sort_order: 9999,
-      })
-      .select('id')
-      .maybeSingle();
+        isActive: true,
+        isPromo: false,
+        sortOrder: 9999,
+      },
+    });
+    expect(res.status()).toBe(201);
 
+    const { data: created } = await supabaseTestClient
+      .from('cast_members')
+      .select('id')
+      .eq('name', uniqueName)
+      .maybeSingle();
     expect(created?.id).toBeTruthy();
 
     try {
-      // Bypass ISR: cache-busting query string forces a fresh render in dev/test.
-      await page.goto(`/association?_=${Date.now()}`);
+      await page.goto('/association');
 
       // Le badge dans la carte "Multimédia" doit contenir le nom unique.
       await expect(page.getByText(uniqueName).first()).toBeVisible({

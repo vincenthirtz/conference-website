@@ -115,9 +115,13 @@ test.describe('Session partagée & redirection joueur', () => {
     // Le bloc « Connexion / Inscription » staff est masqué car authUser présent.
     await expect(page.locator('a:has-text("Connexion")')).toHaveCount(0);
     // La cloche joueur (PlayerBell → useAuthSession) est visible pour un connecté.
-    await expect(page.getByRole('link', { name: /Notifications/ })).toBeVisible(
-      { timeout: 10000 }
-    );
+    // Son nom accessible est « Mon espace joueur — <résumé> » : le résumé vaut
+    // « Notifications » AVANT le chargement des compteurs puis « Aucune
+    // notification » après — viser le résumé rendait le test dépendant de la
+    // course. On vise la partie stable.
+    await expect(
+      page.getByRole('link', { name: /^Mon espace joueur —/ })
+    ).toBeVisible({ timeout: 10000 });
 
     // Retour sur /player : la barre joueur (usePlayerSession) réapparaît sans
     // re-login → le provider a bien conservé la session à travers les routes.

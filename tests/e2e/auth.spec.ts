@@ -37,8 +37,12 @@ test.describe('Auth flow', () => {
     await page.fill('input#email', uniqueEmail);
     await page.fill('input#password', password);
     await page.fill('input#confirm', password);
-    await page.click('button[type="submit"]');
-    await expect(page.getByText(/Compte créé/i)).toBeVisible({
+    await page.click('#main-content button[type="submit"]');
+    // Message NEUTRE depuis l'anti-énumération (pages/register.tsx) : le même
+    // que l'adresse soit libre ou déjà prise — plus de « Compte créé ».
+    await expect(
+      page.getByText(/un email de confirmation vient d.être envoyé/i)
+    ).toBeVisible({
       timeout: 15000,
     });
   });

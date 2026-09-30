@@ -83,7 +83,7 @@ test.describe('Team creation page', () => {
     await solveCaptcha(page);
     await page.getByRole('button', { name: "Créer l'équipe" }).click();
 
-    await expect(page.getByText('Équipe créée')).toBeVisible({
+    await expect(page.getByText('Équipe créée').first()).toBeVisible({
       timeout: 20000,
     });
 
@@ -152,7 +152,7 @@ test.describe('Team creation page', () => {
     await solveCaptcha(page);
     await page.getByRole('button', { name: "Créer l'équipe" }).click();
 
-    await expect(page.getByText('Équipe créée')).toBeVisible({
+    await expect(page.getByText('Équipe créée').first()).toBeVisible({
       timeout: 20000,
     });
     await expect(

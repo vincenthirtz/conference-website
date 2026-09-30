@@ -20,7 +20,9 @@ import {
 } from './_helpers/playerSession';
 
 const PLAYER_EMAIL = `hirtzvincent+langtoggle@gmail.com`;
-const STORAGE_KEY = 'cw_player_lang';
+// Clé site-wide depuis l'i18n global (lib/i18n/LanguageProvider) ; l'ancienne
+// `cw_player_lang` n'est plus que relue (migration), jamais écrite.
+const STORAGE_KEY = 'cw_lang';
 
 const TEAM = {
   id: 'team-e2e-lang',

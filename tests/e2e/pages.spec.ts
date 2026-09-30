@@ -46,7 +46,9 @@ test.describe('Pages publiques — disponibilité et contenu', () => {
       // Real assertion on rendered content — the body must contain the
       // expected page-specific text rather than just being non-empty.
       await expect(
-        page.locator('body').getByText(contains).first()
+        // Le contenu de la page, pas la barre de navigation : ses menus
+        // repliés portent les mêmes mots (« L'association »…) en caché.
+        page.locator('#main-content').getByText(contains).first()
       ).toBeVisible({ timeout: 10000 });
     });
   }

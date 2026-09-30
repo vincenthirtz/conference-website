@@ -2,7 +2,7 @@
 //
 // GET /api/player/matches → { team, matches[] }. Two sections "À venir" /
 // "Résultats". An upcoming match with checkin.isOpen && !alreadyCheckedIn
-// shows a "Check-in" link to /player/checkin; past matches show score +
+// shows a "Check-in" link to the match thread; past matches show score +
 // win/loss/draw badge. Empty states: no team, no matches.
 //
 // Auth = real player login; /api/player/matches is route-mocked per case.
@@ -96,10 +96,11 @@ test.describe('Player matches page', () => {
     // Scores rendered.
     await expect(page.getByText(/3.*–.*1/).first()).toBeVisible();
 
-    // Check-in CTA links to /player/checkin.
+    // Check-in CTA links to the match thread (/player/match/[id]), which hosts
+    // the check-in since 69589968 (« le fil du match »).
     const cta = page.getByRole('link', { name: /Check-in/ });
     await expect(cta).toBeVisible();
-    await expect(cta).toHaveAttribute('href', '/player/checkin');
+    await expect(cta).toHaveAttribute('href', '/player/match/m-upcoming');
   });
 
   test('empty state: player has no team', async ({ page }) => {

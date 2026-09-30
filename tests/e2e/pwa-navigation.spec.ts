@@ -89,8 +89,12 @@ test.describe('PWA — client-side navigation works', () => {
     page,
   }) => {
     await page.goto('/');
+    // Un lien interne VISIBLE vers /partenaires (bandeau sponsors de
+    // l'accueil) : le premier lien « partenaire » du DOM pouvait être une
+    // entrée de menu repliée ou le CTA « Devenir partenaire ».
     const partenaireLink = page
-      .getByRole('link', { name: /partenaire/i })
+      .locator('a[href="/partenaires"]')
+      .filter({ visible: true })
       .first();
     const count = await partenaireLink.count();
     test.skip(count === 0, 'No "Partenaires" link found in navbar');

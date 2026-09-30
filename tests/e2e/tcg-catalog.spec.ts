@@ -50,7 +50,7 @@ test.describe('TCG — catalogue public', () => {
   }) => {
     await page.goto('/tcg');
 
-    const all = page.getByRole('button', { name: 'Tout' });
+    const all = page.getByRole('button', { name: 'Tout', exact: true });
     const teams = page.getByRole('button', { name: 'Équipes' });
     const maps = page.getByRole('button', { name: 'Maps' });
     await expect(all).toBeVisible();

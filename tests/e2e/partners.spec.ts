@@ -11,21 +11,30 @@ test.describe('Page partenaires publique', () => {
     await page.goto('/partenaires');
 
     // Vérifier que les trois catégories sont présentes
-    await expect(page.getByText('Super partenaire')).toBeVisible({
-      timeout: 5000,
-    });
-    await expect(page.getByText('Partenaire majeur')).toBeVisible({
-      timeout: 5000,
-    });
-    await expect(page.getByText('Partenaire culturel')).toBeVisible({
-      timeout: 5000,
-    });
+    // Titres de catégorie (h4) : le même libellé revient dans les badges et
+    // les CTA « Devenir … ».
+    for (const name of [
+      'Super partenaire',
+      'Partenaire majeur',
+      'Partenaire culturel',
+    ]) {
+      await expect(
+        page.getByRole('heading', { name, exact: true })
+      ).toBeVisible({
+        timeout: 5000,
+      });
+    }
   });
 
   test('Le bouton Devenir partenaire est présent', async ({ page }) => {
     await page.goto('/partenaires');
 
-    const link = page.getByRole('link', { name: /devenir partenaire/i });
+    // Le CTA principal ; les cartes ont leurs propres « Devenir partenaire
+    // majeur / culturel ».
+    const link = page.getByRole('link', {
+      name: 'Devenir partenaire',
+      exact: true,
+    });
     await expect(link).toBeVisible({ timeout: 5000 });
     await expect(link).toHaveAttribute('href', '/partenaires/demande');
   });
@@ -55,7 +64,9 @@ test.describe('Formulaire de demande de partenariat', () => {
     await page.goto('/partenaires/demande');
 
     // Vérifier les champs principaux
-    await expect(page.getByPlaceholder('Votre entreprise')).toBeVisible();
+    await expect(
+      page.getByPlaceholder('Votre entreprise', { exact: true })
+    ).toBeVisible();
     await expect(page.getByPlaceholder('Prénom Nom')).toBeVisible();
     await expect(page.getByPlaceholder('contact@entreprise.com')).toBeVisible();
     await expect(page.locator('select').first()).toBeVisible(); // Catégorie
@@ -176,7 +187,9 @@ test.describe('API partnership-requests protection', () => {
       data: {
         companyName: 'Test Company',
         contactName: 'Test Contact',
-        email: 'test@example.com',
+        // Les domaines réservés (example.com, .test…) sont refusés en 400
+        // par utils/emailQuality — volontairement.
+        email: 'e2e-partnership@gmail.com',
         category: 'major',
         message: 'This is a test partnership request',
       },

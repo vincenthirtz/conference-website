@@ -79,25 +79,8 @@ test.describe('Home — event spotlight', () => {
   });
 });
 
-test.describe('Home — participer en 3 étapes', () => {
-  test('renders the 3-step section with a primary CTA', async ({ page }) => {
-    await page.goto('/');
-    const section = page.locator('section#participer');
-    await expect(section).toBeVisible();
-    await expect(
-      section.getByRole('heading', { name: /en 3 étapes/i })
-    ).toBeVisible();
-
-    // 3 étapes numérotées, liens vers create / inscription / live.
-    const stepLinks = section.locator('ol a');
-    await expect(stepLinks).toHaveCount(3);
-    await expect(
-      section.locator('a[href="/team/create"]').first()
-    ).toBeVisible();
-    await expect(section.locator('a[href="/inscription-2026"]')).toBeVisible();
-    await expect(section.locator('a[href="/ambassadors"]')).toBeVisible();
-  });
-});
+// « Participer en 3 étapes » : section retirée volontairement de l'accueil
+// (e75e53d7 — son CTA doublonnait celui du hero). Plus rien à vérifier.
 
 test.describe('Home — news', () => {
   test('section renders featured cards + "Toutes les actus" link', async ({
