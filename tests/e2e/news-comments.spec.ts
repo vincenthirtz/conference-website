@@ -64,8 +64,30 @@ test.describe('News comments', () => {
     await page.getByPlaceholder('Nom (optionnel)').fill(AUTHOR_NAME);
     await captchaInput.fill(answer);
 
-    // Publier
+    // Publier — on suit la requête et la relecture de la liste : une
+    // assertion sur le seul DOM ne disait pas QUI, du serveur ou de l'écran,
+    // perdait le commentaire.
+    const isComments = (u: string) => u.includes('/api/news/comments');
+    const posted = page.waitForResponse(
+      (r) => isComments(r.url()) && r.request().method() === 'POST'
+    );
+    const relisted = page.waitForResponse(
+      async (r) =>
+        isComments(r.url()) &&
+        r.request().method() === 'GET' &&
+        (await posted.then(() => true))
+    );
     await page.getByRole('button', { name: 'Publier' }).click();
+    const postRes = await posted;
+    expect(postRes.status(), await postRes.text()).toBe(201);
+    const listRes = await relisted;
+    const listed = ((await listRes.json()).items ?? []) as {
+      content: string;
+    }[];
+    expect(
+      listed.some((c) => c.content === COMMENT_CONTENT),
+      `GET après POST : ${JSON.stringify(listed).slice(0, 300)}`
+    ).toBe(true);
 
     // Vérifier la présence
     await expect(page.getByText(COMMENT_CONTENT)).toBeVisible({

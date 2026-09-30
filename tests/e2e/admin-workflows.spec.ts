@@ -81,6 +81,10 @@ test.describe('Admin workflows E2E (API)', () => {
         .from('tournament_maps')
         .delete()
         .eq('tournament_id', tid);
+      await supabaseTestClient
+        .from('tournament_teams')
+        .delete()
+        .eq('tournament_id', tid);
       await supabaseTestClient.from('tournaments').delete().eq('id', tid);
     }
     for (const teamId of createdTeamIds) {
@@ -396,6 +400,20 @@ test.describe('Admin workflows E2E (API)', () => {
         bracketTeamIds.push(team!.id);
         createdTeamIds.push(team!.id);
       }
+
+      // Inscription au tournoi : la propagation du bracket refuse une équipe
+      // non inscrite (utils/bracket/propagate.ts).
+      const { error: regErr } = await supabaseTestClient
+        .from('tournament_teams')
+        .insert(
+          bracketTeamIds.map((team_id, i) => ({
+            tournament_id: bracketTournamentId,
+            team_id,
+            seed: i + 1,
+            status: 'registered',
+          }))
+        );
+      if (regErr) throw new Error(`Registration failed: ${regErr.message}`);
     });
 
     test('POST bracket generate crée un bracket de taille 4', async ({

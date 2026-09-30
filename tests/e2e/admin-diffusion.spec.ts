@@ -27,7 +27,10 @@ async function loginAsCoach(page: import('@playwright/test').Page) {
   await page.fill('input#password', COACH_PASSWORD);
   await page.click('#main-content button[type="submit"]');
   await page.waitForURL(/\/admin(?!\/login)/, { timeout: 15000 });
-  await page.waitForLoadState('networkidle');
+  // Pas de `networkidle` : l'admin garde des requêtes périodiques (alertes,
+  // présence, live) et l'attente coûtait ~30 s PAR test — 16 min pour ce
+  // fichier en CI. Les assertions qui suivent attendent déjà leur cible.
+  await page.waitForLoadState('load');
 }
 
 /** Les écrans de l'espace, dans l'ordre de la barre d'onglets. */

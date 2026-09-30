@@ -21,7 +21,10 @@ async function loginAsCoach(page: import('@playwright/test').Page) {
   await page.fill('input#password', COACH_PASSWORD);
   await page.click('#main-content button[type="submit"]');
   await page.waitForURL(/\/admin(?!\/login)/, { timeout: 15000 });
-  await page.waitForLoadState('networkidle');
+  // Pas de `networkidle` : l'admin garde des requêtes périodiques (alertes,
+  // présence, live) et l'attente coûtait ~30 s PAR test — 16 min pour ce
+  // fichier en CI. Les assertions qui suivent attendent déjà leur cible.
+  await page.waitForLoadState('load');
 }
 
 /** Helper: check page loaded without fatal errors */
@@ -97,7 +100,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/tournaments');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
 
     // Should show tournaments heading or list
@@ -116,7 +119,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/tournaments/create');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -127,7 +130,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/teams');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
 
     await expect(
@@ -140,7 +143,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/teams/new');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -149,7 +152,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/teams/my');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -163,7 +166,7 @@ test.describe('Admin pages — Test Coach', () => {
     // page d'édition d'équipe : l'ancienne route redirige (308) vers la liste.
     await page.goto('/admin/teams/add-member');
     await page.waitForURL(/\/admin\/teams(\?|$)/, { timeout: 10000 });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -172,7 +175,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/demandes');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -183,7 +186,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/partners');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -197,7 +200,7 @@ test.describe('Admin pages — Test Coach', () => {
     // redirige (308) vers `?new=1`, qui ouvre la modale.
     await page.goto('/admin/partners/new');
     await page.waitForURL(/\/admin\/partners\?new=1/, { timeout: 10000 });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10000 });
   });
@@ -209,7 +212,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/partnership-requests');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -222,7 +225,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/communications?tab=news');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -231,7 +234,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/news/new');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -242,7 +245,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/twitch-channels');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -256,7 +259,7 @@ test.describe('Admin pages — Test Coach', () => {
     await page.waitForURL(/\/admin\/twitch-channels\?new=1/, {
       timeout: 10000,
     });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10000 });
   });
@@ -270,7 +273,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/diffusion/casteuses');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -284,7 +287,7 @@ test.describe('Admin pages — Test Coach', () => {
     await page.waitForURL(/\/admin\/diffusion\/casteuses\?new=1/, {
       timeout: 10000,
     });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10000 });
   });
@@ -298,7 +301,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/moderation?tab=comments');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -311,7 +314,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/association?tab=adherents');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -320,7 +323,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/adherents/new');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -331,7 +334,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/logs');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -340,7 +343,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/email-logs');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -349,7 +352,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/stats?tab=teams');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -358,7 +361,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/stats?tab=maps');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -371,7 +374,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/site-settings');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -382,7 +385,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/users/manage');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -391,7 +394,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/users/new');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -402,7 +405,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/recycle-bin');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -413,7 +416,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/tournament-simulator');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -424,7 +427,7 @@ test.describe('Admin pages — Test Coach', () => {
     await loginAsCoach(page);
 
     await page.goto('/admin/tournament-templates');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 
@@ -437,7 +440,7 @@ test.describe('Admin pages — Test Coach', () => {
 
     // No login needed — public page
     await page.goto('/admin/forgot-password');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     await expect(page.locator('body')).toBeVisible();
     expect(page.url()).toContain('/admin/forgot-password');
@@ -447,7 +450,7 @@ test.describe('Admin pages — Test Coach', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     await page.goto('/admin/reset-password');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     await expect(page.locator('body')).toBeVisible();
   });
@@ -460,7 +463,7 @@ test.describe('Admin pages — Test Coach', () => {
 
     // Navigate to logout
     await page.goto('/admin/logout');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     // Should redirect to login after logout
     await page.waitForURL(/\/login/, { timeout: 15000 });
@@ -494,7 +497,7 @@ test.describe('Admin pages — Test Coach', () => {
 
     // Navigate to a protected page to confirm session works
     await page.goto('/admin/tournaments');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expectPageLoaded(page);
   });
 });

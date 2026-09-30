@@ -34,15 +34,27 @@ export async function loginPlayer(
   next: string,
   password: string = PLAYER_PASSWORD
 ): Promise<void> {
-  await page.goto(`/login?next=${encodeURIComponent(next)}`);
-  await page.fill('input#email', email);
-  await page.fill('input#password', password);
-  // Le bouton du FORMULAIRE : le pied de page (newsletter) a aussi un submit.
-  await page.click('#main-content button[type="submit"]');
-  // Wait until we leave /login for the requested player route.
-  await page.waitForURL((url) => !url.pathname.startsWith('/login'), {
-    timeout: 15000,
-  });
+  const loginUrl = `/login?next=${encodeURIComponent(next)}`;
+  const leftLogin = (url: URL) => !url.pathname.startsWith('/login');
+
+  // Deux tentatives. Sur un serveur encore froid (première connexion d'une
+  // tranche CI), un clic arrivé avant l'hydratation soumet le formulaire en
+  // natif (GET /login?…) : on reste sur /login sans erreur. La connexion
+  // n'est pas l'objet des specs qui l'utilisent — on la rejoue une fois.
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    await page.goto(loginUrl);
+    await page.fill('input#email', email);
+    await page.fill('input#password', password);
+    // Le bouton du FORMULAIRE : le pied de page (newsletter) a aussi un submit.
+    await page.click('#main-content button[type="submit"]');
+    try {
+      await page.waitForURL(leftLogin, { timeout: 15000 });
+      return;
+    } catch (err) {
+      if (leftLogin(new URL(page.url()))) return;
+      if (attempt === 2) throw err;
+    }
+  }
 }
 
 type JsonMock = Record<string, unknown> | unknown[];

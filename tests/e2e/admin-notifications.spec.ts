@@ -151,13 +151,16 @@ test.describe('Admin notifications page (staff session)', () => {
     // les runs ; on évite de polluer pour les tests suivants).
     await toggleAfter.click();
     await expect(checkboxAfter).toBeChecked();
-    await page.getByTestId('notifications-save-btn').click();
-    await page.waitForResponse(
+    // L'attente est armée AVANT le clic : armée après, une réponse rapide
+    // lui échappait et le test expirait sur une sauvegarde réussie.
+    const cleanupPut = page.waitForResponse(
       (resp) =>
         resp.url().includes('/api/admin/notifications/prefs') &&
-        resp.request().method() === 'PUT' &&
-        resp.ok(),
+        resp.request().method() === 'PUT',
       { timeout: 10000 }
     );
+    await page.getByTestId('notifications-save-btn').click();
+    const resp = await cleanupPut;
+    expect(resp.ok(), await resp.text()).toBe(true);
   });
 });

@@ -22,6 +22,7 @@ import {
   supabaseTestClient,
   createTestStaff,
   deleteTestStaff,
+  seedTournament,
 } from '../utils/supabaseTestClient';
 
 const HAS_SUPABASE = Boolean(supabaseTestClient);
@@ -38,6 +39,9 @@ let managerAuthId: string | null = null;
 let casterAuthId: string | null = null;
 let castMemberId: string | null = null;
 let runId: string | null = null;
+let tournamentId: string | null = null;
+let teamIds: string[] = [];
+let matchId: string | null = null;
 let setupFailedReason: string | null = null;
 
 async function loginVia(
@@ -138,6 +142,59 @@ test.describe('Director cues -> cockpit ack flow', () => {
         started_at: nowIso,
       });
     if (sErr) throw sErr;
+
+    // Le total attendu d'un cue urgent (« x/N ») compte les casteuses
+    // ASSIGNÉES aux matchs du run (cast_assignments, via CasterStatusPanel),
+    // plus la présence : sans segment `match` assigné, N vaut 0 par design.
+    // On sème donc un match, son segment et l'assignation de la casteuse.
+    tournamentId = await seedTournament({
+      name: `E2E Cues Tour ${TS}`,
+      slug: `e2e-cues-tour-${TS}`,
+      status: 'running',
+    });
+    for (const n of [1, 2]) {
+      const { data: t, error: tErr } = await supabaseTestClient
+        .from('teams')
+        .insert({ name: `E2E Cues T${n} ${TS}` })
+        .select('id')
+        .single();
+      if (tErr) throw tErr;
+      teamIds.push(t!.id);
+    }
+    const { data: m, error: mErr } = await supabaseTestClient
+      .from('matches')
+      .insert({
+        tournament_id: tournamentId,
+        team1_id: teamIds[0],
+        team2_id: teamIds[1],
+        status: 'pending',
+        match_format: 'bo3',
+        scheduled_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+      })
+      .select('id')
+      .single();
+    if (mErr) throw mErr;
+    matchId = m!.id;
+    const { error: msErr } = await supabaseTestClient
+      .from('event_segments')
+      .insert({
+        event_run_id: runId,
+        ord: 1,
+        type: 'match',
+        title: 'Match E2E',
+        duration_min: 30,
+        status: 'upcoming',
+        match_id: matchId,
+      });
+    if (msErr) throw msErr;
+    const { error: aErr } = await supabaseTestClient
+      .from('cast_assignments')
+      .insert({
+        match_id: matchId,
+        cast_member_id: castMemberId,
+        briefing_at: new Date(Date.now() + 5 * 60_000).toISOString(),
+      });
+    if (aErr) throw aErr;
   });
 
   test.afterAll(async () => {
@@ -154,6 +211,22 @@ test.describe('Director cues -> cockpit ack flow', () => {
         .delete()
         .eq('event_run_id', runId);
       await supabaseTestClient.from('event_runs').delete().eq('id', runId);
+    }
+    if (matchId) {
+      await supabaseTestClient
+        .from('cast_assignments')
+        .delete()
+        .eq('match_id', matchId);
+      await supabaseTestClient.from('matches').delete().eq('id', matchId);
+    }
+    if (teamIds.length > 0) {
+      await supabaseTestClient.from('teams').delete().in('id', teamIds);
+    }
+    if (tournamentId) {
+      await supabaseTestClient
+        .from('tournaments')
+        .delete()
+        .eq('id', tournamentId);
     }
     if (castMemberId) {
       await supabaseTestClient

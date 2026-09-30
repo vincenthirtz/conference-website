@@ -142,9 +142,8 @@ test.describe('Admin "Vue player" (command center)', () => {
     await expect(
       main.getByRole('button', { name: 'Transférer vers une autre équipe' })
     ).toBeVisible();
-    await expect(
-      main.getByText(/Je souhaite rejoindre cette équipe/)
-    ).toBeVisible();
+    // Le commentaire de la demande n'est pas repris dans la liste staff ;
+    // ses deux gestes, si.
     await expect(main.getByRole('button', { name: 'Approuver' })).toBeVisible();
     await expect(main.getByRole('button', { name: 'Refuser' })).toBeVisible();
 

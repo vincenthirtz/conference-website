@@ -160,7 +160,9 @@ test.describe('Admin users management', () => {
     // Verify the UI shows the role badge was updated to "Caster"
     // Look for a span with the role badge class containing "Caster"
     await expect(
-      page.locator('span').filter({ hasText: 'Caster' })
+      // Le badge porte désormais la dimension (« Staff · Caster ») et une
+      // puce voisine répète le rôle : le premier suffit.
+      page.locator('span').filter({ hasText: 'Caster' }).first()
     ).toBeVisible({
       timeout: 5000,
     });
@@ -221,7 +223,9 @@ test.describe('Admin users management', () => {
 
     // Verify the role badge shows "Membre" now (look for the span badge, not option)
     await expect(
-      page.locator('span').filter({ hasText: 'Membre' })
+      // Le badge porte désormais la dimension (« Staff · Caster ») et une
+      // puce voisine répète le rôle : le premier suffit.
+      page.locator('span').filter({ hasText: 'Membre' }).first()
     ).toBeVisible({
       timeout: 5000,
     });

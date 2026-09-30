@@ -169,24 +169,29 @@ test.describe('/admin/teams/my roster management', () => {
       });
     });
 
-    await page.route('**/api/teams/update-member', async (route) => {
-      const body = JSON.parse(route.request().postData() || '{}');
-      updateMemberCalls.push(body);
-      if (typeof body.battle_tag === 'string') currentTag = body.battle_tag;
-      if (typeof body.is_substitute === 'boolean')
-        currentSub = body.is_substitute;
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          memberId: body.memberId,
-          battle_tag: currentTag,
-          is_substitute: currentSub,
-          role: 'player',
-        }),
-      });
-    });
+    await page.route(
+      // Prédicat sur le chemin : l'écran ajoute `?teamId=` (scopeToTeam), qu'un
+      // glob `**/…` sans query ne matche pas.
+      (url) => url.pathname === '/api/teams/update-member',
+      async (route) => {
+        const body = JSON.parse(route.request().postData() || '{}');
+        updateMemberCalls.push(body);
+        if (typeof body.battle_tag === 'string') currentTag = body.battle_tag;
+        if (typeof body.is_substitute === 'boolean')
+          currentSub = body.is_substitute;
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            memberId: body.memberId,
+            battle_tag: currentTag,
+            is_substitute: currentSub,
+            role: 'player',
+          }),
+        });
+      }
+    );
 
     // --- Load page ----------------------------------------------------------
     await loginAsCaptain(page);

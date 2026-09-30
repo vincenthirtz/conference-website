@@ -193,13 +193,31 @@ test.describe('Cockpit caster — ack cue urgent sous coupure réseau', () => {
   // Le test dégradé acke ce cue pour de vrai à la fin → sans reset, le test
   // suivant trouverait le cue déjà acké et la UrgentCueModal n'apparaîtrait pas.
   // On repart donc d'un cue NON acké avant chaque test.
+  //
+  // Et même un cue NEUF : purger ses acks ne suffisait pas (le 2e test ne voyait
+  // parfois pas la modal — ack différé du 1er test arrivé après la purge). Un
+  // cue par test supprime toute dépendance à ce qu'a laissé le précédent.
   test.beforeEach(async () => {
-    if (supabaseTestClient && cueId) {
+    if (!supabaseTestClient || !runId) return;
+    if (cueId) {
       await supabaseTestClient
         .from('event_cue_acks')
         .delete()
         .eq('cue_id', cueId);
+      await supabaseTestClient.from('event_cues').delete().eq('id', cueId);
     }
+    const { data: cue, error: cErr } = await supabaseTestClient
+      .from('event_cues')
+      .insert({
+        tenant_id: DEFAULT_TENANT_ID,
+        event_run_id: runId,
+        severity: 'urgent',
+        body: `E2E URGENT — coupe la scène maintenant (${TS}-${Date.now()})`,
+      })
+      .select('id')
+      .single();
+    if (cErr) throw cErr;
+    cueId = cue!.id;
   });
 
   test('Ack échoue sous coupure réseau (pas de faux ✓) puis part au retour réseau', async ({

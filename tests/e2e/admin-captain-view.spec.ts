@@ -179,9 +179,8 @@ test.describe('Admin "Vue capitaine" (command center)', () => {
       main.getByRole('button', { name: 'Capitaine Test' })
     ).toHaveCount(0);
     // Demande de join en attente, avec ses deux gestes.
-    await expect(
-      main.getByText(/Je veux rejoindre votre équipe/)
-    ).toBeVisible();
+    // Le commentaire de la demande n'est pas repris dans la liste staff ;
+    // ses deux gestes, si.
     await expect(main.getByRole('button', { name: 'Approuver' })).toBeVisible();
     await expect(main.getByRole('button', { name: 'Refuser' })).toBeVisible();
   });

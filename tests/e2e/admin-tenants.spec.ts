@@ -3,15 +3,17 @@ import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 const TEST_PASSWORD = 'TestPassw0rd!';
 const ADMIN_EMAIL = 'hirtzvincent+e2e-tenants@gmail.com';
+// Le hub /admin/onboarding est OWNER-ONLY (permission `manage_tenant`).
+const OWNER_EMAIL = 'hirtzvincent+e2e-tenants-owner@gmail.com';
 
 const skipIfNoServiceRole = () =>
   !process.env.TEST_SUPABASE_SERVICE_ROLE_KEY &&
   !process.env.SUPABASE_SERVICE_ROLE_KEY &&
   !process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY;
 
-async function loginAsAdmin(page: Page) {
+async function loginAsAdmin(page: Page, email = ADMIN_EMAIL) {
   await page.goto('/login');
-  await page.fill('input#email', ADMIN_EMAIL);
+  await page.fill('input#email', email);
   await page.fill('input#password', TEST_PASSWORD);
   await page.click('#main-content button[type="submit"]');
   await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
@@ -52,11 +54,14 @@ test.describe('Admin tenants UI (S7)', () => {
     if (skipIfNoServiceRole()) return;
     await deleteTestStaff(ADMIN_EMAIL);
     await createTestStaff(ADMIN_EMAIL, TEST_PASSWORD, 'admin');
+    await deleteTestStaff(OWNER_EMAIL);
+    await createTestStaff(OWNER_EMAIL, TEST_PASSWORD, 'owner');
   });
 
   test.afterAll(async () => {
     if (skipIfNoServiceRole()) return;
     await deleteTestStaff(ADMIN_EMAIL);
+    await deleteTestStaff(OWNER_EMAIL);
   });
 
   test('Tenants list page mounts with breadcrumb and CTA', async ({ page }) => {
@@ -174,7 +179,7 @@ test.describe('Admin tenants UI (S7)', () => {
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
-    await loginAsAdmin(page);
+    await loginAsAdmin(page, OWNER_EMAIL);
     // Les serveurs en attente sont une section de l'onglet « À traiter » du hub
     // d'onboarding, aux côtés des demandes d'espace. L'ancienne route
     // /admin/pending-guild-links y redirige (308) ; on y va directement.

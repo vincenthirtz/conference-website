@@ -13,6 +13,10 @@ const CAPTAIN2_EMAIL = `test-scrim-captain2-${Date.now()}@test.local`;
 const PLAYER_EMAIL = `test-scrim-player-${Date.now()}@test.local`;
 const PASSWORD = 'TestPassword123!';
 
+// Négociation multi-créneaux : une demande de scrim porte au moins un
+// créneau (« Propose au moins un créneau. » sinon).
+const SLOT = new Date(Date.now() + 3 * 24 * 60 * 60_000).toISOString();
+
 test.describe('Scrim requests API (/api/demandes/scrim)', () => {
   let captainToken: string;
   let captain2Token: string;
@@ -219,7 +223,7 @@ test.describe('Scrim requests API (/api/demandes/scrim)', () => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/demandes/scrim', {
       headers: { Authorization: `Bearer ${playerToken}` },
-      data: { teamId: teamBId },
+      data: { teamId: teamBId, proposedSlots: [SLOT] },
     });
     expect(res.status()).toBe(403);
     const body = await res.json();
@@ -232,7 +236,7 @@ test.describe('Scrim requests API (/api/demandes/scrim)', () => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/demandes/scrim', {
       headers: { Authorization: `Bearer ${captainToken}` },
-      data: { teamId: teamAId },
+      data: { teamId: teamAId, proposedSlots: [SLOT] },
     });
     expect(res.status()).toBe(400);
     const body = await res.json();
@@ -280,7 +284,7 @@ test.describe('Scrim requests API (/api/demandes/scrim)', () => {
     // The previous test already created a pending scrim to teamB
     const res = await request.post('/api/demandes/scrim', {
       headers: { Authorization: `Bearer ${captainToken}` },
-      data: { teamId: teamBId },
+      data: { teamId: teamBId, proposedSlots: [SLOT] },
     });
     expect(res.status()).toBe(400);
     const body = await res.json();
@@ -327,7 +331,7 @@ test.describe('Scrim requests API (/api/demandes/scrim)', () => {
     test.skip(!HAS_SUPABASE, 'Supabase manquant');
     const res = await request.post('/api/demandes/scrim', {
       headers: { Authorization: `Bearer ${captain2Token}` },
-      data: { teamId: teamAId },
+      data: { teamId: teamAId, proposedSlots: [SLOT] },
     });
     expect(res.status(), await res.text()).toBe(201);
     const body = await res.json();

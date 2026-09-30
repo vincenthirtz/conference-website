@@ -319,9 +319,12 @@ test.describe('Caster cockpit — golden path', () => {
     // Wait for /api/caster/me + /api/caster/runs/current to settle.
     await page.waitForLoadState('networkidle');
 
-    // Header: caster name visible.
+    // Le cockpit vit désormais dans l'admin (/caster/cockpit → /admin/regie,
+    // 63afc377) : plus d'en-tête personnel au nom de la casteuse, un titre de
+    // page « Régie » à la place.
+    await page.waitForURL(/\/admin\/regie/);
     await expect(
-      page.getByText(`E2E Cockpit Caster ${TS}`).first()
+      page.getByRole('heading', { name: 'Régie', level: 1 })
     ).toBeVisible({ timeout: 15_000 });
 
     // Live segment block: title visible.
@@ -333,8 +336,12 @@ test.describe('Caster cockpit — golden path', () => {
       page.getByText(`E2E Cockpit Tour ${TS}`).first()
     ).toBeVisible();
 
-    // Sign-out button is the canonical "I'm on cockpit" marker.
-    await expect(page.getByTestId('caster-signout')).toBeVisible();
+    // Bouton de déconnexion de l'en-tête Régie (plus de testid dédié).
+    await expect(
+      page
+        .locator('#main-content')
+        .getByRole('button', { name: 'Se déconnecter' })
+    ).toBeVisible();
   });
 
   test('Toggle un item de checklist marque checked_at + persiste', async ({

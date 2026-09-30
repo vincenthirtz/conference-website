@@ -122,6 +122,11 @@ test.describe('Team creation page', () => {
 
     const teamName = `${TEAM_NAME}-bulk`;
 
+    // Une joueuse n'appartient qu'à UNE équipe par espace (index unique
+    // team_members (tenant_id, user_id)) : PLAYER_EMAIL est déjà dans
+    // l'équipe du test précédent, on la libère avant de la réinviter.
+    await deleteTeamsByName(TEAM_NAME);
+
     await page.goto('/team/create');
 
     // Étape 1 — Identité
