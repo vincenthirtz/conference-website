@@ -14,6 +14,7 @@ import {
   supabaseTestClient,
   createTestStaff,
   deleteTestStaff,
+  DEFAULT_TENANT_ID,
 } from '../utils/supabaseTestClient';
 
 const HAS_SUPABASE = Boolean(supabaseTestClient);
@@ -286,15 +287,17 @@ test.describe('Teams import E2E (CSV + platform)', () => {
     test("renvoie 400 quand la clé API n'est pas configurée", async ({
       request,
     }) => {
-      // Make sure the keys are not set
-      await supabaseTestClient!
+      // Make sure the keys are not set (dans l'espace du staff).
+      const { error: delErr } = await supabaseTestClient!
         .from('site_settings')
         .delete()
+        .eq('tenant_id', DEFAULT_TENANT_ID)
         .in('key', [
           'toornament_api_key',
           'challonge_api_key',
           'startgg_api_key',
         ]);
+      if (delErr) throw new Error(`site_settings delete: ${delErr.message}`);
 
       const res = await request.post('/api/admin/teams/import-platform', {
         headers: { Authorization: `Bearer ${staffToken}` },
@@ -311,14 +314,23 @@ test.describe('Teams import E2E (CSV + platform)', () => {
       request,
     }) => {
       // Set a fake API key so we get past the key check
-      await supabaseTestClient!.from('site_settings').upsert(
-        {
-          key: 'toornament_api_key',
-          value: 'fake-key',
-          description: 'E2E test',
-        },
-        { onConflict: 'key' }
-      );
+      // Clé primaire (tenant_id, key) : `onConflict: 'key'` faisait échouer
+      // l'upsert (aucune contrainte sur `key` seul), en silence — la clé
+      // n'était jamais posée. tenant_id explicite : l'espace du staff.
+      const { error: settingErr } = await supabaseTestClient!
+        .from('site_settings')
+        .upsert(
+          {
+            tenant_id: DEFAULT_TENANT_ID,
+            key: 'toornament_api_key',
+            value: 'fake-key',
+            description: 'E2E test',
+          },
+          { onConflict: 'tenant_id,key' }
+        );
+      if (settingErr) {
+        throw new Error(`site_settings upsert: ${settingErr.message}`);
+      }
 
       const res = await request.post('/api/admin/teams/import-platform', {
         headers: { Authorization: `Bearer ${staffToken}` },
