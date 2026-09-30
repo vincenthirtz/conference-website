@@ -21,8 +21,10 @@ export default {
   accessDeniedBody:
     'You must be a captain or manager of a team to access this page.',
   backToSpace: 'Back to my space',
+  staffNoTeamTitle: 'No team in your name',
   accessDeniedStaffBody:
-    'You don’t manage a team. As an admin, you’ll find every free player in the admin area.',
+    'You aren’t a captain or manager of any team. As an admin, you can see every team — and each one’s captain view — in the admin area.',
+  staffAllTeamsLink: 'See all teams',
   staffFreePlayersLink: 'See free players',
   tabTitle: "Manage {name} | OW Women's Cup",
   tabTitleMember: "{name} | OW Women's Cup",

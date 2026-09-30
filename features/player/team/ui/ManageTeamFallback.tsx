@@ -35,24 +35,39 @@ export function ManageTeamNoTeam({
   staffSeesFreePlayers,
 }: {
   t: ManageTeamTexts;
-  /** Un admin sans équipe a, lui, la liste des joueuses libres. */
+  /**
+   * Admin (`manage_teams`) sans équipe : pas un refus. Toutes les équipes lui
+   * sont ouvertes côté administration, et chaque fiche mène à sa « Vue
+   * capitaine » — ce même écran, vu par la capitaine. (L'espace joueuse
+   * n'appelle pas `/api/admin/*` : on y renvoie, on ne liste pas ici.)
+   */
   staffSeesFreePlayers: boolean;
 }) {
   return (
     <div className={SHELL}>
-      <div className="text-center">
-        <h1 className="text-xl font-bold mb-4">{t.accessDeniedTitle}</h1>
+      <div className="text-center max-w-md">
+        <h1 className="text-xl font-bold mb-4">
+          {staffSeesFreePlayers ? t.staffNoTeamTitle : t.accessDeniedTitle}
+        </h1>
         <p className="text-gray-400 mb-6">
           {staffSeesFreePlayers ? t.accessDeniedStaffBody : t.accessDeniedBody}
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           {staffSeesFreePlayers && (
-            <Link
-              href="/admin/free-players"
-              className={`${CTA} bg-emerald-600 hover:bg-emerald-500`}
-            >
-              {t.staffFreePlayersLink}
-            </Link>
+            <>
+              <Link
+                href="/admin/teams"
+                className={`${CTA} bg-emerald-600 hover:bg-emerald-500`}
+              >
+                {t.staffAllTeamsLink}
+              </Link>
+              <Link
+                href="/admin/free-players"
+                className={`${CTA} bg-white/10 hover:bg-white/20`}
+              >
+                {t.staffFreePlayersLink}
+              </Link>
+            </>
           )}
           <Link
             href="/player"
