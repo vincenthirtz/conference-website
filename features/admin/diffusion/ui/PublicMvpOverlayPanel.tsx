@@ -239,6 +239,24 @@ function PublicMvpOverlayPanel({
       {/* 3. En direct */}
       <section>
         <p className={`mb-3 ${rubanEyebrow}`}>{t.liveTitle}</p>
+        {state?.twitchChat && (
+          <p
+            className={`mb-3 text-sm ${
+              state.twitchChat.status === 'ready'
+                ? 'text-[var(--lf,#7fca65)]'
+                : 'text-[var(--warn,#f5a524)]'
+            }`}
+            data-testid="mvp-overlay-twitch-status"
+          >
+            {state.twitchChat.status === 'ready'
+              ? t.twitchReady
+              : state.twitchChat.status === 'missing_scope'
+                ? t.twitchMissingScope
+                : state.twitchChat.status === 'not_connected'
+                  ? t.twitchNotConnected
+                  : t.twitchNotConfigured}
+          </p>
+        )}
         {tournamentId ? (
           <StatsMvpPanel
             kind="public"

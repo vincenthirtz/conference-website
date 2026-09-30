@@ -4382,6 +4382,30 @@
        "show_sources",
        "window_minutes"
       ]
+     },
+     "twitchChat": {
+      "type": "object",
+      "properties": {
+       "missingScopes": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "status": {
+        "type": "string",
+        "enum": [
+         "missing_scope",
+         "not_configured",
+         "not_connected",
+         "ready"
+        ]
+       }
+      },
+      "required": [
+       "missingScopes",
+       "status"
+      ]
      }
     },
     "required": [
@@ -25863,6 +25887,9 @@
           "null"
          ]
         },
+        "status": {
+         "type": "string"
+        },
         "team1Name": {
          "type": [
           "string",
@@ -25880,6 +25907,7 @@
         "id",
         "roundName",
         "scheduledAt",
+        "status",
         "team1Name",
         "team2Name"
        ]
@@ -60952,6 +60980,30 @@
        "show_sources",
        "window_minutes"
       ]
+     },
+     "twitchChat": {
+      "type": "object",
+      "properties": {
+       "missingScopes": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "status": {
+        "type": "string",
+        "enum": [
+         "missing_scope",
+         "not_configured",
+         "not_connected",
+         "ready"
+        ]
+       }
+      },
+      "required": [
+       "missingScopes",
+       "status"
+      ]
      }
     },
     "required": [
@@ -79898,6 +79950,23 @@
     ]
    }
   },
+  "POST /api/webhooks/twitch/chat-mvp": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "ok": {
+      "type": "boolean"
+     },
+     "status": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "ok",
+     "status"
+    ]
+   }
+  },
   "POST /api/webhooks/twitch/tcg-drop": {
    "200": {
     "anyOf": [
@@ -80067,6 +80136,30 @@
        "position",
        "show_sources",
        "window_minutes"
+      ]
+     },
+     "twitchChat": {
+      "type": "object",
+      "properties": {
+       "missingScopes": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "status": {
+        "type": "string",
+        "enum": [
+         "missing_scope",
+         "not_configured",
+         "not_connected",
+         "ready"
+        ]
+       }
+      },
+      "required": [
+       "missingScopes",
+       "status"
       ]
      }
     },

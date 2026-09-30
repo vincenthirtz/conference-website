@@ -55,6 +55,12 @@ export const BROADCASTER_SCOPES: readonly string[] = [
   // liste dans `missing_scopes`) → il faut reconnecter la chaîne.
   'moderator:read:followers',
   'moderator:read:shoutouts',
+  // Vote « coup de cœur du public » : le chat lu CÔTÉ SERVEUR pendant un vote
+  // (EventSub channel.chat.message, utils/twitch/chatVoteSubscription.ts).
+  // Une connexion antérieure à ces trois scopes doit être refaite.
+  'user:read:chat',
+  'user:bot',
+  'channel:bot',
   // Boîte d'alertes (pages/api/webhooks/twitch/alerts.ts) — subs, réabos et
   // abonnements offerts d'un côté, bits de l'autre. Les raids n'exigent aucun
   // scope. MÊME AVERTISSEMENT QUE CI-DESSUS, et il s'applique ici pour de bon :

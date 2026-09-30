@@ -1,0 +1,78 @@
+post:
+  tags:
+    - webhooks
+  summary: Vote du public — les !mvp du chat Twitch (EventSub channel.chat.message).
+  description: |
+    Reçoit le chat de la chaîne connectée PENDANT un vote « coup de cœur du
+    public » seulement : l'abonnement EventSub est créé à l'ouverture du vote
+    et supprimé à sa clôture (utils/twitch/chatVoteSubscription.ts). Compte les
+    `!mvp <pseudo>` / `!mvp <n>` (et `!vote …`) sans cockpit caster ouvert.
+
+    Même garde que le webhook des alertes : HMAC `sha256=` sur `id + horodatage
+    + corps brut`, vérifié AVANT tout parsing et tout accès base, fail-closed
+    sans `TWITCH_EVENTSUB_SECRET`, `bodyParser: false`, `security: []` à dessein.
+
+    Un message qui n'est pas une commande repart en 200 SANS requête en base.
+    Clé de votant = login Twitch en minuscules, la même que le cockpit : les
+    deux chemins écrivent la même voix (dernière voix gagnante), sans double
+    compte. Tout ce qui est signé mais inexploitable est acquitté (200).
+  operationId: twitchChatMvpWebhook
+  security: []
+  parameters:
+    - name: Twitch-Eventsub-Message-Id
+      in: header
+      required: true
+      schema:
+        type: string
+    - name: Twitch-Eventsub-Message-Timestamp
+      in: header
+      required: true
+      schema:
+        type: string
+    - name: Twitch-Eventsub-Message-Signature
+      in: header
+      required: true
+      schema:
+        type: string
+    - name: Twitch-Eventsub-Message-Type
+      in: header
+      required: true
+      schema:
+        type: string
+        enum:
+          - webhook_callback_verification
+          - notification
+          - revocation
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          additionalProperties: true
+  responses:
+    '200':
+      description: >-
+        Acquitté. `status` dit ce qui a été fait : `counted`, `rejected`
+        (vote hors scrutin), `not_a_vote`, `unknown_candidate`, `no_open_vote`
+        (et désabonnement), `unknown_channel`, `ignored_payload`,
+        `ignored_message_type`, `revoked` — ou, pour l'activation, le
+        `challenge` rendu tel quel en `text/plain`.
+    '400':
+      description: >-
+        En-têtes manquants (`MISSING_HEADERS`), horodatage illisible
+        (`INVALID_TIMESTAMP`), JSON invalide (`INVALID_JSON`), charge
+        inexploitable (`INVALID_CHALLENGE`).
+    '403':
+      description: >-
+        Signature invalide (`INVALID_SIGNATURE`) ou message hors fenêtre
+        anti-rejeu (`STALE_MESSAGE`).
+    '405':
+      description: Méthode non autorisée (seul POST est accepté).
+    '413':
+      description: Corps au-delà du plafond de 64 Kio (`PAYLOAD_TOO_LARGE`).
+    '503':
+      description: >-
+        Secret absent (`WEBHOOK_NOT_CONFIGURED`), lecture de la chaîne en
+        échec (`CHANNEL_LOOKUP_FAILED`) ou du scrutin (`READ_FAILED`).
+        Réessayable — `Retry-After` est posé.

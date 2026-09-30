@@ -32,6 +32,7 @@ import { useEffect, useState } from 'react';
 import { format, useT } from '@/lib/i18n/useT';
 import type { OverlayPublicMvpResponse } from '@/pages/api/overlay/mvp-public';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
+import { candidateName } from '@/utils/mvp/twitchChatVote';
 
 type Poll = NonNullable<OverlayPublicMvpResponse['poll']>;
 
@@ -237,7 +238,7 @@ export function PublicMvpSource({
                     className="truncate font-black"
                     style={{ fontSize: px(26), lineHeight: 1.1 }}
                   >
-                    {winner.label}
+                    {candidateName(winner.label)}
                   </div>
                   {winner.teamName && (
                     <div
@@ -311,7 +312,7 @@ export function PublicMvpSource({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-bold">
-                      {row.label}
+                      {candidateName(row.label)}
                     </span>
                     {row.teamName && (
                       <span

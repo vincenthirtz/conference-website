@@ -13,10 +13,11 @@
 // l'annonce à l'antenne. Mais un match sans diffusion n'avait alors aucun vote
 // du public. Un admin peut donc le lancer depuis Discord (`/mvp-public`, gate
 // admin côté bot) ou depuis l'onglet « MVP du public » du site.
-//   La régie reste l'autorité quand elle diffuse. Un vote ouvert HORS cockpit
-// ne reçoit pas les `!mvp` du chat Twitch : c'est le cockpit qui les lit et les
-// relaie. Ce n'est pas un défaut à corriger ici, c'est ce que « sans régie »
-// veut dire.
+//   La régie reste l'autorité quand elle diffuse. Depuis le 2026-09-30, un vote
+// ouvert HORS cockpit reçoit AUSSI les `!mvp` du chat Twitch : le serveur lit
+// le chat pendant le vote (utils/twitch/chatVoteSubscription.ts,
+// pages/api/webhooks/twitch/chat-mvp.ts), si la chaîne a accordé les scopes
+// du chat.
 //   Pas d'événement renvoyé au bot pour ces deux gestes : c'est lui qui a
 // appelé, il poste / édite lui-même dans la foulée (cf. publicVoteActions).
 //

@@ -24,6 +24,12 @@ import {
 import { logStaffAction } from '@/utils/staffLogs';
 import { emitBotEvent } from '@/utils/botEvents';
 import { logger } from '@/utils/logger';
+import { supabaseAdmin } from '@/utils/supabase';
+import {
+  ensureChatVoteSubscription,
+  removeChatVoteSubscription,
+  type ChatVoteStatus,
+} from '@/utils/twitch/chatVoteSubscription';
 
 type Candidate = { memberId: string; label: string; teamName: string | null };
 
@@ -34,6 +40,11 @@ export type OpenPublicVoteResult =
       candidates: Candidate[];
       alreadyOpen: boolean;
       votable: boolean;
+      /**
+       * Le chat Twitch vote-t-il tout seul (abonnement EventSub au chat) ?
+       * `missing_scope` : reconnecter la chaîne ; les autres canaux votent.
+       */
+      twitchChat: ChatVoteStatus;
       /** De quoi composer le message de vote sans second appel. */
       match: {
         roundName: string | null;
@@ -45,7 +56,12 @@ export type OpenPublicVoteResult =
       ok: false;
       status: 404 | 409 | 500;
       error: string;
-      code: 'NOT_FOUND' | 'NOT_FINISHED' | 'WALKOVER' | 'OPEN_FAILED';
+      code:
+        | 'NOT_FOUND'
+        | 'NOT_FINISHED'
+        | 'NOT_PLAYABLE'
+        | 'WALKOVER'
+        | 'OPEN_FAILED';
     };
 
 export async function openPublicVoteForMatch(
@@ -66,14 +82,17 @@ export async function openPublicVoteForMatch(
       code: 'NOT_FOUND',
     };
   }
-  // Mêmes deux refus que le vote des équipes, et pour les mêmes raisons :
-  // on ne vote pas sur une partie en cours, ni sur une partie non jouée.
-  if (match.status !== 'finished') {
+  // Le vote du PUBLIC se lance aussi sur un match à venir ou en cours : la
+  // régie l'ouvre en fin de diffusion, souvent avant que le score ne soit
+  // saisi (le vote des équipes, lui, attend la fin du match). Restent
+  // refusés les matchs qui n'auront pas lieu — annulé, reporté — et le
+  // forfait (ci-dessous).
+  if (match.status === 'cancelled' || match.status === 'postponed') {
     return {
       ok: false,
       status: 409,
-      error: "Le match n'est pas terminé",
-      code: 'NOT_FINISHED',
+      error: 'Match annulé ou reporté : pas de vote du public',
+      code: 'NOT_PLAYABLE',
     };
   }
   if (match.isWalkover) {
@@ -132,12 +151,18 @@ export async function openPublicVoteForMatch(
     );
   }
 
+  // Le chat Twitch compte les !mvp côté serveur pendant le vote — sans
+  // dépendre d'un onglet du cockpit caster. Best-effort : un échec n'empêche
+  // pas le vote (Discord, cockpit), il est rendu pour être affiché.
+  const twitchChat = await ensureChatVoteSubscription(tenantId);
+
   return {
     ok: true,
     poll: opened.poll,
     candidates,
     alreadyOpen: opened.alreadyOpen,
     votable: opened.candidates.length >= 2,
+    twitchChat,
     match: {
       roundName: match.roundName,
       team1Name: match.team1Name,
@@ -201,6 +226,10 @@ export async function closePublicVoteForMatch(
     `[${opts.origin}] close public mvp match=${matchId} winner=${settled.award?.memberId ?? 'none'} reason=${settled.reason ?? '-'}`
   );
 
+  // Plus de vote ouvert dans l'espace : on cesse de recevoir le chat Twitch
+  // (chaque message réveillerait une fonction serveur pour rien).
+  await stopChatVoteIfIdle(tenantId);
+
   // Le bot ferme son sélecteur et affiche le résultat. Même urgence qu'à
   // l'ouverture : un sélecteur cliquable sur un scrutin clos est exactement le
   // décrochage que ce système existe pour empêcher.
@@ -229,4 +258,21 @@ export async function closePublicVoteForMatch(
     team1Name: settled.team1Name,
     team2Name: settled.team2Name,
   };
+}
+
+/**
+ * Désabonne le chat Twitch si AUCUN vote du public n'est plus ouvert dans
+ * l'espace (deux matchs peuvent voter en même temps). Best-effort.
+ */
+export async function stopChatVoteIfIdle(tenantId: string): Promise<void> {
+  const { data } = await supabaseAdmin
+    .from('match_public_mvp_polls')
+    .select('id, closes_at')
+    .eq('tenant_id', tenantId)
+    .is('closed_at', null)
+    .gt('closes_at', new Date().toISOString())
+    .limit(1);
+  if ((data ?? []).length === 0) {
+    await removeChatVoteSubscription({ tenantId });
+  }
 }

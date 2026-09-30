@@ -169,6 +169,14 @@ export type MvpOverlaySettings = {
 };
 
 export type MvpOverlayState = {
+  /**
+   * Le chat Twitch vote-t-il sans cockpit ? `ready` : oui, dès l'ouverture
+   * d'un vote ; sinon ce qui manque (chaîne, scopes, configuration).
+   */
+  twitchChat?: {
+    status: 'ready' | 'not_configured' | 'not_connected' | 'missing_scope';
+    missingScopes: string[];
+  };
   settings: MvpOverlaySettings;
   /** TEST à l'écran, et jusqu'à quand. */
   demo: { active: boolean; until: string | null };

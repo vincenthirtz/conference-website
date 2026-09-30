@@ -11,6 +11,7 @@ import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { AdminError } from '@/utils/admin/errors';
 import { DEMO_TOTAL_MS } from '@/utils/overlay/publicMvpDemo';
 import { DEFAULT_PUBLIC_WINDOW_MINUTES } from '@/utils/mvp/publicVote';
+import { chatVoteReadiness } from '@/utils/twitch/chatVoteSubscription';
 import type { Audited } from '../../_shared/audited';
 import type {
   MvpOverlaySettings,
@@ -78,7 +79,12 @@ async function readRow(ctx: ServiceContext) {
 export async function readMvpOverlay(
   ctx: ServiceContext
 ): Promise<MvpOverlayState> {
-  return stateOf(await readRow(ctx), Date.now());
+  const [row, twitchChat] = await Promise.all([
+    readRow(ctx),
+    // Diagnostic seul : aucune écriture chez Twitch (best-effort).
+    chatVoteReadiness(ctx.tenantId).catch(() => undefined),
+  ]);
+  return { ...stateOf(row, Date.now()), twitchChat };
 }
 
 export async function saveMvpOverlaySettings(

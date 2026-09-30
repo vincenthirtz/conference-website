@@ -35,6 +35,19 @@ get:
                   until:
                     type: [string, 'null']
                     format: date-time
+              twitchChat:
+                type: object
+                description: >
+                  Le chat Twitch compte-t-il les !mvp sans cockpit ? `ready`, ou
+                  ce qui manque (`missing_scope` : reconnecter la chaîne).
+                properties:
+                  status:
+                    type: string
+                    enum: [ready, not_configured, not_connected, missing_scope]
+                  missingScopes:
+                    type: array
+                    items:
+                      type: string
     '401':
       $ref: '#/components/responses/Unauthorized'
     '403':

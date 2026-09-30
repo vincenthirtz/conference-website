@@ -34,6 +34,14 @@ export default adminNs('adminMvpOverlay', {
   readOnlySettings:
     'Réglages réservés à la gestion de la diffusion ; vous pouvez tester et piloter le vote.',
   liveTitle: 'En direct',
+  twitchReady:
+    'Chat Twitch : les !mvp sont comptés automatiquement pendant le vote, sans cockpit ouvert.',
+  twitchMissingScope:
+    'Chat Twitch : reconnectez la chaîne (Admin › Twitch) pour autoriser la lecture du chat. D’ici là, seuls le cockpit et Discord comptent les votes.',
+  twitchNotConnected:
+    'Chat Twitch : aucune chaîne connectée pour cet espace — seuls Discord et le cockpit comptent les votes.',
+  twitchNotConfigured:
+    'Chat Twitch : EventSub non configuré côté serveur — seuls Discord et le cockpit comptent les votes.',
   noTournament:
     'Choisissez un tournoi ci-dessus pour piloter le vote de ses matchs.',
   errorLoad: 'Impossible de charger le sondage.',

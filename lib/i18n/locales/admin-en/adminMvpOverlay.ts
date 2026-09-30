@@ -27,6 +27,14 @@ export default {
   readOnlySettings:
     'Settings are reserved to broadcast management; you can still test and run the vote.',
   liveTitle: 'Live',
+  twitchReady:
+    'Twitch chat: !mvp votes are counted automatically during the vote, no cockpit needed.',
+  twitchMissingScope:
+    'Twitch chat: reconnect the channel (Admin › Twitch) to allow reading the chat. Until then, only the cockpit and Discord count votes.',
+  twitchNotConnected:
+    'Twitch chat: no channel connected for this space — only Discord and the cockpit count votes.',
+  twitchNotConfigured:
+    'Twitch chat: EventSub not configured on the server — only Discord and the cockpit count votes.',
   noTournament: 'Pick a tournament above to run the vote of its matches.',
   errorLoad: 'Could not load the poll.',
   errorSave: 'Could not save.',
