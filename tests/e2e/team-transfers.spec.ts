@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
 import {
   supabaseTestClient,
   deleteTeamsByName,
@@ -16,20 +15,11 @@ const PLAYER_EMAIL = `test-tr-player-${TS}@test.local`;
 const COACH_EMAIL = `test-tr-coach-${TS}@test.local`;
 const PASSWORD = 'TestPassword123!';
 
-// Separate admin client that won't be affected by signIn calls
-const supabaseUrl =
-  process.env.TEST_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const serviceRoleKey =
-  process.env.TEST_SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY ||
-  '';
-const adminClient =
-  supabaseUrl && serviceRoleKey
-    ? createClient(supabaseUrl, serviceRoleKey, {
-        auth: { autoRefreshToken: false, persistSession: false },
-      })
-    : null;
+// Le client de seed partagé est désormais étanche aux connexions (un
+// signInWithPassword passe par un client jetable) et pose le tenant par
+// défaut : plus besoin d'un second client service-role local, qui, lui,
+// n'avait pas le tenant (23502 sur teams.tenant_id).
+const adminClient = supabaseTestClient;
 
 /**
  * Nettoie toutes les donnees de test creees par ce fichier :

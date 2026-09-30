@@ -52,7 +52,7 @@ async function loginAsCaster(page: import('@playwright/test').Page) {
   await page.goto('/login');
   await page.fill('input#email', CASTER_EMAIL);
   await page.fill('input#password', CASTER_PASSWORD);
-  await page.click('button[type="submit"]');
+  await page.click('#main-content button[type="submit"]');
   // Caster can land on /admin (because they have a staff row), we just need
   // the sb-* cookies set. We will navigate manually after.
   await page.waitForLoadState('networkidle');
@@ -502,7 +502,7 @@ test.describe('Caster cockpit — edge cases', () => {
     await page.goto('/login');
     await page.fill('input#email', CASTER_EMAIL);
     await page.fill('input#password', CASTER_PASSWORD);
-    await page.click('button[type="submit"]');
+    await page.click('#main-content button[type="submit"]');
     await page.waitForLoadState('networkidle');
 
     const fakeSegId = '00000000-0000-0000-0000-000000000000';

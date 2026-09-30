@@ -48,7 +48,7 @@ async function loginVia(
   await page.goto('/login');
   await page.fill('input#email', email);
   await page.fill('input#password', password);
-  await page.click('button[type="submit"]');
+  await page.click('#main-content button[type="submit"]');
   await page.waitForLoadState('networkidle');
 }
 

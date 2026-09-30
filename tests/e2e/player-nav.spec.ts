@@ -250,8 +250,15 @@ test.describe('PlayerTopBar navigation', () => {
       nav.getByRole('link', { name: 'Accueil', exact: true })
     ).not.toHaveAttribute('aria-current', 'page');
 
-    // Focus visible au clavier sur une entrée.
-    await nav.getByRole('link', { name: 'TCG', exact: true }).focus();
+    // Focus visible au CLAVIER sur une entrée. Un `.focus()` programmatique
+    // juste après un clic souris ne déclenche pas :focus-visible (heuristique
+    // de modalité de Chromium) : on arrive sur « TCG » par Tab depuis
+    // « Matchs », l'entrée qui la précède.
+    await nav.getByRole('link', { name: 'Matchs', exact: true }).focus();
+    await page.keyboard.press('Tab');
+    await expect(
+      nav.getByRole('link', { name: 'TCG', exact: true })
+    ).toBeFocused();
     const outline = await nav
       .getByRole('link', { name: 'TCG', exact: true })
       .evaluate((el) => getComputedStyle(el).outlineStyle);

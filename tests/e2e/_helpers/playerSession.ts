@@ -37,7 +37,8 @@ export async function loginPlayer(
   await page.goto(`/login?next=${encodeURIComponent(next)}`);
   await page.fill('input#email', email);
   await page.fill('input#password', password);
-  await page.click('button[type="submit"]');
+  // Le bouton du FORMULAIRE : le pied de page (newsletter) a aussi un submit.
+  await page.click('#main-content button[type="submit"]');
   // Wait until we leave /login for the requested player route.
   await page.waitForURL((url) => !url.pathname.startsWith('/login'), {
     timeout: 15000,

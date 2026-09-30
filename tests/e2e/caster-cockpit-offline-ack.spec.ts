@@ -77,7 +77,7 @@ async function loginAsCaster(page: import('@playwright/test').Page) {
   await page.goto('/login');
   await page.fill('input#email', CASTER_EMAIL);
   await page.fill('input#password', CASTER_PASSWORD);
-  await page.click('button[type="submit"]');
+  await page.click('#main-content button[type="submit"]');
   // La régie (/admin/regie) est gatée SSR (requireStaffRoleFromRequest) : il
   // faut que la session staff soit POSÉE côté serveur avant d'y naviguer.
   // On attend donc la navigation hors de /login (login abouti) plutôt qu'un

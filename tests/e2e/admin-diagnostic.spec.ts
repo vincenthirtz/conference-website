@@ -213,7 +213,7 @@ test.describe('Diagnostic admin', () => {
     });
     await page.fill('input#email', STAFF_EMAIL);
     await page.fill('input#password', STAFF_PASSWORD);
-    await page.click('button[type="submit"]');
+    await page.click('#main-content button[type="submit"]');
     await page.waitForURL(/\/admin(?!\/login)/, { timeout: 15_000 });
     await page.waitForLoadState('networkidle');
     await context.storageState({ path: authFile });
@@ -241,7 +241,7 @@ test.describe('Diagnostic admin', () => {
     });
     await page.fill('input#email', STAFF_EMAIL);
     await page.fill('input#password', STAFF_PASSWORD);
-    await page.click('button[type="submit"]');
+    await page.click('#main-content button[type="submit"]');
     await page.waitForURL(/\/admin(?!\/login)/, { timeout: 15_000 });
 
     const duration = Date.now() - start;

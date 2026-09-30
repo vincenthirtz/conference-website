@@ -56,7 +56,7 @@ test.describe('Stage groups & pool management (direct supabase)', () => {
     for (const name of teamNames) {
       const { data: tm } = await supabaseTestClient
         .from('teams')
-        .insert({ name, tag: name.slice(0, 10) })
+        .insert({ name, short_name: name.slice(0, 10) })
         .select('id')
         .maybeSingle();
       teams.push(tm!.id);

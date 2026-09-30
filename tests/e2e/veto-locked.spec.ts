@@ -44,7 +44,7 @@ async function loginAsUI(page: Page, email: string) {
   await page.goto('/login');
   await page.fill('input#email', email);
   await page.fill('input#password', PASSWORD);
-  await page.click('button[type="submit"]');
+  await page.click('#main-content button[type="submit"]');
   await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
 }
 
@@ -106,8 +106,9 @@ test.describe('Veto locked flow (P0 matches)', () => {
       .insert({
         tournament_id: tournamentId,
         name: 'Stage E2E',
-        kind: 'single_elimination',
-        position: 1,
+        // Colonnes réelles de tournament_stages (ex-`kind` / `position`).
+        stage_type: 'bracket',
+        order_index: 1,
       })
       .select('id')
       .single();

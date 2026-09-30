@@ -14,6 +14,14 @@ async function cleanupUsers() {
   await deleteTestStaff(STAFF_EMAIL);
 }
 
+// Le formulaire n'est plus sur la page /admin : il vit dans la modale
+// « Mon profil » de l'AdminShell (components/admin/profile/ProfileModal.tsx),
+// onglet « Sécurité ».
+async function openSecurityTab(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'Ouvrir mon profil' }).click();
+  await page.getByRole('tab', { name: 'Sécurité' }).click();
+}
+
 test.describe('Password change feature', () => {
   test.beforeAll(async () => {
     await cleanupUsers();
@@ -32,17 +40,18 @@ test.describe('Password change feature', () => {
       await createTestStaff(STAFF_EMAIL, password, 'admin');
     });
 
-    test('displays password change form on /admin page', async ({ page }) => {
+    test('displays password change form in the profile modal', async ({ page }) => {
       test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
       // Login as staff
       await page.goto('/login');
       await page.fill('input#email', STAFF_EMAIL);
       await page.fill('input#password', password);
-      await page.click('button[type="submit"]');
+      await page.click('#main-content button[type="submit"]');
 
       // Wait for redirect to admin
-      await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
+      await page.waitForURL(/\/admin(?!\/login)/, { timeout: 20000 });
+      await openSecurityTab(page);
 
       // Check password change form is present (use heading to avoid ambiguity)
       await expect(
@@ -58,14 +67,17 @@ test.describe('Password change feature', () => {
       await page.goto('/login');
       await page.fill('input#email', STAFF_EMAIL);
       await page.fill('input#password', password);
-      await page.click('button[type="submit"]');
+      await page.click('#main-content button[type="submit"]');
 
-      await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
+      await page.waitForURL(/\/admin(?!\/login)/, { timeout: 20000 });
+      await openSecurityTab(page);
 
       // Find the password change section
       const passwordSection = page
         .locator('section')
-        .filter({ hasText: 'Changer mon mot de passe' });
+        .filter({
+          has: page.getByRole('heading', { name: 'Changer mon mot de passe' }),
+        });
 
       // Fill in mismatched passwords
       await passwordSection
@@ -95,14 +107,17 @@ test.describe('Password change feature', () => {
       await page.goto('/login');
       await page.fill('input#email', STAFF_EMAIL);
       await page.fill('input#password', password);
-      await page.click('button[type="submit"]');
+      await page.click('#main-content button[type="submit"]');
 
-      await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
+      await page.waitForURL(/\/admin(?!\/login)/, { timeout: 20000 });
+      await openSecurityTab(page);
 
       // Find the password change section
       const passwordSection = page
         .locator('section')
-        .filter({ hasText: 'Changer mon mot de passe' });
+        .filter({
+          has: page.getByRole('heading', { name: 'Changer mon mot de passe' }),
+        });
 
       // Fill in short password
       await passwordSection.getByPlaceholder('••••••••').first().fill('short');
@@ -126,14 +141,17 @@ test.describe('Password change feature', () => {
       await page.goto('/login');
       await page.fill('input#email', STAFF_EMAIL);
       await page.fill('input#password', password);
-      await page.click('button[type="submit"]');
+      await page.click('#main-content button[type="submit"]');
 
-      await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
+      await page.waitForURL(/\/admin(?!\/login)/, { timeout: 20000 });
+      await openSecurityTab(page);
 
       // Find the password change section
       const passwordSection = page
         .locator('section')
-        .filter({ hasText: 'Changer mon mot de passe' });
+        .filter({
+          has: page.getByRole('heading', { name: 'Changer mon mot de passe' }),
+        });
 
       // Fill in matching passwords
       await passwordSection

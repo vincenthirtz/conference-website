@@ -45,7 +45,9 @@ const skipIfNoServiceRole = () =>
 type Gate = { path: string; requiredRole: 'owner' | 'admin' };
 
 const GATES: Gate[] = [
-  { path: '/admin/onboarding', requiredRole: 'admin' },
+  // Hub Onboarding : OWNER-ONLY (permission `manage_tenant`, portée
+  // plateforme — pages/admin/onboarding/index.tsx, adminNav.ts).
+  { path: '/admin/onboarding', requiredRole: 'owner' },
   { path: '/admin/users/manage', requiredRole: 'admin' },
   { path: '/admin/site-settings', requiredRole: 'admin' },
   { path: '/admin/tenants', requiredRole: 'admin' },
@@ -55,7 +57,7 @@ async function login(page: Page, email: string) {
   await page.goto('/login');
   await page.fill('input#email', email);
   await page.fill('input#password', TEST_PASSWORD);
-  await page.click('button[type="submit"]');
+  await page.click('#main-content button[type="submit"]');
   // Caster is the lowest staff role and still lands on /admin (index is
   // caster-gated), so every staff role reaches /admin after login.
   await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });

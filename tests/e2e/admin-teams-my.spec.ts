@@ -74,7 +74,7 @@ async function loginAsCaptain(page: Page) {
   await page.goto('/login');
   await page.fill('input#email', CAPTAIN_EMAIL);
   await page.fill('input#password', TEST_PASSWORD);
-  await page.click('button[type="submit"]');
+  await page.click('#main-content button[type="submit"]');
   await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
 }
 

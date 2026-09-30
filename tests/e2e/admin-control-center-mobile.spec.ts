@@ -46,7 +46,7 @@ test.describe('Centre de contrôle — téléphone', () => {
     await page.goto('/admin/login');
     await page.fill('input#email', STAFF_EMAIL);
     await page.fill('input#password', STAFF_PASSWORD);
-    await page.click('button[type="submit"]');
+    await page.click('#main-content button[type="submit"]');
     await page.waitForURL(/\/admin(?!\/login)/, { timeout: 15000 });
 
     await page.goto(`/admin/tournament/${TOURNAMENT_ID}/dashboard`);

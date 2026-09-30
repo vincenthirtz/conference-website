@@ -152,7 +152,7 @@ test.describe('Public scrim requests API (/api/public/scrim-requests)', () => {
       headers: { Authorization: `Bearer ${captainToken}` },
       data: { demandeId: ours.id, action: 'approve' },
     });
-    expect(approveRes.status()).toBe(200);
+    expect(approveRes.status(), await approveRes.text()).toBe(200);
     const approveBody = await approveRes.json();
     expect(approveBody.newStatus).toBe('approved');
 

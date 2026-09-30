@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 /**
  * Tests de chargement de toutes les pages admin avec le compte Test Coach (admin).
@@ -18,7 +19,7 @@ async function loginAsCoach(page: import('@playwright/test').Page) {
   await page.goto('/login');
   await page.fill('input#email', COACH_EMAIL);
   await page.fill('input#password', COACH_PASSWORD);
-  await page.click('button[type="submit"]');
+  await page.click('#main-content button[type="submit"]');
   await page.waitForURL(/\/admin(?!\/login)/, { timeout: 15000 });
   await page.waitForLoadState('networkidle');
 }
@@ -47,13 +48,22 @@ async function expectPageLoaded(page: import('@playwright/test').Page) {
 
 test.describe('Admin pages — Test Coach', () => {
   test.describe.configure({ mode: 'serial' });
+  // Le compte « Test Coach » existait en prod ; sur la base jetable de la CI il
+  // faut le créer (admin), et le retirer ensuite.
+  test.beforeAll(async () => {
+    await deleteTestStaff(COACH_EMAIL);
+    await createTestStaff(COACH_EMAIL, COACH_PASSWORD, 'admin');
+  });
+  test.afterAll(async () => {
+    await deleteTestStaff(COACH_EMAIL);
+  });
   test('Connexion au dashboard admin', async ({ page }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     await page.goto('/login');
     await page.fill('input#email', COACH_EMAIL);
     await page.fill('input#password', COACH_PASSWORD);
-    await page.click('button[type="submit"]');
+    await page.click('#main-content button[type="submit"]');
 
     await page.waitForURL(/\/admin(?!\/login)/, { timeout: 15000 });
     await expect(page.locator('body')).toBeVisible();

@@ -48,14 +48,14 @@ test.describe('Tournament matches CRUD (direct supabase)', () => {
     // Create two teams
     const { data: t1 } = await supabaseTestClient
       .from('teams')
-      .insert({ name: `E2E Team A ${TS}`, tag: `TA${TS}` })
+      .insert({ name: `E2E Team A ${TS}`, short_name: `TA${TS}` })
       .select('id')
       .maybeSingle();
     team1Id = t1!.id;
 
     const { data: t2 } = await supabaseTestClient
       .from('teams')
-      .insert({ name: `E2E Team B ${TS}`, tag: `TB${TS}` })
+      .insert({ name: `E2E Team B ${TS}`, short_name: `TB${TS}` })
       .select('id')
       .maybeSingle();
     team2Id = t2!.id;

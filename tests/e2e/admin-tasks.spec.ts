@@ -31,7 +31,7 @@ test.describe('Admin – Kanban des tâches', () => {
     await page.goto('/login');
     await page.fill('input#email', STAFF_EMAIL);
     await page.fill('input#password', password);
-    await page.click('button[type="submit"]');
+    await page.click('#main-content button[type="submit"]');
     await page.waitForTimeout(3000);
     await expect(page).toHaveURL(/\/admin(?!\/login)/);
   }

@@ -7,6 +7,8 @@ import {
 } from '../utils/supabaseTestClient';
 
 const HAS_SUPABASE = Boolean(supabaseTestClient);
+// BattleTag exigé pour rejoindre un roster (features/player/demandes/service/join.ts).
+const PLAYER_BATTLETAG = 'Joueuse#12345';
 const PREFIX = `E2E-JR-${Date.now()}`;
 const CAPTAIN_EMAIL = `test-jr-captain-${Date.now()}@test.local`;
 const PLAYER_EMAIL = `test-jr-player-${Date.now()}@test.local`;
@@ -152,7 +154,7 @@ test.describe('Team join requests API', () => {
         Authorization: `Bearer ${playerToken}`,
         'Content-Type': 'application/json',
       },
-      data: { teamId },
+      data: { teamId, battleTag: PLAYER_BATTLETAG },
     });
     expect(res.status()).toBe(400);
     const body = await res.json();
@@ -179,11 +181,12 @@ test.describe('Team join requests API', () => {
       },
       data: {
         teamId,
+        battleTag: PLAYER_BATTLETAG,
         message: 'Je veux rejoindre en tant que sub',
         desiredRole: 'substitute',
       },
     });
-    expect(res.status()).toBe(201);
+    expect(res.status(), await res.text()).toBe(201);
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.demande.type).toBe('join');
@@ -200,7 +203,7 @@ test.describe('Team join requests API', () => {
         Authorization: `Bearer ${playerToken}`,
         'Content-Type': 'application/json',
       },
-      data: { teamId },
+      data: { teamId, battleTag: PLAYER_BATTLETAG },
     });
     expect(res.status()).toBe(400);
     const body = await res.json();

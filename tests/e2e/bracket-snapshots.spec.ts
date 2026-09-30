@@ -53,7 +53,15 @@ test.describe('Bracket snapshots (P2-C)', () => {
     await deleteTestStaff(MGR_EMAIL);
     await deleteTestStaff(ADMIN_EMAIL);
 
-    await createTestStaff(MGR_EMAIL, PASSWORD, 'admin');
+    // Le rôle staff 'manager' a disparu (388ab3d1). Son équivalent : une
+    // casteuse à qui l'on accorde la permission `manage_tournaments` — elle
+    // passe la garde de la route (créer / lister) mais pas la restauration,
+    // réservée aux admins (features/admin/stages/service/rollback.ts).
+    await createTestStaff(MGR_EMAIL, PASSWORD, 'caster');
+    await supabaseTestClient
+      .from('staff')
+      .update({ extra_permissions: ['manage_tournaments'] })
+      .eq('email', MGR_EMAIL);
     await createTestStaff(ADMIN_EMAIL, PASSWORD, 'admin');
     mgrToken = await getToken(MGR_EMAIL);
     adminToken = await getToken(ADMIN_EMAIL);

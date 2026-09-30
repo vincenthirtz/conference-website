@@ -64,14 +64,14 @@ test.describe('Stage completion & swiss rounds (direct supabase)', () => {
     // Create teams
     const { data: t1 } = await supabaseTestClient
       .from('teams')
-      .insert({ name: `E2E Comp A ${TS}`, tag: `CA${TS}` })
+      .insert({ name: `E2E Comp A ${TS}`, short_name: `CA${TS}` })
       .select('id')
       .maybeSingle();
     team1Id = t1!.id;
 
     const { data: t2 } = await supabaseTestClient
       .from('teams')
-      .insert({ name: `E2E Comp B ${TS}`, tag: `CB${TS}` })
+      .insert({ name: `E2E Comp B ${TS}`, short_name: `CB${TS}` })
       .select('id')
       .maybeSingle();
     team2Id = t2!.id;

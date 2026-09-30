@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 /**
  * Tests E2E — l'espace « Diffusion » (régie, casteuses, overlays).
@@ -12,7 +13,7 @@ import { test, expect } from '@playwright/test';
  *     sources.
  */
 
-const COACH_EMAIL = 'hirtzvincent+testcoach@gmail.com';
+const COACH_EMAIL = 'hirtzvincent+testcoachdiffusion@gmail.com';
 const COACH_PASSWORD = 'TestCoach2026!';
 
 const skipIfNoServiceRole = () =>
@@ -24,7 +25,7 @@ async function loginAsCoach(page: import('@playwright/test').Page) {
   await page.goto('/login');
   await page.fill('input#email', COACH_EMAIL);
   await page.fill('input#password', COACH_PASSWORD);
-  await page.click('button[type="submit"]');
+  await page.click('#main-content button[type="submit"]');
   await page.waitForURL(/\/admin(?!\/login)/, { timeout: 15000 });
   await page.waitForLoadState('networkidle');
 }
@@ -70,6 +71,15 @@ test.describe('Diffusion — sans compte', () => {
 });
 
 test.describe('Diffusion — admin connecté', () => {
+  // Le compte « Test Coach » existait en prod ; sur la base jetable de la CI il
+  // faut le créer (admin), et le retirer ensuite.
+  test.beforeAll(async () => {
+    await deleteTestStaff(COACH_EMAIL);
+    await createTestStaff(COACH_EMAIL, COACH_PASSWORD, 'admin');
+  });
+  test.afterAll(async () => {
+    await deleteTestStaff(COACH_EMAIL);
+  });
   test('la barre d’onglets relie tous les écrans de l’espace', async ({
     page,
   }) => {

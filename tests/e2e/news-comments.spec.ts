@@ -45,6 +45,10 @@ test.describe('News comments', () => {
 
     await page.goto(`/news/${createdNewsSlug}`);
 
+    // Le défi n'est demandé qu'au PREMIER FOCUS du formulaire (plus au
+    // montage) : on remplit d'abord le commentaire, ce qui le déclenche.
+    await page.getByPlaceholder('Partage ton avis...').fill(COMMENT_CONTENT);
+
     // Wait for the captcha challenge to load (placeholder contains "Combien font")
     const captchaInput = page.getByPlaceholder(/Combien font/);
     await expect(captchaInput).toBeVisible({ timeout: 10000 });
@@ -57,7 +61,6 @@ test.describe('News comments', () => {
     const answer = String(eval(expression));
 
     // Saisir commentaire
-    await page.getByPlaceholder('Partage ton avis...').fill(COMMENT_CONTENT);
     await page.getByPlaceholder('Nom (optionnel)').fill(AUTHOR_NAME);
     await captchaInput.fill(answer);
 

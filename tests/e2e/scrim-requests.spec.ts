@@ -329,7 +329,7 @@ test.describe('Scrim requests API (/api/demandes/scrim)', () => {
       headers: { Authorization: `Bearer ${captain2Token}` },
       data: { teamId: teamAId },
     });
-    expect(res.status()).toBe(201);
+    expect(res.status(), await res.text()).toBe(201);
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.demande.team_id).toBe(teamAId);

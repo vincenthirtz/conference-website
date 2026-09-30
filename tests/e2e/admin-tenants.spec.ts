@@ -13,7 +13,7 @@ async function loginAsAdmin(page: Page) {
   await page.goto('/login');
   await page.fill('input#email', ADMIN_EMAIL);
   await page.fill('input#password', TEST_PASSWORD);
-  await page.click('button[type="submit"]');
+  await page.click('#main-content button[type="submit"]');
   await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
 }
 
@@ -102,10 +102,19 @@ test.describe('Admin tenants UI (S7)', () => {
       'my-new-event'
     );
 
-    // Submit with invalid slug fails client-side validation, no API call.
-    await page.getByTestId('tenant-slug-input').fill('INVALID slug');
+    // Slug invalide : le champ met en minuscules à la frappe et porte un
+    // `pattern` kebab-case — c'est la validation NATIVE du navigateur qui
+    // bloque l'envoi (TenantFormModal), plus un message rendu par la page.
+    const slugInput = page.getByTestId('tenant-slug-input');
+    await slugInput.fill('INVALID slug');
+    await expect(slugInput).toHaveValue('invalid slug');
     await page.getByTestId('tenant-create-submit').click();
-    await expect(page.getByText(/Slug invalide/i)).toBeVisible();
+    expect(
+      await slugInput.evaluate(
+        (el) => (el as HTMLInputElement).validity.patternMismatch
+      )
+    ).toBe(true);
+    await expect(page.getByRole('dialog')).toBeVisible();
   });
 
   test('Manager can create a tenant end-to-end (skipped if API 404)', async ({

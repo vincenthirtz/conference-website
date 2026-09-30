@@ -52,7 +52,7 @@ test.describe("Formulaire d'inscription", () => {
     await page.fill('input#password', 'Password123!');
     await page.fill('input#confirm', 'DifferentPassword!');
 
-    await page.click('button[type="submit"]');
+    await page.click('#main-content button[type="submit"]');
 
     // Devrait afficher une erreur de correspondance (message spécifique)
     await expect(
@@ -127,7 +127,7 @@ test.describe('Page admin login', () => {
 
     await page.fill('input#email', 'fake@email.com');
     await page.fill('input#password', 'wrongpassword');
-    await page.click('button[type="submit"]');
+    await page.click('#main-content button[type="submit"]');
 
     // Devrait afficher une erreur
     await expect(

@@ -5,6 +5,7 @@ import {
   deleteTestUser,
   createTestPlayer,
 } from '../utils/supabaseTestClient';
+import { solveCaptchaApi } from './_helpers/captcha';
 
 const HAS_SUPABASE = Boolean(supabaseTestClient);
 const PREFIX = `E2E-TM-${Date.now()}`;
@@ -175,7 +176,8 @@ test.describe('Team management API', () => {
     });
     expect(res.status()).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain('pas membre');
+    // « Ce joueur n'est pas un membre valide de ton équipe (ou est coach). »
+    expect(body.error).toContain('pas un membre');
   });
 
   // ─── DELETE /api/teams/[id]/members ─────────────────────
@@ -308,8 +310,10 @@ test.describe('Team management API', () => {
   test('POST /api/teams/create-with-member — 400 si nom trop court', async ({
     request,
   }) => {
+    // La route vérifie le captcha AVANT le corps : sans défi résolu, tout
+    // sortait en « Captcha manquant ».
     const res = await request.post('/api/teams/create-with-member', {
-      data: { name: 'A' },
+      data: { name: 'A', ...(await solveCaptchaApi(request)) },
     });
     expect(res.status()).toBe(400);
     const body = await res.json();
@@ -319,8 +323,10 @@ test.describe('Team management API', () => {
   test('POST /api/teams/create-with-member — 400 si URL invalide', async ({
     request,
   }) => {
+    // La route vérifie le captcha AVANT le corps : sans défi résolu, tout
+    // sortait en « Captcha manquant ».
     const res = await request.post('/api/teams/create-with-member', {
-      data: { name: 'ValidTeam', logo_url: 'javascript:alert(1)' },
+      data: { name: 'ValidTeam', logo_url: 'javascript:alert(1)', ...(await solveCaptchaApi(request)) },
     });
     expect(res.status()).toBe(400);
     const body = await res.json();
@@ -330,8 +336,10 @@ test.describe('Team management API', () => {
   test('POST /api/teams/create-with-member — 400 si description trop longue', async ({
     request,
   }) => {
+    // La route vérifie le captcha AVANT le corps : sans défi résolu, tout
+    // sortait en « Captcha manquant ».
     const res = await request.post('/api/teams/create-with-member', {
-      data: { name: 'ValidTeam', description: 'x'.repeat(2001) },
+      data: { name: 'ValidTeam', description: 'x'.repeat(2001), ...(await solveCaptchaApi(request)) },
     });
     expect(res.status()).toBe(400);
     const body = await res.json();

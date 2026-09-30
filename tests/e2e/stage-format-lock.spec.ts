@@ -67,8 +67,9 @@ test.describe('Stage / match format lock (P0-A)', () => {
       .insert({
         tournament_id: tournamentId,
         name: 'Stage E2E',
-        kind: 'single_elimination',
-        position: 1,
+        // Colonnes réelles de tournament_stages (ex-`kind` / `position`).
+        stage_type: 'bracket',
+        order_index: 1,
         settings: { match_format: 'bo3' },
       })
       .select('id')

@@ -56,7 +56,7 @@ test.describe('Auth flow', () => {
     await page.goto('/login');
     await page.fill('input#email', STAFF_LOGIN_EMAIL);
     await page.fill('input#password', password);
-    await page.click('button[type="submit"]');
+    await page.click('#main-content button[type="submit"]');
 
     // Wait for redirect to admin
     await page.waitForTimeout(2000);
@@ -77,7 +77,7 @@ test.describe('Auth flow', () => {
     await page.goto('/login');
     await page.fill('input#email', STAFF_LOGIN_EMAIL);
     await page.fill('input#password', 'wrongpassword123');
-    await page.click('button[type="submit"]');
+    await page.click('#main-content button[type="submit"]');
 
     // Should show error and stay on login page
     await page.waitForTimeout(2000);
@@ -91,7 +91,7 @@ test.describe('Auth flow', () => {
     await page.goto('/login');
     await page.fill('input#email', STAFF_LOGIN_EMAIL);
     await page.fill('input#password', password);
-    await page.click('button[type="submit"]');
+    await page.click('#main-content button[type="submit"]');
 
     await page.waitForTimeout(2000);
 

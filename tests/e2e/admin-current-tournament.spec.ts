@@ -136,11 +136,18 @@ test.describe('Admin "Tournoi en cours" E2E', () => {
     });
     expect(typeof body.signals.conflictsCount).toBe('number');
     expect(typeof body.signals.pendingTeamsCount).toBe('number');
-    expect(body.signals.rosterLockProximity).toMatchObject({
-      lockedAt: expect.anything(), // null or string
-      hoursLeft: expect.anything(),
-      teamsBelowMin: expect.any(Number),
-    });
+    // `expect.anything()` ne matche PAS null : les deux champs sont null
+    // tant que le tournoi n'a pas de verrou de roster.
+    const lock = body.signals.rosterLockProximity;
+    expect(lock).toHaveProperty('lockedAt');
+    expect(lock).toHaveProperty('hoursLeft');
+    expect(lock.lockedAt === null || typeof lock.lockedAt === 'string').toBe(
+      true
+    );
+    expect(lock.hoursLeft === null || typeof lock.hoursLeft === 'number').toBe(
+      true
+    );
+    expect(typeof lock.teamsBelowMin).toBe('number');
     expect(typeof body.signals.supportHighOpen).toBe('number');
     expect(typeof body.signals.activeMvpPolls).toBe('number');
     expect(Array.isArray(body.signals.stagesReadyToAdvance)).toBe(true);

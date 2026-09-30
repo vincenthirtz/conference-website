@@ -76,7 +76,7 @@ test.describe('Staff access control', () => {
     await page.goto('/login');
     await page.fill('input#email', STAFF_EMAIL);
     await page.fill('input#password', TEST_PASSWORD);
-    await page.click('button[type="submit"]');
+    await page.click('#main-content button[type="submit"]');
 
     await page.waitForTimeout(2000);
 
@@ -113,7 +113,7 @@ test.describe('Navbar visibility', () => {
     await page.goto('/login');
     await page.fill('input#email', STAFF_EMAIL);
     await page.fill('input#password', TEST_PASSWORD);
-    await page.click('button[type="submit"]');
+    await page.click('#main-content button[type="submit"]');
 
     await page.waitForTimeout(2000);
 

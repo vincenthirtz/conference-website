@@ -1,22 +1,20 @@
 // E2E — pages/admin/users/[userId]/captain-view.tsx ("Vue capitaine")
 //
-// The "Vue capitaine" is a per-captain command center calqued on the "Vue
-// player". It is READ-ONLY except for two wired actions:
-//   - approve / reject a pending JOIN demande  → POST /api/admin/demandes
-//   - promote a roster member to captain       → POST /api/admin/users/[id]/actions
-// We:
-//   - log a REAL staff (manager) in through /login (genuine Supabase session);
-//   - route-mock GET /api/admin/users/[userId]/captain-view with a
-//     representative payload (team + roster + 1 pending join request +
-//     1 pending scrim + demande history);
-//   - assert the banner renders, the 4 tabs switch content, and the staff CAN
-//     act (promote member → POST actions ; approve join → POST demandes).
+// Réécrite en S3 (docs/PLAN-espace-unifie.md) : plus d'endpoint-snapshot
+// `/captain-view` ni d'onglets. La page lit
+//   - l'identité de la cible          → GET /api/admin/users/[userId]/profile
+//   - l'équipe qu'elle gère (?as=)     → GET /api/admin/teams/my?as=<userId>
+//   - les demandes de join en attente  → GET /api/admin/demandes?teamId=…
+// et monte le VRAI écran capitaine (PlayerManageTeamScreen) en inspection.
+// Ce qui reste propre au staff, et que cette spec vérifie :
+//   - promouvoir un membre → POST /api/admin/users/[memberId]/actions
+//   - modérer une demande  → POST /api/admin/demandes (updateStatus)
 //
-// NB: like admin-player-view.spec.ts, these tests SKIP without a Supabase
-// service-role key (no isolated test DB locally). tsc + i18n parity are the
-// primary safety net; this spec is the deterministic UI filet.
+// Staff admin RÉEL connecté par /login ; les trois lectures sont route-mockées
+// pour une UI déterministe. L'écran capitaine inspecté (ses propres appels
+// /api/player/*) n'est pas l'objet de la spec — cf. manage-team.spec.ts.
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 const STAFF_PASSWORD = 'TestPassw0rd!';
@@ -25,116 +23,130 @@ const STAFF_EMAIL = 'hirtzvincent+captainviewmgr@gmail.com';
 const TARGET_USER_ID = '33333333-3333-4333-8333-333333333333';
 const MEMBER_USER_ID = '44444444-4444-4444-8444-444444444444';
 const JOIN_DEMANDE_ID = '55555555-5555-4555-8555-555555555555';
+const TEAM_ID = '66666666-6666-4666-8666-666666666666';
 
 const skipIfNoServiceRole = () =>
   !process.env.TEST_SUPABASE_SERVICE_ROLE_KEY &&
   !process.env.SUPABASE_SERVICE_ROLE_KEY &&
   !process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY;
 
-function buildPayload() {
+function profilePayload() {
   return {
     user: {
       id: TARGET_USER_ID,
       email: 'capitaine@example.com',
       displayName: 'Capitaine Test',
+      battleTag: 'Cap#1234',
       avatarUrl: null,
       role: 'player',
-      battleTag: 'Cap#1234',
       createdAt: '2025-01-15T10:00:00.000Z',
     },
-    team: {
-      id: 'team-9',
-      name: 'Les Corbeaux',
-      slug: 'les-corbeaux',
-      logoUrl: null,
-      isJoinable: true,
-      openForScrim: false,
-      captainId: TARGET_USER_ID,
-      members: [
-        {
-          id: 'tm-1',
-          userId: TARGET_USER_ID,
-          displayName: 'Capitaine Test',
-          battleTag: 'Cap#1234',
-          role: 'captain',
-          isSubstitute: false,
-          isCaptain: true,
-        },
-        {
-          id: 'tm-2',
-          userId: MEMBER_USER_ID,
-          displayName: 'Coéquipière',
-          battleTag: 'Mate#5678',
-          role: 'member',
-          isSubstitute: false,
-          isCaptain: false,
-        },
-      ],
-    },
+    team: { id: TEAM_ID, name: 'Les Corbeaux', role: 'captain' },
+  };
+}
+
+function managedPayload(captain = true) {
+  if (!captain) {
+    return { team: null, members: [], isCaptain: false, isManager: false };
+  }
+  return {
+    team: { id: TEAM_ID, name: 'Les Corbeaux' },
+    members: [
+      {
+        id: 'tm-1',
+        user_id: TARGET_USER_ID,
+        display_name: 'Capitaine Test',
+        battle_tag: 'Cap#1234',
+        role: 'captain',
+        is_captain: true,
+      },
+      {
+        id: 'tm-2',
+        user_id: MEMBER_USER_ID,
+        display_name: 'Coéquipière',
+        battle_tag: 'Mate#5678',
+        role: 'member',
+        is_captain: false,
+      },
+    ],
     isCaptain: true,
     isManager: false,
-    joinRequests: [
-      {
-        id: JOIN_DEMANDE_ID,
-        user: { displayName: 'Recrue', battleTag: 'New#0001' },
-        desiredRole: 'dps',
-        comment: 'Je veux rejoindre votre équipe.',
-        createdAt: '2025-02-01T12:00:00.000Z',
-      },
-    ],
-    pendingScrims: [
-      {
-        id: 'scrim-1',
-        opponent: 'Team Adverse',
-        status: 'pending',
-        slots: ['Lundi 20h', 'Mardi 21h'],
-        createdAt: '2025-02-02T12:00:00.000Z',
-      },
-    ],
-    nextMatch: {
-      match: null,
-      team: null,
-      opponent: null,
-      tournament: null,
-      checkin: null,
-      readiness: null,
-    },
+  };
+}
+
+function demandesPayload() {
+  return {
     demandes: [
       {
-        id: '66666666-6666-4666-8666-666666666666',
-        type: 'scrim',
-        status: 'approved',
-        created_at: '2025-01-20T12:00:00.000Z',
-        comment: null,
-        team: { id: 'team-9', name: 'Les Corbeaux' },
+        id: JOIN_DEMANDE_ID,
+        type: 'join',
+        status: 'pending',
+        created_at: '2025-02-01T12:00:00.000Z',
+        comment: 'Je veux rejoindre votre équipe.',
+        payload: null,
       },
     ],
   };
 }
 
-/**
- * Next.js dev overlay intercepts pointer events; remove it so tab clicks land.
- */
-async function dismissNextDevOverlay(page: import('@playwright/test').Page) {
-  await page
-    .addStyleTag({
-      content:
-        'nextjs-portal, nextjs-portal * { display: none !important; pointer-events: none !important; }',
-    })
-    .catch(() => undefined);
-  await page.evaluate(() => {
-    document.querySelectorAll('nextjs-portal').forEach((el) => el.remove());
-  });
+async function mockReads(
+  page: Page,
+  opts: { profileStatus?: number; captain?: boolean } = {}
+): Promise<void> {
+  const { profileStatus = 200, captain = true } = opts;
+  await page.route(
+    (url) => url.pathname === `/api/admin/users/${TARGET_USER_ID}/profile`,
+    (route) =>
+      route.fulfill({
+        status: profileStatus,
+        contentType: 'application/json',
+        body: JSON.stringify(
+          profileStatus === 200
+            ? profilePayload()
+            : { error: 'Utilisateur introuvable' }
+        ),
+      })
+  );
+  await page.route(
+    (url) =>
+      url.pathname === '/api/admin/teams/my' &&
+      url.searchParams.get('as') === TARGET_USER_ID,
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(managedPayload(captain)),
+      })
+  );
+  await page.route(
+    (url) =>
+      url.pathname === '/api/admin/demandes' &&
+      url.searchParams.get('teamId') === TEAM_ID,
+    (route) =>
+      route.request().method() === 'GET'
+        ? route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(demandesPayload()),
+          })
+        : route.fallback()
+  );
 }
 
-async function gotoCaptainView(page: import('@playwright/test').Page) {
+async function gotoCaptainView(page: Page) {
   await page.goto('/login');
   await page.fill('input#email', STAFF_EMAIL);
   await page.fill('input#password', STAFF_PASSWORD);
-  await page.click('button[type="submit"]');
-  await page.waitForURL(/\/admin(?!\/login)/, { timeout: 15000 });
+  await page.click('#main-content button[type="submit"]');
+  await page.waitForURL(/\/admin(?!\/login)/, { timeout: 20_000 });
 
   await page.goto(`/admin/users/${TARGET_USER_ID}/captain-view`);
+}
+
+async function expectBanner(page: Page) {
+  await expect(
+    page.getByRole('heading', { name: /Espace capitaine de Capitaine Test/ })
+  ).toBeVisible({ timeout: 15000 });
 }
 
 test.describe('Admin "Vue capitaine" (command center)', () => {
@@ -149,105 +161,57 @@ test.describe('Admin "Vue capitaine" (command center)', () => {
     await deleteTestStaff(STAFF_EMAIL);
   });
 
-  test('renders banner, switches all 4 tabs, shows roster + scrims + history', async ({
+  test('renders banner, team badge, promotable members and join requests', async ({
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
-
-    await page.route(
-      (url) =>
-        url.pathname === `/api/admin/users/${TARGET_USER_ID}/captain-view`,
-      async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(buildPayload()),
-        });
-      }
-    );
-
+    await mockReads(page);
     await gotoCaptainView(page);
 
+    await expectBanner(page);
+    const main = page.locator('#main-content');
+    await expect(main.getByText('Les Corbeaux').first()).toBeVisible();
+    // La capitaine elle-même n'est pas promouvable ; la coéquipière l'est.
     await expect(
-      page.getByRole('heading', { name: /Espace capitaine de Capitaine Test/ })
-    ).toBeVisible({ timeout: 15000 });
-
-    await dismissNextDevOverlay(page);
-
-    // Cross-link to the player view.
-    await expect(
-      page.getByRole('link', { name: /Voir la vue player/ })
-    ).toHaveAttribute('href', `/admin/users/${TARGET_USER_ID}/player-view`);
-
-    // Default tab = Équipe → team name + roster + read-only recruiting badge.
-    await expect(page.getByText('Les Corbeaux')).toBeVisible();
-    await expect(page.getByText('Coéquipière')).toBeVisible();
-    await expect(page.getByText('Mate#5678')).toBeVisible();
-
-    // Demandes de join tab.
-    await page.getByRole('tab', { name: 'Demandes de join' }).click();
-    await expect(page.getByText('Recrue')).toBeVisible();
-    await expect(
-      page.getByText(/Je veux rejoindre votre équipe/)
+      main.getByRole('button', { name: 'Coéquipière' })
     ).toBeVisible();
-
-    // Scrims tab (read-only).
-    await page.getByRole('tab', { name: 'Scrims' }).click();
-    await expect(page.getByText('Team Adverse')).toBeVisible();
-    await expect(page.getByText('Lundi 20h')).toBeVisible();
-
-    // Historique tab.
-    await page.getByRole('tab', { name: 'Historique' }).click();
-    await expect(page.getByText('Scrim', { exact: true })).toBeVisible();
-    await expect(page.getByText('Approuvée', { exact: true })).toBeVisible();
+    await expect(
+      main.getByRole('button', { name: 'Capitaine Test' })
+    ).toHaveCount(0);
+    // Demande de join en attente, avec ses deux gestes.
+    await expect(
+      main.getByText(/Je veux rejoindre votre équipe/)
+    ).toBeVisible();
+    await expect(main.getByRole('button', { name: 'Approuver' })).toBeVisible();
+    await expect(main.getByRole('button', { name: 'Refuser' })).toBeVisible();
   });
 
   test('promoting a member triggers POST /api/admin/users/[id]/actions', async ({
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
-
-    await page.route(
-      (url) =>
-        url.pathname === `/api/admin/users/${TARGET_USER_ID}/captain-view`,
-      async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(buildPayload()),
-        });
-      }
-    );
+    await mockReads(page);
 
     let actionBody: Record<string, unknown> | null = null;
     await page.route(
       (url) => url.pathname === `/api/admin/users/${MEMBER_USER_ID}/actions`,
       async (route) => {
-        if (route.request().method() === 'POST') {
-          actionBody = route.request().postDataJSON() as Record<
-            string,
-            unknown
-          >;
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ success: true, teamId: 'team-9' }),
-          });
-          return;
-        }
-        await route.continue();
+        actionBody = route.request().postDataJSON() as Record<string, unknown>;
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true }),
+        });
       }
     );
 
     await gotoCaptainView(page);
-    await expect(
-      page.getByRole('heading', { name: /Espace capitaine de Capitaine Test/ })
-    ).toBeVisible({ timeout: 15000 });
-    await dismissNextDevOverlay(page);
+    await expectBanner(page);
 
-    // Équipe tab is default → promote the non-captain member.
-    await page.getByRole('button', { name: 'Promouvoir capitaine' }).click();
-
+    await page
+      .locator('#main-content')
+      .getByRole('button', { name: 'Coéquipière' })
+      .click();
     const dialog = page.getByRole('dialog', {
       name: /Promouvoir ce membre capitaine/,
     });
@@ -262,18 +226,7 @@ test.describe('Admin "Vue capitaine" (command center)', () => {
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
-
-    await page.route(
-      (url) =>
-        url.pathname === `/api/admin/users/${TARGET_USER_ID}/captain-view`,
-      async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(buildPayload()),
-        });
-      }
-    );
+    await mockReads(page);
 
     let demandeBody: Record<string, unknown> | null = null;
     await page.route(
@@ -291,20 +244,17 @@ test.describe('Admin "Vue capitaine" (command center)', () => {
           });
           return;
         }
-        await route.continue();
+        await route.fallback();
       }
     );
 
     await gotoCaptainView(page);
-    await expect(
-      page.getByRole('heading', { name: /Espace capitaine de Capitaine Test/ })
-    ).toBeVisible({ timeout: 15000 });
-    await dismissNextDevOverlay(page);
+    await expectBanner(page);
 
-    await page.getByRole('tab', { name: 'Demandes de join' }).click();
-    const main = page.locator('#main-content');
-    await main.getByRole('button', { name: 'Approuver' }).click();
-
+    await page
+      .locator('#main-content')
+      .getByRole('button', { name: 'Approuver' })
+      .click();
     const dialog = page.getByRole('dialog', {
       name: /Approuver cette demande/,
     });
@@ -321,53 +271,22 @@ test.describe('Admin "Vue capitaine" (command center)', () => {
 
   test('not-a-captain → "Pas de capitanat" empty state', async ({ page }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
-
-    await page.route(
-      (url) =>
-        url.pathname === `/api/admin/users/${TARGET_USER_ID}/captain-view`,
-      async (route) => {
-        const payload = buildPayload();
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            ...payload,
-            team: null,
-            isCaptain: false,
-            joinRequests: [],
-            pendingScrims: [],
-            demandes: [],
-          }),
-        });
-      }
-    );
-
+    await mockReads(page, { captain: false });
     await gotoCaptainView(page);
 
+    await expectBanner(page);
     await expect(
-      page.getByText('Pas de capitanat', { exact: false })
+      page.getByText('Pas de capitanat', { exact: false }).first()
     ).toBeVisible({ timeout: 15000 });
   });
 
   test('404 → "Utilisateur introuvable"', async ({ page }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
-
-    await page.route(
-      (url) =>
-        url.pathname === `/api/admin/users/${TARGET_USER_ID}/captain-view`,
-      async (route) => {
-        await route.fulfill({
-          status: 404,
-          contentType: 'application/json',
-          body: JSON.stringify({ error: 'User not found' }),
-        });
-      }
-    );
-
+    await mockReads(page, { profileStatus: 404 });
     await gotoCaptainView(page);
 
     await expect(
-      page.getByText('Utilisateur introuvable', { exact: false })
+      page.getByText('Utilisateur introuvable', { exact: false }).first()
     ).toBeVisible({ timeout: 15000 });
   });
 });
