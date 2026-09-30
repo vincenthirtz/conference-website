@@ -15,9 +15,10 @@ import {
   mockApiJson,
   buildMatch,
   inMinutes,
+  perWorker,
 } from './_helpers/playerSession';
 
-const PLAYER_EMAIL = `hirtzvincent+playermatches@gmail.com`;
+const PLAYER_EMAIL = perWorker(`hirtzvincent+playermatches@gmail.com`);
 
 test.describe('Player matches page', () => {
   test.beforeAll(async () => {

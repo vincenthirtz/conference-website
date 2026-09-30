@@ -18,9 +18,11 @@ import {
   skipIfNoServiceRole,
   loginPlayer,
   mockApiJson,
+  perWorker,
+  expectPublicLoginEntry,
 } from './_helpers/playerSession';
 
-const PLAYER_EMAIL = `hirtzvincent+playernav@gmail.com`;
+const PLAYER_EMAIL = perWorker(`hirtzvincent+playernav@gmail.com`);
 const SHELL_NAV = 'Navigation de l’espace joueuse';
 const SHELL_ENTRIES = [
   ['Accueil', '/player'],
@@ -72,9 +74,7 @@ test.describe('PlayerTopBar navigation', () => {
     await page.goto('/');
     // The public navbar shows a login button; the player bar (with the
     // "Déconnexion" action) must not be present.
-    await expect(page.locator('a:has-text("Connexion")')).toBeVisible({
-      timeout: 10000,
-    });
+    await expectPublicLoginEntry(page);
     await expect(page.getByRole('button', { name: 'Déconnexion' })).toHaveCount(
       0
     );
@@ -210,9 +210,7 @@ test.describe('PlayerTopBar navigation', () => {
       { timeout: 10000 }
     );
     // Back to a public context: login button visible, player bar gone.
-    await expect(page.locator('a:has-text("Connexion")')).toBeVisible({
-      timeout: 10000,
-    });
+    await expectPublicLoginEntry(page);
   });
 
   test('mobile: bottom nav (4 entries ≥ 44 px) navigates and marks the page', async ({

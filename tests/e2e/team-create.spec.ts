@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { perWorker } from './_helpers/playerSession';
 import { deleteTeamsByName, deleteTestUser } from '../utils/supabaseTestClient';
 
 /**
@@ -21,23 +22,24 @@ async function solveCaptcha(page: Page): Promise<void> {
 }
 
 const TEAM_NAME = `E2E Team ${Date.now()}`;
-const PLAYER_EMAIL = 'hirtzvincent+testjoueur@gmail.com';
+const PLAYER_EMAIL = perWorker('hirtzvincent+testjoueur@gmail.com');
 const PLAYER_BTAG = 'TestPlayer#0001';
 const EXTRA_MEMBER_EMAILS = Array.from({ length: 5 }).map(
-  (_v, idx) => `hirtzvincent+testjoueur${idx + 1}@gmail.com`
+  (_v, idx) => perWorker(`hirtzvincent+testjoueur${idx + 1}@gmail.com`)
 );
 const EXTRA_MEMBER_BTAGS = Array.from({ length: 5 }).map(
   (_v, idx) => `TestMember#00${idx + 2}`
 );
 const ALL_TEST_EMAILS = [PLAYER_EMAIL, ...EXTRA_MEMBER_EMAILS];
 
+// Pas de motif large (« E2E Team% ») au nettoyage : chromium et mobile jouent
+// cette spec en parallèle sur la même base, et l'un effaçait l'équipe de l'autre.
 test.describe('Team creation page', () => {
   test.describe.configure({ mode: 'serial' });
   test.beforeAll(async () => {
     await deleteTeamsByName([
       `${TEAM_NAME}%`,
       `${TEAM_NAME}-bulk%`,
-      'E2E Team%',
     ]);
     for (const email of ALL_TEST_EMAILS) {
       await deleteTestUser(email);
@@ -48,7 +50,6 @@ test.describe('Team creation page', () => {
     await deleteTeamsByName([
       `${TEAM_NAME}%`,
       `${TEAM_NAME}-bulk%`,
-      'E2E Team%',
     ]);
     for (const email of ALL_TEST_EMAILS) {
       await deleteTestUser(email);

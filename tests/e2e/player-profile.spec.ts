@@ -14,9 +14,10 @@ import {
   skipIfNoServiceRole,
   loginPlayer,
   mockApiJson,
+  perWorker,
 } from './_helpers/playerSession';
 
-const PLAYER_EMAIL = `hirtzvincent+playerprofile@gmail.com`;
+const PLAYER_EMAIL = perWorker(`hirtzvincent+playerprofile@gmail.com`);
 
 test.describe('Player profile page', () => {
   test.beforeAll(async () => {

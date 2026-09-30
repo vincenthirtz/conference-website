@@ -24,9 +24,10 @@ import {
   loginPlayer,
   mockApiJson,
   inMinutes,
+  perWorker,
 } from './_helpers/playerSession';
 
-const PLAYER_EMAIL = `hirtzvincent+matchthread@gmail.com`;
+const PLAYER_EMAIL = perWorker(`hirtzvincent+matchthread@gmail.com`);
 const MATCH_ID = '11111111-2222-3333-4444-555555555555';
 const PATH = `/api/player/matches/${MATCH_ID}`;
 

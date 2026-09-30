@@ -13,7 +13,7 @@
 // We deliberately do NOT mock /api/admin/me: the login page calls it and
 // relies on the real 403 (non-staff) to route a player to /player.
 
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 export const PLAYER_PASSWORD = 'TestPassw0rd!';
 
@@ -43,12 +43,16 @@ export async function loginPlayer(
   // n'est pas l'objet des specs qui l'utilisent — on la rejoue une fois.
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     await page.goto(loginUrl);
+    // 2e passage : la 1re connexion a pu aboutir entre-temps (/login redirige).
+    if (leftLogin(new URL(page.url()))) return;
     await page.fill('input#email', email);
     await page.fill('input#password', password);
     // Le bouton du FORMULAIRE : le pied de page (newsletter) a aussi un submit.
     await page.click('#main-content button[type="submit"]');
     try {
-      await page.waitForURL(leftLogin, { timeout: 15000 });
+      // `commit` : seule l'URL compte ici ; attendre le `load` de la page
+      // d'arrivée faisait échouer la connexion quand l'espace était lent.
+      await page.waitForURL(leftLogin, { timeout: 15000, waitUntil: 'commit' });
       return;
     } catch (err) {
       if (leftLogin(new URL(page.url()))) return;
@@ -147,15 +151,44 @@ export async function loginStaff(
     !url.pathname.startsWith('/admin/login');
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     await page.goto('/login');
+    if (inAdmin(new URL(page.url()))) return;
     await page.fill('input#email', email);
     await page.fill('input#password', password);
     await page.click('#main-content button[type="submit"]');
     try {
-      await page.waitForURL(inAdmin, { timeout: 15000 });
+      await page.waitForURL(inAdmin, { timeout: 15000, waitUntil: 'commit' });
       return;
     } catch (err) {
       if (inAdmin(new URL(page.url()))) return;
       if (attempt === 2) throw err;
     }
   }
+}
+
+/**
+ * Adresse propre au worker Playwright courant.
+ *
+ * Les specs du projet `mobile` sont AUSSI jouées par `chromium`, dans la
+ * même tranche et donc sur la même base, par deux workers en parallèle. Une
+ * adresse fixe y est partagée : le `beforeAll` de l'un supprime le compte de
+ * l'autre en plein test (connexions qui échouent, équipes « déjà prises »).
+ * `TEST_PARALLEL_INDEX` (posé par Playwright dans chaque worker) les sépare.
+ */
+export function perWorker(email: string): string {
+  const idx = process.env.TEST_PARALLEL_INDEX;
+  const at = email.indexOf('@');
+  if (!idx || at < 0) return email;
+  return `${email.slice(0, at)}-w${idx}${email.slice(at)}`;
+}
+
+/**
+ * L'entrée « Connexion » de la barre publique est visible — y compris sous
+ * 1119 px, où elle vit dans le tiroir du bouton « Ouvrir le menu ».
+ */
+export async function expectPublicLoginEntry(page: Page): Promise<void> {
+  const burger = page.getByRole('button', { name: 'Ouvrir le menu' });
+  if (await burger.isVisible()) await burger.click();
+  await expect(
+    page.locator('a:has-text("Connexion")').filter({ visible: true }).first()
+  ).toBeVisible({ timeout: 10000 });
 }

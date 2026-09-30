@@ -24,9 +24,10 @@ import {
   skipIfNoServiceRole,
   loginPlayer,
   mockApiJson,
+  perWorker,
 } from './_helpers/playerSession';
 
-const PLAYER_EMAIL = `hirtzvincent+playerdiscovery@gmail.com`;
+const PLAYER_EMAIL = perWorker(`hirtzvincent+playerdiscovery@gmail.com`);
 
 // FR i18n strings under playerDiscovery / playerTopBar.linkLabels — kept in sync
 // with lib/i18n/locales/fr.json so the assertions read like the UI.
@@ -165,10 +166,21 @@ test.describe('Player discovery', () => {
     await loginPlayer(page, PLAYER_EMAIL, '/player');
 
     const bar = page.locator('div.fixed.top-0').first();
-    const networkTab = bar.getByRole('link', { name: T.navLink, exact: true });
-    await expect(networkTab).toBeVisible({ timeout: 10000 });
-
-    await networkTab.click();
+    if (test.info().project.name === 'mobile') {
+      // < 900 px : les onglets de la barre passent dans le menu « Ouvrir le
+      // menu » (PlayerTopBar) ; « Réseau » y est une entrée de menu.
+      await bar.getByRole('button', { name: 'Ouvrir le menu' }).click();
+      await page
+        .getByRole('menuitem', { name: T.navLink, exact: true })
+        .click();
+    } else {
+      const networkTab = bar.getByRole('link', {
+        name: T.navLink,
+        exact: true,
+      });
+      await expect(networkTab).toBeVisible({ timeout: 10000 });
+      await networkTab.click();
+    }
     await page.waitForURL(/\/player\/discovery$/, { timeout: 10000 });
 
     await expect(

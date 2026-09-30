@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { perWorker } from './_helpers/playerSession';
 import {
   supabaseTestClient,
   createTestPlayer,
@@ -8,11 +9,11 @@ import {
 } from '../utils/supabaseTestClient';
 
 const PASSWORD = 'TestPassw0rd!';
-const PLAYER_EMAIL = 'hirtzvincent+datarights@gmail.com';
-const PLAYER_EXPORT_EMAIL = 'hirtzvincent+dataexport@gmail.com';
-const OWNER_EMAIL = 'hirtzvincent+ownernodelete@gmail.com';
-const STAFF_EXPORT_EMAIL = 'hirtzvincent+staffexport@gmail.com';
-const STAFF_DELETE_EMAIL = 'hirtzvincent+staffdelete@gmail.com';
+const PLAYER_EMAIL = perWorker('hirtzvincent+datarights@gmail.com');
+const PLAYER_EXPORT_EMAIL = perWorker('hirtzvincent+dataexport@gmail.com');
+const OWNER_EMAIL = perWorker('hirtzvincent+ownernodelete@gmail.com');
+const STAFF_EXPORT_EMAIL = perWorker('hirtzvincent+staffexport@gmail.com');
+const STAFF_DELETE_EMAIL = perWorker('hirtzvincent+staffdelete@gmail.com');
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
 
@@ -28,6 +29,16 @@ async function getToken(email: string, password: string): Promise<string> {
   });
   return data.session!.access_token;
 }
+
+// Les routes RGPD sont limitées par IP. chromium et mobile jouent cette spec
+// dans la même tranche : sous une même IP, la 2e passe recevait des 429 au
+// lieu des 403/200 attendus. Une IP par worker (en-tête de l'edge Netlify,
+// lu en priorité par utils/rateLimit#getClientIp).
+test.use({
+  extraHTTPHeaders: {
+    'x-nf-client-connection-ip': `10.88.${Number(process.env.TEST_PARALLEL_INDEX ?? 0)}.${1 + Math.floor(Math.random() * 250)}`,
+  },
+});
 
 test.describe('Player data rights (GDPR)', () => {
   // ─── Unauthenticated access ───

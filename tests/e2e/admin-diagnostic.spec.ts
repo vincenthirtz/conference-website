@@ -422,6 +422,9 @@ test.describe('Diagnostic admin', () => {
    * =======================================================*/
 
   test('Navigation entre pages admin (performance)', async ({ browser }) => {
+    // Une douzaine de pages, chacune chargée deux fois (départ + arrivée) :
+    // le budget par défaut (60 s) ne suffit pas sur le runner CI.
+    test.slow();
     await withAuthPage(browser, async (page) => {
       const results: { from: string; to: string; durationMs: number }[] = [];
 

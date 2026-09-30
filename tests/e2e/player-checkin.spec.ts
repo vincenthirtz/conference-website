@@ -15,9 +15,10 @@ import {
   loginPlayer,
   mockApiJson,
   inMinutes,
+  perWorker,
 } from './_helpers/playerSession';
 
-const PLAYER_EMAIL = `hirtzvincent+playercheckin@gmail.com`;
+const PLAYER_EMAIL = perWorker(`hirtzvincent+playercheckin@gmail.com`);
 
 const teamRef = { id: 'team-1', name: 'Les Testeuses', slot: 1 as const };
 const opponent = { id: 'opp-1', name: 'Rivales FC' };

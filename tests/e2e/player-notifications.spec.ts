@@ -13,9 +13,10 @@ import {
   skipIfNoServiceRole,
   loginPlayer,
   mockApiJson,
+  perWorker,
 } from './_helpers/playerSession';
 
-const PLAYER_EMAIL = `hirtzvincent+playernotifs@gmail.com`;
+const PLAYER_EMAIL = perWorker(`hirtzvincent+playernotifs@gmail.com`);
 
 function counters(overrides: Record<string, number> = {}) {
   const base = {

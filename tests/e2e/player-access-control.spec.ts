@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { perWorker, expectPublicLoginEntry } from './_helpers/playerSession';
 import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 const TEST_PASSWORD = 'TestPassw0rd!';
-const STAFF_EMAIL = 'hirtzvincent+teststaff@gmail.com';
+const STAFF_EMAIL = perWorker('hirtzvincent+teststaff@gmail.com');
 
 const skipIfNoServiceRole = () =>
   !process.env.TEST_SUPABASE_SERVICE_ROLE_KEY &&
@@ -99,8 +100,7 @@ test.describe('Navbar visibility', () => {
     await page.goto('/');
 
     // Should see "Connexion" button (wait for client-side rendering)
-    const loginButton = page.locator('a:has-text("Connexion")');
-    await expect(loginButton).toBeVisible({ timeout: 10000 });
+    await expectPublicLoginEntry(page);
   });
 
   test('Staff user sees admin bar after login', async ({ page }) => {
