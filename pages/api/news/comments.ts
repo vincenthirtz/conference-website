@@ -70,8 +70,19 @@ async function listComments(
     return res.status(500).json({ error: 'Failed to fetch comments' });
   }
 
+  // Deux caches, deux règles.
+  //   - CDN Netlify : garde 60 s (+ 30 s de stale-while-revalidate) — la liste
+  //     est lue par chaque lecteur d'un article. En-tête propre au CDN, retiré
+  //     avant d'atteindre le navigateur ; la clé varie sur la query
+  //     (`Netlify-Vary`, next.config.js — tests/unit/cdnCacheVary).
+  //   - Navigateur : AUCUNE réutilisation. `s-maxage` + `stale-while-revalidate`
+  //     dans `Cache-Control` laissaient Chrome resservir l'ancienne liste juste
+  //     après une publication (SWR s'applique aussi au cache privé). L'autrice
+  //     voit son commentaire par la réponse du POST, fusionnée côté client
+  //     (pages/news/[slug].tsx), pas par une variante d'URL.
+  res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
   res.setHeader(
-    'Cache-Control',
+    'Netlify-CDN-Cache-Control',
     'public, s-maxage=60, stale-while-revalidate=30'
   );
   return res.status(200).json({ items: data || [] });

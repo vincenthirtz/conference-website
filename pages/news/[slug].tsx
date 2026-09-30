@@ -424,11 +424,21 @@ function Comments({ newsId }: { newsId: string }) {
         };
         throw new Error(byCode[json?.code as string] || t.errPublish);
       }
+      const created = (await res.json().catch(() => null))?.comment as
+        | Comment
+        | undefined;
       // Publication réussie : nouvelle clé pour un prochain commentaire.
       idempotencyKeyRef.current = genIdempotencyKey();
       setContent('');
       setAuthor('');
       await Promise.all([loadComments(), loadCaptcha()]);
+      // La liste relue peut venir du cache CDN (60 s) et précéder la
+      // publication : le commentaire rendu par le POST y est fusionné.
+      if (created?.id) {
+        setComments((list) =>
+          list.some((c) => c.id === created.id) ? list : [created, ...list]
+        );
+      }
       addToast(t.published, 'success');
     } catch (err: unknown) {
       // Le captcha est à usage unique : on régénère la clé d'idempotence en même

@@ -223,6 +223,14 @@ describe('/api/news/comments', () => {
     );
     expect(res.statusCode).toBe(200);
     expect((res.body as any).items.map((i: any) => i.id)).toEqual(['c1']);
+    // Le navigateur ne doit JAMAIS resservir la liste (SWR compris) : juste
+    // après une publication, il rendait l'ancienne. Le cache reste au CDN.
+    const cc = String(res.headers['Cache-Control']);
+    expect(cc).toMatch(/max-age=0/);
+    expect(cc).not.toMatch(/s-maxage|stale-while-revalidate/);
+    expect(String(res.headers['Netlify-CDN-Cache-Control'])).toMatch(
+      /s-maxage=60/
+    );
   });
 
   it('POST 400 with honeypot filled', async () => {
