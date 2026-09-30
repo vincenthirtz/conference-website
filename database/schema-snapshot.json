@@ -1295,6 +1295,20 @@
       "tenant_id",
       "tournament_id"
     ],
+    "staff_planning_slots": [
+      "created_at",
+      "created_by",
+      "end_time",
+      "id",
+      "note",
+      "person_name",
+      "role",
+      "slot_date",
+      "source",
+      "start_time",
+      "tenant_id",
+      "updated_at"
+    ],
     "stage_teams": [
       "created_at",
       "is_substitute",
@@ -2912,6 +2926,10 @@
     },
     "staff_logs_tenant_id_fkey": {
       "source": "staff_logs",
+      "target": "tenants"
+    },
+    "staff_planning_slots_tenant_id_fkey": {
+      "source": "staff_planning_slots",
       "target": "tenants"
     },
     "stage_teams_stage_id_fkey": {

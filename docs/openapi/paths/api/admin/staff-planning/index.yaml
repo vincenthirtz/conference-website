@@ -1,0 +1,105 @@
+get:
+  x-zod-query: admin.staff-planning.query
+  summary: List staff availability slots in a date window.
+  description: >
+    Planning du staff (cast, moderation, prod OBS, gestion du live) : creneaux
+    de disponibilite par personne et par jour, du `from` au `to` inclus
+    (400 jours maximum). Rend aussi les pseudos connus (legende, saisie).
+    Lisible par tout le staff.
+  operationId: adminListStaffPlanning
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  parameters:
+    - name: from
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+    - name: to
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+  responses:
+    '200':
+      description: Creneaux de la fenetre et pseudos connus.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              slots:
+                type: array
+                items:
+                  type: object
+              people:
+                type: array
+                items:
+                  type: string
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Add a staff availability slot by hand.
+  description: >
+    Ajoute un creneau saisi a la main (`source = manual`) : jamais ecrase par
+    un import CSV. `end_time` anterieur ou egal a `start_time` = fin le
+    lendemain (22:00 -> 00:00). 409 si la personne a deja un creneau qui
+    commence a cette heure ce jour-la. Reserve a `manage_staff`.
+  operationId: adminCreateStaffPlanningSlot
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.staff-planning.create
+          type: object
+          required:
+            - person_name
+            - slot_date
+            - start_time
+            - end_time
+          properties:
+            person_name:
+              type: string
+            slot_date:
+              type: string
+              format: date
+            start_time:
+              type: string
+            end_time:
+              type: string
+            role:
+              type: [string, 'null']
+              enum: [cast, moderation, prod_obs, live_prod, null]
+            note:
+              type: [string, 'null']
+  responses:
+    '201':
+      description: Creneau cree.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              slot:
+                type: object
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '409':
+      description: Creneau deja present a cette heure pour cette personne.

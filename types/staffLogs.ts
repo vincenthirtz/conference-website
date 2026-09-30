@@ -341,6 +341,10 @@ export type StaffLogAction =
   | 'create_custom_game_preset'
   | 'update_custom_game_preset'
   | 'delete_custom_game_preset'
+  // --- Planning du staff ---
+  | 'create_staff_planning_slot'
+  | 'delete_staff_planning_slot'
+  | 'import_staff_planning'
   // --- Twitch ---
   | 'connect_twitch_broadcaster'
   | 'disconnect_twitch_broadcaster'

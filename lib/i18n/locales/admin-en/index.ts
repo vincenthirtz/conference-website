@@ -130,6 +130,7 @@ import enAdminMatchEdit from './adminMatchEdit';
 import enAdminEventDirector from './adminEventDirector';
 import enAdminCampaigns from './adminCampaigns';
 import enAdminCommandPalette from './adminCommandPalette';
+import enAdminStaffPlanning from './adminStaffPlanning';
 import enAdminDataTable from './adminDataTable';
 import enAdminEntityHistory from './adminEntityHistory';
 import enAdminSiteSettings from './adminSiteSettings';
@@ -335,6 +336,7 @@ const adminEnDict = {
   adminEventDirector: enAdminEventDirector,
   adminCampaigns: enAdminCampaigns,
   adminCommandPalette: enAdminCommandPalette,
+  adminStaffPlanning: enAdminStaffPlanning,
   adminDataTable: enAdminDataTable,
   adminEntityHistory: enAdminEntityHistory,
   adminSiteSettings: enAdminSiteSettings,

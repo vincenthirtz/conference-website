@@ -147,6 +147,7 @@ describe('filterAdminLinks – owner role', () => {
     expect(childTitles).toEqual([
       'Gérer les utilisateurs',
       'Créer un utilisateur',
+      'Planning du staff',
       'Association',
       'Documents de l’asso',
       'Ajouter un adhérent',

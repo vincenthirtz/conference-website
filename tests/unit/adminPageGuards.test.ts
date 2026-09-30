@@ -61,6 +61,9 @@ const ROLE_GATED_ON_PURPOSE = new Set([
   // « Gérer mon équipe » : un membre du staff peut être capitaine, quel que
   // soit son rôle. Le contenu vient de SON équipe, pas d'un droit d'admin.
   'teams/my.tsx',
+  // Planning du staff : chacun consulte qui est là quel soir. L'écriture
+  // (ajout, retrait, import) est gardée par `manage_staff` côté API.
+  'staff-planning.tsx',
 ]);
 
 describe('gardes des pages admin', () => {

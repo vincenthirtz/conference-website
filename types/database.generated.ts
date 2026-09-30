@@ -5358,6 +5358,59 @@ export type Database = {
           },
         ]
       }
+      staff_planning_slots: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_time: string
+          id: string
+          note: string | null
+          person_name: string
+          role: string | null
+          slot_date: string
+          source: string
+          start_time: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_time: string
+          id?: string
+          note?: string | null
+          person_name: string
+          role?: string | null
+          slot_date: string
+          source?: string
+          start_time: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_time?: string
+          id?: string
+          note?: string | null
+          person_name?: string
+          role?: string | null
+          slot_date?: string
+          source?: string
+          start_time?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_planning_slots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stage_teams: {
         Row: {
           created_at: string

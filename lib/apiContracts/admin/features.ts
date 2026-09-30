@@ -205,6 +205,12 @@ import {
   PresetPatchDoc,
 } from '../../../features/admin/custom-game-presets/schemas';
 import {
+  StaffPlanningImportBody,
+  StaffPlanningListQuery,
+  StaffPlanningSlotCreate,
+  StaffPlanningSlotIdQuery,
+} from '../../../features/admin/staff-planning/schemas';
+import {
   LobbyIdQuery,
   PlacementsDoc,
 } from '../../../features/admin/lobbies/schemas';
@@ -644,6 +650,14 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
     io: 'input',
   },
   'admin.custom-game-presets.create': { schema: PresetCreateDoc, io: 'input' },
+  'admin.staff-planning.create': {
+    schema: StaffPlanningSlotCreate,
+    io: 'input',
+  },
+  'admin.staff-planning/import.body': {
+    schema: StaffPlanningImportBody,
+    io: 'input',
+  },
   'admin.custom-game-presets/[presetId].update': {
     schema: PresetPatchDoc,
     io: 'input',
@@ -1041,6 +1055,14 @@ export const ADMIN_FEATURE_QUERY_SCHEMAS: Record<string, ApiContractEntry> = {
   'admin.map-pool.query': { schema: MapPoolListQuery, io: 'input' },
   'admin.map-pool/[mapId].query': { schema: MapPoolIdQuery, io: 'input' },
   'admin.custom-game-presets.query': { schema: PresetListQuery, io: 'input' },
+  'admin.staff-planning.query': {
+    schema: StaffPlanningListQuery,
+    io: 'input',
+  },
+  'admin.staff-planning/[slotId].query': {
+    schema: StaffPlanningSlotIdQuery,
+    io: 'input',
+  },
   'admin.custom-game-presets/[presetId].query': {
     schema: PresetIdQuery,
     io: 'input',

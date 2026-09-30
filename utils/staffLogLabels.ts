@@ -300,6 +300,10 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   create_custom_game_preset: 'Création preset partie perso',
   update_custom_game_preset: 'Modification preset partie perso',
   delete_custom_game_preset: 'Suppression preset partie perso',
+  // Planning du staff
+  create_staff_planning_slot: 'Ajout créneau planning staff',
+  delete_staff_planning_slot: 'Suppression créneau planning staff',
+  import_staff_planning: 'Import du planning staff (CSV)',
   // Twitch
   connect_twitch_broadcaster: 'Connexion broadcaster Twitch',
   disconnect_twitch_broadcaster: 'Déconnexion broadcaster Twitch',

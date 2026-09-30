@@ -1,0 +1,29 @@
+delete:
+  x-zod-query: admin.staff-planning/[slotId].query
+  summary: Delete a staff availability slot.
+  description: >
+    Supprime un creneau du planning du staff (saisi a la main ou importe).
+    404 hors du tenant actif. Reserve a `manage_staff`.
+  operationId: adminDeleteStaffPlanningSlot
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Supprime.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              ok:
+                type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

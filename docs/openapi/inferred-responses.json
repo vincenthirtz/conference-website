@@ -453,6 +453,20 @@
     ]
    }
   },
+  "DELETE /api/admin/staff-planning/{slotId}": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "ok": {
+      "type": "boolean",
+      "const": true
+     }
+    },
+    "required": [
+     "ok"
+    ]
+   }
+  },
   "DELETE /api/admin/staff/{staffId}/pole-admin": {
    "200": {
     "type": "object",
@@ -5217,6 +5231,7 @@
           "create_prize_pool",
           "create_scrim",
           "create_scrim_planning",
+          "create_staff_planning_slot",
           "create_stage",
           "create_swiss_round",
           "create_tcg_association_card",
@@ -5253,6 +5268,7 @@
           "delete_scrim",
           "delete_scrim_planning",
           "delete_staff_account",
+          "delete_staff_planning_slot",
           "delete_stage",
           "delete_team",
           "delete_tournament",
@@ -5292,6 +5308,7 @@
           "helloasso_sync",
           "import_default_maps",
           "import_mvp",
+          "import_staff_planning",
           "invite_accept",
           "invite_cancel",
           "invite_create",
@@ -7133,6 +7150,7 @@
           "create_prize_pool",
           "create_scrim",
           "create_scrim_planning",
+          "create_staff_planning_slot",
           "create_stage",
           "create_swiss_round",
           "create_tcg_association_card",
@@ -7169,6 +7187,7 @@
           "delete_scrim",
           "delete_scrim_planning",
           "delete_staff_account",
+          "delete_staff_planning_slot",
           "delete_stage",
           "delete_team",
           "delete_tournament",
@@ -7208,6 +7227,7 @@
           "helloasso_sync",
           "import_default_maps",
           "import_mvp",
+          "import_staff_planning",
           "invite_accept",
           "invite_cancel",
           "invite_create",
@@ -9176,6 +9196,7 @@
           "create_prize_pool",
           "create_scrim",
           "create_scrim_planning",
+          "create_staff_planning_slot",
           "create_stage",
           "create_swiss_round",
           "create_tcg_association_card",
@@ -9212,6 +9233,7 @@
           "delete_scrim",
           "delete_scrim_planning",
           "delete_staff_account",
+          "delete_staff_planning_slot",
           "delete_stage",
           "delete_team",
           "delete_tournament",
@@ -9251,6 +9273,7 @@
           "helloasso_sync",
           "import_default_maps",
           "import_mvp",
+          "import_staff_planning",
           "invite_accept",
           "invite_cancel",
           "invite_create",
@@ -13722,6 +13745,75 @@
     ]
    }
   },
+  "GET /api/admin/staff-planning": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "people": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "slots": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "created_at": {
+         "type": "string"
+        },
+        "end_time": {
+         "type": "string"
+        },
+        "id": {
+         "type": "string"
+        },
+        "note": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "person_name": {
+         "type": "string"
+        },
+        "role": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "slot_date": {
+         "type": "string"
+        },
+        "source": {
+         "type": "string"
+        },
+        "start_time": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "created_at",
+        "end_time",
+        "id",
+        "note",
+        "person_name",
+        "role",
+        "slot_date",
+        "source",
+        "start_time"
+       ]
+      }
+     }
+    },
+    "required": [
+     "people",
+     "slots"
+    ]
+   }
+  },
   "GET /api/admin/stages/{stageId}": {
    "200": {
     "type": "object",
@@ -14164,6 +14256,7 @@
           "create_prize_pool",
           "create_scrim",
           "create_scrim_planning",
+          "create_staff_planning_slot",
           "create_stage",
           "create_swiss_round",
           "create_tcg_association_card",
@@ -14200,6 +14293,7 @@
           "delete_scrim",
           "delete_scrim_planning",
           "delete_staff_account",
+          "delete_staff_planning_slot",
           "delete_stage",
           "delete_team",
           "delete_tournament",
@@ -14239,6 +14333,7 @@
           "helloasso_sync",
           "import_default_maps",
           "import_mvp",
+          "import_staff_planning",
           "invite_accept",
           "invite_cancel",
           "invite_create",
@@ -20406,6 +20501,7 @@
           "create_prize_pool",
           "create_scrim",
           "create_scrim_planning",
+          "create_staff_planning_slot",
           "create_stage",
           "create_swiss_round",
           "create_tcg_association_card",
@@ -20442,6 +20538,7 @@
           "delete_scrim",
           "delete_scrim_planning",
           "delete_staff_account",
+          "delete_staff_planning_slot",
           "delete_stage",
           "delete_team",
           "delete_tournament",
@@ -20481,6 +20578,7 @@
           "helloasso_sync",
           "import_default_maps",
           "import_mvp",
+          "import_staff_planning",
           "invite_accept",
           "invite_cancel",
           "invite_create",
@@ -25038,6 +25136,7 @@
           "create_prize_pool",
           "create_scrim",
           "create_scrim_planning",
+          "create_staff_planning_slot",
           "create_stage",
           "create_swiss_round",
           "create_tcg_association_card",
@@ -25074,6 +25173,7 @@
           "delete_scrim",
           "delete_scrim_planning",
           "delete_staff_account",
+          "delete_staff_planning_slot",
           "delete_stage",
           "delete_team",
           "delete_tournament",
@@ -25113,6 +25213,7 @@
           "helloasso_sync",
           "import_default_maps",
           "import_mvp",
+          "import_staff_planning",
           "invite_accept",
           "invite_cancel",
           "invite_create",
@@ -67239,6 +67340,89 @@
     "required": [
      "dryRun",
      "targets"
+    ]
+   }
+  },
+  "POST /api/admin/staff-planning": {
+   "201": {
+    "type": "object",
+    "properties": {
+     "slot": {
+      "type": "object",
+      "properties": {
+       "created_at": {
+        "type": "string"
+       },
+       "end_time": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "note": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "person_name": {
+        "type": "string"
+       },
+       "role": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "slot_date": {
+        "type": "string"
+       },
+       "source": {
+        "type": "string"
+       },
+       "start_time": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "created_at",
+       "end_time",
+       "id",
+       "note",
+       "person_name",
+       "role",
+       "slot_date",
+       "source",
+       "start_time"
+      ]
+     }
+    },
+    "required": [
+     "slot"
+    ]
+   }
+  },
+  "POST /api/admin/staff-planning/import": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "inserted": {
+      "type": "number"
+     },
+     "months": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "skipped": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "inserted",
+     "months",
+     "skipped"
     ]
    }
   },

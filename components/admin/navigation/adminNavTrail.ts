@@ -183,6 +183,10 @@ export const ADMIN_NAV_TRAILS: Record<string, NavCrumb[]> = {
     { label: 'Staff & Asso', href: null },
     { label: 'Créer un utilisateur', href: '/admin/users/new' },
   ],
+  '/admin/staff-planning': [
+    { label: 'Staff & Asso', href: null },
+    { label: 'Planning du staff', href: '/admin/staff-planning' },
+  ],
   '/admin/association': [
     { label: 'Staff & Asso', href: null },
     { label: 'Association', href: '/admin/association' },

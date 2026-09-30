@@ -329,6 +329,7 @@ const BY_TITLE: Record<string, AdminMenuIconKey> = {
   'Créer une actualité': 'newspaper',
   'Gérer les utilisateurs': 'userCog',
   'Créer un utilisateur': 'userPlus',
+  'Planning du staff': 'calendarCheck',
   Association: 'building',
   'Documents de l’asso': 'fileText',
   'Ajouter un adhérent': 'idCard',

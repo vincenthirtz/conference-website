@@ -1,0 +1,65 @@
+post:
+  summary: Import the shared staff availability spreadsheet.
+  description: >
+    Importe le tableur « Calendrier disponibilite » (export CSV), deja lu cote
+    navigateur (`utils/staffPlanningCsv`) : un creneau par personne et par
+    jour. Remplace l'import precedent des mois `months` ; les creneaux saisis
+    a la main restent (un doublon de l'un d'eux est ignore). Chaque entree
+    doit tomber dans l'un des mois. Reserve a `manage_staff`.
+  operationId: adminImportStaffPlanning
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.staff-planning/import.body
+          type: object
+          required:
+            - months
+            - entries
+          properties:
+            months:
+              type: array
+              items:
+                type: string
+            entries:
+              type: array
+              items:
+                type: object
+                required: [person, date, start, end]
+                properties:
+                  person:
+                    type: string
+                  date:
+                    type: string
+                    format: date
+                  start:
+                    type: string
+                  end:
+                    type: string
+  responses:
+    '200':
+      description: Import applique.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              inserted:
+                type: integer
+              skipped:
+                type: integer
+              months:
+                type: array
+                items:
+                  type: string
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
