@@ -77,13 +77,18 @@ export function useAdminFetch(
         data: { session },
       } = await supabaseClient.auth.getSession();
       const token = session?.access_token;
-      if (!token) {
-        throw new AdminFetchError('Session manquante.', 401, null);
-      }
 
       const { skipAuthRedirect, headers: rawHeaders, ...rest } = init;
       const headers = new Headers(rawHeaders);
-      headers.set('Authorization', `Bearer ${token}`);
+      // Pas de session lisible côté navigateur (cookies `sb-*` devenus
+      // HttpOnly après un rafraîchissement serveur) : on n'abandonne PAS
+      // d'emblée — la requête part sans Bearer et les routes qui authentifient
+      // aussi par cookies (noyau admin, `getStaffContextFromRequest`)
+      // répondent normalement. Sans session du tout, le 401 reproduit
+      // l'ancien comportement : erreur « Session manquante. », SANS redirection
+      // (la cloche et d'autres composants publics appellent ce hook pour un
+      // visiteur anonyme).
+      if (token) headers.set('Authorization', `Bearer ${token}`);
       if (
         typeof rest.body === 'string' &&
         rest.body.length > 0 &&
@@ -98,6 +103,9 @@ export function useAdminFetch(
         headers,
       });
 
+      if (res.status === 401 && !token) {
+        throw new AdminFetchError('Session manquante.', 401, null);
+      }
       if (res.status === 401 && !skipAuthRedirect) {
         routerRef.current.replace(loginPathRef.current);
       }

@@ -478,7 +478,18 @@ test.describe('Diagnostic admin', () => {
   }) => {
     await withAuthPage(browser, async (page) => {
       // Simuler un admin qui clique rapidement entre pages sans attendre le chargement
-      await page.goto('/admin', { waitUntil: 'networkidle', timeout: 15_000 });
+      // Repère, pas `networkidle` : le tableau de bord garde des requêtes
+      // en vol (sondages, flux) et l'état « réseau calme » n'arrivait parfois
+      // jamais — le test expirait sans rien avoir mesuré.
+      await page.goto('/admin', {
+        waitUntil: 'domcontentloaded',
+        timeout: 15_000,
+      });
+      await expect(
+        page.locator('#main-content').getByRole('heading', { level: 1 }).first()
+      ).toBeVisible({
+        timeout: 15_000,
+      });
 
       const pages = [
         '/admin/tournaments',
@@ -493,8 +504,15 @@ test.describe('Diagnostic admin', () => {
         await page.goto(pagePath, { waitUntil: 'commit', timeout: 15_000 });
       }
 
-      // Attendre que la derniere page se charge completement
-      await page.waitForLoadState('networkidle', { timeout: 15_000 });
+      // La dernière page est arrivée : URL finale, document chargé, contenu
+      // principal rendu (repère), sans dépendre du calme réseau.
+      await page.waitForURL(/\/admin\/partners/, { timeout: 15_000 });
+      await page.waitForLoadState('load', { timeout: 15_000 });
+      await expect(
+        page.locator('#main-content').getByRole('heading', { level: 1 }).first()
+      ).toBeVisible({
+        timeout: 15_000,
+      });
       const totalDuration = Date.now() - start;
 
       // Verifier qu'on est bien sur la derniere page et pas sur /login
