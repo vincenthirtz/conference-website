@@ -1,8 +1,7 @@
 -- supabase/migrations/20260930130000_staff_planning_slots.sql
 --
--- ⚠️  NON APPLIQUÉE EN PRODUCTION. Rejouée par `supabase start` en CI (e2e),
---     donc testée ; à relire puis à appliquer À LA MAIN sur le projet
---     `owwomenscup`. Additive et idempotente.
+-- APPLIQUÉE en production le 2026-09-30 (projet `owwomenscup`). Rejouée par
+--     `supabase start` en CI (e2e). Additive et idempotente.
 --
 -- POURQUOI. Les disponibilités du staff (cast, modération, prod OBS, gestion
 --   du live) vivaient dans un tableur partagé (« Calendrier disponibilité »).
