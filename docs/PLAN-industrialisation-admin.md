@@ -14,12 +14,34 @@
 
 ---
 
-## ⏸ Point d'arrêt — 2026-09-29
+## ⏸ Point d'arrêt — 2026-09-30 (changement de machine)
 
-**Où est le travail.** Commits LOCAUX sur `work`, non poussés (`work` déploie en prod sur
-Netlify). Une copie au lot 10 existe aussi sur `origin/admin-industrialisation` (poussée pour un
-changement de machine finalement annulé) ; le travail continue sur `work`. Rien ne part en prod
-avant la recette ci-dessous et un feu vert explicite.
+**Où est le travail.** Tout est sur `origin/admin-industrialisation` (= `work` local de la machine
+d'origine, fusion de `origin/work` 5a63e554 comprise). `origin/work` (PROD Netlify) n'a PAS reçu
+le chantier. Reprendre : `git fetch origin && git switch -c work-chantier origin/admin-industrialisation`
+(ou mettre `work` local dessus). Branche de comparaison e2e : `origin/e2e-baseline` (prod + infra e2e).
+Bot : le commit de textes « capitaine ou manager » est sur `docker-box` branche
+`bot-textes-capitaine-manager` — MAIS le bot a déménagé dans `owwc-discord-bot` (5a63e554) : à
+refaire là-bas (report-score.js / preuve.js / ma-dispute.js), puis `npm run deploy-commands`.
+
+**État des vérifications (2026-09-30).** e2e : **vert** (run 36685028011, 8 tranches, ~5 min,
+chromium + mobile). CI rapide : typecheck, Biome, tests unitaires **verts** ; **seul rouge :
+`Bundle budget`** (run 36685832415) — +100 à +113 ko sur les pages joueuse et certaines admin
+(`/player` 282 → 392 ko, `/player/manage-team` 266 → 379, `captain-view` 273 → 386…). Bien plus
+que les ~12 ko attendus de TanStack : **à analyser AVANT la prod** (piste : zod / useSchemaForm /
+un util serveur tiré côté client — cf. mémoire « Bundle client pollué par un util serveur »),
+alléger, puis `npm run bundle:budget -- --update` (en CI ou sur une machine qui supporte un build).
+
+**Avant / pendant la mise en prod (dans l'ordre).**
+1. Résoudre le budget JS (ci-dessus). Déployer hors soir de match (Cup 2026 : mer/ven 19 h).
+2. Pousser `work` (prod). 3. Appliquer à la main, après relecture :
+   `supabase/migrations/20260930090000_demandes_type_captain_message.sql` et
+   `supabase/migrations/20260930090100_teams_rls_public_read.sql`.
+4. Vérifier : connexion admin (`owwomenscup@gmail.com`, seul pôle-admin — passé le 2026-09-29),
+   espace joueuse, cockpit régie. Les comptes `hirtzvincent@free.fr` et `+ownernodelete` n'ont
+   AUCUN espace rattaché → plus d'accès aux routes `tenants/[id]/*` après déploiement.
+5. Après déploiement : `database/migrations/20260929_demote_developer_global_owner.sql`
+   (ne rétrograde personne aujourd'hui).
 
 **Fait** (L1–L14 socles, cf. sections ; passe visuelle « Le Ruban » lots 1 à 10, cf. L12) :
 - toutes les pages admin sont sur les archétypes Le Ruban ; **plus aucune page > 800 lignes**
