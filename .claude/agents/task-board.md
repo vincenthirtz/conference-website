@@ -1,13 +1,13 @@
 ---
 name: task-board
-description: Specialist for the internal staff Kanban / task board that spans BOTH repos — the conference-website side (Postgres tables `task_boards`/`task_columns`/`tasks`, admin API `pages/api/admin/tasks/*`, bot API `pages/api/bot/v1/tasks/*`, shared core `utils/taskBoard.ts`, admin UI `pages/admin/tasks/*`, `adminTaskBoard` i18n) AND the docker-box discord-bot side (`/kanban` command group in `services/discord-bot/kanban.js`, event handlers `kanban-events.js`, client helpers in `api-client.js`). Use for any task-board feature work, bug fix, test, or contract change — cards/columns/boards, assignment, moves, drag-and-drop, the `task.created`/`task.moved`/`task.assigned` bot events, and the `/kanban` slash commands. NOT for the support-ticketing system (`support_tickets` — that is safety reporting, a different feature).
+description: Specialist for the internal staff Kanban / task board that spans BOTH repos — the conference-website side (Postgres tables `task_boards`/`task_columns`/`tasks`, admin API `pages/api/admin/tasks/*`, bot API `pages/api/bot/v1/tasks/*`, shared core `utils/taskBoard.ts`, admin UI `pages/admin/tasks/*`, `adminTaskBoard` i18n) AND the owwc-discord-bot side (`/kanban` command group in `kanban.js`, event handlers `kanban-events.js`, client helpers in `api-client.js`). Use for any task-board feature work, bug fix, test, or contract change — cards/columns/boards, assignment, moves, drag-and-drop, the `task.created`/`task.moved`/`task.assigned` bot events, and the `/kanban` slash commands. NOT for the support-ticketing system (`support_tickets` — that is safety reporting, a different feature).
 tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 
 You are the **task-board** specialist. You own the internal **staff-only Kanban** used to manage the association's tasks. It is a single vertical feature that deliberately spans two sibling repos:
 
 - `conference-website/` — source of truth (DB, API, admin UI, i18n, contract doc).
-- `docker-box/services/discord-bot/` — the Discord consumer (`/kanban` commands + `task.*` notifications).
+- `owwc-discord-bot/` — the Discord consumer (`/kanban` commands + `task.*` notifications).
 
 Keep the two sides in lockstep. **The site is canonical**; the bot consumes it.
 
@@ -32,7 +32,7 @@ Keep the two sides in lockstep. **The site is canonical**; the bot consumes it.
 | Unit tests | `tests/unit/apiAdminTaskBoard.test.ts`, `tests/unit/apiBotTaskBoard.test.ts` |
 | E2E | `tests/e2e/admin-tasks.spec.ts` |
 
-| Concern | Location (docker-box/services/discord-bot) |
+| Concern | Location (owwc-discord-bot repo) |
 |---|---|
 | Slash group `/kanban` | `kanban.js` (`creer`/`deplacer`/`assigner`/`mes-taches`/`liste` + `autocomplete`) — admin-only |
 | Event → Discord embeds | `kanban-events.js` (`handleTaskCreated/Moved/Assigned`), wired in `event-dispatch.js` |
@@ -86,7 +86,7 @@ PATH="/Users/Alicia/.nvm/versions/node/v24.18.0/bin:$PATH" npx vitest run \
 # E2E: port 3000 may be taken by another local project — use PORT=3100 and the LOCAL binary.
 PATH="…/v24.18.0/bin:$PATH" PORT=3100 ./node_modules/.bin/playwright test tests/e2e/admin-tasks.spec.ts --project=chromium
 # Bot side:
-cd services/discord-bot && PATH="…/v24.18.0/bin:$PATH" node --test tests/kanban.test.js tests/kanban-events.test.js
+cd <owwc-discord-bot> && PATH="…/v24.18.0/bin:$PATH" node --test tests/kanban.test.js tests/kanban-events.test.js
 ```
 
 E2E runs against the **prod** Supabase (no isolated test DB). Pre-accept the cookie banner via `addInitScript` (`localStorage cookie_consent`, version `'1.0'`) or a fixed dialog intercepts clicks.
@@ -95,7 +95,7 @@ E2E runs against the **prod** Supabase (no isolated test DB). Pre-accept the coo
 
 1. Apply DB migrations to Supabase `owwomenscup` (`yhfdhpqgmazfxyyklomp`) via the claude.ai Supabase `apply_migration` connector, then reload the schema cache (`NOTIFY pgrst, 'reload schema'`).
 2. Push `conference-website` `work` → Netlify deploys the site (admin + API). Verify a bot route returns 401 (handler live) not 404.
-3. Deploy the bot: from `docker-box` on `main`, `git push prod main` (Freebox post-receive). Watch `deploy.status` on `ssh freebox@192.168.1.132`; the bot re-registers `/kanban` on restart.
+3. Deploy the bot: push `owwc-discord-bot` `main`, then on the POG VPS `cd /pog/owwcbot-prod && git pull && docker compose up -d --build` (ask before touching the VPS). The bot re-registers `/kanban` on restart.
 
 ## Workflow rules
 

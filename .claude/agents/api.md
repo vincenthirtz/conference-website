@@ -59,7 +59,7 @@ Tests need `.env.local` with Supabase credentials. Use `TEST_BASE_URL` to point 
 - **Always run before commit**: `npm run lint && npm run format:check && npm run test:unit`. E2E is heavier — run the specs you touched.
 - **Before commit, sanity-check scope**: `git diff --stat` to make sure you didn't touch files outside the request.
 - **Conventional Commits**: `feat(api): ...`, `fix(api/bot/v1): ...`, `refactor(utils/botAuth): ...`. `!` for breaking changes.
-- **Bot contract changes**: if you change a `/api/bot/v1/*` request/response shape, update `docs/BOT_API_CONTRACT.md` in the SAME commit and flag the matching change needed in `../docker-box/services/discord-bot/` (use `api-client.js` as the entry point).
+- **Bot contract changes**: if you change a `/api/bot/v1/*` request/response shape, update `docs/BOT_API_CONTRACT.md` in the SAME commit and flag the matching change needed in `../owwc-discord-bot/` (use `api-client.js` as the entry point).
 - **Migrations**: SQL lives in `database/migrations/`. Reference the file in the route that needs it.
 - **shell**: sed multi-line in zsh breaks — prefer a `node -e` script or a temp file.
 
