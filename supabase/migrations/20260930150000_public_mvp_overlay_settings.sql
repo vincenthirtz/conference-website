@@ -1,8 +1,7 @@
 -- supabase/migrations/20260930150000_public_mvp_overlay_settings.sql
 --
--- ⚠️  NON APPLIQUÉE EN PRODUCTION. Rejouée par `supabase start` en CI (e2e),
---     donc testée ; à relire puis à appliquer À LA MAIN sur le projet
---     `owwomenscup`. Additive et idempotente.
+-- APPLIQUÉE en production le 2026-09-30 (projet `owwomenscup`). Rejouée par
+--     `supabase start` en CI (e2e). Additive et idempotente.
 --
 -- POURQUOI. Le sondage « coup de cœur du public » (match_public_mvp_polls)
 --   s'affiche dans la source OBS `/overlay/regie`, mais rien ne se réglait :
