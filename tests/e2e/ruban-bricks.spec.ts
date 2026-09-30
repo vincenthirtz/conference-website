@@ -97,7 +97,11 @@ async function openAdminTokens(page: Page) {
 async function openPlayerProfile(page: Page) {
   await loginPlayer(page, PLAYER_EMAIL, '/player/profile', RUBAN_PASSWORD);
   await page.goto('/player/profile');
-  const primary = page.getByRole('button', { name: 'Enregistrer' });
+  // Le bouton du KIT (d'autres « Enregistrer » non migrés existent plus bas).
+  const primary = page
+    .getByRole('button', { name: 'Enregistrer' })
+    .and(page.locator('[data-ruban-target]'))
+    .first();
   await expect(primary).toBeVisible({ timeout: 20000 });
   return {
     primary,

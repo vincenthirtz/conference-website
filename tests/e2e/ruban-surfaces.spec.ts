@@ -18,6 +18,7 @@
 
 import { test, expect, type Browser } from '@playwright/test';
 import {
+  DEFAULT_TENANT_ID,
   createTestPlayer,
   createTestStaff,
   deleteTestStaff,
@@ -65,15 +66,26 @@ test.describe('Le Ruban — surfaces et jetons', () => {
     // Capitaine d'une équipe : ouvre /team/[slug]/edit et une fiche publique.
     const { data: team, error } = await supabaseTestClient
       .from('teams')
-      .insert({ name: TEAM_NAME, is_active: true, captain_id: playerId })
+      .insert({
+        name: TEAM_NAME,
+        is_active: true,
+        captain_id: playerId,
+        tenant_id: DEFAULT_TENANT_ID,
+      })
       .select('id, slug')
       .single();
     if (error) throw error;
     teamId = team!.id as string;
     teamSlug = (team!.slug as string) || teamId;
-    await supabaseTestClient
+    const { error: memberError } = await supabaseTestClient
       .from('team_members')
-      .insert({ team_id: teamId, user_id: playerId, role: 'captain' });
+      .insert({
+        team_id: teamId,
+        user_id: playerId,
+        role: 'captain',
+        tenant_id: DEFAULT_TENANT_ID,
+      });
+    if (memberError) throw memberError;
   });
 
   test.afterAll(async () => {

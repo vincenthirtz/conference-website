@@ -221,6 +221,11 @@ export async function keyboardFocus(page: Page, locator: Locator) {
   expect(await locator.evaluate((el) => el.matches(':focus-visible'))).toBe(
     true
   );
+  // `transition-colors` du kit anime aussi `outline-color` : on lit l'état
+  // FINAL, pas une couleur intermédiaire.
+  await locator.evaluate((el) => {
+    for (const a of el.getAnimations()) a.finish();
+  });
 }
 
 /** Réponses vides mais valides des API du tableau de bord joueuse. */
