@@ -14,6 +14,12 @@ const MEMBER_EMAIL = `test-member-${Date.now()}@test.local`;
 const OUTSIDER_EMAIL = `test-outsider-${Date.now()}@test.local`;
 const PASSWORD = 'TestPassword123!';
 
+let clientSeq = 0;
+function nextClientIp(): string {
+  clientSeq += 1;
+  return `10.77.${(Date.now() >> 8) & 255}.${clientSeq}`;
+}
+
 test.describe('Team management API', () => {
   let captainToken: string;
   let memberToken: string;
@@ -313,6 +319,9 @@ test.describe('Team management API', () => {
     // La route vérifie le captcha AVANT le corps : sans défi résolu, tout
     // sortait en « Captcha manquant ».
     const res = await request.post('/api/teams/create-with-member', {
+      // Route limitée par IP AVANT la validation : un client distinct par
+      // requête (en-tête IP de l'edge Netlify, lu par getClientIp).
+      headers: { 'x-nf-client-connection-ip': nextClientIp() },
       data: { name: 'A', ...(await solveCaptchaApi(request)) },
     });
     expect(res.status()).toBe(400);
@@ -326,7 +335,14 @@ test.describe('Team management API', () => {
     // La route vérifie le captcha AVANT le corps : sans défi résolu, tout
     // sortait en « Captcha manquant ».
     const res = await request.post('/api/teams/create-with-member', {
-      data: { name: 'ValidTeam', logo_url: 'javascript:alert(1)', ...(await solveCaptchaApi(request)) },
+      // Route limitée par IP AVANT la validation : un client distinct par
+      // requête (en-tête IP de l'edge Netlify, lu par getClientIp).
+      headers: { 'x-nf-client-connection-ip': nextClientIp() },
+      data: {
+        name: 'ValidTeam',
+        logo_url: 'javascript:alert(1)',
+        ...(await solveCaptchaApi(request)),
+      },
     });
     expect(res.status()).toBe(400);
     const body = await res.json();
@@ -339,7 +355,14 @@ test.describe('Team management API', () => {
     // La route vérifie le captcha AVANT le corps : sans défi résolu, tout
     // sortait en « Captcha manquant ».
     const res = await request.post('/api/teams/create-with-member', {
-      data: { name: 'ValidTeam', description: 'x'.repeat(2001), ...(await solveCaptchaApi(request)) },
+      // Route limitée par IP AVANT la validation : un client distinct par
+      // requête (en-tête IP de l'edge Netlify, lu par getClientIp).
+      headers: { 'x-nf-client-connection-ip': nextClientIp() },
+      data: {
+        name: 'ValidTeam',
+        description: 'x'.repeat(2001),
+        ...(await solveCaptchaApi(request)),
+      },
     });
     expect(res.status()).toBe(400);
     const body = await res.json();

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
+import { loginStaff } from './_helpers/playerSession';
 
 /**
  * Tests de chargement de toutes les pages admin avec le compte Test Coach (admin).
@@ -16,15 +17,10 @@ const skipIfNoServiceRole = () =>
 
 /** Helper: login via UI and wait for admin dashboard */
 async function loginAsCoach(page: import('@playwright/test').Page) {
-  await page.goto('/login');
-  await page.fill('input#email', COACH_EMAIL);
-  await page.fill('input#password', COACH_PASSWORD);
-  await page.click('#main-content button[type="submit"]');
-  await page.waitForURL(/\/admin(?!\/login)/, { timeout: 15000 });
-  // Pas de `networkidle` : l'admin garde des requêtes périodiques (alertes,
-  // présence, live) et l'attente coûtait ~30 s PAR test — 16 min pour ce
-  // fichier en CI. Les assertions qui suivent attendent déjà leur cible.
-  await page.waitForLoadState('load');
+  // Seconde tentative intégrée (serveur froid) ; pas de `networkidle` :
+  // l'admin garde des requêtes périodiques et l'attente coûtait ~30 s par
+  // test. Les assertions qui suivent attendent déjà leur cible.
+  await loginStaff(page, COACH_EMAIL, COACH_PASSWORD);
 }
 
 /** Helper: check page loaded without fatal errors */

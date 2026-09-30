@@ -131,3 +131,31 @@ export function buildMatch(overrides: Partial<MockMatch>): MockMatch {
     ...overrides,
   };
 }
+
+/**
+ * Connexion staff par le vrai formulaire /login, jusqu'à l'admin. Même
+ * seconde tentative que `loginPlayer` (soumission avant hydratation sur un
+ * serveur froid : on reste sur /login sans erreur).
+ */
+export async function loginStaff(
+  page: Page,
+  email: string,
+  password: string
+): Promise<void> {
+  const inAdmin = (url: URL) =>
+    url.pathname.startsWith('/admin') &&
+    !url.pathname.startsWith('/admin/login');
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    await page.goto('/login');
+    await page.fill('input#email', email);
+    await page.fill('input#password', password);
+    await page.click('#main-content button[type="submit"]');
+    try {
+      await page.waitForURL(inAdmin, { timeout: 15000 });
+      return;
+    } catch (err) {
+      if (inAdmin(new URL(page.url()))) return;
+      if (attempt === 2) throw err;
+    }
+  }
+}

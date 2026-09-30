@@ -429,7 +429,13 @@ test.describe('Diagnostic admin', () => {
         const from = ADMIN_PAGES[i];
         const to = ADMIN_PAGES[i + 1];
 
-        await page.goto(from.path, { waitUntil: 'networkidle' });
+        // Point de départ : `load` + networkidle BORNÉ. Sans borne, une page
+        // admin qui interroge périodiquement le serveur n'atteint jamais
+        // networkidle et le test entier expirait (60 s) avant de mesurer.
+        await page.goto(from.path, { waitUntil: 'load' });
+        await page
+          .waitForLoadState('networkidle', { timeout: 5_000 })
+          .catch(() => {});
 
         const start = Date.now();
         await page.goto(to.path, {

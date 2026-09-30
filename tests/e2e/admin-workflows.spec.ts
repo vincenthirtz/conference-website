@@ -500,11 +500,16 @@ test.describe('Admin workflows E2E (API)', () => {
     }) => {
       const { data: matches } = await supabaseTestClient!
         .from('matches')
-        .select('id, round_number, next_match_win_id, next_match_win_slot')
+        .select(
+          'id, round_number, team1_id, next_match_win_id, next_match_win_slot'
+        )
         .eq('tournament_id', bracketTournamentId)
         .order('round_number', { ascending: true });
 
-      const semi1 = matches!.find((m) => m.round_number === 1)!;
+      // Identifiée par son équipe (cf. demi-finale 2) : ordre non garanti.
+      const semi1 = matches!.find(
+        (m) => m.round_number === 1 && m.team1_id === bracketTeamIds[0]
+      )!;
       const finale = matches!.find((m) => m.round_number === 2)!;
 
       // Vérifier que le lien bracket existe
@@ -544,12 +549,17 @@ test.describe('Admin workflows E2E (API)', () => {
     }) => {
       const { data: matches } = await supabaseTestClient!
         .from('matches')
-        .select('id, round_number, next_match_win_id, next_match_win_slot')
+        .select(
+          'id, round_number, team1_id, next_match_win_id, next_match_win_slot'
+        )
         .eq('tournament_id', bracketTournamentId)
         .order('round_number', { ascending: true });
 
+      // La demi-finale de team3, identifiée par son équipe : l'ordre de deux
+      // matchs d'un même round n'est pas garanti d'une requête à l'autre.
       const semis = matches!.filter((m) => m.round_number === 1);
-      const semi2 = semis[1];
+      const semi2 = semis.find((m) => m.team1_id === bracketTeamIds[2])!;
+      expect(semi2).toBeTruthy();
       const finale = matches!.find((m) => m.round_number === 2)!;
 
       // team3 (bracketTeamIds[2]) gagne 2-1

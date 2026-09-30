@@ -82,7 +82,17 @@ test.describe('Veto locked flow (P0 matches)', () => {
     await deleteTestStaff(MANAGER_EMAIL);
 
     await createTestStaff(ADMIN_EMAIL, PASSWORD, 'admin');
-    await createTestStaff(MANAGER_EMAIL, PASSWORD, 'admin');
+    // Le rôle staff 'manager' a disparu (388ab3d1) : son équivalent est une
+    // casteuse dotée des permissions d'arbitrage et de gestion des tournois —
+    // elle passe les gardes de route mais pas le déverrouillage, réservé aux
+    // admins (features/admin/matches/service/veto.ts).
+    await createTestStaff(MANAGER_EMAIL, PASSWORD, 'caster');
+    await supabaseTestClient!
+      .from('staff')
+      .update({
+        extra_permissions: ['arbitrate_matches', 'manage_tournaments'],
+      })
+      .eq('email', MANAGER_EMAIL);
 
     adminToken = await getTokenFor(ADMIN_EMAIL);
     managerToken = await getTokenFor(MANAGER_EMAIL);
