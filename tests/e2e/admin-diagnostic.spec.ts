@@ -445,9 +445,10 @@ test.describe('Diagnostic admin', () => {
           waitUntil: 'domcontentloaded',
           timeout: 15_000,
         });
-        await page
-          .waitForLoadState('networkidle', { timeout: 10_000 })
-          .catch(() => {});
+        // Mesure jusqu'au `load`. Avec networkidle (plafonné à 10 s), une page
+        // qui interroge périodiquement le serveur « durait » toujours ~10 s :
+        // c'était le plafond de l'attente qu'on mesurait, pas la navigation.
+        await page.waitForLoadState('load');
         const duration = Date.now() - start;
 
         results.push({ from: from.path, to: to.path, durationMs: duration });

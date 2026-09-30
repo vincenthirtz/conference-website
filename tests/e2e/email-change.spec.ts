@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { loginStaff } from './_helpers/playerSession';
 import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 const password = 'TestPassw0rd!';
@@ -32,11 +33,7 @@ test.describe('Email change feature', () => {
   // « Mon profil » de l'AdminShell (components/admin/profile/ProfileModal.tsx),
   // onglet « Sécurité ».
   async function openEmailSection(page: import('@playwright/test').Page) {
-    await page.goto('/login');
-    await page.fill('input#email', STAFF_EMAIL);
-    await page.fill('input#password', password);
-    await page.click('#main-content button[type="submit"]');
-    await page.waitForURL(/\/admin(?!\/login)/, { timeout: 20_000 });
+    await loginStaff(page, STAFF_EMAIL, password);
 
     await page.getByRole('button', { name: 'Ouvrir mon profil' }).click();
     await page.getByRole('tab', { name: 'Sécurité' }).click();

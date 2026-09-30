@@ -15,6 +15,7 @@
 // vérifie seulement que la barre d'onglets les sélectionne.
 
 import { test, expect, type Page } from '@playwright/test';
+import { loginStaff } from './_helpers/playerSession';
 import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 const STAFF_PASSWORD = 'TestPassw0rd!';
@@ -89,11 +90,7 @@ async function mockReads(page: Page, profileStatus = 200): Promise<void> {
 }
 
 async function gotoPlayerView(page: Page) {
-  await page.goto('/login');
-  await page.fill('input#email', STAFF_EMAIL);
-  await page.fill('input#password', STAFF_PASSWORD);
-  await page.click('#main-content button[type="submit"]');
-  await page.waitForURL(/\/admin(?!\/login)/, { timeout: 20_000 });
+  await loginStaff(page, STAFF_EMAIL, STAFF_PASSWORD);
 
   await page.goto(`/admin/users/${TARGET_USER_ID}/player-view`);
 }

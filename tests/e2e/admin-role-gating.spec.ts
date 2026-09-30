@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { loginStaff } from './_helpers/playerSession';
 import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 /**
@@ -54,13 +55,7 @@ const GATES: Gate[] = [
 ];
 
 async function login(page: Page, email: string) {
-  await page.goto('/login');
-  await page.fill('input#email', email);
-  await page.fill('input#password', TEST_PASSWORD);
-  await page.click('#main-content button[type="submit"]');
-  // Caster is the lowest staff role and still lands on /admin (index is
-  // caster-gated), so every staff role reaches /admin after login.
-  await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
+  await loginStaff(page, email, TEST_PASSWORD);
 }
 
 /**

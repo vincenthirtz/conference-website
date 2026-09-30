@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { loginStaff } from './_helpers/playerSession';
 import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 const TEST_PASSWORD = 'TestPassw0rd!';
@@ -12,11 +13,7 @@ const skipIfNoServiceRole = () =>
   !process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY;
 
 async function loginAsAdmin(page: Page, email = ADMIN_EMAIL) {
-  await page.goto('/login');
-  await page.fill('input#email', email);
-  await page.fill('input#password', TEST_PASSWORD);
-  await page.click('#main-content button[type="submit"]');
-  await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
+  await loginStaff(page, email, TEST_PASSWORD);
 }
 
 /**

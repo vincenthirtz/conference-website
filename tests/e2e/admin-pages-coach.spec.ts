@@ -59,12 +59,7 @@ test.describe('Admin pages — Test Coach', () => {
   test('Connexion au dashboard admin', async ({ page }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
-    await page.goto('/login');
-    await page.fill('input#email', COACH_EMAIL);
-    await page.fill('input#password', COACH_PASSWORD);
-    await page.click('#main-content button[type="submit"]');
-
-    await page.waitForURL(/\/admin(?!\/login)/, { timeout: 15000 });
+    await loginStaff(page, COACH_EMAIL, COACH_PASSWORD);
     await expect(page.locator('body')).toBeVisible();
 
     // Should display the profile page or dashboard

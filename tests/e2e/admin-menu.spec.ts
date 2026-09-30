@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { loginStaff } from './_helpers/playerSession';
 import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 const password = 'TestPassw0rd!';
@@ -28,11 +29,7 @@ test.describe('Admin menu categories', () => {
   // UNE entrée « Partenaires » vers le hub à onglets /admin/partners
   // (fusion liste + demandes, cf. components/admin/navigation/adminNav.ts).
   async function loginAsAdmin(page: import('@playwright/test').Page) {
-    await page.goto('/login');
-    await page.fill('input#email', STAFF_EMAIL);
-    await page.fill('input#password', password);
-    await page.click('#main-content button[type="submit"]');
-    await page.waitForURL(/\/admin(?!\/login)/, { timeout: 20_000 });
+    await loginStaff(page, STAFF_EMAIL, password);
   }
 
   function contentSection(page: import('@playwright/test').Page) {

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { loginStaff } from './_helpers/playerSession';
 import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 const TEST_PASSWORD = 'TestPassw0rd!';
@@ -75,11 +76,7 @@ async function dismissNextOverlay(page: Page) {
 }
 
 async function loginAsStaff(page: Page) {
-  await page.goto('/login');
-  await page.fill('input#email', STAFF_EMAIL);
-  await page.fill('input#password', TEST_PASSWORD);
-  await page.click('#main-content button[type="submit"]');
-  await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
+  await loginStaff(page, STAFF_EMAIL, TEST_PASSWORD);
 }
 
 async function mockReads(page: Page) {

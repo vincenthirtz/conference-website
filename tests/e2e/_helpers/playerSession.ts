@@ -24,6 +24,63 @@ export const skipIfNoServiceRole = () =>
   !process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY;
 
 /**
+ * Connexion par le VRAI formulaire /login, jusqu'à ce que `arrived(url)`.
+ *
+ * Trois écueils rencontrés en CI, et leur parade :
+ *  - la page /login se remonte une fois à l'hydratation : des champs remplis
+ *    avant peuvent être vidés → on vérifie les valeurs avant de soumettre ;
+ *  - le trajet /login → espace peut dépasser 15 s sur un runner chargé →
+ *    30 s, et l'on n'attend que l'URL (`commit`), pas le `load` de l'espace ;
+ *  - une 2e tentative peut arriver alors que la 1re a abouti : /login
+ *    redirige alors tout seul → on le détecte avant de remplir.
+ * Le bouton visé est celui du FORMULAIRE (#main-content) : le pied de page
+ * (newsletter) a aussi un submit.
+ */
+async function loginThroughForm(
+  page: Page,
+  loginUrl: string,
+  email: string,
+  password: string,
+  arrived: (url: URL) => boolean
+): Promise<void> {
+  const redirectedAway = () =>
+    page
+      .waitForURL(arrived, { timeout: 3000, waitUntil: 'commit' })
+      .then(() => true)
+      .catch(() => false);
+
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    await page.goto(loginUrl);
+    if (
+      attempt > 1 &&
+      (arrived(new URL(page.url())) || (await redirectedAway()))
+    )
+      return;
+
+    const emailInput = page.locator('input#email');
+    const passwordInput = page.locator('input#password');
+    await expect(emailInput).toBeEditable();
+    for (let i = 0; i < 3; i += 1) {
+      await emailInput.fill(email);
+      await passwordInput.fill(password);
+      if (
+        (await emailInput.inputValue()) === email &&
+        (await passwordInput.inputValue()) === password
+      )
+        break;
+    }
+    await page.locator('#main-content button[type="submit"]').click();
+    try {
+      await page.waitForURL(arrived, { timeout: 30000, waitUntil: 'commit' });
+      return;
+    } catch (err) {
+      if (arrived(new URL(page.url()))) return;
+      if (attempt === 2) throw err;
+    }
+  }
+}
+
+/**
  * Log a player in through the real /login form and land on `next`.
  * A plain player (role 'player') gets a 403 from /api/admin/me and is routed
  * to `next` (or /player by default).
@@ -34,31 +91,13 @@ export async function loginPlayer(
   next: string,
   password: string = PLAYER_PASSWORD
 ): Promise<void> {
-  const loginUrl = `/login?next=${encodeURIComponent(next)}`;
-  const leftLogin = (url: URL) => !url.pathname.startsWith('/login');
-
-  // Deux tentatives. Sur un serveur encore froid (première connexion d'une
-  // tranche CI), un clic arrivé avant l'hydratation soumet le formulaire en
-  // natif (GET /login?…) : on reste sur /login sans erreur. La connexion
-  // n'est pas l'objet des specs qui l'utilisent — on la rejoue une fois.
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    await page.goto(loginUrl);
-    // 2e passage : la 1re connexion a pu aboutir entre-temps (/login redirige).
-    if (leftLogin(new URL(page.url()))) return;
-    await page.fill('input#email', email);
-    await page.fill('input#password', password);
-    // Le bouton du FORMULAIRE : le pied de page (newsletter) a aussi un submit.
-    await page.click('#main-content button[type="submit"]');
-    try {
-      // `commit` : seule l'URL compte ici ; attendre le `load` de la page
-      // d'arrivée faisait échouer la connexion quand l'espace était lent.
-      await page.waitForURL(leftLogin, { timeout: 15000, waitUntil: 'commit' });
-      return;
-    } catch (err) {
-      if (leftLogin(new URL(page.url()))) return;
-      if (attempt === 2) throw err;
-    }
-  }
+  await loginThroughForm(
+    page,
+    `/login?next=${encodeURIComponent(next)}`,
+    email,
+    password,
+    (url) => !url.pathname.startsWith('/login')
+  );
 }
 
 type JsonMock = Record<string, unknown> | unknown[];
@@ -136,33 +175,21 @@ export function buildMatch(overrides: Partial<MockMatch>): MockMatch {
   };
 }
 
-/**
- * Connexion staff par le vrai formulaire /login, jusqu'à l'admin. Même
- * seconde tentative que `loginPlayer` (soumission avant hydratation sur un
- * serveur froid : on reste sur /login sans erreur).
- */
+/** Connexion staff par le vrai formulaire /login, jusqu'à l'admin. */
 export async function loginStaff(
   page: Page,
   email: string,
   password: string
 ): Promise<void> {
-  const inAdmin = (url: URL) =>
-    url.pathname.startsWith('/admin') &&
-    !url.pathname.startsWith('/admin/login');
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    await page.goto('/login');
-    if (inAdmin(new URL(page.url()))) return;
-    await page.fill('input#email', email);
-    await page.fill('input#password', password);
-    await page.click('#main-content button[type="submit"]');
-    try {
-      await page.waitForURL(inAdmin, { timeout: 15000, waitUntil: 'commit' });
-      return;
-    } catch (err) {
-      if (inAdmin(new URL(page.url()))) return;
-      if (attempt === 2) throw err;
-    }
-  }
+  await loginThroughForm(
+    page,
+    '/login',
+    email,
+    password,
+    (url) =>
+      url.pathname.startsWith('/admin') &&
+      !url.pathname.startsWith('/admin/login')
+  );
 }
 
 /**

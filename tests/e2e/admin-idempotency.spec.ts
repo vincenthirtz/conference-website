@@ -10,6 +10,7 @@
 // withAdminIdempotency, donc valider ici suffit pour garantir le pattern.
 
 import { test, expect, type Page } from '@playwright/test';
+import { loginStaff } from './_helpers/playerSession';
 import { createClient } from '@supabase/supabase-js';
 import {
   supabaseTestClient,
@@ -38,11 +39,7 @@ async function getStaffToken(): Promise<string | null> {
 }
 
 async function loginAsUI(page: Page, email: string) {
-  await page.goto('/login');
-  await page.fill('input#email', email);
-  await page.fill('input#password', PASSWORD);
-  await page.click('#main-content button[type="submit"]');
-  await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
+  await loginStaff(page, email, PASSWORD);
 }
 
 test.describe('Admin idempotency middleware', () => {

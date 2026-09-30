@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { loginStaff } from './_helpers/playerSession';
 import {
   createTestStaff,
   createTestPlayer,
@@ -36,13 +37,7 @@ test.describe('Admin users management', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     // Login as admin
-    await page.goto('/login');
-    await page.fill('input#email', ADMIN_EMAIL);
-    await page.fill('input#password', TEST_PASSWORD);
-    await page.click('#main-content button[type="submit"]');
-
-    // Wait for redirect to admin
-    await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
+    await loginStaff(page, ADMIN_EMAIL, TEST_PASSWORD);
 
     // Navigate to users management page
     await page.goto('/admin/users/manage');
@@ -72,12 +67,7 @@ test.describe('Admin users management', () => {
     await createTestPlayer(TARGET_USER_EMAIL, TEST_PASSWORD);
 
     // Login as admin
-    await page.goto('/login');
-    await page.fill('input#email', ADMIN_EMAIL);
-    await page.fill('input#password', TEST_PASSWORD);
-    await page.click('#main-content button[type="submit"]');
-
-    await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
+    await loginStaff(page, ADMIN_EMAIL, TEST_PASSWORD);
 
     // Navigate to users management page
     await page.goto('/admin/users/manage');
@@ -105,12 +95,7 @@ test.describe('Admin users management', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     // Login as admin
-    await page.goto('/login');
-    await page.fill('input#email', ADMIN_EMAIL);
-    await page.fill('input#password', TEST_PASSWORD);
-    await page.click('#main-content button[type="submit"]');
-
-    await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
+    await loginStaff(page, ADMIN_EMAIL, TEST_PASSWORD);
 
     // Navigate to users management page
     await page.goto('/admin/users/manage');
@@ -172,12 +157,7 @@ test.describe('Admin users management', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
 
     // Login as admin
-    await page.goto('/login');
-    await page.fill('input#email', ADMIN_EMAIL);
-    await page.fill('input#password', TEST_PASSWORD);
-    await page.click('#main-content button[type="submit"]');
-
-    await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
+    await loginStaff(page, ADMIN_EMAIL, TEST_PASSWORD);
 
     // Navigate to users management page
     await page.goto('/admin/users/manage');

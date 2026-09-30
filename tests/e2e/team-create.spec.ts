@@ -24,33 +24,36 @@ async function solveCaptcha(page: Page): Promise<void> {
 const TEAM_NAME = `E2E Team ${Date.now()}`;
 const PLAYER_EMAIL = perWorker('hirtzvincent+testjoueur@gmail.com');
 const PLAYER_BTAG = 'TestPlayer#0001';
-const EXTRA_MEMBER_EMAILS = Array.from({ length: 5 }).map(
-  (_v, idx) => perWorker(`hirtzvincent+testjoueur${idx + 1}@gmail.com`)
+const EXTRA_MEMBER_EMAILS = Array.from({ length: 5 }).map((_v, idx) =>
+  perWorker(`hirtzvincent+testjoueur${idx + 1}@gmail.com`)
 );
 const EXTRA_MEMBER_BTAGS = Array.from({ length: 5 }).map(
   (_v, idx) => `TestMember#00${idx + 2}`
 );
 const ALL_TEST_EMAILS = [PLAYER_EMAIL, ...EXTRA_MEMBER_EMAILS];
 
+// Création d'équipe limitée à 3 / 5 min PAR IP : chromium puis mobile (même
+// tranche, même IP) dépassaient la limite → « Trop de requêtes ». Une IP par
+// chargement du module (en-tête de l'edge Netlify, lu par getClientIp).
+test.use({
+  extraHTTPHeaders: {
+    'x-nf-client-connection-ip': `10.99.${Number(process.env.TEST_PARALLEL_INDEX ?? 0)}.${1 + Math.floor(Math.random() * 250)}`,
+  },
+});
+
 // Pas de motif large (« E2E Team% ») au nettoyage : chromium et mobile jouent
 // cette spec en parallèle sur la même base, et l'un effaçait l'équipe de l'autre.
 test.describe('Team creation page', () => {
   test.describe.configure({ mode: 'serial' });
   test.beforeAll(async () => {
-    await deleteTeamsByName([
-      `${TEAM_NAME}%`,
-      `${TEAM_NAME}-bulk%`,
-    ]);
+    await deleteTeamsByName([`${TEAM_NAME}%`, `${TEAM_NAME}-bulk%`]);
     for (const email of ALL_TEST_EMAILS) {
       await deleteTestUser(email);
     }
   });
 
   test.afterAll(async () => {
-    await deleteTeamsByName([
-      `${TEAM_NAME}%`,
-      `${TEAM_NAME}-bulk%`,
-    ]);
+    await deleteTeamsByName([`${TEAM_NAME}%`, `${TEAM_NAME}-bulk%`]);
     for (const email of ALL_TEST_EMAILS) {
       await deleteTestUser(email);
     }

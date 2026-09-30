@@ -15,6 +15,7 @@
 // /api/player/*) n'est pas l'objet de la spec — cf. manage-team.spec.ts.
 
 import { test, expect, type Page } from '@playwright/test';
+import { loginStaff } from './_helpers/playerSession';
 import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 
 const STAFF_PASSWORD = 'TestPassw0rd!';
@@ -134,11 +135,7 @@ async function mockReads(
 }
 
 async function gotoCaptainView(page: Page) {
-  await page.goto('/login');
-  await page.fill('input#email', STAFF_EMAIL);
-  await page.fill('input#password', STAFF_PASSWORD);
-  await page.click('#main-content button[type="submit"]');
-  await page.waitForURL(/\/admin(?!\/login)/, { timeout: 20_000 });
+  await loginStaff(page, STAFF_EMAIL, STAFF_PASSWORD);
 
   await page.goto(`/admin/users/${TARGET_USER_ID}/captain-view`);
 }
