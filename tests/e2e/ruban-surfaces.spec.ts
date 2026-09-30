@@ -27,6 +27,7 @@ import {
 } from '../utils/supabaseTestClient';
 import { skipIfNoServiceRole } from './_helpers/playerSession';
 import {
+  RUBAN_BRIDGE,
   RUBAN_EXPECTED,
   RUBAN_PASSWORD,
   RUBAN_TOKENS,
@@ -123,6 +124,13 @@ test.describe('Le Ruban — surfaces et jetons', () => {
         const tokens = await readRootTokens(page, RUBAN_TOKENS);
         for (const [name, value] of Object.entries(tokens)) {
           expect(value, `${route} : ${name} ne doit pas être défini`).toBe('');
+        }
+        // Le pont Tailwind garde ses valeurs publiques (pas l'encre Ruban).
+        const bridge = await readRootTokens(page, Object.keys(RUBAN_BRIDGE));
+        for (const [name, ruban] of Object.entries(RUBAN_BRIDGE)) {
+          expect(bridge[name].toLowerCase(), `${route} : ${name}`).not.toBe(
+            ruban
+          );
         }
       });
     }
@@ -223,6 +231,12 @@ test.describe('Le Ruban — surfaces et jetons', () => {
       for (const name of RUBAN_TOKENS) {
         expect(admin[name], `${name} défini côté admin`).not.toBe('');
         expect(player[name], `${name} : joueuse = admin`).toBe(admin[name]);
+      }
+      for (const [name, value] of Object.entries(RUBAN_BRIDGE)) {
+        expect(admin[name].toLowerCase(), `pont ${name} (admin)`).toBe(value);
+        expect(player[name], `pont ${name} : joueuse = admin`).toBe(
+          admin[name]
+        );
       }
       for (const [name, value] of Object.entries(RUBAN_EXPECTED)) {
         expect(admin[name].toLowerCase(), name).toBe(value);

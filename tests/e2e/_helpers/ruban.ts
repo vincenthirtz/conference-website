@@ -6,7 +6,6 @@
 // leurs références ne seraient pas maîtrisées (polices, rendu du runner).
 
 import { expect, type Locator, type Page } from '@playwright/test';
-import { loginPlayer } from './playerSession';
 
 export const RUBAN_PASSWORD = 'TestPassw0rd!';
 
@@ -38,12 +37,20 @@ export const RUBAN_TOKENS = [
   '--glow-live',
   '--fd',
   '--fu',
-  '--color-neutral-900',
-  '--color-gray-800',
-  '--color-purple-500',
-  '--color-violet-400',
-  '--radius-3xl',
 ] as const;
+
+/**
+ * Pont Tailwind : ces variables EXISTENT sur le public (thème Tailwind) ; sous
+ * une surface Ruban elles sont détournées vers l'encre / l'orchidée. Valeurs
+ * attendues sous Ruban.
+ */
+export const RUBAN_BRIDGE: Record<string, string> = {
+  '--color-neutral-900': '#1d1520',
+  '--color-gray-800': '#2f2732',
+  '--color-purple-500': '#b467d1',
+  '--color-violet-400': '#ca85e6',
+  '--radius-3xl': '14px',
+};
 
 /** Valeurs attendues (planche « Du dessin au code »), pour les plus parlantes. */
 export const RUBAN_EXPECTED: Record<string, string> = {
@@ -63,6 +70,7 @@ export async function readRootTokens(
   page: Page,
   names: readonly string[] = [
     ...RUBAN_TOKENS,
+    ...Object.keys(RUBAN_BRIDGE),
     '--target-min',
     '--body-size',
     '--admin-sidebar-w',
@@ -265,20 +273,31 @@ export async function mockPlayerDashboardApis(page: Page) {
 }
 
 /**
- * Connexion joueuse, une seconde tentative en cas de délai : la connexion
- * n'est pas l'objet de ces specs, et la première d'une tranche tombe parfois
- * sur un serveur encore froid.
+ * Connexion joueuse par le vrai formulaire /login. La connexion n'est pas
+ * l'objet de ces specs : attente plus longue que le helper commun (la
+ * première connexion d'une tranche tombe sur un serveur froid), et, si la page
+ * reste sur /login alors que la session est posée, on vérifie qu'elle ouvre
+ * bien `next` plutôt que de ressaisir le formulaire (que /login démonte en
+ * redirigeant une session active).
  */
 export async function loginRubanPlayer(
   page: Page,
   email: string,
   next: string
 ) {
-  try {
-    await loginPlayer(page, email, next, RUBAN_PASSWORD);
-  } catch {
-    // Connexion aboutie entre-temps : rien à refaire.
-    if (!new URL(page.url()).pathname.startsWith('/login')) return;
-    await loginPlayer(page, email, next, RUBAN_PASSWORD);
-  }
+  await page.goto(`/login?next=${encodeURIComponent(next)}`);
+  await page.locator('input#email').fill(email);
+  await page.locator('input#password').fill(RUBAN_PASSWORD);
+  await page.locator('button[type="submit"]').click();
+  const left = await page
+    .waitForURL((url) => !url.pathname.startsWith('/login'), {
+      timeout: 30000,
+    })
+    .then(() => true)
+    .catch(() => false);
+  if (left) return;
+  await page.goto(next);
+  expect(new URL(page.url()).pathname, 'session joueuse établie').not.toMatch(
+    /^\/login/
+  );
 }
