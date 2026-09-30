@@ -354,7 +354,19 @@ async function handlePut(
   // 3) Optionnel : recalcul du score du match à partir des games
   let recomputeResult: any = null;
 
-  if (recomputeMode === 'from_games') {
+  // Aucune map JOUÉE (liste vide, ou cartes du veto encore à 0-0 — un score
+  // absent est stocké à 0) : il n'y a rien à recalculer. Sans ce garde,
+  // l'écran d'édition — qui enregistre les maps à chaque sauvegarde, même
+  // pour un simple changement d'horaire — réécrivait un 0-0 « terminé », que
+  // applyMatchScore requalifie en série inachevée : un match pas encore joué
+  // passait « en cours ».
+  const hasPlayedMap = newGames.some(
+    (g) =>
+      g.winner_team_id != null ||
+      (g.team1_score ?? 0) + (g.team2_score ?? 0) > 0
+  );
+
+  if (recomputeMode === 'from_games' && hasPlayedMap) {
     const [team1Id, team2Id] = teamIds;
 
     // Auto-fill winner_team_id on games that don't have one set

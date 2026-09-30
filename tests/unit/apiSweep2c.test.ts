@@ -239,6 +239,44 @@ describe('/api/matches/[matchId]/games', () => {
     expect(res.statusCode).toBe(200);
   });
 
+  // Régression : l'écran d'édition enregistre les maps à chaque sauvegarde
+  // (même un simple changement d'horaire) avec `from_games` quand le score
+  // est vide. Sans map jouée, le 0-0 recalculé passait le match « en cours ».
+  it.each([
+    ['aucune map', []],
+    [
+      'maps du veto sans score',
+      [{ map_name: 'Ilios', team1_score: null, team2_score: null }],
+    ],
+  ])('PUT from_games avec %s : un match pas encore joué reste pending', async (_label, games) => {
+    setupStaff();
+    store.matches = [
+      {
+        id: 'm1',
+        team1_id: TEAM_A,
+        team2_id: TEAM_B,
+        status: 'pending',
+        team1_score: null,
+        team2_score: null,
+        match_format: 'bo3',
+      },
+    ] as any;
+    const res = makeRes();
+    await gamesHandler(
+      makeAuthedReq({
+        method: 'PUT',
+        query: { matchId: 'm1' },
+        body: { games, recomputeMode: 'from_games' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    const m = (store.matches as any[]).find((x) => x.id === 'm1');
+    expect(m.status).toBe('pending');
+    expect(m.team1_score).toBeNull();
+    expect(m.team2_score).toBeNull();
+  });
+
   it('PUT with recomputeMode swallows applyMatchScore errors when match is missing', async () => {
     setupStaff();
     // Match ID provided but no row in the store → real applyMatchScore throws,
