@@ -129,11 +129,15 @@ test.describe('Manage-team roster console', () => {
     await expect(
       page.getByRole('heading', { name: 'Recrutement' })
     ).toBeVisible();
+    // « Rôle en jeu » (spécialité) : un par membre, capitaine comprise —
+    // elle joue aussi. « Rôle dans l'équipe » : seulement pour les membres
+    // non capitaines (MemberControls, garde `!is_captain`).
     await expect(
       page.getByRole('combobox', { name: 'Rôle en jeu' })
-    ).toHaveCount(
-      2 // one per actionable (non-captain) member
-    );
+    ).toHaveCount(3);
+    await expect(
+      page.getByRole('combobox', { name: "Rôle dans l'équipe" })
+    ).toHaveCount(2);
   });
 
   test('recruiting toggle issues a POST and reflects the new state', async ({

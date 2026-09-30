@@ -684,10 +684,20 @@ test.describe('Diagnostic admin', () => {
         '/admin/logs',
       ];
       for (const pagePath of criticalPages) {
-        await page.goto(pagePath, {
-          waitUntil: 'networkidle',
-          timeout: 15_000,
-        });
+        // `load` + repère (h1), puis un calme réseau BORNÉ : les pages admin
+        // gardent des requêtes en vol (sondages) et `networkidle` seul
+        // expirait. Les requêtes de chargement sont collectées quand même ;
+        // une requête encore pendante à la fin reste hors `completed`.
+        await page.goto(pagePath, { waitUntil: 'load', timeout: 15_000 });
+        await expect(
+          page
+            .locator('#main-content')
+            .getByRole('heading', { level: 1 })
+            .first()
+        ).toBeVisible({ timeout: 15_000 });
+        await page
+          .waitForLoadState('networkidle', { timeout: 5_000 })
+          .catch(() => undefined);
       }
 
       const completed = timings.filter((t) => t.end > 0);
