@@ -26,6 +26,7 @@ import { ADMIN_NAV_TRAILS } from '@/components/admin/navigation/adminNavTrail';
 import { useAdminCrumbs } from '@/components/admin/AdminBreadcrumbs';
 import { useAdminAlertsCount } from '@/hooks/admin/useAdminAlertsCount';
 import { openCommandPalette } from '@/components/admin/commandPaletteEvents';
+import AdminMenuIcon from '@/components/admin/navigation/adminMenuIcons';
 
 export type AdminShellProps = {
   staffName: string | null;
@@ -81,7 +82,17 @@ function NavItem({
             containsActive ? 'text-[var(--t1)]' : idle
           }`}
         >
-          {link.title}
+          <span className="flex min-w-0 items-center gap-2.5">
+            <AdminMenuIcon
+              title={link.title}
+              href={link.ref}
+              isSection
+              className={
+                containsActive ? 'text-[var(--or)]' : 'text-[var(--t4)]'
+              }
+            />
+            <span className="truncate">{link.title}</span>
+          </span>
           <svg
             aria-hidden
             width="12"
@@ -125,13 +136,18 @@ function NavItem({
         href={link.ref}
         onClick={onNavigate}
         aria-current={active ? 'page' : undefined}
-        className={`relative flex items-center py-2 pr-4 ${pad} ${size} transition-colors ${
+        className={`relative flex items-center gap-2.5 py-2 pr-4 ${pad} ${size} transition-colors ${
           active
             ? 'bg-[var(--s2)] text-[var(--t1)] before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-[var(--or)]'
             : idle
         }`}
       >
-        {link.title}
+        <AdminMenuIcon
+          title={link.title}
+          href={link.ref}
+          className={active ? 'text-[var(--or)]' : 'text-[var(--t4)]'}
+        />
+        <span className="min-w-0 truncate">{link.title}</span>
       </Link>
     </li>
   );
