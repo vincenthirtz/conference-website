@@ -25,9 +25,17 @@ import { useStaffSession } from '@/hooks/useStaffSession';
 import { canAccess } from '@/utils/admin/adminAccess';
 import { PALETTE_ACTIONS } from './commandPaletteActions';
 import { OPEN_COMMAND_PALETTE_EVENT } from './commandPaletteEvents';
+import {
+  buildSections,
+  flattenAdminPages,
+  parseQuery,
+  wantsServerSearch,
+  type PaletteRow,
+} from './commandPaletteModel';
+import { ADMIN_LINKS, filterAdminLinks } from '@/components/Navbar/adminLinks';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminCommandPalette from '@/lib/i18n/locales/admin-fr/adminCommandPalette';
-import type { AdminSearchPayload, SearchHit } from '@/pages/api/admin/search';
+import type { AdminSearchPayload } from '@/pages/api/admin/search';
 
 import { logger } from '../../utils/logger';
 
@@ -66,7 +74,7 @@ export default function CommandPalette() {
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [hits, setHits] = useState<SearchHit[]>([]);
+  const [hits, setHits] = useState<PaletteRow[]>([]);
   const [recent, setRecent] = useState<Recent[]>([]);
   const [cursor, setCursor] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -82,8 +90,8 @@ export default function CommandPalette() {
    * (lot L14) : sans ça, un arbitre se voyait proposer « Support » et
    * « Tâches », deux 403.
    */
-  const { staffRole, staffPermissions } = useStaffSession();
-  const actions = useMemo<SearchHit[]>(
+  const { staffRole, staffPermissions, activeTenantKind } = useStaffSession();
+  const actions = useMemo<PaletteRow[]>(
     () =>
       PALETTE_ACTIONS.filter((a) =>
         canAccess(a.access, staffRole, staffPermissions)
@@ -95,6 +103,36 @@ export default function CommandPalette() {
         href: a.href,
       })),
     [t, staffRole, staffPermissions]
+  );
+
+  /**
+   * Pages du menu, filtrées EXACTEMENT comme le menu (rôle, permissions,
+   * console développeur) : la palette ne propose aucune page que le menu
+   * cacherait. Cherchées sur place, sans réseau, dès la première lettre.
+   */
+  const pages = useMemo(
+    () =>
+      flattenAdminPages(
+        filterAdminLinks(
+          staffRole,
+          ADMIN_LINKS,
+          activeTenantKind ?? undefined,
+          staffPermissions
+        )
+      ),
+    [staffRole, activeTenantKind, staffPermissions]
+  );
+
+  const recentRows = useMemo<PaletteRow[]>(
+    () =>
+      recent.map((r) => ({
+        kind: 'recent',
+        id: `recent:${r.href}`,
+        title: r.title,
+        subtitle: null,
+        href: r.href,
+      })),
+    [recent]
   );
 
   const close = useCallback(() => {
@@ -142,11 +180,12 @@ export default function CommandPalette() {
   // Recherche débouncée : on ne part pas au serveur à chaque frappe.
   useEffect(() => {
     if (!open) return;
-    const q = query.trim();
-    if (q.length < 2) {
+    if (!wantsServerSearch(query)) {
       setHits([]);
+      setLoading(false);
       return;
     }
+    const q = parseQuery(query).text;
     let cancelled = false;
     setLoading(true);
     const timer = setTimeout(() => {
@@ -156,7 +195,6 @@ export default function CommandPalette() {
         .then((data) => {
           if (!cancelled) {
             setHits(data.hits ?? []);
-            setCursor(0);
           }
         })
         .catch((err) => {
@@ -173,11 +211,27 @@ export default function CommandPalette() {
     };
   }, [open, query, adminFetchJson]);
 
-  const rows: SearchHit[] = query.trim().length >= 2 ? hits : actions;
+  const sections = useMemo(
+    () => buildSections({ query, actions, pages, hits, recent: recentRows }),
+    [query, actions, pages, hits, recentRows]
+  );
+  // Une seule liste pour le clavier : le curseur traverse les sections.
+  const rows = useMemo(() => sections.flatMap((s) => s.rows), [sections]);
+
+  // Nouvelle saisie ou nouveaux résultats : on repart de la première ligne.
+  useEffect(() => {
+    setCursor(0);
+  }, [query, hits]);
 
   const go = useCallback(
-    (hit: SearchHit) => {
+    (hit: PaletteRow, newTab = false) => {
       pushRecent({ title: hit.title, href: hit.href });
+      if (newTab) {
+        // Ctrl/⌘ : on ouvre à côté et on garde la palette pour enchaîner.
+        window.open(hit.href, '_blank', 'noopener');
+        setRecent(readRecent());
+        return;
+      }
       close();
       router.push(hit.href);
     },
@@ -203,7 +257,7 @@ export default function CommandPalette() {
     if (e.key === 'Enter') {
       e.preventDefault();
       const hit = rows[cursor];
-      if (hit) go(hit);
+      if (hit) go(hit, e.ctrlKey || e.metaKey);
       return;
     }
     // Piège à focus : la palette est modale, la tabulation ne doit pas en
@@ -254,62 +308,59 @@ export default function CommandPalette() {
         <ul
           role="listbox"
           aria-label={t.results}
-          className="max-h-80 overflow-y-auto"
+          className="max-h-96 overflow-y-auto py-1"
         >
           {rows.length === 0 && (
             <li className="px-5 py-4 text-sm text-neutral-500">
               {loading ? t.searching : t.noResult}
             </li>
           )}
-          {rows.map((hit, i) => (
-            <li key={`${hit.kind}-${hit.id}`}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={i === cursor}
-                onMouseEnter={() => setCursor(i)}
-                onClick={() => go(hit)}
-                className={`flex w-full items-center gap-3 px-5 py-2.5 text-left text-sm transition ${
-                  i === cursor ? 'bg-white/10 text-white' : 'text-neutral-300'
-                }`}
-              >
-                <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-wide text-neutral-500">
-                  {t[`kind_${hit.kind}` as keyof typeof t] ?? hit.kind}
-                </span>
-                <span className="min-w-0 flex-1 truncate">{hit.title}</span>
-                {hit.subtitle && (
-                  <span className="shrink-0 truncate text-xs text-neutral-500">
-                    {hit.subtitle}
-                  </span>
-                )}
-              </button>
+          {sections.map((section) => (
+            <li key={section.key} role="presentation">
+              <p className="px-5 pb-1 pt-2.5 font-mono text-[10px] uppercase tracking-wide text-neutral-500">
+                {t[`section_${section.key}`]}
+              </p>
+              <ul role="group" aria-label={t[`section_${section.key}`]}>
+                {section.rows.map((hit) => {
+                  const i = rows.indexOf(hit);
+                  return (
+                    <li key={`${hit.kind}-${hit.id}`}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={i === cursor}
+                        onMouseEnter={() => setCursor(i)}
+                        onClick={(e) => go(hit, e.ctrlKey || e.metaKey)}
+                        className={`flex w-full items-center gap-3 px-5 py-2 text-left text-sm transition ${
+                          i === cursor
+                            ? 'bg-white/10 text-white'
+                            : 'text-neutral-300'
+                        }`}
+                      >
+                        <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-wide text-neutral-500">
+                          {t[`kind_${hit.kind}` as keyof typeof t] ?? hit.kind}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">
+                          {hit.title}
+                        </span>
+                        {hit.subtitle && (
+                          <span className="max-w-[45%] shrink-0 truncate text-xs text-neutral-500">
+                            {hit.subtitle}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             </li>
           ))}
+          {loading && rows.length > 0 && hits.length === 0 && (
+            <li className="px-5 py-2 text-xs text-neutral-500">
+              {t.searching}
+            </li>
+          )}
         </ul>
-
-        {recent.length > 0 && query.trim().length < 2 && (
-          <div className="border-t border-white/10 px-5 py-3">
-            <p className="font-mono text-[10px] uppercase tracking-wide text-neutral-500">
-              {t.recent}
-            </p>
-            <ul className="mt-1.5 flex flex-col gap-1">
-              {recent.map((r) => (
-                <li key={r.href}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      close();
-                      router.push(r.href);
-                    }}
-                    className="truncate text-left text-xs text-neutral-400 transition hover:text-white"
-                  >
-                    {r.title}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
 
         <p className="border-t border-white/10 px-5 py-2 font-mono text-[10px] text-neutral-600">
           {t.hint}

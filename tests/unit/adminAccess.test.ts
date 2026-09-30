@@ -54,6 +54,10 @@ describe('palette ⌘K', () => {
       'action-current',
       'action-tasks',
       'action-support',
+      'create-tournament',
+      'create-team',
+      'create-news',
+      'create-staff',
     ]);
   });
 });
