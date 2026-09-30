@@ -102,8 +102,14 @@ jobs:
       # Pas de cache des images Docker : un `docker save/load` de ~1 Go ne
       # battrait pas un pull déjà masqué par le build.
       - name: Démarrer une Supabase locale (arrière-plan)
+        # Reprises + nettoyage des conteneurs entre deux essais : l'ECR bride
+        # les pulls simultanés des tranches, et un démarrage avorté garde ses
+        # ports (54322 « address already in use »). Cf. le script.
+        env:
+          SHARD_INDEX: ${{ matrix.shard }}
         run: |
-          nohup sh -c 'supabase start -x studio,postgres-meta,imgproxy,edge-runtime,logflare,vector,supavisor > "$RUNNER_TEMP/supabase-start.log" 2>&1; echo $? > "$RUNNER_TEMP/supabase-start.exit"' > /dev/null 2>&1 &
+          : > "$RUNNER_TEMP/supabase-start.log"
+          nohup bash scripts/e2e-supabase-start.sh "$RUNNER_TEMP/supabase-start.log" "$RUNNER_TEMP/supabase-start.exit" > /dev/null 2>&1 &
 
       - name: Installer les dépendances
         run: npm ci
