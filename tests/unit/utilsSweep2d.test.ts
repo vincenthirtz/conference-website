@@ -87,7 +87,12 @@ describe('importTeams', () => {
     expect(result.created).toBe(1);
   });
 
-  it('inserts players into team_members', async () => {
+  it('rattache au roster les BattleTags liés à un compte, remonte les autres', async () => {
+    // team_members.user_id est NOT NULL (FK auth.users) : un BattleTag sans
+    // compte ne doit PAS produire de ligne orpheline, ni être avalé.
+    store.user_battlenet_links = [
+      { auth_user_id: 'u-p1', battle_tag: 'P1#1234' },
+    ] as any;
     const result = await importTeams(
       [
         {
@@ -100,8 +105,16 @@ describe('importTeams', () => {
       { tenantId: TEST_TENANT, sourceLabel: 'csv_import' }
     );
     expect(result.created).toBe(1);
-    // 2 non-empty players inserted
-    expect((store.team_members as any[]).length).toBe(2);
+    const members = store.team_members as any[];
+    expect(members).toHaveLength(1);
+    expect(members[0]).toMatchObject({
+      user_id: 'u-p1',
+      battle_tag: 'P1#1234',
+    });
+    expect(members.every((m) => m.user_id)).toBe(true);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toMatchObject({ row: 1 });
+    expect(result.errors[0].message).toMatch(/P2#5678.*aucun compte/);
   });
 
   it('upserts into tournament_teams when tournamentId provided', async () => {

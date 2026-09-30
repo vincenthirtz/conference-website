@@ -21,6 +21,10 @@ const TS = Date.now();
 const STAFF_EMAIL = `e2e-import-${TS}@test.local`;
 const STAFF_PASSWORD = 'TestPassw0rd!42';
 const TEAM_PREFIX = `E2EImp-${TS}`;
+// Seule joueuse de l'import qui a un compte (BattleTag lié) : les deux autres
+// n'en ont pas et doivent être remontées, pas insérées sans `user_id`.
+const LINKED_TAG = `Alice${TS}#1234`;
+let linkedUserId: string | null = null;
 
 const supabaseUrl =
   process.env.TEST_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -61,10 +65,29 @@ test.describe('Teams import E2E (CSV + platform)', () => {
       .select('id')
       .single();
     tournamentId = t!.id;
+
+    const { data: u } = await supabaseTestClient.auth.admin.createUser({
+      email: `e2e-import-linked-${TS}@test.local`,
+      password: STAFF_PASSWORD,
+      email_confirm: true,
+    });
+    linkedUserId = u?.user?.id ?? null;
+    if (linkedUserId) {
+      await supabaseTestClient.from('user_battlenet_links').insert({
+        auth_user_id: linkedUserId,
+        battle_net_id: `e2e-import-${TS}`,
+        battle_tag: LINKED_TAG,
+      });
+    }
   });
 
   test.afterAll(async () => {
     if (!supabaseTestClient) return;
+
+    if (linkedUserId) {
+      // Cascade : user_battlenet_links et team_members suivent le compte.
+      await supabaseTestClient.auth.admin.deleteUser(linkedUserId);
+    }
 
     // Cleanup teams created by import
     const { data: teams } = await supabaseTestClient
@@ -159,7 +182,7 @@ test.describe('Teams import E2E (CSV + platform)', () => {
     }) => {
       const csv = [
         'name,short_name,country,joueurs',
-        `${TEAM_PREFIX}-Alpha,A1,FR,Alice#1234;Bob#5678`,
+        `${TEAM_PREFIX}-Alpha,A1,FR,${LINKED_TAG};Bob#5678`,
         `${TEAM_PREFIX}-Beta,B1,BE,Charlie#9999`,
         `${TEAM_PREFIX}-Gamma,G1,LU,`,
       ].join('\n');
@@ -175,13 +198,28 @@ test.describe('Teams import E2E (CSV + platform)', () => {
       expect(body.skipped).toBe(0);
       expect(body.teams).toHaveLength(3);
 
-      // DB sanity
+      // Roster : une ligne = un compte. Seule la joueuse liée est rattachée ;
+      // les deux BattleTags sans compte sont REMONTÉS (à inviter), pas avalés.
       const teamIds = body.teams.map((t: any) => t.id);
       const { data: members } = await supabaseTestClient!
         .from('team_members')
-        .select('team_id, battle_tag')
+        .select('team_id, user_id, battle_tag')
         .in('team_id', teamIds);
-      expect(members?.length).toBe(3); // Alice, Bob, Charlie
+      expect(members).toHaveLength(1);
+      expect(members![0]).toMatchObject({
+        user_id: linkedUserId,
+        battle_tag: LINKED_TAG,
+      });
+      const rosterErrors = (body.errors as { message: string }[]).filter((e) =>
+        /aucun compte/.test(e.message)
+      );
+      expect(rosterErrors.map((e) => e.message).join(' | ')).toMatch(
+        /Bob#5678/
+      );
+      expect(rosterErrors.map((e) => e.message).join(' | ')).toMatch(
+        /Charlie#9999/
+      );
+      expect(rosterErrors).toHaveLength(2);
 
       const { data: registrations } = await supabaseTestClient!
         .from('tournament_teams')
