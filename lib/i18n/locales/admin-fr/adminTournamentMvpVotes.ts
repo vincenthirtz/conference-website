@@ -51,8 +51,10 @@ export default adminNs('adminTournamentMvpVotes', {
   sourceCombined: 'Twitch + Discord',
   openTitle: 'Lancer un vote du public',
   openHelp:
-    'Pour un match terminé, sans passer par le cockpit caster (match sans diffusion, par exemple). Le bot poste le vote dans son salon Discord ; seuls les supporters votent, les !mvp du chat Twitch ne sont relayés que par le cockpit.',
-  openNone: 'Aucun match terminé sans vote du public.',
+    'Pour un match en cours, terminé ou à venir — par exemple en fin de diffusion, avant la saisie du score. Le bot poste le vote dans son salon Discord (supporters), et le chat Twitch vote par !mvp <pseudo>.',
+  openNone: 'Aucun match (en cours, terminé ou à venir) sans vote du public.',
+  openStateOngoing: 'En cours',
+  openStateUpcoming: 'À venir',
   openMatchLabel: 'Match',
   openMinutesLabel: 'Durée (min)',
   openCta: 'Lancer le vote',

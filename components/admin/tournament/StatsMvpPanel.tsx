@@ -48,6 +48,8 @@ import {
 /** Match terminé sans vote du public : on peut le lancer à la main. */
 type OpenableMatch = {
   id: string;
+  /** pending · ongoing · finished (le vote du public s'ouvre sur les trois). */
+  status?: string | null;
   roundName: string | null;
   scheduledAt: string | null;
   team1Name: string | null;
@@ -265,6 +267,11 @@ export default function StatsMvpPanel({
                   <option value="">—</option>
                   {(data.openable ?? []).map((m) => (
                     <option key={m.id} value={m.id}>
+                      {m.status === 'ongoing'
+                        ? `${t.openStateOngoing} · `
+                        : m.status === 'pending'
+                          ? `${t.openStateUpcoming} · `
+                          : ''}
                       {m.team1Name ?? t.tbd} {t.vs} {m.team2Name ?? t.tbd}
                       {m.roundName ? ` · ${m.roundName}` : ''}
                       {m.scheduledAt ? ` · ${fmtDate(m.scheduledAt)}` : ''}

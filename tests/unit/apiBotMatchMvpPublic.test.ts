@@ -181,11 +181,11 @@ describe('/api/bot/v1/matches/[matchId]/mvp-public', () => {
     ).toHaveLength(0);
   });
 
-  it('`open` refuse un match non terminé', async () => {
-    (store.matches as any[])[0].status = 'live';
+  it('`open` refuse un match annulé (un match en cours, lui, s’ouvre)', async () => {
+    (store.matches as any[])[0].status = 'cancelled';
     const res = await call('POST', { action: 'open' });
     expect(res.statusCode).toBe(409);
-    expect(res.body.code).toBe('NOT_FINISHED');
+    expect(res.body.code).toBe('NOT_PLAYABLE');
     expect(((store.match_public_mvp_polls as any[]) ?? []).length).toBe(0);
   });
 

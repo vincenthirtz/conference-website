@@ -49,8 +49,11 @@ export default {
   sourceCombined: 'Twitch + Discord',
   openTitle: 'Start an audience vote',
   openHelp:
-    'For a finished match, without the caster cockpit (a match that is not broadcast, for instance). The bot posts the vote in its Discord channel; only supporters vote, Twitch chat !mvp votes are relayed by the cockpit only.',
-  openNone: 'No finished match without an audience vote.',
+    'For a match in progress, finished or upcoming — e.g. at the end of a broadcast, before the score is entered. The bot posts the vote in its Discord channel (supporters), and Twitch chat votes with !mvp <name>.',
+  openNone:
+    'No match (in progress, finished or upcoming) without an audience vote.',
+  openStateOngoing: 'In progress',
+  openStateUpcoming: 'Upcoming',
   openMatchLabel: 'Match',
   openMinutesLabel: 'Duration (min)',
   openCta: 'Start the vote',

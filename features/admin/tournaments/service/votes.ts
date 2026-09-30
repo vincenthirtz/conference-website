@@ -159,13 +159,33 @@ export async function publicVotes(ctx: ServiceContext, tournamentId: string) {
     tournamentId,
     'public'
   );
-  // Matchs où un vote du public peut être LANCÉ À LA MAIN : terminés, jamais
-  // ouverts. Les refus fins (forfait, bye) restent au serveur à l'ouverture.
+  // Matchs où un vote du public peut être LANCÉ À LA MAIN, jamais ouverts :
+  // en cours d'abord (le cas du direct), puis terminés (les plus récents),
+  // puis à venir (les plus proches). Annulés et reportés exclus ; les refus
+  // fins (forfait, bye) restent au serveur à l'ouverture.
+  const rank = (s: string | null) =>
+    s === 'ongoing' ? 0 : s === 'finished' ? 1 : 2;
   const openable = matches
-    .filter((m) => m.status === 'finished' && !polls.has(m.id))
-    .sort((a, b) => (b.scheduled_at ?? '').localeCompare(a.scheduled_at ?? ''))
+    .filter(
+      (m) =>
+        (m.status === 'ongoing' ||
+          m.status === 'finished' ||
+          m.status === 'pending') &&
+        !polls.has(m.id)
+    )
+    .sort((a, b) => {
+      const r = rank(a.status) - rank(b.status);
+      if (r !== 0) return r;
+      const da = a.scheduled_at ?? '';
+      const db = b.scheduled_at ?? '';
+      // À venir : le plus proche d'abord ; sinon le plus récent d'abord.
+      return a.status === 'pending'
+        ? da.localeCompare(db)
+        : db.localeCompare(da);
+    })
     .map((m) => ({
       id: m.id,
+      status: m.status,
       roundName: m.round_name,
       scheduledAt: m.scheduled_at,
       team1Name: nameOf(m.team1_id),

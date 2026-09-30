@@ -223,7 +223,7 @@ describe('GET /api/admin/tournament/[id]/mvp-public-votes', () => {
     expect(res.headers['Cache-Control']).toBe('no-store');
   });
 
-  it('liste les matchs TERMINÉS sans vote du public, pour les lancer à la main', async () => {
+  it('liste les matchs sans vote du public — terminés puis à venir — pour les lancer à la main', async () => {
     const M3 = 'aaaaaaaa-0000-4000-8000-000000000003';
     (store.matches as unknown as Array<Record<string, unknown>>).push({
       id: M3,
@@ -240,8 +240,9 @@ describe('GET /api/admin/tournament/[id]/mvp-public-votes', () => {
     const openable = (
       res.body as { openable: Array<{ id: string; team1Name: string }> }
     ).openable;
-    // M1 a déjà un vote, M2 n'est pas terminé : seul M3 est proposé.
-    expect(openable.map((m) => m.id)).toEqual([M3]);
+    // M1 a déjà un vote. M3 (terminé) passe avant M2 (à venir) : le vote du
+    // public s'ouvre aussi sur un match pas encore joué.
+    expect(openable.map((m) => m.id)).toEqual([M3, M2]);
     expect(openable[0].team1Name).toBe('Bravo');
   });
 

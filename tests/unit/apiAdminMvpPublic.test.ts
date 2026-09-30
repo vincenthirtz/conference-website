@@ -217,9 +217,17 @@ describe('/api/admin/matches/[matchId]/mvp-public', () => {
     );
   });
 
-  it('refuse un match qui n’est pas terminé', async () => {
+  it('ouvre aussi un match EN COURS (fin de diffusion, score pas encore saisi)', async () => {
+    const res = await call('POST', { action: 'open' }, MATCH_ONGOING);
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('refuse un match annulé ou reporté', async () => {
+    (store.matches as any[]).find((m) => m.id === MATCH_ONGOING).status =
+      'cancelled';
     const res = await call('POST', { action: 'open' }, MATCH_ONGOING);
     expect(res.statusCode).toBe(409);
+    expect(JSON.stringify(res.body)).toMatch(/annulé ou reporté/);
   });
 
   it('ouvrir deux fois ne remet pas le compteur à zéro', async () => {
