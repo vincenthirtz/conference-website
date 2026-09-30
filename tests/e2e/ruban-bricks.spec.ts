@@ -21,13 +21,14 @@ import {
   deleteTestStaff,
   deleteTestUser,
 } from '../utils/supabaseTestClient';
-import { loginPlayer, skipIfNoServiceRole } from './_helpers/playerSession';
+import { skipIfNoServiceRole } from './_helpers/playerSession';
 import {
   GRAMMAR_PROPS,
   RUBAN_PASSWORD,
   computed,
   contrastRatio,
   keyboardFocus,
+  loginRubanPlayer,
   loginStaff,
 } from './_helpers/ruban';
 
@@ -95,7 +96,7 @@ async function openAdminTokens(page: Page) {
 }
 
 async function openPlayerProfile(page: Page) {
-  await loginPlayer(page, PLAYER_EMAIL, '/player/profile', RUBAN_PASSWORD);
+  await loginRubanPlayer(page, PLAYER_EMAIL, '/player/profile');
   await page.goto('/player/profile');
   // Le bouton du KIT (d'autres « Enregistrer » non migrés existent plus bas).
   const primary = page

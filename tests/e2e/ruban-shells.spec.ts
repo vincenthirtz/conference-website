@@ -15,10 +15,11 @@ import {
   deleteTestStaff,
   deleteTestUser,
 } from '../utils/supabaseTestClient';
-import { loginPlayer, skipIfNoServiceRole } from './_helpers/playerSession';
+import { skipIfNoServiceRole } from './_helpers/playerSession';
 import {
   RUBAN_PASSWORD,
   expectSurface,
+  loginRubanPlayer,
   loginStaff,
   mockPlayerDashboardApis,
 } from './_helpers/ruban';
@@ -68,9 +69,9 @@ test.describe('Le Ruban — coquilles admin et joueuse', () => {
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
-    await page.setViewportSize({ width: 375, height: 812 });
     await mockPlayerDashboardApis(page);
-    await loginPlayer(page, PLAYER_EMAIL, '/player', RUBAN_PASSWORD);
+    await loginRubanPlayer(page, PLAYER_EMAIL, '/player');
+    await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/player');
     await expectSurface(page, 'player');
 
@@ -112,7 +113,7 @@ test.describe('Le Ruban — coquilles admin et joueuse', () => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
     await page.setViewportSize({ width: 1280, height: 800 });
     await mockPlayerDashboardApis(page);
-    await loginPlayer(page, PLAYER_EMAIL, '/player/matches', RUBAN_PASSWORD);
+    await loginRubanPlayer(page, PLAYER_EMAIL, '/player/matches');
     await page.goto('/player/matches');
     await expectSurface(page, 'player');
 

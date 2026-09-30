@@ -13,9 +13,10 @@
 
 import { test, expect } from '@playwright/test';
 import { createTestPlayer, deleteTestUser } from '../utils/supabaseTestClient';
-import { loginPlayer, skipIfNoServiceRole } from './_helpers/playerSession';
+import { skipIfNoServiceRole } from './_helpers/playerSession';
 import {
   RUBAN_PASSWORD,
+  loginRubanPlayer,
   expectSurface,
   hasHorizontalOverflow,
   mockPlayerDashboardApis,
@@ -50,7 +51,7 @@ test.describe('Le Ruban — archétypes joueuse à 375 px', () => {
     }) => {
       test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
       if (route === '/player') await mockPlayerDashboardApis(page);
-      await loginPlayer(page, PLAYER_EMAIL, route, RUBAN_PASSWORD);
+      await loginRubanPlayer(page, PLAYER_EMAIL, route);
       await page.goto(route);
       expect(new URL(page.url()).pathname).toBe(route);
       await expectSurface(page, 'player');

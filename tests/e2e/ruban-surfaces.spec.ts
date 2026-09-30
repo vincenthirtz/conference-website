@@ -25,12 +25,13 @@ import {
   deleteTestUser,
   supabaseTestClient,
 } from '../utils/supabaseTestClient';
-import { loginPlayer, skipIfNoServiceRole } from './_helpers/playerSession';
+import { skipIfNoServiceRole } from './_helpers/playerSession';
 import {
   RUBAN_EXPECTED,
   RUBAN_PASSWORD,
   RUBAN_TOKENS,
   expectSurface,
+  loginRubanPlayer,
   loginStaff,
   readRootTokens,
 } from './_helpers/ruban';
@@ -82,7 +83,9 @@ test.describe('Le Ruban — surfaces et jetons', () => {
       .insert({
         team_id: teamId,
         user_id: playerId,
-        role: 'captain',
+        // Rôles admis : player/coach/substitute/manager ; le capitanat vit
+        // dans `teams.captain_id`.
+        role: 'player',
         tenant_id: DEFAULT_TENANT_ID,
       });
     if (memberError) throw memberError;
@@ -145,7 +148,7 @@ test.describe('Le Ruban — surfaces et jetons', () => {
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');
-    await loginPlayer(page, PLAYER_EMAIL, '/player', RUBAN_PASSWORD);
+    await loginRubanPlayer(page, PLAYER_EMAIL, '/player');
 
     for (const route of [
       '/player',
@@ -212,12 +215,7 @@ test.describe('Le Ruban — surfaces et jetons', () => {
     const ctx = await projectContext(browser);
     try {
       const playerPage = await ctx.newPage();
-      await loginPlayer(
-        playerPage,
-        PLAYER_EMAIL,
-        '/player/profile',
-        RUBAN_PASSWORD
-      );
+      await loginRubanPlayer(playerPage, PLAYER_EMAIL, '/player/profile');
       await playerPage.goto('/player/profile');
       await expectSurface(playerPage, 'player');
       const player = await readRootTokens(playerPage);

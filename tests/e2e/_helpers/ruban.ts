@@ -6,6 +6,7 @@
 // leurs références ne seraient pas maîtrisées (polices, rendu du runner).
 
 import { expect, type Locator, type Page } from '@playwright/test';
+import { loginPlayer } from './playerSession';
 
 export const RUBAN_PASSWORD = 'TestPassw0rd!';
 
@@ -261,4 +262,23 @@ export async function mockPlayerDashboardApis(page: Page) {
     total: 0,
   });
   await json('/api/player/push/prefs', { prefs: [] });
+}
+
+/**
+ * Connexion joueuse, une seconde tentative en cas de délai : la connexion
+ * n'est pas l'objet de ces specs, et la première d'une tranche tombe parfois
+ * sur un serveur encore froid.
+ */
+export async function loginRubanPlayer(
+  page: Page,
+  email: string,
+  next: string
+) {
+  try {
+    await loginPlayer(page, email, next, RUBAN_PASSWORD);
+  } catch {
+    // Connexion aboutie entre-temps : rien à refaire.
+    if (!new URL(page.url()).pathname.startsWith('/login')) return;
+    await loginPlayer(page, email, next, RUBAN_PASSWORD);
+  }
 }
