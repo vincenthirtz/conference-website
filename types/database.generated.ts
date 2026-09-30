@@ -4614,6 +4614,35 @@ export type Database = {
         }
         Relationships: []
       }
+      regie_overlay_layouts: {
+        Row: {
+          layout: Json
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          layout?: Json
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          layout?: Json
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regie_overlay_layouts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scrim_planning_availabilities: {
         Row: {
           created_at: string

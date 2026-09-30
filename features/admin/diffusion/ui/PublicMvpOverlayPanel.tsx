@@ -188,7 +188,7 @@ function PublicMvpOverlayPanel({
           )}
           <fieldset
             disabled={!canTuneSettings || busy}
-            className="mt-3 grid gap-4 sm:grid-cols-3"
+            className="mt-3 grid gap-4 sm:grid-cols-2"
           >
             <label>
               <span className={rubanLabel}>{t.windowLabel}</span>
@@ -206,32 +206,6 @@ function PublicMvpOverlayPanel({
                 }
               />
             </label>
-            <div>
-              <span className={rubanLabel}>{t.positionLabel}</span>
-              <div
-                role="radiogroup"
-                aria-label={t.positionLabel}
-                className="flex gap-1.5"
-              >
-                {POSITIONS.map((p) => (
-                  <AdminButton
-                    key={p}
-                    type="button"
-                    size="sm"
-                    role="radio"
-                    aria-checked={settings.position === p}
-                    variant={settings.position === p ? 'secondary' : 'ghost'}
-                    onClick={() => setDraft({ ...settings, position: p })}
-                  >
-                    {p === 'top'
-                      ? t.positionTop
-                      : p === 'center'
-                        ? t.positionCenter
-                        : t.positionBottom}
-                  </AdminButton>
-                ))}
-              </div>
-            </div>
             <label className="flex items-center gap-2 self-end text-sm text-[var(--t2,#c7bfca)]">
               <input
                 type="checkbox"

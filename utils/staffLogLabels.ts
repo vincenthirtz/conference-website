@@ -303,6 +303,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   // Planning du staff
   create_staff_planning_slot: 'Ajout créneau planning staff',
   update_mvp_overlay_settings: 'Réglages du sondage MVP (overlay)',
+  update_regie_layout: 'Mise en page de la source Régie',
   update_staff_planning_slot: 'Modification créneau planning staff',
   delete_staff_planning_slot: 'Suppression créneau planning staff',
   import_staff_planning: 'Import du planning staff (CSV)',

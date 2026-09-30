@@ -1,0 +1,145 @@
+get:
+  summary: Layout of the Régie OBS source.
+  description: >
+    Ou la source OBS `/overlay/regie` (plein ecran 1920x1080) pose chaque
+    element : alertes, sondage MVP du public, bandeau partenaires, QR de don.
+    Par element : ancrage (9 positions), decalage x/y en pixels de la scene,
+    echelle, visibilite. Absente = la mise en page d'origine. Regie (caster).
+  operationId: adminReadRegieLayout
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Mise en page.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              layout:
+                type: object
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+put:
+  summary: Save the layout of the Régie OBS source.
+  description: >
+    Enregistre la mise en page complete ; la source l'applique a son
+    rafraichissement suivant (10 s). Journalise. Reserve a `manage_broadcast`.
+  operationId: adminSaveRegieLayout
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.diffusion/regie-layout.update
+          type: object
+          required: [alerts, mvp, partners, don]
+          properties:
+            alerts:
+              type: object
+              required: [anchor, x, y, scale, visible]
+              properties:
+                anchor:
+                  type: string
+                  enum: [tl, tc, tr, ml, mc, mr, bl, bc, br]
+                x:
+                  type: integer
+                  minimum: -1920
+                  maximum: 1920
+                y:
+                  type: integer
+                  minimum: -1080
+                  maximum: 1080
+                scale:
+                  type: number
+                  minimum: 0.4
+                  maximum: 2
+                visible:
+                  type: boolean
+            mvp:
+              type: object
+              required: [anchor, x, y, scale, visible]
+              properties:
+                anchor:
+                  type: string
+                  enum: [tl, tc, tr, ml, mc, mr, bl, bc, br]
+                x:
+                  type: integer
+                  minimum: -1920
+                  maximum: 1920
+                y:
+                  type: integer
+                  minimum: -1080
+                  maximum: 1080
+                scale:
+                  type: number
+                  minimum: 0.4
+                  maximum: 2
+                visible:
+                  type: boolean
+            partners:
+              type: object
+              required: [anchor, x, y, scale, visible]
+              properties:
+                anchor:
+                  type: string
+                  enum: [tl, tc, tr, ml, mc, mr, bl, bc, br]
+                x:
+                  type: integer
+                  minimum: -1920
+                  maximum: 1920
+                y:
+                  type: integer
+                  minimum: -1080
+                  maximum: 1080
+                scale:
+                  type: number
+                  minimum: 0.4
+                  maximum: 2
+                visible:
+                  type: boolean
+            don:
+              type: object
+              required: [anchor, x, y, scale, visible]
+              properties:
+                anchor:
+                  type: string
+                  enum: [tl, tc, tr, ml, mc, mr, bl, bc, br]
+                x:
+                  type: integer
+                  minimum: -1920
+                  maximum: 1920
+                y:
+                  type: integer
+                  minimum: -1080
+                  maximum: 1080
+                scale:
+                  type: number
+                  minimum: 0.4
+                  maximum: 2
+                visible:
+                  type: boolean
+  responses:
+    '200':
+      description: Mise en page enregistree.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              layout:
+                type: object
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

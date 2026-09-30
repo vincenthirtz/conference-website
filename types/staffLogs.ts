@@ -345,6 +345,7 @@ export type StaffLogAction =
   | 'create_staff_planning_slot'
   // --- Sondage MVP du public (overlay) ---
   | 'update_mvp_overlay_settings'
+  | 'update_regie_layout'
   | 'update_staff_planning_slot'
   | 'delete_staff_planning_slot'
   | 'import_staff_planning'

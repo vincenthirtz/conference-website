@@ -51,6 +51,13 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import { LIVE_OVERLAY_POLL_MS, useOverlayPoll } from '@/hooks/useOverlayPoll';
 import { AlertBoxSource } from '@/components/overlay/match/AlertBoxSource';
 import { PublicMvpSource } from '@/components/overlay/match/PublicMvpSource';
+import {
+  DEFAULT_REGIE_LAYOUT,
+  anchorParts,
+  SLOT_CONTENT_STYLE,
+  slotStyle,
+  type RegieSlot,
+} from '@/utils/overlay/regieLayout';
 import { PartnersSource } from '@/components/overlay/match/PartnersSource';
 import {
   parsePartnerCategories,
@@ -191,6 +198,21 @@ export default function RegieOverlayPage() {
     return () => clearTimeout(timer);
   }, [current, data?.settings.durationMs]);
 
+  // Mise en page servie avec le flux (défauts tant qu'elle n'est pas arrivée).
+  const layout = data?.layout ?? DEFAULT_REGIE_LAYOUT;
+  const mvpSlot: RegieSlot = mvpPosition
+    ? {
+        ...layout.mvp,
+        anchor:
+          mvpPosition === 'top' ? 'tc' : mvpPosition === 'bottom' ? 'bc' : 'mc',
+        x: 0,
+        y: 0,
+      }
+    : layout.mvp;
+  const donSlot: RegieSlot = donEnCarte
+    ? { ...layout.don, anchor: 'mc', x: 0, y: 0 }
+    : layout.don;
+
   return (
     <>
       <Head>
@@ -215,73 +237,75 @@ export default function RegieOverlayPage() {
           </div>
         ) : (
           <>
-            {/* Le bandeau partenaires, en bas : il ne bouge pas de la soirée. */}
-            {avecPartenaires && (
-              <PartnersSource
-                partners={partenaires}
-                accent={accent}
-                scale={scale}
-                position="bottom"
-                align="center"
-                showHeading={false}
-              />
-            )}
-
-            {/* Le scrutin : en haut par défaut (il cohabite avec une alerte
-                qui surgit au centre), sinon là où Diffusion › Overlays le
-                pose, ou `?mvpPosition=`. */}
-            {avecMvp && (
-              <div className="pointer-events-none absolute inset-0">
-                <PublicMvpSource
-                  poll={data?.publicMvp ?? null}
-                  scale={scale * 0.85}
-                  accent={accent}
-                  position={mvpPosition}
-                />
+            {/* Chaque élément dans son EMPLACEMENT (ancrage, décalage, échelle),
+                réglé depuis Diffusion › Overlays › Mise en page de la Régie.
+                Les paramètres d'URL (`?mvp=0`, `?don=carte`, `?mvpPosition=`)
+                restent prioritaires : une scène OBS déjà réglée ne bouge pas. */}
+            {avecPartenaires && layout.partners.visible && (
+              <div
+                className="pointer-events-none"
+                style={slotStyle(layout.partners, { globalScale: scale })}
+              >
+                <div style={SLOT_CONTENT_STYLE}>
+                  <PartnersSource
+                    partners={partenaires}
+                    accent={accent}
+                    scale={1}
+                    position="top"
+                    align={
+                      anchorParts(layout.partners.anchor).h === 'l'
+                        ? 'left'
+                        : anchorParts(layout.partners.anchor).h === 'r'
+                          ? 'right'
+                          : 'center'
+                    }
+                    showHeading={false}
+                  />
+                </div>
               </div>
             )}
 
-            {/* Le QR : encart bas-droite par défaut, pour rester pendant le
-                jeu. `don=carte` le met au centre, pour une scène de pause. */}
-            {avecDon && (
+            {avecMvp && mvpSlot.visible && (
               <div
-                className={`absolute ${
-                  donEnCarte
-                    ? 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2'
-                    : // LE QR MONTE QUAND LE BANDEAU EST LÀ. À sa hauteur
-                      // habituelle, il recouvrait la dernière pastille
-                      // partenaire — constaté au rendu, invisible dans le
-                      // code. Un partenaire à moitié caché sur six heures de
-                      // direct, c'est un partenaire mécontent.
-                      avecPartenaires
-                      ? 'bottom-60 right-10'
-                      : 'bottom-16 right-10'
-                } flex items-center gap-4 rounded-2xl border border-white/10 bg-black/85 p-4 pr-6 shadow-2xl`}
-                style={{
-                  transform: scale !== 1 ? `scale(${scale})` : undefined,
-                }}
+                className="pointer-events-none"
+                style={slotStyle(mvpSlot, { globalScale: scale })}
               >
-                {/* Le QR est TOUJOURS sur fond blanc : sur fond sombre ou
-                    transparent, il ne se scanne pas depuis un téléphone pointé
-                    sur un écran. */}
-                <div className="shrink-0 rounded-xl bg-white p-2">
-                  {/* biome-ignore lint/performance/noImgElement: source OBS — pas de next/image */}
-                  <img
-                    src={QR_SRC}
-                    alt={t.donQrAlt}
-                    width={112}
-                    height={112}
-                    className="block aspect-square h-28 w-28 object-contain [image-rendering:pixelated]"
+                <div style={SLOT_CONTENT_STYLE}>
+                  <PublicMvpSource
+                    poll={data?.publicMvp ?? null}
+                    scale={1}
+                    accent={accent}
+                    position="top"
                   />
                 </div>
-                <div className="min-w-0">
-                  <p
-                    className="font-extrabold uppercase tracking-wide"
-                    style={{ color: accent }}
-                  >
-                    {t.donTitle}
-                  </p>
-                  <p className="text-sm text-white/70">{t.donBody}</p>
+              </div>
+            )}
+
+            {/* Le QR est TOUJOURS sur fond blanc : sur fond sombre ou
+                transparent, il ne se scanne pas depuis un téléphone pointé sur
+                un écran. `don=carte` le met au centre, pour une scène de pause. */}
+            {avecDon && donSlot.visible && (
+              <div style={slotStyle(donSlot, { globalScale: scale })}>
+                <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-black/85 p-4 pr-6 shadow-2xl">
+                  <div className="shrink-0 rounded-xl bg-white p-2">
+                    {/* biome-ignore lint/performance/noImgElement: source OBS — pas de next/image */}
+                    <img
+                      src={QR_SRC}
+                      alt={t.donQrAlt}
+                      width={112}
+                      height={112}
+                      className="block aspect-square h-28 w-28 object-contain [image-rendering:pixelated]"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p
+                      className="font-extrabold uppercase tracking-wide"
+                      style={{ color: accent }}
+                    >
+                      {t.donTitle}
+                    </p>
+                    <p className="text-sm text-white/70">{t.donBody}</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -289,19 +313,24 @@ export default function RegieOverlayPage() {
             {/* La boîte d'alertes EN DERNIER : elle passe au-dessus de tout.
                 Une alerte qui surgit doit être vue, quitte à masquer le reste
                 pendant ses dix-neuf secondes. */}
-            {avecAlertes && (
-              <div className="pointer-events-none absolute inset-0">
-                <AlertBoxSource
-                  alert={current}
-                  rules={rules}
-                  scale={scale}
-                  position="center"
-                  soundUrl={data?.settings.soundUrl ?? null}
-                  soundVolume={data?.settings.soundVolume ?? 70}
-                  frameUrl={data?.settings.frameUrl ?? null}
-                  frameKind={data?.settings.frameKind ?? null}
-                  locale={locale}
-                />
+            {avecAlertes && layout.alerts.visible && (
+              <div
+                className="pointer-events-none"
+                style={slotStyle(layout.alerts, { globalScale: scale })}
+              >
+                <div style={SLOT_CONTENT_STYLE}>
+                  <AlertBoxSource
+                    alert={current}
+                    rules={rules}
+                    scale={1}
+                    position="center"
+                    soundUrl={data?.settings.soundUrl ?? null}
+                    soundVolume={data?.settings.soundVolume ?? 70}
+                    frameUrl={data?.settings.frameUrl ?? null}
+                    frameKind={data?.settings.frameKind ?? null}
+                    locale={locale}
+                  />
+                </div>
               </div>
             )}
           </>

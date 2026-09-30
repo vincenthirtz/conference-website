@@ -28,6 +28,10 @@ const PublicMvpOverlayPanel = dynamic(
   () => import('@/features/admin/diffusion/ui/PublicMvpOverlayPanel'),
   { ssr: false }
 );
+const RegieLayoutPanel = dynamic(
+  () => import('@/features/admin/diffusion/ui/RegieLayoutPanel'),
+  { ssr: false }
+);
 import { withStaffPage } from '@/utils/staff';
 import type { StaffProps } from '@/types/admin';
 import { supabaseAdmin } from '@/utils/supabase';
@@ -217,6 +221,15 @@ export default function DiffusionOverlaysPage({
         {canTuneAlerts && (
           <section className="mt-6 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
             <StreamAlertsPanel />
+          </section>
+        )}
+
+        {/* La source Régie est plein écran : où poser chacun de ses éléments. */}
+        {canUseMatchOverlays && (
+          <section className="mt-6 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
+            <RegieLayoutPanel
+              canEdit={(staff?.permissions ?? []).includes('manage_broadcast')}
+            />
           </section>
         )}
 

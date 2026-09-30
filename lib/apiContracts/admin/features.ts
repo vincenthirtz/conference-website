@@ -59,6 +59,7 @@ import {
   TwitchChannelPatch,
   MvpOverlaySettingsBody,
   MvpOverlayTestBody,
+  RegieLayoutBody,
 } from '../../../features/admin/diffusion/schemas';
 import { RemoveFreePlayerQuery } from '../../../features/admin/free-players/schemas';
 import { UserSearchQuery } from '../../../features/admin/users/schemas';
@@ -663,6 +664,10 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   },
   'admin.diffusion/mvp-overlay.update': {
     schema: MvpOverlaySettingsBody,
+    io: 'input',
+  },
+  'admin.diffusion/regie-layout.update': {
+    schema: RegieLayoutBody,
     io: 'input',
   },
   'admin.diffusion/mvp-overlay.body': {

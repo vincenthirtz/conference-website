@@ -4434,6 +4434,179 @@
     ]
    }
   },
+  "GET /api/admin/diffusion/regie-layout": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "layout": {
+      "type": "object",
+      "properties": {
+       "alerts": {
+        "type": "object",
+        "properties": {
+         "anchor": {
+          "type": "string",
+          "enum": [
+           "bc",
+           "bl",
+           "br",
+           "mc",
+           "ml",
+           "mr",
+           "tc",
+           "tl",
+           "tr"
+          ]
+         },
+         "scale": {
+          "type": "number"
+         },
+         "visible": {
+          "type": "boolean"
+         },
+         "x": {
+          "type": "number"
+         },
+         "y": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anchor",
+         "scale",
+         "visible",
+         "x",
+         "y"
+        ]
+       },
+       "don": {
+        "type": "object",
+        "properties": {
+         "anchor": {
+          "type": "string",
+          "enum": [
+           "bc",
+           "bl",
+           "br",
+           "mc",
+           "ml",
+           "mr",
+           "tc",
+           "tl",
+           "tr"
+          ]
+         },
+         "scale": {
+          "type": "number"
+         },
+         "visible": {
+          "type": "boolean"
+         },
+         "x": {
+          "type": "number"
+         },
+         "y": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anchor",
+         "scale",
+         "visible",
+         "x",
+         "y"
+        ]
+       },
+       "mvp": {
+        "type": "object",
+        "properties": {
+         "anchor": {
+          "type": "string",
+          "enum": [
+           "bc",
+           "bl",
+           "br",
+           "mc",
+           "ml",
+           "mr",
+           "tc",
+           "tl",
+           "tr"
+          ]
+         },
+         "scale": {
+          "type": "number"
+         },
+         "visible": {
+          "type": "boolean"
+         },
+         "x": {
+          "type": "number"
+         },
+         "y": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anchor",
+         "scale",
+         "visible",
+         "x",
+         "y"
+        ]
+       },
+       "partners": {
+        "type": "object",
+        "properties": {
+         "anchor": {
+          "type": "string",
+          "enum": [
+           "bc",
+           "bl",
+           "br",
+           "mc",
+           "ml",
+           "mr",
+           "tc",
+           "tl",
+           "tr"
+          ]
+         },
+         "scale": {
+          "type": "number"
+         },
+         "visible": {
+          "type": "boolean"
+         },
+         "x": {
+          "type": "number"
+         },
+         "y": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anchor",
+         "scale",
+         "visible",
+         "x",
+         "y"
+        ]
+       }
+      },
+      "required": [
+       "alerts",
+       "don",
+       "mvp",
+       "partners"
+      ]
+     }
+    },
+    "required": [
+     "layout"
+    ]
+   }
+  },
   "GET /api/admin/diffusion/twitch-channels": {
    "200": {
     "type": "object",
@@ -5530,6 +5703,7 @@
           "update_prize_pool",
           "update_profile",
           "update_public_page",
+          "update_regie_layout",
           "update_scores",
           "update_scrim",
           "update_scrim_planning",
@@ -7451,6 +7625,7 @@
           "update_prize_pool",
           "update_profile",
           "update_public_page",
+          "update_regie_layout",
           "update_scores",
           "update_scrim",
           "update_scrim_planning",
@@ -9499,6 +9674,7 @@
           "update_prize_pool",
           "update_profile",
           "update_public_page",
+          "update_regie_layout",
           "update_scores",
           "update_scrim",
           "update_scrim_planning",
@@ -14584,6 +14760,7 @@
           "update_prize_pool",
           "update_profile",
           "update_public_page",
+          "update_regie_layout",
           "update_scores",
           "update_scrim",
           "update_scrim_planning",
@@ -20831,6 +21008,7 @@
           "update_prize_pool",
           "update_profile",
           "update_public_page",
+          "update_regie_layout",
           "update_scores",
           "update_scrim",
           "update_scrim_planning",
@@ -25468,6 +25646,7 @@
           "update_prize_pool",
           "update_profile",
           "update_public_page",
+          "update_regie_layout",
           "update_scores",
           "update_scrim",
           "update_scrim_planning",
@@ -40529,6 +40708,169 @@
        "accent",
        "logoUrl",
        "name"
+      ]
+     },
+     "layout": {
+      "type": "object",
+      "properties": {
+       "alerts": {
+        "type": "object",
+        "properties": {
+         "anchor": {
+          "type": "string",
+          "enum": [
+           "bc",
+           "bl",
+           "br",
+           "mc",
+           "ml",
+           "mr",
+           "tc",
+           "tl",
+           "tr"
+          ]
+         },
+         "scale": {
+          "type": "number"
+         },
+         "visible": {
+          "type": "boolean"
+         },
+         "x": {
+          "type": "number"
+         },
+         "y": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anchor",
+         "scale",
+         "visible",
+         "x",
+         "y"
+        ]
+       },
+       "don": {
+        "type": "object",
+        "properties": {
+         "anchor": {
+          "type": "string",
+          "enum": [
+           "bc",
+           "bl",
+           "br",
+           "mc",
+           "ml",
+           "mr",
+           "tc",
+           "tl",
+           "tr"
+          ]
+         },
+         "scale": {
+          "type": "number"
+         },
+         "visible": {
+          "type": "boolean"
+         },
+         "x": {
+          "type": "number"
+         },
+         "y": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anchor",
+         "scale",
+         "visible",
+         "x",
+         "y"
+        ]
+       },
+       "mvp": {
+        "type": "object",
+        "properties": {
+         "anchor": {
+          "type": "string",
+          "enum": [
+           "bc",
+           "bl",
+           "br",
+           "mc",
+           "ml",
+           "mr",
+           "tc",
+           "tl",
+           "tr"
+          ]
+         },
+         "scale": {
+          "type": "number"
+         },
+         "visible": {
+          "type": "boolean"
+         },
+         "x": {
+          "type": "number"
+         },
+         "y": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anchor",
+         "scale",
+         "visible",
+         "x",
+         "y"
+        ]
+       },
+       "partners": {
+        "type": "object",
+        "properties": {
+         "anchor": {
+          "type": "string",
+          "enum": [
+           "bc",
+           "bl",
+           "br",
+           "mc",
+           "ml",
+           "mr",
+           "tc",
+           "tl",
+           "tr"
+          ]
+         },
+         "scale": {
+          "type": "number"
+         },
+         "visible": {
+          "type": "boolean"
+         },
+         "x": {
+          "type": "number"
+         },
+         "y": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anchor",
+         "scale",
+         "visible",
+         "x",
+         "y"
+        ]
+       }
+      },
+      "required": [
+       "alerts",
+       "don",
+       "mvp",
+       "partners"
       ]
      },
      "publicMvp": {
@@ -80166,6 +80508,179 @@
     "required": [
      "demo",
      "settings"
+    ]
+   }
+  },
+  "PUT /api/admin/diffusion/regie-layout": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "layout": {
+      "type": "object",
+      "properties": {
+       "alerts": {
+        "type": "object",
+        "properties": {
+         "anchor": {
+          "type": "string",
+          "enum": [
+           "bc",
+           "bl",
+           "br",
+           "mc",
+           "ml",
+           "mr",
+           "tc",
+           "tl",
+           "tr"
+          ]
+         },
+         "scale": {
+          "type": "number"
+         },
+         "visible": {
+          "type": "boolean"
+         },
+         "x": {
+          "type": "number"
+         },
+         "y": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anchor",
+         "scale",
+         "visible",
+         "x",
+         "y"
+        ]
+       },
+       "don": {
+        "type": "object",
+        "properties": {
+         "anchor": {
+          "type": "string",
+          "enum": [
+           "bc",
+           "bl",
+           "br",
+           "mc",
+           "ml",
+           "mr",
+           "tc",
+           "tl",
+           "tr"
+          ]
+         },
+         "scale": {
+          "type": "number"
+         },
+         "visible": {
+          "type": "boolean"
+         },
+         "x": {
+          "type": "number"
+         },
+         "y": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anchor",
+         "scale",
+         "visible",
+         "x",
+         "y"
+        ]
+       },
+       "mvp": {
+        "type": "object",
+        "properties": {
+         "anchor": {
+          "type": "string",
+          "enum": [
+           "bc",
+           "bl",
+           "br",
+           "mc",
+           "ml",
+           "mr",
+           "tc",
+           "tl",
+           "tr"
+          ]
+         },
+         "scale": {
+          "type": "number"
+         },
+         "visible": {
+          "type": "boolean"
+         },
+         "x": {
+          "type": "number"
+         },
+         "y": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anchor",
+         "scale",
+         "visible",
+         "x",
+         "y"
+        ]
+       },
+       "partners": {
+        "type": "object",
+        "properties": {
+         "anchor": {
+          "type": "string",
+          "enum": [
+           "bc",
+           "bl",
+           "br",
+           "mc",
+           "ml",
+           "mr",
+           "tc",
+           "tl",
+           "tr"
+          ]
+         },
+         "scale": {
+          "type": "number"
+         },
+         "visible": {
+          "type": "boolean"
+         },
+         "x": {
+          "type": "number"
+         },
+         "y": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anchor",
+         "scale",
+         "visible",
+         "x",
+         "y"
+        ]
+       }
+      },
+      "required": [
+       "alerts",
+       "don",
+       "mvp",
+       "partners"
+      ]
+     }
+    },
+    "required": [
+     "layout"
     ]
    }
   },

@@ -132,6 +132,7 @@ import enAdminCampaigns from './adminCampaigns';
 import enAdminCommandPalette from './adminCommandPalette';
 import enAdminStaffPlanning from './adminStaffPlanning';
 import enAdminMvpOverlay from './adminMvpOverlay';
+import enAdminRegieLayout from './adminRegieLayout';
 import enAdminDataTable from './adminDataTable';
 import enAdminEntityHistory from './adminEntityHistory';
 import enAdminSiteSettings from './adminSiteSettings';
@@ -339,6 +340,7 @@ const adminEnDict = {
   adminCommandPalette: enAdminCommandPalette,
   adminStaffPlanning: enAdminStaffPlanning,
   adminMvpOverlay: enAdminMvpOverlay,
+  adminRegieLayout: enAdminRegieLayout,
   adminDataTable: enAdminDataTable,
   adminEntityHistory: enAdminEntityHistory,
   adminSiteSettings: enAdminSiteSettings,

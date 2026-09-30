@@ -140,6 +140,7 @@ import nsAdminCampaigns from './adminCampaigns';
 import nsAdminCommandPalette from './adminCommandPalette';
 import nsAdminStaffPlanning from './adminStaffPlanning';
 import nsAdminMvpOverlay from './adminMvpOverlay';
+import nsAdminRegieLayout from './adminRegieLayout';
 import nsAdminDataTable from './adminDataTable';
 import nsAdminEntityHistory from './adminEntityHistory';
 import nsAdminSiteSettings from './adminSiteSettings';
@@ -347,6 +348,7 @@ export const frDict = {
   adminCommandPalette: nsAdminCommandPalette.fr,
   adminStaffPlanning: nsAdminStaffPlanning.fr,
   adminMvpOverlay: nsAdminMvpOverlay.fr,
+  adminRegieLayout: nsAdminRegieLayout.fr,
   adminDataTable: nsAdminDataTable.fr,
   adminEntityHistory: nsAdminEntityHistory.fr,
   adminSiteSettings: nsAdminSiteSettings.fr,

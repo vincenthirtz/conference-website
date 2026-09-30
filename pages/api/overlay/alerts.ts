@@ -26,6 +26,10 @@ import { resolveEmbedTenantId } from '@/utils/embed';
 import { readTenantBranding } from '@/utils/tenant';
 import { capabilityDenial } from '@/utils/billing/tenantCapabilityGate';
 import {
+  normalizeRegieLayout,
+  type RegieLayout,
+} from '@/utils/overlay/regieLayout';
+import {
   readPublicMvpFeed,
   type OverlayPublicMvpPoll,
 } from '@/utils/overlay/publicMvpFeed';
@@ -90,6 +94,12 @@ export type OverlayAlertsResponse = {
    * à en payer les requêtes.
    */
   publicMvp?: OverlayPublicMvpPoll | null;
+  /**
+   * Mise en page de la source Régie (utils/overlay/regieLayout.ts), servie
+   * avec le scrutin (`?with=mvp`, que seule la Régie demande) : réglée depuis
+   * Diffusion › Overlays, appliquée au rafraîchissement suivant.
+   */
+  layout?: RegieLayout;
   /** L'horloge du SERVEUR : celle du poste de régie peut être fausse. */
   serverTime: string;
 };
@@ -160,9 +170,18 @@ export default async function handler(
         .map((x) => x.trim().toLowerCase())
         .filter(Boolean)
     );
-    const publicMvp = demande.has('mvp')
-      ? await readPublicMvpFeed(tenantId, nowMs)
-      : undefined;
+    const [publicMvp, layout] = demande.has('mvp')
+      ? await Promise.all([
+          readPublicMvpFeed(tenantId, nowMs),
+          supabaseAdmin
+            .from('regie_overlay_layouts')
+            .select('layout')
+            .eq('tenant_id', tenantId)
+            .maybeSingle()
+            // Absente, illisible ou table pas encore créée : les défauts.
+            .then(({ data }) => normalizeRegieLayout(data?.layout ?? null)),
+        ])
+      : [undefined, undefined];
 
     const [eventsRes, donationsRes, settingsRes, rulesRes, branding] =
       await Promise.all([
@@ -269,6 +288,7 @@ export default async function handler(
       settings,
       rules,
       ...(publicMvp !== undefined ? { publicMvp } : {}),
+      ...(layout !== undefined ? { layout } : {}),
       branding: branding
         ? {
             name: branding.name ?? null,

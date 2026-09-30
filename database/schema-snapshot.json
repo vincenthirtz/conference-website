@@ -1122,6 +1122,12 @@
       "hits",
       "window_start"
     ],
+    "regie_overlay_layouts": [
+      "layout",
+      "tenant_id",
+      "updated_at",
+      "updated_by"
+    ],
     "scrim_planning_availabilities": [
       "created_at",
       "display_name",
@@ -2837,6 +2843,10 @@
     "push_subscriptions_user_id_fkey": {
       "source": "push_subscriptions",
       "target": "users"
+    },
+    "regie_overlay_layouts_tenant_id_fkey": {
+      "source": "regie_overlay_layouts",
+      "target": "tenants"
     },
     "scrim_planning_availabilities_planning_id_fkey": {
       "source": "scrim_planning_availabilities",

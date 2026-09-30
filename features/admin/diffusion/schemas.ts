@@ -181,3 +181,23 @@ export type MvpOverlayState = {
   /** TEST à l'écran, et jusqu'à quand. */
   demo: { active: boolean; until: string | null };
 };
+
+/* ---------------------------------------------------------------------------
+ * Mise en page de la source Régie (/api/admin/diffusion/regie-layout)
+ * ------------------------------------------------------------------------ */
+
+const RegieSlotBody = z.object({
+  anchor: z.enum(['tl', 'tc', 'tr', 'ml', 'mc', 'mr', 'bl', 'bc', 'br']),
+  x: z.number().int().min(-1920).max(1920),
+  y: z.number().int().min(-1080).max(1080),
+  scale: z.number().min(0.4).max(2),
+  visible: z.boolean(),
+});
+
+/** PUT — la mise en page complète (un emplacement par élément). */
+export const RegieLayoutBody = z.object({
+  alerts: RegieSlotBody,
+  mvp: RegieSlotBody,
+  partners: RegieSlotBody,
+  don: RegieSlotBody,
+});
