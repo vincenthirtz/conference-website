@@ -104,6 +104,10 @@ post:
           schema:
             type: object
             properties:
+              success:
+                type: boolean
+              message:
+                type: string
               broadcastId:
                 type: string
                 format: uuid
