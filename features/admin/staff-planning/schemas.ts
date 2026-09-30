@@ -28,7 +28,7 @@ export const StaffPlanningListQuery = z.looseObject({
   to: ymd,
 });
 
-/** DELETE /api/admin/staff-planning/[slotId]. */
+/** PATCH / DELETE /api/admin/staff-planning/[slotId]. */
 export const StaffPlanningSlotIdQuery = z.looseObject({
   slotId: z.string().uuid(),
 });
@@ -41,7 +41,24 @@ export const StaffPlanningSlotCreate = z.object({
   end_time: hhmm,
   role: z.enum(STAFF_PLANNING_ROLES).nullable().optional(),
   note: z.string().trim().max(200).nullable().optional(),
+  /**
+   * Répétition hebdomadaire : le même créneau, même jour de la semaine,
+   * jusqu'à cette date incluse (26 semaines au plus).
+   */
+  repeat_until: ymd.nullable().optional(),
 });
+
+/** PATCH /api/admin/staff-planning/[slotId] — rôle, horaires, note. */
+export const StaffPlanningSlotPatch = z
+  .object({
+    start_time: hhmm.optional(),
+    end_time: hhmm.optional(),
+    role: z.enum(STAFF_PLANNING_ROLES).nullable().optional(),
+    note: z.string().trim().max(200).nullable().optional(),
+  })
+  .refine((b) => Object.values(b).some((v) => v !== undefined), {
+    message: 'Rien à modifier.',
+  });
 
 /**
  * POST /api/admin/staff-planning/import — le tableur déjà lu côté navigateur

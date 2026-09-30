@@ -4,8 +4,9 @@ get:
   description: >
     Planning du staff (cast, moderation, prod OBS, gestion du live) : creneaux
     de disponibilite par personne et par jour, du `from` au `to` inclus
-    (400 jours maximum). Rend aussi les pseudos connus (legende, saisie).
-    Lisible par tout le staff.
+    (400 jours maximum). Rend aussi les pseudos connus (legende, saisie) et
+    les soirs de match de la fenetre (heure de Paris, matchs annules exclus)
+    pour reperer les soirs non couverts. Lisible par tout le staff.
   operationId: adminListStaffPlanning
   tags:
     - admin/misc
@@ -40,6 +41,18 @@ get:
                 type: array
                 items:
                   type: string
+              matchNights:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date:
+                      type: string
+                      format: date
+                    count:
+                      type: integer
+                    first:
+                      type: string
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':
@@ -52,7 +65,9 @@ post:
     Ajoute un creneau saisi a la main (`source = manual`) : jamais ecrase par
     un import CSV. `end_time` anterieur ou egal a `start_time` = fin le
     lendemain (22:00 -> 00:00). 409 si la personne a deja un creneau qui
-    commence a cette heure ce jour-la. Reserve a `manage_staff`.
+    commence a cette heure ce jour-la. `repeat_until` : le meme creneau
+    chaque semaine jusqu'a cette date (26 semaines au plus) ; les dates deja
+    prises sont ignorees (`skipped`). Reserve a `manage_staff`.
   operationId: adminCreateStaffPlanningSlot
   tags:
     - admin/misc
@@ -85,16 +100,23 @@ post:
               enum: [cast, moderation, prod_obs, live_prod, null]
             note:
               type: [string, 'null']
+            repeat_until:
+              type: [string, 'null']
+              format: date
   responses:
     '201':
-      description: Creneau cree.
+      description: Creneau(x) cree(s).
       content:
         application/json:
           schema:
             type: object
             properties:
               slot:
-                type: object
+                type: [object, 'null']
+              created:
+                type: integer
+              skipped:
+                type: integer
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

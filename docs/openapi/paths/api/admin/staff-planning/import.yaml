@@ -3,9 +3,11 @@ post:
   description: >
     Importe le tableur « Calendrier disponibilite » (export CSV), deja lu cote
     navigateur (`utils/staffPlanningCsv`) : un creneau par personne et par
-    jour. Remplace l'import precedent des mois `months` ; les creneaux saisis
-    a la main restent (un doublon de l'un d'eux est ignore). Chaque entree
-    doit tomber dans l'un des mois. Reserve a `manage_staff`.
+    jour. Rapproche le fichier de l'import precedent des mois `months` : les
+    creneaux disparus du fichier sont retires, les nouveaux ajoutes, ceux qui
+    restent gardent leur role et leur note. Les creneaux saisis a la main
+    restent (un doublon de l'un d'eux est ignore). Chaque entree doit tomber
+    dans l'un des mois. Reserve a `manage_staff`.
   operationId: adminImportStaffPlanning
   tags:
     - admin/misc
@@ -50,6 +52,10 @@ post:
             type: object
             properties:
               inserted:
+                type: integer
+              kept:
+                type: integer
+              removed:
                 type: integer
               skipped:
                 type: integer

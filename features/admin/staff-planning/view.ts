@@ -3,7 +3,8 @@
 // événements de l'agenda générique (`MonthCalendar`). Testé seul.
 
 import type { MonthCalendarEvent } from '@/components/admin/calendar/MonthCalendar';
-import type { StaffPlanningSlotRow } from './client';
+import type { StaffPlanningMatchNight, StaffPlanningSlotRow } from './client';
+import { STAFF_PLANNING_ROLES, type StaffPlanningRole } from './schemas';
 
 /**
  * Palette : une teinte par personne, en HEX explicite. Sous
@@ -98,6 +99,104 @@ export function slotsToEvents(
       chipClassName: '',
       chipStyle: chipStyleOf(personColor(s.person_name, people)),
     }));
+}
+
+/** Couleurs des soirs de match : couvert (au moins une personne) ou non. */
+const NIGHT_COVERED = { backgroundColor: '#2a2230', color: '#e9e1ee' };
+const NIGHT_UNCOVERED = { backgroundColor: '#7f1d1d', color: '#ffe4e4' };
+
+/**
+ * Soirs de match → puces de tête de journée (avant les créneaux) : « ⚔ 3
+ * matchs », en rouge quand personne n'est disponible ce soir-là.
+ */
+export function matchNightEvents(
+  nights: readonly StaffPlanningMatchNight[],
+  slots: readonly StaffPlanningSlotRow[],
+  labels: { matchesOne: string; matchesMany: string; nobody: string }
+): MonthCalendarEvent[] {
+  const staffed = new Set(slots.map((s) => s.slot_date));
+  return nights.map((n) => {
+    const covered = staffed.has(n.date);
+    const what = (n.count > 1 ? labels.matchesMany : labels.matchesOne).replace(
+      '{count}',
+      String(n.count)
+    );
+    return {
+      key: `night:${n.date}`,
+      ymd: n.date,
+      // Avant tout créneau de la journée.
+      minute: -1,
+      timeLabel: hourLabel(n.first),
+      label: covered ? `⚔ ${what}` : `⚠ ${what} · ${labels.nobody}`,
+      chipClassName: 'font-semibold',
+      chipStyle: covered ? NIGHT_COVERED : NIGHT_UNCOVERED,
+    };
+  });
+}
+
+/** Rôles couverts / manquants d'une journée (rôles non précisés ignorés). */
+export function roleCoverage(daySlots: readonly StaffPlanningSlotRow[]): {
+  covered: StaffPlanningRole[];
+  missing: StaffPlanningRole[];
+  unassigned: number;
+} {
+  const present = new Set(daySlots.map((s) => s.role).filter(Boolean));
+  return {
+    covered: STAFF_PLANNING_ROLES.filter((r) => present.has(r)),
+    missing: STAFF_PLANNING_ROLES.filter((r) => !present.has(r)),
+    unassigned: daySlots.filter((s) => !s.role).length,
+  };
+}
+
+/** Stats du mois affiché : créneaux, personnes, soirs de match couverts. */
+export function monthStats(
+  slots: readonly StaffPlanningSlotRow[],
+  nights: readonly StaffPlanningMatchNight[],
+  month: string
+) {
+  const inMonth = slots.filter((s) => s.slot_date.slice(0, 7) === month);
+  const staffed = new Set(inMonth.map((s) => s.slot_date));
+  const monthNights = nights.filter((n) => n.date.slice(0, 7) === month);
+  return {
+    slots: inMonth.length,
+    people: new Set(inMonth.map((s) => s.person_name)).size,
+    nights: monthNights.length,
+    coveredNights: monthNights.filter((n) => staffed.has(n.date)).length,
+    uncovered: monthNights
+      .filter((n) => !staffed.has(n.date))
+      .map((n) => n.date),
+  };
+}
+
+/**
+ * Récap d'une soirée à coller dans Discord : les soirs de match d'abord, puis
+ * une ligne par créneau, rôle entre crochets. Texte brut, markdown Discord.
+ */
+export function discordRecap(input: {
+  dayLabel: string;
+  night: StaffPlanningMatchNight | null;
+  slots: readonly StaffPlanningSlotRow[];
+  roleLabel: (r: StaffPlanningRole) => string;
+  labels: { matchesOne: string; matchesMany: string; nobody: string };
+}): string {
+  const lines = [`**📅 ${input.dayLabel}**`];
+  if (input.night) {
+    const what = (
+      input.night.count > 1 ? input.labels.matchesMany : input.labels.matchesOne
+    ).replace('{count}', String(input.night.count));
+    lines.push(`⚔ ${what} — ${hourLabel(input.night.first)}`);
+  }
+  if (input.slots.length === 0) lines.push(`⚠ ${input.labels.nobody}`);
+  for (const s of [...input.slots].sort((a, b) =>
+    a.start_time.localeCompare(b.start_time)
+  )) {
+    const role = s.role ? ` [${input.roleLabel(s.role)}]` : '';
+    const note = s.note ? ` — ${s.note}` : '';
+    lines.push(
+      `• ${s.person_name} ${rangeLabel(s.start_time, s.end_time)}${role}${note}`
+    );
+  }
+  return lines.join('\n');
 }
 
 /** Créneaux d'un mois ('YYYY-MM') par personne, pour la légende. */

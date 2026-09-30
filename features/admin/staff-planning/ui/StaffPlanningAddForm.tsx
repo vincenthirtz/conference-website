@@ -24,6 +24,8 @@ export type NewSlot = {
   end_time: string;
   role: StaffPlanningRole | null;
   note: string | null;
+  /** Répétition hebdomadaire jusqu'à cette date incluse, ou aucune. */
+  repeat_until: string | null;
 };
 
 const addSchema = z
@@ -39,11 +41,21 @@ const addSchema = z
       .string()
       .max(200)
       .transform((n) => n.trim() || null),
+    repeat: z.boolean(),
+    repeat_until: z.string(),
   })
   .refine((v) => v.start_time !== v.end_time, {
     path: ['end_time'],
     message: '≠ début',
-  });
+  })
+  .refine((v) => !v.repeat || v.repeat_until >= v.slot_date, {
+    path: ['repeat_until'],
+    message: '≥ jour',
+  })
+  .transform(({ repeat, repeat_until, ...slot }) => ({
+    ...slot,
+    repeat_until: repeat && repeat_until ? repeat_until : null,
+  }));
 
 function FieldError({ message }: { message?: string }) {
   return message ? (
@@ -74,6 +86,8 @@ export default function StaffPlanningAddForm({
       end_time: '22:00',
       role: '',
       note: '',
+      repeat: false,
+      repeat_until: '',
     },
     errorFallback: t.errorAdd,
     onSubmit: async (slot) => {
@@ -153,6 +167,25 @@ export default function StaffPlanningAddForm({
           />
           <FieldError message={form.errors.note} />
         </label>
+        <label className="col-span-2 flex items-center gap-2 text-sm text-[var(--t2,#c7bfca)]">
+          <input {...form.checkbox('repeat')} type="checkbox" />
+          {t.fieldRepeat}
+        </label>
+        {form.values.repeat && (
+          <label className="col-span-2">
+            <span className={rubanLabel}>{t.fieldRepeatUntil}</span>
+            <input
+              {...form.field('repeat_until')}
+              type="date"
+              min={form.values.slot_date}
+              className={rubanFormInput}
+            />
+            <span className="mt-1 block text-xs text-[var(--t3,#a39ba6)]">
+              {t.repeatHint}
+            </span>
+            <FieldError message={form.errors.repeat_until} />
+          </label>
+        )}
       </div>
       <FormError message={form.formError} />
       <AdminButton

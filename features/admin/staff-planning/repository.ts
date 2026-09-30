@@ -6,6 +6,8 @@ import type { Database } from '@/types/database.generated';
 
 type SlotInsert =
   Database['public']['Tables']['staff_planning_slots']['Insert'];
+type SlotUpdate =
+  Database['public']['Tables']['staff_planning_slots']['Update'];
 
 export const SLOT_COLUMNS =
   'id, person_name, slot_date, start_time, end_time, role, note, source, created_at' as const;
@@ -46,6 +48,74 @@ export async function insertSlot(db: AdminDb, row: SlotInsert) {
   return { row: data ?? null, error };
 }
 
+export async function updateSlot(
+  db: AdminDb,
+  tenantId: string,
+  id: string,
+  patch: SlotUpdate
+) {
+  const { data, error } = await db
+    .from('staff_planning_slots')
+    .update(patch)
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+    .select(SLOT_COLUMNS)
+    .maybeSingle();
+  return { row: data ?? null, error };
+}
+
+/**
+ * Matchs programmés d'une fenêtre (instants ISO), annulés exclus : l'agenda
+ * les regroupe par soir pour montrer quels soirs il faut couvrir.
+ */
+export async function listMatchTimes(
+  db: AdminDb,
+  tenantId: string,
+  fromIso: string,
+  toIso: string
+) {
+  const { data, error } = await db
+    .from('matches')
+    .select('scheduled_at, status')
+    .eq('tenant_id', tenantId)
+    .not('scheduled_at', 'is', null)
+    .gte('scheduled_at', fromIso)
+    .lt('scheduled_at', toIso)
+    .limit(2000);
+  return { rows: data ?? [], error };
+}
+
+/** Créneaux importés (`csv`) d'une fenêtre : base du rapprochement d'import. */
+export async function listCsvSlots(
+  db: AdminDb,
+  tenantId: string,
+  first: string,
+  last: string
+) {
+  const { data, error } = await db
+    .from('staff_planning_slots')
+    .select('id, person_name, slot_date, start_time, end_time')
+    .eq('tenant_id', tenantId)
+    .eq('source', 'csv')
+    .gte('slot_date', first)
+    .lte('slot_date', last);
+  return { rows: data ?? [], error };
+}
+
+export async function deleteSlotsByIds(
+  db: AdminDb,
+  tenantId: string,
+  ids: string[]
+) {
+  if (ids.length === 0) return { error: null };
+  const { error } = await db
+    .from('staff_planning_slots')
+    .delete()
+    .eq('tenant_id', tenantId)
+    .in('id', ids);
+  return { error };
+}
+
 export async function deleteSlot(db: AdminDb, tenantId: string, id: string) {
   const { data, error } = await db
     .from('staff_planning_slots')
@@ -56,25 +126,11 @@ export async function deleteSlot(db: AdminDb, tenantId: string, id: string) {
   return { deleted: data?.length ?? 0, error };
 }
 
-/** Retire l'import précédent (source `csv`) d'un mois — jamais les saisies manuelles. */
-export async function deleteCsvSlotsOfMonth(
+/** Insertion en lot ; un doublon d'un créneau existant est ignoré. */
+export async function insertSlotsIgnoringDuplicates(
   db: AdminDb,
-  tenantId: string,
-  first: string,
-  last: string
+  rows: SlotInsert[]
 ) {
-  const { error } = await db
-    .from('staff_planning_slots')
-    .delete()
-    .eq('tenant_id', tenantId)
-    .eq('source', 'csv')
-    .gte('slot_date', first)
-    .lte('slot_date', last);
-  return { error };
-}
-
-/** Insertion en lot ; un doublon d'une saisie manuelle est ignoré. */
-export async function insertCsvSlots(db: AdminDb, rows: SlotInsert[]) {
   if (rows.length === 0) return { inserted: 0, error: null };
   const { data, error } = await db
     .from('staff_planning_slots')

@@ -12,7 +12,7 @@
 import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
 import { useStaffSession } from '@/hooks/useStaffSession';
-import { useAdminT } from '@/lib/i18n/useAdminT';
+import { format, useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminStaffPlanning from '@/lib/i18n/locales/admin-fr/adminStaffPlanning';
 import { adminErrorMessage } from '@/utils/admin/adminHttp';
 import { withAdminQuery } from '@/features/admin/_shared/query';
@@ -20,6 +20,7 @@ import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import { FormError } from '@/components/admin/form/FormField';
 import MonthCalendar from '@/components/admin/calendar/MonthCalendar';
 import { rubanEyebrow, rubanMuted } from '@/features/ruban/ruban';
+import StatTile from '@/features/ruban/StatTile';
 import {
   STAFF_PLANNING_TZ,
   useStaffPlanningScreen,
@@ -31,6 +32,15 @@ import StaffPlanningImportPanel from '@/features/admin/staff-planning/ui/StaffPl
 
 // Tout le staff consulte ; l'écriture est gardée par `manage_staff` côté API.
 export const getServerSideProps = withStaffPage('helper');
+
+/** « 2026-10-07 » → « mer. 7 oct. » */
+const shortDay = (ymd: string) =>
+  new Date(`${ymd}T12:00:00Z`).toLocaleDateString('fr-FR', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  });
 
 function AdminStaffPlanningPage() {
   const t = useAdminT(nsAdminStaffPlanning);
@@ -54,6 +64,35 @@ function AdminStaffPlanningPage() {
           />
         )}
 
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <StatTile label={t.statSlots} value={s.stats.slots} />
+          <StatTile label={t.statPeople} value={s.stats.people} />
+          <StatTile
+            label={t.statNights}
+            value={
+              s.stats.nights === 0
+                ? '—'
+                : `${s.stats.coveredNights} / ${s.stats.nights}`
+            }
+            tone={
+              s.stats.nights === 0
+                ? 'neutral'
+                : s.stats.uncovered.length > 0
+                  ? 'warn'
+                  : 'ok'
+            }
+            hint={
+              s.stats.nights === 0
+                ? t.statNoNights
+                : s.stats.uncovered.length > 0
+                  ? format(t.statNightsMissing, {
+                      dates: s.stats.uncovered.map(shortDay).join(', '),
+                    })
+                  : t.statNightsAllCovered
+            }
+          />
+        </div>
+
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0">
             <MonthCalendar
@@ -74,11 +113,14 @@ function AdminStaffPlanningPage() {
             <StaffPlanningDayPanel
               t={t}
               day={s.view.day}
+              night={s.dayNight}
               slots={s.daySlots}
               people={s.people}
               canManage={canManage}
               busyId={s.busy}
               onDelete={s.removeSlot}
+              onUpdate={s.updateSlot}
+              onCopied={s.onCopied}
             />
             <StaffPlanningLegend
               t={t}

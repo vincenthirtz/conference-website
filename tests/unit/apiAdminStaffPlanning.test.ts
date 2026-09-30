@@ -118,6 +118,35 @@ function seed() {
       end_time: '22:00:00',
     }),
   ] as any;
+  store.matches = [
+    // Mercredi 23/09 : deux matchs, 19:00 et 20:30 heure de Paris.
+    {
+      id: 'm1',
+      tenant_id: TENANT,
+      status: 'pending',
+      scheduled_at: '2026-09-23T17:00:00Z',
+    },
+    {
+      id: 'm2',
+      tenant_id: TENANT,
+      status: 'pending',
+      scheduled_at: '2026-09-23T18:30:00Z',
+    },
+    // Vendredi 25/09 : un match annulé, ignoré.
+    {
+      id: 'm3',
+      tenant_id: TENANT,
+      status: 'cancelled',
+      scheduled_at: '2026-09-25T17:00:00Z',
+    },
+    // Autre tenant : ignoré.
+    {
+      id: 'm4',
+      tenant_id: OTHER_TENANT,
+      status: 'pending',
+      scheduled_at: '2026-09-30T17:00:00Z',
+    },
+  ] as any;
   store.staff_logs = [] as any;
 }
 
@@ -318,5 +347,165 @@ describe('POST /api/admin/staff-planning/import', () => {
       res
     );
     expect(res.statusCode).toBe(403);
+  });
+});
+
+describe('soirs de match', () => {
+  it('GET rend les soirs de match du tenant, annulés exclus, heure de Paris', async () => {
+    const res = makeRes();
+    await indexHandler(
+      req({ query: { from: '2026-09-01', to: '2026-09-30' } }),
+      res
+    );
+    expect((res.body as any).matchNights).toEqual([
+      { date: '2026-09-23', count: 2, first: '19:00' },
+    ]);
+  });
+});
+
+describe('PATCH /api/admin/staff-planning/[slotId]', () => {
+  it('pose un rôle et une note sur un créneau importé', async () => {
+    const res = makeRes();
+    await itemHandler(
+      req({
+        method: 'PATCH',
+        query: { slotId: SLOT_CSV },
+        body: { role: 'cast', note: 'Cast principal' },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).slot).toMatchObject({
+      role: 'cast',
+      note: 'Cast principal',
+      start_time: '20:30',
+    });
+  });
+
+  it('400 sur un corps vide, 404 hors tenant, 403 pour un arbitre', async () => {
+    const empty = makeRes();
+    await itemHandler(
+      req({ method: 'PATCH', query: { slotId: SLOT_CSV }, body: {} }),
+      empty
+    );
+    expect(empty.statusCode).toBe(400);
+
+    const foreign = makeRes();
+    await itemHandler(
+      req({
+        method: 'PATCH',
+        query: { slotId: SLOT_FOREIGN },
+        body: { role: 'cast' },
+      }),
+      foreign
+    );
+    expect(foreign.statusCode).toBe(404);
+
+    store.staff = [makeStaffRow('referee')] as any;
+    invalidateStaffCache();
+    const denied = makeRes();
+    await itemHandler(
+      req({
+        method: 'PATCH',
+        query: { slotId: SLOT_CSV },
+        body: { role: 'cast' },
+      }),
+      denied
+    );
+    expect(denied.statusCode).toBe(403);
+  });
+});
+
+describe('POST /api/admin/staff-planning — répétition hebdomadaire', () => {
+  it('crée le créneau chaque semaine jusqu’à la date, sans doublonner', async () => {
+    // Postgres compare des `time` (19:00 = 19:00:00) ; le mock compare des
+    // chaînes : on aligne le format de la saisie manuelle existante.
+    const manual = (store.staff_planning_slots as any[]).find(
+      (x) => x.id === SLOT_MANUAL
+    );
+    manual.start_time = '19:00';
+    const res = makeRes();
+    await indexHandler(
+      req({
+        method: 'POST',
+        body: {
+          person_name: 'Kotarah',
+          slot_date: '2026-09-18',
+          start_time: '19:00',
+          end_time: '22:00',
+          repeat_until: '2026-10-09',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(201);
+    // 18/09, 25/09 (déjà pris à 19:00 par la saisie manuelle), 02/10, 09/10.
+    expect(res.body).toMatchObject({ created: 3, skipped: 1 });
+    const dates = (store.staff_planning_slots as any[])
+      .filter((x) => x.person_name === 'Kotarah')
+      .map((x) => x.slot_date)
+      .sort();
+    expect(dates).toEqual([
+      '2026-09-18',
+      '2026-09-25',
+      '2026-10-02',
+      '2026-10-09',
+    ]);
+  });
+
+  it('400 si la fin de répétition précède le premier jour', async () => {
+    const res = makeRes();
+    await indexHandler(
+      req({
+        method: 'POST',
+        body: {
+          person_name: 'Kotarah',
+          slot_date: '2026-10-09',
+          start_time: '19:00',
+          end_time: '22:00',
+          repeat_until: '2026-10-01',
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(400);
+  });
+});
+
+describe('import — rapprochement', () => {
+  it('un créneau toujours présent garde son id, son rôle et sa note', async () => {
+    const pomme = (store.staff_planning_slots as any[]).find(
+      (x) => x.id === SLOT_CSV
+    );
+    pomme.role = 'prod_obs';
+    pomme.note = 'OBS';
+    const res = makeRes();
+    await importHandler(
+      req({
+        method: 'POST',
+        body: {
+          months: ['2026-09'],
+          entries: [
+            {
+              person: 'Pomme',
+              date: '2026-09-23',
+              start: '20:30',
+              end: '01:00',
+            },
+          ],
+        },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({ inserted: 0, kept: 1, removed: 0 });
+    const kept = (store.staff_planning_slots as any[]).find(
+      (x) => x.id === SLOT_CSV
+    );
+    expect(kept).toMatchObject({
+      role: 'prod_obs',
+      note: 'OBS',
+      end_time: '01:00',
+    });
   });
 });

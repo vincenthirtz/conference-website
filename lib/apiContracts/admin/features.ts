@@ -209,6 +209,7 @@ import {
   StaffPlanningListQuery,
   StaffPlanningSlotCreate,
   StaffPlanningSlotIdQuery,
+  StaffPlanningSlotPatch,
 } from '../../../features/admin/staff-planning/schemas';
 import {
   LobbyIdQuery,
@@ -652,6 +653,10 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   'admin.custom-game-presets.create': { schema: PresetCreateDoc, io: 'input' },
   'admin.staff-planning.create': {
     schema: StaffPlanningSlotCreate,
+    io: 'input',
+  },
+  'admin.staff-planning/[slotId].update': {
+    schema: StaffPlanningSlotPatch,
     io: 'input',
   },
   'admin.staff-planning/import.body': {

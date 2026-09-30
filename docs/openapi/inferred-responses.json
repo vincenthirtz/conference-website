@@ -5457,6 +5457,7 @@
           "update_scrim_planning",
           "update_seed",
           "update_staff_permissions",
+          "update_staff_planning_slot",
           "update_staff_role",
           "update_stage",
           "update_support_ticket",
@@ -7376,6 +7377,7 @@
           "update_scrim_planning",
           "update_seed",
           "update_staff_permissions",
+          "update_staff_planning_slot",
           "update_staff_role",
           "update_stage",
           "update_support_ticket",
@@ -9422,6 +9424,7 @@
           "update_scrim_planning",
           "update_seed",
           "update_staff_permissions",
+          "update_staff_planning_slot",
           "update_staff_role",
           "update_stage",
           "update_support_ticket",
@@ -13749,6 +13752,28 @@
    "200": {
     "type": "object",
     "properties": {
+     "matchNights": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "count": {
+         "type": "number"
+        },
+        "date": {
+         "type": "string"
+        },
+        "first": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "count",
+        "date",
+        "first"
+       ]
+      }
+     },
      "people": {
       "type": "array",
       "items": {
@@ -13809,6 +13834,7 @@
      }
     },
     "required": [
+     "matchNights",
      "people",
      "slots"
     ]
@@ -14482,6 +14508,7 @@
           "update_scrim_planning",
           "update_seed",
           "update_staff_permissions",
+          "update_staff_planning_slot",
           "update_staff_role",
           "update_stage",
           "update_support_ticket",
@@ -20727,6 +20754,7 @@
           "update_scrim_planning",
           "update_seed",
           "update_staff_permissions",
+          "update_staff_planning_slot",
           "update_staff_role",
           "update_stage",
           "update_support_ticket",
@@ -25362,6 +25390,7 @@
           "update_scrim_planning",
           "update_seed",
           "update_staff_permissions",
+          "update_staff_planning_slot",
           "update_staff_role",
           "update_stage",
           "update_support_ticket",
@@ -56550,6 +56579,65 @@
     ]
    }
   },
+  "PATCH /api/admin/staff-planning/{slotId}": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "slot": {
+      "type": "object",
+      "properties": {
+       "created_at": {
+        "type": "string"
+       },
+       "end_time": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "note": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "person_name": {
+        "type": "string"
+       },
+       "role": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "slot_date": {
+        "type": "string"
+       },
+       "source": {
+        "type": "string"
+       },
+       "start_time": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "created_at",
+       "end_time",
+       "id",
+       "note",
+       "person_name",
+       "role",
+       "slot_date",
+       "source",
+       "start_time"
+      ]
+     }
+    },
+    "required": [
+     "slot"
+    ]
+   }
+  },
   "PATCH /api/admin/stages/{stageId}": {
    "200": {
     "type": "object",
@@ -67347,8 +67435,17 @@
    "201": {
     "type": "object",
     "properties": {
+     "created": {
+      "type": "number"
+     },
+     "skipped": {
+      "type": "number"
+     },
      "slot": {
-      "type": "object",
+      "type": [
+       "object",
+       "null"
+      ],
       "properties": {
        "created_at": {
         "type": "string"
@@ -67398,6 +67495,8 @@
      }
     },
     "required": [
+     "created",
+     "skipped",
      "slot"
     ]
    }
@@ -67409,11 +67508,17 @@
      "inserted": {
       "type": "number"
      },
+     "kept": {
+      "type": "number"
+     },
      "months": {
       "type": "array",
       "items": {
        "type": "string"
       }
+     },
+     "removed": {
+      "type": "number"
      },
      "skipped": {
       "type": "number"
@@ -67421,7 +67526,9 @@
     },
     "required": [
      "inserted",
+     "kept",
      "months",
+     "removed",
      "skipped"
     ]
    }

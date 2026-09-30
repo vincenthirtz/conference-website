@@ -1,3 +1,53 @@
+patch:
+  x-zod-query: admin.staff-planning/[slotId].query
+  summary: Edit a staff availability slot.
+  description: >
+    Modifie le role, les horaires ou la note d'un creneau. Le role et la note
+    poses sur un creneau importe survivent aux reimports du tableur. 409 si
+    le nouveau debut en croise un autre de la meme personne ce jour-la.
+    Reserve a `manage_staff`.
+  operationId: adminUpdateStaffPlanningSlot
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.staff-planning/[slotId].update
+          type: object
+          properties:
+            start_time:
+              type: string
+            end_time:
+              type: string
+            role:
+              type: [string, 'null']
+              enum: [cast, moderation, prod_obs, live_prod, null]
+            note:
+              type: [string, 'null']
+  responses:
+    '200':
+      description: Creneau modifie.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              slot:
+                type: object
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      description: Creneau deja present a cette heure pour cette personne.
 delete:
   x-zod-query: admin.staff-planning/[slotId].query
   summary: Delete a staff availability slot.

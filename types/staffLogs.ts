@@ -343,6 +343,7 @@ export type StaffLogAction =
   | 'delete_custom_game_preset'
   // --- Planning du staff ---
   | 'create_staff_planning_slot'
+  | 'update_staff_planning_slot'
   | 'delete_staff_planning_slot'
   | 'import_staff_planning'
   // --- Twitch ---

@@ -26,9 +26,17 @@ export type StaffPlanningSlotRow = {
   created_at: string;
 };
 
+/** Un soir de match de la fenêtre (heure de Paris). */
+export type StaffPlanningMatchNight = {
+  date: string;
+  count: number;
+  first: string;
+};
+
 export type StaffPlanningPayload = {
   slots: StaffPlanningSlotRow[];
   people: string[];
+  matchNights: StaffPlanningMatchNight[];
 };
 
 export const staffPlanningClient = {
