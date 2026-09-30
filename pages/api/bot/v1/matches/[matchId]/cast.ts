@@ -9,7 +9,7 @@
 //  DELETE : retire un assignment (staff admin/owner)
 //           body: { actorDiscordUserId, assignmentId } OU { castMemberId }
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';

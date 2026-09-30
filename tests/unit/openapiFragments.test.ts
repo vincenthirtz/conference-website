@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { z } from 'zod';
+import * as z from 'zod';
 import { API_CONTRACT_SCHEMAS } from '../../lib/apiContracts';
 import {
   assembleSpec,

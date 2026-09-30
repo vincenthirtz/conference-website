@@ -7,7 +7,7 @@
 // répondent à un corps invalide par un message et un `code` à elles
 // (`INVALID_BODY`), que le noyau ne sait pas reproduire. Contrat inchangé.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { TEAM_ROLE_VALUES } from '@/utils/teamRoles';
 import {

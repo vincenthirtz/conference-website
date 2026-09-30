@@ -17,7 +17,7 @@
 // L'id dans l'URL est l'integer `id` de bot_event_outbox (pas l'event_id
 // UUID, qui est la cle externe).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotCrossTenantRequest } from '@/utils/botAuth';

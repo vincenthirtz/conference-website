@@ -5,7 +5,7 @@
 // lib/apiContracts/player/predictions/body.ts (antérieur à P4) : ré-exporté
 // ici pour que le module n'ait qu'une porte d'entrée.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 // Chemin relatif : ce fichier est lu par l'assembleur OpenAPI (sans alias).
 export { predictionBodySchema as PredictionBody } from '../../../lib/apiContracts/player/predictions/body';

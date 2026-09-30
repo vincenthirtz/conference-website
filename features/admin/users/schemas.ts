@@ -1,7 +1,7 @@
 // features/admin/users/schemas.ts — entrées des routes staff sur les comptes.
 // Zod seul : référencé par la spec (lib/apiContracts, `x-zod-query`).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { looseBody, looseQuery } from '../../../utils/admin/pathParams';
 
 export const UserSearchQuery = z.object({

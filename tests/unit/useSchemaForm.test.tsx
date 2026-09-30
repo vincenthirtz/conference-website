@@ -14,7 +14,7 @@ import {
   screen,
 } from '@testing-library/react';
 import { useRef } from 'react';
-import { z } from 'zod';
+import * as z from 'zod';
 import { useSchemaForm } from '../../hooks/forms/useSchemaForm';
 import FormField, {
   FormError,

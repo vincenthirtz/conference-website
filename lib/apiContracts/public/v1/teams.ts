@@ -1,6 +1,6 @@
 // Réponse de /api/public/v1/teams/{id}. Miroir de utils/public/readTeam.ts.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { nullableString } from './common';
 
 export const publicV1TeamMemberSchema = z

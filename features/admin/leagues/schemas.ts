@@ -5,7 +5,7 @@
 // erreur historique (`{ error: 'Invalid body', code: 'INVALID_BODY',
 // details }`) est lue telle quelle ; le service les applique et la reproduit.
 
-import { z } from 'zod';
+import * as z from 'zod';
 // Imports relatifs : ces schémas sont lus par l'assemblage OpenAPI (Node seul).
 import { uuidPathParam as uuidParam } from '../../../utils/admin/pathParams';
 

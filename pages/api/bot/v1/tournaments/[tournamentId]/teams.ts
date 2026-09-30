@@ -16,7 +16,7 @@
 // (/api/admin/teams/[teamId]/tournaments): tournament must be 'published',
 // max_teams not exceeded, team has enough members, no double registration.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';

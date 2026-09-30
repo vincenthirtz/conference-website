@@ -6,7 +6,7 @@
 // The matching endpoints live under `pages/api/onboard/*` and the auto-claim
 // path under `pages/api/bot/v1/tenants/link-guild.ts`.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 // ---------------------------------------------------------------------------
 // Slug rules

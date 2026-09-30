@@ -4,7 +4,7 @@
 // Donnée d'ASSOCIATION, sans colonne tenant_id : garde sur le rôle global
 // (`scope: 'platform'`), aucun scope tenant.
 
-import { z } from 'zod';
+import * as z from 'zod';
 // Imports relatifs : ces schémas sont lus par l'assemblage OpenAPI (Node seul).
 import { uuidPathParam } from '../../../utils/admin/pathParams';
 

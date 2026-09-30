@@ -2,7 +2,7 @@
 // Source unique handler ↔ spec OpenAPI (`x-zod-query: bot.teams/[teamId].query`).
 // Module sans effet de bord : zod et utilitaires purs seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 // querySchema seulement : teamId est un id-OU-slug (pas un UUID strict) et le
 // body PATCH a une sémantique trop riche pour un schéma zod sans changer le

@@ -4,7 +4,7 @@
 // permission `manage_scrims`, la forme et l'appartenance des créneaux.
 
 import { useEffect, useMemo } from 'react';
-import { z } from 'zod';
+import * as z from 'zod';
 import { useSchemaForm } from '@/hooks/forms/useSchemaForm';
 import FormField, {
   FormError,

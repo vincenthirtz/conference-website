@@ -17,7 +17,7 @@
 // 200 `{ matchId, tournamentId, stageId, game, preset: {...} | null, lines: [] }`
 // 404 si le match n'existe pas dans ce tenant.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { resolveMatchPreset } from '@/utils/matches/resolveMatchPreset';

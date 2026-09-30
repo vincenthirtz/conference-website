@@ -38,7 +38,7 @@
 // IP que le client peut forger (`cf-connecting-ip`) : il limite le bruit, il ne
 // protège de rien seul.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 // Les plafonds chiffrés vivent dans `./tradeLimits`, sans zod : le guide
 // joueuse n'a besoin que d'eux, et importer ce module-ci lui faisait charger

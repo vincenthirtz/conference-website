@@ -6,7 +6,7 @@
 // handler. Le cookie l'emporte sur un Bearer résiduel en `cookie-or-bearer`.
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { z } from 'zod';
+import * as z from 'zod';
 
 // Le setup neutralise le rate-limit ; on l'observe ici pour vérifier l'ORDRE.
 const { applyRateLimitMock } = vi.hoisted(() => ({

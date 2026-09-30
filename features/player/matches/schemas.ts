@@ -2,7 +2,7 @@
 // match, déclaration de score, feuille de match (lot P12). Zod seul :
 // importé par les routes, le registre OpenAPI (lib/apiContracts) et le client.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type {
   PlayerCheckin,
   TeamRef,

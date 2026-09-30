@@ -19,7 +19,7 @@
 // Si l'update echoue parce que la colonne manque (Postgres 42703), on renvoie
 // un 503 explicite plutot qu'un 500 opaque, sans impacter les 3 autres champs.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';

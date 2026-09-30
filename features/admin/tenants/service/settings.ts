@@ -2,7 +2,7 @@
 // paiement, RNA), domaine propre, configuration Discord par serveur.
 
 import crypto from 'node:crypto';
-import { z } from 'zod';
+import * as z from 'zod';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { LegacyAdminError } from '@/utils/admin/errors';
 import type { Database } from '@/types/database.generated';

@@ -2,7 +2,7 @@
 // Source unique handler ↔ spec OpenAPI (`x-zod-query: bot.players/by-discord/[discordUserId]/profile.query`).
 // Module sans effet de bord : zod et utilitaires purs seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { discordIdSchema } from '../../../../../../utils/botValidation';
 
 export const profileQuerySchema = z.object({ discordUserId: discordIdSchema });

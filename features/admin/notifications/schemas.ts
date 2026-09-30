@@ -5,7 +5,7 @@
 // code: 'INVALID_BODY', fields }`, `fields` au format `flatten().fieldErrors`) :
 // le service les applique et la reproduit.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { WEB_PUSH_EVENT_TYPES } from '@/utils/webPushEvents';
 
 export { pushSubscribeBodySchema as PushSubscribeBody } from '@/utils/pushSubscriptionUpsert';

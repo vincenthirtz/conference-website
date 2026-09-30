@@ -13,7 +13,7 @@
 // affiche « connecte-toi ».
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { z } from 'zod';
+import * as z from 'zod';
 import crypto from 'crypto';
 
 import { supabaseAdmin, supabaseAnonServer } from '@/utils/supabase';

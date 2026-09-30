@@ -1,6 +1,6 @@
 // Champs anti-bot communs aux formulaires publics sans compte.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 export const antiBotFields = {
   honeypot: z

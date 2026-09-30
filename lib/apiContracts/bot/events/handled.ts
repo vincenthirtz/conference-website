@@ -2,7 +2,7 @@
 // Source unique handler ↔ spec OpenAPI (`x-zod: bot.events/handled`, cf. lib/apiContracts/index.ts).
 // Module sans effet de bord : zod et utilitaires purs seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { uuidSchema } from '../../../../utils/botValidation';
 
 // eventId : UUID requis (uuidSchema = ancien isValidUUID + trim).

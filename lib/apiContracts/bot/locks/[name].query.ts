@@ -2,7 +2,7 @@
 // Source unique handler ↔ spec OpenAPI (`x-zod-query: bot.locks/[name].query`).
 // Module sans effet de bord : zod et utilitaires purs seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { boundedString } from '../../../../utils/botValidation';
 
 export const NAME_MAX_LEN = 64;

@@ -12,7 +12,7 @@
 // dispute (pages/api/admin/matches/[matchId]/dispute.ts).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { z } from 'zod';
+import * as z from 'zod';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute, AuthenticatedStaffContext } from '@/utils/staff';

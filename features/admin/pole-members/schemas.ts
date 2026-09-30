@@ -1,7 +1,7 @@
 // features/admin/pole-members/schemas.ts — membres des pôles de
 // l'association (page publique /association).
 
-import { z } from 'zod';
+import * as z from 'zod';
 // Imports relatifs : ces schémas sont lus par l'assemblage OpenAPI (Node seul).
 import { uuidPathParam } from '../../../utils/admin/pathParams';
 

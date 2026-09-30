@@ -17,7 +17,7 @@
 // applyMatchScore (propage le bracket), log staff_logs. Sans score (reprise
 // pending/ongoing), les reports capitaines sont purges avant la reouverture.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';

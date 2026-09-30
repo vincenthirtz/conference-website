@@ -50,7 +50,7 @@ import {
   REPORT_CLOSED_STATUSES,
   ReportRightLookupError,
 } from './reportRight';
-import { z } from 'zod';
+import * as z from 'zod';
 
 const SITE_URL =
   process.env.SITE_URL ||

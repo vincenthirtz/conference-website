@@ -15,7 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { describe, expect, it } from 'vitest';
-import { z } from 'zod';
+import * as z from 'zod';
 import { API_CONTRACT_SCHEMAS } from '../../lib/apiContracts';
 import { publicV1PaginationSchema } from '../../lib/apiContracts/public/v1/common';
 import {

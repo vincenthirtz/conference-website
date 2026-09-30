@@ -14,7 +14,7 @@
 // la spec OpenAPI référence ces schémas (lib/apiContracts/admin/features.ts)
 // et son assembleur tourne sous Node seul au prebuild, sans alias `@/`.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { uuidPathParam } from '../../../utils/admin/pathParams';
 import { deletedTasksQuerySchema } from '../../../utils/taskBoardSchemas';
 

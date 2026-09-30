@@ -49,7 +49,7 @@ import {
 } from '@/utils/tenants/tenantScope';
 import { assertPlanLimit } from '@/utils/billing/planLimits';
 import { CGV_VERSION } from '@/utils/billing/cgv';
-import { z } from 'zod';
+import * as z from 'zod';
 import type { Audited } from '../../_shared/audited';
 import * as repo from '../repository/tenants';
 import {

@@ -2,7 +2,7 @@
 // Source unique handler ↔ spec OpenAPI (`x-zod: bot.stages/[stageId]/auto-byes`, cf. lib/apiContracts/index.ts).
 // Module sans effet de bord : zod et utilitaires purs seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { discordIdSchema } from '../../../../../utils/botValidation';
 
 // scoreForBye historique : nombre >= 0 (non forcément entier), défaut 1.

@@ -23,7 +23,7 @@
 //
 // Voir database/migrations/add_tenant_plan_billing_tables.sql.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
 import { planPrice, type PlanTerm, type PurchasablePlan } from './planFeatures';

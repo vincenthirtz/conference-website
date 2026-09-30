@@ -10,7 +10,7 @@
 // All match fields except tournament_id are optional — teams may be null
 // (placeholder match), stage may be null (free-floating match), etc.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';

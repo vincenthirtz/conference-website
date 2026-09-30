@@ -1,7 +1,7 @@
 // features/admin/cast-members/schemas.ts — fiches des casteuses et casteurs
 // de l'espace (page /association, assignation aux matchs).
 
-import { z } from 'zod';
+import * as z from 'zod';
 // Imports relatifs : ces schémas sont lus par l'assemblage OpenAPI (Node seul).
 import { uuidPathParam } from '../../../utils/admin/pathParams';
 

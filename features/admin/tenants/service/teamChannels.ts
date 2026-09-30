@@ -5,7 +5,7 @@
 // Le site n'a pas le token Discord : chaque action part en événement vers le
 // bot (`emitBotEvent`), qui exécute et repose une photo fraîche.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import type { AuditDetails } from '@/utils/admin/defineAdminRoute';
 import { LegacyAdminError } from '@/utils/admin/errors';

@@ -8,7 +8,7 @@
 // servie à une visiteuse anonyme ni indexée ; aucune route du réseau ne suit
 // `?as=` (inspection staff) : elles sont toutes `subject: 'self'`.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type {
   DirectoryPlayer,
   PlayerTeam,

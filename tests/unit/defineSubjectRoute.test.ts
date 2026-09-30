@@ -6,7 +6,7 @@
 // J3 comprises), zod → 400 `fields`, idempotence.
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { z } from 'zod';
+import * as z from 'zod';
 import type { StaffMember } from '../../types/staff';
 
 const { logStaffActionMock } = vi.hoisted(() => ({

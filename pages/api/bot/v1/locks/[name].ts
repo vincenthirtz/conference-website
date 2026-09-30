@@ -13,7 +13,7 @@
 // TTL : si le bot crash mid-job, le lock expire après ttlSeconds et un
 // autre process peut le reprendre.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';

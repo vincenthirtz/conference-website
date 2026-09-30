@@ -1,7 +1,7 @@
 // features/admin/dashboard/schemas.ts — entrées des routes du tableau de bord.
 // Zod seul : référencé par la spec (lib/apiContracts, `x-zod-query`).
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 /** Même forme que `isValidUUID` (utils/apiHelpers), sans en importer le module. */
 const UUID_RE =

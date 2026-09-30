@@ -17,7 +17,7 @@
 //   - invitation not found   → 404
 //   - already processed      → 409
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';

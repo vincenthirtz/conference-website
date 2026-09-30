@@ -2,7 +2,7 @@
 // spec OpenAPI (`x-zod: player.predictions.set`).
 // Module sans effet de bord : zod seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 export const predictionBodySchema = z
   .object({

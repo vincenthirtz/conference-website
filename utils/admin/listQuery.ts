@@ -14,7 +14,7 @@
 //
 // Zod seul (référencé par la spec via lib/apiContracts).
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 export const LIST_MAX_PAGE_SIZE = 100;
 

@@ -9,7 +9,7 @@
 // after the bot creates the bare stage.
 
 import slugify from 'slugify';
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';

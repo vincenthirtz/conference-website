@@ -10,7 +10,7 @@
 // (`broadcast`, `email`) est à part : OPT-OUT (abonnée par défaut), posé par
 // la désinscription RGPD.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 /** Compteurs agrégés de GET /api/player/notifications. */
 export type PlayerNotificationsPayload = {

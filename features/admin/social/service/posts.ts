@@ -5,7 +5,7 @@
 // seule destination en erreur refuse tout : on ne publie pas la moitié d'une
 // annonce.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { LegacyAdminError } from '@/utils/admin/errors';
 import {

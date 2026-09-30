@@ -12,7 +12,7 @@
 // n'est pas admin ou owner. Un score qui finalise un match et propage un
 // bracket ne se prend pas sur un pseudo.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { discordIdSchema } from '../../../../../utils/botValidation';
 
 export const scoreBodySchema = z.object({

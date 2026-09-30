@@ -4,7 +4,7 @@
 // handler.
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { z } from 'zod';
+import * as z from 'zod';
 
 const { applyRateLimitMock, verifyCaptchaMock } = vi.hoisted(() => ({
   applyRateLimitMock: vi.fn((..._args: unknown[]) => false),

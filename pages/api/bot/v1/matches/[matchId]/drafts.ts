@@ -9,7 +9,7 @@
 //
 // Auth : x-api-key (BOT_API_KEY) + x-tenant-id (resolved by withBotRoute).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';

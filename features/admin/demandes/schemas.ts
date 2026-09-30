@@ -7,7 +7,7 @@
 // Le segment s'appelle `id` et non `demandeId` : Next.js refuse deux noms de
 // slug différents sur le même segment dynamique (erreur de BUILD seulement).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { uuidPathParam } from '../../../utils/admin/pathParams';
 
 /** Fiche staff d'une demande, relations comprises. */

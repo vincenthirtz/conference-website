@@ -4,7 +4,7 @@
 //
 // `dryRun` (défaut VRAI) : aperçu rendu par équipe, rien n'est envoyé.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import type { AuditDetails } from '@/utils/admin/defineAdminRoute';
 import { AdminError, LegacyAdminError } from '@/utils/admin/errors';

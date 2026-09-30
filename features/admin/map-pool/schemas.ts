@@ -8,7 +8,7 @@
 // zod seul, imports RELATIFS : ces schémas sont référencés par la spec
 // OpenAPI (lib/apiContracts/admin/features.ts), assemblée par Node sans `@/`.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { looseBody, looseQuery } from '../../../utils/admin/pathParams';
 
 /* ---------------------------------------------------------------------------

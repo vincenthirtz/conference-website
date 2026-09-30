@@ -2,7 +2,7 @@
 // Source unique handler ↔ spec OpenAPI (`x-zod-query: bot.tournaments/[tournamentId]/matches.query`).
 // Module sans effet de bord : zod et utilitaires purs seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { uuidSchema } from '../../../../../utils/botValidation';
 
 // Le body (single { match } | batch { matches }) garde sa validation inline :

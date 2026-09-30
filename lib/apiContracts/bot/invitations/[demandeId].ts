@@ -2,7 +2,7 @@
 // Source unique handler ↔ spec OpenAPI (`x-zod: bot.invitations/[demandeId]`, cf. lib/apiContracts/index.ts).
 // Module sans effet de bord : zod et utilitaires purs seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { discordIdSchema } from '../../../../utils/botValidation';
 
 // action : trim + lowercase historique, puis enum strict. actorDiscordUserId

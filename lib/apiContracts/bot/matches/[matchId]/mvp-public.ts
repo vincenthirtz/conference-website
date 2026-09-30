@@ -14,7 +14,7 @@
 // `.nullish()` et non `.optional()` pour la même raison qu'à côté : le bot
 // envoie explicitement `null` pour ce qu'il n'a pas encore.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import {
   discordIdSchema,
   uuidSchema,

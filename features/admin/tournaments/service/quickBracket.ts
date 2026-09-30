@@ -7,7 +7,7 @@
 // équipes). En cas d'échec, nettoyage best-effort de ce qui a été créé.
 
 import slugify from 'slugify';
-import { z } from 'zod';
+import * as z from 'zod';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { LegacyAdminError } from '@/utils/admin/errors';
 import {

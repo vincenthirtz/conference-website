@@ -5,7 +5,7 @@
 // écrans) : le service les applique ; seuls les paramètres d'URL passent par
 // la validation de `defineAdminRoute`.
 
-import { z } from 'zod';
+import * as z from 'zod';
 // Imports relatifs : ces schémas sont lus par l'assemblage OpenAPI (Node seul).
 import { DISCORD_CHANNEL_TYPES } from '../../../utils/discord/channels';
 

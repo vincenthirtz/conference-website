@@ -2,7 +2,7 @@
 // Source unique handler ↔ spec OpenAPI (`x-zod-query: bot.teams/index.query`).
 // Module sans effet de bord : zod et utilitaires purs seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 // GET filtres (tous optionnels, coercition côté handler conservée).
 export const listTeamsQuerySchema = z.object({

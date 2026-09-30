@@ -2,7 +2,7 @@
 // Source unique handler ↔ spec OpenAPI (`x-zod-query: bot.scrims/[scrimId]/index.query`).
 // Module sans effet de bord : zod et utilitaires purs seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 // scrimId est un id OU un slug : on ne peut pas le contraindre à un UUID. On
 // vérifie juste qu'il est non vide (le handler choisit eq('id') vs eq('slug')).

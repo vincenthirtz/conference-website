@@ -32,7 +32,7 @@
 // report-score.js : « ❌ Report échoué : <error> ») : ces messages sont donc
 // rediges pour etre lus sur Discord, accents et consigne compris.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';

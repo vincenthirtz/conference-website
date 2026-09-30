@@ -3,7 +3,7 @@
 // Le corps d'un article garde sa validation historique (titre + contenu
 // requis, le reste transmis tel quel) : le service l'applique.
 
-import { z } from 'zod';
+import * as z from 'zod';
 // Imports relatifs : ces schémas sont lus par l'assemblage OpenAPI (Node seul).
 import {
   looseBody,

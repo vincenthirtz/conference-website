@@ -10,7 +10,7 @@
 // testaient les champs : `parseBody` renvoie le message de la première issue.
 // Les dérivations (trim → null, rôle par défaut…) restent dans la route.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { looseUuid } from '../_shared/zod';
 
 const TEXT_INVALID = 'Texte invalide.';

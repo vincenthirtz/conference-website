@@ -7,7 +7,7 @@
 // assemble avec Node seul — l'alias `@/` n'y existe pas. Et un `.regex()`
 // plutôt qu'un `.refine()` : il se traduit en `pattern` dans la spec.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 /** Même motif que `isValidUUID` (utils/apiHelpers). */
 const UUID_RE =

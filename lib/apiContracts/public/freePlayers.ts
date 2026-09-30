@@ -3,7 +3,7 @@
 // convertit en JSON Schema (`x-zod: public.freePlayerSignup`). Module sans
 // effet de bord (zod et constantes seulement) : l'assembleur de spec l'importe.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import {
   FREE_PLAYER_LEVELS,
   FREE_PLAYER_LIMITS,

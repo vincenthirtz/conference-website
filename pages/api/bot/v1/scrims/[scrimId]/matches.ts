@@ -7,7 +7,7 @@
 //   { actorDiscordUserId, match:  {...} }       // single
 //   { actorDiscordUserId, matches: [{...}, ...] } // batch
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';

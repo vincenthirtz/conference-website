@@ -24,7 +24,7 @@
 // chose.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { z } from 'zod';
+import * as z from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import {

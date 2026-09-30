@@ -3,7 +3,7 @@
 // (`x-zod: public.circuitPartnerApplication`).
 // Module sans effet de bord : zod et modules purs, chemins relatifs.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { antiBotFields } from './antiBot';
 
 // Vide accepté (champ laissé blanc) : le handler le range en NULL. Pas de

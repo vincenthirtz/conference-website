@@ -1,7 +1,7 @@
 // Contrat de POST /api/public/team-openings (annonce d'équipe sans compte).
 // Source unique handler ↔ spec (`x-zod: public.teamOpeningSignup`).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import {
   TEAM_OPENING_LEVELS,
   TEAM_OPENING_LIMITS,

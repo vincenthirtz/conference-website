@@ -14,7 +14,7 @@
 //
 // Une lecture en ÉCHEC n'est jamais une absence : `null` ≠ « rien ».
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { AdminError, LegacyAdminError } from '@/utils/admin/errors';
 import { firstParam } from '@/utils/admin/pathParams';

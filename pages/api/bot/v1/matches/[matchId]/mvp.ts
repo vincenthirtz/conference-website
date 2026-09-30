@@ -19,7 +19,7 @@
 // Auth : x-api-key (BOT_API_KEY) + x-tenant-id. Pas d'acteur staff : voter est
 // ouvert à tout le serveur, c'est le principe d'un vote du public.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import {

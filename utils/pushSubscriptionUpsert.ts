@@ -20,7 +20,7 @@
 // que RLS est contournée que la garde de propriété doit vivre ici.
 
 import { timingSafeEqual } from 'crypto';
-import { z } from 'zod';
+import * as z from 'zod';
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';

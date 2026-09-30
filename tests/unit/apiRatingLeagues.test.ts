@@ -19,7 +19,7 @@ import { invalidateStaffCache } from '../../utils/staff';
 
 import leaderboardHandler from '../../pages/api/players/leaderboard';
 import profileHandler from '../../pages/api/players/[userId]/profile';
-import { z } from 'zod';
+import * as z from 'zod';
 import { playerProfileResponseSchema } from '../../lib/apiContracts/public/v1/rating';
 
 /**

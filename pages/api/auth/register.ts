@@ -19,7 +19,7 @@
 // donc rien de plus qu'un compte 'player' sans équipe.
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { z } from 'zod';
+import * as z from 'zod';
 import { supabaseAnonServer, supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit, refundRateLimit } from '@/utils/rateLimit';
 import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';

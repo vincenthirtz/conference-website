@@ -1,7 +1,7 @@
 // Réponses de /api/public/v1/leaderboard et players/{userId} (aussi
 // /api/players/*). Miroir de types/rating.ts (égalité des types vérifiée par test).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { nullableString } from './common';
 
 const result = z.enum(['win', 'loss', 'draw']);

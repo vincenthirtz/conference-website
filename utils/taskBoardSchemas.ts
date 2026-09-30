@@ -4,7 +4,7 @@
 // pour que la validation de bord (priorité, labels, positions, IDs) reste
 // identique des deux côtés — pas de dérive de contrat.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 /**
  * Priorités de carte — enum aligné sur le CHECK Postgres. Défini ICI (module

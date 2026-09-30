@@ -10,7 +10,7 @@
 // OpenAPI (lib/apiContracts/admin/features.ts), assemblée par Node sans `@/`.
 // `utils/customGamePresets` n'importe rien : il peut être atteint d'ici.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { looseBody, looseQuery } from '../../../utils/admin/pathParams';
 import {
   PRESET_DESCRIPTION_MAX,

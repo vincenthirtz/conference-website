@@ -6,7 +6,7 @@
 // requestId dans l'en-tête et dans le corps d'erreur.
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { z } from 'zod';
+import * as z from 'zod';
 import type { StaffMember } from '../../types/staff';
 import {
   store,

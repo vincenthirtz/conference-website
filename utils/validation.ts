@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 import { checkEmailQuality, EMAIL_QUALITY_MESSAGES } from './emailQuality';
 import {
   CONTACT_MESSAGE_MAX_LENGTH,

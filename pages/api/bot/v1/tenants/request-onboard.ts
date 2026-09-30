@@ -22,7 +22,7 @@
 // tenant yet. Same exemption as `/tenants/link-guild`.
 
 import type { NextApiResponse } from 'next';
-import { z } from 'zod';
+import * as z from 'zod';
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotCrossTenantRequest } from '@/utils/botAuth';

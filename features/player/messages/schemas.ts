@@ -4,7 +4,7 @@
 // playerBoundariesGuard, la matrice de permissions et les contrats), le
 // registre OpenAPI (lib/apiContracts) et, demain, le client.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 const EMPTY = 'Le message ne peut pas etre vide.';
 const TARGET = 'Equipe cible requise.';

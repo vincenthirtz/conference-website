@@ -1,7 +1,7 @@
 // Réponses de /api/public/v1/leagues* (aussi /api/leagues*). Miroir de
 // types/leagues.ts (égalité des types vérifiée par test).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { nullableInt, nullableString } from './common';
 
 export const leagueSchema = z

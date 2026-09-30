@@ -1,6 +1,6 @@
 // Briques communes des réponses de l'API publique v1.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 /** Chaîne ou null (colonnes facultatives exposées telles quelles). */
 export const nullableString = z.string().nullable();

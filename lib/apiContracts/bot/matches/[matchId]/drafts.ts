@@ -2,7 +2,7 @@
 // Source unique handler ↔ spec OpenAPI (`x-zod: bot.matches/[matchId]/drafts`, cf. lib/apiContracts/index.ts).
 // Module sans effet de bord : zod et utilitaires purs seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 // gameIndex : entier >= 1. z.coerce reproduit le Number(body.gameIndex) inline
 // (accepte "2" comme 2). fearless : booléen optionnel ; un non-booléen est

@@ -9,7 +9,7 @@
 // message historique à `parseBody` — un échec de schéma rend donc exactement
 // la réponse d'avant, `fields` en plus.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { looseUuid, stringOrIgnored } from '../_shared/zod';
 
 /** POST /api/player/tcg/packs (ouverture) — refus `missing_pack`. */

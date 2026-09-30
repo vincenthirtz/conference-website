@@ -15,7 +15,7 @@
 // ligne.
 
 import slugify from 'slugify';
-import { z } from 'zod';
+import * as z from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logStaffAction } from '@/utils/staffLogs';
 import { withDefaultTeamLogo } from '@/utils/teams/defaultTeamLogo';

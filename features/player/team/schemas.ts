@@ -9,7 +9,7 @@
 // Les messages sont ceux que les routes renvoyaient, dans l'ordre où elles
 // testaient les champs : `parseBody` renvoie le message de la première issue.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { looseUuid } from '../_shared/zod';
 import { REVIEW_SUBJECT_TYPES } from '../../../utils/teams/teamReviews';
 import type { TeamPermission } from '../../../utils/teamRoles';

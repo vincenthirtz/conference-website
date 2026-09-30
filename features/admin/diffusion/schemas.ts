@@ -8,7 +8,7 @@
 // les mêmes des deux côtés : une erreur `fields.label` du serveur retombe
 // sous le champ `label` du formulaire.
 
-import { z } from 'zod';
+import * as z from 'zod';
 // Import relatif : ce fichier est lu par l'assemblage OpenAPI (Node seul).
 import { looseBody } from '../../../utils/admin/pathParams';
 

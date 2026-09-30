@@ -13,7 +13,7 @@
 // wizard traduit (code → i18n). Un corps que l'ancienne route acceptait est
 // accepté à l'identique.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 const INVALID = 'Requête invalide.';
 

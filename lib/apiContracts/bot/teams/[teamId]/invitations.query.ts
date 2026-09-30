@@ -2,7 +2,7 @@
 // Source unique handler ↔ spec OpenAPI (`x-zod-query: bot.teams/[teamId]/invitations.query`).
 // Module sans effet de bord : zod et utilitaires purs seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { uuidSchema } from '../../../../../utils/botValidation';
 
 // querySchema (GET + POST) : teamId UUID requis. Les filtres GET (status/type/

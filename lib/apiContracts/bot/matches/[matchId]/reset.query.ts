@@ -2,7 +2,7 @@
 // Source unique handler ↔ spec OpenAPI (`x-zod-query: bot.matches/[matchId]/reset.query`).
 // Module sans effet de bord : zod et utilitaires purs seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { uuidSchema } from '../../../../../utils/botValidation';
 
 export const resetQuerySchema = z.object({ matchId: uuidSchema });

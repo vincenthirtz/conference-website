@@ -14,7 +14,7 @@
 // Idempotent : même eventId peut être POST plusieurs fois sans erreur.
 // Auth : x-api-key (BOT_API_KEY).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute } from '@/utils/botAuth';

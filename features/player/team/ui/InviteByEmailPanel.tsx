@@ -6,7 +6,7 @@
 // Formulaire sur schéma (`useSchemaForm`) : aucun `useState` de champ.
 
 import type { ReactNode } from 'react';
-import { z } from 'zod';
+import * as z from 'zod';
 import { useSchemaForm } from '@/hooks/forms/useSchemaForm';
 import FormField, { FormError } from '@/features/ruban/FormField';
 import { Button, Card } from '@/features/ruban';

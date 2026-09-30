@@ -13,7 +13,7 @@
 //
 // Idempotent : reappel = update (snoozed_until ecrase, updated_at refresh).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';

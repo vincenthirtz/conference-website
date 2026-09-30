@@ -19,7 +19,7 @@
 
 import crypto from 'node:crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { z } from 'zod';
+import * as z from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffRoute } from '@/utils/staff';
 import { applyRateLimit } from '@/utils/rateLimit';

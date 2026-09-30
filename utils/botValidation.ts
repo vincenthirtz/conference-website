@@ -14,7 +14,7 @@
 // isValidUUID, et le DISCORD_ID_RE de botAuth/botActor) pour ne PAS changer le
 // comportement de validation pré-existant — juste le factoriser.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 // Re-export du formateur d'erreur (messages .describe() en priorité) pour que
 // les modules de schéma n'aient qu'un seul import.

@@ -3,7 +3,7 @@
 // lib/apiContracts/index.ts). Module sans effet de bord : zod et utilitaires
 // purs seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import {
   discordIdSchema,
   boundedString,

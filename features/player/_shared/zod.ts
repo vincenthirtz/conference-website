@@ -1,7 +1,7 @@
 // features/player/_shared/zod.ts — briques zod communes aux schémas joueuse
 // (lot P4). Zod seul, sans alias `@/` : importé par lib/apiContracts.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 /**
  * UUID au sens d'`isValidUUID` (utils/apiHelpers) : 8-4-4-4-12 hexadécimal,

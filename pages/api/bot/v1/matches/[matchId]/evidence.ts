@@ -20,7 +20,7 @@
 // des droits en echec = 500. Route "basic" (pas de gate Régie+) : soumettre une preuve fait
 // partie du flux de report de base.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import crypto from 'crypto';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';

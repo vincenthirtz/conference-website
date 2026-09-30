@@ -4,7 +4,7 @@
 // `utils/apiTokens/mintTenantApiToken.ts` ; référencé par la spec
 // (`x-zod: admin.apiTokens.mint`).
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 export const mintTokenBodySchema = z.object({
   name: z.string().trim().min(1).max(120),

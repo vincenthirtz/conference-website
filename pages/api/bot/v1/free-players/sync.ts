@@ -27,7 +27,7 @@
 // Réponse 200 : { count, linked, unlinked, unlinkedDiscordIds }.
 // `unlinkedDiscordIds` = les discordUserId du set reçu sans compte site lié.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';

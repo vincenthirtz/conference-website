@@ -5,7 +5,7 @@
 // OpenAPI (lib/apiContracts/admin/features.ts), assemblée par Node sans `@/`.
 
 import { looseBody, uuidPathParam } from '../../../utils/admin/pathParams';
-import { z } from 'zod';
+import * as z from 'zod';
 
 /** `[lobbyId]` : absent ou mal formé → 400 `Invalid lobbyId` (message d'origine). */
 export const LobbyIdQuery = z.object({

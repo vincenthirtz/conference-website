@@ -1,7 +1,7 @@
 // Contrat de POST /api/public/newsletter/subscribe.
 // Source unique handler ↔ spec (`x-zod: public.newsletterSubscribe`).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { antiBotFields } from './antiBot';
 
 export const newsletterSubscribeBodySchema = z.object({

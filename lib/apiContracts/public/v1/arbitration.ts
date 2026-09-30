@@ -1,7 +1,7 @@
 // Réponse de /api/public/v1/tournaments/{id}/arbitration. Miroir de
 // ArbitrationMetrics (utils/disputes/arbitrationMetrics.ts) et du type de la route.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { nullableString } from './common';
 
 const minutes = (description: string) =>

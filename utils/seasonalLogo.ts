@@ -16,7 +16,7 @@
 // Stocké en JSON dans `site_settings` (clé `seasonal_logos`), scopé tenant.
 // Module PUR : aucune dépendance serveur, testable tel quel.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 export const SEASONAL_LOGOS_SETTING_KEY = 'seasonal_logos';
 

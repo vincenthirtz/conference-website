@@ -2,7 +2,7 @@
 // équipe gérée (recrutement, scrims). Zod seul : importé par la route, le
 // registre OpenAPI (lib/apiContracts, chemins relatifs) et, demain, le client.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 /** `joinable` absent = bascule de l'état courant. */
 export const ToggleJoinableBody = z.object({

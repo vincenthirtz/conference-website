@@ -2,7 +2,7 @@
 // Validation des settings JSON par type de stage.
 // Chaque type de stage a un schéma Zod spécifique.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { StageType } from '@/types/admin';
 
 /* -----------------------------------------------------------

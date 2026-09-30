@@ -1,7 +1,7 @@
 // utils/admin/listQuery.ts — le contrat des listes admin serveur (lot L13).
 
 import { describe, it, expect } from 'vitest';
-import { z } from 'zod';
+import * as z from 'zod';
 import {
   adminListQuery,
   listRange,

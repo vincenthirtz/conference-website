@@ -12,7 +12,7 @@
 // FAN ARTS — valider, c'est décider d'une rareté ; retirer n'est pas
 // supprimer (`revoked`). L'identité de la proposante n'est pas rendue.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import {
   AdminError,

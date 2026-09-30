@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { createCheckoutIntent } from '@/utils/helloasso';
-import { z } from 'zod';
+import * as z from 'zod';
 import { formatZodError } from '@/utils/validation';
 
 import { logger } from '../../../utils/logger';

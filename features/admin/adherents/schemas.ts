@@ -1,7 +1,7 @@
 // features/admin/adherents/schemas.ts — adhérents de l'association.
 // Zod seul : la route les applique, la spec les référence (lib/apiContracts).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { adminListQuery } from '../../../utils/admin/listQuery';
 import {
   looseBody,

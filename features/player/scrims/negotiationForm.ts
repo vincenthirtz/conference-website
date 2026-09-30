@@ -8,7 +8,7 @@
 // la main avant (`usePlayerDashboard`). Le serveur revalide contre la
 // négociation EN COURS (`applyScrimRequestAction`).
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 const isValidInstant = (s: string) => !Number.isNaN(new Date(s).getTime());
 

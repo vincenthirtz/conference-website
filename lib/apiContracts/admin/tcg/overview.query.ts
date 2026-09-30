@@ -2,7 +2,7 @@
 // Source unique handler ↔ spec OpenAPI (`x-zod-query: admin.tcg/overview.query`).
 // Module sans effet de bord : zod et utilitaires purs seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 /** Sujets les plus distribués rendus par défaut. */
 export const DEFAULT_TOP = 10;

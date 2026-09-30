@@ -14,7 +14,7 @@ vi.mock('@/utils/supabase', async () => {
 });
 
 import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
-import { z } from 'zod';
+import * as z from 'zod';
 import { publicV1PaginationSchema } from '../../lib/apiContracts/public/v1/common';
 import {
   publicV1StandingSchema,

@@ -2,7 +2,7 @@
 // Source unique handler ↔ spec OpenAPI (`x-zod-query: admin.teams/export.query`).
 // Module sans effet de bord : zod et utilitaires purs seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { uuidSchema } from '../../../../utils/botValidation';
 
 /** Un paramètre vide (`?tournamentId=`) vaut « pas de filtre », pas un 400. */

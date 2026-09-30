@@ -1,7 +1,7 @@
 // Réponses de /api/public/v1/matches* et tournaments/{id}/matches. Miroir de
 // utils/public/readMatches.ts (égalité des types vérifiée par test).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { nullableInt, nullableString } from './common';
 
 const logoUrl = nullableString.meta({

@@ -2,7 +2,7 @@
 // partenaire des circuits féminins et mixtes (`/api/admin/circuit-partners/**`).
 // PORTÉE PLATEFORME : la table n'a pas d'espace, elle en désigne un.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import {
   looseBody,
   looseQuery,

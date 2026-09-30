@@ -13,7 +13,7 @@
 // User-facing error messages are French (rendered by the sign-up / admin forms)
 // and intentionally concise.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { sanitizeUrl } from '@/utils/apiHelpers';
 
 export type RegistrationFieldType =

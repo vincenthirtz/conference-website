@@ -5,7 +5,7 @@
 // rendu dans une réponse : il ne circule que dans l'email.
 
 import crypto from 'node:crypto';
-import { z } from 'zod';
+import * as z from 'zod';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { LegacyAdminError } from '@/utils/admin/errors';
 import type { StaffRole } from '@/types/admin';

@@ -13,7 +13,7 @@
 // `heading` reste requis dans les deux modes : il sert d'étiquette de la
 // campagne dans l'admin et de titre de repli.
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 export const campaignInputSchema = z
   .object({

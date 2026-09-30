@@ -16,7 +16,7 @@
 // Auth : x-api-key (per-tenant). Tenant-scopé. Idempotent (Idempotency-Key
 // honoré sur le POST : un retour réseau ne crée pas deux rows).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';

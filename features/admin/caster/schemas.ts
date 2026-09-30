@@ -2,7 +2,7 @@
 //
 // zod seul, imports RELATIFS : lu par l'assemblage OpenAPI (Node sans `@/`).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { looseBody } from '../../../utils/admin/pathParams';
 import type { StaffLogAction } from '../../../types/staffLogs';
 

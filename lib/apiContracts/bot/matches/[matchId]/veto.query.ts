@@ -2,7 +2,7 @@
 // Source unique handler ↔ spec OpenAPI (`x-zod-query: bot.matches/[matchId]/veto.query`).
 // Module sans effet de bord : zod et utilitaires purs seulement.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { uuidSchema } from '../../../../../utils/botValidation';
 
 // Multi-méthode aux bodies divergents : POST = { actorDiscordUserId, mapName,

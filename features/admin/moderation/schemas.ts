@@ -9,7 +9,7 @@
 //
 // zod seul, imports RELATIFS : schémas référencés par la spec OpenAPI.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import {
   looseBody,
   looseQuery,

@@ -1,7 +1,7 @@
 // features/admin/free-players/schemas.ts — formes d'entrée et de sortie de la
 // vue staff des joueuses libres. Source unique client + serveur (lot L6).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { FreePlayerRole } from '@/utils/freePlayers';
 
 export const RemoveFreePlayerQuery = z.object({

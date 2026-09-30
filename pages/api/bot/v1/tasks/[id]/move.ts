@@ -9,7 +9,7 @@
 // Auth  : x-api-key (per-tenant) + actorDiscordUserId staff admin/owner.
 // Idempotent : honore l'header Idempotency-Key (retry bot sans double move).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff } from '@/utils/botActor';

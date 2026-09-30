@@ -7,7 +7,7 @@
 // s'appliquent VOLONTAIREMENT. Pas de don ici : les dons viennent de HelloAsso.
 
 import crypto from 'node:crypto';
-import { z } from 'zod';
+import * as z from 'zod';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { LegacyAdminError } from '@/utils/admin/errors';
 import { TWITCH_ALERT_KINDS, type AlertKind } from '@/utils/overlay/alertBox';

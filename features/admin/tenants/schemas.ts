@@ -8,7 +8,7 @@
 //
 // Zod seul, imports RELATIFS : lu par l'assemblage OpenAPI (Node sans `@/`).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { looseBody, looseQuery } from '../../../utils/admin/pathParams';
 
 /** Même motif que `isValidUUID` (utils/apiHelpers). */

@@ -2,7 +2,7 @@
 // et readStandings.ts — l'égalité des types est vérifiée par
 // tests/unit/publicV1ResponseContracts.test.ts.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { nullableString } from './common';
 
 export const publicV1TournamentSummarySchema = z

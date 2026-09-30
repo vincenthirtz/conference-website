@@ -10,7 +10,7 @@
 // L'équipe est vérifiée DANS l'espace avant tout : la clé étrangère seule
 // accepterait une équipe d'un autre espace.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { rowToConstraint } from '@/utils/matches/availabilityRows';

@@ -22,7 +22,7 @@
 //
 // Auth : x-api-key + actorDiscordUserId staff admin/owner.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { requireBotStaff, logBotStaffAction } from '@/utils/botActor';

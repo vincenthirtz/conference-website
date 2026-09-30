@@ -25,7 +25,7 @@
 // 409 if the email is already in use or the Discord ID already linked.
 
 import crypto from 'crypto';
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';

@@ -10,7 +10,7 @@
 // Auth   : x-api-key. POST exige aussi actorDiscordUserId = capitaine de la
 //          team. GET est public a la cle (x-api-key sur le bot suffit).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';

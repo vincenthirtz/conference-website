@@ -12,7 +12,7 @@
 // Rate limit : 10/min (heartbeat 20s = 3/min, marge confortable pour retries).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { z } from 'zod';
+import * as z from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import {

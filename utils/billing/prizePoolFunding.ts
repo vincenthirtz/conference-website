@@ -27,7 +27,7 @@
 //
 // Voir database/migrations/create_prize_pool_tables.sql.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
 import type { HelloAssoWebhookEvent } from '../helloasso';

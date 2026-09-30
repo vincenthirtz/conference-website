@@ -14,7 +14,7 @@
 //
 // Le seuil et l'écriture sont atomiques côté base (`pool_register`).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { withAuthRoute } from '@/utils/staff';

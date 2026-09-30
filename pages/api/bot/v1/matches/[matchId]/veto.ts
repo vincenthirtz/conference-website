@@ -13,7 +13,7 @@
 // La logique metier (validation step_number, ordre, generation games) est
 // mirror exact du admin route /api/admin/matches/[matchId]/veto.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';

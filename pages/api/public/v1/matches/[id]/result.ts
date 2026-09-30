@@ -13,7 +13,7 @@
 // Réutilise `applyMatchScore()` — la fonction cœur partagée avec l'admin et le
 // bot (status='finished', propagation bracket, notifications Discord).
 
-import { z } from 'zod';
+import * as z from 'zod';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import {

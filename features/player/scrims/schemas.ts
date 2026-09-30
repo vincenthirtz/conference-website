@@ -6,7 +6,7 @@
 // pour playerBoundariesGuard règle 6, la matrice de permissions et les
 // contrats), par le registre OpenAPI (lib/apiContracts) et, demain, le client.
 
-import { z } from 'zod';
+import * as z from 'zod';
 import { looseUuid } from '../_shared/zod';
 import type { ResolvedTeamSkillRating } from '../../../utils/overwatchRank';
 import type { TeamReliability } from '../../../utils/teams/reliability';
