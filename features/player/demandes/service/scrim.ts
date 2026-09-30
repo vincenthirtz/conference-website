@@ -26,6 +26,7 @@ import {
 } from '../repository/demandes';
 import { readTeam } from '../repository/teams';
 import { ScrimDemandeBody } from '../schemas';
+import { zodIssueFields } from '@/utils/player/errors';
 import { displayNameOf, type DemandesCtx } from './context';
 
 export async function listScrimDemandes(ctx: DemandesCtx) {
@@ -56,8 +57,14 @@ export async function submitScrimDemande(
   const parsed = ScrimDemandeBody.safeParse(raw ?? {});
   if (!parsed.success) {
     const first = parsed.error.issues[0];
+    // `code: 'validation'` (déduit du 400) est traduit côté client par
+    // `playerErrors` ; `error` reste le message historique, `fields` le
+    // détail par champ (contrat `PlayerErrorBody`).
     throw new LegacyAdminError(400, first?.message || 'Requête invalide.', {
-      extra: { field: first?.path?.join('.') || undefined },
+      extra: {
+        field: first?.path?.join('.') || undefined,
+        fields: zodIssueFields(parsed.error),
+      },
     });
   }
   const body = parsed.data;

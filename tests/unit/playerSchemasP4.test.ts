@@ -17,7 +17,10 @@ import {
 import { UpdatePlayerProfileBody } from '@/features/player/profile/schemas';
 import { TradeBlockBody } from '@/features/player/tcg/schemas';
 import { TeamInvitationActionBody } from '@/features/player/invitations/schemas';
-import { CancelDemandeBody } from '@/features/player/demandes/schemas';
+import {
+  CancelDemandeBody,
+  ScrimDemandeBody,
+} from '@/features/player/demandes/schemas';
 import { parseBody } from '@/utils/player/errors';
 import {
   store,
@@ -140,5 +143,31 @@ describe('GET /api/teams/scrim-plannings/[planningId]/suggest', () => {
     await suggestHandler(req() as any, res);
     expect(res.statusCode).toBe(409);
     expect(res.body.code).toBe('PLANNING_NOT_OPEN');
+  });
+});
+
+describe('ScrimDemandeBody — teamId absent', () => {
+  // Le message brut de zod (« Invalid input: expected string, received
+  // undefined », en anglais) remontait tel quel à la joueuse.
+  it('rend le message historique, pas celui de zod', () => {
+    const r = parseBody(ScrimDemandeBody, {});
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.body.error).toBe('Selectionne une equipe adverse.');
+      expect(r.body.code).toBe('validation');
+      expect(r.body.fields?.teamId).toBe('Selectionne une equipe adverse.');
+    }
+  });
+
+  it('même message pour un teamId vide ou non textuel', () => {
+    for (const teamId of ['  ', 42, null]) {
+      const r = ScrimDemandeBody.safeParse({ teamId });
+      expect(r.success).toBe(false);
+      if (!r.success) {
+        expect(r.error.issues[0].message).toBe(
+          'Selectionne une equipe adverse.'
+        );
+      }
+    }
   });
 });

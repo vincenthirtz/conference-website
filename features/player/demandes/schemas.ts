@@ -76,8 +76,12 @@ export type CancelDemandeInput = z.infer<typeof CancelDemandeBody>;
  * Corps de POST /api/demandes/scrim (lot P11 : quitte la route). Validé par
  * le service, pas par le noyau : l'erreur historique porte `field`.
  */
+const SCRIM_TEAM = 'Selectionne une equipe adverse.';
+
 export const ScrimDemandeBody = z.object({
-  teamId: z.string().trim().min(1, 'Selectionne une equipe adverse.'),
+  // `{ error }` sur le type aussi : un teamId ABSENT renvoyait le message brut
+  // de zod, en anglais (« Invalid input: expected string… »).
+  teamId: z.string({ error: SCRIM_TEAM }).trim().min(1, SCRIM_TEAM),
   message: z.string().trim().max(1000).optional().nullable(),
   /** Négociation multi-créneaux : 1..5 dates ISO sur la table. */
   proposedSlots: z.array(z.string()).optional(),
