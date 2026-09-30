@@ -434,11 +434,16 @@ export async function applyMatchScore(
   //     /admin/stages/[id]/snapshots. Best-effort : si l'insert échoue,
   //     on log côté snapshot.ts et on continue (le rollback in-memory
   //     reste actif via snapshotPropagationSlots ci-dessous).
+  //     `tenantId` est obligatoire : `bracket_snapshots.tenant_id` est NOT
+  //     NULL — sans lui l'insert échouait à chaque fois, en silence.
+  //     Attendu (et non `void`) : un snapshot pris APRÈS la propagation
+  //     capturerait l'état qu'il doit permettre d'annuler.
   if (shouldPropagate && match.stage_id) {
-    void createBracketSnapshot({
+    await createBracketSnapshot({
       stageId: match.stage_id,
       reason: 'apply_score',
       staffId: staffId ?? null,
+      tenantId,
     }).catch((e) =>
       logger.error('applyMatchScore: createBracketSnapshot failed', e)
     );

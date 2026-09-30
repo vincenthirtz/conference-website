@@ -386,6 +386,25 @@ describe('applyMatchScore — propagation', () => {
     expect(propagateBracketForMatch).toHaveBeenCalledWith(TENANT_ID, 'm1');
   });
 
+  it('persiste le snapshot de bracket AVEC le tenant (tenant_id NOT NULL)', async () => {
+    // Avant : appel sans tenantId → insert rejeté en base, seulement journalisé.
+    seedMatch();
+    seedTournament();
+    await applyMatchScore({
+      tenantId: TENANT_ID,
+      matchId: 'm1',
+      team1Score: 2,
+      team2Score: 1,
+    });
+    const snaps = (store.bracket_snapshots ?? []) as any[];
+    expect(snaps).toHaveLength(1);
+    expect(snaps[0]).toMatchObject({
+      tenant_id: TENANT_ID,
+      stage_id: 'stage-1',
+      reason: 'apply_score',
+    });
+  });
+
   it('skips propagation when propagateBracket=false', async () => {
     seedMatch();
     seedTournament();
