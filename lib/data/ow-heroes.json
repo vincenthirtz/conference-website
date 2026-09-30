@@ -72,6 +72,12 @@
     "portrait": "https://d15f34w2p8l1cc.cloudfront.net/overwatch/df5a5532862d9292634fb3dc0e51a4705aa601de65e5e815513ccc663d84de56.png"
   },
   {
+    "key": "dmon",
+    "name": "D.Mon",
+    "role": "tank",
+    "portrait": "https://d15f34w2p8l1cc.cloudfront.net/overwatch/a46c60b8562fdbd0b8308396d0808f7606fba208bc67cccf3f82fe56d2c73b9d.png"
+  },
+  {
     "key": "hazard",
     "name": "Danger",
     "role": "tank",
