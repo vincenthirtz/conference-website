@@ -218,7 +218,7 @@ function Footer(): JSX.Element {
           <span className="text-center md:text-left">
             {t.copyright}{' '}
             <a
-              href="https://www.twitch.tv/arukdo"
+              href="https://vincenthirtz.fr/"
               target="_blank"
               rel="noreferrer"
               className="text-gray-300 underline underline-offset-2 hover:text-white transition-colors"
