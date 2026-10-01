@@ -20,6 +20,8 @@
  * `showcase_cosmetic`, ajoutées par `tcg_forge_and_showcase_cosmetics.sql`.
  *
  * IDEMPOTENT : la contrainte est recréée à l'identique plus la valeur.
+ *
+ * APPLIQUÉE en production le 2026-10-01.
  * ------------------------------------------------------------------------- */
 
 BEGIN;

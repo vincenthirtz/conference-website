@@ -514,7 +514,7 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
   },
   {
     // Écrite par `utils/tcg/grantPublicMvp.ts` à la clôture du vote MVP du
-    // public (`settlePublicVote`). Migration `tcg_public_mvp.sql` : le drapeau
+    // public (`settlePublicVote`). Migration `tcg_public_mvp.sql` (appliquée le 2026-10-01) : le drapeau
     // est levé avec le code ; tant qu'elle manque, l'écriture est refusée en
     // 23514 et journalisée, sans gêner le dépouillement.
     key: 'public_mvp',
