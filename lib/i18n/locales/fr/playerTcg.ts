@@ -315,6 +315,7 @@ export default ns('playerTcg', {
   walletBattlenetVerified: 'Compte Battle.net vérifié',
   walletCollectionSet: 'Série complétée',
   walletMatchPrediction: 'Pronostic juste',
+  walletPublicMvp: 'MVP du public',
 
   // Rattachement Twitch, contextualisé : ce qu'on gagne, en une phrase. Affiché
   // SEULEMENT si le drop est réellement branché (montant rendu par l'API).

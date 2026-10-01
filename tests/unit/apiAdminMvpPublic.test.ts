@@ -33,11 +33,13 @@ vi.mock('@/utils/staffLogs', () => ({
 
 import {
   store,
+  setTableWriteError,
   resetSupabaseMock,
   setAuthUser,
 } from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
 import { DEFAULT_TENANT_ID } from '../../utils/tenant';
+import { PUBLIC_MVP_COINS } from '../../utils/tcg/earnSources';
 
 import handler from '../../pages/api/admin/matches/[matchId]/mvp-public';
 
@@ -317,6 +319,66 @@ describe('/api/admin/matches/[matchId]/mvp-public', () => {
     const res = await close();
     expect(res.body.award).toBeNull();
     expect(res.body.reason).toBe('too_few_votes');
+  });
+
+  describe('les pièces TCG de l’élue', () => {
+    const ALICE_USER = '00000000-0000-4000-8000-0000000a11ce';
+    const wallet = () => (store.tcg_wallet_entries ?? []) as any[];
+    const electAlice = async () => {
+      await open();
+      await vote('twitch', [
+        { voterKey: 'v1', memberId: ALICE },
+        { voterKey: 'v2', memberId: ALICE },
+        { voterKey: 'v3', memberId: BEA },
+      ]);
+    };
+
+    it('crédite la gagnante à la clôture, une seule fois', async () => {
+      (store.team_members as any[]).find((m) => m.id === ALICE).user_id =
+        ALICE_USER;
+      await electAlice();
+      await close();
+      expect(wallet()).toHaveLength(1);
+      expect(wallet()[0]).toMatchObject({
+        tenant_id: TENANT,
+        user_id: ALICE_USER,
+        source_kind: 'public_mvp',
+        amount: PUBLIC_MVP_COINS,
+      });
+
+      // Le poller et la commande staff peuvent clore tous les deux.
+      await close();
+      expect(wallet()).toHaveLength(1);
+    });
+
+    it('ne crédite rien à une joueuse sans compte, sans gêner le résultat', async () => {
+      await electAlice();
+      const res = await close();
+      expect(res.body.award.memberId).toBe(ALICE);
+      expect(wallet()).toHaveLength(0);
+    });
+
+    it('ne crédite rien quand le scrutin ne désigne personne', async () => {
+      (store.team_members as any[]).find((m) => m.id === ALICE).user_id =
+        ALICE_USER;
+      await open();
+      await vote('twitch', [{ voterKey: 'v1', memberId: ALICE }]);
+      await close();
+      expect(wallet()).toHaveLength(0);
+    });
+
+    it('un porte-monnaie en panne ne fait pas échouer la clôture', async () => {
+      (store.team_members as any[]).find((m) => m.id === ALICE).user_id =
+        ALICE_USER;
+      await electAlice();
+      setTableWriteError('tcg_wallet_entries', {
+        message: 'violates check constraint',
+      });
+      const res = await close();
+      setTableWriteError('tcg_wallet_entries', null);
+      expect(res.statusCode).toBe(200);
+      expect(res.body.award.memberId).toBe(ALICE);
+    });
   });
 
   it('n’écrit JAMAIS dans les tables du vote des équipes', async () => {

@@ -394,6 +394,8 @@ export function walletSourceLabel(
       return t.walletCollectionSet;
     case 'match_prediction':
       return t.walletMatchPrediction;
+    case 'public_mvp':
+      return t.walletPublicMvp;
     default:
       return t.walletUnknownSource;
   }

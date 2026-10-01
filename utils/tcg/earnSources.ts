@@ -210,6 +210,20 @@ export const MATCH_PREDICTION_COINS = Math.max(
   Math.round(SCRIM_WIN_COINS / 2)
 );
 
+/**
+ * Ce que rapporte le titre de MVP du public sur un match.
+ *
+ * LE PRIX D'UNE VICTOIRE DE MATCH. C'est une distinction individuelle, rare
+ * (une par match diffusé, et seulement si le scrutin désigne quelqu'un — ni
+ * égalité, ni trop peu de voix) : la payer moins qu'une victoire en ferait un
+ * lot de consolation, la payer plus ferait qu'un vote du chat pèse davantage
+ * que le match lui-même.
+ *
+ * DES PIÈCES SEULES, comme `MATCH_PREDICTION_COINS` : un paquet aurait exigé
+ * d'élargir les deux contraintes de `tcg_packs`.
+ */
+export const PUBLIC_MVP_COINS = MATCH_WIN_COINS;
+
 export const PLACEMENT_TIERS: ReadonlyArray<{
   /** Rang maximal (inclus) ouvrant ce palier. */
   maxRank: number;
@@ -240,7 +254,8 @@ export type TcgEarnSourceKey =
   | 'staff_welcome'
   | 'battlenet_verified'
   | 'collection_set'
-  | 'match_prediction';
+  | 'match_prediction'
+  | 'public_mvp';
 
 /**
  * Ce que `source_ref` doit contenir — donc ce qu'« une occurrence » veut dire.
@@ -493,6 +508,19 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
     coins: MATCH_PREDICTION_COINS,
     // `source_ref` = le MATCH : un pronostic payé par match et par personne.
     // Un match se corrige mais ne se recrée pas sous un autre id.
+    refKind: 'match',
+    maxPerRef: 1,
+    schemaReady: true,
+  },
+  {
+    // Écrite par `utils/tcg/grantPublicMvp.ts` à la clôture du vote MVP du
+    // public (`settlePublicVote`). Migration `tcg_public_mvp.sql` : le drapeau
+    // est levé avec le code ; tant qu'elle manque, l'écriture est refusée en
+    // 23514 et journalisée, sans gêner le dépouillement.
+    key: 'public_mvp',
+    packs: 0,
+    coins: PUBLIC_MVP_COINS,
+    // `source_ref` = le MATCH : un titre payé par match et par personne.
     refKind: 'match',
     maxPerRef: 1,
     schemaReady: true,

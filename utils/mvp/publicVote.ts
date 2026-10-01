@@ -32,6 +32,7 @@ import {
 } from '@/utils/mvp/awards';
 import { listMvpCandidates, type MvpCandidate } from '@/utils/mvp/service';
 import { logger } from '@/utils/logger';
+import { grantPublicMvpCoins } from '@/utils/tcg/grantPublicMvp';
 
 /**
  * Durée d'ouverture par défaut, en MINUTES.
@@ -433,6 +434,13 @@ export async function settlePublicVote(
     .eq('id', poll.id);
 
   if (error) logger.error('[mvp-public] settlePublicVote update error:', error);
+
+  // Les pièces de l'élue, à la CLÔTURE seulement : un dépouillement
+  // intermédiaire (scrutin encore ouvert) peut désigner une meneuse qui ne
+  // gagnera pas. Effet de bord — il ne lève pas et ne retient pas le résultat.
+  if (opts.close && outcome.award && !error) {
+    await grantPublicMvpCoins(tenantId, matchId, outcome.award.memberId);
+  }
 
   return { award: outcome.award, reason: outcome.reason, tallies, ...teams };
 }

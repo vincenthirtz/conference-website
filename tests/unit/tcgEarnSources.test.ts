@@ -59,6 +59,7 @@ describe('intégrité du registre', () => {
         'battlenet_verified',
         'collection_set',
         'match_prediction',
+        'public_mvp',
       ])
     );
   });
@@ -111,6 +112,11 @@ describe('intégrité du registre', () => {
       // Un paquet par match bien deviné pleuvrait sur qui ne joue pas
       // (cf. `MATCH_PREDICTION_COINS`).
       if (source.key === 'match_prediction') {
+        expect(source.packs).toBe(0);
+        continue;
+      }
+      // Un titre, pas une ouverture de paquet (cf. `PUBLIC_MVP_COINS`).
+      if (source.key === 'public_mvp') {
         expect(source.packs).toBe(0);
         continue;
       }
@@ -313,6 +319,9 @@ describe('schemaReady', () => {
       // pas : aucun pronostic ne s'enregistre, donc aucun n'est dû.
       'match_prediction',
       'match_win',
+      // `tcg_public_mvp.sql` : levé avec le code. Sans la migration, le
+      // crédit est refusé et journalisé, le dépouillement du vote passe.
+      'public_mvp',
       'scrim_win',
       // `tcg_staff_welcome.sql` (appliquée le 2026-09-20) : la porte d'entrée
       // d'un compte staff hors roster, qui n'en avait aucune.

@@ -249,6 +249,7 @@ export default {
   walletBattlenetVerified: 'Battle.net account verified',
   walletCollectionSet: 'Set completed',
   walletMatchPrediction: 'Correct prediction',
+  walletPublicMvp: "Viewers' MVP",
 
   twitchPitchTitle: 'Earn coins by watching our streams',
   twitchPitchBody:

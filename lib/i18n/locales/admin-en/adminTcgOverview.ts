@@ -57,6 +57,7 @@ export default {
   coinsSourceBattlenetVerified: 'Verified Battle.net accounts',
   coinsSourceCollectionSet: 'Completed sets',
   coinsSourceMatchPrediction: 'Correct predictions',
+  coinsSourcePublicMvp: "Viewers' MVP",
   coinsSourceUnknown: 'Other ({kind})',
 
   cardsTitle: 'Cards',
