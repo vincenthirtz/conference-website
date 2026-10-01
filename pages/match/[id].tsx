@@ -74,6 +74,14 @@ type MatchMvp = {
   battleTag: string | null;
 };
 
+// MVP DU PUBLIC : le vote à chaud du chat Twitch et des supporters Discord,
+// tenu sur des tables à part (cf. utils/mvp/publicVote.ts). Seuls les agrégats
+// sortent : la gagnante et le poids du scrutin, jamais une voix nominative.
+type MatchPublicMvp = MatchMvp & {
+  winnerVotes: number;
+  totalVotes: number;
+};
+
 type Tournament = {
   id: string;
   slug?: string | null;
@@ -132,6 +140,7 @@ type Props = {
   match: Match | null;
   lineups: MatchLineups;
   mvp: MatchMvp | null;
+  publicMvp: MatchPublicMvp | null;
   seo: SeoProps;
 };
 
@@ -353,9 +362,10 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       return oa - ob;
     }) ?? [];
 
-  const [lineups, mvp] = await Promise.all([
+  const [lineups, mvp, publicMvp] = await Promise.all([
     readMatchLineups(match),
     readMatchMvp(match.id),
+    readMatchPublicMvp(match.id),
   ]);
 
   return {
@@ -363,6 +373,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       match,
       lineups,
       mvp,
+      publicMvp,
       seo: buildMatchSeo(match, lineups, mvp),
     },
     revalidate: 30,
@@ -457,7 +468,33 @@ async function readMatchMvp(matchId: string): Promise<MatchMvp | null> {
   };
 }
 
-export default function MatchPage({ match, lineups, mvp }: Props) {
+/**
+ * MVP du public, si le scrutin a eu lieu ET désigné quelqu'un. Un vote clos
+ * sans gagnante (aucune voix, trop peu, égalité en tête) reste muet : annoncer
+ * « pas de MVP » sous un score n'apprend rien au visiteur.
+ */
+async function readMatchPublicMvp(
+  matchId: string
+): Promise<MatchPublicMvp | null> {
+  const { data, error } = await supabaseAdmin
+    .from('match_public_mvp_polls')
+    .select(
+      'winner_member_id, winner_battle_tag, winner_votes, total_votes, settled_at'
+    )
+    .eq('match_id', matchId)
+    .maybeSingle();
+
+  if (error || !data?.settled_at) return null;
+  if (!data.winner_member_id && !data.winner_battle_tag) return null;
+  return {
+    memberId: data.winner_member_id ?? null,
+    battleTag: maskBattleTag(data.winner_battle_tag ?? null),
+    winnerVotes: data.winner_votes ?? 0,
+    totalVotes: data.total_votes ?? 0,
+  };
+}
+
+export default function MatchPage({ match, lineups, mvp, publicMvp }: Props) {
   const t = useT(nsMatchDetail);
   const locale = useLocale();
   if (!match) {
@@ -651,7 +688,26 @@ export default function MatchPage({ match, lineups, mvp }: Props) {
         )}
 
         {/* Compositions + MVP */}
-        <MvpBanner match={match} lineups={lineups} mvp={mvp} t={t} />
+        <MvpBanner
+          match={match}
+          lineups={lineups}
+          mvp={mvp}
+          title={t.mvpTitle}
+        />
+        <MvpBanner
+          match={match}
+          lineups={lineups}
+          mvp={publicMvp}
+          title={t.mvpPublicTitle}
+          detail={
+            publicMvp && publicMvp.totalVotes > 0
+              ? format(t.mvpPublicVotes, {
+                  votes: publicMvp.winnerVotes,
+                  total: publicMvp.totalVotes,
+                })
+              : undefined
+          }
+        />
 
         <LineupsSection match={match} lineups={lineups} mvp={mvp} t={t} />
 
@@ -810,17 +866,23 @@ export default function MatchPage({ match, lineups, mvp }: Props) {
  * Bandeau MVP du match. Affiché uniquement si le staff a importé la gagnante du
  * sondage Discord — c'est la seule distinction individuelle du site, elle mérite
  * mieux qu'une ligne dans un tableau.
+ *
+ * Sert aussi à la MVP du public : même geste, autre titre, et le poids du
+ * scrutin en `detail`. Deux bandeaux distincts plutôt qu'un seul fusionné —
+ * les équipes et le public ne désignent pas toujours la même joueuse.
  */
 function MvpBanner({
   match,
   lineups,
   mvp,
-  t,
+  title,
+  detail,
 }: {
   match: Match;
   lineups: MatchLineups;
   mvp: MatchMvp | null;
-  t: MatchDict;
+  title: string;
+  detail?: string;
 }) {
   const member = findMvpMember(lineups, mvp);
   const name = member ? lineupLabel(member) : (mvp?.battleTag ?? null);
@@ -843,7 +905,7 @@ function MvpBanner({
         </span>
         <div className="min-w-0">
           <p className="text-[10px] uppercase tracking-wide text-amber-200/80">
-            {t.mvpTitle}
+            {title}
           </p>
           <p className="truncate text-sm font-semibold text-white">
             {member?.user_id ? (
@@ -862,6 +924,7 @@ function MvpBanner({
               </span>
             )}
           </p>
+          {detail && <p className="text-[11px] text-gray-400">{detail}</p>}
         </div>
       </div>
     </section>

@@ -64,4 +64,6 @@ export default ns('matchDetail', {
   lineupCaptain: 'Capitaine',
   mvpTitle: 'MVP du match',
   mvpBadge: 'MVP',
+  mvpPublicTitle: 'MVP du public',
+  mvpPublicVotes: '{votes} voix sur {total}',
 });

@@ -64,4 +64,6 @@ export default {
   lineupCaptain: 'Captain',
   mvpTitle: 'Match MVP',
   mvpBadge: 'MVP',
+  mvpPublicTitle: "Viewers' MVP",
+  mvpPublicVotes: '{votes} of {total} votes',
 };
