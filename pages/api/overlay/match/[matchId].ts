@@ -2,8 +2,7 @@
 //
 // GET (PUBLIC) — l'état d'un match, tel qu'une source navigateur OBS l'affiche.
 //
-// C'est le pendant « par match » de /api/overlay/[runId] (qui, lui, suit un
-// conducteur de direct). Ici, pas de régie : une URL, un match, un écran qui se
+// Pas de régie ni de conducteur de direct : une URL, un match, un écran qui se
 // met à jour. C'est ce que l'offre Régie ouvre — cf. la capacité de plan
 // `matchOverlays`, distincte de `broadcastStudio` qui dirige le direct.
 //

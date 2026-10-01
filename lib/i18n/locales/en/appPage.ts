@@ -37,10 +37,7 @@ export default {
     'Click "View match" or "Open ticket" directly in the notification, without having to navigate.',
   feature5Title: 'Shortcuts from the icon',
   feature5Desc:
-    "Right-click the pinned icon = shortcuts menu: Tournaments, Notifications, Player space, Caster cockpit — one click and you're in the right place.",
-  feature6Title: 'Screen stays awake',
-  feature6Desc:
-    "In the caster cockpit during a 40 min BO3 without a keystroke? The screen won't turn off as long as you're on the page.",
+    "Right-click the pinned icon = shortcuts menu: Tournaments, Notifications, Player space, Broadcast — one click and you're in the right place.",
   feature7Title: 'No Chrome bar UI',
   feature7Desc:
     "Once installed, no more address bar or tabs: it's just the app, like a native desktop client.",
@@ -60,12 +57,11 @@ export default {
   audience1Cta: 'My player space',
   audience2Title: 'Casters',
   audience2Desc: 'Stay focused on your match, the app handles the rest.',
-  audience2Bullet1: "Caster cockpit: today's segments, briefing, hotkeys",
-  audience2Bullet2: 'Screen stays awake during a BO without a keyboard',
-  audience2Bullet3:
-    'Assignment notifications, Director signals and urgent cues',
-  audience2Bullet4: 'Direct shortcut to the cockpit from the pinned icon',
-  audience2Cta: 'Cast cockpit',
+  audience2Bullet1: 'OBS scenes and overlays driven from the browser',
+  audience2Bullet2: 'Twitch chat and the crowd MVP vote at hand',
+  audience2Bullet3: 'A notification as soon as a match is assigned to you',
+  audience2Bullet4: 'Direct shortcut to broadcast from the pinned icon',
+  audience2Cta: 'Broadcast space',
   audience3Title: 'Staff & admins',
   audience3Desc: 'The full back-office, available as a PWA.',
   audience3Bullet1:

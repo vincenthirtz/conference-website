@@ -3,9 +3,9 @@
 // Alimente les sources de stream par match (`/overlay/match/*`) depuis
 // `GET /api/overlay/match/[matchId]`.
 //
-// POURQUOI DU POLLING, ET PAS DU REALTIME. L'overlay de conducteur
-// (`useOverlayState`) s'abonne à `event_runs` parce que la régie écrit sur
-// cette ligne et que la scène doit basculer à la seconde. Ici, la donnée suit
+// POURQUOI DU POLLING, ET PAS DU REALTIME. Les scènes caster
+// (`/overlay/caster/*`) s'abonnent à leur ligne parce que la régie y écrit et
+// que la scène doit basculer à la seconde. Ici, la donnée suit
 // une feuille de match : un score saisi par le staff, une manche close. Quatre
 // secondes de retard sur un tableau de score ne se voient pas — la voix du
 // caster arrive toujours avant l'écran — alors qu'un abonnement Realtime sur

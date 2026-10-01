@@ -35,10 +35,10 @@
       "url": "/admin/notifications"
     },
     {
-      "name": "Cockpit cast",
-      "short_name": "Cockpit",
-      "description": "Mes segments du jour",
-      "url": "/caster/cockpit"
+      "name": "Diffusion",
+      "short_name": "Diffusion",
+      "description": "Overlays, scènes et Twitch",
+      "url": "/admin/diffusion/overlays"
     },
     {
       "name": "Tournois",

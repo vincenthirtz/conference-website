@@ -75,7 +75,7 @@ export default defineConfig({
     video: CI ? 'off' : 'retain-on-failure',
     screenshot: 'only-on-failure',
     // actionTimeout seulement : un navigationTimeout de 15 s coupait des
-    // tests VERTS qui attendent `networkidle` (admin-tasks, admin-events).
+    // tests VERTS qui attendent `networkidle` (admin-tasks).
     ...(CI ? { actionTimeout: 15_000 } : {}),
   },
   projects: [

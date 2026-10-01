@@ -1,10 +1,10 @@
 // components/admin/RealtimeStatusBadge.tsx
 //
-// Petit badge d'état temps-réel / mode dégradé pour les pages régie (Director,
-// Broadcast live). `connected` vient de useEventRunRealtime : true = les canaux
-// Supabase sont SUBSCRIBED (état frais en direct) ; false = canal tombé, la
-// page tourne sur son poll de secours (15–30 s de retard). Le régisseur DOIT
-// savoir qu'il pilote potentiellement sur un état périmé.
+// Petit badge d'état temps-réel / mode dégradé pour les écrans de diffusion
+// (Scènes, `/admin/caster`). `connected` : true = les canaux Supabase sont
+// SUBSCRIBED (état frais en direct) ; false = canal tombé, la page tourne sur
+// son poll de secours (15–30 s de retard). Le régisseur DOIT savoir qu'il
+// pilote potentiellement sur un état périmé.
 //
 // Les libellés sont passés en props pour que chaque page reste dans son propre
 // namespace i18n. aria-live polite : le lecteur d'écran annonce le passage

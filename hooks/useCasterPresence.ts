@@ -7,8 +7,8 @@
 // (`{ staffId, displayName, role, activeScene, activeField, joinedAt }`,
 // clé de présence = staffId).
 //
-// ⚠️ Rien à voir avec la TABLE `caster_presence` (heartbeats du cockpit régie,
-// cf. pages/api/caster/heartbeat.ts) : ici l'état est éphémère, porté par le
+// ⚠️ Rien à voir avec la TABLE `caster_presence` (heartbeats de l'ancien cockpit
+// régie, retiré — plus rien n'y écrit) : ici l'état est éphémère, porté par le
 // WebSocket Realtime — aucune écriture en base, donc aucune RLS en jeu (le canal
 // Presence n'est pas du `postgres_changes`, il fonctionne indépendamment de la
 // publication `supabase_realtime`).

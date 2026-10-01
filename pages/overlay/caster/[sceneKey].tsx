@@ -13,7 +13,7 @@
 // - Temps réel : Supabase Realtime sur la ligne résolue — le payload UPDATE
 //   contient la ligne complète (payload.new), appliquée SANS refetch. Filet de
 //   sécurité : re-fetch toutes les 15 s (les Browser Sources OBS tournent des
-//   heures ; même posture que useOverlayState pour /overlay/[runId]).
+//   heures).
 // - Flash-guard : rien n'est rendu avant la première donnée (équivalent du
 //   `body:not(.data-ready)` de match.html — pas de placeholders à l'antenne).
 // - Scène introuvable ou type inconnu (ligne écrite par une version plus
@@ -185,8 +185,7 @@ function CasterOverlayPage() {
         <title>Overlay caster</title>
         <meta name="robots" content="noindex" />
       </Head>
-      {/* Fond transparent pour que OBS composite l'overlay sur la vidéo —
-          même technique que /overlay/[runId]. */}
+      {/* Fond transparent pour que OBS composite l'overlay sur la vidéo. */}
       <style jsx global>{`
         html,
         body {

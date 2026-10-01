@@ -10,7 +10,7 @@
 // aucune photo, aucun identifiant interne. La règle vit dans
 // `utils/tcg/overlayFeed.ts`, qui est le seul chemin par lequel un nom sort.
 //
-// CONTRAT DE GENTILLESSE ENVERS OBS, calqué sur `/api/overlay/[runId]` : une
+// CONTRAT DE GENTILLESSE ENVERS OBS, commun aux sources `/api/overlay/*` : une
 // source ajoutée avant le direct interroge dans le vide pendant des heures.
 // Elle ne doit jamais recevoir d'erreur pour autant.
 //   - jeton absent / malformé → 400, une seule fois, à la configuration ;

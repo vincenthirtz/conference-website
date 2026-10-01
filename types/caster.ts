@@ -317,8 +317,8 @@ export type CasterApiTournamentMap = {
  * — MÊME shape que l'app desktop (src/main/presence.js) pour que casters web et
  * desktop se voient mutuellement. `activeScene` = **id** de la scène éditée.
  *
- * ⚠️ Ne pas confondre avec la TABLE `caster_presence` (heartbeats du cockpit
- * régie, cf. pages/api/caster/heartbeat.ts) : ici c'est un canal Realtime
+ * ⚠️ Ne pas confondre avec la TABLE `caster_presence` (heartbeats de l'ancien
+ * cockpit régie, retiré — plus rien n'y écrit) : ici c'est un canal Realtime
  * Presence éphémère, aucune écriture en base.
  */
 export type CasterPresenceUser = {

@@ -90,14 +90,12 @@ describe('filterAdminLinks – owner role', () => {
     );
   });
 
-  it('réunit cockpit, console live, run-of-show et scènes sous "Diffusion"', () => {
+  it('réunit overlays, scènes, Twitch et casteuses sous "Diffusion"', () => {
     const diffusion = findByTitle(links, 'Diffusion');
     expect(diffusion?.children?.map((c) => c.title)).toEqual([
-      'Cockpit',
-      'Console live',
-      'Run-of-show',
-      'Scènes',
       'Overlays',
+      'Scènes',
+      'Twitch & interactions',
       'Casteuses',
       'Chaînes Twitch',
     ]);
@@ -197,10 +195,9 @@ describe('filterAdminLinks – caster role', () => {
   it('ouvre "Diffusion" au caster : ce sont ses écrans un soir de match', () => {
     const diffusion = findByTitle(links, 'Diffusion');
     expect(diffusion?.children?.map((c) => c.title)).toEqual([
-      'Cockpit',
-      'Console live',
-      'Scènes',
       'Overlays',
+      'Scènes',
+      'Twitch & interactions',
     ]);
   });
 

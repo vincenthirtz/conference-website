@@ -14,11 +14,20 @@ const ids = (perms: string[] | null) =>
   visibleDiffusionTabs(perms).map((t) => t.id);
 
 describe('onglets Diffusion', () => {
-  it('commence par le cockpit, dans l’ordre d’une soirée', () => {
-    expect(DIFFUSION_TABS.slice(0, 2).map((t) => t.id)).toEqual([
-      'cockpit',
+  it('commence par les overlays, l’écran le plus ouvert', () => {
+    expect(DIFFUSION_TABS.map((t) => t.id)).toEqual([
+      'overlays',
+      'scenes',
       'live',
+      'casters',
+      'twitch',
     ]);
+  });
+
+  it('n’a plus d’onglet cockpit ni run-of-show', () => {
+    const hrefs = DIFFUSION_TABS.map((t) => t.href);
+    expect(hrefs).not.toContain('/admin/regie');
+    expect(hrefs).not.toContain('/admin/events');
   });
 
   it('réserve les casteuses à manage_communications, comme leur page', () => {
@@ -26,9 +35,9 @@ describe('onglets Diffusion', () => {
     expect(ids(['manage_communications'])).toContain('casters');
   });
 
-  it('masque le run-of-show sans manage_broadcast, le montre avec', () => {
-    expect(ids(['manage_tcg'])).not.toContain('runofshow');
-    expect(ids(['manage_broadcast'])).toContain('runofshow');
+  it('masque les chaînes Twitch sans manage_broadcast, les montre avec', () => {
+    expect(ids(['manage_tcg'])).not.toContain('twitch');
+    expect(ids(['manage_broadcast'])).toContain('twitch');
   });
 
   it('montre tout pendant la lecture de la session', () => {
@@ -50,7 +59,7 @@ describe('onglets Diffusion', () => {
     const forCaster = visibleDiffusionTabs(['use_cast_cockpit'], 'caster').map(
       (t) => t.id
     );
-    expect(forCaster).toEqual(['cockpit', 'live', 'scenes', 'overlays']);
+    expect(forCaster).toEqual(['overlays', 'scenes', 'live']);
   });
 
   it('chaque onglet vise une page admin distincte', () => {

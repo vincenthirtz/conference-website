@@ -113,9 +113,8 @@ capg "Annuaire public de clubs / structures" "clubs?Directory|annuaire des (club
 capg "Carte interactive des événements" "leaflet|maplibre|mapbox" pages components
 capg "Catalogue de tournois inter-espaces" "crossTenantTournaments|tournamentsNetwork|network/tournaments" pages utils
 echo "### Diffusion"
-capf "Overlay OBS de régie" pages/overlay/[runId].tsx
-capf "Direction automatique de régie" utils/broadcast/autoDirector.ts
-capf "Cockpit caster" pages/caster/cockpit.tsx
+capf "Overlay OBS de régie" pages/overlay/regie.tsx
+capf "Cockpit caster (scènes, pilotage OBS)" pages/admin/caster.tsx
 capf "Prédictions Twitch" pages/api/admin/twitch/predictions/index.ts
 echo "### Argent"
 capf "Paiement de plan (HelloAsso)" utils/billing/tenantPlanBilling.ts

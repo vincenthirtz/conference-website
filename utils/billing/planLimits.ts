@@ -189,9 +189,8 @@ export const PLAN_FEATURE_ENFORCEMENT: Record<
   arbitration: { kind: 'code', where: 'utils/billing/botPlanGate.ts' },
   ratings: { kind: 'code', where: 'utils/billing/botPlanGate.ts' },
   broadcastStudio: {
-    kind: 'code',
-    where:
-      'utils/billing/tenantCapabilityGate.ts → POST/GET /api/admin/broadcast/state + POST /api/admin/broadcast/next-match',
+    kind: 'commercial',
+    why: "Elle gardait la console de run (`/api/admin/broadcast/state` et `next-match`), retirée avec le run-of-show jamais utilisé. Il n'en reste que la ligne de l'offre : le logiciel Womenscup OBS, déployé sur devis.",
   },
   matchOverlays: {
     kind: 'code',

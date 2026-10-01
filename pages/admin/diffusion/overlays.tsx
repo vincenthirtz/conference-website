@@ -139,8 +139,8 @@ export default function DiffusionOverlaysPage({
   const elsewhere = [
     {
       href: '/admin/broadcast/live',
-      title: t.runOverlay,
-      desc: t.runOverlayDesc,
+      title: t.twitchInteractions,
+      desc: t.twitchInteractionsDesc,
     },
     {
       href: '/admin/caster?tab=obs',

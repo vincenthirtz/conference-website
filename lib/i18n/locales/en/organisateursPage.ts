@@ -30,7 +30,7 @@ export default {
     'A contested score opens its own thread, with evidence, a deadline and a recorded decision. Obvious reconciliations settle themselves.',
   what5Title: 'Production and streaming',
   what5Body:
-    'Caster assignments, run-of-show, OBS overlay and one-click switch to the next match.',
+    'Caster assignments, OBS scenes and overlays driven from the browser, Twitch predictions and drops.',
   what6Title: 'Discord bot',
   what6Body:
     'Team channels, roles, match announcements, tickets: the bot does on your server what the platform decides, without you hosting it.',

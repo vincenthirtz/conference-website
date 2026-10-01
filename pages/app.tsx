@@ -124,24 +124,6 @@ const getFeatures = (t: AppDict): Feature[] => [
     ),
   },
   {
-    title: t.feature6Title,
-    description: t.feature6Desc,
-    icon: (cls) => (
-      <svg
-        className={cls}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="12" cy="12" r="4" />
-        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-      </svg>
-    ),
-  },
-  {
     title: t.feature7Title,
     description: t.feature7Desc,
     icon: (cls) => (
@@ -211,7 +193,7 @@ const getAudiences = (t: AppDict): AudienceCard[] => [
       t.audience2Bullet3,
       t.audience2Bullet4,
     ],
-    cta: { href: '/admin/regie', label: t.audience2Cta },
+    cta: { href: '/admin/diffusion/overlays', label: t.audience2Cta },
   },
   {
     emoji: '\u{1F6E0}\u{FE0F}',

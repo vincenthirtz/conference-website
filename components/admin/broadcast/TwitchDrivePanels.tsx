@@ -1,9 +1,9 @@
 // components/admin/broadcast/TwitchDrivePanels.tsx
 //
-// Les deux panneaux qui ÉCRIVENT sur Twitch depuis la console live :
+// Les deux panneaux qui ÉCRIVENT sur Twitch depuis « Twitch & interactions » :
 // prédictions et commandes (chat, clip, marqueur, modération).
 //
-// POURQUOI UN CONTRÔLE ICI. La console admet le rôle caster, mais toutes les
+// POURQUOI UN CONTRÔLE ICI. L'écran admet le rôle caster, mais toutes les
 // routes de ces panneaux exigent `manage_broadcast`. Contrairement à la santé
 // du drop (masquée sur 403) ou au statut d'antenne (liste vide), ces deux-là
 // ne se masquaient PAS : une casteuse voyait « Connecter la chaîne », un

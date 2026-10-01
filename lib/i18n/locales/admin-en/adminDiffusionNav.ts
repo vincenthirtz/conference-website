@@ -4,12 +4,9 @@
 
 export default {
   ariaLabel: 'Broadcast screens',
-  liveNow: 'live',
-  tabCockpit: 'Cockpit',
-  tabRunOfShow: 'Run-of-show',
-  tabLive: 'Live console',
-  tabScenes: 'Scenes',
   tabOverlays: 'Overlays',
+  tabScenes: 'Scenes',
+  tabLive: 'Twitch & interactions',
   tabCasters: 'Casters',
   tabTwitch: 'Twitch channels',
   castersPageTitle: 'Casters — Broadcast',

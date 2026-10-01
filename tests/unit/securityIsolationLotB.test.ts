@@ -20,10 +20,6 @@ vi.mock('@/utils/castEvents', async (orig) => ({
   ...(await orig<typeof import('../../utils/castEvents')>()),
   emitCastEvent: vi.fn(async () => undefined),
 }));
-vi.mock('@/utils/broadcast/autoDirector', async (orig) => ({
-  ...(await orig<typeof import('../../utils/broadcast/autoDirector')>()),
-  reactToMatchStatus: vi.fn(async () => undefined),
-}));
 
 import {
   store,

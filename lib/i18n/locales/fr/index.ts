@@ -75,7 +75,6 @@ import nsPressSection from './pressSection';
 import nsCgvPage from './cgvPage';
 import nsLivePage from './livePage';
 import nsLiveTwitchSection from './liveTwitchSection';
-import nsLiveEventBanner from './liveEventBanner';
 import nsScrimDetail from './scrimDetail';
 import nsMatchDetail from './matchDetail';
 import nsJeuxPage from './jeuxPage';
@@ -120,15 +119,6 @@ import nsTournamentTeams from './tournamentTeams';
 import nsTournoiPage from './tournoiPage';
 import nsLeaguesIndex from './leaguesIndex';
 import nsLeagueDetail from './leagueDetail';
-import nsCasterCockpit from './casterCockpit';
-import nsBriefingPanel from './briefingPanel';
-import nsLiveSegmentBlock from './liveSegmentBlock';
-import nsCockpitChecklist from './cockpitChecklist';
-import nsUrgentCueModal from './urgentCueModal';
-import nsCockpitHotkeys from './cockpitHotkeys';
-import nsCueBanner from './cueBanner';
-import nsCueFeed from './cueFeed';
-import nsUpcomingAssignments from './upcomingAssignments';
 import nsCastViewer from './castViewer';
 import nsMatchGames from './matchGames';
 import nsDraftPage from './draftPage';
@@ -159,9 +149,6 @@ import nsEmbedSchedule from './embedSchedule';
 import nsScrimPlanning from './scrimPlanning';
 import nsOverlay from './overlay';
 import nsDeveloperRegisterPage from './developerRegisterPage';
-import nsAdminRegie from './adminRegie';
-import nsRegieNewRun from './regieNewRun';
-import nsRegieStartPrepared from './regieStartPrepared';
 import nsBattlenetVerify from './battlenetVerify';
 import nsOverwatchRank from './overwatchRank';
 import nsPrintExport from './printExport';
@@ -250,7 +237,6 @@ export const frDict = {
   cgvPage: nsCgvPage.fr,
   livePage: nsLivePage.fr,
   liveTwitchSection: nsLiveTwitchSection.fr,
-  liveEventBanner: nsLiveEventBanner.fr,
   scrimDetail: nsScrimDetail.fr,
   matchDetail: nsMatchDetail.fr,
   jeuxPage: nsJeuxPage.fr,
@@ -295,15 +281,6 @@ export const frDict = {
   tournoiPage: nsTournoiPage.fr,
   leaguesIndex: nsLeaguesIndex.fr,
   leagueDetail: nsLeagueDetail.fr,
-  casterCockpit: nsCasterCockpit.fr,
-  briefingPanel: nsBriefingPanel.fr,
-  liveSegmentBlock: nsLiveSegmentBlock.fr,
-  cockpitChecklist: nsCockpitChecklist.fr,
-  urgentCueModal: nsUrgentCueModal.fr,
-  cockpitHotkeys: nsCockpitHotkeys.fr,
-  cueBanner: nsCueBanner.fr,
-  cueFeed: nsCueFeed.fr,
-  upcomingAssignments: nsUpcomingAssignments.fr,
   castViewer: nsCastViewer.fr,
   matchGames: nsMatchGames.fr,
   draftPage: nsDraftPage.fr,
@@ -334,9 +311,6 @@ export const frDict = {
   scrimPlanning: nsScrimPlanning.fr,
   overlay: nsOverlay.fr,
   developerRegisterPage: nsDeveloperRegisterPage.fr,
-  adminRegie: nsAdminRegie.fr,
-  regieNewRun: nsRegieNewRun.fr,
-  regieStartPrepared: nsRegieStartPrepared.fr,
   battlenetVerify: nsBattlenetVerify.fr,
   overwatchRank: nsOverwatchRank.fr,
   printExport: nsPrintExport.fr,

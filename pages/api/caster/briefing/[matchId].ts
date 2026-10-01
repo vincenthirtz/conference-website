@@ -1,6 +1,7 @@
 // pages/api/caster/briefing/[matchId].ts
 //
-// Feature: Run-of-show — Lot 2.
+// Écrite pour le cockpit du run-of-show (retiré). CONSERVÉE : elle ne lit
+// aucune table `event_*` et reste appelable par une session caster.
 // GET : briefing automatique pour le caster — compos des 2 equipes, H2H,
 // news recentes liees aux equipes.
 //

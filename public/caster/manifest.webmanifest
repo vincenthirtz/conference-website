@@ -1,9 +1,9 @@
 {
-  "name": "OW Women's Cup – Cockpit caster",
+  "name": "OW Women's Cup – Diffusion",
   "short_name": "OWWC Cast",
-  "description": "Cockpit du caster OW Women's Cup : segments, checklist, briefing, hotkeys.",
-  "start_url": "/caster/cockpit",
-  "scope": "/caster",
+  "description": "Diffusion de l'OW Women's Cup : overlays, scènes et Twitch.",
+  "start_url": "/admin/diffusion/overlays",
+  "scope": "/admin",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
   "categories": ["sports", "productivity"],

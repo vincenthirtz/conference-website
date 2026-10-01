@@ -424,7 +424,6 @@ describe('GET /api/admin/notifications/prefs', () => {
     expect(types).toContain('match.starting');
     expect(types).toContain('cast.assigned');
     expect(types).toContain('helloasso.payment.received');
-    expect(types).toContain('event_segment.transitioned');
   });
 
   it('fusionne les opt-out stockés avec les défauts', async () => {

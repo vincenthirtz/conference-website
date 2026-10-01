@@ -132,7 +132,10 @@ export default function PilotageView({ data }: { data: Pilotage }) {
             <AdminButtonLink href={`/admin/tournament/${tid}/dashboard`}>
               {t.openDashboard}
             </AdminButtonLink>
-            <AdminButtonLink href="/admin/regie" variant="secondary">
+            <AdminButtonLink
+              href="/admin/diffusion/overlays"
+              variant="secondary"
+            >
               {t.openRegie}
             </AdminButtonLink>
           </>
@@ -301,7 +304,7 @@ export default function PilotageView({ data }: { data: Pilotage }) {
                 [t.quickCheckin, `/admin/tournament/${tid}/checkin`],
                 [t.quickMatches, `/admin/tournament/${tid}/matches`],
                 [t.quickDashboard, `/admin/tournament/${tid}/dashboard`],
-                [t.quickRegie, '/admin/regie'],
+                [t.quickRegie, '/admin/diffusion/overlays'],
               ].map(([label, href]) => (
                 <li key={href}>
                   <Link

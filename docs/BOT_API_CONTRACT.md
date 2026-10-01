@@ -170,7 +170,6 @@ absent d'ici, ou listé mais plus émis, fait échouer la suite.
 | `INVALID_TENANT_HEADER` | 400 | `x-tenant-id` n'est pas un UUID (clé plateforme). | toutes (clé plateforme) |
 | `UNKNOWN_TENANT` | 404 | Espace désigné inconnu ou inactif (clé plateforme). | toutes (clé plateforme) |
 | `TENANT_LOOKUP_UNAVAILABLE` | 503 | Rattachement serveur Discord → espace illisible ; réessayer. | toutes (clé plateforme) |
-| `MISSING_TENANT` | 400 | Contexte d'espace absent. | `runs/current` |
 | `APPLY_FAILED` | 400 / 500 | Application du score en échec : 400 sur `forfeit`, 500 sur `report` et `resolve-dispute`. | `matches/[matchId]/forfeit`, `matches/[matchId]/report`, `matches/[matchId]/resolve-dispute` |
 | `MATCH_FINALIZED` | 409 | Match déjà clôturé, ou clôturé pendant le report. | `matches/[matchId]/report` |
 | `MATCH_NOT_STARTED` | 409 | Report avant le coup d'envoi du match. | `matches/[matchId]/report` |
@@ -280,7 +279,7 @@ future finer tiers). The baseline denial fires first for a tenant with no bot.
 | Capability              | Routes                                                                                                                                                                     | Plan                |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | `discordBot` (baseline) | **toutes les routes tenant-scopées**                                                                                                                                       | Régie+ / foundation |
-| `discordEventOps:full`  | `runs/current`, `cast/assignments`, `cast/[assignmentId]/ack`, `matches/[matchId]/cast`, `matches/[matchId]/discord`, `matches/[matchId]/drafts`, `matches/[matchId]/veto` | Régie+              |
+| `discordEventOps:full`  | `cast/assignments`, `cast/[assignmentId]/ack`, `matches/[matchId]/cast`, `matches/[matchId]/discord`, `matches/[matchId]/drafts`, `matches/[matchId]/veto` | Régie+              |
 | `arbitration`           | `disputes`, `disputes/escalations`, `matches/[matchId]/dispute`, `matches/[matchId]/resolve-dispute`, `moderation/blacklist-alert`                                         | Régie+              |
 
 **Bot client (owwc-discord-bot `api-client.js`) — à gérer** : traiter
@@ -343,7 +342,6 @@ catalog can grow without forcing a bot deploy.
 | `tournament.finalized` (Lot 1)    | Admin `POST /api/admin/tournament/[id]/finalize`                                                                                                                                                            | `{ tournament_id, tournament_name, rankings: [{ team_id, team_name, rank, prize }, ...] }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `mvp.public.opened`               | Admin `POST /api/admin/matches/[matchId]/mvp-public` (action `open`, depuis le cockpit régie ou l'onglet « MVP du public » des stats du tournoi)                                                                                                                | `{ matchId, roundName, team1Name, team2Name, closesAt, candidates: [{ memberId, label, teamName }, ...] }` — **poussé, jamais sondé** : la fenêtre du scrutin public dure ~10 min, soit la période entière du poller de clôture MVP, qui le raterait. Un `open` rejoué sur un scrutin déjà ouvert n'émet rien (sinon double message). |
 | `mvp.public.closed`               | Admin `POST /api/admin/matches/[matchId]/mvp-public` (action `close`, depuis le cockpit régie ou l'onglet « MVP du public »)                                                                                                               | `{ matchId, winnerLabel, winnerMemberId, reason, team1Name, team2Name, bySource: { twitch, discord } \| null }` — le bot édite son message SANS composants. Depuis le 2026-09-27, un admin peut aussi ouvrir / clore depuis Discord (`/mvp-public`) via `POST /api/bot/v1/matches/[matchId]/mvp-public` (actions `open` / `close`) : ces deux gestes n'émettent AUCUN de ces événements — le bot, qui a appelé, poste ou édite lui-même (sinon double message). Depuis le 2026-09-30, les `!mvp` Twitch sont comptés côté serveur (EventSub `channel.chat.message`, abonné pendant le vote seulement) : un vote ouvert hors cockpit les reçoit aussi. L'ouverture accepte un match à venir ou en cours ; seuls annulé, reporté et forfait sont refusés (409, `NOT_PLAYABLE` / `WALKOVER`). |
-| `broadcast.state_changed` (Lot 7) | Admin `POST /api/admin/broadcast/state`                                                                                                                                                                     | `{ runId, runSlug, state: { v: 1, on_air, lower_third, pip, scene, auto_director, scene_updated_at }, currentSegmentId, matchId }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `news.published`                  | Admin / bot ingest                                                                                                                                                                                          | `{ newsId, slug, title, tag, excerpt, imageUrl, publishedAt }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `registration.blacklisted`        | `utils/moderation/blacklist.ts` (`alertIfBlacklisted`) at register / team create / add-member                                                                                                               | `{ context, matchedOn, strength, reason, matchCount, matches[], battleTag?, displayName?, discordUserId? }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `registration.entity_blacklisted` | `utils/moderation/entityBlacklist.ts` (`alertIfEntityBlacklisted`) at team create                                                                                                                           | `{ context, entityName, matchedOn: 'name', entityType, matchedName, strength, reason, matchCount, matches[] }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
@@ -360,7 +358,6 @@ catalog can grow without forcing a bot deploy.
 | `scrim.planning.opened`           | `pages/api/admin/scrim-plannings/index.ts` (POST) — grille de dispos ouverte entre 2 équipes                                                                                                                | `{ planningId, title, game, status, team1, team2, horizonStart, horizonDays }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `scrim.planning.validated`        | `pages/api/admin/scrim-plannings/[planningId]/validate.ts` — créneau validé → scrim créé                                                                                                                    | `{ planningId, validatedSlot, scrimId, team1, team2 }` (le `scrim.scheduled` du scrim créé est émis en parallèle)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `scrim.planning.reminder`         | `emitScrimPlanningEvent('scrim.planning.reminder', ...)` — relance : dispos encore manquantes                                                                                                               | `{ planningId, title, game, status, team1, team2, horizonStart, horizonDays }` (fanout push/email : staff + capitaines/managers des 2 équipes)                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `event_segment.transitioned`      | Admin `/api/admin/events/.../segments/.../{start,skip,end}.ts` (Lot 2 run-of-show)                                                                                                                          | `{ runId, segmentId, fromStatus, toStatus, tenantId, broadcastMessage, segment: { ord, type, title, durationMin, matchId } }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `task.created` (Kanban)           | `createTaskCore` — admin `POST /api/admin/tasks/tasks` OU bot `POST /api/bot/v1/tasks`                                                                                                                      | `{ taskId, boardId, boardName, columnName, title, priority, assigneeStaffId?, assigneeDiscordUserId?, assigneeName?, actorLabel }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `task.moved` (Kanban)             | `moveTaskCore` — admin `PATCH .../tasks/{id}/move` OU bot `PATCH /api/bot/v1/tasks/{id}/move`                                                                                                               | `{ taskId, boardName, title, fromColumnName, toColumnName, isDone, assigneeDiscordUserId?, assigneeName?, actorLabel }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `task.assigned` (Kanban)          | `assignTaskCore` — admin `PATCH .../tasks/{id}/assign` OU bot `PATCH /api/bot/v1/tasks/{id}/assign` (assigné non-null uniquement)                                                                           | `{ taskId, boardName, title, assigneeStaffId, assigneeName, assigneeDiscordUserId?, actorLabel }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
@@ -562,69 +559,6 @@ la carte ; `dueDate` = date ISO ou `null` ; `labels` = liste
 `{ name, color }` des labels portés par la carte (`tasks.labels[]`, ordre
 préservé), la couleur venant de `task_labels` (`color` = `null` si le nom n'a
 pas de définition de label sur le board ; `[]` si la carte n'a aucun label).
-
-#### `event_segment.transitioned` (Lot 2 run-of-show)
-
-Emitted whenever a segment in an `event_runs` timeline changes lifecycle
-state via the staff Director endpoints:
-
-- `upcoming → live` (via `POST /api/admin/events/:runId/segments/:segId/start`)
-- `upcoming → skipped` (via `POST /api/admin/events/:runId/segments/:segId/skip`)
-- `live → done` (via `POST /api/admin/events/:runId/segments/:segId/end`)
-
-Idempotent endpoints — if the transition is a no-op (segment already in the
-target state) the event is **not** re-emitted, so the bot can safely treat
-the event as "first time we see this transition for this segmentId".
-
-**Timeline pre-fill** — `POST /api/admin/events/:runId/segments/from-tournament`
-(staff `admin`) builds the match segments of a run in one shot from a
-tournament's matches. Body `{ tournament_id }`. Matches are appended to the
-queue (`MAX(ord)+1, …`) in broadcast order (stage `order_index` → `round_number`
-→ `scheduled_at` → `created_at`), one `type='match'` segment each, title
-`"<teamA> vs <teamB>"` (falls back to the match round label, then `Match <n>`).
-Anti-duplication: a match already bound to a segment of the run is skipped.
-Honors `Idempotency-Key`. Returns `200 { segments, created, skipped }`,
-`404 { code: 'TOURNAMENT_NOT_FOUND' }` for a foreign/missing tournament, and
-`409 { code: 'RUN_DONE' }` when the run is finished. This endpoint does **not**
-emit a bot event (segments start upcoming; `event_segment.transitioned` fires
-later on start/skip/end).
-
-The full webhook/outbox body shape (consistent with the rest of the catalog):
-
-```json
-{
-  "id": "<event uuid>",
-  "event": "event_segment.transitioned",
-  "tenantId": "<uuid>",
-  "timestamp": "2026-05-21T20:42:00.000Z",
-  "data": {
-    "runId": "<uuid>",
-    "segmentId": "<uuid>",
-    "fromStatus": "upcoming",
-    "toStatus": "live",
-    "tenantId": "<uuid>",
-    "broadcastMessage": {
-      "discord": "**Match 3** kicks off NOW — Chaos Theory vs Phoenix Rising",
-      "push_title": "Live now: Chaos Theory vs Phoenix Rising",
-      "push_body": "Tune in for Match 3 of Finale Spring 2026",
-      "email_subject": null
-    },
-    "segment": {
-      "ord": 4,
-      "type": "match",
-      "title": "Match 3 — Chaos Theory vs Phoenix Rising",
-      "durationMin": 45,
-      "matchId": "<uuid>"
-    }
-  }
-}
-```
-
-`broadcastMessage` is `null` when the staff didn't author one for that
-segment (i.e. silent transition — pure cockpit/timeline state change). The
-bot uses it as the canonical Discord copy when `toStatus === 'live'`. For
-`skipped` and `done`, the bot typically ignores `broadcastMessage` and just
-updates its own panel/state.
 
 #### `dispute.sla_breached` (Lot 4 Open Disputes Board)
 
@@ -1059,7 +993,7 @@ code. Les tableaux par domaine ci-dessous gardent le contexte rédigé ; un test
 ce tableau.
 
 <!-- BEGIN GENERATED: bot-inventory -->
-_Tableau généré depuis les options `withBotRoute` des handlers — ne pas éditer à la main : `npm run contract:bot-inventory`. 96 routes._
+_Tableau généré depuis les options `withBotRoute` des handlers — ne pas éditer à la main : `npm run contract:bot-inventory`. 95 routes._
 
 | Route | Méthodes | Idem. | Rate-key | Plafond | Portée / plan |
 | --- | --- | --- | --- | --- | --- |
@@ -1120,7 +1054,6 @@ _Tableau généré depuis les options `withBotRoute` des handlers — ne pas éd
 | [`reminders/index.ts`](../pages/api/bot/v1/reminders/index.ts) | GET | — | `bot-reminders` | 60/min | — |
 | [`role-sync/presence.ts`](../pages/api/bot/v1/role-sync/presence.ts) | POST | oui | `bot-role-sync-presence` | 120/min | — |
 | [`role-sync/snapshot.ts`](../pages/api/bot/v1/role-sync/snapshot.ts) | GET | — | `bot-role-sync-snapshot` | 12/min | — |
-| [`runs/current.ts`](../pages/api/bot/v1/runs/current.ts) | GET | — | `bot-runs-current` | 60/min | plan `discordEventOps:full` |
 | [`scrims/[scrimId]/index.ts`](../pages/api/bot/v1/scrims/[scrimId]/index.ts) | GET, PATCH | oui | `bot-scrim-id` | 60/min | — |
 | [`scrims/[scrimId]/matches.ts`](../pages/api/bot/v1/scrims/[scrimId]/matches.ts) | GET, POST | oui | `bot-scrim-matches` | 60/min | — |
 | [`scrims/[scrimId]/matches/[matchId].ts`](../pages/api/bot/v1/scrims/[scrimId]/matches/[matchId].ts) | PATCH | oui | `bot-scrim-match-patch` | 60/min | — |
@@ -2310,7 +2243,6 @@ ajoute un POST par arrivee/depart, en plus du POST par cycle).
 | [`leaderboards/teams.ts`](../pages/api/bot/v1/leaderboards/teams.ts)               | GET     | —     | `bot-leaderboards-teams`        |
 | [`twitch/live.ts`](../pages/api/bot/v1/twitch/live.ts)                             | GET     | —     | `bot-twitch-live`               |
 | [`tournament-help/inventory.ts`](../pages/api/bot/v1/tournament-help/inventory.ts) | GET     | —     | `bot-tournament-help-inventory` |
-| [`runs/current.ts`](../pages/api/bot/v1/runs/current.ts)                           | GET     | —     | `bot-runs-current`              |
 
 #### `GET /api/bot/v1/twitch/live`
 
@@ -2336,164 +2268,6 @@ whatever survives is what reaches Helix. Explicitly requested channels come back
 with `label`, `badge`, `description` and `backgroundUrl` set to `null`: that
 dressing lives in the table, and the caller already knows which channel it asked
 for.
-
-#### `GET /api/bot/v1/runs/current`
-
-Returns the current live `event_run` of the tenant plus its segments —
-useful for a `/run` or `/event` slash command, or for the bot to render a
-"What's live right now" panel without piecing it together from the outbox.
-
-**Auth** : `x-api-key` + tenant via per-tenant key or `x-tenant-id` header
-(standard `withBotRoute` resolution).
-
-**Response 200** (no live run)
-
-```json
-{ "run": null, "segments": [] }
-```
-
-**Response 200** (live run)
-
-```json
-{
-  "run": {
-    "id": "<uuid>",
-    "slug": "finale-printemps-2026",
-    "name": "Finale Printemps 2026",
-    "description": "Show de clôture, 4 matchs + remise des prix",
-    "scheduledAt": "2026-05-21T20:00:00.000Z",
-    "status": "live",
-    "startedAt": "2026-05-21T20:03:12.000Z",
-    "endedAt": null
-  },
-  "segments": [
-    {
-      "id": "<uuid>",
-      "ord": 0,
-      "type": "intro",
-      "title": "Intro caster",
-      "durationMin": 10,
-      "matchId": null,
-      "status": "done",
-      "startedAt": "2026-05-21T20:03:12.000Z",
-      "endedAt": "2026-05-21T20:13:45.000Z"
-    },
-    {
-      "id": "<uuid>",
-      "ord": 1,
-      "type": "match",
-      "title": "Match 1 — Chaos Theory vs Phoenix Rising",
-      "durationMin": 45,
-      "matchId": "<uuid>",
-      "status": "live",
-      "startedAt": "2026-05-21T20:14:01.000Z",
-      "endedAt": null
-    }
-  ]
-}
-```
-
-Like the public timeline endpoint, this projection deliberately omits
-`broadcast_message` and `caster_checklist`. Those stay internal — the bot
-already receives the broadcast copy via the `event_segment.transitioned`
-outbox event.
-
-**Errors** : `400` (missing tenant context), `401` (auth), `500` (DB).
-**Rate limit** : 60/min global. **Idempotency** : non (GET).
-
-#### Broadcast console & auto-director (Lot 7 — Production broadcast automatisée)
-
-The broadcast console operates on the SINGLE live `event_run` of the tenant
-(`status='live'`). Overlay state lives in the freeform `event_runs.broadcast_state`
-JSONB (no dedicated columns) and is normalised on read. Shape (v1):
-
-```json
-{
-  "v": 1,
-  "on_air": false,
-  "lower_third": null,
-  "pip": { "enabled": false },
-  "scene": "starting",
-  "auto_director": true,
-  "scene_updated_at": null
-}
-```
-
-`scene` ∈ `starting | match | pause | results | end | custom`. Absent fields are
-backfilled on read (`scene`→`starting`, `auto_director`→`true`, `on_air`→`false`,
-`pip.enabled`→`false`). `scene` and `auto_director` were added by Lot 7 and only
-extend the JSONB — no migration.
-
-**Auto-director reactor.** When `auto_director` is `true` (default), the reactor
-auto-switches `scene` on match status changes: `ongoing`→`match`,
-`finished`/`walkover`→`results`, `disputed`→`pause` (where wired). Setting
-`auto_director=false` freezes the scene for a manual operator override; the
-reactor becomes a no-op.
-
-**Overlay renderer.** `GET /api/overlay/{runId}` (below) is the chrome-less OBS
-browser-source feed. The overlay page subscribes to `event_runs.broadcast_state`
-via Supabase Realtime, so scene/lower-third/PiP changes render live without
-polling; the JSON endpoint is the cacheable fallback.
-
-##### `GET /api/admin/broadcast/state` (staff, `caster`+)
-
-Aggregate live state: `{ run, currentSegment, match, casters, state, generatedAt }`
-where `state` is the v1 broadcast_state above. Read-only for `caster`.
-**Errors** : `401`, `403`. **Rate limit** : staff. **Idempotency** : non (GET).
-
-##### `POST /api/admin/broadcast/state` (staff, `admin`+)
-
-Partial patch of `broadcast_state` on the live run. Body (all optional, ≥1
-required): `on_air: boolean`, `lower_third: string|null` (≤500), `pip: { enabled }`,
-`scene: <scene enum>`, `auto_director: boolean`. `caster` is `403` (read-only).
-Returns the refreshed aggregate state and emits `broadcast.state_changed`.
-**Errors** : `400` (validation / empty patch), `401`, `403` (caster),
-`409 { code: 'NO_LIVE_RUN' }`. **Idempotency** : oui (`Idempotency-Key`).
-
-##### `POST /api/admin/broadcast/next-match` (staff, `admin`+)
-
-One-click advance to the next match. No request body. Resolves the live run + its
-current live segment, finds the next `type='match'` `upcoming` segment by `ord`
-(skipping breaks/intros/outros), and performs the atomic single-live-segment swap
-(same code path as `segments/{segId}/start`). Resets the overlay scene to
-`starting` (best-effort) so the auto-director flips it to `match` when the new
-match goes ongoing. Emits `event_segment.transitioned`.
-
-**Response 200** : `{ segment: { …event_segment… }, alreadyStarted: boolean, runId }`.
-**Errors** : `401`, `403`, `404` (target segment vanished), `405`,
-`409 { code }` where `code` ∈ `NO_LIVE_RUN | NO_CURRENT_SEGMENT | NO_NEXT_MATCH | SEGMENT_NOT_UPCOMING`.
-**Rate limit** : `admin-broadcast-next-match` (30/min). **Idempotency** : oui.
-
-##### `GET /api/overlay/{runId}` (PUBLIC — no auth)
-
-OBS browser-source overlay feed for a run. `Cache-Control: s-maxage=5,
-stale-while-revalidate`, CORS-friendly, no auth. Never exposes staff-only fields
-(`auto_director`, casters, stream URLs, checklists, broadcast messages).
-
-**Response 200**
-
-```json
-{
-  "scene": "match",
-  "onAir": true,
-  "lowerThird": null,
-  "pip": { "enabled": false },
-  "match": {
-    "team1": { "name": "Chaos Theory", "logoUrl": "https://…", "score": 1 },
-    "team2": { "name": "Phoenix Rising", "logoUrl": "https://…", "score": 0 },
-    "format": "bo3",
-    "status": "ongoing"
-  },
-  "sponsors": [
-    { "name": "Acme", "logoUrl": "https://…", "websiteUrl": "https://…" }
-  ]
-}
-```
-
-When the run is unknown or not live, a safe empty-ish shape is returned with a
-`200` (`scene: "starting"`, `match: null`, `onAir: false`, sponsors still
-included) so the browser source never errors mid-broadcast. A malformed `runId`
-→ `400`. **Rate limit** : `overlay` (120/min). **Idempotency** : non (GET).
 
 #### Twitch broadcaster actions (régie — écriture sur la chaîne)
 

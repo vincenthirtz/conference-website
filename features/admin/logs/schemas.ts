@@ -61,7 +61,6 @@ export const HISTORY_ENTITY_TYPES = [
   'tournament',
   'user',
   'support_ticket',
-  'event_run',
   // L'espace lui-même (T9) — cas particulier assumé (portée : cf. service).
   'tenant',
   // Fiche Le Ruban des chaînes Twitch (avant / après écrits par L8).

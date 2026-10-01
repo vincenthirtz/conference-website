@@ -77,7 +77,6 @@ import enPressSection from './pressSection';
 import enCgvPage from './cgvPage';
 import enLivePage from './livePage';
 import enLiveTwitchSection from './liveTwitchSection';
-import enLiveEventBanner from './liveEventBanner';
 import enScrimDetail from './scrimDetail';
 import enMatchDetail from './matchDetail';
 import enJeuxPage from './jeuxPage';
@@ -121,15 +120,6 @@ import enTournamentTeams from './tournamentTeams';
 import enTournoiPage from './tournoiPage';
 import enLeaguesIndex from './leaguesIndex';
 import enLeagueDetail from './leagueDetail';
-import enCasterCockpit from './casterCockpit';
-import enBriefingPanel from './briefingPanel';
-import enLiveSegmentBlock from './liveSegmentBlock';
-import enCockpitChecklist from './cockpitChecklist';
-import enUrgentCueModal from './urgentCueModal';
-import enCockpitHotkeys from './cockpitHotkeys';
-import enCueBanner from './cueBanner';
-import enCueFeed from './cueFeed';
-import enUpcomingAssignments from './upcomingAssignments';
 import enCastViewer from './castViewer';
 import enMatchGames from './matchGames';
 import enDraftPage from './draftPage';
@@ -160,9 +150,6 @@ import enEmbedSchedule from './embedSchedule';
 import enScrimPlanning from './scrimPlanning';
 import enOverlay from './overlay';
 import enDeveloperRegisterPage from './developerRegisterPage';
-import enAdminRegie from './adminRegie';
-import enRegieNewRun from './regieNewRun';
-import enRegieStartPrepared from './regieStartPrepared';
 import enBattlenetVerify from './battlenetVerify';
 import enOverwatchRank from './overwatchRank';
 import enPrintExport from './printExport';
@@ -252,7 +239,6 @@ const enDict = {
   cgvPage: enCgvPage,
   livePage: enLivePage,
   liveTwitchSection: enLiveTwitchSection,
-  liveEventBanner: enLiveEventBanner,
   scrimDetail: enScrimDetail,
   matchDetail: enMatchDetail,
   jeuxPage: enJeuxPage,
@@ -296,15 +282,6 @@ const enDict = {
   tournoiPage: enTournoiPage,
   leaguesIndex: enLeaguesIndex,
   leagueDetail: enLeagueDetail,
-  casterCockpit: enCasterCockpit,
-  briefingPanel: enBriefingPanel,
-  liveSegmentBlock: enLiveSegmentBlock,
-  cockpitChecklist: enCockpitChecklist,
-  urgentCueModal: enUrgentCueModal,
-  cockpitHotkeys: enCockpitHotkeys,
-  cueBanner: enCueBanner,
-  cueFeed: enCueFeed,
-  upcomingAssignments: enUpcomingAssignments,
   castViewer: enCastViewer,
   matchGames: enMatchGames,
   draftPage: enDraftPage,
@@ -335,9 +312,6 @@ const enDict = {
   scrimPlanning: enScrimPlanning,
   overlay: enOverlay,
   developerRegisterPage: enDeveloperRegisterPage,
-  adminRegie: enAdminRegie,
-  regieNewRun: enRegieNewRun,
-  regieStartPrepared: enRegieStartPrepared,
   battlenetVerify: enBattlenetVerify,
   overwatchRank: enOverwatchRank,
   printExport: enPrintExport,

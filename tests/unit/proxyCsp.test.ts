@@ -100,8 +100,8 @@ describe('proxy.ts CSP — frame-ancestors scoping (T7)', () => {
     expect(getCsp(res)['frame-ancestors']).toBe("'self'");
   });
 
-  it("keeps frame-ancestors 'self' for the run-of-show overlay too", () => {
-    const res = proxy(makeRequest('/overlay/some-run-id') as never);
+  it("keeps frame-ancestors 'self' for the other overlays too", () => {
+    const res = proxy(makeRequest('/overlay/regie') as never);
     expect(getCsp(res)['frame-ancestors']).toBe("'self'");
   });
 

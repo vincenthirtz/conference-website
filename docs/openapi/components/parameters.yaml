@@ -104,20 +104,6 @@ ScrimId:
   schema:
     type: string
     format: uuid
-RunId:
-  name: runId
-  in: path
-  required: true
-  schema:
-    type: string
-    format: uuid
-SegId:
-  name: segId
-  in: path
-  required: true
-  schema:
-    type: string
-    format: uuid
 DiscordUserId:
   name: discordUserId
   in: path

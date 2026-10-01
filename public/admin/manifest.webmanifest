@@ -48,10 +48,10 @@
       "url": "/admin/support"
     },
     {
-      "name": "Cockpit cast",
-      "short_name": "Cockpit",
-      "description": "Cockpit caster",
-      "url": "/caster/cockpit"
+      "name": "Diffusion",
+      "short_name": "Diffusion",
+      "description": "Overlays, scènes et Twitch",
+      "url": "/admin/diffusion/overlays"
     }
   ]
 }

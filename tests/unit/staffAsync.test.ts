@@ -359,11 +359,11 @@ describe('withStaffPage', () => {
     const ctx = {
       req: makeReq(),
       res: makeRes(),
-      resolvedUrl: '/admin/regie?x=1',
+      resolvedUrl: '/admin/caster?x=1',
     } as any;
     const result = (await ssr(ctx)) as any;
     expect(result.redirect.destination).toBe(
-      '/admin/login?next=%2Fadmin%2Fregie%3Fx%3D1'
+      '/admin/login?next=%2Fadmin%2Fcaster%3Fx%3D1'
     );
   });
 

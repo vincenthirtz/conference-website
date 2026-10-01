@@ -1,18 +1,21 @@
 // components/admin/broadcast/DiffusionTabsNav.tsx
 //
-// L'espace « Diffusion » : la régie, les casteuses et les overlays, réunis par
-// une barre d'onglets commune à leurs écrans.
+// L'espace « Diffusion » : les overlays, les scènes, Twitch et les casteuses,
+// réunis par une barre d'onglets commune à leurs écrans.
 //
 // POURQUOI UNE BARRE ET PAS UNE PAGE. Ces écrans servent la même soirée mais
-// vivaient à sept endroits : une entrée « Broadcast live » rangée dans
-// Tournois, le cockpit et les scènes seulement en cartes du tableau de bord,
-// le run-of-show joignable par un fil d'Ariane, les casteuses dans
+// vivaient éparpillés : une entrée « Broadcast live » rangée dans Tournois,
+// les scènes seulement en carte du tableau de bord, les casteuses dans
 // l'Association, les overlays dans les outils d'un tournoi et dans le TCG.
 // Les fondre en une page aurait remonté des milliers de lignes de temps réel
-// (cues, heartbeat, Realtime des scènes) dans un seul composant, et plusieurs
+// (Realtime des scènes, pilotage OBS) dans un seul composant, et plusieurs
 // écrans portent déjà leurs propres onglets `?tab=`. On garde les pages et
 // leurs URL ; on leur donne un chapeau commun. Même choix que
 // `TournamentTabsNav`.
+//
+// Le cockpit (`/admin/regie`) et le run-of-show (`/admin/events`) avaient ici
+// leur onglet, ainsi qu'un point « en direct » allumé par un run en cours :
+// retirés avec la fonctionnalité, qui n'a jamais servi en production.
 //
 // CHAQUE ONGLET PORTE SON DROIT. Un onglet qui mène à un 403 n'est pas un
 // raccourci : il est masqué à qui n'a pas la permission de la page visée.
@@ -27,18 +30,15 @@ import Link from 'next/link';
 import { useStaffSession } from '@/hooks/useStaffSession';
 import { canAccess, diffusionTabAccess } from '@/utils/admin/adminAccess';
 import type { StaffRole } from '@/utils/staffRoles';
-import { useDiffusionLive } from '@/hooks/useDiffusionLive';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminDiffusionNav from '@/lib/i18n/locales/admin-fr/adminDiffusionNav';
 
 type Dict = typeof nsAdminDiffusionNav.fr;
 
 export type DiffusionTabId =
-  | 'cockpit'
-  | 'live'
-  | 'runofshow'
-  | 'scenes'
   | 'overlays'
+  | 'scenes'
+  | 'live'
   | 'casters'
   | 'twitch';
 
@@ -58,26 +58,18 @@ export type DiffusionTab = {
   minRole?: StaffRole;
 };
 
-/** L'ordre est celui d'une soirée : on conduit, on surveille, on habille. */
+/**
+ * Overlays EN PREMIER : c'est l'écran le plus ouvert de l'espace (toutes les
+ * sources OBS, leurs réglages, leur présence à l'antenne). Viennent ensuite ce
+ * qu'on pilote pendant le direct (scènes, Twitch), puis ce qu'on règle avant
+ * (casteuses, chaînes suivies).
+ */
 export const DIFFUSION_TABS: readonly DiffusionTab[] = [
   {
-    id: 'cockpit',
-    href: '/admin/regie',
-    labelKey: 'tabCockpit',
+    id: 'overlays',
+    href: '/admin/diffusion/overlays',
+    labelKey: 'tabOverlays',
     minRole: 'caster',
-  },
-  {
-    id: 'live',
-    href: '/admin/broadcast/live',
-    labelKey: 'tabLive',
-    minRole: 'caster',
-  },
-  // Le déroulé : on le prépare avant, on le conduit depuis le director.
-  {
-    id: 'runofshow',
-    href: '/admin/events',
-    labelKey: 'tabRunOfShow',
-    permission: 'manage_broadcast',
   },
   {
     id: 'scenes',
@@ -85,10 +77,12 @@ export const DIFFUSION_TABS: readonly DiffusionTab[] = [
     labelKey: 'tabScenes',
     minRole: 'caster',
   },
+  // « Twitch & interactions » : drops TCG, prédictions, points de chaîne,
+  // commandes. L'URL date de l'ex-« console live ».
   {
-    id: 'overlays',
-    href: '/admin/diffusion/overlays',
-    labelKey: 'tabOverlays',
+    id: 'live',
+    href: '/admin/broadcast/live',
+    labelKey: 'tabLive',
     minRole: 'caster',
   },
   {
@@ -106,15 +100,6 @@ export const DIFFUSION_TABS: readonly DiffusionTab[] = [
     permission: 'manage_broadcast',
   },
 ];
-
-/**
- * Les onglets qui suivent le RUN en direct : c'est sur eux que le point du direct
- * s'allume. Les autres (overlays, casteuses…) se règlent hors antenne.
- */
-export const LIVE_TABS: ReadonlySet<DiffusionTabId> = new Set([
-  'cockpit',
-  'live',
-]);
 
 /**
  * Les onglets visibles pour ces permissions (`null` = pas encore lues) et ce
@@ -143,10 +128,6 @@ export default function DiffusionTabsNav({
     loading ? null : staffPermissions,
     staffRole
   );
-  // Un run en direct se voit depuis N'IMPORTE quel écran de la diffusion :
-  // on préparait les overlays sans savoir que l'antenne avait démarré.
-  const live = useDiffusionLive();
-  const onAir = live?.live === true;
   return (
     <nav
       aria-label={t.ariaLabel}
@@ -166,18 +147,6 @@ export default function DiffusionTabsNav({
             }`}
           >
             {t[tab.labelKey]}
-            {onAir && LIVE_TABS.has(tab.id) && (
-              <>
-                <span
-                  aria-hidden
-                  title={live?.runName ?? undefined}
-                  className="ml-2 inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--lf,#7fca65)] align-middle shadow-[var(--glow-live)]"
-                />
-                <span className="sr-only">
-                  {` — ${t.liveNow}${live?.runName ? ` : ${live.runName}` : ''}`}
-                </span>
-              </>
-            )}
           </Link>
         );
       })}

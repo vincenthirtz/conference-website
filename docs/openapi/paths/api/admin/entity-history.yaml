@@ -21,7 +21,7 @@ get:
       required: true
       schema:
         type: string
-        enum: [team, tournament, user, support_ticket, event_run]
+        enum: [team, tournament, user, support_ticket]
     - name: id
       in: query
       required: true

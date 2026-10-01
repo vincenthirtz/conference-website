@@ -59,7 +59,6 @@ import { logger } from '@/utils/logger';
 import {
   WEB_PUSH_EVENT_TYPES,
   renderWebPushPayload,
-  shouldPushForEvent,
   playerUrlForEvent,
   type WebPushEventType,
 } from '@/utils/webPushEvents';
@@ -68,7 +67,6 @@ import {
   loadStaffUserIdsForTenant,
   loadPlayerUserIdsForMatch,
   loadTeamMemberUserIds,
-  loadCasterUserIdsForMatch,
   loadCaptainManagerUserIdsForTeams,
   loadOptedOutUserIds,
   type OutboxRow,
@@ -534,16 +532,7 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
       continue;
     }
 
-    // Filtre amont par event_name : certains events (event_segment.transitioned
-    // notamment) ne déclenchent un push que pour un sous-ensemble de leurs
-    // transitions/types. Voir shouldPushForEvent dans utils/webPushEvents.ts.
-    if (!shouldPushForEvent(event.event_name, event.payload ?? {})) {
-      continue;
-    }
-
-    // Recipients staff : par défaut staff du tenant + pole admins ; pour les
-    // transitions de segment match→live, on cible les casters assignés au
-    // match uniquement (audience réduite, cf. loadCasterUserIdsForMatch).
+    // Recipients staff : par défaut staff du tenant + pole admins.
     let staffUserIds: string[];
     if (event.event_name === 'tcg.pack_granted') {
       // Un paquet gagné ne regarde QUE la joueuse qui l'a gagné. Sans cette
@@ -556,24 +545,6 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
       // équipes du tenant — le meilleur moyen de faire couper les
       // notifications à tout le monde.
       staffUserIds = [];
-    } else if (event.event_name === 'event_segment.transitioned') {
-      const data = (event.payload ?? {}) as Record<string, unknown>;
-      const inner =
-        data.data && typeof data.data === 'object'
-          ? (data.data as Record<string, unknown>)
-          : data;
-      const segment =
-        inner.segment && typeof inner.segment === 'object'
-          ? (inner.segment as Record<string, unknown>)
-          : {};
-      const matchId =
-        typeof segment.matchId === 'string' ? segment.matchId : null;
-      if (!matchId) {
-        // shouldPushForEvent garantit normalement matchId présent — défense
-        // en profondeur.
-        continue;
-      }
-      staffUserIds = await loadCasterUserIdsForMatch(matchId);
     } else {
       staffUserIds = await loadStaffUserIdsForTenant(event.tenant_id);
     }

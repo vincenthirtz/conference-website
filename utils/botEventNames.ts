@@ -118,7 +118,6 @@ export const BOT_EVENT_NAMES = [
   'mvp.public.closed',
   'dispute.sla_breached',
   'checkin.nudge',
-  'broadcast.state_changed',
   'task.created',
   'task.moved',
   'task.assigned',

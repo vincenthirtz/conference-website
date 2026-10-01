@@ -4,9 +4,9 @@
 //
 // Le métier reste dans ses utils : score + propagation (applyMatchScore),
 // purge des reports capitaines (scoreReports), événements bot (botEvents),
-// régie auto (autoDirector), planification Discord (scheduleEvents), garde
-// TCG (paidMatches). Ce service n'en recopie rien : il ordonne, valide et
-// garde les messages / codes des routes d'origine.
+// planification Discord (scheduleEvents), garde TCG (paidMatches). Ce
+// service n'en recopie rien : il ordonne, valide et garde les messages /
+// codes des routes d'origine.
 
 import { LegacyAdminError } from '@/utils/admin/errors';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
@@ -17,7 +17,6 @@ import { notifyMatchStarting } from '@/utils/discord';
 import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { emitScheduleEventsInBackground } from '@/utils/matches/scheduleEvents';
-import { reactToMatchStatus } from '@/utils/broadcast/autoDirector';
 import {
   matchTransitionPurgesReports,
   purgeScoreReports,
@@ -530,14 +529,6 @@ function announceMatchStarting(
     );
   })().catch((e) =>
     ctx.logger.error('[botEvents] match.starting emit error:', e)
-  );
-  // Régie auto : scène overlay → 'match' si c'est le match du segment live.
-  void reactToMatchStatus({
-    tenantId: ctx.tenantId,
-    matchId,
-    newStatus: 'ongoing',
-  }).catch((e) =>
-    ctx.logger.error('[broadcast/autoDirector] match ongoing reactor error:', e)
   );
 }
 

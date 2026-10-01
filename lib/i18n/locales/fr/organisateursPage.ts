@@ -36,7 +36,7 @@ export default ns('organisateursPage', {
     'Un score contesté ouvre un fil dédié, avec preuves, délai et décision tracée. Les réconciliations évidentes se règlent seules.',
   what5Title: 'Régie et diffusion',
   what5Body:
-    'Assignation des castrices, conducteur de direct, overlay OBS et bascule de scène au match suivant en un clic.',
+    'Assignation des castrices, scènes et overlays OBS pilotés depuis le navigateur, prédictions et drops Twitch.',
   what6Title: 'Bot Discord',
   what6Body:
     "Salons d'équipe, rôles, annonces de matchs, tickets : le bot fait sur votre serveur ce que la plateforme décide, sans que vous ayez à l'héberger.",

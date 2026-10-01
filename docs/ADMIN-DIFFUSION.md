@@ -1,8 +1,37 @@
 # L'espace « Diffusion » de l'admin
 
-Tout ce qui sert un direct — la régie, les casteuses, les overlays — réuni sous
-une seule entrée de menu et une seule barre d'onglets. Livré en 10 lots le
-2026-09-28 sur la branche `work`.
+Tout ce qui sert un direct — les overlays, les scènes, Twitch, les casteuses —
+réuni sous une seule entrée de menu et une seule barre d'onglets. Livré en 10
+lots le 2026-09-28 sur la branche `work`, allégé le 2026-10-01.
+
+## État actuel (allègement du 2026-10-01)
+
+Le **run-of-show** (`/admin/events`, director, cues, vagues, stations), le
+**cockpit** (`/admin/regie`, ex-`/caster/cockpit`) et la moitié « run » de la
+console live (HUD, régie automatique, scènes de run, prochain match, antenne,
+PiP, bandeau, overlay `/overlay/<runId>`) ont été **retirés** : la
+fonctionnalité n'a jamais servi en production (aucune ligne dans `event_runs`).
+Les tables `event_*` et `caster_presence` existent toujours ; leur suppression
+reste à valider.
+
+Les cinq onglets, dans l'ordre de la barre :
+
+| Onglet | Page | Accès |
+|---|---|---|
+| **Overlays** | `/admin/diffusion/overlays` | rôle caster |
+| **Scènes** | `/admin/caster` | rôle caster |
+| **Twitch & interactions** | `/admin/broadcast/live` | rôle caster (panneaux d'écriture : `manage_broadcast`) |
+| **Casteuses** | `/admin/diffusion/casteuses` | `manage_communications` |
+| **Chaînes Twitch** | `/admin/twitch-channels` | `manage_broadcast` |
+
+Overlays vient en premier : c'est l'écran le plus ouvert, et c'est lui qu'ouvre
+la carte **Diffusion** du tableau de bord. « Twitch & interactions » a gardé
+l'URL de l'ex-console live (retour par défaut de l'OAuth Twitch) et ne contient
+plus que ce qui ne dépend d'aucun run : santé des drops TCG, statut d'antenne,
+prédictions, points de chaîne et commandes Twitch.
+
+Le reste de ce document est l'**historique** des chantiers : il cite des écrans
+(Cockpit, Console live, Run-of-show, Director) qui n'existent plus.
 
 ## Avant / après
 
@@ -32,7 +61,7 @@ porte déjà ses propres onglets `?tab=`. Les URL ne bougent pas ; seules les
 listes déplacées (casteuses) redirigent.
 
 - Vrais `<Link>`, l'onglet actif porte `aria-current="page"`.
-- **Chaque onglet porte son droit** : Run-of-show et Chaînes Twitch exigent
+- **Chaque onglet porte son droit** : Chaînes Twitch exige
   `manage_broadcast`, Casteuses `manage_communications`. Un onglet qui mènerait
   à un 403 est masqué. Pendant la lecture de la session, tout s'affiche plutôt
   que de faire clignoter la barre.
@@ -49,8 +78,8 @@ listes déplacées (casteuses) redirigent.
 2. les **réglages de la boîte d'alertes**, pour l'espace de l'association doté
    de la capacité de régie ET avec `manage_broadcast` ;
 3. l'**overlay TCG** (jeton + habillage, `TcgOverlaySection`) avec `manage_tcg` ;
-4. des renvois vers les overlays réglés sur leur propre écran (run live,
-   scènes caster, TCG pour qui n'a pas le droit ci-dessus).
+4. des renvois vers ce qui se règle sur son propre écran (Twitch &
+   interactions, scènes caster, TCG pour qui n'a pas le droit ci-dessus).
 
 La capacité « overlays de régie » (palier `matchOverlays`, espace de
 l'association) est lue côté serveur par `utils/admin/overlayAccess.ts`.
@@ -159,4 +188,4 @@ aucune donnée n'est exposée ni modifiée.
 **Les noms de source** reprennent les clés du panneau des sources (`regie`,
 `alerts`, `day`, `mvpPublic`, `partners`, `don`, `donAlert`, `scrims`,
 `scrimResult`, et pour les sources de match la valeur de `?source=`), plus
-`run`, `logo`, `tcg` et `caster:<scène>`.
+`logo`, `tcg` et `caster:<scène>` (`run` a disparu avec `/overlay/<runId>`).

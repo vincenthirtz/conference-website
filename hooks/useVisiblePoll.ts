@@ -1,8 +1,7 @@
 // hooks/useVisiblePoll.ts
 //
-// Le sondage de SECOURS des écrans de la régie (cockpit, director, console
-// live) : le temps réel reste la source principale, ceci rattrape ce qu'il a
-// manqué.
+// Le sondage de SECOURS des écrans de la diffusion : le temps réel, quand il
+// existe, reste la source principale ; ceci rattrape ce qu'il a manqué.
 //
 // DEUX RÈGLES, qu'aucune copie ne respectait toutes :
 //   1. rien ne part quand l'onglet est caché (les trois le faisaient) ;

@@ -252,7 +252,6 @@ describe('GET /api/public/webhook-events', () => {
       'staff.role.changed',
       'scrim.planning.opened',
       'checkin.nudge',
-      'broadcast.state_changed',
     ]) {
       expect(types).not.toContain(internal);
     }

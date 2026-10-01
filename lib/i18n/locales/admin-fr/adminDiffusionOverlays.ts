@@ -19,8 +19,9 @@ export default adminNs('adminDiffusionOverlays', {
   elsewhereTitle: 'Overlays réglés ailleurs',
   elsewhereIntro:
     'Ces sources dépendent d’un réglage qui vit sur son propre écran : l’URL s’y copie.',
-  runOverlay: 'Overlay du run en direct',
-  runOverlayDesc: 'Scène, bandeau et PiP pilotés depuis la console live.',
+  twitchInteractions: 'Twitch & interactions',
+  twitchInteractionsDesc:
+    'Drops TCG, prédictions, points de chaîne et commandes Twitch : ce qui déclenche les annonces à l’écran.',
   sceneOverlays: 'Scènes caster',
   sceneOverlaysDesc: 'Tableau de score et habillage, une URL par scène.',
   tcgOverlay: 'Annonces TCG',

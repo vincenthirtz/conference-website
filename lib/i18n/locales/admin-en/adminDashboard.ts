@@ -58,7 +58,7 @@ export default {
   navCampaignsDesc: 'Bulk sends and campaign tracking.',
   navDiffusionTitle: 'Broadcast',
   navDiffusionDesc:
-    'Control room, run-of-show, scenes, overlays, casters and Twitch channels — the whole show in one place.',
+    'Overlays, scenes, Twitch, casters and followed channels — the whole show in one place.',
   navUsersTitle: 'Users',
   navUsersDesc: 'Manage staff and member accounts.',
   navStatsTitle: 'Stats',

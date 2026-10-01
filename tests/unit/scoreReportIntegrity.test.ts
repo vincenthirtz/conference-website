@@ -88,12 +88,6 @@ vi.mock('../../utils/rating/applyMatchRating', () => ({
 vi.mock('../../utils/predictions/settle', () => ({
   settleMatchPredictions: vi.fn(async () => undefined),
 }));
-vi.mock('../../utils/broadcast/autoDirector', () => ({
-  reactToMatchStatus: vi.fn(async () => undefined),
-}));
-vi.mock('@/utils/broadcast/autoDirector', () => ({
-  reactToMatchStatus: vi.fn(async () => undefined),
-}));
 
 import {
   store,

@@ -10,9 +10,17 @@
 // Cleans its interval up on unmount / list change (may run for hours in OBS).
 
 import { useEffect, useState } from 'react';
-import type { OverlaySponsor } from '@/hooks/useOverlayState';
 import { useT } from '@/lib/i18n/useT';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
+
+// Le type vivait dans `useOverlayState`, parti avec l'overlay de run
+// (`/overlay/<runId>`). Le rotateur, lui, sert toujours les sources Partenaires
+// et Alertes : il porte désormais sa propre forme.
+type OverlaySponsor = {
+  name: string;
+  logoUrl: string | null;
+  websiteUrl: string | null;
+};
 
 type Props = {
   sponsors: OverlaySponsor[];

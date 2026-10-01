@@ -35,7 +35,7 @@ For Playwright: never use `--ignore-pattern` (invalid flag), use `--grep-invert`
 
 The site sits at the center of a small ecosystem:
 
-- **`conference-website`** (this repo) — public site, admin dashboard, REST API, PWA, caster cockpit.
+- **`conference-website`** (this repo) — public site, admin dashboard, REST API, PWA.
 - **`owwc-discord-bot`** (private sibling repo `vincenthirtz/owwc-discord-bot`, local clone `C:\Users\hirtz\workspace\owwc-discord-bot`; formerly `docker-box/services/discord-bot`) — Discord bot that consumes `/api/bot/v1/*`.
 - **`womenscup-caster`** (sibling) — separate caster-tooling repo.
 
@@ -44,19 +44,18 @@ The site sits at the center of a small ecosystem:
 - **pages/** — Next.js pages and API routes
   - **pages/api/admin/** — staff-gated admin endpoints (cookie session)
   - **pages/api/bot/v1/** — Discord-bot API. Contract: [docs/BOT_API_CONTRACT.md](docs/BOT_API_CONTRACT.md). Auth: `x-api-key` per-tenant (`tenant_secrets`, no env fallback) + `x-tenant-id`. Idempotency + rate limits. Sibling repo: `docker-box/services/discord-bot/`.
-  - **pages/api/caster/** — caster-cockpit endpoints (caster session)
+  - **pages/api/caster/** — read API of the `womenscup-caster` desktop app (`v1/*` + legacy aliases, public GET — [docs/CASTER_API_CONTRACT.md](docs/CASTER_API_CONTRACT.md)), plus two leftover caster-session routes (`me`, `briefing/[matchId]`)
   - **pages/api/player/** — player espace endpoints (user session)
   - **pages/api/cron/** — invoked by Netlify scheduled functions
   - **pages/api/** — public endpoints (matches, news, teams, Twitch, HelloAsso, captcha, support). Public team creation (`teams/create-with-member`) is anonymous-by-design but captcha + honeypot + rate-limit gated. The legacy `POST /api/news` ingest (global `BOT_API_KEY`) rejects an unknown/inactive `x-tenant-id` with `400 UNKNOWN_TENANT`.
   - **pages/admin/** — admin dashboard (tournaments, teams, news, broadcast, scrims, disputes, demandes, onboarding queue, site settings, stats, logs, users, etc.)
-  - **pages/caster/** — caster cockpit (`/caster/cockpit`)
   - **pages/player/** — player espace (`/player/*`)
   - **pages/onboard/** — self-service tenant onboarding flow ([docs/ONBOARDING.md](docs/ONBOARDING.md))
   - **pages/[tenantSlug]/** — multi-tenant path-prefix routes (POC: `tournois.tsx`)
-- **components/** — React components. `components/admin/*` is admin-only. `components/Caster/*` is caster-cockpit. Public landing/UX components live at the root.
+- **components/** — React components. `components/admin/*` is admin-only. Public landing/UX components live at the root.
 - **utils/** — shared logic (see "Key Modules" below)
-- **hooks/** — React hooks (`useStaffSession`, `useCasterSession`, `usePlayerSession`, `useAdminFetch`, `useIdempotentMutation`, `useRealtimeChannel`, `useDraftState`, `useDraftTimer`, `useEventRunRealtime`, `useWakeLock`, `useOnlineStatus`, `useCookieConsent`, …)
-- **types/** — domain TS types (`bracket`, `swiss`, `draft`, `events`, `matches`, `stages`, `staff`, `validation`, …)
+- **hooks/** — React hooks (`useStaffSession`, `usePlayerSession`, `useAdminFetch`, `useIdempotentMutation`, `useRealtimeChannel`, `useDraftState`, `useDraftTimer`, `useOnlineStatus`, `useCookieConsent`, …)
+- **types/** — domain TS types (`bracket`, `swiss`, `draft`, `matches`, `stages`, `staff`, `validation`, …)
 - **config/** — static config (speakers, teams, social links, past results)
 - **database/** — Postgres SQL
   - **database/migrations/** — versioned migrations (~137 files)
@@ -79,7 +78,7 @@ The site sits at the center of a small ecosystem:
 
 - `supabase.ts` + `supabaseAdmin.ts` — browser/server clients (cookies via `@supabase/ssr`) and admin client (service role, bypasses RLS).
 - `staff.ts` — staff auth, roles, CSRF (`csrfCheck`), `withStaffRoute(handler, minRole)`, `withStaffPage(minRole, loader?)`, `getStaffContextFromRequest`. Roles: `owner > admin > caster`.
-- `casterAuth.ts` — caster-cockpit auth.
+- `casterAuth.ts` — caster-session gate (`withCasterRoute`), used by the two leftover `/api/caster/{me,briefing}` routes.
 - `tenant.ts` + `adminTenants.ts` — multi-tenant resolution (path-prefix from `tenants.slug`, legacy `DEFAULT_TENANT_ID` fallback, in-memory slug cache).
 - `botAuth.ts` + `botActor.ts` + `botEvents.ts` + `botPlayerLogs.ts` + `botRoleSync.ts` — Discord-bot API auth (per-tenant `x-api-key`), actor resolution, outbox event emission, audit logs.
 - `adminIdempotency.ts` — `withAdminIdempotency(handler, { key })` honors `Idempotency-Key` header (5-min window, only caches 2xx). Insert AFTER `withStaffRoute`.
@@ -93,7 +92,7 @@ The site sits at the center of a small ecosystem:
 - `tournamentImport/` — tournament import pipeline.
 - `simulator.ts` + `simulatorBrackets.ts` + `simulatorFakeData.ts` + `simulatorSerialization.ts` — tournament simulator.
 - `draftEngine.ts` — MOBA pick/ban draft engine.
-- `castEvents.ts` + `broadcast/liveState.ts` + `broadcasts.ts` — caster/cockpit + broadcast workflows.
+- `castEvents.ts` — cast-assignment outbox events. `broadcasts.ts` — EMAIL campaigns (the name is historical; nothing to do with streaming).
 - `discord.ts` + `discordLinks.ts` — Discord helpers + link tokens.
 - `helloasso.ts` — HelloAsso integration. **Two accounts, never mix them**: the env vars (`HELLOASSO_CLIENT_ID/SECRET/ORG_SLUG`) are the ASSOCIATION's account (memberships, donations, plan payments); a third-party space connects its own credentials (encrypted per tenant, `utils/billing/helloassoAccount.ts`, admin screen « Réglages › Encaissement ») so its tournament prize pools are collected by its own structure. No connected account → a prize pool can't be opened (`409 HELLOASSO_NOT_CONNECTED`). The payment webhook takes a per-tenant derived token (`?tenant=<slug>&token=…`) and only applies a contribution to a pool of that same space.
 - `twitch.ts` — Twitch OAuth + live status.
@@ -107,7 +106,7 @@ Three distinct session surfaces, all backed by Supabase Auth:
 | ------------------- | ------------------------------------- | -------- | -------------------------------------------------- |
 | Public/player       | `getServerClient(req, res)`           | Cookies  | RLS-enforced; user-bearer for API routes           |
 | Admin/staff         | `withStaffRoute` / `withStaffPage`    | Cookies  | Role gate `owner > admin > caster`               |
-| Caster cockpit      | `casterAuth.ts`                       | Cookies  | Separate gate; `useCasterSession` on client        |
+| Caster session      | `casterAuth.ts`                       | Cookies  | `withCasterRoute`; only `/api/caster/{me,briefing}` |
 | Discord bot         | `withBotAuth` (per-tenant `x-api-key`) | Header   | Bypasses RLS via `supabaseAdmin`; logs actor       |
 
 - Staff actions are logged to `staff_logs` via `logStaffAction()`.
@@ -129,7 +128,6 @@ Defined in `netlify.toml`, each calls a `pages/api/cron/*` handler:
 - `broadcast-cron` `0 10 * * *` — daily broadcast email waves (Brevo 300/day cap)
 - `outbox-maintenance-cron` `0 * * * *` — `bot_event_outbox` hygiene + latency stats
 - `web-push-dispatcher-cron` `* * * * *` — outbox → Web Push fan-out
-- `overrun-watcher-cron` `*/2` — server-side fallback for cue overruns
 - `dispute-sla-cron` `*/5` — dispute SLA breach detector
 - `sync-game-heroes-cron` `0 4 * * *` — refresh LoL/Dota hero pool
 - `draft-auto-pick-cron` `* * * * *` — server-side draft timer (auto-pick)
@@ -140,10 +138,10 @@ Phase 1 (DB) done — 32 tables now carry `tenant_id`. Phase 2 (bot) sends `x-te
 
 ### Key Patterns
 
-- API auth: bearer token in `Authorization` header for user routes; cookie session for admin/caster; `x-api-key` for bot.
-- Pages use `_app.tsx` layout with `Navbar`, `Footer`, `DefaultSeo`, `ErrorBoundary`, `ToastProvider`. `/admin` and `/caster` routes skip the public chrome.
+- API auth: bearer token in `Authorization` header for user routes; cookie session for admin; `x-api-key` for bot.
+- Pages use `_app.tsx` layout with `Navbar`, `Footer`, `DefaultSeo`, `ErrorBoundary`, `ToastProvider`. `/admin` routes skip the public footer and analytics (`utils/layout/appChrome.ts`).
 - Validation: zod schemas in `utils/validation.ts`. Validate at entry points.
-- Realtime: `useRealtimeChannel` / `useEventRunRealtime` / `usePublicEventRunRealtime` wrap Supabase Realtime.
+- Realtime: `useRealtimeChannel` wraps Supabase Realtime.
 
 ## Project Policies
 

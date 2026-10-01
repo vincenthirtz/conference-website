@@ -159,29 +159,6 @@ import {
   TeamStatsQuery,
 } from '../../../features/admin/stats/schemas';
 import {
-  CreateCueDoc,
-  CreateRunDoc,
-  CreateSegmentDoc,
-  CreateStationDoc,
-  CreateWaveDoc,
-  CueIdQuery,
-  CueListQuery,
-  FromScrimDoc,
-  FromTournamentDoc,
-  ReorderSegmentsDoc,
-  ReorderWavesDoc,
-  RunIdQuery,
-  RunListQuery,
-  SegmentIdQuery,
-  StationIdQuery,
-  UpdateRunDoc,
-  UpdateSegmentDoc,
-  UpdateStationDoc,
-  UpdateWaveDoc,
-  WaveIdQuery,
-} from '../../../features/admin/events/schemas';
-import { BroadcastStatePatchDoc } from '../../../features/admin/diffusion/schemas';
-import {
   CampaignIdQuery,
   CampaignInputDoc,
   CampaignListQuery,
@@ -593,49 +570,8 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
     io: 'input',
   },
   'admin.circuit-partners/[id].decision': { schema: DecisionDoc, io: 'input' },
-  // Run-of-show, régie et campagnes email (vague 2). Corps « historiques » :
-  // looseBody (champs nommés), validés par le service.
-  'admin.events.create': { schema: CreateRunDoc, io: 'input' },
-  'admin.events/[runId].update': { schema: UpdateRunDoc, io: 'input' },
-  'admin.events/[runId]/segments.create': {
-    schema: CreateSegmentDoc,
-    io: 'input',
-  },
-  'admin.events/[runId]/segments/[segId].update': {
-    schema: UpdateSegmentDoc,
-    io: 'input',
-  },
-  'admin.events/[runId]/segments/reorder.body': {
-    schema: ReorderSegmentsDoc,
-    io: 'input',
-  },
-  'admin.events/[runId]/segments/from-scrim.body': {
-    schema: FromScrimDoc,
-    io: 'input',
-  },
-  'admin.events/[runId]/segments/from-tournament.body': {
-    schema: FromTournamentDoc,
-    io: 'input',
-  },
-  'admin.events/[runId]/cues.create': { schema: CreateCueDoc, io: 'input' },
-  'admin.events/[runId]/waves.create': { schema: CreateWaveDoc, io: 'input' },
-  'admin.events/[runId]/waves/[waveId].update': {
-    schema: UpdateWaveDoc,
-    io: 'input',
-  },
-  'admin.events/[runId]/waves/reorder.body': {
-    schema: ReorderWavesDoc,
-    io: 'input',
-  },
-  'admin.events/[runId]/stations.create': {
-    schema: CreateStationDoc,
-    io: 'input',
-  },
-  'admin.events/[runId]/stations/[stationId].update': {
-    schema: UpdateStationDoc,
-    io: 'input',
-  },
-  'admin.broadcast/state.body': { schema: BroadcastStatePatchDoc, io: 'input' },
+  // Campagnes email (vague 2). Corps « historiques » : looseBody (champs
+  // nommés), validés par le service.
   'admin.broadcast.create': { schema: CampaignInputDoc, io: 'input' },
   'admin.broadcast/[campaignId].send': { schema: CampaignSendDoc, io: 'input' },
   'admin.broadcast/[campaignId].update': {
@@ -1040,28 +976,8 @@ export const ADMIN_FEATURE_QUERY_SCHEMAS: Record<string, ApiContractEntry> = {
   },
   'admin.stats/teams.query': { schema: TeamStatsQuery, io: 'input' },
   'admin.stats/maps.query': { schema: MapStatsQuery, io: 'input' },
-  // Run-of-show et campagnes email (vague 2). `events/[runId]` couvre toutes
-  // les sous-routes qui ne lisent que runId ; `broadcast/[campaignId]` couvre
-  // envoi, duplication, planning et vague.
-  'admin.events.query': { schema: RunListQuery, io: 'input' },
-  'admin.events/[runId].query': { schema: RunIdQuery, io: 'input' },
-  'admin.events/[runId]/cues.query': { schema: CueListQuery, io: 'input' },
-  'admin.events/[runId]/cues/[cueId].query': {
-    schema: CueIdQuery,
-    io: 'input',
-  },
-  'admin.events/[runId]/segments/[segId].query': {
-    schema: SegmentIdQuery,
-    io: 'input',
-  },
-  'admin.events/[runId]/waves/[waveId].query': {
-    schema: WaveIdQuery,
-    io: 'input',
-  },
-  'admin.events/[runId]/stations/[stationId].query': {
-    schema: StationIdQuery,
-    io: 'input',
-  },
+  // Campagnes email (vague 2). `broadcast/[campaignId]` couvre envoi,
+  // duplication, planning et vague.
   'admin.broadcast.query': { schema: CampaignListQuery, io: 'input' },
   'admin.broadcast/[campaignId].query': {
     schema: CampaignIdQuery,

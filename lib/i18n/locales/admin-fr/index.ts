@@ -126,7 +126,6 @@ import nsAdminDiffusionNav from './adminDiffusionNav';
 import nsAdminDiffusionOverlays from './adminDiffusionOverlays';
 import nsAdminTwitchPredictions from './adminTwitchPredictions';
 import nsAdminTwitchCommands from './adminTwitchCommands';
-import nsAdminEventsList from './adminEventsList';
 import nsAdminNotifications from './adminNotifications';
 import nsAdminSupport from './adminSupport';
 import nsAdminModerationBlacklist from './adminModerationBlacklist';
@@ -135,7 +134,6 @@ import nsAdminMatchDraft from './adminMatchDraft';
 import nsAdminMatchDetail from './adminMatchDetail';
 import nsAdminMatchLineups from './adminMatchLineups';
 import nsAdminMatchEdit from './adminMatchEdit';
-import nsAdminEventDirector from './adminEventDirector';
 import nsAdminCampaigns from './adminCampaigns';
 import nsAdminCommandPalette from './adminCommandPalette';
 import nsAdminStaffPlanning from './adminStaffPlanning';
@@ -181,17 +179,6 @@ import nsAdminDashboardSparkline from './adminDashboardSparkline';
 import nsAdminDashboardStageProgressBar from './adminDashboardStageProgressBar';
 import nsAdminDashboardSupportTicketsDonut from './adminDashboardSupportTicketsDonut';
 import nsAdminDashboardUpcomingMatchRow from './adminDashboardUpcomingMatchRow';
-import nsAdminDirectorAddSegmentModal from './adminDirectorAddSegmentModal';
-import nsAdminDirectorCasterStatusPanel from './adminDirectorCasterStatusPanel';
-import nsAdminDirectorCueComposer from './adminDirectorCueComposer';
-import nsAdminDirectorCueFeed from './adminDirectorCueFeed';
-import nsAdminDirectorMatchPicker from './adminDirectorMatchPicker';
-import nsAdminDirectorRunStatusHeader from './adminDirectorRunStatusHeader';
-import nsAdminDirectorSegmentCard from './adminDirectorSegmentCard';
-import nsAdminDirectorSegmentEditor from './adminDirectorSegmentEditor';
-import nsAdminDirectorStationBoard from './adminDirectorStationBoard';
-import nsAdminDirectorTimelineBuilder from './adminDirectorTimelineBuilder';
-import nsAdminDirectorWaveBoard from './adminDirectorWaveBoard';
 import nsAdminSimulatorEliminationView from './adminSimulatorEliminationView';
 import nsAdminSimulatorSimMatchCard from './adminSimulatorSimMatchCard';
 import nsAdminTeamsAddMemberModal from './adminTeamsAddMemberModal';
@@ -334,7 +321,6 @@ export const frDict = {
   adminDiffusionOverlays: nsAdminDiffusionOverlays.fr,
   adminTwitchPredictions: nsAdminTwitchPredictions.fr,
   adminTwitchCommands: nsAdminTwitchCommands.fr,
-  adminEventsList: nsAdminEventsList.fr,
   adminNotifications: nsAdminNotifications.fr,
   adminSupport: nsAdminSupport.fr,
   adminModerationBlacklist: nsAdminModerationBlacklist.fr,
@@ -343,7 +329,6 @@ export const frDict = {
   adminMatchDetail: nsAdminMatchDetail.fr,
   adminMatchLineups: nsAdminMatchLineups.fr,
   adminMatchEdit: nsAdminMatchEdit.fr,
-  adminEventDirector: nsAdminEventDirector.fr,
   adminCampaigns: nsAdminCampaigns.fr,
   adminCommandPalette: nsAdminCommandPalette.fr,
   adminStaffPlanning: nsAdminStaffPlanning.fr,
@@ -389,17 +374,6 @@ export const frDict = {
   adminDashboardStageProgressBar: nsAdminDashboardStageProgressBar.fr,
   adminDashboardSupportTicketsDonut: nsAdminDashboardSupportTicketsDonut.fr,
   adminDashboardUpcomingMatchRow: nsAdminDashboardUpcomingMatchRow.fr,
-  adminDirectorAddSegmentModal: nsAdminDirectorAddSegmentModal.fr,
-  adminDirectorCasterStatusPanel: nsAdminDirectorCasterStatusPanel.fr,
-  adminDirectorCueComposer: nsAdminDirectorCueComposer.fr,
-  adminDirectorCueFeed: nsAdminDirectorCueFeed.fr,
-  adminDirectorMatchPicker: nsAdminDirectorMatchPicker.fr,
-  adminDirectorRunStatusHeader: nsAdminDirectorRunStatusHeader.fr,
-  adminDirectorSegmentCard: nsAdminDirectorSegmentCard.fr,
-  adminDirectorSegmentEditor: nsAdminDirectorSegmentEditor.fr,
-  adminDirectorStationBoard: nsAdminDirectorStationBoard.fr,
-  adminDirectorTimelineBuilder: nsAdminDirectorTimelineBuilder.fr,
-  adminDirectorWaveBoard: nsAdminDirectorWaveBoard.fr,
   adminSimulatorEliminationView: nsAdminSimulatorEliminationView.fr,
   adminSimulatorSimMatchCard: nsAdminSimulatorSimMatchCard.fr,
   adminTeamsAddMemberModal: nsAdminTeamsAddMemberModal.fr,

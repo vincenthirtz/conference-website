@@ -343,12 +343,15 @@ export const ADMIN_NAV: AdminNavNode[] = [
     ],
   },
   {
-    // Espace « Diffusion » : la régie, les casteuses et les overlays, réunis.
-    // Ces écrans servaient la même soirée mais vivaient à sept endroits —
-    // « Broadcast live » rangé dans Tournois, cockpit et scènes seulement en
-    // cartes, run-of-show joignable par un fil d'Ariane. Ils partagent aussi
-    // une barre d'onglets (`DiffusionTabsNav`). UNE carte au tableau de bord :
-    // l'entrée de l'espace, pas un raccourci par écran.
+    // Espace « Diffusion » : les overlays, les scènes, Twitch et les casteuses,
+    // réunis. Ces écrans servaient la même soirée mais vivaient éparpillés —
+    // « Broadcast live » rangé dans Tournois, scènes seulement en carte. Ils
+    // partagent aussi une barre d'onglets (`DiffusionTabsNav`), dans le même
+    // ordre qu'ici. UNE carte au tableau de bord : l'entrée de l'espace, pas un
+    // raccourci par écran — elle ouvre les Overlays, l'écran le plus utilisé.
+    //
+    // Le cockpit (`/admin/regie`) et le run-of-show (`/admin/events`) en ont
+    // été retirés : jamais utilisés en production.
     //
     // minRole 'caster' : ces pages admettent le rôle caster (gate SSR), et
     // c'est lui qui les ouvre le plus un soir de match.
@@ -358,9 +361,11 @@ export const ADMIN_NAV: AdminNavNode[] = [
     minRole: 'caster',
     children: [
       {
-        id: 'caster-cockpit',
-        topBarLabel: 'Cockpit',
-        href: '/admin/regie',
+        // Toutes les sources OBS au même endroit (lot 4) : elles vivaient
+        // dans l'onglet Outils de chaque tournoi. Porte la carte de l'espace.
+        id: 'diffusion-overlays',
+        topBarLabel: 'Overlays',
+        href: '/admin/diffusion/overlays',
         minRole: 'caster',
         card: {
           order: 8,
@@ -371,32 +376,18 @@ export const ADMIN_NAV: AdminNavNode[] = [
         },
       },
       {
-        id: 'broadcast-live',
-        topBarLabel: 'Console live',
-        href: '/admin/broadcast/live',
-        minRole: 'caster',
-      },
-      {
-        // Le déroulé des soirées : n'avait AUCUNE entrée de menu, on n'y
-        // arrivait que par le fil d'Ariane du director.
-        id: 'run-of-show',
-        topBarLabel: 'Run-of-show',
-        href: '/admin/events',
-        permission: 'manage_broadcast',
-        minRole: 'caster',
-      },
-      {
         id: 'caster-scenes',
         topBarLabel: 'Scènes',
         href: '/admin/caster',
         minRole: 'caster',
       },
       {
-        // Toutes les sources OBS au même endroit (lot 4) : elles vivaient
-        // dans l'onglet Outils de chaque tournoi.
-        id: 'diffusion-overlays',
-        topBarLabel: 'Overlays',
-        href: '/admin/diffusion/overlays',
+        // Ex-« Console live » : même URL, mais l'écran ne garde que ce qui se
+        // pilote sur la chaîne (drops TCG, prédictions, points de chaîne,
+        // commandes).
+        id: 'broadcast-live',
+        topBarLabel: 'Twitch & interactions',
+        href: '/admin/broadcast/live',
         minRole: 'caster',
       },
       {

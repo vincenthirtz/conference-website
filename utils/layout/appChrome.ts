@@ -5,8 +5,8 @@
 // indexation, manifeste PWA. Refonte des menus, plan 9.
 //
 // Ces règles étaient des conditions éparpillées dans `_app.tsx`
-// (`!isCaster && …`, `!isAdmin && !isCaster && …`) ; chaque cas particulier se
-// devinait en relisant le rendu. Elles sont ici, UNE ligne par cas, testées
+// (`!isAdmin && …`, `!isEmbed && …`) ; chaque cas particulier se devinait en
+// relisant le rendu. Elles sont ici, UNE ligne par cas, testées
 // (tests/unit/appChrome.test.ts).
 //
 // PUR : ne lit que le motif de route (`router.pathname`).
@@ -41,7 +41,7 @@ export type AppChrome = {
   floatingSocials: boolean;
   analytics: boolean;
   noindex: boolean;
-  /** Surface « application » (admin, cockpit caster, espace joueuse). */
+  /** Surface « application » (admin, espace joueuse). */
   appScope: boolean;
   /** `data-surface` « Le Ruban » (null : site public). */
   surface: RubanSurface | null;
@@ -50,7 +50,6 @@ export type AppChrome = {
 
 export function resolveAppChrome(pathname: string): AppChrome {
   const isAdmin = pathname === '/admin' || pathname.startsWith('/admin/');
-  const isCaster = pathname === '/caster' || pathname.startsWith('/caster/');
   // `/player/[userId]` : profil PUBLIC (ISR, indexable) sous /player pour des
   // raisons de routage — il relève du site, pas de l'espace privé.
   const isPlayer =
@@ -65,7 +64,7 @@ export function resolveAppChrome(pathname: string): AppChrome {
   const isTechnical = pathname.startsWith('/auth/') || pathname === '/403';
 
   const bare = isEmbed || isOverlay || isDevPreview;
-  const appScope = isAdmin || isCaster || isPlayer;
+  const appScope = isAdmin || isPlayer;
   // Distinct d'`isPlayer` : la surface couvre aussi les parcours joueuse hors
   // /player (création d'équipe, check-in à jeton…) sans toucher à leur
   // indexation ni à leur manifeste.
@@ -77,24 +76,21 @@ export function resolveAppChrome(pathname: string): AppChrome {
 
   return {
     bare,
-    // Le cockpit caster a sa propre barre légère.
-    navbar: !bare && !isCaster,
+    navbar: !bare,
     // Admin : un outil interne, pas le site — le pied de page marketing n'y
     // apportait que du défilement (décision du plan 9). L'espace joueuse le
     // garde : c'est par lui qu'on rejoint le reste du site.
-    footer: !bare && !isCaster && !isAdmin,
-    floatingSocials: !bare && !isCaster && !isAdmin,
+    footer: !bare && !isAdmin,
+    floatingSocials: !bare && !isAdmin,
     // Surfaces internes non mesurées : leur trafic fausserait l'entonnoir.
-    analytics: !bare && !isCaster && !isAdmin,
+    analytics: !bare && !isAdmin,
     noindex: appScope || bare || isTechnical,
     appScope,
     surface,
     manifest: isAdmin
       ? '/admin/manifest.webmanifest'
-      : isCaster
-        ? '/caster/manifest.webmanifest'
-        : isPlayer
-          ? '/player/manifest.webmanifest'
-          : '/site.webmanifest',
+      : isPlayer
+        ? '/player/manifest.webmanifest'
+        : '/site.webmanifest',
   };
 }

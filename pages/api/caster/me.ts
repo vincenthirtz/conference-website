@@ -1,6 +1,7 @@
 // pages/api/caster/me.ts
 //
-// Feature: Run-of-show — Lot 2.
+// Écrite pour le cockpit du run-of-show (retiré). CONSERVÉE : elle ne lit
+// aucune table `event_*` et reste appelable par une session caster.
 // GET : caster connecte (fiche cast_members) + ses prochaines assignations
 // dans les 24h.
 //

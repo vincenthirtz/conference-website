@@ -472,19 +472,20 @@ Refresh an expired access token.
 
 ---
 
-## Out of scope — caster cockpit / run-of-show
+## Out of scope — former caster cockpit / run-of-show
 
-The following `/api/caster/*` routes belong to a **separate web feature**
-(staff cockpit / run-of-show) guarded by `withCasterRoute`. They are **NOT**
-called by the womenscup-caster Electron app and are **NOT** versioned here.
-Listed only so this inventory stays unambiguous:
+The web cockpit (`/admin/regie`) and the run-of-show were removed on
+2026-10-01 (never used in production), together with their routes:
+`/api/caster/runs/*`, `/api/caster/cues/[cueId]/ack`,
+`/api/caster/segments/*` and `/api/caster/heartbeat`.
+
+Two routes of that feature remain, guarded by `withCasterRoute`. They read no
+run-of-show table, have no caller left on the site, are **NOT** called by the
+womenscup-caster Electron app and are **NOT** versioned here. Listed only so
+this inventory stays unambiguous:
 
 - `/api/caster/briefing/[matchId]`
-- `/api/caster/cues/[cueId]/ack`
-- `/api/caster/heartbeat`
 - `/api/caster/me`
-- `/api/caster/runs/*`
-- `/api/caster/segments/*`
 
 ## Residual realtime channel (outside the HTTP API)
 

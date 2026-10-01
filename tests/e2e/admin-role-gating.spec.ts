@@ -130,17 +130,15 @@ test.describe('Admin role-gating (withStaffPage)', () => {
 
 /**
  * /admin/caster (scènes caster, lot 1) est gaté 'caster' (tout staff passe) —
- * il n'a donc pas sa place dans GATES (qui vérifie caster-bloqué). Comme pour
- * /admin/regie, on épingle le comportement non-authentifié : le gate SSR custom
+ * il n'a donc pas sa place dans GATES (qui vérifie caster-bloqué). On épingle
+ * le comportement non-authentifié : le gate SSR custom
  * (requireStaffRoleFromRequest) redirige vers /admin/login?next=/admin/caster
  * (route qui forwarde elle-même vers /login en préservant `next`). On matche
  * donc /login OU /admin/login + le paramètre next, pas l'URL exacte.
  * Pas besoin du service role : aucun compte à créer.
  */
 test.describe('Caster scenes gate (/admin/caster)', () => {
-  test('unauthenticated visitor is redirected to login (comme /admin/regie)', async ({
-    page,
-  }) => {
+  test('unauthenticated visitor is redirected to login', async ({ page }) => {
     await page.goto('/admin/caster');
     await page.waitForURL(/\/login/, { timeout: 10000 });
     expect(page.url()).toMatch(/\/login/);

@@ -92,7 +92,6 @@ function MyApp({ Component, pageProps, router, branding }: AppPropsWithSeo) {
   // (refonte des menus, plan 9) — plus des conditions éparpillées ici.
   const chrome = resolveAppChrome(router.pathname);
   const isAdmin = router.pathname.startsWith('/admin');
-  const isCaster = router.pathname.startsWith('/caster');
   const effectiveSeo: SeoProps = chrome.noindex
     ? { ...seo, noindex: true }
     : { ...seo };
@@ -164,15 +163,14 @@ function MyApp({ Component, pageProps, router, branding }: AppPropsWithSeo) {
                     <Component {...pageProps} />
                   </main>
                   {isAdmin && <PushOptIn />}
-                  {(isAdmin || isCaster) && <PWAInstallAndUpdate />}
-                  {(isAdmin || isCaster) && <OfflineBanner />}
+                  {isAdmin && <PWAInstallAndUpdate />}
+                  {isAdmin && <OfflineBanner />}
                   {chrome.footer && <Footer />}
                   {chrome.floatingSocials && <FloatingSocials />}
                   <BackToTopButton />
                   <CookieBanner />
-                  {/* Ni l'admin ni le cockpit caster ne sont mesurés : ce sont
-                      des surfaces internes, leur trafic fausserait l'entonnoir
-                      d'acquisition. */}
+                  {/* L'admin n'est pas mesuré : c'est une surface interne, son
+                      trafic fausserait l'entonnoir d'acquisition. */}
                   {chrome.analytics && <AnalyticsScript />}
                   <ToastContainer />
                 </div>

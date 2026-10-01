@@ -13,8 +13,9 @@ export default {
   elsewhereTitle: 'Overlays set up elsewhere',
   elsewhereIntro:
     'These sources depend on a setting that lives on its own screen: copy the URL there.',
-  runOverlay: 'Live run overlay',
-  runOverlayDesc: 'Scene, lower third and PiP driven from the live console.',
+  twitchInteractions: 'Twitch & interactions',
+  twitchInteractionsDesc:
+    'TCG drops, predictions, channel points and Twitch commands: what triggers the on-screen announcements.',
   sceneOverlays: 'Caster scenes',
   sceneOverlaysDesc: 'Scoreboard and branding, one URL per scene.',
   tcgOverlay: 'TCG announcements',

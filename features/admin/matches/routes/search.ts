@@ -1,6 +1,7 @@
 // features/admin/matches/routes/search.ts — GET /api/admin/matches/search
 // Recherche floue de matchs du tenant (`q`, `upcoming`, `limit`) pour les
-// sélecteurs staff (Director / run-of-show).
+// sélecteurs staff. Son seul appelant était le director du run-of-show,
+// retiré : la route reste, sans écran qui la consomme pour le moment.
 
 import { defineAdminRoute, read } from '@/utils/admin/defineAdminRoute';
 import { MatchSearchQuery } from '../schemas';

@@ -207,10 +207,8 @@ tags:
     description: 'Phases de tournoi (poules, brackets).'
   - name: admin/scrims
     description: 'Scrims côté staff.'
-  - name: admin/events
-    description: Run-of-show admin (cues, segments, presence).
   - name: admin/broadcast
-    description: 'Régie de diffusion (scènes, overlays, auto-director).'
+    description: 'Campagnes email (envois groupés, vagues, abonnements).'
   - name: admin/tenants
     description: 'Espaces (tenants) et leur configuration.'
   - name: admin/users

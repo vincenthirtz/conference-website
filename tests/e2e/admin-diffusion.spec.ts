@@ -3,7 +3,7 @@ import { createTestStaff, deleteTestStaff } from '../utils/supabaseTestClient';
 import { loginStaff } from './_helpers/playerSession';
 
 /**
- * Tests E2E — l'espace « Diffusion » (régie, casteuses, overlays).
+ * Tests E2E — l'espace « Diffusion » (overlays, scènes, Twitch, casteuses).
  *
  * Deux niveaux :
  *   - SANS compte : chaque écran de l'espace renvoie vers la connexion en
@@ -31,11 +31,9 @@ async function loginAsCoach(page: import('@playwright/test').Page) {
 
 /** Les écrans de l'espace, dans l'ordre de la barre d'onglets. */
 const DIFFUSION_SCREENS = [
-  '/admin/regie',
-  '/admin/broadcast/live',
-  '/admin/events',
-  '/admin/caster',
   '/admin/diffusion/overlays',
+  '/admin/caster',
+  '/admin/broadcast/live',
   '/admin/diffusion/casteuses',
   '/admin/twitch-channels',
 ];

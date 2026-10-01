@@ -125,23 +125,6 @@ export function twitchChannelToForm(
   };
 }
 
-/* ---------------------------------------------------------------------------
- * Régie vidéo : état d'antenne (POST /api/admin/broadcast/state)
- * ------------------------------------------------------------------------ */
-
-/**
- * Corps déclaré par la route (champs NOMMÉS pour la spec) ; chaque champ est
- * validé par le service, avec les messages d'origine
- * (`on_air must be a boolean`…), dans l'ordre d'origine.
- */
-export const BroadcastStatePatchDoc = looseBody([
-  'on_air',
-  'lower_third',
-  'pip',
-  'scene',
-  'auto_director',
-]);
-
 /** POST /api/admin/stream-alert-test — type d'alerte Twitch + pseudo affiché. */
 export const StreamAlertTestDoc = looseBody(['kind', 'name']);
 

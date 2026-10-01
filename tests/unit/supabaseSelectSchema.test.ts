@@ -144,9 +144,9 @@ describe('schéma : colonnes citées dans les .select()', () => {
 
   // Un `.select()` n'est pas la seule façon de citer une colonne : un filtre
   // (`.eq('user_id', …)` sur une table qui porte `auth_user_id`) ou une
-  // écriture échouent exactement pareil. Le commentaire de
-  // `utils/broadcast/liveState.ts` garde la trace d'un cas vécu : la requête
-  // partait en erreur AVALÉE, et plus aucun caster n'avait de Discord.
+  // écriture échouent exactement pareil. Cas vécu dans l'ancienne régie
+  // (`utils/broadcast/liveState.ts`, retiré depuis) : la requête partait en
+  // erreur AVALÉE, et plus aucun caster n'avait de Discord.
   it('ne filtre ni n’écrit sur une colonne absente du schéma', () => {
     const offenders: string[] = [];
     for (const use of scan.usages) {

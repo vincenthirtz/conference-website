@@ -3,8 +3,8 @@
 // Alimente la source navigateur OBS du TCG (`/overlay/tcg/<jeton>`).
 //
 // INTERROGATION SEULE, PAS DE REALTIME — et c'est une différence assumée avec
-// `useOverlayState`. Celui-là s'abonne à UNE ligne (`event_runs`) que la RLS
-// expose ; ici la donnée vit dans `tcg_wallet_entries`, table en service-role
+// les scènes caster. Celles-là s'abonnent à UNE ligne (`caster_scenes`) que la
+// RLS expose ; ici la donnée vit dans `tcg_wallet_entries`, table en service-role
 // sans policy publique. Un abonnement Realtime depuis un navigateur anonyme n'y
 // recevrait jamais rien : il donnerait l'illusion d'un canal temps réel qui
 // n'existe pas. Mieux vaut une interrogation honnête toutes les 5 secondes.

@@ -47,7 +47,7 @@ réservée au staff actif.
 
 | Route                        | Rôle                                                                                                                                                                 |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/admin/caster`              | Cockpit : CRUD + édition des scènes, pilotage OBS, chat, poll MVP. Gate SSR tout staff (caster/admin/owner), comme `/admin/regie`.                                   |
+| `/admin/caster`              | Cockpit : CRUD + édition des scènes, pilotage OBS, chat, poll MVP. Gate SSR tout staff (caster/admin/owner).                                   |
 | `/overlay/caster/<sceneKey>` | Overlay Browser Source public 1920×1080. `sceneKey` = UUID de scène **ou** type (première scène du type par `sort_order`). Chrome-less, `noindex`, fond transparent. |
 
 Les overlays lisent avec la clé anon + Realtime, avec un poll de secours (les
@@ -244,8 +244,9 @@ voient donc mutuellement.
 
 C'est un canal Presence, pas du `postgres_changes` : il ne dépend ni de la
 publication Realtime ni d'une RLS, et rien n'est écrit en base. À ne pas
-confondre avec la **table** `caster_presence` (heartbeats du cockpit régie,
-`/api/caster/heartbeat`), qui n'a aucun rapport.
+confondre avec la **table** `caster_presence` (heartbeats de l'ancien cockpit
+régie `/admin/regie`, retiré le 2026-10-01 — plus rien n'y écrit), qui n'a
+aucun rapport.
 
 L'affichage est **consultatif** : bandeau d'avatars en tête de page, pastille
 « 👁 » sur les scènes ouvertes par quelqu'un d'autre, et avertissement d'édition

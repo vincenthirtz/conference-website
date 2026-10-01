@@ -17,9 +17,6 @@ get:
       - Default: `tenant_staff(tenant_id)` + cross-tenant
         `staff.is_pole_admin=true`, then map to `auth_user_id`
         (active, non-deleted only).
-      - For `event_segment.transitioned` (match → live), audience is
-        narrowed to casters assigned to the match via
-        `cast_assignments` / `cast_members`.
       - Opt-out: `notification_prefs(user_id, event_type, enabled=false)`
         excludes the user. Absent row = opted-in (opt-out model).
 

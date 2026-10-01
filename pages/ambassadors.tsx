@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import type { GetStaticProps } from 'next';
-import dynamic from 'next/dynamic';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import LiveTwitchSection, {
   type TwitchChannel,
@@ -16,13 +15,6 @@ import nsLivePage from '@/lib/i18n/locales/fr/livePage';
 import { socialUrl } from '@/config/socials';
 
 type LiveDict = typeof nsLivePage.fr;
-
-// LiveEventBanner depend de fetch + realtime supabaseClient — pas SSR-friendly,
-// on le charge cote client uniquement.
-const LiveEventBanner = dynamic(
-  () => import('@/components/Live/LiveEventBanner'),
-  { ssr: false }
-);
 
 const DISCORD_INVITE_URL = socialUrl('discord');
 const ASSO_TWITCH_URL = 'https://twitch.tv/owwomenscup';
@@ -161,8 +153,6 @@ function LivePage({ channels, loadError }: Props) {
         </div>
 
         <div className="relative mx-auto max-w-4xl px-6 pt-36 pb-16 text-center">
-          <LiveEventBanner />
-
           <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-gray-300 backdrop-blur-sm">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-violet-light)] animate-pulse" />
             {t.heroBadge}

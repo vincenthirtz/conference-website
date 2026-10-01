@@ -19,7 +19,6 @@ import { emitBotEvent } from '../botEvents';
 import { enrichMatchEvent } from './botEventEnrich';
 import { applyMatchRatingIncremental } from '../rating/applyMatchRating';
 import { settleMatchPredictions } from '../predictions/settle';
-import { reactToMatchStatus } from '../broadcast/autoDirector';
 import type { PropagationResult } from '../../types/bracket';
 import { logger } from '../logger';
 import type {
@@ -728,13 +727,6 @@ export async function applyMatchScore(
         logger.error('[botEvents] team.forfeit emit error:', e)
       );
     }
-
-    // Auto-director (Feature: Production broadcast automatisée) : bascule la
-    // scene overlay vers 'results' si ce match est celui du segment live.
-    // Best-effort, non-bloquant — comme les emits bot ci-dessus.
-    void reactToMatchStatus({ tenantId, matchId, newStatus }).catch((e) =>
-      logger.error('[broadcast/autoDirector] applyScore reactor error:', e)
-    );
 
     // Auto-advance: si tous les matchs du stage source sont termines et que
     // advancement_rules est configure, on inscrit automatiquement les top N

@@ -119,7 +119,6 @@ import enAdminDiffusionNav from './adminDiffusionNav';
 import enAdminDiffusionOverlays from './adminDiffusionOverlays';
 import enAdminTwitchPredictions from './adminTwitchPredictions';
 import enAdminTwitchCommands from './adminTwitchCommands';
-import enAdminEventsList from './adminEventsList';
 import enAdminNotifications from './adminNotifications';
 import enAdminSupport from './adminSupport';
 import enAdminModerationBlacklist from './adminModerationBlacklist';
@@ -127,7 +126,6 @@ import enAdminModerationEntityBlacklist from './adminModerationEntityBlacklist';
 import enAdminMatchDraft from './adminMatchDraft';
 import enAdminMatchDetail from './adminMatchDetail';
 import enAdminMatchEdit from './adminMatchEdit';
-import enAdminEventDirector from './adminEventDirector';
 import enAdminCampaigns from './adminCampaigns';
 import enAdminCommandPalette from './adminCommandPalette';
 import enAdminStaffPlanning from './adminStaffPlanning';
@@ -173,17 +171,6 @@ import enAdminDashboardSparkline from './adminDashboardSparkline';
 import enAdminDashboardStageProgressBar from './adminDashboardStageProgressBar';
 import enAdminDashboardSupportTicketsDonut from './adminDashboardSupportTicketsDonut';
 import enAdminDashboardUpcomingMatchRow from './adminDashboardUpcomingMatchRow';
-import enAdminDirectorAddSegmentModal from './adminDirectorAddSegmentModal';
-import enAdminDirectorCasterStatusPanel from './adminDirectorCasterStatusPanel';
-import enAdminDirectorCueComposer from './adminDirectorCueComposer';
-import enAdminDirectorCueFeed from './adminDirectorCueFeed';
-import enAdminDirectorMatchPicker from './adminDirectorMatchPicker';
-import enAdminDirectorRunStatusHeader from './adminDirectorRunStatusHeader';
-import enAdminDirectorSegmentCard from './adminDirectorSegmentCard';
-import enAdminDirectorSegmentEditor from './adminDirectorSegmentEditor';
-import enAdminDirectorStationBoard from './adminDirectorStationBoard';
-import enAdminDirectorTimelineBuilder from './adminDirectorTimelineBuilder';
-import enAdminDirectorWaveBoard from './adminDirectorWaveBoard';
 import enAdminSimulatorEliminationView from './adminSimulatorEliminationView';
 import enAdminSimulatorSimMatchCard from './adminSimulatorSimMatchCard';
 import enAdminTeamsAddMemberModal from './adminTeamsAddMemberModal';
@@ -327,7 +314,6 @@ const adminEnDict = {
   adminDiffusionOverlays: enAdminDiffusionOverlays,
   adminTwitchPredictions: enAdminTwitchPredictions,
   adminTwitchCommands: enAdminTwitchCommands,
-  adminEventsList: enAdminEventsList,
   adminNotifications: enAdminNotifications,
   adminSupport: enAdminSupport,
   adminModerationBlacklist: enAdminModerationBlacklist,
@@ -335,7 +321,6 @@ const adminEnDict = {
   adminMatchDraft: enAdminMatchDraft,
   adminMatchDetail: enAdminMatchDetail,
   adminMatchEdit: enAdminMatchEdit,
-  adminEventDirector: enAdminEventDirector,
   adminCampaigns: enAdminCampaigns,
   adminCommandPalette: enAdminCommandPalette,
   adminStaffPlanning: enAdminStaffPlanning,
@@ -381,17 +366,6 @@ const adminEnDict = {
   adminDashboardStageProgressBar: enAdminDashboardStageProgressBar,
   adminDashboardSupportTicketsDonut: enAdminDashboardSupportTicketsDonut,
   adminDashboardUpcomingMatchRow: enAdminDashboardUpcomingMatchRow,
-  adminDirectorAddSegmentModal: enAdminDirectorAddSegmentModal,
-  adminDirectorCasterStatusPanel: enAdminDirectorCasterStatusPanel,
-  adminDirectorCueComposer: enAdminDirectorCueComposer,
-  adminDirectorCueFeed: enAdminDirectorCueFeed,
-  adminDirectorMatchPicker: enAdminDirectorMatchPicker,
-  adminDirectorRunStatusHeader: enAdminDirectorRunStatusHeader,
-  adminDirectorSegmentCard: enAdminDirectorSegmentCard,
-  adminDirectorSegmentEditor: enAdminDirectorSegmentEditor,
-  adminDirectorStationBoard: enAdminDirectorStationBoard,
-  adminDirectorTimelineBuilder: enAdminDirectorTimelineBuilder,
-  adminDirectorWaveBoard: enAdminDirectorWaveBoard,
   adminSimulatorEliminationView: enAdminSimulatorEliminationView,
   adminSimulatorSimMatchCard: enAdminSimulatorSimMatchCard,
   adminTeamsAddMemberModal: enAdminTeamsAddMemberModal,

@@ -16,7 +16,7 @@ import crypto from 'crypto';
  * Events exposables à des tiers via webhook. Sous-ensemble PUBLIC de
  * `BotEventName` (utils/botEvents.ts) : on EXCLUT délibérément les events
  * d'opération Discord interne (team.member.*, cast.*, staff.role.changed,
- * scrim.planning.*, checkin.nudge, broadcast.state_changed, …) qui n'ont aucun
+ * scrim.planning.*, checkin.nudge, …) qui n'ont aucun
  * sens hors de notre stack. Ajouter un event ici = décision produit explicite.
  */
 export const WEBHOOK_EVENT_TYPES = [

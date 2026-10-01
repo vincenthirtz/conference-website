@@ -11,12 +11,9 @@ import { adminNs } from '../../ns';
 
 export default adminNs('adminDiffusionNav', {
   ariaLabel: 'Écrans de la diffusion',
-  liveNow: 'en direct',
-  tabCockpit: 'Cockpit',
-  tabRunOfShow: 'Run-of-show',
-  tabLive: 'Console live',
-  tabScenes: 'Scènes',
   tabOverlays: 'Overlays',
+  tabScenes: 'Scènes',
+  tabLive: 'Twitch & interactions',
   tabCasters: 'Casteuses',
   tabTwitch: 'Chaînes Twitch',
   // Page Diffusion › Casteuses.

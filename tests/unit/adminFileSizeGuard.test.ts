@@ -62,20 +62,9 @@ const BASELINE: Record<string, number> = {
   'pages/admin/teams/[teamId]/edit.tsx': 707,
   'pages/admin/matches/[matchId]/edit.tsx': 705,
   'pages/admin/teams/index.tsx': 653,
-  // 1263 : sondage de secours mutualisé (hooks/useVisiblePoll).
-  // 1259 : passe « Le Ruban » (lot 5C) — les titres de colonne sont partis
-  // dans features/admin/events/ui/DirectorSectionTitle.tsx.
-  'pages/admin/events/[runId]/director.tsx': 658,
   'components/admin/moderation/SupportPanel.tsx': 1146,
   // 1172 : errorCode / withBusy / Spinner partagés (twitchPanelUtils).
   'components/admin/broadcast/TwitchCommandsPanel.tsx': 1144,
-  // 959 : en-tête et pastille de connexion partis dans
-  // `components/Caster/RegieHeader.tsx` (onglets « Diffusion »).
-  // 886 : sondage de secours mutualisé (hooks/useVisiblePoll).
-  // 881 : largeur du conteneur stabilisée (plus de paramètre `wide`).
-  // 740 : passe « Le Ruban » (lot 5C) — le panneau « run préparé » est parti
-  // dans features/admin/diffusion/StartPreparedPanel.tsx.
-  'pages/admin/regie.tsx': 740,
   'pages/admin/users/[userId]/player-view.tsx': 635,
   // 860 écrites : le panneau « Visuels » (logo, bannière, règlement PDF, et
   // désormais la chaîne de diffusion par défaut) est parti dans

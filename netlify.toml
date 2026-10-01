@@ -53,14 +53,6 @@
 [functions."webhook-dispatcher-cron"]
   schedule = "* * * * *"
 
-# Scheduled function: server-side fallback overrun escalation (lot 6).
-# Le client-side (useOverrunWatcher dans Director tab) fait l'escalation
-# T+0/T+2min/T+5min. Si l'onglet est ferme, ce cron prend le relais a
-# T+5min..T+7min (selon le tick). Dedup via event_cues.dedup_key (partial
-# unique index uq_event_cues_dedup_key). Scan cross-tenant via supabaseAdmin.
-[functions."overrun-watcher-cron"]
-  schedule = "*/2 * * * *"
-
 # Scheduled function: dispute SLA breach detector (Lot 4 — Open Disputes Board).
 # Scans active tenants for matches `status='disputed'` whose
 # `dispute_opened_at` is older than `tenants.dispute_sla_minutes` AND

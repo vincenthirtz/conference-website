@@ -10,18 +10,6 @@ type TwitchChannelInsert =
 type TwitchChannelUpdate =
   Database['public']['Tables']['twitch_channels']['Update'];
 
-export async function findLiveRun(db: AdminDb, tenantId: string) {
-  const { data, error } = await db
-    .from('event_runs')
-    .select('id, name, started_at')
-    .eq('tenant_id', tenantId)
-    .eq('status', 'live')
-    .order('started_at', { ascending: false, nullsFirst: false })
-    .limit(1)
-    .maybeSingle();
-  return { run: data ?? null, error };
-}
-
 export async function listActiveTwitchChannels(db: AdminDb, tenantId: string) {
   const { data, error } = await db
     .from('twitch_channels')
@@ -134,27 +122,4 @@ export async function deleteTwitchChannel(
     .eq('id', id)
     .eq('tenant_id', tenantId);
   return { error };
-}
-
-/**
- * Prochain segment `match` encore `upcoming` après l'`ord` courant (pauses,
- * intros et segments déjà joués sautés) — « match suivant » de la régie.
- */
-export async function findNextUpcomingMatchSegment(
-  db: AdminDb,
-  tenantId: string,
-  runId: string,
-  afterOrd: number
-) {
-  const { data, error } = await db
-    .from('event_segments')
-    .select('id, ord, type, status, match_id, title')
-    .eq('event_run_id', runId)
-    .eq('tenant_id', tenantId)
-    .eq('type', 'match')
-    .eq('status', 'upcoming')
-    .gt('ord', afterOrd)
-    .order('ord', { ascending: true })
-    .limit(1);
-  return { row: data?.[0] ?? null, error };
 }

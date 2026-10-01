@@ -69,8 +69,6 @@ export const ENTITY_ROUTES: {
   },
   { pattern: '/admin/scrims/[id]', list: '/admin/scrims', key: 'scrim' },
   { pattern: '/admin/leagues/[id]', list: '/admin/leagues', key: 'league' },
-  // Déroulé d'émission : sa liste est le run-of-show (Diffusion › Run-of-show).
-  { pattern: '/admin/events/[runId]', list: '/admin/events', key: 'event' },
   // Fiche d'une casteuse : sa liste vit dans Diffusion › Casteuses. Sans
   // cette entrée, `/admin/cast-members` n'étant plus une entrée de menu, la
   // fiche n'avait AUCUN fil d'Ariane.
@@ -88,7 +86,6 @@ export const ENTITY_ROUTES: {
  * chaque page — plusieurs sont des god-components gelés.
  */
 export const OWN_BREADCRUMB_ROUTES: ReadonlySet<string> = new Set([
-  '/admin/events/[runId]/director',
   '/admin/leagues/[id]',
   '/admin/matches/[matchId]/edit',
   '/admin/news/[id]',

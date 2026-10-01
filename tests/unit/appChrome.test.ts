@@ -48,15 +48,6 @@ describe('resolveAppChrome', () => {
     });
   });
 
-  it('cockpit caster : sa propre barre, ni menu ni pied', () => {
-    expect(resolveAppChrome('/caster/cockpit')).toMatchObject({
-      navbar: false,
-      footer: false,
-      analytics: false,
-      noindex: true,
-    });
-  });
-
   it('iframes et overlays OBS : pages nues', () => {
     for (const p of [
       '/embed/bracket/[id]',
@@ -116,7 +107,6 @@ describe('resolveAppChrome', () => {
         '/team/[slug]/stats',
         '/rejoindre',
         '/scrims',
-        '/caster/cockpit',
         '/embed/bracket',
       ]) {
         expect(resolveAppChrome(route).surface, route).toBeNull();

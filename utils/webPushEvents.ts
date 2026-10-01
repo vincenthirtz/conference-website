@@ -31,16 +31,6 @@ export const WEB_PUSH_EVENT_TYPES = [
   'registration.new',
   'helloasso.payment.received',
   'captain.support.opened',
-  // Run-of-show : transition d'un segment dans le timeline d'un event.
-  // Le dispatcher applique un filtre supplémentaire (cf. shouldPushForEvent)
-  // pour ne notifier QUE les transitions vers 'live' d'un segment de type
-  // 'match'. Les autres transitions (done, skipped, intro/break/outro...)
-  // sont écrites dans l'outbox pour le bot Discord mais ne déclenchent pas
-  // de push PWA — l'audience est restreinte aux casters assignés au match
-  // (cf. loadCasterUserIdsForMatch dans le dispatcher).
-  // Note : cast.hotkey_triggered N'EST PAS ajouté ici — par design, on ne
-  // push pas les highlights en temps réel (Discord-only).
-  'event_segment.transitioned',
   // Scrim planning (grille de dispos partagée entre 2 équipes). Audience =
   // staff du tenant + capitaines/managers des 2 équipes (cf. dispatcher +
   // loadCaptainManagerUserIdsForTeams). URL player = /player/scrim-planning/<id>.
@@ -150,7 +140,7 @@ export function playerUrlForEvent(
  *         imminent inutile en digest J+1 ? → conservé car émis et utile, mais
  *         les events purement temps-réel comme les hotkeys ne sont pas listés).
  *       · staff-only / ops (helloasso.payment.received, registration.new,
- *         dispute.sla_breached, staff.role.changed, broadcast.state_changed).
+ *         dispute.sla_breached, staff.role.changed).
  *       · événements non émis dans l'outbox (match.score_reported,
  *         scrim.confirmed n'ont pas de call site emit → non inclus).
  *
@@ -339,39 +329,6 @@ function unwrap(payload: EventPayload): EventPayload {
     return data as EventPayload;
   }
   return payload;
-}
-
-/**
- * Filtre amont appliqué par le dispatcher AVANT de calculer recipients/render.
- * Renvoie `true` si l'event doit déclencher un push, `false` sinon.
- *
- * Pour la plupart des events de WEB_PUSH_EVENT_TYPES, on retourne `true`
- * inconditionnellement — le filtrage opt-out/audience est fait ailleurs.
- *
- * Cas spéciaux :
- *   - `event_segment.transitioned` : push uniquement si on bascule UN segment
- *     de type 'match' vers 'live'. Les transitions intermédiaires (done,
- *     skipped) et les segments non-match (intro, break, outro, custom) sont
- *     ignorés côté PWA (le bot Discord, lui, traite toutes les transitions).
- */
-export function shouldPushForEvent(
-  eventName: string,
-  payload: EventPayload
-): boolean {
-  if (eventName === 'event_segment.transitioned') {
-    const data = unwrap(payload);
-    const toStatus = str(data, 'toStatus');
-    if (toStatus !== 'live') return false;
-    const segment = (data as { segment?: unknown }).segment;
-    if (!segment || typeof segment !== 'object') return false;
-    const seg = segment as Record<string, unknown>;
-    if (seg.type !== 'match') return false;
-    if (typeof seg.matchId !== 'string' || seg.matchId.length === 0) {
-      return false;
-    }
-    return true;
-  }
-  return true;
 }
 
 /**
@@ -577,45 +534,6 @@ export function renderWebPushPayload(
           : 'Nouveau ticket support.',
         url,
         actions: [{ action: 'view', title: 'Ouvrir le ticket' }],
-      };
-    }
-    case 'event_segment.transitioned': {
-      // Le dispatcher a déjà filtré via shouldPushForEvent : on sait que
-      // toStatus === 'live' et segment.type === 'match' (sinon on ne serait
-      // pas là). On rend défensivement quand même au cas où la fonction
-      // serait appelée hors flux.
-      const data = unwrap(payload);
-      const segment =
-        (data as { segment?: Record<string, unknown> }).segment ?? {};
-      const segTitle =
-        typeof segment.title === 'string' && segment.title.length > 0
-          ? segment.title
-          : 'Match';
-      const broadcast = (data as { broadcastMessage?: unknown })
-        .broadcastMessage;
-      const pushTitle =
-        broadcast && typeof broadcast === 'object'
-          ? (broadcast as Record<string, unknown>).push_title
-          : null;
-      const pushBody =
-        broadcast && typeof broadcast === 'object'
-          ? (broadcast as Record<string, unknown>).push_body
-          : null;
-      return {
-        title:
-          typeof pushTitle === 'string' && pushTitle.length > 0
-            ? pushTitle
-            : 'Match en direct',
-        body:
-          typeof pushBody === 'string' && pushBody.length > 0
-            ? pushBody
-            : `${segTitle} commence maintenant`,
-        // Audience = casters assignés au match. La régie (/admin/regie, ex
-        // cockpit) liste leurs segments du jour ; les casters sont staff
-        // (rôle 'caster') donc y ont accès. On évite /admin/events/<runId> qui
-        // suppose un accès plus large.
-        url: '/admin/regie',
-        actions: [{ action: 'cockpit', title: 'Ouvrir la régie' }],
       };
     }
     case 'scrim.search.matched': {

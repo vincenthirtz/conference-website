@@ -17,7 +17,6 @@ import { applyMatchScore } from '@/utils/matches/applyScore';
 import { emitBotEvent } from '@/utils/botEvents';
 import { enrichMatchEvent } from '@/utils/matches/botEventEnrich';
 import { findDownstreamImpact } from '@/utils/bracket/disputeImpact';
-import { reactToMatchStatus } from '@/utils/broadcast/autoDirector';
 import { purgeScoreReports } from '@/utils/matches/scoreReports';
 import type { Audited } from '../../_shared/audited';
 import * as repo from '../repository/matches';
@@ -161,15 +160,6 @@ export async function openDispute(
       );
     })().catch((e) =>
       ctx.logger.error('[botEvents] match.disputed emit error:', e)
-    );
-
-    // Régie auto : scène 'pause' si c'est le match du segment live.
-    void reactToMatchStatus({
-      tenantId: ctx.tenantId,
-      matchId,
-      newStatus: 'disputed',
-    }).catch((e) =>
-      ctx.logger.error('[autoDirector] disputed react error:', e)
     );
 
     return {

@@ -180,52 +180,6 @@ CronOutboxMaintenanceResult:
       description: Delivered/failed rows older than cutoff deleted this tick.
     stats:
       $ref: '#/components/schemas/CronOutboxMaintenanceStats'
-CronOverrunCheckResult:
-  type: object
-  required:
-    - success
-    - runs_examined
-    - segments_examined
-    - escalated
-    - deduped
-    - errors
-    - truncated_by_time_budget
-    - duration_ms
-  properties:
-    success:
-      type: boolean
-      enum:
-        - true
-    runs_examined:
-      type: integer
-      minimum: 0
-      description: Number of `event_runs` with `status='live'` scanned.
-    segments_examined:
-      type: integer
-      minimum: 0
-      description: Live segments inspected for overrun.
-    escalated:
-      type: integer
-      minimum: 0
-      description: New `event_cues` rows inserted this tick.
-    deduped:
-      type: integer
-      minimum: 0
-      description: |
-        Inserts that hit `23505` on `uq_event_cues_dedup_key` — a cue with
-        the same `auto-overrun:{runId}:{segId}` already exists.
-    errors:
-      type: integer
-      minimum: 0
-      description: Cue insert errors not classified as dedup.
-    truncated_by_time_budget:
-      type: boolean
-      description: |
-        `true` when the 20s soft time budget was exceeded and the loop
-        broke early. Remaining work picked up next tick.
-    duration_ms:
-      type: integer
-      minimum: 0
 CronWebPushDispatchResult:
   type: object
   required:
