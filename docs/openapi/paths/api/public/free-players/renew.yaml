@@ -1,0 +1,72 @@
+get:
+  tags:
+    - public/misc
+  summary: Décrit la fiche visée par un lien de prolongation (ne change rien).
+  description: >
+    Sert la page /rejoindre/prolonger. Meme token HMAC que le retrait (recu par
+    email). Separation GET/POST : les clients mail pre-visitent les liens.
+  operationId: describePublicFreePlayerRenewal
+  security: []
+  parameters:
+    - in: query
+      name: token
+      required: true
+      schema:
+        type: string
+  responses:
+    '200':
+      description: Fiche trouvee.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: [string, 'null']
+              expiresAt:
+                type: [string, 'null']
+              expired:
+                type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      description: Lien plus valide (fiche retiree).
+    '429':
+      $ref: '#/components/responses/RateLimited'
+post:
+  tags:
+    - public/misc
+  summary: Prolonge une fiche "joueuse libre" de 60 jours ("je cherche toujours").
+  description: >
+    Repousse l'echeance et rearme la relance. Une fiche deja expiree se prolonge
+    aussi, et son annonce Discord (retiree a l'expiration) est republiee.
+  operationId: renewPublicFreePlayer
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [token]
+          properties:
+            token:
+              type: string
+  responses:
+    '200':
+      description: Fiche prolongee.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              expiresAt:
+                type: string
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '404':
+      description: Lien plus valide (fiche retiree).
+    '429':
+      $ref: '#/components/responses/RateLimited'

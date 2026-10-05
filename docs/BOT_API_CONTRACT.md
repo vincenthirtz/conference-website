@@ -209,7 +209,7 @@ absent d'ici, ou listé mais plus émis, fait échouer la suite.
 | `CHECKIN_TEAM_AMBIGUOUS` | 409 | L'acteur peut pointer pour les deux équipes du match sans en être capitaine d'une seule : pas de choix à sa place. | `matches/[matchId]/checkin` |
 | `NOT_LINKED` | 404 | Compte Discord non relié à un compte du site. | `players/by-discord/[discordUserId]/*` |
 | `INVALID_DISCORD_ID` | 400 | `discordUserId` invalide. | `players/by-discord/[discordUserId]/twitch` |
-| `FREE_PLAYER_NOT_FOUND` | 404 | Aucune fiche « joueuse libre » pour ce compte Discord. | `free-players/profile` |
+| `FREE_PLAYER_NOT_FOUND` | 404 | Aucune fiche « joueuse libre » pour ce compte Discord (`profile`), ou plus de fiche web pour cet id (`announcement`). | `free-players/profile`, `free-players/announcement` |
 | `INVALID_GUILD_ID` | 400 | Identifiant de serveur Discord invalide. | `tenants/by-guild/[guildId]`, `tenants/link-guild` |
 | `GUILD_NOT_LINKED` | 404 | Serveur Discord non rattaché. | `tenants/by-guild/[guildId]` |
 | `INVALID_OWNER_ID` | 400 | `owner_discord_id` n'est pas un snowflake Discord. | `tenants/link-guild` |
@@ -993,7 +993,7 @@ code. Les tableaux par domaine ci-dessous gardent le contexte rédigé ; un test
 ce tableau.
 
 <!-- BEGIN GENERATED: bot-inventory -->
-_Tableau généré depuis les options `withBotRoute` des handlers — ne pas éditer à la main : `npm run contract:bot-inventory`. 95 routes._
+_Tableau généré depuis les options `withBotRoute` des handlers — ne pas éditer à la main : `npm run contract:bot-inventory`. 96 routes._
 
 | Route | Méthodes | Idem. | Rate-key | Plafond | Portée / plan |
 | --- | --- | --- | --- | --- | --- |
@@ -1011,6 +1011,7 @@ _Tableau généré depuis les options `withBotRoute` des handlers — ne pas éd
 | [`events/[id]/ack.ts`](../pages/api/bot/v1/events/[id]/ack.ts) | POST | oui | `bot-events-ack` | 120/min | `crossTenant` |
 | [`events/handled.ts`](../pages/api/bot/v1/events/handled.ts) | POST | — | `bot-events-handled` | 240/min | — |
 | [`events/pending.ts`](../pages/api/bot/v1/events/pending.ts) | GET | — | `bot-events-pending` | 60/min | `crossTenant` |
+| [`free-players/announcement.ts`](../pages/api/bot/v1/free-players/announcement.ts) | POST | oui | `bot-free-players-announcement` | 30/min | — |
 | [`free-players/profile.ts`](../pages/api/bot/v1/free-players/profile.ts) | POST | oui | `bot-free-players-profile` | 20/min | — |
 | [`free-players/sync.ts`](../pages/api/bot/v1/free-players/sync.ts) | POST | oui | `bot-free-players-sync` | 30/min | — |
 | [`invitations/[demandeId].ts`](../pages/api/bot/v1/invitations/[demandeId].ts) | POST | oui | `bot-invitations-action` | 30/min | — |
@@ -3010,6 +3011,7 @@ Payload :
 
 ```json
 {
+  "freePlayerId": "3f0c2a4e-8d1b-4c6f-9a2e-1b7d5e9c0a11",
   "displayName": "Nova",
   "roles": ["tank", "support"],
   "level": "gold",
@@ -3025,6 +3027,56 @@ Payload :
 > **Aucune donnée de contact dans cet event** — ni email, ni pseudo Discord. Le
 > bot annonce, il ne distribue pas de carnet d'adresses ; la prise de contact
 > passe par une capitaine authentifiée sur le site.
+
+- `freePlayerId` : id de la fiche. Le bot le renvoie tel quel à
+  `POST /free-players/announcement` une fois l'annonce postée. Absent des events
+  émis avant le 2026-10-05 : dans ce cas, pas d'ancrage. Il est aussi réémis
+  quand une fiche **expirée** est prolongée (réannonce).
+
+#### `POST /api/bot/v1/free-players/announcement`
+
+Le bot dit **où** il a annoncé une fiche. Le site garde l'ancrage
+(`free_players.discord_announce_{channel,message}_id`) pour demander plus tard
+la suppression du message (`free_player.withdrawn`). Le bot ne tient aucun état.
+
+Body :
+
+```json
+{
+  "freePlayerId": "3f0c2a4e-8d1b-4c6f-9a2e-1b7d5e9c0a11",
+  "channelId": "123456789012345678",
+  "messageId": "123456789012345679"
+}
+```
+
+- `200 { "ok": true }` — ancrage enregistré. Si un **autre** message était déjà
+  ancré pour la fiche, le site émet `free_player.withdrawn` pour l'ancien.
+- `404 FREE_PLAYER_NOT_FOUND` — la fiche n'existe plus (retirée entre
+  l'inscription et l'annonce). Le bot **supprime aussitôt** le message posté.
+- Idempotente : le bot envoie `Idempotency-Key: free-player-anchor-<freePlayerId>-<messageId>`.
+
+#### Event `free_player.withdrawn` (site → bot, via outbox/webhook)
+
+Émis quand l'annonce d'une fiche doit disparaître : retrait par la joueuse
+(lien email), suppression par le staff, ou expiration (cron
+`free-players-expiry`, quotidien).
+
+```json
+{
+  "freePlayerId": "3f0c2a4e-8d1b-4c6f-9a2e-1b7d5e9c0a11",
+  "channelId": "123456789012345678",
+  "messageId": "123456789012345679",
+  "reason": "removed"
+}
+```
+
+- `reason` : `removed` (la joueuse, ou remplacement d'une annonce par une
+  autre) | `expired` | `admin`.
+- Le bot ne supprime **que ses propres messages** (`author.id === client.user.id`)
+  et refuse un salon hors de la guilde du tenant. Message ou salon déjà disparu
+  = no-op.
+- `eventId` déterministe (clé `free_player.withdrawn:<freePlayerId>:<messageId>`) :
+  deux demandes pour la même annonce n'en font qu'une.
 
 ### Team openings (equipes qui cherchent une joueuse)
 

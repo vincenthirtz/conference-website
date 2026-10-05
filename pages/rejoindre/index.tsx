@@ -23,6 +23,7 @@ import { useT } from '@/lib/i18n/useT';
 import nsRejoindrePage from '@/lib/i18n/locales/fr/rejoindrePage';
 import JoinAsPlayerForm from '@/components/FreePlayers/JoinAsPlayerForm';
 import FreePlayersList from '@/components/FreePlayers/FreePlayersList';
+import ResendLinkForm from '@/components/FreePlayers/ResendLinkForm';
 import OtherMarketCount from '@/components/shared/OtherMarketCount';
 
 const CREATE_TEAM_HREF = `/team/create?tournament=${ACTIVE_WOMEN_TOURNAMENT_ID}`;
@@ -150,6 +151,12 @@ function RejoindrePage() {
       <div className="mx-auto max-w-6xl px-6 py-12">
         <FreePlayersList refreshKey={refreshKey} />
       </div>
+
+      {/* Lien perdu : la seule autre issue était d'écrire au staff. Ancre
+          visée par la page de retrait quand un lien n'est plus valide. */}
+      <section id="lien-perdu" className="mx-auto max-w-2xl px-6 pb-12">
+        <ResendLinkForm />
+      </section>
 
       {/* Renvois : les autres portes d'entrée, dont le miroir /recrutement */}
       <section className="mx-auto max-w-5xl px-6 pb-20">

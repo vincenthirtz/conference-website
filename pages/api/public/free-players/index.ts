@@ -303,6 +303,10 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     void emitBotEvent(
       'free_player.registered',
       {
+        // Pas une donnée de contact : le bot le renvoie avec l'id du message
+        // posté (`free-players/announcement`), pour que le site sache quoi
+        // faire supprimer quand la fiche s'en ira.
+        freePlayerId,
         displayName: body.displayName,
         roles: row.roles,
         level: row.level,

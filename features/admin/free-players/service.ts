@@ -15,6 +15,7 @@
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { AdminError, NotFoundError } from '@/utils/admin/errors';
 import { normalizeRoles } from '@/utils/freePlayers';
+import { requestAnnouncementWithdrawal } from '@/utils/freePlayers/announcement';
 import * as repo from './repository';
 import type { FreePlayerAdminList, RemoveFreePlayerResult } from './schemas';
 
@@ -64,6 +65,13 @@ export async function removeFreePlayer(
     ctx.logger.error('[admin/free-players] delete error', error);
     throw new AdminError(500, 'internal', 'Suppression impossible.');
   }
+
+  // L'annonce Discord part avec la fiche (no-op pour une fiche sans annonce,
+  // dont toutes celles de provenance Discord).
+  await requestAnnouncementWithdrawal(
+    { ...row, tenant_id: ctx.tenantId },
+    'admin'
+  );
 
   return {
     success: true,

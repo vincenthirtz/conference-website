@@ -5,6 +5,7 @@
 
 import type { AdminDb } from '@/utils/admin/serviceContext';
 import { FREE_PLAYER_SELECT } from '@/utils/freePlayers';
+import { ANNOUNCEMENT_SELECT } from '@/utils/freePlayers/announcement';
 
 export async function listByTenant(db: AdminDb, tenantId: string) {
   const { data, error } = await db
@@ -22,7 +23,7 @@ export async function findForRemoval(
 ) {
   const { data, error } = await db
     .from('free_players')
-    .select('id, source, display_name, discord_username')
+    .select(`${ANNOUNCEMENT_SELECT}, source, display_name, discord_username`)
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .maybeSingle();

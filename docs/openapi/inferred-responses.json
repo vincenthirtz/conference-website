@@ -36385,6 +36385,139 @@
     ]
    }
   },
+  "GET /api/cron/free-players-expiry": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "announcements": {
+      "anyOf": [
+       {
+        "type": "object",
+        "properties": {
+         "candidates": {
+          "type": "number"
+         },
+         "dryRun": {},
+         "error": {
+          "type": "string"
+         },
+         "withdrawn": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "candidates",
+         "error",
+         "withdrawn"
+        ]
+       },
+       {
+        "type": "object",
+        "properties": {
+         "candidates": {
+          "type": "number"
+         },
+         "dryRun": {
+          "type": "boolean"
+         },
+         "error": {},
+         "withdrawn": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "candidates",
+         "dryRun",
+         "withdrawn"
+        ]
+       },
+       {
+        "type": "object",
+        "properties": {
+         "candidates": {
+          "type": "number"
+         },
+         "dryRun": {},
+         "error": {},
+         "withdrawn": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "candidates",
+         "withdrawn"
+        ]
+       }
+      ]
+     },
+     "reminders": {
+      "anyOf": [
+       {
+        "type": "object",
+        "properties": {
+         "candidates": {
+          "type": "number"
+         },
+         "dryRun": {},
+         "error": {
+          "type": "string"
+         },
+         "sent": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "candidates",
+         "error",
+         "sent"
+        ]
+       },
+       {
+        "type": "object",
+        "properties": {
+         "candidates": {
+          "type": "number"
+         },
+         "dryRun": {
+          "type": "boolean"
+         },
+         "error": {},
+         "sent": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "candidates",
+         "dryRun",
+         "sent"
+        ]
+       },
+       {
+        "type": "object",
+        "properties": {
+         "candidates": {
+          "type": "number"
+         },
+         "dryRun": {},
+         "error": {},
+         "sent": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "candidates",
+         "sent"
+        ]
+       }
+      ]
+     }
+    },
+    "required": [
+     "announcements",
+     "reminders"
+    ]
+   }
+  },
   "GET /api/cron/outbox-maintenance": {
    "200": {
     "type": "object",
@@ -49535,6 +49668,33 @@
      }
     },
     "required": [
+     "name"
+    ]
+   }
+  },
+  "GET /api/public/free-players/renew": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "expired": {
+      "type": "boolean"
+     },
+     "expiresAt": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "name": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "expired",
+     "expiresAt",
      "name"
     ]
    }
@@ -69307,6 +69467,19 @@
     ]
    }
   },
+  "POST /api/bot/v1/free-players/announcement": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "ok": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "ok"
+    ]
+   }
+  },
   "POST /api/bot/v1/free-players/profile": {
    "200": {
     "type": "object",
@@ -72624,6 +72797,139 @@
     ]
    }
   },
+  "POST /api/cron/free-players-expiry": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "announcements": {
+      "anyOf": [
+       {
+        "type": "object",
+        "properties": {
+         "candidates": {
+          "type": "number"
+         },
+         "dryRun": {},
+         "error": {
+          "type": "string"
+         },
+         "withdrawn": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "candidates",
+         "error",
+         "withdrawn"
+        ]
+       },
+       {
+        "type": "object",
+        "properties": {
+         "candidates": {
+          "type": "number"
+         },
+         "dryRun": {
+          "type": "boolean"
+         },
+         "error": {},
+         "withdrawn": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "candidates",
+         "dryRun",
+         "withdrawn"
+        ]
+       },
+       {
+        "type": "object",
+        "properties": {
+         "candidates": {
+          "type": "number"
+         },
+         "dryRun": {},
+         "error": {},
+         "withdrawn": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "candidates",
+         "withdrawn"
+        ]
+       }
+      ]
+     },
+     "reminders": {
+      "anyOf": [
+       {
+        "type": "object",
+        "properties": {
+         "candidates": {
+          "type": "number"
+         },
+         "dryRun": {},
+         "error": {
+          "type": "string"
+         },
+         "sent": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "candidates",
+         "error",
+         "sent"
+        ]
+       },
+       {
+        "type": "object",
+        "properties": {
+         "candidates": {
+          "type": "number"
+         },
+         "dryRun": {
+          "type": "boolean"
+         },
+         "error": {},
+         "sent": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "candidates",
+         "dryRun",
+         "sent"
+        ]
+       },
+       {
+        "type": "object",
+        "properties": {
+         "candidates": {
+          "type": "number"
+         },
+         "dryRun": {},
+         "error": {},
+         "sent": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "candidates",
+         "sent"
+        ]
+       }
+      ]
+     }
+    },
+    "required": [
+     "announcements",
+     "reminders"
+    ]
+   }
+  },
   "POST /api/cron/outbox-maintenance": {
    "200": {
     "type": "object",
@@ -74721,6 +75027,36 @@
    }
   },
   "POST /api/public/free-players/remove": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "success": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "success"
+    ]
+   }
+  },
+  "POST /api/public/free-players/renew": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "expiresAt": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "expiresAt",
+     "success"
+    ]
+   }
+  },
+  "POST /api/public/free-players/resend-link": {
    "200": {
     "type": "object",
     "properties": {

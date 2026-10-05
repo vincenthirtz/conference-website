@@ -148,4 +148,34 @@ export default ns('rejoindrePage', {
   discordDesc:
     'Le rôle « Recherche une équipe » sur le serveur est le pendant de cette fiche : les deux alimentent la même liste. Prendre le rôle en plus de ta fiche ne fait pas doublon — et c’est là que les capitaines recrutent au quotidien.',
   discordCta: 'Rejoindre le Discord',
+
+  // --- Prolongation de fiche (/rejoindre/prolonger) -----------------------
+  renewTitle: 'Je cherche toujours une équipe',
+  renewIntro:
+    'Ta fiche reste en ligne 60 jours de plus : les capitaines continuent de la voir et peuvent te contacter.',
+  renewFor: 'Fiche de {name}',
+  renewExpiresOn: 'Elle expire actuellement le {date}.',
+  renewExpired:
+    'Ta fiche a expiré : elle n’apparaît plus dans la liste. La prolonger la remet en ligne.',
+  renewConfirm: 'Oui, garder ma fiche en ligne',
+  renewWorking: 'Prolongation…',
+  renewDoneTitle: 'C’est noté',
+  renewDoneBody:
+    'Ta fiche reste en ligne jusqu’au {date}. On te préviendra encore avant qu’elle expire.',
+  renewRemoveInstead: 'Tu as trouvé une équipe ? Retire plutôt ta fiche',
+  renewError: 'La prolongation a échoué. Réessaie dans un instant.',
+  renewInvalidBody:
+    'Ta fiche a peut-être été retirée. Tu peux te réinscrire en deux minutes.',
+
+  // --- Lien perdu (/rejoindre#lien-perdu) ---------------------------------
+  resendTitle: 'Tu as perdu le lien de ta fiche ?',
+  resendIntro:
+    'Indique l’adresse email de ta fiche : si elle existe, on t’y renvoie les liens pour la retirer ou la prolonger.',
+  resendEmailLabel: 'Adresse email de ta fiche',
+  resendSubmit: 'Renvoyer le lien',
+  resendWorking: 'Envoi…',
+  resendDone:
+    'Si une fiche existe à cette adresse, le lien vient d’y partir. Pense à regarder tes spams.',
+  resendError: 'L’envoi a échoué. Réessaie dans un instant.',
+  removeLostLink: 'Recevoir un nouveau lien',
 });

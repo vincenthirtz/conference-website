@@ -11,15 +11,17 @@
 //      supplémentaire coûte des abandons, et une fiche incomplète vaut mieux
 //      qu'une fiche jamais envoyée.
 //
-// Anti-spam identique à NewsletterSignup : honeypot hors écran + captcha HMAC
-// maison récupéré paresseusement à la première interaction (le formulaire ne
-// doit pas déclencher une requête au simple affichage de la page).
+// Anti-spam : honeypot hors écran + captcha HMAC maison récupéré paresseusement
+// à la première interaction (le formulaire ne doit pas déclencher une requête
+// au simple affichage de la page) — cf. `usePublicFormGuard`.
 
-import { useId, useRef, useState } from 'react';
+import { useId, useState } from 'react';
 import { socialUrl } from '@/config/socials';
 import { useT, format as fmt } from '@/lib/i18n/useT';
 import Link from 'next/link';
 import nsRejoindrePage from '@/lib/i18n/locales/fr/rejoindrePage';
+import { usePublicFormGuard } from '@/hooks/usePublicFormGuard';
+import HoneypotField from '@/components/forms/HoneypotField';
 import {
   FREE_PLAYER_LEVELS,
   FREE_PLAYER_LIMITS,
@@ -28,7 +30,6 @@ import {
   type FreePlayerRole,
 } from '@/utils/freePlayers';
 
-type Captcha = { token: string; question: string };
 type Status = 'idle' | 'submitting' | 'success' | 'error';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -75,12 +76,9 @@ export default function JoinAsPlayerForm({
   // par défaut — déposer une annonce ici n'est pas la déposer partout.
   const [shareAcrossTenants, setShareAcrossTenants] = useState(false);
 
-  const [honeypot, setHoneypot] = useState('');
-  const [captcha, setCaptcha] = useState<Captcha | null>(null);
-  const [captchaAnswer, setCaptchaAnswer] = useState('');
+  const guard = usePublicFormGuard();
   const [status, setStatus] = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const fetchedRef = useRef(false);
 
   const nameId = useId();
   const emailId = useId();
@@ -90,32 +88,6 @@ export default function JoinAsPlayerForm({
   const levelId = useId();
   const captchaId = useId();
   const statusId = useId();
-
-  async function ensureCaptcha() {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    try {
-      const res = await fetch('/api/captcha');
-      const data = await res.json();
-      if (res.ok) setCaptcha({ token: data.token, question: data.question });
-    } catch {
-      // Signalé à la soumission si toujours absent.
-      fetchedRef.current = false;
-    }
-  }
-
-  async function refreshCaptcha() {
-    try {
-      const res = await fetch('/api/captcha');
-      const data = await res.json();
-      if (res.ok) {
-        setCaptcha({ token: data.token, question: data.question });
-        setCaptchaAnswer('');
-      }
-    } catch {
-      /* noop */
-    }
-  }
 
   function toggleRole(role: FreePlayerRole) {
     setRoles((prev) =>
@@ -157,16 +129,14 @@ export default function JoinAsPlayerForm({
           note: note.trim() || undefined,
           contactDiscord: contactDiscord.trim() || undefined,
           shareAcrossTenants,
-          honeypot,
-          captchaToken: captcha?.token,
-          captchaAnswer,
+          ...guard.payload,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) {
         // Le token de captcha est à usage unique : en redemander un permet de
         // réessayer sans recharger la page.
-        await refreshCaptcha();
+        await guard.refresh();
         throw new Error(data?.error || t.errorGeneric);
       }
       setStatus('success');
@@ -234,7 +204,7 @@ export default function JoinAsPlayerForm({
   return (
     <form
       onSubmit={handleSubmit}
-      onFocus={ensureCaptcha}
+      onFocus={guard.ensure}
       className="space-y-5 rounded-2xl border border-white/10 bg-[var(--bg-elevated)] p-6"
       noValidate
     >
@@ -382,40 +352,23 @@ export default function JoinAsPlayerForm({
         </span>
       </label>
 
-      {/* Honeypot : hors écran, invisible aux lecteurs d'écran, non tabulable. */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          left: '-9999px',
-          width: '1px',
-          height: '1px',
-          overflow: 'hidden',
-        }}
-      >
-        <label>
-          {t.honeypotLabel}
-          <input
-            type="text"
-            tabIndex={-1}
-            autoComplete="off"
-            value={honeypot}
-            onChange={(e) => setHoneypot(e.target.value)}
-          />
-        </label>
-      </div>
+      <HoneypotField
+        label={t.honeypotLabel}
+        value={guard.honeypot}
+        onChange={guard.setHoneypot}
+      />
 
-      {captcha && (
+      {guard.question && (
         <div>
           <label htmlFor={captchaId} className={labelClass}>
-            {fmt(t.captchaLabel, { question: captcha.question })}
+            {fmt(t.captchaLabel, { question: guard.question })}
           </label>
           <input
             id={captchaId}
             type="text"
             inputMode="numeric"
-            value={captchaAnswer}
-            onChange={(e) => setCaptchaAnswer(e.target.value)}
+            value={guard.captchaAnswer}
+            onChange={(e) => guard.setCaptchaAnswer(e.target.value)}
             placeholder={t.captchaPlaceholder}
             className={`${inputClass} mt-1`}
             required

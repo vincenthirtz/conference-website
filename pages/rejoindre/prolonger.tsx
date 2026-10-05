@@ -1,37 +1,49 @@
-// pages/rejoindre/retrait.tsx
+// pages/rejoindre/prolonger.tsx
 //
-// Page de retrait d'une fiche « joueuse libre ». Cible du lien envoyé par email
-// à l'inscription (utils/freePlayerRemoval.ts).
+// « Je cherche toujours » — prolonge une fiche « joueuse libre » de 60 jours.
+// Cible du bouton de la relance envoyée avant péremption
+// (cron free-players-expiry), et du renvoi de liens.
 //
-// Le retrait exige un CLIC : la page ne supprime rien au chargement. Les
-// clients mail et les antivirus pré-visitent les liens d'un email — un retrait
-// déclenché au GET ferait disparaître des fiches sans que personne n'ait
-// décidé quoi que ce soit.
+// Comme pour le retrait, la prolongation exige un CLIC : les clients mail et
+// les antivirus pré-visitent les liens d'un email. Prolonger au chargement
+// garderait en ligne des fiches dont la titulaire n'a rien décidé.
 //
-// `noindex` : la page n'a de sens qu'avec un token, et une URL portant un token
-// n'a rien à faire dans un index de moteur de recherche.
+// `noindex` : une URL qui porte un token n'a rien à faire dans un index.
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format as fmt } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 import nsRejoindrePage from '@/lib/i18n/locales/fr/rejoindrePage';
+
+type Info = { name: string | null; expiresAt: string | null; expired: boolean };
 
 type State =
   | { kind: 'loading' }
-  | { kind: 'ready'; name: string | null }
-  | { kind: 'removing'; name: string | null }
-  | { kind: 'done' }
+  | ({ kind: 'ready' } & Info)
+  | ({ kind: 'renewing' } & Info)
+  | { kind: 'done'; expiresAt: string | null }
   | { kind: 'invalid' }
-  | { kind: 'error'; name: string | null };
+  | ({ kind: 'error' } & Info);
 
-function RetraitPage() {
+function ProlongerPage() {
   const t = useT(nsRejoindrePage);
+  const locale = useLocale();
   const router = useRouter();
   const token =
     typeof router.query.token === 'string' ? router.query.token : '';
   const [state, setState] = useState<State>({ kind: 'loading' });
+
+  const formatDate = (iso: string | null) =>
+    iso
+      ? new Date(iso).toLocaleDateString(locale, {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })
+      : '';
 
   useEffect(() => {
     // `router.isReady` : sur une page statique, `query` est vide au premier
@@ -45,7 +57,7 @@ function RetraitPage() {
     (async () => {
       try {
         const res = await fetch(
-          `/api/public/free-players/remove?token=${encodeURIComponent(token)}`
+          `/api/public/free-players/renew?token=${encodeURIComponent(token)}`
         );
         if (cancelled) return;
         if (!res.ok) {
@@ -53,7 +65,12 @@ function RetraitPage() {
           return;
         }
         const data = await res.json();
-        setState({ kind: 'ready', name: data?.name ?? null });
+        setState({
+          kind: 'ready',
+          name: data?.name ?? null,
+          expiresAt: data?.expiresAt ?? null,
+          expired: data?.expired === true,
+        });
       } catch {
         if (!cancelled) setState({ kind: 'invalid' });
       }
@@ -63,19 +80,25 @@ function RetraitPage() {
     };
   }, [router.isReady, token]);
 
-  const handleRemove = useCallback(async () => {
-    const name = 'name' in state ? state.name : null;
-    setState({ kind: 'removing', name });
+  const handleRenew = useCallback(async () => {
+    if (state.kind !== 'ready' && state.kind !== 'error') return;
+    const info: Info = {
+      name: state.name,
+      expiresAt: state.expiresAt,
+      expired: state.expired,
+    };
+    setState({ kind: 'renewing', ...info });
     try {
-      const res = await fetch('/api/public/free-players/remove', {
+      const res = await fetch('/api/public/free-players/renew', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setState({ kind: 'done' });
+      const data = await res.json();
+      setState({ kind: 'done', expiresAt: data?.expiresAt ?? null });
     } catch {
-      setState({ kind: 'error', name });
+      setState({ kind: 'error', ...info });
     }
   }, [state, token]);
 
@@ -85,6 +108,7 @@ function RetraitPage() {
     'mt-6 w-full rounded-lg bg-gradient-to-r from-[var(--color-violet)] to-[var(--color-green)] px-4 py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
   const linkBtn =
     'mt-4 inline-block text-sm font-semibold text-[var(--color-green-light)] underline underline-offset-2';
+  const removeHref = `/rejoindre/retrait?token=${encodeURIComponent(token)}`;
 
   return (
     <div className="min-h-screen bg-neutral-950 px-6 py-32 text-white">
@@ -97,20 +121,19 @@ function RetraitPage() {
       {state.kind === 'invalid' && (
         <div className={card} role="alert">
           <h1 className="text-xl font-bold">{t.removeInvalidTitle}</h1>
-          <p className="mt-3 text-sm text-gray-300">{t.removeInvalidBody}</p>
-          <Link href="/rejoindre#lien-perdu" className={`${linkBtn} mr-4`}>
-            {t.removeLostLink}
-          </Link>
-          <Link href="/contact" className={linkBtn}>
-            {t.removeContactStaff}
+          <p className="mt-3 text-sm text-gray-300">{t.renewInvalidBody}</p>
+          <Link href="/rejoindre" className={linkBtn}>
+            {t.removeBackCta}
           </Link>
         </div>
       )}
 
       {state.kind === 'done' && (
         <div className={card} role="status">
-          <h1 className="text-xl font-bold">{t.removeDoneTitle}</h1>
-          <p className="mt-3 text-sm text-gray-300">{t.removeDoneBody}</p>
+          <h1 className="text-xl font-bold">{t.renewDoneTitle}</h1>
+          <p className="mt-3 text-sm text-gray-300">
+            {fmt(t.renewDoneBody, { date: formatDate(state.expiresAt) })}
+          </p>
           <Link href="/rejoindre" className={linkBtn}>
             {t.removeBackCta}
           </Link>
@@ -118,34 +141,41 @@ function RetraitPage() {
       )}
 
       {(state.kind === 'ready' ||
-        state.kind === 'removing' ||
+        state.kind === 'renewing' ||
         state.kind === 'error') && (
         <div className={card}>
-          <h1 className="text-xl font-bold">{t.removeTitle}</h1>
+          <h1 className="text-xl font-bold">{t.renewTitle}</h1>
           {state.name && (
             <p className="mt-2 text-sm text-gray-400">
-              {fmt(t.removeFor, { name: state.name })}
+              {fmt(t.renewFor, { name: state.name })}
             </p>
           )}
-          <p className="mt-3 text-sm text-gray-300">{t.removeIntro}</p>
+          <p className="mt-3 text-sm text-gray-300">
+            {state.expired
+              ? t.renewExpired
+              : state.expiresAt
+                ? fmt(t.renewExpiresOn, { date: formatDate(state.expiresAt) })
+                : null}
+          </p>
+          <p className="mt-3 text-sm text-gray-300">{t.renewIntro}</p>
 
           {state.kind === 'error' && (
             <p role="alert" className="mt-4 text-sm text-red-300">
-              {t.removeError}
+              {t.renewError}
             </p>
           )}
 
           <button
             type="button"
-            onClick={handleRemove}
-            disabled={state.kind === 'removing'}
+            onClick={handleRenew}
+            disabled={state.kind === 'renewing'}
             className={primaryBtn}
           >
-            {state.kind === 'removing' ? t.removeWorking : t.removeConfirm}
+            {state.kind === 'renewing' ? t.renewWorking : t.renewConfirm}
           </button>
 
-          <Link href="/rejoindre" className={linkBtn}>
-            {t.removeBackCta}
+          <Link href={removeHref} className={linkBtn}>
+            {t.renewRemoveInstead}
           </Link>
         </div>
       )}
@@ -153,16 +183,15 @@ function RetraitPage() {
   );
 }
 
-const retraitSeo: SeoProps = {
+const prolongerSeo: SeoProps = {
   title: {
     // DefaultSeo ajoute déjà « | <nom du site> » : pas de suffixe ici.
-    fr: 'Retirer ma fiche',
-    en: 'Remove my profile',
+    fr: 'Garder ma fiche en ligne',
+    en: 'Keep my profile online',
   },
-  // Une URL qui porte un token n'a rien à faire dans un index.
   noindex: true,
 };
 
-RetraitPage.seo = retraitSeo;
+ProlongerPage.seo = prolongerSeo;
 
-export default RetraitPage;
+export default ProlongerPage;

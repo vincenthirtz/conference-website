@@ -1,0 +1,39 @@
+post:
+  tags:
+    - bot/free-players
+  summary: Le bot indique ou il a annonce une fiche "joueuse libre".
+  description: >-
+    L'annonce Discord d'une inscription web survivait a la fiche (retrait,
+    peremption, suppression staff). Le bot ne tient pas d'etat : le site garde
+    donc l'ancrage (salon + message) et demandera la suppression via l'event
+    free_player.withdrawn quand la fiche s'en ira.
+
+
+    404 si la fiche n'existe plus (retiree entre l'inscription et l'annonce) :
+    le bot supprime alors aussitot le message qu'il vient de poster. Fiches de
+    provenance web seulement.
+  operationId: botAnchorFreePlayerAnnouncement
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: bot.free-players/announcement
+  responses:
+    '200':
+      description: Ancrage enregistre.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      description: Aucune fiche "joueuse libre" web ne correspond (code FREE_PLAYER_NOT_FOUND).
+    '429':
+      $ref: '#/components/responses/RateLimited'

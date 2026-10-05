@@ -23,9 +23,17 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { verifyFreePlayerRemovalToken } from '@/utils/freePlayerRemoval';
+import {
+  ANNOUNCEMENT_SELECT,
+  requestAnnouncementWithdrawal,
+  type AnnouncedRow,
+} from '@/utils/freePlayers/announcement';
 import { logger } from '@/utils/logger';
 
-type Row = { id: string; display_name: string | null; source: string | null };
+type Row = AnnouncedRow & {
+  display_name: string | null;
+  source: string | null;
+};
 
 function readToken(req: NextApiRequest): string {
   const raw = req.method === 'GET' ? req.query.token : (req.body ?? {}).token;
@@ -43,7 +51,7 @@ const INVALID = 'Ce lien de retrait n’est plus valide.';
 async function loadRow(id: string): Promise<Row | null> {
   const { data, error } = await supabaseAdmin
     .from('free_players')
-    .select('id, display_name, source')
+    .select(`${ANNOUNCEMENT_SELECT}, display_name, source`)
     .eq('id', id)
     .maybeSingle();
   if (error) {
@@ -108,6 +116,10 @@ export default async function handler(
         .status(500)
         .json({ error: 'Le retrait a échoué. Réessaie dans un instant.' });
     }
+
+    // L'annonce Discord part avec la fiche : sans ça, le salon continuait de
+    // la présenter comme disponible. Jamais bloquant pour le retrait.
+    await requestAnnouncementWithdrawal(row, 'removed');
 
     logger.info('[free-players/remove] fiche retirée par sa titulaire');
     return res.status(200).json({ success: true });

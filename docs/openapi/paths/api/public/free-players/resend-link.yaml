@@ -1,0 +1,41 @@
+post:
+  tags:
+    - public/misc
+  summary: Renvoie les liens (retrait, prolongation) d'une fiche "joueuse libre".
+  description: >
+    "J'ai perdu mon lien." L'email part UNIQUEMENT a l'adresse de la fiche, et
+    la reponse est identique que la fiche existe ou non (pas d'oracle).
+    Honeypot + captcha HMAC + rate-limit par IP.
+  operationId: resendPublicFreePlayerLinks
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [email]
+          properties:
+            email:
+              type: string
+              format: email
+            honeypot:
+              type: string
+            captchaToken:
+              type: string
+            captchaAnswer:
+              type: string
+  responses:
+    '200':
+      description: 'Toujours `{ success: true }`, fiche ou non.'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '429':
+      $ref: '#/components/responses/RateLimited'

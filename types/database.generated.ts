@@ -1999,10 +1999,13 @@ export type Database = {
           availability: string | null
           contact_discord: string | null
           contact_email: string | null
+          discord_announce_channel_id: string | null
+          discord_announce_message_id: string | null
           discord_user_id: string | null
           discord_username: string | null
           display_name: string | null
           expires_at: string | null
+          expiry_reminder_sent_at: string | null
           id: string
           level: string | null
           marked_at: string
@@ -2018,10 +2021,13 @@ export type Database = {
           availability?: string | null
           contact_discord?: string | null
           contact_email?: string | null
+          discord_announce_channel_id?: string | null
+          discord_announce_message_id?: string | null
           discord_user_id?: string | null
           discord_username?: string | null
           display_name?: string | null
           expires_at?: string | null
+          expiry_reminder_sent_at?: string | null
           id?: string
           level?: string | null
           marked_at?: string
@@ -2037,10 +2043,13 @@ export type Database = {
           availability?: string | null
           contact_discord?: string | null
           contact_email?: string | null
+          discord_announce_channel_id?: string | null
+          discord_announce_message_id?: string | null
           discord_user_id?: string | null
           discord_username?: string | null
           display_name?: string | null
           expires_at?: string | null
+          expiry_reminder_sent_at?: string | null
           id?: string
           level?: string | null
           marked_at?: string

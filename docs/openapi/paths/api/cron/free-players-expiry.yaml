@@ -1,0 +1,47 @@
+get:
+  tags:
+    - cron
+  summary: Fin de vie des fiches "joueuse libre" web (relance + annonces Discord).
+  operationId: cronFreePlayersExpiryGet
+  description: |
+    Netlify scheduled function (quotidienne, 09:15 UTC). Deux passes :
+
+    1. Relance email UNIQUE des fiches web qui expirent dans moins de 7 jours
+       ("je cherche toujours" / "retirer ma fiche"). Dedupliquee par
+       `free_players.expiry_reminder_sent_at`, pose avant l'envoi par un
+       update conditionnel.
+    2. Retrait des annonces Discord des fiches expirees : emet
+       `free_player.withdrawn` puis efface l'ancrage. La fiche n'est pas purgee.
+
+    Query : `?dry_run=1` compte les candidates sans rien envoyer ni ecrire.
+
+    Auth : `Authorization: Bearer <CRON_SECRET>` OU `?secret=<CRON_SECRET>`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: '`{ reminders: { candidates, sent }, announcements: { candidates, withdrawn } }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+post:
+  tags:
+    - cron
+  summary: Fin de vie des fiches "joueuse libre" web (identique au GET).
+  operationId: cronFreePlayersExpiryPost
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Voir le GET.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'

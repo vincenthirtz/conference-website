@@ -91,6 +91,10 @@ export const BOT_EVENT_NAMES = [
   // site. Sert à alerter les capitaines dont le roster est incomplet — sans
   // ça, l'inscription attend que quelqu'un vienne la lire.
   'free_player.registered',
+  // L'annonce Discord de la précédente doit disparaître avec la fiche
+  // (retrait, péremption, suppression staff). Sans lui, le salon continuait
+  // de présenter comme disponibles des joueuses parties depuis des semaines.
+  'free_player.withdrawn',
   // Le miroir du précédent : une ÉQUIPE cherche une joueuse. Annoncé dans un
   // salon distinct (#recherche-joueuse), parce que les deux publics ne sont pas
   // les mêmes — une joueuse sans équipe ne suit pas le salon où les capitaines

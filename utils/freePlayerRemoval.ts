@@ -108,13 +108,31 @@ export function verifyFreePlayerRemovalToken(token: string): string | null {
   }
 }
 
-/** URL publique du retrait, telle qu'envoyée dans l'email de confirmation. */
-export function buildFreePlayerRemovalUrl(freePlayerId: string): string {
-  const origin = (
+function siteOrigin(): string {
+  return (
     process.env.SITE_URL ||
     process.env.NEXT_PUBLIC_SITE_URL ||
     'https://owwomenscup.fr'
   ).replace(/\/+$/, '');
+}
+
+/** URL publique du retrait, telle qu'envoyée dans l'email de confirmation. */
+export function buildFreePlayerRemovalUrl(freePlayerId: string): string {
   const token = generateFreePlayerRemovalToken(freePlayerId);
-  return `${origin}/rejoindre/retrait?token=${encodeURIComponent(token)}`;
+  return `${siteOrigin()}/rejoindre/retrait?token=${encodeURIComponent(token)}`;
+}
+
+/**
+ * URL de prolongation (« je cherche toujours »), envoyée dans la relance avant
+ * péremption.
+ *
+ * MÊME TOKEN que le retrait, et c'est voulu : les deux gestes s'appuient sur la
+ * même preuve (l'accès à la boîte) et visent la même fiche. Une famille de
+ * tokens séparée protège d'un MÉLANGE entre usages de pouvoirs différents —
+ * désabonnement contre retrait. Ici, qui peut retirer la fiche peut à plus forte
+ * raison la garder en ligne : prolonger n'ouvre aucun pouvoir nouveau.
+ */
+export function buildFreePlayerRenewUrl(freePlayerId: string): string {
+  const token = generateFreePlayerRemovalToken(freePlayerId);
+  return `${siteOrigin()}/rejoindre/prolonger?token=${encodeURIComponent(token)}`;
 }

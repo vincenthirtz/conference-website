@@ -1406,6 +1406,120 @@ export function sendFreePlayerPublishedEmail(opts: {
   });
 }
 
+// ─── Fiche « joueuse libre » : relance avant péremption ───────
+//
+// Envoyée par le cron `free-players-expiry` quelques jours avant l'échéance.
+// Une fiche expirait jusqu'ici en silence : la joueuse disparaissait de la
+// liste en se croyant toujours visible. Deux boutons, dans cet ordre, parce
+// que c'est l'ordre des cas : la plupart cherchent encore ; celles qui ont
+// trouvé ont besoin de la porte de sortie. UNE relance par cycle de 60 jours
+// (`expiry_reminder_sent_at`) — au-delà, ce serait du harcèlement.
+
+const FREE_PLAYER_EXPIRY_SUBJECT =
+  'Ta fiche expire bientôt — OW Women’s Cup';
+
+function formatFrDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'Europe/Paris',
+  });
+}
+
+/** HTML de la relance « ta fiche expire bientôt » : prolonger ou retirer. */
+export function buildFreePlayerExpiryReminderEmailHtml(opts: {
+  displayName: string;
+  expiresAt: string;
+  renewUrl: string;
+  removeUrl: string;
+}): string {
+  return emailLayout(`
+    ${gradientBar()}
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Tu cherches toujours une &eacute;quipe&nbsp;?</h1>
+    <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
+      Salut <strong style="color:#ffffff;">${escapeHtml(opts.displayName)}</strong>, ta fiche de joueuse libre
+      expire le <strong style="color:#ffffff;">${escapeHtml(formatFrDate(opts.expiresAt))}</strong>. Pass&eacute;e
+      cette date, les capitaines ne la verront plus.
+    </p>
+    <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
+      Si tu cherches encore, un clic suffit pour la garder en ligne 60&nbsp;jours de plus&nbsp;:
+    </p>
+    ${ctaButton(opts.renewUrl, 'Je cherche toujours')}
+    <p style="margin:24px 0 0;font-size:15px;color:#C6BED9;line-height:1.6;">
+      Tu as trouv&eacute; une &eacute;quipe&nbsp;? Bravo&nbsp;! Retire ta fiche pour que les capitaines ne t&apos;&eacute;crivent plus&nbsp;:
+      <a href="${escapeHtml(opts.removeUrl)}" style="color:#9081B0;text-decoration:underline;">retirer ma fiche</a>.
+    </p>
+    <p style="margin:16px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
+      Sans r&eacute;ponse de ta part, la fiche dispara&icirc;t d&apos;elle-m&ecirc;me &agrave; l&apos;&eacute;ch&eacute;ance. C&apos;est le seul rappel que tu recevras.
+    </p>
+  `);
+}
+
+export function sendFreePlayerExpiryReminderEmail(opts: {
+  to: string;
+  displayName: string;
+  expiresAt: string;
+  renewUrl: string;
+  removeUrl: string;
+  tenantId?: string | null;
+}): Promise<SendEmailResult> {
+  return sendEmail({
+    tenantId: opts.tenantId,
+    to: opts.to,
+    subject: FREE_PLAYER_EXPIRY_SUBJECT,
+    tags: ['free-player-expiry-reminder'],
+    html: buildFreePlayerExpiryReminderEmailHtml(opts),
+  });
+}
+
+// ─── Fiche « joueuse libre » : renvoi des liens ───────────────
+//
+// « J'ai perdu l'email. » Le lien de retrait n'existait QUE dans l'email de
+// confirmation ; le perdre obligeait à écrire au staff. Ce renvoi ne part
+// qu'à l'adresse de la fiche — le posséder reste la même preuve qu'à
+// l'inscription.
+
+const FREE_PLAYER_LINKS_SUBJECT = 'Les liens de ta fiche — OW Women’s Cup';
+
+/** HTML du renvoi : prolonger (si elle cherche encore) ou retirer sa fiche. */
+export function buildFreePlayerLinksEmailHtml(opts: {
+  displayName: string;
+  renewUrl: string;
+  removeUrl: string;
+}): string {
+  return emailLayout(`
+    ${gradientBar()}
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Les liens de ta fiche</h1>
+    <p style="margin:0 0 20px;font-size:15px;color:#C6BED9;line-height:1.6;">
+      Salut <strong style="color:#ffffff;">${escapeHtml(opts.displayName)}</strong>, tu as demand&eacute; &agrave; recevoir
+      de nouveau les liens de ta fiche de joueuse libre. Tu as trouv&eacute; une &eacute;quipe, ou tu changes d&apos;avis&nbsp;?
+    </p>
+    ${ctaButton(opts.removeUrl, 'Retirer ma fiche')}
+    <p style="margin:24px 0 0;font-size:15px;color:#C6BED9;line-height:1.6;">
+      Tu cherches toujours&nbsp;? <a href="${escapeHtml(opts.renewUrl)}" style="color:#9081B0;text-decoration:underline;">Garde ta fiche en ligne 60&nbsp;jours de plus</a>.
+    </p>
+    <p style="margin:16px 0 0;font-size:12px;color:#675788;line-height:1.5;text-align:center;">
+      Ce n&apos;est pas toi&nbsp;? Ignore cet email&nbsp;: rien ne change sans clic de ta part.
+    </p>
+  `);
+}
+
+export function sendFreePlayerLinksEmail(opts: {
+  to: string;
+  displayName: string;
+  renewUrl: string;
+  removeUrl: string;
+  tenantId?: string | null;
+}): Promise<SendEmailResult> {
+  return sendEmail({
+    tenantId: opts.tenantId,
+    to: opts.to,
+    subject: FREE_PLAYER_LINKS_SUBJECT,
+    tags: ['free-player-links'],
+    html: buildFreePlayerLinksEmailHtml(opts),
+  });
+}
+
 // ─── Annonce « une équipe cherche une joueuse » publiée ───────
 //
 // Miroir de l'email ci-dessus, pour le marché inverse. Mêmes rôles, même ordre

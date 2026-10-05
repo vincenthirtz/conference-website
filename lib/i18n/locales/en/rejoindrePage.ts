@@ -131,4 +131,34 @@ export default {
   removeContactStaff: 'Contact the staff',
   removeLoading: 'Checking the link…',
   removeError: 'Removal failed. Please try again in a moment.',
+
+  // --- Renewal (/rejoindre/prolonger) -------------------------------------
+  renewTitle: "I'm still looking for a team",
+  renewIntro:
+    'Your profile stays online for 60 more days: captains can still see it and contact you.',
+  renewFor: "{name}'s profile",
+  renewExpiresOn: 'It currently expires on {date}.',
+  renewExpired:
+    'Your profile has expired: it no longer appears in the list. Renewing it puts it back online.',
+  renewConfirm: 'Yes, keep my profile online',
+  renewWorking: 'Renewing…',
+  renewDoneTitle: 'Got it',
+  renewDoneBody:
+    "Your profile stays online until {date}. We'll remind you again before it expires.",
+  renewRemoveInstead: 'Found a team? Remove your profile instead',
+  renewError: 'Renewal failed. Please try again in a moment.',
+  renewInvalidBody:
+    'Your profile may have been removed. You can add yourself again in two minutes.',
+
+  // --- Lost link (/rejoindre#lien-perdu) ----------------------------------
+  resendTitle: 'Lost the link to your profile?',
+  resendIntro:
+    "Enter your profile's email address: if it exists, we'll send you the links to remove or renew it.",
+  resendEmailLabel: "Your profile's email address",
+  resendSubmit: 'Resend the link',
+  resendWorking: 'Sending…',
+  resendDone:
+    'If a profile exists for this address, the link is on its way. Remember to check your spam folder.',
+  resendError: 'Sending failed. Please try again in a moment.',
+  removeLostLink: 'Get a new link',
 };
