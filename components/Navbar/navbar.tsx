@@ -307,9 +307,13 @@ function Navbar(): JSX.Element {
             )}
           </div>
 
+          {/* Le burger appartient à la nav publique : quand une barre d'espace
+              la remplace, celle-ci a le sien (AdminShell, PlayerTopBar).
+              Masqué sur `showPlayerBar` seul, il restait sur /admin — deux
+              menus mobiles empilés. */}
           <div
             data-test="nav-Hamberger"
-            className={`z-[99] min-[1119px]:hidden ${showPlayerBar ? 'hidden' : ''}`}
+            className={`z-[99] min-[1119px]:hidden ${hideMarketingNav ? 'hidden' : ''}`}
           >
             <button
               type="button"
