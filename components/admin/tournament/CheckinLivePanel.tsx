@@ -1,14 +1,27 @@
 // components/admin/tournament/CheckinLivePanel.tsx
 //
 // Live Check-In Console — large-display variant used during check-in J-1 / J-0.
-// Polling 10s, big numbers, one "Relance Discord" button per un-checked team.
+// Polling 10s (onglet visible seulement), big numbers, one "Relance Discord"
+// button per un-checked team, plus « Pointer pour l'équipe » (rattrapage staff,
+// motif obligatoire) pour qui a la permission d'arbitrer.
 // Extracted from the former /admin/tournament/[id]/checkin/live page; now the
 // `live` sub-tab of the merged check-in route.
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type FormEvent,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useRouter } from 'next/router';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
+import { useStaffSession } from '@/hooks/useStaffSession';
+import { useVisiblePoll } from '@/hooks/useVisiblePoll';
+import Modal from '@/components/ui/Modal';
 import {
   tournamentMatchUrls,
   tournamentUrls,
@@ -21,8 +34,12 @@ import Chip from '@/features/admin/_shared/ui/Chip';
 import StatTile from '@/features/admin/_shared/ui/StatTile';
 import {
   rubanCardPadded,
+  rubanErr,
   rubanErrBox,
   rubanFaint,
+  rubanFormLabel,
+  rubanHelp,
+  rubanInput,
   rubanMuted,
 } from '@/features/admin/_shared/ui/ruban';
 
@@ -49,6 +66,16 @@ const POLL_MS = 10_000;
 // par défaut : ce qui mérite l'oeil du staff pendant le check-in J-0.
 const PAST_WINDOW_MIN = 30;
 const FUTURE_WINDOW_MIN = 120;
+// Mêmes bornes que le service (features/admin/matches/service/checkinStaff.ts).
+const STAFF_REASON_MIN = 3;
+const STAFF_REASON_MAX = 500;
+
+/** Équipe visée par la modale « Pointer pour l'équipe ». */
+type StaffCheckinTarget = {
+  matchId: string;
+  side: TeamSide;
+  teamName: string;
+};
 
 export default function CheckinLivePanel() {
   const t = useAdminT(nsAdminTournamentCheckinLive);
@@ -61,6 +88,14 @@ export default function CheckinLivePanel() {
   const { mutateJson } = useIdempotentMutation({
     autoRegenerateOnSuccess: true,
   });
+  // Instance distincte : une clé par intention de pointage (régénérée à
+  // l'ouverture de la modale), sans interférer avec les relances.
+  const staffCheckinMutation = useIdempotentMutation({
+    autoRegenerateOnSuccess: true,
+  });
+  // Bouton visible pour qui peut arbitrer ; la route reste la vraie garde.
+  const { staffPermissions } = useStaffSession();
+  const canStaffCheckin = staffPermissions.includes('arbitrate_matches');
 
   const [rows, setRows] = useState<CheckinRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,6 +103,9 @@ export default function CheckinLivePanel() {
   const [nudging, setNudging] = useState<Set<string>>(new Set());
   const [lastNudgeAt, setLastNudgeAt] = useState<Date | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
+  const [staffTarget, setStaffTarget] = useState<StaffCheckinTarget | null>(
+    null
+  );
 
   const lastFetchRef = useRef<number>(0);
 
@@ -93,16 +131,14 @@ export default function CheckinLivePanel() {
     }
   }, [adminFetchJson, tournamentId, t]);
 
-  // Auto-poll. Le tick horloge 1s n'est plus ici : il est confine a la feuille
-  // <LiveClock> (entete), pour ne pas re-rendre metriques + tableau chaque
-  // seconde.
+  // Premier chargement (et rechargement si le tournoi change), puis sondage
+  // 10 s : rien ne part onglet caché, relecture au retour sur l'onglet. Le
+  // tick horloge 1s n'est plus ici : il est confine a la feuille <LiveClock>
+  // (entete), pour ne pas re-rendre metriques + tableau chaque seconde.
   useEffect(() => {
-    fetchData();
-    const poll = setInterval(fetchData, POLL_MS);
-    return () => {
-      clearInterval(poll);
-    };
+    void fetchData();
   }, [fetchData]);
+  useVisiblePoll(() => void fetchData(), POLL_MS);
 
   const windowedRows = useMemo(() => {
     return rows
@@ -188,6 +224,55 @@ export default function CheckinLivePanel() {
     }
   }
 
+  function openStaffCheckin(target: StaffCheckinTarget) {
+    staffCheckinMutation.regenerate();
+    setStaffTarget(target);
+  }
+
+  async function submitStaffCheckin(reason: string): Promise<boolean> {
+    if (!staffTarget) return false;
+    const { matchId, side, teamName } = staffTarget;
+    try {
+      const json = await staffCheckinMutation.mutateJson<{
+        success: boolean;
+        checkedInAt: string;
+        alreadyCheckedIn: boolean;
+      }>(tournamentMatchUrls.checkinStaff(matchId), {
+        method: 'POST',
+        body: JSON.stringify({ teamSide: side, reason }),
+      });
+      // Reflet immédiat, sans attendre le prochain tour de sondage.
+      setRows((prev) =>
+        prev.map((r) => {
+          if (r.matchId !== matchId) return r;
+          return side === 1
+            ? { ...r, team1: { ...r.team1, checkedInAt: json.checkedInAt } }
+            : { ...r, team2: { ...r.team2, checkedInAt: json.checkedInAt } };
+        })
+      );
+      addToast(
+        format(
+          json.alreadyCheckedIn ? t.staffCheckinAlready : t.staffCheckinDone,
+          { team: teamName }
+        ),
+        json.alreadyCheckedIn ? 'info' : 'success'
+      );
+      setStaffTarget(null);
+      void fetchData();
+      return true;
+    } catch (err) {
+      const e = err as AdminFetchError;
+      const payloadError =
+        typeof e.payload === 'object' && e.payload && 'error' in e.payload
+          ? String((e.payload as { error: string }).error)
+          : null;
+      addToast(payloadError || e.message || t.staffCheckinError, 'error');
+      // L'état a pu bouger (forfait tombé entre-temps) : on relit.
+      void fetchData();
+      return false;
+    }
+  }
+
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
@@ -267,10 +352,106 @@ export default function CheckinLivePanel() {
             now={now}
             onNudge={nudge}
             nudgingSet={nudging}
+            onStaffCheckin={canStaffCheckin ? openStaffCheckin : null}
           />
         ))}
       </div>
+
+      <StaffCheckinModal
+        target={staffTarget}
+        onClose={() => setStaffTarget(null)}
+        onSubmit={submitStaffCheckin}
+      />
     </>
+  );
+}
+
+function StaffCheckinModal({
+  target,
+  onClose,
+  onSubmit,
+}: {
+  target: StaffCheckinTarget | null;
+  onClose: () => void;
+  onSubmit: (reason: string) => Promise<boolean>;
+}) {
+  const t = useAdminT(nsAdminTournamentCheckinLive);
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [touched, setTouched] = useState(false);
+
+  // Champ vierge à chaque ouverture (autre équipe, autre motif).
+  const targetKey = target ? `${target.matchId}:${target.side}` : null;
+  useEffect(() => {
+    if (targetKey) {
+      setReason('');
+      setTouched(false);
+      setSubmitting(false);
+    }
+  }, [targetKey]);
+
+  const trimmed = reason.trim();
+  const tooShort = trimmed.length < STAFF_REASON_MIN;
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setTouched(true);
+    if (tooShort || submitting) return;
+    setSubmitting(true);
+    const ok = await onSubmit(trimmed);
+    if (!ok) setSubmitting(false);
+  }
+
+  return (
+    <Modal
+      open={!!target}
+      onClose={submitting ? () => {} : onClose}
+      size="md"
+      title={format(t.staffCheckinTitle, { team: target?.teamName ?? '—' })}
+      subtitle={t.staffCheckinHelp}
+      dataTestId="staff-checkin-modal"
+      footer={
+        <>
+          <AdminButton variant="ghost" onClick={onClose} disabled={submitting}>
+            {t.staffCheckinCancel}
+          </AdminButton>
+          <AdminButton
+            type="submit"
+            form="staff-checkin-form"
+            disabled={submitting || tooShort}
+          >
+            {submitting ? t.staffCheckinSubmitting : t.staffCheckinConfirm}
+          </AdminButton>
+        </>
+      }
+    >
+      <form id="staff-checkin-form" onSubmit={handleSubmit}>
+        <label htmlFor="staff-checkin-reason" className={rubanFormLabel}>
+          {t.staffCheckinReasonLabel}
+        </label>
+        <textarea
+          id="staff-checkin-reason"
+          className={rubanInput}
+          rows={3}
+          maxLength={STAFF_REASON_MAX}
+          required
+          value={reason}
+          placeholder={t.staffCheckinReasonPlaceholder}
+          onChange={(e) => setReason(e.target.value)}
+          onBlur={() => setTouched(true)}
+          disabled={submitting}
+        />
+        {touched && tooShort ? (
+          <p className={`mt-1 text-xs ${rubanErr}`}>
+            {format(t.staffCheckinReasonTooShort, { min: STAFF_REASON_MIN })}
+          </p>
+        ) : (
+          <p className={`mt-1 ${rubanHelp}`}>
+            {trimmed.length} / {STAFF_REASON_MAX}
+          </p>
+        )}
+      </form>
+    </Modal>
   );
 }
 
@@ -291,11 +472,13 @@ function MatchRow({
   now,
   onNudge,
   nudgingSet,
+  onStaffCheckin,
 }: {
   row: CheckinRow;
   now: number;
   onNudge: (matchId: string, side: TeamSide | 'both') => void;
   nudgingSet: Set<string>;
+  onStaffCheckin: ((target: StaffCheckinTarget) => void) | null;
 }) {
   const t = useAdminT(nsAdminTournamentCheckinLive);
   const scheduledMs = row.scheduledAt
@@ -354,6 +537,8 @@ function MatchRow({
           matchId={row.matchId}
           onNudge={onNudge}
           loading={nudgingSet.has(`${row.matchId}:1`)}
+          forfeitProcessed={!!row.forfeitProcessedAt}
+          onStaffCheckin={onStaffCheckin}
         />
         <TeamLine
           side={2}
@@ -362,6 +547,8 @@ function MatchRow({
           matchId={row.matchId}
           onNudge={onNudge}
           loading={nudgingSet.has(`${row.matchId}:2`)}
+          forfeitProcessed={!!row.forfeitProcessedAt}
+          onStaffCheckin={onStaffCheckin}
         />
       </div>
     </div>
@@ -375,6 +562,8 @@ function TeamLine({
   matchId,
   onNudge,
   loading,
+  forfeitProcessed,
+  onStaffCheckin,
 }: {
   side: TeamSide;
   name: string | null;
@@ -382,6 +571,8 @@ function TeamLine({
   matchId: string;
   onNudge: (matchId: string, side: TeamSide | 'both') => void;
   loading: boolean;
+  forfeitProcessed: boolean;
+  onStaffCheckin: ((target: StaffCheckinTarget) => void) | null;
 }) {
   const t = useAdminT(nsAdminTournamentCheckinLive);
   const checkedIn = !!checkedInAt;
@@ -412,13 +603,29 @@ function TeamLine({
           )}
         </div>
       </div>
-      <AdminButton
-        size="xs"
-        onClick={() => onNudge(matchId, side)}
-        disabled={checkedIn || loading}
-      >
-        {loading ? '…' : t.nudgeDiscord}
-      </AdminButton>
+      <div className="flex shrink-0 flex-col items-end gap-1.5">
+        <AdminButton
+          size="xs"
+          onClick={() => onNudge(matchId, side)}
+          disabled={checkedIn || loading}
+        >
+          {loading ? '…' : t.nudgeDiscord}
+        </AdminButton>
+        {!checkedIn &&
+          name &&
+          onStaffCheckin &&
+          (forfeitProcessed ? (
+            <Chip tone="neutral">{t.forfeitProcessed}</Chip>
+          ) : (
+            <AdminButton
+              variant="secondary"
+              size="xs"
+              onClick={() => onStaffCheckin({ matchId, side, teamName: name })}
+            >
+              {t.staffCheckin}
+            </AdminButton>
+          ))}
+      </div>
     </div>
   );
 }

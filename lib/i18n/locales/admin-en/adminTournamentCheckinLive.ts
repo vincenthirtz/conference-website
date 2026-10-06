@@ -38,4 +38,19 @@ export default {
   nudgeSent_one: 'Nudge sent to {count} captain.',
   nudgeSent_other: 'Nudge sent to {count} captains.',
   nudgeError: 'Nudge failed',
+  staffCheckin: 'Check in for the team',
+  staffCheckinTitle: 'Check {team} in on their behalf',
+  staffCheckinHelp:
+    'The check-in is recorded on behalf of staff and logged with the reason. Allowed after kickoff, as long as the automatic forfeit has not been processed.',
+  staffCheckinReasonLabel: 'Reason (required)',
+  staffCheckinReasonPlaceholder:
+    'E.g. captain cannot access the link, presence confirmed on Discord',
+  staffCheckinReasonTooShort: 'Reason too short ({min} characters minimum).',
+  staffCheckinConfirm: 'Check in',
+  staffCheckinSubmitting: 'Checking in…',
+  staffCheckinCancel: 'Cancel',
+  staffCheckinDone: '{team} checked in by staff.',
+  staffCheckinAlready: '{team} was already checked in.',
+  staffCheckinError: 'Check-in failed',
+  forfeitProcessed: 'Forfeit already processed',
 };

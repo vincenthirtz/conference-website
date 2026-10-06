@@ -37,4 +37,19 @@ export default adminNs('adminTournamentCheckinLive', {
   nudgeSent_one: 'Relance envoyée à {count} capitaine.',
   nudgeSent_other: 'Relance envoyée à {count} capitaines.',
   nudgeError: 'Échec de la relance',
+  staffCheckin: "Pointer pour l'équipe",
+  staffCheckinTitle: 'Pointer {team} à sa place',
+  staffCheckinHelp:
+    "Le check-in est posé au nom du staff et journalisé avec le motif. Possible après le coup d'envoi, tant que le forfait automatique n'est pas tombé.",
+  staffCheckinReasonLabel: 'Motif (obligatoire)',
+  staffCheckinReasonPlaceholder:
+    'Ex. capitaine sans accès au lien, présence confirmée sur Discord',
+  staffCheckinReasonTooShort: 'Motif trop court ({min} caractères minimum).',
+  staffCheckinConfirm: 'Pointer',
+  staffCheckinSubmitting: 'Pointage…',
+  staffCheckinCancel: 'Annuler',
+  staffCheckinDone: '{team} pointée par le staff.',
+  staffCheckinAlready: '{team} était déjà pointée.',
+  staffCheckinError: 'Échec du pointage',
+  forfeitProcessed: 'Forfait déjà traité',
 });
