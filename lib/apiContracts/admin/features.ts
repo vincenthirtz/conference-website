@@ -830,7 +830,7 @@ export const ADMIN_FEATURE_QUERY_SCHEMAS: Record<string, ApiContractEntry> = {
   // Tournoi (features/admin/tournaments). Trois libellés d'erreur d'id
   // coexistaient ; chaque schéma partagé porte le sien :
   //   `checkin` (« Invalid tournament ID ») : checkin, checkin-nudge-all,
-  //     checkin-settings, status-guards, apply-template, clone, stages, pool,
+  //     checkin-settings, apply-template, clone, stages, pool,
   //     podium-preview, conflicts, discord-test ;
   //   `stats` (« Invalid tournament id ») : stats, analytics, overlay-day,
   //     mvp-votes, mvp-public-votes, bracket, bulk-matches, auto-schedule ;
