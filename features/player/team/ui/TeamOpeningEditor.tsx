@@ -27,7 +27,7 @@ import {
   type TeamOpeningRole,
 } from '@/utils/teamOpenings';
 import { usePlayerErrorText } from '../../_shared/useErrorText';
-import type { TeamOpeningDto } from '../openingSchemas';
+import type { TeamOpeningDto } from '../opening/schemas';
 import {
   useCloseTeamOpening,
   useSaveTeamOpening,

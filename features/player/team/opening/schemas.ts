@@ -1,4 +1,4 @@
-// features/player/team/openingSchemas.ts — contrat de /api/teams/opening
+// features/player/team/opening/schemas.ts — contrat de /api/teams/opening
 // (lot P8) : l'annonce « cette équipe cherche une joueuse » posée DEPUIS
 // l'espace capitaine, rattachée à l'équipe gérée (`team_openings.team_id`).
 //
@@ -9,7 +9,9 @@
 // le nom vient de l'équipe gérée, l'email du compte authentifié.
 //
 // Imports RELATIFS : le schéma est référencé par lib/apiContracts, que le
-// script de build assemble sans l'alias `@/`.
+// script de build assemble sans l'alias `@/`. Fichier nommé `schemas.ts` :
+// le registre OpenAPI l'expose au portail développeur (page publique), qui
+// ne peut atteindre de features/player que des `schemas.ts` zod purs.
 
 import * as z from 'zod';
 import {
@@ -18,7 +20,7 @@ import {
   TEAM_OPENING_ROLES,
   type TeamOpeningLevel,
   type TeamOpeningRole,
-} from '../../../utils/teamOpenings';
+} from '../../../../utils/teamOpenings';
 
 /** Corps de PUT /api/teams/opening (création OU mise à jour). */
 export const TeamOpeningUpsertBody = z.object({

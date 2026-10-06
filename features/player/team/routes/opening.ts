@@ -10,7 +10,7 @@ import {
   mutateSubject,
   readSubject,
 } from '@/utils/player/defineSubjectRoute';
-import { TeamOpeningUpsertBody } from '../openingSchemas';
+import { TeamOpeningUpsertBody } from '../opening/schemas';
 import {
   closeTeamOpening,
   getTeamOpening,

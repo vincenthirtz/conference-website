@@ -16,7 +16,7 @@ import {
 import type {
   TeamOpeningResponse,
   TeamOpeningUpsertInput,
-} from '../openingSchemas';
+} from '../opening/schemas';
 
 export const TEAM_OPENING_URL = '/api/teams/opening';
 

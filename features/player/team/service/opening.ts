@@ -42,7 +42,7 @@ import type {
   TeamOpeningDto,
   TeamOpeningResponse,
   TeamOpeningUpsertInput,
-} from '../openingSchemas';
+} from '../opening/schemas';
 import {
   deleteTeamOpenings,
   insertTeamOpening,

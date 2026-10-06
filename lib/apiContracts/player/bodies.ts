@@ -39,7 +39,7 @@ import {
   UpdateMemberBody,
   UpdateMemberSpecialtyBody,
 } from '../../../features/player/team/schemas';
-import { TeamOpeningUpsertBody } from '../../../features/player/team/openingSchemas';
+import { TeamOpeningUpsertBody } from '../../../features/player/team/opening/schemas';
 import {
   EquipCosmeticsBody,
   ForgeBody,
