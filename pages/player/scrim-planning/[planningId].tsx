@@ -39,12 +39,15 @@ function ScrimPlanningDetailPage() {
   const router = useRouter();
   // Retour à CETTE page après connexion (`?next=`), requête comprise — sans
   // quoi un lien partagé (un mail, une notification) perdait sa destination.
-  // Avant hydratation `asPath` n'est pas fiable : repli sur `/player`.
+  // Avant hydratation `asPath` n'est pas fiable (chemin du motif, pas de
+  // requête) : la redirection n'est armée qu'une fois le routeur prêt, sinon
+  // elle partait avec le repli `/player` et le lien perdait sa destination.
   const {
     user,
     loading: authLoading,
     ready,
   } = usePlayerSession({
+    redirect: router.isReady,
     redirectTo: loginHrefFor(router.isReady ? router.asPath : '/player'),
   });
   const t = useT(nsScrimPlanning);

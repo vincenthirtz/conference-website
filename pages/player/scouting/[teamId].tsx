@@ -18,8 +18,11 @@ import ScoutingScreen from '@/features/player/network/ui/scouting/ScoutingScreen
 function ScoutingPage() {
   const router = useRouter();
   // Retour au dossier après connexion : c'est une page qu'on ouvre depuis un
-  // lien (annuaire, fil de match), la perdre renvoyait à l'accueil.
+  // lien (annuaire, fil de match), la perdre renvoyait à l'accueil. La
+  // redirection attend `router.isReady` : avant, `asPath` n'est pas fiable et
+  // le repli `/player/teams` partait à la place du dossier.
   const { ready, loading: authLoading } = usePlayerSession({
+    redirect: router.isReady,
     redirectTo: loginHrefFor(router.isReady ? router.asPath : '/player/teams'),
   });
   const teamId =
