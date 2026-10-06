@@ -16,7 +16,7 @@
 // gardent leur propre requête, leur propre garde d'accès et leur propre forme
 // de réponse.
 
-import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
+import { CHECKIN_OPEN_MINUTES, isCheckinWindowPassed } from '@/utils/checkin';
 
 /**
  * Colonnes nécessaires à toutes les vues joueuse. Surensemble volontaire : une
@@ -138,7 +138,8 @@ export function buildCheckin(
     !!closesAt &&
     now >= new Date(opensAt).getTime() &&
     now <= new Date(closesAt).getTime();
-  const isPassed = !!closesAt && now > new Date(closesAt).getTime();
+  // Même règle que la garde serveur de `redeemCheckinToken`.
+  const isPassed = isCheckinWindowPassed(closesAt, now);
 
   return {
     token,

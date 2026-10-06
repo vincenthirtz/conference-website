@@ -149,6 +149,29 @@ export function buildMatchLineupPageUrl(matchId: string): string {
 }
 
 /* -----------------------------------------------------------
+ * Fermeture de la fenêtre
+ * ---------------------------------------------------------*/
+
+/**
+ * La fenêtre de check-in est-elle PASSÉE ? Elle se ferme au coup d'envoi
+ * (`scheduled_at`) : au-delà, le forfait automatique peut tomber au prochain
+ * passage du cron (cf. `processMatchCheckin`, étape 5).
+ *
+ * LA règle, écrite une fois : l'écran joueuse (`buildCheckin`, champ
+ * `isPassed`) et l'écriture serveur (`redeemCheckinToken`) la partagent. Un
+ * horaire absent ou illisible ne ferme rien — sans horaire, il n'y a ni
+ * fenêtre ni forfait automatique.
+ */
+export function isCheckinWindowPassed(
+  scheduledAt: string | null | undefined,
+  now: number = Date.now()
+): boolean {
+  if (!scheduledAt) return false;
+  const kickoff = new Date(scheduledAt).getTime();
+  return Number.isFinite(kickoff) && now > kickoff;
+}
+
+/* -----------------------------------------------------------
  * Token redemption (called by public route + Draftbot)
  * ---------------------------------------------------------*/
 
@@ -244,6 +267,17 @@ export async function resolveCheckinToken(
   };
 }
 
+/**
+ * Codes d'erreur métier du check-in (conflits d'état, à rendre en 409) :
+ *   - `CHECKIN_MATCH_CLOSED`  : le match n'est plus `pending`/`ongoing` ;
+ *   - `CHECKIN_WINDOW_CLOSED` : le coup d'envoi est passé, ou le forfait
+ *     automatique a déjà été traité pour ce match.
+ * Les autres échecs (jeton invalide, écriture ratée…) n'ont pas de code.
+ */
+export type CheckinRedeemErrorCode =
+  | 'CHECKIN_MATCH_CLOSED'
+  | 'CHECKIN_WINDOW_CLOSED';
+
 export type CheckinRedeemResult =
   | {
       ok: true;
@@ -253,11 +287,25 @@ export type CheckinRedeemResult =
       checkedInAt: string;
       alreadyCheckedIn: boolean;
     }
-  | { ok: false; error: string };
+  | { ok: false; error: string; code?: CheckinRedeemErrorCode };
+
+const CHECKIN_WINDOW_CLOSED_ERROR =
+  "Check-in fermé : l'heure du match est passée. Contacte le staff.";
 
 /**
  * Redeem a check-in token: marks the team as checked-in if not already.
  * Idempotent — calling twice on a valid token is safe.
+ *
+ * Garde horaire SERVEUR : passé le coup d'envoi (`isCheckinWindowPassed`), le
+ * jeton ne pointe plus. Avant, seul le statut était vérifié : le lien du mail
+ * ou le bouton Discord restaient valables jusqu'au passage du cron de forfait,
+ * et une équipe pouvait pointer APRÈS que le cron eut lu « pas pointée » —
+ * forfait posé ET check-in enregistré. L'écriture elle-même est donc
+ * conditionnelle (statut, horaire, forfait non traité, pas déjà pointée) : une
+ * course perdue retombe sur une relecture, jamais sur une écriture.
+ *
+ * Un rejeu sur une équipe DÉJÀ pointée reste un succès, même après le coup
+ * d'envoi : il ne change rien.
  *
  * @param tenantId Tenant scope (S5a) — propagé à resolveCheckinToken et
  *                  à l'UPDATE final pour éviter de marquer un check-in
@@ -278,6 +326,7 @@ export async function redeemCheckinToken(
     return {
       ok: false,
       error: `Check-in fermé (statut du match : ${resolved.matchStatus})`,
+      code: 'CHECKIN_MATCH_CLOSED',
     };
   }
 
@@ -292,19 +341,68 @@ export async function redeemCheckinToken(
     };
   }
 
-  const now = new Date().toISOString();
+  const nowMs = Date.now();
+  if (isCheckinWindowPassed(resolved.scheduledAt, nowMs)) {
+    return {
+      ok: false,
+      error: CHECKIN_WINDOW_CLOSED_ERROR,
+      code: 'CHECKIN_WINDOW_CLOSED',
+    };
+  }
+
+  const now = new Date(nowMs).toISOString();
   const field =
     resolved.teamSlot === 1 ? 'team1_checked_in_at' : 'team2_checked_in_at';
 
-  const { error } = await supabaseAdmin!
+  // Écriture CONDITIONNELLE : tout ce qui a été vérifié plus haut est
+  // revérifié par la base au moment d'écrire, pour fermer la course avec le
+  // cron de forfait (et avec un second clic simultané).
+  let update = supabaseAdmin!
     .from('matches')
     .update({ [field]: now })
     .eq('tenant_id', tenantId)
-    .eq('id', resolved.matchId);
+    .eq('id', resolved.matchId)
+    .in('status', ['pending', 'ongoing'])
+    .is(field, null)
+    .is('forfeit_processed_at', null);
+  if (resolved.scheduledAt) update = update.gte('scheduled_at', now);
+  const { data: written, error } = await update.select('id');
 
   if (error) {
     logger.error('[checkin] redeem update error:', error);
     return { ok: false, error: "Échec de l'enregistrement du check-in" };
+  }
+
+  if (!Array.isArray(written) || written.length === 0) {
+    // Course perdue : soit un autre clic a pointé entre-temps (succès
+    // idempotent), soit le match s'est fermé (horaire, statut, forfait).
+    const again = await resolveCheckinToken(tenantId, token);
+    if (again.ok && again.alreadyCheckedIn && again.checkedInAt) {
+      return {
+        ok: true,
+        matchId: again.matchId,
+        teamSlot: again.teamSlot,
+        teamName: again.teamName,
+        checkedInAt: again.checkedInAt,
+        alreadyCheckedIn: true,
+      };
+    }
+    if (
+      again.ok &&
+      again.matchStatus !== 'pending' &&
+      again.matchStatus !== 'ongoing'
+    ) {
+      return {
+        ok: false,
+        error: `Check-in fermé (statut du match : ${again.matchStatus})`,
+        code: 'CHECKIN_MATCH_CLOSED',
+      };
+    }
+    return {
+      ok: false,
+      error: CHECKIN_WINDOW_CLOSED_ERROR,
+      code: 'CHECKIN_WINDOW_CLOSED',
+    };
   }
 
   // Série de check-ins (TCG). ICI et pas dans les routes : c'est l'entonnoir

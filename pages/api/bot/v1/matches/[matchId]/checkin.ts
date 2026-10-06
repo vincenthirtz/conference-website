@@ -177,6 +177,11 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 
   const result = await redeemCheckinToken(req.botContext.tenantId, token);
   if (!result.ok) {
+    // CHECKIN_MATCH_CLOSED / CHECKIN_WINDOW_CLOSED : conflit d'état (409) ;
+    // `error` reste lisible tel quel sur Discord.
+    if (result.code) {
+      return res.status(409).json({ error: result.error, code: result.code });
+    }
     return res.status(400).json({ error: result.error });
   }
 

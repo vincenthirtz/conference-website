@@ -37,6 +37,11 @@ export default async function handler(
   if (req.method === 'POST') {
     const result = await redeemCheckinToken(tenantId, token);
     if (!result.ok) {
+      // Match fermé / coup d'envoi passé : conflit d'état (409 + code), pas
+      // une requête mal formée.
+      if (result.code) {
+        return res.status(409).json({ error: result.error, code: result.code });
+      }
       return res.status(400).json({ error: result.error });
     }
     return res.status(200).json(result);
