@@ -30,11 +30,11 @@ import { isBlacklistEntryExpired } from '@/utils/moderation/blacklistExpiry';
 import {
   BlacklistExpiryChip,
   BlacklistExpiryField,
-  EMPTY_EXPIRY,
   ExpiredFilterOption,
   expiryBody,
   listFilterParams,
 } from './BlacklistExpiry';
+import { useBlacklistExpiry } from '@/features/admin/moderation/hooks/useBlacklistExpiry';
 
 type BlacklistEntry = {
   id: string;
@@ -116,8 +116,8 @@ export default function BlacklistPanel() {
   // `total` gardé en local (via onData) pour permettre son décrément optimiste
   // à la suppression — le hook n'expose que `data`.
   const [total, setTotal] = useState<number | null>(null);
-  const [expiryAvailable, setExpiryAvailable] = useState(true);
-  const [expiry, setExpiry] = useState(EMPTY_EXPIRY);
+  const expiryState = useBlacklistExpiry();
+  const { available: expiryAvailable, choice: expiry } = expiryState;
 
   // Entrées : filtres serveur `search`/`active` réactifs (portés par l'URL).
   // `total` revient toujours dans le payload → includeTotal:false garde la
@@ -149,7 +149,7 @@ export default function BlacklistPanel() {
     select: (res) => res.items || [],
     onData: (res) => {
       setTotal(typeof res.total === 'number' ? res.total : null);
-      setExpiryAvailable(res.expiry_available !== false);
+      expiryState.readAvailability(res);
     },
   });
 
@@ -233,7 +233,7 @@ export default function BlacklistPanel() {
         reason: '',
         notes: '',
       });
-      setExpiry(EMPTY_EXPIRY);
+      expiryState.reset();
       await fetchEntries();
     } catch (err) {
       addToast((err as Error).message, 'error');
@@ -392,7 +392,7 @@ export default function BlacklistPanel() {
         </div>
         <BlacklistExpiryField
           value={expiry}
-          onChange={setExpiry}
+          onChange={expiryState.setChoice}
           available={expiryAvailable}
         />
         <div className="flex justify-end">

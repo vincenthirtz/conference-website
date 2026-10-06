@@ -35,11 +35,11 @@ import { isBlacklistEntryExpired } from '@/utils/moderation/blacklistExpiry';
 import {
   BlacklistExpiryChip,
   BlacklistExpiryField,
-  EMPTY_EXPIRY,
   ExpiredFilterOption,
   expiryBody,
   listFilterParams,
 } from './BlacklistExpiry';
+import { useBlacklistExpiry } from '@/features/admin/moderation/hooks/useBlacklistExpiry';
 
 type EntityType = 'team' | 'org';
 
@@ -100,8 +100,8 @@ export default function EntityBlacklistPanel() {
   // par l'URL). Le contrat renvoie toujours { items, total } → includeTotal
   // désactivé, le `total` du hook est lu directement dans le payload.
   // `expiry_available` : migration blacklist_expires_at appliquée ?
-  const [expiryAvailable, setExpiryAvailable] = useState(true);
-  const [expiry, setExpiry] = useState(EMPTY_EXPIRY);
+  const expiryState = useBlacklistExpiry();
+  const { available: expiryAvailable, choice: expiry } = expiryState;
   const {
     data: entries,
     total,
@@ -130,7 +130,7 @@ export default function EntityBlacklistPanel() {
       entity_type: typeFilter,
     },
     select: (res) => res.items || [],
-    onData: (res) => setExpiryAvailable(res.expiry_available !== false),
+    onData: (res) => expiryState.readAvailability(res),
   });
 
   // Formulaire d'ajout.
@@ -186,7 +186,7 @@ export default function EntityBlacklistPanel() {
         reason: '',
         notes: '',
       });
-      setExpiry(EMPTY_EXPIRY);
+      expiryState.reset();
       fetchEntries();
     } catch (err) {
       addToast((err as Error).message, 'error');
@@ -371,7 +371,7 @@ export default function EntityBlacklistPanel() {
         </div>
         <BlacklistExpiryField
           value={expiry}
-          onChange={setExpiry}
+          onChange={expiryState.setChoice}
           available={expiryAvailable}
         />
         <div className="flex justify-end">
