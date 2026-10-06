@@ -23,6 +23,7 @@ import {
   useTournamentStages,
 } from '@/features/admin/tournaments/hooks/useTournamentStages';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
+import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
 import type { StaffProps, Stage, Tournament } from '@/types/admin';
 import type { AdvancementRules } from '@/components/admin/AdvancementRulesEditor';
 import FfaLobbiesManager from '@/components/admin/ffa/FfaLobbiesManager';
@@ -569,6 +570,9 @@ function AdminStagePage(_props: StaffProps) {
 
           {stage && (
             <div className="space-y-6">
+              <div className="flex justify-end">
+                <EntityHistoryButton entityType="stage" entityId={stage.id} />
+              </div>
               {/* Quick Actions Bar */}
               <QuickActionsBar
                 stage={stage}

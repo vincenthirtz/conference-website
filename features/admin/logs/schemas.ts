@@ -72,6 +72,15 @@ export const HISTORY_ENTITY_TYPES = [
   'tenant',
   // Fiche Le Ruban des chaînes Twitch (avant / après écrits par L8).
   'twitch_channel',
+  // Lot A10 : fiches demande, adhérent, partenaire, actu, scrim, phase. Chaque
+  // type est écrit TEL QUEL par le module du domaine (entity_id = id de la
+  // fiche) ; le test de couverture d'adminEntityHistory le vérifie.
+  'demande',
+  'adherent',
+  'partner',
+  'news',
+  'scrim',
+  'stage',
 ] as const;
 
 export type HistoryEntityType = (typeof HISTORY_ENTITY_TYPES)[number];

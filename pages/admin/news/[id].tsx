@@ -21,6 +21,7 @@ import nsAdminNewsEdit from '@/lib/i18n/locales/admin-fr/adminNewsEdit';
 import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
 import { FormError } from '@/components/admin/form/FormField';
 import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
+import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
 import AdminButton, {
   AdminButtonLink,
 } from '@/features/admin/_shared/ui/AdminButton';
@@ -187,6 +188,9 @@ function AdminNewsEdit() {
           }
           actions={
             <>
+              {newsId && (
+                <EntityHistoryButton entityType="news" entityId={newsId} />
+              )}
               <AdminButtonLink
                 href="/admin/news"
                 className={saving ? 'pointer-events-none opacity-50' : ''}

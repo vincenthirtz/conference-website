@@ -176,6 +176,8 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   delete_adherent: 'Suppression adhérent',
   // Contenu éditorial
   publish_news: 'Publication actualité',
+  update_news: 'Modification actualité',
+  delete_news: 'Suppression actualité',
   publish_social_post: 'Publication post multi-réseaux',
   connect_social_account: 'Connexion compte réseau social',
   store_social_credentials: 'Secret d’app réseau social enregistré',

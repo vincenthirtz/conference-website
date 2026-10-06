@@ -20,6 +20,7 @@ import nsAdminAdherentDetail from '@/lib/i18n/locales/admin-fr/adminAdherentDeta
 import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
 import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
+import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
 import AdminButton, {
   AdminButtonLink,
 } from '@/features/admin/_shared/ui/AdminButton';
@@ -255,6 +256,10 @@ function AdminEditAdherentPage(_props: Props) {
           }
           actions={
             <>
+              <EntityHistoryButton
+                entityType="adherent"
+                entityId={adherent.id}
+              />
               <AdminButtonLink
                 href="/admin/adherents"
                 className={saving ? 'pointer-events-none opacity-50' : ''}

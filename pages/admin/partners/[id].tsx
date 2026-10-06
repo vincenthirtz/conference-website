@@ -16,6 +16,7 @@ import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 import { FormError } from '@/components/admin/form/FormField';
 import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
 import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
+import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
 import AdminButton, {
   AdminButtonLink,
 } from '@/features/admin/_shared/ui/AdminButton';
@@ -178,6 +179,12 @@ function AdminEditPartnerPage(_props: Props) {
           }
           actions={
             <>
+              {partnerId && (
+                <EntityHistoryButton
+                  entityType="partner"
+                  entityId={partnerId}
+                />
+              )}
               <AdminButtonLink
                 href="/admin/partners"
                 className={saving ? 'pointer-events-none opacity-50' : ''}

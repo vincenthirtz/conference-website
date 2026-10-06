@@ -39,14 +39,20 @@ export default defineAdminRoute({
   PUT: mutate({
     query: NewsIdQuery,
     rateLimit: LIMIT,
-    // Pas de journal avant la migration (seule la création publie au journal).
-    audit: false,
+    // Lot A10 : modification et suppression journalisées sous l'entité `news`
+    // (même id que la création) — c'est ce que lit l'historique de la fiche.
+    audit: 'update_news',
     handler: async ({ query, req, res, ctx }) => {
       const { row, revalidateSlugs, justPublished } = await updateNews(
         ctx,
         query.id,
         req.body
       );
+      ctx.audit({
+        entity_type: 'news',
+        entity_id: query.id,
+        payload: { title: row.title, slug: row.slug, status: row.status },
+      });
       await revalidateNewsPages(res, revalidateSlugs);
       if (justPublished) announcePublished(ctx, row);
       return row;
@@ -56,9 +62,14 @@ export default defineAdminRoute({
     query: NewsIdQuery,
     rateLimit: LIMIT,
     status: 204,
-    audit: false,
+    audit: 'delete_news',
     handler: async ({ query, res, ctx }) => {
       const slug = await deleteNews(ctx, query.id);
+      ctx.audit({
+        entity_type: 'news',
+        entity_id: query.id,
+        payload: { slug, deleted: true },
+      });
       if (slug) await revalidateNewsPages(res, [slug]);
     },
   }),

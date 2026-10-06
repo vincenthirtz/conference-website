@@ -22,6 +22,7 @@ import nsAdminDemandeDetail from '@/lib/i18n/locales/admin-fr/adminDemandeDetail
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
+import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
 import { FicheLayout, FicheSection } from '@/features/admin/_shared/ui/Fiche';
 import {
   CaptainRequestDetails,
@@ -218,6 +219,9 @@ function AdminDemandeDetailPage() {
               </Chip>
               {demande.source && <Chip>{demande.source}</Chip>}
             </>
+          }
+          actions={
+            <EntityHistoryButton entityType="demande" entityId={demande.id} />
           }
         />
 

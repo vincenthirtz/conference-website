@@ -34,6 +34,7 @@ import ScrimResultPanel from '@/components/admin/scrims/ScrimResultPanel';
 import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
 import EntityHeader from '@/features/admin/_shared/ui/EntityHeader';
+import EntityHistoryButton from '@/components/admin/EntityHistoryButton';
 import AdminButton, {
   AdminButtonLink,
 } from '@/features/admin/_shared/ui/AdminButton';
@@ -236,6 +237,7 @@ function AdminScrimEditPage(_props: StaffProps) {
           meta={format(t.slug, { slug: scrim.slug || '—' })}
           actions={
             <>
+              <EntityHistoryButton entityType="scrim" entityId={scrim.id} />
               <AdminButtonLink
                 href="/admin/scrims"
                 className={saving ? 'pointer-events-none opacity-50' : ''}

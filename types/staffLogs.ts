@@ -189,6 +189,8 @@ export type StaffLogAction =
   | 'delete_adherent'
   // --- Contenu éditorial ---
   | 'publish_news'
+  | 'update_news'
+  | 'delete_news'
   | 'publish_social_post'
   | 'connect_social_account'
   | 'store_social_credentials'
