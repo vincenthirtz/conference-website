@@ -15465,6 +15465,9 @@
         "items": {
          "type": "object",
          "properties": {
+          "archivedCount": {
+           "type": "number"
+          },
           "id": {
            "type": "string"
           },
@@ -15834,9 +15837,6 @@
         "items": {
          "type": "object",
          "properties": {
-          "archivedCount": {
-           "type": "number"
-          },
           "id": {
            "type": "string"
           },
