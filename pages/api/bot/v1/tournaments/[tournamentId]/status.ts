@@ -6,7 +6,8 @@
 // engagent des effets metier lourds (notifications, propagation, freeze
 // roster) et restent reservees au workflow admin UI.
 //
-// Garde-fou aligne sur status-guards.ts : 'published' exige >= 1 stage.
+// Garde-fou aligne sur les gardes de statut du tableau de bord tournoi
+// (utils/dashboard/buildTournamentDashboard) : 'published' exige >= 1 stage.
 //
 // Auth : x-api-key + actorDiscordUserId staff admin/owner.
 
@@ -66,7 +67,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 
   // Refuse de redescendre vers 'draft' depuis 'running'/'completed' — cela
   // signifierait re-cacher un tournoi en cours d'execution. C'est aligne sur
-  // l'esprit de status-guards.ts ('draft' est officiellement always-allowed
+  // l'esprit des gardes du tableau de bord ('draft' est officiellement always-allowed
   // dans l'UI mais reserve aux managers ; cote bot on reste strict).
   if (
     status === 'draft' &&

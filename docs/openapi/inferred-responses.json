@@ -9905,19 +9905,6 @@
     ]
    }
   },
-  "GET /api/admin/notifications/unread-count": {
-   "200": {
-    "type": "object",
-    "properties": {
-     "count": {
-      "type": "number"
-     }
-    },
-    "required": [
-     "count"
-    ]
-   }
-  },
   "GET /api/admin/overview-summary": {
    "200": {
     "type": "object",
@@ -26196,45 +26183,6 @@
      "overview",
      "teamStats",
      "tournament"
-    ]
-   }
-  },
-  "GET /api/admin/tournament/{id}/status-guards": {
-   "200": {
-    "type": "object",
-    "properties": {
-     "current_status": {
-      "type": "string"
-     },
-     "guards": {
-      "type": "array",
-      "items": {
-       "type": "object",
-       "properties": {
-        "allowed": {
-         "type": "boolean"
-        },
-        "label": {
-         "type": "string"
-        },
-        "reason": {
-         "type": "string"
-        },
-        "status": {
-         "type": "string"
-        }
-       },
-       "required": [
-        "allowed",
-        "label",
-        "status"
-       ]
-      }
-     }
-    },
-    "required": [
-     "current_status",
-     "guards"
     ]
    }
   },
@@ -57211,16 +57159,63 @@
      "subscription": {
       "type": "object",
       "properties": {
+       "consecutive_failures": {
+        "type": "number"
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "description": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "disabled_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "enabled": {
         "type": "boolean"
        },
+       "event_types": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
        "id": {
+        "type": "string"
+       },
+       "last_delivery_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "last_error": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "url": {
         "type": "string"
        }
       },
       "required": [
+       "consecutive_failures",
+       "created_at",
+       "description",
+       "disabled_at",
        "enabled",
-       "id"
+       "event_types",
+       "id",
+       "last_delivery_at",
+       "last_error",
+       "url"
       ]
      }
     },
@@ -58866,6 +58861,28 @@
     "required": [
      "demo",
      "settings"
+    ]
+   }
+  },
+  "POST /api/admin/discord-logs/replay": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "number"
+     },
+     "replayed": {
+      "type": "boolean"
+     },
+     "status": {
+      "type": "string",
+      "const": "pending"
+     }
+    },
+    "required": [
+     "id",
+     "replayed",
+     "status"
     ]
    }
   },
@@ -69309,6 +69326,192 @@
     "required": [
      "secret",
      "subscription"
+    ]
+   }
+  },
+  "POST /api/admin/webhooks/{id}/redeliver": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "delivery": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "attempts": {
+        "type": "number"
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "delivered_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "event_name": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "last_error": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "response_status": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "attempts",
+       "created_at",
+       "delivered_at",
+       "event_name",
+       "id",
+       "last_error",
+       "response_status",
+       "status"
+      ]
+     },
+     "error": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "ok": {
+      "type": "boolean"
+     },
+     "status": {
+      "type": [
+       "number",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "delivery",
+     "error",
+     "ok",
+     "status"
+    ]
+   }
+  },
+  "POST /api/admin/webhooks/{id}/rotate-secret": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "secret": {
+      "type": "string"
+     },
+     "subscription": {
+      "type": "object",
+      "properties": {
+       "consecutive_failures": {
+        "type": "number"
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "description": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "disabled_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "enabled": {
+        "type": "boolean"
+       },
+       "event_types": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "id": {
+        "type": "string"
+       },
+       "last_delivery_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "last_error": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "url": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "consecutive_failures",
+       "created_at",
+       "description",
+       "disabled_at",
+       "enabled",
+       "event_types",
+       "id",
+       "last_delivery_at",
+       "last_error",
+       "url"
+      ]
+     }
+    },
+    "required": [
+     "secret",
+     "subscription"
+    ]
+   }
+  },
+  "POST /api/admin/webhooks/{id}/test": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "error": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "eventId": {
+      "type": "string"
+     },
+     "ok": {
+      "type": "boolean"
+     },
+     "status": {
+      "type": [
+       "number",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "error",
+     "eventId",
+     "ok",
+     "status"
     ]
    }
   },

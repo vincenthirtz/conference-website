@@ -225,26 +225,6 @@ export async function firstTournamentTeamId(
   return data;
 }
 
-export async function countStagesAndTeams(
-  db: AdminDb,
-  tenantId: string,
-  tournamentId: string
-) {
-  const [stagesRes, teamsRes] = await Promise.all([
-    db
-      .from('tournament_stages')
-      .select('id', { count: 'exact', head: true })
-      .eq('tournament_id', tournamentId)
-      .eq('tenant_id', tenantId),
-    db
-      .from('tournament_teams')
-      .select('id', { count: 'exact', head: true })
-      .eq('tournament_id', tournamentId)
-      .eq('tenant_id', tenantId),
-  ]);
-  return { stages: stagesRes.count ?? 0, teams: teamsRes.count ?? 0 };
-}
-
 /** Phases existantes, la plus haute d'abord (ajout en fin de liste). */
 export async function stagesByOrderDesc(
   db: AdminDb,

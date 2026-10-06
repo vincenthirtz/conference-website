@@ -11,7 +11,6 @@ import {
 import { invalidateStaffCache } from '../../utils/staff';
 
 import templatesHandler from '../../pages/api/admin/tournament-templates';
-import statusGuardsHandler from '../../pages/api/admin/tournament/[id]/status-guards';
 import uploadHandler from '../../pages/api/admin/upload';
 
 /* -----------------------------------------------------------
@@ -70,8 +69,6 @@ beforeEach(() => {
   setAuthUser({ id: 'user-1' });
   store.staff = [makeStaffRow('admin')] as any;
 });
-
-const TID = '550e8400-e29b-41d4-a716-446655440000';
 
 /* -----------------------------------------------------------
  * /api/admin/tournament-templates — JSON-blob CRUD via site_settings
@@ -237,119 +234,6 @@ describe('/api/admin/tournament-templates', () => {
     const res = makeRes();
     await templatesHandler(makeReq({ method: 'PATCH' }), res);
     expect(res.statusCode).toBe(405);
-  });
-});
-
-/* -----------------------------------------------------------
- * /api/admin/tournament/[id]/status-guards
- * ---------------------------------------------------------*/
-
-describe('GET /api/admin/tournament/[id]/status-guards', () => {
-  it('400 when id is invalid', async () => {
-    const res = makeRes();
-    await statusGuardsHandler(
-      makeReq({ method: 'GET', query: { id: 'bogus' } }),
-      res
-    );
-    expect(res.statusCode).toBe(400);
-  });
-
-  it('405 on non-GET', async () => {
-    const res = makeRes();
-    await statusGuardsHandler(
-      makeReq({ method: 'POST', query: { id: TID } }),
-      res
-    );
-    expect(res.statusCode).toBe(405);
-  });
-
-  it('404 when tournament does not exist', async () => {
-    store.tournaments = [];
-    const res = makeRes();
-    await statusGuardsHandler(
-      makeReq({ method: 'GET', query: { id: TID } }),
-      res
-    );
-    expect(res.statusCode).toBe(404);
-  });
-
-  it('200 with all transitions blocked when tournament has no stages/teams', async () => {
-    store.tournaments = [{ id: TID, status: 'draft' }] as any;
-    store.tournament_stages = [];
-    store.tournament_teams = [];
-    store.matches = [];
-    const res = makeRes();
-    await statusGuardsHandler(
-      makeReq({ method: 'GET', query: { id: TID } }),
-      res
-    );
-    expect(res.statusCode).toBe(200);
-    const body = res.body as any;
-    expect(body.current_status).toBe('draft');
-    const guards = body.guards as Array<{
-      status: string;
-      allowed: boolean;
-      reason?: string;
-    }>;
-    const published = guards.find((g) => g.status === 'published')!;
-    expect(published.allowed).toBe(false);
-    expect(published.reason).toMatch(/au moins 1 phase/);
-    const running = guards.find((g) => g.status === 'running')!;
-    expect(running.allowed).toBe(false);
-  });
-
-  it('200 with running allowed when stages + teams present', async () => {
-    store.tournaments = [{ id: TID, status: 'published' }] as any;
-    store.tournament_stages = [{ id: 's1', tournament_id: TID }] as any;
-    store.tournament_teams = [
-      { id: 'tt1', tournament_id: TID, team_id: 't1' },
-    ] as any;
-    store.matches = [];
-    const res = makeRes();
-    await statusGuardsHandler(
-      makeReq({ method: 'GET', query: { id: TID } }),
-      res
-    );
-    const guards = (res.body as any).guards as any[];
-    const running = guards.find((g) => g.status === 'running');
-    expect(running.allowed).toBe(true);
-  });
-
-  it('200 marks completed as not allowed when not running', async () => {
-    store.tournaments = [{ id: TID, status: 'published' }] as any;
-    store.tournament_stages = [{ id: 's1', tournament_id: TID }] as any;
-    store.tournament_teams = [
-      { id: 'tt1', tournament_id: TID, team_id: 't1' },
-    ] as any;
-    store.matches = [];
-    const res = makeRes();
-    await statusGuardsHandler(
-      makeReq({ method: 'GET', query: { id: TID } }),
-      res
-    );
-    const completed = ((res.body as any).guards as any[]).find(
-      (g) => g.status === 'completed'
-    );
-    expect(completed.allowed).toBe(false);
-  });
-
-  it('200 reports current status as a non-allowed guard', async () => {
-    store.tournaments = [{ id: TID, status: 'running' }] as any;
-    store.tournament_stages = [{ id: 's1', tournament_id: TID }] as any;
-    store.tournament_teams = [
-      { id: 'tt1', tournament_id: TID, team_id: 't1' },
-    ] as any;
-    store.matches = [];
-    const res = makeRes();
-    await statusGuardsHandler(
-      makeReq({ method: 'GET', query: { id: TID } }),
-      res
-    );
-    const current = ((res.body as any).guards as any[]).find(
-      (g) => g.status === 'running'
-    );
-    expect(current.allowed).toBe(false);
-    expect(current.reason).toBe('Statut actuel');
   });
 });
 

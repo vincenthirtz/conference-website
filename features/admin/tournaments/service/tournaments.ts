@@ -392,64 +392,6 @@ async function checkStatusTransitionGuards(
   return null;
 }
 
-/* ---------------------------------------------------------------------------
- * Gardes de statut (workflow visuel)
- * ------------------------------------------------------------------------ */
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: 'Brouillon',
-  published: 'Publié',
-  running: 'En cours',
-  completed: 'Terminé',
-  archived: 'Archivé',
-};
-
-type StatusGuard = {
-  status: string;
-  label: string;
-  allowed: boolean;
-  reason?: string;
-};
-
-export async function getStatusGuards(ctx: ServiceContext, id: string) {
-  const { data: tournament } = await repo.findTournament(
-    ctx.db,
-    ctx.tenantId,
-    id
-  );
-  if (!tournament) fail(404, 'Tournament not found');
-  const currentStatus = tournament.status ?? 'draft';
-  const counts = await repo.countStagesAndTeams(ctx.db, ctx.tenantId, id);
-
-  const guards: StatusGuard[] = [];
-  for (const status of VALID_STATUSES) {
-    if (status === currentStatus) {
-      guards.push({
-        status,
-        label: STATUS_LABELS[status],
-        allowed: false,
-        reason: 'Statut actuel',
-      });
-      continue;
-    }
-    let allowed = true;
-    let reason: string | undefined;
-    if (status === 'published' && counts.stages === 0) {
-      allowed = false;
-      reason = 'Le tournoi doit avoir au moins 1 phase';
-    } else if (status === 'running') {
-      if (counts.stages === 0) {
-        allowed = false;
-        reason = 'Le tournoi doit avoir au moins 1 phase';
-      } else if (counts.teams === 0) {
-        allowed = false;
-        reason = 'Le tournoi doit avoir au moins 1 équipe';
-      }
-    } else if (status === 'completed' && currentStatus !== 'running') {
-      allowed = false;
-      reason = 'Le tournoi doit être en cours';
-    }
-    guards.push({ status, label: STATUS_LABELS[status], allowed, reason });
-  }
-  return { current_status: currentStatus, guards };
-}
+// Gardes de statut du workflow visuel : calculées par le tableau de bord du
+// tournoi (utils/dashboard/buildTournamentDashboard). L'ancienne route
+// dédiée `…/[id]/status-guards`, sans appelant, a été retirée.
