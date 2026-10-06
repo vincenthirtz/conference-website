@@ -284,6 +284,49 @@
     ]
    }
   },
+  "DELETE /api/admin/recycle-bin": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "anonymized",
+       "deleted"
+      ]
+     },
+     "purged": {
+      "type": "boolean",
+      "const": true
+     },
+     "type": {
+      "type": "string",
+      "enum": [
+       "adherent",
+       "cast_member",
+       "match",
+       "news",
+       "partner",
+       "scrim",
+       "scrim_planning",
+       "staff",
+       "stage",
+       "task",
+       "team"
+      ]
+     }
+    },
+    "required": [
+     "id",
+     "mode",
+     "purged",
+     "type"
+    ]
+   }
+  },
   "DELETE /api/admin/scrim-plannings/{planningId}": {
    "200": {
     "type": "object",
@@ -1694,6 +1737,116 @@
      "granted",
      "permission",
      "userId"
+    ]
+   }
+  },
+  "DELETE /api/teams/opening": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "accountEmail": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "opening": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "active": {
+        "type": "boolean"
+       },
+       "availability": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "contactDiscord": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "contactEmail": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "expiresAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "level": {
+        "type": [
+         "string",
+         "null"
+        ],
+        "enum": [
+         "bronze",
+         "champion",
+         "diamond",
+         "emerald",
+         "gold",
+         "grandmaster",
+         "master",
+         "platinum",
+         "silver",
+         "unknown",
+         null
+        ]
+       },
+       "note": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "roles": {
+        "type": "array",
+        "items": {
+         "type": "string",
+         "enum": [
+          "dps",
+          "flex",
+          "support",
+          "tank"
+         ]
+        }
+       },
+       "since": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "active",
+       "availability",
+       "contactDiscord",
+       "contactEmail",
+       "expiresAt",
+       "id",
+       "level",
+       "note",
+       "roles",
+       "since"
+      ]
+     }
+    },
+    "required": [
+     "accountEmail",
+     "opening"
     ]
    }
   },
@@ -4973,6 +5126,7 @@
           "ban",
           "batch_scores",
           "blacklist_add",
+          "blacklist_expired",
           "blacklist_remove",
           "blacklist_update",
           "broadcast_campaign_create",
@@ -5063,6 +5217,7 @@
           "delete_lobby",
           "delete_map_pool_entry",
           "delete_match",
+          "delete_news",
           "delete_pole_member",
           "delete_scrim",
           "delete_scrim_planning",
@@ -5090,6 +5245,7 @@
           "end_event_run",
           "end_event_segment",
           "entity_blacklist_add",
+          "entity_blacklist_expired",
           "entity_blacklist_remove",
           "entity_blacklist_update",
           "event_cue_manage",
@@ -5099,6 +5255,7 @@
           "event_wave_manage",
           "expire_tenant_request",
           "export_tenant",
+          "export_users",
           "finalize_tournament",
           "forward_scrim_request",
           "generate_group_matches",
@@ -5123,6 +5280,7 @@
           "manage_team",
           "map_veto",
           "match_rescheduled",
+          "moderate_comments",
           "notify_scrim_captains",
           "notify_tournament_captains",
           "open_match_dispute",
@@ -5132,6 +5290,7 @@
           "process_demande",
           "publish_news",
           "publish_social_post",
+          "purge_deleted_item",
           "read_association_documents",
           "reassign_captain",
           "reassign_stage",
@@ -5238,6 +5397,7 @@
           "update_bracket",
           "update_cast_member",
           "update_comment",
+          "update_comment_settings",
           "update_custom_game_preset",
           "update_discord_webhook",
           "update_event_run",
@@ -5250,6 +5410,7 @@
           "update_match",
           "update_member_profile",
           "update_mvp_overlay_settings",
+          "update_news",
           "update_player_battle_tag",
           "update_player_skill_rating",
           "update_pole_member",
@@ -6025,6 +6186,7 @@
           "ban",
           "batch_scores",
           "blacklist_add",
+          "blacklist_expired",
           "blacklist_remove",
           "blacklist_update",
           "broadcast_campaign_create",
@@ -6115,6 +6277,7 @@
           "delete_lobby",
           "delete_map_pool_entry",
           "delete_match",
+          "delete_news",
           "delete_pole_member",
           "delete_scrim",
           "delete_scrim_planning",
@@ -6142,6 +6305,7 @@
           "end_event_run",
           "end_event_segment",
           "entity_blacklist_add",
+          "entity_blacklist_expired",
           "entity_blacklist_remove",
           "entity_blacklist_update",
           "event_cue_manage",
@@ -6151,6 +6315,7 @@
           "event_wave_manage",
           "expire_tenant_request",
           "export_tenant",
+          "export_users",
           "finalize_tournament",
           "forward_scrim_request",
           "generate_group_matches",
@@ -6175,6 +6340,7 @@
           "manage_team",
           "map_veto",
           "match_rescheduled",
+          "moderate_comments",
           "notify_scrim_captains",
           "notify_tournament_captains",
           "open_match_dispute",
@@ -6184,6 +6350,7 @@
           "process_demande",
           "publish_news",
           "publish_social_post",
+          "purge_deleted_item",
           "read_association_documents",
           "reassign_captain",
           "reassign_stage",
@@ -6290,6 +6457,7 @@
           "update_bracket",
           "update_cast_member",
           "update_comment",
+          "update_comment_settings",
           "update_custom_game_preset",
           "update_discord_webhook",
           "update_event_run",
@@ -6302,6 +6470,7 @@
           "update_match",
           "update_member_profile",
           "update_mvp_overlay_settings",
+          "update_news",
           "update_player_battle_tag",
           "update_player_skill_rating",
           "update_pole_member",
@@ -8079,6 +8248,7 @@
           "ban",
           "batch_scores",
           "blacklist_add",
+          "blacklist_expired",
           "blacklist_remove",
           "blacklist_update",
           "broadcast_campaign_create",
@@ -8169,6 +8339,7 @@
           "delete_lobby",
           "delete_map_pool_entry",
           "delete_match",
+          "delete_news",
           "delete_pole_member",
           "delete_scrim",
           "delete_scrim_planning",
@@ -8196,6 +8367,7 @@
           "end_event_run",
           "end_event_segment",
           "entity_blacklist_add",
+          "entity_blacklist_expired",
           "entity_blacklist_remove",
           "entity_blacklist_update",
           "event_cue_manage",
@@ -8205,6 +8377,7 @@
           "event_wave_manage",
           "expire_tenant_request",
           "export_tenant",
+          "export_users",
           "finalize_tournament",
           "forward_scrim_request",
           "generate_group_matches",
@@ -8229,6 +8402,7 @@
           "manage_team",
           "map_veto",
           "match_rescheduled",
+          "moderate_comments",
           "notify_scrim_captains",
           "notify_tournament_captains",
           "open_match_dispute",
@@ -8238,6 +8412,7 @@
           "process_demande",
           "publish_news",
           "publish_social_post",
+          "purge_deleted_item",
           "read_association_documents",
           "reassign_captain",
           "reassign_stage",
@@ -8344,6 +8519,7 @@
           "update_bracket",
           "update_cast_member",
           "update_comment",
+          "update_comment_settings",
           "update_custom_game_preset",
           "update_discord_webhook",
           "update_event_run",
@@ -8356,6 +8532,7 @@
           "update_match",
           "update_member_profile",
           "update_mvp_overlay_settings",
+          "update_news",
           "update_player_battle_tag",
           "update_player_skill_rating",
           "update_pole_member",
@@ -9402,6 +9579,9 @@
    "200": {
     "type": "object",
     "properties": {
+     "expiry_available": {
+      "type": "boolean"
+     },
      "items": {
       "type": "array",
       "items": {
@@ -9482,6 +9662,7 @@
      }
     },
     "required": [
+     "expiry_available",
      "items",
      "total"
     ]
@@ -9576,10 +9757,162 @@
     ]
    }
   },
+  "GET /api/admin/moderation/comments": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "comments": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "author_name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "content": {
+         "type": "string"
+        },
+        "created_at": {
+         "type": "string"
+        },
+        "id": {
+         "type": "string"
+        },
+        "news": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "slug": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "title": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "id",
+          "slug",
+          "title"
+         ]
+        },
+        "news_id": {
+         "type": "string"
+        },
+        "status": {
+         "type": "string",
+         "enum": [
+          "hidden",
+          "pending",
+          "visible"
+         ]
+        }
+       },
+       "required": [
+        "author_name",
+        "content",
+        "created_at",
+        "id",
+        "news",
+        "news_id",
+        "status"
+       ]
+      }
+     },
+     "counts": {
+      "type": "object",
+      "properties": {
+       "pending": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "pending"
+      ]
+     },
+     "status_available": {
+      "type": "boolean"
+     },
+     "total": {}
+    },
+    "required": [
+     "comments",
+     "counts",
+     "status_available",
+     "total"
+    ]
+   }
+  },
+  "GET /api/admin/moderation/comments/settings": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "closed_articles": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "slug": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "title": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "id",
+        "slug",
+        "title"
+       ]
+      }
+     },
+     "closure_available": {
+      "type": "boolean"
+     },
+     "pre_moderation": {
+      "type": "boolean"
+     },
+     "status_available": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "closed_articles",
+     "closure_available",
+     "pre_moderation",
+     "status_available"
+    ]
+   }
+  },
   "GET /api/admin/moderation/entity-blacklist": {
    "200": {
     "type": "object",
     "properties": {
+     "expiry_available": {
+      "type": "boolean"
+     },
      "items": {
       "type": "array",
       "items": {
@@ -9647,6 +9980,7 @@
      }
     },
     "required": [
+     "expiry_available",
      "items",
      "total"
     ]
@@ -10738,6 +11072,9 @@
         "name": {
          "type": "string"
         },
+        "purgeable": {
+         "type": "boolean"
+        },
         "tournament_id": {
          "type": [
           "string",
@@ -10750,10 +11087,13 @@
           "adherent",
           "cast_member",
           "match",
+          "news",
           "partner",
           "scrim",
+          "scrim_planning",
           "staff",
           "stage",
+          "task",
           "team"
          ]
         }
@@ -10763,6 +11103,7 @@
         "details",
         "id",
         "name",
+        "purgeable",
         "tournament_id",
         "type"
        ]
@@ -13164,6 +13505,7 @@
           "ban",
           "batch_scores",
           "blacklist_add",
+          "blacklist_expired",
           "blacklist_remove",
           "blacklist_update",
           "broadcast_campaign_create",
@@ -13254,6 +13596,7 @@
           "delete_lobby",
           "delete_map_pool_entry",
           "delete_match",
+          "delete_news",
           "delete_pole_member",
           "delete_scrim",
           "delete_scrim_planning",
@@ -13281,6 +13624,7 @@
           "end_event_run",
           "end_event_segment",
           "entity_blacklist_add",
+          "entity_blacklist_expired",
           "entity_blacklist_remove",
           "entity_blacklist_update",
           "event_cue_manage",
@@ -13290,6 +13634,7 @@
           "event_wave_manage",
           "expire_tenant_request",
           "export_tenant",
+          "export_users",
           "finalize_tournament",
           "forward_scrim_request",
           "generate_group_matches",
@@ -13314,6 +13659,7 @@
           "manage_team",
           "map_veto",
           "match_rescheduled",
+          "moderate_comments",
           "notify_scrim_captains",
           "notify_tournament_captains",
           "open_match_dispute",
@@ -13323,6 +13669,7 @@
           "process_demande",
           "publish_news",
           "publish_social_post",
+          "purge_deleted_item",
           "read_association_documents",
           "reassign_captain",
           "reassign_stage",
@@ -13429,6 +13776,7 @@
           "update_bracket",
           "update_cast_member",
           "update_comment",
+          "update_comment_settings",
           "update_custom_game_preset",
           "update_discord_webhook",
           "update_event_run",
@@ -13441,6 +13789,7 @@
           "update_match",
           "update_member_profile",
           "update_mvp_overlay_settings",
+          "update_news",
           "update_player_battle_tag",
           "update_player_skill_rating",
           "update_pole_member",
@@ -15021,6 +15370,9 @@
    "200": {
     "type": "object",
     "properties": {
+     "assignment_available": {
+      "type": "boolean"
+     },
      "counts": {
       "type": "object",
       "properties": {
@@ -15055,6 +15407,33 @@
       "items": {
        "type": "object",
        "properties": {
+        "assigned_staff_id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "assigned_to": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "display_name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "id": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "display_name",
+          "id"
+         ]
+        },
         "category": {
          "type": "string"
         },
@@ -15162,6 +15541,7 @@
         }
        },
        "required": [
+        "assigned_to",
         "category",
         "converted_entity_blacklist_id",
         "converted_player_blacklist_id",
@@ -15195,6 +15575,7 @@
      }
     },
     "required": [
+     "assignment_available",
      "counts",
      "limit",
      "offset",
@@ -18506,6 +18887,67 @@
        ]
       }
      },
+     "rosterLock": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "locked": {
+        "type": "boolean"
+       },
+       "lockedAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "pendingRequest": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "createdAt": {
+          "type": "string"
+         },
+         "ticketId": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "createdAt",
+         "ticketId"
+        ]
+       },
+       "tournamentId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "tournamentName": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "unlockedUntil": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "locked",
+       "lockedAt",
+       "pendingRequest",
+       "tournamentId",
+       "tournamentName",
+       "unlockedUntil"
+      ]
+     },
      "team": {
       "type": [
        "object",
@@ -18588,6 +19030,7 @@
      "managedTeams",
      "members",
      "permissions",
+     "rosterLock",
      "team"
     ]
    }
@@ -19421,6 +19864,7 @@
           "ban",
           "batch_scores",
           "blacklist_add",
+          "blacklist_expired",
           "blacklist_remove",
           "blacklist_update",
           "broadcast_campaign_create",
@@ -19511,6 +19955,7 @@
           "delete_lobby",
           "delete_map_pool_entry",
           "delete_match",
+          "delete_news",
           "delete_pole_member",
           "delete_scrim",
           "delete_scrim_planning",
@@ -19538,6 +19983,7 @@
           "end_event_run",
           "end_event_segment",
           "entity_blacklist_add",
+          "entity_blacklist_expired",
           "entity_blacklist_remove",
           "entity_blacklist_update",
           "event_cue_manage",
@@ -19547,6 +19993,7 @@
           "event_wave_manage",
           "expire_tenant_request",
           "export_tenant",
+          "export_users",
           "finalize_tournament",
           "forward_scrim_request",
           "generate_group_matches",
@@ -19571,6 +20018,7 @@
           "manage_team",
           "map_veto",
           "match_rescheduled",
+          "moderate_comments",
           "notify_scrim_captains",
           "notify_tournament_captains",
           "open_match_dispute",
@@ -19580,6 +20028,7 @@
           "process_demande",
           "publish_news",
           "publish_social_post",
+          "purge_deleted_item",
           "read_association_documents",
           "reassign_captain",
           "reassign_stage",
@@ -19686,6 +20135,7 @@
           "update_bracket",
           "update_cast_member",
           "update_comment",
+          "update_comment_settings",
           "update_custom_game_preset",
           "update_discord_webhook",
           "update_event_run",
@@ -19698,6 +20148,7 @@
           "update_match",
           "update_member_profile",
           "update_mvp_overlay_settings",
+          "update_news",
           "update_player_battle_tag",
           "update_player_skill_rating",
           "update_pole_member",
@@ -24064,6 +24515,7 @@
           "ban",
           "batch_scores",
           "blacklist_add",
+          "blacklist_expired",
           "blacklist_remove",
           "blacklist_update",
           "broadcast_campaign_create",
@@ -24154,6 +24606,7 @@
           "delete_lobby",
           "delete_map_pool_entry",
           "delete_match",
+          "delete_news",
           "delete_pole_member",
           "delete_scrim",
           "delete_scrim_planning",
@@ -24181,6 +24634,7 @@
           "end_event_run",
           "end_event_segment",
           "entity_blacklist_add",
+          "entity_blacklist_expired",
           "entity_blacklist_remove",
           "entity_blacklist_update",
           "event_cue_manage",
@@ -24190,6 +24644,7 @@
           "event_wave_manage",
           "expire_tenant_request",
           "export_tenant",
+          "export_users",
           "finalize_tournament",
           "forward_scrim_request",
           "generate_group_matches",
@@ -24214,6 +24669,7 @@
           "manage_team",
           "map_veto",
           "match_rescheduled",
+          "moderate_comments",
           "notify_scrim_captains",
           "notify_tournament_captains",
           "open_match_dispute",
@@ -24223,6 +24679,7 @@
           "process_demande",
           "publish_news",
           "publish_social_post",
+          "purge_deleted_item",
           "read_association_documents",
           "reassign_captain",
           "reassign_stage",
@@ -24329,6 +24786,7 @@
           "update_bracket",
           "update_cast_member",
           "update_comment",
+          "update_comment_settings",
           "update_custom_game_preset",
           "update_discord_webhook",
           "update_event_run",
@@ -24341,6 +24799,7 @@
           "update_match",
           "update_member_profile",
           "update_mvp_overlay_settings",
+          "update_news",
           "update_player_battle_tag",
           "update_player_skill_rating",
           "update_pole_member",
@@ -27086,6 +27545,9 @@
      "prediction"
     ]
    }
+  },
+  "GET /api/admin/users/export": {
+   "200": {}
   },
   "GET /api/admin/users/manage": {
    "200": {
@@ -36246,6 +36708,67 @@
     ]
    }
   },
+  "GET /api/cron/blacklist-expiry": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "dry_run": {
+      "type": "boolean"
+     },
+     "entities": {
+      "type": "object",
+      "properties": {
+       "candidates": {
+        "type": "number"
+       },
+       "error": {
+        "type": "string",
+        "enum": [
+         "lookup_failed",
+         "migration_pending",
+         "update_failed"
+        ]
+       },
+       "expired": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "candidates",
+       "expired"
+      ]
+     },
+     "players": {
+      "type": "object",
+      "properties": {
+       "candidates": {
+        "type": "number"
+       },
+       "error": {
+        "type": "string",
+        "enum": [
+         "lookup_failed",
+         "migration_pending",
+         "update_failed"
+        ]
+       },
+       "expired": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "candidates",
+       "expired"
+      ]
+     }
+    },
+    "required": [
+     "dry_run",
+     "entities",
+     "players"
+    ]
+   }
+  },
   "GET /api/cron/broadcast-process": {
    "200": {
     "type": "object",
@@ -36694,6 +37217,319 @@
        "success"
       ]
      }
+    ]
+   }
+  },
+  "GET /api/cron/recycle-bin-purge": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "cutoff": {
+      "type": "string"
+     },
+     "duration_ms": {
+      "type": "number"
+     },
+     "retention_days": {
+      "type": "number"
+     },
+     "types": {
+      "type": "object",
+      "properties": {
+       "adherent": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "cast_member": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "match": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "news": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "partner": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "scrim": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "scrim_planning": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "staff": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "stage": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "task": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "team": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       }
+      }
+     }
+    },
+    "required": [
+     "cutoff",
+     "duration_ms",
+     "retention_days",
+     "types"
     ]
    }
   },
@@ -38884,6 +39720,9 @@
    "200": {
     "type": "object",
     "properties": {
+     "commentsClosed": {
+      "type": "boolean"
+     },
      "items": {
       "type": "array",
       "items": {
@@ -38906,6 +39745,7 @@
      }
     },
     "required": [
+     "commentsClosed",
      "items"
     ]
    }
@@ -41598,9 +42438,11 @@
           "battletag",
           "checkin",
           "invitation",
+          "joinRequests",
           "lineup",
           "messages",
           "roster",
+          "score",
           "scrims"
          ]
         }
@@ -42669,6 +43511,57 @@
      "report": {
       "type": "object",
       "properties": {
+       "dispute": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "expectedBy": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "openedAt": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "openedByStaff": {
+          "type": "boolean"
+         },
+         "opponentReport": {
+          "type": [
+           "object",
+           "null"
+          ],
+          "properties": {
+           "mine": {
+            "type": "number"
+           },
+           "opponent": {
+            "type": "number"
+           }
+          },
+          "required": [
+           "mine",
+           "opponent"
+          ]
+         },
+         "slaMinutes": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "expectedBy",
+         "openedAt",
+         "openedByStaff",
+         "opponentReport",
+         "slaMinutes"
+        ]
+       },
        "mine": {
         "type": [
          "object",
@@ -42699,6 +43592,7 @@
        }
       },
       "required": [
+       "dispute",
        "mine",
        "state"
       ]
@@ -48190,6 +49084,67 @@
        ]
       }
      },
+     "rosterLock": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "locked": {
+        "type": "boolean"
+       },
+       "lockedAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "pendingRequest": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "createdAt": {
+          "type": "string"
+         },
+         "ticketId": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "createdAt",
+         "ticketId"
+        ]
+       },
+       "tournamentId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "tournamentName": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "unlockedUntil": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "locked",
+       "lockedAt",
+       "pendingRequest",
+       "tournamentId",
+       "tournamentName",
+       "unlockedUntil"
+      ]
+     },
      "team": {
       "type": [
        "object",
@@ -48272,6 +49227,7 @@
      "managedTeams",
      "members",
      "permissions",
+     "rosterLock",
      "team"
     ]
    }
@@ -50492,6 +51448,56 @@
         "open_for_scrim": {
          "type": "boolean"
         },
+        "opening": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "level": {
+           "type": [
+            "string",
+            "null"
+           ],
+           "enum": [
+            "bronze",
+            "champion",
+            "diamond",
+            "emerald",
+            "gold",
+            "grandmaster",
+            "master",
+            "platinum",
+            "silver",
+            "unknown",
+            null
+           ]
+          },
+          "roles": {
+           "type": "array",
+           "items": {
+            "type": "string",
+            "enum": [
+             "dps",
+             "flex",
+             "support",
+             "tank"
+            ]
+           }
+          },
+          "since": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "level",
+          "roles",
+          "since"
+         ]
+        },
         "short_name": {
          "type": [
           "string",
@@ -50507,6 +51513,7 @@
         "member_count",
         "name",
         "open_for_scrim",
+        "opening",
         "short_name"
        ]
       }
@@ -50948,6 +51955,12 @@
             "null"
            ]
           },
+          "discord": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
           "display_name": {
            "type": [
             "string",
@@ -50969,6 +51982,7 @@
          },
          "required": [
           "battle_tag",
+          "discord",
           "display_name",
           "email",
           "id"
@@ -51262,6 +52276,116 @@
      "grants",
      "members",
      "teamId"
+    ]
+   }
+  },
+  "GET /api/teams/opening": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "accountEmail": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "opening": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "active": {
+        "type": "boolean"
+       },
+       "availability": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "contactDiscord": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "contactEmail": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "expiresAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "level": {
+        "type": [
+         "string",
+         "null"
+        ],
+        "enum": [
+         "bronze",
+         "champion",
+         "diamond",
+         "emerald",
+         "gold",
+         "grandmaster",
+         "master",
+         "platinum",
+         "silver",
+         "unknown",
+         null
+        ]
+       },
+       "note": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "roles": {
+        "type": "array",
+        "items": {
+         "type": "string",
+         "enum": [
+          "dps",
+          "flex",
+          "support",
+          "tank"
+         ]
+        }
+       },
+       "since": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "active",
+       "availability",
+       "contactDiscord",
+       "contactEmail",
+       "expiresAt",
+       "id",
+       "level",
+       "note",
+       "roles",
+       "since"
+      ]
+     }
+    },
+    "required": [
+     "accountEmail",
+     "opening"
     ]
    }
   },
@@ -51864,6 +52988,12 @@
             "null"
            ]
           },
+          "discord": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
           "display_name": {
            "type": [
             "string",
@@ -51885,6 +53015,7 @@
          },
          "required": [
           "battle_tag",
+          "discord",
           "display_name",
           "email",
           "id"
@@ -54328,6 +55459,30 @@
     ]
    }
   },
+  "PATCH /api/admin/moderation/comments/settings": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "comments_closed": {
+      "type": "boolean"
+     },
+     "id": {
+      "type": "string"
+     },
+     "title": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "comments_closed",
+     "id",
+     "title"
+    ]
+   }
+  },
   "PATCH /api/admin/moderation/entity-blacklist/{id}": {
    "200": {
     "type": "object",
@@ -55144,6 +56299,33 @@
    "200": {
     "type": "object",
     "properties": {
+     "notification": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "discord": {
+        "type": "string",
+        "enum": [
+         "no_account",
+         "unavailable"
+        ]
+       },
+       "email": {
+        "type": "string",
+        "enum": [
+         "failed",
+         "no_address",
+         "sent"
+        ]
+       }
+      },
+      "required": [
+       "discord",
+       "email"
+      ]
+     },
      "ticket": {
       "type": "object",
       "properties": {
@@ -55305,6 +56487,7 @@
      }
     },
     "required": [
+     "notification",
      "ticket"
     ]
    }
@@ -57261,16 +58444,63 @@
      "subscription": {
       "type": "object",
       "properties": {
+       "consecutive_failures": {
+        "type": "number"
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "description": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "disabled_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "enabled": {
         "type": "boolean"
        },
+       "event_types": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
        "id": {
+        "type": "string"
+       },
+       "last_delivery_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "last_error": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "url": {
         "type": "string"
        }
       },
       "required": [
+       "consecutive_failures",
+       "created_at",
+       "description",
+       "disabled_at",
        "enabled",
-       "id"
+       "event_types",
+       "id",
+       "last_delivery_at",
+       "last_error",
+       "url"
       ]
      }
     },
@@ -58824,6 +60054,63 @@
     ]
    }
   },
+  "POST /api/admin/demandes/{id}/assign": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "assignment": {
+      "type": "object",
+      "properties": {
+       "assigned_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "assigned_staff_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "assigned_to": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "display_name": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "id": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "display_name",
+         "id"
+        ]
+       },
+       "id": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "assigned_at",
+       "assigned_staff_id",
+       "assigned_to",
+       "id"
+      ]
+     }
+    },
+    "required": [
+     "assignment"
+    ]
+   }
+  },
   "POST /api/admin/demandes/{id}/notify-captains": {
    "202": {
     "type": "object",
@@ -59428,6 +60715,40 @@
      "nudgedSides",
      "skippedSides",
      "success"
+    ]
+   }
+  },
+  "POST /api/admin/matches/{matchId}/checkin-staff": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "alreadyCheckedIn": {
+      "type": "boolean"
+     },
+     "checkedInAt": {
+      "type": "string"
+     },
+     "matchId": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean",
+      "const": true
+     },
+     "teamSide": {
+      "type": "number",
+      "enum": [
+       1,
+       2
+      ]
+     }
+    },
+    "required": [
+     "alreadyCheckedIn",
+     "checkedInAt",
+     "matchId",
+     "success",
+     "teamSide"
     ]
    }
   },
@@ -62155,6 +63476,30 @@
     ]
    }
   },
+  "POST /api/admin/moderation/comments": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "action": {
+      "type": "string"
+     },
+     "affected": {
+      "type": "number"
+     },
+     "ids": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     }
+    },
+    "required": [
+     "action",
+     "affected",
+     "ids"
+    ]
+   }
+  },
   "POST /api/admin/moderation/entity-blacklist": {
    "201": {
     "type": "object",
@@ -64517,6 +65862,63 @@
     "required": [
      "kind",
      "ok"
+    ]
+   }
+  },
+  "POST /api/admin/support/tickets/{id}/assign": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "assignment": {
+      "type": "object",
+      "properties": {
+       "assigned_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "assigned_staff_id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "assigned_to": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "properties": {
+         "display_name": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "id": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "display_name",
+         "id"
+        ]
+       },
+       "id": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "assigned_at",
+       "assigned_staff_id",
+       "assigned_to",
+       "id"
+      ]
+     }
+    },
+    "required": [
+     "assignment"
     ]
    }
   },
@@ -72897,6 +74299,67 @@
     ]
    }
   },
+  "POST /api/cron/blacklist-expiry": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "dry_run": {
+      "type": "boolean"
+     },
+     "entities": {
+      "type": "object",
+      "properties": {
+       "candidates": {
+        "type": "number"
+       },
+       "error": {
+        "type": "string",
+        "enum": [
+         "lookup_failed",
+         "migration_pending",
+         "update_failed"
+        ]
+       },
+       "expired": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "candidates",
+       "expired"
+      ]
+     },
+     "players": {
+      "type": "object",
+      "properties": {
+       "candidates": {
+        "type": "number"
+       },
+       "error": {
+        "type": "string",
+        "enum": [
+         "lookup_failed",
+         "migration_pending",
+         "update_failed"
+        ]
+       },
+       "expired": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "candidates",
+       "expired"
+      ]
+     }
+    },
+    "required": [
+     "dry_run",
+     "entities",
+     "players"
+    ]
+   }
+  },
   "POST /api/cron/broadcast-process": {
    "200": {
     "type": "object",
@@ -73345,6 +74808,319 @@
        "success"
       ]
      }
+    ]
+   }
+  },
+  "POST /api/cron/recycle-bin-purge": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "cutoff": {
+      "type": "string"
+     },
+     "duration_ms": {
+      "type": "number"
+     },
+     "retention_days": {
+      "type": "number"
+     },
+     "types": {
+      "type": "object",
+      "properties": {
+       "adherent": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "cast_member": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "match": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "news": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "partner": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "scrim": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "scrim_planning": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "staff": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "stage": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "task": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       },
+       "team": {
+        "type": "object",
+        "properties": {
+         "anonymized": {
+          "type": "number"
+         },
+         "candidates": {
+          "type": "number"
+         },
+         "deleted": {
+          "type": "number"
+         },
+         "error": {
+          "type": "string"
+         },
+         "failed": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anonymized",
+         "candidates",
+         "deleted",
+         "failed"
+        ]
+       }
+      }
+     }
+    },
+    "required": [
+     "cutoff",
+     "duration_ms",
+     "retention_days",
+     "types"
     ]
    }
   },
@@ -74138,28 +75914,62 @@
   },
   "POST /api/news/comments": {
    "201": {
-    "type": "object",
-    "properties": {
-     "comment": {
+    "anyOf": [
+     {
       "type": "object",
       "properties": {
-       "author_name": {},
-       "content": {},
-       "created_at": {},
-       "id": {},
-       "news_id": {}
+       "comment": {
+        "type": "object",
+        "properties": {
+         "author_name": {},
+         "content": {},
+         "created_at": {},
+         "id": {},
+         "news_id": {}
+        },
+        "required": [
+         "author_name",
+         "content",
+         "created_at",
+         "id",
+         "news_id"
+        ]
+       },
+       "pending": {
+        "type": "boolean",
+        "const": true
+       }
       },
       "required": [
-       "author_name",
-       "content",
-       "created_at",
-       "id",
-       "news_id"
+       "comment",
+       "pending"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "comment": {
+        "type": "object",
+        "properties": {
+         "author_name": {},
+         "content": {},
+         "created_at": {},
+         "id": {},
+         "news_id": {}
+        },
+        "required": [
+         "author_name",
+         "content",
+         "created_at",
+         "id",
+         "news_id"
+        ]
+       }
+      },
+      "required": [
+       "comment"
       ]
      }
-    },
-    "required": [
-     "comment"
     ]
    }
   },
@@ -74295,6 +76105,24 @@
        "success"
       ]
      }
+    ]
+   }
+  },
+  "POST /api/player/matches/{matchId}/evidence": {
+   "201": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "kind": {
+      "type": "string",
+      "const": "screenshot"
+     }
+    },
+    "required": [
+     "id",
+     "kind"
     ]
    }
   },
@@ -75892,6 +77720,35 @@
     ]
    }
   },
+  "POST /api/teams/roster-unlock-request": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "request": {
+      "type": "object",
+      "properties": {
+       "createdAt": {
+        "type": "string"
+       },
+       "ticketId": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "createdAt",
+       "ticketId"
+      ]
+     },
+     "success": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "request",
+     "success"
+    ]
+   }
+  },
   "POST /api/teams/scrim-requests": {
    "200": {
     "type": "object",
@@ -77126,6 +78983,19 @@
   },
   "PUT /api/admin/matches/{matchId}": {
    "200": {}
+  },
+  "PUT /api/admin/moderation/comments/settings": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "pre_moderation": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "pre_moderation"
+    ]
+   }
   },
   "PUT /api/admin/news/{id}": {
    "200": {
@@ -79444,6 +81314,116 @@
     "required": [
      "ok",
      "slots"
+    ]
+   }
+  },
+  "PUT /api/teams/opening": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "accountEmail": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "opening": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "active": {
+        "type": "boolean"
+       },
+       "availability": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "contactDiscord": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "contactEmail": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "expiresAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "id": {
+        "type": "string"
+       },
+       "level": {
+        "type": [
+         "string",
+         "null"
+        ],
+        "enum": [
+         "bronze",
+         "champion",
+         "diamond",
+         "emerald",
+         "gold",
+         "grandmaster",
+         "master",
+         "platinum",
+         "silver",
+         "unknown",
+         null
+        ]
+       },
+       "note": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "roles": {
+        "type": "array",
+        "items": {
+         "type": "string",
+         "enum": [
+          "dps",
+          "flex",
+          "support",
+          "tank"
+         ]
+        }
+       },
+       "since": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "active",
+       "availability",
+       "contactDiscord",
+       "contactEmail",
+       "expiresAt",
+       "id",
+       "level",
+       "note",
+       "roles",
+       "since"
+      ]
+     }
+    },
+    "required": [
+     "accountEmail",
+     "opening"
     ]
    }
   },
