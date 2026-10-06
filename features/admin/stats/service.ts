@@ -164,7 +164,7 @@ export function teamStatsCsv(stats: TeamStatsRow[]): string {
 }
 
 /* ---------------------------------------------------------------------------
- * Maps (agrégat global de la vue, cf. repository)
+ * Maps (agrégat de l'espace courant, cf. repository)
  * ------------------------------------------------------------------------ */
 
 // Colonnes de tri exposées → colonnes de la vue.
@@ -192,7 +192,10 @@ export async function getMapStats(
   const { limit, offset, minMatches } = pageOf(query);
   const search = sanitizeSearch(query.search as string | string[] | undefined);
 
-  const { rows, count, error } = await repo.listMapStats(ctx.db, {
+  // Bornée à l'espace courant (lot A10) ; repli calculé depuis `games` tant
+  // que la vue n'a pas sa colonne tenant_id (cf. repository).
+  const { rows, count, error, source } = await repo.listMapStats(ctx.db, {
+    tenantId: ctx.tenantId,
     minMatches,
     sortBy: mapSortBy(query.sortBy),
     ascending: sortDirOf(query.sortDir) === 'asc',
@@ -203,6 +206,11 @@ export async function getMapStats(
   if (error) {
     ctx.logger.error('[/api/admin/stats/maps] fetch error', error);
     throw new AdminError(500, 'internal', 'Failed to load map stats.');
+  }
+  if (source === 'games') {
+    ctx.logger.warn(
+      '[/api/admin/stats/maps] map_stats_view sans tenant_id : repli sur games (appliquer map_stats_view_tenant.sql)'
+    );
   }
 
   // Vue → format attendu par l'écran ; winrates calculés sur ce qu'elle rend.

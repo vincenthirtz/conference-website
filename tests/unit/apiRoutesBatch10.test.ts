@@ -35,6 +35,7 @@ import {
   setAdminUser,
   setAuthListUsers,
   setCreateUserResult,
+  CONFERENCE_TENANT_ID,
 } from './__helpers__/supabaseMock';
 
 import { invalidateStaffCache } from '../../utils/staff';
@@ -213,8 +214,10 @@ describe('GET /api/admin/stats/maps', () => {
   });
 
   function seedMaps() {
+    // Lot A10 : la vue porte tenant_id, la route ne lit que l'espace courant.
     store.map_stats_view = [
       {
+        tenant_id: CONFERENCE_TENANT_ID,
         map_name: 'Lijiang',
         games_played: 4,
         wins_team1: 3,
@@ -222,11 +225,20 @@ describe('GET /api/admin/stats/maps', () => {
         total_rounds: 16,
       },
       {
+        tenant_id: CONFERENCE_TENANT_ID,
         map_name: 'Hanamura',
         games_played: 2,
         wins_team1: 1,
         wins_team2: 1,
         total_rounds: 8,
+      },
+      {
+        tenant_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        map_name: 'Busan',
+        games_played: 9,
+        wins_team1: 5,
+        wins_team2: 4,
+        total_rounds: 30,
       },
     ] as any;
   }
