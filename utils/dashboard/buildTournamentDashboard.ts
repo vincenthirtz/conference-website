@@ -1216,7 +1216,12 @@ export async function fetchDashboardData(
      * ---------------------------------------------------------*/
 
     const ticketRows = (ticketsBreakdownRes.data ?? []) as {
-      category: 'dispute' | 'behavior' | 'technical' | 'other';
+      category:
+        | 'dispute'
+        | 'behavior'
+        | 'technical'
+        | 'other'
+        | 'roster_unlock';
       severity: 'low' | 'medium' | 'high';
     }[];
     const tickets: TicketsBreakdown = {
@@ -1225,8 +1230,11 @@ export async function fetchDashboardData(
       bySeverity: { low: 0, medium: 0, high: 0 },
     };
     for (const t of ticketRows) {
-      if (t.category && t.category in tickets.byCategory) {
-        tickets.byCategory[t.category]++;
+      // Les demandes de dérogation de roster (lot P7) tombent dans « autre » :
+      // le donut garde ses quatre tranches et leur somme reste le total.
+      const category = t.category === 'roster_unlock' ? 'other' : t.category;
+      if (category && category in tickets.byCategory) {
+        tickets.byCategory[category]++;
       }
       if (t.severity && t.severity in tickets.bySeverity) {
         tickets.bySeverity[t.severity]++;

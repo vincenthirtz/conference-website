@@ -158,6 +158,23 @@ export default {
     '{count} members out of {total} have left the Discord server',
   discordCheckedAt:
     'Last checked by the bot: {date} — it re-checks every 30 minutes.',
+  rosterLockedTitle: 'Roster locked since {date}',
+  rosterLockedBody:
+    'The “{tournament}” tournament has frozen rosters: adding, removing and changing roles are blocked. If a change is essential (injury, unexpected absence), ask the staff for an exception.',
+  rosterUnlockedTitle: 'Roster unlocked until {date}',
+  rosterUnlockedBody:
+    'The staff opened an editing window for “{tournament}”. Make your changes before it closes.',
+  rosterUnlockCta: 'Request an exception',
+  rosterUnlockReasonLabel: 'Which change, and why?',
+  rosterUnlockReasonPlaceholder:
+    'E.g. our support got injured, we would like to replace her with Name#1234.',
+  rosterUnlockReasonHint: '{min} characters minimum.',
+  rosterUnlockSubmit: 'Send request',
+  rosterUnlockCancel: 'Cancel',
+  rosterUnlockSent:
+    'Request sent. The staff will reply and open a window if the change is justified.',
+  rosterUnlockPending: 'Exception requested on {date} — waiting for the staff.',
+  rosterUnlockError: 'Could not send the request.',
   discordLeftBody:
     'Their account is linked — it is the server they left. They cannot fix this from their player space: they need a new invite to the Discord.',
   discordGapBodyBoth:

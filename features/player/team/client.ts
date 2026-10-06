@@ -9,6 +9,7 @@
 // Mutations : `Idempotency-Key` fraîche.
 
 import { playerRequest, type PlayerScope } from '@/utils/player/playerHttp';
+import type { RosterUnlockRequestView } from '@/utils/teams/rosterLockView';
 import type {
   InvitationSentDto,
   InviteRoleChoice,
@@ -33,6 +34,7 @@ export const teamUrls = {
   updateMemberSpecialty: '/api/teams/update-member-specialty',
   updateMember: '/api/teams/update-member',
   transferCaptain: '/api/teams/transfer-captain',
+  rosterUnlockRequest: '/api/teams/roster-unlock-request',
   memberPermissions: '/api/teams/member-permissions',
   publicPage: (teamId: string) =>
     `/api/teams/${encodeURIComponent(teamId)}/public-page`,
@@ -139,6 +141,14 @@ export const teamClient = {
     mutate<unknown>(teamUrls.transferCaptain, 'PATCH', scope, {
       newCaptainUserId,
     }),
+  /** Demande de dérogation au verrou de roster (lot P7) → ticket staff. */
+  requestRosterUnlock: (scope: PlayerScope, reason: string) =>
+    mutate<{ success: true; request: RosterUnlockRequestView }>(
+      teamUrls.rosterUnlockRequest,
+      'POST',
+      scope,
+      { reason }
+    ),
 
   /** Droits délégués (J3) de l'équipe active, par membre et par source. */
   memberRights: (scope: PlayerScope) =>

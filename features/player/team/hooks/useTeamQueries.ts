@@ -177,6 +177,13 @@ export const useTransferCaptain = () =>
     (s) => [teamKeys.all(s)]
   );
 
+/** Demande de dérogation (lot P7) : l'état vit dans `useManagedTeam`. */
+export const useRequestRosterUnlock = () =>
+  useTeamMutation(
+    (s, reason: string) => teamClient.requestRosterUnlock(s, reason),
+    () => []
+  );
+
 export const usePatchTeamInfo = () =>
   useTeamMutation(
     (s, body: TeamInfoPatchInput) => teamClient.patchInfo(s, body),

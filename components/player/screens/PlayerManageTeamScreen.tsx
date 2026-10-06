@@ -36,6 +36,7 @@ import RoleScopePanel from '@/features/player/team/ui/RoleScopePanel';
 import TeamOpennessPanel from '@/features/player/team/ui/TeamOpennessPanel';
 import InviteByEmailPanel from '@/features/player/team/ui/InviteByEmailPanel';
 import RosterPanel from '@/features/player/team/ui/RosterPanel';
+import ActionErrorAlert from '@/features/player/team/ui/ActionErrorAlert';
 import SentInvitationsPanel from '@/features/player/team/ui/SentInvitationsPanel';
 import JoinRequestsPanel from '@/features/player/team/ui/JoinRequestsPanel';
 import {
@@ -135,15 +136,7 @@ export default function PlayerManageTeamScreen() {
             )}
             <TeamRegistrationCard />
 
-            {s.error && (
-              <div
-                role="alert"
-                aria-live="assertive"
-                className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
-              >
-                {s.error}
-              </div>
-            )}
+            <ActionErrorAlert message={s.error} />
 
             <TeamOpennessPanel
               t={t}
@@ -192,6 +185,7 @@ export default function PlayerManageTeamScreen() {
               roleLabel={s.roleLabel}
               onCommitTeamSkillRating={a.commitTeamSkillRating}
               onCommitTeamIdentity={a.commitTeamIdentity}
+              rosterUnlock={s.rosterUnlock}
               rowHandlers={(m) => ({
                 confirmingRemoval: s.pendingRemoval === m.id,
                 roleLocked: s.isRoleLockedFor(m),

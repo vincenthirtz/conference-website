@@ -1077,7 +1077,7 @@ export async function notifyScoreReportDispute(
 export type SupportTicketNotification = {
   ticketId: string;
   tournamentId: string | null;
-  category: 'dispute' | 'behavior' | 'technical' | 'other';
+  category: 'dispute' | 'behavior' | 'technical' | 'other' | 'roster_unlock';
   severity: 'low' | 'medium' | 'high';
   isAnonymous: boolean;
   reporterName: string | null;
@@ -1101,6 +1101,7 @@ const CATEGORY_LABEL: Record<SupportTicketNotification['category'], string> = {
   behavior: '🚨 Comportement / Safety',
   technical: '🛠️ Problème technique',
   other: '📬 Autre',
+  roster_unlock: '🔓 Dérogation de roster',
 };
 
 const SEVERITY_LABEL: Record<SupportTicketNotification['severity'], string> = {

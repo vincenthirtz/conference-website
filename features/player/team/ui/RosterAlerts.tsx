@@ -1,14 +1,17 @@
 // features/player/team/ui/RosterAlerts.tsx — ce qui manque au roster :
 // capitaine non désignée, membres injoignables sur Discord (non liés, ou
-// partis du serveur). Rendu seulement quand il y a quelque chose à dire.
+// partis du serveur), verrou de roster (lot P7). Rendu seulement quand il y
+// a quelque chose à dire.
 
 import { format } from '@/lib/i18n/useT';
 import {
   discordReadinessSummary,
   hasDiscordLinkInfo,
 } from '@/utils/teams/rosterReadiness';
+import type { RosterLockView } from '@/utils/teams/rosterLockView';
 import type { ManagedTeamMemberDto } from '../schemas';
 import type { ManageTeamTexts } from '../hooks/useManageTeamScreen';
+import RosterLockBanner from './RosterLockBanner';
 
 const ALERT =
   'mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3';
@@ -18,11 +21,18 @@ export default function RosterAlerts({
   members,
   hasCaptain,
   locale,
+  rosterLock = null,
+  busy = false,
+  onRequestRosterUnlock,
 }: {
   t: ManageTeamTexts;
   members: ManagedTeamMemberDto[];
   hasCaptain: boolean;
   locale: string;
+  /** État du verrou de roster ; `null` = inconnu, rien n'est affiché. */
+  rosterLock?: RosterLockView | null;
+  busy?: boolean;
+  onRequestRosterUnlock?: (reason: string) => Promise<boolean>;
 }) {
   // Porte sur le roster ENTIER, encadrement compris ; `known` peut valoir 0 —
   // le serveur ne communique l'état qu'à qui gère l'équipe.
@@ -44,6 +54,15 @@ export default function RosterAlerts({
 
   return (
     <>
+      {rosterLock && (
+        <RosterLockBanner
+          t={t}
+          lock={rosterLock}
+          locale={locale}
+          busy={busy}
+          onRequest={onRequestRosterUnlock}
+        />
+      )}
       {/* Équipe créée par un manager : on rappelle qu'on peut désigner la
           capitaine (bouton sur chaque membre). */}
       {!hasCaptain && (

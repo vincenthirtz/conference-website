@@ -13,6 +13,7 @@ import type {
   ManagedTeamMemberDto,
   TeamIdentityField,
 } from '../schemas';
+import type { RosterLockView } from '@/utils/teams/rosterLockView';
 import type {
   CommitResult,
   ManageTeamTexts,
@@ -43,6 +44,7 @@ export default function RosterPanel({
   rightsPanel,
   onCommitTeamSkillRating,
   onCommitTeamIdentity,
+  rosterUnlock,
 }: {
   t: ManageTeamTexts;
   tRank: typeof nsOverwatchRank.fr;
@@ -63,6 +65,11 @@ export default function RosterPanel({
     field: TeamIdentityField,
     raw: string
   ) => Promise<CommitResult>;
+  /** Verrou de roster (lot P7) ; `onRequest` absent = pas de bouton. */
+  rosterUnlock?: {
+    lock: RosterLockView | null;
+    onRequest?: (reason: string) => Promise<boolean>;
+  };
 }) {
   const { roster, subs, staff } = splitTeamMembers(members);
   const ordered = [...roster, ...subs, ...staff];
@@ -84,6 +91,9 @@ export default function RosterPanel({
         members={members}
         hasCaptain={hasCaptain}
         locale={locale}
+        rosterLock={rosterUnlock?.lock ?? null}
+        busy={busy}
+        onRequestRosterUnlock={rosterUnlock?.onRequest}
       />
       <TeamLevelBand
         t={t}

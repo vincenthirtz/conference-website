@@ -168,6 +168,25 @@ export default ns('manageTeam', {
   // « partie » peut donc être périmé — le dire évite une réinvitation inutile.
   discordCheckedAt:
     'Dernier constat du bot : {date} — il revérifie toutes les 30 minutes.',
+  // Verrou de roster (lot P7).
+  rosterLockedTitle: 'Roster verrouillé depuis le {date}',
+  rosterLockedBody:
+    'Le tournoi « {tournament} » a figé les rosters : ajouts, retraits et changements de rôle sont bloqués. Si un changement est indispensable (blessure, absence imprévue), demande une dérogation au staff.',
+  rosterUnlockedTitle: 'Roster déverrouillé jusqu’au {date}',
+  rosterUnlockedBody:
+    'Le staff a ouvert une fenêtre de modification pour « {tournament} ». Fais tes changements avant qu’elle ne se referme.',
+  rosterUnlockCta: 'Demander une dérogation',
+  rosterUnlockReasonLabel: 'Quel changement, et pourquoi ?',
+  rosterUnlockReasonPlaceholder:
+    'Ex. : notre support s’est blessée, on souhaite la remplacer par Pseudo#1234.',
+  rosterUnlockReasonHint: '{min} caractères minimum.',
+  rosterUnlockSubmit: 'Envoyer la demande',
+  rosterUnlockCancel: 'Annuler',
+  rosterUnlockSent:
+    'Demande envoyée. Le staff te répondra et ouvrira une fenêtre si le changement est justifié.',
+  rosterUnlockPending:
+    'Demande de dérogation envoyée le {date} — en attente du staff.',
+  rosterUnlockError: 'Impossible d’envoyer la demande.',
   discordLeftBody:
     "Leur compte est bien lié — c'est le serveur qu'elles ont quitté. Elles ne peuvent pas régler ça depuis leur espace joueur : il faut les réinviter sur le Discord.",
   discordGapBodyBoth:

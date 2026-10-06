@@ -27,6 +27,10 @@ import {
 import type { TeamMemberLite } from '@/components/player/TeamCard';
 import { readTeamPermissions } from '@/utils/teams/clientPermissions';
 import type { TeamPermission } from '@/utils/teamRoles';
+import {
+  readRosterLockView,
+  type RosterLockView,
+} from '@/utils/teams/rosterLockView';
 
 export type ManagedTeamInfo = {
   id: string;
@@ -89,6 +93,11 @@ export type ManagedTeamData = {
    * réponse, elles ne peuvent pas se désynchroniser.
    */
   managedTeams: ActiveTeamOption[];
+  /**
+   * État du verrou de roster de `team` (lot P7). `null` = inconnu (serveur
+   * antérieur, lecture en échec) : l'écran n'affiche alors rien.
+   */
+  rosterLock: RosterLockView | null;
 };
 
 type ApiPayload = {
@@ -98,6 +107,7 @@ type ApiPayload = {
   isManager?: boolean;
   permissions?: TeamPermission[];
   managedTeams?: ActiveTeamOption[];
+  rosterLock?: unknown;
 };
 
 const CACHE_TTL_MS = 15_000;
@@ -131,6 +141,7 @@ function normalize(payload: ApiPayload | null): ManagedTeamData {
     // comportement (tout, si l'appelant gère l'équipe). Cf. clientPermissions.
     permissions: readTeamPermissions(payload),
     managedTeams: payload?.managedTeams ?? [],
+    rosterLock: readRosterLockView(payload?.rosterLock),
   };
 }
 

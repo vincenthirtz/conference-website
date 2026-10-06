@@ -17,6 +17,7 @@ export default adminNs('adminSupport', {
   catBehavior: '🚨 Safety',
   catTechnical: '🛠️ Technique',
   catOther: '📬 Autre',
+  catRosterUnlock: '🔓 Dérogation roster',
   statusOpen: 'Ouvert',
   statusInProgress: 'En cours',
   statusResolved: 'Résolu',

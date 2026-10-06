@@ -80,7 +80,7 @@ export default ns('inscription2026', {
     "Oui. Signale-toi sur la page « Rejoindre une équipe » : pseudo, postes joués et disponibilités, sans créer de compte. Les capitaines qui recrutent voient ta fiche et te contactent. Le canal dédié du Discord reste une seconde porte d'entrée.",
   faq4Q: "Puis-je modifier mon roster après l'inscription ?",
   faq4A:
-    'Oui, tant que les check-ins ne sont pas verrouillés. Les changements se font depuis la page de ton équipe. Au-delà de la date limite, contacte le staff sur Discord.',
+    'Oui, jusqu’au verrouillage des rosters fixé par le tournoi. Les changements se font depuis la page de ton équipe, qui t’indique aussi quand le roster est verrouillé. Une fois le roster verrouillé, demande une dérogation depuis cette même page (bouton « Demander une dérogation ») : le staff l’examine et peut rouvrir une fenêtre de modification.',
   faq5Q: "L'inscription est-elle payante ?",
   faq5A:
     "Non, l'inscription au tournoi féminin 2026 est gratuite. L'association vit grâce aux dons et aux partenariats.",

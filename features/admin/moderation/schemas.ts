@@ -55,6 +55,7 @@ export const TICKET_CATEGORIES = [
   'behavior',
   'technical',
   'other',
+  'roster_unlock',
 ] as const;
 export const TICKET_SEARCH_MAX_LENGTH = 100;
 

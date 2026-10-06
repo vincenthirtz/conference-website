@@ -34,6 +34,7 @@ import {
   type TeamInfoPatch,
 } from '../repository/myTeam';
 import type { TeamInfoPatchInput } from '../schemas';
+import { loadRosterLockView } from './rosterUnlock';
 
 export type MyTeamContext = {
   db: AdminDb;
@@ -47,7 +48,20 @@ export async function getMyTeam(ctx: MyTeamContext, teamId: string | null) {
   const slice = await loadManagedTeamSlice(ctx.subject.userId, ctx.tenantId, {
     teamId,
   });
-  // Forme publique inchangée ; `permissions` et `managedTeams` sont des ajouts.
+  // État du verrou de roster (lot P7) : la capitaine le voit avant d'écrire
+  // au lieu de le découvrir par une 409. `null` quand on ne sait pas.
+  const team = slice.team as { id?: string; name?: string } | null;
+  const rosterLock =
+    team?.id && typeof team.name === 'string'
+      ? await loadRosterLockView(
+          ctx.db,
+          ctx.tenantId,
+          { id: team.id, name: team.name },
+          ctx.logger
+        )
+      : null;
+  // Forme publique inchangée ; `permissions`, `managedTeams` et `rosterLock`
+  // sont des ajouts.
   return {
     team: slice.team,
     members: slice.members,
@@ -55,6 +69,7 @@ export async function getMyTeam(ctx: MyTeamContext, teamId: string | null) {
     isManager: slice.isManager,
     permissions: slice.permissions,
     managedTeams: slice.managedTeams,
+    rosterLock,
   };
 }
 

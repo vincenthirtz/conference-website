@@ -9,7 +9,12 @@
 
 import type { ChipTone } from '@/features/admin/_shared/ui/Chip';
 
-export type Category = 'dispute' | 'behavior' | 'technical' | 'other';
+export type Category =
+  | 'dispute'
+  | 'behavior'
+  | 'technical'
+  | 'other'
+  | 'roster_unlock';
 export type Status = 'open' | 'in_progress' | 'resolved' | 'closed';
 export type Severity = 'low' | 'medium' | 'high';
 
@@ -22,6 +27,7 @@ export function getCategoryLabels(tx: Dict): Record<Category, string> {
     behavior: tx.catBehavior,
     technical: tx.catTechnical,
     other: tx.catOther,
+    roster_unlock: tx.catRosterUnlock,
   };
 }
 

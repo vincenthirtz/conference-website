@@ -77,7 +77,7 @@ export default {
     'Yes. Add yourself on the « Join a team » page: nickname, roles you play and availability, without creating an account. Recruiting captains see your profile and reach out. The dedicated Discord channel remains a second way in.',
   faq4Q: 'Can I change my roster after registering?',
   faq4A:
-    "Yes, as long as check-ins aren't locked. Changes are made from your team page. After the deadline, contact the staff on Discord.",
+    'Yes, until the roster lock set by the tournament. Changes are made from your team page, which also tells you when the roster is locked. Once the roster is locked, request an exception from that same page (“Request an exception” button): the staff reviews it and can reopen an editing window.',
   faq5Q: 'Is registration paid?',
   faq5A:
     "No, registration for the 2026 women's tournament is free. The association runs on donations and partnerships.",

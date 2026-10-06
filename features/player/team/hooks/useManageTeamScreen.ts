@@ -45,6 +45,7 @@ import {
   useJoinRequests,
   usePatchTeamInfo,
   useRemoveMember,
+  useRequestRosterUnlock,
   useResendInvitation,
   useSentInvitations,
   useTransferCaptain,
@@ -128,6 +129,7 @@ export function useManageTeamScreen(loginHref: string) {
   const updateMember = useUpdateMember();
   const transferCaptain = useTransferCaptain();
   const patchTeamInfo = usePatchTeamInfo();
+  const requestRosterUnlockMutation = useRequestRosterUnlock();
 
   // Miroir local de la tranche partagée : les retouches optimistes (retrait,
   // changement de rôle, bascules) s'y appliquent sans aller-retour.
@@ -487,6 +489,23 @@ export function useManageTeamScreen(loginHref: string) {
       showSuccess(action === 'approve' ? t.playerAccepted : t.requestRejected);
     });
 
+  // ── Verrou de roster (lot P7) ───────────────────────────────────────────
+  /** `true` si la demande est partie (le formulaire se ferme alors). */
+  const requestRosterUnlock = async (reason: string): Promise<boolean> => {
+    let sent = false;
+    await run('roster-unlock', t.rosterUnlockError, async () => {
+      try {
+        await requestRosterUnlockMutation.mutateAsync(reason);
+        sent = true;
+        showSuccess(t.rosterUnlockSent);
+      } finally {
+        // Succès comme « déjà demandé » (409) : le bandeau relit l'état.
+        await reloadTeam();
+      }
+    });
+    return sent;
+  };
+
   const retry = () => {
     void reloadTeam();
     void joinRequestsQuery.refetch();
@@ -512,6 +531,12 @@ export function useManageTeamScreen(loginHref: string) {
     showRoleScope,
     viewerRole,
     hasCaptain,
+    // Verrou de roster (lot P7) : bandeau + demande de dérogation, réservée à
+    // qui gère le roster (et jamais en lecture seule).
+    rosterUnlock: {
+      lock: managedTeam?.rosterLock ?? null,
+      onRequest: canDo('manage_roster') ? requestRosterUnlock : undefined,
+    },
     memberLabel,
     roleLabel,
     isRoleLockedFor,
