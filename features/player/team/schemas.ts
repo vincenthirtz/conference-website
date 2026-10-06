@@ -409,13 +409,15 @@ export type TeamJoinRequestDto = {
   } | null;
 };
 
+const INVITE_ROLES = [
+  'player',
+  'substitute',
+  'coach',
+  'manager',
+  'captain',
+] as const;
 /** Rôle proposé à l'invitation ; `captain` = désigner la capitaine. */
-export type InviteRoleChoice =
-  | 'player'
-  | 'substitute'
-  | 'coach'
-  | 'manager'
-  | 'captain';
+export type InviteRoleChoice = (typeof INVITE_ROLES)[number];
 
 /** Réponse de POST /api/teams/invitations (et de la relance). */
 export type InvitationSentDto = {
@@ -423,14 +425,6 @@ export type InvitationSentDto = {
   email_sent: boolean;
   expires_at?: string | null;
 };
-
-const INVITE_ROLES = [
-  'player',
-  'substitute',
-  'coach',
-  'manager',
-  'captain',
-] as const satisfies readonly InviteRoleChoice[];
 
 /**
  * Formulaire « Inviter par e-mail » (useSchemaForm). L'adresse est vérifiée
