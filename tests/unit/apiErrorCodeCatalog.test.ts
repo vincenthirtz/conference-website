@@ -176,6 +176,11 @@ const RELAYED_BOT_CODES: Record<string, { source: string; codes: string[] }> = {
       'assignee_not_staff',
     ],
   },
+  // matches/[matchId]/checkin.ts → redeemCheckinToken (`result.code`).
+  checkin: {
+    source: 'utils/checkin.ts',
+    codes: ['CHECKIN_MATCH_CLOSED', 'CHECKIN_WINDOW_CLOSED'],
+  },
 };
 
 /** Modules lus en entier : chacun de leurs codes atteint une réponse bot. */
