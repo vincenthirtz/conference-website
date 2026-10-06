@@ -1,0 +1,59 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+post:
+  summary: Check a team in on its behalf (staff catch-up).
+  description: |
+    Requires the `arbitrate_matches` permission. Sets `team{1,2}_checked_in_at`
+    with the same guards as the public token check-in (match `pending` or
+    `ongoing`, auto-forfeit not processed yet) EXCEPT the kickoff time: staff
+    may check a team in after kickoff. Replaying on an already checked-in team
+    is a no-op success (`alreadyCheckedIn: true`). The mandatory `reason` is
+    written to the staff log (`checkin` action).
+  operationId: adminCheckinStaff
+  x-zod-query: admin.matches/[matchId]/sub.query
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.matches/[matchId]/checkin-staff.body
+          type: object
+          required:
+            - teamSide
+            - reason
+          properties:
+            teamSide:
+              type: integer
+              enum:
+                - 1
+                - 2
+              description: Side of the match to check in.
+            reason:
+              type: string
+              minLength: 3
+              maxLength: 500
+              description: Why staff checks the team in (staff log).
+  responses:
+    '200':
+      description: Team checked in (or already was).
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      description: Match closed or auto-forfeit already processed.

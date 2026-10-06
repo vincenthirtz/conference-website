@@ -258,6 +258,9 @@ export const MatchLineupBody = looseBody(['teamId', 'starters', 'reopen']);
 
 export const CheckinNudgeBody = looseBody(['teamSide']);
 
+/** Corps de POST …/checkin-staff (pointage staff) ; validé par le service. */
+export const CheckinStaffBody = looseBody(['teamSide', 'reason']);
+
 /** Corps déclaré de POST …/mvp-public ; validé par le service. */
 export const MvpPublicLooseBody = looseBody([
   'action',

@@ -256,6 +256,7 @@ import {
 
 import {
   CheckinNudgeBody,
+  CheckinStaffBody,
   DisputeBoardQuery,
   DisputeOpenBody,
   DisputeResolveBody,
@@ -731,6 +732,10 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   },
   'admin.matches/[matchId]/checkin-nudge.body': {
     schema: CheckinNudgeBody,
+    io: 'input',
+  },
+  'admin.matches/[matchId]/checkin-staff.body': {
+    schema: CheckinStaffBody,
     io: 'input',
   },
   // Équipes (features/admin/teams, vague serveur 4). Corps « historiques »

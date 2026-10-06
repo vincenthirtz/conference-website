@@ -1534,3 +1534,183 @@ export async function listCheckinStatus(
     };
   });
 }
+
+/* -----------------------------------------------------------
+ * Pointage par le staff (rattrapage, console live)
+ * ---------------------------------------------------------*/
+
+/**
+ * Codes d'échec du pointage staff :
+ *   - `CHECKIN_MATCH_NOT_FOUND`   : pas de match à cet id dans le tenant (404) ;
+ *   - `CHECKIN_TEAM_MISSING`      : aucun club dans ce slot (409) ;
+ *   - `CHECKIN_MATCH_CLOSED`      : le match n'est plus `pending`/`ongoing` (409) ;
+ *   - `CHECKIN_FORFEIT_PROCESSED` : le forfait automatique est déjà passé (409).
+ */
+export type StaffCheckinErrorCode =
+  | 'CHECKIN_MATCH_NOT_FOUND'
+  | 'CHECKIN_TEAM_MISSING'
+  | 'CHECKIN_MATCH_CLOSED'
+  | 'CHECKIN_FORFEIT_PROCESSED';
+
+export type StaffCheckinResult =
+  | {
+      ok: true;
+      matchId: string;
+      tournamentId: string | null;
+      teamSlot: 1 | 2;
+      teamId: string;
+      checkedInAt: string;
+      alreadyCheckedIn: boolean;
+    }
+  | { ok: false; error: string; code: StaffCheckinErrorCode };
+
+type StaffCheckinMatchRow = {
+  id: string;
+  tournament_id: string | null;
+  status: string;
+  team1_id: string | null;
+  team2_id: string | null;
+  team1_checked_in_at: string | null;
+  team2_checked_in_at: string | null;
+  forfeit_processed_at: string | null;
+};
+
+async function readStaffCheckinMatch(
+  tenantId: string,
+  matchId: string
+): Promise<StaffCheckinMatchRow | null> {
+  const { data } = await supabaseAdmin!
+    .from('matches')
+    .select(
+      'id, tournament_id, status, team1_id, team2_id, team1_checked_in_at, team2_checked_in_at, forfeit_processed_at'
+    )
+    .eq('tenant_id', tenantId)
+    .eq('id', matchId)
+    .maybeSingle();
+  return (data as StaffCheckinMatchRow | null) ?? null;
+}
+
+/** Verdict sur une ligne relue : succès idempotent ou refus motivé. */
+function staffCheckinVerdict(
+  m: StaffCheckinMatchRow,
+  teamSlot: 1 | 2
+): StaffCheckinResult | null {
+  const teamId = teamSlot === 1 ? m.team1_id : m.team2_id;
+  if (!teamId) {
+    return {
+      ok: false,
+      error: `Aucune équipe dans le slot ${teamSlot} de ce match.`,
+      code: 'CHECKIN_TEAM_MISSING',
+    };
+  }
+  if (m.status !== 'pending' && m.status !== 'ongoing') {
+    return {
+      ok: false,
+      error: `Check-in fermé (statut du match : ${m.status})`,
+      code: 'CHECKIN_MATCH_CLOSED',
+    };
+  }
+  const checkedInAt =
+    teamSlot === 1 ? m.team1_checked_in_at : m.team2_checked_in_at;
+  if (checkedInAt) {
+    return {
+      ok: true,
+      matchId: m.id,
+      tournamentId: m.tournament_id ?? null,
+      teamSlot,
+      teamId,
+      checkedInAt,
+      alreadyCheckedIn: true,
+    };
+  }
+  if (m.forfeit_processed_at) {
+    return {
+      ok: false,
+      error:
+        'Le forfait automatique a déjà été traité pour ce match : le check-in ne peut plus être posé.',
+      code: 'CHECKIN_FORFEIT_PROCESSED',
+    };
+  }
+  return null;
+}
+
+/**
+ * Pointe une équipe À SA PLACE (geste staff de rattrapage : capitaine sans
+ * accès, lien perdu, coup d'envoi déjà passé).
+ *
+ * Mêmes gardes que `redeemCheckinToken` SAUF l'horaire : le staff peut pointer
+ * après le coup d'envoi — c'est tout l'objet du rattrapage. Ce qu'il ne peut
+ * pas faire, c'est pointer une équipe dont le forfait automatique est déjà
+ * tombé (défaire un forfait passe par l'arbitrage du match, pas par ici).
+ *
+ * L'écriture est conditionnelle, comme pour le jeton (statut, slot encore
+ * vide, forfait non traité) : une course avec le cron de forfait ou avec la
+ * capitaine qui clique au même instant retombe sur une relecture, jamais sur
+ * une double écriture. Un rejeu sur une équipe déjà pointée est un succès
+ * (`alreadyCheckedIn`).
+ *
+ * Pas de récompense de série TCG : elle salue une équipe qui a pointé
+ * elle-même, pas un rattrapage du staff.
+ */
+export async function staffCheckInTeam(
+  tenantId: string,
+  matchId: string,
+  teamSlot: 1 | 2
+): Promise<StaffCheckinResult> {
+  if (!supabaseAdmin) {
+    throw new Error('supabase admin unavailable');
+  }
+
+  const match = await readStaffCheckinMatch(tenantId, matchId);
+  if (!match) {
+    return {
+      ok: false,
+      error: 'Match introuvable',
+      code: 'CHECKIN_MATCH_NOT_FOUND',
+    };
+  }
+  const verdict = staffCheckinVerdict(match, teamSlot);
+  if (verdict) return verdict;
+
+  const now = new Date().toISOString();
+  const field = teamSlot === 1 ? 'team1_checked_in_at' : 'team2_checked_in_at';
+  const { data: written, error } = await supabaseAdmin
+    .from('matches')
+    .update({ [field]: now })
+    .eq('tenant_id', tenantId)
+    .eq('id', matchId)
+    .in('status', ['pending', 'ongoing'])
+    .is(field, null)
+    .is('forfeit_processed_at', null)
+    .select('id');
+
+  if (error) {
+    logger.error('[checkin] staff check-in update error:', error);
+    throw new Error("Échec de l'enregistrement du check-in");
+  }
+
+  if (!Array.isArray(written) || written.length === 0) {
+    // Course perdue : on relit et on rend le verdict de l'état réel.
+    const again = await readStaffCheckinMatch(tenantId, matchId);
+    if (!again) {
+      return {
+        ok: false,
+        error: 'Match introuvable',
+        code: 'CHECKIN_MATCH_NOT_FOUND',
+      };
+    }
+    const late = staffCheckinVerdict(again, teamSlot);
+    if (late) return late;
+    throw new Error("Échec de l'enregistrement du check-in");
+  }
+
+  return {
+    ok: true,
+    matchId,
+    tournamentId: match.tournament_id ?? null,
+    teamSlot,
+    teamId: (teamSlot === 1 ? match.team1_id : match.team2_id) as string,
+    checkedInAt: now,
+    alreadyCheckedIn: false,
+  };
+}

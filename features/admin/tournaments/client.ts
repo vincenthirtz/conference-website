@@ -85,6 +85,7 @@ export const tournamentUrls = {
   discordTest: (id: string) => `${T}/${enc(id)}/discord-test`,
   checkin: (id: string) => `${T}/${enc(id)}/checkin`,
   checkinSettings: (id: string) => `${T}/${enc(id)}/checkin-settings`,
+  reviewsPlaylist: (id: string) => `${T}/${enc(id)}/reviews-playlist`,
   checkinNudgeAll: (id: string) => `${T}/${enc(id)}/checkin-nudge-all`,
   stats: (id: string) => `${T}/${enc(id)}/stats`,
   analytics: (id: string) => `${T}/${enc(id)}/analytics`,
@@ -121,6 +122,8 @@ export const tournamentMatchUrls = {
   veto: (matchId: string) => `/api/admin/matches/${enc(matchId)}/veto`,
   checkinNudge: (matchId: string) =>
     `/api/admin/matches/${enc(matchId)}/checkin-nudge`,
+  checkinStaff: (matchId: string) =>
+    `/api/admin/matches/${enc(matchId)}/checkin-staff`,
   mvpPublic: (matchId: string) =>
     `/api/admin/matches/${enc(matchId)}/mvp-public`,
   mapPool: (matchId: string) => `/api/admin/matches/${enc(matchId)}/map-pool`,
