@@ -15,6 +15,8 @@ export default {
   title: 'Create an account',
   subtitle:
     "Sign up with your email. You'll get a link to confirm your account before signing in.",
+  nextContextNote:
+    "Once your account is created and confirmed, you'll pick up where you left off (your invitation is kept).",
   accountTypeLegend: "I'm creating this account as",
   accountTypePlayer: 'Player',
   accountTypePlayerHint: "I play on a team, or I'm looking for one.",

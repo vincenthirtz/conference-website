@@ -32,6 +32,8 @@ import {
   EMAIL_QUALITY_MESSAGES,
 } from '@/utils/emailQuality';
 import { checkEmailDomainDns } from '@/utils/emailDns';
+import { safeNext } from '@/utils/auth/safeNext';
+import { getSiteUrl } from '@/utils/onboard';
 
 import { logger } from '../../../utils/logger';
 
@@ -102,6 +104,10 @@ const registerSchema = z.object({
   // antérieur à 2026-08-20) gardent le comportement exact d'avant.
   accountType: z.enum(SELF_SERVICE_ROLES).optional(),
   signupSource: signupSourceSchema,
+  // Destination après confirmation (ex. `/rejoindre/<token>` : l'invitation
+  // qui a amené ici). Une valeur invalide est IGNORÉE, pas rejetée : elle ne
+  // doit pas coûter l'inscription. Validée ensuite par `safeNext`.
+  next: z.string().max(500).optional().catch(undefined),
   battleTag: z.preprocess(
     (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
     z
@@ -139,6 +145,16 @@ export default async function handler(
   }
 
   const { password, displayName, battleTag, signupSource } = parsed.data;
+  // Lien de confirmation : il ramène vers /login avec le `next` validé (même
+  // règle anti open-redirect que la page). La page de connexion reprend une
+  // session déjà établie et file vers `next`, sinon elle le garde pour après
+  // la saisie. Sans `next`, comportement inchangé (Site URL Supabase).
+  // ⚠️ L'URL doit figurer dans les Redirect URLs autorisées de Supabase ;
+  // sinon Supabase retombe sur la Site URL (dégradation sans risque).
+  const next = safeNext(parsed.data.next);
+  const emailRedirectTo = next
+    ? `${getSiteUrl()}/login?next=${encodeURIComponent(next)}`
+    : undefined;
   const accountRole = parsed.data.accountType ?? 'player';
   const email = normalizeEmail(parsed.data.email);
 
@@ -169,6 +185,7 @@ export default async function handler(
     email,
     password,
     options: {
+      ...(emailRedirectTo ? { emailRedirectTo } : {}),
       data: {
         display_name: displayName ?? null,
         // Rôle borné côté serveur à SELF_SERVICE_ROLES : le client choisit

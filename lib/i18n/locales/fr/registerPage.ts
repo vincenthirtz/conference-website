@@ -14,6 +14,9 @@ export default ns('registerPage', {
   title: 'Créer un compte',
   subtitle:
     'Inscris-toi avec ton email. Tu recevras un lien pour confirmer ton compte avant de te connecter.',
+  // Affiché quand on arrive avec ?next= (ex. une invitation d'équipe).
+  nextContextNote:
+    'Une fois ton compte créé et confirmé, tu reprendras là où tu en étais (ton invitation est gardée).',
   accountTypeLegend: 'Je crée ce compte en tant que',
   accountTypePlayer: 'Joueuse',
   accountTypePlayerHint: 'Je joue en équipe ou je cherche une équipe.',

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabaseBrowser';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 import { useT } from '@/lib/i18n/useT';
@@ -7,9 +8,17 @@ import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics/track';
 import { resolveSignupSource } from '@/lib/analytics/attribution';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import nsRegisterPage from '@/lib/i18n/locales/fr/registerPage';
+import { safeNext } from '@/utils/auth/safeNext';
 
 function RegisterPage() {
   const t = useT(nsRegisterPage);
+  const router = useRouter();
+  // Contexte d'arrivée (`?next=`, ex. `/rejoindre/<token>` depuis une
+  // invitation). Validé comme sur /login (anti open-redirect) puis propagé :
+  // retour OAuth Discord, lien de confirmation e-mail, lien « se connecter ».
+  // Sans lui, l'invitation qui avait amené ici était perdue.
+  const next = safeNext(router.query.next);
+  const loginHref = next ? `/login?next=${encodeURIComponent(next)}` : '/login';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -82,8 +91,13 @@ function RegisterPage() {
       const baseUrl =
         process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, '') ||
         (typeof window !== 'undefined' ? window.location.origin : '');
+      // Une nouvelle joueuse vise son espace (ou le contexte d'arrivée), pas
+      // l'accueil public. discord-member fait encore le détour par la saisie
+      // du BattleTag si le compte n'en a pas, en conservant cette cible.
       const redirectTo = baseUrl
-        ? `${baseUrl}/auth/discord-member?next=/`
+        ? `${baseUrl}/auth/discord-member?next=${encodeURIComponent(
+            next ?? '/player'
+          )}`
         : undefined;
 
       const { error } = await supabaseClient.auth.signInWithOAuth({
@@ -157,6 +171,8 @@ function RegisterPage() {
           // Attribution : première touche mémorisée si consentement analytics,
           // sinon les utm_* de l'URL courante. `null` quand il n'y a rien.
           signupSource: resolveSignupSource() ?? undefined,
+          // Le lien de confirmation e-mail ramènera ici (revalidé serveur).
+          next: next ?? undefined,
         }),
       });
 
@@ -215,6 +231,14 @@ function RegisterPage() {
             <p className="text-sm text-gray-300 mt-2 text-center max-w-sm">
               {t.subtitle}
             </p>
+            {next && (
+              <p
+                data-testid="register-next-context"
+                className="mt-3 max-w-sm rounded-xl border border-purple-400/30 bg-purple-500/10 px-3 py-2 text-center text-xs text-purple-100"
+              >
+                {t.nextContextNote}
+              </p>
+            )}
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl shadow-black/40 p-6">
@@ -469,7 +493,7 @@ function RegisterPage() {
             </form>
 
             <div className="mt-4 text-center text-sm text-gray-300 space-x-3">
-              <Link href="/login" className="hover:text-white">
+              <Link href={loginHref} className="hover:text-white">
                 {t.linkLogin}
               </Link>
               <span className="text-gray-600">•</span>

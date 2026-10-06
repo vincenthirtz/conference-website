@@ -16,15 +16,9 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../utils/logger';
 import nsLoginPage from '@/lib/i18n/locales/fr/loginPage';
-
-// Valide une cible de redirection pour éviter les open redirects : on
-// n'accepte que les chemins internes (commence par '/' mais pas par '//',
-// qui serait un lien protocol-relative vers un domaine externe).
-// Même règle que pages/auth/discord-member.tsx.
-function safeNext(raw: unknown): string | null {
-  if (typeof raw !== 'string') return null;
-  return raw.startsWith('/') && !raw.startsWith('//') ? raw : null;
-}
+// Valide `?next=` (anti open-redirect) — règle partagée avec /register et
+// l'API d'inscription.
+import { safeNext } from '@/utils/auth/safeNext';
 
 // Amorce le cache de session staff (même clé/shape que useStaffSession) à
 // partir de la réponse /api/admin/me déjà obtenue au login. Évite que la
@@ -51,6 +45,12 @@ function primeStaffCache(me: {
 const LoginPage = () => {
   const router = useRouter();
   const t = useT(nsLoginPage);
+  // Le contexte (`?next=`, ex. une invitation) survit au détour par la
+  // création de compte.
+  const nextForRegister = safeNext(router.query.next);
+  const registerHref = nextForRegister
+    ? `/register?next=${encodeURIComponent(nextForRegister)}`
+    : '/register';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -439,7 +439,7 @@ const LoginPage = () => {
                   >
                     {t.noAccount}{' '}
                     <Link
-                      href="/register"
+                      href={registerHref}
                       className="text-purple-300 hover:text-purple-200 underline"
                     >
                       {t.createAccount}
