@@ -40,8 +40,12 @@ export default {
   opensIn: 'Opens in',
   passedTitle: 'The check-in window is closed',
   passedBody:
-    "You didn't confirm your check-in in time. Contact staff if this is a mistake.",
-  contactStaff: 'Contact staff',
+    "You didn't confirm your check-in in time. If this is a mistake, let staff know: the ticket opens with the match details already filled in.",
+  contactStaff: 'Open a ticket with staff',
+  // Pre-filled support ticket (check-in window passed).
+  supportSubject: 'Missed check-in — {team} vs {opponent}',
+  supportMessage:
+    "Hello, our team {team} couldn't confirm its check-in for the match against {opponent} ({tournament}), scheduled {date}.\nMatch ID: {matchId}\n\nWhat happened: ",
   unavailable: 'Check-in is not available for this match.',
   restrictedOpenTitle: 'Check-in open',
   restrictedBody: 'Check-in is done by the captain, the coach or the manager.',

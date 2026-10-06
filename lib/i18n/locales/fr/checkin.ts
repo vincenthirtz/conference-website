@@ -41,8 +41,12 @@ export default ns('checkin', {
   opensIn: 'Ouverture dans',
   passedTitle: 'La fenêtre de check-in est fermée',
   passedBody:
-    "Tu n'as pas validé ton check-in à temps. Contacte le staff si c'est une erreur.",
-  contactStaff: 'Contacter le staff',
+    "Tu n'as pas validé ton check-in à temps. Si c'est une erreur, préviens le staff : le ticket s'ouvre avec les infos du match déjà remplies.",
+  contactStaff: 'Ouvrir un ticket au staff',
+  // Ticket support pré-rempli (fenêtre de check-in passée).
+  supportSubject: 'Check-in manqué — {team} vs {opponent}',
+  supportMessage:
+    "Bonjour, notre équipe {team} n'a pas pu valider son check-in pour le match contre {opponent} ({tournament}), prévu {date}.\nIdentifiant du match : {matchId}\n\nCe qui s'est passé : ",
   unavailable: "Le check-in n'est pas disponible pour ce match.",
   // Check-in réservé à la capitaine / coach / manager (règle du 2026-09-17).
   restrictedOpenTitle: 'Check-in ouvert',

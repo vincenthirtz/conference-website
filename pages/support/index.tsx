@@ -2,8 +2,10 @@
 // Public support / safety reporting form. Anyone can submit, optionally
 // anonymously. HIGH severity submissions ping the moderation role on Discord.
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/router';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
+import { parseSupportPrefill } from '@/utils/support/prefill';
 import { useT } from '@/lib/i18n/useT';
 import nsSupportPage from '@/lib/i18n/locales/fr/supportPage';
 
@@ -89,6 +91,20 @@ export default function SupportPage() {
   const [reportedType, setReportedType] = useState<ReportedTargetType>('');
   const [reportedName, setReportedName] = useState('');
   const [reportedBattleTag, setReportedBattleTag] = useState('');
+
+  // Pré-remplissage par la query (`?category=&subject=&message=`), posé par
+  // les écrans qui savent de quoi il s'agit (check-in manqué…). Appliqué UNE
+  // fois, quand la query est disponible : on n'écrase jamais une saisie.
+  const router = useRouter();
+  const prefillApplied = useRef(false);
+  useEffect(() => {
+    if (!router.isReady || prefillApplied.current) return;
+    prefillApplied.current = true;
+    const prefill = parseSupportPrefill(router.query);
+    if (prefill.category) setCategory(prefill.category);
+    if (prefill.subject) setSubject(prefill.subject);
+    if (prefill.message) setMessage(prefill.message);
+  }, [router.isReady, router.query]);
 
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<{ ref: string } | null>(null);

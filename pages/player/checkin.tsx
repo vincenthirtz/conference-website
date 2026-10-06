@@ -16,6 +16,7 @@ import type { NextMatchPayload } from '@/features/player/checkin/schemas';
 import { fetchNextMatch, postCheckin } from '@/features/player/checkin/client';
 import MatchLineupCard from '@/components/player/MatchLineupCard';
 import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
+import { buildSupportHref } from '@/utils/support/prefill';
 import {
   isCheckinStillOpen,
   matchThreadRefreshMs,
@@ -218,6 +219,24 @@ function PlayerCheckin() {
 
   const match = data?.match ?? null;
   const checkin = data?.checkin ?? null;
+  // Fenêtre passée : le ticket support s'ouvre pré-rempli avec ce que la page
+  // sait déjà (match, équipe, heure prévue) au lieu d'un /support vierge.
+  const missedCheckinSupportHref = match
+    ? buildSupportHref({
+        category: 'dispute',
+        subject: format(t.supportSubject, {
+          team: data?.team?.name ?? '—',
+          opponent: data?.opponent?.name ?? t.opponentTbd,
+        }),
+        message: format(t.supportMessage, {
+          team: data?.team?.name ?? '—',
+          opponent: data?.opponent?.name ?? t.opponentTbd,
+          tournament: data?.tournament?.name ?? '—',
+          date: formatScheduled(match.scheduledAt ?? null, lang, t),
+          matchId: match.id,
+        }),
+      })
+    : '/support';
   const hasMatch = !!match && !!data?.team;
 
   return (
@@ -306,6 +325,7 @@ function PlayerCheckin() {
               submitError={submitError}
               justConfirmed={justConfirmed}
               onSubmit={handleSubmit}
+              supportHref={missedCheckinSupportHref}
               lang={lang}
               t={t}
             />
@@ -352,6 +372,7 @@ function CheckinState({
   submitError,
   justConfirmed,
   onSubmit,
+  supportHref,
   lang,
   t,
 }: {
@@ -360,6 +381,8 @@ function CheckinState({
   submitError: string | null;
   justConfirmed: boolean;
   onSubmit: () => void;
+  /** Ticket support pré-rempli (match, équipe, heure) — fenêtre passée. */
+  supportHref: string;
   lang: Lang;
   t: T;
 }) {
@@ -572,7 +595,7 @@ function CheckinState({
         <h3 className="text-lg font-semibold text-amber-50">{t.passedTitle}</h3>
         <p className="mt-2 text-sm text-amber-200/90">{t.passedBody}</p>
         <Link
-          href="/support"
+          href={supportHref}
           className="mt-4 inline-flex items-center justify-center rounded-full border border-amber-400/40 bg-amber-500/10 px-5 py-2.5 text-sm font-medium text-amber-100 transition hover:bg-amber-500/20"
         >
           {t.contactStaff}
