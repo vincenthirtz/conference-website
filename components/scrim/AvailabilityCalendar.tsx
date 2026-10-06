@@ -24,6 +24,7 @@ import {
 } from '@/utils/teams/scrimPlanningOverlap';
 import { fmtHourOfDay as fmtHour } from '@/utils/teams/scrimTime';
 import type { AvailabilityGridLabels } from '@/components/scrim/AvailabilityGrid';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 export type AvailabilityCalendarLabels = AvailabilityGridLabels & {
   /** « Semaine du {date} ». */
@@ -78,15 +79,16 @@ const HEAT_RAMP = [
 
 function fmtDayHeader(
   dateStr: string,
-  timezone: string
+  timezone: string,
+  locale: string
 ): { dow: string; day: string } {
   const d = new Date(`${dateStr}T12:00:00Z`);
   return {
-    dow: d.toLocaleDateString('fr-FR', {
+    dow: d.toLocaleDateString(locale, {
       weekday: 'short',
       timeZone: timezone,
     }),
-    day: d.toLocaleDateString('fr-FR', {
+    day: d.toLocaleDateString(locale, {
       day: 'numeric',
       month: 'short',
       timeZone: timezone,
@@ -130,6 +132,7 @@ export default function AvailabilityCalendar({
   secondaryTz = null,
   focusDate = null,
 }: AvailabilityCalendarProps) {
+  const locale = useLocale();
   const allDays = useMemo(() => horizonDates(config), [config]);
   const rows = useMemo(() => slotMinutesOfDay(config), [config]);
   const slotPx = (HOUR_PX * config.slotMinutes) / 60;
@@ -303,7 +306,7 @@ export default function AvailabilityCalendar({
             <span className="tabular-nums">
               {labels.weekOf.replace(
                 '{date}',
-                fmtDayHeader(days[0], config.timezone).day
+                fmtDayHeader(days[0], config.timezone, locale).day
               )}
             </span>
             <button
@@ -364,10 +367,10 @@ export default function AvailabilityCalendar({
                     }`}
                   >
                     <div className="text-[11px] font-semibold uppercase">
-                      {fmtDayHeader(day, config.timezone).dow}
+                      {fmtDayHeader(day, config.timezone, locale).dow}
                     </div>
                     <div className="text-[10px] text-gray-500">
-                      {fmtDayHeader(day, config.timezone).day}
+                      {fmtDayHeader(day, config.timezone, locale).day}
                     </div>
                   </div>
 

@@ -97,6 +97,8 @@ export default ns('playerIndex', {
     'Le check-in est fait par la capitaine, le coach ou la manager.',
   readinessViewMatch: 'Voir le match',
   proposedSlotsLabel: 'Créneaux proposés',
+  /** Fuseau des heures affichées dans une négociation de scrim. */
+  slotsTimezone: 'heure de Paris',
   acceptSlot: 'Accepter ce créneau',
   counterCta: "Proposer d'autres créneaux",
   counterSubmit: 'Envoyer la contre-proposition',

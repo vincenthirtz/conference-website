@@ -22,6 +22,8 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import nsTeamJoinLink from '@/lib/i18n/locales/fr/teamJoinLink';
+import { useLocale } from '@/lib/i18n/useLocale';
+import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
 
 type JoinLink = {
   id: string;
@@ -51,6 +53,7 @@ export default function TeamJoinLinkPanel({
   readOnly = false,
 }: Props) {
   const t = useT(nsTeamJoinLink);
+  const locale = useLocale();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const { confirm, dialog } = useConfirmDialog();
 
@@ -150,7 +153,7 @@ export default function TeamJoinLinkPanel({
               <p className="text-sm text-gray-200">
                 {format(t.panelActive, {
                   role: roleLabel(link.role),
-                  date: new Date(link.expires_at).toLocaleDateString('fr-FR'),
+                  date: formatMatchDateTime(link.expires_at, locale, 'date'),
                 })}
               </p>
               <p className="mt-1 text-xs text-gray-500">

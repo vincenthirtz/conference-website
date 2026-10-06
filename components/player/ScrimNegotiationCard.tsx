@@ -23,8 +23,15 @@ import { format } from '@/lib/i18n/useT';
 import nsPlayerIndex from '@/lib/i18n/locales/fr/playerIndex';
 import { formatSkillRating } from '@/utils/overwatchRank';
 import { announcedSrOf, broadcastOf } from '@/utils/teams/scrimBroadcast';
+import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
 
 type Tr = typeof nsPlayerIndex.fr;
+
+// Cible tactile ≥ 44 px sur mobile (WCAG 2.5.5) : ces boutons se pressent au
+// pouce, souvent depuis Discord sur téléphone. Au-delà de `sm`, on revient à
+// une hauteur compacte (36 px) pour ne pas gonfler la carte sur desktop.
+const ACTION_BTN =
+  'inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-medium sm:min-h-9 sm:px-3 sm:text-xs disabled:opacity-50';
 
 export type ScrimNego = {
   slots: string[];
@@ -114,14 +121,11 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
   });
   const counterError = counter.errors.slots;
 
-  const formatSlot = (iso: string) =>
-    new Date(iso).toLocaleString(locale, {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  // Heure de PARIS, et dite comme telle (`t.slotsTimezone`) : les deux équipes
+  // peuvent vivre dans des pays différents, et un créneau sans fuseau se lisait
+  // à l'heure de chaque appareil — « 20:00 » n'était pas le même instant des
+  // deux côtés. Épingler le fuseau supprime aussi l'écart serveur/navigateur.
+  const formatSlot = (iso: string) => formatMatchDateTime(iso, locale, 'slot');
 
   const isExternal = scrim.source === 'public';
   const contactEmail =
@@ -189,15 +193,7 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
             {scrim.payload?.preferred_date && (
               <span>
                 {t.dateLabel}{' '}
-                {new Date(scrim.payload.preferred_date).toLocaleDateString(
-                  locale,
-                  {
-                    day: 'numeric',
-                    month: 'short',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  }
-                )}
+                {`${formatSlot(scrim.payload.preferred_date)} (${t.slotsTimezone})`}
               </span>
             )}
             {scrim.payload?.format && (
@@ -207,7 +203,7 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
             )}
             <span>
               {format(t.receivedOn, {
-                date: new Date(scrim.created_at).toLocaleDateString(locale),
+                date: formatMatchDateTime(scrim.created_at, locale, 'date'),
               })}
             </span>
             <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-wide text-gray-300">
@@ -223,7 +219,9 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
       {/* Agreed slot (negotiation already concluded) */}
       {agreedSlot && (
         <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
-          {format(t.agreedOn, { date: formatSlot(agreedSlot) })}
+          {format(t.agreedOn, {
+            date: `${formatSlot(agreedSlot)} (${t.slotsTimezone})`,
+          })}
         </div>
       )}
 
@@ -231,14 +229,14 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
       {!agreedSlot && negoSlots.length > 0 && (
         <fieldset className="space-y-1.5">
           <legend className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">
-            {t.proposedSlotsLabel}
+            {t.proposedSlotsLabel} · {t.slotsTimezone}
           </legend>
           {negoSlots.map((slot) => {
             const checked = selectedSlot === slot;
             return (
               <label
                 key={slot}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-xs transition ${
+                className={`flex min-h-11 items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm sm:min-h-0 sm:text-xs transition ${
                   checked
                     ? 'bg-blue-600/30 border-blue-400/50 text-white'
                     : 'bg-white/5 border-white/10 text-gray-200 hover:bg-white/10'
@@ -324,7 +322,7 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
             aria-describedby={
               counterError ? errorDomId(counter.formId, 'slots') : undefined
             }
-            className="mt-3 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-xs font-medium text-white"
+            className={`${ACTION_BTN} mt-3 bg-blue-600 text-white hover:bg-blue-500`}
           >
             {noSlotYet ? t.acceptSlot : t.counterSubmit}
           </button>
@@ -342,7 +340,7 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
                   onAction?.(scrim.id, 'accept', { slot: selectedSlot });
                 }
               }}
-              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium text-white"
+              className={`${ACTION_BTN} bg-emerald-600 text-white hover:bg-emerald-500 disabled:cursor-not-allowed`}
             >
               {t.acceptSlot}
             </button>
@@ -352,7 +350,7 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
               type="button"
               disabled={busy}
               onClick={() => setCounterOpen((open) => !open)}
-              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-50 text-xs"
+              className={`${ACTION_BTN} bg-white/10 hover:bg-white/20`}
             >
               {noSlotYet ? t.acceptSlot : t.counterCta}
             </button>
@@ -361,7 +359,7 @@ function ScrimNegotiationCardImpl({ scrim, busy, locale, t, onAction }: Props) {
             type="button"
             disabled={busy}
             onClick={() => onAction?.(scrim.id, 'reject')}
-            className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-200 hover:bg-red-500/10 disabled:opacity-50 text-xs ml-auto"
+            className={`${ACTION_BTN} ml-auto border border-red-500/30 text-red-200 hover:bg-red-500/10`}
           >
             {t.rejectScrim}
           </button>

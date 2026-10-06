@@ -28,6 +28,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 import dynamic from 'next/dynamic';
@@ -80,6 +81,7 @@ export default function TcgPhotoCard({
 } = {}) {
   const t = useT(nsPlayerTcg);
   const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
   const { adminFetch, adminFetchJson } = useAdminFetch({ loginPath });
   const bare = chrome === 'bare';
 
@@ -207,7 +209,14 @@ export default function TcgPhotoCard({
   }, [draft, adminFetch, addToast, errorLabel, load, t]);
 
   const onRemove = useCallback(async () => {
-    if (!window.confirm(t.confirmRemove)) return;
+    // Dialogue du site plutôt que `window.confirm` : focus piégé, Échap,
+    // libellés traduits — et pas de boîte système bloquante sur mobile.
+    const ok = await confirm({
+      title: t.confirmRemove,
+      variant: 'danger',
+      confirmLabel: t.remove,
+    });
+    if (!ok) return;
     setBusy('remove');
     try {
       const res = await adminFetch('/api/player/tcg/photo', {
@@ -224,7 +233,7 @@ export default function TcgPhotoCard({
     } finally {
       setBusy(null);
     }
-  }, [adminFetch, addToast, load, t]);
+  }, [adminFetch, addToast, confirm, load, t]);
 
   if (!state) return null;
 
@@ -247,6 +256,7 @@ export default function TcgPhotoCard({
           : 'rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl'
       }
     >
+      {dialog}
       {!bare && <h2 className="mb-2 text-lg font-semibold">{t.title}</h2>}
       <p className="mb-4 text-sm text-gray-300">{t.intro}</p>
 

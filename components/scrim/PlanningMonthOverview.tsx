@@ -21,6 +21,7 @@ import {
   addDaysYmd,
   todayYmdInTz,
 } from '@/utils/teams/scrimCalendar';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 export type PlanningMonthLabels = {
   monthPrev: string;
@@ -31,11 +32,11 @@ export type PlanningMonthLabels = {
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
-function weekdayHeads(tz: string): string[] {
+function weekdayHeads(tz: string, locale: string): string[] {
   // 2024-01-01 est un lundi (référence arbitraire).
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(`2024-01-0${i + 1}T12:00:00Z`);
-    return d.toLocaleDateString('fr-FR', { weekday: 'short', timeZone: tz });
+    return d.toLocaleDateString(locale, { weekday: 'short', timeZone: tz });
   });
 }
 
@@ -64,7 +65,11 @@ export default function PlanningMonthOverview({
   labels: PlanningMonthLabels;
   onSelectDay: (ymd: string) => void;
 }) {
-  const heads = useMemo(() => weekdayHeads(config.timezone), [config.timezone]);
+  const locale = useLocale();
+  const heads = useMemo(
+    () => weekdayHeads(config.timezone, locale),
+    [config.timezone, locale]
+  );
   const todayYmd = useMemo(
     () => todayYmdInTz(config.timezone),
     [config.timezone]
@@ -107,7 +112,7 @@ export default function PlanningMonthOverview({
   }, [monthAnchor]);
 
   const monthLabel = new Date(`${monthAnchor}T12:00:00Z`).toLocaleDateString(
-    'fr-FR',
+    locale,
     { month: 'long', year: 'numeric', timeZone: config.timezone }
   );
 

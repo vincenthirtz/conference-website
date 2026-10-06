@@ -21,6 +21,8 @@ export type MatchDateStyle =
   | 'long'
   /** « ven. 18, 19:00 » — une ligne d'agenda, colonne étroite. */
   | 'agenda'
+  /** « ven. 18 sept., 19:00 » — un créneau de scrim, jour + mois abrégés. */
+  | 'slot'
   /** « 19:00 » — un horaire dans une phrase qui a déjà le jour. */
   | 'time'
   /** « 18/09/2026 19:00 » — un horodatage (validation, check-in). */
@@ -39,6 +41,13 @@ const PRESETS: Record<MatchDateStyle, Intl.DateTimeFormatOptions> = {
   agenda: {
     weekday: 'short',
     day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  },
+  slot: {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
     hour: '2-digit',
     minute: '2-digit',
   },

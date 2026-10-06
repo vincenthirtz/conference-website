@@ -11,6 +11,7 @@ import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useToast } from '@/components/Toast';
 import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
 import nsMyScrims from '@/lib/i18n/locales/fr/myScrims';
 import {
   useMyScrims,
@@ -35,16 +36,10 @@ export default function MyScrimsCard() {
     return null;
   }
 
+  // Heure de Paris, comme le calendrier du tournoi : sans fuseau, l'heure
+  // suivait l'appareil (et différait entre rendu serveur et navigateur).
   const fmtDate = (iso: string | null) =>
-    iso
-      ? new Date(iso).toLocaleString(locale, {
-          weekday: 'short',
-          day: 'numeric',
-          month: 'short',
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-      : t.noDate;
+    formatMatchDateTime(iso, locale, 'slot', t.noDate);
 
   const onReport = async (
     scrim: PlayerScrim,

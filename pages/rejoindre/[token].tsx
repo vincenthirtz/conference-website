@@ -21,6 +21,8 @@ import { useT, format } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import nsTeamJoinLink from '@/lib/i18n/locales/fr/teamJoinLink';
 import { invitationsClient } from '@/utils/invitations/tokenClient';
+import { useLocale } from '@/lib/i18n/useLocale';
+import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
 
 type JoinLinkInfo = {
   team: {
@@ -39,6 +41,7 @@ const SPECIALTIES = ['tank', 'dps', 'support', 'flex'] as const;
 
 function JoinByLinkPage() {
   const t = useT(nsTeamJoinLink);
+  const locale = useLocale();
   const router = useRouter();
   const { user, token: authToken, loading: authLoading } = useSession();
 
@@ -220,8 +223,10 @@ function JoinByLinkPage() {
                 {info?.expires_at && (
                   <p className="mt-1 text-xs text-gray-500">
                     {format(t.expiresAt, {
-                      date: new Date(info.expires_at).toLocaleDateString(
-                        'fr-FR'
+                      date: formatMatchDateTime(
+                        info.expires_at,
+                        locale,
+                        'date'
                       ),
                     })}
                   </p>

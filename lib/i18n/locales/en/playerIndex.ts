@@ -95,6 +95,7 @@ export default {
     'Check-in is done by the captain, the coach or the manager.',
   readinessViewMatch: 'View match',
   proposedSlotsLabel: 'Proposed slots',
+  slotsTimezone: 'Paris time',
   acceptSlot: 'Accept this slot',
   counterCta: 'Propose other slots',
   counterSubmit: 'Send counter-proposal',

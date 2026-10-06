@@ -25,6 +25,7 @@ import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import type { OpponentReason } from '@/utils/teams/opponentMatch';
 import nsPlayerTeams from '@/lib/i18n/locales/fr/playerTeams';
@@ -62,15 +63,9 @@ function PlayerTeamsPage() {
     urlFilter: router.query.filter,
   });
 
-  // `useLocale()` renvoie déjà un tag BCP-47 ('fr-FR' | 'en-GB').
-  const fmtSlot = (iso: string) =>
-    new Date(iso).toLocaleString(locale, {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  // `useLocale()` renvoie déjà un tag BCP-47 ('fr-FR' | 'en-GB'). Heure de
+  // Paris : deux équipes de pays différents lisent le même créneau.
+  const fmtSlot = (iso: string) => formatMatchDateTime(iso, locale, 'slot');
 
   /** Libellé d'une raison de score. Les codes viennent de l'API. */
   const reasonLabel = (code: OpponentReason): string =>

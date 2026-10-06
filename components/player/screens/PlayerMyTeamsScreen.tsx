@@ -21,6 +21,7 @@ import TeamAvatar from '@/components/Team/TeamAvatar';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
+import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
 import nsPlayerMyTeams from '@/lib/i18n/locales/fr/playerMyTeams';
 import type { MyTeamRow, MyTeamsPayload } from '@/pages/api/player/my-teams';
 
@@ -98,15 +99,11 @@ function TeamCardRow({
             </p>
             <p className="text-xs text-gray-500">
               {nm?.scheduledAt
-                ? `${t.colNextMatch} · ${new Date(
-                    nm.scheduledAt
-                  ).toLocaleString(locale, {
-                    weekday: 'short',
-                    day: '2-digit',
-                    month: 'short',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}${nm.opponentName ? ` · ${nm.opponentName}` : ''}`
+                ? `${t.colNextMatch} · ${formatMatchDateTime(
+                    nm.scheduledAt,
+                    locale,
+                    'long'
+                  )}${nm.opponentName ? ` · ${nm.opponentName}` : ''}`
                 : t.noMatch}
             </p>
           </div>

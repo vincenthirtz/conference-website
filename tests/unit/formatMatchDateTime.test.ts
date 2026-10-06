@@ -26,7 +26,7 @@ describe('formatMatchDateTime', () => {
   //      ce qui rend le résultat indépendant du fuseau du processus ;
   //   2. la valeur rendue est l'heure de Paris, quelle que soit la machine
   //      qui lance la suite (UTC en CI, Paris en local).
-  it.each(['long', 'agenda', 'time', 'stamp', 'date'] as const)(
+  it.each(['long', 'agenda', 'slot', 'time', 'stamp', 'date'] as const)(
     'style %s : fuseau épinglé, jamais celui du processus',
     (style) => {
       const spy = vi.spyOn(Intl, 'DateTimeFormat');
@@ -52,6 +52,9 @@ describe('formatMatchDateTime', () => {
     expect(formatMatchDateTime(KICKOFF_UTC, 'fr-FR', 'agenda')).toMatch(
       /^ven\.? 18.*19:00$/
     );
+    expect(formatMatchDateTime(KICKOFF_UTC, 'fr-FR', 'slot')).toMatch(
+      /^ven\.? 18 sept\.?.*19:00$/
+    );
     // 22:30 UTC = 00:30 à Paris le LENDEMAIN : le jour suit Paris aussi.
     expect(
       formatMatchDateTime('2026-09-18T22:30:00.000Z', 'fr-FR', 'date')
@@ -61,6 +64,10 @@ describe('formatMatchDateTime', () => {
   it('suit la langue sans changer l’heure', () => {
     expect(formatMatchDateTime(KICKOFF_UTC, 'en-GB', 'long')).toMatch(
       /Friday 18 September.*19:00/
+    );
+    // Un créneau de scrim en anglais : jours et mois en anglais, même heure.
+    expect(formatMatchDateTime(KICKOFF_UTC, 'en-GB', 'slot')).toMatch(
+      /^Fri 18 Sept?.*19:00$/
     );
   });
 

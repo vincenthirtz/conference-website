@@ -21,6 +21,7 @@ import {
   type HeatmapCell,
 } from '@/utils/teams/scrimPlanningOverlap';
 import { fmtHourOfDay as fmtHour } from '@/utils/teams/scrimTime';
+import { useLocale } from '@/lib/i18n/useLocale';
 
 export type AvailabilityGridLabels = {
   /** Titre de la légende (ex. « Disponibilités »). */
@@ -89,16 +90,17 @@ const HEAT_RAMP = [
 
 function fmtWeekday(
   dateStr: string,
-  timezone: string
+  timezone: string,
+  locale: string
 ): { dow: string; day: string } {
   // dateStr = 'YYYY-MM-DD' (date calendaire locale de session). On la rend à
   // midi UTC pour éviter tout glissement de jour à l'affichage.
   const d = new Date(`${dateStr}T12:00:00Z`);
-  const dow = d.toLocaleDateString('fr-FR', {
+  const dow = d.toLocaleDateString(locale, {
     weekday: 'short',
     timeZone: timezone,
   });
-  const day = d.toLocaleDateString('fr-FR', {
+  const day = d.toLocaleDateString(locale, {
     day: 'numeric',
     month: 'short',
     timeZone: timezone,
@@ -121,6 +123,7 @@ export default function AvailabilityGrid({
   requireStaff = false,
   secondaryTz = null,
 }: AvailabilityGridProps) {
+  const locale = useLocale();
   const days = useMemo(() => horizonDates(config), [config]);
   const rows = useMemo(() => slotMinutesOfDay(config), [config]);
 
@@ -258,7 +261,7 @@ export default function AvailabilityGrid({
           {/* Coin + en-têtes de jour (sticky top) */}
           <div className="sticky left-0 z-20 bg-black/60 backdrop-blur" />
           {days.map((day) => {
-            const { dow, day: dm } = fmtWeekday(day, config.timezone);
+            const { dow, day: dm } = fmtWeekday(day, config.timezone, locale);
             return (
               <div key={`h-${day}`} className="px-1 pb-2 text-center">
                 <div className="text-[11px] font-semibold uppercase text-gray-200">
@@ -292,7 +295,7 @@ export default function AvailabilityGrid({
                     }
                     aria-label={labels.cellLabel.replace(
                       '{when}',
-                      `${fmtWeekday(day, config.timezone).dow} ${fmtHour(m)}`
+                      `${fmtWeekday(day, config.timezone, locale).dow} ${fmtHour(m)}`
                     )}
                     onPointerDown={() => startPaint(key)}
                     onPointerEnter={() => {
