@@ -52,6 +52,11 @@ export const WEB_PUSH_EVENT_TYPES = [
   // des dizaines de notifications par soirée de tournoi, à des gens que ça ne
   // concerne pas — le meilleur moyen de faire couper les notifications.
   'tcg.pack_granted',
+  // Décision sur une demande d'adhésion / de transfert. Audience = LA SEULE
+  // candidate (payload.userId), staff exclu : la décision ne regarde qu'elle,
+  // et la branche par défaut préviendrait tout le staff du tenant à chaque
+  // geste de capitaine.
+  'team.join.decided',
 ] as const;
 
 export type WebPushEventType = (typeof WEB_PUSH_EVENT_TYPES)[number];
@@ -118,6 +123,10 @@ export function playerUrlForEvent(
       // geste — c'est le principe déjà retenu pour les events de match, qui
       // pointent le fil du match et non le tableau de bord.
       return '/player/tcg';
+    case 'team.join.decided':
+      // Le tableau de bord : l'historique des demandes (et le motif d'un
+      // refus) y vit ; une acceptation y montre la nouvelle équipe.
+      return '/player';
     case 'news.published':
       // V1 : pas de fanout player news (audience trop large), géré V2.
       return null;
@@ -209,6 +218,10 @@ export const PLAYER_PUSH_EVENT_TYPES = [
   // figurer dans SES préférences, sinon « désactivable » ne serait vrai que
   // sur le papier.
   'tcg.pack_granted',
+  // La réponse à SA candidature : la joueuse doit pouvoir la couper, et c'est
+  // aussi l'interrupteur que relit l'émetteur pour le DM Discord
+  // (utils/teams/joinDecisionNotify.ts).
+  'team.join.decided',
 ] as const satisfies readonly WebPushEventType[];
 
 export type PlayerPushEventType = (typeof PLAYER_PUSH_EVENT_TYPES)[number];
@@ -579,6 +592,35 @@ export function renderWebPushPayload(
         body: `Ta victoire t’a rapporté un paquet${gain}.`,
         url,
         actions: [{ action: 'view', title: 'Ouvrir mon paquet' }],
+      };
+    }
+    case 'team.join.decided': {
+      const data = unwrap(payload);
+      const url = playerUrlForEvent(eventName, payload) ?? '/player';
+      const team = str(data, 'teamName');
+      const transfer = str(data, 'kind') === 'transfer';
+      if (str(data, 'decision') === 'approved') {
+        return {
+          title: transfer ? 'Transfert accepté' : 'Candidature acceptée',
+          body: team
+            ? `Tu fais maintenant partie de ${team}.`
+            : 'Tu fais maintenant partie de ta nouvelle équipe.',
+          url,
+          actions: [{ action: 'view', title: 'Voir mon espace' }],
+        };
+      }
+      // Le motif n'est PAS mis dans le corps : une notification se lit sur un
+      // écran verrouillé, par-dessus l'épaule. Il attend sur le tableau de bord.
+      const hasReason = str(data, 'reason') !== null;
+      return {
+        title: transfer ? 'Transfert refusé' : 'Candidature refusée',
+        body:
+          (team
+            ? `${team} n’a pas retenu ta demande.`
+            : 'Ta demande n’a pas été retenue.') +
+          (hasReason ? ' Le motif est dans ton espace.' : ''),
+        url,
+        actions: [{ action: 'view', title: 'Voir mon espace' }],
       };
     }
     case 'scrim.planning.opened': {

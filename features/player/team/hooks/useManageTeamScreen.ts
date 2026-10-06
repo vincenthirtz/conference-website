@@ -471,7 +471,8 @@ export function useManageTeamScreen(loginHref: string) {
   const decideJoin = (
     demandeId: string,
     action: 'approve' | 'reject',
-    battleTag?: string
+    battleTag?: string,
+    reason?: string
   ) =>
     run(`join-${demandeId}`, t.teamInfoError, async () => {
       await decideJoinRequest.mutateAsync({
@@ -479,6 +480,8 @@ export function useManageTeamScreen(loginHref: string) {
         action,
         // Rattrapage d'une demande déposée sans BattleTag.
         battleTag: battleTag?.trim() || undefined,
+        // Motif de refus facultatif, montré à la candidate.
+        reason: action === 'reject' ? reason?.trim() || undefined : undefined,
       });
       if (action === 'approve') await reloadTeam();
       showSuccess(action === 'approve' ? t.playerAccepted : t.requestRejected);

@@ -98,6 +98,8 @@ export const teamClient = {
       demandeId: string;
       action: 'approve' | 'reject';
       battleTag?: string;
+      /** Motif de refus facultatif, montré à la candidate. */
+      reason?: string;
     }
   ) => mutate<unknown>(teamUrls.joinRequests, 'POST', scope, body),
 

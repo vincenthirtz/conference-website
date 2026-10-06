@@ -539,6 +539,9 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
       // exception, la branche par défaut ci-dessous préviendrait tout le staff
       // du tenant — et les pole admins de tous les tenants — à chaque victoire.
       staffUserIds = [];
+    } else if (event.event_name === 'team.join.decided') {
+      // La réponse à une candidature ne regarde que la candidate.
+      staffUserIds = [];
     } else if (event.event_name === 'team.weekly.recap') {
       // N7 : un récap d'équipe n'est PAS une information de staff. Sans cette
       // exception, chaque staff recevrait le bilan hebdomadaire de toutes les
@@ -592,6 +595,15 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
       if (teamId) {
         playerUserIds = await loadTeamMemberUserIds([teamId], event.tenant_id);
       }
+    } else if (event.event_name === 'team.join.decided') {
+      // Un event par décision, une seule destinataire : la candidate.
+      const data = (event.payload ?? {}) as Record<string, unknown>;
+      const inner =
+        data.data && typeof data.data === 'object'
+          ? (data.data as Record<string, unknown>)
+          : data;
+      const userId = typeof inner.userId === 'string' ? inner.userId : null;
+      playerUserIds = userId ? [userId] : [];
     } else if (event.event_name === 'tcg.pack_granted') {
       // L'émetteur a déjà résolu la destinataire : un event PAR gagnante, donc
       // exactement un `userId` par event. Le dispatcher ne fait que router — il

@@ -1,11 +1,12 @@
 // features/player/team/ui/JoinRequestsPanel.tsx — demandes ENTRANTES à
 // rejoindre l'équipe. Une demande déposée sans BattleTag reçoit un champ de
 // rattrapage (sinon la fiche de roster naîtrait vide) : il est NON contrôlé,
-// lu au moment d'accepter.
+// lu au moment d'accepter. Même principe pour le motif de refus, facultatif,
+// lu au moment de refuser et montré à la candidate.
 
 import { useRef } from 'react';
 import { Card } from '@/features/ruban';
-import type { TeamJoinRequestDto } from '../schemas';
+import { DEMANDE_REJECT_REASON_MAX, type TeamJoinRequestDto } from '../schemas';
 import type { ManageTeamTexts } from '../hooks/useManageTeamScreen';
 
 function JoinRequestRow({
@@ -23,9 +24,14 @@ function JoinRequestRow({
   editable: boolean;
   busy: boolean;
   roleLabel: (role: string | null | undefined) => string;
-  onDecide: (action: 'approve' | 'reject', battleTag?: string) => void;
+  onDecide: (
+    action: 'approve' | 'reject',
+    battleTag?: string,
+    reason?: string
+  ) => void;
 }) {
   const battleTagRef = useRef<HTMLInputElement>(null);
+  const reasonRef = useRef<HTMLTextAreaElement>(null);
   const name =
     req.user?.display_name ||
     req.payload?.user_display_name ||
@@ -73,7 +79,13 @@ function JoinRequestRow({
             </button>
             <button
               type="button"
-              onClick={() => onDecide('reject')}
+              onClick={() =>
+                onDecide(
+                  'reject',
+                  undefined,
+                  reasonRef.current?.value.trim() || undefined
+                )
+              }
               disabled={busy}
               className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-semibold transition disabled:opacity-50"
             >
@@ -82,6 +94,31 @@ function JoinRequestRow({
           </div>
         )}
       </div>
+      {editable && (
+        <div className="mt-3">
+          <label
+            htmlFor={`join-reason-${req.id}`}
+            className="block text-[11px] uppercase tracking-[0.12em] text-gray-400 mb-1"
+          >
+            {t.rejectReasonLabel}
+          </label>
+          <textarea
+            ref={reasonRef}
+            id={`join-reason-${req.id}`}
+            defaultValue=""
+            rows={2}
+            maxLength={DEMANDE_REJECT_REASON_MAX}
+            aria-describedby={`join-reason-hint-${req.id}`}
+            className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-red-400/60"
+          />
+          <p
+            id={`join-reason-hint-${req.id}`}
+            className="mt-1 text-[11px] text-gray-400"
+          >
+            {t.rejectReasonHint}
+          </p>
+        </div>
+      )}
       {editable && !btag && (
         <div className="w-full sm:w-64">
           <label
@@ -130,7 +167,8 @@ export default function JoinRequestsPanel({
   onDecide: (
     demandeId: string,
     action: 'approve' | 'reject',
-    battleTag?: string
+    battleTag?: string,
+    reason?: string
   ) => void;
 }) {
   return (
@@ -158,8 +196,8 @@ export default function JoinRequestsPanel({
               editable={editable}
               busy={actionLoading === `join-${req.id}`}
               roleLabel={roleLabel}
-              onDecide={(action, battleTag) =>
-                onDecide(req.id, action, battleTag)
+              onDecide={(action, battleTag, reason) =>
+                onDecide(req.id, action, battleTag, reason)
               }
             />
           ))}

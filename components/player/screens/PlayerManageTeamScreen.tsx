@@ -237,8 +237,8 @@ export default function PlayerManageTeamScreen() {
                 editable={s.canDo('manage_join_requests')}
                 actionLoading={s.actionLoading}
                 roleLabel={s.roleLabel}
-                onDecide={(id, action, battleTag) =>
-                  void a.decideJoin(id, action, battleTag)
+                onDecide={(id, action, battleTag, reason) =>
+                  void a.decideJoin(id, action, battleTag, reason)
                 }
               />
             )}

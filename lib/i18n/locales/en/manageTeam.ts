@@ -119,6 +119,9 @@ export default {
   joinMissingBattleTagLabel: "Player's BattleTag",
   joinMissingBattleTagHint:
     'She has not filled it in: enter it to add her to the roster, or ask her to complete her profile.',
+  rejectReasonLabel: 'Reason for declining (optional)',
+  rejectReasonHint:
+    'Shown to the player with the answer. Keep it short and kind.',
   battleTagLabel: 'BattleTag',
   battleTagUpdated: 'BattleTag updated',
   battleTagError: 'Could not update the BattleTag.',

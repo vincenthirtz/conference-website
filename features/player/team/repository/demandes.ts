@@ -3,6 +3,7 @@
 // (lot P10). Toujours scopé tenant + équipe.
 
 import type { AdminDb } from '@/utils/admin/serviceContext';
+import type { Json } from '@/types/database.generated';
 import type { DemandeRow } from '@/utils/teams/demandeRows';
 
 export type IncomingDemandeType = 'join' | 'transfer';
@@ -59,7 +60,14 @@ export async function readPendingTeamDemande(
 
 export async function rejectTeamDemande(
   db: AdminDb,
-  args: { tenantId: string; demandeId: string; note: string }
+  args: {
+    tenantId: string;
+    demandeId: string;
+    /** Motif montré à la candidate (`null` = aucun). */
+    note: string | null;
+    /** Payload réécrit (trace de l'auteur du refus). */
+    payload: Record<string, unknown>;
+  }
 ) {
   const { error } = await db
     .from('demandes')
@@ -67,6 +75,7 @@ export async function rejectTeamDemande(
       status: 'rejected',
       processed_at: new Date().toISOString(),
       staff_note: args.note,
+      payload: args.payload as Json,
     })
     .eq('id', args.demandeId)
     .eq('tenant_id', args.tenantId);

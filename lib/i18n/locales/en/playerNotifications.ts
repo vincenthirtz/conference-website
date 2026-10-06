@@ -20,6 +20,7 @@ export default {
     'team.forfeit': 'Team forfeit',
     'news.published': 'New article',
     'team.weekly.recap': 'Weekly team recap',
+    'team.join.decided': 'Answer to your application',
   },
   eventDescriptions: {
     'match.starting': 'When one of your matches is about to start.',
@@ -32,6 +33,8 @@ export default {
     'news.published': 'When an article is published.',
     'team.weekly.recap':
       "Your team's week in review. Only sent when something actually happened.",
+    'team.join.decided':
+      'When a team accepts or declines your request to join it (push and Discord message).',
   },
   loadError: 'Error while loading your notifications.',
   prefSaved: 'Preference saved.',

@@ -127,6 +127,9 @@ export default ns('manageTeam', {
   joinMissingBattleTagLabel: 'BattleTag de la joueuse',
   joinMissingBattleTagHint:
     "Elle ne l'a pas renseigné : saisis-le pour l'ajouter au roster, ou demande-lui de compléter son profil.",
+  rejectReasonLabel: 'Motif du refus (facultatif)',
+  rejectReasonHint:
+    'Montré à la joueuse avec la réponse. Reste bref et bienveillant.',
   battleTagLabel: 'BattleTag',
   battleTagUpdated: 'BattleTag mis à jour',
   battleTagError: 'Impossible de mettre à jour le BattleTag.',

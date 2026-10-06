@@ -125,7 +125,12 @@ export const useDecideJoinRequest = () =>
   useTeamMutation(
     (
       s,
-      v: { demandeId: string; action: 'approve' | 'reject'; battleTag?: string }
+      v: {
+        demandeId: string;
+        action: 'approve' | 'reject';
+        battleTag?: string;
+        reason?: string;
+      }
     ) => teamClient.decideJoinRequest(s, v),
     joinRequestsOnly
   );

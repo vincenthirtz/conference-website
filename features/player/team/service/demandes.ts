@@ -4,9 +4,13 @@
 // `manage_roster`). Lot P10, même contrat.
 //
 // Les deux flux ne diffèrent que par la RPC d'approbation, la correction du
-// BattleTag (adhésion seulement) et l'actualité produite : un brouillon pour
-// une adhésion (on n'annonce pas publiquement qu'une personne rejoint une
-// équipe avant qu'elle le sache), publiée pour un transfert (historique).
+// BattleTag (adhésion seulement) et le texte de l'actualité produite —
+// toujours un BROUILLON, relu et publié par le staff s'il y a lieu (un
+// transfert publié d'office annonçait un prénom avant toute relecture).
+//
+// Dans les deux sens, la candidate est prévenue de la décision
+// (`team.join.decided`, utils/teams/joinDecisionNotify.ts). Un refus porte le
+// motif FACULTATIF saisi par la capitaine — jamais un identifiant interne.
 
 import { validateRole } from '@/utils/apiHelpers';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
@@ -25,6 +29,8 @@ import {
   type IncomingDemandeType,
 } from '../repository/demandes';
 import { insertTeamNews, readTeamHead } from '../repository/roster';
+import { announceJoinDecision } from '@/utils/teams/joinDecisionNotify';
+import { buildJoinNewsText } from '@/utils/teams/joinDecisionNews';
 import type {
   JoinRequestDecisionInput,
   TransferRequestDecisionInput,
@@ -97,6 +103,7 @@ type Decision = {
   demandeId: string;
   action: 'approve' | 'reject';
   battleTag?: unknown;
+  reason?: string | null;
 };
 
 /** POST : approuver (RPC transactionnelle) ou rejeter une demande. */
@@ -121,15 +128,33 @@ async function decide(
   const payload = (demande.payload ?? null) as DemandePayload | null;
 
   if (action === 'reject') {
+    // `staff_note` est affiché à la candidate comme « Motif : … » : seul le
+    // motif saisi y va (ou rien). L'auteur du geste — qui y était écrit en
+    // uuid — reste tracé, mais dans le payload, jamais affiché à la joueuse.
+    const reason = body.reason?.trim() || null;
     const { error } = await rejectTeamDemande(db, {
       tenantId,
       demandeId,
-      note: `Traite par le capitaine (${ctx.subject.userId})`,
+      note: reason,
+      payload: {
+        ...((demande.payload as Record<string, unknown> | null) ?? {}),
+        rejected_by_user_id: ctx.subject.userId,
+      },
     });
     if (error) {
       ctx.logger.error(`${LOG[type]} update error:`, error);
       throw fail(500, 'Echec de la mise a jour de la demande.');
     }
+    await announceJoinDecision({
+      tenantId,
+      userId: demande.user_id,
+      demandeId,
+      kind: type,
+      decision: 'rejected',
+      teamId: team.id,
+      teamName: team.name,
+      reason,
+    });
     return {
       success: true,
       demandeId,
@@ -171,43 +196,42 @@ async function decide(
     throw fail(mapped.status, mapped.error);
   }
 
-  // Actualité automatique, APRÈS la RPC, best-effort.
+  // Actualité automatique, APRÈS la RPC, best-effort. BROUILLON dans les deux
+  // cas : le staff publie s'il y a lieu (`published_at` null).
   try {
     const playerName =
-      battleTag?.split('#')[0] || payload?.user_display_name || 'Joueur';
-    const slugBase = `team-${team.id}-${type}-${Date.now().toString(36)}`;
-    if (type === 'join') {
-      // BROUILLON : le staff publie s'il y a lieu (`published_at` null).
-      await insertTeamNews(db, {
-        title: `${playerName} rejoint ${team.name}`,
-        slug: slugBase,
-        tag: 'teams',
-        excerpt: `${playerName} rejoint ${team.name} en tant que ${desiredRole}.`,
-        content: `${playerName} a rejoint ${team.name} en tant que ${desiredRole}. Bienvenue !`,
-        image_url: team.logo_url ?? null,
-        team_id: team.id,
-        status: 'draft',
-        published_at: null,
-        tenant_id: tenantId,
-      });
-    } else {
-      const fromTeamName = payload?.from_team_name || 'une equipe';
-      await insertTeamNews(db, {
-        title: `${playerName} transfere vers ${team.name}`,
-        slug: slugBase,
-        tag: 'teams',
-        excerpt: `${playerName} quitte ${fromTeamName} et rejoint ${team.name} en tant que ${desiredRole}.`,
-        content: `${playerName} a ete transfere de ${fromTeamName} vers ${team.name} en tant que ${desiredRole}. Bienvenue !`,
-        image_url: team.logo_url ?? null,
-        team_id: team.id,
-        status: 'published',
-        published_at: new Date().toISOString(),
-        tenant_id: tenantId,
-      });
-    }
+      battleTag?.split('#')[0] || payload?.user_display_name || 'Joueuse';
+    const text = buildJoinNewsText({
+      kind: type,
+      playerName,
+      teamName: team.name,
+      role: desiredRole,
+      fromTeamName: payload?.from_team_name ?? null,
+    });
+    await insertTeamNews(db, {
+      ...text,
+      slug: `team-${team.id}-${type}-${Date.now().toString(36)}`,
+      tag: 'teams',
+      image_url: team.logo_url ?? null,
+      team_id: team.id,
+      status: 'draft',
+      published_at: null,
+      tenant_id: tenantId,
+    });
   } catch (newsErr) {
     ctx.logger.error(`${LOG[type]} create news error:`, newsErr);
   }
+
+  await announceJoinDecision({
+    tenantId,
+    userId: demande.user_id,
+    demandeId,
+    kind: type,
+    decision: 'approved',
+    teamId: team.id,
+    teamName: team.name,
+    role: desiredRole,
+  });
 
   return {
     success: true,

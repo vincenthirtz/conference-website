@@ -16,10 +16,29 @@ import type { TeamPermission } from '../../../utils/teamRoles';
 
 const DEMANDE_ACTION = 'Action invalide. Utilise "approve" ou "reject".';
 
+/**
+ * Longueur maximale du motif de refus d'une demande (adhésion / transfert).
+ * Le motif est montré tel quel à la candidate (historique de ses demandes,
+ * notification) : court par construction.
+ */
+export const DEMANDE_REJECT_REASON_MAX = 300;
+
 /** Corps de POST /api/teams/transfer-requests. */
 export const TransferRequestDecisionBody = z.object({
   demandeId: looseUuid('demandeId invalide.'),
   action: z.enum(['approve', 'reject'], { error: DEMANDE_ACTION }),
+  /**
+   * Motif du refus, FACULTATIF, saisi par la capitaine et montré à la
+   * candidate. Ignoré sur une acceptation. Vide / blanc = pas de motif.
+   */
+  reason: z
+    .string({ error: 'Motif invalide.' })
+    .trim()
+    .max(
+      DEMANDE_REJECT_REASON_MAX,
+      `Motif trop long (max ${DEMANDE_REJECT_REASON_MAX} caractères).`
+    )
+    .nullish(),
 });
 export type TransferRequestDecisionInput = z.infer<
   typeof TransferRequestDecisionBody

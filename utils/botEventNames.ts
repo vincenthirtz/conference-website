@@ -221,6 +221,16 @@ export const BOT_EVENT_NAMES = [
   // préviendrait tout le staff du tenant d'un échange entre deux joueuses.
   'tcg.trade_proposed',
   'tcg.trade_resolved',
+
+  // Décision sur une demande d'adhésion ou de transfert, adressée à la
+  // CANDIDATE (`utils/teams/joinDecisionNotify.ts`). Charge :
+  // `{ userId, discordUserId, discordUsername, demandeId,
+  //    kind: 'join' | 'transfer', decision: 'approved' | 'rejected',
+  //    teamId, teamName, role, reason, ctaUrl }`.
+  // Un événement par décision, émis APRÈS l'écriture. Non émis quand la
+  // candidate a coupé ce type dans ses préférences. Dans
+  // `WEB_PUSH_EVENT_TYPES` avec une audience réduite à `userId`.
+  'team.join.decided',
 ] as const;
 
 export type BotEventName = (typeof BOT_EVENT_NAMES)[number];
