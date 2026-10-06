@@ -33,6 +33,10 @@ function labelFor(item: TodoItem, t: T): string {
       return format(t.todoInvitation, { n: item.count ?? 0 });
     case 'scrims':
       return format(t.todoScrims, { n: item.count ?? 0 });
+    case 'score':
+      return format(t.todoScore, { n: item.count ?? 0 });
+    case 'joinRequests':
+      return format(t.todoJoinRequests, { n: item.count ?? 0 });
     case 'messages':
       return format(t.todoMessages, { n: item.count ?? 0 });
     case 'battletag':

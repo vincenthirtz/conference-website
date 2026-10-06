@@ -129,6 +129,8 @@ export default {
   todoInvitation: 'Answer {n} team invitation(s)',
   todoScrims: 'Answer {n} scrim request(s)',
   todoMessages: 'Read {n} team message(s)',
+  todoScore: 'Confirm the score of {n} match(es) reported by the opponent',
+  todoJoinRequests: 'Review {n} request(s) to join the team',
   todoBattleTag: 'Verify your BattleTag',
   sectionCollapse: 'Collapse section',
   sectionExpand: 'Expand section',

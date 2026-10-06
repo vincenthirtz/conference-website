@@ -2,10 +2,14 @@
 // joueuse (lot P12). UNE lecture qui remplace l'ancienne cascade en deux
 // vagues côté client : l'équipe gérée est résolue une fois
 // (loadManagedTeamSlice — même source que /api/admin/teams/my), puis chaque
-// section part en parallèle. Les sections réservées à l'encadrement
-// (scrims en attente, messages non lus) rendent vide/zéro aux autres.
+// section part en parallèle. Les sections réservées à l'encadrement suivent
+// chacune la permission EFFECTIVE qui permet d'y répondre (J3) — scrims =
+// manage_scrims, messages = send_captain_messages, adhésions =
+// manage_join_requests — et non « capitaine ou manager » : une coach à qui
+// l'on a délégué un droit voit ce qui l'attend, les autres reçoivent vide/zéro.
 
 import { loadManagedTeamSlice } from '@/utils/teams/managedTeamSlice';
+import type { TeamPermission } from '@/utils/teamRoles';
 import {
   EMPTY_NEXT_MATCH,
   type PendingScrim,
@@ -16,7 +20,9 @@ import {
   loadDemandes,
   loadNextMatch,
   loadPendingInvitationCount,
+  loadPendingJoinRequests,
   loadPendingScrims,
+  loadScoresToConfirm,
   loadUnreadMessages,
 } from './sections';
 import { buildTodo } from './todo';
@@ -32,8 +38,9 @@ export async function getPlayerDashboard(
   const teamSlice = await loadManagedTeamSlice(userId, tenantId, {
     teamId: requestedTeamId,
   });
-  const { isCaptain, isManager } = teamSlice;
+  const { isCaptain, isManager, permissions } = teamSlice;
   const canManage = isCaptain || isManager;
+  const can = (p: TeamPermission) => permissions.includes(p);
   const rosterSize = teamSlice.members.length;
   const teamId = teamSlice.teamId;
 
@@ -44,18 +51,28 @@ export async function getPlayerDashboard(
     unreadMessages,
     nextMatch,
     pendingInvitations,
+    pendingJoinRequests,
+    scoresToConfirm,
   ] = await Promise.all([
     loadDemandes(ctx, 'captain_request'),
     loadDemandes(ctx, 'join'),
-    canManage && teamId
+    can('manage_scrims') && teamId
       ? loadPendingScrims(ctx, teamId)
       : Promise.resolve([] as PendingScrim[]),
-    canManage && teamId ? loadUnreadMessages(ctx, teamId) : Promise.resolve(0),
+    can('send_captain_messages') && teamId
+      ? loadUnreadMessages(ctx, teamId)
+      : Promise.resolve(0),
     teamId
       ? loadNextMatch(ctx, teamId, rosterSize)
       : Promise.resolve(EMPTY_NEXT_MATCH),
     // Le bandeau « à faire » n'a besoin que du compte des invitations.
     loadPendingInvitationCount(ctx),
+    can('manage_join_requests') && teamId
+      ? loadPendingJoinRequests(ctx, teamId)
+      : Promise.resolve(0),
+    // Droit de déclarer = capitaine ou manager d'équipe (reportRight.ts),
+    // vérifié dans la section : ce n'est pas une permission déléguable.
+    teamId ? loadScoresToConfirm(ctx, teamId) : Promise.resolve([] as string[]),
   ]);
 
   const todo = buildTodo({
@@ -64,9 +81,11 @@ export async function getPlayerDashboard(
     pendingScrims,
     unreadMessages,
     pendingInvitations,
+    pendingJoinRequests,
+    scoresToConfirm,
     members: teamSlice.members,
     canManage,
-    permissions: teamSlice.permissions,
+    permissions,
   });
 
   return {
@@ -74,7 +93,7 @@ export async function getPlayerDashboard(
     members: teamSlice.members,
     isCaptain,
     isManager,
-    permissions: teamSlice.permissions,
+    permissions,
     managedTeams: teamSlice.managedTeams,
     todo,
     demandesCaptain,

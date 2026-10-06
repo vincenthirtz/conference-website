@@ -132,6 +132,8 @@ export default ns('playerIndex', {
   todoInvitation: 'Répondre à {n} invitation(s) d’équipe',
   todoScrims: 'Répondre à {n} demande(s) de scrim',
   todoMessages: 'Lire {n} message(s) d’équipe',
+  todoScore: 'Confirmer le score de {n} match(s) déclaré(s) par l’adversaire',
+  todoJoinRequests: 'Traiter {n} demande(s) pour rejoindre l’équipe',
   todoBattleTag: 'Vérifier ton BattleTag',
   sectionCollapse: 'Replier la section',
   sectionExpand: 'Déplier la section',

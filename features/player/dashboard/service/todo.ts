@@ -8,7 +8,7 @@ import { DASHBOARD_ANCHORS } from '@/utils/player/dashboardAnchors';
 import type { NextMatchSection, PendingScrim, TodoItem } from '../schemas';
 
 /**
- * Les trois gestes en attente, dans un ordre FIXE : le plus périssable
+ * Au plus trois gestes en attente, dans un ordre FIXE : le plus périssable
  * d'abord. Le check-in se referme tout seul, les invitations expirent, les
  * messages attendent. Cet ordre est celui du code — donc stable d'un
  * chargement à l'autre, ce qui est la moitié de l'intérêt d'un tel bandeau.
@@ -19,6 +19,17 @@ export function buildTodo(input: {
   pendingScrims: PendingScrim[];
   unreadMessages: number;
   pendingInvitations: number;
+  /**
+   * Demandes d'adhésion reçues par l'équipe, en attente. Le service ne la
+   * remplit que pour qui a `manage_join_requests` ; absent = 0.
+   */
+  pendingJoinRequests?: number;
+  /**
+   * Matchs dont le score attend MA confirmation (`report.state ===
+   * 'awaiting_me'`), triés par date ; le service ne les calcule que pour qui
+   * peut déclarer (capitaine / manager d'équipe). Absent = aucun.
+   */
+  scoresToConfirm?: string[];
   members: {
     user_id?: string | null;
     battle_tag_verified_at?: string | null;
@@ -74,7 +85,20 @@ export function buildTodo(input: {
     });
   }
 
-  // 4. Invitation reçue : elle expire, et c'est un geste d'une seconde.
+  // 4. Score déclaré par l'adversaire, en attente de MA déclaration : sans
+  //    elle, le résultat reste suspendu (et finit en arbitrage staff). Un seul
+  //    match → son fil, où se fait la déclaration ; plusieurs → « Mes matchs ».
+  const scores = input.scoresToConfirm ?? [];
+  if (scores.length > 0) {
+    items.push({
+      id: 'score',
+      href:
+        scores.length === 1 ? `/player/match/${scores[0]}` : '/player/matches',
+      count: scores.length,
+    });
+  }
+
+  // 5. Invitation reçue : elle expire, et c'est un geste d'une seconde.
   //    `/player` seul était un clic mort — le bandeau vit SUR /player. L'ancre
   //    est celle posée autour d'InvitationsSection.
   if (input.pendingInvitations > 0) {
@@ -85,7 +109,7 @@ export function buildTodo(input: {
     });
   }
 
-  // 5. Scrims en attente de MA réponse. Vers le bloc « scrims qui attendent ta
+  // 6. Scrims en attente de MA réponse. Vers le bloc « scrims qui attendent ta
   //    réponse », pas vers `#scrim-plannings` (les grilles de dispo, un autre
   //    geste). Le tableau de bord déplie la section Scrims si elle est repliée.
   //    Seulement avec `manage_scrims` : c'est la condition d'affichage de la
@@ -102,7 +126,19 @@ export function buildTodo(input: {
     });
   }
 
-  // 6. Messages d'équipe non lus.
+  // 7. Demandes d'adhésion à traiter — celles que compte déjà la cloche. Vers
+  //    la gestion d'équipe, où vit le panneau des demandes. Seulement avec
+  //    `manage_join_requests` : sans elle, le geste serait refusé.
+  const joinRequests = input.pendingJoinRequests ?? 0;
+  if (joinRequests > 0 && input.permissions.includes('manage_join_requests')) {
+    items.push({
+      id: 'joinRequests',
+      href: '/player/manage-team',
+      count: joinRequests,
+    });
+  }
+
+  // 8. Messages d'équipe non lus.
   if (input.unreadMessages > 0) {
     items.push({
       id: 'messages',
@@ -111,7 +147,7 @@ export function buildTodo(input: {
     });
   }
 
-  // 7. Mon BattleTag n'est pas vérifié — le plus patient des rappels.
+  // 9. Mon BattleTag n'est pas vérifié — le plus patient des rappels.
   const me = input.members.find((m) => m.user_id === input.userId);
   if (me && !me.battle_tag_verified_at) {
     items.push({ id: 'battletag', href: '/player/profile', count: null });

@@ -207,6 +207,8 @@ absent d'ici, ou listé mais plus émis, fait échouer la suite.
 | `TEAM_AMBIGUOUS` | 409 | L'acteur encadre plusieurs équipes : quitter depuis le site. | `teams/leave` |
 | `CHECKIN_NOT_ALLOWED` | 403 | L'acteur n'est ni capitaine, ni coach, ni manager d'une des deux équipes du match (ou son compte Discord n'est relié à aucun compte du site). `error` est lisible tel quel sur Discord. | `matches/[matchId]/checkin` |
 | `CHECKIN_TEAM_AMBIGUOUS` | 409 | L'acteur peut pointer pour les deux équipes du match sans en être capitaine d'une seule : pas de choix à sa place. | `matches/[matchId]/checkin` |
+| `CHECKIN_MATCH_CLOSED` | 409 | Le match n'est plus `pending`/`ongoing` (terminé, annulé…). Avant le 2026-10-06 : `400` sans code. | `matches/[matchId]/checkin` |
+| `CHECKIN_WINDOW_CLOSED` | 409 | Coup d'envoi (`scheduled_at`) passé, ou forfait automatique déjà traité : le check-in est fermé côté serveur (`utils/checkin.ts`, `isCheckinWindowPassed`). Un rejeu sur une équipe déjà pointée reste un `200 alreadyCheckedIn: true`. | `matches/[matchId]/checkin` |
 | `NOT_LINKED` | 404 | Compte Discord non relié à un compte du site. | `players/by-discord/[discordUserId]/*` |
 | `INVALID_DISCORD_ID` | 400 | `discordUserId` invalide. | `players/by-discord/[discordUserId]/twitch` |
 | `FREE_PLAYER_NOT_FOUND` | 404 | Aucune fiche « joueuse libre » pour ce compte Discord (`profile`), ou plus de fiche web pour cet id (`announcement`). | `free-players/profile`, `free-players/announcement` |
@@ -2059,6 +2061,17 @@ y puise pour `/mvp ajouter`). Côté bot : `/mvp ajouter` et `/mvp retirer`
 > Côté bot (`owwc-discord-bot/`, rien d'obligatoire pour ce déploiement) :
 > le bouton `checkin:<matchId>` du salon privé du match reste cliquable par
 > toute l'équipe — le refus vient de l'API et s'affiche via `formatResultLine`.
+> **Check-in fermé au coup d'envoi, côté serveur (2026-10-06).**
+> `POST /api/bot/v1/matches/:matchId/checkin` (et `POST /api/checkin/:token`)
+> refusent désormais de pointer après `scheduled_at` : avant, seul le statut
+> était vérifié et le jeton restait valable jusqu'au passage du cron de forfait
+> (course : forfait posé ET check-in enregistré). L'écriture est conditionnelle
+> (statut, horaire, `forfeit_processed_at` nul, équipe pas déjà pointée).
+> Refus : `409 CHECKIN_WINDOW_CLOSED`. Le refus « statut du match » passe de
+> `400` sans code à `409 CHECKIN_MATCH_CLOSED` (même `error`). Côté bot : rien
+> d'obligatoire — `checkin.js` affiche `error` tel quel et le statut HTTP
+> brut ; seul un traitement qui testerait `status === 400` serait concerné.
+
 
 #### `GET /api/bot/v1/players/by-discord/:discordUserId/actions-todo`
 

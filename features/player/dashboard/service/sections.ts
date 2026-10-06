@@ -12,6 +12,11 @@ import {
 import { readScrimNego } from '@/utils/teams/scrimNegotiation';
 import { loadScrimsAwaitingTeam } from '@/utils/teams/scrimsAwaitingTeam';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
+import {
+  loadReportableTeamIds,
+  mayReportFor,
+} from '@/utils/matches/reportRight';
+import { computeScoreReportState } from '@/utils/matches/scoreReports';
 import type { AdminDb } from '@/utils/admin/serviceContext';
 import type { Logger } from '@/utils/logger';
 import * as repo from '../repository';
@@ -132,6 +137,99 @@ export async function loadUnreadMessages(
   } catch (err) {
     ctx.logger.error('[player/dashboard] unreadMessages error:', err);
     return 0;
+  }
+}
+
+/**
+ * Demandes d'adhésion à traiter (réservé à `manage_join_requests`, filtré par
+ * l'appelant). Même source que la cloche ; un échec vaut zéro.
+ */
+export async function loadPendingJoinRequests(
+  ctx: DashboardCtx,
+  teamId: string
+): Promise<number> {
+  try {
+    const { count, error } = await repo.countPendingJoinRequests(
+      ctx.db,
+      teamId,
+      ctx.tenantId
+    );
+    if (error) {
+      ctx.logger.error('[player/dashboard] joinRequests error:', error);
+      return 0;
+    }
+    return count;
+  } catch (err) {
+    ctx.logger.error('[player/dashboard] joinRequests error:', err);
+    return 0;
+  }
+}
+
+/**
+ * Matchs dont le score attend MA confirmation : l'adversaire a déclaré, mon
+ * équipe pas encore (`awaiting_me`, MÊME calcul que le fil du match —
+ * computeScoreReportState). Seulement si le sujet peut déclarer pour l'équipe
+ * face à cet adversaire (utils/matches/reportRight.ts : capitaine ou manager
+ * d'équipe, jamais une permission déléguée). Ids triés par date de match ;
+ * un échec vaut liste vide.
+ */
+export async function loadScoresToConfirm(
+  ctx: DashboardCtx,
+  teamId: string
+): Promise<string[]> {
+  try {
+    const reportable = await loadReportableTeamIds(
+      ctx.db,
+      ctx.tenantId,
+      ctx.userId
+    );
+    if (!reportable.has(teamId)) return [];
+
+    const { rows, error } = await repo.listReportableTeamMatches(
+      ctx.db,
+      teamId,
+      ctx.tenantId
+    );
+    if (error) {
+      ctx.logger.error('[player/dashboard] scoresToConfirm error:', error);
+      return [];
+    }
+    const mine = rows.filter(
+      (m) => m.team1_id === teamId || m.team2_id === teamId
+    );
+    if (mine.length === 0) return [];
+
+    const reports = await repo.listScoreReportsForMatches(
+      ctx.db,
+      ctx.tenantId,
+      mine.map((m) => m.id)
+    );
+    if (reports.error) {
+      ctx.logger.error(
+        '[player/dashboard] scoresToConfirm reports error:',
+        reports.error
+      );
+      return [];
+    }
+
+    const out: string[] = [];
+    for (const m of mine) {
+      const mySide = m.team1_id === teamId ? 1 : 2;
+      const opponentId = mySide === 1 ? m.team2_id : m.team1_id;
+      if (!mayReportFor(reportable, teamId, opponentId)) continue;
+      const forMatch = reports.rows.filter((r) => r.match_id === m.id);
+      const myReport = forMatch.find((r) => r.team_side === mySide) ?? null;
+      const oppReport = forMatch.find((r) => r.team_side !== mySide) ?? null;
+      if (
+        computeScoreReportState(m.status, myReport, oppReport) === 'awaiting_me'
+      ) {
+        out.push(m.id);
+      }
+    }
+    return out;
+  } catch (err) {
+    ctx.logger.error('[player/dashboard] scoresToConfirm error:', err);
+    return [];
   }
 }
 

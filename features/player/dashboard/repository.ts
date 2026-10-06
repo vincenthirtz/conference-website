@@ -100,3 +100,74 @@ export async function readNextTeamMatch(
     error,
   };
 }
+
+/**
+ * Demandes d'adhésion (`join`) REÇUES par mon équipe et encore `pending` —
+ * même source que la cloche (notifications/service/counters.ts).
+ */
+export async function countPendingJoinRequests(
+  db: AdminDb,
+  teamId: string,
+  tenantId: string
+) {
+  const { count, error } = await loose(db)
+    .from('demandes')
+    .select('id', { count: 'exact', head: true })
+    .eq('type', 'join')
+    .eq('tenant_id', tenantId)
+    .eq('team_id', teamId)
+    .eq('status', 'pending');
+  return { count: count ?? 0, error };
+}
+
+/**
+ * Matchs de l'équipe où un report de score est encore recevable (statuts hors
+ * REPORT_CLOSED_STATUSES et hors dispute). Plafonné : un score qui attend une
+ * confirmation est récent par nature.
+ */
+export async function listReportableTeamMatches(
+  db: AdminDb,
+  teamId: string,
+  tenantId: string
+) {
+  const { data, error } = await loose(db)
+    .from('matches')
+    .select('id, status, scheduled_at, team1_id, team2_id')
+    .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
+    .eq('tenant_id', tenantId)
+    .in('status', ['pending', 'ongoing', 'postponed'])
+    .order('scheduled_at', { ascending: true })
+    .limit(50);
+  return {
+    rows: (data ?? []) as {
+      id: string;
+      status: string;
+      scheduled_at: string | null;
+      team1_id: string | null;
+      team2_id: string | null;
+    }[],
+    error,
+  };
+}
+
+/** Reports de score de ces matchs (les deux côtés). */
+export async function listScoreReportsForMatches(
+  db: AdminDb,
+  tenantId: string,
+  matchIds: string[]
+) {
+  const { data, error } = await loose(db)
+    .from('match_score_reports')
+    .select('match_id, team_side, team1_score, team2_score')
+    .eq('tenant_id', tenantId)
+    .in('match_id', matchIds);
+  return {
+    rows: (data ?? []) as {
+      match_id: string;
+      team_side: number;
+      team1_score: number;
+      team2_score: number;
+    }[],
+    error,
+  };
+}

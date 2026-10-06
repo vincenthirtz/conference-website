@@ -116,6 +116,8 @@ export type TodoItem = {
     | 'scrims'
     | 'messages'
     | 'invitation'
+    | 'score'
+    | 'joinRequests'
     | 'battletag'
     | 'roster';
   /** Chemin interne à ouvrir. */
