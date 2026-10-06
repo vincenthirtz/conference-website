@@ -15,8 +15,60 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 import { countPlayingMembers } from '@/utils/teams/roleKind';
+import { isFreePlayerLevel } from '@/utils/freePlayers';
+import {
+  isTeamOpeningActive,
+  normalizeOpeningRoles,
+  type TeamOpeningLevel,
+  type TeamOpeningRole,
+  type TeamOpeningRow,
+} from '@/utils/teamOpenings';
 
 import { logger } from '../../../utils/logger';
+
+/**
+ * Annonce de recrutement ACTIVE rattachée à l'équipe (lot P8) : postes
+ * recherchés et niveau, pour que le sélecteur de /player/join-team dise ce
+ * que l'équipe cherche. Jamais de contact ici (route publique).
+ *
+ * Rattachement par `team_id` UNIQUEMENT — jamais par nom : seule une annonce
+ * posée depuis l'espace capitaine (authentifiée) porte un `team_id`. Cf.
+ * utils/teams/directoryRecruitment.ts pour le risque d'usurpation.
+ */
+export type PublicTeamOpeningSummary = {
+  roles: TeamOpeningRole[];
+  level: TeamOpeningLevel | null;
+  since: string | null;
+};
+
+/** Colonnes lues : aucune donnée de contact. */
+const OPENING_SUMMARY_SELECT =
+  'id, team_id, team_name, roles, level, marked_at, expires_at';
+
+/** Index des annonces actives par équipe (la plus récente l'emporte). */
+export function summarizeOpenings(
+  rows: ReadonlyArray<
+    Pick<
+      TeamOpeningRow,
+      'team_id' | 'roles' | 'level' | 'marked_at' | 'expires_at'
+    >
+  >,
+  now: Date = new Date()
+): Map<string, PublicTeamOpeningSummary> {
+  const out = new Map<string, PublicTeamOpeningSummary>();
+  for (const row of rows) {
+    if (!row.team_id) continue;
+    if (!isTeamOpeningActive(row as TeamOpeningRow, now)) continue;
+    const prev = out.get(row.team_id);
+    if (prev && (prev.since ?? '') >= (row.marked_at ?? '')) continue;
+    out.set(row.team_id, {
+      roles: normalizeOpeningRoles(row.roles),
+      level: isFreePlayerLevel(row.level) ? row.level : null,
+      since: row.marked_at,
+    });
+  }
+  return out;
+}
 export type PublicTeam = {
   id: string;
   name: string;
@@ -31,6 +83,8 @@ export type PublicTeam = {
    * adversaire revient à tirer au sort dans une liste alphabétique.
    */
   open_for_scrim: boolean;
+  /** Annonce de recrutement active rattachée à l'équipe, ou `null` (lot P8). */
+  opening: PublicTeamOpeningSummary | null;
 };
 
 /**
@@ -181,6 +235,7 @@ export default async function handler(
       member_count: countPlayingMembers(t.team_members),
       is_joinable: t.is_joinable ?? false,
       open_for_scrim: t.open_for_scrim ?? false,
+      opening: null,
     }));
 
     // Exclusion des équipes PLEINES en mode « rejoindre » (joinable=1).
@@ -194,6 +249,27 @@ export default async function handler(
     // indicateur de cardinalité côté DB, pas la longueur exacte de `teams`.
     if (onlyJoinable) {
       teams = teams.filter((t) => t.member_count < MAX_TEAM_PLAYERS);
+    }
+
+    // Annonces rattachées (lot P8). Bonus d'affichage : un échec ne fait pas
+    // tomber la liste, les équipes partent simplement sans `opening`.
+    if (teams.length > 0) {
+      const { data: openingRows, error: openingErr } = await supabaseAdmin
+        .from('team_openings')
+        .select(OPENING_SUMMARY_SELECT)
+        .eq('tenant_id', tenantId)
+        .in(
+          'team_id',
+          teams.map((t) => t.id)
+        );
+      if (openingErr) {
+        logger.error('[api/teams] openings error:', openingErr);
+      } else {
+        const byTeam = summarizeOpenings(
+          (openingRows ?? []) as unknown as TeamOpeningRow[]
+        );
+        teams = teams.map((t) => ({ ...t, opening: byTeam.get(t.id) ?? null }));
+      }
     }
 
     res.setHeader(

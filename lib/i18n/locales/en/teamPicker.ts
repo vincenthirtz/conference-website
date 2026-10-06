@@ -16,4 +16,7 @@ export default {
   countryAll: 'All countries',
   membersCount: '{count}/5 members',
   openForScrimBadge: 'looking for a scrim',
+  recruitingBadge: 'recruiting',
+  lookingFor: 'Looking for: {roles}',
+  teamLevel: 'Level: {level}',
 };

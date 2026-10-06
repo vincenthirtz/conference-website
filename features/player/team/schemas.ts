@@ -404,6 +404,8 @@ export type TeamJoinRequestDto = {
     email: string | null;
     display_name: string | null;
     battle_tag: string | null;
+    /** Pseudo Discord du profil, s'il est connu (lot P8). */
+    discord?: string | null;
   } | null;
 };
 

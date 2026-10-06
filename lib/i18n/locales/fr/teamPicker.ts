@@ -15,4 +15,8 @@ export default ns('teamPicker', {
   countryAll: 'Tous les pays',
   membersCount: '{count}/5 membres',
   openForScrimBadge: 'cherche un scrim',
+  // Annonce de recrutement rattachée (lot P8).
+  recruitingBadge: 'recrute',
+  lookingFor: 'Cherche : {roles}',
+  teamLevel: 'Niveau : {level}',
 });

@@ -10,8 +10,10 @@
 // qui se monte n'a souvent pas encore d'existence sur le site ; exiger qu'elle
 // crée une fiche d'équipe, invite ses membres puis publie remettrait la
 // friction exactement là où ce parcours cherche à la retirer. Le lien vers une
-// vraie équipe (`team_id`) se fera plus tard, quand l'annonce sera posée depuis
-// l'espace capitaine.
+// vraie équipe (`team_id`) n'est JAMAIS posé ici : il l'est par
+// /api/teams/opening, quand la capitaine publie depuis son espace (session +
+// permission d'équipe — lot P8). Les deux écrivent la même table, donc la
+// liste ci-dessous montre les deux provenances.
 //
 // Confidentialité : le GET ne renvoie JAMAIS de moyen de contact (cf.
 // `toPublicTeamOpening`). L'email et le pseudo Discord ne sortent que par

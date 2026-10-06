@@ -3,9 +3,19 @@
 // rattrapage (sinon la fiche de roster naîtrait vide) : il est NON contrôlé,
 // lu au moment d'accepter. Même principe pour le motif de refus, facultatif,
 // lu au moment de refuser et montré à la candidate.
+//
+// Lot P8 : le nom mène au profil public de la candidate (rang, héros,
+// historique) et son pseudo Discord s'affiche s'il est connu — décider sans
+// rien savoir d'elle n'était pas une décision. Accepter / Refuser sont des
+// cibles de 44 px, et le refus se CONFIRME (il est définitif et notifié) ; la
+// confirmation rappelle si un motif sera montré ou non.
 
 import { useRef } from 'react';
+import Link from 'next/link';
 import { Card } from '@/features/ruban';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { format, useT } from '@/lib/i18n/useT';
+import nsTeamOpening from '@/lib/i18n/locales/fr/teamOpening';
 import { DEMANDE_REJECT_REASON_MAX, type TeamJoinRequestDto } from '../schemas';
 import type { ManageTeamTexts } from '../hooks/useManageTeamScreen';
 
@@ -17,6 +27,7 @@ function JoinRequestRow({
   busy,
   roleLabel,
   onDecide,
+  confirmReject,
 }: {
   t: ManageTeamTexts;
   locale: string;
@@ -29,7 +40,9 @@ function JoinRequestRow({
     battleTag?: string,
     reason?: string
   ) => void;
+  confirmReject: (name: string, hasReason: boolean) => Promise<boolean>;
 }) {
+  const tO = useT(nsTeamOpening);
   const battleTagRef = useRef<HTMLInputElement>(null);
   const reasonRef = useRef<HTMLTextAreaElement>(null);
   const name =
@@ -38,19 +51,44 @@ function JoinRequestRow({
     req.user?.email?.split('@')[0] ||
     t.defaultPlayerName;
   const btag = req.user?.battle_tag || req.payload?.user_battle_tag;
+  const discord = req.user?.discord?.trim() || null;
+  const profileId = req.user?.id || req.user_id || null;
+
+  const reject = async () => {
+    // Lu AVANT la confirmation : le motif saisi est celui qui partira.
+    const reason = reasonRef.current?.value.trim() || undefined;
+    if (!(await confirmReject(name, !!reason))) return;
+    onDecide('reject', undefined, reason);
+  };
 
   return (
     <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="font-medium text-sm">
-            {name}
+            {profileId ? (
+              <Link
+                href={`/player/${encodeURIComponent(profileId)}`}
+                className="text-purple-200 hover:text-purple-100 underline underline-offset-2"
+                title={format(tO.viewProfile, { name })}
+                aria-label={format(tO.viewProfile, { name })}
+              >
+                {name}
+              </Link>
+            ) : (
+              name
+            )}
             {btag && (
               <span className="text-gray-400 font-mono ml-2 text-xs">
                 {btag}
               </span>
             )}
           </div>
+          {discord && (
+            <div className="text-xs text-gray-400 mt-1">
+              {format(tO.discordHandle, { handle: discord })}
+            </div>
+          )}
           <div className="text-xs text-gray-400 mt-1">
             {t.wantsToJoinAs}
             <span className="text-gray-300">
@@ -73,21 +111,15 @@ function JoinRequestRow({
                 onDecide('approve', battleTagRef.current?.value || undefined)
               }
               disabled={busy}
-              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold transition disabled:opacity-50"
+              className="min-h-[44px] min-w-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold transition disabled:opacity-50"
             >
               {t.accept}
             </button>
             <button
               type="button"
-              onClick={() =>
-                onDecide(
-                  'reject',
-                  undefined,
-                  reasonRef.current?.value.trim() || undefined
-                )
-              }
+              onClick={() => void reject()}
               disabled={busy}
-              className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-semibold transition disabled:opacity-50"
+              className="min-h-[44px] min-w-[44px] px-4 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-sm font-semibold transition disabled:opacity-50"
             >
               {t.reject}
             </button>
@@ -171,8 +203,22 @@ export default function JoinRequestsPanel({
     reason?: string
   ) => void;
 }) {
+  const tO = useT(nsTeamOpening);
+  const { confirm, dialog } = useConfirmDialog();
+  const confirmReject = (name: string, hasReason: boolean) =>
+    confirm({
+      title: format(tO.rejectConfirmTitle, { name }),
+      subtitle: hasReason
+        ? tO.rejectConfirmWithReason
+        : tO.rejectConfirmNoReason,
+      variant: 'danger',
+      confirmLabel: t.reject,
+      cancelLabel: tO.rejectConfirmNo,
+    });
+
   return (
     <Card as="section">
+      {dialog}
       <h2 className="text-lg font-semibold">
         {t.pendingRequests}
         {requests.length > 0 && (
@@ -199,6 +245,7 @@ export default function JoinRequestsPanel({
               onDecide={(action, battleTag, reason) =>
                 onDecide(req.id, action, battleTag, reason)
               }
+              confirmReject={confirmReject}
             />
           ))}
         </div>

@@ -39,6 +39,7 @@ import {
   UpdateMemberBody,
   UpdateMemberSpecialtyBody,
 } from '../../../features/player/team/schemas';
+import { TeamOpeningUpsertBody } from '../../../features/player/team/openingSchemas';
 import {
   EquipCosmeticsBody,
   ForgeBody,
@@ -68,6 +69,7 @@ export const PLAYER_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   'player.teams.transfer-captain': input(TransferCaptainBody),
   'player.teams.members.remove': input(RemoveTeamMemberBody),
   'player.teams.member-permissions': input(MemberPermissionBody),
+  'player.teams.opening.put': input(TeamOpeningUpsertBody),
   'player.teams.add-member': input(AddMemberBody),
   'player.teams.scrim-plannings.availability': input(PlanningAvailabilityBody),
   'player.teams.public-page': input(TeamPublicPageBody),

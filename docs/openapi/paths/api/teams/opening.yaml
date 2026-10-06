@@ -1,0 +1,87 @@
+get:
+  tags:
+    - public/auth
+  summary: Annonce de recrutement de l'equipe geree (lot P8).
+  description: |
+    L'annonce « cette equipe cherche une joueuse » rattachee a l'equipe
+    (`team_openings.team_id`), ou `null`. `accountEmail` = l'email du compte
+    qui servirait de contact si l'appelante publiait (affiche avant la
+    publication).
+
+    Exige la permission d'equipe `manage_join_requests`.
+  operationId: getTeamOpening
+  security:
+    - PlayerBearer: []
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
+  responses:
+    '200':
+      description: '{ opening: TeamOpeningDto | null, accountEmail }'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+put:
+  tags:
+    - public/auth
+  summary: Publier ou mettre a jour l'annonce de l'equipe geree.
+  description: |
+    Cree l'annonce (rattachee a l'equipe, visible sur /recrutement) ou met a
+    jour l'existante ; la peremption repart a 60 jours. Le contact enregistre
+    a la creation est l'email du COMPTE (jamais une saisie libre) ; une
+    annonce publique anterieure deposee avec ce meme email est adoptee.
+    400 `NO_CONTACT_EMAIL` si le compte n'a pas d'email utilisable.
+  operationId: upsertTeamOpening
+  security:
+    - PlayerBearer: []
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: player.teams.opening.put
+  responses:
+    '200':
+      description: '{ opening, accountEmail }'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+delete:
+  tags:
+    - public/auth
+  summary: Clore l'annonce de l'equipe geree (suppression).
+  operationId: closeTeamOpening
+  security:
+    - PlayerBearer: []
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+  responses:
+    '200':
+      description: '{ opening: null, accountEmail }'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

@@ -27,6 +27,7 @@ import nsNextMatchCard from './nextMatchCard';
 import nsPlayerProfile from './playerProfile';
 import nsCasterApplication from './casterApplication';
 import nsJoinTeam from './joinTeam';
+import nsTeamOpening from './teamOpening';
 import nsActiveTeamSwitcher from './activeTeamSwitcher';
 import nsManageTeam from './manageTeam';
 import nsFreePlayers from './freePlayers';
@@ -189,6 +190,7 @@ export const frDict = {
   playerProfile: nsPlayerProfile.fr,
   casterApplication: nsCasterApplication.fr,
   joinTeam: nsJoinTeam.fr,
+  teamOpening: nsTeamOpening.fr,
   activeTeamSwitcher: nsActiveTeamSwitcher.fr,
   manageTeam: nsManageTeam.fr,
   freePlayers: nsFreePlayers.fr,

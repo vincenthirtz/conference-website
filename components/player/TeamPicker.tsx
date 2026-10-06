@@ -15,6 +15,10 @@ import Image from 'next/image';
 import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
 import { useT, format } from '@/lib/i18n/useT';
 import nsTeamPicker from '@/lib/i18n/locales/fr/teamPicker';
+import nsRecrutementPage from '@/lib/i18n/locales/fr/recrutementPage';
+
+/** Libellé de poste / niveau, partagé avec la page /recrutement. */
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export type TeamPickerTeam = {
   id: string;
@@ -29,6 +33,14 @@ export type TeamPickerTeam = {
    * alphabétique.
    */
   open_for_scrim?: boolean;
+  /**
+   * Annonce de recrutement rattachée à l'équipe (lot P8) : postes recherchés
+   * et niveau. Sans elle, une joueuse candidate à l'aveugle.
+   */
+  opening?: {
+    roles: string[];
+    level: string | null;
+  } | null;
 };
 
 type AccentColor = 'emerald' | 'purple' | 'blue';
@@ -92,6 +104,10 @@ export default function TeamPicker({
   searchPlaceholder,
 }: Props) {
   const t = useT(nsTeamPicker);
+  const tr = useT(nsRecrutementPage) as unknown as Record<string, string>;
+  const roleLabel = (role: string) => tr[`role${capitalize(role)}`] ?? role;
+  const levelLabel = (level: string) =>
+    tr[`level${capitalize(level)}`] ?? level;
   const uid = useId();
   const searchId = `teampicker-search-${uid}`;
   const countryId = `teampicker-country-${uid}`;
@@ -251,7 +267,28 @@ export default function TeamPicker({
                           {t.openForScrimBadge}
                         </span>
                       )}
+                      {team.opening && (
+                        <span className="flex-shrink-0 rounded-full border border-purple-400/40 bg-purple-500/15 px-2 py-0.5 text-[10px] font-semibold text-purple-100">
+                          {t.recruitingBadge}
+                        </span>
+                      )}
                     </div>
+                    {team.opening && team.opening.roles.length > 0 && (
+                      <div className="text-xs text-purple-200/90 truncate">
+                        {format(t.lookingFor, {
+                          roles: team.opening.roles.map(roleLabel).join(', '),
+                        })}
+                        {team.opening.level &&
+                          team.opening.level !== 'unknown' && (
+                            <>
+                              {' · '}
+                              {format(t.teamLevel, {
+                                level: levelLabel(team.opening.level),
+                              })}
+                            </>
+                          )}
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 text-xs text-gray-400">
                       {team.short_name && <span>{team.short_name}</span>}
                       {team.country && (

@@ -1,10 +1,15 @@
 // features/player/team/ui/TeamOpennessPanel.tsx — recrutement et scrims.
 // L'état se lit pour TOUTE membre (savoir que son équipe recrute est une
 // information) ; seul l'interrupteur demande la permission.
+//
+// Lot P8 : sous l'interrupteur « ouvert aux demandes », l'ANNONCE de
+// recrutement (postes, niveau, dispos) — publiée, modifiée ou close d'ici,
+// rattachée à l'équipe. Même permission que l'interrupteur.
 
 import Switch from '@/components/ui/Switch';
 import { Card } from '@/features/ruban';
 import type { ManageTeamTexts } from '../hooks/useManageTeamScreen';
+import TeamOpeningEditor from './TeamOpeningEditor';
 
 type Toggle = {
   on: boolean;
@@ -43,6 +48,8 @@ export default function TeamOpennessPanel({
           )}
         </div>
       </Card>
+
+      <TeamOpeningEditor editable={recruitment.editable} />
 
       <Card as="section">
         <div className="flex items-center justify-between gap-4">

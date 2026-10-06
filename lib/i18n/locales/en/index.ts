@@ -33,6 +33,7 @@ import enNextMatchCard from './nextMatchCard';
 import enPlayerProfile from './playerProfile';
 import enCasterApplication from './casterApplication';
 import enJoinTeam from './joinTeam';
+import enTeamOpening from './teamOpening';
 import enManageTeam from './manageTeam';
 import enFreePlayers from './freePlayers';
 import enNewTeamForm from './newTeamForm';
@@ -195,6 +196,7 @@ const enDict = {
   playerProfile: enPlayerProfile,
   casterApplication: enCasterApplication,
   joinTeam: enJoinTeam,
+  teamOpening: enTeamOpening,
   manageTeam: enManageTeam,
   freePlayers: enFreePlayers,
   newTeamForm: enNewTeamForm,

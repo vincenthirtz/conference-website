@@ -32,6 +32,11 @@ type Team = {
   country: string | null;
   member_count?: number;
   is_joinable?: boolean;
+  /**
+   * Annonce de recrutement rattachée (lot P8, /api/teams) : postes recherchés
+   * et niveau, affichés par le TeamPicker avec l'effectif.
+   */
+  opening?: { roles: string[]; level: string | null } | null;
 };
 
 type PendingJoin = {
@@ -138,6 +143,11 @@ function JoinTeamPage() {
           (tm) =>
             typeof tm.member_count !== 'number' ||
             tm.member_count < MAX_TEAM_PLAYERS
+        );
+        // Les équipes qui ont publié ce qu'elles cherchent d'abord (tri
+        // stable : l'ordre alphabétique de l'API est gardé dans chaque groupe).
+        result = [...result].sort(
+          (a, b) => (a.opening ? 0 : 1) - (b.opening ? 0 : 1)
         );
         setTeams(result);
       } catch (err) {

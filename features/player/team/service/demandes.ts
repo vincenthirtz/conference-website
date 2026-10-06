@@ -92,6 +92,9 @@ export async function listIncomingDemandes(
             email: p.email || null,
             display_name: p.display_name || p.full_name || null,
             battle_tag: p.battle_tag || null,
+            // Pseudo Discord (lot P8) : la capitaine doit pouvoir joindre ou
+            // reconnaître la candidate avant de décider.
+            discord: p.discord || null,
           }
         : null,
     };
