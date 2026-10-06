@@ -9,10 +9,12 @@
 // Assignation (`assigned_staff_id`, `assigned_at`) : sans la migration
 // add_staff_assignment_to_demandes_and_support_tickets, la liste se relit
 // sans ces colonnes ni le filtre, et `assignmentAvailable` vaut false.
+//
+// La base est REÇUE (client service role fourni par la page), jamais importée
+// ici : règle 3 de tests/unit/adminBoundariesGuard.test.ts.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ParsedUrlQuery } from 'querystring';
-import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import type { DemandeStatus } from '@/components/admin/demandes/demandeChips';
 import {
@@ -61,7 +63,12 @@ const str = (v: unknown) => (typeof v === 'string' ? v : '');
 
 export async function loadDemandesList(
   query: ParsedUrlQuery,
-  scope: { tenantId: string; staffId: string }
+  scope: {
+    tenantId: string;
+    staffId: string;
+    /** Client service role ; `null` = Supabase non configuré. */
+    db: SupabaseClient<any> | null;
+  }
 ): Promise<DemandesListProps> {
   const type = str(query.type);
   const statusRaw = typeof query.status === 'string' ? query.status : 'pending';
@@ -75,7 +82,7 @@ export async function loadDemandesList(
   const orderDir = query.orderDir === 'asc' ? 'asc' : 'desc';
   const assigned = parseAssignmentFilter(query.assigned);
 
-  if (!supabaseAdmin) {
+  if (!scope.db) {
     return {
       initialDemandes: [],
       initialTotal: null,
@@ -87,8 +94,7 @@ export async function loadDemandesList(
   }
   // Colonnes d'assignation hors du schéma généré : client non typé, le
   // périmètre (tenant) reste explicite sur chaque requête.
-  const db = supabaseAdmin as unknown as SupabaseClient<any>;
-  const { tenantId, staffId } = scope;
+  const { db, tenantId, staffId } = scope;
 
   // Filtres communs à la page et aux compteurs (statut à part).
   function filtered(q: any, withAssignment: boolean) {
@@ -189,7 +195,7 @@ export async function loadDemandesList(
   await Promise.all(
     userIds.map(async (uid) => {
       try {
-        const { data } = await supabaseAdmin!.auth.admin.getUserById(uid);
+        const { data } = await db.auth.admin.getUserById(uid);
         if (data?.user) {
           const meta = (data.user.user_metadata ?? {}) as Record<string, any>;
           userMap.set(uid, {

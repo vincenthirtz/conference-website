@@ -10,6 +10,7 @@ import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { supabaseAdmin } from '@/utils/supabase';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
@@ -78,6 +79,7 @@ export const getServerSideProps = withStaffPage(
     loadDemandesList(ctx.query, {
       tenantId: staffCtx.tenantId,
       staffId: staffCtx.staff.id,
+      db: supabaseAdmin,
     })
 );
 
