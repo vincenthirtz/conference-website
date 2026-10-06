@@ -55,7 +55,6 @@ export const TICKET_CATEGORIES = [
   'behavior',
   'technical',
   'other',
-  'roster_unlock',
 ] as const;
 export const TICKET_SEARCH_MAX_LENGTH = 100;
 
@@ -88,6 +87,8 @@ export const SupportTicketListQuery = looseQuery([
   'search',
   // `oldest` : plus anciens d'abord (file de traitement) ; défaut récents.
   'sort',
+  // `me` (à moi) / `unassigned` (non assignés) — migration d'assignation.
+  'assigned',
   'limit',
   'offset',
 ]);

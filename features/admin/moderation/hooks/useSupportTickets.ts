@@ -50,3 +50,15 @@ export function useUpdateSupportTicket() {
     },
   });
 }
+
+/** « Je prends » / « Libérer » : relit les listes (filtre « à moi »). */
+export function useAssignSupportTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, action }: { id: string; action: 'claim' | 'release' }) =>
+      moderationClient.assignTicket(id, action),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: supportKeys.all });
+    },
+  });
+}

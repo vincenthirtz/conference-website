@@ -26,6 +26,7 @@ import {
   type TicketStatus,
 } from '@/features/admin/moderation/client';
 import {
+  useAssignSupportTicket,
   usePatchSupportTickets,
   useSupportTickets,
   useUpdateSupportTicket,
@@ -34,6 +35,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminSupport from '@/lib/i18n/locales/admin-fr/adminSupport';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import AssignmentControl from '@/features/admin/_shared/ui/AssignmentControl';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import StatTile from '@/features/admin/_shared/ui/StatTile';
 
@@ -59,6 +61,7 @@ const FILTER_KEYS = [
   'category',
   'search',
   'sort',
+  'assigned',
 ] as const;
 
 const PAGE_SIZE = 50;
@@ -101,6 +104,10 @@ export default function SupportPanel() {
   const category = filters.category ?? '';
   const search = filters.search ?? '';
   const sort = filters.sort === 'oldest' ? 'oldest' : '';
+  const assigned =
+    filters.assigned === 'me' || filters.assigned === 'unassigned'
+      ? filters.assigned
+      : '';
 
   // Champ de recherche local (debounce → query param `search`).
   const [searchInput, setSearchInput] = useState(search);
@@ -123,7 +130,7 @@ export default function SupportPanel() {
   // Tout changement de filtre/recherche repart de la première page.
   useEffect(() => {
     setOffset(0);
-  }, [status, severity, category, search, sort]);
+  }, [status, severity, category, search, sort, assigned]);
 
   // Requête par clé (filtres + offset) : le reset d'offset ci-dessus et le
   // changement de filtre produisent deux clés successives, et seule la clé
@@ -135,6 +142,7 @@ export default function SupportPanel() {
     if (category) params.set('category', category);
     if (search) params.set('search', search);
     if (sort) params.set('sort', sort);
+    if (assigned) params.set('assigned', assigned);
     params.set('limit', String(PAGE_SIZE));
     params.set('offset', String(offset));
     return params.toString();
@@ -165,6 +173,26 @@ export default function SupportPanel() {
     [ticketsQuery.refetch]
   );
   const updateTicket = useUpdateSupportTicket();
+  const assignTicket = useAssignSupportTicket();
+  // Migration d'assignation absente : ni filtre ni bouton.
+  const assignmentOn = ticketsQuery.data?.assignment_available === true;
+
+  async function assign(action: 'claim' | 'release') {
+    if (!selected) return;
+    try {
+      const { assignment } = await assignTicket.mutateAsync({
+        id: selected.id,
+        action,
+      });
+      setSelected((prev) => (prev ? { ...prev, ...assignment } : prev));
+      addToast(
+        action === 'claim' ? tx.toastClaimed : tx.toastReleased,
+        'success'
+      );
+    } catch (err) {
+      addToast((err as Error).message, 'error');
+    }
+  }
 
   function openDetail(t: Ticket) {
     setSelected(t);
@@ -381,7 +409,8 @@ export default function SupportPanel() {
             : tx.ticketUpdated,
         sent && sent !== 'sent' ? 'error' : 'success'
       );
-      setSelected(json.ticket);
+      // La fiche renvoyée ne porte pas l'assignation (lue avec la liste).
+      setSelected((prev) => ({ ...prev, ...json.ticket }));
     } catch (err) {
       addToast((err as Error).message, 'error');
     } finally {
@@ -481,6 +510,18 @@ export default function SupportPanel() {
           <option value="">{tx.sortNewest}</option>
           <option value="oldest">{tx.sortOldest}</option>
         </select>
+
+        {assignmentOn && (
+          <select
+            className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm"
+            value={assigned}
+            onChange={(e) => setFilters({ assigned: e.target.value || null })}
+          >
+            <option value="">{tx.filterAllAssignment}</option>
+            <option value="me">{tx.filterAssignedMe}</option>
+            <option value="unassigned">{tx.filterUnassigned}</option>
+          </select>
+        )}
 
         <AdminButton
           variant="ghost"
@@ -657,6 +698,23 @@ export default function SupportPanel() {
               <Field label={tx.fieldCreatedAt}>
                 {formatDateFr(selected.created_at)}
               </Field>
+              {assignmentOn && (
+                <Field label={tx.fieldAssignment}>
+                  <AssignmentControl
+                    assignedStaffId={selected.assigned_staff_id}
+                    assignedTo={selected.assigned_to}
+                    busy={assignTicket.isPending}
+                    labels={{
+                      claim: tx.assignClaim,
+                      release: tx.assignRelease,
+                      assignedTo: tx.assignedTo,
+                      unknownStaff: tx.assignUnknownStaff,
+                    }}
+                    onClaim={() => assign('claim')}
+                    onRelease={() => assign('release')}
+                  />
+                </Field>
+              )}
               {(selected.reported_target_type ||
                 selected.reported_target_name ||
                 selected.reported_battle_tag) && (

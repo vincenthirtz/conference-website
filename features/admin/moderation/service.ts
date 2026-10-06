@@ -17,6 +17,16 @@ import type { TablesUpdate } from '@/types/database.generated';
 import { escapePostgrestValue, sanitizeSearch } from '@/utils/apiHelpers';
 import type { Audited } from '../_shared/audited';
 import { parseWithLegacyFields } from '../_shared/legacyParse';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  type AssignmentAction,
+  type AssignmentResult,
+  loadStaffBriefs,
+  parseAssignmentFilter,
+  type StaffBrief,
+  setAssignment,
+  withAssignmentFallback,
+} from '../_shared/staffAssignment';
 import * as repo from './repository';
 import { notifyTicketReporter } from './supportNotify';
 import {
@@ -410,10 +420,18 @@ export async function listSupportTickets(
       : '';
   const safe = search ? escapePostgrestValue(search) : '';
 
-  const { page, open, high, resolved } = await repo.listSupportTickets(
-    ctx.db,
-    ctx.tenantId,
-    {
+  // « À moi » / « non assignés » : sans la migration d'assignation, le filtre
+  // tombe avec les colonnes (repli) et `assignment_available` le dit.
+  const assignFilter = parseAssignmentFilter(query.assigned);
+  const assignee =
+    assignFilter === 'me' && ctx.actor.kind === 'staff'
+      ? { mode: 'me' as const, staffId: ctx.actor.staffId }
+      : assignFilter === 'unassigned'
+        ? { mode: 'unassigned' as const }
+        : null;
+
+  const listed = await withAssignmentFallback(async (withAssignment) => {
+    const r = await repo.listSupportTickets(ctx.db, ctx.tenantId, {
       status: oneOf(query.status, TICKET_STATUSES),
       severity: oneOf(query.severity, TICKET_SEVERITIES),
       category: oneOf(query.category, TICKET_CATEGORIES),
@@ -423,19 +441,45 @@ export async function listSupportTickets(
           : null,
       searchPattern: safe ? `%${safe}%` : null,
       oldestFirst: query.sort === 'oldest',
+      withAssignment,
+      assignee: withAssignment ? assignee : null,
       limit,
       offset,
-    }
-  );
+    });
+    return {
+      ...r,
+      error: r.page.error || r.open.error || r.high.error || r.resolved.error,
+    };
+  });
+  const { page, open, high, resolved } = listed;
 
-  const firstError = page.error || open.error || high.error || resolved.error;
-  if (firstError) {
-    ctx.logger.error('[admin/support/tickets] list error:', firstError);
+  if (listed.error) {
+    ctx.logger.error('[admin/support/tickets] list error:', listed.error);
     throw new AdminError(500, 'internal', 'Échec du chargement');
   }
 
+  // Nom de la personne assignée (une requête, bornée par la page).
+  const rows = (page.data || []) as Array<
+    NonNullable<typeof page.data>[number] & {
+      assigned_staff_id?: string | null;
+    }
+  >;
+  const briefs = listed.assignmentAvailable
+    ? await loadStaffBriefs(
+        ctx.db as unknown as SupabaseClient<any>,
+        rows.map((r) => r.assigned_staff_id)
+      )
+    : new Map<string, StaffBrief>();
+  const tickets = rows.map((r) => ({
+    ...r,
+    assigned_to: r.assigned_staff_id
+      ? (briefs.get(r.assigned_staff_id) ?? null)
+      : null,
+  }));
+
   return {
-    tickets: page.data || [],
+    assignment_available: listed.assignmentAvailable,
+    tickets,
     total: page.count ?? null,
     limit,
     offset,
@@ -538,6 +582,35 @@ export async function updateSupportTicket(
       },
     },
   } satisfies Audited<unknown>;
+}
+
+/**
+ * « Je prends » / « Libérer » un ticket (cf. _shared/staffAssignment.ts).
+ * Journal : `update_support_ticket` + `payload.assignment`.
+ */
+export async function assignSupportTicket(
+  ctx: ServiceContext,
+  id: string,
+  action: AssignmentAction
+): Promise<Audited<{ assignment: AssignmentResult }>> {
+  const { before, after } = await setAssignment(
+    ctx,
+    'support_tickets',
+    id,
+    action
+  );
+  return {
+    result: { assignment: after },
+    audit: {
+      entity_type: 'support_ticket',
+      entity_id: id,
+      payload: {
+        assignment: action,
+        previous_staff_id: before,
+        assigned_staff_id: after.assigned_staff_id,
+      },
+    },
+  };
 }
 
 export async function deleteSupportTicket(ctx: ServiceContext, id: string) {

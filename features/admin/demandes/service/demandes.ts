@@ -15,6 +15,11 @@ import {
 } from '@/utils/scrimRequestNotify';
 import { readScrimNego } from '@/utils/teams/scrimNegotiation';
 import type { Audited } from '../../_shared/audited';
+import {
+  type AssignmentAction,
+  type AssignmentResult,
+  setAssignment,
+} from '../../_shared/staffAssignment';
 import * as demandes from '../repository/demandes';
 
 const fail = (status: number, error: string) =>
@@ -70,6 +75,31 @@ export async function getDemande(ctx: ServiceContext, id: string) {
   }
 
   return { demande };
+}
+
+/**
+ * « Je prends » / « Libérer » une demande (cf. _shared/staffAssignment.ts).
+ * Journal : `process_demande` + `payload.assignment`, avec la personne qui
+ * l'avait avant (une libération par un tiers reste traçable).
+ */
+export async function assignDemande(
+  ctx: ServiceContext,
+  id: string,
+  action: AssignmentAction
+): Promise<Audited<{ assignment: AssignmentResult }>> {
+  const { before, after } = await setAssignment(ctx, 'demandes', id, action);
+  return {
+    result: { assignment: after },
+    audit: {
+      entity_type: 'demande',
+      entity_id: id,
+      payload: {
+        assignment: action,
+        previous_staff_id: before,
+        assigned_staff_id: after.assigned_staff_id,
+      },
+    },
+  };
 }
 
 /**

@@ -65,6 +65,13 @@ export default function SupportTicketRow({
               {formatDateFr(t.created_at)}
             </span>
           )}
+          {t.assigned_staff_id && (
+            <Chip tone="brand" data-testid="assigned-to">
+              {format(tx.assignedTo, {
+                name: t.assigned_to?.display_name || tx.assignUnknownStaff,
+              })}
+            </Chip>
+          )}
           {t.source === 'discord_bot' && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-700/30 text-indigo-200 border border-indigo-500/40">
               {tx.discordBadge}

@@ -1,14 +1,14 @@
 // pages/admin/demandes/index.tsx
 //
 // Liste staff des demandes (« Le Ruban », lot 7A). La page garde le chargement
-// SSR, l'état (sélection, modales) et tous les appels ; l'affichage vit dans
+// SSR (le chargement vit dans features/admin/demandes/listLoader.ts), l'état
+// (sélection, modales) et tous les appels ; l'affichage vit dans
 // features/admin/demandes/ui/DemandesList*.tsx, les types et règles pures dans
 // features/admin/demandes/listModel.ts.
 
 import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { supabaseAdmin } from '@/utils/supabase';
 import { withStaffPage } from '@/utils/staff';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useToast } from '@/components/Toast';
@@ -23,18 +23,17 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 
 import { logger } from '../../../utils/logger';
 import nsAdminDemandesList from '@/lib/i18n/locales/admin-fr/adminDemandesList';
-import type { DemandeStatus } from '@/components/admin/demandes/demandeChips';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 import {
   isBattleTagFlagged,
   resolveDemandeBattleTag,
-  sanitizeSearchInput,
   type Demande,
-  type StaffMini,
-  type StatusCounts,
-  type TournamentMini,
-  type UserMini,
 } from '@/features/admin/demandes/listModel';
+import {
+  DEMANDES_PAGE_SIZE,
+  type DemandesListProps,
+  loadDemandesList,
+} from '@/features/admin/demandes/listLoader';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import DemandesListStats from '@/features/admin/demandes/ui/DemandesListStats';
@@ -50,17 +49,12 @@ import {
   DemandesListTagModal,
 } from '@/features/admin/demandes/ui/DemandesListModals';
 
-type Props = {
+type Props = DemandesListProps & {
   staff: {
     id: string | null;
     role: string | null;
     display_name: string | null;
   };
-  initialDemandes: Demande[];
-  initialTotal: number | null;
-  tournaments: TournamentMini[];
-  statusCounts: StatusCounts;
-  initialError: string | null;
 };
 
 const D_FILTER_KEYS = [
@@ -73,206 +67,18 @@ const D_FILTER_KEYS = [
   'offset',
   'orderBy',
   'orderDir',
+  'assigned',
 ] as const;
 type FilterKey = (typeof D_FILTER_KEYS)[number];
-const LIMIT = 50;
-
-const EMPTY_COUNTS: StatusCounts = {
-  pending: 0,
-  approved: 0,
-  rejected: 0,
-  cancelled: 0,
-  total: 0,
-};
+const LIMIT = DEMANDES_PAGE_SIZE;
 
 export const getServerSideProps = withStaffPage(
   { permission: 'manage_teams' },
-  async (ctx, staffCtx) => {
-    const { query } = ctx;
-    const type = typeof query.type === 'string' ? query.type : '';
-    const statusRaw =
-      typeof query.status === 'string' ? query.status : 'pending';
-    const tournamentId =
-      typeof query.tournamentId === 'string' ? query.tournamentId : '';
-    const searchRaw = typeof query.search === 'string' ? query.search : '';
-    const search = sanitizeSearchInput(searchRaw);
-    const from = typeof query.from === 'string' ? query.from : '';
-    const to = typeof query.to === 'string' ? query.to : '';
-    const offset = Math.max(0, Number(query.offset) || 0);
-    const orderBy =
-      query.orderBy === 'processed_at' ? 'processed_at' : 'created_at';
-    const orderDir = query.orderDir === 'asc' ? 'asc' : 'desc';
-
-    if (!supabaseAdmin) {
-      return {
-        initialDemandes: [],
-        initialTotal: null,
-        tournaments: [],
-        statusCounts: EMPTY_COUNTS,
-        initialError: 'Service indisponible',
-      };
-    }
-
-    const { tenantId } = staffCtx;
-
-    const baseColumns = `
-    id, user_id, team_id, tournament_id, type, status,
-    comment, staff_note, source, payload,
-    processed_at, processed_by_staff_id,
-    created_at, updated_at,
-    team:teams!demandes_team_id_fkey(id, name, short_name, logo_url),
-    tournament:tournaments!demandes_tournament_id_fkey(id, name, slug)
-  `;
-
-    let q = supabaseAdmin
-      .from('demandes')
-      .select(baseColumns, { count: 'exact' })
-      .eq('tenant_id', tenantId)
-      .order(orderBy, { ascending: orderDir === 'asc' })
-      .range(offset, offset + LIMIT - 1);
-
-    if (statusRaw) q = q.eq('status', statusRaw);
-    if (type) q = q.eq('type', type);
-    if (tournamentId) q = q.eq('tournament_id', tournamentId);
-    if (from) q = q.gte('created_at', from);
-    if (to) q = q.lte('created_at', to);
-    if (search) {
-      const s = `%${search}%`;
-      q = q.or(`comment.ilike.${s},staff_note.ilike.${s},source.ilike.${s}`);
-    }
-
-    // Stats: count rows per status, applying every filter EXCEPT status,
-    // so each card shows how many match the rest of the filter set.
-    function buildStatusQuery(targetStatus: DemandeStatus) {
-      let sq = supabaseAdmin!
-        .from('demandes')
-        .select('id', { count: 'exact', head: true })
-        .eq('tenant_id', tenantId)
-        .eq('status', targetStatus);
-      if (type) sq = sq.eq('type', type);
-      if (tournamentId) sq = sq.eq('tournament_id', tournamentId);
-      if (from) sq = sq.gte('created_at', from);
-      if (to) sq = sq.lte('created_at', to);
-      if (search) {
-        const s = `%${search}%`;
-        sq = sq.or(
-          `comment.ilike.${s},staff_note.ilike.${s},source.ilike.${s}`
-        );
-      }
-      return sq;
-    }
-
-    const [
-      demandesRes,
-      tournamentsRes,
-      pendingRes,
-      approvedRes,
-      rejectedRes,
-      cancelledRes,
-    ] = await Promise.all([
-      q,
-      supabaseAdmin
-        .from('tournaments')
-        .select('id, name, slug')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false })
-        .limit(200),
-      buildStatusQuery('pending'),
-      buildStatusQuery('approved'),
-      buildStatusQuery('rejected'),
-      buildStatusQuery('cancelled'),
-    ]);
-
-    if (demandesRes.error) {
-      logger.error('admin demandes SSR error:', demandesRes.error);
-      return {
-        initialDemandes: [],
-        initialTotal: null,
-        tournaments: (tournamentsRes.data || []) as TournamentMini[],
-        statusCounts: EMPTY_COUNTS,
-        initialError: 'Erreur lors du chargement',
-      };
-    }
-
-    const rows = (demandesRes.data || []) as unknown as Demande[];
-
-    // Enrich user info via Supabase Auth (parallel)
-    const userIds = [
-      ...new Set(rows.map((d) => d.user_id).filter(Boolean)),
-    ] as string[];
-    const userMap = new Map<string, UserMini>();
-    await Promise.all(
-      userIds.map(async (uid) => {
-        try {
-          const { data } = await supabaseAdmin!.auth.admin.getUserById(uid);
-          if (data?.user) {
-            const meta = (data.user.user_metadata ?? {}) as Record<string, any>;
-            userMap.set(uid, {
-              id: uid,
-              email: data.user.email ?? null,
-              display_name:
-                (meta.display_name as string) ||
-                (meta.full_name as string) ||
-                data.user.email ||
-                null,
-              avatar_url: (meta.avatar_url as string) || null,
-              battle_tag: (meta.battle_tag as string) || null,
-              discord: (meta.discord as string) || null,
-            });
-          }
-        } catch {
-          // ignore individual failures
-        }
-      })
-    );
-
-    // Enrich staff handler info (single batched query)
-    const staffIds = [
-      ...new Set(rows.map((d) => d.processed_by_staff_id).filter(Boolean)),
-    ] as string[];
-    const staffMap = new Map<string, StaffMini>();
-    if (staffIds.length > 0) {
-      const { data: staffRows } = await supabaseAdmin
-        .from('staff')
-        .select('id, display_name')
-        .in('id', staffIds);
-      for (const s of staffRows || []) {
-        staffMap.set(s.id, {
-          id: s.id,
-          display_name: s.display_name ?? null,
-        });
-      }
-    }
-
-    const enriched: Demande[] = rows.map((d) => ({
-      ...d,
-      user: d.user_id ? (userMap.get(d.user_id) ?? null) : null,
-      processed_by: d.processed_by_staff_id
-        ? (staffMap.get(d.processed_by_staff_id) ?? null)
-        : null,
-    }));
-
-    const statusCounts: StatusCounts = {
-      pending: pendingRes.count ?? 0,
-      approved: approvedRes.count ?? 0,
-      rejected: rejectedRes.count ?? 0,
-      cancelled: cancelledRes.count ?? 0,
-      total:
-        (pendingRes.count ?? 0) +
-        (approvedRes.count ?? 0) +
-        (rejectedRes.count ?? 0) +
-        (cancelledRes.count ?? 0),
-    };
-
-    return {
-      initialDemandes: enriched,
-      initialTotal:
-        typeof demandesRes.count === 'number' ? demandesRes.count : null,
-      tournaments: (tournamentsRes.data || []) as TournamentMini[],
-      statusCounts,
-      initialError: null,
-    };
-  }
+  (ctx, staffCtx) =>
+    loadDemandesList(ctx.query, {
+      tenantId: staffCtx.tenantId,
+      staffId: staffCtx.staff.id,
+    })
 );
 
 function AdminDemandesPage({
@@ -281,6 +87,7 @@ function AdminDemandesPage({
   tournaments,
   statusCounts,
   initialError,
+  assignmentAvailable,
 }: Props) {
   const t = useAdminT(nsAdminDemandesList);
   const { addToast } = useToast();
@@ -299,6 +106,7 @@ function AdminDemandesPage({
   const orderBy =
     filters.orderBy === 'processed_at' ? 'processed_at' : 'created_at';
   const orderDir = filters.orderDir === 'asc' ? 'asc' : 'desc';
+  const assignedFilter = filters.assigned ?? '';
   const limit = LIMIT;
 
   const demandes = initialDemandes;
@@ -331,6 +139,7 @@ function AdminDemandesPage({
     !!search ||
     !!dateFrom ||
     !!dateTo ||
+    !!assignedFilter ||
     statusFilter !== 'pending' ||
     orderBy !== 'created_at' ||
     orderDir !== 'desc';
@@ -425,6 +234,23 @@ function AdminDemandesPage({
    * qui renvoie au salon d'actions plutôt qu'un « envoyé ✓ » qu'on ne peut pas
    * garantir.
    */
+  // « Je prends » / « Libérer » (409 : déjà pris par quelqu'un d'autre).
+  async function handleAssign(id: string, action: 'claim' | 'release') {
+    setSingleProcessing(id);
+    try {
+      await demandesClient.assign(id, action);
+      addToast(
+        action === 'claim' ? t.toastClaimed : t.toastReleased,
+        'success'
+      );
+      refresh();
+    } catch (err) {
+      addToast((err as Error)?.message || t.error, 'error');
+    } finally {
+      setSingleProcessing(null);
+    }
+  }
+
   async function handleNotifyCaptains(id: string) {
     setSingleProcessing(id);
     setErrorMsg(null);
@@ -664,6 +490,7 @@ function AdminDemandesPage({
           onSearchInputChange={setSearchInput}
           dateFrom={dateFrom}
           dateTo={dateTo}
+          assignedFilter={assignmentAvailable ? assignedFilter : null}
           sortValue={`${orderBy}:${orderDir}`}
           hasActiveFilters={hasActiveFilters}
           onFilterChange={(key, value) =>
@@ -707,6 +534,7 @@ function AdminDemandesPage({
             onNotifyCaptains: handleNotifyCaptains,
             onApprove: (id) => handleSingleAction(id, 'approved'),
             onReject: (id) => handleSingleAction(id, 'rejected'),
+            onAssign: assignmentAvailable ? handleAssign : undefined,
           }}
         />
 

@@ -31,6 +31,7 @@ export default function DemandesListFilters({
   onSearchInputChange,
   dateFrom,
   dateTo,
+  assignedFilter,
   sortValue,
   hasActiveFilters,
   onFilterChange,
@@ -46,12 +47,14 @@ export default function DemandesListFilters({
   onSearchInputChange: (value: string) => void;
   dateFrom: string;
   dateTo: string;
+  /** `me` / `unassigned` / '' ; `null` = assignation indisponible (masqué). */
+  assignedFilter: string | null;
   /** `${orderBy}:${orderDir}` */
   sortValue: string;
   hasActiveFilters: boolean;
   /** Un filtre de l'URL ; `null` le retire. */
   onFilterChange: (
-    key: 'type' | 'status' | 'tournamentId' | 'from' | 'to',
+    key: 'type' | 'status' | 'tournamentId' | 'from' | 'to' | 'assigned',
     value: string | null
   ) => void;
   onSortChange: (value: string) => void;
@@ -134,6 +137,18 @@ export default function DemandesListFilters({
                 label: `${tour.name}${tour.slug ? ` (${tour.slug})` : ''}`,
               }))}
             />
+            {assignedFilter !== null && (
+              <FilterSelect
+                label={t.filterAssigned}
+                allLabel={t.assignedAll}
+                value={assignedFilter}
+                onChange={(v) => onFilterChange('assigned', v)}
+                options={[
+                  { value: 'me', label: t.assignedMe },
+                  { value: 'unassigned', label: t.assignedNone },
+                ]}
+              />
+            )}
             <label className="inline-flex items-center gap-2">
               <span className={INLINE_LABEL}>{t.filterFrom}</span>
               <input

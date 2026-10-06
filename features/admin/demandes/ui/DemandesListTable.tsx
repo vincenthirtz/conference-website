@@ -68,6 +68,8 @@ export type DemandeRowActions = {
   onNotifyCaptains: (id: string) => void;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
+  /** « Je prends » / « Libérer » ; absent = assignation indisponible. */
+  onAssign?: (id: string, action: 'claim' | 'release') => void;
 };
 
 function DemandesListRow({
@@ -130,6 +132,13 @@ function DemandesListRow({
               {statusLabel(d.status, t)}
             </Chip>
             <Chip tone="neutral">{typeLabel(d.type, t)}</Chip>
+            {d.assigned_staff_id && (
+              <Chip tone="brand" data-testid="assigned-to">
+                {format(t.assignedTo, {
+                  name: d.assigned_to?.display_name || t.assignUnknownStaff,
+                })}
+              </Chip>
+            )}
             {d.source && d.source !== 'website' && (
               <Chip tone="neutral">{d.source}</Chip>
             )}
@@ -262,6 +271,24 @@ function DemandesListRow({
       {/* Quick actions for pending demandes */}
       {d.status === 'pending' && (
         <div className="hidden shrink-0 items-center gap-1 md:flex">
+          {actions.onAssign && (
+            <AdminButton
+              variant="ghost"
+              size="xs"
+              onClick={() =>
+                actions.onAssign?.(
+                  d.id,
+                  d.assigned_staff_id ? 'release' : 'claim'
+                )
+              }
+              disabled={disabled}
+              data-testid={
+                d.assigned_staff_id ? 'assign-release' : 'assign-claim'
+              }
+            >
+              {d.assigned_staff_id ? t.assignRelease : t.assignClaim}
+            </AdminButton>
+          )}
           <AdminButton
             variant="ghost"
             size="xs"

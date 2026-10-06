@@ -54,11 +54,16 @@ export type Demande = {
   payload: DemandePayload | null;
   processed_at: string | null;
   processed_by_staff_id: string | null;
+  /** Absents tant que la migration d'assignation n'est pas appliquée. */
+  assigned_staff_id?: string | null;
+  assigned_at?: string | null;
 
   tournament?: TournamentMini | null;
   team?: TeamMini | null;
   user?: UserMini | null;
   processed_by?: StaffMini | null;
+  /** Staff qui a pris la demande (« Je prends »). */
+  assigned_to?: StaffMini | null;
 };
 
 export type StatusCounts = {

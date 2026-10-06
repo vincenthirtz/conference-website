@@ -9,12 +9,7 @@
 import { adminRequest } from '@/utils/admin/adminHttp';
 
 export type TicketSeverity = 'low' | 'medium' | 'high';
-export type TicketCategory =
-  | 'dispute'
-  | 'behavior'
-  | 'technical'
-  | 'other'
-  | 'roster_unlock';
+export type TicketCategory = 'dispute' | 'behavior' | 'technical' | 'other';
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 export type TicketSource = 'web' | 'discord_bot';
 export type TicketReportedTargetType = 'player' | 'team' | 'org';
@@ -42,6 +37,21 @@ export type SupportTicket = {
   converted_entity_blacklist_id: string | null;
   created_at: string;
   updated_at: string;
+  /** Absents tant que la migration d'assignation n'est pas appliquée. */
+  assigned_staff_id?: string | null;
+  assigned_at?: string | null;
+  assigned_to?: StaffBrief | null;
+};
+
+export type StaffBrief = { id: string; display_name: string | null };
+
+export type AssignmentResponse = {
+  assignment: {
+    id: string;
+    assigned_staff_id: string | null;
+    assigned_at: string | null;
+    assigned_to: StaffBrief | null;
+  };
 };
 
 export type ConvertBlacklistResponse = {
@@ -51,6 +61,8 @@ export type ConvertBlacklistResponse = {
 };
 
 export type SupportTicketsResponse = {
+  /** `false` : migration d'assignation absente (boutons masqués). */
+  assignment_available?: boolean;
   tickets?: SupportTicket[];
   total?: number;
   counts?: {
@@ -163,5 +175,11 @@ export const moderationClient = {
     adminRequest<SupportTicketUpdateResponse>(
       `${TICKETS}/${encodeURIComponent(id)}`,
       { method: 'PATCH', json: body, idempotent: true }
+    ),
+  /** « Je prends » / « Libérer ». 409 si déjà pris par quelqu'un d'autre. */
+  assignTicket: (id: string, action: 'claim' | 'release') =>
+    adminRequest<AssignmentResponse>(
+      `${TICKETS}/${encodeURIComponent(id)}/assign`,
+      { method: 'POST', json: { action }, idempotent: true }
     ),
 };

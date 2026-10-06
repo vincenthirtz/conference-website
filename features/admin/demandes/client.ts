@@ -48,6 +48,7 @@ export const demandesPaths = {
   csv: (params: URLSearchParams) => `${BASE}?${params.toString()}`,
   byId: (id: string) => `${BASE}/${enc(id)}`,
   notifyCaptains: (id: string) => `${BASE}/${enc(id)}/notify-captains`,
+  assign: (id: string) => `${BASE}/${enc(id)}/assign`,
   forwardScrim: '/api/admin/scrims/forward',
   tournament: (id: string) => `/api/admin/tournament/${enc(id)}`,
 } as const;
@@ -80,6 +81,12 @@ export const demandesClient = {
       method: 'POST',
       json: { action: 'requestMoreInfo', demandeId, note },
     }),
+  /** « Je prends » / « Libérer ». 409 si déjà pris ; 503 sans migration. */
+  assign: (id: string, action: 'claim' | 'release') =>
+    adminRequest<{ assignment: { assigned_staff_id: string | null } }>(
+      demandesPaths.assign(id),
+      { method: 'POST', json: { action }, idempotent: true }
+    ),
   notifyCaptains: (id: string) =>
     adminRequest<{ message?: string }>(demandesPaths.notifyCaptains(id), {
       method: 'POST',

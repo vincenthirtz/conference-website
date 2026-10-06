@@ -4,6 +4,7 @@
 // paramètre obligatoire.
 
 import type { AdminDb } from '@/utils/admin/serviceContext';
+import { ASSIGNMENT_COLUMNS } from '../_shared/staffAssignment';
 import type { TablesInsert, TablesUpdate } from '@/types/database.generated';
 import {
   BLACKLIST_ALERT_COLUMNS,
@@ -184,6 +185,11 @@ export type TicketFilters = {
   category: string | null;
   tournamentId: string | null;
   searchPattern: string | null;
+  /**
+   * « À moi » (staff id) / « non assignés ». Exige la migration
+   * d'assignation : le service ne le passe qu'avec `withAssignment`.
+   */
+  assignee?: { mode: 'me'; staffId: string } | { mode: 'unassigned' } | null;
 };
 
 // Signatures ouvertes : les filtres PostgREST sont des méthodes génériques,
@@ -191,6 +197,7 @@ export type TicketFilters = {
 type TicketFilterable<Q> = {
   eq: (...args: any[]) => Q;
   or: (...args: any[]) => Q;
+  is: (...args: any[]) => Q;
 };
 
 /**
@@ -213,6 +220,11 @@ function withTicketFilters<Q extends TicketFilterable<Q>>(
       `subject.ilike.${p},message.ilike.${p},reporter_name.ilike.${p}`
     );
   }
+  if (f.assignee?.mode === 'me') {
+    out = out.eq('assigned_staff_id', f.assignee.staffId);
+  } else if (f.assignee?.mode === 'unassigned') {
+    out = out.is('assigned_staff_id', null);
+  }
   return out;
 }
 
@@ -229,12 +241,20 @@ function countTickets(db: AdminDb, tenantId: string, f: TicketFilters) {
 export async function listSupportTickets(
   db: AdminDb,
   tenantId: string,
-  f: TicketFilters & Page & { oldestFirst?: boolean }
+  f: TicketFilters & Page & { oldestFirst?: boolean; withAssignment?: boolean }
 ) {
+  // Colonnes d'assignation hors du schéma généré (migration récente) : le
+  // type des lignes reste celui de la liste, le service lit les deux champs
+  // en plus (`TicketAssignmentFields`).
+  const columns = (
+    f.withAssignment
+      ? `${SUPPORT_TICKET_LIST_COLUMNS}, ${ASSIGNMENT_COLUMNS}`
+      : SUPPORT_TICKET_LIST_COLUMNS
+  ) as typeof SUPPORT_TICKET_LIST_COLUMNS;
   const pageQuery = withTicketFilters(
     db
       .from('support_tickets')
-      .select(SUPPORT_TICKET_LIST_COLUMNS, { count: 'exact' })
+      .select(columns, { count: 'exact' })
       .eq('tenant_id', tenantId),
     f
   )
