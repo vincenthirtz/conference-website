@@ -11,9 +11,11 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import TeamPicker from '@/components/player/TeamPicker';
+import PendingDemandeNotice from '@/components/player/PendingDemandeNotice';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics/track';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
@@ -32,8 +34,15 @@ type Team = {
   is_joinable?: boolean;
 };
 
+type PendingJoin = {
+  id: string;
+  teamName: string | null;
+  createdAt: string | null;
+};
+
 function JoinTeamPage() {
   const t = useT(nsJoinTeam);
+  const locale = useLocale();
   const router = useRouter();
   // Retour à CETTE page après connexion (`?next=`), requête comprise — sans
   // quoi un lien partagé (`?tab=scrim&team=…`, un mail, une notification)
@@ -88,6 +97,14 @@ function JoinTeamPage() {
   const [success, setSuccess] = useState(false);
   const [successTeamName, setSuccessTeamName] = useState('');
 
+  // Demande déjà en attente : on l'affiche (au lieu de renvoyer en silence
+  // vers /player) avec la possibilité de l'annuler pour en faire une autre.
+  const [pendingDemande, setPendingDemande] = useState<PendingJoin | null>(
+    null
+  );
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
   useEffect(() => {
     if (user && !battleTagSeeded) {
       setBattleTag((user.user_metadata?.battle_tag as string) || '');
@@ -141,32 +158,36 @@ function JoinTeamPage() {
   useEffect(() => {
     if (!ready || !token) return;
     let cancelled = false;
-    // Garde le skeleton affiché pendant une éventuelle redirection pour éviter
-    // que le formulaire ne clignote avant le changement de route.
-    let redirecting = false;
     setLoading(true);
     (async () => {
       try {
         const data = await adminFetchJson<{
-          demandes?: { status: string }[];
+          demandes?: {
+            id: string;
+            status: string;
+            created_at?: string | null;
+            team?: { name?: string | null } | null;
+          }[];
         }>('/api/demandes/join', { skipAuthRedirect: true });
         const pending = data.demandes?.find((d) => d.status === 'pending');
         if (pending && !cancelled) {
-          redirecting = true;
-          router.replace('/player');
-          return;
+          setPendingDemande({
+            id: pending.id,
+            teamName: pending.team?.name ?? null,
+            createdAt: pending.created_at ?? null,
+          });
         }
       } catch (err) {
         logger.error('[join-team] auth error:', err);
         if (!cancelled) setError(t.connectionError);
       } finally {
-        if (!cancelled && !redirecting) setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [ready, token, router, adminFetchJson]);
+  }, [ready, token, adminFetchJson]);
 
   // Recharge la liste quand la recherche (debouncee) change.
   useEffect(() => {
@@ -221,6 +242,32 @@ function JoinTeamPage() {
       setSubmitting(false);
     }
   };
+
+  const cancelPending = async () => {
+    if (!pendingDemande || cancelling) return;
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      await adminFetchJson('/api/demandes/cancel', {
+        method: 'DELETE',
+        body: JSON.stringify({ demandeId: pendingDemande.id }),
+      });
+      // Retour au formulaire : la joueuse peut choisir une autre équipe.
+      setPendingDemande(null);
+    } catch (err: unknown) {
+      setCancelError((err as Error)?.message || t.pendingCancelError);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const pendingDate = pendingDemande?.createdAt
+    ? new Date(pendingDemande.createdAt).toLocaleDateString(locale, {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : null;
 
   if (authLoading || loading || teamLoading) {
     return <PlayerPageSkeleton rows={3} />;
@@ -305,6 +352,23 @@ function JoinTeamPage() {
                   {t.alreadyInTeamCta}
                 </Link>
               </div>
+            ) : pendingDemande ? (
+              <PendingDemandeNotice
+                title={t.pendingTitle}
+                body={format(
+                  pendingDate ? t.pendingBody : t.pendingBodyNoDate,
+                  {
+                    teamName: pendingDemande.teamName || t.pendingTeamFallback,
+                    date: pendingDate ?? '',
+                  }
+                )}
+                cancelLabel={t.pendingCancel}
+                cancellingLabel={t.pendingCancelling}
+                backLabel={t.backToSpace}
+                onCancel={cancelPending}
+                cancelling={cancelling}
+                error={cancelError}
+              />
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Recherche + selection d'equipe (composant partage) */}

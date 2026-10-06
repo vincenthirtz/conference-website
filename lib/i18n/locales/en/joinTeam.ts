@@ -64,4 +64,13 @@ export default {
   battleTagRequired: 'We need your BattleTag to add you to a roster.',
   teamsLoadError: 'Unable to load teams. Please try again.',
   retry: 'Retry',
+  pendingTitle: 'You already have a pending request',
+  pendingBody:
+    'Your request to join "{teamName}", sent on {date}, is waiting for the team’s answer. One request at a time: cancel it to pick another team.',
+  pendingBodyNoDate:
+    'Your request to join "{teamName}" is waiting for the team’s answer. One request at a time: cancel it to pick another team.',
+  pendingTeamFallback: 'a team',
+  pendingCancel: 'Cancel and pick another team',
+  pendingCancelling: 'Cancelling…',
+  pendingCancelError: 'Unable to cancel the request. Please try again.',
 };

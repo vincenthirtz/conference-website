@@ -43,4 +43,13 @@ export default {
   searchLabel: 'Search for a team',
   searchPlaceholder: 'Search by name...',
   noTeams: 'No team found',
+  pendingTitle: 'You already have a pending captain request',
+  pendingBody:
+    'Your request for "{teamName}", sent on {date}, is waiting for staff approval. One request at a time: cancel it to make another one.',
+  pendingBodyNoDate:
+    'Your request for "{teamName}" is waiting for staff approval. One request at a time: cancel it to make another one.',
+  pendingTeamFallback: 'your team',
+  pendingCancel: 'Cancel and pick another team',
+  pendingCancelling: 'Cancelling…',
+  pendingCancelError: 'Unable to cancel the request. Please try again.',
 };

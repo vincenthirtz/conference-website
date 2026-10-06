@@ -4,14 +4,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useDebounce } from '@/hooks/useDebounce';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import TeamPicker from '@/components/player/TeamPicker';
+import PendingDemandeNotice from '@/components/player/PendingDemandeNotice';
 import NewTeamForm, { EMAIL_RE } from '@/components/player/NewTeamForm';
 import { useT, format } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/useLocale';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
 import { logger } from '../../utils/logger';
@@ -23,6 +24,12 @@ type Team = {
   name: string;
   short_name: string | null;
   logo_url: string | null;
+};
+
+type PendingCaptain = {
+  id: string;
+  teamName: string | null;
+  createdAt: string | null;
 };
 
 type TeamMember = {
@@ -42,11 +49,19 @@ function nextMemberId(): string {
 }
 
 function RequestCaptainPage() {
-  const router = useRouter();
   const { user, token, loading: authLoading, ready } = usePlayerSession();
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const t = useT(nsRequestCaptain);
+  const locale = useLocale();
   const [loading, setLoading] = useState(true);
+
+  // Demande déjà en attente : affichée (au lieu d'un renvoi silencieux vers
+  // /player), avec la possibilité de l'annuler pour en refaire une.
+  const [pendingDemande, setPendingDemande] = useState<PendingCaptain | null>(
+    null
+  );
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   // Mode de sélection
   const [mode, setMode] = useState<'existing' | 'new'>('new');
@@ -106,32 +121,43 @@ function RequestCaptainPage() {
   useEffect(() => {
     if (!ready || !token) return;
     let cancelled = false;
-    // Garde le skeleton pendant une redirection éventuelle (évite le flash du
-    // formulaire avant le changement de route).
-    let redirecting = false;
     setLoading(true);
     (async () => {
       try {
         const data = await adminFetchJson<{
-          demandes?: { status: string }[];
+          demandes?: {
+            id: string;
+            status: string;
+            created_at?: string | null;
+            payload?: {
+              team_name?: string | null;
+              existing_team_name?: string | null;
+            } | null;
+          }[];
         }>('/api/demandes/captain', { skipAuthRedirect: true });
         const pending = data.demandes?.find((d) => d.status === 'pending');
         if (pending && !cancelled) {
-          redirecting = true;
-          router.replace('/player');
-          return;
+          // Équipe existante OU nouvelle équipe : le nom vit dans le payload.
+          setPendingDemande({
+            id: pending.id,
+            teamName:
+              pending.payload?.existing_team_name ||
+              pending.payload?.team_name ||
+              null,
+            createdAt: pending.created_at ?? null,
+          });
         }
       } catch (err) {
         logger.error('[request-captain] auth error:', err);
         if (!cancelled) setError(t.connectionError);
       } finally {
-        if (!cancelled && !redirecting) setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [ready, token, router, adminFetchJson]);
+  }, [ready, token, adminFetchJson]);
 
   // Recharge la liste d'equipes quand la recherche (debouncee) change.
   useEffect(() => {
@@ -252,6 +278,32 @@ function RequestCaptainPage() {
     }
   };
 
+  const cancelPending = async () => {
+    if (!pendingDemande || cancelling) return;
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      await adminFetchJson('/api/demandes/cancel', {
+        method: 'DELETE',
+        body: JSON.stringify({ demandeId: pendingDemande.id }),
+      });
+      // Retour au formulaire : elle peut viser une autre équipe.
+      setPendingDemande(null);
+    } catch (err: unknown) {
+      setCancelError((err as Error)?.message || t.pendingCancelError);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const pendingDate = pendingDemande?.createdAt
+    ? new Date(pendingDemande.createdAt).toLocaleDateString(locale, {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : null;
+
   if (authLoading || loading) {
     return <PlayerPageSkeleton rows={3} />;
   }
@@ -320,120 +372,141 @@ function RequestCaptainPage() {
             <h1 className="text-2xl font-bold mb-2">{t.heading}</h1>
             <p className="text-gray-400 text-sm mb-6">{t.intro}</p>
 
-            {/* Toggle mode */}
-            <div className="flex gap-2 mb-6">
-              <button
-                type="button"
-                onClick={() => setMode('new')}
-                className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition ${
-                  mode === 'new'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                }`}
-              >
-                {t.modeNew}
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('existing')}
-                className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition ${
-                  mode === 'existing'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                }`}
-              >
-                {t.modeExisting}
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {mode === 'existing' && (
-                <div>
-                  <TeamPicker
-                    teams={teams}
-                    value={selectedTeamId}
-                    onChange={setSelectedTeamId}
-                    loading={teamsLoading}
-                    error={teamsError}
-                    accentColor="purple"
-                    label={t.searchLabel}
-                    emptyLabel={t.noTeams}
-                    search={teamSearch}
-                    onSearchChange={setTeamSearch}
-                    searchPlaceholder={t.searchPlaceholder}
-                  />
-                  {teamsError && (
-                    <button
-                      type="button"
-                      onClick={() => loadTeams(debouncedSearch)}
-                      className="mt-3 text-sm text-purple-400 hover:text-purple-300"
-                    >
-                      {t.retry}
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {mode === 'new' && (
-                <NewTeamForm
-                  teamName={teamName}
-                  onTeamNameChange={setTeamName}
-                  members={members}
-                  onAddMember={addMember}
-                  onUpdateMember={updateMember}
-                  onRemoveMember={removeMember}
-                  onValidityChange={setMembersValid}
-                />
-              )}
-
-              {/* Message */}
-              <div>
-                <label
-                  htmlFor="message"
-                  className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
-                >
-                  {t.messageLabel}
-                </label>
-                <textarea
-                  id="message"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 transition resize-none"
-                  placeholder={t.messagePlaceholder}
-                  maxLength={500}
-                />
-              </div>
-
-              {error && (
-                <div
-                  role="alert"
-                  className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
-                >
-                  {error}
-                </div>
-              )}
-
-              {(() => {
-                const submitDisabled =
-                  submitting ||
-                  (mode === 'existing' && !selectedTeamId) ||
-                  (mode === 'new' && (!teamName.trim() || !membersValid));
-                return (
+            {pendingDemande ? (
+              <PendingDemandeNotice
+                title={t.pendingTitle}
+                body={format(
+                  pendingDate ? t.pendingBody : t.pendingBodyNoDate,
+                  {
+                    teamName: pendingDemande.teamName || t.pendingTeamFallback,
+                    date: pendingDate ?? '',
+                  }
+                )}
+                cancelLabel={t.pendingCancel}
+                cancellingLabel={t.pendingCancelling}
+                backLabel={t.backToSpace}
+                onCancel={cancelPending}
+                cancelling={cancelling}
+                error={cancelError}
+              />
+            ) : (
+              <>
+                {/* Toggle mode */}
+                <div className="flex gap-2 mb-6">
                   <button
-                    type="submit"
-                    disabled={submitDisabled}
-                    className={`w-full px-4 py-3 rounded-xl font-semibold transition ${
-                      submitDisabled
-                        ? 'bg-gray-600 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400'
+                    type="button"
+                    onClick={() => setMode('new')}
+                    className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition ${
+                      mode === 'new'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-white/5 text-gray-400 hover:bg-white/10'
                     }`}
                   >
-                    {submitting ? t.submitting : t.submit}
+                    {t.modeNew}
                   </button>
-                );
-              })()}
-            </form>
+                  <button
+                    type="button"
+                    onClick={() => setMode('existing')}
+                    className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition ${
+                      mode === 'existing'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                    }`}
+                  >
+                    {t.modeExisting}
+                  </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {mode === 'existing' && (
+                    <div>
+                      <TeamPicker
+                        teams={teams}
+                        value={selectedTeamId}
+                        onChange={setSelectedTeamId}
+                        loading={teamsLoading}
+                        error={teamsError}
+                        accentColor="purple"
+                        label={t.searchLabel}
+                        emptyLabel={t.noTeams}
+                        search={teamSearch}
+                        onSearchChange={setTeamSearch}
+                        searchPlaceholder={t.searchPlaceholder}
+                      />
+                      {teamsError && (
+                        <button
+                          type="button"
+                          onClick={() => loadTeams(debouncedSearch)}
+                          className="mt-3 text-sm text-purple-400 hover:text-purple-300"
+                        >
+                          {t.retry}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {mode === 'new' && (
+                    <NewTeamForm
+                      teamName={teamName}
+                      onTeamNameChange={setTeamName}
+                      members={members}
+                      onAddMember={addMember}
+                      onUpdateMember={updateMember}
+                      onRemoveMember={removeMember}
+                      onValidityChange={setMembersValid}
+                    />
+                  )}
+
+                  {/* Message */}
+                  <div>
+                    <label
+                      htmlFor="message"
+                      className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
+                    >
+                      {t.messageLabel}
+                    </label>
+                    <textarea
+                      id="message"
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      rows={3}
+                      className="w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 transition resize-none"
+                      placeholder={t.messagePlaceholder}
+                      maxLength={500}
+                    />
+                  </div>
+
+                  {error && (
+                    <div
+                      role="alert"
+                      className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+                    >
+                      {error}
+                    </div>
+                  )}
+
+                  {(() => {
+                    const submitDisabled =
+                      submitting ||
+                      (mode === 'existing' && !selectedTeamId) ||
+                      (mode === 'new' && (!teamName.trim() || !membersValid));
+                    return (
+                      <button
+                        type="submit"
+                        disabled={submitDisabled}
+                        className={`w-full px-4 py-3 rounded-xl font-semibold transition ${
+                          submitDisabled
+                            ? 'bg-gray-600 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400'
+                        }`}
+                      >
+                        {submitting ? t.submitting : t.submit}
+                      </button>
+                    );
+                  })()}
+                </form>
+              </>
+            )}
           </div>
 
           <div className="mt-6 text-center text-sm text-gray-500">

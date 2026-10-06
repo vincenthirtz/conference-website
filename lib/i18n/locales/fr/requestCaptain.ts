@@ -43,4 +43,14 @@ export default ns('requestCaptain', {
   searchLabel: 'Rechercher une équipe',
   searchPlaceholder: 'Rechercher par nom...',
   noTeams: 'Aucune équipe trouvée',
+  // Demande déjà en attente (affichée au lieu d'un renvoi silencieux).
+  pendingTitle: 'Tu as déjà une demande de capitanat en attente',
+  pendingBody:
+    'Ta demande pour « {teamName} », envoyée le {date}, attend la validation du staff. Une seule demande à la fois : annule-la pour en faire une autre.',
+  pendingBodyNoDate:
+    'Ta demande pour « {teamName} » attend la validation du staff. Une seule demande à la fois : annule-la pour en faire une autre.',
+  pendingTeamFallback: 'ton équipe',
+  pendingCancel: 'Annuler et choisir une autre équipe',
+  pendingCancelling: 'Annulation…',
+  pendingCancelError: 'Impossible d’annuler la demande. Réessaie.',
 });

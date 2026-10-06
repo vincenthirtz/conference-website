@@ -66,4 +66,14 @@ export default ns('joinTeam', {
   battleTagRequired: 'Ton BattleTag est nécessaire pour rejoindre un roster.',
   teamsLoadError: 'Impossible de charger les équipes. Réessaie.',
   retry: 'Réessayer',
+  // Demande déjà en attente (affichée au lieu d'un renvoi silencieux).
+  pendingTitle: 'Tu as déjà une demande en attente',
+  pendingBody:
+    'Ta demande pour rejoindre « {teamName} », envoyée le {date}, attend la réponse de l’équipe. Une seule demande à la fois : annule-la pour en choisir une autre.',
+  pendingBodyNoDate:
+    'Ta demande pour rejoindre « {teamName} » attend la réponse de l’équipe. Une seule demande à la fois : annule-la pour en choisir une autre.',
+  pendingTeamFallback: 'une équipe',
+  pendingCancel: 'Annuler et choisir une autre équipe',
+  pendingCancelling: 'Annulation…',
+  pendingCancelError: 'Impossible d’annuler la demande. Réessaie.',
 });
