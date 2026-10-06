@@ -115,4 +115,10 @@ export default {
   convertedPlayerBadge: 'Converted · player blacklist',
   convertedEntityBadge: 'Converted · entity blacklist',
   convertAllDone: 'Already converted to blacklist (player and team/org).',
+  sortNewest: 'Newest first',
+  sortOldest: 'Oldest first',
+  waitingLessThanHour: 'Waiting < 1 h',
+  waitingHours: 'Waiting {count} h',
+  waitingDays: 'Waiting {count} d',
+  waitingTitle: 'Received on {date} — amber after 24 h, red after 72 h',
 };

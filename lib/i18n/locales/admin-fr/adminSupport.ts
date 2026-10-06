@@ -114,4 +114,11 @@ export default adminNs('adminSupport', {
   convertedPlayerBadge: 'Converti · blacklist joueur',
   convertedEntityBadge: 'Converti · blacklist entité',
   convertAllDone: 'Déjà converti en blacklist (joueur et équipe/structure).',
+  sortNewest: 'Plus récents d’abord',
+  sortOldest: 'Plus anciens d’abord',
+  waitingLessThanHour: 'En attente depuis < 1 h',
+  waitingHours: 'En attente depuis {count} h',
+  waitingDays: 'En attente depuis {count} j',
+  waitingTitle:
+    'Reçu le {date} — orange au-delà de 24 h, rouge au-delà de 72 h',
 });

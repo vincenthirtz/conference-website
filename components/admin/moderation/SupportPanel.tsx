@@ -13,6 +13,7 @@ import {
   severityTone,
   statusTone,
 } from './supportLabels';
+import SupportTicketRow from './SupportTicketRow';
 import EmptyState from '@/components/admin/EmptyState';
 import Modal from '@/components/admin/Modal';
 import { useUrlFilters } from '@/utils/useUrlFilters';
@@ -51,7 +52,13 @@ type TicketCounts = {
   resolved: number;
 };
 
-const FILTER_KEYS = ['status', 'severity', 'category', 'search'] as const;
+const FILTER_KEYS = [
+  'status',
+  'severity',
+  'category',
+  'search',
+  'sort',
+] as const;
 
 const PAGE_SIZE = 50;
 
@@ -92,6 +99,7 @@ export default function SupportPanel() {
   const severity = filters.severity ?? '';
   const category = filters.category ?? '';
   const search = filters.search ?? '';
+  const sort = filters.sort === 'oldest' ? 'oldest' : '';
 
   // Champ de recherche local (debounce → query param `search`).
   const [searchInput, setSearchInput] = useState(search);
@@ -114,7 +122,7 @@ export default function SupportPanel() {
   // Tout changement de filtre/recherche repart de la première page.
   useEffect(() => {
     setOffset(0);
-  }, [status, severity, category, search]);
+  }, [status, severity, category, search, sort]);
 
   // Requête par clé (filtres + offset) : le reset d'offset ci-dessus et le
   // changement de filtre produisent deux clés successives, et seule la clé
@@ -125,6 +133,7 @@ export default function SupportPanel() {
     if (severity) params.set('severity', severity);
     if (category) params.set('category', category);
     if (search) params.set('search', search);
+    if (sort) params.set('sort', sort);
     params.set('limit', String(PAGE_SIZE));
     params.set('offset', String(offset));
     return params.toString();
@@ -455,6 +464,15 @@ export default function SupportPanel() {
           <option value="other">{tx.catFilterOther}</option>
         </select>
 
+        <select
+          className="rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm"
+          value={sort}
+          onChange={(e) => setFilters({ sort: e.target.value || null })}
+        >
+          <option value="">{tx.sortNewest}</option>
+          <option value="oldest">{tx.sortOldest}</option>
+        </select>
+
         <AdminButton
           variant="ghost"
           size="sm"
@@ -486,76 +504,7 @@ export default function SupportPanel() {
         <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] overflow-hidden">
           <div className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
             {tickets.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => openDetail(t)}
-                className="w-full text-left px-4 py-3 hover:bg-neutral-700/30 transition-colors flex flex-col sm:flex-row sm:items-center gap-3"
-              >
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Chip tone={severityTone(t.severity)}>
-                    {t.severity.toUpperCase()}
-                  </Chip>
-                  <Chip tone={statusTone(t.status)}>
-                    {statusLabels[t.status]}
-                  </Chip>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-neutral-400">
-                      {categoryLabels[t.category]}
-                    </span>
-                    <span className="text-xs text-neutral-600">·</span>
-                    <span className="text-xs text-neutral-500">
-                      {formatDateFr(t.created_at)}
-                    </span>
-                    {t.source === 'discord_bot' && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-700/30 text-indigo-200 border border-indigo-500/40">
-                        {tx.discordBadge}
-                      </span>
-                    )}
-                    {t.is_anonymous && (
-                      <span className="text-xs text-purple-300">
-                        {tx.anonymousTag}
-                      </span>
-                    )}
-                    {t.converted_player_blacklist_id && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-red-700/30 text-red-200 border border-red-500/40">
-                        {tx.convertedPlayerBadge}
-                      </span>
-                    )}
-                    {t.converted_entity_blacklist_id && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-purple-700/30 text-purple-200 border border-purple-500/40">
-                        {tx.convertedEntityBadge}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-sm text-white mt-1 truncate">
-                    {t.subject || t.message.slice(0, 100)}
-                  </div>
-                  {!t.is_anonymous &&
-                    (t.reporter_name ||
-                      t.reporter_email ||
-                      t.discord_username) && (
-                      <div className="text-xs text-neutral-500 mt-0.5 truncate">
-                        {t.reporter_name || t.discord_username || ''}{' '}
-                        {t.reporter_email && (
-                          <span className="font-mono">
-                            ({t.reporter_email})
-                          </span>
-                        )}
-                        {!t.reporter_email && t.discord_username && (
-                          <span className="font-mono">
-                            (@{t.discord_username})
-                          </span>
-                        )}
-                      </div>
-                    )}
-                </div>
-                <div className="text-xs text-neutral-500 font-mono flex-shrink-0">
-                  {t.id.slice(0, 8)}
-                </div>
-              </button>
+              <SupportTicketRow key={t.id} ticket={t} onOpen={openDetail} />
             ))}
           </div>
         </section>

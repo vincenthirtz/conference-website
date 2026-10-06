@@ -229,7 +229,7 @@ function countTickets(db: AdminDb, tenantId: string, f: TicketFilters) {
 export async function listSupportTickets(
   db: AdminDb,
   tenantId: string,
-  f: TicketFilters & Page
+  f: TicketFilters & Page & { oldestFirst?: boolean }
 ) {
   const pageQuery = withTicketFilters(
     db
@@ -238,7 +238,7 @@ export async function listSupportTickets(
       .eq('tenant_id', tenantId),
     f
   )
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: f.oldestFirst === true })
     .range(f.offset, f.offset + f.limit - 1);
 
   const openCountQuery = countTickets(db, tenantId, f).eq('status', 'open');

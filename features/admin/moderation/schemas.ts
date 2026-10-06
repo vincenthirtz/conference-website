@@ -85,6 +85,8 @@ export const SupportTicketListQuery = looseQuery([
   'category',
   'tournament_id',
   'search',
+  // `oldest` : plus anciens d'abord (file de traitement) ; défaut récents.
+  'sort',
   'limit',
   'offset',
 ]);

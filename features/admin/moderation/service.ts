@@ -421,6 +421,7 @@ export async function listSupportTickets(
           ? query.tournament_id
           : null,
       searchPattern: safe ? `%${safe}%` : null,
+      oldestFirst: query.sort === 'oldest',
       limit,
       offset,
     }

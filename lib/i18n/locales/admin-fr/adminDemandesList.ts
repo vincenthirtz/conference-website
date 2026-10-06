@@ -44,8 +44,8 @@ export default adminNs('adminDemandesList', {
   statusCancelled: 'Annulée',
   tournamentAll: 'Tous les tournois',
   searchPlaceholder: 'Commentaire, note staff...',
-  sortDateRecent: 'Date — récentes',
-  sortDateOld: 'Date — anciennes',
+  sortDateRecent: 'Plus récentes d’abord',
+  sortDateOld: 'Plus anciennes d’abord',
   sortProcessedRecent: 'Traitée — récentes',
   sortProcessedOld: 'Traitée — anciennes',
   searchBtn: 'Rechercher',
@@ -105,4 +105,9 @@ export default adminNs('adminDemandesList', {
   send: 'Envoyer',
   infoNotePlaceholder: 'Ex : peux-tu confirmer ton BattleTag et ton rôle ?',
   systemNotification: 'Notification',
+  waitingLessThanHour: 'En attente depuis < 1 h',
+  waitingHours: 'En attente depuis {count} h',
+  waitingDays: 'En attente depuis {count} j',
+  waitingTitle:
+    'Reçue le {date} — orange au-delà de 24 h, rouge au-delà de 72 h',
 });

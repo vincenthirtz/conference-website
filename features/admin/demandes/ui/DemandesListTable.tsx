@@ -12,7 +12,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useAdminT } from '@/lib/i18n/useAdminT';
+import { format, useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminDemandesList from '@/lib/i18n/locales/admin-fr/adminDemandesList';
 import EmptyState from '@/components/admin/EmptyState';
 import DemandeAvatar from '@/components/admin/demandes/DemandeAvatar';
@@ -24,6 +24,7 @@ import {
 import { isSystemNotification } from '@/utils/demandes/systemNotification';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
+import WaitingChip from '@/features/admin/_shared/ui/WaitingChip';
 import { statusChipTone } from '@/features/admin/demandes/ui/DemandeDetailBlocks';
 import {
   isBattleTagFlagged,
@@ -83,6 +84,11 @@ function DemandesListRow({
 }) {
   const t = useAdminT(nsAdminDemandesList);
   const isNotification = isSystemNotification(d);
+  const waitingLabels = {
+    lessThanHour: t.waitingLessThanHour,
+    hours: t.waitingHours,
+    days: t.waitingDays,
+  };
   return (
     <div
       className={`group flex items-center gap-4 p-4 transition-colors hover:bg-[var(--s2,#1d1520)] ${
@@ -214,9 +220,21 @@ function DemandesListRow({
                 <span>•</span>
               </>
             )}
-            <span className="text-xs" data-numeric>
-              {formatDateTime(d.created_at)}
-            </span>
+            {/* En attente : l'ancienneté plutôt qu'une date à recompter de
+                tête ; la date exacte reste dans l'info-bulle. */}
+            {d.status === 'pending' ? (
+              <WaitingChip
+                since={d.created_at}
+                labels={waitingLabels}
+                title={format(t.waitingTitle, {
+                  date: formatDateTime(d.created_at),
+                })}
+              />
+            ) : (
+              <span className="text-xs" data-numeric>
+                {formatDateTime(d.created_at)}
+              </span>
+            )}
           </div>
           {d.comment && (
             <p className="mt-1 max-w-xl truncate text-xs text-[var(--t4,#807984)]">
