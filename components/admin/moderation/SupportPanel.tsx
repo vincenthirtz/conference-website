@@ -35,7 +35,7 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminSupport from '@/lib/i18n/locales/admin-fr/adminSupport';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import AssignmentControl from '@/features/admin/_shared/ui/AssignmentControl';
+import AssignmentControl from '@/features/admin/_shared/queue/AssignmentControl';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import StatTile from '@/features/admin/_shared/ui/StatTile';
 

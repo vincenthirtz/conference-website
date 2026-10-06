@@ -24,7 +24,7 @@ import {
 import { isSystemNotification } from '@/utils/demandes/systemNotification';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
-import WaitingChip from '@/features/admin/_shared/ui/WaitingChip';
+import WaitingChip from '@/features/admin/_shared/queue/WaitingChip';
 import { statusChipTone } from '@/features/admin/demandes/ui/DemandeDetailBlocks';
 import {
   isBattleTagFlagged,

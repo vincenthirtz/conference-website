@@ -1,4 +1,4 @@
-// features/admin/_shared/ui/AssignmentControl.tsx — « Je prends » / « Libérer »
+// features/admin/_shared/queue/AssignmentControl.tsx — « Je prends » / « Libérer »
 // d'un dossier de file de traitement (demande, ticket support), avec le nom de
 // la personne qui l'a pris. Présentationnel : l'appel est fait par l'appelant.
 //

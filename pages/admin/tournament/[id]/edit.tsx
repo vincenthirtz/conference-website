@@ -10,7 +10,7 @@ import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
 import { useDirtyBaseline } from '@/hooks/forms/useDirtyBaseline';
 import { useUnsavedChangesGuard } from '@/hooks/forms/useUnsavedChangesGuard';
 import { isStaleUpdateError } from '@/features/admin/_shared/optimisticLock';
-import StaleUpdateNotice from '@/features/admin/_shared/ui/StaleUpdateNotice';
+import StaleUpdateNotice from '@/features/admin/_shared/lock/StaleUpdateNotice';
 import {
   useTournamentDetail,
   useUpdateTournament,

@@ -1,11 +1,11 @@
-// features/admin/_shared/ui/StaleUpdateNotice.tsx — 409 du verrou optimiste
+// features/admin/_shared/lock/StaleUpdateNotice.tsx — 409 du verrou optimiste
 // (features/admin/_shared/optimisticLock.ts) : la fiche a été modifiée par
 // quelqu'un d'autre depuis son ouverture. On explique et on propose de
 // recharger, plutôt que d'afficher un message d'erreur sans issue.
 
 import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
 import { useAdminT } from '@/lib/i18n/useAdminT';
-import AdminButton from './AdminButton';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
 type Props = {
   /** Relit la fiche et réinitialise le formulaire. */

@@ -7,7 +7,7 @@
 import { format, useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminSupport from '@/lib/i18n/locales/admin-fr/adminSupport';
 import Chip from '@/features/admin/_shared/ui/Chip';
-import WaitingChip from '@/features/admin/_shared/ui/WaitingChip';
+import WaitingChip from '@/features/admin/_shared/queue/WaitingChip';
 import type { SupportTicket } from '@/features/admin/moderation/client';
 import {
   formatDateFr,

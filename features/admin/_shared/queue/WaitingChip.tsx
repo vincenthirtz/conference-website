@@ -1,4 +1,4 @@
-// features/admin/_shared/ui/WaitingChip.tsx — puce « en attente depuis X h/j »
+// features/admin/_shared/queue/WaitingChip.tsx — puce « en attente depuis X h/j »
 // d'une file de traitement, colorée selon l'ancienneté (cf. ../waitingAge.ts).
 //
 // L'heure courante n'est lue qu'APRÈS le montage : une liste rendue côté

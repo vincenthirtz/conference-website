@@ -5,7 +5,7 @@
 // personne attend. La puce dit directement « en attente depuis 3 j », et sa
 // couleur passe à l'orange puis au rouge : ce qui traîne se voit sans lire.
 //
-// Pur, sans React : la puce (`ui/WaitingChip.tsx`) et les tests s'en servent.
+// Pur, sans React : la puce (`queue/WaitingChip.tsx`) et les tests s'en servent.
 
 /** Au-delà : la puce passe à l'orange (une journée sans réponse). */
 export const WAITING_WARN_HOURS = 24;

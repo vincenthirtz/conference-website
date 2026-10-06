@@ -56,7 +56,7 @@ import { teamsClient, teamsPaths } from '@/features/admin/teams/client';
 import { withAdminQuery } from '@/features/admin/_shared/query';
 import { useUnsavedChangesGuard } from '@/hooks/forms/useUnsavedChangesGuard';
 import { isStaleUpdateError } from '@/features/admin/_shared/optimisticLock';
-import StaleUpdateNotice from '@/features/admin/_shared/ui/StaleUpdateNotice';
+import StaleUpdateNotice from '@/features/admin/_shared/lock/StaleUpdateNotice';
 import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
 
 const FORM_ID = 'team-edit-form';
