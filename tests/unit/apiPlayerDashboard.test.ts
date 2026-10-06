@@ -495,3 +495,222 @@ describe('buildTodo', () => {
     expect(withoutPermission.map((i) => i.id)).not.toContain('lineup');
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * Droits délégués & nouveaux items du bandeau (lot P5).
+ *
+ * Chaque donnée réservée à l'encadrement suit la permission EFFECTIVE qui
+ * permet d'y répondre — plus « capitaine ou manager » en bloc.
+ * ------------------------------------------------------------------------- */
+
+describe('/api/player/dashboard — permissions déléguées', () => {
+  /** PLAYER_ID (m-1) devient coach, avec les permissions choisies. */
+  function grantCoach(permissions: string[]) {
+    store.site_settings = [
+      {
+        key: 'team_roles',
+        value: JSON.stringify([
+          { value: 'player', label: 'Player', permissions: [] },
+          { value: 'coach', label: 'Coach', permissions },
+        ]),
+      },
+    ] as any;
+    (store.team_members as any[])[1].role = 'coach';
+  }
+
+  function addPendingJoinRequest() {
+    (store.demandes as any[]).push({
+      id: 'join-pending',
+      team_id: TEAM_ID,
+      user_id: 'candidate',
+      type: 'join',
+      status: 'pending',
+      comment: null,
+      payload: {},
+      created_at: new Date().toISOString(),
+    });
+  }
+
+  it('un coach (manage_scrims, sans messages) voit ses scrims mais pas les messages', async () => {
+    seed({ minPlayers: 5, memberCount: 5 });
+    (store.team_members as any[])[1].role = 'coach';
+    setAuthUser({ id: PLAYER_ID });
+    const res = makeRes();
+    await dashboardHandler(makeReq(), res);
+
+    const b = res.body as any;
+    expect(b.pendingScrims).toHaveLength(1);
+    expect(b.unreadMessages).toBe(0);
+    expect(b.todo.map((i: any) => i.id)).toContain('scrims');
+    expect(b.todo.map((i: any) => i.id)).not.toContain('messages');
+  });
+
+  it('send_captain_messages + manage_join_requests délégués : messages et adhésions, pas de scrims', async () => {
+    seed({ minPlayers: 5, memberCount: 5 });
+    grantCoach(['send_captain_messages', 'manage_join_requests']);
+    addPendingJoinRequest();
+    setAuthUser({ id: PLAYER_ID });
+    const res = makeRes();
+    await dashboardHandler(makeReq(), res);
+
+    const b = res.body as any;
+    expect(b.permissions).toEqual([
+      'manage_join_requests',
+      'send_captain_messages',
+    ]);
+    expect(b.pendingScrims).toEqual([]);
+    expect(b.unreadMessages).toBe(1);
+    expect(b.todo).toEqual(
+      expect.arrayContaining([
+        { id: 'joinRequests', href: '/player/manage-team', count: 1 },
+        { id: 'messages', href: '/player/messages', count: 1 },
+      ])
+    );
+    expect(b.todo.map((i: any) => i.id)).not.toContain('scrims');
+  });
+
+  it('pas d’item adhésions sans manage_join_requests', async () => {
+    seed({ minPlayers: 5, memberCount: 5 });
+    (store.team_members as any[])[1].role = 'coach';
+    addPendingJoinRequest();
+    setAuthUser({ id: PLAYER_ID });
+    const res = makeRes();
+    await dashboardHandler(makeReq(), res);
+
+    expect((res.body as any).todo.map((i: any) => i.id)).not.toContain(
+      'joinRequests'
+    );
+  });
+
+  it('la capitaine voit les demandes d’adhésion à traiter', async () => {
+    seed({ minPlayers: 5, memberCount: 5 });
+    addPendingJoinRequest();
+    setAuthUser({ id: CAPTAIN_ID });
+    const res = makeRes();
+    await dashboardHandler(makeReq(), res);
+
+    expect((res.body as any).todo).toEqual(
+      expect.arrayContaining([
+        { id: 'joinRequests', href: '/player/manage-team', count: 1 },
+      ])
+    );
+  });
+});
+
+describe('/api/player/dashboard — score à confirmer', () => {
+  function oppReported() {
+    store.match_score_reports = [
+      {
+        id: 'r-opp',
+        match_id: MATCH_ID,
+        team_side: 2,
+        team1_score: 0,
+        team2_score: 2,
+      },
+    ] as any;
+  }
+
+  it('la capitaine voit le score déclaré par l’adversaire à confirmer', async () => {
+    seed({ minPlayers: 5, memberCount: 5 });
+    oppReported();
+    setAuthUser({ id: CAPTAIN_ID });
+    const res = makeRes();
+    await dashboardHandler(makeReq(), res);
+
+    expect((res.body as any).todo).toEqual(
+      expect.arrayContaining([
+        { id: 'score', href: `/player/match/${MATCH_ID}`, count: 1 },
+      ])
+    );
+  });
+
+  it('rien quand mon équipe a déjà déclaré', async () => {
+    seed({ minPlayers: 5, memberCount: 5 });
+    oppReported();
+    (store.match_score_reports as any[]).push({
+      id: 'r-mine',
+      match_id: MATCH_ID,
+      team_side: 1,
+      team1_score: 0,
+      team2_score: 2,
+    });
+    setAuthUser({ id: CAPTAIN_ID });
+    const res = makeRes();
+    await dashboardHandler(makeReq(), res);
+
+    expect((res.body as any).todo.map((i: any) => i.id)).not.toContain('score');
+  });
+
+  it('rien pour qui ne peut pas déclarer (un coach)', async () => {
+    seed({ minPlayers: 5, memberCount: 5 });
+    oppReported();
+    (store.team_members as any[])[1].role = 'coach';
+    setAuthUser({ id: PLAYER_ID });
+    const res = makeRes();
+    await dashboardHandler(makeReq(), res);
+
+    expect((res.body as any).todo.map((i: any) => i.id)).not.toContain('score');
+  });
+});
+
+describe('buildTodo — score à confirmer & adhésions', () => {
+  const base = {
+    userId: CAPTAIN_ID,
+    nextMatch: {
+      match: null,
+      team: null,
+      opponent: null,
+      tournament: null,
+      checkin: null,
+      readiness: null,
+    } as any,
+    pendingScrims: [],
+    unreadMessages: 0,
+    pendingInvitations: 0,
+    members: [],
+    canManage: true,
+    permissions: ['manage_join_requests'] as any,
+  };
+
+  it('un seul match → son fil ; plusieurs → « Mes matchs »', async () => {
+    const { buildTodo } = await import(
+      '../../features/player/dashboard/service/todo'
+    );
+    expect(buildTodo({ ...base, scoresToConfirm: ['m-1'] })).toEqual([
+      { id: 'score', href: '/player/match/m-1', count: 1 },
+    ]);
+    expect(buildTodo({ ...base, scoresToConfirm: ['m-1', 'm-2'] })).toEqual([
+      { id: 'score', href: '/player/matches', count: 2 },
+    ]);
+  });
+
+  it('adhésions seulement avec manage_join_requests', async () => {
+    const { buildTodo } = await import(
+      '../../features/player/dashboard/service/todo'
+    );
+    expect(buildTodo({ ...base, pendingJoinRequests: 2 })).toEqual([
+      { id: 'joinRequests', href: '/player/manage-team', count: 2 },
+    ]);
+    expect(
+      buildTodo({ ...base, pendingJoinRequests: 2, permissions: [] as any })
+    ).toEqual([]);
+  });
+
+  it('le score passe avant l’invitation, les adhésions et les messages', async () => {
+    const { buildTodo } = await import(
+      '../../features/player/dashboard/service/todo'
+    );
+    const todo = buildTodo({
+      ...base,
+      unreadMessages: 1,
+      pendingInvitations: 1,
+      pendingJoinRequests: 1,
+      scoresToConfirm: ['m-1'],
+    });
+    expect(todo.map((i) => i.id)).toEqual([
+      'score',
+      'invitation',
+      'joinRequests',
+    ]);
+  });
+});
