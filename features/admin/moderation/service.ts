@@ -18,6 +18,7 @@ import { escapePostgrestValue, sanitizeSearch } from '@/utils/apiHelpers';
 import type { Audited } from '../_shared/audited';
 import { parseWithLegacyFields } from '../_shared/legacyParse';
 import * as repo from './repository';
+import { notifyTicketReporter } from './supportNotify';
 import {
   BlacklistAlertsQuery,
   BlacklistCreateBody,
@@ -458,7 +459,18 @@ export async function updateSupportTicket(
   id: string,
   body: Record<string, unknown>
 ) {
-  const { status, resolution_note } = body;
+  const { status, resolution_note, notify_reporter } = body;
+  if (notify_reporter !== undefined && typeof notify_reporter !== 'boolean') {
+    throw new ValidationError('notify_reporter invalide');
+  }
+  // Prévenir la personne n'a de sens qu'avec une suite donnée : résolution
+  // ou clôture, dans la même requête.
+  const notify = notify_reporter === true;
+  if (notify && status !== 'resolved' && status !== 'closed') {
+    throw new ValidationError(
+      'La notification accompagne une résolution ou une clôture.'
+    );
+  }
   const update: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   };
@@ -503,8 +515,18 @@ export async function updateSupportTicket(
     throw new AdminError(500, 'internal', 'Échec de la mise à jour');
   }
 
+  // Après l'écriture : un envoi raté n'annule pas la résolution, il est
+  // rendu à l'écran et versé au journal (`payload.notification`).
+  const notification =
+    notify && (status === 'resolved' || status === 'closed')
+      ? await notifyTicketReporter(row, status, {
+          tenantId: ctx.tenantId,
+          logger: ctx.logger,
+        })
+      : null;
+
   return {
-    result: { ticket: row },
+    result: { ticket: row, notification },
     audit: {
       entity_type: 'support_ticket',
       entity_id: id,
@@ -512,6 +534,7 @@ export async function updateSupportTicket(
       payload: {
         new_status: update.status ?? null,
         has_note: !!update.resolution_note,
+        ...(notification ? { notification } : {}),
       },
     },
   } satisfies Audited<unknown>;

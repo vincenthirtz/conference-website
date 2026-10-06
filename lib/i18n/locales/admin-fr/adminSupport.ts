@@ -68,7 +68,16 @@ export default adminNs('adminSupport', {
   reasonPlaceholder: "Raison de l'ajout à la blacklist",
   blacklisting: 'Ajout…',
   addToBlacklist: 'Ajouter à la blacklist',
-  resolutionLabel: 'Note de résolution (visible uniquement par le staff)',
+  resolutionLabel:
+    'Note de résolution (staff — envoyée à la personne si vous la notifiez)',
+  notifyReporter: 'Notifier la personne en résolvant ou en fermant',
+  notifyReporterHelp:
+    'Un email lui transmet le statut et la note ci-dessus. Le MP Discord n’est pas encore disponible.',
+  notifyNoContact:
+    'Signalement anonyme ou sans adresse email : impossible de prévenir la personne.',
+  toastNotifySent: 'Ticket mis à jour — email envoyé à la personne.',
+  toastNotifyNotSent:
+    'Ticket mis à jour, mais l’email n’a pas pu partir (voir le journal).',
   resolutionPlaceholder: 'Action prise, contexte...',
   markInProgress: 'Marquer « en cours »',
   markResolved: 'Marquer résolu',

@@ -226,7 +226,12 @@ export const EntityBlacklistUpdateDoc = looseBody([
   'active',
 ]);
 
-export const SupportTicketPatchBody = looseBody(['status', 'resolution_note']);
+export const SupportTicketPatchBody = looseBody([
+  'status',
+  'resolution_note',
+  // Booléen : prévenir l'auteur·ice (email) — avec `resolved` / `closed` seulement.
+  'notify_reporter',
+]);
 
 export const ConvertBlacklistDoc = looseBody([
   'kind',

@@ -56,7 +56,22 @@ export type SupportTicketsResponse = {
   };
 };
 
-export type SupportTicketUpdateResponse = { ticket: SupportTicket };
+/** Résultat de « Notifier la personne » (null si non demandé). */
+export type ReporterNotification = {
+  email: 'sent' | 'failed' | 'no_address';
+  discord: 'unavailable' | 'no_account';
+};
+
+export type SupportTicketUpdateBody = {
+  status: TicketStatus;
+  resolution_note?: string;
+  notify_reporter?: boolean;
+};
+
+export type SupportTicketUpdateResponse = {
+  ticket: SupportTicket;
+  notification?: ReporterNotification | null;
+};
 
 const BL = '/api/admin/moderation/blacklist';
 const EBL = '/api/admin/moderation/entity-blacklist';
@@ -139,10 +154,7 @@ export const moderationClient = {
   // --- Support
   tickets: (query: string) =>
     adminRequest<SupportTicketsResponse>(`${TICKETS}?${query}`),
-  updateTicket: (
-    id: string,
-    body: { status: TicketStatus; resolution_note?: string }
-  ) =>
+  updateTicket: (id: string, body: SupportTicketUpdateBody) =>
     adminRequest<SupportTicketUpdateResponse>(
       `${TICKETS}/${encodeURIComponent(id)}`,
       { method: 'PATCH', json: body, idempotent: true }

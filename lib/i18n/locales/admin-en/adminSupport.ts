@@ -69,7 +69,16 @@ export default {
   reasonPlaceholder: 'Reason for adding to the blacklist',
   blacklisting: 'Adding…',
   addToBlacklist: 'Add to blacklist',
-  resolutionLabel: 'Resolution note (visible to staff only)',
+  resolutionLabel:
+    'Resolution note (staff — sent to the reporter if you notify them)',
+  notifyReporter: 'Notify the reporter when resolving or closing',
+  notifyReporterHelp:
+    'An email sends them the status and the note above. Discord DMs are not available yet.',
+  notifyNoContact:
+    'Anonymous report or no email address: the reporter cannot be notified.',
+  toastNotifySent: 'Ticket updated — email sent to the reporter.',
+  toastNotifyNotSent:
+    'Ticket updated, but the email could not be sent (see the log).',
   resolutionPlaceholder: 'Action taken, context...',
   markInProgress: 'Mark « in progress »',
   markResolved: 'Mark resolved',

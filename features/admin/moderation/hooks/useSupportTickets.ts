@@ -8,7 +8,7 @@ import {
   moderationClient,
   type SupportTicket,
   type SupportTicketsResponse,
-  type TicketStatus,
+  type SupportTicketUpdateBody,
 } from '../client';
 
 export const supportKeys = {
@@ -43,13 +43,8 @@ export function usePatchSupportTickets(query: string) {
 export function useUpdateSupportTicket() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      id,
-      body,
-    }: {
-      id: string;
-      body: { status: TicketStatus; resolution_note?: string };
-    }) => moderationClient.updateTicket(id, body),
+    mutationFn: ({ id, body }: { id: string; body: SupportTicketUpdateBody }) =>
+      moderationClient.updateTicket(id, body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: supportKeys.all });
     },

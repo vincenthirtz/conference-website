@@ -1155,6 +1155,60 @@ export function sendSupportConfirmationEmail(opts: {
 }
 
 /**
+ * Suite donnée à un signalement : envoyé quand le staff résout ou ferme un
+ * ticket ET coche « Notifier la personne » (jamais d'office : la note de
+ * résolution est d'abord un outil interne, le staff choisit de la partager).
+ */
+export function sendSupportResolutionEmail(opts: {
+  to: string;
+  ticketId: string;
+  status: 'resolved' | 'closed';
+  subject: string | null;
+  /** Message partagé avec la personne (note de résolution) ; peut être vide. */
+  note: string | null;
+  tenantId?: string | null;
+}): Promise<SendEmailResult> {
+  const statusLabel =
+    opts.status === 'resolved' ? 'R&eacute;solu' : 'Ferm&eacute;';
+  const note = opts.note?.trim()
+    ? escapeHtml(opts.note.trim()).replace(/\r?\n/g, '<br/>')
+    : null;
+  return sendEmail({
+    tenantId: opts.tenantId,
+    to: opts.to,
+    subject: "Suite à votre signalement — OW Women's Cup",
+    tags: ['support-resolution'],
+    html: emailLayout(`
+      ${gradientBar()}
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">Votre signalement a &eacute;t&eacute; trait&eacute;</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#C6BED9;line-height:1.6;">
+        L&apos;&eacute;quipe de mod&eacute;ration a examin&eacute; votre signalement. Voici la suite qui lui a &eacute;t&eacute; donn&eacute;e.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);margin:0 0 24px;">
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">R&eacute;f&eacute;rence ticket</span><br/>
+            <code style="font-size:13px;color:#7bc96a;font-family:'Fira Code',monospace;">${escapeHtml(opts.ticketId.slice(0, 8))}</code>
+          </td>
+        </tr>
+        ${opts.subject ? `<tr><td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Sujet</span><br/><span style="font-size:15px;color:#ffffff;">${escapeHtml(opts.subject)}</span></td></tr>` : ''}
+        <tr>
+          <td style="padding:14px 20px;${note ? 'border-bottom:1px solid rgba(255,255,255,0.06);' : ''}">
+            <span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Statut</span><br/>
+            <span style="font-size:15px;color:#ffffff;font-weight:500;">${statusLabel}</span>
+          </td>
+        </tr>
+        ${note ? `<tr><td style="padding:14px 20px;"><span style="font-size:12px;color:#9081B0;text-transform:uppercase;letter-spacing:0.1em;">Message de la mod&eacute;ration</span><br/><span style="font-size:15px;color:#ffffff;line-height:1.6;">${note}</span></td></tr>` : ''}
+      </table>
+      <p style="margin:0;font-size:13px;color:#675788;line-height:1.5;">
+        Si la situation persiste ou si vous avez un &eacute;l&eacute;ment nouveau, ouvrez un nouveau signalement
+        ou contactez la mod&eacute;ration directement sur Discord.
+      </p>
+    `),
+  });
+}
+
+/**
  * Renewal reminder sent to a tenant's owner(s) ~14 days before their paid plan
  * (« Régie solidaire ») expires. Sent by the `plan-renewal` cron, once per
  * billing cycle (guarded by tenants.plan_last_reminder_at). Transactional /
@@ -1415,8 +1469,7 @@ export function sendFreePlayerPublishedEmail(opts: {
 // trouvé ont besoin de la porte de sortie. UNE relance par cycle de 60 jours
 // (`expiry_reminder_sent_at`) — au-delà, ce serait du harcèlement.
 
-const FREE_PLAYER_EXPIRY_SUBJECT =
-  'Ta fiche expire bientôt — OW Women’s Cup';
+const FREE_PLAYER_EXPIRY_SUBJECT = 'Ta fiche expire bientôt — OW Women’s Cup';
 
 function formatFrDate(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR', {

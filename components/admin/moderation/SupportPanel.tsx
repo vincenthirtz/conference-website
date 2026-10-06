@@ -13,6 +13,7 @@ import {
   severityTone,
   statusTone,
 } from './supportLabels';
+import SupportResolutionForm from './SupportResolutionForm';
 import SupportTicketRow from './SupportTicketRow';
 import EmptyState from '@/components/admin/EmptyState';
 import Modal from '@/components/admin/Modal';
@@ -362,16 +363,24 @@ export default function SupportPanel() {
     }
   }
 
-  async function updateStatus(newStatus: Status, note?: string) {
+  async function updateStatus(newStatus: Status, note: string, notify = false) {
     if (!selected) return;
     setUpdating(true);
     try {
-      const body: { status: Status; resolution_note?: string } = {
-        status: newStatus,
-      };
-      if (note !== undefined) body.resolution_note = note;
-      const json = await updateTicket.mutateAsync({ id: selected.id, body });
-      addToast(tx.ticketUpdated, 'success');
+      const body = { status: newStatus, resolution_note: note };
+      const json = await updateTicket.mutateAsync({
+        id: selected.id,
+        body: notify ? { ...body, notify_reporter: true } : body,
+      });
+      const sent = json.notification?.email;
+      addToast(
+        sent === 'sent'
+          ? tx.toastNotifySent
+          : sent
+            ? tx.toastNotifyNotSent
+            : tx.ticketUpdated,
+        sent && sent !== 'sent' ? 'error' : 'success'
+      );
       setSelected(json.ticket);
     } catch (err) {
       addToast((err as Error).message, 'error');
@@ -927,44 +936,14 @@ export default function SupportPanel() {
               </div>
             </div>
 
-            <div className="space-y-3 border-t border-neutral-700 pt-4">
-              <label className="block text-sm font-medium text-neutral-200">
-                {tx.resolutionLabel}
-              </label>
-              <textarea
-                value={resolutionNote}
-                onChange={(e) => setResolutionNote(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm"
-                placeholder={tx.resolutionPlaceholder}
-              />
-              <div className="flex flex-wrap gap-2 justify-end">
-                <AdminButton
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => updateStatus('in_progress', resolutionNote)}
-                  disabled={updating || selected.status === 'in_progress'}
-                >
-                  {tx.markInProgress}
-                </AdminButton>
-                <AdminButton
-                  variant="primary"
-                  size="sm"
-                  onClick={() => updateStatus('resolved', resolutionNote)}
-                  disabled={updating || selected.status === 'resolved'}
-                >
-                  {tx.markResolved}
-                </AdminButton>
-                <AdminButton
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => updateStatus('closed', resolutionNote)}
-                  disabled={updating || selected.status === 'closed'}
-                >
-                  {tx.close}
-                </AdminButton>
-              </div>
-            </div>
+            <SupportResolutionForm
+              key={selected.id}
+              ticket={selected}
+              note={resolutionNote}
+              onNoteChange={setResolutionNote}
+              updating={updating}
+              onUpdate={(s, notify) => updateStatus(s, resolutionNote, notify)}
+            />
           </>
         </Modal>
       )}
