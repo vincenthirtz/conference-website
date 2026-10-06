@@ -67,13 +67,10 @@ test.describe('/player/scrim-planning/[planningId]', () => {
     await deleteTestUser(PLAYER_EMAIL);
   });
 
-  // TODO(P10) : réactiver quand la redirection de session de la page attendra
-  // `router.isReady`. Constaté le 2026-10-06 en chargement direct : la
-  // redirection part AVANT l'hydratation du routeur, avec le repli
-  // `loginHrefFor('/player')` → `/login?next=/player` ; un lien partagé vers une
-  // grille perd sa destination (pages/player/scrim-planning/[planningId].tsx,
-  // hors lot tests). La spec décrit le comportement voulu.
-  test.fixme('sans session → /login, retour sur la grille conservé', async ({
+  // Régression P10 : la redirection partait avant l'hydratation du routeur,
+  // avec le repli `/login?next=/player` — le lien partagé perdait la grille.
+  // Aucune session requise : tourne sans clé service.
+  test('sans session → /login, retour sur la grille conservé', async ({
     page,
   }) => {
     await page.goto(PAGE);

@@ -90,6 +90,18 @@ test.describe('/player/scouting/[teamId]', () => {
     await deleteTestUser(PLAYER_EMAIL);
   });
 
+  // Même piège que la grille de scrim : redirigée avant `router.isReady`, la
+  // page partait vers le repli `/login?next=/player/teams` et le dossier
+  // ouvert depuis un lien était perdu. Aucune session requise.
+  test('sans session → /login, retour sur le dossier conservé', async ({
+    page,
+  }) => {
+    const path = `/player/scouting/${TARGET_ID}`;
+    await page.goto(path);
+    await page.waitForURL(/\/login/, { timeout: 15000 });
+    expect(new URL(page.url()).searchParams.get('next')).toBe(path);
+  });
+
   test('affiche le dossier et « Proposer un scrim » présélectionne l’adversaire', async ({
     page,
   }) => {
