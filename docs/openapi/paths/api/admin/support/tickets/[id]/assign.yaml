@@ -1,0 +1,56 @@
+post:
+  tags:
+    - admin/misc
+  summary: Prendre en charge ou liberer un ticket support (« Je prends » / « Liberer »).
+  operationId: adminAssignSupportTicket
+  description: |
+    `claim` assigne le ticket au staff appelant (`assigned_staff_id`,
+    `assigned_at`) ; un ticket deja pris par quelqu'un d'autre repond 409
+    en nommant la personne (ecriture conditionnelle contre les courses).
+    `release` vide l'assignation, ouverte a tout le staff ayant
+    `moderate_support`.
+
+    Journal staff : `update_support_ticket` avec `payload.assignment`.
+
+    503 tant que la migration
+    `add_staff_assignment_to_demandes_and_support_tickets.sql` n'est pas
+    appliquee.
+  security:
+    - StaffSession: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [action]
+          properties:
+            action:
+              type: string
+              enum: [claim, release]
+  responses:
+    '200':
+      description: 'Etat final : `{ assignment: { id, assigned_staff_id, assigned_at, assigned_to } }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
+    '503':
+      description: Migration d'assignation non appliquee.
