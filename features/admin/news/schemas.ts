@@ -28,6 +28,8 @@ export type NewsPayload = {
   imageUrl?: string;
   status?: 'draft' | 'published';
   publishedAt?: string | null;
+  /** Verrou optimiste (features/admin/_shared/optimisticLock) — édition. */
+  expected_updated_at?: string | null;
 };
 
 /** Toutes les colonnes de `news` : ce que renvoyait le `select('*')`. */

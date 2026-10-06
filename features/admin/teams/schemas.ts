@@ -140,7 +140,11 @@ export const TEAM_UPDATABLE_FIELDS = [
   'skill_rating',
 ] as const;
 
-export const TeamPatchBody = looseBody(TEAM_UPDATABLE_FIELDS);
+// `expected_updated_at` : verrou optimiste (features/admin/_shared/optimisticLock).
+export const TeamPatchBody = looseBody([
+  ...TEAM_UPDATABLE_FIELDS,
+  'expected_updated_at',
+]);
 
 /** POST /api/admin/teams/bulk. */
 export const TeamBulkBody = looseBody(['action', 'teamIds', 'tournamentId']);

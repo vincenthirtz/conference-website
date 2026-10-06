@@ -6,7 +6,7 @@
 // roster n'écrase plus la saisie en cours. Les setters gardent la forme
 // attendue par `TeamEditInfoForm` et `LogoUpload` (rendu inchangé).
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDirtyBaseline } from '@/hooks/forms/useDirtyBaseline';
 import type { TeamRow } from '@/types/admin';
 import {
@@ -103,17 +103,39 @@ export function useTeamEditForm(
   // « Modifications non enregistrées » : écart à la dernière version connue
   // du serveur (hydratation, puis `markSaved` après un enregistrement réussi).
   const { dirty, markClean } = useDirtyBaseline(form);
+  // Verrou optimiste : `updated_at` de la version sur laquelle repose la
+  // saisie — celle hydratée ou celle renvoyée par le dernier enregistrement,
+  // JAMAIS celle d'une relecture du cache (elle masquerait un conflit).
+  const [version, setVersion] = useState<string | null>(null);
   const hydrate = useCallback(
     (row: TeamRow) => {
       const next = formFromRow(row);
       setForm(next);
+      setVersion(row.updated_at ?? null);
       markClean(next);
     },
     [markClean]
   );
-  useHydrateOnce(teamId ?? null, team ?? undefined, hydrate);
+  const ready = useHydrateOnce(teamId ?? null, team ?? undefined, hydrate);
+  // Relecture de la fiche (geste de roster, capitanat…) alors que rien n'est
+  // en cours de saisie : on suit la nouvelle version, sinon le prochain
+  // enregistrement partirait en 409 sur un changement fait… depuis cet écran.
+  // Saisie en cours : on garde la version d'origine (le conflit est réel).
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  const teamVersion = team?.updated_at ?? null;
+  useEffect(() => {
+    if (!ready || !team || dirtyRef.current || teamVersion === version) return;
+    hydrate(team);
+  }, [ready, team, teamVersion, version, hydrate]);
   /** Enregistrement réussi : la saisie courante devient la référence. */
-  const markSaved = useCallback(() => markClean(form), [markClean, form]);
+  const markSaved = useCallback(
+    (saved: Pick<TeamRow, 'updated_at'>) => {
+      setVersion(saved.updated_at ?? null);
+      markClean(form);
+    },
+    [markClean, form]
+  );
   const setters = useMemo(() => {
     const set =
       <K extends keyof TeamEditForm>(k: K) =>
@@ -136,5 +158,5 @@ export function useTeamEditForm(
       setSkillRating: set('skillRating'),
     };
   }, []);
-  return { form, setters, dirty, markSaved, hydrate };
+  return { form, setters, dirty, markSaved, hydrate, version };
 }

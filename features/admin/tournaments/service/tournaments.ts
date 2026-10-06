@@ -15,6 +15,7 @@ import {
   type RegistrationField,
 } from '@/utils/registrationFields';
 import type { Audited } from '../../_shared/audited';
+import { assertFreshVersion } from '../../_shared/optimisticLock';
 import * as repo from '../repository/tournaments';
 import { fail } from './common';
 
@@ -260,6 +261,13 @@ export async function patchTournament(
   );
   if (fetchErr || !before) fail(404, 'Tournament not found');
 
+  // Verrou optimiste : `expected_updated_at` fourni → même version, sinon 409.
+  assertFreshVersion(
+    b.expected_updated_at,
+    before.updated_at,
+    'Ce tournoi a été modifié par quelqu’un d’autre entre-temps. Rechargez la page pour repartir de la version à jour.'
+  );
+
   // Cohérence des dates avec les valeurs existantes (une seule date modifiée).
   const effectiveStart =
     b.start_date !== undefined
@@ -336,7 +344,12 @@ export async function patchTournament(
     ctx.db,
     ctx.tenantId,
     id,
-    patch as TablesUpdate<'tournaments'>
+    // `updated_at` posé ici (et non laissé à un éventuel trigger) : c'est la
+    // version que compare le verrou optimiste. Hors du `patch` journalisé.
+    {
+      ...patch,
+      updated_at: new Date().toISOString(),
+    } as TablesUpdate<'tournaments'>
   );
   if (updateErr || !after) {
     ctx.logger.error('admin PATCH tournament error:', updateErr);

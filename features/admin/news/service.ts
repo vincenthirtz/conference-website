@@ -16,6 +16,7 @@ import {
 import { emitBotEvent } from '@/utils/botEvents';
 import { escapePostgrestValue, sanitizeSearch } from '@/utils/apiHelpers';
 import type { Audited } from '../_shared/audited';
+import { assertFreshVersion } from '../_shared/optimisticLock';
 import * as repo from './repository';
 import type { NewsPayload } from './schemas';
 
@@ -144,6 +145,19 @@ export async function updateNews(
       500,
       'internal',
       'Failed to load the existing article.'
+    );
+  }
+
+  // Verrou optimiste : `expected_updated_at` fourni → même version, sinon 409.
+  // `findNewsState` ne lit pas `updated_at` : la fiche complète n'est relue
+  // que si le client a demandé le contrôle.
+  const expected = body.expected_updated_at;
+  if (typeof expected === 'string' && expected) {
+    const { row: current } = await repo.findNews(ctx.db, ctx.tenantId, id);
+    assertFreshVersion(
+      expected,
+      current?.updated_at,
+      'Cet article a été modifié par quelqu’un d’autre entre-temps. Rechargez la page pour repartir de la version à jour.'
     );
   }
 

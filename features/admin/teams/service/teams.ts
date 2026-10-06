@@ -25,6 +25,7 @@ import {
 } from '@/utils/teams/adminTeamsFilters';
 import { fetchAdminUserProfiles } from '@/utils/adminUserProfiles';
 import type { Audited } from '../../_shared/audited';
+import { assertFreshVersion } from '../../_shared/optimisticLock';
 import * as teams from '../repository/teams';
 import { TEAM_UPDATABLE_FIELDS } from '../schemas';
 import { fail, isTruthyFlag } from './common';
@@ -247,6 +248,13 @@ export async function updateTeam(
     id
   );
   if (fetchErr || !before) throw fail(404, 'Team not found');
+
+  // Verrou optimiste : `expected_updated_at` fourni → même version, sinon 409.
+  assertFreshVersion(
+    body.expected_updated_at,
+    before.updated_at,
+    'Cette équipe a été modifiée par quelqu’un d’autre entre-temps. Rechargez la page pour repartir de la version à jour.'
+  );
 
   // Capitanat : la cible doit être membre (non-coach) de CETTE équipe, comme
   // l'exige `reassign_captain`. Sans ce recoupement, n'importe quel compte —

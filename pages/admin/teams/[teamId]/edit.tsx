@@ -22,7 +22,7 @@ import {
   DEFAULT_TEAM_ROLES,
   type TeamRole,
 } from '@/utils/teamRoles';
-import type { StaffProps, TeamMemberRow } from '@/types/admin';
+import type { StaffProps, TeamMemberRow, TeamRow } from '@/types/admin';
 import type {
   TournamentRow,
   TournamentRegistration,
@@ -55,6 +55,8 @@ import {
 import { teamsClient, teamsPaths } from '@/features/admin/teams/client';
 import { withAdminQuery } from '@/features/admin/_shared/query';
 import { useUnsavedChangesGuard } from '@/hooks/forms/useUnsavedChangesGuard';
+import { isStaleUpdateError } from '@/features/admin/_shared/optimisticLock';
+import StaleUpdateNotice from '@/features/admin/_shared/ui/StaleUpdateNotice';
 import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
 
 const FORM_ID = 'team-edit-form';
@@ -129,7 +131,12 @@ function AdminEditTeamPage({
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>('');
 
   // Formulaire « infos » : un objet, hydraté une fois par fiche.
-  const { form, setters, dirty, markSaved } = useTeamEditForm(teamId, team);
+  const { form, setters, dirty, markSaved, hydrate, version } = useTeamEditForm(
+    teamId,
+    team
+  );
+  const [stale, setStale] = useState(false);
+  const [reloading, setReloading] = useState(false);
   useUnsavedChangesGuard(dirty, tFiche.unsavedConfirm);
   const { logoUrl, ...infoFormValues } = form;
   const { setLogoUrl, ...infoFormSetters } = setters;
@@ -204,17 +211,41 @@ function AdminEditTeamPage({
     setErrorMsg(null);
 
     try {
-      const json = await teamsClient.update(teamId, teamPayloadFromForm(form));
+      const json = await teamsClient.update(teamId, {
+        ...teamPayloadFromForm(form),
+        // Verrou optimiste : 409 si l'équipe a changé depuis l'ouverture.
+        expected_updated_at: version,
+      } as Partial<TeamRow>);
 
-      markSaved();
+      markSaved(json.team);
       addToast(t.toastTeamUpdated, 'success');
       // Fiche à jour + listes invalidées : /admin/teams montre la ligne
       // modifiée sans rechargement.
       setTeam(json.team);
     } catch (err: unknown) {
-      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
+      if (isStaleUpdateError(err)) setStale(true);
+      else setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setSaving(false);
+    }
+  }
+
+  // 409 : relire l'équipe et repartir de la version à jour.
+  async function handleReload() {
+    if (!teamId) return;
+    setReloading(true);
+    try {
+      const json = await teamsClient.get(teamId);
+      if (json.team) {
+        setTeam(json.team);
+        hydrate(json.team);
+      }
+      setStale(false);
+      setErrorMsg(null);
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? t.errUnexpected);
+    } finally {
+      setReloading(false);
     }
   }
 
@@ -453,6 +484,10 @@ function AdminEditTeamPage({
             )
           }
         />
+
+        {stale && (
+          <StaleUpdateNotice onReload={handleReload} reloading={reloading} />
+        )}
 
         {team && (
           <FicheLayout

@@ -38,7 +38,7 @@ export const TOURNAMENT_DETAIL_COLUMNS =
 
 /** En-tête d'un tournoi lu par les routes qui en vérifient l'existence. */
 export const TOURNAMENT_LOOKUP_COLUMNS =
-  'id, name, slug, game, status, start_date, end_date, timezone, max_teams, min_players, pooled_teams, roster_locked_at, roster_unlocked_until' as const;
+  'id, name, slug, game, status, start_date, end_date, timezone, max_teams, min_players, pooled_teams, roster_locked_at, roster_unlocked_until, updated_at' as const;
 
 /** Liste staff des tournois (GET /api/admin/tournaments). */
 export const TOURNAMENT_LIST_COLUMNS =
@@ -245,7 +245,11 @@ export const TOURNAMENT_PATCH_FIELDS = [
   'format_details',
   'registration_fields',
 ] as const;
-export const TournamentPatchBody = looseBody(TOURNAMENT_PATCH_FIELDS);
+// `expected_updated_at` : verrou optimiste (features/admin/_shared/optimisticLock).
+export const TournamentPatchBody = looseBody([
+  ...TOURNAMENT_PATCH_FIELDS,
+  'expected_updated_at',
+]);
 
 export const ApplyTemplateBody = looseBody(['templateId', 'append']);
 export const CloneTournamentBody = looseBody(['name', 'slug']);
