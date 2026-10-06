@@ -26,6 +26,7 @@
 // tournoi qui verrouille vraiment.
 
 import { supabaseAdmin } from '../supabase';
+import { formatSiteDate } from '../timezone';
 
 export type RosterLockStatus =
   | {
@@ -174,7 +175,14 @@ export async function isTeamRosterLocked(
  */
 export function rosterLockErrorMessage(status: RosterLockStatus): string {
   if (!status.locked) return 'Roster non verrouillé';
-  const when = new Date(status.lockedAt).toLocaleString('fr-FR');
+  // Fuseau du site explicite : ce message est construit côté serveur (UTC sur
+  // Netlify) — sans timeZone, l'heure affichée était décalée de 1 à 2 h.
+  const when = formatSiteDate(
+    status.lockedAt,
+    'fr',
+    { dateStyle: 'short', timeStyle: 'short' },
+    status.lockedAt
+  );
   const tname = status.tournamentName || status.tournamentId.slice(0, 8);
   // Ce message est lu par des CAPITAINES, pas par des développeurs : la version
   // précédente leur soufflait « utilise force=true (admin uniquement) », un

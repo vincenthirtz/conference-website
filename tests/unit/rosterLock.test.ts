@@ -86,6 +86,24 @@ describe('rosterLockErrorMessage', () => {
     // toLocaleString('fr-FR') uses DD/MM/YYYY — assert the day/month digits appear.
     expect(msg).toMatch(/15\/01\/2026/);
   });
+
+  it("affiche l'heure dans le fuseau du site, pas en UTC", () => {
+    // 10:00 UTC en janvier = 11:00 à Paris ; 10:00 UTC en juillet = 12:00.
+    const winter = rosterLockErrorMessage({
+      locked: true,
+      tournamentId: 'tid',
+      tournamentName: 'X',
+      lockedAt: '2026-01-15T10:00:00.000Z',
+    });
+    expect(winter).toContain('11:00');
+    const summer = rosterLockErrorMessage({
+      locked: true,
+      tournamentId: 'tid',
+      tournamentName: 'X',
+      lockedAt: '2026-07-15T10:00:00.000Z',
+    });
+    expect(summer).toContain('12:00');
+  });
 });
 
 describe('isTeamRosterLocked', () => {
