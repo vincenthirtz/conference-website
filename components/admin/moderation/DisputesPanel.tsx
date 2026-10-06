@@ -8,7 +8,7 @@
 // filters client-side; it requests one page at a time and lets the API count
 // the classification breakdown.
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { moderationPaths } from '@/features/admin/moderation/client';
@@ -17,6 +17,7 @@ import {
   useTournamentOptions,
 } from '@/features/admin/_shared/tournamentOptions';
 import { useAdminResource } from '@/hooks/useAdminResource';
+import { useVisiblePoll } from '@/hooks/useVisiblePoll';
 import AdminListShell from '@/components/admin/AdminListShell';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminDisputes from '@/lib/i18n/locales/admin-fr/adminDisputes';
@@ -103,10 +104,9 @@ export default function DisputesPanel() {
   });
 
   // Auto-refresh 1 min : rejoue la requête courante (mêmes filtres/offset).
-  useEffect(() => {
-    const handle = setInterval(fetchData, 60_000);
-    return () => clearInterval(handle);
-  }, [fetchData]);
+  // Rien ne part onglet caché ; relecture au retour sur l'onglet. Le premier
+  // chargement reste celui du hook (pas d'`immediate`).
+  useVisiblePoll(() => void fetchData(), 60_000);
 
   // Reset to the first page when a filter changes.
   function changeFilter(next: 'all' | Classification) {
