@@ -7,7 +7,8 @@
 //
 // Modèle OPT-IN (à l'inverse du push, opt-out) : un user n'est emailé pour un
 // event QUE s'il a une row notification_prefs(channel='email', enabled=true)
-// explicite (cf. loadEmailOptedInUserIds).
+// explicite (cf. loadEmailOptedInUserIds). EXCEPTION : `checkin.opened` pour
+// qui peut pointer, en opt-OUT (cf. utils/teams/checkinEmailDefault.ts).
 //
 // Dedup : email_deliveries(outbox_event_id, user_id) UNIQUE. On ne ré-emaile
 // jamais une paire (event, user) déjà présente — idempotent si le cron se
@@ -40,6 +41,11 @@ import {
   loadEmailOptedInUserIds,
   type OutboxRow,
 } from './notificationAudience';
+import {
+  CHECKIN_EMAIL_EVENT,
+  loadCheckinCapableUserIdsForMatch,
+  loadEmailOptedOutUserIds,
+} from './teams/checkinEmailDefault';
 
 const DEFAULT_WINDOW_HOURS = 24;
 const DEFAULT_BATCH_LIMIT = 500;
@@ -191,6 +197,23 @@ async function resolveEmailAudience(event: OutboxRow): Promise<string[]> {
     }
   }
 
+  // Check-in ouvert : qui peut pointer le reçoit SAUF refus explicite
+  // (opt-out) — c'est l'événement qui mène au forfait. Les autres restent en
+  // opt-in. Cf. utils/teams/checkinEmailDefault.ts.
+  let byDefault = new Set<string>();
+  if (matchId && event.event_name === CHECKIN_EMAIL_EVENT) {
+    const capable = await loadCheckinCapableUserIdsForMatch(
+      matchId,
+      event.tenant_id
+    );
+    const refused = await loadEmailOptedOutUserIds(capable, event.event_name);
+    // `null` = préférences illisibles : on ne présume pas d'un « oui ».
+    if (refused) {
+      byDefault = new Set(capable.filter((u) => !refused.has(u)));
+      for (const u of byDefault) audience.add(u);
+    }
+  }
+
   if (audience.size === 0) return [];
 
   // Filtre OPT-IN email (seul un opt-in explicite reçoit).
@@ -198,7 +221,7 @@ async function resolveEmailAudience(event: OutboxRow): Promise<string[]> {
     Array.from(audience),
     event.event_name
   );
-  return Array.from(audience).filter((u) => optedIn.has(u));
+  return Array.from(audience).filter((u) => optedIn.has(u) || byDefault.has(u));
 }
 
 /**

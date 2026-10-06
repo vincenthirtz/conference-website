@@ -115,6 +115,38 @@ export async function listPrefRows(db: AdminDb, userId: string) {
   return { rows: (data ?? []) as PrefRow[], error };
 }
 
+/**
+ * Ce qu'il faut pour savoir si la joueuse peut pointer QUELQUE PART dans le
+ * tenant (règle utils/teams/canCheckIn.ts) : est-elle capitaine d'une équipe,
+ * et ses rôles d'équipe. `error` = une lecture a échoué.
+ */
+export async function readCheckinStanding(
+  db: AdminDb,
+  userId: string,
+  tenantId: string
+) {
+  const [captainRes, membersRes] = await Promise.all([
+    db
+      .from('teams')
+      .select('id')
+      .eq('captain_id', userId)
+      .eq('tenant_id', tenantId)
+      .limit(1),
+    db
+      .from('team_members')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('tenant_id', tenantId),
+  ]);
+  return {
+    isCaptain: ((captainRes.data ?? []) as unknown[]).length > 0,
+    roles: ((membersRes.data ?? []) as Array<{ role: string | null }>).map(
+      (r) => r.role
+    ),
+    error: captainRes.error || membersRes.error,
+  };
+}
+
 export async function deletePrefRow(
   db: AdminDb,
   k: { userId: string; eventType: string; channel: string }
