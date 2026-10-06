@@ -18,6 +18,7 @@ export default {
   catBehavior: '🚨 Safety',
   catTechnical: '🛠️ Technical',
   catOther: '📬 Other',
+  catRosterUnlock: '🔓 Roster exception',
   statusOpen: 'Open',
   statusInProgress: 'In progress',
   statusResolved: 'Resolved',

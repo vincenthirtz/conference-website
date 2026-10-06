@@ -9,7 +9,12 @@
 import { adminRequest } from '@/utils/admin/adminHttp';
 
 export type TicketSeverity = 'low' | 'medium' | 'high';
-export type TicketCategory = 'dispute' | 'behavior' | 'technical' | 'other';
+export type TicketCategory =
+  | 'dispute'
+  | 'behavior'
+  | 'technical'
+  | 'other'
+  | 'roster_unlock';
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 export type TicketSource = 'web' | 'discord_bot';
 export type TicketReportedTargetType = 'player' | 'team' | 'org';
