@@ -205,6 +205,14 @@
 [functions."team-weekly-recap-cron"]
   schedule = "0 9 * * 1"
 
+# Scheduled function: levée des sanctions temporaires échues (blacklists joueurs
+# et entités). Toutes les heures à :23 — une entrée échue est déjà inactive pour
+# les vérifications (prédicat central), le cron bascule `active = false` et
+# journalise chaque levée (`blacklist_expired` / `entity_blacklist_expired`,
+# sans auteur staff). Requiert CRON_SECRET + URL.
+[functions."blacklist-expiry-cron"]
+  schedule = "23 * * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]

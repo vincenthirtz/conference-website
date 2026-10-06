@@ -99,8 +99,27 @@ const BL = '/api/admin/moderation/blacklist';
 const EBL = '/api/admin/moderation/entity-blacklist';
 const TICKETS = '/api/admin/support/tickets';
 
+const MOD_COMMENTS = '/api/admin/moderation/comments';
+
+export type CommentStatus = 'visible' | 'pending' | 'hidden';
+export type CommentBulkAction = 'show' | 'hide' | 'delete';
+
+export type CommentSettings = {
+  pre_moderation: boolean;
+  /** `false` : migration news_comments_moderation absente. */
+  status_available: boolean;
+  closure_available: boolean;
+  closed_articles: Array<{
+    id: string;
+    title: string | null;
+    slug: string | null;
+  }>;
+};
+
 export const moderationPaths = {
   comments: '/api/admin/comments',
+  /** File de modération (statut, actions en masse). */
+  moderatedComments: MOD_COMMENTS,
   disputes: '/api/admin/disputes',
   blacklist: BL,
   entityBlacklist: EBL,
@@ -132,14 +151,37 @@ export const moderationClient = {
       json: { id },
       idempotent: true,
     }),
+  bulkComments: (ids: string[], action: CommentBulkAction) =>
+    adminRequest<{ action: CommentBulkAction; affected: number }>(
+      MOD_COMMENTS,
+      { method: 'POST', json: { ids, action }, idempotent: true }
+    ),
+  commentSettings: () =>
+    adminRequest<CommentSettings>(`${MOD_COMMENTS}/settings`),
+  setPreModeration: (preModeration: boolean) =>
+    adminRequest<{ pre_moderation: boolean }>(`${MOD_COMMENTS}/settings`, {
+      method: 'PUT',
+      json: { pre_moderation: preModeration },
+      idempotent: true,
+    }),
+  setArticleCommentsClosed: (newsId: string, closed: boolean) =>
+    adminRequest<{ id: string; comments_closed: boolean }>(
+      `${MOD_COMMENTS}/settings`,
+      {
+        method: 'PATCH',
+        json: { news_id: newsId, comments_closed: closed },
+        idempotent: true,
+      }
+    ),
 
   // --- Blacklist joueurs
   blacklistAlerts: <A>(query: string) =>
     adminRequest<BlacklistAlertsPage<A>>(`${BL}/alerts?${query}`),
-  setBlacklistActive: (id: string, active: boolean) =>
+  /** `clearExpiry` : réactiver une sanction échue efface son échéance. */
+  setBlacklistActive: (id: string, active: boolean, clearExpiry = false) =>
     adminRequest(`${BL}/${encodeURIComponent(id)}`, {
       method: 'PATCH',
-      json: { active },
+      json: clearExpiry ? { active, expires_at: null } : { active },
       idempotent: true,
     }),
   updateBlacklistNotes: (id: string, patch: BlacklistNotesPatch) =>
@@ -155,10 +197,14 @@ export const moderationClient = {
     }),
 
   // --- Blacklist entités (équipes, organisations)
-  setEntityBlacklistActive: (id: string, active: boolean) =>
+  setEntityBlacklistActive: (
+    id: string,
+    active: boolean,
+    clearExpiry = false
+  ) =>
     adminRequest(`${EBL}/${encodeURIComponent(id)}`, {
       method: 'PATCH',
-      json: { active },
+      json: clearExpiry ? { active, expires_at: null } : { active },
       idempotent: true,
     }),
   updateEntityBlacklist: <R>(id: string, patch: Record<string, unknown>) =>

@@ -47,4 +47,6 @@ export default ns('newsDetail', {
   errCommentsClosed: 'Les commentaires sont fermés sur cet article.',
   errPublishGeneric: 'Erreur lors de la publication',
   published: 'Commentaire publié.',
+  pendingModeration:
+    'Merci ! Ton commentaire sera publié après relecture par l’équipe.',
 });

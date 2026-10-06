@@ -21,7 +21,7 @@ get:
         default: 50
   responses:
     '200':
-      description: Commentaires les plus recents en premier.
+      description: 'Commentaires VISIBLES les plus recents en premier (ni en attente de moderation, ni masques).'
       content:
         application/json:
           schema:
@@ -33,6 +33,9 @@ get:
                 type: array
                 items:
                   $ref: '#/components/schemas/NewsComment'
+              commentsClosed:
+                type: boolean
+                description: 'Commentaires fermes par le staff sur cet article : formulaire masque, liste lisible.'
     '400':
       $ref: '#/components/responses/BadRequest'
     '500':
@@ -45,6 +48,10 @@ post:
   description: |
     L'article cible (newsId) doit exister pour le tenant resolu ET etre
     publie : sinon 404 (inconnu) ou 403 (brouillon / commentaires fermes).
+
+    Si le tenant a active la pre-moderation (`site_settings`
+    `news_comments_moderation` = `pre`), le commentaire nait en attente et la
+    reponse porte `pending: true` ; sinon il est publie directement.
   security: []
   requestBody:
     required: true
@@ -64,6 +71,9 @@ post:
             properties:
               comment:
                 $ref: '#/components/schemas/NewsComment'
+              pending:
+                type: boolean
+                description: 'Present (true) si le commentaire attend une relecture avant publication.'
     '400':
       $ref: '#/components/responses/BadRequest'
     '403':

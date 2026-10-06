@@ -1,0 +1,85 @@
+get:
+  summary: File de modération des commentaires d'actualités (filtre statut, recherche, article).
+  operationId: adminListModeratedComments
+  description: |
+    Commentaires du tenant, récents d'abord, avec leur `status`
+    (`visible` | `pending` | `hidden`) et le nombre en attente
+    (`counts.pending`). Avant la migration `news_comments_moderation`,
+    `status_available` vaut false et tout est rendu `visible`.
+  x-zod-query: admin.moderation/comments.query
+  tags:
+    - admin/content
+  security:
+    - StaffSession: []
+  parameters:
+    - name: status
+      in: query
+      schema:
+        type: string
+        enum: [visible, pending, hidden]
+    - name: search
+      in: query
+      schema:
+        type: string
+    - name: news_id
+      in: query
+      schema:
+        type: string
+        format: uuid
+    - name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 30
+    - name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+  responses:
+    '200':
+      description: '`{ comments, total, counts: { pending }, status_available }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+post:
+  summary: Action en masse sur une sélection de commentaires (réafficher, masquer, supprimer).
+  operationId: adminBulkModerateComments
+  description: |
+    `show` repasse la sélection en `visible` (valide aussi les commentaires en
+    attente), `hide` la masque (réversible), `delete` la supprime. Au plus 100
+    identifiants, bornés au tenant courant. 503 pour `show` / `hide` tant que
+    la migration `news_comments_moderation` n'est pas appliquée.
+  tags:
+    - admin/content
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.moderation/comments.bulk
+  responses:
+    '200':
+      description: '`{ action, affected, ids }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'

@@ -8,6 +8,7 @@ import { ASSIGNMENT_COLUMNS } from '../_shared/staffAssignment';
 import type { TablesInsert, TablesUpdate } from '@/types/database.generated';
 import {
   BLACKLIST_ALERT_COLUMNS,
+  BLACKLIST_EXPIRY_COLUMN,
   ENTITY_BLACKLIST_COLUMNS,
   PLAYER_BLACKLIST_COLUMNS,
   SUPPORT_TICKET_LIST_COLUMNS,
@@ -18,14 +19,28 @@ type Page = { offset: number; limit: number };
 
 /* ---- Blacklist joueurs ---- */
 
+/**
+ * Filtres d'échéance (migration blacklist_expires_at) : `withExpiry` lit la
+ * colonne, `expiredBefore` (ISO) ne garde que les entrées échues. Le service
+ * relit sans eux si la colonne manque.
+ */
+type ExpiryFilters = { withExpiry: boolean; expiredBefore: string | null };
+
 export async function listPlayerBlacklist(
   db: AdminDb,
   tenantId: string,
-  f: Page & { searchPattern: string | null; active: boolean | null }
+  f: Page &
+    ExpiryFilters & { searchPattern: string | null; active: boolean | null }
 ) {
+  // Colonne hors du schéma généré (migration récente) : type de ligne gardé.
+  const columns = (
+    f.withExpiry
+      ? `${PLAYER_BLACKLIST_COLUMNS}, ${BLACKLIST_EXPIRY_COLUMN}`
+      : PLAYER_BLACKLIST_COLUMNS
+  ) as typeof PLAYER_BLACKLIST_COLUMNS;
   let query = db
     .from('player_blacklist')
-    .select(PLAYER_BLACKLIST_COLUMNS, { count: 'exact' })
+    .select(columns, { count: 'exact' })
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
     .range(f.offset, f.offset + f.limit - 1);
@@ -36,6 +51,9 @@ export async function listPlayerBlacklist(
     );
   }
   if (f.active !== null) query = query.eq('active', f.active);
+  if (f.withExpiry && f.expiredBefore) {
+    query = query.lte(BLACKLIST_EXPIRY_COLUMN as never, f.expiredBefore);
+  }
   const { data, error, count } = await query;
   return { rows: data ?? [], count, error };
 }
@@ -88,21 +106,30 @@ export async function deletePlayerBlacklist(
 export async function listEntityBlacklist(
   db: AdminDb,
   tenantId: string,
-  f: Page & {
-    namePattern: string | null;
-    active: boolean | null;
-    entityType: 'team' | 'org' | null;
-  }
+  f: Page &
+    ExpiryFilters & {
+      namePattern: string | null;
+      active: boolean | null;
+      entityType: 'team' | 'org' | null;
+    }
 ) {
+  const columns = (
+    f.withExpiry
+      ? `${ENTITY_BLACKLIST_COLUMNS}, ${BLACKLIST_EXPIRY_COLUMN}`
+      : ENTITY_BLACKLIST_COLUMNS
+  ) as typeof ENTITY_BLACKLIST_COLUMNS;
   let query = db
     .from('entity_blacklist')
-    .select(ENTITY_BLACKLIST_COLUMNS, { count: 'exact' })
+    .select(columns, { count: 'exact' })
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
     .range(f.offset, f.offset + f.limit - 1);
   if (f.namePattern) query = query.ilike('name', f.namePattern);
   if (f.active !== null) query = query.eq('active', f.active);
   if (f.entityType) query = query.eq('entity_type', f.entityType);
+  if (f.withExpiry && f.expiredBefore) {
+    query = query.lte(BLACKLIST_EXPIRY_COLUMN as never, f.expiredBefore);
+  }
   const { data, error, count } = await query;
   return { rows: data ?? [], count, error };
 }

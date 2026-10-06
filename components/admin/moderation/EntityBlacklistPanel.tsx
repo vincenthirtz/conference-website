@@ -31,6 +31,15 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminModerationEntityBlacklist from '@/lib/i18n/locales/admin-fr/adminModerationEntityBlacklist';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
+import { isBlacklistEntryExpired } from '@/utils/moderation/blacklistExpiry';
+import {
+  BlacklistExpiryChip,
+  BlacklistExpiryField,
+  EMPTY_EXPIRY,
+  ExpiredFilterOption,
+  expiryBody,
+  listFilterParams,
+} from './BlacklistExpiry';
 
 type EntityType = 'team' | 'org';
 
@@ -45,6 +54,7 @@ type EntityBlacklistEntry = {
   active: boolean;
   created_at: string;
   updated_at: string;
+  expires_at?: string | null;
 };
 
 const PAGE_SIZE = 50;
@@ -89,6 +99,9 @@ export default function EntityBlacklistPanel() {
   // Entrées : filtres serveur `search`/`active`/`entity_type` réactifs (portés
   // par l'URL). Le contrat renvoie toujours { items, total } → includeTotal
   // désactivé, le `total` du hook est lu directement dans le payload.
+  // `expiry_available` : migration blacklist_expires_at appliquée ?
+  const [expiryAvailable, setExpiryAvailable] = useState(true);
+  const [expiry, setExpiry] = useState(EMPTY_EXPIRY);
   const {
     data: entries,
     total,
@@ -103,16 +116,21 @@ export default function EntityBlacklistPanel() {
     hasMore,
   } = useAdminResource<
     EntityBlacklistEntry,
-    { items?: EntityBlacklistEntry[]; total?: number | null }
+    {
+      items?: EntityBlacklistEntry[];
+      total?: number | null;
+      expiry_available?: boolean;
+    }
   >(moderationPaths.entityBlacklist, {
     limit: PAGE_SIZE,
     includeTotal: false,
     params: {
       search: searchFilter,
-      active: activeFilter,
+      ...listFilterParams(activeFilter),
       entity_type: typeFilter,
     },
     select: (res) => res.items || [],
+    onData: (res) => setExpiryAvailable(res.expiry_available !== false),
   });
 
   // Formulaire d'ajout.
@@ -155,6 +173,7 @@ export default function EntityBlacklistPanel() {
       };
       if (form.reason.trim()) body.reason = form.reason.trim();
       if (form.notes.trim()) body.notes = form.notes.trim();
+      Object.assign(body, expiryBody(expiry));
 
       await createMutateJson(moderationPaths.entityBlacklist, {
         method: 'POST',
@@ -167,6 +186,7 @@ export default function EntityBlacklistPanel() {
         reason: '',
         notes: '',
       });
+      setExpiry(EMPTY_EXPIRY);
       fetchEntries();
     } catch (err) {
       addToast((err as Error).message, 'error');
@@ -177,15 +197,28 @@ export default function EntityBlacklistPanel() {
 
   async function toggleActive(entry: EntityBlacklistEntry) {
     setBusyId(entry.id);
+    // Réactiver une sanction échue efface son échéance (sinon le cron la
+    // relèverait au passage suivant).
+    const clearExpiry = !entry.active && isBlacklistEntryExpired(entry);
     try {
-      await moderationClient.setEntityBlacklistActive(entry.id, !entry.active);
+      await moderationClient.setEntityBlacklistActive(
+        entry.id,
+        !entry.active,
+        clearExpiry
+      );
       addToast(
         entry.active ? tx.entryDeactivated : tx.entryReactivated,
         'success'
       );
       mutateEntries((prev) =>
         prev.map((e) =>
-          e.id === entry.id ? { ...e, active: !entry.active } : e
+          e.id === entry.id
+            ? {
+                ...e,
+                active: !entry.active,
+                ...(clearExpiry ? { expires_at: null } : {}),
+              }
+            : e
         )
       );
     } catch (err) {
@@ -336,6 +369,11 @@ export default function EntityBlacklistPanel() {
             maxLength={2000}
           />
         </div>
+        <BlacklistExpiryField
+          value={expiry}
+          onChange={setExpiry}
+          available={expiryAvailable}
+        />
         <div className="flex justify-end">
           <AdminButton
             variant="danger"
@@ -390,6 +428,7 @@ export default function EntityBlacklistPanel() {
           <option value="">{tx.filterAllStatus}</option>
           <option value="true">{tx.filterActive}</option>
           <option value="false">{tx.filterInactive}</option>
+          {expiryAvailable && <ExpiredFilterOption />}
         </select>
 
         <AdminButton variant="ghost" size="sm" onClick={fetchEntries}>
@@ -438,6 +477,7 @@ export default function EntityBlacklistPanel() {
                           <Chip tone={entry.active ? 'err' : 'neutral'}>
                             {entry.active ? tx.statusActive : tx.statusInactive}
                           </Chip>
+                          <BlacklistExpiryChip expiresAt={entry.expires_at} />
                           <span className="text-xs text-neutral-500">
                             {formatDateFr(entry.created_at)}
                           </span>

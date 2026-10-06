@@ -32,6 +32,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { emitBotEvent } from '@/utils/botEvents';
 import { logger } from '@/utils/logger';
+import { isBlacklistEntryEffective } from './blacklistExpiry';
+import { isMissingColumnError } from './missingColumn';
 
 export type EntityBlacklistEntityType = 'team' | 'org';
 
@@ -65,6 +67,7 @@ type EntityBlacklistRow = {
   entity_type: EntityBlacklistEntityType;
   name: string;
   reason: string | null;
+  expires_at?: string | null;
 };
 
 /**
@@ -97,19 +100,31 @@ export async function checkEntityBlacklist(
   try {
     // Fetch en bloc puis matching en JS : la liste est petite (limit 500) et
     // on évite l'escaping PostgREST (%/_/virgules) sur des noms libres.
-    const { data, error } = await supabaseAdmin
-      .from('entity_blacklist')
-      .select('id, entity_type, name, reason')
-      .eq('tenant_id', tenantId)
-      .eq('active', true)
-      .limit(500);
+    // Une entrée échue (`expires_at` passé) ne matche plus, même avant le
+    // passage du cron. Avant la migration : relecture sans la colonne.
+    const run = (columns: string) =>
+      supabaseAdmin
+        .from('entity_blacklist')
+        .select(columns)
+        .eq('tenant_id', tenantId)
+        .eq('active', true)
+        .limit(500);
+    let { data, error } = await run(
+      'id, entity_type, name, reason, expires_at'
+    );
+    if (error && isMissingColumnError(error, 'expires_at')) {
+      ({ data, error } = await run('id, entity_type, name, reason'));
+    }
 
     if (error) {
       logger.warn('[entityBlacklist] checkEntityBlacklist query error', error);
       return { matched: false, entries: [] };
     }
 
-    const rows = (data ?? []) as EntityBlacklistRow[];
+    const now = new Date();
+    const rows = ((data ?? []) as unknown as EntityBlacklistRow[]).filter(
+      (row) => isBlacklistEntryEffective(row, now)
+    );
     const byId = new Map<string, EntityBlacklistMatch>();
 
     for (const row of rows) {

@@ -186,6 +186,8 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   delete_announcement: 'Suppression annonce',
   update_comment: 'Modification commentaire',
   delete_comment: 'Suppression commentaire',
+  moderate_comments: 'Modération de commentaires (sélection)',
+  update_comment_settings: 'Réglages des commentaires',
   // Discord / webhooks / bot
   update_discord_webhook: 'Webhook Discord modifié',
   delete_discord_webhook: 'Webhook Discord supprimé',
@@ -242,6 +244,8 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   entity_blacklist_add: 'Ajout blacklist entité',
   entity_blacklist_update: 'Modification blacklist entité',
   entity_blacklist_remove: 'Suppression blacklist entité',
+  blacklist_expired: 'Sanction joueur levée (échéance)',
+  entity_blacklist_expired: 'Sanction entité levée (échéance)',
   support_ticket_convert_blacklist: 'Conversion signalement → blacklist',
   // TCG (cartes joueuses)
   tcg_photo_approve: 'Photo de carte TCG approuvée',

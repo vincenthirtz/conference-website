@@ -83,4 +83,18 @@ export default adminNs('adminModerationBlacklist', {
   deleteFallbackLabel: 'cette entrée',
   entryDeleted: 'Entrée supprimée.',
   playerTagPlaceholder: 'Joueur#1234',
+  // Sanctions temporaires (partagé avec la blacklist entités)
+  expiryLabel: 'Durée',
+  expiryPermanent: 'Sans échéance',
+  expiryDays_one: '{count} jour',
+  expiryDays_other: '{count} jours',
+  expiryCustom: 'Jusqu’au…',
+  expiryDateLabel: 'Date de fin',
+  expiryUnavailable:
+    'Sanctions temporaires indisponibles : la migration blacklist_expires_at n’est pas appliquée.',
+  filterExpired: 'Expirées',
+  /** Interpole `{date}`. */
+  expiresOn: 'Jusqu’au {date}',
+  /** Interpole `{date}`. */
+  expiredOn: 'Expirée le {date}',
 });

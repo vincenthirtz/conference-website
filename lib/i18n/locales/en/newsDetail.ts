@@ -48,4 +48,6 @@ export default {
   errCommentsClosed: 'Comments are closed on this article.',
   errPublishGeneric: 'Error during publication',
   published: 'Comment published.',
+  pendingModeration:
+    'Thanks! Your comment will be published once the team has reviewed it.',
 };

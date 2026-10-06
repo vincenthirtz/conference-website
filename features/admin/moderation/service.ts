@@ -27,6 +27,12 @@ import {
   setAssignment,
   withAssignmentFallback,
 } from '../_shared/staffAssignment';
+import {
+  assertExpiryWritable,
+  expiredBeforeFilter,
+  expiryPatch,
+  withExpiryFallback,
+} from './blacklistExpiry';
 import * as repo from './repository';
 import { notifyTicketReporter } from './supportNotify';
 import {
@@ -82,20 +88,26 @@ export async function listPlayerBlacklist(
   page: Page
 ) {
   const search = sanitizeSearch(query.search as string | string[] | undefined);
-  const { rows, count, error } = await repo.listPlayerBlacklist(
-    ctx.db,
-    ctx.tenantId,
-    {
-      ...page,
-      searchPattern: search ? `%${escapePostgrestValue(search)}%` : null,
-      active: activeFilter(query.active),
-    }
+  const expiredBefore = expiredBeforeFilter(query.expired);
+  const { rows, count, error, expiryAvailable } = await withExpiryFallback(
+    (withExpiry) =>
+      repo.listPlayerBlacklist(ctx.db, ctx.tenantId, {
+        ...page,
+        searchPattern: search ? `%${escapePostgrestValue(search)}%` : null,
+        active: activeFilter(query.active),
+        withExpiry,
+        expiredBefore,
+      })
   );
   if (error) {
     ctx.logger.error('[admin/blacklist] list error', error);
     throw new AdminError(500, 'internal', 'Failed to load the blacklist.');
   }
-  return { items: rows, total: typeof count === 'number' ? count : null };
+  return {
+    items: rows,
+    total: typeof count === 'number' ? count : null,
+    expiry_available: expiryAvailable,
+  };
 }
 
 export async function addPlayerToBlacklist(
@@ -103,6 +115,7 @@ export async function addPlayerToBlacklist(
   rawBody: unknown
 ) {
   const body = parseWithLegacyFields(BlacklistCreateBody, rawBody ?? {});
+  const expiry = expiryPatch(body, { creating: true });
   const insertPayload = {
     tenant_id: ctx.tenantId,
     battle_tag: normalizeBattleTag(body.battle_tag),
@@ -112,11 +125,14 @@ export async function addPlayerToBlacklist(
     notes: nullableText(body.notes),
     banned_by: authUserId(ctx),
     active: true,
+    // Clé absente si aucune échéance : l'insert reste valide avant migration.
+    ...expiry,
   };
   const { row, error } = await repo.insertPlayerBlacklist(
     ctx.db,
     insertPayload
   );
+  assertExpiryWritable(error, expiry);
   if (error || !row) {
     ctx.logger.error('[admin/blacklist] create error', error);
     throw new AdminError(
@@ -135,6 +151,7 @@ export async function addPlayerToBlacklist(
         display_name: insertPayload.display_name,
         discord_user_id: insertPayload.discord_user_id,
         reason: insertPayload.reason,
+        ...expiry,
       },
     },
   } satisfies Audited<unknown>;
@@ -146,7 +163,8 @@ export async function updatePlayerBlacklistEntry(
   rawBody: unknown
 ) {
   const body = parseWithLegacyFields(BlacklistUpdateBody, rawBody ?? {});
-  const updatePayload: Record<string, unknown> = {};
+  const expiry = expiryPatch(body, { creating: false });
+  const updatePayload: Record<string, unknown> = { ...expiry };
   if (body.reason !== undefined)
     updatePayload.reason = nullableText(body.reason);
   if (body.notes !== undefined) updatePayload.notes = nullableText(body.notes);
@@ -158,6 +176,7 @@ export async function updatePlayerBlacklistEntry(
     id,
     updatePayload as TablesUpdate<'player_blacklist'>
   );
+  assertExpiryWritable(error, expiry);
   if (error) {
     ctx.logger.error('[admin/blacklist/id] update error', error);
     throw new AdminError(
@@ -212,16 +231,18 @@ export async function listEntityBlacklist(
 ) {
   const search = sanitizeSearch(query.search as string | string[] | undefined);
   const entityType = query.entity_type;
-  const { rows, count, error } = await repo.listEntityBlacklist(
-    ctx.db,
-    ctx.tenantId,
-    {
-      ...page,
-      namePattern: search ? `%${escapePostgrestValue(search)}%` : null,
-      active: activeFilter(query.active),
-      entityType:
-        entityType === 'team' || entityType === 'org' ? entityType : null,
-    }
+  const expiredBefore = expiredBeforeFilter(query.expired);
+  const { rows, count, error, expiryAvailable } = await withExpiryFallback(
+    (withExpiry) =>
+      repo.listEntityBlacklist(ctx.db, ctx.tenantId, {
+        ...page,
+        namePattern: search ? `%${escapePostgrestValue(search)}%` : null,
+        active: activeFilter(query.active),
+        entityType:
+          entityType === 'team' || entityType === 'org' ? entityType : null,
+        withExpiry,
+        expiredBefore,
+      })
   );
   if (error) {
     ctx.logger.error('[admin/entity-blacklist] list error', error);
@@ -231,7 +252,11 @@ export async function listEntityBlacklist(
       'Failed to load the entity blacklist.'
     );
   }
-  return { items: rows, total: typeof count === 'number' ? count : null };
+  return {
+    items: rows,
+    total: typeof count === 'number' ? count : null,
+    expiry_available: expiryAvailable,
+  };
 }
 
 export async function addEntityToBlacklist(
@@ -239,6 +264,7 @@ export async function addEntityToBlacklist(
   rawBody: unknown
 ) {
   const body = parseWithLegacyFields(EntityBlacklistCreateBody, rawBody ?? {});
+  const expiry = expiryPatch(body, { creating: true });
   const insertPayload = {
     tenant_id: ctx.tenantId,
     entity_type: body.entity_type,
@@ -249,11 +275,13 @@ export async function addEntityToBlacklist(
     notes: nullableText(body.notes),
     banned_by: authUserId(ctx),
     active: true,
+    ...expiry,
   };
   const { row, error } = await repo.insertEntityBlacklist(
     ctx.db,
     insertPayload
   );
+  assertExpiryWritable(error, expiry);
   if (error || !row) {
     ctx.logger.error('[admin/entity-blacklist] create error', error);
     throw new AdminError(
@@ -271,6 +299,7 @@ export async function addEntityToBlacklist(
         entity_type: insertPayload.entity_type,
         name: insertPayload.name,
         reason: insertPayload.reason,
+        ...expiry,
       },
     },
   } satisfies Audited<unknown>;
@@ -282,7 +311,8 @@ export async function updateEntityBlacklistEntry(
   rawBody: unknown
 ) {
   const body = parseWithLegacyFields(EntityBlacklistUpdateBody, rawBody ?? {});
-  const updatePayload: Record<string, unknown> = {};
+  const expiry = expiryPatch(body, { creating: false });
+  const updatePayload: Record<string, unknown> = { ...expiry };
   if (body.name !== undefined) updatePayload.name = body.name;
   if (body.entity_type !== undefined)
     updatePayload.entity_type = body.entity_type;
@@ -297,6 +327,7 @@ export async function updateEntityBlacklistEntry(
     id,
     updatePayload as TablesUpdate<'entity_blacklist'>
   );
+  assertExpiryWritable(error, expiry);
   if (error) {
     ctx.logger.error('[admin/entity-blacklist/id] update error', error);
     throw new AdminError(

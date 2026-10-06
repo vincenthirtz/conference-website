@@ -22,6 +22,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { emitBotEvent } from '@/utils/botEvents';
 import { logger } from '@/utils/logger';
+import { isBlacklistEntryEffective } from './blacklistExpiry';
+import { isMissingColumnError } from './missingColumn';
 
 export type BlacklistMatchedOn =
   | 'battle_tag'
@@ -77,10 +79,11 @@ type BlacklistRow = {
   display_name: string | null;
   discord_user_id: string | null;
   reason: string | null;
+  expires_at?: string | null;
 };
 
 /**
- * Matche `input` contre les entrées `active` du tenant.
+ * Matche `input` contre les entrées `active` et non échues du tenant.
  *
  * - battle_tag : égalité sur valeur lowercase/trim (match FORT).
  * - discord_user_id : égalité exacte (match FORT).
@@ -125,19 +128,34 @@ export async function checkBlacklist(
       orClauses.push(`display_name.ilike.${escapeOrValue(displayName)}`);
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('player_blacklist')
-      .select('id, battle_tag, display_name, discord_user_id, reason')
-      .eq('tenant_id', tenantId)
-      .eq('active', true)
-      .or(orClauses.join(','));
+    // `expires_at` (sanction temporaire) : une entrée échue ne matche plus,
+    // même avant le passage du cron (prédicat central). Avant la migration,
+    // la colonne manque : relecture sans elle.
+    const run = (columns: string) =>
+      supabaseAdmin
+        .from('player_blacklist')
+        .select(columns)
+        .eq('tenant_id', tenantId)
+        .eq('active', true)
+        .or(orClauses.join(','));
+    let { data, error } = await run(
+      'id, battle_tag, display_name, discord_user_id, reason, expires_at'
+    );
+    if (error && isMissingColumnError(error, 'expires_at')) {
+      ({ data, error } = await run(
+        'id, battle_tag, display_name, discord_user_id, reason'
+      ));
+    }
 
     if (error) {
       logger.warn('[blacklist] checkBlacklist query error', error);
       return { matched: false, entries: [] };
     }
 
-    const rows = (data ?? []) as BlacklistRow[];
+    const now = new Date();
+    const rows = ((data ?? []) as unknown as BlacklistRow[]).filter((row) =>
+      isBlacklistEntryEffective(row, now)
+    );
     const byId = new Map<string, BlacklistMatch>();
 
     for (const row of rows) {

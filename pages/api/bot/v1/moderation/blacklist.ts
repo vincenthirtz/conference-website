@@ -24,6 +24,8 @@ import { requireBotStaff } from '@/utils/botActor';
 import { discordIdSchema, uuidSchema } from '@/utils/botValidation';
 import { formatZodError } from '@/utils/validation';
 import { logger } from '@/utils/logger';
+import { isBlacklistEntryEffective } from '@/utils/moderation/blacklistExpiry';
+import { isMissingColumnError } from '@/utils/moderation/missingColumn';
 
 /** Normalise un battletag pour le stockage (lowercase + trim). */
 function normalizeBattleTag(value: string | null | undefined): string | null {
@@ -73,19 +75,39 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
   const tenantId = req.botContext.tenantId;
 
   if (req.method === 'GET') {
-    const { data, error } = await supabaseAdmin
-      .from('player_blacklist')
-      .select('id, battle_tag, display_name, discord_user_id, reason')
-      .eq('tenant_id', tenantId)
-      .eq('active', true)
-      .order('created_at', { ascending: false });
+    // Sanction temporaire échue = inactive, même avant le cron (prédicat
+    // central, utils/moderation/blacklistExpiry). Forme de réponse inchangée :
+    // l'entrée disparaît simplement de la liste. Repli sans `expires_at` tant
+    // que la migration n'est pas appliquée.
+    const run = (columns: string) =>
+      supabaseAdmin
+        .from('player_blacklist')
+        .select(columns)
+        .eq('tenant_id', tenantId)
+        .eq('active', true)
+        .order('created_at', { ascending: false });
+    let { data, error } = await run(
+      'id, battle_tag, display_name, discord_user_id, reason, expires_at'
+    );
+    if (error && isMissingColumnError(error, 'expires_at')) {
+      ({ data, error } = await run(
+        'id, battle_tag, display_name, discord_user_id, reason'
+      ));
+    }
 
     if (error) {
       logger.error('[bot/moderation/blacklist] list error', error);
       return res.status(500).json({ error: 'Erreur de lecture' });
     }
 
-    const blacklist = (data ?? []).map((row) => {
+    const now = new Date();
+    const effective = (
+      (data ?? []) as unknown as Array<{
+        expires_at?: string | null;
+      }>
+    ).filter((row) => isBlacklistEntryEffective(row, now));
+
+    const blacklist = effective.map((row) => {
       const r = row as {
         id: string;
         battle_tag: string | null;

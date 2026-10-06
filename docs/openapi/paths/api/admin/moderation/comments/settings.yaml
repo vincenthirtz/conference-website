@@ -1,0 +1,86 @@
+get:
+  summary: Réglages des commentaires (pré-modération, articles fermés).
+  operationId: adminGetCommentSettings
+  description: |
+    `{ pre_moderation, status_available, closure_available, closed_articles }`.
+    `pre_moderation` vient de `site_settings` (`news_comments_moderation` =
+    `pre`) ; par défaut, publication directe.
+  tags:
+    - admin/content
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Réglages du tenant courant.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+put:
+  summary: Active ou désactive la pré-modération des commentaires du tenant.
+  operationId: adminUpdateCommentSettings
+  description: |
+    Activée, les nouveaux commentaires naissent `pending` et n'apparaissent
+    qu'une fois validés. 503 si la migration `news_comments_moderation`
+    n'est pas appliquée.
+  tags:
+    - admin/content
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.moderation/comments/settings.update
+  responses:
+    '200':
+      description: '`{ pre_moderation }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+patch:
+  summary: Ferme ou rouvre les commentaires d'un article.
+  operationId: adminSetArticleCommentsClosed
+  description: |
+    Fermé, l'article refuse les nouveaux commentaires (403 `COMMENTS_CLOSED`)
+    et masque le formulaire ; les commentaires existants restent lisibles.
+  tags:
+    - admin/content
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.moderation/comments/settings.closure
+  responses:
+    '200':
+      description: '`{ id, title, comments_closed }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

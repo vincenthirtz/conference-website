@@ -1,0 +1,54 @@
+get:
+  tags:
+    - cron
+  summary: Levée des sanctions temporaires échues (blacklists joueurs et entités).
+  operationId: cronBlacklistExpiryGet
+  description: |
+    Netlify scheduled function (toutes les heures, :23 UTC). Une entrée de
+    blacklist dont `expires_at` est passé est déjà inactive pour les
+    vérifications (prédicat central) ; ce cron bascule `active = false` (écriture
+    conditionnelle) et journalise chaque levée dans `staff_logs`
+    (`blacklist_expired` / `entity_blacklist_expired`, `staff_id` null,
+    `payload.automatic`).
+
+    Avant la migration `blacklist_expires_at` : `error: migration_pending`, 200.
+
+    Query : `?dry_run=1` compte les entrées échues sans rien écrire.
+
+    Auth : `Authorization: Bearer <CRON_SECRET>` OU `?secret=<CRON_SECRET>`.
+  security:
+    - CronSecret: []
+  parameters:
+    - name: dry_run
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: ['1', 'true']
+  responses:
+    '200':
+      description: '`{ players: { candidates, expired, error? }, entities: { candidates, expired, error? }, dry_run }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+post:
+  tags:
+    - cron
+  summary: Levée des sanctions temporaires échues (identique au GET).
+  operationId: cronBlacklistExpiryPost
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Voir le GET.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'

@@ -95,6 +95,7 @@ import { PoleMemberIdQuery } from '../../../features/admin/pole-members/schemas'
 import { CastMemberIdQuery } from '../../../features/admin/cast-members/schemas';
 import {
   AssignTaskBody,
+  BoardDetailQuery,
   BoardIdQuery,
   ChecklistItemIdQuery,
   ColumnIdQuery,
@@ -140,6 +141,10 @@ import {
   BlacklistEntryIdQuery,
   BlacklistListQuery,
   BlacklistUpdateDoc,
+  CommentArticleClosureBody,
+  CommentBulkBody,
+  CommentModerationListQuery,
+  CommentSettingsBody,
   ConvertBlacklistDoc,
   ConvertTicketIdQuery,
   EntityBlacklistCreateDoc,
@@ -570,6 +575,15 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
     schema: EntityBlacklistUpdateDoc,
     io: 'input',
   },
+  'admin.moderation/comments.bulk': { schema: CommentBulkBody, io: 'input' },
+  'admin.moderation/comments/settings.update': {
+    schema: CommentSettingsBody,
+    io: 'input',
+  },
+  'admin.moderation/comments/settings.closure': {
+    schema: CommentArticleClosureBody,
+    io: 'input',
+  },
   'admin.support/tickets/[id].update': {
     schema: SupportTicketPatchBody,
     io: 'input',
@@ -941,6 +955,10 @@ export const ADMIN_FEATURE_QUERY_SCHEMAS: Record<string, ApiContractEntry> = {
   // sous-routes (move, assign, restore, comments, checklist, activity).
   'admin.tasks/boards.query': { schema: ListBoardsQuery, io: 'input' },
   'admin.tasks/boards/[id].query': { schema: BoardIdQuery, io: 'input' },
+  'admin.tasks/boards/[id].get.query': {
+    schema: BoardDetailQuery,
+    io: 'input',
+  },
   'admin.tasks/columns/[id].query': { schema: ColumnIdQuery, io: 'input' },
   'admin.tasks/tasks/[id].query': { schema: TaskIdQuery, io: 'input' },
   'admin.tasks/labels/[id].query': { schema: LabelIdQuery, io: 'input' },
@@ -976,6 +994,10 @@ export const ADMIN_FEATURE_QUERY_SCHEMAS: Record<string, ApiContractEntry> = {
   },
   'admin.moderation/entity-blacklist.query': {
     schema: EntityBlacklistListQuery,
+    io: 'input',
+  },
+  'admin.moderation/comments.query': {
+    schema: CommentModerationListQuery,
     io: 'input',
   },
   'admin.support/tickets.query': {

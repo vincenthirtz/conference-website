@@ -3,6 +3,11 @@ import { supabaseAdmin, getServerClient } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { verifyCaptcha } from '@/utils/captcha';
 import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
+import { isMissingColumnError } from '@/utils/moderation/missingColumn';
+import {
+  getCommentModerationMode,
+  initialCommentStatus,
+} from '@/utils/moderation/newsComments';
 
 import { logger } from '../../../utils/logger';
 type Comment = {
@@ -19,9 +24,13 @@ type Comment = {
  * plus être affiché tel quel (il l'était, en français, dans une interface
  * pouvant être en anglais).
  */
-type ListResponse = { items: Comment[] } | { error: string; code?: string };
+type ListResponse =
+  | { items: Comment[]; commentsClosed?: boolean }
+  | { error: string; code?: string };
 
-type CreateResponse = { comment: Comment } | { error: string; code?: string };
+type CreateResponse =
+  | { comment: Comment; pending?: boolean }
+  | { error: string; code?: string };
 
 export default async function handler(
   req: NextApiRequest,
@@ -57,13 +66,32 @@ async function listComments(
 
   const tenantId = await resolveTenantIdForPublicRequestAsync(req);
 
-  const { data, error } = await client
-    .from('news_comments')
-    .select('id, news_id, author_name, content, created_at')
-    .eq('news_id', newsId)
-    .eq('tenant_id', tenantId)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+  // Seuls les commentaires VISIBLES sont publics : ni ceux en attente de
+  // pré-modération, ni ceux masqués par le staff. Deux `neq` plutôt qu'un
+  // `eq('visible')` : même résultat sur une colonne NOT NULL, et une ligne
+  // sans statut (avant migration) reste lisible. Colonne absente → relecture
+  // sans filtre (tout était publié avant la migration).
+  const base = () =>
+    client
+      .from('news_comments')
+      .select('id, news_id, author_name, content, created_at')
+      .eq('news_id', newsId)
+      .eq('tenant_id', tenantId);
+  const [listed, closure] = await Promise.all([
+    (async () => {
+      const first = await base()
+        .neq('status' as never, 'pending')
+        .neq('status' as never, 'hidden')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (first.error && isMissingColumnError(first.error, 'status')) {
+        return base().order('created_at', { ascending: false }).limit(limit);
+      }
+      return first;
+    })(),
+    readCommentsClosed(client, newsId, tenantId),
+  ]);
+  const { data, error } = listed;
 
   if (error) {
     logger.error('[/api/news/comments] list error:', error);
@@ -85,7 +113,39 @@ async function listComments(
     'Netlify-CDN-Cache-Control',
     'public, s-maxage=60, stale-while-revalidate=30'
   );
-  return res.status(200).json({ items: data || [] });
+  // `commentsClosed` : le formulaire disparaît sur un article fermé (les
+  // commentaires existants restent lisibles).
+  return res
+    .status(200)
+    .json({ items: data || [], commentsClosed: closure === true });
+}
+
+type CommentsClient = NonNullable<typeof supabaseAdmin>;
+
+/**
+ * `news.comments_closed` de l'article (null si illisible). Colonne absente
+ * avant la migration : jamais fermé.
+ */
+async function readCommentsClosed(
+  client: CommentsClient,
+  newsId: string,
+  tenantId: string
+): Promise<boolean | null> {
+  const { data, error } = await client
+    .from('news')
+    .select('comments_closed' as 'id')
+    .eq('id', newsId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+  if (error) {
+    if (!isMissingColumnError(error, 'comments_closed')) {
+      logger.warn('[/api/news/comments] closure lookup error:', error);
+    }
+    return null;
+  }
+  return (
+    (data as { comments_closed?: boolean } | null)?.comments_closed === true
+  );
 }
 
 async function createComment(
@@ -187,22 +247,55 @@ async function createComment(
       code: 'COMMENTS_CLOSED',
     });
   }
+  // Interrupteur staff « commentaires fermés » sur l'article.
+  if ((await readCommentsClosed(client, trimmedNewsId, tenantId)) === true) {
+    return res.status(403).json({
+      error: 'Comments are closed on this article',
+      code: 'COMMENTS_CLOSED',
+    });
+  }
 
-  const { data, error } = await client
-    .from('news_comments')
-    .insert({
-      news_id: trimmedNewsId,
-      content: trimmedContent,
-      author_name: trimmedAuthor,
-      tenant_id: tenantId,
-    })
-    .select('id, news_id, author_name, content, created_at')
-    .maybeSingle();
+  // Pré-modération (réglage du tenant) : le commentaire naît `pending` et
+  // n'apparaît qu'une fois validé. Par défaut, publication directe : la clé
+  // `status` est alors omise (défaut base `visible`), ce qui garde l'insert
+  // valide avant la migration.
+  const pending =
+    initialCommentStatus(await getCommentModerationMode(tenantId)) ===
+    'pending';
+  const row = {
+    news_id: trimmedNewsId,
+    content: trimmedContent,
+    author_name: trimmedAuthor,
+    tenant_id: tenantId,
+  };
+  const insert = (payload: typeof row) =>
+    client
+      .from('news_comments')
+      .insert(payload)
+      .select('id, news_id, author_name, content, created_at')
+      .maybeSingle();
+  let { data, error } = await insert(
+    pending ? ({ ...row, status: 'pending' } as typeof row) : row
+  );
+  let held = pending;
+  if (pending && error && isMissingColumnError(error, 'status')) {
+    // Pré-modération réglée mais migration absente : on publie plutôt que de
+    // perdre le commentaire, et on le signale.
+    logger.warn(
+      '[/api/news/comments] pre-moderation set but status column missing'
+    );
+    ({ data, error } = await insert(row));
+    held = false;
+  }
 
   if (error || !data) {
     logger.error('[/api/news/comments] create error:', error);
     return res.status(500).json({ error: 'Failed to create comment' });
   }
 
-  return res.status(201).json({ comment: data });
+  // `pending: true` : le client n'affiche pas le commentaire, il annonce
+  // qu'il sera publié après relecture.
+  return res
+    .status(201)
+    .json(held ? { comment: data, pending: true } : { comment: data });
 }

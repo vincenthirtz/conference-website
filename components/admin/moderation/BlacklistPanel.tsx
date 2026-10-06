@@ -26,6 +26,15 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminModerationBlacklist from '@/lib/i18n/locales/admin-fr/adminModerationBlacklist';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
+import { isBlacklistEntryExpired } from '@/utils/moderation/blacklistExpiry';
+import {
+  BlacklistExpiryChip,
+  BlacklistExpiryField,
+  EMPTY_EXPIRY,
+  ExpiredFilterOption,
+  expiryBody,
+  listFilterParams,
+} from './BlacklistExpiry';
 
 type BlacklistEntry = {
   id: string;
@@ -37,6 +46,7 @@ type BlacklistEntry = {
   banned_by: string | null;
   active: boolean;
   created_at: string;
+  expires_at?: string | null;
 };
 
 type AlertStrength = 'strong' | 'soft';
@@ -106,6 +116,8 @@ export default function BlacklistPanel() {
   // `total` gardé en local (via onData) pour permettre son décrément optimiste
   // à la suppression — le hook n'expose que `data`.
   const [total, setTotal] = useState<number | null>(null);
+  const [expiryAvailable, setExpiryAvailable] = useState(true);
+  const [expiry, setExpiry] = useState(EMPTY_EXPIRY);
 
   // Entrées : filtres serveur `search`/`active` réactifs (portés par l'URL).
   // `total` revient toujours dans le payload → includeTotal:false garde la
@@ -129,13 +141,16 @@ export default function BlacklistPanel() {
     hasMore,
   } = useAdminResource<
     BlacklistEntry,
-    { items?: BlacklistEntry[]; total?: number }
+    { items?: BlacklistEntry[]; total?: number; expiry_available?: boolean }
   >(moderationPaths.blacklist, {
     limit: 50,
     includeTotal: false,
-    params: { search: searchFilter, active: activeFilter },
+    params: { search: searchFilter, ...listFilterParams(activeFilter) },
     select: (res) => res.items || [],
-    onData: (res) => setTotal(typeof res.total === 'number' ? res.total : null),
+    onData: (res) => {
+      setTotal(typeof res.total === 'number' ? res.total : null);
+      setExpiryAvailable(res.expiry_available !== false);
+    },
   });
 
   // Formulaire d'ajout.
@@ -204,6 +219,7 @@ export default function BlacklistPanel() {
         body.discord_user_id = form.discord_user_id.trim();
       if (form.reason.trim()) body.reason = form.reason.trim();
       if (form.notes.trim()) body.notes = form.notes.trim();
+      Object.assign(body, expiryBody(expiry));
 
       await createMutateJson(moderationPaths.blacklist, {
         method: 'POST',
@@ -217,6 +233,7 @@ export default function BlacklistPanel() {
         reason: '',
         notes: '',
       });
+      setExpiry(EMPTY_EXPIRY);
       await fetchEntries();
     } catch (err) {
       addToast((err as Error).message, 'error');
@@ -227,15 +244,28 @@ export default function BlacklistPanel() {
 
   async function toggleActive(entry: BlacklistEntry) {
     setBusyId(entry.id);
+    // Réactiver une sanction échue la rend définitive (échéance effacée) :
+    // sinon le cron la relèverait au passage suivant.
+    const clearExpiry = !entry.active && isBlacklistEntryExpired(entry);
     try {
-      await moderationClient.setBlacklistActive(entry.id, !entry.active);
+      await moderationClient.setBlacklistActive(
+        entry.id,
+        !entry.active,
+        clearExpiry
+      );
       addToast(
         entry.active ? tx.entryDeactivated : tx.entryReactivated,
         'success'
       );
       mutateEntries((prev) =>
         prev.map((e) =>
-          e.id === entry.id ? { ...e, active: !entry.active } : e
+          e.id === entry.id
+            ? {
+                ...e,
+                active: !entry.active,
+                ...(clearExpiry ? { expires_at: null } : {}),
+              }
+            : e
         )
       );
     } catch (err) {
@@ -360,6 +390,11 @@ export default function BlacklistPanel() {
             placeholder={tx.notesPlaceholder}
           />
         </div>
+        <BlacklistExpiryField
+          value={expiry}
+          onChange={setExpiry}
+          available={expiryAvailable}
+        />
         <div className="flex justify-end">
           <AdminButton
             variant="danger"
@@ -401,6 +436,7 @@ export default function BlacklistPanel() {
           <option value="">{tx.filterAllStatus}</option>
           <option value="true">{tx.filterActive}</option>
           <option value="false">{tx.filterInactive}</option>
+          {expiryAvailable && <ExpiredFilterOption />}
         </select>
 
         <AdminButton variant="ghost" size="sm" onClick={fetchEntries}>
@@ -445,6 +481,7 @@ export default function BlacklistPanel() {
                           <Chip tone={entry.active ? 'err' : 'neutral'}>
                             {entry.active ? tx.statusActive : tx.statusInactive}
                           </Chip>
+                          <BlacklistExpiryChip expiresAt={entry.expires_at} />
                           <span className="text-xs text-neutral-500">
                             {formatDateFr(entry.created_at)}
                           </span>

@@ -327,6 +327,8 @@ function Comments({ newsId }: { newsId: string }) {
   const [captchaToken, setCaptchaToken] = useState('');
   const [captchaQuestion, setCaptchaQuestion] = useState('');
   const [captchaAnswer, setCaptchaAnswer] = useState('');
+  // Fermés par le staff : plus de formulaire, la liste reste lisible.
+  const [commentsClosed, setCommentsClosed] = useState(false);
   const { addToast } = useToast();
   const idempotencyKeyRef = useRef<string>(genIdempotencyKey());
   const captchaRequestedRef = useRef(false);
@@ -368,6 +370,7 @@ function Comments({ newsId }: { newsId: string }) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setComments(json.items || []);
+      setCommentsClosed(json.commentsClosed === true);
     } catch {
       // Message traduit côté rendu : celui de l'exception (« Failed to
       // fetch »…) n'est ni localisé ni utile au lecteur.
@@ -424,9 +427,11 @@ function Comments({ newsId }: { newsId: string }) {
         };
         throw new Error(byCode[json?.code as string] || t.errPublish);
       }
-      const created = (await res.json().catch(() => null))?.comment as
-        | Comment
-        | undefined;
+      const json = await res.json().catch(() => null);
+      const created = json?.comment as Comment | undefined;
+      // Pré-modération : le commentaire attend une relecture, il n'est pas
+      // fusionné dans la liste publique.
+      const pending = json?.pending === true;
       // Publication réussie : nouvelle clé pour un prochain commentaire.
       idempotencyKeyRef.current = genIdempotencyKey();
       setContent('');
@@ -434,12 +439,12 @@ function Comments({ newsId }: { newsId: string }) {
       await Promise.all([loadComments(), loadCaptcha()]);
       // La liste relue peut venir du cache CDN (60 s) et précéder la
       // publication : le commentaire rendu par le POST y est fusionné.
-      if (created?.id) {
+      if (created?.id && !pending) {
         setComments((list) =>
           list.some((c) => c.id === created.id) ? list : [created, ...list]
         );
       }
-      addToast(t.published, 'success');
+      addToast(pending ? t.pendingModeration : t.published, 'success');
     } catch (err: unknown) {
       // Le captcha est à usage unique : on régénère la clé d'idempotence en même
       // temps que le challenge pour que le retry soit une intention propre.
@@ -459,10 +464,17 @@ function Comments({ newsId }: { newsId: string }) {
         {t.commentsTitle}
       </Heading>
 
+      {commentsClosed && (
+        <p role="status" className="text-sm text-gray-400">
+          {t.errCommentsClosed}
+        </p>
+      )}
+
       {/* `onFocus` remonte depuis les champs (React l'écoute en focusin). */}
       <form
         onSubmit={handleSubmit}
         onFocus={ensureCaptcha}
+        hidden={commentsClosed}
         className="space-y-3"
       >
         <div className="grid gap-3 md:grid-cols-[1fr_0.6fr]">

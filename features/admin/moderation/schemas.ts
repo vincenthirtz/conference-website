@@ -15,6 +15,7 @@ import {
   looseQuery,
   uuidPathParam,
 } from '../../../utils/admin/pathParams';
+import { BLACKLIST_MAX_DURATION_DAYS } from '../../../utils/moderation/blacklistExpiry';
 
 export { querySchema as BlacklistAlertsQuery } from '../../../lib/apiContracts/admin/moderation/blacklist/alerts.query';
 
@@ -27,6 +28,9 @@ export const PLAYER_BLACKLIST_COLUMNS =
 
 export const ENTITY_BLACKLIST_COLUMNS =
   'id, tenant_id, entity_type, name, reason, notes, banned_by, active, created_at, updated_at' as const;
+
+/** Échéance des sanctions temporaires (migration blacklist_expires_at). */
+export const BLACKLIST_EXPIRY_COLUMN = 'expires_at' as const;
 
 export const BLACKLIST_ALERT_COLUMNS =
   'id, created_at, discord_user_id, battle_tag, display_name, matched_on, strength, source, context, reason, blacklist_entry_id' as const;
@@ -65,9 +69,11 @@ export const TICKET_SEARCH_MAX_LENGTH = 100;
 
 /* Filtres de liste : nommés pour la spec, normalisés par le service. */
 
+// `expired=true` : sanctions temporaires échues (levées ou en attente du cron).
 export const BlacklistListQuery = looseQuery([
   'search',
   'active',
+  'expired',
   'limit',
   'offset',
 ]);
@@ -75,6 +81,7 @@ export const BlacklistListQuery = looseQuery([
 export const EntityBlacklistListQuery = looseQuery([
   'search',
   'active',
+  'expired',
   'entity_type',
   'limit',
   'offset',
@@ -117,6 +124,26 @@ const discordUserId = z
   .optional()
   .nullable();
 
+/**
+ * Sanction temporaire : date explicite OU durée en jours (l'une ou l'autre ;
+ * `expires_at` l'emporte). `null` = sans échéance. Résolu par
+ * `resolveBlacklistExpiry` (utils/moderation/blacklistExpiry.ts).
+ */
+const expiryFields = {
+  expires_at: z
+    .string()
+    .datetime({ offset: true, message: 'expires_at invalide (ISO 8601).' })
+    .optional()
+    .nullable(),
+  duration_days: z
+    .number()
+    .int()
+    .min(1)
+    .max(BLACKLIST_MAX_DURATION_DAYS)
+    .optional()
+    .nullable(),
+};
+
 const playerIdentifiers = {
   battle_tag: z.string().trim().max(190).optional().nullable(),
   display_name: z.string().trim().max(190).optional().nullable(),
@@ -138,7 +165,7 @@ const atLeastOneIdentifier = {
 // Au moins un identifiant requis (CHECK DB miroir côté app pour renvoyer un
 // 400 propre plutôt qu'une erreur Postgres brute).
 export const BlacklistCreateBody = z
-  .object(playerIdentifiers)
+  .object({ ...playerIdentifiers, ...expiryFields })
   .refine(atLeastOneIdentifier.check, {
     message: atLeastOneIdentifier.message,
   });
@@ -149,10 +176,15 @@ export const BlacklistUpdateBody = z
     reason: z.string().trim().max(1000).optional().nullable(),
     notes: z.string().trim().max(2000).optional().nullable(),
     active: z.boolean().optional(),
+    ...expiryFields,
   })
   .refine(
     (v) =>
-      v.reason !== undefined || v.notes !== undefined || v.active !== undefined,
+      v.reason !== undefined ||
+      v.notes !== undefined ||
+      v.active !== undefined ||
+      v.expires_at !== undefined ||
+      v.duration_days !== undefined,
     { message: 'Aucun champ à mettre à jour.' }
   );
 
@@ -163,7 +195,10 @@ const entityFields = {
   notes: z.string().trim().max(2000).optional().nullable(),
 };
 
-export const EntityBlacklistCreateBody = z.object(entityFields);
+export const EntityBlacklistCreateBody = z.object({
+  ...entityFields,
+  ...expiryFields,
+});
 export type EntityBlacklistCreateInput = z.output<
   typeof EntityBlacklistCreateBody
 >;
@@ -175,6 +210,7 @@ export const EntityBlacklistUpdateBody = z
     reason: z.string().trim().max(1000).optional().nullable(),
     notes: z.string().trim().max(2000).optional().nullable(),
     active: z.boolean().optional(),
+    ...expiryFields,
   })
   .refine(
     (v) =>
@@ -182,7 +218,9 @@ export const EntityBlacklistUpdateBody = z
       v.entity_type !== undefined ||
       v.reason !== undefined ||
       v.notes !== undefined ||
-      v.active !== undefined,
+      v.active !== undefined ||
+      v.expires_at !== undefined ||
+      v.duration_days !== undefined,
     { message: 'Aucun champ à mettre à jour.' }
   );
 
@@ -210,15 +248,25 @@ export const BlacklistCreateDoc = looseBody([
   'discord_user_id',
   'reason',
   'notes',
+  'expires_at',
+  'duration_days',
 ]);
 
-export const BlacklistUpdateDoc = looseBody(['reason', 'notes', 'active']);
+export const BlacklistUpdateDoc = looseBody([
+  'reason',
+  'notes',
+  'active',
+  'expires_at',
+  'duration_days',
+]);
 
 export const EntityBlacklistCreateDoc = looseBody([
   'entity_type',
   'name',
   'reason',
   'notes',
+  'expires_at',
+  'duration_days',
 ]);
 
 export const EntityBlacklistUpdateDoc = looseBody([
@@ -227,7 +275,43 @@ export const EntityBlacklistUpdateDoc = looseBody([
   'reason',
   'notes',
   'active',
+  'expires_at',
+  'duration_days',
 ]);
+
+/* ---------------------------------------------------------------------------
+ * Commentaires d'actualités — statut, actions en masse, réglages
+ * (`/api/admin/moderation/comments/**`, migration news_comments_moderation)
+ * ------------------------------------------------------------------------ */
+
+export const COMMENT_BULK_ACTIONS = ['show', 'hide', 'delete'] as const;
+export const COMMENT_BULK_MAX = 100;
+
+/** `status` : visible | pending | hidden (absent = tous). */
+export const CommentModerationListQuery = looseQuery([
+  'status',
+  'search',
+  'news_id',
+  'limit',
+  'offset',
+]);
+
+export const CommentBulkBody = z.object({
+  ids: z
+    .array(z.string().uuid('Identifiant de commentaire invalide.'))
+    .min(1, 'Aucun commentaire sélectionné.')
+    .max(COMMENT_BULK_MAX, `Au plus ${COMMENT_BULK_MAX} commentaires.`),
+  action: z.enum(COMMENT_BULK_ACTIONS),
+});
+
+export const CommentSettingsBody = z.object({
+  pre_moderation: z.boolean(),
+});
+
+export const CommentArticleClosureBody = z.object({
+  news_id: z.string().uuid('Identifiant d’article invalide.'),
+  comments_closed: z.boolean(),
+});
 
 export const SupportTicketPatchBody = looseBody([
   'status',

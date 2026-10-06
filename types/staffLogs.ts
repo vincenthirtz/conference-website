@@ -199,6 +199,10 @@ export type StaffLogAction =
   | 'delete_announcement'
   | 'update_comment'
   | 'delete_comment'
+  // Masquer / réafficher / supprimer une sélection de commentaires.
+  | 'moderate_comments'
+  // Pré-modération des commentaires, fermeture des commentaires d'un article.
+  | 'update_comment_settings'
   // --- Discord / webhooks / bot ---
   | 'update_discord_webhook'
   | 'delete_discord_webhook'
@@ -262,6 +266,9 @@ export type StaffLogAction =
   | 'entity_blacklist_add'
   | 'entity_blacklist_update'
   | 'entity_blacklist_remove'
+  // Levée automatique d'une sanction temporaire échue (cron, sans auteur).
+  | 'blacklist_expired'
+  | 'entity_blacklist_expired'
   | 'support_ticket_convert_blacklist'
   // --- TCG (cartes joueuses) ---
   // Relire la photo d'une personne réelle est un acte à tracer : on doit
@@ -464,7 +471,11 @@ export type StaffLog = {
 };
 
 export type StaffLogInsert = {
-  staff_id: string;
+  /**
+   * `null` : geste AUTOMATIQUE sans auteur staff (cron), marqué
+   * `payload.automatic` — ex. la levée d'une sanction échue.
+   */
+  staff_id: string | null;
   action: StaffLogAction;
   entity_type?: string | null;
   entity_id?: string | null;

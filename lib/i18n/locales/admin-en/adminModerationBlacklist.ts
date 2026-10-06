@@ -84,4 +84,15 @@ export default {
   deleteFallbackLabel: 'this entry',
   entryDeleted: 'Entry deleted.',
   playerTagPlaceholder: 'Player#1234',
+  expiryLabel: 'Duration',
+  expiryPermanent: 'No end date',
+  expiryDays_one: '{count} day',
+  expiryDays_other: '{count} days',
+  expiryCustom: 'Until…',
+  expiryDateLabel: 'End date',
+  expiryUnavailable:
+    'Temporary sanctions unavailable: the blacklist_expires_at migration has not been applied.',
+  filterExpired: 'Expired',
+  expiresOn: 'Until {date}',
+  expiredOn: 'Expired on {date}',
 };

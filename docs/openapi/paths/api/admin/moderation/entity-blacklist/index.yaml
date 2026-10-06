@@ -16,6 +16,12 @@ get:
       schema:
         type: string
         enum: ['true', 'false']
+    - name: expired
+      in: query
+      description: '`true` : seulement les sanctions temporaires échues (`expires_at` passé).'
+      schema:
+        type: string
+        enum: ['true']
     - name: entity_type
       in: query
       schema:
