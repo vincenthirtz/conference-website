@@ -14,6 +14,8 @@ import type { Dict } from './stageDisplay';
 import AdvanceStandingsTable, {
   type AdvanceStanding,
 } from './AdvanceStandingsTable';
+import type { TiebreakerOverride } from '@/features/admin/stages/client';
+import type { OverrideDraft } from '@/features/admin/stages/hooks/useTiebreakerOverrides';
 
 type OtherStage = { id: string; name: string; stage_type: string | null };
 type SeedMode = 'rank' | 'manual' | 'none';
@@ -40,6 +42,11 @@ type Props = {
   onChangeSeedMode: (m: SeedMode) => void;
   onSubmit: () => void;
   t: Dict;
+  /** Dérogations de départage, transmises à la table (cf. elle). */
+  overrides?: TiebreakerOverride[];
+  overrideSaving?: boolean;
+  onAddOverride?: (draft: OverrideDraft) => Promise<boolean>;
+  onRemoveOverride?: (ov: TiebreakerOverride) => void;
 };
 
 /**
@@ -69,6 +76,10 @@ function AdvanceModal({
   onChangeSeedMode,
   onSubmit,
   t,
+  overrides,
+  overrideSaving,
+  onAddOverride,
+  onRemoveOverride,
 }: Props) {
   return (
     <Modal
@@ -202,6 +213,10 @@ function AdvanceModal({
               onToggleTeam={onToggleTeam}
               onToggleAll={onToggleAll}
               t={t}
+              overrides={overrides}
+              overrideSaving={overrideSaving}
+              onAddOverride={onAddOverride}
+              onRemoveOverride={onRemoveOverride}
             />
           ) : (
             <p className={`text-sm ${rubanMuted}`}>{t.noStandings}</p>
