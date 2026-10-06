@@ -42,6 +42,8 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import nsAdminTcgPhotos from '@/lib/i18n/locales/admin-fr/adminTcgPhotos';
 import {
+  approveSequentially,
+  BULK_APPROVE_MAX,
   normalizePendingPhotos,
   photoOwnerLabel,
   type PendingPhoto,
@@ -74,6 +76,10 @@ export default function TcgPhotosPanel() {
   // garde la dernière file (le cache conserve ses données).
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  // Sélection pour la validation groupée (userId). Le refus reste unitaire :
+  // il porte un motif propre à chaque photo et supprime le fichier.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const query = useTcgPendingPhotos();
   const decideMutation = useDecideTcgPhoto();
@@ -153,6 +159,78 @@ export default function TcgPhotosPanel() {
     [decideMutation, addToast, confirm, load, reasons, t]
   );
 
+  // Une photo sortie de la file (tranchée, retirée) quitte la sélection.
+  const queueIds = useMemo(
+    () => new Set((photos ?? []).map((p) => p.userId)),
+    [photos]
+  );
+  const selectedInQueue = (photos ?? []).filter((p) => selected.has(p.userId));
+  const selectable = (photos ?? []).filter((p) => p.photoPath);
+  const allSelected =
+    selectable.length > 0 && selectable.every((p) => selected.has(p.userId));
+
+  const toggleSelected = (userId: string) => {
+    const next = new Set([...selected].filter((id) => queueIds.has(id)));
+    if (next.has(userId)) {
+      next.delete(userId);
+    } else if (next.size >= BULK_APPROVE_MAX) {
+      addToast(format(t.selectionCapped, { max: BULK_APPROVE_MAX }), 'info');
+      return;
+    } else {
+      next.add(userId);
+    }
+    setSelected(next);
+  };
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelected(new Set());
+      return;
+    }
+    if (selectable.length > BULK_APPROVE_MAX) {
+      addToast(format(t.selectionCapped, { max: BULK_APPROVE_MAX }), 'info');
+    }
+    setSelected(
+      new Set(selectable.slice(0, BULK_APPROVE_MAX).map((p) => p.userId))
+    );
+  };
+
+  const approveSelection = async () => {
+    if (selectedInQueue.length === 0) return;
+    setBulkBusy(true);
+    try {
+      const outcome = await approveSequentially(
+        selectedInQueue,
+        async (photo) => {
+          setBusy(photo.userId);
+          await decideMutation.mutateAsync({
+            userId: photo.userId,
+            photoPath: photo.photoPath,
+            decision: 'approve',
+            reason: null,
+          });
+        },
+        (err) => err instanceof AdminHttpError && err.status === 409
+      );
+      const ok = outcome.approved.length;
+      if (outcome.stopped) {
+        addToast(format(t.bulkStopped, { ok }), 'error');
+      } else if (outcome.skipped.length > 0) {
+        addToast(
+          format(t.bulkPartial, { ok, skipped: outcome.skipped.length }),
+          'info'
+        );
+      } else {
+        addToast(format(t.bulkApproved, { count: ok }), 'success');
+      }
+      setSelected(new Set());
+      await load();
+    } finally {
+      setBusy(null);
+      setBulkBusy(false);
+    }
+  };
+
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -192,114 +270,150 @@ export default function TcgPhotosPanel() {
           description={t.emptyDescription}
         />
       ) : (
-        <ul aria-label={t.listLabel} className="mt-6 grid gap-4 sm:grid-cols-2">
-          {photos.map((photo) => {
-            const name = photoOwnerLabel(photo);
-            const isBusy = busy === photo.userId;
-            const reasonId = `tcg-photo-reason-${photo.userId}`;
-            const hintId = `tcg-photo-hint-${photo.userId}`;
-            return (
-              <li
-                key={photo.userId}
-                aria-busy={isBusy}
-                className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4"
-              >
-                <div className="flex gap-4">
-                  {photo.photoUrl ? (
-                    <Image
-                      src={photo.photoUrl}
-                      // L'image EST le contenu à juger : un `alt` vide la
-                      // rendrait invisible à qui relit au lecteur d'écran.
-                      alt={format(t.photoAlt, { name })}
-                      width={128}
-                      height={128}
-                      className="h-32 w-32 shrink-0 rounded-[var(--r-ctrl,4px)] object-cover"
-                      unoptimized
+        <>
+          <div className="mt-6 flex flex-wrap items-center gap-3 text-sm">
+            <label className="flex items-center gap-2 text-gray-300">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-purple-400"
+                checked={allSelected}
+                disabled={bulkBusy || selectable.length === 0}
+                onChange={toggleAll}
+              />
+              {t.selectAll}
+            </label>
+            <AdminButton
+              variant="secondary"
+              size="sm"
+              disabled={bulkBusy || selectedInQueue.length === 0}
+              onClick={() => void approveSelection()}
+            >
+              {bulkBusy
+                ? t.working
+                : format(t.approveSelected, { count: selectedInQueue.length })}
+            </AdminButton>
+          </div>
+          <ul
+            aria-label={t.listLabel}
+            className="mt-4 grid gap-4 sm:grid-cols-2"
+          >
+            {photos.map((photo) => {
+              const name = photoOwnerLabel(photo);
+              const isBusy = bulkBusy || busy === photo.userId;
+              const reasonId = `tcg-photo-reason-${photo.userId}`;
+              const hintId = `tcg-photo-hint-${photo.userId}`;
+              return (
+                <li
+                  key={photo.userId}
+                  aria-busy={isBusy}
+                  className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4"
+                >
+                  <div className="flex gap-4">
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4 shrink-0 accent-purple-400"
+                      checked={selected.has(photo.userId)}
+                      // Sans chemin affiché, aucune décision n'est possible.
+                      disabled={isBusy || !photo.photoPath}
+                      onChange={() => toggleSelected(photo.userId)}
+                      aria-label={format(t.selectPhoto, { name })}
                     />
-                  ) : (
-                    <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] px-2 text-center text-[11px] text-gray-500">
-                      {t.photoMissing}
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <h3 className="truncate text-sm font-semibold text-white">
-                      {name}
-                    </h3>
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      {format(t.submittedAt, {
-                        date: formatDate(photo.submittedAt, locale),
-                      })}
-                    </p>
-                    {/* Avant de valider : sans profil joueuse, aucune carte
-                        n'affichera cette photo. */}
-                    {photo.hasPlayerProfile === false && (
-                      <p
-                        role="note"
-                        className={`mt-2 px-2 py-1 text-xs ${rubanWarn}`}
-                      >
-                        <span className="font-semibold">{t.noCardTitle}</span>{' '}
-                        {t.noCardBody}
-                      </p>
+                    {photo.photoUrl ? (
+                      <Image
+                        src={photo.photoUrl}
+                        // L'image EST le contenu à juger : un `alt` vide la
+                        // rendrait invisible à qui relit au lecteur d'écran.
+                        alt={format(t.photoAlt, { name })}
+                        width={128}
+                        height={128}
+                        className="h-32 w-32 shrink-0 rounded-[var(--r-ctrl,4px)] object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-[var(--r-ctrl,4px)] bg-[var(--s2,#1d1520)] px-2 text-center text-[11px] text-gray-500">
+                        {t.photoMissing}
+                      </div>
                     )}
-                    <Link
-                      href={`/player/${photo.userId}`}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      aria-label={format(t.viewProfileOf, { name })}
-                      className="mt-1 inline-block text-sm font-medium text-[var(--color-green-light)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
-                    >
-                      {t.viewProfile}
-                    </Link>
+                    <div className="min-w-0">
+                      <h3 className="truncate text-sm font-semibold text-white">
+                        {name}
+                      </h3>
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        {format(t.submittedAt, {
+                          date: formatDate(photo.submittedAt, locale),
+                        })}
+                      </p>
+                      {/* Avant de valider : sans profil joueuse, aucune carte
+                        n'affichera cette photo. */}
+                      {photo.hasPlayerProfile === false && (
+                        <p
+                          role="note"
+                          className={`mt-2 px-2 py-1 text-xs ${rubanWarn}`}
+                        >
+                          <span className="font-semibold">{t.noCardTitle}</span>{' '}
+                          {t.noCardBody}
+                        </p>
+                      )}
+                      <Link
+                        href={`/player/${photo.userId}`}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        aria-label={format(t.viewProfileOf, { name })}
+                        className="mt-1 inline-block text-sm font-medium text-[var(--color-green-light)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+                      >
+                        {t.viewProfile}
+                      </Link>
+                    </div>
                   </div>
-                </div>
 
-                {/* Libellé réservé aux lecteurs d'écran : le placeholder
+                  {/* Libellé réservé aux lecteurs d'écran : le placeholder
                     disparaît à la saisie et ne tient pas lieu de label. */}
-                <label htmlFor={reasonId} className="sr-only">
-                  {format(t.reasonLabel, { name })}
-                </label>
-                <input
-                  id={reasonId}
-                  type="text"
-                  maxLength={500}
-                  value={reasons[photo.userId] ?? ''}
-                  disabled={isBusy}
-                  aria-describedby={hintId}
-                  onChange={(e) =>
-                    setReasons((prev) => ({
-                      ...prev,
-                      [photo.userId]: e.target.value,
-                    }))
-                  }
-                  placeholder={t.reasonPlaceholder}
-                  className="mt-3 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 disabled:opacity-50"
-                />
-                <p id={hintId} className="mt-2 text-xs text-gray-500">
-                  {t.rejectHint}
-                </p>
+                  <label htmlFor={reasonId} className="sr-only">
+                    {format(t.reasonLabel, { name })}
+                  </label>
+                  <input
+                    id={reasonId}
+                    type="text"
+                    maxLength={500}
+                    value={reasons[photo.userId] ?? ''}
+                    disabled={isBusy}
+                    aria-describedby={hintId}
+                    onChange={(e) =>
+                      setReasons((prev) => ({
+                        ...prev,
+                        [photo.userId]: e.target.value,
+                      }))
+                    }
+                    placeholder={t.reasonPlaceholder}
+                    className="mt-3 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 disabled:opacity-50"
+                  />
+                  <p id={hintId} className="mt-2 text-xs text-gray-500">
+                    {t.rejectHint}
+                  </p>
 
-                <div className="mt-3 flex gap-2">
-                  <AdminButton
-                    variant="secondary"
-                    size="sm"
-                    disabled={isBusy}
-                    onClick={() => void decide(photo, 'approve')}
-                  >
-                    {isBusy ? t.working : t.approve}
-                  </AdminButton>
-                  <AdminButton
-                    variant="danger"
-                    size="sm"
-                    disabled={isBusy}
-                    onClick={() => void decide(photo, 'reject')}
-                  >
-                    {isBusy ? t.working : t.reject}
-                  </AdminButton>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                  <div className="mt-3 flex gap-2">
+                    <AdminButton
+                      variant="secondary"
+                      size="sm"
+                      disabled={isBusy}
+                      onClick={() => void decide(photo, 'approve')}
+                    >
+                      {isBusy ? t.working : t.approve}
+                    </AdminButton>
+                    <AdminButton
+                      variant="danger"
+                      size="sm"
+                      disabled={isBusy}
+                      onClick={() => void decide(photo, 'reject')}
+                    >
+                      {isBusy ? t.working : t.reject}
+                    </AdminButton>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
       {dialog}
     </div>

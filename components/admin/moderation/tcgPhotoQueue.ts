@@ -79,3 +79,51 @@ export function photoOwnerLabel(photo: PendingPhoto): string {
     email: photo.email,
   });
 }
+
+/**
+ * Plafond d'un lot de validation : la route de décision est limitée à 30
+ * écritures par minute, un lot doit pouvoir passer d'un trait.
+ */
+export const BULK_APPROVE_MAX = 25;
+
+export type BulkApproveOutcome = {
+  approved: string[];
+  /** Déjà tranchée ou remplacée entre-temps (409), ou sans chemin affiché. */
+  skipped: string[];
+  /** Arrêt sur une erreur autre qu'un conflit (429, 5xx…) : le reste attend. */
+  stopped: boolean;
+};
+
+/**
+ * Valide la sélection UNE PHOTO APRÈS L'AUTRE, chacune avec le `photoPath`
+ * affiché — exactement la décision unitaire, donc le même garde serveur (on
+ * n'approuve que ce qu'on a vu) et une ligne de journal par photo. Un conflit
+ * n'arrête pas le lot ; toute autre erreur l'arrête, pour ne pas marteler une
+ * route qui refuse.
+ */
+export async function approveSequentially(
+  photos: PendingPhoto[],
+  approve: (photo: PendingPhoto & { photoPath: string }) => Promise<void>,
+  isConflict: (err: unknown) => boolean
+): Promise<BulkApproveOutcome> {
+  const out: BulkApproveOutcome = { approved: [], skipped: [], stopped: false };
+  for (const photo of photos.slice(0, BULK_APPROVE_MAX)) {
+    const { photoPath } = photo;
+    if (!photoPath) {
+      out.skipped.push(photo.userId);
+      continue;
+    }
+    try {
+      await approve({ ...photo, photoPath });
+      out.approved.push(photo.userId);
+    } catch (err) {
+      if (isConflict(err)) {
+        out.skipped.push(photo.userId);
+        continue;
+      }
+      out.stopped = true;
+      break;
+    }
+  }
+  return out;
+}

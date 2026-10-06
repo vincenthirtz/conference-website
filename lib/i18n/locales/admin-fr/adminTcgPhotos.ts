@@ -64,4 +64,21 @@ export default adminNs('adminTcgPhotos', {
   /** Interpole `{reason}`. */
   confirmRejectReason: 'Motif transmis : « {reason} »',
   confirmRejectNoReason: 'Aucun motif ne sera transmis.',
+
+  // Validation groupée (le refus reste individuel, avec son motif).
+  /** Interpole `{name}`. */
+  selectPhoto: 'Sélectionner la photo de {name}',
+  selectAll: 'Tout sélectionner',
+  /** Interpole `{count}`. */
+  approveSelected: 'Valider la sélection ({count})',
+  /** Interpole `{max}`. */
+  selectionCapped: 'Au plus {max} photos par lot : la sélection est plafonnée.',
+  /** Interpole `{count}`. */
+  bulkApproved: '{count} photo(s) validée(s)',
+  /** Interpole `{ok}` et `{skipped}`. */
+  bulkPartial:
+    '{ok} photo(s) validée(s), {skipped} déjà traitée(s) ou remplacée(s) entre-temps',
+  /** Interpole `{ok}`. */
+  bulkStopped:
+    'Validation interrompue après {ok} photo(s) : réessaie dans une minute.',
 });

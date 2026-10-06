@@ -55,4 +55,13 @@ export default {
     'The file will be deleted from storage. The player keeps the reason and can submit again.',
   confirmRejectReason: 'Reason sent: “{reason}”',
   confirmRejectNoReason: 'No reason will be sent.',
+
+  selectPhoto: 'Select {name}’s photo',
+  selectAll: 'Select all',
+  approveSelected: 'Approve selection ({count})',
+  selectionCapped: 'At most {max} photos per batch: the selection is capped.',
+  bulkApproved: '{count} photo(s) approved',
+  bulkPartial:
+    '{ok} photo(s) approved, {skipped} already handled or replaced in the meantime',
+  bulkStopped: 'Approval stopped after {ok} photo(s): try again in a minute.',
 };
