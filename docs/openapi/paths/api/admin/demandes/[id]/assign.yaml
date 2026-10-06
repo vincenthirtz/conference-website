@@ -3,6 +3,7 @@ post:
     - admin/demandes
   summary: Prendre en charge ou liberer une demande (« Je prends » / « Liberer »).
   operationId: adminAssignDemande
+  x-zod-query: admin.demandes/[id].query
   description: |
     `claim` assigne la demande au staff appelant (`assigned_staff_id`,
     `assigned_at`) ; un dossier deja pris par quelqu'un d'autre repond 409
@@ -28,12 +29,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required: [action]
-          properties:
-            action:
-              type: string
-              enum: [claim, release]
+          x-zod: admin.demandes/[id]/assign.body
   responses:
     '200':
       description: 'Etat final : `{ assignment: { id, assigned_staff_id, assigned_at, assigned_to } }`.'

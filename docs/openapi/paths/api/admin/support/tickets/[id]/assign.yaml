@@ -3,6 +3,7 @@ post:
     - admin/misc
   summary: Prendre en charge ou liberer un ticket support (« Je prends » / « Liberer »).
   operationId: adminAssignSupportTicket
+  x-zod-query: admin.support/tickets/[id].query
   description: |
     `claim` assigne le ticket au staff appelant (`assigned_staff_id`,
     `assigned_at`) ; un ticket deja pris par quelqu'un d'autre repond 409
@@ -28,12 +29,7 @@ post:
     content:
       application/json:
         schema:
-          type: object
-          required: [action]
-          properties:
-            action:
-              type: string
-              enum: [claim, release]
+          x-zod: admin.support/tickets/[id]/assign.body
   responses:
     '200':
       description: 'Etat final : `{ assignment: { id, assigned_staff_id, assigned_at, assigned_to } }`.'

@@ -357,6 +357,7 @@ import {
   StaffLogsQuery,
 } from '../../../features/admin/logs/schemas';
 import { CasterAuditDoc } from '../../../features/admin/caster/schemas';
+import { AssignmentBody } from '../../../features/admin/_shared/assignmentSchemas';
 import {
   RecycleBinPurgeQuery,
   RecycleBinQuery,
@@ -587,6 +588,12 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   },
   'admin.support/tickets/[id].update': {
     schema: SupportTicketPatchBody,
+    io: 'input',
+  },
+  // « Je prends » / « Libérer » : même corps pour les deux files.
+  'admin.demandes/[id]/assign.body': { schema: AssignmentBody, io: 'input' },
+  'admin.support/tickets/[id]/assign.body': {
+    schema: AssignmentBody,
     io: 'input',
   },
   'admin.support/tickets/[id]/convert-blacklist.body': {
