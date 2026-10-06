@@ -6,15 +6,33 @@
 // La suppression part avec une `Idempotency-Key` : un double clic rejoue la
 // même réponse au lieu d'une seconde suppression.
 
+//
+// CAPITANAT : une capitaine d'équipe qui compte d'autres membres reçoit un 409
+// `captain_must_transfer` (FK ON DELETE SET NULL → équipe sans capitaine).
+// On l'affiche comme un préalable, avec le lien vers le transfert.
+
 import { useState } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import nsPlayerProfile from '@/lib/i18n/locales/fr/playerProfile';
-import { Button, FicheSection } from '@/features/ruban';
+import { Button, ButtonLink, FicheSection } from '@/features/ruban';
 import { FormError } from '@/features/ruban/FormField';
+import { ApiHttpError } from '@/utils/http/authedRequest';
 import { useDataExport, useDeleteAccount } from '../hooks/useProfile';
+import { CAPTAIN_MUST_TRANSFER } from '../schemas';
 
 const confirmBox =
   'mb-3 space-y-3 rounded-[var(--r-ctrl,4px)] border p-4 bg-[var(--s2,#1d1520)]';
+
+type BlockingTeam = { id: string; name: string | null };
+
+/** `teams` du corps 409, défensif : un corps inattendu donne une liste vide. */
+function readBlockingTeams(payload: unknown): BlockingTeam[] {
+  const raw = (payload as { teams?: unknown } | null)?.teams;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (t): t is BlockingTeam => !!t && typeof (t as BlockingTeam).id === 'string'
+  );
+}
 
 export default function DataRightsPanel() {
   const t = useT(nsPlayerProfile);
@@ -23,6 +41,7 @@ export default function DataRightsPanel() {
   const [exportConfirm, setExportConfirm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [captainTeams, setCaptainTeams] = useState<BlockingTeam[] | null>(null);
 
   const exporting = exportData.isPending;
   const deleting = deleteAccount.isPending;
@@ -37,8 +56,17 @@ export default function DataRightsPanel() {
 
   const runDelete = () => {
     setError(null);
+    setCaptainTeams(null);
     deleteAccount.mutate(undefined, {
-      onError: (err) => setError((err as Error)?.message || t.deleteError),
+      onError: (err) => {
+        // Capitanat à transférer d'abord : pas une panne, un préalable — on
+        // l'affiche avec le chemin vers le transfert plutôt qu'en erreur.
+        if (err instanceof ApiHttpError && err.code === CAPTAIN_MUST_TRANSFER) {
+          setCaptainTeams(readBlockingTeams(err.payload));
+          return;
+        }
+        setError((err as Error)?.message || t.deleteError);
+      },
       onSettled: () => setDeleteConfirm(false),
     });
   };
@@ -79,6 +107,32 @@ export default function DataRightsPanel() {
       <p className="mb-5 text-[12.5px] text-[var(--t4,#807984)]">
         {t.dataHelp}
       </p>
+
+      {captainTeams && (
+        <div
+          role="alert"
+          className={`${confirmBox} border-[var(--or,#b467d1)]`}
+          data-testid="delete-account-captain-block"
+        >
+          <p className="text-sm font-semibold text-[var(--t1,#f4edf7)]">
+            {t.captainBlockTitle}
+          </p>
+          <p className="text-[12.5px] text-[var(--t2,#c7bfca)]">
+            {t.captainBlockText}
+          </p>
+          {captainTeams.length > 0 && (
+            <p className="text-[12.5px] text-[var(--t2,#c7bfca)]">
+              {t.captainBlockTeams}{' '}
+              <strong>
+                {captainTeams.map((team) => team.name || team.id).join(', ')}
+              </strong>
+            </p>
+          )}
+          <ButtonLink variant="primary" href="/player/manage-team">
+            {t.captainBlockAction}
+          </ButtonLink>
+        </div>
+      )}
 
       {!deleteConfirm ? (
         <Button

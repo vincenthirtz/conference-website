@@ -93,6 +93,11 @@ export default {
     '. Deleted: your account, your teams and requests, your card photo, your collection, your coins, your predictions, your calendar tokens and your preferences. Your fan art is withdrawn and its files erased.',
   deleting: 'Deleting...',
   confirmDelete: 'Confirm deletion',
+  captainBlockTitle: 'Transfer your captaincy first',
+  captainBlockText:
+    'You are the captain of a team that has other members. Without a captain it could no longer be managed: hand the role to a teammate before deleting your account.',
+  captainBlockTeams: 'Team(s) concerned:',
+  captainBlockAction: 'Transfer captaincy',
   deleteHelp:
     'GDPR right to erasure. What is also part of other players’ history stays, without your name: your leaderboard entry (shown as “Joueuse retirée”, removed player), your matches, your card trades and the copies of your card already collected, which show without a photo. Your support reports and membership record are kept by the association, detached from your account.',
   currentPasswordLabel: 'Current password',

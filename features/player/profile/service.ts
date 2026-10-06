@@ -26,10 +26,12 @@ import { erasePersonalData } from '@/utils/player/erasePersonalData';
 import { sendAccountDeletedEmail } from '@/utils/email';
 import {
   deleteAuthUser,
+  readCaptainedTeamsWithOthers,
   readStaffRole,
   updateRosterEntries,
   writeUserMetadata,
 } from './repository';
+import { CAPTAIN_MUST_TRANSFER } from './schemas';
 import type {
   TwitchSourceResponse,
   UpdatePlayerProfileInput,
@@ -312,7 +314,7 @@ export async function buildDataExport(user: User) {
 }
 
 /**
- * Droit à l'oubli. ORDRE : garde owner → registre (fichiers puis lignes) →
+ * Droit à l'oubli. ORDRE : garde owner → garde capitanat → registre (fichiers puis lignes) →
  * `deleteUser` → e-mail (après, pour ne jamais annoncer une suppression
  * échouée). La régénération de la fiche publique reste à la route (HTTP).
  */
@@ -326,6 +328,33 @@ export async function deleteAccount(
     throw new LegacyAdminError(
       403,
       'Les comptes owner ne peuvent pas être auto-supprimés. Contacte un autre owner.'
+    );
+  }
+
+  // Capitanat (S4, même règle que `leaveTeam`) : une capitaine d'une équipe
+  // qui compte d'autres membres transfère d'abord. Sinon la FK
+  // `teams_captain_fk` (ON DELETE SET NULL) laisserait une équipe sans
+  // capitaine, ingérable par ses membres. Lecture en échec : on bloque aussi
+  // (fail-closed), le compte reste intact.
+  const captained = await readCaptainedTeamsWithOthers(ctx.db, userId);
+  if (captained.error) {
+    ctx.logger.error(
+      '[player/delete-account] captained teams read error:',
+      captained.error
+    );
+    throw new LegacyAdminError(
+      500,
+      'Vérification de ton capitanat impossible. Ton compte n’a pas été supprimé : réessaie dans quelques instants.'
+    );
+  }
+  if (captained.teams.length > 0) {
+    throw new LegacyAdminError(
+      409,
+      'Tu es capitaine d’une équipe qui compte d’autres membres. Transfère le rôle de capitaine avant de supprimer ton compte.',
+      {
+        code: CAPTAIN_MUST_TRANSFER,
+        extra: { teams: captained.teams },
+      }
     );
   }
 

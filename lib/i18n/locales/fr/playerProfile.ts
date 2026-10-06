@@ -92,6 +92,11 @@ export default ns('playerProfile', {
     '. Sont supprimés : ton compte, tes équipes et demandes, ta photo de carte, ta collection, tes pièces, tes pronostics, tes jetons de calendrier et tes préférences. Tes fan arts sont retirés et leurs fichiers effacés.',
   deleting: 'Suppression...',
   confirmDelete: 'Confirmer la suppression',
+  captainBlockTitle: 'Transfère d’abord ton capitanat',
+  captainBlockText:
+    'Tu es capitaine d’une équipe qui compte d’autres membres. Sans capitaine, elle ne pourrait plus être gérée : confie le rôle à une coéquipière avant de supprimer ton compte.',
+  captainBlockTeams: 'Équipe(s) concernée(s) :',
+  captainBlockAction: 'Transférer le capitanat',
   deleteHelp:
     "Droit à l'oubli RGPD. Ce qui fait aussi partie de l'histoire des autres reste, sans ton nom : ta ligne au classement (affichée « Joueuse retirée »), tes matchs, tes échanges de cartes et les exemplaires de ta carte déjà collectionnés, qui s'affichent sans photo. Tes signalements au support et ta fiche d'adhérente sont conservés par l'association, détachés de ton compte.",
   currentPasswordLabel: 'Mot de passe actuel',

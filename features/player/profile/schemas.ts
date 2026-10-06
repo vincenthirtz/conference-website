@@ -99,6 +99,13 @@ export type UpdateProfileResponse = {
 export type DeleteAccountResponse = { success: true };
 
 /**
+ * Code stable du refus de suppression (409) : la joueuse est capitaine d'une
+ * équipe qui compte d'autres membres. Le corps porte aussi
+ * `teams: { id, name }[]` — les équipes à transférer d'abord.
+ */
+export const CAPTAIN_MUST_TRANSFER = 'captain_must_transfer';
+
+/**
  * Formulaire « Modifier mon profil » : ses valeurs sont des CHAÎNES (les
  * champs) ; les règles partagées du corps de la route (`UpdatePlayerProfileBody`)
  * s'appliquent avant l'envoi, sous le champ en faute. (Pas de `.pipe()` : le

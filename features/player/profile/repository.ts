@@ -50,6 +50,50 @@ export async function readStaffRole(
   return (data as { role?: string | null } | null)?.role ?? null;
 }
 
+export type CaptainedTeam = { id: string; name: string | null };
+
+/**
+ * Équipes NON dissoutes dont l'appelante est capitaine ET qui comptent au
+ * moins un autre membre, tous tenants. La FK `teams_captain_fk` est en
+ * ON DELETE SET NULL : supprimer ce compte laisserait ces équipes sans
+ * capitaine. Une équipe où elle est seule n'est pas bloquante (même règle que
+ * `leaveTeam`). Rend l'erreur, ne lève pas.
+ */
+export async function readCaptainedTeamsWithOthers(
+  db: AdminDb,
+  userId: string
+): Promise<{ teams: CaptainedTeam[]; error: unknown }> {
+  const { data: teamRows, error } = await db
+    .from('teams')
+    .select('id, name')
+    .eq('captain_id', userId)
+    .is('deleted_at', null);
+  if (error) return { teams: [], error };
+  const teams = (teamRows ?? []) as CaptainedTeam[];
+  if (teams.length === 0) return { teams: [], error: null };
+
+  const { data: memberRows, error: membersErr } = await db
+    .from('team_members')
+    .select('team_id, user_id')
+    .in(
+      'team_id',
+      teams.map((t) => t.id)
+    );
+  if (membersErr) return { teams: [], error: membersErr };
+  const members = (memberRows ?? []) as {
+    team_id: string;
+    user_id: string | null;
+  }[];
+  return {
+    teams: teams
+      .filter((t) =>
+        members.some((m) => m.team_id === t.id && m.user_id !== userId)
+      )
+      .map((t) => ({ id: t.id, name: t.name ?? null })),
+    error: null,
+  };
+}
+
 /** Supprime le compte Supabase Auth. */
 export async function deleteAuthUser(db: AdminDb, userId: string) {
   const { error } = await db.auth.admin.deleteUser(userId);
