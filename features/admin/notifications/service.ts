@@ -46,28 +46,6 @@ function parseBody<S extends z.ZodType>(schema: S, raw: unknown): z.output<S> {
 /* ---- Badge non-lu ---- */
 
 /**
- * Nombre de notifications délivrées et non acquittées : source de vérité de
- * `setAppBadge(n)` quand l'app est ouverte (le SW n'a pas la session).
- * Deux requêtes (ids d'abonnement puis compte) : PostgREST ne filtre pas sur
- * un sous-select, et le compte profite de l'index partiel.
- */
-export async function unreadCount(ctx: ServiceContext) {
-  const { ids, error } = await repo.listSubscriptionIds(ctx.db, userIdOf(ctx));
-  if (error) {
-    ctx.logger.error('[admin/notif/unread-count] load subs error', error);
-    throw new AdminError(500, 'internal', SERVER_ERROR);
-  }
-  if (ids.length === 0) return { count: 0 };
-
-  const { count, error: countErr } = await repo.countUnacked(ctx.db, ids);
-  if (countErr) {
-    ctx.logger.error('[admin/notif/unread-count] count error', countErr);
-    throw new AdminError(500, 'internal', SERVER_ERROR);
-  }
-  return { count };
-}
-
-/**
  * Acquitte TOUTES les notifications non lues, tous appareils confondus
  * (l'autre appareil voit le compteur se vider au push suivant). Les `failed`
  * / `expired` non acquittées aussi : pour le compteur, c'est un état « vu ».

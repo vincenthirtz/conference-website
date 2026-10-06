@@ -1,9 +1,10 @@
 // tests/unit/adminNotificationsBadge.test.ts
 //
-// Badge Web Push du staff, routes migrées sur `defineAdminRoute`
+// Badge Web Push du staff, route migrée sur `defineAdminRoute`
 // (features/admin/notifications) :
-//   - GET  /api/admin/notifications/unread-count → { count }
 //   - POST /api/admin/notifications/ack-all      → { count_cleared }
+// (GET /unread-count, appelée par personne — ni l'admin, ni le SW, ni le
+// bot —, a été supprimée.)
 // Les autres routes du module sont couvertes par apiAdminNotifications.test.ts.
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -15,7 +16,6 @@ import {
 } from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
 
-import unreadCountHandler from '../../pages/api/admin/notifications/unread-count';
 import ackAllHandler from '../../pages/api/admin/notifications/ack-all';
 
 let n = 0;
@@ -96,30 +96,6 @@ beforeEach(() => {
   setAuthUser({ id: 'user-1' });
   store.staff = [staffRow()] as any;
   vi.spyOn(console, 'error').mockImplementation(() => {});
-});
-
-describe('GET /api/admin/notifications/unread-count', () => {
-  it('0 when the staff has no subscription', async () => {
-    const res = makeRes();
-    await unreadCountHandler(makeReq(), res);
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ count: 0 });
-  });
-
-  it("counts only the caller's delivered, unacked notifications", async () => {
-    seedDeliveries();
-    const res = makeRes();
-    await unreadCountHandler(makeReq(), res);
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ count: 2 });
-  });
-
-  it('405 with Allow on POST', async () => {
-    const res = makeRes();
-    await unreadCountHandler(makeReq({ method: 'POST' }), res);
-    expect(res.statusCode).toBe(405);
-    expect(res.headers.Allow).toBe('GET');
-  });
 });
 
 describe('POST /api/admin/notifications/ack-all', () => {

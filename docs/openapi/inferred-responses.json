@@ -9920,19 +9920,6 @@
     ]
    }
   },
-  "GET /api/admin/notifications/unread-count": {
-   "200": {
-    "type": "object",
-    "properties": {
-     "count": {
-      "type": "number"
-     }
-    },
-    "required": [
-     "count"
-    ]
-   }
-  },
   "GET /api/admin/overview-summary": {
    "200": {
     "type": "object",

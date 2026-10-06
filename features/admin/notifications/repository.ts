@@ -24,17 +24,6 @@ export async function listSubscriptions(db: AdminDb, userId: string) {
   return { rows: data ?? [], error };
 }
 
-/** Deliveries délivrées et non acquittées (index partiel `idx_web_push_deliveries_unacked`). */
-export async function countUnacked(db: AdminDb, subscriptionIds: string[]) {
-  const { count, error } = await db
-    .from('web_push_deliveries')
-    .select('id', { count: 'exact', head: true })
-    .in('subscription_id', subscriptionIds)
-    .eq('status', 'delivered')
-    .is('acked_at', null);
-  return { count: count ?? 0, error };
-}
-
 export async function ackAll(
   db: AdminDb,
   subscriptionIds: string[],
