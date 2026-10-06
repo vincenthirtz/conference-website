@@ -1,5 +1,5 @@
 {
-  "measuredAt": "2026-10-05",
+  "measuredAt": "2026-10-06",
   "notes": {
     "perimetre": "Espace joueuse/capitaine/manager/coach/supportrice (§ 1 du plan). Site public hors périmètre : pages/player/[userId].tsx exclue.",
     "ecarts": [
@@ -29,7 +29,7 @@
     "ui.useAdminFetch": 23,
     "ui.rawApiUrl": 77,
     "ui.importFromApi": 7,
-    "ui.tailwindColor": 2435,
+    "ui.tailwindColor": 2432,
     "ui.inlineStyle": 23,
     "size.pagesOver800": 0,
     "size.componentsOver600": 0,
