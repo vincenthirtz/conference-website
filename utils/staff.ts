@@ -28,6 +28,15 @@ import type { TenantKind } from './tenantKind';
 
 import { logger } from './logger';
 import { clearTenantRoleCache } from './staffRoleCache';
+import {
+  aalFromAccessToken,
+  isMfaSensitiveGuard,
+  isStaffMfaEnforced,
+  mfaRequired,
+  StaffMfaRequiredError,
+  staffMfaRedirect,
+  type AuthenticatorAssuranceLevel,
+} from './staffMfa';
 export type { StaffRole } from '@/types/admin';
 export type {
   StaffMember,
@@ -153,7 +162,10 @@ const tokenUserCache = new Map<
 // (même session = mêmes cookies) sur la même fenêtre que `tokenUserCache`.
 const cookieUserCache = new Map<
   string,
-  { user: User | null; expiresAt: number }
+  // `accessToken` : le jeton de la session que `getUser` vient de valider —
+  // conservé pour lire son niveau d'assurance (`aal`, cf. utils/staffMfa.ts)
+  // sans relire les cookies ni décoder un jeton non vérifié.
+  { user: User | null; accessToken?: string | null; expiresAt: number }
 >();
 
 // Éviction des caches user (token/cookie) : sans elle, les entrées expirées
@@ -225,6 +237,8 @@ export async function resolveUserFromToken(
 
 // Symbole privé pour mémoïser le contexte sur l'objet req durant la vie de la requête.
 const STAFF_CTX_KEY = Symbol.for('ow.staffContext');
+// Jeton d'accès VALIDÉ qui a établi le contexte (Bearer ou session cookie).
+const STAFF_TOKEN_KEY = Symbol.for('ow.staffAccessToken');
 
 /**
  * - API routes : on lit le header Authorization: Bearer <token>
@@ -252,6 +266,7 @@ export async function getStaffContextFromRequest(
 
   if (token) {
     user = await resolveUserFromToken(token);
+    if (user) reqWithCache[STAFF_TOKEN_KEY] = token;
   }
 
   // 2) Si pas de token ou pas d'user via token → fallback cookies / SSR
@@ -262,6 +277,7 @@ export async function getStaffContextFromRequest(
 
     if (cached && cached.expiresAt > now) {
       user = cached.user;
+      if (user) reqWithCache[STAFF_TOKEN_KEY] = cached.accessToken ?? null;
     } else {
       const supabase = getServerClient(req, res);
       const {
@@ -285,9 +301,23 @@ export async function getStaffContextFromRequest(
       }
 
       user = cookieUser ?? null;
+      // Jeton de la session que `getUser` vient de valider (même client, donc
+      // même session, rafraîchie le cas échéant) : sert au niveau d'assurance
+      // MFA. Best-effort — sans lui, la session compte comme `aal1`.
+      let accessToken: string | null = null;
+      if (user && typeof supabase.auth.getSession === 'function') {
+        try {
+          const { data } = await supabase.auth.getSession();
+          accessToken = data?.session?.access_token ?? null;
+        } catch {
+          accessToken = null;
+        }
+      }
+      if (user) reqWithCache[STAFF_TOKEN_KEY] = accessToken;
       if (cookieHeader) {
         setUserCacheEntry(cookieUserCache, cookieHeader, {
           user,
+          accessToken,
           expiresAt: now + TOKEN_CACHE_TTL,
         });
       }
@@ -540,6 +570,49 @@ export async function resolveGuard(
   });
 }
 
+/* -----------------------------------------------------------
+ * Double authentification (TOTP) — cf. utils/staffMfa.ts
+ * ---------------------------------------------------------*/
+
+/**
+ * Niveau d'assurance de la session qui a établi le contexte staff : lu dans
+ * le jeton d'accès que `getStaffContextFromRequest` a fait valider par GoTrue.
+ * `null` sans session (ou jeton illisible) — traité comme « pas aal2 ».
+ */
+export async function getStaffSessionAal(
+  req: SupabaseServerReq,
+  res: SupabaseServerRes
+): Promise<AuthenticatorAssuranceLevel | null> {
+  const ctx = await getStaffContextFromRequest(req, res);
+  if (!ctx.user) return null;
+  const token = (req as unknown as Record<symbol, unknown>)[STAFF_TOKEN_KEY];
+  return aalFromAccessToken(typeof token === 'string' ? token : null);
+}
+
+/**
+ * Exige `aal2` pour une garde SENSIBLE quand l'obligation est active
+ * (`STAFF_MFA_ENFORCED`). Ne fait RIEN quand elle est coupée — pas même la
+ * lecture du jeton. Lève `StaffMfaRequiredError` (403).
+ *
+ * `sensitive` force la sensibilité d'une route dont la garde ne l'est pas
+ * (clés d'API : `manage_settings`).
+ */
+export async function assertStaffMfa(
+  req: SupabaseServerReq,
+  res: SupabaseServerRes,
+  guard: StaffGuard,
+  opts: { sensitive?: boolean } = {}
+): Promise<void> {
+  const enforced = isStaffMfaEnforced();
+  if (!enforced) return;
+  const sensitive = opts.sensitive === true || isMfaSensitiveGuard(guard);
+  if (!sensitive) return;
+  const aal = await getStaffSessionAal(req, res);
+  if (mfaRequired({ enforced, sensitive, aal })) {
+    throw new StaffMfaRequiredError();
+  }
+}
+
 export function withStaffRoute(
   handler: (
     req: NextApiRequest,
@@ -555,8 +628,13 @@ export function withStaffRoute(
         return;
       }
       const ctx = await resolveGuard(req, res, guard);
+      await assertStaffMfa(req, res, guard);
       await handler(req, res, ctx);
     } catch (err: unknown) {
+      if (err instanceof StaffMfaRequiredError) {
+        res.status(403).json({ error: err.message, code: 'MFA_REQUIRED' });
+        return;
+      }
       if (
         err instanceof StaffUnauthenticatedError ||
         err instanceof StaffUnauthorizedError
@@ -680,6 +758,22 @@ export function withStaffPage<
 
     try {
       const staffCtx = await resolveGuard(req, res, guard);
+
+      // Double authentification : quand l'obligation est active, TOUTE page
+      // admin exige une session `aal2` ; sinon direction /admin/mfa
+      // (enrôlement ou saisie du code), page demandée conservée. Coupée par
+      // défaut (STAFF_MFA_ENFORCED) : rien ne change alors — cf. staffMfa.ts.
+      if (isStaffMfaEnforced()) {
+        const aal = await getStaffSessionAal(req, res);
+        if (mfaRequired({ enforced: true, sensitive: true, aal })) {
+          return {
+            redirect: {
+              destination: staffMfaRedirect(ctx.resolvedUrl),
+              permanent: false,
+            },
+          };
+        }
+      }
 
       // Nature du tenant actif (organizer/developer) : sert à filtrer la nav
       // admin et les cartes du dashboard côté SSR. Fail-safe 'organizer' en cas

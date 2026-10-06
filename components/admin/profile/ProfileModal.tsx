@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useToast } from '@/components/Toast';
@@ -15,6 +15,8 @@ import AdminButton, {
 } from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import ProfileLinkedAccounts from './ProfileLinkedAccounts';
+import StaffMfaPanel from './StaffMfaPanel';
+import { ErrorBanner, InfoTile } from './ProfileBits';
 
 import { logger } from '@/utils/logger';
 import nsAdminProfile from '@/lib/i18n/locales/admin-fr/adminProfile';
@@ -44,58 +46,6 @@ const labelClass = 'block text-sm font-medium text-[var(--t2,#c7bfca)] mb-1.5';
 const helpClass = 'text-xs text-[var(--t3,#a39ba6)]';
 const spinnerClass =
   'w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin';
-
-// Bannière d'erreur réutilisable (mutualise l'icône + le style rouge).
-function ErrorBanner({ message }: { message: string }) {
-  return (
-    <div className="mb-4 flex items-center gap-2 rounded-[var(--r-ctrl,4px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-sm text-[#ffc2c2]">
-      <svg
-        className="w-5 h-5 text-red-400 flex-shrink-0"
-        fill="currentColor"
-        viewBox="0 0 20 20"
-        aria-hidden="true"
-      >
-        <path
-          fillRule="evenodd"
-          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-          clipRule="evenodd"
-        />
-      </svg>
-      {message}
-    </div>
-  );
-}
-
-function InfoTile({
-  label,
-  children,
-  className = '',
-  mono = false,
-}: {
-  label: string;
-  children: ReactNode;
-  className?: string;
-  mono?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-4 ${className}`}
-    >
-      <div className="mb-1 font-[family-name:var(--fd)] text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--t3,#a39ba6)] [font-stretch:75%]">
-        {label}
-      </div>
-      <div
-        className={
-          mono
-            ? 'font-mono text-xs text-[var(--t2,#c7bfca)] break-all'
-            : 'text-sm font-medium text-[var(--t1,#f4edf7)]'
-        }
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function ProfileModal({ open, onClose }: ProfileModalProps) {
   const [profile, setProfile] = useState<StaffProfile | null>(null);
@@ -718,6 +668,28 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
                 </AdminButton>
               </form>
               <p className={`${helpClass} mt-3`}>{t.passwordHelp}</p>
+            </SectionCard>
+            <SectionCard
+              accent="purple"
+              title={t.mfaHeading}
+              icon={
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.8}
+                    d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
+                  />
+                </svg>
+              }
+            >
+              <StaffMfaPanel />
             </SectionCard>
           </div>
         )}

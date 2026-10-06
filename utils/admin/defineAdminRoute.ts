@@ -43,7 +43,12 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { z, ZodType } from 'zod';
-import { resolveGuard, type StaffGuard } from '@/utils/staff';
+import { assertStaffMfa, resolveGuard, type StaffGuard } from '@/utils/staff';
+import {
+  MFA_SENSITIVE_ROUTE_KEYS,
+  StaffMfaRequiredError,
+} from '@/utils/staffMfa';
+import { AdminError } from './errors';
 import { logStaffAction, type StaffLogAction } from '@/utils/staffLogs';
 import { logger } from '@/utils/logger';
 import type { AuthenticatedStaffContext } from '@/types/staff';
@@ -193,6 +198,13 @@ export type AdminRouteDefinition = {
   key: string;
   /** Garde par défaut de toutes les méthodes. */
   guard: StaffGuard;
+  /**
+   * Route sensible bien que sa garde ne le soit pas : exige `aal2` quand la
+   * double authentification staff est obligatoire (cf. utils/staffMfa.ts).
+   * Les gardes `owner` / `manage_tenant` / `manage_billing` / `manage_staff`
+   * le sont déjà d'office.
+   */
+  mfa?: boolean;
   GET?: AnyRead;
   POST?: AnyMutating;
   PUT?: AnyMutating;
@@ -272,8 +284,24 @@ export function defineAdminRoute(def: AdminRouteDefinition): AdminRouteHandler {
     namespace: 'admin',
     // Auth par cookie : l'origine est vérifiée sur les mutations.
     csrf: true,
-    authorize: (req, res, method) =>
-      resolveGuard(req, res, meta.methods[method]!.guard),
+    authorize: async (req, res, method) => {
+      const guard = meta.methods[method]!.guard;
+      const st = await resolveGuard(req, res, guard);
+      try {
+        await assertStaffMfa(req, res, guard, {
+          sensitive: def.mfa === true || MFA_SENSITIVE_ROUTE_KEYS.has(def.key),
+        });
+      } catch (err) {
+        // Code stable pour le client : `reason: 'mfa_required'` → /admin/mfa.
+        if (err instanceof StaffMfaRequiredError) {
+          throw new AdminError(403, 'forbidden', err.message, {
+            reason: err.reason,
+          });
+        }
+        throw err;
+      }
+      return st;
+    },
     idempotent: (method) => meta.methods[method]!.idempotent,
     idempotencyScope: (st) => ({ actorId: st.staff.id, tenantId: st.tenantId }),
     context: (st, base): AdminRouteContext => ({

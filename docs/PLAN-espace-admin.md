@@ -479,6 +479,42 @@ même migration — avec des utilisateurs des deux côtés.
 
 ---
 
+## Sécurité des comptes staff — double authentification (TOTP) — 🟨 LIVRÉE, OBLIGATION COUPÉE
+
+**Constat** : aucun second facteur sur les comptes staff, alors qu'un compte owner ouvre les
+clés d'API, HelloAsso, l'export complet d'un espace et la suppression de comptes.
+
+**Ce qui existe** (Supabase MFA TOTP, aucune dépendance ajoutée) :
+
+- Enrôlement (QR code + vérification), saisie du code et désactivation : onglet **Sécurité** du
+  profil staff (`components/admin/profile/StaffMfaPanel.tsx`) et page **`/admin/mfa`**.
+- Le niveau d'assurance (`aal1` / `aal2`) est lu dans le JWT de session APRÈS validation par
+  GoTrue (`getStaffSessionAal`, `utils/staff.ts`) ; logique pure dans `utils/staffMfa.ts`.
+- Quand l'obligation est active :
+  - toute page `withStaffPage` exige `aal2`, sinon redirection vers `/admin/mfa?next=…`
+    (enrôlement si aucun facteur vérifié, sinon saisie du code) ;
+  - les routes API **sensibles** répondent `403` (`reason: 'mfa_required'` via `defineAdminRoute`,
+    `code: 'MFA_REQUIRED'` via `withStaffRoute`) à une session `aal1` : gardes `owner`,
+    permissions `manage_tenant` (secrets, clés d'API d'espace, export complet d'un espace, admins
+    de pôle), `manage_billing` (HelloAsso), `manage_staff` (rôles, suppression et export de
+    comptes), plus les routes listées dans `MFA_SENSITIVE_ROUTE_KEYS` (clés d'API,
+    `manage_settings`) ou déclarées `mfa: true`.
+
+**Bascule (anti lock-out)** — variable d'environnement serveur `STAFF_MFA_ENFORCED`,
+**coupée par défaut** (seules `true` / `1` / `on` l'activent ; toute autre valeur la laisse
+coupée). Coupée, rien n'est bloqué : le staff ne voit que l'invitation à s'enrôler.
+
+1. Dashboard Supabase › Authentication › **Multi-Factor** : activer **TOTP** (enroll + verify).
+2. Demander à chaque membre du staff de s'enrôler (profil › Sécurité, ou `/admin/mfa`), et
+   vérifier dans Supabase (`auth.mfa_factors`, `status = 'verified'`) que tous les comptes
+   staff actifs — owners d'abord — ont un facteur vérifié.
+3. Poser `STAFF_MFA_ENFORCED=true` dans Netlify, redéployer.
+4. **Retour arrière** : retirer la variable (ou `false`) et redéployer. Un staff qui a perdu son
+   appareil : supprimer son facteur dans Supabase (Authentication › Users › facteurs), il
+   repassera par l'enrôlement.
+
+---
+
 ## 3. Ce qu'on ne fait pas (et pourquoi)
 
 - **Refondre la navigation.** [ADMIN_CONSOLIDATION.md](./ADMIN_CONSOLIDATION.md) l'a faite en

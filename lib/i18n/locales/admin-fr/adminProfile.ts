@@ -77,4 +77,42 @@ export default adminNs('adminProfile', {
   twitchHeading: 'Mon compte Twitch',
   discordHeading: 'Mon compte Discord',
   tcgHeading: 'Ma carte à collectionner',
+  // Double authentification (TOTP) — carte du profil + page /admin/mfa.
+  mfaHeading: 'Double authentification (TOTP)',
+  mfaIntro:
+    'Protège ton compte staff avec un code à 6 chiffres généré par une application d’authentification (Google Authenticator, 1Password, Aegis…).',
+  mfaInvite:
+    'Recommandé : active la double authentification. Elle pourra devenir obligatoire pour accéder à l’administration.',
+  mfaStatusOn: 'Activée',
+  mfaStatusOff: 'Non activée',
+  mfaEnableBtn: 'Activer la double authentification',
+  mfaScanQr:
+    'Scanne ce QR code avec ton application, puis saisis le code qu’elle affiche.',
+  mfaQrAlt: 'QR code d’enrôlement TOTP',
+  mfaSecretLabel: 'Ou saisis cette clé manuellement',
+  mfaCodeLabel: 'Code à 6 chiffres',
+  mfaVerifyBtn: 'Vérifier et activer',
+  mfaVerifying: 'Vérification…',
+  mfaCancelBtn: 'Annuler',
+  mfaChallengeIntro:
+    'Saisis le code de ton application d’authentification pour valider cette session.',
+  mfaChallengeBtn: 'Valider',
+  mfaSessionVerified: 'Cette session est validée par ton second facteur.',
+  mfaDisableBtn: 'Désactiver',
+  mfaDisableHelp:
+    'Désactiver la double authentification exige une session validée par un code.',
+  toastMfaEnabled: 'Double authentification activée.',
+  toastMfaVerified: 'Session validée.',
+  toastMfaDisabled: 'Double authentification désactivée.',
+  errorMfaCode: 'Code invalide. Réessaie avec le code affiché en ce moment.',
+  errorMfaGeneric: 'Erreur de double authentification.',
+  mfaPageTitle: "Double authentification | OW Women's Cup",
+  mfaPageBadge: 'Sécurité',
+  mfaPageHeading: 'Double authentification',
+  mfaPageEnforcedIntro:
+    'L’accès à l’administration exige un second facteur. Active-le ou valide ton code pour continuer.',
+  mfaPageOptionalIntro:
+    'Le second facteur n’est pas encore obligatoire, mais il protège ton compte dès aujourd’hui.',
+  mfaPageContinue: 'Continuer vers l’administration',
+  mfaPageLogout: 'Se déconnecter',
 });
