@@ -10,13 +10,19 @@
 //   - pendingInvites : invitations adressées À la joueuse (vue invitée), même
 //     source et même filtre d'expiration que la liste liée ;
 //   - checkinPending : 1 si la fenêtre de check-in du prochain match est
-//     ouverte et pas encore validée ;
+//     ouverte, pas encore validée, ET que la joueuse peut pointer (capitaine,
+//     coach, manager — règle du 2026-09-17, utils/teams/canCheckIn.ts ; même
+//     filtre que le bandeau « à faire » du tableau de bord) ;
 //   - pendingPlannings : grilles ouvertes où elle n'a pas encore peint.
 // Chaque bloc retombe sur zéro en cas d'échec : un compteur en panne ne fait
 // jamais tomber la réponse.
 
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
 import { getStaffRole } from '@/utils/staff';
+import {
+  exposesCheckin,
+  loadCheckinPermission,
+} from '@/utils/teams/canCheckIn';
 import { getManagedTeam } from '@/utils/teams/managementAccess';
 import { resolveMembership } from '@/utils/teams/memberships';
 import { listPendingInvitationsForUser } from '@/utils/teams/invitations';
@@ -45,7 +51,14 @@ async function countInbox(ctx: NotificationsCtx, teamId: string) {
   return { unreadMessages, pendingJoinRequests };
 }
 
-async function computeCheckinPending(
+/**
+ * Exporté pour les tests. La permission n'est lue QUE si un check-in est
+ * effectivement à faire (deux lectures épargnées le reste du temps) ; une
+ * lecture en échec retombe sur l'ancien comportement (`exposesCheckin`), comme
+ * les routes de lecture joueuse : mieux vaut une pastille de trop qu'un
+ * check-in manqué.
+ */
+export async function computeCheckinPending(
   ctx: NotificationsCtx,
   memberTeamId: string
 ): Promise<0 | 1> {
@@ -65,7 +78,13 @@ async function computeCheckinPending(
     next.team1_id === memberTeamId
       ? next.team1_checked_in_at
       : next.team2_checked_in_at;
-  return isOpen && !checkedInAt ? 1 : 0;
+  if (!isOpen || checkedInAt) return 0;
+  const permission = await loadCheckinPermission(
+    ctx.userId,
+    ctx.tenantId,
+    memberTeamId
+  );
+  return exposesCheckin(permission) ? 1 : 0;
 }
 
 /**
