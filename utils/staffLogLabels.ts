@@ -204,6 +204,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   disable_webhook: 'Webhook désactivé',
   revoke_previous_bot_key: 'Ancienne clé bot révoquée',
   export_tenant: 'Export des données d’un espace',
+  export_users: 'Export CSV des comptes utilisateurs',
   verify_custom_domain: 'Vérification du domaine propre',
   invite_tenant_staff: 'Invitation au staff d’un espace',
   revoke_tenant_invitation: 'Invitation révoquée',

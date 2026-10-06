@@ -55,11 +55,34 @@ export const usersPaths = {
   staff: (id: string) => `${USERS}/${enc(id)}/staff`,
   permissions: (id: string) => `${USERS}/${enc(id)}/permissions`,
   actions: (id: string) => `${USERS}/${enc(id)}/actions`,
+  export: `${USERS}/export`,
 } as const;
 
+/** Filtres de la liste, tels que l'export CSV serveur les attend. */
+export type UsersExportParams = {
+  search?: string | null;
+  role?: string | null;
+  filters?: readonly string[];
+  sort?: string | null;
+  dir?: string | null;
+};
+
+/**
+ * URL de l'export CSV (GET /api/admin/users/export) : les MÊMES paramètres que
+ * la liste, sans pagination. Un filtre vide est omis.
+ */
+export function buildUsersExportUrl(p: UsersExportParams): string {
+  const qs = new URLSearchParams();
+  if (p.search) qs.set('search', p.search);
+  if (p.role) qs.set('role', p.role);
+  if (p.filters?.length) qs.set('filters', p.filters.join(','));
+  if (p.sort) qs.set('sort', p.sort);
+  if (p.dir) qs.set('dir', p.dir);
+  const s = qs.toString();
+  return s ? `${usersPaths.export}?${s}` : usersPaths.export;
+}
+
 export const usersClient = {
-  /** Page de la liste des inscrits (export CSV : requête brute par page). */
-  managePage: <T>(qs: string) => adminRequest<T>(`${MANAGE}?${qs}`),
   /** PATCH /manage : rôle, nom, BattleTag, suspension, renvoi d'identifiants… */
   patch: <T = unknown>(body: Record<string, unknown>) =>
     adminRequest<T>(MANAGE, { method: 'PATCH', json: body }),

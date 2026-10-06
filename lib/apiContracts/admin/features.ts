@@ -207,6 +207,7 @@ import {
   PlayerActionDoc,
   StaffPermissionsDoc,
   UserIdPathQuery,
+  UsersExportQuery,
   UsersManageDeleteDoc,
   UsersManageListQuery,
   UsersManagePatchDoc,
@@ -1006,6 +1007,7 @@ export const ADMIN_FEATURE_QUERY_SCHEMAS: Record<string, ApiContractEntry> = {
   // suppression d'un lobby et saisie de ses placements partagent le schéma.
   'admin.lobbies/[lobbyId].query': { schema: LobbyIdQuery, io: 'input' },
   'admin.users/manage.query': { schema: UsersManageListQuery, io: 'input' },
+  'admin.users/export.query': { schema: UsersExportQuery, io: 'input' },
   // permissions et actions d'un compte partagent le même schéma.
   'admin.users/[userId].query': { schema: UserIdPathQuery, io: 'input' },
   'admin.tcg/catalogue.query': { schema: TcgCatalogueQuery, io: 'input' },

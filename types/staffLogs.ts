@@ -222,6 +222,7 @@ export type StaffLogAction =
   | 'disable_webhook'
   | 'revoke_previous_bot_key'
   | 'export_tenant'
+  | 'export_users'
   | 'verify_custom_domain'
   | 'invite_tenant_staff'
   | 'revoke_tenant_invitation'

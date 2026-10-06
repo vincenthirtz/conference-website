@@ -195,7 +195,7 @@ export default adminNs('adminUsersManage', {
   filterStaff: 'Staff',
   filterCommunity: 'Communauté',
   exportTruncated:
-    'Export partiel : {count} ligne(s) exportée(s) avant que la limite de requêtes ne soit atteinte.',
+    'Export partiel : {count} ligne(s) exportée(s), le plafond par fichier est atteint. Affine les filtres pour exporter le reste.',
   roleReferee: 'Arbitre',
   roleHelper: 'Bénévole',
 });

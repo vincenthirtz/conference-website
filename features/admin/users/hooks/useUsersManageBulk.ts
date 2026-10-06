@@ -8,16 +8,14 @@
 
 import type { Dispatch, SetStateAction } from 'react';
 import { format } from '@/lib/i18n/useAdminT';
-import { AdminHttpError } from '@/utils/admin/adminHttp';
-import { usersClient } from '../client';
+import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { filenameFromContentDisposition } from '@/utils/teams/teamExportClient';
+import { buildUsersExportUrl, usersClient } from '../client';
 import type { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import type { useToast } from '@/components/Toast';
-import { csvCell, isSuspended } from '@/components/admin/users/manageFormat';
 import {
   canGrantRole,
   isRowLocked,
-  isStaffRoleValue,
-  type ApiResponse,
   type Dict,
   type QuickFilter,
   type SortDir,
@@ -65,6 +63,8 @@ export function useUsersManageBulk({
   confirm,
   refresh,
 }: Deps) {
+  const { adminFetch } = useAdminFetch();
+
   // Enchaîne des mutations unitaires sur la sélection (pas d'endpoint bulk
   // côté API), en publiant l'avancement : sur 30 comptes la boucle dure
   // plusieurs secondes, un simple spinner ne dit pas où on en est. Renvoie le
@@ -182,96 +182,48 @@ export function useUsersManageBulk({
     }
   };
 
+  // Export CSV : produit et journalisé CÔTÉ SERVEUR (GET /api/admin/users/
+  // export), avec les filtres et le tri courants. Le navigateur ne fait plus
+  // que télécharger le fichier — plus de pagination, de 429 ni de fichier
+  // tronqué faute de requêtes.
   const exportCsv = async () => {
     setExporting(true);
-    let truncated = false;
     try {
-      const collected: UserLite[] = [];
-      const pageSize = 200;
-      let off = 0;
-      // Rapatrie toutes les lignes correspondant aux filtres/tri courants.
-      // L'endpoint est limité à 60 req/min : sur un gros export on finit par
-      // se prendre un 429. On attend et on retente au lieu de tout perdre —
-      // et si ça persiste, on exporte quand même ce qui a été collecté.
-      for (let guard = 0; guard < 100; guard += 1) {
-        const qs = new URLSearchParams();
-        if (search) qs.set('search', search);
-        if (roleFilter) qs.set('role', roleFilter);
-        if (quickFilters.length) qs.set('filters', quickFilters.join(','));
-        qs.set('sort', sortField);
-        qs.set('dir', sortDir);
-        qs.set('limit', String(pageSize));
-        qs.set('offset', String(off));
-
-        let items: UserLite[] | null = null;
-        for (let attempt = 0; attempt < 3 && items === null; attempt += 1) {
-          try {
-            const json = await usersClient.managePage<ApiResponse>(
-              qs.toString()
-            );
-            items = json.items || [];
-          } catch (err: unknown) {
-            const rateLimited =
-              err instanceof AdminHttpError && err.status === 429;
-            if (!rateLimited || attempt === 2) {
-              if (collected.length === 0) throw err;
-              truncated = true;
-              break;
-            }
-            await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
-          }
-        }
-        if (items === null) break; // export partiel (cf. `truncated`)
-
-        collected.push(...items);
-        if (items.length < pageSize) break;
-        off += pageSize;
+      const res = await adminFetch(
+        buildUsersExportUrl({
+          search,
+          role: roleFilter,
+          filters: quickFilters,
+          sort: sortField,
+          dir: sortDir,
+        })
+      );
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          error?: unknown;
+        } | null;
+        throw new Error(
+          typeof body?.error === 'string' ? body.error : t.errExport
+        );
       }
-
-      const header = [
-        'id',
-        'email',
-        'display_name',
-        'account_role',
-        'role_scope',
-        'created_at',
-        'last_sign_in_at',
-        'banned_until',
-        'discord',
-        'teams',
-      ];
-      const lines = [
-        header.join(','),
-        ...collected.map((u) =>
-          [
-            u.id,
-            u.email || '',
-            u.display_name || '',
-            u.role || '',
-            isStaffRoleValue(u.role) ? 'staff' : 'community',
-            u.created_at || '',
-            u.last_sign_in_at || '',
-            isSuspended(u.banned_until) ? u.banned_until || '' : '',
-            u.discord_username || u.discord_user_id || '',
-            (u.team_memberships || [])
-              .map((tm) => `${tm.team_name} (${tm.role || '—'})`)
-              .join('; '),
-          ]
-            .map((c) => csvCell(String(c)))
-            .join(',')
-        ),
-      ];
-      const csv = '﻿' + lines.join('\r\n'); // BOM pour Excel
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'utilisateurs.csv';
+      a.download =
+        filenameFromContentDisposition(
+          res.headers.get('Content-Disposition')
+        ) ?? 'utilisateurs.csv';
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
-      if (truncated) {
+      a.remove();
+      // Révoquer dans la foulée du clic coupe le téléchargement sous Firefox.
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      if (res.headers.get('X-Export-Truncated') === '1') {
         addToast(
-          format(t.exportTruncated, { count: collected.length }),
+          format(t.exportTruncated, {
+            count: Number(res.headers.get('X-Export-Count')) || 0,
+          }),
           'warning'
         );
       }

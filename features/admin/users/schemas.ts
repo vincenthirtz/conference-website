@@ -38,6 +38,18 @@ export const UsersManageListQuery = looseQuery([
   'filters',
 ]);
 
+/**
+ * Export CSV : les MÊMES filtres et le même tri que la liste, sans pagination
+ * (le serveur parcourt toutes les pages lui-même).
+ */
+export const UsersExportQuery = looseQuery([
+  'search',
+  'role',
+  'sort',
+  'dir',
+  'filters',
+]);
+
 export const UsersManagePatchDoc = looseBody([
   'userId',
   'action',

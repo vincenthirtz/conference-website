@@ -1,0 +1,71 @@
+get:
+  x-zod-query: admin.users/export.query
+  summary: Export user accounts as CSV (same filters as the admin list).
+  description: |
+    Requires the `manage_staff` staff permission (platform scope), like
+    `GET /api/admin/users/manage`. Applies the same filters and sort as the
+    list (`search`, `role`, `filters`, `sort`, `dir`), unpaginated but capped
+    at 10 000 rows (`X-Export-Truncated: 1` when capped).
+    CSV: UTF-8 BOM, `,` separator, CRLF, formula-injection neutralised;
+    columns `id,email,display_name,account_role,role_scope,created_at,
+    last_sign_in_at,banned_until,discord,teams`.
+    Every export is logged in `staff_logs` (`export_users`).
+    Responses carry `Cache-Control: private, no-store`.
+  operationId: adminExportUsers
+  tags:
+    - admin/users
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: search
+      description: Free-text match on email, display_name, role, or team battle_tag.
+      schema:
+        type: string
+    - in: query
+      name: role
+      description: Exact role filter (case-insensitive) on user_metadata.role.
+      schema:
+        type: string
+    - in: query
+      name: filters
+      description: Comma-separated quick filters (same values as the list).
+      schema:
+        type: string
+    - in: query
+      name: sort
+      schema:
+        type: string
+    - in: query
+      name: dir
+      schema:
+        type: string
+        enum:
+          - asc
+          - desc
+  responses:
+    '200':
+      description: CSV attachment.
+      headers:
+        Content-Disposition:
+          description: '`attachment; filename="utilisateurs-YYYY-MM-DD.csv"`.'
+          schema:
+            type: string
+        X-Export-Count:
+          description: Number of exported rows.
+          schema:
+            type: string
+        X-Export-Truncated:
+          description: '`1` when the 10 000-row cap was reached, else `0`.'
+          schema:
+            type: string
+      content:
+        text/csv:
+          schema:
+            type: string
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '429':
+      description: Too many exports (6 per minute).

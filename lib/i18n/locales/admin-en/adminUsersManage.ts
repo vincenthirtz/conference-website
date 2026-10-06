@@ -144,7 +144,7 @@ export default {
     'This is your own account: changing its role or deleting it is rejected by the API.',
   battleTagInvalid: 'Invalid BattleTag — expected format: Name#1234.',
   exportTruncated:
-    'Partial export: {count} row(s) exported before the request limit was hit.',
+    'Partial export: {count} row(s) exported, the per-file cap was reached. Narrow the filters to export the rest.',
   quickFiltersLabel: 'Quick filters:',
   quickFiltersClear: 'Reset',
   quickFiltersHint:
