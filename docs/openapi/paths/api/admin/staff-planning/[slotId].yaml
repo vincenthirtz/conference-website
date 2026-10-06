@@ -5,7 +5,8 @@ patch:
     Modifie le role, les horaires ou la note d'un creneau. Le role et la note
     poses sur un creneau importe survivent aux reimports du tableur. 409 si
     le nouveau debut en croise un autre de la meme personne ce jour-la.
-    Reserve a `manage_staff`.
+    Tout le staff sur SES creneaux (pseudo = nom affiche, 403 sinon) ;
+    `manage_staff` sur tous.
   operationId: adminUpdateStaffPlanningSlot
   tags:
     - admin/misc
@@ -53,7 +54,8 @@ delete:
   summary: Delete a staff availability slot.
   description: >
     Supprime un creneau du planning du staff (saisi a la main ou importe).
-    404 hors du tenant actif. Reserve a `manage_staff`.
+    404 hors du tenant actif. Tout le staff sur SES creneaux (403 sinon) ;
+    `manage_staff` sur tous.
   operationId: adminDeleteStaffPlanningSlot
   tags:
     - admin/misc

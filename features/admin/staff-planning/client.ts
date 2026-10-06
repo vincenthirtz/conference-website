@@ -37,6 +37,8 @@ export type StaffPlanningPayload = {
   slots: StaffPlanningSlotRow[];
   people: string[];
   matchNights: StaffPlanningMatchNight[];
+  /** Nom affiché du lecteur (« Mes dispos ») ; `null` s'il n'en a pas. */
+  me?: string | null;
 };
 
 export const staffPlanningClient = {

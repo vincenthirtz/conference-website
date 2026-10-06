@@ -129,6 +129,12 @@ export default adminNs('adminDashboard', {
   alertStagesReadyMsg: 'Tous les matchs sont terminés sur ces phases.',
   alertRosterLockTitle: 'Verrouillage des rosters imminent',
   alertRosterLockMsg: 'Le lock des effectifs intervient dans moins de 24h.',
+  alertStaffNightsTitle_one: '{count} soir de match sans staff cette semaine',
+  alertStaffNightsTitle_other:
+    '{count} soirs de match sans staff cette semaine',
+  alertStaffNightsMsg:
+    'Personne n’a posé de dispo ces soirs-là dans les 7 prochains jours.',
+  ctaViewStaffPlanning: 'Voir le planning',
   navCheckinTitle: 'Check-in du jour',
   navCheckinDesc: 'Suivre et relancer les check-ins du tournoi en cours',
   navFunnelTitle: 'Entonnoir du réseau',

@@ -48,19 +48,49 @@ export async function insertSlot(db: AdminDb, row: SlotInsert) {
   return { row: data ?? null, error };
 }
 
+/** Jours ayant au moins un créneau (couverture des soirs de match). */
+export async function listSlotDates(
+  db: AdminDb,
+  tenantId: string,
+  from: string,
+  to: string
+) {
+  const { data, error } = await db
+    .from('staff_planning_slots')
+    .select('slot_date')
+    .eq('tenant_id', tenantId)
+    .gte('slot_date', from)
+    .lte('slot_date', to)
+    .limit(5000);
+  return { rows: data ?? [], error };
+}
+
+/** Pseudo d'un créneau du tenant : contrôle « Mes dispos ». */
+export async function getSlotOwner(db: AdminDb, tenantId: string, id: string) {
+  const { data, error } = await db
+    .from('staff_planning_slots')
+    .select('id, person_name')
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+  return { row: data ?? null, error };
+}
+
+/** `onlyPerson` : n'écrit le créneau que s'il porte (encore) ce pseudo. */
 export async function updateSlot(
   db: AdminDb,
   tenantId: string,
   id: string,
-  patch: SlotUpdate
+  patch: SlotUpdate,
+  onlyPerson?: string
 ) {
-  const { data, error } = await db
+  let q = db
     .from('staff_planning_slots')
     .update(patch)
     .eq('id', id)
-    .eq('tenant_id', tenantId)
-    .select(SLOT_COLUMNS)
-    .maybeSingle();
+    .eq('tenant_id', tenantId);
+  if (onlyPerson !== undefined) q = q.eq('person_name', onlyPerson);
+  const { data, error } = await q.select(SLOT_COLUMNS).maybeSingle();
   return { row: data ?? null, error };
 }
 
@@ -116,13 +146,19 @@ export async function deleteSlotsByIds(
   return { error };
 }
 
-export async function deleteSlot(db: AdminDb, tenantId: string, id: string) {
-  const { data, error } = await db
+export async function deleteSlot(
+  db: AdminDb,
+  tenantId: string,
+  id: string,
+  onlyPerson?: string
+) {
+  let q = db
     .from('staff_planning_slots')
     .delete()
     .eq('id', id)
-    .eq('tenant_id', tenantId)
-    .select('id');
+    .eq('tenant_id', tenantId);
+  if (onlyPerson !== undefined) q = q.eq('person_name', onlyPerson);
+  const { data, error } = await q.select('id');
   return { deleted: data?.length ?? 0, error };
 }
 

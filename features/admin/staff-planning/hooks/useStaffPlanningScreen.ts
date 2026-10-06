@@ -21,6 +21,7 @@ import {
   type StaffPlanningMatchNight,
   type StaffPlanningSlotRow,
 } from '../client';
+import { samePerson } from '../access';
 import {
   countByPerson,
   matchNightEvents,
@@ -59,6 +60,9 @@ export function useStaffPlanningScreen(t: StaffPlanningTexts) {
   const slots = planning.data?.slots ?? EMPTY;
   const people = planning.data?.people ?? [];
   const nights = planning.data?.matchNights ?? NO_NIGHTS;
+  const me = planning.data?.me ?? null;
+  // Le pseudo tel qu'il apparaît au planning (casse du tableur), pour filtrer.
+  const mine = me ? (people.find((p) => samePerson(p, me)) ?? me) : null;
   const month = view.monthAnchor.slice(0, 7);
 
   // Soirs de match d'abord (minute -1), puis les créneaux. Filtré sur une
@@ -213,6 +217,9 @@ export function useStaffPlanningScreen(t: StaffPlanningTexts) {
     },
     slots,
     people,
+    /** Nom affiché du lecteur, et son pseudo au planning (« Mes dispos »). */
+    me,
+    mine,
     events,
     counts,
     daySlots,

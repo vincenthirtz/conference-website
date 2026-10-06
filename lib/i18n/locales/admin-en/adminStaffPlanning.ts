@@ -80,6 +80,11 @@ export default {
   toastAddedMany: '{count} slots added',
   toastAddedSkipped: '{count} slots added ({skipped} already there)',
   toastImportDetail: '{inserted} added · {kept} kept · {removed} removed',
-  readOnlyNote:
-    'Read only: managing the schedule is reserved to staff management.',
+  mineNote:
+    'You add, edit and remove your own availability; the rest of the schedule and the spreadsheet import are reserved to staff management.',
+  mineAddTitle: 'Add my availability',
+  mineFilter: 'My availability',
+  mineFilterOff: 'Everyone',
+  selfNameMissing:
+    'Set your display name (your spreadsheet nickname) in your staff profile to enter your availability.',
 };

@@ -87,6 +87,11 @@ export default adminNs('adminStaffPlanning', {
   toastAddedSkipped: '{count} créneaux ajoutés ({skipped} déjà présents)',
   toastImportDetail:
     '{inserted} ajoutés · {kept} conservés · {removed} retirés',
-  readOnlyNote:
-    'Lecture seule : la gestion du planning est réservée à la gestion du staff.',
+  mineNote:
+    'Tu saisis, modifies et retires tes propres disponibilités ; le reste du planning et l’import du tableur sont réservés à la gestion du staff.',
+  mineAddTitle: 'Ajouter une dispo',
+  mineFilter: 'Mes dispos',
+  mineFilterOff: 'Tout le monde',
+  selfNameMissing:
+    'Renseigne ton nom affiché (ton pseudo du tableur) dans ton profil staff pour saisir tes disponibilités.',
 });

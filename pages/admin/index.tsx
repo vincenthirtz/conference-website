@@ -343,6 +343,20 @@ function buildAlerts(summary: AlertsSummary | null, t: Dict) {
       cta: { label: t.ctaViewTournament, href: '/admin/tournoi-en-cours' },
     });
   }
+  const staffNights = b.staffUncoveredNights ?? 0;
+  if (staffNights > 0) {
+    out.push({
+      severity: 'warning',
+      title: format(
+        staffNights > 1
+          ? t.alertStaffNightsTitle_other
+          : t.alertStaffNightsTitle_one,
+        { count: staffNights }
+      ),
+      message: t.alertStaffNightsMsg,
+      cta: { label: t.ctaViewStaffPlanning, href: '/admin/staff-planning' },
+    });
+  }
 
   return out;
 }

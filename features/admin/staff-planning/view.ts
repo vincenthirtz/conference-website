@@ -4,6 +4,7 @@
 
 import type { MonthCalendarEvent } from '@/components/admin/calendar/MonthCalendar';
 import type { StaffPlanningMatchNight, StaffPlanningSlotRow } from './client';
+import { staffedDays, uncoveredNights } from './coverage';
 import { STAFF_PLANNING_ROLES, type StaffPlanningRole } from './schemas';
 
 /**
@@ -114,7 +115,7 @@ export function matchNightEvents(
   slots: readonly StaffPlanningSlotRow[],
   labels: { matchesOne: string; matchesMany: string; nobody: string }
 ): MonthCalendarEvent[] {
-  const staffed = new Set(slots.map((s) => s.slot_date));
+  const staffed = staffedDays(slots);
   return nights.map((n) => {
     const covered = staffed.has(n.date);
     const what = (n.count > 1 ? labels.matchesMany : labels.matchesOne).replace(
@@ -155,16 +156,14 @@ export function monthStats(
   month: string
 ) {
   const inMonth = slots.filter((s) => s.slot_date.slice(0, 7) === month);
-  const staffed = new Set(inMonth.map((s) => s.slot_date));
   const monthNights = nights.filter((n) => n.date.slice(0, 7) === month);
+  const uncovered = uncoveredNights(monthNights, inMonth).map((n) => n.date);
   return {
     slots: inMonth.length,
     people: new Set(inMonth.map((s) => s.person_name)).size,
     nights: monthNights.length,
-    coveredNights: monthNights.filter((n) => staffed.has(n.date)).length,
-    uncovered: monthNights
-      .filter((n) => !staffed.has(n.date))
-      .map((n) => n.date),
+    coveredNights: monthNights.length - uncovered.length,
+    uncovered,
   };
 }
 

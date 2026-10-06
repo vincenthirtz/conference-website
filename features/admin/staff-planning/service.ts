@@ -9,13 +9,24 @@
 // Une saisie manuelle n'est jamais touchée par un import.
 //
 // La lecture joint les SOIRS DE MATCH de la fenêtre : l'écran montre quels
-// soirs sont à couvrir et lesquels ne le sont pas.
+// soirs sont à couvrir et lesquels ne le sont pas. La même définition de
+// « non couvert » (./coverage.ts) alimente le badge d'alertes de l'admin.
+//
+// Écriture : `manage_staff` sur tout le planning, tout autre membre du staff
+// sur SES créneaux seulement (« Mes dispos », ./access.ts) — vérifié ici, sur
+// la ligne en base.
 
 import type { z } from 'zod';
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { AdminError } from '@/utils/admin/errors';
-import { addDaysYmd, dateAndMinuteInTz } from '@/utils/teams/scrimCalendar';
+import {
+  addDaysYmd,
+  dateAndMinuteInTz,
+  todayYmdInTz,
+} from '@/utils/teams/scrimCalendar';
 import type { Audited } from '../_shared/audited';
+import { assertCanWriteFor, type PlanningWriter } from './access';
+import { uncoveredNights } from './coverage';
 import * as repo from './repository';
 import type {
   StaffPlanningImportBody,
@@ -105,11 +116,14 @@ export function weeklyDates(from: string, until: string): string[] {
 
 export async function listPlanning(
   ctx: ServiceContext,
-  query: { from: string; to: string }
+  query: { from: string; to: string },
+  /** Nom affiché du lecteur : l'écran en tire « Mes dispos ». */
+  me: string | null = null
 ): Promise<{
   slots: StaffPlanningSlot[];
   people: string[];
   matchNights: MatchNight[];
+  me: string | null;
 }> {
   const span =
     (Date.parse(`${query.to}T00:00:00Z`) -
@@ -142,7 +156,67 @@ export async function listPlanning(
     slots: slots.rows.map(normalizeSlot),
     people: names,
     matchNights: groupMatchNights(matches.rows, query.from, query.to),
+    me,
   };
+}
+
+/* ---------------------------------------------------------------------------
+ * Soirs de match sans staff à venir — badge d'alertes de l'admin
+ * ------------------------------------------------------------------------ */
+
+/** Horizon du signal « soir de match sans staff » (aujourd'hui compris). */
+export const UNCOVERED_ALERT_DAYS = 7;
+
+/**
+ * Soirs de match des `days` prochains jours (aujourd'hui compris, heure de
+ * Paris) où personne n'a posé de créneau : la définition de l'écran planning
+ * (./coverage.ts), lue en deux requêtes légères.
+ */
+export async function uncoveredMatchNightsAhead(
+  ctx: ServiceContext,
+  today: string = todayYmdInTz(STAFF_PLANNING_TZ),
+  days: number = UNCOVERED_ALERT_DAYS
+): Promise<MatchNight[]> {
+  const to = addDaysYmd(today, days - 1);
+  const [slots, matches] = await Promise.all([
+    repo.listSlotDates(ctx.db, ctx.tenantId, today, to),
+    repo.listMatchTimes(
+      ctx.db,
+      ctx.tenantId,
+      `${addDaysYmd(today, -1)}T00:00:00Z`,
+      `${addDaysYmd(to, 2)}T00:00:00Z`
+    ),
+  ]);
+  if (slots.error || matches.error) {
+    ctx.logger.error('[admin/staff-planning] uncovered nights error', null, {
+      tenantId: ctx.tenantId,
+    });
+    throw serverError();
+  }
+  return uncoveredNights(groupMatchNights(matches.rows, today, to), slots.rows);
+}
+
+/**
+ * Contrôle « Mes dispos » d'un créneau existant (404 hors tenant, 403 s'il
+ * n'est pas à `writer`). Rend le pseudo auquel borner l'écriture (`undefined`
+ * pour `manage_staff`) : un changement concurrent du créneau n'y passe pas.
+ */
+async function slotWritableBy(
+  ctx: ServiceContext,
+  slotId: string,
+  writer: PlanningWriter
+): Promise<string | undefined> {
+  if (writer.manageAll) return undefined;
+  const { row, error } = await repo.getSlotOwner(ctx.db, ctx.tenantId, slotId);
+  if (error) {
+    ctx.logger.error('[admin/staff-planning] owner read error', null, {
+      tenantId: ctx.tenantId,
+    });
+    throw serverError();
+  }
+  if (!row) throw new AdminError(404, 'not_found', 'Créneau introuvable.');
+  assertCanWriteFor(writer, row.person_name);
+  return row.person_name;
 }
 
 /* ---------------------------------------------------------------------------
@@ -151,10 +225,12 @@ export async function listPlanning(
 
 export async function createSlot(
   ctx: ServiceContext,
-  body: z.output<typeof StaffPlanningSlotCreate>
+  body: z.output<typeof StaffPlanningSlotCreate>,
+  writer: PlanningWriter
 ): Promise<
   Audited<{ slot: StaffPlanningSlot | null; created: number; skipped: number }>
 > {
+  const person = assertCanWriteFor(writer, body.person_name);
   if (body.start_time === body.end_time) {
     throw new AdminError(400, 'validation', 'Créneau vide.', {
       fields: { end_time: 'La fin doit différer du début.' },
@@ -162,7 +238,7 @@ export async function createSlot(
   }
   const base = {
     tenant_id: ctx.tenantId,
-    person_name: body.person_name,
+    person_name: person,
     start_time: body.start_time,
     end_time: body.end_time,
     role: body.role ?? null,
@@ -197,7 +273,7 @@ export async function createSlot(
       audit: {
         entity_type: 'staff_planning_slot',
         payload: {
-          person: body.person_name,
+          person,
           from: body.slot_date,
           until: body.repeat_until,
           created: inserted,
@@ -241,7 +317,8 @@ export async function createSlot(
 export async function updateSlot(
   ctx: ServiceContext,
   slotId: string,
-  body: z.output<typeof StaffPlanningSlotPatch>
+  body: z.output<typeof StaffPlanningSlotPatch>,
+  writer: PlanningWriter
 ): Promise<Audited<{ slot: StaffPlanningSlot }>> {
   if (
     body.start_time !== undefined &&
@@ -260,11 +337,13 @@ export async function updateSlot(
   if (body.role !== undefined) patch.role = body.role;
   if (body.note !== undefined) patch.note = body.note ? body.note : null;
 
+  const onlyPerson = await slotWritableBy(ctx, slotId, writer);
   const { row, error } = await repo.updateSlot(
     ctx.db,
     ctx.tenantId,
     slotId,
-    patch
+    patch,
+    onlyPerson
   );
   if (error?.code === '23505') {
     throw new AdminError(
@@ -297,12 +376,15 @@ export async function updateSlot(
 
 export async function deleteSlot(
   ctx: ServiceContext,
-  slotId: string
+  slotId: string,
+  writer: PlanningWriter
 ): Promise<Audited<{ ok: true }>> {
+  const onlyPerson = await slotWritableBy(ctx, slotId, writer);
   const { deleted, error } = await repo.deleteSlot(
     ctx.db,
     ctx.tenantId,
-    slotId
+    slotId,
+    onlyPerson
   );
   if (error) {
     ctx.logger.error('[admin/staff-planning] delete error', null, {

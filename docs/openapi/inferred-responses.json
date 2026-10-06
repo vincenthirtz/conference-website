@@ -2489,6 +2489,9 @@
          "null"
         ]
        },
+       "staffUncoveredNights": {
+        "type": "number"
+       },
        "used": {
         "type": "number"
        }
@@ -13044,6 +13047,12 @@
          },
          "name": {
           "type": "string"
+     "me": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
          },
          "seed": {
           "type": [
@@ -13105,6 +13114,7 @@
         }
        },
        "required": [
+     "me",
         "logoUrl",
         "name",
         "seed",

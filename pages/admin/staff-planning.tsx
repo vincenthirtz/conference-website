@@ -5,9 +5,11 @@
 // l'agenda des scrims. Une couleur par personne ; clic sur un nom = ses seuls
 // créneaux ; clic sur un jour = son détail.
 //
-// Consultable par tout le staff. Ajouter, retirer et importer le tableur
-// partagé (export CSV) : réservé à `manage_staff` (gardé côté API). L'état et
-// les gestes vivent dans `useStaffPlanningScreen` ; la page compose.
+// Consultable par tout le staff. Chacun saisit, modifie et retire SES
+// disponibilités (« Mes dispos ») ; le planning des autres et l'import du
+// tableur partagé (export CSV) : réservés à `manage_staff`. Tout est gardé
+// côté API. L'état et les gestes vivent dans `useStaffPlanningScreen` ; la
+// page compose.
 
 import Head from 'next/head';
 import { withStaffPage } from '@/utils/staff';
@@ -21,6 +23,7 @@ import { FormError } from '@/components/admin/form/FormField';
 import MonthCalendar from '@/components/admin/calendar/MonthCalendar';
 import { rubanEyebrow, rubanMuted } from '@/features/ruban/ruban';
 import StatTile from '@/features/ruban/StatTile';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import {
   STAFF_PLANNING_TZ,
   useStaffPlanningScreen,
@@ -30,7 +33,7 @@ import StaffPlanningDayPanel from '@/features/admin/staff-planning/ui/StaffPlann
 import StaffPlanningAddForm from '@/features/admin/staff-planning/ui/StaffPlanningAddForm';
 import StaffPlanningImportPanel from '@/features/admin/staff-planning/ui/StaffPlanningImport';
 
-// Tout le staff consulte ; l'écriture est gardée par `manage_staff` côté API.
+// Tout le staff consulte et tient ses dispos ; le reste, `manage_staff`.
 export const getServerSideProps = withStaffPage('helper');
 
 /** « 2026-10-07 » → « mer. 7 oct. » */
@@ -117,6 +120,7 @@ function AdminStaffPlanningPage() {
               slots={s.daySlots}
               people={s.people}
               canManage={canManage}
+              me={s.me}
               busyId={s.busy}
               onDelete={s.removeSlot}
               onUpdate={s.updateSlot}
@@ -129,6 +133,19 @@ function AdminStaffPlanningPage() {
               only={s.view.only}
               onOnly={s.setOnly}
             />
+            {s.mine && (
+              <AdminButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                aria-pressed={s.view.only === s.mine}
+                onClick={() =>
+                  s.setOnly(s.view.only === s.mine ? null : s.mine)
+                }
+              >
+                {s.view.only === s.mine ? t.mineFilterOff : t.mineFilter}
+              </AdminButton>
+            )}
             {canManage ? (
               <>
                 <StaffPlanningAddForm
@@ -143,8 +160,21 @@ function AdminStaffPlanningPage() {
                   onImport={s.importCsv}
                 />
               </>
+            ) : s.mine ? (
+              <>
+                <StaffPlanningAddForm
+                  t={t}
+                  people={s.people}
+                  day={s.view.day}
+                  fixedPerson={s.mine}
+                  onSubmit={s.addSlot}
+                />
+                <p className={`text-xs ${rubanMuted}`}>{t.mineNote}</p>
+              </>
             ) : (
-              <p className={`text-xs ${rubanMuted}`}>{t.readOnlyNote}</p>
+              !s.planning.isPending && (
+                <p className={`text-xs ${rubanMuted}`}>{t.selfNameMissing}</p>
+              )
             )}
           </aside>
         </div>

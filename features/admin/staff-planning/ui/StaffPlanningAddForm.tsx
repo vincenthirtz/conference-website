@@ -2,6 +2,8 @@
 // créneau à la main (jamais écrasé par un import). Formulaire sur schéma
 // (`useAdminForm`) : validation locale, erreurs par champ, erreur serveur
 // affichée sous le formulaire. Le jour suit le jour cliqué dans l'agenda.
+// « Mes dispos » (`fixedPerson`) : la personne est le lecteur, non modifiable
+// (l'API refuse de toute façon un autre pseudo).
 
 import { useEffect } from 'react';
 import * as z from 'zod';
@@ -69,18 +71,21 @@ export default function StaffPlanningAddForm({
   t,
   people,
   day,
+  fixedPerson = null,
   onSubmit,
 }: {
   t: StaffPlanningTexts;
   people: string[];
   day: string;
+  /** « Mes dispos » : le pseudo du lecteur, imposé. */
+  fixedPerson?: string | null;
   /** Lève en cas d'échec : l'erreur s'affiche dans le formulaire. */
   onSubmit: (slot: NewSlot) => Promise<void>;
 }) {
   const form = useAdminForm({
     schema: addSchema,
     initialValues: {
-      person_name: '',
+      person_name: fixedPerson ?? '',
       slot_date: day,
       start_time: '19:00',
       end_time: '22:00',
@@ -97,13 +102,23 @@ export default function StaffPlanningAddForm({
   });
   const { setValue } = form;
   useEffect(() => setValue('slot_date', day), [day, setValue]);
+  useEffect(() => {
+    if (fixedPerson) setValue('person_name', fixedPerson);
+  }, [fixedPerson, setValue]);
   const listId = `${form.formId}-people`;
 
   return (
     <form className={rubanCardPadded} onSubmit={form.handleSubmit} noValidate>
-      <p className={rubanEyebrow}>{t.addTitle}</p>
+      <p className={rubanEyebrow}>
+        {fixedPerson ? t.mineAddTitle : t.addTitle}
+      </p>
+      {fixedPerson && (
+        <p className="mt-1 text-sm font-semibold text-[var(--t1,#f4edf7)]">
+          {fixedPerson}
+        </p>
+      )}
       <div className="mt-3 grid grid-cols-2 gap-3">
-        <label className="col-span-2">
+        <label className={`col-span-2${fixedPerson ? ' hidden' : ''}`}>
           <span className={rubanLabel}>{t.fieldPerson}</span>
           <input
             {...form.field('person_name')}

@@ -1423,6 +1423,13 @@ export type AlertsSummary = {
     rosterLockSoon: boolean; // <= 24h, > 0h
     stagesReady: number;
     activeMvpPolls: number;
+    /**
+     * Soirs de match des 7 prochains jours sans personne au planning du staff
+     * (portée ESPACE, pas tournoi). Ajouté par le badge
+     * (features/admin/dashboard/service.ts), hors des 8 signaux du tournoi :
+     * absent du builder complet, qui ne lit pas le planning.
+     */
+    staffUncoveredNights?: number;
   };
 };
 

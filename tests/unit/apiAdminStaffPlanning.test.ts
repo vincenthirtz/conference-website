@@ -3,7 +3,10 @@
 // Couvert :
 //   - lecture : fenêtre de dates, tenant actif seul, pseudos connus ; ouverte à
 //     tout le staff (arbitre compris), fenêtre invalide = 400 ;
-//   - écriture réservée à `manage_staff` (arbitre = 403) ;
+//   - écriture : `manage_staff` sur tout ; tout autre staff sur SES créneaux
+//     (« Mes dispos » : pseudo = nom affiché), 403 sur ceux des autres ou
+//     sans nom affiché ; import réservé à `manage_staff` ;
+//   - soirs de match sans staff à venir (signal du badge d'alertes) ;
 //   - ajout manuel : validation, 409 sur doublon ;
 //   - retrait : 404 hors tenant ;
 //   - import : remplace l'import précédent des mois couverts, garde les
@@ -21,8 +24,10 @@ import {
   store,
   resetSupabaseMock,
   setAuthUser,
+  supabaseAdmin,
 } from './__helpers__/supabaseMock';
 import { invalidateStaffCache } from '../../utils/staff';
+import { uncoveredMatchNightsAhead } from '../../features/admin/staff-planning/service';
 
 import indexHandler from '../../pages/api/admin/staff-planning/index';
 import itemHandler from '../../pages/api/admin/staff-planning/[slotId]';
@@ -35,13 +40,16 @@ const SLOT_MANUAL = '55555555-5555-4555-8555-55555555bbbb';
 const SLOT_OTHER_MONTH = '55555555-5555-4555-8555-55555555cccc';
 const SLOT_FOREIGN = '55555555-5555-4555-8555-55555555ffff';
 
-function makeStaffRow(role: 'admin' | 'referee'): StaffMember {
+function makeStaffRow(
+  role: 'admin' | 'referee',
+  display_name: string | null = null
+): StaffMember {
   return {
     id: 'staff-1',
     auth_user_id: 'user-1',
     email: 'a@a.com',
     role,
-    display_name: null,
+    display_name,
     avatar_url: null,
     created_at: '2026-01-01T00:00:00.000Z',
   };
@@ -469,6 +477,154 @@ describe('POST /api/admin/staff-planning — répétition hebdomadaire', () => {
       res
     );
     expect(res.statusCode).toBe(400);
+  });
+});
+
+describe('« Mes dispos » — un staff sans manage_staff sur ses créneaux', () => {
+  // Arbitre dont le nom affiché est « pomme » : le pseudo du tableur est
+  // « Pomme » (casse ignorée).
+  beforeEach(() => {
+    store.staff = [makeStaffRow('referee', ' pomme ')] as any;
+    invalidateStaffCache();
+  });
+
+  const mine = {
+    person_name: 'Pomme',
+    slot_date: '2026-10-02',
+    start_time: '19:00',
+    end_time: '22:00',
+  };
+
+  it('GET rend le nom affiché du lecteur (`me`)', async () => {
+    const res = makeRes();
+    await indexHandler(
+      req({ query: { from: '2026-09-01', to: '2026-09-30' } }),
+      res
+    );
+    expect((res.body as any).me).toBe('pomme');
+  });
+
+  it('ajoute SA dispo, garde la graphie du planning', async () => {
+    const res = makeRes();
+    await indexHandler(req({ method: 'POST', body: mine }), res);
+    expect(res.statusCode).toBe(201);
+    expect(
+      (store.staff_planning_slots as any[]).find(
+        (s) => s.slot_date === '2026-10-02'
+      )
+    ).toMatchObject({ person_name: 'Pomme', source: 'manual' });
+  });
+
+  it('403 pour la dispo de quelqu’un d’autre, sans rien écrire', async () => {
+    const before = ids().length;
+    const res = makeRes();
+    await indexHandler(
+      req({ method: 'POST', body: { ...mine, person_name: 'Kotarah' } }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+    expect(ids()).toHaveLength(before);
+  });
+
+  it('modifie et retire SES créneaux, pas ceux des autres', async () => {
+    const own = makeRes();
+    await itemHandler(
+      req({
+        method: 'PATCH',
+        query: { slotId: SLOT_CSV },
+        body: { note: 'Dispo tard' },
+      }),
+      own
+    );
+    expect(own.statusCode).toBe(200);
+    expect((own.body as any).slot.note).toBe('Dispo tard');
+
+    const other = makeRes();
+    await itemHandler(
+      req({
+        method: 'PATCH',
+        query: { slotId: SLOT_MANUAL },
+        body: { note: 'piraté' },
+      }),
+      other
+    );
+    expect(other.statusCode).toBe(403);
+    expect(
+      (store.staff_planning_slots as any[]).find((s) => s.id === SLOT_MANUAL)
+        .note
+    ).toBeNull();
+
+    const delOther = makeRes();
+    await itemHandler(
+      req({ method: 'DELETE', query: { slotId: SLOT_MANUAL } }),
+      delOther
+    );
+    expect(delOther.statusCode).toBe(403);
+    expect(ids()).toContain(SLOT_MANUAL);
+
+    const delOwn = makeRes();
+    await itemHandler(
+      req({ method: 'DELETE', query: { slotId: SLOT_CSV } }),
+      delOwn
+    );
+    expect(delOwn.statusCode).toBe(200);
+    expect(ids()).not.toContain(SLOT_CSV);
+  });
+
+  it('404 (et non 403) sur un créneau d’un autre tenant', async () => {
+    const res = makeRes();
+    await itemHandler(
+      req({ method: 'DELETE', query: { slotId: SLOT_FOREIGN } }),
+      res
+    );
+    expect(res.statusCode).toBe(404);
+    expect(ids()).toContain(SLOT_FOREIGN);
+  });
+
+  it('l’import reste réservé à manage_staff', async () => {
+    const res = makeRes();
+    await importHandler(
+      req({ method: 'POST', body: { months: ['2026-09'], entries: [] } }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+  });
+});
+
+describe('soirs de match sans staff à venir (badge d’alertes)', () => {
+  const ctx = () => ({
+    db: supabaseAdmin as any,
+    tenantId: TENANT,
+    actor: { kind: 'system' as const },
+    logger: { error: () => {}, warn: () => {} } as any,
+  });
+
+  it('compte les soirs de match des 7 jours sans aucun créneau', async () => {
+    store.matches = [
+      ...(store.matches as any[]),
+      // Lundi 21/09 : match, personne → non couvert.
+      {
+        id: 'm5',
+        tenant_id: TENANT,
+        status: 'pending',
+        scheduled_at: '2026-09-21T18:00:00Z',
+      },
+      // 29/09 : hors des 7 jours à partir du 21/09.
+      {
+        id: 'm6',
+        tenant_id: TENANT,
+        status: 'pending',
+        scheduled_at: '2026-09-29T18:00:00Z',
+      },
+    ] as any;
+    // 23/09 : couvert par Pomme (SLOT_CSV). 25/09 : seul match annulé.
+    const nights = await uncoveredMatchNightsAhead(ctx(), '2026-09-21');
+    expect(nights.map((n) => n.date)).toEqual(['2026-09-21']);
+  });
+
+  it('aucun soir non couvert quand chaque soir de match a quelqu’un', async () => {
+    const nights = await uncoveredMatchNightsAhead(ctx(), '2026-09-21');
+    expect(nights).toEqual([]);
   });
 });
 

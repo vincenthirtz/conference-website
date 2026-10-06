@@ -126,6 +126,11 @@ export default {
   alertStagesReadyMsg: 'All matches are finished on these stages.',
   alertRosterLockTitle: 'Roster lock imminent',
   alertRosterLockMsg: 'Rosters lock in less than 24 hours.',
+  alertStaffNightsTitle_one: '{count} match night without staff this week',
+  alertStaffNightsTitle_other: '{count} match nights without staff this week',
+  alertStaffNightsMsg:
+    'Nobody has entered availability for these nights in the next 7 days.',
+  ctaViewStaffPlanning: 'View schedule',
   navCheckinTitle: "Today's check-in",
   navCheckinDesc: 'Follow and nudge check-ins for the current tournament',
   navFunnelTitle: 'Network funnel',

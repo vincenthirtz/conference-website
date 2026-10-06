@@ -4,9 +4,11 @@
 //   - les rôles couverts et manquants ce soir-là ;
 //   - qui, de quelle heure à quelle heure, quel rôle, d'où vient la ligne ;
 //   - « Copier pour Discord » : le récap de la soirée, prêt à coller ;
-//   - pour la gestion : modifier (rôle, horaires, note) ou retirer.
+//   - modifier (rôle, horaires, note) ou retirer : la gestion du staff sur
+//     tous les créneaux, chacun sur les siens (« Mes dispos », gardé côté API).
 
 import { useState } from 'react';
+import { samePerson } from '../access';
 import { format } from '@/lib/i18n/useAdminT';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import {
@@ -45,6 +47,7 @@ export default function StaffPlanningDayPanel({
   slots,
   people,
   canManage,
+  me,
   busyId,
   onDelete,
   onUpdate,
@@ -56,12 +59,16 @@ export default function StaffPlanningDayPanel({
   slots: StaffPlanningSlotRow[];
   people: string[];
   canManage: boolean;
+  /** Nom affiché du lecteur : ses créneaux restent modifiables. */
+  me: string | null;
   busyId: string | null;
   onDelete: (slot: StaffPlanningSlotRow) => void;
   onUpdate: (slot: StaffPlanningSlotRow, patch: SlotPatch) => Promise<void>;
   onCopied: (ok: boolean) => void;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
+  const editable = (s: StaffPlanningSlotRow) =>
+    canManage || (!!me && samePerson(me, s.person_name));
   const coverage = roleCoverage(slots);
   const matchLabels = {
     matchesOne: t.matchesOne,
@@ -174,7 +181,7 @@ export default function StaffPlanningDayPanel({
                   </p>
                 </div>
               </div>
-              {canManage && editing !== s.id && (
+              {editable(s) && editing !== s.id && (
                 <div className="mt-2 flex gap-1 pl-[22px]">
                   <AdminButton
                     variant="ghost"
@@ -195,7 +202,7 @@ export default function StaffPlanningDayPanel({
                   </AdminButton>
                 </div>
               )}
-              {canManage && editing === s.id && (
+              {editable(s) && editing === s.id && (
                 <StaffPlanningSlotEditor
                   t={t}
                   slot={s}
