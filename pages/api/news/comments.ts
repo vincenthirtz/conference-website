@@ -80,8 +80,8 @@ async function listComments(
   const [listed, closure] = await Promise.all([
     (async () => {
       const first = await base()
-        .neq('status' as never, 'pending')
-        .neq('status' as never, 'hidden')
+        .neq('status', 'pending')
+        .neq('status', 'hidden')
         .order('created_at', { ascending: false })
         .limit(limit);
       if (first.error && isMissingColumnError(first.error, 'status')) {
@@ -133,7 +133,7 @@ async function readCommentsClosed(
 ): Promise<boolean | null> {
   const { data, error } = await client
     .from('news')
-    .select('comments_closed' as 'id')
+    .select('comments_closed')
     .eq('id', newsId)
     .eq('tenant_id', tenantId)
     .maybeSingle();
@@ -143,9 +143,7 @@ async function readCommentsClosed(
     }
     return null;
   }
-  return (
-    (data as { comments_closed?: boolean } | null)?.comments_closed === true
-  );
+  return data?.comments_closed === true;
 }
 
 async function createComment(

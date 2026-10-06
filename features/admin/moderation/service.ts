@@ -17,7 +17,6 @@ import type { TablesUpdate } from '@/types/database.generated';
 import { escapePostgrestValue, sanitizeSearch } from '@/utils/apiHelpers';
 import type { Audited } from '../_shared/audited';
 import { parseWithLegacyFields } from '../_shared/legacyParse';
-import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   type AssignmentAction,
   type AssignmentResult,
@@ -497,7 +496,7 @@ export async function listSupportTickets(
   >;
   const briefs = listed.assignmentAvailable
     ? await loadStaffBriefs(
-        ctx.db as unknown as SupabaseClient<any>,
+        ctx.db,
         rows.map((r) => r.assigned_staff_id)
       )
     : new Map<string, StaffBrief>();

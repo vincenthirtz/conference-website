@@ -1,15 +1,14 @@
 // features/admin/tournaments/repository/reviewsPlaylist.ts — accès base de la
-// playlist YouTube « Reviews » d'un tournoi (`tournaments.reviews_playlist_id`).
+// playlist YouTube « Reviews » d'un tournoi (`tournaments.reviews_playlist_id`,
+// migration tournaments_reviews_playlist.sql).
 //
-// La colonne n'est pas encore dans types/database.generated.ts (migration
-// tournaments_reviews_playlist.sql à appliquer, puis types à régénérer) : on
-// passe par un nom de colonne typé `string` et des casts LOCAUX, plutôt que de
-// toucher au fichier généré.
+// Lecture à part plutôt qu'une colonne de plus dans le `select` de la fiche :
+// sur un environnement où la migration manque, seule cette lecture échoue
+// (42703, repli dans le service), pas toute la fiche tournoi.
 
 import type { AdminDb } from '@/utils/admin/serviceContext';
-import type { TablesUpdate } from '@/types/database.generated';
 
-export const REVIEWS_PLAYLIST_COLUMN: string = 'reviews_playlist_id';
+export const REVIEWS_PLAYLIST_COLUMN = 'reviews_playlist_id' as const;
 
 export async function readReviewsPlaylist(
   db: AdminDb,
@@ -18,14 +17,11 @@ export async function readReviewsPlaylist(
 ) {
   const { data, error } = await db
     .from('tournaments')
-    .select(`id, ${REVIEWS_PLAYLIST_COLUMN}`)
+    .select('id, reviews_playlist_id')
     .eq('tenant_id', tenantId)
     .eq('id', tournamentId)
     .maybeSingle();
-  return {
-    data: data as unknown as Record<string, unknown> | null,
-    error,
-  };
+  return { data, error };
 }
 
 /**
@@ -41,9 +37,7 @@ export async function writeReviewsPlaylist(
 ) {
   return db
     .from('tournaments')
-    .update({
-      [REVIEWS_PLAYLIST_COLUMN]: playlistId,
-    } as unknown as TablesUpdate<'tournaments'>)
+    .update({ reviews_playlist_id: playlistId })
     .eq('tenant_id', tenantId)
     .eq('id', tournamentId)
     .select('id')

@@ -51,8 +51,9 @@ export type ModeratedComment = {
   news: { id: string; title: string | null; slug: string | null } | null;
 };
 
-// `status` / `comments_closed` sont hors du schéma généré (migration récente) :
-// accès non typé, borné à ce module, toujours scopé par `ctx.tenantId`.
+// Accès non typé réservé aux deux lectures DYNAMIQUES (sélection avec ou sans
+// `status` selon le repli 42703, sonde de colonne) : le reste passe par le
+// client typé. Toujours scopé par `ctx.tenantId`.
 type LooseDb = { from: (table: string) => any };
 function db(ctx: ServiceContext): LooseDb {
   return ctx.db as unknown as LooseDb;
@@ -117,7 +118,7 @@ export async function listModeratedComments(
 
   let pending = 0;
   if (statusAvailable) {
-    const { count } = await db(ctx)
+    const { count } = await ctx.db
       .from('news_comments')
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', ctx.tenantId)
@@ -145,7 +146,7 @@ export async function bulkModerateComments(
   body: z.output<typeof CommentBulkBody>
 ): Promise<Audited<{ action: string; affected: number; ids: string[] }>> {
   const ids = [...new Set(body.ids)];
-  const table = db(ctx).from('news_comments');
+  const table = ctx.db.from('news_comments');
   const scoped =
     body.action === 'delete'
       ? table.delete()
@@ -202,7 +203,7 @@ export async function getCommentSettings(ctx: ServiceContext) {
   const [mode, statusAvailable, closed] = await Promise.all([
     getSetting(COMMENT_MODERATION_SETTING_KEY, ctx.tenantId),
     probeColumn(ctx, 'news_comments', 'status'),
-    db(ctx)
+    ctx.db
       .from('news')
       .select('id, title, slug')
       .eq('tenant_id', ctx.tenantId)
@@ -274,7 +275,7 @@ export async function setArticleCommentsClosed(
 ): Promise<
   Audited<{ id: string; title: string | null; comments_closed: boolean }>
 > {
-  const { data, error } = await db(ctx)
+  const { data, error } = await ctx.db
     .from('news')
     .update({ comments_closed: body.comments_closed })
     .eq('tenant_id', ctx.tenantId)

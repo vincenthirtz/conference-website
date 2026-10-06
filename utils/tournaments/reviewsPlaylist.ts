@@ -16,7 +16,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { isValidPlaylistId } from '@/utils/youtube/playlist';
 
-/** Colonne hors des types générés tant que la migration n'est pas appliquée. */
+/** Lue à part : une colonne absente (environnement non migré) ne casse que cette lecture. */
 const COLUMN: string = 'reviews_playlist_id';
 
 export function isMissingColumnError(err: unknown): boolean {

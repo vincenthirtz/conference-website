@@ -70,10 +70,8 @@ function isAuthorized(req: NextApiRequest): boolean {
   return typeof q === 'string' && sameSecret(q, secret);
 }
 
-// Les colonnes `expires_at` sont hors du schéma généré tant que la migration
-// n'est pas reflétée dans les types : client non typé pour ce balayage.
 function table(name: Table) {
-  return (supabaseAdmin as unknown as { from: (t: string) => any }).from(name);
+  return supabaseAdmin.from(name);
 }
 
 export async function expireTable(

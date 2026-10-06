@@ -87,7 +87,7 @@ export const getServerSideProps = withStaffPage<{
         .order('created_at', { ascending: false })
         .range(offset, offset + NEWS_LIMIT - 1);
 
-      if (filterDeleted) q = q.is('deleted_at' as never, null);
+      if (filterDeleted) q = q.is('deleted_at', null);
       if (status === 'draft' || status === 'published') {
         q = q.eq('status', status);
       }

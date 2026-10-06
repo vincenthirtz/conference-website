@@ -122,8 +122,9 @@ export async function setAssignment(
   action: AssignmentAction
 ): Promise<{ before: string | null; after: AssignmentResult }> {
   const me = staffIdOf(ctx);
-  // Colonnes hors du schéma généré tant que la migration n'est pas typée :
-  // client non typé, le périmètre (tenant + id) reste explicite.
+  // Table choisie à l'exécution (`demandes` | `support_tickets`) : client non
+  // typé plutôt qu'une union de builders, le périmètre (tenant + id) reste
+  // explicite.
   const db = ctx.db as unknown as SupabaseClient<any>;
 
   const current = await db

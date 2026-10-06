@@ -92,8 +92,9 @@ export async function loadDemandesList(
       assignmentAvailable: false,
     };
   }
-  // Colonnes d'assignation hors du schéma généré : client non typé, le
-  // périmètre (tenant) reste explicite sur chaque requête.
+  // Client `supabaseAdmin` (non typé) de la page SSR ; filtres d'assignation
+  // conditionnels (repli 42703). Le périmètre (tenant) reste explicite sur
+  // chaque requête.
   const { db, tenantId, staffId } = scope;
 
   // Filtres communs à la page et aux compteurs (statut à part).

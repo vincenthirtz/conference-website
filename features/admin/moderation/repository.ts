@@ -32,7 +32,8 @@ export async function listPlayerBlacklist(
   f: Page &
     ExpiryFilters & { searchPattern: string | null; active: boolean | null }
 ) {
-  // Colonne hors du schéma généré (migration récente) : type de ligne gardé.
+  // Sélection conditionnelle (repli 42703 si `expires_at` manque) : type de
+  // ligne gardé, le service lit l'échéance en plus.
   const columns = (
     f.withExpiry
       ? `${PLAYER_BLACKLIST_COLUMNS}, ${BLACKLIST_EXPIRY_COLUMN}`
@@ -52,7 +53,7 @@ export async function listPlayerBlacklist(
   }
   if (f.active !== null) query = query.eq('active', f.active);
   if (f.withExpiry && f.expiredBefore) {
-    query = query.lte(BLACKLIST_EXPIRY_COLUMN as never, f.expiredBefore);
+    query = query.lte(BLACKLIST_EXPIRY_COLUMN, f.expiredBefore);
   }
   const { data, error, count } = await query;
   return { rows: data ?? [], count, error };
@@ -128,7 +129,7 @@ export async function listEntityBlacklist(
   if (f.active !== null) query = query.eq('active', f.active);
   if (f.entityType) query = query.eq('entity_type', f.entityType);
   if (f.withExpiry && f.expiredBefore) {
-    query = query.lte(BLACKLIST_EXPIRY_COLUMN as never, f.expiredBefore);
+    query = query.lte(BLACKLIST_EXPIRY_COLUMN, f.expiredBefore);
   }
   const { data, error, count } = await query;
   return { rows: data ?? [], count, error };
@@ -270,9 +271,9 @@ export async function listSupportTickets(
   tenantId: string,
   f: TicketFilters & Page & { oldestFirst?: boolean; withAssignment?: boolean }
 ) {
-  // Colonnes d'assignation hors du schéma généré (migration récente) : le
-  // type des lignes reste celui de la liste, le service lit les deux champs
-  // en plus (`TicketAssignmentFields`).
+  // Sélection conditionnelle (repli 42703 si l'assignation manque) : le type
+  // des lignes reste celui de la liste, le service lit les deux champs en plus
+  // (`TicketAssignmentFields`).
   const columns = (
     f.withAssignment
       ? `${SUPPORT_TICKET_LIST_COLUMNS}, ${ASSIGNMENT_COLUMNS}`

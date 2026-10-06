@@ -31,7 +31,7 @@ export async function listNews(
       .eq('tenant_id', tenantId)
       .order('published_at', { ascending: false, nullsFirst: false })
       .limit(opts.limit);
-    if (filterDeleted) query = query.is('deleted_at' as never, null);
+    if (filterDeleted) query = query.is('deleted_at', null);
     if (opts.status) query = query.eq('status', opts.status);
     if (opts.tag) query = query.eq('tag', opts.tag);
     return query;
@@ -55,9 +55,7 @@ export async function findNews(db: AdminDb, tenantId: string, id: string) {
       .select(NEWS_COLUMNS)
       .eq('id', id)
       .eq('tenant_id', tenantId);
-    return (
-      filterDeleted ? q.is('deleted_at' as never, null) : q
-    ).maybeSingle();
+    return (filterDeleted ? q.is('deleted_at', null) : q).maybeSingle();
   });
   return { row: data ?? null, error };
 }
@@ -70,9 +68,7 @@ export async function findNewsState(db: AdminDb, tenantId: string, id: string) {
       .select('published_at, status, tag, slug')
       .eq('id', id)
       .eq('tenant_id', tenantId);
-    return (
-      filterDeleted ? q.is('deleted_at' as never, null) : q
-    ).maybeSingle();
+    return (filterDeleted ? q.is('deleted_at', null) : q).maybeSingle();
   });
   return { row: data ?? null, error };
 }
@@ -92,7 +88,7 @@ export async function updateNews(
       .update(payload)
       .eq('id', id)
       .eq('tenant_id', tenantId);
-    return (filterDeleted ? q.is('deleted_at' as never, null) : q)
+    return (filterDeleted ? q.is('deleted_at', null) : q)
       .select(NEWS_COLUMNS)
       .single();
   });
@@ -111,10 +107,10 @@ export async function deleteNews(db: AdminDb, tenantId: string, id: string) {
   const now = new Date().toISOString();
   const soft = await db
     .from('news')
-    .update({ deleted_at: now, status: 'draft', updated_at: now } as NewsUpdate)
+    .update({ deleted_at: now, status: 'draft', updated_at: now })
     .eq('id', id)
     .eq('tenant_id', tenantId)
-    .is('deleted_at' as never, null)
+    .is('deleted_at', null)
     .select('slug')
     .maybeSingle();
   if (!isMissingColumnError(soft.error, 'deleted_at')) {
