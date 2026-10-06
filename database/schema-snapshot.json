@@ -312,6 +312,8 @@
       "updated_at"
     ],
     "demandes": [
+      "assigned_at",
+      "assigned_staff_id",
       "auth_user_id",
       "comment",
       "created_at",
@@ -395,6 +397,7 @@
       "banned_by",
       "created_at",
       "entity_type",
+      "expires_at",
       "id",
       "name",
       "notes",
@@ -875,8 +878,10 @@
     ],
     "news": [
       "author_id",
+      "comments_closed",
       "content",
       "created_at",
+      "deleted_at",
       "excerpt",
       "id",
       "image_url",
@@ -895,6 +900,7 @@
       "created_at",
       "id",
       "news_id",
+      "status",
       "tenant_id"
     ],
     "newsletter_subscribers": [
@@ -999,6 +1005,7 @@
       "created_at",
       "discord_user_id",
       "display_name",
+      "expires_at",
       "id",
       "notes",
       "reason",
@@ -1379,6 +1386,8 @@
       "updated_by"
     ],
     "support_tickets": [
+      "assigned_at",
+      "assigned_staff_id",
       "category",
       "converted_entity_blacklist_id",
       "converted_player_blacklist_id",
@@ -2118,6 +2127,7 @@
       "overlay_day_set_at",
       "pooled_teams",
       "registration_fields",
+      "reviews_playlist_id",
       "roster_locked_at",
       "roster_unlocked_until",
       "rules_url",
@@ -2326,6 +2336,10 @@
     "custom_game_presets_tenant_id_fkey": {
       "source": "custom_game_presets",
       "target": "tenants"
+    },
+    "demandes_assigned_staff_id_fkey": {
+      "source": "demandes",
+      "target": "staff"
     },
     "demandes_auth_user_id_fkey": {
       "source": "demandes",
@@ -3006,6 +3020,10 @@
     "stream_alert_settings_tenant_id_fkey": {
       "source": "stream_alert_settings",
       "target": "tenants"
+    },
+    "support_tickets_assigned_staff_id_fkey": {
+      "source": "support_tickets",
+      "target": "staff"
     },
     "support_tickets_converted_entity_blacklist_id_fkey": {
       "source": "support_tickets",

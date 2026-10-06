@@ -1190,6 +1190,8 @@ export type Database = {
       }
       demandes: {
         Row: {
+          assigned_at: string | null
+          assigned_staff_id: string | null
           auth_user_id: string | null
           comment: string | null
           created_at: string
@@ -1212,6 +1214,8 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          assigned_at?: string | null
+          assigned_staff_id?: string | null
           auth_user_id?: string | null
           comment?: string | null
           created_at?: string
@@ -1234,6 +1238,8 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          assigned_at?: string | null
+          assigned_staff_id?: string | null
           auth_user_id?: string | null
           comment?: string | null
           created_at?: string
@@ -1256,6 +1262,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "demandes_assigned_staff_id_fkey"
+            columns: ["assigned_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "demandes_processed_by_staff_id_fkey"
             columns: ["processed_by_staff_id"]
@@ -1520,6 +1533,7 @@ export type Database = {
           banned_by: string | null
           created_at: string
           entity_type: string
+          expires_at: string | null
           id: string
           name: string
           notes: string | null
@@ -1532,6 +1546,7 @@ export type Database = {
           banned_by?: string | null
           created_at?: string
           entity_type: string
+          expires_at?: string | null
           id?: string
           name: string
           notes?: string | null
@@ -1544,6 +1559,7 @@ export type Database = {
           banned_by?: string | null
           created_at?: string
           entity_type?: string
+          expires_at?: string | null
           id?: string
           name?: string
           notes?: string | null
@@ -3664,8 +3680,10 @@ export type Database = {
       news: {
         Row: {
           author_id: string | null
+          comments_closed: boolean
           content: string
           created_at: string
+          deleted_at: string | null
           excerpt: string | null
           id: string
           image_url: string | null
@@ -3680,8 +3698,10 @@ export type Database = {
         }
         Insert: {
           author_id?: string | null
+          comments_closed?: boolean
           content: string
           created_at?: string
+          deleted_at?: string | null
           excerpt?: string | null
           id?: string
           image_url?: string | null
@@ -3696,8 +3716,10 @@ export type Database = {
         }
         Update: {
           author_id?: string | null
+          comments_closed?: boolean
           content?: string
           created_at?: string
+          deleted_at?: string | null
           excerpt?: string | null
           id?: string
           image_url?: string | null
@@ -3741,6 +3763,7 @@ export type Database = {
           created_at: string
           id: string
           news_id: string
+          status: string
           tenant_id: string
         }
         Insert: {
@@ -3749,6 +3772,7 @@ export type Database = {
           created_at?: string
           id?: string
           news_id: string
+          status?: string
           tenant_id: string
         }
         Update: {
@@ -3757,6 +3781,7 @@ export type Database = {
           created_at?: string
           id?: string
           news_id?: string
+          status?: string
           tenant_id?: string
         }
         Relationships: [
@@ -4120,6 +4145,7 @@ export type Database = {
           created_at: string
           discord_user_id: string | null
           display_name: string | null
+          expires_at: string | null
           id: string
           notes: string | null
           reason: string | null
@@ -4133,6 +4159,7 @@ export type Database = {
           created_at?: string
           discord_user_id?: string | null
           display_name?: string | null
+          expires_at?: string | null
           id?: string
           notes?: string | null
           reason?: string | null
@@ -4146,6 +4173,7 @@ export type Database = {
           created_at?: string
           discord_user_id?: string | null
           display_name?: string | null
+          expires_at?: string | null
           id?: string
           notes?: string | null
           reason?: string | null
@@ -5739,6 +5767,8 @@ export type Database = {
       }
       support_tickets: {
         Row: {
+          assigned_at: string | null
+          assigned_staff_id: string | null
           category: string
           converted_entity_blacklist_id: string | null
           converted_player_blacklist_id: string | null
@@ -5767,6 +5797,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_at?: string | null
+          assigned_staff_id?: string | null
           category: string
           converted_entity_blacklist_id?: string | null
           converted_player_blacklist_id?: string | null
@@ -5795,6 +5827,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_at?: string | null
+          assigned_staff_id?: string | null
           category?: string
           converted_entity_blacklist_id?: string | null
           converted_player_blacklist_id?: string | null
@@ -5823,6 +5857,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "support_tickets_assigned_staff_id_fkey"
+            columns: ["assigned_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "support_tickets_converted_entity_blacklist_id_fkey"
             columns: ["converted_entity_blacklist_id"]
@@ -8605,6 +8646,7 @@ export type Database = {
           overlay_day_set_at: string | null
           pooled_teams: boolean
           registration_fields: Json
+          reviews_playlist_id: string | null
           roster_locked_at: string | null
           roster_unlocked_until: string | null
           rules_url: string | null
@@ -8643,6 +8685,7 @@ export type Database = {
           overlay_day_set_at?: string | null
           pooled_teams?: boolean
           registration_fields?: Json
+          reviews_playlist_id?: string | null
           roster_locked_at?: string | null
           roster_unlocked_until?: string | null
           rules_url?: string | null
@@ -8681,6 +8724,7 @@ export type Database = {
           overlay_day_set_at?: string | null
           pooled_teams?: boolean
           registration_fields?: Json
+          reviews_playlist_id?: string | null
           roster_locked_at?: string | null
           roster_unlocked_until?: string | null
           rules_url?: string | null
