@@ -21,6 +21,7 @@
 // n importe quel user staff (caster inclus) — le endpoint
 // /api/admin/notifications/subscribe a withStaffRoute(_, 'caster').
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
@@ -56,7 +57,49 @@ type Props = {
   loginPath?: string;
   /** Custom intro copy ; default: depends on audience. */
   message?: string;
+  /**
+   * Quand l'opt-in est IMPOSSIBLE, dire pourquoi au lieu de ne rien rendre :
+   *   - iOS hors PWA installée (Safari n'expose pas Web Push) → lien /app ;
+   *   - permission refusée → réactiver dans les réglages du navigateur.
+   * Opt-in par écran : un repli permanent n'a sa place que là où l'on règle
+   * ses notifications, pas en tête d'un tableau de bord.
+   */
+  showFallback?: boolean;
 };
+
+export type PushFallback = 'ios-install' | 'denied';
+
+/**
+ * iOS / iPadOS ouvert dans le navigateur (pas en PWA installée) : Web Push n'y
+ * existe qu'une fois l'app ajoutée à l'écran d'accueil (iOS ≥ 16.4). L'iPad
+ * récent se présente en « MacIntel » tactile.
+ */
+export function isIosWithoutPwa(
+  nav: Pick<Navigator, 'userAgent' | 'platform' | 'maxTouchPoints'> & {
+    standalone?: boolean;
+  },
+  displayModeStandalone: boolean
+): boolean {
+  const ios =
+    /iPad|iPhone|iPod/.test(nav.userAgent) ||
+    (nav.platform === 'MacIntel' && (nav.maxTouchPoints ?? 0) > 1);
+  if (!ios) return false;
+  return !(nav.standalone === true || displayModeStandalone);
+}
+
+function detectIosWithoutPwa(): boolean {
+  try {
+    const standalone =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(display-mode: standalone)').matches;
+    return isIosWithoutPwa(
+      navigator as Navigator & { standalone?: boolean },
+      standalone
+    );
+  } catch {
+    return false;
+  }
+}
 
 const DISMISS_KEY_PREFIX = 'pwa-push-dismissed';
 const DENIED_KEY = 'pwa-push-denied';
@@ -71,6 +114,7 @@ export default function PushOptIn({
   variant = 'banner',
   loginPath = '/admin/login',
   message,
+  showFallback = false,
 }: Props) {
   const t = useT(nsPushOptIn);
   const defaultMessages: Record<PushAudience, string> = {
@@ -80,6 +124,7 @@ export default function PushOptIn({
     public: t.msgPublic,
   };
   const [visible, setVisible] = useState(false);
+  const [fallback, setFallback] = useState<PushFallback | null>(null);
   const [busy, setBusy] = useState(false);
   const { addToast } = useToast();
   const { adminFetchJson } = useAdminFetch({ loginPath });
@@ -90,30 +135,35 @@ export default function PushOptIn({
     if (process.env.NEXT_PUBLIC_ENABLE_PWA !== '1') return;
 
     const support = getWebPushSupport();
-    if (!support.supported) return;
-
-    try {
-      if (
-        window.localStorage.getItem(dismissKey(audience)) === '1' ||
-        window.localStorage.getItem(DENIED_KEY) === '1'
-      ) {
-        return;
-      }
-    } catch {
-      // localStorage indisponible — on accepte d afficher.
+    if (!support.supported) {
+      if (showFallback && detectIosWithoutPwa()) setFallback('ios-install');
+      return;
     }
 
     if (typeof Notification === 'undefined') return;
 
-    if (Notification.permission !== 'default') {
-      if (Notification.permission === 'denied') {
-        try {
-          window.localStorage.setItem(DENIED_KEY, '1');
-        } catch {
-          // Ignore.
-        }
+    // La permission RÉELLE d'abord : un refus se dit, quel que soit l'état
+    // mémorisé ; et une permission revenue à « default » (réactivée dans les
+    // réglages) efface le refus mémorisé, qui sinon masquerait l'opt-in pour
+    // toujours.
+    if (Notification.permission === 'denied') {
+      try {
+        window.localStorage.setItem(DENIED_KEY, '1');
+      } catch {
+        // Ignore.
       }
+      if (showFallback) setFallback('denied');
       return;
+    }
+    if (Notification.permission !== 'default') return;
+
+    try {
+      window.localStorage.removeItem(DENIED_KEY);
+      if (window.localStorage.getItem(dismissKey(audience)) === '1') {
+        return;
+      }
+    } catch {
+      // localStorage indisponible — on accepte d afficher.
     }
 
     let cancelled = false;
@@ -125,7 +175,7 @@ export default function PushOptIn({
     return () => {
       cancelled = true;
     };
-  }, [audience]);
+  }, [audience, showFallback]);
 
   const handleDismiss = useCallback(() => {
     try {
@@ -156,6 +206,7 @@ export default function PushOptIn({
             // Ignore.
           }
           addToast(t.permDenied, 'warning');
+          if (showFallback) setFallback('denied');
         }
         setVisible(false);
         return;
@@ -199,7 +250,29 @@ export default function PushOptIn({
     } finally {
       setBusy(false);
     }
-  }, [addToast, adminFetchJson, audience, busy, t]);
+  }, [addToast, adminFetchJson, audience, busy, showFallback, t]);
+
+  if (!visible && fallback) {
+    return (
+      <div
+        className="rounded-2xl border border-amber-500/30 bg-amber-900/20 text-amber-100 p-4"
+        role="status"
+        data-testid={`push-optin-fallback-${fallback}`}
+      >
+        <h3 className="text-sm font-semibold mb-1">{t.cardTitle}</h3>
+        {fallback === 'ios-install' ? (
+          <p className="text-xs leading-snug">
+            {t.fallbackIosInstall}{' '}
+            <Link href="/app" className="underline font-medium">
+              {t.fallbackIosInstallCta}
+            </Link>
+          </p>
+        ) : (
+          <p className="text-xs leading-snug">{t.fallbackDenied}</p>
+        )}
+      </div>
+    );
+  }
 
   if (!visible) return null;
 

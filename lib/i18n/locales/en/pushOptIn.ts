@@ -32,4 +32,9 @@ export default {
   successDefault:
     "Notifications enabled. You'll receive match, scrim and support alerts.",
   errActivate: 'Unable to enable notifications. Try again later.',
+  fallbackIosInstall:
+    'On iPhone and iPad, notifications go through the app: install it to get the check-in alert.',
+  fallbackIosInstallCta: 'How to install it',
+  fallbackDenied:
+    'Notifications are blocked for this site: re-enable them in your browser settings to get the check-in alert.',
 };

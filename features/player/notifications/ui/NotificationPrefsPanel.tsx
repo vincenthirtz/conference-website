@@ -31,7 +31,14 @@ export default function NotificationPrefsPanel({
   return (
     <>
       <div className="mb-4">
-        <PushOptIn audience="player" variant="card" loginPath="/login" />
+        {/* Repli explicite (iOS hors PWA, permission refusée) : c'est ICI
+            qu'on vient comprendre pourquoi aucune alerte n'arrive. */}
+        <PushOptIn
+          audience="player"
+          variant="card"
+          loginPath="/login"
+          showFallback
+        />
       </div>
 
       <NotificationPrefsGrid

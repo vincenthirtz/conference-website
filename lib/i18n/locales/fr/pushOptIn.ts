@@ -32,4 +32,9 @@ export default ns('pushOptIn', {
   successDefault:
     'Notifications activees. Tu recevras les alertes match, scrim et support.',
   errActivate: 'Impossible d activer les notifications. Reessaie plus tard.',
+  fallbackIosInstall:
+    "Sur iPhone et iPad, les notifications passent par l'app : installe-la pour recevoir l'alerte de check-in.",
+  fallbackIosInstallCta: "Comment l'installer",
+  fallbackDenied:
+    "Les notifications sont bloquées pour ce site : réactive-les dans les réglages du navigateur pour recevoir l'alerte de check-in.",
 });
