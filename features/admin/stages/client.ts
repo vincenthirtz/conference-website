@@ -41,6 +41,55 @@ export const stageUrls = {
   advance: (id: string) => `${S}/${enc(id)}/advance`,
   bulkMatches: (id: string) => `${S}/${enc(id)}/bulk-matches`,
   lobbies: (id: string) => `${S}/${enc(id)}/lobbies`,
+  /** GET (liste) / POST (snapshot manuel) / PATCH (restauration, admin+). */
+  snapshots: (id: string) => `${S}/${enc(id)}/snapshots`,
+  /** GET / POST / DELETE (`{ id }`) des dérogations de départage. */
+  tiebreakerOverride: (id: string) => `${S}/${enc(id)}/tiebreaker-override`,
+  batchScores: (id: string) => `${S}/${enc(id)}/batch-scores`,
+};
+
+/* ------------------------- outils de rattrapage ------------------------- */
+
+/** Ligne de `GET …/snapshots` (features/admin/stages/repository/related). */
+export type BracketSnapshot = {
+  id: number;
+  stage_id: string;
+  taken_at: string;
+  taken_by_staff_id: string | null;
+  reason: string | null;
+  match_count: number | null;
+  staff?: { id: string; display_name: string | null; role: string } | null;
+};
+
+/** Ligne de `GET …/tiebreaker-override` : « winner passe devant loser ». */
+export type TiebreakerOverride = {
+  id: number;
+  winner_team_id: string;
+  loser_team_id: string;
+  reason: string | null;
+  set_by_staff_id: string | null;
+  set_at: string;
+  winner?: { id: string; name: string } | null;
+  loser?: { id: string; name: string } | null;
+};
+
+/** Une ligne du corps de `POST …/batch-scores`. */
+export type BatchScoreEntry = {
+  matchId: string;
+  team1Score: number;
+  team2Score: number;
+};
+
+/** Réponse de `POST …/batch-scores` (200 partiel ou 500 tout en échec). */
+export type BatchScoresResponse = {
+  results: Array<{
+    matchId: string;
+    success: boolean;
+    error?: string;
+    winnerTeamId?: string | null;
+  }>;
+  successCount: number;
+  failureCount: number;
 };
 
 export const lobbyUrls = {

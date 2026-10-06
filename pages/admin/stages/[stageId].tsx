@@ -59,6 +59,8 @@ import nsAdminStageDetail from '@/lib/i18n/locales/admin-fr/adminStageDetail';
 import type { StageOption, TournamentOption } from '@/utils/stages/stageOption';
 import { ERROR_BOX, SPINNER } from '@/features/admin/stages/ui/rubanClasses';
 import { useStageAdvanceActions } from '@/features/admin/stages/hooks/useStageAdvanceActions';
+import { useTiebreakerOverrides } from '@/features/admin/stages/hooks/useTiebreakerOverrides';
+import BatchScoresGrid from '@/features/admin/stages/ui/BatchScoresGrid';
 
 type StageApiResponse = {
   stage: Stage;
@@ -322,6 +324,25 @@ function AdminStagePage(_props: StaffProps) {
     setAdvanceLoading,
     setAdvanceSubmitting,
     setShowAdvanceModal,
+  });
+
+  // Dérogations de départage (« Forcer l'ordre » dans la modale d'avancement) :
+  // après chaque geste, le classement affiché est relu (sélection conservée).
+  const refreshAdvanceStandings = useCallback(async () => {
+    if (!sid) return;
+    try {
+      const res = await adminFetch(stageUrls.standings(sid));
+      if (!res.ok) return;
+      const json = await res.json();
+      setAdvanceStandings(json.standings || []);
+    } catch (err) {
+      logger.error('refreshAdvanceStandings error:', err);
+    }
+  }, [sid, adminFetch]);
+  const tiebreak = useTiebreakerOverrides(sid, {
+    enabled: showAdvanceModal && !!stage,
+    onChanged: refreshAdvanceStandings,
+    t,
   });
 
   const openAutoSeedModal = useCallback(async () => {
@@ -591,6 +612,16 @@ function AdminStagePage(_props: StaffProps) {
                     />
                   )}
 
+                  {stage.stage_type !== 'ffa' && (
+                    <BatchScoresGrid
+                      stageId={stage.id}
+                      tournamentId={stage.tournament_id}
+                      stageType={stage.stage_type ?? null}
+                      onSaved={fetchCompletionStatus}
+                      t={t}
+                    />
+                  )}
+
                   {completionStatus &&
                     completionStatus.totalMatches > 0 &&
                     completionStatus.isComplete && (
@@ -682,7 +713,12 @@ function AdminStagePage(_props: StaffProps) {
         onChangeSeedMode={setAdvanceSeedMode}
         onSubmit={handleAdvanceSubmit}
         t={t}
+        overrides={tiebreak.overrides}
+        overrideSaving={tiebreak.saving}
+        onAddOverride={tiebreak.addOverride}
+        onRemoveOverride={tiebreak.removeOverride}
       />
+      {tiebreak.dialog}
     </>
   );
 }

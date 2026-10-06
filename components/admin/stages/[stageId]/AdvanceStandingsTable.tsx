@@ -1,5 +1,18 @@
 // components/admin/stages/[stageId]/AdvanceStandingsTable.tsx
-import React from 'react';
+import React, { useState } from 'react';
+import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import {
+  rubanFormInput,
+  rubanFormLabel,
+  rubanInset,
+  rubanMuted,
+} from '@/features/admin/_shared/ui/ruban';
+import type { TiebreakerOverride } from '@/features/admin/stages/client';
+import {
+  type OverrideDraft,
+  validateOverrideDraft,
+} from '@/features/admin/stages/hooks/useTiebreakerOverrides';
+import { format } from '@/lib/i18n/useAdminT';
 import type { Dict } from './stageDisplay';
 
 export type AdvanceStanding = {
@@ -80,6 +93,22 @@ type Props = {
   onToggleTeam: (teamId: string) => void;
   onToggleAll: () => void;
   t: Dict;
+  /**
+   * Dérogations de départage (« Forcer l'ordre »). Sans `onAddOverride`, la
+   * table reste en lecture seule (aucune barre d'outils).
+   */
+  overrides?: TiebreakerOverride[];
+  overrideSaving?: boolean;
+  onAddOverride?: (draft: OverrideDraft) => Promise<boolean>;
+  onRemoveOverride?: (ov: TiebreakerOverride) => void;
+};
+
+const NO_OVERRIDES: TiebreakerOverride[] = [];
+
+const EMPTY_DRAFT: OverrideDraft = {
+  winnerTeamId: '',
+  loserTeamId: '',
+  reason: '',
 };
 
 /** Slug du départage → libellé lisible. Inconnu ou absent → rien à dire. */
@@ -100,6 +129,202 @@ function tiebreakLabel(key: string | null | undefined, t: Dict): string | null {
   }
 }
 
+function TeamSelect({
+  id,
+  label,
+  value,
+  standings,
+  onChange,
+  t,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  standings: AdvanceStanding[];
+  onChange: (teamId: string) => void;
+  t: Dict;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className={rubanFormLabel}>
+        {label}
+      </label>
+      <select
+        id={id}
+        className={rubanFormInput}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value="">{t.ovPickTeam}</option>
+        {standings.map((s) => (
+          <option key={s.teamId} value={s.teamId}>
+            {s.rank}. {s.teamName || s.teamId.slice(0, 8)} ({s.score})
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+/**
+ * « Forcer l'ordre » : formulaire (motif obligatoire) + dérogations actives.
+ * La validation locale reprend celle du serveur, plus l'égalité de points
+ * (le moteur ignore une dérogation entre scores différents).
+ */
+function OverrideToolbar({
+  standings,
+  overrides,
+  saving,
+  onAdd,
+  onRemove,
+  t,
+}: {
+  standings: AdvanceStanding[];
+  overrides: TiebreakerOverride[];
+  saving: boolean;
+  onAdd: (draft: OverrideDraft) => Promise<boolean>;
+  onRemove?: (ov: TiebreakerOverride) => void;
+  t: Dict;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<OverrideDraft>(EMPTY_DRAFT);
+  const [error, setError] = useState<string | null>(null);
+  const nameOf = (id: string) =>
+    standings.find((s) => s.teamId === id)?.teamName || id.slice(0, 8);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const key = validateOverrideDraft(draft, standings);
+    if (key) {
+      setError(t[key]);
+      return;
+    }
+    setError(null);
+    if (await onAdd(draft)) {
+      setDraft(EMPTY_DRAFT);
+      setOpen(false);
+    }
+  }
+
+  return (
+    <div
+      className={`${rubanInset} space-y-3 p-3`}
+      data-testid="tiebreaker-overrides"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className={`text-xs ${rubanMuted}`}>{t.ovIntro}</p>
+        <AdminButton
+          size="xs"
+          variant={open ? 'ghost' : 'secondary'}
+          onClick={() => {
+            setOpen((o) => !o);
+            setError(null);
+          }}
+        >
+          {open ? t.ovCancel : t.ovForce}
+        </AdminButton>
+      </div>
+
+      {open && (
+        <form
+          onSubmit={submit}
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+        >
+          <TeamSelect
+            id="ov-winner"
+            label={t.ovWinnerLabel}
+            value={draft.winnerTeamId}
+            standings={standings}
+            onChange={(v) => setDraft((d) => ({ ...d, winnerTeamId: v }))}
+            t={t}
+          />
+          <TeamSelect
+            id="ov-loser"
+            label={t.ovLoserLabel}
+            value={draft.loserTeamId}
+            standings={standings}
+            onChange={(v) => setDraft((d) => ({ ...d, loserTeamId: v }))}
+            t={t}
+          />
+          <div className="sm:col-span-2">
+            <label htmlFor="ov-reason" className={rubanFormLabel}>
+              {t.ovReasonLabel}
+            </label>
+            <textarea
+              id="ov-reason"
+              rows={2}
+              maxLength={500}
+              className={rubanFormInput}
+              placeholder={t.ovReasonPlaceholder}
+              value={draft.reason}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, reason: e.target.value }))
+              }
+            />
+          </div>
+          {error && (
+            <p
+              role="alert"
+              className="text-xs text-[var(--err,#ff6b6b)] sm:col-span-2"
+            >
+              {error}
+            </p>
+          )}
+          <div className="sm:col-span-2">
+            <AdminButton
+              type="submit"
+              size="sm"
+              variant="primary"
+              disabled={saving}
+            >
+              {t.ovSubmit}
+            </AdminButton>
+          </div>
+        </form>
+      )}
+
+      {overrides.length > 0 && (
+        <div>
+          <p className={`mb-1 text-xs font-semibold ${rubanMuted}`}>
+            {t.ovActiveTitle}
+          </p>
+          <ul className="space-y-1">
+            {overrides.map((ov) => (
+              <li
+                key={ov.id}
+                data-testid="tiebreaker-override-row"
+                className="flex flex-wrap items-center justify-between gap-2 text-sm"
+              >
+                <span className="text-[var(--t1,#f4edf7)]">
+                  {format(t.ovActiveRow, {
+                    winner: ov.winner?.name ?? nameOf(ov.winner_team_id),
+                    loser: ov.loser?.name ?? nameOf(ov.loser_team_id),
+                  })}
+                  {ov.reason && (
+                    <span className={`ml-2 text-xs ${rubanMuted}`}>
+                      — {ov.reason}
+                    </span>
+                  )}
+                </span>
+                {onRemove && (
+                  <AdminButton
+                    size="xs"
+                    variant="danger"
+                    disabled={saving}
+                    onClick={() => onRemove(ov)}
+                  >
+                    {t.ovRemove}
+                  </AdminButton>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Table des standings avec cases à cocher (sélection des équipes à avancer). */
 function AdvanceStandingsTable({
   standings,
@@ -108,54 +333,76 @@ function AdvanceStandingsTable({
   onToggleTeam,
   onToggleAll,
   t,
+  overrides = NO_OVERRIDES,
+  overrideSaving = false,
+  onAddOverride,
+  onRemoveOverride,
 }: Props) {
+  // Équipes placées d'office devant une autre : leur départage, c'est le staff.
+  const forcedAhead = new Set(overrides.map((o) => o.winner_team_id));
   return (
-    <div className="overflow-hidden rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))]">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-[var(--s2,#1d1520)]">
-            <th scope="col" className="px-3 py-2 text-left w-10">
-              <input
-                type="checkbox"
-                checked={allSelected}
-                onChange={onToggleAll}
+    <div className="space-y-3">
+      {onAddOverride && (
+        <OverrideToolbar
+          standings={standings}
+          overrides={overrides}
+          saving={overrideSaving}
+          onAdd={onAddOverride}
+          onRemove={onRemoveOverride}
+          t={t}
+        />
+      )}
+      <div className="overflow-hidden rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))]">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-[var(--s2,#1d1520)]">
+              <th scope="col" className="px-3 py-2 text-left w-10">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={onToggleAll}
+                />
+              </th>
+              <th scope="col" className="px-3 py-2 text-left">
+                #
+              </th>
+              <th scope="col" className="px-3 py-2 text-left">
+                {t.thTeam}
+              </th>
+              <th scope="col" className="px-3 py-2 text-center">
+                {t.thWins}
+              </th>
+              <th scope="col" className="px-3 py-2 text-center">
+                {t.thLosses}
+              </th>
+              <th scope="col" className="px-3 py-2 text-center">
+                {t.thDraws}
+              </th>
+              <th scope="col" className="px-3 py-2 text-right">
+                {t.thPoints}
+              </th>
+              <th scope="col" className="px-3 py-2 text-right">
+                {t.thTiebreak}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {standings.map((s) => (
+              <StandingRow
+                key={s.teamId}
+                s={s}
+                selected={selectedIds.has(s.teamId)}
+                onToggle={onToggleTeam}
+                tiebreakLabel={
+                  forcedAhead.has(s.teamId)
+                    ? t.tbOverride
+                    : tiebreakLabel(s.tiebrokenBy, t)
+                }
               />
-            </th>
-            <th scope="col" className="px-3 py-2 text-left">
-              #
-            </th>
-            <th scope="col" className="px-3 py-2 text-left">
-              {t.thTeam}
-            </th>
-            <th scope="col" className="px-3 py-2 text-center">
-              {t.thWins}
-            </th>
-            <th scope="col" className="px-3 py-2 text-center">
-              {t.thLosses}
-            </th>
-            <th scope="col" className="px-3 py-2 text-center">
-              {t.thDraws}
-            </th>
-            <th scope="col" className="px-3 py-2 text-right">
-              {t.thPoints}
-            </th>
-            <th scope="col" className="px-3 py-2 text-right">
-              {t.thTiebreak}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {standings.map((s) => (
-            <StandingRow
-              key={s.teamId}
-              s={s}
-              selected={selectedIds.has(s.teamId)}
-              onToggle={onToggleTeam}
-              tiebreakLabel={tiebreakLabel(s.tiebrokenBy, t)}
-            />
-          ))}
-        </tbody>
-      </table>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
