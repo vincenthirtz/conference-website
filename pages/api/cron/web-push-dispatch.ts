@@ -542,6 +542,9 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
     } else if (event.event_name === 'team.join.decided') {
       // La réponse à une candidature ne regarde que la candidate.
       staffUserIds = [];
+    } else if (event.event_name === 'captain.message') {
+      // Une conversation entre deux équipes ne regarde pas le staff.
+      staffUserIds = [];
     } else if (event.event_name === 'team.weekly.recap') {
       // N7 : un récap d'équipe n'est PAS une information de staff. Sans cette
       // exception, chaque staff recevrait le bilan hebdomadaire de toutes les
@@ -604,6 +607,19 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
           : data;
       const userId = typeof inner.userId === 'string' ? inner.userId : null;
       playerUserIds = userId ? [userId] : [];
+    } else if (event.event_name === 'captain.message') {
+      // L'émetteur a résolu les destinataires (détentrices de
+      // send_captain_messages côté équipe destinataire) : on route, sans
+      // recalculer.
+      const data = (event.payload ?? {}) as Record<string, unknown>;
+      const inner =
+        data.data && typeof data.data === 'object'
+          ? (data.data as Record<string, unknown>)
+          : data;
+      const raw = inner.recipientUserIds;
+      playerUserIds = Array.isArray(raw)
+        ? raw.filter((v): v is string => typeof v === 'string' && v.length > 0)
+        : [];
     } else if (event.event_name === 'tcg.pack_granted') {
       // L'émetteur a déjà résolu la destinataire : un event PAR gagnante, donc
       // exactement un `userId` par event. Le dispatcher ne fait que router — il

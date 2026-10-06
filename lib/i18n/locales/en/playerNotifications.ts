@@ -21,6 +21,7 @@ export default {
     'news.published': 'New article',
     'team.weekly.recap': 'Weekly team recap',
     'team.join.decided': 'Answer to your application',
+    'captain.message': 'Message from another team',
   },
   eventDescriptions: {
     'match.starting': 'When one of your matches is about to start.',
@@ -35,6 +36,8 @@ export default {
       "Your team's week in review. Only sent when something actually happened.",
     'team.join.decided':
       'When a team accepts or declines your request to join it (push and Discord message).',
+    'captain.message':
+      'When a team writes to yours, if you can reply on its behalf. The content stays in your messages.',
   },
   loadError: 'Error while loading your notifications.',
   prefSaved: 'Preference saved.',

@@ -4,6 +4,7 @@
 
 import { LegacyAdminError } from '@/utils/admin/errors';
 import { parseBody } from '@/utils/player/errors';
+import { announceCaptainMessage } from '@/utils/teams/captainMessageNotify';
 import * as repo from '../repository';
 import {
   SendMessageBody,
@@ -127,5 +128,16 @@ export async function sendMessage(
     ctx.logger.error('[player/messages] insert error:', error);
     throw new LegacyAdminError(500, 'Failed to send message.');
   }
+  // Prévenir l'équipe destinataire (push + DM bot). Après l'écriture, et sans
+  // jamais lever : une annonce ratée ne transforme pas un envoi réussi en 500.
+  await announceCaptainMessage({
+    tenantId: ctx.tenantId,
+    senderUserId: ctx.userId,
+    conversationId: convId,
+    fromTeamId: team.id,
+    fromTeamName: team.name,
+    toTeamId: targetTeamId,
+    toTeamName: target.team.name,
+  });
   return { success: true, message, conversationId: convId };
 }

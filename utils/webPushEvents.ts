@@ -57,6 +57,11 @@ export const WEB_PUSH_EVENT_TYPES = [
   // et la branche par défaut préviendrait tout le staff du tenant à chaque
   // geste de capitaine.
   'team.join.decided',
+  // Message entre capitaines. Audience = les destinataires résolues par
+  // l'émetteur (payload.recipientUserIds : détentrices de
+  // send_captain_messages côté équipe destinataire), staff exclu — une
+  // conversation entre deux équipes ne regarde pas le staff.
+  'captain.message',
 ] as const;
 
 export type WebPushEventType = (typeof WEB_PUSH_EVENT_TYPES)[number];
@@ -127,6 +132,9 @@ export function playerUrlForEvent(
       // Le tableau de bord : l'historique des demandes (et le motif d'un
       // refus) y vit ; une acceptation y montre la nouvelle équipe.
       return '/player';
+    case 'captain.message':
+      // La messagerie : la conversation y est en tête, marquée non lue.
+      return '/player/messages';
     case 'news.published':
       // V1 : pas de fanout player news (audience trop large), géré V2.
       return null;
@@ -170,6 +178,9 @@ export const EMAIL_EVENT_TYPES = [
   'scrim.planning.validated',
   'news.published',
   'team.weekly.recap',
+  // Message d'une autre équipe, sans son contenu. Audience = payload
+  // .recipientUserIds (staff exclu), comme le push. Opt-in comme tout l'email.
+  'captain.message',
   // PAS de `tcg.pack_granted` ici, à dessein. Un digest qui annonce « tu as
   // gagné un paquet avant-hier » n'apporte rien : le paquet ne périme pas, il
   // attend sur la page, et le push immédiat a déjà fait le travail. Le canal
@@ -222,6 +233,9 @@ export const PLAYER_PUSH_EVENT_TYPES = [
   // aussi l'interrupteur que relit l'émetteur pour le DM Discord
   // (utils/teams/joinDecisionNotify.ts).
   'team.join.decided',
+  // Un message d'une autre équipe : coupable par chaque destinataire, et
+  // relu par l'émetteur pour le DM (utils/teams/captainMessageNotify.ts).
+  'captain.message',
 ] as const satisfies readonly WebPushEventType[];
 
 export type PlayerPushEventType = (typeof PLAYER_PUSH_EVENT_TYPES)[number];
@@ -623,6 +637,20 @@ export function renderWebPushPayload(
         actions: [{ action: 'view', title: 'Voir mon espace' }],
       };
     }
+    case 'captain.message': {
+      const data = unwrap(payload);
+      const url = playerUrlForEvent(eventName, payload) ?? '/player/messages';
+      const from = str(data, 'fromTeamName');
+      // Jamais le contenu du message : il ne sort pas de la messagerie.
+      return {
+        title: 'Nouveau message d’équipe',
+        body: from
+          ? `${from} a écrit à ton équipe.`
+          : 'Une équipe a écrit à ton équipe.',
+        url,
+        actions: [{ action: 'view', title: 'Lire' }],
+      };
+    }
     case 'scrim.planning.opened': {
       const data = unwrap(payload);
       const url = playerUrlForEvent(eventName, payload) ?? '/player';
@@ -792,6 +820,16 @@ export function renderEmailPayload(
       return {
         heading: teamName ? `Votre semaine — ${teamName}` : 'Votre semaine',
         body: summary || 'Le bilan de la semaine de votre équipe est prêt.',
+        url,
+      };
+    }
+    case 'captain.message': {
+      const from = str(data, 'fromTeamName');
+      return {
+        heading: 'Nouveau message d’équipe',
+        body: from
+          ? `${from} a écrit à ton équipe. Le message t’attend dans la messagerie.`
+          : 'Une équipe a écrit à ton équipe. Le message t’attend dans la messagerie.',
         url,
       };
     }

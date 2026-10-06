@@ -138,6 +138,18 @@ async function resolveEmailAudience(event: OutboxRow): Promise<string[]> {
     return roster.filter((u) => optedInRoster.has(u));
   }
 
+  // Message entre capitaines : l'émetteur a résolu les destinataires
+  // (utils/teams/captainMessageNotify.ts). Staff exclu, comme pour le push.
+  if (event.event_name === 'captain.message') {
+    const raw = inner.recipientUserIds;
+    const recipients = Array.isArray(raw)
+      ? raw.filter((v): v is string => typeof v === 'string' && v.length > 0)
+      : [];
+    if (recipients.length === 0) return [];
+    const optedIn = await loadEmailOptedInUserIds(recipients, event.event_name);
+    return recipients.filter((u) => optedIn.has(u));
+  }
+
   // Staff du tenant (+ pole admins) reçoivent tous les events email-éligibles.
   for (const u of await loadStaffUserIdsForTenant(event.tenant_id)) {
     audience.add(u);

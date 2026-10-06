@@ -231,6 +231,16 @@ export const BOT_EVENT_NAMES = [
   // candidate a coupé ce type dans ses préférences. Dans
   // `WEB_PUSH_EVENT_TYPES` avec une audience réduite à `userId`.
   'team.join.decided',
+
+  // Message entre capitaines, adressé aux personnes qui peuvent répondre au
+  // nom de l'équipe DESTINATAIRE (`utils/teams/captainMessageNotify.ts`).
+  // Charge : `{ conversationId, fromTeamId, fromTeamName, toTeamId,
+  //   toTeamName, recipientUserIds, recipients: [{ userId, discordUserId,
+  //   discordUsername }], ctaUrl }`. JAMAIS le contenu du message. Un
+  // événement par message, émis APRÈS l'écriture ; les destinataires ayant
+  // coupé ce type sont retirées avant l'émission (aucun event si plus
+  // personne). Dans `WEB_PUSH_EVENT_TYPES`, audience = `recipientUserIds`.
+  'captain.message',
 ] as const;
 
 export type BotEventName = (typeof BOT_EVENT_NAMES)[number];

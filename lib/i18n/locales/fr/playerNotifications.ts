@@ -20,6 +20,7 @@ export default ns('playerNotifications', {
     'news.published': 'Nouvelle actualité',
     'team.weekly.recap': "Récap hebdomadaire d'équipe",
     'team.join.decided': 'Réponse à ta candidature',
+    'captain.message': 'Message d’une autre équipe',
   },
   eventDescriptions: {
     'match.starting': 'Quand un de tes matchs va bientôt commencer.',
@@ -34,6 +35,8 @@ export default ns('playerNotifications', {
       "Le bilan de la semaine de ton équipe. Envoyé seulement s'il s'est passé quelque chose.",
     'team.join.decided':
       'Quand une équipe accepte ou refuse ta demande pour la rejoindre (push et message Discord).',
+    'captain.message':
+      'Quand une équipe écrit à la tienne, si tu peux répondre en son nom. Le contenu reste dans la messagerie.',
   },
   loadError: 'Erreur lors du chargement de tes notifications.',
   prefSaved: 'Préférence enregistrée.',
