@@ -3,16 +3,17 @@
 // Détecte la drift entre les 3 sources de vérité de la surface HTTP :
 //   1. `docs/openapi/` — la spec (un fragment par handler, cf. utils/openapi/assemble.ts).
 //   2. `pages/api/**/*.ts` — les handlers Next.js (canonique).
-//   3. `../docker-box/services/discord-bot/**/*.{js,ts}` — le client bot
-//      (consumer cross-repo).
+//   3. `../owwc-discord-bot/**/*.{js,ts}` — le client bot (consumer
+//      cross-repo).
 //
 // Le test ne *corrige* pas la drift : il la *rapporte*. Une entrée dans
 // `ALLOWLIST_*` ci-dessous est la voie d'évacuation pour les cas connus
 // (handlers générés, routes en cours de retrait, etc.) — toute autre
 // drift fait échouer le test.
 //
-// Cross-repo : le bot vit dans `docker-box`, son chemin est résolu depuis
-// `BOT_CLIENT_ROOT` (env override) ou `../docker-box/services/discord-bot`.
+// Cross-repo : le bot vit dans son propre repo `owwc-discord-bot` (sorti de
+// docker-box/services/discord-bot le 2026-09-29) ; son chemin est résolu
+// depuis `BOT_CLIENT_ROOT` (env override) ou les emplacements frères ci-dessous.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -30,14 +31,14 @@ const FRAGMENTS_ROOT = path.join(REPO_ROOT, 'docs', 'openapi', 'paths');
 // Où vit le repo voisin. La valeur unique « frère de conference-website » est
 // un pari sur l'arborescence du poste : elle tombe juste chez qui range les
 // deux repos côte à côte, et rend la garde cross-repo rouge en permanence chez
-// les autres (ici `depot/conference-website` et `workspace/docker-box`). Une
+// les autres (ici `depot/conference-website` et `workspace/owwc-discord-bot`). Une
 // garde rouge par accident ne protège plus de rien — on essaie donc les
 // emplacements plausibles, l'env gardant le dernier mot.
 const BOT_CLIENT_CANDIDATES = [
-  path.resolve(REPO_ROOT, '..', 'docker-box'),
-  path.resolve(REPO_ROOT, '..', '..', 'workspace', 'docker-box'),
-  path.resolve(REPO_ROOT, '..', '..', 'depot', 'docker-box'),
-].map((root) => path.join(root, 'services', 'discord-bot'));
+  path.resolve(REPO_ROOT, '..', 'owwc-discord-bot'),
+  path.resolve(REPO_ROOT, '..', '..', 'workspace', 'owwc-discord-bot'),
+  path.resolve(REPO_ROOT, '..', '..', 'depot', 'owwc-discord-bot'),
+];
 
 const BOT_CLIENT_ROOT =
   process.env.BOT_CLIENT_ROOT ??
@@ -629,7 +630,7 @@ describe('OpenAPI ↔ handlers', () => {
   });
 });
 
-// En CI, le repo voisin `docker-box` n'est pas récupéré : exiger sa présence y
+// En CI, le repo voisin `owwc-discord-bot` (privé) n'est pas récupéré : exiger sa présence y
 // faisait échouer la suite à coup sûr. Hors CI (poste de dev), son absence reste
 // une erreur — c'est là que la vérification cross-repo a un sens.
 const BOT_ROOT_OPTIONAL =
