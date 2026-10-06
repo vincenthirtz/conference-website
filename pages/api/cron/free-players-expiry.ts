@@ -120,7 +120,10 @@ async function withdrawExpiredAnnouncements(now: Date, dryRun: boolean) {
     .lte('expires_at', now.toISOString())
     .limit(BATCH);
   if (error) {
-    logger.error('[cron/free-players-expiry] announcements lookup error', error);
+    logger.error(
+      '[cron/free-players-expiry] announcements lookup error',
+      error
+    );
     return { candidates: 0, withdrawn: 0, error: 'lookup_failed' };
   }
   const rows = (data ?? []) as AnnouncedRow[];

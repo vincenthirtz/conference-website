@@ -16,7 +16,12 @@ vi.mock('@/utils/captcha', () => ({
 
 const { emitBotEvent, sendExpiry, sendLinks } = vi.hoisted(() => ({
   emitBotEvent: vi.fn(
-    async (_event: string, _data: unknown, _tenantId: string, _opts?: unknown) => ({
+    async (
+      _event: string,
+      _data: unknown,
+      _tenantId: string,
+      _opts?: unknown
+    ) => ({
       delivered: true,
       attempts: 1,
     })
@@ -323,7 +328,11 @@ describe('prolongation', () => {
 // ---------------------------------------------------------------------------
 
 describe('renvoi des liens', () => {
-  const body = { email: 'Nova@Gmail.com', captchaToken: 't', captchaAnswer: '4' };
+  const body = {
+    email: 'Nova@Gmail.com',
+    captchaToken: 't',
+    captchaAnswer: '4',
+  };
 
   it('envoie les liens à l’adresse de la fiche', async () => {
     store.free_players = [fiche()] as any[];

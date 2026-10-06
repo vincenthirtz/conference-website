@@ -35,7 +35,11 @@ export function candidateName(label: string): string {
 }
 
 const fold = (s: string) =>
-  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 
 /**
  * La candidate désignée par l'argument, ou null (inconnue ou ambiguë).

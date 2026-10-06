@@ -51,7 +51,11 @@ const MONTHS: Record<string, number> = {
 const WEEKDAYS = new Set(['lu', 'ma', 'me', 'je', 've', 'sa', 'di']);
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const strip = (s: string) =>
-  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 
 /** Découpe CSV minimale : virgules, champs entre guillemets, "" échappé. */
 export function parseCsvRows(text: string): string[][] {

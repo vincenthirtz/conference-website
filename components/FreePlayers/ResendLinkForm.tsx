@@ -61,7 +61,10 @@ export default function ResendLinkForm() {
       <p className="mt-2 text-sm text-[var(--t2)]">{t.resendIntro}</p>
 
       {status === 'done' ? (
-        <p role="status" className="mt-4 text-sm text-[var(--color-green-light)]">
+        <p
+          role="status"
+          className="mt-4 text-sm text-[var(--color-green-light)]"
+        >
           {t.resendDone}
         </p>
       ) : (
