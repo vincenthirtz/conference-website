@@ -2336,6 +2336,9 @@
        "rosterLockSoon": {
         "type": "boolean"
        },
+       "staffUncoveredNights": {
+        "type": "number"
+       },
        "stagesReady": {
         "type": "number"
        },
@@ -2488,9 +2491,6 @@
          "number",
          "null"
         ]
-       },
-       "staffUncoveredNights": {
-        "type": "number"
        },
        "used": {
         "type": "number"
@@ -12706,6 +12706,12 @@
        ]
       }
      },
+     "me": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
      "people": {
       "type": "array",
       "items": {
@@ -12767,6 +12773,7 @@
     },
     "required": [
      "matchNights",
+     "me",
      "people",
      "slots"
     ]
@@ -13047,12 +13054,6 @@
          },
          "name": {
           "type": "string"
-     "me": {
-      "type": [
-       "string",
-       "null"
-      ]
-     },
          },
          "seed": {
           "type": [
@@ -13114,7 +13115,6 @@
         }
        },
        "required": [
-     "me",
         "logoUrl",
         "name",
         "seed",
@@ -15569,6 +15569,7 @@
           }
          },
          "required": [
+          "archivedCount",
           "id",
           "isDone",
           "name",
@@ -15833,6 +15834,9 @@
         "items": {
          "type": "object",
          "properties": {
+          "archivedCount": {
+           "type": "number"
+          },
           "id": {
            "type": "string"
           },
@@ -15846,9 +15850,6 @@
            "type": "number"
           }
          },
-          "archivedCount": {
-           "type": "number"
-          },
          "required": [
           "id",
           "isDone",
@@ -15953,7 +15954,6 @@
     "type": "object",
     "properties": {
      "activity": {
-          "archivedCount",
       "type": "array",
       "items": {
        "type": "object",
