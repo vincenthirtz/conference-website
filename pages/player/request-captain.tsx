@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { loginHrefFor } from '@/utils/player/sessionExpiry';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { usePendingDemande } from '@/features/player/demandes/hooks/usePendingDemande';
 import { useDebounce } from '@/hooks/useDebounce';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import TeamPicker from '@/components/player/TeamPicker';
@@ -72,11 +73,13 @@ function RequestCaptainPage() {
 
   // Demande déjà en attente : affichée (au lieu d'un renvoi silencieux vers
   // /player), avec la possibilité de l'annuler pour en refaire une.
-  const [pendingDemande, setPendingDemande] = useState<PendingCaptain | null>(
-    null
-  );
-  const [cancelling, setCancelling] = useState(false);
-  const [cancelError, setCancelError] = useState<string | null>(null);
+  const {
+    pending: pendingDemande,
+    setPending: setPendingDemande,
+    cancelling,
+    cancelError,
+    cancel: cancelPending,
+  } = usePendingDemande<PendingCaptain>(t.pendingCancelError);
 
   // Mode de sélection
   const [mode, setMode] = useState<'existing' | 'new'>('new');
@@ -172,7 +175,7 @@ function RequestCaptainPage() {
     return () => {
       cancelled = true;
     };
-  }, [ready, token, adminFetchJson]);
+  }, [ready, token, adminFetchJson, setPendingDemande]);
 
   // Recharge la liste d'equipes quand la recherche (debouncee) change.
   useEffect(() => {
@@ -290,24 +293,6 @@ function RequestCaptainPage() {
       setError((err as Error).message || t.errGeneric);
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const cancelPending = async () => {
-    if (!pendingDemande || cancelling) return;
-    setCancelling(true);
-    setCancelError(null);
-    try {
-      await adminFetchJson('/api/demandes/cancel', {
-        method: 'DELETE',
-        body: JSON.stringify({ demandeId: pendingDemande.id }),
-      });
-      // Retour au formulaire : elle peut viser une autre équipe.
-      setPendingDemande(null);
-    } catch (err: unknown) {
-      setCancelError((err as Error)?.message || t.pendingCancelError);
-    } finally {
-      setCancelling(false);
     }
   };
 

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
+import { usePendingDemande } from '@/features/player/demandes/hooks/usePendingDemande';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
@@ -106,11 +107,13 @@ function JoinTeamPage() {
 
   // Demande déjà en attente : on l'affiche (au lieu de renvoyer en silence
   // vers /player) avec la possibilité de l'annuler pour en faire une autre.
-  const [pendingDemande, setPendingDemande] = useState<PendingJoin | null>(
-    null
-  );
-  const [cancelling, setCancelling] = useState(false);
-  const [cancelError, setCancelError] = useState<string | null>(null);
+  const {
+    pending: pendingDemande,
+    setPending: setPendingDemande,
+    cancelling,
+    cancelError,
+    cancel: cancelPending,
+  } = usePendingDemande<PendingJoin>(t.pendingCancelError);
 
   useEffect(() => {
     if (user && !battleTagSeeded) {
@@ -199,7 +202,7 @@ function JoinTeamPage() {
     return () => {
       cancelled = true;
     };
-  }, [ready, token, adminFetchJson]);
+  }, [ready, token, adminFetchJson, setPendingDemande]);
 
   // Recharge la liste quand la recherche (debouncee) change.
   useEffect(() => {
@@ -252,24 +255,6 @@ function JoinTeamPage() {
       setError((err as Error).message || t.genericError);
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const cancelPending = async () => {
-    if (!pendingDemande || cancelling) return;
-    setCancelling(true);
-    setCancelError(null);
-    try {
-      await adminFetchJson('/api/demandes/cancel', {
-        method: 'DELETE',
-        body: JSON.stringify({ demandeId: pendingDemande.id }),
-      });
-      // Retour au formulaire : la joueuse peut choisir une autre équipe.
-      setPendingDemande(null);
-    } catch (err: unknown) {
-      setCancelError((err as Error)?.message || t.pendingCancelError);
-    } finally {
-      setCancelling(false);
     }
   };
 
