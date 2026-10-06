@@ -8,6 +8,7 @@ const { session, replace, router } = vi.hoisted(() => ({
     value: { access_token: 'tok-1' } as { access_token: string } | null,
   },
   replace: vi.fn(async (_path: string) => true),
+  router: { asPath: undefined as string | undefined },
 }));
 vi.mock('@/utils/supabaseBrowser', () => ({
   supabaseClient: {
@@ -118,6 +119,16 @@ describe('adminRequest', () => {
       () => {}
     );
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('401 : la connexion ramène sur la page courante (?next=)', async () => {
+    router.asPath = '/admin/news/7';
+    respond(401, { error: 'Non authentifié' });
+    await adminRequest('/api/admin/x').catch(() => {});
+    expect(replace).toHaveBeenCalledWith(
+      `/admin/login?next=${encodeURIComponent('/admin/news/7')}`
+    );
+    router.asPath = undefined;
   });
 
   it('échoue sans session, sans appeler le réseau', async () => {

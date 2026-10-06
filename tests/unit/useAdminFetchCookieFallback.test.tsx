@@ -71,4 +71,18 @@ describe('useAdminFetch — repli cookies', () => {
     expect(new Headers(init.headers).get('Authorization')).toBe('Bearer tok');
     expect(replace).toHaveBeenCalledWith('/admin/login');
   });
+
+  it('401 avec jeton : ?next= vers la page courante', async () => {
+    getSession.mockResolvedValueOnce({
+      data: { session: { access_token: 'tok' } },
+    } as never);
+    asPath.value = '/admin/tournament/3/edit';
+    fetchMock.mockResolvedValue(new Response('{}', { status: 401 }));
+    const { result } = renderHook(() => useAdminFetch());
+    await result.current.adminFetch('/api/x');
+    expect(replace).toHaveBeenCalledWith(
+      `/admin/login?next=${encodeURIComponent('/admin/tournament/3/edit')}`
+    );
+    asPath.value = undefined;
+  });
 });
