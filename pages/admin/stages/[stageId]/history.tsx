@@ -9,6 +9,12 @@ import {
   useStageHistory,
 } from '@/features/admin/stages/hooks/useStage';
 import StageTabsNav from '@/components/admin/stages/StageTabsNav';
+import Tabs, {
+  type TabItem,
+  tabButtonId,
+  tabPanelId,
+  useQueryTab,
+} from '@/components/ui/Tabs';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { StageType, StaffRole } from '@/types/admin';
 import nsAdminStageHistory from '@/lib/i18n/locales/admin-fr/adminStageHistory';
@@ -70,16 +76,19 @@ function shortId(id: string) {
   return id.slice(0, 4) + '…' + id.slice(-3);
 }
 
-type View = 'journal' | 'snapshots';
+const VIEW_TABS_ID = 'stage-history';
 
 function AdminStageHistoryPage({ staff }: StaffProps) {
   const t = useAdminT(nsAdminStageHistory);
   const router = useRouter();
   const { stageId } = router.query;
-  // `?view=snapshots` ouvre directement l'onglet des snapshots.
-  const [view, setView] = useState<View>(() =>
-    router.query.view === 'snapshots' ? 'snapshots' : 'journal'
-  );
+  // Onglet porté par l'URL (`?view=snapshots` ouvre les snapshots) : barre
+  // d'onglets commune (components/ui/Tabs), clavier compris.
+  const viewTabs: TabItem[] = [
+    { id: 'journal', label: t.tabJournal },
+    { id: 'snapshots', label: t.tabSnapshots },
+  ];
+  const [view, setView] = useQueryTab(viewTabs, 'view');
   const canRestore = hasAtLeastRole(staff?.role as StaffRole, 'admin');
 
   // Contexte de la phase, uniquement pour la barre d'onglets (gating + retour).
@@ -142,212 +151,215 @@ function AdminStageHistoryPage({ staff }: StaffProps) {
         <AdminPageHeader title={t.heading} subtitle={t.subtitle} />
 
         {/* Journal staff | snapshots de bracket */}
-        <div role="tablist" className="mb-4 flex gap-2">
-          {(['journal', 'snapshots'] as const).map((v) => (
-            <AdminButton
-              key={v}
-              role="tab"
-              aria-selected={view === v}
-              variant={view === v ? 'primary' : 'ghost'}
-              size="sm"
-              onClick={() => setView(v)}
-            >
-              {v === 'journal' ? t.tabJournal : t.tabSnapshots}
-            </AdminButton>
-          ))}
-        </div>
+        <Tabs
+          tabs={viewTabs}
+          active={view}
+          onChange={setView}
+          ariaLabel={t.heading}
+          idBase={VIEW_TABS_ID}
+          variant="segmented"
+          className="mb-4"
+        />
 
-        {view === 'snapshots' && stageId && (
-          <BracketSnapshotsPanel
-            stageId={String(stageId)}
-            canRestore={canRestore}
-            t={t}
-          />
-        )}
+        <div
+          role="tabpanel"
+          id={tabPanelId(VIEW_TABS_ID, view)}
+          aria-labelledby={tabButtonId(VIEW_TABS_ID, view)}
+        >
+          {view === 'snapshots' && stageId && (
+            <BracketSnapshotsPanel
+              stageId={String(stageId)}
+              canRestore={canRestore}
+              t={t}
+            />
+          )}
 
-        {view === 'journal' && (
-          <>
-            {/* Filtres */}
-            <form
-              onSubmit={handleFilterSubmit}
-              className="mb-6 flex flex-wrap items-end gap-4 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4"
-            >
-              <div className="flex flex-col gap-1">
-                <label className={filterLabelClass}>{t.entityTypeLabel}</label>
-                <input
-                  type="text"
-                  className={filterInputClass}
-                  placeholder={t.entityTypePlaceholder}
-                  value={entityType}
-                  onChange={(e) => setEntityType(e.target.value)}
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className={filterLabelClass}>{t.actionLabel}</label>
-                <input
-                  type="text"
-                  className={filterInputClass}
-                  placeholder={t.actionPlaceholder}
-                  value={action}
-                  onChange={(e) => setAction(e.target.value)}
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className={filterLabelClass}>{t.limitLabel}</label>
-                <select
-                  className={filterInputClass}
-                  value={limit}
-                  onChange={(e) => setLimit(Number(e.target.value) || 50)}
-                >
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                  <option value={200}>200</option>
-                </select>
-              </div>
-
-              <AdminButton
-                type="submit"
-                variant="secondary"
-                size="sm"
-                className="ml-auto"
+          {view === 'journal' && (
+            <>
+              {/* Filtres */}
+              <form
+                onSubmit={handleFilterSubmit}
+                className="mb-6 flex flex-wrap items-end gap-4 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4"
               >
-                {t.filter}
-              </AdminButton>
-            </form>
+                <div className="flex flex-col gap-1">
+                  <label className={filterLabelClass}>
+                    {t.entityTypeLabel}
+                  </label>
+                  <input
+                    type="text"
+                    className={filterInputClass}
+                    placeholder={t.entityTypePlaceholder}
+                    value={entityType}
+                    onChange={(e) => setEntityType(e.target.value)}
+                  />
+                </div>
 
-            {/* Error */}
-            {errorMsg && (
-              <div className="mb-4 rounded-[var(--r-ctrl,4px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-sm text-[var(--t1,#f4edf7)]">
-                {errorMsg}
-              </div>
-            )}
+                <div className="flex flex-col gap-1">
+                  <label className={filterLabelClass}>{t.actionLabel}</label>
+                  <input
+                    type="text"
+                    className={filterInputClass}
+                    placeholder={t.actionPlaceholder}
+                    value={action}
+                    onChange={(e) => setAction(e.target.value)}
+                  />
+                </div>
 
-            {/* Liste des logs */}
-            <div className="overflow-hidden rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]">
-              <div className="flex items-center justify-between border-b border-[var(--line,rgba(194,196,201,.12))] px-5 py-3">
-                <span
-                  className="text-sm font-semibold text-[var(--t1,#f4edf7)]"
-                  data-numeric
+                <div className="flex flex-col gap-1">
+                  <label className={filterLabelClass}>{t.limitLabel}</label>
+                  <select
+                    className={filterInputClass}
+                    value={limit}
+                    onChange={(e) => setLimit(Number(e.target.value) || 50)}
+                  >
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={200}>200</option>
+                  </select>
+                </div>
+
+                <AdminButton
+                  type="submit"
+                  variant="secondary"
+                  size="sm"
+                  className="ml-auto"
                 >
-                  {loading
-                    ? t.loading
-                    : format(t.logsCount, { count: logs.length })}
-                </span>
-                <span className="text-xs text-[var(--t3,#a39ba6)]">
-                  {t.sortedHint}
-                </span>
-              </div>
+                  {t.filter}
+                </AdminButton>
+              </form>
 
-              {logs.length === 0 && !loading && (
-                <div className="px-5 py-8 text-center text-sm text-[var(--t3,#a39ba6)]">
-                  {t.emptyLogs}
+              {/* Error */}
+              {errorMsg && (
+                <div className="mb-4 rounded-[var(--r-ctrl,4px)] border border-[rgba(255,107,107,.45)] bg-[rgba(255,107,107,.08)] px-4 py-3 text-sm text-[var(--t1,#f4edf7)]">
+                  {errorMsg}
                 </div>
               )}
 
-              {logs.length > 0 && (
-                <ul className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
-                  {logs.map((log) => (
-                    <li
-                      key={log.id}
-                      className="flex flex-col gap-1 px-5 py-3 text-sm"
-                    >
-                      {/* Ligne principale */}
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-xs text-[var(--t4,#807984)]">
-                            {formatDateTime(log.created_at)}
-                          </span>
-                          <Chip tone="brand">{log.action}</Chip>
-                          {log.entity_type && (
-                            <Chip>
-                              {log.entity_type}
-                              {log.entity_id
-                                ? ` #${shortId(log.entity_id)}`
-                                : ''}
-                            </Chip>
+              {/* Liste des logs */}
+              <div className="overflow-hidden rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]">
+                <div className="flex items-center justify-between border-b border-[var(--line,rgba(194,196,201,.12))] px-5 py-3">
+                  <span
+                    className="text-sm font-semibold text-[var(--t1,#f4edf7)]"
+                    data-numeric
+                  >
+                    {loading
+                      ? t.loading
+                      : format(t.logsCount, { count: logs.length })}
+                  </span>
+                  <span className="text-xs text-[var(--t3,#a39ba6)]">
+                    {t.sortedHint}
+                  </span>
+                </div>
+
+                {logs.length === 0 && !loading && (
+                  <div className="px-5 py-8 text-center text-sm text-[var(--t3,#a39ba6)]">
+                    {t.emptyLogs}
+                  </div>
+                )}
+
+                {logs.length > 0 && (
+                  <ul className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
+                    {logs.map((log) => (
+                      <li
+                        key={log.id}
+                        className="flex flex-col gap-1 px-5 py-3 text-sm"
+                      >
+                        {/* Ligne principale */}
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-xs text-[var(--t4,#807984)]">
+                              {formatDateTime(log.created_at)}
+                            </span>
+                            <Chip tone="brand">{log.action}</Chip>
+                            {log.entity_type && (
+                              <Chip>
+                                {log.entity_type}
+                                {log.entity_id
+                                  ? ` #${shortId(log.entity_id)}`
+                                  : ''}
+                              </Chip>
+                            )}
+                          </div>
+
+                          {log.staff && (
+                            <div className="flex items-center gap-2 text-xs text-[var(--t3,#a39ba6)]">
+                              <span className="text-[var(--t4,#807984)]">
+                                {t.by}
+                              </span>
+                              <span className="font-medium text-[var(--t1,#f4edf7)]">
+                                {log.staff.display_name || log.staff.id}
+                              </span>
+                              {log.staff.role && <Chip>{log.staff.role}</Chip>}
+                            </div>
                           )}
                         </div>
 
-                        {log.staff && (
-                          <div className="flex items-center gap-2 text-xs text-[var(--t3,#a39ba6)]">
-                            <span className="text-[var(--t4,#807984)]">
-                              {t.by}
-                            </span>
-                            <span className="font-medium text-[var(--t1,#f4edf7)]">
-                              {log.staff.display_name || log.staff.id}
-                            </span>
-                            {log.staff.role && <Chip>{log.staff.role}</Chip>}
+                        {/* Message formatté si dispo */}
+                        {log.message && (
+                          <div className="text-[var(--t2,#c7bfca)]">
+                            {log.message}
                           </div>
                         )}
-                      </div>
 
-                      {/* Message formatté si dispo */}
-                      {log.message && (
-                        <div className="text-[var(--t2,#c7bfca)]">
-                          {log.message}
-                        </div>
-                      )}
+                        {/* Payload brut */}
+                        {log.payload ? (
+                          <details className="mt-1 text-xs text-[var(--t3,#a39ba6)]">
+                            <summary className="cursor-pointer select-none hover:text-[var(--t1,#f4edf7)]">
+                              {t.payloadDetails}
+                            </summary>
+                            <pre className="mt-1 overflow-x-auto rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-2 text-[11px]">
+                              {JSON.stringify(log.payload, null, 2)}
+                            </pre>
+                          </details>
+                        ) : null}
 
-                      {/* Payload brut */}
-                      {log.payload ? (
-                        <details className="mt-1 text-xs text-[var(--t3,#a39ba6)]">
-                          <summary className="cursor-pointer select-none hover:text-[var(--t1,#f4edf7)]">
-                            {t.payloadDetails}
-                          </summary>
-                          <pre className="mt-1 overflow-x-auto rounded-[var(--r-ctrl,4px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s2,#1d1520)] p-2 text-[11px]">
-                            {JSON.stringify(log.payload, null, 2)}
-                          </pre>
-                        </details>
-                      ) : null}
-
-                      {/* Liens rapides */}
-                      <div className="mt-1 flex flex-wrap gap-2 text-xs text-[var(--or-200,#eec4ff)]">
-                        {log.entity_type === 'match' && log.entity_id && (
-                          <Link
-                            href={`/admin/matches/${log.entity_id}`}
-                            className="hover:underline"
-                          >
-                            {t.openMatch}
-                          </Link>
-                        )}
-
-                        {log.entity_type === 'stage' && log.entity_id && (
-                          <Link
-                            href={`/admin/stages/${log.entity_id}`}
-                            className="hover:underline"
-                          >
-                            {t.openStage}
-                          </Link>
-                        )}
-
-                        {log.entity_type === 'team' && log.entity_id && (
-                          <Link
-                            href={`/admin/teams/${log.entity_id}`}
-                            className="hover:underline"
-                          >
-                            {t.openTeam}
-                          </Link>
-                        )}
-
-                        {log.entity_type === 'tournament' &&
-                          log.tournament_id && (
+                        {/* Liens rapides */}
+                        <div className="mt-1 flex flex-wrap gap-2 text-xs text-[var(--or-200,#eec4ff)]">
+                          {log.entity_type === 'match' && log.entity_id && (
                             <Link
-                              href={`/admin/tournament/${log.tournament_id}`}
+                              href={`/admin/matches/${log.entity_id}`}
                               className="hover:underline"
                             >
-                              {t.openTournament}
+                              {t.openMatch}
                             </Link>
                           )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </>
-        )}
+
+                          {log.entity_type === 'stage' && log.entity_id && (
+                            <Link
+                              href={`/admin/stages/${log.entity_id}`}
+                              className="hover:underline"
+                            >
+                              {t.openStage}
+                            </Link>
+                          )}
+
+                          {log.entity_type === 'team' && log.entity_id && (
+                            <Link
+                              href={`/admin/teams/${log.entity_id}`}
+                              className="hover:underline"
+                            >
+                              {t.openTeam}
+                            </Link>
+                          )}
+
+                          {log.entity_type === 'tournament' &&
+                            log.tournament_id && (
+                              <Link
+                                href={`/admin/tournament/${log.tournament_id}`}
+                                className="hover:underline"
+                              >
+                                {t.openTournament}
+                              </Link>
+                            )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </>
   );
