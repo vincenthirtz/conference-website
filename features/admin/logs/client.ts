@@ -27,7 +27,20 @@ export type TestEmailResponse = {
   error?: string;
 };
 
+export type ReplayDiscordEventResponse = {
+  id: number;
+  status: 'pending';
+  replayed: boolean;
+};
+
 export const logsClient = {
+  /** Remet en file un event `failed` (`id` = `event:<n>` de la liste). */
+  replayDiscordEvent: (id: string) =>
+    adminRequest<ReplayDiscordEventResponse>('/api/admin/discord-logs/replay', {
+      method: 'POST',
+      json: { id },
+      idempotent: true,
+    }),
   sendTestEmail: (to: string) =>
     adminRequest<TestEmailResponse>('/api/admin/test-email', {
       method: 'POST',

@@ -123,6 +123,70 @@ export async function queryDiscordLogs(
   return { rows: (data ?? []) as unknown[], error, count };
 }
 
+/* --------------------- Rejeu d'un event outbox `failed` --------------------- */
+
+export type OutboxEventRow = {
+  id: number;
+  event_id: string;
+  event_name: string;
+  status: string;
+};
+
+export async function getOutboxEvent(
+  db: AdminDb,
+  tenantId: string,
+  id: number
+) {
+  const { data, error } = await untyped(db)
+    .from('bot_event_outbox')
+    .select('id, event_id, event_name, status')
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+  return { row: (data ?? null) as OutboxEventRow | null, error };
+}
+
+/**
+ * Libère le claim distribué du bot (`discord_event_ack`) : sans cela, le
+ * poller verrait `wasNew=false` et ACQUITTERAIT l'event sans le dispatcher.
+ */
+export async function releaseBotEventClaim(db: AdminDb, eventId: string) {
+  const { error } = await untyped(db)
+    .from('discord_event_ack')
+    .delete()
+    .eq('event_id', eventId);
+  return { error };
+}
+
+/**
+ * `failed` → `pending`, compteurs remis à zéro. Conditionnel sur
+ * `status = 'failed'` : deux rejeux simultanés n'en font qu'un (le second ne
+ * rend aucune ligne). `last_push_at = now` ouvre une nouvelle fenêtre avant
+ * que le poison-pill (cron outbox-maintenance) ne la juge de nouveau périmée.
+ */
+export async function requeueFailedOutboxEvent(
+  db: AdminDb,
+  tenantId: string,
+  id: number,
+  nowIso: string
+) {
+  const { data, error } = await untyped(db)
+    .from('bot_event_outbox')
+    .update({
+      status: 'pending',
+      push_attempts: 0,
+      last_push_error: null,
+      last_push_at: nowIso,
+      delivered_at: null,
+    })
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+    .eq('status', 'failed')
+    .select('id')
+    .maybeSingle();
+  return { row: (data ?? null) as { id: number } | null, error };
+}
+
 export async function listEntityHistory(
   db: AdminDb,
   tenantId: string,

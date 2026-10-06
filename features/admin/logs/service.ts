@@ -439,6 +439,107 @@ function buildDiscordLogsCsv(logs: DiscordLogRow[]): string {
   return lines.join('\r\n');
 }
 
+/* ---------------------- Rejeu d'un event outbox `failed` ------------------- */
+
+/** `123`, `'123'` ou `'event:123'` (l'id que rend la liste) → 123. */
+function outboxIdOf(raw: unknown): number {
+  const s =
+    typeof raw === 'number'
+      ? String(raw)
+      : typeof raw === 'string'
+        ? raw.replace(/^event:/, '')
+        : '';
+  if (!/^[1-9]\d{0,15}$/.test(s)) {
+    throw new LegacyAdminError(400, 'id invalide', { code: 'INVALID_ID' });
+  }
+  return Number(s);
+}
+
+/**
+ * POST /api/admin/discord-logs/replay — remet en file un event `failed` de
+ * `bot_event_outbox` (passé `failed` par le poison-pill du cron
+ * outbox-maintenance quand le bot ne l'a pas acquitté à temps).
+ *
+ * Le bot le relira par son poller (`GET /api/bot/v1/events/pending` ne
+ * filtre que sur `status = 'pending'`, sans fenêtre de temps). Deux
+ * conditions pour qu'il le DISPATCHE au lieu de l'acquitter à vide :
+ *   1. le claim distribué (`discord_event_ack`) est libéré — sinon
+ *      `POST /events/handled` répond `wasNew=false` → ack sans dispatch ;
+ *   2. `last_push_at = now` : le poison-pill compte désormais depuis le
+ *      rejeu, pas depuis la création (sinon l'event redeviendrait `failed`
+ *      au tick horaire suivant).
+ * Le claim est libéré AVANT la remise en file : le poller ne voit jamais une
+ * ligne `pending` dont le claim traîne encore.
+ *
+ * Idempotent : un event déjà `pending` répond 200 `replayed:false` sans
+ * rien écrire ni journaliser ; `delivered` → 409 `ALREADY_DELIVERED`.
+ */
+export async function replayDiscordEvent(ctx: ServiceContext, body: unknown) {
+  const id = outboxIdOf((body as { id?: unknown } | null)?.id);
+  const { row, error } = await repo.getOutboxEvent(ctx.db, ctx.tenantId, id);
+  if (error) {
+    ctx.logger.error('[/api/admin/discord-logs/replay] read error:', error);
+    throw new LegacyAdminError(500, 'Lecture impossible.');
+  }
+  if (!row) {
+    throw new LegacyAdminError(404, 'Event introuvable.', {
+      code: 'NOT_FOUND',
+    });
+  }
+  if (row.status === 'delivered') {
+    throw new LegacyAdminError(409, 'Event déjà livré.', {
+      code: 'ALREADY_DELIVERED',
+    });
+  }
+  const unchanged = {
+    result: { id: row.id, status: 'pending' as const, replayed: false },
+    audit: { skip: true },
+  };
+  if (row.status === 'pending') return unchanged;
+
+  // discord_event_ack.event_id est un uuid : un event_id legacy non-uuid ne
+  // peut pas y avoir de claim.
+  if (isValidUUID(row.event_id)) {
+    const { error: relErr } = await repo.releaseBotEventClaim(
+      ctx.db,
+      row.event_id
+    );
+    if (relErr) {
+      ctx.logger.error(
+        '[/api/admin/discord-logs/replay] claim release error:',
+        relErr
+      );
+      throw new LegacyAdminError(500, 'Rejeu impossible.');
+    }
+  }
+
+  const { row: requeued, error: upErr } = await repo.requeueFailedOutboxEvent(
+    ctx.db,
+    ctx.tenantId,
+    id,
+    new Date().toISOString()
+  );
+  if (upErr) {
+    ctx.logger.error('[/api/admin/discord-logs/replay] requeue error:', upErr);
+    throw new LegacyAdminError(500, 'Rejeu impossible.');
+  }
+  // Course perdue contre un autre rejeu : l'event est déjà en file.
+  if (!requeued) return unchanged;
+
+  return {
+    result: { id: row.id, status: 'pending' as const, replayed: true },
+    audit: {
+      entity_type: 'bot_event',
+      entity_id: row.event_id,
+      payload: {
+        action: 'replay_bot_event',
+        outbox_id: row.id,
+        event_name: row.event_name,
+      },
+    },
+  };
+}
+
 /* ---------------------------- Historique d'entité -------------------------- */
 
 const HISTORY_LIMIT = 50;

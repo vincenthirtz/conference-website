@@ -44,6 +44,14 @@ export default adminNs('adminDiscordLogs', {
   exportCsv: 'Exporter CSV',
   exporting: 'Export…',
   exportError: 'L’export CSV a échoué.',
+  replay: 'Rejouer',
+  replaying: 'Rejeu…',
+  confirmReplayTitle: 'Rejouer cet event ?',
+  confirmReplaySubtitle:
+    'L’event repasse en file d’attente et le bot le traitera à son prochain passage (environ une minute). S’il l’avait en réalité déjà traité, l’annonce sera publiée une seconde fois.',
+  toastReplayed: 'Event remis en file : le bot va le traiter.',
+  toastAlreadyQueued: 'Event déjà en file d’attente.',
+  replayError: 'Le rejeu a échoué.',
   sortedByDate: 'Trié par date décroissante',
 
   by: 'par',

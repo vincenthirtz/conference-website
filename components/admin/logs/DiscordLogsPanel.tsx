@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminResource } from '@/hooks/useAdminResource';
 import { logsPaths } from '@/features/admin/logs/client';
+import ReplayBotEventButton from '@/features/admin/logs/ui/ReplayBotEventButton';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import {
@@ -82,7 +83,8 @@ const INPUT_CLASS =
  *   - `player` : what players did FROM Discord (`bot_player_actions`)
  *   - `event`  : what the site asked the bot to do IN Discord, with delivery
  *     status (`bot_event_outbox`) — a failed row is an announcement that never
- *     reached the server.
+ *     reached the server; « Rejouer » puts it back in the queue (pending) for
+ *     the bot's outbox poller (POST /api/admin/discord-logs/replay).
  */
 export default function DiscordLogsPanel() {
   const { adminFetch } = useAdminFetch();
@@ -149,6 +151,7 @@ export default function DiscordLogsPanel() {
     limit,
     setOffset,
     resetOffset,
+    refresh,
   } = useAdminResource<DiscordLogRow, DiscordLogsApiResponse>(
     logsPaths.discord,
     {
@@ -556,6 +559,12 @@ export default function DiscordLogsPanel() {
                         {format(t.attempts, { count: log.push_attempts })}
                       </span>
                     ) : null}
+                    {log.source === 'event' && log.status === 'failed' && (
+                      <ReplayBotEventButton
+                        logId={log.id}
+                        onReplayed={refresh}
+                      />
+                    )}
                   </div>
 
                   {log.actor && (

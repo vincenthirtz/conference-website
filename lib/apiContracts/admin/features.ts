@@ -344,6 +344,7 @@ import {
   DemandeNotifyQuery,
 } from '../../../features/admin/demandes/schemas';
 import {
+  DiscordEventReplayDoc,
   DiscordLogsQuery,
   EntityHistoryQuery,
   StaffLogsQuery,
@@ -677,6 +678,10 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   'admin.webhooks/[id].update': { schema: WebhookPatchDoc, io: 'input' },
   'admin.webhooks/[id]/redeliver.create': {
     schema: WebhookRedeliverDoc,
+    io: 'input',
+  },
+  'admin.discord-logs/replay.create': {
+    schema: DiscordEventReplayDoc,
     io: 'input',
   },
   // Fiche, litige, veto, drafts, casters, MVP, feuille de match, relance

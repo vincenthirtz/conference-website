@@ -206,6 +206,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   test_webhook: 'Webhook testé',
   redeliver_webhook: 'Livraison webhook renvoyée',
   rotate_webhook_secret: 'Secret de webhook renouvelé',
+  replay_bot_event: 'Event Discord rejoué',
   revoke_previous_bot_key: 'Ancienne clé bot révoquée',
   export_tenant: 'Export des données d’un espace',
   export_users: 'Export CSV des comptes utilisateurs',

@@ -5148,6 +5148,7 @@
           "reopen_match_lineup",
           "reorder_event_segments",
           "reorder_event_waves",
+          "replay_bot_event",
           "report_score",
           "requestMoreInfo",
           "resend_credentials",
@@ -6199,6 +6200,7 @@
           "reopen_match_lineup",
           "reorder_event_segments",
           "reorder_event_waves",
+          "replay_bot_event",
           "report_score",
           "requestMoreInfo",
           "resend_credentials",
@@ -8252,6 +8254,7 @@
           "reopen_match_lineup",
           "reorder_event_segments",
           "reorder_event_waves",
+          "replay_bot_event",
           "report_score",
           "requestMoreInfo",
           "resend_credentials",
@@ -13342,6 +13345,7 @@
           "reopen_match_lineup",
           "reorder_event_segments",
           "reorder_event_waves",
+          "replay_bot_event",
           "report_score",
           "requestMoreInfo",
           "resend_credentials",
@@ -19594,6 +19598,7 @@
           "reopen_match_lineup",
           "reorder_event_segments",
           "reorder_event_waves",
+          "replay_bot_event",
           "report_score",
           "requestMoreInfo",
           "resend_credentials",
@@ -24236,6 +24241,7 @@
           "reopen_match_lineup",
           "reorder_event_segments",
           "reorder_event_waves",
+          "replay_bot_event",
           "report_score",
           "requestMoreInfo",
           "resend_credentials",
@@ -58851,6 +58857,28 @@
     "required": [
      "demo",
      "settings"
+    ]
+   }
+  },
+  "POST /api/admin/discord-logs/replay": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "number"
+     },
+     "replayed": {
+      "type": "boolean"
+     },
+     "status": {
+      "type": "string",
+      "const": "pending"
+     }
+    },
+    "required": [
+     "id",
+     "replayed",
+     "status"
     ]
    }
   },

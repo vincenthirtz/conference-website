@@ -224,6 +224,8 @@ export type StaffLogAction =
   | 'test_webhook'
   | 'redeliver_webhook'
   | 'rotate_webhook_secret'
+  // Rejeu d'un event outbox `failed` (onglet Discord de /admin/logs).
+  | 'replay_bot_event'
   | 'revoke_previous_bot_key'
   | 'export_tenant'
   | 'export_users'

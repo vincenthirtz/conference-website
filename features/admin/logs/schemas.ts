@@ -7,7 +7,7 @@
 //
 // zod seul, imports RELATIFS : lu par l'assemblage OpenAPI (Node sans `@/`).
 
-import { looseQuery } from '../../../utils/admin/pathParams';
+import { looseBody, looseQuery } from '../../../utils/admin/pathParams';
 
 /** GET /api/admin/logs (JSON paginé ou `format=csv`). */
 export const StaffLogsQuery = looseQuery([
@@ -47,6 +47,13 @@ export const DiscordLogsQuery = looseQuery([
   'format',
   'export',
 ]);
+
+/**
+ * POST /api/admin/discord-logs/replay { id } — `id` numérique de la ligne
+ * `bot_event_outbox` (ou la forme `event:<id>` que rend la liste), vérifié
+ * par le service (400 `INVALID_ID`).
+ */
+export const DiscordEventReplayDoc = looseBody(['id']);
 
 /** GET /api/admin/entity-history?type=&id= */
 export const EntityHistoryQuery = looseQuery(['type', 'id']);

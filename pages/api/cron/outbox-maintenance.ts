@@ -10,7 +10,9 @@
 //      OUTBOX_FAILED_AFTER_HOURS (defaut 6) en status='failed'. Empeche un
 //      event corrompu (le bot crashe en dispatch) de rester pending eternellement
 //      et d'etre re-tente a chaque tick du poller. Operateur peut inspecter
-//      last_push_error puis re-emit manuellement si besoin.
+//      last_push_error puis le rejouer depuis /admin/logs (onglet Discord,
+//      POST /api/admin/discord-logs/replay) : la fenetre repart alors de
+//      last_push_at.
 //
 //   3. Observabilite : renvoie un snapshot des compteurs et de la latence
 //      de livraison (p50/p95 sur les dernieres 24h). Logge en structure pour
@@ -106,6 +108,11 @@ export default async function handler(
     })
     .eq('status', 'pending')
     .lt('created_at', failedCutoffIso)
+    // Un event REJOUÉ depuis /admin/logs (failed → pending) porte
+    // `last_push_at = moment du rejeu` : sa fenêtre repart de là, sinon il
+    // redeviendrait `failed` au tick suivant, avant que le bot l'ait relu.
+    // Pour un event ordinaire, last_push_at ≈ created_at (push à l'émission).
+    .or(`last_push_at.is.null,last_push_at.lt.${failedCutoffIso}`)
     .select('id, event_id, event_name, created_at, push_attempts');
 
   if (markErr) {

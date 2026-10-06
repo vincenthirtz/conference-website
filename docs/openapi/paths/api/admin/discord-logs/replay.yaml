@@ -1,0 +1,40 @@
+post:
+  tags:
+    - admin/misc
+  summary: Rejoue un event `failed` de l'outbox bot (remise en file `pending`).
+  description: >-
+    Libère le claim distribué du bot (`discord_event_ack`) puis repasse la
+    ligne en `pending` (tentatives et erreur remises à zéro, `last_push_at`
+    = maintenant) : le poller du bot la relit via
+    `GET /api/bot/v1/events/pending` et la dispatche. Idempotent : un event
+    déjà `pending` répond `replayed: false`. 409 `ALREADY_DELIVERED` pour un
+    event livré.
+  operationId: adminReplayDiscordEvent
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.discord-logs/replay.create
+          type: object
+          required:
+            - id
+          properties:
+            id:
+              description: Id numérique de la ligne outbox (ou `event:<id>`).
+              oneOf:
+                - type: integer
+                - type: string
+  responses:
+    '200':
+      description: '`{ id, status: "pending", replayed }`.'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      description: Event déjà livré.
