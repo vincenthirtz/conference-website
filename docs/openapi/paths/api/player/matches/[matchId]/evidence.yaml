@@ -43,7 +43,8 @@ post:
               maxLength: 500
   responses:
     '201':
-      description: Preuve enregistree (`{ id, kind: 'screenshot' }`).
+      description: |
+        Preuve enregistree (`{ id, kind: 'screenshot' }`).
       content:
         application/json: {}
     '400':
