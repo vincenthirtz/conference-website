@@ -127,7 +127,14 @@ export const WebhookCreateDoc = looseBody([
   'event_types',
   'description',
 ]);
-export const WebhookPatchDoc = looseBody(['enabled']);
+export const WebhookPatchDoc = looseBody([
+  'enabled',
+  'url',
+  'event_types',
+  'description',
+]);
+/** POST `/webhooks/[id]/redeliver` — UUID vérifié par le service. */
+export const WebhookRedeliverDoc = looseBody(['deliveryId']);
 
 /* --------------------------- Colonnes --------------------------------- */
 

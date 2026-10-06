@@ -43,6 +43,19 @@ export function useWebhookDeliveries(id: string | null) {
   });
 }
 
+/** Relit les livraisons d'un abonnement (après un renvoi). */
+export function useReloadWebhookDeliveries() {
+  const qc = useQueryClient();
+  return useCallback(
+    (id: string) =>
+      qc.invalidateQueries({
+        queryKey: integrationsKeys.deliveries(id),
+        exact: true,
+      }),
+    [qc]
+  );
+}
+
 /** Relit une liste et attend la fin (après une écriture). */
 export function useReloadIntegrations() {
   const qc = useQueryClient();

@@ -2,9 +2,11 @@
 // webhooks sortants, secrets du bot, file d'onboarding.
 //
 // SECRETS. Aucune lecture de ce fichier ne rend `token_hash`, le `secret` d'un
-// webhook, ni un jeton de `tenant_requests`. Le seul secret LU est
+// webhook (hors exception ci-dessous), ni un jeton de `tenant_requests`. Le seul secret LU est
 // l'empreinte courante de la clé bot, pour la garder valable 48 h pendant une
-// rotation — elle ne quitte jamais le service.
+// rotation — elle ne quitte jamais le service. Exception assumée :
+// `getWebhookSigningTarget` lit le secret d'un webhook pour SIGNER un envoi
+// immédiat (test, renvoi) ; lui non plus ne quitte jamais le service.
 
 import type { AdminDb } from '@/utils/admin/serviceContext';
 import type { Database } from '@/types/database.generated';
@@ -135,7 +137,79 @@ export async function updateWebhook(
     .update(patch)
     .eq('id', id)
     .eq('tenant_id', tenantId)
-    .select('id, enabled')
+    .select(WEBHOOK_LIST_COLUMNS)
+    .maybeSingle();
+  return { row: data, error };
+}
+
+/** État courant (sans secret) — base du journal avant / après d'une modification. */
+export async function getWebhook(db: AdminDb, tenantId: string, id: string) {
+  const { data, error } = await db
+    .from('webhook_subscriptions')
+    .select(WEBHOOK_LIST_COLUMNS)
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+  return { row: data, error };
+}
+
+/**
+ * SEULE lecture du secret d'un abonnement : il signe un envoi immédiat
+ * (test, renvoi) et ne quitte JAMAIS le service — ni réponse, ni journal.
+ */
+export async function getWebhookSigningTarget(
+  db: AdminDb,
+  tenantId: string,
+  id: string
+) {
+  const { data, error } = await db
+    .from('webhook_subscriptions')
+    .select('id, url, secret')
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+  return { row: data, error };
+}
+
+export async function getWebhookDelivery(
+  db: AdminDb,
+  subscriptionId: string,
+  deliveryId: string
+) {
+  const { data, error } = await db
+    .from('webhook_deliveries')
+    .select('id, outbox_event_id, event_name, status, attempts')
+    .eq('id', deliveryId)
+    .eq('subscription_id', subscriptionId)
+    .maybeSingle();
+  return { row: data, error };
+}
+
+export async function updateWebhookDelivery(
+  db: AdminDb,
+  deliveryId: string,
+  patch: Database['public']['Tables']['webhook_deliveries']['Update']
+) {
+  const { data, error } = await db
+    .from('webhook_deliveries')
+    .update(patch)
+    .eq('id', deliveryId)
+    .select(WEBHOOK_DELIVERY_COLUMNS)
+    .maybeSingle();
+  return { row: data, error };
+}
+
+/** Enveloppe outbox d'un event (le corps exact qu'avait envoyé le dispatcher). */
+export async function getOutboxPayload(
+  db: AdminDb,
+  tenantId: string,
+  eventId: string
+) {
+  const { data, error } = await db
+    .from('bot_event_outbox')
+    .select('event_id, event_name, payload')
+    .eq('event_id', eventId)
+    .eq('tenant_id', tenantId)
     .maybeSingle();
   return { row: data, error };
 }

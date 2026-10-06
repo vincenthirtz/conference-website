@@ -28,11 +28,13 @@ import {
   WEBHOOK_MAX_ATTEMPTS,
   WEBHOOK_MAX_CONSECUTIVE_FAILURES,
 } from '@/utils/webhooks';
+// Envoi HTTP (garde anti-SSRF, timeout, pas de redirection) : partagé avec
+// les gestes admin « Envoyer un test » / « Renvoyer ».
+import { postWebhook } from '@/utils/webhookDelivery';
 
 const DEFAULT_BATCH_LIMIT = 200;
 const DEFAULT_WINDOW_HOURS = 24;
 const SOFT_TIME_BUDGET_MS = 8_000;
-const DELIVERY_TIMEOUT_MS = 8_000;
 
 let _inFlight = false;
 
@@ -177,36 +179,6 @@ async function writeDelivery(
       return;
     }
     logger.error('[cron/webhook] delivery insert error', error);
-  }
-}
-
-async function postWebhook(
-  url: string,
-  body: string,
-  headers: Record<string, string>
-): Promise<{ ok: boolean; status: number | null; error: string | null }> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), DELIVERY_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers,
-      body,
-      signal: controller.signal,
-    });
-    return {
-      ok: res.ok,
-      status: res.status,
-      error: res.ok ? null : `HTTP ${res.status}`,
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      status: null,
-      error: (err instanceof Error ? err.message : String(err)).slice(0, 500),
-    };
-  } finally {
-    clearTimeout(timer);
   }
 }
 

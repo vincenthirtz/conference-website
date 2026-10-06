@@ -1,8 +1,9 @@
 // features/admin/tenants/service/integrations.ts — clés d'API publiques,
 // webhooks sortants, secrets du bot, file des demandes d'onboarding.
 //
-// SECRETS. Trois réponses révèlent un secret UNE fois (clé d'API émise,
-// secret de signature d'un webhook, clé + secret du bot après rotation) :
+// SECRETS. Quatre réponses révèlent un secret UNE fois (clé d'API émise,
+// secret de signature d'un webhook à la création ou à la rotation, clé +
+// secret du bot après rotation) :
 // elles sont rendues à l'identique, jamais journalisées, et leurs routes
 // désactivent l'idempotence — le cache d'idempotence stocke le corps des
 // réponses en base, un secret n'y a rien à faire.
@@ -15,10 +16,13 @@ import { isValidUUID } from '@/utils/apiHelpers';
 import { mintTenantApiToken } from '@/utils/apiTokens/mintTenantApiToken';
 import { invalidateBotApiKeyCache } from '@/utils/botAuth';
 import {
+  buildWebhookHeaders,
+  checkWebhookUrl,
   generateWebhookSecret,
   parseWebhookEventTypes,
   WEBHOOK_EVENT_TYPES,
 } from '@/utils/webhooks';
+import { postWebhook } from '@/utils/webhookDelivery';
 import type { Audited } from '../../_shared/audited';
 import * as repo from '../repository/integrations';
 import * as tenantsRepo from '../repository/tenants';
@@ -283,20 +287,62 @@ export async function revokeNamedTenantApiToken(
 /* ------------------------------ webhooks ------------------------------- */
 
 const webhookCreateSchema = z.object({
-  url: z
-    .string()
-    .trim()
-    .url()
-    .refine((u) => /^https?:\/\//i.test(u), 'URL doit être http(s).')
-    .refine((u) => u.length <= 2000, 'URL trop longue.'),
+  url: z.string(),
   event_types: z.array(z.string()).min(1),
   description: z.string().trim().max(200).optional(),
 });
 
-const webhookPatchSchema = z.object({ enabled: z.boolean() });
+/**
+ * PATCH : au moins un champ. `url` et `event_types` suivent EXACTEMENT les
+ * règles de la création (`checkWebhookUrl`, `parseWebhookEventTypes`).
+ */
+const webhookPatchSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    url: z.string().optional(),
+    event_types: z.array(z.string()).min(1).optional(),
+    description: z.string().trim().max(200).nullable().optional(),
+  })
+  .refine(
+    (b) =>
+      b.enabled !== undefined ||
+      b.url !== undefined ||
+      b.event_types !== undefined ||
+      b.description !== undefined,
+    'Aucun champ à modifier.'
+  );
 
 function webhookIdOf(raw: unknown): string {
   return requireUuid(raw, 'Invalid id.', 'INVALID_ID');
+}
+
+/** URL d'abonnement validée (anti-SSRF) ou 400 `INVALID_URL`. */
+function webhookUrlOf(raw: unknown): string {
+  const check = checkWebhookUrl(raw);
+  if (!check.ok) {
+    throw new LegacyAdminError(400, check.reason, { code: 'INVALID_URL' });
+  }
+  return check.url;
+}
+
+/** Liste d'events validée ou 400 `INVALID_EVENT_TYPES`. */
+function webhookEventsOf(raw: unknown): string[] {
+  const events = parseWebhookEventTypes(raw);
+  if (!events.ok) {
+    throw new LegacyAdminError(
+      400,
+      `Events invalides : ${events.invalid.join(', ')}.`,
+      {
+        code: 'INVALID_EVENT_TYPES',
+        extra: { availableEvents: WEBHOOK_EVENT_TYPES },
+      }
+    );
+  }
+  return events.types;
+}
+
+function notFound(): LegacyAdminError {
+  return new LegacyAdminError(404, 'Not found.', { code: 'NOT_FOUND' });
 }
 
 export async function listWebhookSubscriptions(ctx: ServiceContext) {
@@ -320,23 +366,14 @@ export async function createWebhookSubscription(
   if (!parsed.success) {
     throw new LegacyAdminError(400, 'Invalid body.', { code: 'INVALID_BODY' });
   }
-  const events = parseWebhookEventTypes(parsed.data.event_types);
-  if (!events.ok) {
-    throw new LegacyAdminError(
-      400,
-      `Events invalides : ${events.invalid.join(', ')}.`,
-      {
-        code: 'INVALID_EVENT_TYPES',
-        extra: { availableEvents: WEBHOOK_EVENT_TYPES },
-      }
-    );
-  }
+  const url = webhookUrlOf(parsed.data.url);
+  const eventTypes = webhookEventsOf(parsed.data.event_types);
   const secret = generateWebhookSecret();
   const { row, error } = await repo.insertWebhook(ctx.db, {
     tenant_id: ctx.tenantId,
-    url: parsed.data.url,
+    url,
     secret,
-    event_types: events.types,
+    event_types: eventTypes,
     description: parsed.data.description ?? null,
     created_by: scope.staffId,
   });
@@ -355,13 +392,18 @@ export async function createWebhookSubscription(
       payload: {
         action: 'create_webhook',
         url: row.url,
-        event_types: events.types,
+        event_types: eventTypes,
       },
     },
   } satisfies Audited<unknown>;
 }
 
-export async function setWebhookEnabled(
+/**
+ * PATCH /api/admin/webhooks/[id] — active / désactive, et/ou modifie l'URL,
+ * les events, la description. Réactiver ou changer d'URL remet le compteur
+ * d'échecs à zéro (les échecs passés visaient l'ancienne destination).
+ */
+export async function updateWebhookSubscription(
   ctx: ServiceContext,
   rawId: unknown,
   body: unknown
@@ -371,15 +413,45 @@ export async function setWebhookEnabled(
   if (!parsed.success) {
     throw new LegacyAdminError(400, 'Invalid body.', { code: 'INVALID_BODY' });
   }
-  // Réactiver remet le compteur d'échecs à zéro (lève un auto-disable).
-  const patch = parsed.data.enabled
-    ? {
-        enabled: true,
-        consecutive_failures: 0,
-        disabled_at: null,
-        last_error: null,
-      }
-    : { enabled: false, disabled_at: new Date().toISOString() };
+  const { enabled, description } = parsed.data;
+  const url =
+    parsed.data.url !== undefined ? webhookUrlOf(parsed.data.url) : undefined;
+  const eventTypes =
+    parsed.data.event_types !== undefined
+      ? webhookEventsOf(parsed.data.event_types)
+      : undefined;
+
+  const { row: before, error: readErr } = await repo.getWebhook(
+    ctx.db,
+    ctx.tenantId,
+    id
+  );
+  if (readErr) {
+    ctx.logger.error('[admin/webhooks] patch read error', readErr, {
+      tenantId: ctx.tenantId,
+    });
+    throw serverError();
+  }
+  if (!before) throw notFound();
+
+  const patch: Parameters<typeof repo.updateWebhook>[3] = {};
+  if (url !== undefined) patch.url = url;
+  if (eventTypes !== undefined) patch.event_types = eventTypes;
+  if (description !== undefined) patch.description = description || null;
+  const resetFailures =
+    enabled === true || (url !== undefined && url !== before.url);
+  if (enabled === false) {
+    patch.enabled = false;
+    patch.disabled_at = new Date().toISOString();
+  } else if (enabled === true) {
+    patch.enabled = true;
+    patch.disabled_at = null;
+  }
+  if (resetFailures) {
+    patch.consecutive_failures = 0;
+    patch.last_error = null;
+  }
+
   const { row, error } = await repo.updateWebhook(
     ctx.db,
     ctx.tenantId,
@@ -392,10 +464,16 @@ export async function setWebhookEnabled(
     });
     throw serverError();
   }
-  if (!row) {
-    throw new LegacyAdminError(404, 'Not found.', { code: 'NOT_FOUND' });
-  }
-  const action = parsed.data.enabled ? 'enable_webhook' : 'disable_webhook';
+  if (!row) throw notFound();
+
+  // Simple bascule : slugs historiques. Sinon : modification, avant / après.
+  const onlyToggle =
+    url === undefined && eventTypes === undefined && description === undefined;
+  const action = onlyToggle
+    ? enabled
+      ? 'enable_webhook'
+      : 'disable_webhook'
+    : 'update_webhook';
   return {
     result: { subscription: row },
     audit: {
@@ -403,6 +481,236 @@ export async function setWebhookEnabled(
       entity_type: 'webhook_subscription',
       entity_id: id,
       payload: { action },
+      ...(onlyToggle
+        ? {}
+        : {
+            before: {
+              url: before.url,
+              event_types: before.event_types,
+              description: before.description,
+              enabled: before.enabled,
+            },
+            after: {
+              url: row.url,
+              event_types: row.event_types,
+              description: row.description,
+              enabled: row.enabled,
+            },
+          }),
+    },
+  } satisfies Audited<unknown>;
+}
+
+/** Corps d'un envoi de test : enveloppe identique aux vrais events. */
+function testEnvelope(tenantId: string, subscriptionId: string) {
+  return {
+    id: crypto.randomUUID(),
+    event: 'webhook.test',
+    tenantId,
+    timestamp: new Date().toISOString(),
+    data: {
+      message: 'Envoi de test depuis le tableau de bord.',
+      subscriptionId,
+    },
+  };
+}
+
+async function signingTargetOf(ctx: ServiceContext, id: string) {
+  const { row, error } = await repo.getWebhookSigningTarget(
+    ctx.db,
+    ctx.tenantId,
+    id
+  );
+  if (error) {
+    ctx.logger.error('[admin/webhooks] signing target error', error, {
+      tenantId: ctx.tenantId,
+    });
+    throw serverError();
+  }
+  if (!row) throw notFound();
+  return row;
+}
+
+/**
+ * POST /api/admin/webhooks/[id]/test — envoie MAINTENANT un event
+ * `webhook.test` signé avec le secret de l'abonnement (même désactivé :
+ * c'est le moyen de vérifier une destination avant de la réactiver). Rien
+ * n'est écrit dans les livraisons ni dans les compteurs d'échecs : un test
+ * raté ne doit pas rapprocher l'abonnement de l'auto-désactivation.
+ */
+export async function sendWebhookTest(ctx: ServiceContext, rawId: unknown) {
+  const id = webhookIdOf(rawId);
+  const target = await signingTargetOf(ctx, id);
+  const envelope = testEnvelope(ctx.tenantId, id);
+  const rawBody = JSON.stringify(envelope);
+  const result = await postWebhook(
+    target.url,
+    rawBody,
+    buildWebhookHeaders({
+      secret: target.secret,
+      rawBody,
+      eventName: envelope.event,
+      eventId: envelope.id,
+      tenantId: ctx.tenantId,
+    })
+  );
+  return {
+    result: { eventId: envelope.id, ...result },
+    audit: {
+      entity_type: 'webhook_subscription',
+      entity_id: id,
+      payload: {
+        action: 'test_webhook',
+        ok: result.ok,
+        response_status: result.status,
+      },
+    },
+  } satisfies Audited<unknown>;
+}
+
+const redeliverSchema = z.object({ deliveryId: z.string() });
+
+/**
+ * POST /api/admin/webhooks/[id]/redeliver { deliveryId } — renvoie MAINTENANT
+ * une livraison ÉCHOUÉE, avec le corps exact de l'event (relu dans l'outbox)
+ * et le secret courant. La ligne de livraison est mise à jour comme le
+ * ferait le dispatcher (tentatives +1, statut, code HTTP). Un succès remet
+ * aussi l'abonnement au vert ; un échec ne compte pas vers l'auto-désactivation
+ * (geste manuel).
+ *
+ * 409 `NOT_FAILED` sur une livraison livrée ou en cours ; 409 `EVENT_GONE` si
+ * l'event a quitté l'outbox (purge après 7 jours).
+ */
+export async function redeliverWebhookDelivery(
+  ctx: ServiceContext,
+  rawId: unknown,
+  body: unknown
+) {
+  const id = webhookIdOf(rawId);
+  const parsed = redeliverSchema.safeParse(body);
+  if (!parsed.success || !isValidUUID(parsed.data.deliveryId)) {
+    throw new LegacyAdminError(400, 'Invalid deliveryId.', {
+      code: 'INVALID_DELIVERY_ID',
+    });
+  }
+  const deliveryId = parsed.data.deliveryId;
+  const target = await signingTargetOf(ctx, id);
+
+  const { row: delivery, error: dErr } = await repo.getWebhookDelivery(
+    ctx.db,
+    id,
+    deliveryId
+  );
+  if (dErr) {
+    ctx.logger.error('[admin/webhooks/redeliver] delivery read error', dErr);
+    throw serverError();
+  }
+  if (!delivery) throw notFound();
+  if (delivery.status !== 'failed') {
+    throw new LegacyAdminError(409, 'Seule une livraison échouée se renvoie.', {
+      code: 'NOT_FAILED',
+    });
+  }
+
+  const { row: event, error: eErr } = await repo.getOutboxPayload(
+    ctx.db,
+    ctx.tenantId,
+    delivery.outbox_event_id
+  );
+  if (eErr) {
+    ctx.logger.error('[admin/webhooks/redeliver] outbox read error', eErr);
+    throw serverError();
+  }
+  if (!event) {
+    throw new LegacyAdminError(
+      409,
+      "L'event n'est plus disponible (purgé de l'outbox).",
+      { code: 'EVENT_GONE' }
+    );
+  }
+
+  const rawBody = JSON.stringify(event.payload ?? {});
+  const result = await postWebhook(
+    target.url,
+    rawBody,
+    buildWebhookHeaders({
+      secret: target.secret,
+      rawBody,
+      eventName: delivery.event_name,
+      eventId: delivery.outbox_event_id,
+      tenantId: ctx.tenantId,
+    })
+  );
+  const nowIso = new Date().toISOString();
+  const { row: updated, error: uErr } = await repo.updateWebhookDelivery(
+    ctx.db,
+    deliveryId,
+    {
+      status: result.ok ? 'delivered' : 'failed',
+      attempts: (delivery.attempts ?? 0) + 1,
+      response_status: result.status,
+      last_error: result.error,
+      delivered_at: result.ok ? nowIso : null,
+      updated_at: nowIso,
+    }
+  );
+  if (uErr) {
+    // L'envoi a eu lieu : on le dit, même si le journal de livraison n'a pas
+    // pu suivre.
+    ctx.logger.error('[admin/webhooks/redeliver] delivery update error', uErr);
+  }
+  if (result.ok) {
+    const { error: sErr } = await repo.updateWebhook(ctx.db, ctx.tenantId, id, {
+      consecutive_failures: 0,
+      last_delivery_at: nowIso,
+      last_error: null,
+    });
+    if (sErr) {
+      ctx.logger.error('[admin/webhooks/redeliver] sub reset error', sErr);
+    }
+  }
+  return {
+    result: { delivery: updated ?? null, ...result },
+    audit: {
+      entity_type: 'webhook_subscription',
+      entity_id: id,
+      payload: {
+        action: 'redeliver_webhook',
+        delivery_id: deliveryId,
+        event_name: delivery.event_name,
+        ok: result.ok,
+        response_status: result.status,
+      },
+    },
+  } satisfies Audited<unknown>;
+}
+
+/**
+ * POST /api/admin/webhooks/[id]/rotate-secret — nouveau secret de signature,
+ * rendu UNE fois (comme à la création). Effet immédiat : les envois suivants
+ * sont signés avec lui, sans période de grâce — le destinataire doit être
+ * mis à jour aussitôt. Jamais journalisé, jamais mis en cache.
+ */
+export async function rotateWebhookSecret(ctx: ServiceContext, rawId: unknown) {
+  const id = webhookIdOf(rawId);
+  const secret = generateWebhookSecret();
+  const { row, error } = await repo.updateWebhook(ctx.db, ctx.tenantId, id, {
+    secret,
+  });
+  if (error) {
+    ctx.logger.error('[admin/webhooks] rotate secret error', error, {
+      tenantId: ctx.tenantId,
+    });
+    throw serverError();
+  }
+  if (!row) throw notFound();
+  return {
+    result: { secret, subscription: row },
+    // Pas de secret au journal.
+    audit: {
+      entity_type: 'webhook_subscription',
+      entity_id: id,
+      payload: { action: 'rotate_webhook_secret' },
     },
   } satisfies Audited<unknown>;
 }

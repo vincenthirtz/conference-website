@@ -58,4 +58,22 @@ export default {
   confirmDeleteTitle: 'Delete this subscription?',
   confirmDeleteSubtitle:
     'The URL will stop receiving events. This action is irreversible.',
+  edit: 'Edit',
+  cancel: 'Cancel',
+  save: 'Save',
+  saving: 'Saving…',
+  toastUpdated: 'Subscription updated.',
+  sendTest: 'Send a test',
+  toastTestOk: 'Test received by the endpoint (HTTP {status}).',
+  toastTestFailed: 'Test failed: {error}',
+  rotateSecret: 'Rotate secret',
+  confirmRotateTitle: 'Rotate the signing secret?',
+  confirmRotateSubtitle:
+    'The old secret stops signing requests immediately: update the receiver right away or it will reject signatures. The new secret is shown only once.',
+  toastRotated: 'New secret generated.',
+  colActions: 'Actions',
+  redeliver: 'Redeliver',
+  redelivering: 'Sending…',
+  toastRedeliverOk: 'Delivery resent (HTTP {status}).',
+  toastRedeliverFailed: 'Failed again: {error}',
 };

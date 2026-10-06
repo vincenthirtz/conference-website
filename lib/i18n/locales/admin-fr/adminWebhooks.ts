@@ -57,4 +57,22 @@ export default adminNs('adminWebhooks', {
   confirmDeleteTitle: 'Supprimer cet abonnement ?',
   confirmDeleteSubtitle:
     "L'URL cessera de recevoir des events. Cette action est irréversible.",
+  edit: 'Modifier',
+  cancel: 'Annuler',
+  save: 'Enregistrer',
+  saving: 'Enregistrement…',
+  toastUpdated: 'Abonnement modifié.',
+  sendTest: 'Envoyer un test',
+  toastTestOk: 'Test reçu par le destinataire (HTTP {status}).',
+  toastTestFailed: 'Échec du test : {error}',
+  rotateSecret: 'Renouveler le secret',
+  confirmRotateTitle: 'Renouveler le secret de signature ?',
+  confirmRotateSubtitle:
+    "L'ancien secret cesse immédiatement de signer les envois : mettez à jour le destinataire aussitôt, sinon il rejettera les signatures. Le nouveau secret ne s'affichera qu'une fois.",
+  toastRotated: 'Nouveau secret généré.',
+  colActions: 'Actions',
+  redeliver: 'Renvoyer',
+  redelivering: 'Envoi…',
+  toastRedeliverOk: 'Livraison renvoyée (HTTP {status}).',
+  toastRedeliverFailed: 'Nouvel échec : {error}',
 });

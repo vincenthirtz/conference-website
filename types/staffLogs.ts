@@ -220,6 +220,10 @@ export type StaffLogAction =
   // --- Espaces, webhooks sortants, invitations (ex-`other` + `payload.action`) ---
   | 'enable_webhook'
   | 'disable_webhook'
+  | 'update_webhook'
+  | 'test_webhook'
+  | 'redeliver_webhook'
+  | 'rotate_webhook_secret'
   | 'revoke_previous_bot_key'
   | 'export_tenant'
   | 'export_users'

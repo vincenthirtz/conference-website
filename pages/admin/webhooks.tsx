@@ -6,8 +6,10 @@
 //   WEBHOOK_EVENT_TYPES renvoyée par l'API) + description. Le secret de
 //   signature est affiché UNE SEULE FOIS (ApiTokenRevealModal réutilisé).
 // - Liste : URL, events, statut (actif / désactivé), échecs consécutifs,
-//   dernière livraison. Actions : activer/désactiver, supprimer, voir les
-//   dernières livraisons.
+//   dernière livraison. Actions : modifier (URL, events, description),
+//   envoyer un test, renouveler le secret (révélé une fois), activer /
+//   désactiver, supprimer, voir les dernières livraisons et renvoyer une
+//   livraison échouée.
 //
 // Auth : minRole 'admin' (withStaffPage). Le backend (withStaffRoute) est la
 // vraie barrière.
@@ -18,14 +20,17 @@ import { withStaffPage } from '@/utils/staff';
 import { withAdminQuery } from '@/features/admin/_shared/query';
 import {
   integrationsPaths,
-  type WebhookDelivery,
+  type WebhookSendResult,
   type WebhookSubscription,
 } from '@/features/admin/integrations/client';
 import {
   useReloadIntegrations,
-  useWebhookDeliveries,
   useWebhooks,
 } from '@/features/admin/integrations/hooks/useIntegrations';
+import WebhookEditForm from '@/features/admin/integrations/ui/WebhookEditForm';
+import WebhookDeliveriesPanel, {
+  formatWebhookDate,
+} from '@/features/admin/integrations/ui/WebhookDeliveriesPanel';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -53,24 +58,11 @@ const INPUT =
   'w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 type Subscription = WebhookSubscription;
-type Delivery = WebhookDelivery;
 
 const EMPTY_EVENTS: string[] = [];
 type CreateResponse = { secret: string; subscription: Subscription };
-
-function formatDate(s: string | null, fallback: string): string {
-  if (!s) return fallback;
-  try {
-    return new Date(s).toLocaleString('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return s;
-  }
-}
+/** Volet ouvert sous une ligne (un seul à la fois). */
+type OpenPanel = { id: string; kind: 'deliveries' | 'edit' };
 
 export const getServerSideProps = withStaffPage({
   permission: 'manage_settings',
@@ -103,22 +95,13 @@ function AdminWebhooksPage() {
   const [revealed, setRevealed] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const [openId, setOpenId] = useState<string | null>(null);
-  const deliveriesQuery = useWebhookDeliveries(openId);
-  const openDeliveries: Delivery[] | undefined = deliveriesQuery.data;
+  const [panel, setPanel] = useState<OpenPanel | null>(null);
 
   useEffect(() => {
     if (list.error) logger.error('[admin/webhooks] load error', list.error);
   }, [list.error]);
 
   const fetchSubs = useCallback(() => reload('webhooks'), [reload]);
-
-  // Livraisons illisibles : toast, le volet reste en chargement (inchangé).
-  useEffect(() => {
-    if (deliveriesQuery.error) {
-      addToast(deliveriesQuery.error.message || t.errorGeneric, 'error');
-    }
-  }, [deliveriesQuery.error, addToast, t.errorGeneric]);
 
   const toggleEvent = useCallback((ev: string) => {
     setSelected((prev) => {
@@ -248,9 +231,80 @@ function AdminWebhooksPage() {
     ]
   );
 
-  const toggleDeliveries = useCallback((sub: Subscription) => {
-    setOpenId((prev) => (prev === sub.id ? null : sub.id));
-  }, []);
+  // Un seul volet ouvert à la fois : livraisons OU modification.
+  const togglePanel = useCallback(
+    (sub: Subscription, kind: OpenPanel['kind']) => {
+      setPanel((prev) =>
+        prev?.id === sub.id && prev.kind === kind ? null : { id: sub.id, kind }
+      );
+    },
+    []
+  );
+
+  // ---- Envoi de test ----
+  const handleTest = useCallback(
+    async (sub: Subscription) => {
+      setBusyId(sub.id);
+      try {
+        const res = await mutateJson<WebhookSendResult>(
+          integrationsPaths.webhookTest(sub.id),
+          { method: 'POST' }
+        );
+        if (res.ok) {
+          addToast(
+            t.toastTestOk.replace('{status}', String(res.status ?? '')),
+            'success'
+          );
+        } else {
+          addToast(
+            t.toastTestFailed.replace('{error}', res.error || '—'),
+            'error'
+          );
+        }
+      } catch (err) {
+        addToast((err as Error)?.message || t.errorGeneric, 'error');
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [mutateJson, addToast, t.toastTestOk, t.toastTestFailed, t.errorGeneric]
+  );
+
+  // ---- Rotation du secret (révélé une fois) ----
+  const handleRotate = useCallback(
+    async (sub: Subscription) => {
+      const ok = await confirm({
+        title: t.confirmRotateTitle,
+        subtitle: t.confirmRotateSubtitle,
+        variant: 'danger',
+        confirmLabel: t.rotateSecret,
+      });
+      if (!ok) return;
+      setBusyId(sub.id);
+      try {
+        const res = await mutateJson<CreateResponse>(
+          integrationsPaths.webhookRotateSecret(sub.id),
+          { method: 'POST' }
+        );
+        addToast(t.toastRotated, 'success');
+        setRevealed(res.secret);
+      } catch (err) {
+        addToast((err as Error)?.message || t.errorGeneric, 'error');
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [
+      confirm,
+      mutateJson,
+      addToast,
+      t.confirmRotateTitle,
+      t.confirmRotateSubtitle,
+      t.rotateSecret,
+      t.toastRotated,
+      t.errorGeneric,
+    ]
+  );
 
   return (
     <>
@@ -419,7 +473,7 @@ function AdminWebhooksPage() {
                       </div>
                       <p className="mt-2 text-[11px] text-[var(--t4,#807984)]">
                         {t.lastDelivery}:{' '}
-                        {formatDate(sub.last_delivery_at, t.never)}
+                        {formatWebhookDate(sub.last_delivery_at, t.never)}
                         {sub.consecutive_failures > 0 && (
                           <span className="text-[var(--warn,#f5a524)]">
                             {' · '}
@@ -431,15 +485,41 @@ function AdminWebhooksPage() {
                         )}
                       </p>
                     </div>
-                    <div className="flex flex-shrink-0 items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <AdminButton
                         size="sm"
-                        onClick={() => toggleDeliveries(sub)}
+                        onClick={() => togglePanel(sub, 'deliveries')}
                         data-testid={`webhook-deliveries-btn-${sub.id}`}
                       >
-                        {openId === sub.id
+                        {panel?.id === sub.id && panel.kind === 'deliveries'
                           ? t.hideDeliveries
                           : t.viewDeliveries}
+                      </AdminButton>
+                      <AdminButton
+                        size="sm"
+                        onClick={() => handleTest(sub)}
+                        disabled={busyId === sub.id}
+                        data-testid={`webhook-test-btn-${sub.id}`}
+                      >
+                        {t.sendTest}
+                      </AdminButton>
+                      <AdminButton
+                        size="sm"
+                        onClick={() => togglePanel(sub, 'edit')}
+                        disabled={busyId === sub.id}
+                        data-testid={`webhook-edit-btn-${sub.id}`}
+                      >
+                        {panel?.id === sub.id && panel.kind === 'edit'
+                          ? t.cancel
+                          : t.edit}
+                      </AdminButton>
+                      <AdminButton
+                        size="sm"
+                        onClick={() => handleRotate(sub)}
+                        disabled={busyId === sub.id}
+                        data-testid={`webhook-rotate-btn-${sub.id}`}
+                      >
+                        {t.rotateSecret}
                       </AdminButton>
                       <AdminButton
                         size="sm"
@@ -461,74 +541,23 @@ function AdminWebhooksPage() {
                     </div>
                   </div>
 
-                  {openId === sub.id && (
-                    <div className="mt-4 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-3">
-                      {!openDeliveries ? (
-                        <LoadingSpinner label={t.loading} className="py-4" />
-                      ) : openDeliveries.length === 0 ? (
-                        <p className="py-2 text-xs text-[var(--t4,#807984)]">
-                          {t.noDeliveries}
-                        </p>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="text-left text-[var(--t3,#a39ba6)]">
-                                <th className="py-1.5 pr-3 font-medium">
-                                  {t.colEvent}
-                                </th>
-                                <th className="py-1.5 pr-3 font-medium">
-                                  {t.colStatus}
-                                </th>
-                                <th className="py-1.5 pr-3 font-medium">
-                                  {t.colAttempts}
-                                </th>
-                                <th className="py-1.5 pr-3 font-medium">
-                                  HTTP
-                                </th>
-                                <th className="py-1.5 font-medium">
-                                  {t.colWhen}
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[var(--line2,rgba(194,196,201,.2))]">
-                              {openDeliveries.map((d) => (
-                                <tr key={d.id}>
-                                  <td className="py-1.5 pr-3 font-mono text-[var(--t2,#c7bfca)]">
-                                    {d.event_name}
-                                  </td>
-                                  <td className="py-1.5 pr-3">
-                                    <Chip
-                                      tone={
-                                        d.status === 'delivered'
-                                          ? 'ok'
-                                          : d.status === 'failed'
-                                            ? 'err'
-                                            : 'neutral'
-                                      }
-                                    >
-                                      {d.status}
-                                    </Chip>
-                                  </td>
-                                  <td className="py-1.5 pr-3 text-[var(--t3,#a39ba6)]">
-                                    {d.attempts}
-                                  </td>
-                                  <td className="py-1.5 pr-3 text-[var(--t3,#a39ba6)]">
-                                    {d.response_status ?? '—'}
-                                  </td>
-                                  <td className="whitespace-nowrap py-1.5 text-[var(--t3,#a39ba6)]">
-                                    {formatDate(
-                                      d.delivered_at ?? d.created_at,
-                                      '—'
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
+                  {panel?.id === sub.id && panel.kind === 'edit' && (
+                    <WebhookEditForm
+                      sub={sub}
+                      available={available}
+                      onCancel={() => setPanel(null)}
+                      onSaved={async () => {
+                        setPanel(null);
+                        await fetchSubs();
+                      }}
+                    />
+                  )}
+
+                  {panel?.id === sub.id && panel.kind === 'deliveries' && (
+                    <WebhookDeliveriesPanel
+                      subscriptionId={sub.id}
+                      onRedelivered={fetchSubs}
+                    />
                   )}
                 </li>
               ))}

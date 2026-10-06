@@ -8,7 +8,7 @@ parameters:
 patch:
   tags:
     - admin/misc
-  summary: Active/désactive un abonnement webhook.
+  summary: Active/désactive et/ou modifie un abonnement webhook.
   operationId: adminPatchWebhook
   x-zod-query: admin.tenants/[id].query
   security:
@@ -20,11 +20,22 @@ patch:
         schema:
           x-zod: admin.webhooks/[id].update
           type: object
-          required:
-            - enabled
+          description: >-
+            Au moins un champ. `url` suit les règles de la création (HTTPS,
+            hôte public) ; réactiver ou changer d'URL remet les échecs à zéro.
           properties:
             enabled:
               type: boolean
+            url:
+              type: string
+              format: uri
+            event_types:
+              type: array
+              items:
+                type: string
+            description:
+              type: string
+              nullable: true
   responses:
     '200':
       description: Abonnement mis à jour.

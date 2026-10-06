@@ -125,6 +125,165 @@ export function generateWebhookSecret(): string {
   return `whsec_${crypto.randomBytes(24).toString('hex')}`;
 }
 
+/* ------------------------------ anti-SSRF ------------------------------- */
+//
+// Une URL de webhook est saisie par un staff d'espace, puis appelée par NOS
+// serveurs : sans garde, c'est une sonde vers le réseau interne (métadonnées
+// cloud 169.254.169.254, localhost, services privés). Deux niveaux :
+//   - à l'ÉCRITURE (création, modification) : `checkWebhookUrl` — HTTPS
+//     obligatoire, pas d'identifiants dans l'URL, hôte public ;
+//   - à l'ENVOI (utils/webhookDelivery.ts) : l'adresse RÉSOLUE est revérifiée
+//     par `isBlockedWebhookAddress` (un nom public peut pointer vers 10.0.0.1).
+
+/** Longueur max d'une URL d'abonnement (identique à la contrainte historique). */
+export const WEBHOOK_URL_MAX_LENGTH = 2000;
+
+function ipv4Octets(address: string): number[] | null {
+  const parts = address.split('.');
+  if (parts.length !== 4) return null;
+  const octets = parts.map((p) => (/^\d{1,3}$/.test(p) ? Number(p) : NaN));
+  return octets.every((o) => Number.isInteger(o) && o >= 0 && o <= 255)
+    ? octets
+    : null;
+}
+
+function isBlockedIpv4(o: number[]): boolean {
+  const [a, b, c] = o;
+  return (
+    a === 0 || // « ce réseau »
+    a === 10 ||
+    (a === 100 && b >= 64 && b <= 127) || // CGNAT
+    a === 127 ||
+    (a === 169 && b === 254) || // link-local (métadonnées cloud)
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 0 && (c === 0 || c === 2)) ||
+    (a === 192 && b === 168) ||
+    (a === 198 && (b === 18 || b === 19)) || // bancs de test
+    (a === 198 && b === 51 && c === 100) ||
+    (a === 203 && b === 0 && c === 113) ||
+    a >= 224 // multicast + réservé + broadcast
+  );
+}
+
+/** Groupes hexadécimaux d'une IPv6 (`::` développé), ou null si illisible. */
+function ipv6Groups(address: string): number[] | null {
+  let addr = address.toLowerCase();
+  // Suffixe IPv4 (`::ffff:1.2.3.4`) → deux groupes hex.
+  const v4 = addr.match(/^(.*:)(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (v4) {
+    const o = ipv4Octets(v4[2]);
+    if (!o) return null;
+    addr = `${v4[1]}${((o[0] << 8) | o[1]).toString(16)}:${((o[2] << 8) | o[3]).toString(16)}`;
+  }
+  const halves = addr.split('::');
+  if (halves.length > 2) return null;
+  const head = halves[0] ? halves[0].split(':') : [];
+  const tail = halves.length === 2 && halves[1] ? halves[1].split(':') : [];
+  const missing = 8 - head.length - tail.length;
+  if (halves.length === 1 ? missing !== 0 : missing < 0) return null;
+  const groups = [...head, ...Array(missing).fill('0'), ...tail];
+  const nums = groups.map((g) =>
+    /^[0-9a-f]{1,4}$/.test(g) ? parseInt(g, 16) : NaN
+  );
+  return nums.every((n) => Number.isInteger(n)) ? nums : null;
+}
+
+/**
+ * Adresse IP (v4 ou v6, crochets tolérés) vers laquelle un webhook ne doit
+ * JAMAIS partir : boucle locale, réseaux privés, link-local, multicast,
+ * plages réservées. Une chaîne qui n'est pas une IP renvoie `false` (c'est un
+ * nom d'hôte : voir `checkWebhookUrl`).
+ */
+export function isBlockedWebhookAddress(address: string): boolean {
+  const raw = address.replace(/^\[|\]$/g, '');
+  const v4 = ipv4Octets(raw);
+  if (v4) return isBlockedIpv4(v4);
+  if (!raw.includes(':')) return false;
+  const g = ipv6Groups(raw);
+  if (!g) return true; // IPv6 illisible : on refuse plutôt que deviner.
+  if (g.every((x) => x === 0)) return true; // ::
+  if (g.slice(0, 7).every((x) => x === 0) && g[7] === 1) return true; // ::1
+  // IPv4 encapsulée (::ffff:a.b.c.d, ::a.b.c.d) : on juge l'IPv4.
+  const mapped =
+    g.slice(0, 5).every((x) => x === 0) && (g[5] === 0xffff || g[5] === 0);
+  if (mapped) {
+    return isBlockedIpv4([g[6] >> 8, g[6] & 0xff, g[7] >> 8, g[7] & 0xff]);
+  }
+  const first = g[0];
+  return (
+    (first & 0xfe00) === 0xfc00 || // fc00::/7 (ULA)
+    (first & 0xffc0) === 0xfe80 || // fe80::/10 (link-local)
+    (first & 0xff00) === 0xff00 || // multicast
+    (first === 0x2001 && g[1] === 0x0db8) // documentation
+  );
+}
+
+/** Suffixes de noms qui ne désignent jamais un hôte public. */
+const PRIVATE_HOST_SUFFIXES = [
+  '.localhost',
+  '.local',
+  '.internal',
+  '.intranet',
+  '.lan',
+  '.home',
+  '.corp',
+  '.home.arpa',
+];
+
+export type WebhookUrlCheck =
+  | { ok: true; url: string }
+  | { ok: false; reason: string };
+
+/**
+ * Valide l'URL d'un abonnement (création ET modification — mêmes règles) :
+ * HTTPS seulement, pas d'identifiants, hôte public (ni IP privée, ni
+ * `localhost`, ni nom à un seul label comme `mariadb`). Renvoie l'URL
+ * normalisée par le parseur WHATWG (qui ramène `0x7f.1` ou `2130706433` à
+ * `127.0.0.1` — la vérification porte donc sur la forme canonique).
+ */
+export function checkWebhookUrl(raw: unknown): WebhookUrlCheck {
+  if (typeof raw !== 'string' || !raw.trim()) {
+    return { ok: false, reason: "L'URL est requise." };
+  }
+  const input = raw.trim();
+  if (input.length > WEBHOOK_URL_MAX_LENGTH) {
+    return { ok: false, reason: 'URL trop longue.' };
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(input);
+  } catch {
+    return { ok: false, reason: 'URL invalide.' };
+  }
+  if (parsed.protocol !== 'https:') {
+    return { ok: false, reason: "L'URL doit être en HTTPS." };
+  }
+  if (parsed.username || parsed.password) {
+    return {
+      ok: false,
+      reason: "L'URL ne doit pas contenir d'identifiants.",
+    };
+  }
+  const host = parsed.hostname.toLowerCase().replace(/\.$/, '');
+  if (!host) return { ok: false, reason: 'URL invalide.' };
+  const isIpLiteral = host.startsWith('[') || ipv4Octets(host) !== null;
+  if (isIpLiteral) {
+    if (isBlockedWebhookAddress(host)) {
+      return { ok: false, reason: 'Adresse privée ou réservée refusée.' };
+    }
+  } else if (
+    host === 'localhost' ||
+    !host.includes('.') ||
+    PRIVATE_HOST_SUFFIXES.some((s) => host.endsWith(s))
+  ) {
+    return { ok: false, reason: 'Hôte non public refusé.' };
+  }
+  if (parsed.href.length > WEBHOOK_URL_MAX_LENGTH) {
+    return { ok: false, reason: 'URL trop longue.' };
+  }
+  return { ok: true, url: parsed.href };
+}
+
 /** Retries max d'une même livraison avant abandon (le cron 1-min = le backoff). */
 export const WEBHOOK_MAX_ATTEMPTS = 5;
 

@@ -1,5 +1,7 @@
 // features/admin/tenants/routes/webhookById.ts — /api/admin/webhooks/[id]
-//   PATCH  : active / désactive (réactiver remet les échecs à zéro).
+//   PATCH  : active / désactive (réactiver remet les échecs à zéro) et/ou
+//            modifie `url` (mêmes règles anti-SSRF que la création),
+//            `event_types`, `description`.
 //   DELETE : supprime (CASCADE des livraisons).
 
 import { defineAdminRoute, mutate } from '@/utils/admin/defineAdminRoute';
@@ -7,7 +9,7 @@ import { audited } from '../../_shared/audited';
 import { IdQuery, WebhookPatchDoc } from '../schemas';
 import {
   deleteWebhookSubscription,
-  setWebhookEnabled,
+  updateWebhookSubscription,
 } from '../service/integrations';
 
 const LIMIT = { max: 20, windowMs: 60_000 };
@@ -19,10 +21,11 @@ export default defineAdminRoute({
     query: IdQuery,
     body: WebhookPatchDoc,
     rateLimit: LIMIT,
-    // Slug déclaré ; la désactivation le remplace (`disable_webhook`).
+    // Slug déclaré ; le service le remplace selon le geste
+    // (`disable_webhook`, `update_webhook`).
     audit: 'enable_webhook',
     handler: ({ ctx, req }) =>
-      audited(ctx, setWebhookEnabled(ctx, req.query.id, req.body)),
+      audited(ctx, updateWebhookSubscription(ctx, req.query.id, req.body)),
   }),
   DELETE: mutate({
     query: IdQuery,

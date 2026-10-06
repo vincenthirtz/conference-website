@@ -202,6 +202,10 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   // Espaces, webhooks sortants, invitations
   enable_webhook: 'Webhook réactivé',
   disable_webhook: 'Webhook désactivé',
+  update_webhook: 'Webhook modifié',
+  test_webhook: 'Webhook testé',
+  redeliver_webhook: 'Livraison webhook renvoyée',
+  rotate_webhook_secret: 'Secret de webhook renouvelé',
   revoke_previous_bot_key: 'Ancienne clé bot révoquée',
   export_tenant: 'Export des données d’un espace',
   export_users: 'Export CSV des comptes utilisateurs',

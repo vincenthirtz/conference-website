@@ -1,0 +1,26 @@
+parameters:
+  - name: id
+    in: path
+    required: true
+    schema:
+      type: string
+      format: uuid
+post:
+  tags:
+    - admin/misc
+  summary: Envoie un event `webhook.test` signé à l'URL de l'abonnement.
+  description: >-
+    Appel sortant immédiat, signé avec le secret courant (même si
+    l'abonnement est désactivé). N'écrit ni livraison ni compteur d'échecs.
+    Un refus du destinataire est une réponse 200 avec `ok: false`.
+  operationId: adminTestWebhook
+  x-zod-query: admin.tenants/[id].query
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Résultat de l'envoi (`eventId`, `ok`, `status`, `error`).
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      $ref: '#/components/responses/NotFound'

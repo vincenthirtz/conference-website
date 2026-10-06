@@ -5135,6 +5135,7 @@
           "rebuild_ratings",
           "recompute_league_standings",
           "record_scrim_result",
+          "redeliver_webhook",
           "register_team",
           "reject",
           "reject_circuit_partner",
@@ -5162,6 +5163,7 @@
           "revoke_tenant_invitation",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
+          "rotate_webhook_secret",
           "save_placements",
           "send_team_message",
           "send_twitch_chat",
@@ -5208,6 +5210,7 @@
           "team_availability_update",
           "team_discord_writeback",
           "tenant_lifecycle",
+          "test_webhook",
           "ticket_closed",
           "toggle_pole_admin",
           "tournament_update",
@@ -5270,6 +5273,7 @@
           "update_twitch_prediction",
           "update_twitch_redemptions",
           "update_twitch_reward",
+          "update_webhook",
           "upload_association_document",
           "validate_match_lineup",
           "validate_scrim_planning",
@@ -6182,6 +6186,7 @@
           "rebuild_ratings",
           "recompute_league_standings",
           "record_scrim_result",
+          "redeliver_webhook",
           "register_team",
           "reject",
           "reject_circuit_partner",
@@ -6209,6 +6214,7 @@
           "revoke_tenant_invitation",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
+          "rotate_webhook_secret",
           "save_placements",
           "send_team_message",
           "send_twitch_chat",
@@ -6255,6 +6261,7 @@
           "team_availability_update",
           "team_discord_writeback",
           "tenant_lifecycle",
+          "test_webhook",
           "ticket_closed",
           "toggle_pole_admin",
           "tournament_update",
@@ -6317,6 +6324,7 @@
           "update_twitch_prediction",
           "update_twitch_redemptions",
           "update_twitch_reward",
+          "update_webhook",
           "upload_association_document",
           "validate_match_lineup",
           "validate_scrim_planning",
@@ -8231,6 +8239,7 @@
           "rebuild_ratings",
           "recompute_league_standings",
           "record_scrim_result",
+          "redeliver_webhook",
           "register_team",
           "reject",
           "reject_circuit_partner",
@@ -8258,6 +8267,7 @@
           "revoke_tenant_invitation",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
+          "rotate_webhook_secret",
           "save_placements",
           "send_team_message",
           "send_twitch_chat",
@@ -8304,6 +8314,7 @@
           "team_availability_update",
           "team_discord_writeback",
           "tenant_lifecycle",
+          "test_webhook",
           "ticket_closed",
           "toggle_pole_admin",
           "tournament_update",
@@ -8366,6 +8377,7 @@
           "update_twitch_prediction",
           "update_twitch_redemptions",
           "update_twitch_reward",
+          "update_webhook",
           "upload_association_document",
           "validate_match_lineup",
           "validate_scrim_planning",
@@ -13317,6 +13329,7 @@
           "rebuild_ratings",
           "recompute_league_standings",
           "record_scrim_result",
+          "redeliver_webhook",
           "register_team",
           "reject",
           "reject_circuit_partner",
@@ -13344,6 +13357,7 @@
           "revoke_tenant_invitation",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
+          "rotate_webhook_secret",
           "save_placements",
           "send_team_message",
           "send_twitch_chat",
@@ -13390,6 +13404,7 @@
           "team_availability_update",
           "team_discord_writeback",
           "tenant_lifecycle",
+          "test_webhook",
           "ticket_closed",
           "toggle_pole_admin",
           "tournament_update",
@@ -13452,6 +13467,7 @@
           "update_twitch_prediction",
           "update_twitch_redemptions",
           "update_twitch_reward",
+          "update_webhook",
           "upload_association_document",
           "validate_match_lineup",
           "validate_scrim_planning",
@@ -19565,6 +19581,7 @@
           "rebuild_ratings",
           "recompute_league_standings",
           "record_scrim_result",
+          "redeliver_webhook",
           "register_team",
           "reject",
           "reject_circuit_partner",
@@ -19592,6 +19609,7 @@
           "revoke_tenant_invitation",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
+          "rotate_webhook_secret",
           "save_placements",
           "send_team_message",
           "send_twitch_chat",
@@ -19638,6 +19656,7 @@
           "team_availability_update",
           "team_discord_writeback",
           "tenant_lifecycle",
+          "test_webhook",
           "ticket_closed",
           "toggle_pole_admin",
           "tournament_update",
@@ -19700,6 +19719,7 @@
           "update_twitch_prediction",
           "update_twitch_redemptions",
           "update_twitch_reward",
+          "update_webhook",
           "upload_association_document",
           "validate_match_lineup",
           "validate_scrim_planning",
@@ -24203,6 +24223,7 @@
           "rebuild_ratings",
           "recompute_league_standings",
           "record_scrim_result",
+          "redeliver_webhook",
           "register_team",
           "reject",
           "reject_circuit_partner",
@@ -24230,6 +24251,7 @@
           "revoke_tenant_invitation",
           "revoke_tenant_staff",
           "rotate_bot_secrets",
+          "rotate_webhook_secret",
           "save_placements",
           "send_team_message",
           "send_twitch_chat",
@@ -24276,6 +24298,7 @@
           "team_availability_update",
           "team_discord_writeback",
           "tenant_lifecycle",
+          "test_webhook",
           "ticket_closed",
           "toggle_pole_admin",
           "tournament_update",
@@ -24338,6 +24361,7 @@
           "update_twitch_prediction",
           "update_twitch_redemptions",
           "update_twitch_reward",
+          "update_webhook",
           "upload_association_document",
           "validate_match_lineup",
           "validate_scrim_planning",
@@ -69270,6 +69294,192 @@
     "required": [
      "secret",
      "subscription"
+    ]
+   }
+  },
+  "POST /api/admin/webhooks/{id}/redeliver": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "delivery": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "attempts": {
+        "type": "number"
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "delivered_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "event_name": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "last_error": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "response_status": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "attempts",
+       "created_at",
+       "delivered_at",
+       "event_name",
+       "id",
+       "last_error",
+       "response_status",
+       "status"
+      ]
+     },
+     "error": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "ok": {
+      "type": "boolean"
+     },
+     "status": {
+      "type": [
+       "number",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "delivery",
+     "error",
+     "ok",
+     "status"
+    ]
+   }
+  },
+  "POST /api/admin/webhooks/{id}/rotate-secret": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "secret": {
+      "type": "string"
+     },
+     "subscription": {
+      "type": "object",
+      "properties": {
+       "consecutive_failures": {
+        "type": "number"
+       },
+       "created_at": {
+        "type": "string"
+       },
+       "description": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "disabled_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "enabled": {
+        "type": "boolean"
+       },
+       "event_types": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "id": {
+        "type": "string"
+       },
+       "last_delivery_at": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "last_error": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "url": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "consecutive_failures",
+       "created_at",
+       "description",
+       "disabled_at",
+       "enabled",
+       "event_types",
+       "id",
+       "last_delivery_at",
+       "last_error",
+       "url"
+      ]
+     }
+    },
+    "required": [
+     "secret",
+     "subscription"
+    ]
+   }
+  },
+  "POST /api/admin/webhooks/{id}/test": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "error": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "eventId": {
+      "type": "string"
+     },
+     "ok": {
+      "type": "boolean"
+     },
+     "status": {
+      "type": [
+       "number",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "error",
+     "eventId",
+     "ok",
+     "status"
     ]
    }
   },

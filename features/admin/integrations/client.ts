@@ -18,7 +18,18 @@ export const integrationsPaths = {
   apiToken: (id: string) => `${TOKENS}/${enc(id)}`,
   webhooks: WEBHOOKS,
   webhook: (id: string) => `${WEBHOOKS}/${enc(id)}`,
+  webhookTest: (id: string) => `${WEBHOOKS}/${enc(id)}/test`,
+  webhookRedeliver: (id: string) => `${WEBHOOKS}/${enc(id)}/redeliver`,
+  /** Révèle le nouveau secret UNE fois : réponse jamais mise en cache. */
+  webhookRotateSecret: (id: string) => `${WEBHOOKS}/${enc(id)}/rotate-secret`,
 } as const;
+
+/** Résultat d'un envoi immédiat (test ou renvoi). */
+export type WebhookSendResult = {
+  ok: boolean;
+  status: number | null;
+  error: string | null;
+};
 
 export type ApiTokenListRow = {
   id: string;

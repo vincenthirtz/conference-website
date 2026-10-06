@@ -251,6 +251,7 @@ import {
   TenantUsageQuery,
   WebhookCreateDoc,
   WebhookPatchDoc,
+  WebhookRedeliverDoc,
 } from '../../../features/admin/tenants/schemas';
 
 import {
@@ -674,6 +675,10 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   'admin.api-tokens/[id].update': { schema: ApiTokenPatchDoc, io: 'input' },
   'admin.webhooks.create': { schema: WebhookCreateDoc, io: 'input' },
   'admin.webhooks/[id].update': { schema: WebhookPatchDoc, io: 'input' },
+  'admin.webhooks/[id]/redeliver.create': {
+    schema: WebhookRedeliverDoc,
+    io: 'input',
+  },
   // Fiche, litige, veto, drafts, casters, MVP, feuille de match, relance
   // check-in d'un match (features/admin/matches).
   'admin.matches/[matchId].update': { schema: MatchUpdateBody, io: 'input' },
