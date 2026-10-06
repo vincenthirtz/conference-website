@@ -9112,6 +9112,7 @@ export type Database = {
           diff_team2: number | null
           games_played: number | null
           map_name: string | null
+          tenant_id: string | null
           total_rounds: number | null
           wins_team1: number | null
           wins_team2: number | null

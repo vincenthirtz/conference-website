@@ -639,6 +639,7 @@
       "diff_team2",
       "games_played",
       "map_name",
+      "tenant_id",
       "total_rounds",
       "wins_team1",
       "wins_team2"
