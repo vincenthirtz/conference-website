@@ -1,6 +1,9 @@
 // features/admin/recycle-bin/routes/index.ts — /api/admin/recycle-bin
 //   GET   : éléments soft-deleted (un type ou tous), paginés
 //   PATCH : restaure `{ id, type }`
+//   DELETE: efface DÉFINITIVEMENT `?id=&type=` — owner uniquement (garde
+//           'owner' : second facteur exigé, cf. utils/staffMfa), types
+//           purgeables seulement (schemas.ts), journalisé.
 
 import {
   type AdminRouteContext,
@@ -10,16 +13,22 @@ import {
 } from '@/utils/admin/defineAdminRoute';
 import { parsePagination } from '@/utils/apiHelpers';
 import { audited } from '../../_shared/audited';
-import { RecycleBinQuery, RecycleBinRestoreDoc } from '../schemas';
+import {
+  RecycleBinPurgeQuery,
+  RecycleBinQuery,
+  RecycleBinRestoreDoc,
+} from '../schemas';
 import { isPlatformOwnerStaff } from '../../_shared/platformOwner';
 import {
   listRecycleBin,
+  purgeFromRecycleBin,
   type RecycleBinCaller,
   restoreFromRecycleBin,
 } from '../service';
 
 const callerOf = (ctx: AdminRouteContext): RecycleBinCaller => ({
   platform: isPlatformOwnerStaff(ctx.staff),
+  staffId: ctx.staff.staff.id,
 });
 
 export default defineAdminRoute({
@@ -41,5 +50,12 @@ export default defineAdminRoute({
     audit: 'restore_deleted_item',
     handler: ({ body, ctx }) =>
       audited(ctx, restoreFromRecycleBin(ctx, callerOf(ctx), body)),
+  }),
+  DELETE: mutate({
+    guard: 'owner',
+    query: RecycleBinPurgeQuery,
+    audit: 'purge_deleted_item',
+    handler: ({ query, ctx }) =>
+      audited(ctx, purgeFromRecycleBin(ctx, callerOf(ctx), query)),
   }),
 });

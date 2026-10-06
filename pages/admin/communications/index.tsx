@@ -3,6 +3,7 @@ import { withStaffPage } from '@/utils/staff';
 import { hasAtLeastRole } from '@/utils/staffRoles';
 import type { StaffRole } from '@/utils/staff';
 import { supabaseAdmin } from '@/utils/supabase';
+import { withDeletedAtFallback } from '@/features/admin/recycle-bin/missingColumn';
 import { escapePostgrestValue, sanitizeSearch } from '@/utils/apiHelpers';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
@@ -71,25 +72,32 @@ export const getServerSideProps = withStaffPage<{
   }
 
   const { tenantId } = staffCtx;
+  const db = supabaseAdmin;
 
-  let q = supabaseAdmin
-    .from('news')
-    .select('id, title, slug, tag, status, published_at, created_at', {
-      count: 'exact',
-    })
-    .eq('tenant_id', tenantId)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + NEWS_LIMIT - 1);
+  // Les actualités en corbeille (`deleted_at`) n'ont rien à faire ici ; repli
+  // sans le filtre tant que add_news_soft_delete.sql n'est pas appliquée.
+  const { data, error, count } = await withDeletedAtFallback(
+    (filterDeleted) => {
+      let q = db
+        .from('news')
+        .select('id, title, slug, tag, status, published_at, created_at', {
+          count: 'exact',
+        })
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + NEWS_LIMIT - 1);
 
-  if (status === 'draft' || status === 'published') {
-    q = q.eq('status', status);
-  }
-  if (search) {
-    const s = `%${escapePostgrestValue(search)}%`;
-    q = q.or(`title.ilike.${s},slug.ilike.${s}`);
-  }
-
-  const { data, error, count } = await q;
+      if (filterDeleted) q = q.is('deleted_at' as never, null);
+      if (status === 'draft' || status === 'published') {
+        q = q.eq('status', status);
+      }
+      if (search) {
+        const s = `%${escapePostgrestValue(search)}%`;
+        q = q.or(`title.ilike.${s},slug.ilike.${s}`);
+      }
+      return q;
+    }
+  );
 
   if (error) {
     logger.error('admin communications (news) SSR error:', error);

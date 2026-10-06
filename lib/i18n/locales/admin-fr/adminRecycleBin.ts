@@ -18,6 +18,9 @@ export default adminNs('adminRecycleBin', {
   typeAdherent: 'Adherent',
   typeStaff: 'Staff',
   typeScrim: 'Scrim',
+  typeScrimPlanning: 'Planning de scrim',
+  typeTask: 'Tâche',
+  typeNews: 'Actualité',
   backToDashboard: 'Retour au dashboard',
   heading: 'Corbeille',
   subtitle:
@@ -34,6 +37,9 @@ export default adminNs('adminRecycleBin', {
   filterAdherents: 'Adherents',
   filterStaff: 'Staff',
   filterScrims: 'Scrims',
+  filterScrimPlannings: 'Plannings de scrim',
+  filterTasks: 'Tâches',
+  filterNews: 'Actualités',
   refresh: 'Rafraichir',
   empty: 'La corbeille est vide.',
   deletedOn: 'Supprime le {date}',
@@ -47,4 +53,14 @@ export default adminNs('adminRecycleBin', {
   toastRestored: '{type} "{name}" restaure avec succes.',
   errorUnexpected: 'Erreur inattendue',
   errorRestore: 'Erreur lors de la restauration',
+  retentionNotice:
+    'Les plannings, tâches, actualités, partenaires et adhérents restés 90 jours dans la corbeille sont supprimés définitivement.',
+  purge: 'Supprimer définitivement',
+  purging: 'Suppression…',
+  confirmPurgeTitle: 'Supprimer définitivement {type} "{name}" ?',
+  confirmPurgeSubtitle:
+    'Action irréversible : l’élément et ce qui en dépend (commentaires, disponibilités…) seront effacés. Un adhérent ayant des cotisations est anonymisé.',
+  confirmPurgeLabel: 'Supprimer définitivement',
+  toastPurged: '{type} "{name}" supprimé définitivement.',
+  errorPurge: 'Erreur lors de la suppression définitive',
 });

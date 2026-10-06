@@ -42,11 +42,16 @@ type DeletedItem = {
     | 'cast_member'
     | 'adherent'
     | 'staff'
-    | 'scrim';
+    | 'scrim'
+    | 'scrim_planning'
+    | 'task'
+    | 'news';
   name: string;
   details: string | null;
   deleted_at: string | null;
   tournament_id: string | null;
+  /** Le serveur dit si le type peut être effacé (schemas PURGEABLE_TYPES). */
+  purgeable?: boolean;
 };
 
 type RecycleBinResponse = {
@@ -78,6 +83,12 @@ function typeLabel(type: string, t: Dict) {
       return t.typeStaff;
     case 'scrim':
       return t.typeScrim;
+    case 'scrim_planning':
+      return t.typeScrimPlanning;
+    case 'task':
+      return t.typeTask;
+    case 'news':
+      return t.typeNews;
     default:
       return type;
   }
@@ -101,6 +112,12 @@ function typeColor(type: string) {
       return 'bg-rose-600/20 text-rose-300 border-rose-500/30';
     case 'scrim':
       return 'bg-teal-600/20 text-teal-300 border-teal-500/30';
+    case 'scrim_planning':
+      return 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30';
+    case 'task':
+      return 'bg-indigo-600/20 text-indigo-300 border-indigo-500/30';
+    case 'news':
+      return 'bg-yellow-600/20 text-yellow-300 border-yellow-500/30';
     default:
       return 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30';
   }
@@ -121,7 +138,7 @@ function formatDate(iso: string | null) {
   }
 }
 
-function AdminRecycleBinPage(_props: StaffProps) {
+function AdminRecycleBinPage({ staff }: StaffProps) {
   const router = useRouter();
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
@@ -129,6 +146,9 @@ function AdminRecycleBinPage(_props: StaffProps) {
 
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [purgingId, setPurgingId] = useState<string | null>(null);
+  // Effacement définitif : owner uniquement (la route le garde aussi).
+  const canPurge = staff?.role === 'owner';
   // Erreur d'action « restaurer » — affichée dans la même bannière que les
   // erreurs de chargement (portées par le hook via `error`).
   const [restoreError, setRestoreError] = useState<string | null>(null);
@@ -186,6 +206,37 @@ function AdminRecycleBinPage(_props: StaffProps) {
     }
   }
 
+  async function handlePurge(item: DeletedItem) {
+    const ok = await confirm({
+      title: format(t.confirmPurgeTitle, {
+        type: typeLabel(item.type, t).toLowerCase(),
+        name: item.name,
+      }),
+      subtitle: t.confirmPurgeSubtitle,
+      variant: 'danger',
+      confirmLabel: t.confirmPurgeLabel,
+    });
+    if (!ok) return;
+
+    setPurgingId(item.id);
+    setRestoreError(null);
+    try {
+      await recycleBinClient.purge({ id: item.id, type: item.type });
+      addToast(
+        format(t.toastPurged, {
+          type: typeLabel(item.type, t),
+          name: item.name,
+        }),
+        'info'
+      );
+      fetchItems();
+    } catch (err: unknown) {
+      setRestoreError((err as Error)?.message ?? t.errorPurge);
+    } finally {
+      setPurgingId(null);
+    }
+  }
+
   return (
     <>
       {dialog}
@@ -222,7 +273,7 @@ function AdminRecycleBinPage(_props: StaffProps) {
             title={t.heading}
             subtitle={
               <>
-                {t.subtitle}
+                {t.subtitle} {t.retentionNotice}
                 {total !== null && (
                   <span className="ml-1">
                     {format(total > 1 ? t.countInBin_other : t.countInBin_one, {
@@ -279,6 +330,9 @@ function AdminRecycleBinPage(_props: StaffProps) {
                     { value: 'adherent', label: t.filterAdherents },
                     { value: 'staff', label: t.filterStaff },
                     { value: 'scrim', label: t.filterScrims },
+                    { value: 'scrim_planning', label: t.filterScrimPlannings },
+                    { value: 'task', label: t.filterTasks },
+                    { value: 'news', label: t.filterNews },
                   ]}
                 />
                 <AdminButton
@@ -349,12 +403,28 @@ function AdminRecycleBinPage(_props: StaffProps) {
                       </div>
                     </div>
 
+                    {/* Purge (owner) */}
+                    {canPurge && item.purgeable && (
+                      <AdminButton
+                        size="sm"
+                        variant="danger"
+                        onClick={() => handlePurge(item)}
+                        disabled={
+                          purgingId === item.id || restoringId === item.id
+                        }
+                      >
+                        {purgingId === item.id ? t.purging : t.purge}
+                      </AdminButton>
+                    )}
+
                     {/* Restore button */}
                     <AdminButton
                       size="sm"
                       variant="secondary"
                       onClick={() => handleRestore(item)}
-                      disabled={restoringId === item.id}
+                      disabled={
+                        restoringId === item.id || purgingId === item.id
+                      }
                     >
                       {restoringId === item.id ? (
                         <>

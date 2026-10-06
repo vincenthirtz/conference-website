@@ -109,6 +109,14 @@
 [functions."tcg-photo-purge-cron"]
   schedule = "41 * * * *"
 
+# Scheduled function: purge de la corbeille admin. Efface définitivement ce qui
+# y dort depuis plus de 90 jours (PURGE_RETENTION_DAYS) — partenaires,
+# adhérents (anonymisés s'ils ont des cotisations), actualités, plannings de
+# scrim, tâches. L'historique des tournois et les comptes staff sont exclus.
+# Une fois par jour, 03:23 UTC (heure creuse, hors des minutes rondes).
+[functions."recycle-bin-purge-cron"]
+  schedule = "23 3 * * *"
+
 # Scheduled function: paid-plan lifecycle (« Régie solidaire », axe 06 — revenu
 # récurrent). Une fois par jour à 08:00 UTC. Sur les tenants regie/circuit :
 # bascule en 'past_due' les plans actifs expirés, et envoie aux owners une

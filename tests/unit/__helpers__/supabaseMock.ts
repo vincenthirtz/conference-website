@@ -593,6 +593,31 @@ class Builder {
         .filter((v) => v.length > 0);
       this.filters.push((row) => !excluded.includes(String(row[col] ?? '')));
     }
+    // `.not(col, 'like', '%suffixe')` — motif SQL LIKE (`%` = n'importe quoi,
+    // `_` = un caractère), sensible à la casse. Une ligne SANS valeur passe :
+    // en SQL elle serait exclue (`NOT (NULL LIKE …)` est NULL), mais les
+    // colonnes ainsi filtrées sont NOT NULL en base et les fixtures legacy ne
+    // les sèment pas toujours.
+    if (op === 'like' && typeof val === 'string') {
+      const re = new RegExp(
+        `^${val
+          .split('')
+          .map((ch) =>
+            ch === '%'
+              ? '.*'
+              : ch === '_'
+                ? '.'
+                : ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          )
+          .join('')}$`
+      );
+      this.filters.push(
+        (row) =>
+          row[col] === null ||
+          row[col] === undefined ||
+          !re.test(String(row[col]))
+      );
+    }
     return this;
   }
 

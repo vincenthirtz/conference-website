@@ -374,6 +374,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   task_delete: 'Suppression tâche',
   task_restore: 'Restauration tâche',
   restore_deleted_item: 'Restauration depuis la corbeille',
+  purge_deleted_item: 'Suppression définitive (corbeille)',
   task_move: 'Déplacement tâche',
   task_assign: 'Assignation tâche',
   task_comment_create: 'Commentaire de tâche ajouté',

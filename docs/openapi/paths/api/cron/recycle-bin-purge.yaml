@@ -1,0 +1,70 @@
+get:
+  tags:
+    - cron
+  summary: Purge definitive de la corbeille admin au-dela de 90 jours.
+  operationId: cronRecycleBinPurgeGet
+  description: |
+    Schedule: daily (`23 3 * * *`) via Netlify scheduled function
+    `recycle-bin-purge-cron`.
+
+    Efface definitivement les elements en corbeille depuis plus de
+    `PURGE_RETENTION_DAYS` (90 jours) : plannings de scrim, taches,
+    actualites, partenaires, adherents. Un adherent qui a des cotisations
+    est ANONYMISE (donnees personnelles effacees, cotisations gardees).
+    Equipes, matchs, phases, scrims, staff et casteurs ne sont jamais
+    purges (historique des tournois, audit). Au plus 200 elements par type
+    et par passage ; chaque effacement est journalise
+    (`purge_deleted_item`, `payload.automatic: true`).
+
+    Auth: `Authorization: Bearer <CRON_SECRET>` header OR
+    `?secret=<CRON_SECRET>` query string (constant-time). Both GET and POST
+    accepted.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: '`{ cutoff, retention_days, types, duration_ms }`.'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              cutoff:
+                type: string
+                format: date-time
+              retention_days:
+                type: integer
+              types:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    candidates:
+                      type: integer
+                    deleted:
+                      type: integer
+                    anonymized:
+                      type: integer
+                    failed:
+                      type: integer
+                    error:
+                      type: string
+              duration_ms:
+                type: integer
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '500':
+      description: Unexpected failure.
+post:
+  tags:
+    - cron
+  summary: Purge definitive de la corbeille admin au-dela de 90 jours.
+  operationId: cronRecycleBinPurgePost
+  description: Same as `GET /api/cron/recycle-bin-purge`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: '`{ cutoff, retention_days, types, duration_ms }`.'
+    '401':
+      $ref: '#/components/responses/Unauthorized'

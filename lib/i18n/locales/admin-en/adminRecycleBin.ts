@@ -19,6 +19,9 @@ export default {
   typeAdherent: 'Member',
   typeStaff: 'Staff',
   typeScrim: 'Scrim',
+  typeScrimPlanning: 'Scrim planning',
+  typeTask: 'Task',
+  typeNews: 'News',
   backToDashboard: 'Back to dashboard',
   heading: 'Recycle bin',
   subtitle:
@@ -35,6 +38,9 @@ export default {
   filterAdherents: 'Members',
   filterStaff: 'Staff',
   filterScrims: 'Scrims',
+  filterScrimPlannings: 'Scrim plannings',
+  filterTasks: 'Tasks',
+  filterNews: 'News',
   refresh: 'Refresh',
   empty: 'The recycle bin is empty.',
   deletedOn: 'Deleted on {date}',
@@ -48,4 +54,14 @@ export default {
   toastRestored: '{type} "{name}" restored successfully.',
   errorUnexpected: 'Unexpected error',
   errorRestore: 'Error during restore',
+  retentionNotice:
+    'Plannings, tasks, news, partners and members left in the recycle bin for 90 days are permanently deleted.',
+  purge: 'Delete permanently',
+  purging: 'Deleting…',
+  confirmPurgeTitle: 'Permanently delete {type} "{name}"?',
+  confirmPurgeSubtitle:
+    'This cannot be undone: the item and what depends on it (comments, availabilities…) will be erased. A member with membership payments is anonymized.',
+  confirmPurgeLabel: 'Delete permanently',
+  toastPurged: '{type} "{name}" permanently deleted.',
+  errorPurge: 'Error during permanent deletion',
 };

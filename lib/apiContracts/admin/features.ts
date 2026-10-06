@@ -358,6 +358,7 @@ import {
 } from '../../../features/admin/logs/schemas';
 import { CasterAuditDoc } from '../../../features/admin/caster/schemas';
 import {
+  RecycleBinPurgeQuery,
   RecycleBinQuery,
   RecycleBinRestoreDoc,
 } from '../../../features/admin/recycle-bin/schemas';
@@ -1211,5 +1212,9 @@ export const ADMIN_FEATURE_QUERY_SCHEMAS: Record<string, ApiContractEntry> = {
   'admin.disputes.query': { schema: DisputeBoardQuery, io: 'input' },
   'admin.team-messages.query': { schema: TeamMessagesQuery, io: 'input' },
   'admin.recycle-bin.query': { schema: RecycleBinQuery, io: 'input' },
+  'admin.recycle-bin.delete.query': {
+    schema: RecycleBinPurgeQuery,
+    io: 'input',
+  },
   'admin.docs/openapi.query': { schema: OpenApiSpecQuery, io: 'input' },
 };

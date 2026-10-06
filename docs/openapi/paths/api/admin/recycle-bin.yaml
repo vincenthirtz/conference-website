@@ -23,6 +23,9 @@ get:
           - adherent
           - staff
           - scrim
+          - scrim_planning
+          - task
+          - news
   responses:
     '200':
       description: Recycle bin entries.
@@ -76,6 +79,9 @@ patch:
                 - adherent
                 - staff
                 - scrim
+                - scrim_planning
+                - task
+                - news
             id:
               type: string
               format: uuid
@@ -98,3 +104,68 @@ patch:
       $ref: '#/components/responses/Unauthorized'
     '403':
       $ref: '#/components/responses/Forbidden'
+delete:
+  summary: Permanently delete an item from the recycle bin.
+  description: >-
+    Requires `owner` role (second factor when enforced). Only purgeable types
+    (`scrim_planning`, `task`, `news`, `partner`, `adherent`) — others
+    answer 409 `NOT_PURGEABLE` (tournament history, staff audit trail). Global
+    sources (`partner`, `adherent`) are reserved to pole-admins and global
+    owners (403 `PLATFORM_SCOPE`). An adherent with membership payments is
+    anonymized instead of deleted (`mode: anonymized`). The item must be in
+    the recycle bin (404 `NOT_IN_RECYCLE_BIN`). Items left in the bin for 90
+    days are purged automatically by `/api/cron/recycle-bin-purge`.
+  operationId: adminPurgeFromRecycleBin
+  x-zod-query: admin.recycle-bin.delete.query
+  tags:
+    - admin/misc
+  security:
+    - StaffSession: []
+  parameters:
+    - in: query
+      name: id
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - in: query
+      name: type
+      required: true
+      schema:
+        type: string
+        enum:
+          - scrim_planning
+          - task
+          - news
+          - partner
+          - adherent
+  responses:
+    '200':
+      description: Purged.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              purged:
+                type: boolean
+              type:
+                type: string
+              id:
+                type: string
+                format: uuid
+              mode:
+                type: string
+                enum:
+                  - deleted
+                  - anonymized
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'

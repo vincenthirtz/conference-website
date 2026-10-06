@@ -557,7 +557,8 @@ describe('/api/admin/recycle-bin', () => {
 
   it('returns 405 on unsupported method', async () => {
     const res = makeRes();
-    await recycleBinHandler(makeReq({ method: 'DELETE' }), res);
+    // DELETE = suppression définitive (lot A4) : PUT reste non déclaré.
+    await recycleBinHandler(makeReq({ method: 'PUT' }), res);
     expect(res.statusCode).toBe(405);
   });
 });

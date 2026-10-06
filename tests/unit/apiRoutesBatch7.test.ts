@@ -331,15 +331,20 @@ describe('/api/admin/news/[id]', () => {
     expect(n.published_at).toBe(oldPub);
   });
 
-  it('DELETE 204 removes', async () => {
-    store.news = [{ id: VALID_UUID, title: 'X', content: 'X' }] as any;
+  it('DELETE 204 met en corbeille (deleted_at + brouillon)', async () => {
+    store.news = [
+      { id: VALID_UUID, title: 'X', content: 'X', status: 'published' },
+    ] as any;
     const res = makeRes();
     await newsByIdHandler(
       makeReq({ method: 'DELETE', query: { id: VALID_UUID } }),
       res
     );
     expect(res.statusCode).toBe(204);
-    expect(store.news.length).toBe(0);
+    // Suppression douce (lot A4) : la ligne reste, restaurable.
+    expect(store.news.length).toBe(1);
+    expect((store.news[0] as any).deleted_at).toEqual(expect.any(String));
+    expect((store.news[0] as any).status).toBe('draft');
   });
 
   it('returns 405 on unsupported method', async () => {

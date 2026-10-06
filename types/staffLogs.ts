@@ -426,6 +426,8 @@ export type StaffLogAction =
   | 'task_restore'
   // Corbeille (ex-`other` + `payload.action_label: 'restore_item'`, conservé).
   | 'restore_deleted_item'
+  // Corbeille : effacement définitif (owner, ou cron au-delà de 90 j).
+  | 'purge_deleted_item'
   | 'task_move'
   | 'task_assign'
   | 'task_comment_create'
