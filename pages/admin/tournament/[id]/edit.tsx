@@ -21,6 +21,7 @@ import RegistrationFieldsEditor, {
 } from '@/components/admin/RegistrationFieldsEditor';
 import TournamentVisualsSection from '@/components/admin/tournament/TournamentVisualsSection';
 import TournamentFormatFields from '@/components/admin/tournament/TournamentFormatFields';
+import TournamentReviewsPlaylistSection from '@/components/admin/tournament/TournamentReviewsPlaylistSection';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import type { StaffProps, Tournament } from '@/types/admin';
 import type { RegistrationField } from '@/utils/registrationFields';
@@ -628,6 +629,11 @@ function AdminTournamentEditPage(_props: StaffProps) {
                         </label>
                       </div>
                     </FicheSection>
+
+                    {/* Playlist « Reviews » : sauvegarde autonome. */}
+                    <TournamentReviewsPlaylistSection
+                      tournamentId={String(id ?? '')}
+                    />
 
                     <FicheSection title={tFiche.metaTitle} eyebrow>
                       <MetaList

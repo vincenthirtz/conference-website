@@ -48,6 +48,7 @@ import enAdminTournamentSchedule from './adminTournamentSchedule';
 import enAdminTournamentMapDraw from './adminTournamentMapDraw';
 import enAdminTournamentCheckin from './adminTournamentCheckin';
 import enAdminTournamentCheckinLive from './adminTournamentCheckinLive';
+import enAdminTournamentReviews from './adminTournamentReviews';
 import enAdminTournamentPool from './adminTournamentPool';
 import enAdminTournamentBulkOps from './adminTournamentBulkOps';
 import enAdminTournamentNav from './adminTournamentNav';
@@ -243,6 +244,7 @@ const adminEnDict = {
   adminTournamentMapDraw: enAdminTournamentMapDraw,
   adminTournamentCheckin: enAdminTournamentCheckin,
   adminTournamentCheckinLive: enAdminTournamentCheckinLive,
+  adminTournamentReviews: enAdminTournamentReviews,
   adminTournamentPool: enAdminTournamentPool,
   adminTournamentBulkOps: enAdminTournamentBulkOps,
   adminTournamentNav: enAdminTournamentNav,

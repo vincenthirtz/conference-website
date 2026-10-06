@@ -1,0 +1,86 @@
+parameters:
+  - in: path
+    name: id
+    required: true
+    schema:
+      type: string
+      format: uuid
+get:
+  summary: Read the tournament's YouTube "Reviews" playlist.
+  description: >
+    Returns the YouTube playlist shown in the public Reviews tab of the
+    tournament. Read defensively: if the reviews migration has not been applied
+    yet, `migrated` is false and `playlistId` is null.
+  operationId: adminGetTournamentReviewsPlaylist
+  x-zod-query: admin.tournament/[id].query
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Current Reviews playlist.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              playlistId:
+                type: string
+                nullable: true
+                pattern: '^[A-Za-z0-9_-]{10,64}$'
+              playlistUrl:
+                type: string
+                nullable: true
+              migrated:
+                type: boolean
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+patch:
+  summary: Set or clear the tournament's YouTube "Reviews" playlist.
+  description: >
+    `playlist` accepts a full YouTube playlist URL (any URL carrying `list=`)
+    or a bare playlist ID. An empty string or null clears it (the public tab is
+    then hidden). Does not bump `updated_at`, so it does not interfere with the
+    optimistic lock of the main edit form.
+  operationId: adminUpdateTournamentReviewsPlaylist
+  x-zod-query: admin.tournament/[id].query
+  tags:
+    - admin/tournaments
+  security:
+    - StaffSession: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.tournament/[id]/reviews-playlist.update
+  responses:
+    '200':
+      description: Updated.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '503':
+      description: "Reviews migration not applied yet: the column does not exist."
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

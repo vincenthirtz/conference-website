@@ -55,6 +55,7 @@ import nsAdminTournamentSchedule from './adminTournamentSchedule';
 import nsAdminTournamentMapDraw from './adminTournamentMapDraw';
 import nsAdminTournamentCheckin from './adminTournamentCheckin';
 import nsAdminTournamentCheckinLive from './adminTournamentCheckinLive';
+import nsAdminTournamentReviews from './adminTournamentReviews';
 import nsAdminTournamentPool from './adminTournamentPool';
 import nsAdminTournamentBulkOps from './adminTournamentBulkOps';
 import nsAdminTournamentNav from './adminTournamentNav';
@@ -250,6 +251,7 @@ export const frDict = {
   adminTournamentMapDraw: nsAdminTournamentMapDraw.fr,
   adminTournamentCheckin: nsAdminTournamentCheckin.fr,
   adminTournamentCheckinLive: nsAdminTournamentCheckinLive.fr,
+  adminTournamentReviews: nsAdminTournamentReviews.fr,
   adminTournamentPool: nsAdminTournamentPool.fr,
   adminTournamentBulkOps: nsAdminTournamentBulkOps.fr,
   adminTournamentNav: nsAdminTournamentNav.fr,

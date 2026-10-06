@@ -256,6 +256,8 @@ export const CloneTournamentBody = looseBody(['name', 'slug']);
 export const OverlayDayBody = looseBody(['date']);
 export const RosterUnlockBody = looseBody(['minutes']);
 export const CheckinSettingsBody = looseBody(['checkinGraceMinutes']);
+/** Playlist YouTube « Reviews » : URL collée ou ID ; vide/null = retrait. */
+export const ReviewsPlaylistBody = looseBody(['playlist']);
 export const DiscordTestBody = looseBody(['channelType']);
 export const DiscordWebhookBody = looseBody([
   'channelType',

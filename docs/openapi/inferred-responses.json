@@ -25445,6 +25445,33 @@
     ]
    }
   },
+  "GET /api/admin/tournament/{id}/reviews-playlist": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "migrated": {
+      "type": "boolean"
+     },
+     "playlistId": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "playlistUrl": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "migrated",
+     "playlistId",
+     "playlistUrl"
+    ]
+   }
+  },
   "GET /api/admin/tournament/{id}/schedule-diagnostics": {
    "200": {
     "type": "object",
@@ -56798,6 +56825,37 @@
     },
     "required": [
      "checkinGraceMinutes",
+     "success"
+    ]
+   }
+  },
+  "PATCH /api/admin/tournament/{id}/reviews-playlist": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "migrated": {
+      "type": "boolean"
+     },
+     "playlistId": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "playlistUrl": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "success": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "migrated",
+     "playlistId",
+     "playlistUrl",
      "success"
     ]
    }

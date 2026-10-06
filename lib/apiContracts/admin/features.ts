@@ -299,6 +299,7 @@ import {
   PoolLooseBody,
   PrizePoolLooseBody,
   QuickBracketDoc,
+  ReviewsPlaylistBody,
   RosterUnlockBody,
   ScheduleDiagnosticsQuery,
   ScheduleMoveLooseBody,
@@ -380,6 +381,10 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   },
   'admin.tournament/[id]/checkin-settings.update': {
     schema: CheckinSettingsBody,
+    io: 'input',
+  },
+  'admin.tournament/[id]/reviews-playlist.update': {
+    schema: ReviewsPlaylistBody,
     io: 'input',
   },
   'admin.tournament/[id]/discord-test.body': {
