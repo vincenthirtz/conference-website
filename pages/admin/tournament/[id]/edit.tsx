@@ -7,6 +7,8 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import { withAdminQuery } from '@/features/admin/_shared/query';
 import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
+import { useDirtyBaseline } from '@/hooks/forms/useDirtyBaseline';
+import { useUnsavedChangesGuard } from '@/hooks/forms/useUnsavedChangesGuard';
 import {
   useTournamentDetail,
   useUpdateTournament,
@@ -158,44 +160,57 @@ function AdminTournamentEditPage(_props: StaffProps) {
     [gameConfig]
   );
 
+  // « Modifications non enregistrées » : comparées à la dernière version
+  // hydratée depuis le serveur (ouverture, puis chaque enregistrement réussi).
+  const editable = useMemo(
+    () => ({ form, registrationFields }),
+    [form, registrationFields]
+  );
+  const { dirty, markClean } = useDirtyBaseline(editable);
+  useUnsavedChangesGuard(dirty, tFiche.unsavedConfirm);
+
   // Pré-remplissage du formulaire depuis la fiche serveur : à l'ouverture
   // (une fois), puis après chaque enregistrement.
-  const hydrateForm = useCallback((tour: Tournament) => {
-    // Pré-remplir le formulaire
-    setForm({
-      name: tour.name || '',
-      slug: tour.slug || '',
-      game: tour.game || '',
-      status: tour.status || 'draft',
-      start_date: tour.start_date ? toLocalInputValue(tour.start_date) : '',
-      end_date: tour.end_date ? toLocalInputValue(tour.end_date) : '',
-      roster_locked_at: tour.roster_locked_at
-        ? toLocalInputValue(tour.roster_locked_at)
-        : '',
-      timezone: tour.timezone || 'Europe/Paris',
-      format: tour.format || '',
-      format_type: tour.format_type || '',
-      max_teams: tour.max_teams ? String(tour.max_teams) : '',
-      min_players: tour.min_players ? String(tour.min_players) : '',
-      solo_mode: tour.solo_mode === true,
-      pooled_teams: tour.pooled_teams === true,
-      max_players: tour.max_players ? String(tour.max_players) : '',
-      is_public: tour.is_public,
-      is_featured: tour.is_featured,
-      logo_url: tour.logo_url || '',
-      banner_url: tour.banner_url || '',
-      rules_url: tour.rules_url || '',
-      default_stream_url: tour.default_stream_url || '',
-      description_info: tour.description_info || '',
-      schedule_details: tour.schedule_details || '',
-      schedule_rules: tour.schedule_rules || '',
-      format_details: tour.format_details || '',
-    });
-
-    setRegistrationFields(
-      Array.isArray(tour.registration_fields) ? tour.registration_fields : []
-    );
-  }, []);
+  const hydrateForm = useCallback(
+    (tour: Tournament) => {
+      const nextForm = {
+        name: tour.name || '',
+        slug: tour.slug || '',
+        game: tour.game || '',
+        status: tour.status || 'draft',
+        start_date: tour.start_date ? toLocalInputValue(tour.start_date) : '',
+        end_date: tour.end_date ? toLocalInputValue(tour.end_date) : '',
+        roster_locked_at: tour.roster_locked_at
+          ? toLocalInputValue(tour.roster_locked_at)
+          : '',
+        timezone: tour.timezone || 'Europe/Paris',
+        format: tour.format || '',
+        format_type: tour.format_type || '',
+        max_teams: tour.max_teams ? String(tour.max_teams) : '',
+        min_players: tour.min_players ? String(tour.min_players) : '',
+        solo_mode: tour.solo_mode === true,
+        pooled_teams: tour.pooled_teams === true,
+        max_players: tour.max_players ? String(tour.max_players) : '',
+        is_public: tour.is_public,
+        is_featured: tour.is_featured,
+        logo_url: tour.logo_url || '',
+        banner_url: tour.banner_url || '',
+        rules_url: tour.rules_url || '',
+        default_stream_url: tour.default_stream_url || '',
+        description_info: tour.description_info || '',
+        schedule_details: tour.schedule_details || '',
+        schedule_rules: tour.schedule_rules || '',
+        format_details: tour.format_details || '',
+      };
+      const nextFields = Array.isArray(tour.registration_fields)
+        ? tour.registration_fields
+        : [];
+      setForm(nextForm);
+      setRegistrationFields(nextFields);
+      markClean({ form: nextForm, registrationFields: nextFields });
+    },
+    [markClean]
+  );
 
   const formReady = useHydrateOnce(tournamentId || null, detail.data, (d) => {
     if (d.tournament) hydrateForm(d.tournament);

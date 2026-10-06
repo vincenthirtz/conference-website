@@ -16,4 +16,9 @@ export default {
     'These actions affect data other screens rely on. Each one asks you to type the name to confirm.',
   typeToConfirm: 'Type “{name}” to confirm',
   execute: 'Execute',
+  unsavedConfirm: 'You have unsaved changes. Leave anyway?',
+  staleTitle: 'This record changed in the meantime',
+  staleBody:
+    'Someone edited it since you opened it. Reload to start from the latest version (your current input will be lost).',
+  reload: 'Reload',
 };

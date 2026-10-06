@@ -54,6 +54,8 @@ import {
 } from '@/features/admin/teams/hooks/useTeamsQueries';
 import { teamsClient, teamsPaths } from '@/features/admin/teams/client';
 import { withAdminQuery } from '@/features/admin/_shared/query';
+import { useUnsavedChangesGuard } from '@/hooks/forms/useUnsavedChangesGuard';
+import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
 
 const FORM_ID = 'team-edit-form';
 
@@ -76,6 +78,7 @@ function AdminEditTeamPage({
   teamRoles,
 }: StaffProps & { teamRoles: TeamRole[] }) {
   const t = useAdminT(nsAdminTeamEdit);
+  const tFiche = useAdminT(nsAdminFiche);
   const router = useRouter();
   const { teamId } = router.query as { teamId?: string };
 
@@ -126,7 +129,8 @@ function AdminEditTeamPage({
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>('');
 
   // Formulaire « infos » : un objet, hydraté une fois par fiche.
-  const { form, setters } = useTeamEditForm(teamId, team);
+  const { form, setters, dirty, markSaved } = useTeamEditForm(teamId, team);
+  useUnsavedChangesGuard(dirty, tFiche.unsavedConfirm);
   const { logoUrl, ...infoFormValues } = form;
   const { setLogoUrl, ...infoFormSetters } = setters;
 
@@ -202,6 +206,7 @@ function AdminEditTeamPage({
     try {
       const json = await teamsClient.update(teamId, teamPayloadFromForm(form));
 
+      markSaved();
       addToast(t.toastTeamUpdated, 'success');
       // Fiche à jour + listes invalidées : /admin/teams montre la ligne
       // modifiée sans rechargement.

@@ -1,6 +1,6 @@
 // pages/admin/matches/[matchId]/edit.tsx
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
@@ -28,6 +28,9 @@ import {
 } from '@/features/admin/matches/hooks/useMatch';
 import { AdminHttpError } from '@/utils/admin/adminHttp';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useDirtyBaseline } from '@/hooks/forms/useDirtyBaseline';
+import { useUnsavedChangesGuard } from '@/hooks/forms/useUnsavedChangesGuard';
+import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { isoToLocalInput } from '@/utils/dateFormatters';
 import MatchGamesPanel, {
@@ -100,6 +103,7 @@ export const getServerSideProps = withStaffPage({
 
 function AdminMatchEditPage(_props: StaffProps) {
   const t = useAdminT(nsAdminMatchEdit);
+  const tFiche = useAdminT(nsAdminFiche);
   const router = useRouter();
   const { matchId } = router.query;
   const { addToast } = useToast();
@@ -171,21 +175,34 @@ function AdminMatchEditPage(_props: StaffProps) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  // « Modifications non enregistrées » : écart à la dernière version
+  // hydratée depuis le serveur (ouverture, puis chaque relecture).
+  const editable = useMemo(() => ({ form, games }), [form, games]);
+  const { dirty, markClean } = useDirtyBaseline(editable);
+  useUnsavedChangesGuard(dirty, tFiche.unsavedConfirm);
+
   // Copie la réponse du serveur dans le formulaire et les parties.
-  const hydrate = useCallback((json: MatchDetail) => {
-    const m = json.match;
-    setGames(m.games && Array.isArray(m.games) ? gamesFromRows(m.games) : []);
-    setForm({
-      status: m.status || 'pending',
-      best_of: m.best_of ? String(m.best_of) : '',
-      round_number: m.round_number ? String(m.round_number) : '',
-      scheduled_at: isoToLocalInput(m.scheduled_at),
-      stream_url: m.stream_url || '',
-      notes: m.notes || '',
-      team1_score: m.team1_score != null ? String(m.team1_score) : '',
-      team2_score: m.team2_score != null ? String(m.team2_score) : '',
-    });
-  }, []);
+  const hydrate = useCallback(
+    (json: MatchDetail) => {
+      const m = json.match;
+      const nextGames =
+        m.games && Array.isArray(m.games) ? gamesFromRows(m.games) : [];
+      const nextForm: MatchEditFormState = {
+        status: m.status || 'pending',
+        best_of: m.best_of ? String(m.best_of) : '',
+        round_number: m.round_number ? String(m.round_number) : '',
+        scheduled_at: isoToLocalInput(m.scheduled_at),
+        stream_url: m.stream_url || '',
+        notes: m.notes || '',
+        team1_score: m.team1_score != null ? String(m.team1_score) : '',
+        team2_score: m.team2_score != null ? String(m.team2_score) : '',
+      };
+      setGames(nextGames);
+      setForm(nextForm);
+      markClean({ form: nextForm, games: nextGames });
+    },
+    [markClean]
+  );
   useHydrateOnce(id ?? null, detail.data, hydrate);
 
   /**

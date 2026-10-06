@@ -2,7 +2,11 @@
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import slugify from 'slugify';
+import { useDirtyBaseline } from '@/hooks/forms/useDirtyBaseline';
+import { useUnsavedChangesGuard } from '@/hooks/forms/useUnsavedChangesGuard';
+import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
 import { withStaffPage } from '@/utils/staff';
 import { withAdminQuery } from '@/features/admin/_shared/query';
 import { useCreateNews } from '@/features/admin/news/hooks/useNews';
@@ -25,20 +29,28 @@ export const getServerSideProps = withStaffPage({
 const slugifyValue = (value: string) =>
   slugify(value, { lower: true, strict: true });
 
+const EMPTY_FORM = {
+  title: '',
+  slug: '',
+  tag: 'general',
+  excerpt: '',
+  imageUrl: '',
+  content: '',
+  status: 'draft',
+  publishedAt: '',
+};
+
 function AdminNewsCreate() {
   const t = useAdminT(nsAdminNewsNew);
   const router = useRouter();
   const create = useCreateNews();
-  const [form, setForm] = useState({
-    title: '',
-    slug: '',
-    tag: 'general',
-    excerpt: '',
-    imageUrl: '',
-    content: '',
-    status: 'draft',
-    publishedAt: '',
-  });
+  const tf = useAdminT(nsAdminFiche);
+  const [form, setForm] = useState(EMPTY_FORM);
+  // « Modifications non enregistrées » : tout écart au formulaire vierge (un
+  // brouillon restauré compris). Désarmé juste avant de quitter après création.
+  const { dirty, markClean } = useDirtyBaseline(form);
+  useEffect(() => markClean(EMPTY_FORM), [markClean]);
+  useUnsavedChangesGuard(dirty, tf.unsavedConfirm);
   const [error, setError] = useState<string | null>(null);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
   // Fallback d'aperçu géré par état (réarmé à chaque changement d'URL).
@@ -74,6 +86,7 @@ function AdminNewsCreate() {
 
       const json = await create.mutateAsync(payload as NewsPayload);
       clearDraft();
+      flushSync(() => markClean(form));
       router.push(`/admin/news/${json.id}`);
     } catch (err: unknown) {
       setError((err as Error)?.message || t.errorGeneric);

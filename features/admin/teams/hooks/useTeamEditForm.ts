@@ -6,7 +6,8 @@
 // roster n'écrase plus la saisie en cours. Les setters gardent la forme
 // attendue par `TeamEditInfoForm` et `LogoUpload` (rendu inchangé).
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useDirtyBaseline } from '@/hooks/forms/useDirtyBaseline';
 import type { TeamRow } from '@/types/admin';
 import {
   EMPTY_LOGO_CREDIT,
@@ -99,9 +100,20 @@ export function useTeamEditForm(
   team: TeamRow | null
 ) {
   const [form, setForm] = useState<TeamEditForm>(EMPTY_FORM);
-  useHydrateOnce(teamId ?? null, team ?? undefined, (row) =>
-    setForm(formFromRow(row))
+  // « Modifications non enregistrées » : écart à la dernière version connue
+  // du serveur (hydratation, puis `markSaved` après un enregistrement réussi).
+  const { dirty, markClean } = useDirtyBaseline(form);
+  const hydrate = useCallback(
+    (row: TeamRow) => {
+      const next = formFromRow(row);
+      setForm(next);
+      markClean(next);
+    },
+    [markClean]
   );
+  useHydrateOnce(teamId ?? null, team ?? undefined, hydrate);
+  /** Enregistrement réussi : la saisie courante devient la référence. */
+  const markSaved = useCallback(() => markClean(form), [markClean, form]);
   const setters = useMemo(() => {
     const set =
       <K extends keyof TeamEditForm>(k: K) =>
@@ -124,5 +136,5 @@ export function useTeamEditForm(
       setSkillRating: set('skillRating'),
     };
   }, []);
-  return { form, setters };
+  return { form, setters, dirty, markSaved, hydrate };
 }

@@ -20,4 +20,10 @@ export default adminNs('adminFiche', {
     'Ces actions engagent des données que d’autres écrans consomment. Chacune demande une confirmation par saisie du nom.',
   typeToConfirm: 'Tapez « {name} » pour confirmer',
   execute: 'Exécuter',
+  unsavedConfirm:
+    'Des modifications ne sont pas enregistrées. Quitter quand même ?',
+  staleTitle: 'Cette fiche a changé entre-temps',
+  staleBody:
+    'Quelqu’un l’a modifiée depuis que vous l’avez ouverte. Rechargez pour repartir de la version à jour (votre saisie en cours sera perdue).',
+  reload: 'Recharger',
 });

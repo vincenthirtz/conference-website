@@ -1,7 +1,10 @@
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
 import slugify from 'slugify';
+import { useDirtyBaseline } from '@/hooks/forms/useDirtyBaseline';
+import { useUnsavedChangesGuard } from '@/hooks/forms/useUnsavedChangesGuard';
 import { withStaffPage } from '@/utils/staff';
 import { withAdminQuery } from '@/features/admin/_shared/query';
 import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
@@ -66,9 +69,13 @@ function AdminNewsEdit() {
   const updateField = (key: keyof FormState, value: string) =>
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
 
+  // « Modifications non enregistrées » : écart à la version hydratée.
+  const { dirty, markClean } = useDirtyBaseline(form);
+  useUnsavedChangesGuard(dirty, tf.unsavedConfirm);
+
   // Formulaire copié UNE fois de la fiche (jamais réécrit sous la saisie).
-  const hydrated = useHydrateOnce(newsId, item.data, (json) =>
-    setForm({
+  const hydrated = useHydrateOnce(newsId, item.data, (json) => {
+    const next: FormState = {
       title: json.title || '',
       slug: json.slug || '',
       tag: json.tag || 'general',
@@ -79,8 +86,10 @@ function AdminNewsEdit() {
       publishedAt: json.published_at
         ? new Date(json.published_at).toISOString().slice(0, 16)
         : '',
-    })
-  );
+    };
+    setForm(next);
+    markClean(next);
+  });
   // Chargement puis horodatages lus dans la même réponse (null si échec).
   const loading = !item.isError && !hydrated;
   const meta =
@@ -107,6 +116,9 @@ function AdminNewsEdit() {
       };
 
       await update.mutateAsync(payload);
+      // Garde désarmée AVANT de quitter la page (rendu synchrone) : sinon la
+      // navigation qui suit l'enregistrement demanderait confirmation.
+      flushSync(() => markClean(form));
       router.push('/admin/news');
     } catch (err: unknown) {
       setError((err as Error)?.message || t.errorGeneric);
