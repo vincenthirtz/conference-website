@@ -339,7 +339,8 @@ describe('/api/checkin/[token]', () => {
         id: 'm1',
         tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
         status: 'pending',
-        scheduled_at: '2026-04-01T12:00:00.000Z',
+        // Avant le coup d'envoi : passé l'heure, le serveur refuse (409).
+        scheduled_at: new Date(Date.now() + 20 * 60_000).toISOString(),
         team1_id: 'team-a',
         team2_id: 'team-b',
         team1_checkin_token: tok,
@@ -359,7 +360,7 @@ describe('/api/checkin/[token]', () => {
     expect((store.matches[0] as any).team1_checked_in_at).toBeTruthy();
   });
 
-  it('POST 400 when match is finished', async () => {
+  it('POST 409 CHECKIN_MATCH_CLOSED when match is finished', async () => {
     const tok = 'c'.repeat(32);
     store.matches = [
       {
@@ -382,7 +383,36 @@ describe('/api/checkin/[token]', () => {
       makeReq({ method: 'POST', query: { token: tok } }),
       res
     );
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(409);
+    expect((res.body as any).code).toBe('CHECKIN_MATCH_CLOSED');
+  });
+
+  it('POST 409 CHECKIN_WINDOW_CLOSED after kickoff (pending match)', async () => {
+    const tok = 'd'.repeat(32);
+    store.matches = [
+      {
+        id: 'm1',
+        tenant_id: 'ce69a726-773e-4d12-b5eb-d2503aa752b4',
+        status: 'pending',
+        scheduled_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+        team1_id: 'team-a',
+        team2_id: 'team-b',
+        team1_checkin_token: tok,
+        team2_checkin_token: null,
+        team1_checked_in_at: null,
+        team2_checked_in_at: null,
+        team1: { id: 'team-a', name: 'Alpha' },
+        team2: { id: 'team-b', name: 'Bravo' },
+      },
+    ] as any;
+    const res = makeRes();
+    await checkinTokenHandler(
+      makeReq({ method: 'POST', query: { token: tok } }),
+      res
+    );
+    expect(res.statusCode).toBe(409);
+    expect((res.body as any).code).toBe('CHECKIN_WINDOW_CLOSED');
+    expect((store.matches[0] as any).team1_checked_in_at).toBeNull();
   });
 
   it('returns 405 on PATCH', async () => {

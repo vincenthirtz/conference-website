@@ -20,7 +20,7 @@
 //   4. UNE ERREUR N'EST PAS UN « RIEN À DONNER ». Un calendrier ou un roster
 //      illisible rend `error` et n'écrit rien.
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/utils/supabase', async () => {
   const m = await import('./__helpers__/supabaseMock');
@@ -537,6 +537,16 @@ describe('grantCheckinStreakReward', () => {
  * ---------------------------------------------------------*/
 
 describe('redeemCheckinToken → série de check-ins', () => {
+  // `redeemCheckinToken` refuse de pointer après le coup d'envoi (garde
+  // serveur) : l'horloge est figée AVANT celui du match 5 (19:00 le jour 5).
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(`${day(5)}T18:30:00.000Z`));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('le 5ᵉ check-in via le lien crédite ; le même lien rejoué ne recrédite pas', async () => {
     const token = 'T'.repeat(32);
     for (const n of [1, 2, 3, 4]) seedMatch(n, { checkedIn: true });
