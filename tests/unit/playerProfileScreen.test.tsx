@@ -48,10 +48,12 @@ type Call = {
 };
 let calls: Call[] = [];
 let patchReply: { status: number; body: unknown };
+let deleteReply: { status: number; body: unknown };
 
 beforeEach(() => {
   calls = [];
   patchReply = { status: 200, body: { success: true, rosterSynced: true } };
+  deleteReply = { status: 200, body: { success: true } };
   vi.clearAllMocks();
   globalThis.fetch = vi.fn(async (url: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET';
@@ -61,7 +63,7 @@ beforeEach(() => {
       method === 'PATCH'
         ? patchReply
         : method === 'DELETE'
-          ? { status: 200, body: { success: true } }
+          ? deleteReply
           : {
               status: 200,
               body: { twitch: 'nova_tv', twitchOrigin: 'roster' },
@@ -177,6 +179,28 @@ describe('DataRightsPanel', () => {
     expect(del.url).toBe('/api/player/delete-account');
     expect(del.headers.get('Idempotency-Key')).toBeTruthy();
     expect(auth.signOut).toHaveBeenCalled();
+  });
+
+  it('capitaine d’une équipe avec d’autres membres : bloque et renvoie vers le transfert', async () => {
+    deleteReply = {
+      status: 409,
+      body: {
+        error: 'Tu es capitaine…',
+        code: 'captain_must_transfer',
+        teams: [{ id: 't1', name: 'Les Aurores' }],
+      },
+    };
+    render(<DataRightsPanel />);
+    await click('Supprimer mon compte');
+    await click('Confirmer la suppression');
+    const block = await screen.findByTestId('delete-account-captain-block');
+    expect(block.textContent).toContain('Transfère d’abord ton capitanat');
+    expect(block.textContent).toContain('Les Aurores');
+    const link = screen.getByRole('link', { name: 'Transférer le capitanat' });
+    expect(link.getAttribute('href')).toBe('/player/manage-team');
+    // Le compte n'est pas supprimé : ni déconnexion ni redirection.
+    expect(auth.signOut).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
   });
 });
 

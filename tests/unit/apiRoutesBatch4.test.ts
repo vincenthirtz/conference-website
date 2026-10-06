@@ -346,6 +346,72 @@ describe('DELETE /api/player/delete-account', () => {
     deleteUserSpy.mockRestore();
   });
 
+  it('409 captain_must_transfer when captain of a team with other members — nothing erased', async () => {
+    setAuthUser({ id: 'user-1', email: 'me@a.com' });
+    store.staff = [];
+    store.teams = [
+      { id: 't1', name: 'Les Aurores', captain_id: 'user-1', deleted_at: null },
+    ] as any;
+    store.team_members = [
+      { id: 'tm1', user_id: 'user-1', team_id: 't1' },
+      { id: 'tm2', user_id: 'user-2', team_id: 't1' },
+    ] as any;
+    store.demandes = [{ id: 'd1', user_id: 'user-1' }] as any;
+
+    const deleteUserSpy = vi.spyOn(supabaseAdmin.auth.admin, 'deleteUser');
+    const res = makeRes();
+    await deleteAccountHandler(makeReq({ method: 'DELETE' }, true), res);
+
+    expect(res.statusCode).toBe(409);
+    expect((res.body as any).code).toBe('captain_must_transfer');
+    expect((res.body as any).teams).toEqual([
+      { id: 't1', name: 'Les Aurores' },
+    ]);
+    // Garde AVANT le registre : rien n'est effacé, le compte reste.
+    expect(store.team_members.length).toBe(2);
+    expect(store.demandes.length).toBe(1);
+    expect(deleteUserSpy).not.toHaveBeenCalled();
+    expect(sendAccountDeletedEmail).not.toHaveBeenCalled();
+    deleteUserSpy.mockRestore();
+  });
+
+  it('200 when captain is alone in her team (same rule as leave)', async () => {
+    setAuthUser({ id: 'user-1', email: 'me@a.com' });
+    store.staff = [];
+    store.teams = [
+      { id: 't1', name: 'Solo', captain_id: 'user-1', deleted_at: null },
+    ] as any;
+    store.team_members = [
+      { id: 'tm1', user_id: 'user-1', team_id: 't1' },
+    ] as any;
+    store.demandes = [];
+
+    const res = makeRes();
+    await deleteAccountHandler(makeReq({ method: 'DELETE' }, true), res);
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('200 when the captained team is dissolved (deleted_at set)', async () => {
+    setAuthUser({ id: 'user-1', email: 'me@a.com' });
+    store.staff = [];
+    store.teams = [
+      {
+        id: 't1',
+        name: 'Ancienne',
+        captain_id: 'user-1',
+        deleted_at: '2026-01-01T00:00:00.000Z',
+      },
+    ] as any;
+    store.team_members = [
+      { id: 'tm2', user_id: 'user-2', team_id: 't1' },
+    ] as any;
+    store.demandes = [];
+
+    const res = makeRes();
+    await deleteAccountHandler(makeReq({ method: 'DELETE' }, true), res);
+    expect(res.statusCode).toBe(200);
+  });
+
   it('500 when auth deleteUser fails', async () => {
     setAuthUser({ id: 'user-1', email: 'me@a.com' });
     store.staff = [];
