@@ -14,6 +14,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
 import {
+  CONFERENCE_TENANT_ID,
   store,
   resetSupabaseMock,
   setAuthUser,
@@ -199,7 +200,11 @@ describe('état du rapport de score', () => {
   it('« none » tant que personne n’a rapporté', async () => {
     const res = makeRes();
     await handler(makeReq(), res);
-    expect((res.body as any).report).toEqual({ state: 'none', mine: null });
+    expect((res.body as any).report).toEqual({
+      state: 'none',
+      mine: null,
+      dispute: null,
+    });
   });
 
   it('« awaiting_opponent » et mon report relu DE MON CÔTÉ', async () => {
@@ -245,6 +250,104 @@ describe('état du rapport de score', () => {
     const res = makeRes();
     await handler(makeReq(), res);
     expect((res.body as any).report.state).toBe('disputed');
+  });
+});
+
+// Lot P4 : la déclaration adverse ne sort qu'une fois le litige OUVERT. Avant,
+// la montrer permettrait de recopier le score de l'autre au lieu de déclarer
+// le sien — c'est la réconciliation à deux voix qui tomberait.
+describe('litige : déclaration adverse, délai, visibilité', () => {
+  const OPENED_AT = '2026-10-06T20:00:00.000Z';
+
+  it('aucune déclaration adverse tant que le litige n’est pas ouvert', async () => {
+    store.match_score_reports = [
+      { match_id: MATCH_ID, team_side: 2, team1_score: 0, team2_score: 3 },
+    ] as any;
+    const res = makeRes();
+    await handler(makeReq(), res);
+    const b = res.body as any;
+    expect(b.report.state).toBe('awaiting_me');
+    expect(b.report.dispute).toBeNull();
+    expect(JSON.stringify(b)).not.toContain('opponentReport');
+  });
+
+  it('deux reports divergents SANS litige ouvert (course) : rien ne sort', async () => {
+    store.match_score_reports = [
+      { match_id: MATCH_ID, team_side: 1, team1_score: 2, team2_score: 0 },
+      { match_id: MATCH_ID, team_side: 2, team1_score: 0, team2_score: 2 },
+    ] as any;
+    const res = makeRes();
+    await handler(makeReq(), res);
+    const b = res.body as any;
+    expect(b.report.state).toBe('disputed');
+    expect(b.report.dispute).toBeNull();
+  });
+
+  it('litige ouvert : les deux déclarations, dans MA perspective, et le délai', async () => {
+    Object.assign((store.matches as any[])[0], {
+      status: 'disputed',
+      dispute_opened_at: OPENED_AT,
+      dispute_opened_by: null,
+    });
+    store.tenants = [
+      { id: CONFERENCE_TENANT_ID, dispute_sla_minutes: 90 },
+    ] as any;
+    store.match_score_reports = [
+      { match_id: MATCH_ID, team_side: 1, team1_score: 2, team2_score: 1 },
+      { match_id: MATCH_ID, team_side: 2, team1_score: 1, team2_score: 2 },
+    ] as any;
+    const res = makeRes();
+    await handler(makeReq(), res);
+    const b = res.body as any;
+    expect(b.report.mine).toEqual({ mine: 2, opponent: 1 });
+    expect(b.report.dispute).toEqual({
+      opponentReport: { mine: 1, opponent: 2 },
+      openedAt: OPENED_AT,
+      slaMinutes: 90,
+      expectedBy: '2026-10-06T21:30:00.000Z',
+      openedByStaff: false,
+    });
+  });
+
+  it('vu de team2, la déclaration adverse est retournée elle aussi', async () => {
+    seed({ slotOfMine: 2 });
+    Object.assign((store.matches as any[])[0], {
+      status: 'disputed',
+      dispute_opened_at: OPENED_AT,
+    });
+    // team1 (l'adversaire) dit 3-0 pour lui.
+    store.match_score_reports = [
+      { match_id: MATCH_ID, team_side: 1, team1_score: 3, team2_score: 0 },
+    ] as any;
+    const res = makeRes();
+    await handler(makeReq(), res);
+    const d = (res.body as any).report.dispute;
+    expect(d.opponentReport).toEqual({ mine: 0, opponent: 3 });
+  });
+
+  it('litige ouvert par le staff, sans report adverse ni date', async () => {
+    Object.assign((store.matches as any[])[0], {
+      status: 'disputed',
+      dispute_opened_at: null,
+      dispute_opened_by: '00000000-0000-0000-0000-00000000staf',
+    });
+    const res = makeRes();
+    await handler(makeReq(), res);
+    const d = (res.body as any).report.dispute;
+    expect(d.opponentReport).toBeNull();
+    expect(d.openedByStaff).toBe(true);
+    expect(d.expectedBy).toBeNull();
+    // Délai par défaut de getSlaMinutes (tenant sans valeur).
+    expect(d.slaMinutes).toBe(60);
+  });
+
+  it('un tiers ne voit RIEN du litige (404, comme le reste du fil)', async () => {
+    (store.matches as any[])[0].status = 'disputed';
+    setAuthUser({ id: OUTSIDER_ID });
+    const res = makeRes();
+    await handler(makeReq(), res);
+    expect(res.statusCode).toBe(404);
+    expect(JSON.stringify(res.body)).not.toContain('opponentReport');
   });
 });
 

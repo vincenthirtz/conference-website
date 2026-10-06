@@ -66,6 +66,28 @@ describe('reportScoreErrorToast', () => {
     expect(r.message).not.toBe(t.errNotCaptain);
   });
 
+  it('codes stables (lot P4) → message traduit, jamais le texte serveur', () => {
+    expect(reportScoreErrorToast(403, 'NOT_REPORTER', 3, t).message).toBe(
+      t.errNotCaptain
+    );
+    expect(reportScoreErrorToast(400, 'INVALID_SCORE', 3, t).message).toBe(
+      t.errInvalidScore
+    );
+    expect(reportScoreErrorToast(404, 'MATCH_NOT_FOUND', 3, t).message).toBe(
+      t.errMatchNotFound
+    );
+    expect(reportScoreErrorToast(400, 'MATCH_IS_BYE', 3, t).message).toBe(
+      t.errMatchBye
+    );
+    expect(reportScoreErrorToast(400, 'MATCH_INCOMPLETE', 3, t).message).toBe(
+      t.errMatchIncomplete
+    );
+    // Codes 500 : le générique (le détail reste dans les journaux).
+    expect(reportScoreErrorToast(500, 'APPLY_FAILED', 3, t).message).toBe(
+      t.errGeneric
+    );
+  });
+
   it('401 → session expirée, pas un échec générique', () => {
     expect(reportScoreErrorToast(401, null, 3, t).message).toBe(
       t.errSessionExpired
