@@ -28,6 +28,7 @@ import {
   bracketTabMode,
   type BracketTabMode,
 } from '@/utils/stages/bracketStage';
+import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 type StandingsDict = typeof nsTournamentStandings.fr;
 
@@ -47,6 +48,7 @@ type Props = {
   // En prop, pas en import : `publicStandings` importe `supabaseAdmin`, et
   // l'importer dans le composant embarquerait ce module côté client.
   formLength: number;
+  hasReviews: boolean;
   seo: SeoProps;
 };
 
@@ -87,13 +89,14 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   }
 
-  const [tables, stagesRes] = await Promise.all([
+  const [tables, stagesRes, hasReviews] = await Promise.all([
     readPublicStandings(tenantId, tournament.id),
     supabaseAdmin
       .from('tournament_stages')
       .select('stage_type')
       .eq('tenant_id', tenantId)
       .eq('tournament_id', tournament.id),
+    hasReviewsPlaylist(tenantId, tournament.id),
   ]);
   const stageTypes = (stagesRes.data || []).map(
     (s: { stage_type: string }) => s.stage_type
@@ -106,6 +109,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       hasFfaStage: stageTypes.includes('ffa'),
       bracketTab: bracketTabMode(stageTypes),
       formLength: FORM_LENGTH,
+      hasReviews,
       seo: buildStandingsSeo(tournament),
     },
     revalidate: 60,
@@ -118,6 +122,7 @@ export default function TournamentStandingsPage({
   hasFfaStage,
   bracketTab,
   formLength,
+  hasReviews,
 }: Props) {
   const t = useT(nsTournamentStandings);
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
@@ -135,6 +140,7 @@ export default function TournamentStandingsPage({
           showPodium={isCompleted}
           bracketLabel={bracketTab}
           showFfa={hasFfaStage}
+          showReviews={hasReviews}
         />
         <section className="mb-6">
           <Heading typeStyle="heading-md" className="text-brand-gradient mb-1">

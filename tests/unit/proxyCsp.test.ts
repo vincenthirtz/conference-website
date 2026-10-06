@@ -235,3 +235,15 @@ describe('proxy.ts — X-Frame-Options neutralisation on /embed/*', () => {
     expect(res.headers.get('X-Frame-Options')).toBeNull();
   });
 });
+
+describe('proxy.ts CSP — lecteur YouTube des Reviews', () => {
+  it('autorise youtube-nocookie en frame-src sur le site public', () => {
+    const csp = getCsp(proxy(makeRequest('/tournament/cup/reviews') as never));
+    expect(csp['frame-src']).toContain('https://www.youtube-nocookie.com');
+  });
+
+  it("n'ouvre pas frame-src à tout YouTube par joker", () => {
+    const csp = getCsp(proxy(makeRequest('/tournament/cup/reviews') as never));
+    expect(csp['frame-src']).not.toContain('*.youtube');
+  });
+});

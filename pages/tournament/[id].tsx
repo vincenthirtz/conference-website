@@ -56,6 +56,7 @@ import {
 } from '@/utils/stages/bracketStage';
 import { gameLabel } from '@/config/games';
 import { tournamentRegisterHref } from '@/utils/tournaments/registerHref';
+import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 type TournamentPageProps = {
   tournament: LandingTournament & {
@@ -78,6 +79,8 @@ type TournamentPageProps = {
   hub: LiveHubData;
   /** Classement OFFICIEL (celui de la page Classement). */
   standings: PublicStandingsTable[];
+  /** Playlist « Reviews » configurée → onglet affiché. */
+  hasReviews: boolean;
   seo: SeoProps;
 };
 
@@ -164,6 +167,7 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
     roundsResult,
     hubMatchesResult,
     standings,
+    hasReviews,
   ] = await Promise.all([
     supabaseAdmin
       .from('tournament_stages')
@@ -233,6 +237,8 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       .neq('status', 'cancelled'),
 
     readPublicStandings(tenantId, tournamentId),
+
+    hasReviewsPlaylist(tenantId, tournamentId),
   ]);
 
   if (stagesResult.error)
@@ -410,6 +416,7 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       leagues,
       hub,
       standings,
+      hasReviews,
       seo: buildTournamentSeo(tournament),
     },
     revalidate: 60,
@@ -430,6 +437,7 @@ export default function TournamentPage({
   leagues,
   hub,
   standings,
+  hasReviews,
 }: Omit<TournamentPageProps, 'seo'>) {
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
   const registerHref = tournamentRegisterHref(tournament);
@@ -466,6 +474,7 @@ export default function TournamentPage({
             showPodium={isCompleted}
             bracketLabel={bracketTab}
             showFfa={hasFfaStage}
+            showReviews={hasReviews}
           />
         }
       />

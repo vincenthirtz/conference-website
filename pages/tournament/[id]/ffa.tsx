@@ -19,6 +19,7 @@ import { useT } from '@/lib/i18n/useT';
 import { logger } from '@/utils/logger';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
 import nsFfaStandings from '@/lib/i18n/locales/fr/ffaStandings';
+import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 type TournamentLite = {
   id: string;
@@ -34,6 +35,7 @@ type Props = {
   stageName: string | null;
   standings: PublicFfaStandingRow[];
   isCompleted: boolean;
+  hasReviews: boolean;
   seo: SeoProps;
 };
 
@@ -93,6 +95,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       standings,
       isCompleted:
         tournament.status === 'finished' || tournament.status === 'completed',
+      hasReviews: await hasReviewsPlaylist(tenantId, tournament.id),
       seo: buildFfaSeo(tournament.name, stageName),
     },
     revalidate: 60,
@@ -109,6 +112,7 @@ export default function TournamentFfaPage({
   stageName,
   standings,
   isCompleted,
+  hasReviews,
 }: Props) {
   const t = useT(nsFfaStandings);
 
@@ -120,6 +124,7 @@ export default function TournamentFfaPage({
           active="ffa"
           showPodium={isCompleted}
           showFfa={true}
+          showReviews={hasReviews}
         />
         <header className="mb-8">
           <p className="text-[10px] uppercase tracking-widest text-[var(--color-green-light)] mb-2">

@@ -41,6 +41,7 @@ import {
 } from '@/utils/tournament/finalsPhase';
 import FinalsPhaseView from '@/components/tournament/FinalsPhaseView';
 import { gameLabel } from '@/config/games';
+import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 type BracketDict = typeof nsTournamentBracket.fr;
 
@@ -65,6 +66,7 @@ type Props = {
   tabMode: BracketTabMode;
   /** Tournoi sans arbre : finales + course à la qualification. */
   finals: FinalsPhase | null;
+  hasReviews: boolean;
   seo: SeoProps;
 };
 
@@ -138,7 +140,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   }
 
-  const [stagesResult, matchesResult] = await Promise.all([
+  const [stagesResult, matchesResult, hasReviews] = await Promise.all([
     supabaseAdmin
       .from('tournament_stages')
       .select('stage_type')
@@ -178,6 +180,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       // l'ordre d'insertion (created_at) reflète la position dans le round.
       .order('round_number', { ascending: true })
       .order('created_at', { ascending: true }),
+    hasReviewsPlaylist(tenantId, tournament.id),
   ]);
 
   if (stagesResult.error)
@@ -235,6 +238,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       hasFfaStage,
       tabMode,
       finals,
+      hasReviews,
       seo: buildBracketSeo(tournament as Tournament, tabMode),
     },
     revalidate: 60,
@@ -249,6 +253,7 @@ export default function TournamentBracketPage({
   hasFfaStage,
   tabMode,
   finals,
+  hasReviews,
 }: Props) {
   const t = useT(nsTournamentBracket);
   const { lang } = useLang();
@@ -273,6 +278,7 @@ export default function TournamentBracketPage({
           bracketLabel={tabMode}
           showPodium={isCompleted}
           showFfa={hasFfaStage}
+          showReviews={hasReviews}
         />
         {/* Header */}
         <section className="mb-6">

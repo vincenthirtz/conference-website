@@ -116,6 +116,7 @@ import enTournamentMaps from './tournamentMaps';
 import enTournamentStats from './tournamentStats';
 import enTournamentStandings from './tournamentStandings';
 import enTournamentMvp from './tournamentMvp';
+import enTournamentReviews from './tournamentReviews';
 import enTournamentPodium from './tournamentPodium';
 import enTournamentTeams from './tournamentTeams';
 import enTournoiPage from './tournoiPage';
@@ -279,6 +280,7 @@ const enDict = {
   tournamentStats: enTournamentStats,
   tournamentStandings: enTournamentStandings,
   tournamentMvp: enTournamentMvp,
+  tournamentReviews: enTournamentReviews,
   tournamentPodium: enTournamentPodium,
   tournamentTeams: enTournamentTeams,
   tournoiPage: enTournoiPage,

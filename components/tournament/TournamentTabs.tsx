@@ -1,7 +1,7 @@
 // components/tournament/TournamentTabs.tsx
 // Barre d'onglets partagée par toutes les sous-pages publiques d'un tournoi.
 // Rendue en tête de chaque page pour offrir une navigation cohérente (Hub,
-// Équipes, Matchs, Classement, Maps, Stats, MVP, + Podium/FFA conditionnels). Chaque onglet
+// Équipes, Matchs, Classement, Maps, Stats, MVP, + Podium/FFA/Reviews conditionnels). Chaque onglet
 // est un <Link> Next stylisé (HTML valide + navigation client), avec état actif
 // et focus clavier visible. Aucun fetch : présentation pure.
 
@@ -19,7 +19,8 @@ export type TournamentTabKey =
   | 'stats'
   | 'mvp'
   | 'podium'
-  | 'ffa';
+  | 'ffa'
+  | 'reviews';
 
 export default function TournamentTabs({
   tournamentPath,
@@ -28,6 +29,7 @@ export default function TournamentTabs({
   bracketLabel = 'bracket',
   showPodium = true,
   showFfa = false,
+  showReviews = false,
   className = '',
 }: {
   /** Base path du tournoi, ex. `/tournament/${slug || id}`. */
@@ -45,6 +47,8 @@ export default function TournamentTabs({
   showPodium?: boolean;
   /** Afficher l'onglet FFA (uniquement si le tournoi a une phase FFA). */
   showFfa?: boolean;
+  /** Afficher l'onglet Reviews (uniquement si une playlist est configurée). */
+  showReviews?: boolean;
   className?: string;
 }) {
   const t = useT(nsTournamentTabs);
@@ -85,6 +89,15 @@ export default function TournamentTabs({
             key: 'ffa' as TournamentTabKey,
             label: t.ffa,
             href: `${tournamentPath}/ffa`,
+          },
+        ]
+      : []),
+    ...(showReviews
+      ? [
+          {
+            key: 'reviews' as TournamentTabKey,
+            label: t.reviews,
+            href: `${tournamentPath}/reviews`,
           },
         ]
       : []),

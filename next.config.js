@@ -54,6 +54,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'cdn.discordapp.com',
       },
+      // Miniatures des vidéos « Reviews » d'un tournoi. Passer par l'optimiseur
+      // (même origine) évite que le navigateur contacte Google avant que la
+      // visiteuse ait choisi de lancer une vidéo.
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com',
+        pathname: '/vi/**',
+      },
     ],
   },
   /**

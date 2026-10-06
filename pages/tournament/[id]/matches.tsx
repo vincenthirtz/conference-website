@@ -31,6 +31,7 @@ import nsTournamentMatches from '@/lib/i18n/locales/fr/tournamentMatches';
 import { containsFfaStage } from '@/utils/stages/ffaStage';
 import { bracketTabMode } from '@/utils/stages/bracketStage';
 import { gameLabel } from '@/config/games';
+import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 // Fuseau de référence pour placer les matchs dans la grille mensuelle.
 const MATCHES_TZ = 'Europe/Paris';
@@ -89,6 +90,7 @@ type Props = {
   tournament: Tournament;
   stages: Stage[];
   matches: SimpleMatch[];
+  hasReviews: boolean;
   seo: SeoProps;
 };
 
@@ -182,6 +184,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       tournament: tournament as Tournament,
       stages: (stages || []) as Stage[],
       matches,
+      hasReviews: await hasReviewsPlaylist(tenantId, tournamentId),
       seo: buildMatchesSeo(tournament as Tournament),
     },
     revalidate: 60,
@@ -192,6 +195,7 @@ export default function TournamentMatchesPage({
   tournament,
   stages,
   matches,
+  hasReviews,
 }: Props) {
   const router = useRouter();
   const t = useT(nsTournamentMatches);
@@ -314,6 +318,7 @@ export default function TournamentMatchesPage({
             showPodium={isCompleted}
             bracketLabel={bracketTab}
             showFfa={hasFfaStage}
+            showReviews={hasReviews}
           />
         </div>
         {/* Header */}

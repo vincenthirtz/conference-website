@@ -24,6 +24,7 @@ import {
   bracketTabMode,
   type BracketTabMode,
 } from '@/utils/stages/bracketStage';
+import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 /** Recopie du `.select()` des matchs terminés, embed du sondage MVP compris. */
 type FinishedMatchRow = {
@@ -89,6 +90,7 @@ type Props = {
   perMatch: PerMatchEntry[];
   hasFfaStage: boolean;
   bracketTab: BracketTabMode;
+  hasReviews: boolean;
   seo: SeoProps;
 };
 
@@ -297,6 +299,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       perMatch,
       hasFfaStage,
       bracketTab,
+      hasReviews: await hasReviewsPlaylist(tenantId, tournamentId),
       seo: buildMvpSeo(tournament.name),
     },
     revalidate: 60,
@@ -344,6 +347,7 @@ export default function TournamentMvpPage({
   perMatch,
   hasFfaStage,
   bracketTab,
+  hasReviews,
 }: Props) {
   const t = useT(nsTournamentMvp);
   const locale = useLocale();
@@ -362,6 +366,7 @@ export default function TournamentMvpPage({
             showPodium={isCompleted}
             bracketLabel={bracketTab}
             showFfa={hasFfaStage}
+            showReviews={hasReviews}
           />
           <section className="mb-6">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">

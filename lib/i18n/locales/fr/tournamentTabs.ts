@@ -21,4 +21,5 @@ export default ns('tournamentTabs', {
   mvp: 'MVP',
   podium: 'Podium',
   ffa: 'FFA',
+  reviews: 'Reviews',
 });

@@ -85,8 +85,10 @@ const CONNECT_SRC_CASTER_COCKPIT =
 //     l'hôte n'est pas connu à l'avance (il change d'un événement à l'autre).
 //     Même posture que `img-src ... https:` déjà en place : ce sont des médias
 //     affichés, pas du script — et la portée reste limitée aux pages caster.
+// www.youtube-nocookie.com : lecteur des Reviews de tournoi et de l'embed
+// d'équipe, chargé seulement après un clic (façade, aucun iframe avant).
 const FRAME_SRC_BASE =
-  "frame-src 'self' https://player.twitch.tv https://www.twitch.tv https://www.youtube.com https://challenges.cloudflare.com";
+  "frame-src 'self' https://player.twitch.tv https://www.twitch.tv https://www.youtube.com https://www.youtube-nocookie.com https://challenges.cloudflare.com";
 const FRAME_SRC_CASTER = `${FRAME_SRC_BASE} https://vdo.ninja https://*.vdo.ninja`;
 const MEDIA_SRC_BASE = `media-src 'self' https://*.supabase.co`;
 const MEDIA_SRC_CASTER = `${MEDIA_SRC_BASE} https: blob:`;

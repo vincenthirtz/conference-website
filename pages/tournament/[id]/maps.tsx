@@ -33,6 +33,7 @@ import {
   type BracketTabMode,
 } from '@/utils/stages/bracketStage';
 import { gameLabel } from '@/config/games';
+import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 type MapsDict = typeof nsTournamentMaps.fr;
 type Tournament = {
   id: string;
@@ -133,6 +134,7 @@ type Props = {
   hasVetoData: boolean;
   hasFfaStage: boolean;
   bracketTab: BracketTabMode;
+  hasReviews: boolean;
   seo: SeoProps;
 };
 
@@ -405,6 +407,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       hasVetoData,
       hasFfaStage,
       bracketTab,
+      hasReviews: await hasReviewsPlaylist(tenantId, tournamentId),
       seo: buildMapsSeo(tournament as Tournament),
     },
     revalidate: 60,
@@ -420,6 +423,7 @@ export default function TournamentMapsPage({
   hasVetoData,
   hasFfaStage,
   bracketTab,
+  hasReviews,
 }: Props) {
   const t = useT(nsTournamentMaps);
   const { lang } = useLang();
@@ -556,6 +560,7 @@ export default function TournamentMapsPage({
           showPodium={isCompleted}
           bracketLabel={bracketTab}
           showFfa={hasFfaStage}
+          showReviews={hasReviews}
         />
         {/* Header */}
         <section className="mb-6">

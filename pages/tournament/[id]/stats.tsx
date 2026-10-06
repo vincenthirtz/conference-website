@@ -32,6 +32,7 @@ import {
   type BracketTabMode,
 } from '@/utils/stages/bracketStage';
 import { gameLabel } from '@/config/games';
+import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 /** Recopie du `.select()` embarquant l'équipe depuis `stage_teams`. */
 type StageTeamEmbedRow = { team: Relation<SimpleTeam> };
@@ -101,6 +102,7 @@ type Props = {
    * page triait par winrate, et son « Top 3 » contredisait le classement.
    */
   officialOrder: string[];
+  hasReviews: boolean;
   seo: SeoProps;
 };
 
@@ -146,20 +148,22 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   const tournamentId = tournament.id;
 
   // Phase B : stages + matches + classement officiel en parallèle
-  const [stagesRes, matchesRes, standingsTables] = await Promise.all([
-    supabaseAdmin
-      .from('tournament_stages')
-      .select('id, stage_type')
-      .eq('tenant_id', tenantId)
-      .eq('tournament_id', tournamentId),
-    supabaseAdmin
-      .from('matches')
-      .select('id, status, is_bye, team1_id, team2_id, winner_team_id')
-      .eq('tenant_id', tenantId)
-      .eq('tournament_id', tournamentId)
-      .neq('status', 'cancelled'),
-    readPublicStandings(tenantId, tournamentId),
-  ]);
+  const [stagesRes, matchesRes, standingsTables, hasReviews] =
+    await Promise.all([
+      supabaseAdmin
+        .from('tournament_stages')
+        .select('id, stage_type')
+        .eq('tenant_id', tenantId)
+        .eq('tournament_id', tournamentId),
+      supabaseAdmin
+        .from('matches')
+        .select('id, status, is_bye, team1_id, team2_id, winner_team_id')
+        .eq('tenant_id', tenantId)
+        .eq('tournament_id', tournamentId)
+        .neq('status', 'cancelled'),
+      readPublicStandings(tenantId, tournamentId),
+      hasReviewsPlaylist(tenantId, tournamentId),
+    ]);
 
   if (matchesRes.error) {
     logger.error('stats page matches error:', matchesRes.error);
@@ -237,6 +241,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
         hasFfaStage,
         bracketTab,
         officialOrder: [],
+        hasReviews,
         seo: buildStatsSeo(tournament as Tournament),
       },
       revalidate: 60,
@@ -278,6 +283,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
         .flatMap((tb) => tb.rows)
         .sort((a, b) => a.rank - b.rank)
         .map((r) => r.teamId),
+      hasReviews,
       seo: buildStatsSeo(tournament as Tournament),
     },
     revalidate: 60,
@@ -292,6 +298,7 @@ export default function TournamentStatsPage({
   hasFfaStage,
   bracketTab,
   officialOrder,
+  hasReviews,
 }: Props) {
   const t = useT(nsTournamentStats);
   const { lang } = useLang();
@@ -361,6 +368,7 @@ export default function TournamentStatsPage({
           showPodium={isCompleted}
           bracketLabel={bracketTab}
           showFfa={hasFfaStage}
+          showReviews={hasReviews}
         />
         {/* Header */}
         <section className="mb-6">

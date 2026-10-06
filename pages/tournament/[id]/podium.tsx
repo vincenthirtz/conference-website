@@ -25,6 +25,7 @@ import {
   bracketTabMode,
   type BracketTabMode,
 } from '@/utils/stages/bracketStage';
+import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 /** Recopie du `.select()` du palmarès figé, embed compris. */
 type PodiumRankRow = {
@@ -73,6 +74,7 @@ type Props = {
   rankings: RankingRow[];
   hasFfaStage: boolean;
   bracketTab: BracketTabMode;
+  hasReviews: boolean;
   seo: SeoProps;
 };
 
@@ -120,7 +122,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
   }
 
-  const [{ data: rankRows, error }, stagesRes] = await Promise.all([
+  const [{ data: rankRows, error }, stagesRes, hasReviews] = await Promise.all([
     supabaseAdmin
       .from('final_rankings')
       .select(
@@ -145,6 +147,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       .select('stage_type')
       .eq('tenant_id', tenantId)
       .eq('tournament_id', tournament.id),
+    hasReviewsPlaylist(tenantId, tournament.id),
   ]);
 
   if (error) {
@@ -183,6 +186,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       rankings,
       hasFfaStage,
       bracketTab,
+      hasReviews,
       seo: buildPodiumSeo(tournament),
     },
     revalidate: 60,
@@ -214,6 +218,7 @@ export default function TournamentPodiumPage({
   rankings,
   hasFfaStage,
   bracketTab,
+  hasReviews,
 }: Props) {
   const t = useT(nsTournamentPodium);
   const locale = useLocale();
@@ -242,6 +247,7 @@ export default function TournamentPodiumPage({
           showPodium={isCompleted}
           bracketLabel={bracketTab}
           showFfa={hasFfaStage}
+          showReviews={hasReviews}
         />
         <div className="flex flex-col items-center text-center mb-10">
           <p className="text-xs uppercase tracking-widest text-[var(--color-yellow)] mb-2">

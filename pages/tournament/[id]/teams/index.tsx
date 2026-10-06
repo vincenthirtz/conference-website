@@ -30,6 +30,7 @@ import {
   bracketTabMode,
   type BracketTabMode,
 } from '@/utils/stages/bracketStage';
+import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 type Tournament = {
   id: string;
@@ -55,6 +56,7 @@ type Props = {
   teams: Team[];
   hasFfaStage: boolean;
   bracketTab: BracketTabMode;
+  hasReviews: boolean;
   seo: SeoProps;
 };
 
@@ -98,7 +100,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     return { notFound: true, revalidate: 60 };
 
   // Équipes inscrites (via tournament_teams) + phases (pour l'onglet FFA).
-  const [teamsRes, stagesRes] = await Promise.all([
+  const [teamsRes, stagesRes, hasReviews] = await Promise.all([
     supabaseAdmin
       .from('tournament_teams')
       .select('team:teams ( id, slug, name, short_name, logo_url )')
@@ -109,6 +111,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       .select('stage_type')
       .eq('tenant_id', tenantId)
       .eq('tournament_id', tournament.id),
+    hasReviewsPlaylist(tenantId, tournament.id),
   ]);
 
   if (teamsRes.error)
@@ -136,6 +139,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       teams,
       hasFfaStage,
       bracketTab,
+      hasReviews,
       seo: buildTeamsListSeo(tournament, teams.length),
     },
     revalidate: 60,
@@ -147,6 +151,7 @@ export default function TournamentTeamsPage({
   teams,
   hasFfaStage,
   bracketTab,
+  hasReviews,
 }: Props) {
   const t = useT(nsTournamentTeams);
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
@@ -162,6 +167,7 @@ export default function TournamentTeamsPage({
           showPodium={isCompleted}
           bracketLabel={bracketTab}
           showFfa={hasFfaStage}
+          showReviews={hasReviews}
         />
         <section className="mb-8">
           <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-green-light)]/90">
