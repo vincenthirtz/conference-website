@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import {
   type CommentBulkAction,
@@ -14,18 +13,12 @@ import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminCommentsList from '@/lib/i18n/locales/admin-fr/adminCommentsList';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
+import Chip from '@/features/admin/_shared/ui/Chip';
+import CommentModerationItem, {
+  type CommentRow,
+} from '@/features/admin/moderation/ui/CommentModerationItem';
+import { useCommentSelection } from '@/features/admin/moderation/hooks/useCommentSelection';
 import CommentSettingsSection from './CommentSettingsSection';
-
-type CommentRow = {
-  id: string;
-  news_id: string;
-  author_name: string | null;
-  content: string;
-  created_at: string;
-  status?: CommentStatus;
-  news?: { id: string; title: string | null; slug: string | null } | null;
-};
 
 type ApiList = {
   comments: CommentRow[];
@@ -34,27 +27,6 @@ type ApiList = {
   /** `false` : migration news_comments_moderation absente. */
   status_available?: boolean;
 };
-
-const STATUS_TONE: Record<CommentStatus, ChipTone> = {
-  visible: 'ok',
-  pending: 'warn',
-  hidden: 'neutral',
-};
-
-function formatDate(d: string | null) {
-  if (!d) return '—';
-  try {
-    return new Date(d).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return d;
-  }
-}
 
 export default function CommentsPanel() {
   const t = useAdminT(nsAdminCommentsList);
@@ -66,10 +38,13 @@ export default function CommentsPanel() {
   const [deleting, setDeleting] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<CommentStatus | ''>('');
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
-  const [statusAvailable, setStatusAvailable] = useState(true);
-  const [pendingCount, setPendingCount] = useState(0);
+  // Méta de la liste, posées ensemble par chaque réponse (`onData`).
+  const [listMeta, setListMeta] = useState({
+    statusAvailable: true,
+    pendingCount: 0,
+  });
+  const { statusAvailable, pendingCount } = listMeta;
   const { confirm, dialog } = useConfirmDialog();
   const commentSettings = useCommentSettings();
 
@@ -90,36 +65,24 @@ export default function CommentsPanel() {
     params: { status: statusFilter || undefined },
     select: (res) => res.comments || [],
     selectTotal: (res) => res.total ?? null,
-    onData: (res) => {
-      setStatusAvailable(res.status_available !== false);
-      setPendingCount(res.counts?.pending ?? 0);
-    },
+    onData: (res) =>
+      setListMeta({
+        statusAvailable: res.status_available !== false,
+        pendingCount: res.counts?.pending ?? 0,
+      }),
   });
 
   const error = mutationError ?? fetchError;
 
-  // La sélection ne survit pas à un changement de page ou de filtre : une
-  // action en masse ne doit viser que ce qui est sous les yeux.
-  const pageIds = useMemo(() => comments.map((c) => c.id), [comments]);
-  useEffect(() => {
-    setSelected((prev) => {
-      const next = new Set([...prev].filter((id) => pageIds.includes(id)));
-      return next.size === prev.size ? prev : next;
-    });
-  }, [pageIds]);
+  const selection = useCommentSelection(comments);
+  const { selected, allSelected } = selection;
 
-  const toggleSelected = (id: string) =>
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+  const dropDraft = (id: string) =>
+    setEditing((prev) => {
+      const next = { ...prev };
+      delete next[id];
       return next;
     });
-
-  const allSelected =
-    pageIds.length > 0 && pageIds.every((id) => selected.has(id));
-  const toggleAll = () =>
-    setSelected(allSelected ? new Set() : new Set(pageIds));
 
   const runBulk = async (action: CommentBulkAction) => {
     const ids = [...selected];
@@ -143,7 +106,7 @@ export default function CommentsPanel() {
         delete: t.toastBulkDelete,
       }[action];
       addToast(format(toast, { count: res.affected }), 'success');
-      setSelected(new Set());
+      selection.clear();
       refresh();
     } catch (err: unknown) {
       setMutationError((err as Error)?.message || t.errorBulk);
@@ -181,11 +144,6 @@ export default function CommentsPanel() {
     }
   };
 
-  const statusLabel: Record<CommentStatus, string> = {
-    visible: t.statusVisible,
-    pending: t.statusPending,
-    hidden: t.statusHidden,
-  };
   const filters: Array<{ value: CommentStatus | ''; label: string }> = [
     { value: '', label: t.filterAll },
     { value: 'pending', label: t.filterPending },
@@ -223,11 +181,7 @@ export default function CommentsPanel() {
     setMutationError(null);
     try {
       await moderationClient.updateComment(c.id, newContent);
-      setEditing((prev) => {
-        const next = { ...prev };
-        delete next[c.id];
-        return next;
-      });
+      dropDraft(c.id);
       addToast(t.toastUpdated, 'success');
       refresh();
     } catch (err: unknown) {
@@ -385,7 +339,7 @@ export default function CommentsPanel() {
               type="checkbox"
               className="h-4 w-4 accent-[var(--or,#b467d1)]"
               checked={allSelected}
-              onChange={toggleAll}
+              onChange={selection.toggleAll}
             />
             {t.selectAllPage}
           </label>
@@ -426,7 +380,7 @@ export default function CommentsPanel() {
                 variant="ghost"
                 size="sm"
                 disabled={bulkBusy}
-                onClick={() => setSelected(new Set())}
+                onClick={selection.clear}
               >
                 {t.clearSelection}
               </AdminButton>
@@ -461,185 +415,34 @@ export default function CommentsPanel() {
         ) : (
           <div className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
             {comments.map((c) => (
-              <div
+              <CommentModerationItem
                 key={c.id}
-                className="p-4 hover:bg-neutral-700/20 transition-colors"
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between gap-4 mb-3">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 accent-[var(--or,#b467d1)]"
-                      checked={selected.has(c.id)}
-                      onChange={() => toggleSelected(c.id)}
-                      aria-label={format(t.selectComment, {
-                        author: c.author_name || t.anonymous,
-                      })}
-                    />
-                    {/* Avatar */}
-                    <div className="w-10 h-10 rounded-full bg-neutral-700/50 flex items-center justify-center border border-neutral-700">
-                      <svg
-                        className="w-5 h-5 text-neutral-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                        />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="font-medium text-white">
-                        {c.author_name || t.anonymous}
-                      </div>
-                      <div className="text-xs text-neutral-500">
-                        {formatDate(c.created_at)}
-                      </div>
-                    </div>
-                    {statusAvailable && c.status && (
-                      <Chip tone={STATUS_TONE[c.status]}>
-                        {statusLabel[c.status]}
-                      </Chip>
-                    )}
-                  </div>
-
-                  {/* News link */}
-                  {c.news && (
-                    <Link
-                      href={`/news/${c.news.slug || c.news.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-2 py-1 text-xs text-[var(--or-200,#eec4ff)] hover:text-[var(--t1,#f4edf7)]"
-                    >
-                      <svg
-                        className="w-3 h-3"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                        />
-                      </svg>
-                      {c.news.title || t.articleFallback}
-                    </Link>
-                  )}
-                </div>
-
-                {/* Content */}
-                <textarea
-                  className="w-full resize-none rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-4 py-3 text-sm text-white focus:border-[var(--or,#b467d1)] focus:outline-none"
-                  value={editing[c.id] ?? c.content}
-                  onChange={(e) =>
-                    setEditing((prev) => ({
-                      ...prev,
-                      [c.id]: e.target.value,
-                    }))
-                  }
-                  rows={3}
-                />
-
-                {/* Actions */}
-                <div className="flex items-center gap-3 mt-3">
-                  <AdminButton
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleSave(c)}
-                    disabled={saving === c.id || editing[c.id] === undefined}
-                    className={saving === c.id ? 'cursor-wait' : ''}
-                  >
-                    {saving === c.id ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        {t.saving}
-                      </>
-                    ) : (
-                      <>
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        {t.save}
-                      </>
-                    )}
-                  </AdminButton>
-
-                  {editing[c.id] !== undefined && (
-                    <AdminButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setEditing((prev) => {
-                          const next = { ...prev };
-                          delete next[c.id];
-                          return next;
-                        })
-                      }
-                    >
-                      {t.cancel}
-                    </AdminButton>
-                  )}
-
-                  {c.news &&
-                    commentSettings.settings?.closure_available &&
-                    !commentSettings.isClosed(c.news_id) && (
-                      <AdminButton
-                        variant="ghost"
-                        size="sm"
-                        disabled={commentSettings.busy}
-                        onClick={() =>
-                          void setArticleClosed(
-                            {
-                              id: c.news_id,
-                              title: c.news?.title ?? null,
-                            },
-                            true
-                          )
-                        }
-                      >
-                        {t.closeArticle}
-                      </AdminButton>
-                    )}
-
-                  <button
-                    type="button"
-                    onClick={() => setDeleteTarget(c)}
-                    className="ml-auto rounded-[var(--r-ctrl,4px)] border border-transparent p-2 text-[var(--err,#ff6b6b)] transition-colors hover:border-[rgba(255,107,107,.45)]"
-                    title={t.delete}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+                comment={c}
+                t={t}
+                statusAvailable={statusAvailable}
+                selected={selection.selected.has(c.id)}
+                onToggleSelected={() => selection.toggle(c.id)}
+                draft={editing[c.id]}
+                onDraftChange={(value) =>
+                  setEditing((prev) => ({ ...prev, [c.id]: value }))
+                }
+                onCancelDraft={() => dropDraft(c.id)}
+                saving={saving === c.id}
+                onSave={() => handleSave(c)}
+                canCloseArticle={
+                  !!c.news &&
+                  !!commentSettings.settings?.closure_available &&
+                  !commentSettings.isClosed(c.news_id)
+                }
+                closeBusy={commentSettings.busy}
+                onCloseArticle={() =>
+                  void setArticleClosed(
+                    { id: c.news_id, title: c.news?.title ?? null },
+                    true
+                  )
+                }
+                onDelete={() => setDeleteTarget(c)}
+              />
             ))}
           </div>
         )}
