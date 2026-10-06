@@ -16,6 +16,12 @@ get:
     (miroir de `/api/player/matches/{matchId}/report-score`). L'ecran s'y fie
     pour n'afficher que des gestes qui aboutiront.
 
+    `report.dispute` n'est renseigne QU'UNE FOIS le litige ouvert
+    (`status = disputed`) : declaration de l'adversaire (dans la perspective
+    de l'appelant), ouverture, delai d'arbitrage vise (`slaMinutes` =
+    `tenants.dispute_sla_minutes`, seuil du cron dispute-sla-check) et
+    echeance `expectedBy`. Avant, la declaration adverse ne sort jamais.
+
     Inspectable par le staff via `?as=` (lecture seule, cf. SubjectAs).
   operationId: getPlayerMatchDetail
   security:

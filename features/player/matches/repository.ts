@@ -91,6 +91,27 @@ export async function readScoreReports(
   return { reports: (data ?? null) as ScoreReportRow[] | null, error };
 }
 
+/** Méta du litige — lue seulement quand le match est `disputed`. */
+export async function readDisputeMeta(
+  db: AdminDb,
+  tenantId: string,
+  matchId: string
+) {
+  const { data, error } = await loose(db)
+    .from('matches')
+    .select('dispute_opened_at, dispute_opened_by')
+    .eq('tenant_id', tenantId)
+    .eq('id', matchId)
+    .maybeSingle();
+  return {
+    meta: data as {
+      dispute_opened_at: string | null;
+      dispute_opened_by: string | null;
+    } | null,
+    error,
+  };
+}
+
 /* ---------------------- Déclaration de score ------------------------- */
 
 export async function readMatchForReport(

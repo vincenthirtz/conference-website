@@ -40,6 +40,15 @@ post:
       - quand le staff rouvre le match sans fixer de score (dispute resolue
         en pending/ongoing ou annulee), les reports des deux camps sont
         purges : il faut deux nouveaux reports.
+
+    Chaque refus porte un `code` STABLE (l'ecran traduit le code, jamais le
+    texte `error`) : `INVALID_MATCH_ID`, `INVALID_SCORE`, `MATCH_NOT_FOUND`,
+    `MATCH_IS_BYE`, `MATCH_INCOMPLETE`, `NOT_REPORTER`, `REPORT_BOTH_SIDES`,
+    `MATCH_NOT_STARTED`, `INVALID_SCORE_FOR_FORMAT`, `MATCH_FINALIZED`,
+    `FINALIZATION_IN_PROGRESS`, `DISPUTE_UNDER_STAFF_REVIEW` ; en 500 :
+    `MATCH_LOOKUP_FAILED`, `REPORT_RIGHT_LOOKUP_FAILED`, `REPORT_SAVE_FAILED`,
+    `REPORTS_LOOKUP_FAILED`, `DISPUTE_CLOSE_FAILED`, `APPLY_FAILED`,
+    `DISPUTE_OPEN_FAILED`.
   operationId: reportPlayerMatchScore
   security:
     - PlayerBearer: []

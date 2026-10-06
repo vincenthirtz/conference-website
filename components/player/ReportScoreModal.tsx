@@ -100,6 +100,23 @@ export function reportScoreErrorToast(
   if (code === 'REPORT_BOTH_SIDES') {
     return { message: t.errBothSides, level: 'error' };
   }
+  // Codes stables de report-score.ts : le texte serveur (français, pour les
+  // journaux) n'est JAMAIS affiché — une joueuse anglophone lirait du FR.
+  if (code === 'NOT_REPORTER') {
+    return { message: t.errNotCaptain, level: 'error' };
+  }
+  if (code === 'INVALID_SCORE') {
+    return { message: t.errInvalidScore, level: 'error' };
+  }
+  if (code === 'MATCH_NOT_FOUND' || code === 'INVALID_MATCH_ID') {
+    return { message: t.errMatchNotFound, level: 'error' };
+  }
+  if (code === 'MATCH_IS_BYE') {
+    return { message: t.errMatchBye, level: 'error' };
+  }
+  if (code === 'MATCH_INCOMPLETE') {
+    return { message: t.errMatchIncomplete, level: 'error' };
+  }
   if (status === 401) return { message: t.errSessionExpired, level: 'error' };
   if (status === 403) return { message: t.errNotCaptain, level: 'error' };
   // 409 sans code connu : trois 409 différents existent désormais, on ne

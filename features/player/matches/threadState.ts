@@ -12,6 +12,7 @@ import {
   canOfferScoreReport,
   isCheckinStillOpen,
 } from '@/utils/matches/playerMatchLive';
+import { disputeDeadline } from './disputeView';
 import type { PlayerMatchDetail } from './schemas';
 
 export type StepState = 'done' | 'active' | 'idle';
@@ -81,9 +82,16 @@ export function matchThreadState(
       ? 'report'
       : null;
 
+  // Échéance d'arbitrage, à l'horloge locale (le litige n'est renvoyé
+  // qu'une fois ouvert ; `?.` : une réponse sans le champ ne casse rien).
+  const dispute = report.dispute ?? null;
+  const disputeDue = dispute ? disputeDeadline(dispute, now) : null;
+
   return {
     isFinished,
     isDisputed,
+    dispute,
+    disputeDue,
     checkinOpen,
     checkinPassed,
     showReportCta,

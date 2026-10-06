@@ -34,6 +34,33 @@ export const ReportScoreBody = z.object({
 });
 export type ReportScoreInput = z.infer<typeof ReportScoreBody>;
 
+/**
+ * Plafond d'une capture déposée depuis le site. Plus bas que celui du bot
+ * (MAX_EVIDENCE_BYTES, 10 Mo) : le corps JSON porte l'image en base64 (+33 %)
+ * et une fonction Netlify refuse au-delà de 6 Mo de requête.
+ */
+export const PLAYER_EVIDENCE_MAX_BYTES = 4 * 1024 * 1024;
+
+/** Base64 de PLAYER_EVIDENCE_MAX_BYTES, préfixe `data:` compris. */
+const PLAYER_EVIDENCE_MAX_BASE64 =
+  Math.ceil(PLAYER_EVIDENCE_MAX_BYTES / 3) * 4 + 64;
+
+/**
+ * Corps de POST /api/player/matches/{matchId}/evidence : UNE capture d'écran
+ * (PNG, JPEG ou WebP — vérifié sur les octets, jamais sur le type déclaré).
+ */
+export const EvidenceUploadBody = z.object({
+  file_base64: z
+    .string()
+    .min(1, 'Fichier manquant.')
+    .max(PLAYER_EVIDENCE_MAX_BASE64, 'Fichier trop lourd.'),
+  filename: z.string().trim().min(1).max(255).optional(),
+  note: z.string().trim().max(500).optional(),
+});
+export type EvidenceUploadInput = z.infer<typeof EvidenceUploadBody>;
+
+export type EvidenceUploadResult = { id: string; kind: 'screenshot' };
+
 /* ------------------------------------------------------------------------
  * Formes de réponse (types seuls : lus par l'écran, jamais validés).
  * --------------------------------------------------------------------- */
@@ -82,6 +109,23 @@ export type PlayerMatchesPayload = {
   matches: PlayerMatch[];
 };
 
+/** Un litige ouvert, vu d'un côté du match. */
+export type PlayerMatchDispute = {
+  /** Ce que l'ADVERSAIRE a déclaré, dans MA perspective ; `null` si rien. */
+  opponentReport: { mine: number; opponent: number } | null;
+  /** Ouverture du litige (ISO) ; `null` si elle n'est pas datée. */
+  openedAt: string | null;
+  /**
+   * Délai d'arbitrage visé, en minutes : `tenants.dispute_sla_minutes`, le
+   * seuil du cron dispute-sla-check qui relance le staff.
+   */
+  slaMinutes: number;
+  /** `openedAt + slaMinutes` ; `null` sans date d'ouverture. */
+  expectedBy: string | null;
+  /** Ouvert par le staff, et non par le désaccord des deux déclarations. */
+  openedByStaff: boolean;
+};
+
 /** Le fil d'UN match (GET /api/player/matches/{matchId}). */
 export type PlayerMatchDetail = {
   match: {
@@ -114,6 +158,12 @@ export type PlayerMatchDetail = {
     state: ScoreReportState;
     /** Ce que MON équipe a déjà déclaré, `null` si rien. */
     mine: { mine: number; opponent: number } | null;
+    /**
+     * Le litige, UNIQUEMENT une fois ouvert (`match.status === 'disputed'`) ;
+     * `null` sinon. Avant, la déclaration adverse reste secrète : la montrer
+     * permettrait de recopier le score de l'autre au lieu de déclarer le sien.
+     */
+    dispute: PlayerMatchDispute | null;
   };
   /** Ce que l'appelant peut faire ICI (mêmes règles que les écritures). */
   permissions: {

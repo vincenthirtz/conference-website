@@ -7,7 +7,12 @@
 // lien envoyé par le bot — une personne sans compte doit pouvoir s'en servir.
 
 import { playerRequest, type PlayerScope } from '@/utils/player/playerHttp';
-import type { PlayerMatchDetail, PlayerMatchesPayload } from './schemas';
+import type {
+  EvidenceUploadInput,
+  EvidenceUploadResult,
+  PlayerMatchDetail,
+  PlayerMatchesPayload,
+} from './schemas';
 
 export const matchesUrls = {
   list: '/api/player/matches',
@@ -15,6 +20,8 @@ export const matchesUrls = {
     `/api/player/matches/${encodeURIComponent(matchId)}`,
   reportScore: (matchId: string) =>
     `/api/player/matches/${encodeURIComponent(matchId)}/report-score`,
+  evidence: (matchId: string) =>
+    `/api/player/matches/${encodeURIComponent(matchId)}/evidence`,
 };
 
 export const matchesClient = {
@@ -31,6 +38,17 @@ export const matchesClient = {
   detail: (scope: PlayerScope, matchId: string) =>
     playerRequest<PlayerMatchDetail>(matchesUrls.detail(matchId), {
       scope: { ...scope, teamId: null },
+      skipAuthRedirect: true,
+    }),
+  /**
+   * Capture jointe au match (route `self` : pas de portée sujet). Idempotente
+   * par `Idempotency-Key` : un double tap ne dépose pas deux fois.
+   */
+  attachEvidence: (matchId: string, body: EvidenceUploadInput) =>
+    playerRequest<EvidenceUploadResult>(matchesUrls.evidence(matchId), {
+      method: 'POST',
+      json: body,
+      idempotent: true,
       skipAuthRedirect: true,
     }),
 };

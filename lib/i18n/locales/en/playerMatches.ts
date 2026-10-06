@@ -77,6 +77,9 @@ export default {
     'This score is impossible for the match format. Check the number of maps won.',
   errSessionExpired:
     'Your session expired. Sign in again, then resend the score.',
+  errMatchNotFound: 'This match could not be found. Reload the page.',
+  errMatchBye: 'This match is a bye: there is no score to report.',
+  errMatchIncomplete: 'Both teams of this match have not been set yet.',
   sessionExpired: 'Your session expired.',
   signinAgain: 'Sign in again',
 };

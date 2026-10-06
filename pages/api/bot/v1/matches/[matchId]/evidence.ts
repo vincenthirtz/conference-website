@@ -21,16 +21,10 @@
 // partie du flux de report de base.
 
 import * as z from 'zod';
-import crypto from 'crypto';
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
-import {
-  decodeEvidencePayload,
-  buildEvidencePath,
-  uploadEvidenceObject,
-  signEvidenceUrl,
-} from '@/utils/matches/evidence';
+import { signEvidenceUrl, storeSideEvidence } from '@/utils/matches/evidence';
 import {
   REPORT_BOTH_SIDES,
   ReportRightLookupError,
@@ -174,81 +168,23 @@ async function handlePost(
   if (!captain) return;
   const { side, authUserId } = captain;
 
-  const evidenceId = crypto.randomUUID();
-  const nowIso = new Date().toISOString();
-
-  let row: Record<string, unknown>;
-
-  if (input.kind === 'replay_url') {
-    // Lien externe : external_url renseigne, storage_path null
-    // (invariant match_evidence_location_chk).
-    row = {
-      id: evidenceId,
-      match_id: matchId,
-      tenant_id: req.botContext.tenantId,
-      team_side: side,
-      submitted_by_auth_user_id: authUserId,
-      discord_user_id: input.discordUserId,
-      kind: 'replay_url',
-      storage_path: null,
-      external_url: input.external_url,
-      mime_type: null,
-      size_bytes: null,
-      sha256: null,
-      note: input.note ?? null,
-      created_at: nowIso,
-    };
-  } else {
-    // Binaire : decode + validation magic bytes / allowlist + sha256 + upload.
-    const decoded = decodeEvidencePayload(
-      input.kind,
-      input.file_base64,
-      input.filename
-    );
-    if (!decoded.ok) {
-      return res.status(400).json({ error: decoded.error });
+  // Décodage, validation, upload et insertion : cœur partagé avec la route
+  // joueuse (utils/matches/evidence.ts). Réponses d'erreur inchangées ({ error }).
+  const stored = await storeSideEvidence({
+    tenantId: req.botContext.tenantId,
+    matchId,
+    side,
+    authUserId,
+    discordUserId: input.discordUserId,
+    input,
+  });
+  if (!stored.ok) {
+    if (stored.cause) {
+      logger.error('[bot/matches/evidence] store error', stored.cause);
     }
-    const { buffer, mime, ext, sizeBytes, sha256 } = decoded.value;
-    const path = buildEvidencePath(
-      req.botContext.tenantId,
-      matchId,
-      evidenceId,
-      ext
-    );
-
-    const up = await uploadEvidenceObject(path, buffer, mime);
-    if (up.error) {
-      logger.error('[bot/matches/evidence] upload error', up.error);
-      return res.status(500).json({ error: "Impossible d'uploader la preuve" });
-    }
-
-    row = {
-      id: evidenceId,
-      match_id: matchId,
-      tenant_id: req.botContext.tenantId,
-      team_side: side,
-      submitted_by_auth_user_id: authUserId,
-      discord_user_id: input.discordUserId,
-      kind: input.kind,
-      storage_path: path,
-      external_url: null,
-      mime_type: mime,
-      size_bytes: sizeBytes,
-      sha256,
-      note: input.note ?? null,
-      created_at: nowIso,
-    };
+    return res.status(stored.status).json({ error: stored.error });
   }
-
-  const { error: insErr } = await supabaseAdmin
-    .from('match_evidence')
-    .insert(row);
-  if (insErr) {
-    logger.error('[bot/matches/evidence] insert error', insErr);
-    return res
-      .status(500)
-      .json({ error: "Echec de l'enregistrement de la preuve" });
-  }
+  const evidenceId = stored.id;
 
   if (authUserId) {
     void logPlayerAction({

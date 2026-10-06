@@ -76,6 +76,46 @@ export default ns('playerMatch', {
   scoreDisputed:
     'Les deux reports divergent : le staff arbitre. Tu peux corriger le tien.',
   scoreFinal: 'Score final : {mine}–{opponent}.',
+  // Litige ouvert (lot P4) : les deux déclarations, le délai, le recours.
+  disputeMine: 'Ton équipe a déclaré {mine}–{opponent}.',
+  disputeOpponent:
+    'L’adversaire a déclaré {mine}–{opponent} (ton score en premier).',
+  disputeOpponentNone: 'L’adversaire n’a pas déclaré de score.',
+  disputeStaffOpened:
+    'Le staff a ouvert un litige sur ce match : c’est lui qui fixera le résultat.',
+  disputeExpectedBy:
+    'Arbitrage attendu d’ici le {date} (délai visé : {duration}).',
+  disputeOverdue:
+    'Le délai d’arbitrage visé ({duration}) est dépassé : le staff est relancé automatiquement.',
+  disputeSlaOnly:
+    'Délai d’arbitrage visé : {duration} après l’ouverture du litige.',
+  disputeTicketHint:
+    'Un élément à faire valoir ? Joins une capture ci-dessous, ou écris au staff.',
+  disputeTicketCta: 'Ouvrir un ticket litige ↗',
+  disputeTicketSubject: 'Litige de score — {team} vs {opponent}',
+  disputeTicketMessage:
+    'Match : {url}\nNotre déclaration : {mine}–{opponent}.\n\nCe que nous contestons : ',
+  durationMinutes: '{n} min',
+  durationHours: '{n} h',
+  durationHoursMinutes: '{h} h {m} min',
+  // Preuve jointe depuis le site (lot P4).
+  evidenceTitle: 'Capture du score',
+  evidenceHelp:
+    'Joins une capture de l’écran de fin (PNG, JPEG ou WebP, 4 Mo max). Elle est transmise au staff avec ton report.',
+  evidenceCta: 'Joindre une capture',
+  evidenceUploading: 'Envoi de la capture…',
+  evidenceSuccess: 'Capture jointe au match.',
+  evidenceSent: 'Capture(s) jointe(s) depuis cette page : {n}.',
+  evidenceErrTooLarge: 'Capture trop lourde (4 Mo max).',
+  evidenceErrType: 'Ce fichier n’est pas une image PNG, JPEG ou WebP.',
+  evidenceErrRight:
+    'Seule la capitaine ou une manager d’une des équipes peut joindre une preuve.',
+  evidenceErrBothSides:
+    'Tu tiens les deux équipes de ce match : chaque équipe joint ses preuves séparément.',
+  evidenceErrRateLimited: 'Trop d’envois. Réessaie dans une minute.',
+  evidenceErrSession:
+    'Ta session a expiré. Reconnecte-toi puis renvoie la capture.',
+  evidenceErrGeneric: 'La capture n’a pas pu être envoyée. Réessaie.',
   scoreCaptainOnly: 'Seule la capitaine peut rapporter le score.',
   scoreAfterKickoff: "Le score se rapporte une fois le coup d'envoi passé.",
   reviewCta: 'Écrire la revue du match ↗',

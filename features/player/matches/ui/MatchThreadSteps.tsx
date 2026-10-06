@@ -17,6 +17,8 @@ import MatchPrepCard from '@/components/player/MatchPrepCard';
 import { isLineupClosedStatus } from '@/utils/matches/lineup';
 import type { PlayerMatchDetail } from '../schemas';
 import type { MatchThreadState } from '../threadState';
+import MatchDisputePanel from './MatchDisputePanel';
+import MatchEvidenceUpload from './MatchEvidenceUpload';
 import MatchThreadStep from './MatchThreadStep';
 
 type T = typeof nsPlayerMatch.fr;
@@ -212,7 +214,16 @@ function ScoreStep(props: Props) {
   return (
     <MatchThreadStep index={5} title={t.stepScore} state={view.scoreState}>
       {report.state === 'disputed' ? (
-        <p className="text-amber-200">{t.scoreDisputed}</p>
+        <>
+          <p className="text-amber-200">{t.scoreDisputed}</p>
+          {/* Litige OUVERT : les deux déclarations, le délai, le recours. */}
+          <MatchDisputePanel
+            data={data}
+            view={view}
+            t={t}
+            formatDate={props.formatDate}
+          />
+        </>
       ) : report.state === 'agreed' ? (
         <p className="text-emerald-200">{t.scoreAgreed}</p>
       ) : report.state === 'awaiting_opponent' && report.mine ? (
@@ -258,6 +269,11 @@ function ScoreStep(props: Props) {
                 : t.scoreCaptainOnly}
             </p>
           )}
+
+      {/* Capture jointe : mêmes droits et même moment que le report. */}
+      {view.showReportCta && (
+        <MatchEvidenceUpload matchId={data.match.id} t={t} />
+      )}
 
       {view.isFinished && (
         <div className="mt-4 border-t border-[var(--line,rgba(194,196,201,.12))] pt-3">

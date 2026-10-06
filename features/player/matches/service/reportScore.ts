@@ -78,11 +78,40 @@ function unwrap<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-const fail = (status: number, error: string, code?: string) =>
-  new LegacyAdminError(status, error, code ? { code } : {});
+/**
+ * Codes STABLES des refus de la déclaration (contrat avec l'écran : la modale
+ * traduit le code, elle n'affiche jamais le texte serveur, qui reste en
+ * français pour les journaux et les intégrations). Ne renommer qu'avec
+ * reportScoreErrorToast (components/player/ReportScoreModal.tsx).
+ */
+export const REPORT_SCORE_ERROR_CODES = [
+  'INVALID_MATCH_ID',
+  'INVALID_SCORE',
+  'MATCH_LOOKUP_FAILED',
+  'MATCH_NOT_FOUND',
+  'MATCH_IS_BYE',
+  'MATCH_INCOMPLETE',
+  'MATCH_FINALIZED',
+  'REPORT_RIGHT_LOOKUP_FAILED',
+  'NOT_REPORTER',
+  'REPORT_BOTH_SIDES',
+  'MATCH_NOT_STARTED',
+  'INVALID_SCORE_FOR_FORMAT',
+  'REPORT_SAVE_FAILED',
+  'REPORTS_LOOKUP_FAILED',
+  'DISPUTE_UNDER_STAFF_REVIEW',
+  'DISPUTE_CLOSE_FAILED',
+  'APPLY_FAILED',
+  'DISPUTE_OPEN_FAILED',
+  'FINALIZATION_IN_PROGRESS',
+] as const;
+export type ReportScoreErrorCode = (typeof REPORT_SCORE_ERROR_CODES)[number];
+
+const fail = (status: number, error: string, code: ReportScoreErrorCode) =>
+  new LegacyAdminError(status, error, { code });
 
 const finalizedMessage = (status: string) =>
-  `Match deja cloture (status=${status}). Contactez le staff pour modifier.`;
+  `Match déjà clôturé (statut ${status}). Contactez le staff pour le modifier.`;
 
 export async function reportScore(
   ctx: MatchesCtx,
@@ -95,14 +124,15 @@ export async function reportScore(
   // 1) Validation entrée (path + body), messages historiques.
   const parsedQuery = MatchIdQuery.safeParse(rawQuery);
   if (!parsedQuery.success) {
-    throw fail(400, 'Identifiant de match invalide.');
+    throw fail(400, 'Identifiant de match invalide.', 'INVALID_MATCH_ID');
   }
   const { matchId } = parsedQuery.data;
   const parsedBody = ReportScoreBody.safeParse(rawBody);
   if (!parsedBody.success) {
     throw fail(
       400,
-      'Scores invalides : team1Score et team2Score doivent etre des entiers >= 0.'
+      'Scores invalides : team1Score et team2Score doivent être des entiers ≥ 0.',
+      'INVALID_SCORE'
     );
   }
   const { team1Score, team2Score } = parsedBody.data;
@@ -115,10 +145,16 @@ export async function reportScore(
   );
   if (matchErr) {
     logger.error('[player/report-score] match lookup error', matchErr);
-    throw fail(500, 'Erreur de lecture du match');
+    throw fail(500, 'Erreur de lecture du match.', 'MATCH_LOOKUP_FAILED');
   }
-  if (!match) throw fail(404, 'Match introuvable');
-  if (match.is_bye) throw fail(400, 'Match marque bye');
+  if (!match) throw fail(404, 'Match introuvable.', 'MATCH_NOT_FOUND');
+  if (match.is_bye) {
+    throw fail(
+      400,
+      'Match marqué « bye » : aucun score à déclarer.',
+      'MATCH_IS_BYE'
+    );
+  }
   const status = match.status as string;
   if (REPORT_CLOSED_STATUSES.has(status)) {
     throw fail(409, finalizedMessage(status), 'MATCH_FINALIZED');
@@ -130,7 +166,11 @@ export async function reportScore(
     match.tournament as { id: string; name: string } | null
   );
   if (!team1?.id || !team2?.id) {
-    throw fail(400, 'Match incomplet (equipes non assignees)');
+    throw fail(
+      400,
+      'Match incomplet (équipes non assignées).',
+      'MATCH_INCOMPLETE'
+    );
   }
 
   // 3) Le droit de déclarer (reportRight.ts).
@@ -144,20 +184,25 @@ export async function reportScore(
   } catch (e) {
     if (!(e instanceof ReportRightLookupError)) throw e;
     logger.error('[player/report-score] report right lookup error', e.cause);
-    throw fail(500, 'Erreur de verification des droits');
+    throw fail(
+      500,
+      'Erreur de vérification des droits.',
+      'REPORT_RIGHT_LOOKUP_FAILED'
+    );
   }
   const decision = decideReportingSide(reportable, team1.id, team2.id);
   if (decision.side === null) {
     if (decision.code === REPORT_BOTH_SIDES) {
       throw fail(
         403,
-        'Vous etes capitaine ou manager des deux equipes de ce match : le score doit etre declare par chaque equipe separement.',
+        'Vous êtes capitaine ou manager des deux équipes de ce match : le score doit être déclaré par chaque équipe séparément.',
         REPORT_BOTH_SIDES
       );
     }
     throw fail(
       403,
-      "Vous n'etes ni capitaine ni manager d'une des deux equipes de ce match."
+      "Vous n'êtes ni capitaine ni manager d'une des deux équipes de ce match.",
+      'NOT_REPORTER'
     );
   }
   const mySide = decision.side;
@@ -173,7 +218,7 @@ export async function reportScore(
   ) {
     throw fail(
       409,
-      "Le match n'a pas encore commence : le score se rapporte apres le coup d'envoi. S'il a ete joue en avance, demandez au staff de le passer en cours.",
+      "Le match n'a pas encore commencé : le score se rapporte après le coup d'envoi. S'il a été joué en avance, demandez au staff de le passer en cours.",
       'MATCH_NOT_STARTED'
     );
   }
@@ -204,7 +249,11 @@ export async function reportScore(
   });
   if (upsertErr) {
     logger.error('[player/report-score] upsert report error', upsertErr);
-    throw fail(500, "Echec de l'enregistrement du report");
+    throw fail(
+      500,
+      "Échec de l'enregistrement du report.",
+      'REPORT_SAVE_FAILED'
+    );
   }
   logger.info('[player/report-score] captain score report received', {
     matchId,
@@ -224,7 +273,7 @@ export async function reportScore(
     );
   if (reportsErr) {
     logger.error('[player/report-score] reports lookup error', reportsErr);
-    throw fail(500, 'Erreur de lecture des reports');
+    throw fail(500, 'Erreur de lecture des reports.', 'REPORTS_LOOKUP_FAILED');
   }
   const mine = bothReports?.find((r) => r.team_side === mySide) ?? null;
   const opponent =
@@ -267,7 +316,11 @@ export async function reportScore(
       );
       if (clearErr) {
         logger.error('[player/report-score] clear dispute error', clearErr);
-        throw fail(500, 'Echec de la fermeture de la dispute');
+        throw fail(
+          500,
+          'Échec de la fermeture du litige.',
+          'DISPUTE_CLOSE_FAILED'
+        );
       }
     }
     const scrimId = (match.scrim_id as string | null) ?? null;
@@ -301,9 +354,10 @@ export async function reportScore(
           team2Score: mine.team2_score,
         });
       }
-      const msg = e instanceof Error ? e.message : String(e);
+      // Le détail technique reste dans les journaux : il n'a rien à faire
+      // sous les yeux d'une joueuse.
       logger.error('[player/report-score] applyMatchScore error', e);
-      throw fail(500, `Echec de la finalisation : ${msg}`, 'APPLY_FAILED');
+      throw fail(500, 'Échec de la finalisation du match.', 'APPLY_FAILED');
     }
   }
 
@@ -323,12 +377,12 @@ export async function reportScore(
       await repo.openCaptainDispute(db, tenantId, matchId, status, reason);
     if (disputeErr) {
       logger.error('[player/report-score] open dispute error', disputeErr);
-      throw fail(500, "Echec de l'ouverture de la dispute");
+      throw fail(500, "Échec de l'ouverture du litige.", 'DISPUTE_OPEN_FAILED');
     }
     if (!disputedRow) {
       throw fail(
         409,
-        'Le match a change pendant votre report (cloture ou modifie). Rechargez la page ; contactez le staff pour contester.',
+        'Le match a changé pendant votre report (clôturé ou modifié). Rechargez la page ; contactez le staff pour contester.',
         'MATCH_FINALIZED'
       );
     }
@@ -424,7 +478,7 @@ async function finalizationConflict(
   });
   throw fail(
     409,
-    "Le score est en cours de validation par l'autre equipe. Rechargez dans quelques secondes.",
+    "Le score est en cours de validation par l'autre équipe. Rechargez dans quelques secondes.",
     'FINALIZATION_IN_PROGRESS'
   );
 }

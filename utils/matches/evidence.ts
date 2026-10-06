@@ -103,9 +103,16 @@ export type DecodedEvidence = {
   sha256: string;
 };
 
+/** Codes stables des refus de décodage (l'écran les traduit). */
+export type EvidenceDecodeErrorCode =
+  | 'EVIDENCE_EMPTY'
+  | 'EVIDENCE_TOO_LARGE'
+  | 'EVIDENCE_NOT_IMAGE'
+  | 'EVIDENCE_BAD_EXTENSION';
+
 export type DecodeResult =
   | { ok: true; value: DecodedEvidence }
-  | { ok: false; error: string };
+  | { ok: false; error: string; code: EvidenceDecodeErrorCode };
 
 /**
  * Decode a base64 payload for a binary evidence kind (screenshot / replay_file),
@@ -119,17 +126,26 @@ export type DecodeResult =
 export function decodeEvidencePayload(
   kind: 'screenshot' | 'replay_file',
   fileBase64: string,
-  filename: string
+  filename: string,
+  maxBytes: number = MAX_EVIDENCE_BYTES
 ): DecodeResult {
   const base64Data = fileBase64.replace(/^data:[^;]+;base64,/, '');
   const buffer = Buffer.from(base64Data, 'base64');
 
   if (buffer.length === 0) {
-    return { ok: false, error: 'Fichier vide ou base64 invalide.' };
+    return {
+      ok: false,
+      error: 'Fichier vide ou base64 invalide.',
+      code: 'EVIDENCE_EMPTY',
+    };
   }
-  if (buffer.length > MAX_EVIDENCE_BYTES) {
-    const maxMo = Math.round(MAX_EVIDENCE_BYTES / (1024 * 1024));
-    return { ok: false, error: `Fichier trop lourd (max ${maxMo} Mo).` };
+  if (buffer.length > maxBytes) {
+    const maxMo = Math.round(maxBytes / (1024 * 1024));
+    return {
+      ok: false,
+      error: `Fichier trop lourd (max ${maxMo} Mo).`,
+      code: 'EVIDENCE_TOO_LARGE',
+    };
   }
 
   let mime: string;
@@ -142,6 +158,7 @@ export function decodeEvidencePayload(
         ok: false,
         error:
           'Le contenu du fichier ne correspond pas à une image PNG, JPEG ou WebP.',
+        code: 'EVIDENCE_NOT_IMAGE',
       };
     }
     mime = sig.mime;
@@ -154,6 +171,7 @@ export function decodeEvidencePayload(
         error: `Extension de replay non supportée (.${rawExt || '?'}). Formats acceptés : ${[
           ...REPLAY_EXT_ALLOWLIST,
         ].join(', ')}.`,
+        code: 'EVIDENCE_BAD_EXTENSION',
       };
     }
     mime = 'application/octet-stream';
@@ -207,4 +225,133 @@ export async function signEvidenceUrl(
     .createSignedUrl(path, ttlSeconds);
   if (error || !data) return null;
   return data.signedUrl ?? null;
+}
+
+/* ---------------------------------------------------------------------------
+ * Dépôt d'une preuve par UN CÔTÉ du match — cœur commun de la route bot
+ * (/api/bot/v1/matches/{matchId}/evidence) et de la route joueuse
+ * (/api/player/matches/{matchId}/evidence). Le DROIT (quel côté) est décidé
+ * en amont par chaque route (utils/matches/reportRight.ts) ; ceci ne fait que
+ * décoder, valider, uploader et insérer la ligne `match_evidence`.
+ * ------------------------------------------------------------------------- */
+
+export type EvidenceInput =
+  | { kind: 'replay_url'; external_url: string; note?: string | null }
+  | {
+      kind: 'screenshot' | 'replay_file';
+      file_base64: string;
+      filename: string;
+      note?: string | null;
+    };
+
+export type StoreEvidenceFailureCode =
+  | EvidenceDecodeErrorCode
+  | 'EVIDENCE_UPLOAD_FAILED'
+  | 'EVIDENCE_SAVE_FAILED';
+
+export type StoreEvidenceResult =
+  | { ok: true; id: string; kind: EvidenceKind }
+  | {
+      ok: false;
+      status: 400 | 500;
+      error: string;
+      code: StoreEvidenceFailureCode;
+      /** Cause technique, à journaliser (jamais renvoyée au client). */
+      cause?: unknown;
+    };
+
+export async function storeSideEvidence(params: {
+  tenantId: string;
+  matchId: string;
+  side: 1 | 2;
+  authUserId: string | null;
+  discordUserId: string | null;
+  input: EvidenceInput;
+  /** Plafond binaire propre à la surface (défaut MAX_EVIDENCE_BYTES). */
+  maxBytes?: number;
+}): Promise<StoreEvidenceResult> {
+  const { tenantId, matchId, side, authUserId, discordUserId, input } = params;
+  const evidenceId = crypto.randomUUID();
+  const base = {
+    id: evidenceId,
+    match_id: matchId,
+    tenant_id: tenantId,
+    team_side: side,
+    submitted_by_auth_user_id: authUserId,
+    discord_user_id: discordUserId,
+    kind: input.kind,
+    note: input.note ?? null,
+    created_at: new Date().toISOString(),
+  };
+
+  let row: Record<string, unknown>;
+  if (input.kind === 'replay_url') {
+    // Lien externe : external_url renseigné, storage_path null
+    // (invariant match_evidence_location_chk).
+    row = {
+      ...base,
+      storage_path: null,
+      external_url: input.external_url,
+      mime_type: null,
+      size_bytes: null,
+      sha256: null,
+    };
+  } else {
+    // Binaire : décodage + magic bytes / allowlist + sha256 + upload.
+    const decoded = decodeEvidencePayload(
+      input.kind,
+      input.file_base64,
+      input.filename,
+      params.maxBytes
+    );
+    if (!decoded.ok) {
+      return {
+        ok: false,
+        status: 400,
+        error: decoded.error,
+        code: decoded.code,
+      };
+    }
+    const { buffer, mime, ext, sizeBytes, sha256 } = decoded.value;
+    const path = buildEvidencePath(tenantId, matchId, evidenceId, ext);
+    const up = await uploadEvidenceObject(path, buffer, mime);
+    if (up.error) {
+      return {
+        ok: false,
+        status: 500,
+        error: "Impossible d'uploader la preuve",
+        code: 'EVIDENCE_UPLOAD_FAILED',
+        cause: up.error,
+      };
+    }
+    row = {
+      ...base,
+      storage_path: path,
+      external_url: null,
+      mime_type: mime,
+      size_bytes: sizeBytes,
+      sha256,
+    };
+  }
+
+  if (!supabaseAdmin) {
+    return {
+      ok: false,
+      status: 500,
+      error: "Echec de l'enregistrement de la preuve",
+      code: 'EVIDENCE_SAVE_FAILED',
+      cause: 'service role unavailable',
+    };
+  }
+  const { error } = await supabaseAdmin.from('match_evidence').insert(row);
+  if (error) {
+    return {
+      ok: false,
+      status: 500,
+      error: "Echec de l'enregistrement de la preuve",
+      code: 'EVIDENCE_SAVE_FAILED',
+      cause: error,
+    };
+  }
+  return { ok: true, id: evidenceId, kind: input.kind };
 }

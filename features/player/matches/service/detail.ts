@@ -22,16 +22,64 @@ import {
   inferBestOf,
   resolvePlayerSide,
 } from '@/utils/matches/playerMatchView';
-import { computeScoreReportState } from '@/utils/matches/scoreReports';
+import {
+  computeScoreReportState,
+  isStaffOpenedDispute,
+} from '@/utils/matches/scoreReports';
+import { getSlaMinutes } from '@/utils/disputes/slaBreaches';
 import { LegacyAdminError } from '@/utils/admin/errors';
 import { PlayerError } from '@/utils/player/errors';
 import * as repo from '../repository';
-import type { PlayerMatchDetail } from '../schemas';
+import type { PlayerMatchDetail, PlayerMatchDispute } from '../schemas';
 import type { MatchesCtx } from './context';
 import { loadReportableTeamIds, mayReportFor } from './reportRight';
 
 const notFound = () =>
   new LegacyAdminError(404, 'Match not found', { code: 'not_found' });
+
+type Scores = { team1_score: number; team2_score: number };
+
+/** Un report absolu (team1/team2) lu dans la perspective de MON équipe. */
+function inMyPerspective(report: Scores, isTeam1: boolean) {
+  return {
+    mine: isTeam1 ? report.team1_score : report.team2_score,
+    opponent: isTeam1 ? report.team2_score : report.team1_score,
+  };
+}
+
+/**
+ * Le litige tel que la joueuse le voit. Appelé SEULEMENT quand le match est
+ * `disputed` : avant, la déclaration adverse ne sort pas (cf. schemas.ts).
+ * Lecture de la méta en échec → litige sans date plutôt qu'un fil cassé.
+ */
+async function buildDispute(
+  ctx: MatchesCtx,
+  matchId: string,
+  oppReport: Scores | null,
+  isTeam1: boolean
+): Promise<PlayerMatchDispute> {
+  const [{ meta, error }, slaMinutes] = await Promise.all([
+    repo.readDisputeMeta(ctx.db, ctx.tenantId, matchId),
+    getSlaMinutes(ctx.tenantId),
+  ]);
+  if (error) {
+    ctx.logger.error('[/api/player/matches/[matchId]] dispute meta:', error);
+  }
+  const openedAt = meta?.dispute_opened_at ?? null;
+  const openedMs = openedAt ? Date.parse(openedAt) : Number.NaN;
+  return {
+    opponentReport: oppReport ? inMyPerspective(oppReport, isTeam1) : null,
+    openedAt,
+    slaMinutes,
+    expectedBy: Number.isFinite(openedMs)
+      ? new Date(openedMs + slaMinutes * 60_000).toISOString()
+      : null,
+    openedByStaff: isStaffOpenedDispute({
+      status: 'disputed',
+      dispute_opened_by: meta?.dispute_opened_by ?? null,
+    }),
+  };
+}
 
 export async function getPlayerMatchDetail(
   ctx: MatchesCtx,
@@ -113,6 +161,12 @@ export async function getPlayerMatchDetail(
   // « D'accord » exige deux reports ÉGAUX (cf. computeScoreReportState).
   const status = match.status as string;
   const reportState = computeScoreReportState(status, myReport, oppReport);
+  // Litige OUVERT seulement : deux reports divergents sans dispute ouverte
+  // (course entre deux écritures) ne dévoilent rien.
+  const dispute =
+    status === 'disputed'
+      ? await buildDispute(ctx, matchId, oppReport, side.isTeam1)
+      : null;
 
   const access = managed.length
     ? managed
@@ -148,16 +202,8 @@ export async function getPlayerMatchDetail(
     result,
     report: {
       state: reportState,
-      mine: myReport
-        ? {
-            mine: (side.isTeam1
-              ? myReport.team1_score
-              : myReport.team2_score) as number,
-            opponent: (side.isTeam1
-              ? myReport.team2_score
-              : myReport.team1_score) as number,
-          }
-        : null,
+      mine: myReport ? inMyPerspective(myReport, side.isTeam1) : null,
+      dispute,
     },
     permissions: {
       validateLineup: !!myAccess?.permissions.includes('validate_lineup'),

@@ -80,6 +80,11 @@ export default ns('playerMatches', {
     'Ce score est impossible pour le format du match. Vérifie le nombre de maps gagnées.',
   errSessionExpired:
     'Ta session a expiré. Reconnecte-toi puis renvoie le score.',
+  errMatchNotFound: 'Ce match est introuvable. Recharge la page.',
+  errMatchBye:
+    'Ce match est une exemption (bye) : il n’y a pas de score à rapporter.',
+  errMatchIncomplete:
+    'Les deux équipes de ce match ne sont pas encore désignées.',
   sessionExpired: 'Ta session a expiré.',
   signinAgain: 'Se reconnecter',
 });

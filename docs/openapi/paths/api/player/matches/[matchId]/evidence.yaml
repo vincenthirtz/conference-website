@@ -1,0 +1,73 @@
+post:
+  tags:
+    - public/auth
+  summary: Joindre une capture d'ecran a un match (capitaine ou manager d'equipe).
+  description: |
+    Pendant web de `POST /api/bot/v1/matches/{matchId}/evidence` (kind
+    `screenshot` seulement). La capture est validee sur ses octets (PNG, JPEG
+    ou WebP), plafonnee a 4 Mo, hashee (sha256), deposee dans le bucket prive
+    `match-evidence` puis enregistree dans `match_evidence` avec le
+    `team_side` de l'appelante. Logique partagee avec la route bot
+    (`storeSideEvidence`, utils/matches/evidence.ts).
+
+    Droit : le meme que la declaration du score (utils/matches/reportRight.ts)
+    — capitaine OU manager d'equipe de team1 ou team2. Tenir les DEUX equipes
+    → `403 REPORT_BOTH_SIDES`. Sujet `self` : `?as=` refuse.
+    Idempotence honoree via `Idempotency-Key`.
+  operationId: attachPlayerMatchEvidence
+  security:
+    - PlayerBearer: []
+  parameters:
+    - name: matchId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [file_base64]
+          properties:
+            file_base64:
+              type: string
+              description: Image en base64 (prefixe `data:` accepte).
+            filename:
+              type: string
+              maxLength: 255
+            note:
+              type: string
+              maxLength: 500
+  responses:
+    '201':
+      description: Preuve enregistree (`{ id, kind: 'screenshot' }`).
+      content:
+        application/json: {}
+    '400':
+      description: |
+        `code` : `INVALID_MATCH_ID`, `MATCH_INCOMPLETE`, `EVIDENCE_EMPTY`,
+        `EVIDENCE_TOO_LARGE`, `EVIDENCE_NOT_IMAGE`, ou erreur de validation
+        du corps.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      description: |
+        `code` : `NOT_REPORTER` (ni capitaine ni manager d'une des deux
+        equipes) ou `REPORT_BOTH_SIDES`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '429':
+      description: Trop de depots (10 par minute).
+    '500':
+      $ref: '#/components/responses/ServerError'
