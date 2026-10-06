@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { supabaseClient } from '@/utils/supabaseBrowser';
+import { loginPathWithNext } from '@/utils/admin/loginRedirect';
 
 export type AdminFetchOptions = RequestInit & {
   /**
@@ -107,7 +108,10 @@ export function useAdminFetch(
         throw new AdminFetchError('Session manquante.', 401, null);
       }
       if (res.status === 401 && !skipAuthRedirect) {
-        routerRef.current.replace(loginPathRef.current);
+        // `?next=` : après reconnexion, retour sur la page en cours.
+        routerRef.current.replace(
+          loginPathWithNext(loginPathRef.current, routerRef.current.asPath)
+        );
       }
 
       return res;

@@ -17,7 +17,9 @@ import {
   errorMessageWithRef,
   type AuthedRequestInit,
 } from '@/utils/http/authedRequest';
+import Router from 'next/router';
 import type { AdminErrorCode } from './errors';
+import { loginPathWithNext } from './loginRedirect';
 
 // Le transport (Bearer, 401, idempotence, lecture de l'erreur) vit dans le
 // cœur commun `utils/http/authedRequest.ts`, partagé avec `playerRequest`.
@@ -33,12 +35,21 @@ export class AdminHttpError extends ApiHttpError {
 
 export type AdminRequestInit = AuthedRequestInit;
 
+/** Chemin courant ; le singleton du routeur lève hors d'une app Next montée. */
+function currentPath(): string | null {
+  try {
+    return Router.asPath ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function adminRequest<T>(
   url: string,
   init: AdminRequestInit = {}
 ): Promise<T> {
   return authedRequest<T>(url, init, {
-    defaultLoginPath: () => '/admin/login',
+    defaultLoginPath: () => loginPathWithNext('/admin/login', currentPath()),
     makeError: (message, status, payload) =>
       new AdminHttpError(message, status, payload),
   });

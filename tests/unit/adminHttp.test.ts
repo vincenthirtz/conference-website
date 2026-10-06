@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // `vi.mock` est remonté en tête de fichier : ce qu'il capture doit l'être aussi.
-const { session, replace } = vi.hoisted(() => ({
+const { session, replace, router } = vi.hoisted(() => ({
   session: {
     value: { access_token: 'tok-1' } as { access_token: string } | null,
   },
@@ -16,7 +16,14 @@ vi.mock('@/utils/supabaseBrowser', () => ({
     },
   },
 }));
-vi.mock('next/router', () => ({ default: { replace } }));
+vi.mock('next/router', () => ({
+  default: {
+    replace,
+    get asPath() {
+      return router.asPath;
+    },
+  },
+}));
 
 import {
   adminRequest,

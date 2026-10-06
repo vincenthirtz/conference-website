@@ -10,11 +10,14 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { renderHook, cleanup } from '@testing-library/react';
 
-const { replace, getSession } = vi.hoisted(() => ({
+const { replace, getSession, asPath } = vi.hoisted(() => ({
+  asPath: { value: undefined as string | undefined },
   replace: vi.fn(),
   getSession: vi.fn(async () => ({ data: { session: null } })),
 }));
-vi.mock('next/router', () => ({ useRouter: () => ({ replace }) }));
+vi.mock('next/router', () => ({
+  useRouter: () => ({ replace, asPath: asPath.value }),
+}));
 vi.mock('@/utils/supabaseBrowser', () => ({
   supabaseClient: { auth: { getSession } },
 }));
