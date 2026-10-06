@@ -9,7 +9,7 @@ import { withAdminQuery } from '@/features/admin/_shared/query';
 import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
 import { useDirtyBaseline } from '@/hooks/forms/useDirtyBaseline';
 import { useUnsavedChangesGuard } from '@/hooks/forms/useUnsavedChangesGuard';
-import { isStaleUpdateError } from '@/features/admin/_shared/optimisticLock';
+import { useOptimisticLock } from '@/features/admin/_shared/lock/useOptimisticLock';
 import StaleUpdateNotice from '@/features/admin/_shared/lock/StaleUpdateNotice';
 import {
   useTournamentDetail,
@@ -172,9 +172,8 @@ function AdminTournamentEditPage(_props: StaffProps) {
   const { dirty, markClean } = useDirtyBaseline(editable);
   useUnsavedChangesGuard(dirty, tFiche.unsavedConfirm);
   // Verrou optimiste : version (`updated_at`) sur laquelle repose la saisie.
-  const [version, setVersion] = useState<string | null>(null);
-  const [stale, setStale] = useState(false);
-  const [reloading, setReloading] = useState(false);
+  const lock = useOptimisticLock();
+  const setLockVersion = lock.setVersion;
 
   // Pré-remplissage du formulaire depuis la fiche serveur : à l'ouverture
   // (une fois), puis après chaque enregistrement.
@@ -214,10 +213,10 @@ function AdminTournamentEditPage(_props: StaffProps) {
         : [];
       setForm(nextForm);
       setRegistrationFields(nextFields);
-      setVersion(tour.updated_at ?? null);
+      setLockVersion(tour.updated_at ?? null);
       markClean({ form: nextForm, registrationFields: nextFields });
     },
-    [markClean]
+    [markClean, setLockVersion]
   );
 
   const formReady = useHydrateOnce(tournamentId || null, detail.data, (d) => {
@@ -286,7 +285,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
       schedule_rules: form.schedule_rules.trim() || null,
       format_details: form.format_details.trim() || null,
       registration_fields: registrationFields,
-      expected_updated_at: version,
+      expected_updated_at: lock.version,
     };
 
     try {
@@ -297,24 +296,20 @@ function AdminTournamentEditPage(_props: StaffProps) {
       const { data } = await detail.refetch();
       if (data?.tournament) hydrateForm(data.tournament);
     } catch (err: unknown) {
-      if (isStaleUpdateError(err)) setStale(true);
-      else setErrorMsg((err as Error)?.message ?? t.errorUpdate);
+      if (!lock.catchStale(err))
+        setErrorMsg((err as Error)?.message ?? t.errorUpdate);
     } finally {
       setSaving(false);
     }
   }
 
   // 409 : relire la fiche et repartir de la version à jour.
-  async function handleReload() {
-    setReloading(true);
-    try {
+  function handleReload() {
+    return lock.reload(async () => {
       const { data } = await detail.refetch();
       if (data?.tournament) hydrateForm(data.tournament);
-      setStale(false);
       setErrorMsg(null);
-    } finally {
-      setReloading(false);
-    }
+    });
   }
 
   return (
@@ -355,8 +350,11 @@ function AdminTournamentEditPage(_props: StaffProps) {
           }
         />
 
-        {stale && (
-          <StaleUpdateNotice onReload={handleReload} reloading={reloading} />
+        {lock.stale && (
+          <StaleUpdateNotice
+            onReload={handleReload}
+            reloading={lock.reloading}
+          />
         )}
 
         {errorMsg && (

@@ -5,7 +5,7 @@ import { flushSync } from 'react-dom';
 import slugify from 'slugify';
 import { useDirtyBaseline } from '@/hooks/forms/useDirtyBaseline';
 import { useUnsavedChangesGuard } from '@/hooks/forms/useUnsavedChangesGuard';
-import { isStaleUpdateError } from '@/features/admin/_shared/optimisticLock';
+import { useOptimisticLock } from '@/features/admin/_shared/lock/useOptimisticLock';
 import StaleUpdateNotice from '@/features/admin/_shared/lock/StaleUpdateNotice';
 import { withStaffPage } from '@/utils/staff';
 import { withAdminQuery } from '@/features/admin/_shared/query';
@@ -77,9 +77,7 @@ function AdminNewsEdit() {
   useUnsavedChangesGuard(dirty, tf.unsavedConfirm);
 
   // Verrou optimiste : `updated_at` de la version sur laquelle repose la saisie.
-  const [version, setVersion] = useState<string | null>(null);
-  const [stale, setStale] = useState(false);
-  const [reloading, setReloading] = useState(false);
+  const lock = useOptimisticLock();
 
   // Formulaire copié UNE fois de la fiche (jamais réécrit sous la saisie),
   // puis sur demande après un conflit (« Recharger »).
@@ -97,23 +95,18 @@ function AdminNewsEdit() {
         : '',
     };
     setForm(next);
-    setVersion(json.updated_at ?? null);
+    lock.setVersion(json.updated_at ?? null);
     markClean(next);
   };
   const hydrated = useHydrateOnce(newsId, item.data, hydrateFrom);
 
   // 409 : relire l'article et repartir de la version à jour.
-  const onReload = async () => {
-    setReloading(true);
-    try {
+  const onReload = () =>
+    lock.reload(async () => {
       const { data } = await item.refetch();
       if (data) hydrateFrom(data);
-      setStale(false);
       setError(null);
-    } finally {
-      setReloading(false);
-    }
-  };
+    });
   // Chargement puis horodatages lus dans la même réponse (null si échec).
   const loading = !item.isError && !hydrated;
   const meta =
@@ -138,7 +131,7 @@ function AdminNewsEdit() {
         ...form,
         slug: form.slug || slugifyValue(form.title),
         // Verrou optimiste : 409 si l'article a changé depuis l'ouverture.
-        expected_updated_at: version,
+        expected_updated_at: lock.version,
       };
 
       await update.mutateAsync(payload);
@@ -147,8 +140,8 @@ function AdminNewsEdit() {
       flushSync(() => markClean(form));
       router.push('/admin/news');
     } catch (err: unknown) {
-      if (isStaleUpdateError(err)) setStale(true);
-      else setError((err as Error)?.message || t.errorGeneric);
+      if (!lock.catchStale(err))
+        setError((err as Error)?.message || t.errorGeneric);
     }
   };
 
@@ -209,8 +202,8 @@ function AdminNewsEdit() {
           }
         />
 
-        {stale && (
-          <StaleUpdateNotice onReload={onReload} reloading={reloading} />
+        {lock.stale && (
+          <StaleUpdateNotice onReload={onReload} reloading={lock.reloading} />
         )}
         {loading && <div className="text-[var(--t3,#a39ba6)]">{t.loading}</div>}
         {!form && <FormError message={error} />}

@@ -55,7 +55,7 @@ import {
 import { teamsClient, teamsPaths } from '@/features/admin/teams/client';
 import { withAdminQuery } from '@/features/admin/_shared/query';
 import { useUnsavedChangesGuard } from '@/hooks/forms/useUnsavedChangesGuard';
-import { isStaleUpdateError } from '@/features/admin/_shared/optimisticLock';
+import { useOptimisticLock } from '@/features/admin/_shared/lock/useOptimisticLock';
 import StaleUpdateNotice from '@/features/admin/_shared/lock/StaleUpdateNotice';
 import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
 
@@ -135,8 +135,8 @@ function AdminEditTeamPage({
     teamId,
     team
   );
-  const [stale, setStale] = useState(false);
-  const [reloading, setReloading] = useState(false);
+  // Verrou optimiste : la version vient du formulaire (useTeamEditForm).
+  const lock = useOptimisticLock();
   useUnsavedChangesGuard(dirty, tFiche.unsavedConfirm);
   const { logoUrl, ...infoFormValues } = form;
   const { setLogoUrl, ...infoFormSetters } = setters;
@@ -223,8 +223,8 @@ function AdminEditTeamPage({
       // modifiée sans rechargement.
       setTeam(json.team);
     } catch (err: unknown) {
-      if (isStaleUpdateError(err)) setStale(true);
-      else setErrorMsg((err as Error)?.message ?? t.errUnexpected);
+      if (!lock.catchStale(err))
+        setErrorMsg((err as Error)?.message ?? t.errUnexpected);
     } finally {
       setSaving(false);
     }
@@ -233,19 +233,17 @@ function AdminEditTeamPage({
   // 409 : relire l'équipe et repartir de la version à jour.
   async function handleReload() {
     if (!teamId) return;
-    setReloading(true);
     try {
-      const json = await teamsClient.get(teamId);
-      if (json.team) {
-        setTeam(json.team);
-        hydrate(json.team);
-      }
-      setStale(false);
-      setErrorMsg(null);
+      await lock.reload(async () => {
+        const json = await teamsClient.get(teamId);
+        if (json.team) {
+          setTeam(json.team);
+          hydrate(json.team);
+        }
+        setErrorMsg(null);
+      });
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? t.errUnexpected);
-    } finally {
-      setReloading(false);
     }
   }
 
@@ -485,8 +483,11 @@ function AdminEditTeamPage({
           }
         />
 
-        {stale && (
-          <StaleUpdateNotice onReload={handleReload} reloading={reloading} />
+        {lock.stale && (
+          <StaleUpdateNotice
+            onReload={handleReload}
+            reloading={lock.reloading}
+          />
         )}
 
         {team && (
