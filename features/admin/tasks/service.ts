@@ -181,7 +181,65 @@ export async function createBoard(
   };
 }
 
-export async function getBoardDetail(ctx: ServiceContext, id: string) {
+/**
+ * Une carte d'une colonne terminale non modifiée depuis ce délai (jours) est
+ * « archivée » : masquée par défaut du board, comptée par colonne
+ * (`archivedCount`), rendue avec `?archive=1`.
+ */
+export const DONE_ARCHIVE_DAYS = 30;
+
+/** Cartes du board, l'historique terminé écarté sauf `archive`. */
+async function loadBoardTasks(
+  ctx: ServiceContext,
+  boardId: string,
+  cols: { id: string; is_done: boolean | null }[],
+  archive: boolean,
+  now: Date
+) {
+  const doneIds = cols.filter((c) => c.is_done === true).map((c) => c.id);
+  const archivedByColumn = new Map<string, number>();
+  if (archive || doneIds.length === 0) {
+    const tasks = await repo.listLiveTasksOfBoard(
+      ctx.db,
+      ctx.tenantId,
+      boardId
+    );
+    return { tasks, archivedByColumn };
+  }
+  const cutoff = new Date(
+    now.getTime() - DONE_ARCHIVE_DAYS * 86_400_000
+  ).toISOString();
+  const activeIds = cols.filter((c) => c.is_done !== true).map((c) => c.id);
+  const [active, recentDone, archived] = await Promise.all([
+    repo.listLiveTasksOfBoard(ctx.db, ctx.tenantId, boardId, {
+      columnIds: activeIds,
+    }),
+    repo.listLiveTasksOfBoard(ctx.db, ctx.tenantId, boardId, {
+      columnIds: doneIds,
+      updatedSince: cutoff,
+    }),
+    repo.listTaskColumnsUpdatedBefore(
+      ctx.db,
+      ctx.tenantId,
+      boardId,
+      doneIds,
+      cutoff
+    ),
+  ]);
+  for (const r of archived) {
+    archivedByColumn.set(
+      r.column_id,
+      (archivedByColumn.get(r.column_id) ?? 0) + 1
+    );
+  }
+  return { tasks: [...active, ...recentDone], archivedByColumn };
+}
+
+export async function getBoardDetail(
+  ctx: ServiceContext,
+  id: string,
+  opts: { archive?: boolean; now?: Date } = {}
+) {
   const { row: board, error } = await repo.getBoard(ctx.db, ctx.tenantId, id);
   if (error) {
     throw fail(
@@ -193,10 +251,14 @@ export async function getBoardDetail(ctx: ServiceContext, id: string) {
   }
   if (!board) throw new NotFoundError('Board introuvable');
 
-  const [cols, tasks] = await Promise.all([
-    repo.listColumnsOfBoard(ctx.db, ctx.tenantId, id),
-    repo.listLiveTasksOfBoard(ctx.db, ctx.tenantId, id),
-  ]);
+  const cols = await repo.listColumnsOfBoard(ctx.db, ctx.tenantId, id);
+  const { tasks, archivedByColumn } = await loadBoardTasks(
+    ctx,
+    id,
+    cols,
+    opts.archive === true,
+    opts.now ?? new Date()
+  );
 
   // Noms d'assignés en un seul round-trip (même requête que le cœur).
   const nameById = await resolveStaffNames(
@@ -239,6 +301,8 @@ export async function getBoardDetail(ctx: ServiceContext, id: string) {
       position: c.position ?? 0,
       wipLimit: c.wip_limit ?? null,
       isDone: c.is_done === true,
+      /** Cartes terminées archivées non rendues (0 avec `archive`). */
+      archivedCount: archivedByColumn.get(c.id) ?? 0,
       tasks: tasks
         .filter((t) => t.column_id === c.id)
         .sort((x, y) => (x.position ?? 0) - (y.position ?? 0))

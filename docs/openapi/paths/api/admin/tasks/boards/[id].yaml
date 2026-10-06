@@ -2,8 +2,12 @@ get:
   tags:
     - admin/tasks
   summary: Board complet (colonnes ordonnees, cartes triees par position).
+  description: >
+    Les cartes des colonnes terminales non modifiees depuis plus de 30 jours
+    sont masquees par defaut ; chaque colonne porte `archivedCount`, leur
+    nombre. `archive=1` les rend toutes.
   operationId: adminGetTaskBoard
-  x-zod-query: admin.tasks/boards/[id].query
+  x-zod-query: admin.tasks/boards/[id].get.query
   security:
     - StaffSession: []
   parameters:
@@ -11,6 +15,11 @@ get:
       in: path
       required: true
       schema: {type: string, format: uuid}
+    - name: archive
+      in: query
+      description: "1 ou true : inclure les cartes terminees archivees."
+      schema:
+        type: string
   responses:
     '200':
       description: Board complet.

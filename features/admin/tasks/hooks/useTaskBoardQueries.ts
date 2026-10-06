@@ -16,7 +16,14 @@ import { taskBoardClient } from '../client';
 export const taskBoardKeys = {
   all: adminKey('tasks'),
   boards: () => [...taskBoardKeys.all, 'boards'] as const,
-  board: (id: string) => [...taskBoardKeys.all, 'board', id] as const,
+  /** Le détail avec ou sans l'archive des cartes terminées : deux entrées. */
+  board: (id: string, archive = false) =>
+    [
+      ...taskBoardKeys.all,
+      'board',
+      id,
+      archive ? 'archive' : 'recent',
+    ] as const,
   my: () => [...taskBoardKeys.all, 'my'] as const,
   staff: (tenantId: string) =>
     [...taskBoardKeys.all, 'staff', tenantId] as const,
@@ -34,11 +41,15 @@ export function useTaskBoardsList() {
   });
 }
 
-/** Détail du board actif, relu à chaque changement de board. */
-export function useTaskBoardDetail(boardId: string | null) {
+/**
+ * Détail du board actif, relu à chaque changement de board ou d'affichage
+ * de l'archive (cartes terminées depuis plus de 30 jours).
+ */
+export function useTaskBoardDetail(boardId: string | null, archive = false) {
   return useQuery({
-    queryKey: taskBoardKeys.board(boardId ?? ''),
-    queryFn: async () => (await taskBoardClient.board(boardId as string)).board,
+    queryKey: taskBoardKeys.board(boardId ?? '', archive),
+    queryFn: async () =>
+      (await taskBoardClient.board(boardId as string, archive)).board,
     enabled: !!boardId,
     ...EDITOR_QUERY_OPTIONS,
     // Pas de nouvel essai différé : il pourrait retomber après un

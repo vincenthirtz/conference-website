@@ -68,6 +68,8 @@ export type BoardDetailColumn = {
   position: number;
   wipLimit: number | null;
   isDone: boolean;
+  /** Cartes terminées depuis plus de 30 jours, masquées (non chargées). */
+  archivedCount?: number;
   tasks: BoardTask[];
 };
 

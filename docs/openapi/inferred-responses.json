@@ -15846,6 +15846,9 @@
            "type": "number"
           }
          },
+          "archivedCount": {
+           "type": "number"
+          },
          "required": [
           "id",
           "isDone",
@@ -15950,6 +15953,7 @@
     "type": "object",
     "properties": {
      "activity": {
+          "archivedCount",
       "type": "array",
       "items": {
        "type": "object",

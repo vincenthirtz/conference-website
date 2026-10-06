@@ -1,17 +1,19 @@
 // features/admin/tasks/routes/boardById.ts
 // /api/admin/tasks/boards/[id] — GET board complet (colonnes, cartes, labels,
-// agrégats checklist / commentaires), PATCH édition, DELETE (CASCADE).
+// agrégats checklist / commentaires ; cartes terminées depuis plus de 30 jours
+// seulement avec `?archive=1`), PATCH édition, DELETE (CASCADE).
 
 import { defineAdminRoute, mutate, read } from '@/utils/admin/defineAdminRoute';
-import { BoardIdQuery, PatchBoardBody } from '../schemas';
+import { BoardDetailQuery, BoardIdQuery, PatchBoardBody } from '../schemas';
 import { deleteBoard, getBoardDetail, updateBoard } from '../service';
 
 export default defineAdminRoute({
   key: 'tasks-board-id',
   guard: { permission: 'manage_tasks' },
   GET: read({
-    query: BoardIdQuery,
-    handler: ({ query, ctx }) => getBoardDetail(ctx, query.id),
+    query: BoardDetailQuery,
+    handler: ({ query, ctx }) =>
+      getBoardDetail(ctx, query.id, { archive: query.archive }),
   }),
   PATCH: mutate({
     query: BoardIdQuery,

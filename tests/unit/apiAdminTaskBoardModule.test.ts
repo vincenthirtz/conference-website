@@ -183,6 +183,60 @@ describe('DELETE /api/admin/tasks/boards/[id]', () => {
   });
 });
 
+describe('GET /api/admin/tasks/boards/[id] — archive des cartes terminées', () => {
+  const DONE = '44444444-4444-4444-8444-444444444403';
+  const OLD_DONE = '55555555-5555-4555-8555-555555555503';
+  const RECENT_DONE = '55555555-5555-4555-8555-555555555504';
+  const OLD_TODO = '55555555-5555-4555-8555-555555555505';
+  const daysAgo = (n: number) =>
+    new Date(Date.now() - n * 86_400_000).toISOString();
+
+  beforeEach(() => {
+    (store.task_columns as any[]).push({
+      id: DONE,
+      tenant_id: TENANT,
+      board_id: BOARD,
+      name: 'Terminé',
+      position: 2,
+      wip_limit: null,
+      is_done: true,
+    });
+    store.tasks = [
+      { ...task(TASK, COL1, 0), updated_at: daysAgo(1) },
+      // Ancienne mais NON terminée : toujours rendue.
+      { ...task(OLD_TODO, COL1, 1), updated_at: daysAgo(90) },
+      { ...task(OLD_DONE, DONE, 0), updated_at: daysAgo(45) },
+      { ...task(RECENT_DONE, DONE, 1), updated_at: daysAgo(3) },
+    ] as any;
+  });
+
+  const columnsOf = (res: any) =>
+    new Map<string, any>(res.body.board.columns.map((c: any) => [c.id, c]));
+
+  it('masque par défaut les cartes terminées depuis plus de 30 jours, et les compte', async () => {
+    const res = makeRes();
+    await boardIdHandler(makeReq({ query: { id: BOARD } }), res);
+    expect(res.statusCode).toBe(200);
+    const cols = columnsOf(res);
+    expect(cols.get(DONE).tasks.map((t: any) => t.id)).toEqual([RECENT_DONE]);
+    expect(cols.get(DONE).archivedCount).toBe(1);
+    expect(cols.get(COL1).tasks.map((t: any) => t.id)).toEqual([
+      TASK,
+      OLD_TODO,
+    ]);
+    expect(cols.get(COL1).archivedCount).toBe(0);
+  });
+
+  it('`?archive=1` rend toute l’archive', async () => {
+    const res = makeRes();
+    await boardIdHandler(makeReq({ query: { id: BOARD, archive: '1' } }), res);
+    expect(res.statusCode).toBe(200);
+    const done = columnsOf(res).get(DONE);
+    expect(done.tasks.map((t: any) => t.id)).toEqual([OLD_DONE, RECENT_DONE]);
+    expect(done.archivedCount).toBe(0);
+  });
+});
+
 describe('contrat HTTP conservé', () => {
   it('400 avec le message historique sur un id non-uuid', async () => {
     const res = makeRes();

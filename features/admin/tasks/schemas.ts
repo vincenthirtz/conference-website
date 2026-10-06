@@ -50,6 +50,18 @@ export const LabelIdQuery = idQuery('Label id invalide');
 export const CommentIdQuery = idQuery('Commentaire id invalide');
 export const ChecklistItemIdQuery = idQuery('Item id invalide');
 
+/**
+ * `GET boards/[id]?archive=1|true` : rend aussi les cartes TERMINÉES depuis
+ * plus de `DONE_ARCHIVE_DAYS` jours, masquées par défaut (« afficher
+ * l'archive »). Toute autre valeur = masquées.
+ */
+export const BoardDetailQuery = BoardIdQuery.extend({
+  archive: z
+    .unknown()
+    .optional()
+    .transform((v) => v === '1' || v === 'true'),
+});
+
 /** `GET boards?includeArchived=1|true` ; toute autre valeur = non archivés. */
 export const ListBoardsQuery = z.object({
   includeArchived: z

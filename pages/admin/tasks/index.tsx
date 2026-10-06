@@ -119,6 +119,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
     typeof router.query.board === 'string' ? router.query.board : null
   );
   const [showArchived, setShowArchived] = useState(false);
+  const [showDoneArchive, setShowDoneArchive] = useState(false);
   // Bascule Board ↔ Mes tâches (vue transverse).
   const [viewMode, setViewMode] = useState<'board' | 'mine'>('board');
   // Ouverture différée d'une carte depuis « Mes tâches » : on navigue vers son
@@ -139,7 +140,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
   // Pas encore de réponse = chargement (comme l'état initial d'avant).
   const loadingBoards =
     boardsQuery.isFetching || (!boardsQuery.data && !boardsQuery.isError);
-  const detailQuery = useTaskBoardDetail(activeBoardId);
+  const detailQuery = useTaskBoardDetail(activeBoardId, showDoneArchive);
   const detail: BoardDetail | null = detailQuery.data ?? null;
   const loadingDetail = detailQuery.isFetching;
   const myTasksQuery = useMyTasks(viewMode === 'mine');
@@ -154,11 +155,11 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
     (next: SetStateAction<BoardDetail | null>) => {
       if (!activeBoardId) return;
       queryClient.setQueryData<BoardDetail | null>(
-        taskBoardKeys.board(activeBoardId),
+        taskBoardKeys.board(activeBoardId, showDoneArchive),
         (prev) => (typeof next === 'function' ? next(prev ?? null) : next)
       );
     },
-    [queryClient, activeBoardId]
+    [queryClient, activeBoardId, showDoneArchive]
   );
 
   // Board modale (création / renommage)
@@ -274,11 +275,11 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
   const fetchDetail = useCallback(
     async (boardId: string) => {
       await queryClient.refetchQueries({
-        queryKey: taskBoardKeys.board(boardId),
+        queryKey: taskBoardKeys.board(boardId, showDoneArchive),
         exact: true,
       });
     },
-    [queryClient]
+    [queryClient, showDoneArchive]
   );
 
   const refetchMyTasks = myTasksQuery.refetch;
@@ -634,6 +635,8 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
                           onDropOnCard={onDropOnCard}
                           onCardDragStart={onCardDragStart}
                           onCardDragEnd={onCardDragEnd}
+                          archiveShown={showDoneArchive}
+                          onToggleArchive={() => setShowDoneArchive((v) => !v)}
                         />
                       ))}
                     </div>

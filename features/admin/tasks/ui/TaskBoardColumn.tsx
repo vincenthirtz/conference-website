@@ -35,6 +35,8 @@ export default function TaskBoardColumn({
   onDropOnCard,
   onCardDragStart,
   onCardDragEnd,
+  archiveShown = false,
+  onToggleArchive,
 }: {
   t: Dict;
   col: BoardDetailColumn;
@@ -59,7 +61,13 @@ export default function TaskBoardColumn({
   ) => void;
   onCardDragStart: (e: DragEvent, taskId: string) => void;
   onCardDragEnd: () => void;
+  /** Cartes terminées depuis plus de 30 jours affichées (board entier). */
+  archiveShown?: boolean;
+  onToggleArchive?: () => void;
 }) {
+  const archivedCount = col.archivedCount ?? 0;
+  const showArchiveToggle =
+    col.isDone && !!onToggleArchive && (archiveShown || archivedCount > 0);
   const totalCount = col.tasks.length;
   // WIP se calcule sur le total réel, pas sur le filtré.
   const over = col.wipLimit != null && totalCount > col.wipLimit;
@@ -195,6 +203,23 @@ export default function TaskBoardColumn({
             onDrop={(e) => onDropOnCard(e, col.id, card.id)}
           />
         ))}
+        {showArchiveToggle && (
+          <div className="px-2 py-2 text-center">
+            {!archiveShown && (
+              <p className="mb-1 text-xs text-[var(--t4,#807984)]">
+                {format(t.doneArchiveHidden, { count: archivedCount })}
+              </p>
+            )}
+            <AdminButton
+              size="xs"
+              variant="ghost"
+              aria-pressed={archiveShown}
+              onClick={onToggleArchive}
+            >
+              {archiveShown ? t.doneArchiveHide : t.doneArchiveShow}
+            </AdminButton>
+          </div>
+        )}
       </div>
 
       {/* Ajouter une carte */}

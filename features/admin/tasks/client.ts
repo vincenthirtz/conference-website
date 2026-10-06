@@ -58,8 +58,11 @@ export const taskBoardClient = {
     adminRequest<{ boards: BoardListItem[] }>(
       `${taskBoardUrls.boards}?includeArchived=1`
     ),
-  board: (id: string) =>
-    adminRequest<{ board: BoardDetail }>(taskBoardUrls.board(id)),
+  /** `archive` : avec les cartes terminées depuis plus de 30 jours. */
+  board: (id: string, archive = false) =>
+    adminRequest<{ board: BoardDetail }>(
+      archive ? `${taskBoardUrls.board(id)}?archive=1` : taskBoardUrls.board(id)
+    ),
   myTasks: () => adminRequest<{ tasks: MyTask[] }>(taskBoardUrls.my),
   deleted: (boardId: string) =>
     adminRequest<{ tasks: DeletedTask[] }>(taskBoardUrls.deleted(boardId)),

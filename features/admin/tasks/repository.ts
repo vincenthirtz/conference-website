@@ -288,17 +288,50 @@ export async function listColumnNames(
 
 /* ----------------------------------------------------------------- tasks */
 
+/**
+ * Cartes vivantes d'un board. `only` restreint aux colonnes `columnIds`, et,
+ * avec `updatedSince`, aux cartes modifiées depuis cet instant : c'est ainsi
+ * que le service écarte l'historique terminé (cf. getBoardDetail).
+ */
 export async function listLiveTasksOfBoard(
   db: AdminDb,
   tenantId: string,
-  boardId: string
+  boardId: string,
+  only?: { columnIds: string[]; updatedSince?: string }
 ) {
-  const { data } = await db
+  if (only && only.columnIds.length === 0) return [];
+  let q = db
     .from('tasks')
     .select(TASK_CARD_COLUMNS)
     .eq('tenant_id', tenantId)
     .eq('board_id', boardId)
     .is('deleted_at', null);
+  if (only) q = q.in('column_id', only.columnIds);
+  if (only?.updatedSince) q = q.gte('updated_at', only.updatedSince);
+  const { data } = await q;
+  return data ?? [];
+}
+
+/**
+ * Colonne de chaque carte vivante des colonnes `columnIds` modifiée AVANT
+ * `before` : les cartes terminées archivées, seulement comptées.
+ */
+export async function listTaskColumnsUpdatedBefore(
+  db: AdminDb,
+  tenantId: string,
+  boardId: string,
+  columnIds: string[],
+  before: string
+) {
+  if (columnIds.length === 0) return [];
+  const { data } = await db
+    .from('tasks')
+    .select('column_id')
+    .eq('tenant_id', tenantId)
+    .eq('board_id', boardId)
+    .is('deleted_at', null)
+    .in('column_id', columnIds)
+    .lt('updated_at', before);
   return data ?? [];
 }
 
