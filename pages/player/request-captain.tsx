@@ -4,7 +4,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
+import { loginHrefFor } from '@/utils/player/sessionExpiry';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useDebounce } from '@/hooks/useDebounce';
 import { PlayerPageSkeleton } from '@/components/player/Skeletons';
@@ -49,7 +51,20 @@ function nextMemberId(): string {
 }
 
 function RequestCaptainPage() {
-  const { user, token, loading: authLoading, ready } = usePlayerSession();
+  const router = useRouter();
+  // Retour à CETTE page après connexion (`?next=`), comme les autres pages
+  // joueuse ; redirection armée une fois le routeur prêt (`asPath` fiable).
+  const {
+    user,
+    token,
+    loading: authLoading,
+    ready,
+  } = usePlayerSession({
+    redirect: router.isReady,
+    redirectTo: loginHrefFor(
+      router.isReady ? router.asPath : '/player/request-captain'
+    ),
+  });
   const { adminFetchJson } = useAdminFetch({ loginPath: '/login' });
   const t = useT(nsRequestCaptain);
   const locale = useLocale();
@@ -533,5 +548,5 @@ const requestCaptainSeo: SeoProps = {
 RequestCaptainPage.seo = requestCaptainSeo;
 
 // Coquille joueuse (lot P8) : navigation basse / rail. La page garde sa
-// propre redirection de session (pas encore migrée) : `redirectTo` absent.
+// propre redirection de session (retour `?next=` exact) : `redirectTo` absent.
 export default withPlayerShell(RequestCaptainPage);

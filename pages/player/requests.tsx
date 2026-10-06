@@ -27,6 +27,8 @@ function PlayerRequestsPage() {
   // lien partagé (`?tab=scrim&team=…`) garde sa destination. Avant
   // hydratation `asPath` n'est pas fiable : repli sur `/player/requests`.
   const { user, loading: authLoading } = usePlayerSession({
+    // Armée seulement routeur prêt : avant, la requête du lien était perdue.
+    redirect: router.isReady,
     redirectTo: loginHrefFor(
       router.isReady ? router.asPath : '/player/requests'
     ),

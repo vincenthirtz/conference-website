@@ -59,6 +59,8 @@ function JoinTeamPage() {
     loading: authLoading,
     ready,
   } = usePlayerSession({
+    // Armée seulement routeur prêt : avant, la requête du lien était perdue.
+    redirect: router.isReady,
     redirectTo: loginHrefFor(
       router.isReady ? router.asPath : '/player/join-team'
     ),
