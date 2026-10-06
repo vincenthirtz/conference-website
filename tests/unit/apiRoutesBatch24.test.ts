@@ -164,6 +164,8 @@ describe('/api/teams/join-requests', () => {
       email: 'known@example.com',
       display_name: 'Known Full',
       battle_tag: 'Known#9',
+      // Pseudo Discord exposé depuis le lot P8 ; absent du profil → null.
+      discord: null,
     });
     // Unknown id → skipped, userInfo null (best-effort).
     expect(ghost.user).toBeNull();
