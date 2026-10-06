@@ -10,9 +10,11 @@
 // autre (DELETE /api/demandes/cancel, côté page).
 //
 // Composant de PRÉSENTATION : les libellés arrivent déjà traduits (chaque page
-// garde son namespace i18n), l'appel réseau reste dans la page.
+// garde son namespace i18n), l'appel réseau reste dans la page. Briques et
+// encadrés du kit Le Ruban (features/ruban), pas de couleur Tailwind en dur.
 
-import Link from 'next/link';
+import Button, { ButtonLink } from '@/features/ruban/Button';
+import { rubanErr, rubanWarnBox } from '@/features/ruban/ruban';
 
 type Props = {
   title: string;
@@ -40,7 +42,7 @@ export default function PendingDemandeNotice({
     <section
       data-testid="pending-demande-notice"
       aria-labelledby="pending-demande-title"
-      className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-100"
+      className={rubanWarnBox}
     >
       <h2 id="pending-demande-title" className="mb-1 font-semibold">
         {title}
@@ -48,30 +50,24 @@ export default function PendingDemandeNotice({
       <p>{body}</p>
 
       {error && (
-        <p
-          role="alert"
-          className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-100"
-        >
+        <p role="alert" className={`mt-3 px-3 py-2 text-xs ${rubanErr}`}>
           {error}
         </p>
       )}
 
       <div className="mt-4 flex flex-wrap gap-3">
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          size="sm"
           onClick={onCancel}
           disabled={cancelling}
           aria-busy={cancelling || undefined}
-          className="inline-flex rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {cancelling ? cancellingLabel : cancelLabel}
-        </button>
-        <Link
-          href="/player"
-          className="inline-flex rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
-        >
+        </Button>
+        <ButtonLink href="/player" size="sm">
           {backLabel}
-        </Link>
+        </ButtonLink>
       </div>
     </section>
   );

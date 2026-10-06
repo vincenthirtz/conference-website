@@ -13,6 +13,7 @@
 import { useId, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
+import Chip from '@/features/ruban/Chip';
 import { useT, format } from '@/lib/i18n/useT';
 import nsTeamPicker from '@/lib/i18n/locales/fr/teamPicker';
 import nsRecrutementPage from '@/lib/i18n/locales/fr/recrutementPage';
@@ -268,13 +269,11 @@ export default function TeamPicker({
                         </span>
                       )}
                       {team.opening && (
-                        <span className="flex-shrink-0 rounded-full border border-purple-400/40 bg-purple-500/15 px-2 py-0.5 text-[10px] font-semibold text-purple-100">
-                          {t.recruitingBadge}
-                        </span>
+                        <Chip tone="brand">{t.recruitingBadge}</Chip>
                       )}
                     </div>
                     {team.opening && team.opening.roles.length > 0 && (
-                      <div className="text-xs text-purple-200/90 truncate">
+                      <div className="text-xs text-[var(--or-200,#eec4ff)] truncate">
                         {format(t.lookingFor, {
                           roles: team.opening.roles.map(roleLabel).join(', '),
                         })}
