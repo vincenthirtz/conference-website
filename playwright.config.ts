@@ -88,10 +88,12 @@ export default defineConfig({
     // rejoués sur un téléphone (412 px, tactile). Pixel 7 = Chromium, déjà
     // installé pour le projet desktop. Base LOCALE uniquement, comme le reste
     // de la suite (skipIfNoServiceRole + supabaseTestClient) — jamais la prod.
+    // `manage-team` / `guide-team` : écrans capitaine sans préfixe, rejoués
+    // aussi en mobile (lot P10).
     {
       name: 'mobile',
       testMatch:
-        /e2e[\\/](player-|captain-|team-|checkin-|scrim-|tcg)[^\\/]*\.spec\.ts$/,
+        /e2e[\\/](player-|captain-|team-|checkin-|scrim-|tcg|manage-team|guide-team)[^\\/]*\.spec\.ts$/,
       use: { ...devices['Pixel 7'] },
     },
   ],
