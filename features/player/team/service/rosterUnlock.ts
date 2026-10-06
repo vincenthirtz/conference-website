@@ -24,7 +24,7 @@ import {
   type RosterLockView,
   type RosterUnlockRequestView,
 } from '@/utils/teams/rosterLockView';
-import type { RosterUnlockRequestInput } from '../rosterUnlockSchemas';
+import type { RosterUnlockRequestInput } from '../rosterUnlock/schemas';
 import { fail, type ManagedTeamContext } from './context';
 
 const SITE_URL =

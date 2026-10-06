@@ -6,7 +6,7 @@ import {
   defineSubjectRoute,
   mutateSubject,
 } from '@/utils/player/defineSubjectRoute';
-import { RosterUnlockRequestBody } from '../rosterUnlockSchemas';
+import { RosterUnlockRequestBody } from '../rosterUnlock/schemas';
 import { requestRosterUnlock } from '../service/rosterUnlock';
 
 export default defineSubjectRoute({
@@ -14,6 +14,9 @@ export default defineSubjectRoute({
   tenantResolution: 'async',
   POST: mutateSubject({
     team: { permission: 'manage_roster' },
+    // Act-as staff (S4) : le service le note sur le ticket. `actAs` exige
+    // `follow` — sans lui, le module refusait de se charger.
+    subject: 'follow',
     actAs: true,
     body: RosterUnlockRequestBody,
     rateLimit: { max: 5, windowMs: 60 * 60 * 1000 },

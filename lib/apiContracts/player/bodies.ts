@@ -15,7 +15,10 @@ import {
   RegisterTeamDemandeBody,
   TransferDemandeBody,
 } from '../../../features/player/demandes/schemas';
-import { LineupBody } from '../../../features/player/matches/schemas';
+import {
+  EvidenceUploadBody,
+  LineupBody,
+} from '../../../features/player/matches/schemas';
 import { CreateTeamBody } from '../../../features/player/onboarding/schemas';
 import { SendMessageBody } from '../../../features/player/messages/schemas';
 import { LeaderboardVisibilityBody } from '../../../features/player/predictions/schemas';
@@ -40,6 +43,7 @@ import {
   UpdateMemberSpecialtyBody,
 } from '../../../features/player/team/schemas';
 import { TeamOpeningUpsertBody } from '../../../features/player/team/opening/schemas';
+import { RosterUnlockRequestBody } from '../../../features/player/team/rosterUnlock/schemas';
 import {
   EquipCosmeticsBody,
   ForgeBody,
@@ -76,6 +80,8 @@ export const PLAYER_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   'player.teams.member-profile': input(TeamMemberProfileBody),
   'player.predictions.leaderboard': input(LeaderboardVisibilityBody),
   'player.teams.matches.lineup': input(LineupBody),
+  'player.matches.evidence': input(EvidenceUploadBody),
+  'player.teams.roster-unlock-request': input(RosterUnlockRequestBody),
   'player.team-reviews.put': input(TeamReviewBody),
   'player.team-rhythm.put': input(TeamRhythmBody),
   'player.update-profile': input(UpdatePlayerProfileBody),

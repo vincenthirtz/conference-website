@@ -1,0 +1,47 @@
+post:
+  tags:
+    - public/teams
+  summary: Demander une derogation au verrou de roster de l'equipe geree.
+  description: |
+    Cree un ticket de support `roster_unlock` (equipe ciblee, lien admin,
+    notification Discord) traite par le staff. Droit `manage_roster` : c'est
+    celui que le verrou bloque. Sans la migration
+    `add_roster_unlock_category_to_support_tickets.sql`, le ticket retombe en
+    categorie `other` avec un sujet prefixe.
+
+    409 `roster_not_locked` si le roster est libre ; 409
+    `roster_unlock_already_requested` (avec `request`) si une demande est deja
+    en attente. Act-as staff autorise (`?as=…&act=1`) : le ticket le precise.
+  operationId: requestRosterUnlock
+  security:
+    - PlayerBearer: []
+  parameters:
+    - $ref: '#/components/parameters/TeamScope'
+    - $ref: '#/components/parameters/SubjectAs'
+    - $ref: '#/components/parameters/ActAs'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: player.teams.roster-unlock-request
+  responses:
+    '200':
+      description: '{ success: true, request: { ticketId, createdAt } }'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
+    '429':
+      $ref: '#/components/responses/RateLimited'

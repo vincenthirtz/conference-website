@@ -18,7 +18,7 @@ import {
   loadRosterLockView,
   requestRosterUnlock,
 } from '@/features/player/team/service/rosterUnlock';
-import { RosterUnlockRequestBody } from '@/features/player/team/rosterUnlockSchemas';
+import { RosterUnlockRequestBody } from '@/features/player/team/rosterUnlock/schemas';
 import {
   ROSTER_UNLOCK_SUBJECT_PREFIX,
   readRosterLockView,
