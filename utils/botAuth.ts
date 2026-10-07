@@ -73,6 +73,32 @@ const DEFAULT_TENANT_ID_FOR_CACHE = DEFAULT_TENANT_ID;
  */
 const API_KEY_TTL_MS = 60_000;
 const API_KEY_CACHE_MAX = 50;
+
+/**
+ * Pas minimal entre deux écritures de `tenant_secrets.last_used_at`.
+ *
+ * La trace d'usage s'écrivait à chaque miss du cache ci-dessus. Or le bot
+ * interroge le site toutes les ~60 s, soit pile le TTL : presque chaque appel
+ * était un miss, donc une lecture ET une écriture — 1 621 PATCH en 24 h pour
+ * une donnée dont la seule utilité est de dire « cette clé sert encore ».
+ * Une précision à l'heure suffit largement : on n'écrit plus que si la valeur
+ * lue (dans la même requête que la vérification) a plus d'une heure.
+ */
+export const LAST_USED_WRITE_INTERVAL_MS = 60 * 60_000;
+
+/**
+ * Faut-il rafraîchir `last_used_at` ? Oui si absent, illisible, ou plus vieux
+ * que l'intervalle. Exporté pour les tests.
+ */
+export function shouldBumpLastUsed(
+  lastUsedAt: string | null | undefined,
+  nowMs: number = Date.now()
+): boolean {
+  if (!lastUsedAt) return true;
+  const t = Date.parse(lastUsedAt);
+  if (!Number.isFinite(t)) return true;
+  return nowMs - t >= LAST_USED_WRITE_INTERVAL_MS;
+}
 const apiKeyCache = new Map<
   string,
   { tenantId: string; isPlatformKey: boolean; expiresAt: number }
@@ -301,7 +327,7 @@ export async function verifyBotApiKeyMultiTenant(
   const { data } = await supabaseAdmin
     .from('tenant_secrets')
     .select(
-      'tenant_id, is_platform_key, bot_api_key_hash, previous_key_hash, previous_key_expires_at'
+      'tenant_id, is_platform_key, bot_api_key_hash, previous_key_hash, previous_key_expires_at, last_used_at'
     )
     .or(`bot_api_key_hash.eq.${hash},previous_key_hash.eq.${hash}`)
     .maybeSingle();
@@ -313,6 +339,7 @@ export async function verifyBotApiKeyMultiTenant(
       bot_api_key_hash?: string | null;
       previous_key_hash?: string | null;
       previous_key_expires_at?: string | null;
+      last_used_at?: string | null;
     };
     // Clé précédente : n'est acceptée que tant que sa fenêtre court. Passé
     // l'échéance, elle vaut une clé inconnue.
@@ -326,13 +353,15 @@ export async function verifyBotApiKeyMultiTenant(
     }
     const tenantId = data.tenant_id as string;
     const isPlatformKey = data.is_platform_key === true;
-    // Trace d'usage, au plus une fois par TTL de cache (on n'arrive ici que sur
-    // un miss). Best-effort : une écriture ratée ne refuse pas l'appel.
-    void supabaseAdmin
-      .from('tenant_secrets')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('tenant_id', tenantId)
-      .then(undefined, () => undefined);
+    // Trace d'usage, au plus une fois par heure (cf. LAST_USED_WRITE_INTERVAL_MS).
+    // Best-effort : une écriture ratée ne refuse pas l'appel.
+    if (shouldBumpLastUsed(row.last_used_at)) {
+      void supabaseAdmin
+        .from('tenant_secrets')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('tenant_id', tenantId)
+        .then(undefined, () => undefined);
+    }
     apiKeyCache.set(hash, {
       tenantId,
       isPlatformKey,
