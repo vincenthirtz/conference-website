@@ -181,7 +181,7 @@ absent d'ici, ou listé mais plus émis, fait échouer la suite.
 | `TOURNAMENT_COMPLETED` | 403 | Tournoi terminé : le rouvrir avant de modifier le match. | `matches/[matchId]`, `matches/[matchId]/reset` |
 | `ALREADY_COMPLETE` | 400 | Veto déjà complet. | `matches/[matchId]/veto` |
 | `CHANNEL_COLUMN_MISSING` | 503 | Migration du salon de match non appliquée. | `matches/[matchId]/discord` |
-| `BATTLE_TAGS_UNAVAILABLE` | 503 | Correspondance BattleTag du tenant illisible (`Retry-After: 60`) ; retomber sur `players/by-discord/:id/team`. | `players/battle-tags` |
+| `BATTLE_TAGS_UNAVAILABLE` | 503 | Correspondance BattleTag du tenant illisible (`Retry-After: 60`) ; sauter le critère BattleTag pour ce tick (pas de repli membre par membre). | `players/battle-tags` |
 | `MATCH_NOT_FOUND` | 404 | Match introuvable. | `matches/[matchId]/drafts` |
 | `TOURNAMENT_NOT_FOUND` | 404 | Tournoi du match introuvable. | `matches/[matchId]/drafts` |
 | `GAME_NOT_DRAFTABLE` | 400 | Le jeu du tournoi n'a pas de draft. | `matches/[matchId]/drafts` |
@@ -2129,9 +2129,10 @@ défaut).
 
 **Errors** : `400 INVALID_QUERY` (curseur ou limite invalide, détail dans
 `fields`), `401` (clé), `405` (autre méthode que GET), `429` (limiteur),
-`503 BATTLE_TAGS_UNAVAILABLE` + `Retry-After: 60` (lecture impossible —
-retomber sur `.../team` membre par membre ou sauter le critère BattleTag pour
-ce tick).
+`503 BATTLE_TAGS_UNAVAILABLE` + `Retry-After: 60` (lecture impossible — le
+bot saute le critère BattleTag pour ce tick et réessaie au suivant ; ne PAS
+retomber sur `.../team` membre par membre, ce qui renverrait des milliers
+d'appels sur un site déjà en difficulté).
 **Rate limit** : 30/min (`bot-player-battle-tags`). **Idempotency** : non (GET).
 
 #### `GET /api/bot/v1/players/by-discord/:discordUserId/actions-todo`
