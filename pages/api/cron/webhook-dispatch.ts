@@ -38,6 +38,46 @@ const SOFT_TIME_BUDGET_MS = 8_000;
 
 let _inFlight = false;
 
+/**
+ * « Existe-t-il au moins un abonnement actif, tous tenants confondus ? »,
+ * mémorisé ANY_SUB_TTL_MS.
+ *
+ * POURQUOI. Le tick (chaque minute) commençait par relire 24 h d'outbox, puis
+ * seulement après regardait s'il y avait quelqu'un à qui envoyer. Sans aucun
+ * abonnement — le cas courant —, c'étaient 1 440 lectures `bot_event_outbox`
+ * par jour pour rien. On pose la question dans l'autre sens, une requête
+ * `limit 1` toutes les 5 min au plus.
+ *
+ * Sans perte : un abonnement créé est servi au plus 5 min plus tard, et la
+ * fenêtre de 24 h rattrape les events émis entre-temps. Le chemin complet
+ * relit toujours les abonnements à jour (compteurs d'échecs compris) : seul
+ * ce booléen est mis en cache. Une erreur de lecture n'est pas mémorisée et
+ * laisse passer le tick normal.
+ */
+const ANY_SUB_TTL_MS = 5 * 60_000;
+let anySubCache: { value: boolean; expiresAt: number } | null = null;
+
+async function hasAnyEnabledSubscription(nowMs: number): Promise<boolean> {
+  if (anySubCache && anySubCache.expiresAt > nowMs) return anySubCache.value;
+  const { data, error } = await supabaseAdmin
+    .from('webhook_subscriptions')
+    .select('id')
+    .eq('enabled', true)
+    .limit(1);
+  if (error) {
+    logger.error('[cron/webhook] any-sub probe error', error);
+    return true; // dans le doute, tick complet
+  }
+  const value = ((data ?? []) as unknown[]).length > 0;
+  anySubCache = { value, expiresAt: nowMs + ANY_SUB_TTL_MS };
+  return value;
+}
+
+/** Oublie le mémo « au moins un abonnement ». Usage strictement test. */
+export function invalidateWebhookAnySubCache(): void {
+  anySubCache = null;
+}
+
 function isAuthorized(req: NextApiRequest): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
@@ -193,6 +233,12 @@ export async function runWebhookDispatcher(): Promise<Counters> {
     duration_ms: 0,
     truncated: false,
   };
+
+  // Personne d'abonné : rien à lire dans l'outbox.
+  if (!(await hasAnyEnabledSubscription(startedAt))) {
+    counters.duration_ms = Date.now() - startedAt;
+    return counters;
+  }
 
   const batchLimit = envNumber('WEBHOOK_BATCH_LIMIT', DEFAULT_BATCH_LIMIT);
   const windowHours = envNumber('WEBHOOK_WINDOW_HOURS', DEFAULT_WINDOW_HOURS);
