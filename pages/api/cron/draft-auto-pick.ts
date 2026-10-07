@@ -8,9 +8,8 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { runDraftAutoPickTick } from '@/utils/draftEngine';
-import { supabaseAdmin } from '@/utils/supabase';
+import { writeCronHeartbeat } from '@/utils/cronHeartbeat';
 import { logger } from '../../../utils/logger';
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
 function isAuthorized(req: NextApiRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -49,25 +48,18 @@ export default async function handler(
       summary.errors
     );
 
-    // Heartbeat for the mega-dashboard, matching other crons.
-    if (supabaseAdmin) {
-      try {
-        await supabaseAdmin.from('site_settings').upsert(
-          {
-            // Heartbeat rattaché au tenant par défaut (lot A8) : les crons ne
-            // sont pas encore multi-tenant, et un upsert sans `tenant_id`
-            // violerait la clé primaire `(tenant_id, key)`.
-            tenant_id: DEFAULT_TENANT_ID,
-            key: 'last_cron_draft_auto_pick_at',
-            value: new Date().toISOString(),
-            description:
-              'ISO timestamp du dernier passage du cron /api/cron/draft-auto-pick (heartbeat dashboard).',
-          },
-          { onConflict: 'tenant_id,key' }
-        );
-      } catch (e) {
-        logger.error('[cron/draft-auto-pick] heartbeat write error:', e);
-      }
+    // Heartbeat for the mega-dashboard, matching other crons. Écrit au plus
+    // toutes les 15 min (cf. utils/cronHeartbeat.ts) : à un passage par
+    // minute, l'écrire à chaque fois coûtait 1 440 upserts/jour. Un passage
+    // qui a réellement auto-pické écrit toujours.
+    try {
+      await writeCronHeartbeat(
+        'last_cron_draft_auto_pick_at',
+        'ISO timestamp du dernier passage du cron /api/cron/draft-auto-pick (heartbeat dashboard).',
+        { force: summary.autoPicked > 0 }
+      );
+    } catch (e) {
+      logger.error('[cron/draft-auto-pick] heartbeat write error:', e);
     }
 
     return res.status(200).json({

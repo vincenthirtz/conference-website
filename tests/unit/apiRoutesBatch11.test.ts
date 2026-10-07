@@ -35,6 +35,7 @@ vi.mock('@/utils/email', () => ({
 import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
 
 import cronCheckinHandler from '../../pages/api/cron/checkin-process';
+import { __resetCronHeartbeatsForTests } from '../../utils/cronHeartbeat';
 import newsCommentsHandler from '../../pages/api/news/comments';
 import supportTicketHandler from '../../pages/api/support/ticket';
 import { generateChallenge } from '../../utils/captcha';
@@ -69,6 +70,9 @@ function makeRes() {
 
 beforeEach(() => {
   resetSupabaseMock();
+  // Le heartbeat est throttlé en mémoire (15 min) : sans reset, le premier
+  // test qui passe par le cron « consomme » l'écriture des suivants.
+  __resetCronHeartbeatsForTests();
   processCheckinForUpcomingMatches.mockClear();
   notifySupportTicket.mockClear();
   sendSupportConfirmationEmail.mockClear();

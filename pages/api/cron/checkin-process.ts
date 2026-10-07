@@ -7,10 +7,9 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { processCheckinForUpcomingMatches } from '@/utils/checkin';
-import { supabaseAdmin } from '@/utils/supabase';
+import { writeCronHeartbeat } from '@/utils/cronHeartbeat';
 
 import { logger } from '../../../utils/logger';
-import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 export const config = {
   api: {
     // Cron jobs may run for a few seconds when there are many matches in the
@@ -65,25 +64,16 @@ export default async function handler(
 
     // Heartbeat : on note la dernière exécution dans site_settings pour que
     // le mega-dashboard puisse afficher "il y a X min" et alerter si > 60 min.
-    if (supabaseAdmin) {
-      try {
-        const nowIso = new Date().toISOString();
-        await supabaseAdmin.from('site_settings').upsert(
-          {
-            // Heartbeat rattaché au tenant par défaut (lot A8) : les crons ne
-            // sont pas encore multi-tenant, et un upsert sans `tenant_id`
-            // violerait la clé primaire `(tenant_id, key)`.
-            tenant_id: DEFAULT_TENANT_ID,
-            key: 'last_cron_checkin_at',
-            value: nowIso,
-            description:
-              'ISO timestamp du dernier passage du cron /api/cron/checkin-process (heartbeat dashboard).',
-          },
-          { onConflict: 'tenant_id,key' }
-        );
-      } catch (e) {
-        logger.error('[cron/checkin] heartbeat write error:', e);
-      }
+    // Écrit au plus toutes les 15 min (cf. utils/cronHeartbeat.ts — 15 < 60,
+    // l'alerte reste juste), et toujours quand le passage a agi.
+    try {
+      await writeCronHeartbeat(
+        'last_cron_checkin_at',
+        'ISO timestamp du dernier passage du cron /api/cron/checkin-process (heartbeat dashboard).',
+        { force: summary.acted > 0 }
+      );
+    } catch (e) {
+      logger.error('[cron/checkin] heartbeat write error:', e);
     }
 
     return res.status(200).json({
