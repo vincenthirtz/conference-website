@@ -99,6 +99,16 @@ export default ns('homeV2', {
     'Ils soutiennent la compétition · ils la diffusent · ils en parlent',
   supportPartnersLink: 'Voir tous les partenaires',
   supportBecomePartner: 'Devenir partenaire',
+  // --- Encart d'événement ponctuel (HomeEventSpotlight) -----------------
+  eventEyebrow: 'Event Halloween',
+  eventTitle: 'Le tournoi d’Halloween de la Women’s Cup',
+  eventBody:
+    'Inscris-toi seule ou entre amies : on forme les équipes de 5 pour toi. Une soirée de matchs Overwatch 100 % féminine, frissons garantis.',
+  eventCtaRegister: 'Je m’inscris',
+  eventCtaDetails: 'Voir le tournoi',
+  eventLogoAlt: 'Logo de l’Event Halloween de la Women’s Cup',
+  eventVideoTitle: 'Bande-annonce de l’Event Halloween',
+  eventVideoPlay: 'Lire la bande-annonce de l’Event Halloween',
   // --- Bande organisatrice (HomeOrganiserCta) -----------------------------
   organiserEyebrow: 'Vous organisez ?',
   organiserTitle: 'Montez votre tournoi, comme celui-ci',

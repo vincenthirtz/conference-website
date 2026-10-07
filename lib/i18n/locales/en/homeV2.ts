@@ -94,5 +94,14 @@ export default {
   shareCopyLink: 'Copy link',
   shareLinkCopied: 'Link copied',
   shareCopyFailed: "The link couldn't be copied",
+  eventEyebrow: 'Halloween Event',
+  eventTitle: "The Women's Cup Halloween tournament",
+  eventBody:
+    "Sign up solo or with friends: we'll build the 5-player teams for you. A night of 100% women's Overwatch matches, chills guaranteed.",
+  eventCtaRegister: 'Sign up',
+  eventCtaDetails: 'View the tournament',
+  eventLogoAlt: "Women's Cup Halloween Event logo",
+  eventVideoTitle: 'Halloween Event trailer',
+  eventVideoPlay: 'Play the Halloween Event trailer',
   heroCtaJoin: "I'm looking for a team",
 };

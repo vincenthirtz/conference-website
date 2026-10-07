@@ -35,6 +35,11 @@ import HomeNewsV2 from '@/components/Home/HomeNewsV2';
 import HomeSupportStrip from '@/components/Home/HomeSupportStrip';
 import HomeOrganiserCta from '@/components/Home/HomeOrganiserCta';
 import HomeSocialWall from '@/components/Home/HomeSocialWall';
+import HomeEventSpotlight from '@/components/Home/HomeEventSpotlight';
+import {
+  homeEventSpotlight,
+  isHomeEventVisible,
+} from '@/config/homeEventSpotlight';
 import type { SocialFeedItem } from '@/utils/social/socialFeed';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 
@@ -147,6 +152,12 @@ function Home({
             <p className="text-sm text-red-200">{t.loadError}</p>
           </div>
         </div>
+      )}
+
+      {/* Événement ponctuel daté (Halloween…) : sous le hero pour être vu
+          avant la clôture des inscriptions ; se retire seul passé sa date. */}
+      {isHomeEventVisible(homeEventSpotlight, nowIso) && (
+        <HomeEventSpotlight event={homeEventSpotlight} />
       )}
 
       <HomeSpotlight
