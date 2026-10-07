@@ -1,0 +1,54 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+post:
+  tags:
+    - bot/matches
+  summary: Confirme une proposition de forfait (bouton du DM) — forfait appliqué.
+  description: |
+    Applique le forfait de l'équipe ABSENTE exactement comme le faisait le cron avant le 2026-10-07 : applyMatchScore (requiredWins-0, `walkover`, bracket propagé), motif `no_show_reason`, ping Discord du salon check-in, mail à la capitaine forfait. Journal staff au nom de l'admin. Sur un match déjà clos (score saisi par les équipes, annulé), la proposition passe `overridden` et la réponse est 409. Émet `match.forfeit_resolved`.
+    Acteur : admin/owner EFFECTIF du tenant (rôle global élevé par
+    `tenant_staff.role`, accès au tenant requis), sinon 403.
+  operationId: botConfirmForfeitProposal
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: bot.matches/[matchId]/forfeit-proposal
+          properties:
+            actorDiscordUserId:
+              description: Admin/owner du tenant qui a cliqué.
+  responses:
+    '200':
+      description: Forfait appliqué (outcome confirmed, état du match dans match).
+      content:
+        application/json: {}
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      description: Match introuvable (MATCH_NOT_FOUND) ou sans proposition (FORFEIT_PROPOSAL_NOT_FOUND).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '409':
+      description: Proposition plus en attente (FORFEIT_PROPOSAL_NOT_PENDING), état courant joint.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ForfeitProposalConflict'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '500':
+      $ref: '#/components/responses/ServerError'
+    '503':
+      description: Colonnes de la proposition absentes (FORFEIT_PROPOSALS_UNAVAILABLE, migration non appliquée) ou maintenance.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  x-zod-query: bot.matches/[matchId]/forfeit-proposal.query

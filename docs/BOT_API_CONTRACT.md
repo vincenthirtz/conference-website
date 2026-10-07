@@ -170,7 +170,10 @@ absent d'ici, ou listé mais plus émis, fait échouer la suite.
 | `INVALID_TENANT_HEADER` | 400 | `x-tenant-id` n'est pas un UUID (clé plateforme). | toutes (clé plateforme) |
 | `UNKNOWN_TENANT` | 404 | Espace désigné inconnu ou inactif (clé plateforme). | toutes (clé plateforme) |
 | `TENANT_LOOKUP_UNAVAILABLE` | 503 | Rattachement serveur Discord → espace illisible ; réessayer. | toutes (clé plateforme) |
-| `APPLY_FAILED` | 400 / 500 | Application du score en échec : 400 sur `forfeit`, 500 sur `report` et `resolve-dispute`. | `matches/[matchId]/forfeit`, `matches/[matchId]/report`, `matches/[matchId]/resolve-dispute` |
+| `APPLY_FAILED` | 400 / 500 | Application du score en échec : 400 sur `forfeit` et `forfeit-proposal/confirm` (la proposition redevient `pending`), 500 sur `report` et `resolve-dispute`. | `matches/[matchId]/forfeit`, `matches/[matchId]/forfeit-proposal/confirm`, `matches/[matchId]/report`, `matches/[matchId]/resolve-dispute` |
+| `FORFEIT_PROPOSAL_NOT_PENDING` | 409 | La proposition de forfait n'est plus en attente : déjà confirmée ou refusée (autre admin, double clic), écrasée par une saisie de score du staff, ou devenue caduque (match clos entre-temps → `overridden`). Le corps porte `proposal` (état courant, cf. `ForfeitProposal`) et `matchStatus` : éditer le DM avec. | `matches/[matchId]/forfeit-proposal/confirm`, `matches/[matchId]/forfeit-proposal/decline` |
+| `FORFEIT_PROPOSAL_NOT_FOUND` | 404 | Le match n'a aucune proposition de forfait. | `matches/[matchId]/forfeit-proposal/confirm`, `matches/[matchId]/forfeit-proposal/decline` |
+| `FORFEIT_PROPOSALS_UNAVAILABLE` | 503 | Colonnes `matches.forfeit_proposal_*` absentes (migration `add_match_forfeit_proposal.sql` non appliquée). | `matches/[matchId]/forfeit-proposal/confirm`, `matches/[matchId]/forfeit-proposal/decline` |
 | `MATCH_FINALIZED` | 409 | Match déjà clôturé, ou clôturé pendant le report. | `matches/[matchId]/report` |
 | `MATCH_NOT_STARTED` | 409 | Report avant le coup d'envoi du match. | `matches/[matchId]/report` |
 | `INVALID_SCORE_FOR_FORMAT` | 400 | Score incompatible avec le format (BO) du match. | `matches/[matchId]/report` |
@@ -182,7 +185,7 @@ absent d'ici, ou listé mais plus émis, fait échouer la suite.
 | `ALREADY_COMPLETE` | 400 | Veto déjà complet. | `matches/[matchId]/veto` |
 | `CHANNEL_COLUMN_MISSING` | 503 | Migration du salon de match non appliquée. | `matches/[matchId]/discord` |
 | `BATTLE_TAGS_UNAVAILABLE` | 503 | Correspondance BattleTag du tenant illisible (`Retry-After: 60`) ; sauter le critère BattleTag pour ce tick (pas de repli membre par membre). | `players/battle-tags` |
-| `MATCH_NOT_FOUND` | 404 | Match introuvable. | `matches/[matchId]/drafts` |
+| `MATCH_NOT_FOUND` | 404 | Match introuvable. | `matches/[matchId]/drafts`, `matches/[matchId]/forfeit-proposal/confirm`, `matches/[matchId]/forfeit-proposal/decline` |
 | `TOURNAMENT_NOT_FOUND` | 404 | Tournoi du match introuvable. | `matches/[matchId]/drafts` |
 | `GAME_NOT_DRAFTABLE` | 400 | Le jeu du tournoi n'a pas de draft. | `matches/[matchId]/drafts` |
 | `GAME_INDEX_OUT_OF_RANGE` | 400 | Numéro de partie hors du format du match. | `matches/[matchId]/drafts` |
@@ -209,7 +212,7 @@ absent d'ici, ou listé mais plus émis, fait échouer la suite.
 | `CHECKIN_NOT_ALLOWED` | 403 | L'acteur n'est ni capitaine, ni coach, ni manager d'une des deux équipes du match (ou son compte Discord n'est relié à aucun compte du site). `error` est lisible tel quel sur Discord. | `matches/[matchId]/checkin` |
 | `CHECKIN_TEAM_AMBIGUOUS` | 409 | L'acteur peut pointer pour les deux équipes du match sans en être capitaine d'une seule : pas de choix à sa place. | `matches/[matchId]/checkin` |
 | `CHECKIN_MATCH_CLOSED` | 409 | Le match n'est plus `pending`/`ongoing` (terminé, annulé…). Avant le 2026-10-06 : `400` sans code. | `matches/[matchId]/checkin` |
-| `CHECKIN_WINDOW_CLOSED` | 409 | Coup d'envoi (`scheduled_at`) passé, ou forfait automatique déjà traité : le check-in est fermé côté serveur (`utils/checkin.ts`, `isCheckinWindowPassed`). Un rejeu sur une équipe déjà pointée reste un `200 alreadyCheckedIn: true`. | `matches/[matchId]/checkin` |
+| `CHECKIN_WINDOW_CLOSED` | 409 | Coup d'envoi (`scheduled_at`) passé, ou étape « forfait » du cron déjà passée (`forfeit_processed_at` — depuis le 2026-10-07 elle POSE une proposition, elle n'applique plus le forfait) : le check-in est fermé côté serveur (`utils/checkin.ts`, `isCheckinWindowPassed`). Un rejeu sur une équipe déjà pointée reste un `200 alreadyCheckedIn: true`. | `matches/[matchId]/checkin` |
 | `NOT_LINKED` | 404 | Compte Discord non relié à un compte du site. | `players/by-discord/[discordUserId]/*` |
 | `INVALID_DISCORD_ID` | 400 | `discordUserId` invalide. | `players/by-discord/[discordUserId]/twitch` |
 | `FREE_PLAYER_NOT_FOUND` | 404 | Aucune fiche « joueuse libre » pour ce compte Discord (`profile`), ou plus de fiche web pour cet id (`announcement`). | `free-players/profile`, `free-players/announcement` |
@@ -338,7 +341,8 @@ catalog can grow without forcing a bot deploy.
 | `match.rescheduled`               | Idem, **en plus** de `match.scheduled`, quand le match avait déjà une date                                                                                                                                  | Sur-ensemble de `match.scheduled` : `{ matchId, match_id, tournamentId, scrimId, scheduledAt, previousScheduledAt, from, to, enriched }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `match.unscheduled`               | Idem, date retirée (`scheduled_at` → `null`)                                                                                                                                                                | `{ matchId, tournamentId, scrimId, previousScheduledAt, enriched }` (était `{ matchId }` : champs ajoutés, rétro-compatible)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `match.finished`                  | Score apply / admin                                                                                                                                                                                         | `{ matchId, team1Score, team2Score, winnerTeamId }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `match.disputed`                  | Admin `POST .../dispute`                                                                                                                                                                                    | `{ matchId, reason, openedBy }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `match.forfeit_proposed`          | `utils/checkin.ts` (`runForfeitStep`, cron check-in) via `utils/matches/forfeitProposal.ts` (`emitForfeitProposed`) — UNE seule équipe a pointé au coup d'envoi : le forfait est **proposé**, plus jamais appliqué seul (2026-10-07) | `{ matchId, proposalId, tournamentId, tournamentName, stageName, scheduledAt, matchFormat, team1: { id, name, checkedIn }, team2: { … }, absentTeamId, proposedWinnerTeamId, proposedAt, adminUrl, recipients: [{ userId, discordUserId }] }` — **ajouté le 2026-10-07**. Un event par match (clé d'idempotence `match.forfeit_proposed:<matchId>`). `recipients` = admins/owners effectifs du tenant, actifs, au compte Discord lié. **À consommer par le bot** : DM à chaque `recipients[].discordUserId` avec Confirmer / Refuser → `POST matches/:matchId/forfeit-proposal/{confirm,decline}`. Détail : « Proposition de forfait » ci-dessous. |
+| `match.forfeit_resolved`          | `utils/matches/forfeitProposal.ts` (`emitForfeitResolved`) — confirmation / refus (bot ou fiche admin), écrasement par une saisie de score du staff (`applyMatchScore` avec `staffId`), proposition caduque (match clos avant confirmation) | `{ matchId, proposalId, outcome: 'confirmed' \| 'declined' \| 'overridden', by: { staffId, discordUserId } \| null, adminUrl }` — **ajouté le 2026-10-07**. Un event par proposition (clé `match.forfeit_resolved:<matchId>`). Optionnel côté bot : éditer les DM déjà envoyés (désactiver les boutons, afficher l'issue). || `match.disputed`                  | Admin `POST .../dispute`                                                                                                                                                                                    | `{ matchId, reason, openedBy }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `match.dispute.resolved`          | Admin `POST .../resolve-dispute`                                                                                                                                                                            | `{ matchId, resolution, resolvedBy }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `dispute.sla_breached` (Lot 4)    | Cron `/api/cron/dispute-sla-check`                                                                                                                                                                          | `{ matchId, tournamentId, disputeReason, disputeOpenedAt, ageMinutes, slaMinutes }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `checkin.nudge` (Lot 5)           | Admin `POST /api/admin/matches/[matchId]/checkin-nudge`                                                                                                                                                     | `{ matchId, tournamentId, teamSide: 1 \| 2, scheduledAt, nudgedByStaffId, enriched }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -683,6 +687,61 @@ des deux equipes** (`enriched.team{1,2}.discordChannelId`), avec dedup sur le
 couple `(matchId, importCode)` : replanifier ne respamme pas, changer le code
 re-notifie.
 
+#### Proposition de forfait — `match.forfeit_proposed` / `match.forfeit_resolved`
+
+**Règle (2026-10-07)** : le cron de check-in n'applique PLUS de forfait. Quand
+une seule équipe a pointé au coup d'envoi (fenêtre de rattrapage
+`checkin_grace_minutes` inchangée), il pose une **proposition** sur le match
+— une seule fois, sans toucher au score, au statut ni au bracket — et émet
+`match.forfeit_proposed`. Les admins/owners tranchent : bouton du DM (routes
+ci-dessous) ou fiche admin du match (`/admin/matches/:id`, permission
+`arbitrate_matches`). Aucune équipe pointée : comportement inchangé (match
+`cancelled`, aucun score écrit, pas de proposition).
+
+```jsonc
+// match.forfeit_proposed — data
+{
+  "matchId": "uuid",
+  "proposalId": "uuid",            // = matchId (une proposition par match)
+  "tournamentId": "uuid|null",
+  "tournamentName": "string|null",
+  "stageName": "string|null",
+  "scheduledAt": "ISO|null",
+  "matchFormat": "bo3|null",
+  "team1": { "id": "uuid|null", "name": "string|null", "checkedIn": true },
+  "team2": { "id": "uuid|null", "name": "string|null", "checkedIn": false },
+  "absentTeamId": "uuid",          // équipe qui serait déclarée forfait
+  "proposedWinnerTeamId": "uuid|null",
+  "proposedAt": "ISO|null",
+  "adminUrl": "https://…/admin/matches/<matchId>",
+  "recipients": [{ "userId": "uuid", "discordUserId": "snowflake" }]
+}
+
+// match.forfeit_resolved — data
+{
+  "matchId": "uuid",
+  "proposalId": "uuid",
+  "outcome": "confirmed" | "declined" | "overridden",
+  "by": { "staffId": "uuid|null", "discordUserId": "snowflake|null" } | null,
+  "adminUrl": "https://…/admin/matches/<matchId>"
+}
+```
+
+- **Destinataires** : staff du tenant (`tenant_staff`) + pôle-admins — la
+  même audience de départ que les notifications staff — restreints au rôle
+  EFFECTIF admin/owner (max de `staff.role` et `tenant_staff.role`), comptes
+  actifs, avec une ligne `user_discord_links`. Liste vide possible : le bot
+  n'envoie alors rien, la fiche admin reste le recours.
+- **`overridden`** : une saisie / validation de score par le STAFF sur le
+  match (admin, scores de phase, résolution de litige, `/score`, `/forfait`,
+  `resolve-dispute` — tout `applyMatchScore` avec un `staffId`) écrase la
+  proposition. Un report de capitaines ne l'écrase PAS ; une confirmation
+  arrivant ensuite sur ce match clos rend la proposition `overridden` (409)
+  plutôt que d'écraser le résultat joué.
+- **Migration absente** (`add_match_forfeit_proposal.sql`) : aucune
+  proposition, aucun event, et surtout **aucun forfait automatique** (log
+  warn) ; les routes répondent `503 FORFEIT_PROPOSALS_UNAVAILABLE`.
+
 #### `registration.blacklisted` (Blacklist joueurs)
 
 Emitted by `utils/moderation/blacklist.ts` (`alertIfBlacklisted`) when a
@@ -846,6 +905,8 @@ doesn't break during a deploy. The mode is toggled via
   | `matches/:matchId/forfeit`            | 5           | `actorDiscordUserId` | staff      |
   | `matches/:matchId/reset`              | 5           | `actorDiscordUserId` | staff      |
   | `matches/:matchId/resolve-dispute`    | 5           | `actorDiscordUserId` | staff      |
+  | `matches/:matchId/forfeit-proposal/confirm` | 5     | `actorDiscordUserId` | staff (admin/owner du tenant) |
+  | `matches/:matchId/forfeit-proposal/decline` | 5     | `actorDiscordUserId` | staff (admin/owner du tenant) |
   | `matches/:matchId/veto` (POST/DELETE) | 5           | `actorDiscordUserId` | staff      |
   | `matches/:matchId/cast` (POST/DELETE) | 5           | `actorDiscordUserId` | staff      |
   | `matches/:matchId/report`             | 5           | `discordUserId`      | captain / manager (not both teams) |
@@ -998,7 +1059,7 @@ code. Les tableaux par domaine ci-dessous gardent le contexte rédigé ; un test
 ce tableau.
 
 <!-- BEGIN GENERATED: bot-inventory -->
-_Tableau généré depuis les options `withBotRoute` des handlers — ne pas éditer à la main : `npm run contract:bot-inventory`. 97 routes._
+_Tableau généré depuis les options `withBotRoute` des handlers — ne pas éditer à la main : `npm run contract:bot-inventory`. 99 routes._
 
 | Route | Méthodes | Idem. | Rate-key | Plafond | Portée / plan |
 | --- | --- | --- | --- | --- | --- |
@@ -1030,6 +1091,8 @@ _Tableau généré depuis les options `withBotRoute` des handlers — ne pas éd
 | [`matches/[matchId]/drafts.ts`](../pages/api/bot/v1/matches/[matchId]/drafts.ts) | POST | oui | `bot-match-draft-init` | 30/min | plan `discordEventOps:full` |
 | [`matches/[matchId]/evidence.ts`](../pages/api/bot/v1/matches/[matchId]/evidence.ts) | GET, POST | oui | `bot-match-evidence` | 40/min (+10/acteur) | — |
 | [`matches/[matchId]/forfeit.ts`](../pages/api/bot/v1/matches/[matchId]/forfeit.ts) | POST | oui | `bot-match-forfeit` | 20/min (+5/acteur) | — |
+| [`matches/[matchId]/forfeit-proposal/confirm.ts`](../pages/api/bot/v1/matches/[matchId]/forfeit-proposal/confirm.ts) | POST | oui | `bot-match-forfeit-proposal-confirm` | 20/min (+5/acteur) | — |
+| [`matches/[matchId]/forfeit-proposal/decline.ts`](../pages/api/bot/v1/matches/[matchId]/forfeit-proposal/decline.ts) | POST | oui | `bot-match-forfeit-proposal-decline` | 20/min (+5/acteur) | — |
 | [`matches/[matchId]/mvp.ts`](../pages/api/bot/v1/matches/[matchId]/mvp.ts) | GET, POST | — | `bot-match-mvp` | 600/min (+20/acteur) | — |
 | [`matches/[matchId]/mvp-public.ts`](../pages/api/bot/v1/matches/[matchId]/mvp-public.ts) | GET, POST | — | `bot-match-mvp-public` | 900/min (+10/acteur) | — |
 | [`matches/[matchId]/preset.ts`](../pages/api/bot/v1/matches/[matchId]/preset.ts) | GET | — | `bot-match-preset` | 60/min | — |
@@ -1673,11 +1736,73 @@ global, bucket `bot-reconcile-team-channels`. **Idempotency** : non.
 | [`matches/[matchId]/dispute.ts`](../pages/api/bot/v1/matches/[matchId]/dispute.ts)                 | GET               | —     | `bot-match-dispute`         |
 | [`matches/[matchId]/evidence.ts`](../pages/api/bot/v1/matches/[matchId]/evidence.ts)               | GET, POST         | yes   | `bot-match-evidence`        |
 | [`matches/[matchId]/forfeit.ts`](../pages/api/bot/v1/matches/[matchId]/forfeit.ts)                 | POST              | yes   | `bot-match-forfeit`         |
+| [`matches/[matchId]/forfeit-proposal/confirm.ts`](../pages/api/bot/v1/matches/[matchId]/forfeit-proposal/confirm.ts) | POST | yes | `bot-match-forfeit-proposal-confirm` |
+| [`matches/[matchId]/forfeit-proposal/decline.ts`](../pages/api/bot/v1/matches/[matchId]/forfeit-proposal/decline.ts) | POST | yes | `bot-match-forfeit-proposal-decline` |
 | [`matches/[matchId]/report.ts`](../pages/api/bot/v1/matches/[matchId]/report.ts)                   | POST              | yes   | `bot-match-report`          |
 | [`matches/[matchId]/preset.ts`](../pages/api/bot/v1/matches/[matchId]/preset.ts)                   | GET               | —     | `bot-match-preset`          |
 | [`matches/[matchId]/reset.ts`](../pages/api/bot/v1/matches/[matchId]/reset.ts)                     | POST              | yes   | `bot-match-reset`           |
 | [`matches/[matchId]/resolve-dispute.ts`](../pages/api/bot/v1/matches/[matchId]/resolve-dispute.ts) | POST              | yes   | `bot-match-resolve-dispute` |
 | [`matches/[matchId]/veto.ts`](../pages/api/bot/v1/matches/[matchId]/veto.ts)                       | GET, POST, DELETE | yes   | `bot-match-veto`            |
+
+#### `POST /api/bot/v1/matches/:matchId/forfeit-proposal/confirm` et `…/decline` — boutons du DM de forfait
+
+Ajoutées le 2026-10-07 avec l'event `match.forfeit_proposed` (cf. « Proposition
+de forfait » dans le catalogue des events). Idempotentes (`Idempotency-Key`),
+20/min + 5/min par acteur.
+
+- **Corps** : `{ "actorDiscordUserId": "<snowflake>" }` (zod
+  `bot.matches/[matchId]/forfeit-proposal`).
+- **Acteur** : admin/owner EFFECTIF **du tenant** de la requête (accès via
+  `tenant_staff` ou pôle-admin, rôle = max(`staff.role`,
+  `tenant_staff.role`), compte actif) — sinon `403`. Plus strict que
+  `/forfait` (`requireBotStaff`, rôle global seul).
+- **`confirm`** : `pending` → `confirmed` puis forfait de l'équipe ABSENTE,
+  exactement comme l'ancien forfait automatique (`applyMatchScore` :
+  requiredWins-0, `walkover`, bracket propagé ; `no_show_reason` ; ping du salon
+  check-in ; mail à la capitaine forfait ; `match.finished` / `team.forfeit`),
+  au nom de l'admin (journal staff). Échec d'application → `400 APPLY_FAILED`,
+  la proposition redevient `pending`. Match déjà clos → proposition
+  `overridden`, `409`.
+- **`decline`** : `pending` → `declined`. Rien ne change sur le match.
+- Journal : `staff_logs.action = update_match`, `payload = { subject:
+  'forfeit_proposal', decision, absent_team_id, via: 'discord_bot' }`.
+- Émet `match.forfeit_resolved` sur chaque transition aboutie.
+
+```jsonc
+// 200
+{
+  "success": true,
+  "matchId": "uuid",
+  "outcome": "confirmed" | "declined",
+  "proposal": {
+    "matchId": "uuid",
+    "status": "confirmed" | "declined",
+    "absentTeamId": "uuid|null",
+    "proposedWinnerTeamId": "uuid|null",
+    "proposedAt": "ISO|null",
+    "resolvedAt": "ISO|null",
+    "resolvedByStaffId": "uuid|null"
+  },
+  // état du match après le forfait ; null sur un refus
+  "match": { "status": "walkover", "team1Score": 2, "team2Score": 0, "winnerTeamId": "uuid" } | null
+}
+
+// 409 — proposition plus en attente : mettre le DM à jour avec `proposal.status`
+{
+  "error": "Cette proposition de forfait n'est plus en attente.",
+  "code": "FORFEIT_PROPOSAL_NOT_PENDING",
+  "proposal": { "status": "confirmed" | "declined" | "overridden", … } | null,
+  "matchStatus": "walkover|finished|…|null"
+}
+```
+
+Autres réponses : `400 INVALID_BODY` / `INVALID_QUERY`, `403` (acteur),
+`404 MATCH_NOT_FOUND` / `FORFEIT_PROPOSAL_NOT_FOUND`,
+`503 FORFEIT_PROPOSALS_UNAVAILABLE` (migration absente) ou `MAINTENANCE_MODE`.
+
+Pendant côté site : `GET` / `POST /api/admin/matches/:matchId/forfeit-proposal`
+(`{ decision: 'confirm' | 'decline' }`, permission `arbitrate_matches`), même
+cœur (`utils/matches/forfeitProposalResolve.ts`), mêmes codes.
 
 #### `POST` / `DELETE /api/bot/v1/matches/:matchId/veto` — parties preparees
 

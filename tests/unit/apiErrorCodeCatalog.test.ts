@@ -181,6 +181,18 @@ const RELAYED_BOT_CODES: Record<string, { source: string; codes: string[] }> = {
     source: 'utils/checkin.ts',
     codes: ['CHECKIN_MATCH_CLOSED', 'CHECKIN_WINDOW_CLOSED'],
   },
+  // Boutons du DM de forfait : `code: result.code` dans les deux routes
+  // forfeit-proposal/{confirm,decline}.
+  forfeitProposal: {
+    source: 'utils/matches/forfeitProposalResolve.ts',
+    codes: [
+      'MATCH_NOT_FOUND',
+      'FORFEIT_PROPOSAL_NOT_FOUND',
+      'FORFEIT_PROPOSAL_NOT_PENDING',
+      'FORFEIT_PROPOSALS_UNAVAILABLE',
+      'APPLY_FAILED',
+    ],
+  },
 };
 
 /** Modules lus en entier : chacun de leurs codes atteint une réponse bot. */

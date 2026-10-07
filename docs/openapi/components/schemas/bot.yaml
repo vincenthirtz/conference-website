@@ -58,3 +58,69 @@ Lock:
       anyOf:
         - $ref: '#/components/schemas/Timestamp'
         - type: 'null'
+ForfeitProposal:
+  type: object
+  description: |
+    Proposition de forfait posée par le cron de check-in quand UNE seule
+    équipe a pointé au coup d'envoi. Jamais appliquée seule : un admin la
+    confirme (forfait appliqué) ou la refuse ; une saisie de score par le
+    staff l'écrase (`overridden`). Une proposition au plus par match :
+    `matchId` l'identifie.
+  required:
+    - matchId
+    - status
+    - absentTeamId
+    - proposedWinnerTeamId
+    - proposedAt
+    - resolvedAt
+    - resolvedByStaffId
+  properties:
+    matchId:
+      $ref: '#/components/schemas/Uuid'
+    status:
+      type: string
+      enum:
+        - pending
+        - confirmed
+        - declined
+        - overridden
+    absentTeamId:
+      type: [string, 'null']
+      format: uuid
+      description: Équipe absente (celle qui serait déclarée forfait).
+    proposedWinnerTeamId:
+      type: [string, 'null']
+      format: uuid
+      description: Équipe présente, vainqueure si le forfait est confirmé.
+    proposedAt:
+      type: [string, 'null']
+      format: date-time
+    resolvedAt:
+      type: [string, 'null']
+      format: date-time
+    resolvedByStaffId:
+      type: [string, 'null']
+      format: uuid
+      description: Staff qui a tranché ; `null` si écrasée sans auteur.
+ForfeitProposalConflict:
+  type: object
+  description: |
+    409 `FORFEIT_PROPOSAL_NOT_PENDING` — la proposition n'est plus en attente
+    (déjà confirmée / refusée, ou écrasée par une saisie de score). Porte
+    l'état courant pour mettre à jour le DM.
+  required:
+    - error
+    - code
+  properties:
+    error:
+      type: string
+    code:
+      type: string
+      enum:
+        - FORFEIT_PROPOSAL_NOT_PENDING
+    proposal:
+      oneOf:
+        - $ref: '#/components/schemas/ForfeitProposal'
+        - type: 'null'
+    matchStatus:
+      type: [string, 'null']

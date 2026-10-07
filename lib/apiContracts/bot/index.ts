@@ -18,6 +18,7 @@ import { mvpPublicBodySchema as s5c_matches_matchId_mvp_public } from './matches
 import { draftsBodySchema as s6_matches_matchId_drafts } from './matches/[matchId]/drafts';
 import { evidencePostSchema as s7_matches_matchId_evidence } from './matches/[matchId]/evidence';
 import { forfeitBodySchema as s8_matches_matchId_forfeit } from './matches/[matchId]/forfeit';
+import { forfeitProposalBodySchema as s8b_matches_matchId_forfeit_proposal } from './matches/[matchId]/forfeit-proposal';
 import { scoreBodySchema as s5d_matches_matchId_score } from './matches/[matchId]/score';
 import { reportBodySchema as s9_matches_matchId_report } from './matches/[matchId]/report';
 import { resetBodySchema as s10_matches_matchId_reset } from './matches/[matchId]/reset';
@@ -59,6 +60,7 @@ import { discordQuerySchema as q7_matches_matchId_discord } from './matches/[mat
 import { draftsQuerySchema as q8_matches_matchId_drafts } from './matches/[matchId]/drafts.query';
 import { evidenceQuerySchema as q9_matches_matchId_evidence } from './matches/[matchId]/evidence.query';
 import { forfeitQuerySchema as q10_matches_matchId_forfeit } from './matches/[matchId]/forfeit.query';
+import { forfeitProposalQuerySchema as q10b_matches_matchId_forfeit_proposal } from './matches/[matchId]/forfeit-proposal.query';
 import { scoreQuerySchema as q6d_matches_matchId_score } from './matches/[matchId]/score.query';
 import { presetQuerySchema as q11_matches_matchId_preset } from './matches/[matchId]/preset.query';
 import { reportQuerySchema as q12_matches_matchId_report } from './matches/[matchId]/report.query';
@@ -129,6 +131,10 @@ export const BOT_API_CONTRACT_SCHEMAS: Record<string, ApiContractEntry> = {
   },
   'bot.matches/[matchId]/forfeit': {
     schema: s8_matches_matchId_forfeit,
+    io: 'input',
+  },
+  'bot.matches/[matchId]/forfeit-proposal': {
+    schema: s8b_matches_matchId_forfeit_proposal,
     io: 'input',
   },
   'bot.matches/[matchId]/score': {
@@ -260,6 +266,10 @@ export const BOT_API_CONTRACT_SCHEMAS: Record<string, ApiContractEntry> = {
   },
   'bot.matches/[matchId]/forfeit.query': {
     schema: q10_matches_matchId_forfeit,
+    io: 'input',
+  },
+  'bot.matches/[matchId]/forfeit-proposal.query': {
+    schema: q10b_matches_matchId_forfeit_proposal,
     io: 'input',
   },
   'bot.matches/[matchId]/score.query': {
