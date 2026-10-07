@@ -56,6 +56,7 @@ import {
 } from './__helpers__/supabaseMock';
 
 import {
+  applyNoShowForfeit,
   hasActiveTournamentWindow,
   processMatchCheckin,
 } from '../../utils/checkin';
@@ -272,11 +273,13 @@ describe('messages de check-in : langue et destinataires', () => {
     });
   });
 
+  // Le forfait n'est plus appliqué par le cron mais à la CONFIRMATION d'une
+  // proposition (applyNoShowForfeit) : mêmes messages, même langue.
   it('annonce le forfait dans la langue de l’équipe forfait', async () => {
     store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
     internationalTeams();
 
-    await processMatchCheckin(
+    await applyNoShowForfeit(
       lite({
         team2_checked_in_at: new Date().toISOString(),
         team1: {
@@ -285,7 +288,9 @@ describe('messages de check-in : langue et destinataires', () => {
           discord_role_id: '111',
           preferred_locale: 'en',
         },
-      })
+      }),
+      'team-a',
+      null
     );
 
     expect(notifyCheckinForfeit).toHaveBeenCalledTimes(1);

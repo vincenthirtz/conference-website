@@ -5,7 +5,9 @@
 //   T-60min : generate tokens (if missing) + send check-in email to captains
 //   T-30min : Discord reminder for un-checked-in teams
 //   T-15min : Discord reminder for un-checked-in teams
-//   T-0     : auto-forfeit any team that didn't check in
+//   T-0     : PROPOSE a forfeit for a team that didn't check in (never
+//             applied automatically — staff confirms, cf.
+//             utils/matches/forfeitProposal.ts)
 //
 // Each step is gated by a `*_sent_at` (or `forfeit_processed_at`) timestamp
 // stored on the match row, so re-running the cron is idempotent.
@@ -27,6 +29,12 @@ import {
   notifyLineupReminder,
 } from './discord';
 import { applyMatchScore } from './matches/applyScore';
+import {
+  createForfeitProposal,
+  emitForfeitProposed,
+  listPendingForfeitProposals,
+} from './matches/forfeitProposal';
+import type { ApplyMatchScoreResult } from '../types/matches';
 import { emitBotEvent } from './botEvents';
 import { isCheckinTeamRole } from './teams/canCheckIn';
 import { grantCheckinStreakReward } from './tcg/grantCheckinStreak';
@@ -544,14 +552,14 @@ async function sendReminderEmailSafely(opts: {
  * Per-match orchestration (the actual state machine)
  * ---------------------------------------------------------*/
 
-type MatchLiteTeam = {
+export type MatchLiteTeam = {
   id: string;
   name: string;
   discord_role_id: string | null;
   preferred_locale?: string | null;
 };
 
-type MatchLite = {
+export type MatchLite = {
   id: string;
   // Tenant scope (S5a — defense-in-depth). Source-of-truth pour scoper toutes
   // les mutations declenchees par le state machine check-in (update matches,
@@ -650,9 +658,11 @@ export async function processMatchCheckin(
     await runReminderStep(match, 15, result);
   }
 
-  // Step 5: auto-forfeit. A team that hasn't checked in by kickoff is forfeited;
-  // the per-tournament grace window only widens the *catch-up* span during which
-  // the cron may still act (so a few missed ticks don't skip the match), exactly
+  // Step 5: forfeit PROPOSAL. A team that hasn't checked in by kickoff gets a
+  // forfeit proposal (never applied automatically — staff confirms or
+  // declines, cf. runForfeitStep); the per-tournament grace window only
+  // widens the *catch-up* span during which the cron may still act (so a few
+  // missed ticks don't skip the match), exactly
   // as the hard-coded `-60` upper bound did before. The grace is read via an
   // ISOLATED query with a 60-min fallback (see resolveGraceMinutes), so a
   // not-yet-migrated DB behaves identically to today (window [T-0, T+60]).
@@ -1118,28 +1128,90 @@ async function runForfeitStep(
     return;
   }
 
-  // One team missing -> forfeit
-  const forfeitTeamId = team1CheckedIn ? match.team2_id! : match.team1_id!;
-  const forfeitedName = team1CheckedIn ? team2Name : team1Name;
-  const winnerName = team1CheckedIn ? team1Name : team2Name;
-  const forfeitedRoleId = team1CheckedIn
-    ? (match.team2?.discord_role_id ?? null)
-    : (match.team1?.discord_role_id ?? null);
+  // One team missing -> PROPOSITION de forfait, jamais le forfait lui-même.
+  //
+  // Le cron appliquait ici le forfait (applyMatchScore : requiredWins-0,
+  // `walkover`, bracket propagé). Règle du 2026-10-07 : aucun forfait
+  // automatique. On pose une proposition (une fois par match) et on prévient
+  // les admins/owners du tenant (`match.forfeit_proposed`) ; le forfait n'est
+  // appliqué que sur confirmation (utils/matches/forfeitProposalResolve.ts →
+  // `applyNoShowForfeit` ci-dessous). Score, statut et bracket restent tels
+  // quels.
+  const absentTeamId = team1CheckedIn ? match.team2_id! : match.team1_id!;
+  const absentName = team1CheckedIn ? team2Name : team1Name;
 
-  try {
-    await applyMatchScore({
-      tenantId: match.tenant_id,
-      matchId: match.id,
-      forfeitTeamId,
-      staffId: null,
-      propagateBracket: true,
-    });
-  } catch (e) {
-    result.errors.push(
-      `applyMatchScore forfeit: ${e instanceof Error ? e.message : String(e)}`
-    );
+  const created = await createForfeitProposal({
+    tenantId: match.tenant_id,
+    matchId: match.id,
+    absentTeamId,
+  });
+
+  if (created.outcome === 'error') {
+    // Rien d'écrit : le prochain tick réessaiera (forfeit_processed_at nul).
+    result.errors.push(`forfeit proposal: ${created.error}`);
     return;
   }
+
+  if (created.outcome === 'unavailable') {
+    // Migration add_match_forfeit_proposal.sql pas appliquée : pas de
+    // proposition possible, et SURTOUT pas de forfait automatique pour autant.
+    logger.warn(
+      '[checkin] proposition de forfait impossible (colonnes matches.forfeit_proposal_* absentes) — aucun forfait automatique',
+      { matchId: match.id, absentTeamId }
+    );
+    await markForfeitProcessed(match.tenant_id, match.id, result);
+    result.steps.push(`forfeit_proposal_unavailable (${absentName} absent)`);
+    return;
+  }
+
+  if (created.outcome === 'created') {
+    await emitForfeitProposed({
+      tenantId: match.tenant_id,
+      proposal: created.proposal,
+    });
+  }
+
+  await markForfeitProcessed(match.tenant_id, match.id, result);
+  result.steps.push(
+    created.outcome === 'created'
+      ? `forfeit_proposed (${absentName} absent)`
+      : `forfeit_proposal_exists (${absentName} absent)`
+  );
+}
+
+/**
+ * Applique le forfait « absence au check-in » — EXACTEMENT ce que faisait le
+ * cron avant le 2026-10-07, désormais déclenché par la CONFIRMATION d'une
+ * proposition (utils/matches/forfeitProposalResolve.ts) :
+ *   - applyMatchScore({ forfeitTeamId }) : requiredWins-0, `walkover`,
+ *     bracket propagé (lève en cas d'échec — à l'appelant de réagir) ;
+ *   - motif `no_show_reason` (best-effort) ;
+ *   - ping Discord du salon check-in + mail à la capitaine forfait
+ *     (best-effort, jamais bloquants).
+ *
+ * Seule différence : `staffId` est celui de qui a confirmé (journal staff),
+ * là où le cron passait `null`.
+ */
+export async function applyNoShowForfeit(
+  match: MatchLite,
+  forfeitTeamId: string,
+  staffId: string | null
+): Promise<ApplyMatchScoreResult> {
+  const team1Name = match.team1?.name || 'Équipe 1';
+  const team2Name = match.team2?.name || 'Équipe 2';
+  const forfeitIsTeam1 = forfeitTeamId === match.team1_id;
+  const forfeitedName = forfeitIsTeam1 ? team1Name : team2Name;
+  const winnerName = forfeitIsTeam1 ? team2Name : team1Name;
+  const forfeitedTeam = forfeitIsTeam1 ? match.team1 : match.team2;
+  const forfeitedRoleId = forfeitedTeam?.discord_role_id ?? null;
+
+  const applied = await applyMatchScore({
+    tenantId: match.tenant_id,
+    matchId: match.id,
+    forfeitTeamId,
+    staffId,
+    propagateBracket: true,
+  });
 
   // Best-effort motif AFTER the critical forfeit has been applied. If the
   // column doesn't exist yet, this fails in isolation and the forfeit stands.
@@ -1151,20 +1223,18 @@ async function runForfeitStep(
 
   // Discord ping for the forfeit (separate from the auto match-result ping
   // that applyMatchScore triggers — this one is on the dedicated checkin
-  // channel). Pas de délai dans le message : le forfait tombe au coup d'envoi.
+  // channel).
   await notifyCheckinForfeit({
     tournamentId: match.tournament_id,
     matchId: match.id,
     forfeitedTeamName: forfeitedName,
     forfeitedTeamRoleId: forfeitedRoleId,
     opponentName: winnerName,
-    locale: teamLocale(
-      forfeitTeamId === match.team1_id ? match.team1 : match.team2
-    ),
+    locale: teamLocale(forfeitedTeam),
   }).catch((e) => logger.error('[checkin] notifyCheckinForfeit error:', e));
 
-  // Email the forfeited team's captain. Fire-and-forget — an email failure
-  // must never interrupt the cron (sendForfeitEmailSafely swallows errors).
+  // Email the forfeited team's captain. Fire-and-forget (sendForfeitEmailSafely
+  // swallows errors).
   if (match.scheduled_at) {
     await sendForfeitEmailSafely({
       tenantId: match.tenant_id,
@@ -1173,14 +1243,29 @@ async function runForfeitStep(
       opponentName: winnerName,
       scheduledAt: match.scheduled_at,
       tournamentName: match.tournament?.name || "OW Women's Cup",
-      locale: teamLocale(
-        forfeitTeamId === match.team1_id ? match.team1 : match.team2
-      ),
+      locale: teamLocale(forfeitedTeam),
     });
   }
 
-  await markForfeitProcessed(match.tenant_id, match.id, result);
-  result.steps.push(`forfeit (${forfeitedName} -> walkover)`);
+  return applied;
+}
+
+/**
+ * Match au format attendu par le check-in (`MatchLite`), scopé au tenant.
+ * `null` si introuvable ; lève sur une erreur de lecture.
+ */
+export async function loadCheckinMatch(
+  tenantId: string,
+  matchId: string
+): Promise<MatchLite | null> {
+  const { data, error } = await supabaseAdmin!
+    .from('matches')
+    .select(SELECT_FIELDS)
+    .eq('tenant_id', tenantId)
+    .eq('id', matchId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? normalizeMatch(data as Record<string, unknown>) : null;
 }
 
 /**
@@ -1461,6 +1546,12 @@ export type CheckinStatusRow = {
   reminder30At: string | null;
   reminder15At: string | null;
   forfeitProcessedAt: string | null;
+  /**
+   * Une proposition de forfait attend une décision du staff (cf.
+   * utils/matches/forfeitProposal.ts). `false` aussi tant que la migration
+   * n'est pas appliquée.
+   */
+  forfeitProposalPending: boolean;
 };
 
 /** Recopie du `.select()` de `listCheckinStatus`, embeds compris. */
@@ -1508,7 +1599,15 @@ export async function listCheckinStatus(
     return [];
   }
 
-  return ((data || []) as CheckinMatchRow[]).map((m) => {
+  const rowsData = (data || []) as CheckinMatchRow[];
+  // Requête isolée : la lecture ci-dessus ne nomme pas les colonnes de la
+  // proposition, et ne tombe donc pas avant leur migration.
+  const pending = await listPendingForfeitProposals(
+    tenantId,
+    rowsData.map((m) => m.id)
+  );
+
+  return rowsData.map((m) => {
     // `oneRelation` remplace le dénouement recopié à la main : même résultat,
     // mais la forme de l'embed est déclarée au lieu d'être testée à l'aveugle.
     const t1 = oneRelation(m.team1);
@@ -1531,6 +1630,7 @@ export async function listCheckinStatus(
       reminder30At: m.reminder_30_sent_at ?? null,
       reminder15At: m.reminder_15_sent_at ?? null,
       forfeitProcessedAt: m.forfeit_processed_at ?? null,
+      forfeitProposalPending: pending.has(m.id),
     };
   });
 }

@@ -19,6 +19,7 @@ import { emitBotEvent } from '../botEvents';
 import { enrichMatchEvent } from './botEventEnrich';
 import { applyMatchRatingIncremental } from '../rating/applyMatchRating';
 import { settleMatchPredictions } from '../predictions/settle';
+import { overridePendingForfeitProposal } from './forfeitProposal';
 import type { PropagationResult } from '../../types/bracket';
 import { logger } from '../logger';
 import type {
@@ -650,6 +651,17 @@ export async function applyMatchScore(
     } catch (e) {
       logger.error('applyMatchScore: logStaffAction error', e);
     }
+  }
+
+  // 11b) Une saisie de score par le STAFF tranche à la place d'une
+  //      proposition de forfait en attente (cf. utils/matches/forfeitProposal.ts) :
+  //      `pending` → `overridden`. Le staff est reconnu à `staffId` — les
+  //      reports des capitaines, l'API publique et GraphQL passent `null` et ne
+  //      l'écrasent pas. La confirmation de la proposition passe elle-même par
+  //      ici, mais l'a déjà marquée `confirmed` : rien à écraser.
+  //      Best-effort, ne lève jamais (le score est écrit).
+  if (staffId) {
+    await overridePendingForfeitProposal({ tenantId, matchId, staffId });
   }
 
   // 12) Discord notifications (fire-and-forget)

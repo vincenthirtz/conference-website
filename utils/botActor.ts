@@ -21,6 +21,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from './supabase';
 import { logStaffAction, type StaffLogAction } from './staffLogs';
 import { logger } from './logger';
+import { canAccessTenant, readTenantStaffRole } from './adminTenants';
+import { effectiveTenantRole, isAdminOrOwnerRole } from './staffRoles';
 
 const DISCORD_ID_RE = /^[0-9]{15,25}$/;
 const STAFF_PRIVILEGED = new Set(['admin', 'owner']);
@@ -79,6 +81,75 @@ export async function requireBotStaff(
     return null;
   }
   return actor;
+}
+
+export type BotTenantAdminActor = BotActor & {
+  staffId: string;
+  discordUserId: string;
+};
+
+/**
+ * Comme `requireBotStaff`, mais SCOPÉ AU TENANT de la requête : le compte doit
+ * avoir accès à ce tenant (ligne `tenant_staff` ou pôle-admin) et y être
+ * admin/owner EFFECTIF (rôle global élevé par `tenant_staff.role`, comme
+ * `requireStaffRoleFromRequest`). Compte inactif ou supprimé → refusé.
+ *
+ * `requireBotStaff` ne regarde que `staff.role` : un admin d'un autre espace y
+ * passerait. Les décisions qui engagent un match d'UN tenant (proposition de
+ * forfait) passent par ici.
+ */
+export async function requireBotTenantAdmin(
+  _req: NextApiRequest,
+  res: NextApiResponse,
+  body: Record<string, unknown>,
+  tenantId: string
+): Promise<BotTenantAdminActor | null> {
+  const actorDiscordUserId =
+    typeof body.actorDiscordUserId === 'string'
+      ? body.actorDiscordUserId.trim()
+      : '';
+  if (!DISCORD_ID_RE.test(actorDiscordUserId)) {
+    res.status(400).json({ error: 'actorDiscordUserId requis' });
+    return null;
+  }
+  const deny = (): null => {
+    res.status(403).json({
+      error:
+        "Action réservée aux admins/owners de cet espace. Ton compte Discord n'est pas lié à un staff de ce niveau ici.",
+    });
+    return null;
+  };
+
+  const actor = await resolveActorStaff(actorDiscordUserId);
+  if (!actor.staffId) return deny();
+  const staffId = actor.staffId;
+
+  const { data: staffRow } = await supabaseAdmin
+    .from('staff')
+    .select('is_pole_admin, is_active, deleted_at')
+    .eq('id', staffId)
+    .maybeSingle();
+  const row = staffRow as {
+    is_pole_admin?: boolean | null;
+    is_active?: boolean | null;
+    deleted_at?: string | null;
+  } | null;
+  if (!row || row.is_active === false || row.deleted_at) return deny();
+
+  const isPoleAdmin = row.is_pole_admin === true;
+  if (
+    !isPoleAdmin &&
+    !(await canAccessTenant(staffId, tenantId, { isPoleAdmin }))
+  ) {
+    return deny();
+  }
+  const tenantRole = isPoleAdmin
+    ? null
+    : await readTenantStaffRole(staffId, tenantId);
+  const role = effectiveTenantRole(actor.role, tenantRole);
+  if (!isAdminOrOwnerRole(role)) return deny();
+
+  return { ...actor, role, staffId, discordUserId: actorDiscordUserId };
 }
 
 export type BotPlayerActor = {

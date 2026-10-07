@@ -43,6 +43,7 @@ import {
   store,
   resetSupabaseMock,
   setAdminUser,
+  setTableWriteError,
   supabaseAdmin,
 } from './__helpers__/supabaseMock';
 
@@ -55,6 +56,7 @@ import {
   listCheckinStatus,
   processCheckinForUpcomingMatches,
   hasActiveTournamentWindow,
+  applyNoShowForfeit,
 } from '../../utils/checkin';
 
 /* -----------------------------------------------------------
@@ -655,8 +657,18 @@ describe('processMatchCheckin — forfeit step', () => {
     expect(notifyCheckinForfeit).not.toHaveBeenCalled();
   });
 
-  it('forfeits the missing team to the present one', async () => {
-    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
+  // Règle du 2026-10-07 : le cron ne forfait PLUS. Il propose, une fois, sans
+  // toucher au score, au statut ni au bracket.
+  it('proposes a forfeit for the missing team without applying it', async () => {
+    store.matches = [
+      {
+        id: 'match-1',
+        tenant_id: TENANT_ID,
+        status: 'pending',
+        team1_id: 'team-a',
+        team2_id: 'team-b',
+      },
+    ] as any;
 
     const m = buildMatchLite({
       scheduled_at: scheduledIn(-1),
@@ -665,16 +677,83 @@ describe('processMatchCheckin — forfeit step', () => {
     });
     const r = await processMatchCheckin(m);
 
-    expect(r.steps[0]).toMatch(/^forfeit \(/);
-    expect(applyMatchScore).toHaveBeenCalledOnce();
-    const args = (applyMatchScore.mock.calls[0] as any[])[0];
-    expect(args.forfeitTeamId).toBe('team-b');
-    expect(notifyCheckinForfeit).toHaveBeenCalledOnce();
+    expect(r.errors).toEqual([]);
+    expect(r.steps).toContain('forfeit_proposed (Bravo absent)');
+    expect(applyMatchScore).not.toHaveBeenCalled();
+    expect(notifyCheckinForfeit).not.toHaveBeenCalled();
+    expect(sendCheckinForfeitEmail).not.toHaveBeenCalled();
+
+    const row = store.matches[0] as any;
+    expect(row.status).toBe('pending');
+    expect(row.team1_score).toBeUndefined();
+    expect(row.winner_team_id).toBeUndefined();
+    expect(row.no_show_reason).toBeUndefined();
+    expect(row.forfeit_proposal_status).toBe('pending');
+    expect(row.forfeit_proposed_team_id).toBe('team-b');
+    expect(row.forfeit_proposed_at).toBeTruthy();
+    expect(row.forfeit_processed_at).toBeTruthy();
+
+    const events = (store.bot_event_outbox ?? []) as any[];
+    const proposed = events.filter(
+      (e) => e.event_name === 'match.forfeit_proposed'
+    );
+    expect(proposed).toHaveLength(1);
+    const data = proposed[0].payload.data;
+    expect(data).toMatchObject({
+      matchId: 'match-1',
+      absentTeamId: 'team-b',
+      proposedWinnerTeamId: 'team-a',
+    });
+    expect(data.adminUrl).toMatch(/\/admin\/matches\/match-1$/);
+    expect(Array.isArray(data.recipients)).toBe(true);
   });
 
-  it('records an error when applyMatchScore throws', async () => {
-    applyMatchScore.mockRejectedValueOnce(new Error('db down'));
-    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
+  it('is idempotent: a second pass neither recreates nor re-emits the proposal', async () => {
+    store.matches = [
+      {
+        id: 'match-1',
+        tenant_id: TENANT_ID,
+        status: 'pending',
+        team1_id: 'team-a',
+        team2_id: 'team-b',
+      },
+    ] as any;
+    const base = {
+      scheduled_at: scheduledIn(-1),
+      team1_checked_in_at: '2026-04-01T12:00:00.000Z',
+      checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
+    };
+
+    await processMatchCheckin(buildMatchLite(base));
+    const firstAt = (store.matches[0] as any).forfeit_proposed_at;
+    // Tick rejoué alors que forfeit_processed_at n'était pas encore relu.
+    const r2 = await processMatchCheckin(buildMatchLite(base));
+
+    expect(r2.steps).toContain('forfeit_proposal_exists (Bravo absent)');
+    expect((store.matches[0] as any).forfeit_proposed_at).toBe(firstAt);
+    const proposed = ((store.bot_event_outbox ?? []) as any[]).filter(
+      (e) => e.event_name === 'match.forfeit_proposed'
+    );
+    expect(proposed).toHaveLength(1);
+    expect(applyMatchScore).not.toHaveBeenCalled();
+  });
+
+  it('applies NO forfeit when the proposal columns are missing (migration not applied)', async () => {
+    store.matches = [
+      {
+        id: 'match-1',
+        tenant_id: TENANT_ID,
+        status: 'pending',
+        team1_id: 'team-a',
+        team2_id: 'team-b',
+      },
+    ] as any;
+    // PostgREST, colonne absente de son cache de schéma.
+    setTableWriteError('matches', {
+      code: 'PGRST204',
+      message:
+        "Could not find the 'forfeit_proposal_status' column of 'matches' in the schema cache",
+    } as any);
 
     const m = buildMatchLite({
       scheduled_at: scheduledIn(-1),
@@ -682,9 +761,13 @@ describe('processMatchCheckin — forfeit step', () => {
       checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
     });
     const r = await processMatchCheckin(m);
+    setTableWriteError('matches', null);
 
-    expect(r.errors[0]).toMatch(/applyMatchScore forfeit/);
-    expect(r.steps).toEqual([]); // step push happens after the call returns
+    expect(r.steps).toContain('forfeit_proposal_unavailable (Alpha absent)');
+    expect(applyMatchScore).not.toHaveBeenCalled();
+    expect(notifyCheckinForfeit).not.toHaveBeenCalled();
+    expect((store.matches[0] as any).status).toBe('pending');
+    expect((store.bot_event_outbox ?? []) as any[]).toHaveLength(0);
   });
 });
 
@@ -702,21 +785,25 @@ describe('processMatchCheckin — configurable grace + no_show_reason + email', 
     ] as any;
   }
 
-  it('writes no_show_reason and emails the forfeited captain (default 60 grace)', async () => {
+  it('applyNoShowForfeit (confirmation) applies the forfeit exactly like the former cron', async () => {
     seedForfeitedCaptain();
-    // No `tournaments` row seeded → resolveGraceMinutes hits the maybeSingle
-    // null branch → fallback 60 (mirrors a not-yet-migrated DB).
     store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
 
     const m = buildMatchLite({
-      scheduled_at: scheduledIn(-1), // 1 min past kickoff, well within 60 grace
+      scheduled_at: scheduledIn(-1),
       team1_checked_in_at: '2026-04-01T12:00:00.000Z', // Alpha in, Bravo out
       checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
     });
-    const r = await processMatchCheckin(m);
+    await applyNoShowForfeit(m, 'team-b', 'staff-1');
 
-    expect(r.steps[0]).toMatch(/^forfeit \(/);
     expect(applyMatchScore).toHaveBeenCalledOnce();
+    expect((applyMatchScore.mock.calls[0] as any[])[0]).toMatchObject({
+      tenantId: TENANT_ID,
+      matchId: 'match-1',
+      forfeitTeamId: 'team-b',
+      staffId: 'staff-1',
+      propagateBracket: true,
+    });
     expect((store.matches[0] as any).no_show_reason).toBe(
       'auto_forfeit_no_checkin'
     );
@@ -727,10 +814,22 @@ describe('processMatchCheckin — configurable grace + no_show_reason + email', 
       teamName: 'Bravo',
       opponentName: 'Alpha',
     });
-    // Le délai de grâce ne transite PLUS vers les messages : il borne le
-    // rattrapage du cron, ce n'est pas un délai accordé aux équipes.
     const dArg = (notifyCheckinForfeit.mock.calls[0] as any[])[0];
+    expect(dArg).toMatchObject({
+      forfeitedTeamName: 'Bravo',
+      opponentName: 'Alpha',
+    });
     expect(dArg).not.toHaveProperty('graceMinutes');
+  });
+
+  it('applyNoShowForfeit propagates an applyMatchScore failure', async () => {
+    applyMatchScore.mockRejectedValueOnce(new Error('db down'));
+    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
+    const m = buildMatchLite({ scheduled_at: scheduledIn(-1) });
+    await expect(applyNoShowForfeit(m, 'team-b', null)).rejects.toThrow(
+      'db down'
+    );
+    expect(notifyCheckinForfeit).not.toHaveBeenCalled();
   });
 
   it('honors a per-tournament checkin_grace_minutes value', async () => {
@@ -749,12 +848,9 @@ describe('processMatchCheckin — configurable grace + no_show_reason + email', 
     });
     const r = await processMatchCheckin(m);
 
-    expect(r.steps[0]).toMatch(/^forfeit \(/);
-    expect(applyMatchScore).toHaveBeenCalledOnce();
-    // Le délai élargi a bien permis le forfait (fenêtre de rattrapage), sans
-    // être annoncé aux équipes.
-    const arg = (sendCheckinForfeitEmail.mock.calls[0] as any[])[0];
-    expect(arg).not.toHaveProperty('graceMinutes');
+    // Le délai élargi a bien permis la PROPOSITION (fenêtre de rattrapage).
+    expect(r.steps[0]).toMatch(/^forfeit_proposed \(/);
+    expect(applyMatchScore).not.toHaveBeenCalled();
   });
 
   it('does not forfeit yet when still inside a longer grace window', async () => {
@@ -775,27 +871,6 @@ describe('processMatchCheckin — configurable grace + no_show_reason + email', 
 
     expect(r.steps).toEqual([]);
     expect(applyMatchScore).not.toHaveBeenCalled();
-  });
-
-  it('still forfeits if no_show_reason write fails (graceful degradation)', async () => {
-    seedForfeitedCaptain();
-    store.matches = [{ id: 'match-1', tenant_id: TENANT_ID }] as any;
-
-    // Simulate the column not existing: monkey-patch the matches update used by
-    // recordNoShowReason to throw. The forfeit (applyMatchScore) and
-    // forfeit_processed_at must still go through.
-    const m = buildMatchLite({
-      scheduled_at: scheduledIn(-1),
-      team1_checked_in_at: '2026-04-01T12:00:00.000Z',
-      checkin_email_sent_at: '2026-04-01T12:00:00.000Z',
-    });
-    const r = await processMatchCheckin(m);
-
-    // applyMatchScore is mocked (does not actually flip status), but the
-    // forfeit step completed and marked the match processed.
-    expect(r.steps[0]).toMatch(/^forfeit \(/);
-    expect((store.matches[0] as any).forfeit_processed_at).toBeTruthy();
-    expect(applyMatchScore).toHaveBeenCalledOnce();
   });
 });
 

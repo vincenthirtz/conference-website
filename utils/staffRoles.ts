@@ -109,3 +109,31 @@ export function hasAtLeastRole(
   if (!role) return false;
   return STAFF_ROLE_RANK[role] >= STAFF_ROLE_RANK[minRole];
 }
+
+/**
+ * Rôle EFFECTIF sur un tenant : le MAXIMUM du rôle global (`staff.role`) et du
+ * rôle porté par `tenant_staff.role` — la règle de
+ * `requireStaffRoleFromRequest`, pour les chemins qui n'ont pas de session
+ * (bot, audiences de notification). Une valeur inconnue n'élève rien.
+ */
+export function effectiveTenantRole(
+  globalRole: unknown,
+  tenantRole: unknown
+): StaffRole | null {
+  const asRole = (v: unknown): StaffRole | null =>
+    typeof v === 'string' && (STAFF_ROLES as readonly string[]).includes(v)
+      ? (v as StaffRole)
+      : null;
+  const g = asRole(globalRole);
+  const t = asRole(tenantRole);
+  if (!g) return t;
+  if (!t) return g;
+  return STAFF_ROLE_RANK[t] > STAFF_ROLE_RANK[g] ? t : g;
+}
+
+/** Admin ou owner : peut trancher au nom de l'organisation. */
+export function isAdminOrOwnerRole(
+  role: StaffRole | null | undefined
+): boolean {
+  return role === 'admin' || role === 'owner';
+}

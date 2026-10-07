@@ -21,6 +21,15 @@ export const BOT_EVENT_NAMES = [
   'match.disputed',
   'match.dispute.resolved',
   'match.finished',
+  // PROPOSITION de forfait (absence au check-in), adressée aux admins/owners
+  // du tenant au compte Discord lié (`recipients`) : DM avec Confirmer /
+  // Refuser → POST /api/bot/v1/matches/:matchId/forfeit-proposal/{confirm,
+  // decline}. Le cron n'applique PLUS aucun forfait seul (2026-10-07).
+  // `resolved` : la proposition est tranchée (confirmée, refusée, ou écrasée
+  // par une saisie de score du staff) — de quoi éditer les DM déjà partis.
+  // Cf. utils/matches/forfeitProposal.ts.
+  'match.forfeit_proposed',
+  'match.forfeit_resolved',
   'news.published',
   // Post composé dans l'admin (Communication › Réseaux) et poussé vers le salon
   // d'annonces. Le sens INVERSE de news-forwarder.js, qui lui remonte le salon
