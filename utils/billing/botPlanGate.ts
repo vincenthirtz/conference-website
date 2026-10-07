@@ -29,6 +29,7 @@
 
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
+import { invalidateTenantGateRow, loadTenantGateRow } from '../tenants/gateRow';
 import {
   tenantFeatures,
   PLAN_LABELS,
@@ -77,47 +78,38 @@ export const BOT_FALLBACK_PLAN_STATE: TenantPlanState = {
 };
 
 /**
- * Cache court (60 s) du plan par tenant. Le gate BASELINE charge le plan à
- * CHAQUE appel bot tenant-scopé (le bot poll souvent) → on évite un round-trip
- * DB par requête. TTL court : un plan fraîchement activé (webhook HelloAsso)
- * prend effet en ≤ 60 s. `__resetBotPlanCacheForTests` purge en test.
+ * Le gate BASELINE charge le plan à CHAQUE appel bot tenant-scopé (le bot poll
+ * souvent). Le cache est celui de la ligne `tenants` partagée avec le cycle de
+ * vie et l'existence (../tenants/gateRow.ts, TTL 120 s) : un plan fraîchement
+ * activé (webhook HelloAsso) prend effet en ≤ 120 s. Pas de second étage de
+ * cache ici — il ajouterait son TTL à celui de la ligne.
+ * `__resetBotPlanCacheForTests` purge en test.
  */
-const BOT_PLAN_CACHE_TTL_MS = 60_000;
-const botPlanCache = new Map<
-  string,
-  { state: TenantPlanState; expiresAt: number }
->();
-
 export function __resetBotPlanCacheForTests(): void {
-  botPlanCache.clear();
+  invalidateTenantGateRow();
 }
 
 /**
  * Charge `{ plan, plan_status, plan_expires_at }` d'un tenant pour le gate bot.
  * Fail-closed sur `discovery` (cf. BOT_FALLBACK_PLAN_STATE) si la row est
- * absente / la requête échoue. Résultat caché 60 s par tenant.
+ * absente / la requête échoue. Ligne cachée 120 s par tenant (gateRow).
  */
 export async function loadTenantPlanStateForBot(
   tenantId: string
 ): Promise<TenantPlanState> {
-  const now = Date.now();
-  const cached = botPlanCache.get(tenantId);
-  if (cached && cached.expiresAt > now) return cached.state;
-
   if (!supabaseAdmin) return BOT_FALLBACK_PLAN_STATE;
-  const { data, error } = await supabaseAdmin
-    .from('tenants')
-    .select('plan, plan_status, plan_expires_at')
-    .eq('id', tenantId)
-    .maybeSingle();
+  // Ligne partagée avec le cycle de vie et l'existence (../tenants/gateRow.ts) :
+  // une seule lecture `tenants` par miss, au lieu d'une par contrôle.
+  const lookup = await loadTenantGateRow(tenantId);
 
-  if (error) {
-    logger.error('[bot/plan] tenant plan lookup error', error);
+  if (!lookup.ok) {
+    logger.error('[bot/plan] tenant plan lookup error', lookup.error);
     return BOT_FALLBACK_PLAN_STATE; // erreur transitoire → ne pas cacher
   }
+  const data = lookup.row;
   if (!data) return BOT_FALLBACK_PLAN_STATE;
 
-  const state: TenantPlanState = {
+  return {
     plan: (data.plan as TenantPlan) ?? BOT_FALLBACK_PLAN_STATE.plan,
     plan_status:
       (data.plan_status as PlanStatus) ?? BOT_FALLBACK_PLAN_STATE.plan_status,
@@ -125,11 +117,6 @@ export async function loadTenantPlanStateForBot(
       (data.plan_expires_at as string | null) ??
       BOT_FALLBACK_PLAN_STATE.plan_expires_at,
   };
-  botPlanCache.set(tenantId, {
-    state,
-    expiresAt: now + BOT_PLAN_CACHE_TTL_MS,
-  });
-  return state;
 }
 
 /** Le tenant satisfait-il l'exigence de capacité, à l'instant `nowMs` ? */

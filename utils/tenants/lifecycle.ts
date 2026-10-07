@@ -12,8 +12,8 @@
 // Un seul endroit dit donc ici : quels états existent, ce qu'ils autorisent, et
 // quel refus renvoyer. Les appelants n'ont plus qu'à l'appliquer.
 
-import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
+import { invalidateTenantGateRow, loadTenantGateRow } from './gateRow';
 
 export const LIFECYCLE_STATES = [
   'active',
@@ -76,13 +76,12 @@ export type TenantLifecycle = {
   purgeAfter: string | null;
 };
 
-const TTL_MS = 60_000;
-const cache = new Map<string, { value: TenantLifecycle; expiresAt: number }>();
-
-/** À usage test, et après un changement d'état. */
+/**
+ * À usage test, et après un changement d'état. La ligne est partagée avec le
+ * gate plan et l'existence (cf. ./gateRow.ts) : on l'oublie entière.
+ */
 export function invalidateLifecycleCache(tenantId?: string): void {
-  if (tenantId) cache.delete(tenantId);
-  else cache.clear();
+  invalidateTenantGateRow(tenantId);
 }
 
 /**
@@ -91,35 +90,25 @@ export function invalidateLifecycleCache(tenantId?: string): void {
  *
  * En cas d'erreur de lecture, on répond `active` SANS mettre en cache : une
  * base indisponible ne doit pas couper des espaces en règle. Le risque inverse
- * — servir 60 s de plus un espace suspendu — est le moindre.
+ * — servir 120 s de plus un espace suspendu — est le moindre.
+ *
+ * Lecture mutualisée avec le plan et l'existence (./gateRow.ts, TTL 120 s).
  */
 export async function getTenantLifecycle(
   tenantId: string
 ): Promise<TenantLifecycle> {
-  const now = Date.now();
-  const hit = cache.get(tenantId);
-  if (hit && hit.expiresAt > now) return hit.value;
+  const lookup = await loadTenantGateRow(tenantId);
 
-  const { data, error } = await supabaseAdmin
-    .from('tenants')
-    .select('lifecycle_state, lifecycle_reason, purge_after')
-    .eq('id', tenantId)
-    .maybeSingle();
-
-  if (error) {
-    logger.error('[lifecycle] lookup failed', error);
+  if (!lookup.ok) {
+    logger.error('[lifecycle] lookup failed', lookup.error);
     return { state: 'active', reason: null, purgeAfter: null };
   }
-  if (!data) {
+  const row = lookup.row;
+  if (!row) {
     return { state: 'purged', reason: null, purgeAfter: null };
   }
 
-  const row = data as {
-    lifecycle_state: string | null;
-    lifecycle_reason: string | null;
-    purge_after: string | null;
-  };
-  const value: TenantLifecycle = {
+  return {
     state: (LIFECYCLE_STATES as readonly string[]).includes(
       row.lifecycle_state ?? ''
     )
@@ -128,8 +117,6 @@ export async function getTenantLifecycle(
     reason: row.lifecycle_reason ?? null,
     purgeAfter: row.purge_after ?? null,
   };
-  cache.set(tenantId, { value, expiresAt: now + TTL_MS });
-  return value;
 }
 
 /**

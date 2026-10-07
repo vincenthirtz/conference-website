@@ -59,6 +59,7 @@ type RequestLike =
 
 // Dans une feuille à part, importable côté client (cf. `./tenantId`).
 import { DEFAULT_TENANT_ID } from './tenantId';
+import { invalidateTenantGateRow, loadTenantGateRow } from './tenants/gateRow';
 
 export { DEFAULT_TENANT_ID };
 
@@ -129,6 +130,7 @@ const guildTenantCache = new Map<
 export function __resetTenantLookupCachesForTests(): void {
   activeTenantCache.clear();
   guildTenantCache.clear();
+  invalidateTenantGateRow();
 }
 
 /** Le tenant existe-t-il et est-il actif ? */
@@ -139,25 +141,28 @@ export async function isActiveTenantId(tenantId: string): Promise<boolean> {
   if (cached && cached.expiresAt > now) return cached.active;
 
   if (!supabaseAdmin) return false;
-  const { data, error } = await supabaseAdmin
-    .from('tenants')
-    .select('id, is_active')
-    .eq('id', tenantId)
-    .maybeSingle();
+  // Ligne partagée avec le cycle de vie et le plan (./tenants/gateRow.ts) : sur
+  // le chemin bot, les trois contrôles ne coûtent plus qu'une lecture.
+  const lookup = await loadTenantGateRow(tenantId);
 
   // Erreur transitoire : on refuse sans cacher, pour ne pas figer un faux
   // négatif pendant une minute.
-  if (error) {
-    logger.error('[tenant] active tenant lookup failed', error);
+  if (!lookup.ok) {
+    logger.error('[tenant] active tenant lookup failed', lookup.error);
     return false;
   }
 
-  const active =
-    !!data && (data as { is_active?: boolean }).is_active !== false;
-  activeTenantCache.set(tenantId, {
-    active,
-    expiresAt: now + TENANT_LOOKUP_TTL_MS,
-  });
+  const data = lookup.row;
+  const active = !!data && data.is_active !== false;
+  // Une ligne présente est déjà cachée par gateRow (120 s) : un second étage
+  // ajouterait son TTL au sien. Seul le négatif « tenant inconnu », que gateRow
+  // ne garde pas, est mémorisé ici.
+  if (!data) {
+    activeTenantCache.set(tenantId, {
+      active: false,
+      expiresAt: now + TENANT_LOOKUP_TTL_MS,
+    });
+  }
   return active;
 }
 
