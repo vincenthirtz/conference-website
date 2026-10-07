@@ -37035,6 +37035,102 @@
     ]
    }
   },
+  "GET /api/cron/discord-match-events": {
+   "200": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "candidates": {
+        "type": "number"
+       },
+       "delivered": {
+        "type": "number"
+       },
+       "dryRun": {},
+       "error": {
+        "type": "string"
+       },
+       "failed": {
+        "type": "number"
+       },
+       "matches": {}
+      },
+      "required": [
+       "candidates",
+       "delivered",
+       "error",
+       "failed"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "candidates": {
+        "type": "number"
+       },
+       "delivered": {
+        "type": "number"
+       },
+       "dryRun": {
+        "type": "boolean"
+       },
+       "error": {},
+       "failed": {
+        "type": "number"
+       },
+       "matches": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "scheduledAt": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "id",
+          "scheduledAt"
+         ]
+        }
+       }
+      },
+      "required": [
+       "candidates",
+       "delivered",
+       "dryRun",
+       "failed",
+       "matches"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "candidates": {
+        "type": "number"
+       },
+       "delivered": {
+        "type": "number"
+       },
+       "dryRun": {},
+       "error": {},
+       "failed": {
+        "type": "number"
+       },
+       "matches": {}
+      },
+      "required": [
+       "candidates",
+       "delivered",
+       "failed"
+      ]
+     }
+    ]
+   }
+  },
   "GET /api/cron/dispute-sla-check": {
    "200": {
     "type": "object",
@@ -75008,6 +75104,102 @@
      "errors",
      "scanned",
      "success"
+    ]
+   }
+  },
+  "POST /api/cron/discord-match-events": {
+   "200": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "candidates": {
+        "type": "number"
+       },
+       "delivered": {
+        "type": "number"
+       },
+       "dryRun": {},
+       "error": {
+        "type": "string"
+       },
+       "failed": {
+        "type": "number"
+       },
+       "matches": {}
+      },
+      "required": [
+       "candidates",
+       "delivered",
+       "error",
+       "failed"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "candidates": {
+        "type": "number"
+       },
+       "delivered": {
+        "type": "number"
+       },
+       "dryRun": {
+        "type": "boolean"
+       },
+       "error": {},
+       "failed": {
+        "type": "number"
+       },
+       "matches": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "scheduledAt": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "id",
+          "scheduledAt"
+         ]
+        }
+       }
+      },
+      "required": [
+       "candidates",
+       "delivered",
+       "dryRun",
+       "failed",
+       "matches"
+      ]
+     },
+     {
+      "type": "object",
+      "properties": {
+       "candidates": {
+        "type": "number"
+       },
+       "delivered": {
+        "type": "number"
+       },
+       "dryRun": {},
+       "error": {},
+       "failed": {
+        "type": "number"
+       },
+       "matches": {}
+      },
+      "required": [
+       "candidates",
+       "delivered",
+       "failed"
+      ]
+     }
     ]
    }
   },

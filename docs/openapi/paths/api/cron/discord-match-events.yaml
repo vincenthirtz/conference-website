@@ -1,0 +1,47 @@
+get:
+  tags:
+    - cron
+  summary: Events Discord programmés des matchs, créés la veille.
+  operationId: cronDiscordMatchEventsGet
+  description: |
+    Netlify scheduled function (quotidienne, 10:00 UTC). Tout match des 36
+    prochaines heures sans `matches.discord_scheduled_event_id` (non fini, non
+    supprime) est re-signale au bot par un `match.scheduled`.
+
+    Livraison DIRECTE au webhook du bot, pas par l'outbox : les dispatchers
+    push/email lisent l'outbox et renverraient un "Match planifie" aux
+    joueuses. Idempotent : le bot reecrit l'id d'event, le passage suivant ne
+    revoit plus le match.
+
+    Query : `?dry_run=1` liste les matchs vises sans rien livrer.
+
+    Auth : `Authorization: Bearer <CRON_SECRET>` OU `?secret=<CRON_SECRET>`.
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: '`{ candidates, delivered, failed }` (+ `matches` en dry run).'
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+post:
+  tags:
+    - cron
+  summary: Events Discord programmés des matchs (identique au GET).
+  operationId: cronDiscordMatchEventsPost
+  security:
+    - CronSecret: []
+  responses:
+    '200':
+      description: Voir le GET.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    '401':
+      $ref: '#/components/responses/Unauthorized'

@@ -289,6 +289,33 @@ function buildFullPayload(
   };
 }
 
+/**
+ * Livre un événement AU BOT SEUL, sans l'écrire dans l'outbox.
+ *
+ * L'outbox n'appartient pas qu'au bot : web-push-dispatch et l'email digest
+ * la lisent aussi. Un rattrapage (re-signaler au bot un état qu'il a manqué)
+ * qui passerait par elle renverrait aux joueuses des notifications d'un fait
+ * ancien — « Match planifié » pour un match connu depuis des semaines.
+ *
+ * Contrepartie : pas de filet. Un échec de livraison n'est pas rejoué par le
+ * poller ; l'appelant doit être idempotent et repasser (cron).
+ */
+export async function pushBotEventDirect(
+  event: BotEventName,
+  data: BotEventPayload,
+  tenantId: string
+): Promise<EmitResult> {
+  if (!tenantId) {
+    return { delivered: false, error: 'tenant_missing', attempts: 0 };
+  }
+  return pushToBot(
+    event,
+    buildFullPayload(event, data, tenantId),
+    null,
+    tenantId
+  );
+}
+
 export async function emitBotEvent(
   event: BotEventName,
   data: BotEventPayload,

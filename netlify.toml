@@ -205,6 +205,14 @@
 [functions."free-players-expiry-cron"]
   schedule = "15 9 * * *"
 
+# Events Discord programmés des matchs, la veille. 10:00 UTC, horizon 36 h :
+# tout match sans `discord_scheduled_event_id` est re-signalé au bot
+# (`match.scheduled`, livraison directe — PAS l'outbox, que lisent les
+# dispatchers push/email). Rattrape les matchs datés sans émission (saison
+# 2026 planifiée en masse le 31/08). Requiert CRON_SECRET + URL.
+[functions."discord-match-events-cron"]
+  schedule = "0 10 * * *"
+
 # N7 — récap hebdomadaire d'équipe. Lundi 09:00 UTC : la semaine écoulée est
 # close et la suivante se prépare. N'émet `team.weekly.recap` que pour les
 # équipes dont la semaine a quelque chose à raconter (jamais pour une équipe
