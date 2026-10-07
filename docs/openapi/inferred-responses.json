@@ -30995,6 +30995,41 @@
     ]
    }
   },
+  "GET /api/bot/v1/players/battle-tags": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "items": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "battleTag": {
+         "type": "string"
+        },
+        "discordUserId": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "battleTag",
+        "discordUserId"
+       ]
+      }
+     },
+     "nextCursor": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "items",
+     "nextCursor"
+    ]
+   }
+  },
   "GET /api/bot/v1/players/by-discord/{discordUserId}/actions": {
    "200": {
     "type": "object",

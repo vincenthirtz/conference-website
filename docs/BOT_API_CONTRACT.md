@@ -181,6 +181,7 @@ absent d'ici, ou listé mais plus émis, fait échouer la suite.
 | `TOURNAMENT_COMPLETED` | 403 | Tournoi terminé : le rouvrir avant de modifier le match. | `matches/[matchId]`, `matches/[matchId]/reset` |
 | `ALREADY_COMPLETE` | 400 | Veto déjà complet. | `matches/[matchId]/veto` |
 | `CHANNEL_COLUMN_MISSING` | 503 | Migration du salon de match non appliquée. | `matches/[matchId]/discord` |
+| `BATTLE_TAGS_UNAVAILABLE` | 503 | Correspondance BattleTag du tenant illisible (`Retry-After: 60`) ; retomber sur `players/by-discord/:id/team`. | `players/battle-tags` |
 | `MATCH_NOT_FOUND` | 404 | Match introuvable. | `matches/[matchId]/drafts` |
 | `TOURNAMENT_NOT_FOUND` | 404 | Tournoi du match introuvable. | `matches/[matchId]/drafts` |
 | `GAME_NOT_DRAFTABLE` | 400 | Le jeu du tournoi n'a pas de draft. | `matches/[matchId]/drafts` |
@@ -997,7 +998,7 @@ code. Les tableaux par domaine ci-dessous gardent le contexte rédigé ; un test
 ce tableau.
 
 <!-- BEGIN GENERATED: bot-inventory -->
-_Tableau généré depuis les options `withBotRoute` des handlers — ne pas éditer à la main : `npm run contract:bot-inventory`. 96 routes._
+_Tableau généré depuis les options `withBotRoute` des handlers — ne pas éditer à la main : `npm run contract:bot-inventory`. 97 routes._
 
 | Route | Méthodes | Idem. | Rate-key | Plafond | Portée / plan |
 | --- | --- | --- | --- | --- | --- |
@@ -1041,6 +1042,7 @@ _Tableau généré depuis les options `withBotRoute` des handlers — ne pas éd
 | [`moderation/blacklist.ts`](../pages/api/bot/v1/moderation/blacklist.ts) | GET, POST, DELETE | oui | `bot-moderation` | 30/min (+10/acteur) | — |
 | [`moderation/blacklist-alert.ts`](../pages/api/bot/v1/moderation/blacklist-alert.ts) | POST | oui | `bot-moderation` | 30/min | plan `arbitration` |
 | [`player-actions.ts`](../pages/api/bot/v1/player-actions.ts) | GET | — | `bot-player-actions` | 30/min | — |
+| [`players/battle-tags.ts`](../pages/api/bot/v1/players/battle-tags.ts) | GET | — | `bot-player-battle-tags` | 30/min | — |
 | [`players/by-discord/[discordUserId]/actions.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/actions.ts) | GET | — | `bot-player-actions` | 60/min | — |
 | [`players/by-discord/[discordUserId]/actions-todo.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/actions-todo.ts) | GET | — | `bot-player-actions-todo` | 60/min | — |
 | [`players/by-discord/[discordUserId]/actions/snooze.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/actions/snooze.ts) | POST | oui | `actions.snooze` | 30/min | — |
@@ -2032,6 +2034,7 @@ y puise pour `/mvp ajouter`). Côté bot : `/mvp ajouter` et `/mvp retirer`
 > déclare désormais le paramètre en ligne sur cette route.
 
 | [`players/by-discord/[discordUserId]/team.ts`](../pages/api/bot/v1/players/by-discord/[discordUserId]/team.ts)                     | GET     | —     | `bot-player-team`                                                  |
+| [`players/battle-tags.ts`](../pages/api/bot/v1/players/battle-tags.ts)                                                             | GET     | —     | `bot-player-battle-tags`                                           |
 | [`player-actions.ts`](../pages/api/bot/v1/player-actions.ts)                                                                       | GET     | —     | `bot-player-actions` _(shares bucket with the by-discord variant)_ |
 
 > **Manager multi-equipes (2026-08-20).** Un compte au role d'equipe `manager`
@@ -2079,6 +2082,57 @@ y puise pour `/mvp ajouter`). Côté bot : `/mvp ajouter` et `/mvp retirer`
 > `400` sans code à `409 CHECKIN_MATCH_CLOSED` (même `error`). Côté bot : rien
 > d'obligatoire — `checkin.js` affiche `error` tel quel et le statut HTTP
 > brut ; seul un traitement qui testerait `status === 400` serait concerné.
+
+#### `GET /api/bot/v1/players/battle-tags`
+
+Correspondance `discordUserId → battleTag` de **tout le tenant** en un appel
+(paginé). Conçue pour le scan blacklist (`owwc-discord-bot/blacklist.js`), qui
+appelait `GET .../players/by-discord/:id/team` pour **chaque** membre de chaque
+serveur et n'y lisait que `member.battleTag` (~14 000 requêtes base/jour).
+Un scan de serveur passe de N appels HTTP à 1 (ou quelques pages).
+
+**Auth** : `x-api-key` ; tenant déduit de la clé (avec la clé plateforme :
+`x-guild-id` / `x-tenant-id` comme partout — le bot DOIT donc passer le
+`guildId` du serveur scanné, sinon la correspondance est celle du tenant par
+défaut).
+
+**Query** (toutes optionnelles) :
+
+| Param | Forme | Sens |
+| --- | --- | --- |
+| `cursor` | snowflake `^[0-9]{15,25}$` | `nextCursor` de la page précédente (exclusif). Absent = 1re page. |
+| `limit` | entier `1`–`9999` | Taille de page. Défaut `1000`, plafonnée à `5000`. |
+
+**Response 200**
+
+```json
+{
+  "items": [
+    { "discordUserId": "100000000000000001", "battleTag": "Un#1234" }
+  ],
+  "nextCursor": null
+}
+```
+
+- `items` trié par `discordUserId` (ordre de chaîne). `nextCursor` = dernier
+  `discordUserId` de la page s'il en reste, sinon `null` : relancer avec
+  `?cursor=<nextCursor>` jusqu'à `null`.
+- `battleTag` est **exactement** le `member.battleTag` que renverrait
+  `.../by-discord/:id/team` (compte lié, appartenance retenue par
+  `pickMembership` dans le tenant, `team_members.battle_tag` brut, non
+  normalisé). Comptes non liés, sans équipe dans le tenant ou sans BattleTag :
+  **absents** — pour le bot, absence = `null` (équivalent du 404 de `.../team`).
+- Rien d'autre n'est exposé (ni `authUserId`, ni équipe, ni pseudo Discord).
+- Fraîcheur : instantané serveur de 30 s au plus (`utils/botPlayerTeamSnapshot.ts`,
+  partagé avec le mode rafale de `.../team`) ; les pages d'un même parcours
+  viennent en principe du même instantané.
+
+**Errors** : `400 INVALID_QUERY` (curseur ou limite invalide, détail dans
+`fields`), `401` (clé), `405` (autre méthode que GET), `429` (limiteur),
+`503 BATTLE_TAGS_UNAVAILABLE` + `Retry-After: 60` (lecture impossible —
+retomber sur `.../team` membre par membre ou sauter le critère BattleTag pour
+ce tick).
+**Rate limit** : 30/min (`bot-player-battle-tags`). **Idempotency** : non (GET).
 
 #### `GET /api/bot/v1/players/by-discord/:discordUserId/actions-todo`
 

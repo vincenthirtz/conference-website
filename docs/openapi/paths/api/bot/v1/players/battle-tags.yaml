@@ -1,0 +1,59 @@
+get:
+  tags:
+    - bot/players
+  summary: Correspondance discordUserId → BattleTag de tout le tenant (scan blacklist).
+  description: |-
+    Remplace, pour le scan blacklist du bot, un appel à
+    `players/by-discord/{discordUserId}/team` par membre. `battleTag` est
+    exactement le `member.battleTag` que renverrait cette route ; les comptes
+    non liés, sans équipe dans le tenant ou sans BattleTag sont absents.
+    Pagination par curseur : relancer avec `cursor=nextCursor` tant qu'il
+    n'est pas `null`. Données servies par un instantané de 30 s au plus.
+  operationId: botListPlayerBattleTags
+  x-zod-query: bot.players/battle-tags.query
+  parameters:
+    - name: cursor
+      in: query
+      description: '`nextCursor` de la page précédente (exclusif).'
+    - name: limit
+      in: query
+      description: Taille de page (défaut 1000, plafonnée à 5000).
+  responses:
+    '200':
+      description: Une page de la correspondance, triée par discordUserId.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - items
+              - nextCursor
+            properties:
+              items:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - discordUserId
+                    - battleTag
+                  properties:
+                    discordUserId:
+                      type: string
+                    battleTag:
+                      type: string
+              nextCursor:
+                type:
+                  - string
+                  - 'null'
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '503':
+      description: Correspondance illisible (code `BATTLE_TAGS_UNAVAILABLE`, `Retry-After`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

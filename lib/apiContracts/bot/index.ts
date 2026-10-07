@@ -80,6 +80,7 @@ import { invitationsQuerySchema as q27_teams_teamId_invitations } from './teams/
 import { kickMemberQuerySchema as q28_teams_teamId_members } from './teams/[teamId]/members.query';
 import { transferCaptainQuerySchema as q29_teams_teamId_transfer_captain } from './teams/[teamId]/transfer-captain.query';
 import { listTeamsQuerySchema as q30_teams_index } from './teams/index.query';
+import { battleTagsQuerySchema as q_players_battle_tags } from './players/battle-tags.query';
 import { cloneQuerySchema as q31_tournaments_tournamentId_clone } from './tournaments/[tournamentId]/clone.query';
 import { matchesQuerySchema as q32_tournaments_tournamentId_matches } from './tournaments/[tournamentId]/matches.query';
 import { createStageQuerySchema as q33_tournaments_tournamentId_stages } from './tournaments/[tournamentId]/stages.query';
@@ -339,6 +340,10 @@ export const BOT_API_CONTRACT_SCHEMAS: Record<string, ApiContractEntry> = {
     io: 'input',
   },
   'bot.teams/index.query': { schema: q30_teams_index, io: 'input' },
+  'bot.players/battle-tags.query': {
+    schema: q_players_battle_tags,
+    io: 'input',
+  },
   'bot.tournaments/[tournamentId]/clone.query': {
     schema: q31_tournaments_tournamentId_clone,
     io: 'input',
