@@ -26,12 +26,10 @@ get:
             type: object
             properties:
               playlistId:
-                type: string
-                nullable: true
+                type: [string, 'null']
                 pattern: '^[A-Za-z0-9_-]{10,64}$'
               playlistUrl:
-                type: string
-                nullable: true
+                type: [string, 'null']
               migrated:
                 type: boolean
     '401':

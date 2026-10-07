@@ -34,8 +34,7 @@ patch:
               items:
                 type: string
             description:
-              type: string
-              nullable: true
+              type: [string, 'null']
   responses:
     '200':
       description: Abonnement mis à jour.
