@@ -741,6 +741,12 @@ ci-dessous) ou fiche admin du match (`/admin/matches/:id`, permission
 - **Migration absente** (`add_match_forfeit_proposal.sql`) : aucune
   proposition, aucun event, et surtout **aucun forfait automatique** (log
   warn) ; les routes répondent `503 FORFEIT_PROPOSALS_UNAVAILABLE`.
+- **Consommé par** `owwc-discord-bot/forfeit-proposal.js` (déployé le
+  2026-10-07, commit `c452d9f`) : DM à chaque destinataire avec Confirmer
+  (confirmation en deux temps) / Refuser ; `match.forfeit_resolved` retire les
+  boutons des DM connus. Le clic se fait hors serveur : le bot porte le
+  `tenantId` de l'event dans le `custom_id` du bouton et l'envoie en
+  `x-tenant-id` (plus `x-guild-id` s'il connaît le serveur du tenant).
 
 #### `registration.blacklisted` (Blacklist joueurs)
 
