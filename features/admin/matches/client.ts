@@ -56,6 +56,26 @@ export type MatchHistoryLog = {
   date: string;
 };
 
+/**
+ * Proposition de forfait posée par le cron de check-in (miroir client de
+ * `ForfeitProposal`, utils/matches/forfeitProposal.ts — module serveur).
+ */
+export type MatchForfeitProposal = {
+  matchId: string;
+  status: 'pending' | 'confirmed' | 'declined' | 'overridden';
+  absentTeamId: string | null;
+  proposedWinnerTeamId: string | null;
+  proposedAt: string | null;
+  resolvedAt: string | null;
+  resolvedByStaffId: string | null;
+};
+
+export type MatchForfeitProposalView = {
+  /** `false` tant que la migration n'est pas appliquée. */
+  available: boolean;
+  proposal: MatchForfeitProposal | null;
+};
+
 export type LineupPlayer = {
   team_id: string;
   user_id: string | null;
@@ -141,6 +161,15 @@ export const matchesClient = {
 
   history: (id: string) =>
     adminRequest<{ logs?: MatchHistoryLog[] }>(`${byId(id)}/history`),
+
+  forfeitProposal: (id: string) =>
+    adminRequest<MatchForfeitProposalView>(`${byId(id)}/forfeit-proposal`),
+  decideForfeitProposal: (id: string, decision: 'confirm' | 'decline') =>
+    adminRequest(`${byId(id)}/forfeit-proposal`, {
+      method: 'POST',
+      json: { decision },
+      idempotent: true,
+    }),
 
   lineups: (id: string) =>
     adminRequest<{ lineups?: TeamLineup[] }>(`${byId(id)}/lineup`),

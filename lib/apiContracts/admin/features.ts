@@ -262,6 +262,7 @@ import {
 import {
   CheckinNudgeBody,
   CheckinStaffBody,
+  ForfeitProposalDecisionBody,
   DisputeBoardQuery,
   DisputeOpenBody,
   DisputeResolveBody,
@@ -763,6 +764,10 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   },
   'admin.matches/[matchId]/checkin-staff.body': {
     schema: CheckinStaffBody,
+    io: 'input',
+  },
+  'admin.matches/[matchId]/forfeit-proposal.body': {
+    schema: ForfeitProposalDecisionBody,
     io: 'input',
   },
   // Équipes (features/admin/teams, vague serveur 4). Corps « historiques »

@@ -261,6 +261,14 @@ export const CheckinNudgeBody = looseBody(['teamSide']);
 /** Corps de POST …/checkin-staff (pointage staff) ; validé par le service. */
 export const CheckinStaffBody = looseBody(['teamSide', 'reason']);
 
+/**
+ * Corps de POST …/forfeit-proposal : trancher la proposition de forfait posée
+ * par le cron de check-in (cf. utils/matches/forfeitProposal.ts).
+ */
+export const ForfeitProposalDecisionBody = z.object({
+  decision: z.enum(['confirm', 'decline']),
+});
+
 /** Corps déclaré de POST …/mvp-public ; validé par le service. */
 export const MvpPublicLooseBody = looseBody([
   'action',

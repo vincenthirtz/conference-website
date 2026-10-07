@@ -53,4 +53,5 @@ export default {
   staffCheckinAlready: '{team} was already checked in.',
   staffCheckinError: 'Check-in failed',
   forfeitProcessed: 'Forfeit already processed',
+  forfeitProposalPending: 'Forfeit to confirm',
 };

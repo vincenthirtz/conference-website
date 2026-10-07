@@ -52,4 +52,5 @@ export default adminNs('adminTournamentCheckinLive', {
   staffCheckinAlready: '{team} était déjà pointée.',
   staffCheckinError: 'Échec du pointage',
   forfeitProcessed: 'Forfait déjà traité',
+  forfeitProposalPending: 'Forfait à confirmer',
 });

@@ -11,6 +11,7 @@ import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { MatchStatus } from '@/types/admin';
 import MatchHistoryDrawer from '@/components/admin/MatchHistoryDrawer';
 import MatchLineupsPanel from '@/components/admin/MatchLineupsPanel';
+import MatchForfeitProposalPanel from '@/components/admin/MatchForfeitProposalPanel';
 import Modal from '@/components/admin/Modal';
 import nsAdminMatchDetail from '@/lib/i18n/locales/admin-fr/adminMatchDetail';
 import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
@@ -286,6 +287,14 @@ function MatchViewPage(_: StaffProps) {
             {(match.status === 'disputed' || match.dispute_reason) && (
               <MatchDisputeCard match={match} />
             )}
+
+            {/* Forfait PROPOSÉ par le cron de check-in (jamais appliqué
+                seul) : confirmer ou refuser. Se tait sans proposition. */}
+            <MatchForfeitProposalPanel
+              matchId={match.id}
+              team1={match.team1}
+              team2={match.team2}
+            />
 
             <MatchInfoCards match={match} />
 

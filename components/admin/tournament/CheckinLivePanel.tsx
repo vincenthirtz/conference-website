@@ -8,6 +8,7 @@
 // `live` sub-tab of the merged check-in route.
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
@@ -47,6 +48,8 @@ type CheckinRow = {
   reminder30At: string | null;
   reminder15At: string | null;
   forfeitProcessedAt: string | null;
+  /** Forfait PROPOSÉ par le cron, en attente d'une décision staff. */
+  forfeitProposalPending?: boolean;
 };
 
 type ApiResponse = { matches: CheckinRow[] };
@@ -406,6 +409,13 @@ function MatchRow({
                 })
               : '—'}
           </span>
+          {row.forfeitProposalPending && (
+            // Le cron ne tranche plus : il propose. La décision se prend sur
+            // la fiche du match (ou par le DM Discord des admins).
+            <Link href={`/admin/matches/${row.matchId}`}>
+              <Chip tone="warn">{t.forfeitProposalPending}</Chip>
+            </Link>
+          )}
         </div>
         <AdminButton
           variant="secondary"

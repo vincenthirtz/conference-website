@@ -8215,6 +8215,79 @@
     ]
    }
   },
+  "GET /api/admin/matches/{matchId}/forfeit-proposal": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "available": {
+      "type": "boolean"
+     },
+     "proposal": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "absentTeamId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "matchId": {
+        "type": "string"
+       },
+       "proposedAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "proposedWinnerTeamId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "resolvedAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "resolvedByStaffId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string",
+        "enum": [
+         "confirmed",
+         "declined",
+         "overridden",
+         "pending"
+        ]
+       }
+      },
+      "required": [
+       "absentTeamId",
+       "matchId",
+       "proposedAt",
+       "proposedWinnerTeamId",
+       "resolvedAt",
+       "resolvedByStaffId",
+       "status"
+      ]
+     }
+    },
+    "required": [
+     "available",
+     "proposal"
+    ]
+   }
+  },
   "GET /api/admin/matches/{matchId}/history": {
    "200": {
     "type": "object",
@@ -23175,6 +23248,9 @@
           "null"
          ]
         },
+        "forfeitProposalPending": {
+         "type": "boolean"
+        },
         "matchId": {
          "type": "string"
         },
@@ -23259,6 +23335,7 @@
        "required": [
         "emailSentAt",
         "forfeitProcessedAt",
+        "forfeitProposalPending",
         "matchId",
         "reminder15At",
         "reminder30At",
@@ -63052,6 +63129,128 @@
     ]
    }
   },
+  "POST /api/admin/matches/{matchId}/forfeit-proposal": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "match": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "status": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "team1Score": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "team2Score": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "winnerTeamId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "status",
+       "team1Score",
+       "team2Score",
+       "winnerTeamId"
+      ]
+     },
+     "matchId": {
+      "type": "string"
+     },
+     "outcome": {
+      "type": "string",
+      "enum": [
+       "confirmed",
+       "declined"
+      ]
+     },
+     "proposal": {
+      "type": "object",
+      "properties": {
+       "absentTeamId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "matchId": {
+        "type": "string"
+       },
+       "proposedAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "proposedWinnerTeamId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "resolvedAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "resolvedByStaffId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string",
+        "enum": [
+         "confirmed",
+         "declined",
+         "overridden",
+         "pending"
+        ]
+       }
+      },
+      "required": [
+       "absentTeamId",
+       "matchId",
+       "proposedAt",
+       "proposedWinnerTeamId",
+       "resolvedAt",
+       "resolvedByStaffId",
+       "status"
+      ]
+     },
+     "success": {
+      "type": "boolean",
+      "const": true
+     }
+    },
+    "required": [
+     "match",
+     "matchId",
+     "outcome",
+     "proposal",
+     "success"
+    ]
+   }
+  },
   "POST /api/admin/matches/{matchId}/lineup": {
    "200": {}
   },
@@ -72132,6 +72331,248 @@
      "team1Score",
      "team2Score",
      "winnerTeamId"
+    ]
+   }
+  },
+  "POST /api/bot/v1/matches/{matchId}/forfeit-proposal/confirm": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "match": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "status": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "team1Score": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "team2Score": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "winnerTeamId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "status",
+       "team1Score",
+       "team2Score",
+       "winnerTeamId"
+      ]
+     },
+     "matchId": {
+      "type": "string"
+     },
+     "outcome": {
+      "type": "string",
+      "enum": [
+       "confirmed",
+       "declined"
+      ]
+     },
+     "proposal": {
+      "type": "object",
+      "properties": {
+       "absentTeamId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "matchId": {
+        "type": "string"
+       },
+       "proposedAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "proposedWinnerTeamId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "resolvedAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "resolvedByStaffId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string",
+        "enum": [
+         "confirmed",
+         "declined",
+         "overridden",
+         "pending"
+        ]
+       }
+      },
+      "required": [
+       "absentTeamId",
+       "matchId",
+       "proposedAt",
+       "proposedWinnerTeamId",
+       "resolvedAt",
+       "resolvedByStaffId",
+       "status"
+      ]
+     },
+     "success": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "match",
+     "matchId",
+     "outcome",
+     "proposal",
+     "success"
+    ]
+   }
+  },
+  "POST /api/bot/v1/matches/{matchId}/forfeit-proposal/decline": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "match": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "status": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "team1Score": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "team2Score": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "winnerTeamId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "status",
+       "team1Score",
+       "team2Score",
+       "winnerTeamId"
+      ]
+     },
+     "matchId": {
+      "type": "string"
+     },
+     "outcome": {
+      "type": "string",
+      "enum": [
+       "confirmed",
+       "declined"
+      ]
+     },
+     "proposal": {
+      "type": "object",
+      "properties": {
+       "absentTeamId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "matchId": {
+        "type": "string"
+       },
+       "proposedAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "proposedWinnerTeamId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "resolvedAt": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "resolvedByStaffId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "status": {
+        "type": "string",
+        "enum": [
+         "confirmed",
+         "declined",
+         "overridden",
+         "pending"
+        ]
+       }
+      },
+      "required": [
+       "absentTeamId",
+       "matchId",
+       "proposedAt",
+       "proposedWinnerTeamId",
+       "resolvedAt",
+       "resolvedByStaffId",
+       "status"
+      ]
+     },
+     "success": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "match",
+     "matchId",
+     "outcome",
+     "proposal",
+     "success"
     ]
    }
   },

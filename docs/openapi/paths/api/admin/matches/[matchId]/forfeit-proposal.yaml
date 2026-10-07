@@ -1,0 +1,92 @@
+parameters:
+  - $ref: '#/components/parameters/MatchId'
+get:
+  summary: Read the forfeit proposal of a match.
+  description: |
+    Requires the `arbitrate_matches` permission. The check-in cron no longer
+    applies forfeits on its own: when only one team checked in at kickoff it
+    stores a PROPOSAL (`pending`) that staff confirms or declines. `proposal`
+    is `null` when none was made; `available` is `false` while the
+    `add_match_forfeit_proposal.sql` migration is not applied.
+  operationId: adminGetForfeitProposal
+  x-zod-query: admin.matches/[matchId]/sub.query
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Proposal (or `null`).
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - available
+              - proposal
+            properties:
+              available:
+                type: boolean
+              proposal:
+                oneOf:
+                  - $ref: '#/components/schemas/ForfeitProposal'
+                  - type: 'null'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+post:
+  summary: Confirm or decline the forfeit proposal of a match.
+  description: |
+    Requires the `arbitrate_matches` permission. `confirm` applies the forfeit
+    of the absent team exactly as the former automatic forfeit did (forfeit
+    score, `walkover`, bracket propagation, check-in notifications);
+    `decline` leaves the match untouched. Same core as the Discord bot routes
+    `/api/bot/v1/matches/{matchId}/forfeit-proposal/{confirm,decline}`; emits
+    `match.forfeit_resolved`. Staff log: `update_match`
+    (`payload.subject = forfeit_proposal`).
+  operationId: adminDecideForfeitProposal
+  x-zod-query: admin.matches/[matchId]/sub.query
+  tags:
+    - admin/matches
+  security:
+    - StaffSession: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.matches/[matchId]/forfeit-proposal.body
+  responses:
+    '200':
+      description: Proposal decided.
+      content:
+        application/json: {}
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      description: Match not found (`MATCH_NOT_FOUND`) or no proposal (`FORFEIT_PROPOSAL_NOT_FOUND`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '409':
+      description: Proposal no longer pending (`FORFEIT_PROPOSAL_NOT_PENDING`), current state attached.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ForfeitProposalConflict'
+    '503':
+      description: Proposal columns missing (`FORFEIT_PROPOSALS_UNAVAILABLE`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

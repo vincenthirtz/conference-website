@@ -16,6 +16,7 @@ export const matchesKeys = {
   detail: (id: string) => adminKey('matches', 'detail', id),
   history: (id: string) => adminKey('matches', 'history', id),
   lineups: (id: string) => adminKey('matches', 'lineups', id),
+  forfeitProposal: (id: string) => adminKey('matches', 'forfeit-proposal', id),
   castAssignments: (id: string) => adminKey('matches', 'cast-assignments', id),
   castMembers: adminKey('matches', 'cast-members-options'),
   mapPool: (id: string) => adminKey('matches', 'map-pool', id),
@@ -101,6 +102,32 @@ export function useResolveMatchDispute(id: string) {
 
 export function useCancelMatchDispute(id: string) {
   return useMutation({ mutationFn: () => client.cancelDispute(id) });
+}
+
+// --- Proposition de forfait (absence au check-in)
+
+export function useMatchForfeitProposal(id: string) {
+  return useQuery({
+    queryKey: matchesKeys.forfeitProposal(id),
+    queryFn: () => client.forfeitProposal(id),
+    enabled: !!id,
+    retry: false,
+  });
+}
+
+/** Trancher : relit la proposition, la fiche et l'historique. */
+export function useDecideForfeitProposal(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (decision: 'confirm' | 'decline') =>
+      client.decideForfeitProposal(id, decision),
+    onSettled: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: matchesKeys.forfeitProposal(id) }),
+        qc.invalidateQueries({ queryKey: matchesKeys.detail(id) }),
+        qc.invalidateQueries({ queryKey: matchesKeys.history(id) }),
+      ]),
+  });
 }
 
 // --- Feuilles de match (line-ups)

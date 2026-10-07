@@ -199,6 +199,7 @@ import enAdminSocialPosts from './adminSocialPosts';
 import enAdminTeamMessages from './adminTeamMessages';
 import enAdminCasterScenes from './adminCasterScenes';
 import enAdminMatchLineups from './adminMatchLineups';
+import enAdminMatchForfeitProposal from './adminMatchForfeitProposal';
 import enAdminDiscordLogs from './adminDiscordLogs';
 import enAdminDocuments from './adminDocuments';
 import enAdminStaffPermissions from './adminStaffPermissions';
@@ -395,6 +396,7 @@ const adminEnDict = {
   adminTeamMessages: enAdminTeamMessages,
   adminCasterScenes: enAdminCasterScenes,
   adminMatchLineups: enAdminMatchLineups,
+  adminMatchForfeitProposal: enAdminMatchForfeitProposal,
   adminDiscordLogs: enAdminDiscordLogs,
   adminDocuments: enAdminDocuments,
   adminStaffPermissions: enAdminStaffPermissions,

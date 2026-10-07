@@ -134,6 +134,7 @@ import nsAdminModerationEntityBlacklist from './adminModerationEntityBlacklist';
 import nsAdminMatchDraft from './adminMatchDraft';
 import nsAdminMatchDetail from './adminMatchDetail';
 import nsAdminMatchLineups from './adminMatchLineups';
+import nsAdminMatchForfeitProposal from './adminMatchForfeitProposal';
 import nsAdminMatchEdit from './adminMatchEdit';
 import nsAdminCampaigns from './adminCampaigns';
 import nsAdminCommandPalette from './adminCommandPalette';
@@ -330,6 +331,7 @@ export const frDict = {
   adminMatchDraft: nsAdminMatchDraft.fr,
   adminMatchDetail: nsAdminMatchDetail.fr,
   adminMatchLineups: nsAdminMatchLineups.fr,
+  adminMatchForfeitProposal: nsAdminMatchForfeitProposal.fr,
   adminMatchEdit: nsAdminMatchEdit.fr,
   adminCampaigns: nsAdminCampaigns.fr,
   adminCommandPalette: nsAdminCommandPalette.fr,
