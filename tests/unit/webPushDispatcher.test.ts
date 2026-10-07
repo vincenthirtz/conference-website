@@ -38,6 +38,7 @@ vi.mock('web-push', () => ({
 import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
 import handler, {
   runWebPushDispatcher,
+  __resetWebPushSettledMemoForTests,
 } from '../../pages/api/cron/web-push-dispatch';
 import { playerUrlForEvent } from '../../utils/webPushEvents';
 
@@ -163,6 +164,9 @@ beforeEach(() => {
   vi.setSystemTime(new Date(NOW));
   resetSupabaseMock();
   seedBaseFixtures();
+  // Mémo des events réglés (en mémoire du process) : les tests réutilisent les
+  // mêmes event_id, un test ne doit pas hériter de l'issue du précédent.
+  __resetWebPushSettledMemoForTests();
   sendNotification.mockReset();
   sendNotification.mockResolvedValue({ statusCode: 201 });
   vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -870,5 +874,71 @@ describe('playerUrlForEvent — events de match', () => {
   it('ne touche pas aux autres familles d’events', () => {
     expect(playerUrlForEvent('scrim.search.matched', {})).toBe('/player/teams');
     expect(playerUrlForEvent('team.weekly.recap', {})).toBe('/player');
+  });
+});
+
+/* ===========================================================================
+ * Mémo des events réglés — le rebalayage de la fenêtre ne recalcule plus
+ * l'audience d'un event qui n'a plus rien à retenter.
+ * ===========================================================================*/
+
+describe('mémo des events réglés', () => {
+  function seedEvent(eventId: string) {
+    store.bot_event_outbox = [
+      {
+        id: 1,
+        event_id: eventId,
+        event_name: 'match.starting',
+        tenant_id: TENANT_A,
+        payload: {},
+        created_at: NOW,
+        status: 'pending',
+      },
+    ] as any;
+  }
+
+  async function countFromCalls(table: string, run: () => Promise<unknown>) {
+    const { supabaseAdmin } = await import('./__helpers__/supabaseMock');
+    const spy = vi.spyOn(supabaseAdmin as any, 'from');
+    await run();
+    const n = spy.mock.calls.filter((c) => c[0] === table).length;
+    spy.mockRestore();
+    return n;
+  }
+
+  it('un event entièrement livré ne recalcule plus son audience au tick suivant', async () => {
+    seedEvent('evt-settled');
+    await runWebPushDispatcher();
+    expect(sendNotification).toHaveBeenCalledTimes(2);
+
+    const staffReads = await countFromCalls('tenant_staff', () =>
+      runWebPushDispatcher()
+    );
+    expect(staffReads).toBe(0);
+    expect(sendNotification).toHaveBeenCalledTimes(2);
+  });
+
+  it('un event en échec transitoire reste retenté à chaque tick', async () => {
+    seedEvent('evt-still-failing');
+    sendNotification.mockImplementation(async () => {
+      throw Object.assign(new Error('Boom'), { statusCode: 500 });
+    });
+    await runWebPushDispatcher();
+    await runWebPushDispatcher();
+    for (const d of store.web_push_deliveries as any[]) {
+      expect(d.attempts).toBe(2);
+    }
+  });
+
+  it('le mémo expire : passé 15 min, l’event est réexaminé', async () => {
+    seedEvent('evt-memo-expiry');
+    await runWebPushDispatcher();
+    vi.setSystemTime(new Date(Date.parse(NOW) + 15 * 60_000 + 1));
+    const staffReads = await countFromCalls('tenant_staff', () =>
+      runWebPushDispatcher()
+    );
+    expect(staffReads).toBeGreaterThan(0);
+    // Toujours livré une seule fois : web_push_deliveries fait foi.
+    expect(sendNotification).toHaveBeenCalledTimes(2);
   });
 });

@@ -101,6 +101,49 @@ const MAX_ATTEMPTS_BEFORE_GIVING_UP = 5;
 // scheduled-function tourne en série, mais on protège tout de même.
 let _dispatcherInFlight = false;
 
+/**
+ * Events « réglés » : déjà traités par cette instance sans rien laisser à
+ * retenter (aucune audience, aucun abonnement, ou chaque envoi est livré /
+ * expiré / abandonné). Valeur = échéance du mémo.
+ *
+ * POURQUOI. La fenêtre d'une heure est rebalayée à chaque tick (chaque
+ * minute) : un event y repassait ~60 fois, et chaque passage recalculait son
+ * audience — `tenant_staff`, `staff`, `matches`, `team_members`,
+ * préférences, abonnements — pour finir sur « déjà livré » ou « personne à
+ * prévenir ». Mémoriser l'issue pendant 15 min divise ce coût par ~15.
+ *
+ * Sans effet sur la livraison : un envoi en échec (`failed`) n'est PAS mémorisé
+ * et reste retenté à chaque tick. Le seul écart : un appareil abonné APRÈS le
+ * traitement d'un event le reçoit au plus 15 min plus tard (toujours dans la
+ * fenêtre), au lieu d'une minute. Mémoire du process : une instance froide
+ * repart de zéro, et `web_push_deliveries` empêche tout double envoi.
+ */
+const SETTLED_MEMO_TTL_MS = 15 * 60_000;
+const settledEvents = new Map<string, number>();
+
+function isSettled(eventId: string, nowMs: number): boolean {
+  const until = settledEvents.get(eventId);
+  if (until === undefined) return false;
+  if (until > nowMs) return true;
+  settledEvents.delete(eventId);
+  return false;
+}
+
+function markSettled(eventId: string, nowMs: number): void {
+  settledEvents.set(eventId, nowMs + SETTLED_MEMO_TTL_MS);
+  // Borne mémoire : purge des échéances passées quand la table grossit.
+  if (settledEvents.size > 5_000) {
+    for (const [id, until] of settledEvents) {
+      if (until <= nowMs) settledEvents.delete(id);
+    }
+  }
+}
+
+/** Oublie le mémo des events réglés. Usage strictement test. */
+export function __resetWebPushSettledMemoForTests(): void {
+  settledEvents.clear();
+}
+
 function envNumber(name: string, fallback: number): number {
   const raw = process.env[name];
   if (!raw) return fallback;
@@ -504,8 +547,10 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
   const batchLimit = envNumber('WEB_PUSH_BATCH_LIMIT', DEFAULT_BATCH_LIMIT);
   const windowHours = envNumber('WEB_PUSH_WINDOW_HOURS', DEFAULT_WINDOW_HOURS);
 
-  const events = await loadCandidateEvents(windowHours, batchLimit);
-  counters.events_examined = events.length;
+  const loaded = await loadCandidateEvents(windowHours, batchLimit);
+  counters.events_examined = loaded.length;
+  // Les events réglés lors d'un tick précédent ne coûtent plus rien.
+  const events = loaded.filter((e) => !isSettled(e.event_id, startedAt));
   if (events.length === 0) {
     counters.duration_ms = Date.now() - startedAt;
     return counters;
@@ -684,17 +729,26 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
     // staff qui joue aussi reçoit la version admin avec URL /admin/matches/...).
     const staffSet = new Set(staffUserIds);
     const allUserIds = Array.from(new Set([...staffUserIds, ...playerUserIds]));
-    if (allUserIds.length === 0) continue;
+    if (allUserIds.length === 0) {
+      markSettled(event.event_id, startedAt);
+      continue;
+    }
 
     // Filtrage opt-out (s'applique aux deux audiences indistinctement —
     // un user opt-out de match.starting ne le reçoit ni en staff ni en player).
     const optedOut = await loadOptedOutUserIds(allUserIds, event.event_name);
     const eligibleUserIds = allUserIds.filter((u) => !optedOut.has(u));
     counters.skipped_prefs += allUserIds.length - eligibleUserIds.length;
-    if (eligibleUserIds.length === 0) continue;
+    if (eligibleUserIds.length === 0) {
+      markSettled(event.event_id, startedAt);
+      continue;
+    }
 
     const subs = await loadSubscriptions(eligibleUserIds);
-    if (subs.length === 0) continue;
+    if (subs.length === 0) {
+      markSettled(event.event_id, startedAt);
+      continue;
+    }
 
     // Lazy load des unread_count pour les users de cet event qu'on n'a pas
     // encore vus dans ce tick. Un staff cross-tenant qui apparaît sur 2 events
@@ -826,6 +880,8 @@ export async function runWebPushDispatcher(): Promise<TickCounters> {
           break;
       }
     }
+    // Rien à retenter (aucun `failed`) : l'event est réglé pour ce process.
+    if (!results.includes('failed')) markSettled(event.event_id, startedAt);
     counters.processed += 1;
   }
 
