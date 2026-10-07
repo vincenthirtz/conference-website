@@ -32040,11 +32040,18 @@
      {
       "type": "object",
       "properties": {
-       "authUserId": {},
+       "authUserId": {
+        "type": "string"
+       },
        "discordUserId": {
         "type": "string"
        },
-       "discordUsername": {},
+       "discordUsername": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "member": {
         "type": "null"
        },
@@ -32068,11 +32075,18 @@
      {
       "type": "object",
       "properties": {
-       "authUserId": {},
+       "authUserId": {
+        "type": "string"
+       },
        "discordUserId": {
         "type": "string"
        },
-       "discordUsername": {},
+       "discordUsername": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "member": {
         "type": "object",
         "properties": {
@@ -32119,18 +32133,72 @@
        "team": {
         "type": "object",
         "properties": {
-         "bannerUrl": {},
-         "country": {},
-         "description": {},
-         "discord": {},
-         "discordRoleId": {},
-         "id": {},
-         "isJoinable": {},
-         "logoUrl": {},
-         "name": {},
-         "shortName": {},
-         "slug": {},
-         "website": {}
+         "bannerUrl": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "country": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "description": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "discord": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "discordRoleId": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "id": {
+          "type": "string"
+         },
+         "isJoinable": {
+          "type": [
+           "boolean",
+           "null"
+          ]
+         },
+         "logoUrl": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "name": {
+          "type": "string"
+         },
+         "shortName": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "slug": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "website": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
         },
         "required": [
          "bannerUrl",
