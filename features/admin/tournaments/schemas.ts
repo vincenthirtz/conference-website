@@ -30,11 +30,11 @@ import {
  * (`insert().select('*')`) et le clonage. Colonne ajoutée = à ajouter ici.
  */
 export const TOURNAMENT_ROW_COLUMNS =
-  'id, tenant_id, name, short_name, slug, game, status, start_date, end_date, timezone, format, format_type, format_details, max_teams, min_players, max_players, solo_mode, pooled_teams, roster_locked_at, roster_unlocked_until, visibility, is_featured, logo_url, banner_url, rules_url, default_stream_url, description_info, schedule_details, schedule_rules, registration_fields, checkin_grace_minutes, overlay_day_date, overlay_day_set_at, j1_reminder_sent_at, created_at, updated_at' as const;
+  'id, tenant_id, name, short_name, slug, game, status, start_date, end_date, timezone, format, format_type, format_details, max_teams, min_players, max_players, solo_mode, pooled_teams, roster_locked_at, roster_unlocked_until, visibility, is_featured, logo_url, banner_url, rules_url, default_stream_url, description_info, hero_subtitle, schedule_details, schedule_rules, registration_fields, checkin_grace_minutes, overlay_day_date, overlay_day_set_at, j1_reminder_sent_at, created_at, updated_at' as const;
 
 /** Fiche staff d'un tournoi (GET / PATCH /api/admin/tournament/[id]). */
 export const TOURNAMENT_DETAIL_COLUMNS =
-  'id, name, slug, game, status, start_date, end_date, timezone, format, format_type, max_teams, min_players, max_players, solo_mode, pooled_teams, roster_locked_at, visibility, is_featured, logo_url, banner_url, rules_url, default_stream_url, description_info, schedule_details, schedule_rules, format_details, registration_fields, created_at, updated_at' as const;
+  'id, name, slug, game, status, start_date, end_date, timezone, format, format_type, max_teams, min_players, max_players, solo_mode, pooled_teams, roster_locked_at, visibility, is_featured, logo_url, banner_url, rules_url, default_stream_url, description_info, hero_subtitle, schedule_details, schedule_rules, format_details, registration_fields, created_at, updated_at' as const;
 
 /** En-tête d'un tournoi lu par les routes qui en vérifient l'existence. */
 export const TOURNAMENT_LOOKUP_COLUMNS =
@@ -240,6 +240,7 @@ export const TOURNAMENT_PATCH_FIELDS = [
   'rules_url',
   'default_stream_url',
   'description_info',
+  'hero_subtitle',
   'schedule_details',
   'schedule_rules',
   'format_details',

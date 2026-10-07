@@ -115,6 +115,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
     rules_url: string;
     default_stream_url: string;
     description_info: string;
+    hero_subtitle: string;
     schedule_details: string;
     schedule_rules: string;
     format_details: string;
@@ -141,6 +142,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
     rules_url: '',
     default_stream_url: '',
     description_info: '',
+    hero_subtitle: '',
     schedule_details: '',
     schedule_rules: '',
     format_details: '',
@@ -204,6 +206,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
         rules_url: tour.rules_url || '',
         default_stream_url: tour.default_stream_url || '',
         description_info: tour.description_info || '',
+        hero_subtitle: tour.hero_subtitle || '',
         schedule_details: tour.schedule_details || '',
         schedule_rules: tour.schedule_rules || '',
         format_details: tour.format_details || '',
@@ -281,6 +284,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
       rules_url: form.rules_url.trim() || null,
       default_stream_url: form.default_stream_url.trim() || null,
       description_info: form.description_info.trim() || null,
+      hero_subtitle: form.hero_subtitle.trim() || null,
       schedule_details: form.schedule_details.trim() || null,
       schedule_rules: form.schedule_rules.trim() || null,
       format_details: form.format_details.trim() || null,
@@ -518,6 +522,22 @@ function AdminTournamentEditPage(_props: StaffProps) {
                         {t.publicHelp}
                       </p>
                       <div className="space-y-4">
+                        <div>
+                          <label className={LABEL} htmlFor="hero-subtitle">
+                            {t.heroSubtitleLabel}
+                          </label>
+                          <textarea
+                            id="hero-subtitle"
+                            rows={2}
+                            maxLength={300}
+                            className={INPUT}
+                            value={form.hero_subtitle}
+                            onChange={(e) =>
+                              updateField('hero_subtitle', e.target.value)
+                            }
+                            placeholder={t.heroSubtitlePlaceholder}
+                          />
+                        </div>
                         <div>
                           <label className={LABEL}>{t.descriptionLabel}</label>
                           <textarea

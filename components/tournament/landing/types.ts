@@ -36,6 +36,8 @@ export type LandingTournament = {
   rules_url?: string | null;
   logo_url?: string | null;
   banner_url?: string | null;
+  /** Accroche du hero saisie dans l'admin ; absente = accroche par défaut. */
+  hero_subtitle?: string | null;
 };
 
 export type LandingStage = {

@@ -90,6 +90,7 @@ export type Tournament = {
   /** Chaîne de diffusion du tournoi. Un match sans `stream_url` propre en hérite. */
   default_stream_url?: string | null;
   description_info: string | null;
+  hero_subtitle?: string | null;
   schedule_details: string | null;
   schedule_rules: string | null;
   format_details: string | null;

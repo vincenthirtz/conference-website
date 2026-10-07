@@ -151,7 +151,7 @@ export default function TournamentHero({
             </h1>
 
             <p className="mt-5 max-w-xl text-base leading-relaxed text-gray-300 sm:text-lg">
-              {t.heroSubtitle}
+              {tournament.hero_subtitle?.trim() || t.heroSubtitle}
             </p>
 
             {/* Méta : date · format · rareté */}

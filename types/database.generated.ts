@@ -8634,6 +8634,7 @@ export type Database = {
           format_details: string | null
           format_type: string | null
           game: string | null
+          hero_subtitle: string | null
           id: string
           is_featured: boolean
           j1_reminder_sent_at: string | null
@@ -8673,6 +8674,7 @@ export type Database = {
           format_details?: string | null
           format_type?: string | null
           game?: string | null
+          hero_subtitle?: string | null
           id?: string
           is_featured?: boolean
           j1_reminder_sent_at?: string | null
@@ -8712,6 +8714,7 @@ export type Database = {
           format_details?: string | null
           format_type?: string | null
           game?: string | null
+          hero_subtitle?: string | null
           id?: string
           is_featured?: boolean
           j1_reminder_sent_at?: string | null

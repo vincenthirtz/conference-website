@@ -72,6 +72,9 @@ export default adminNs('adminTournamentEdit', {
   sectionPublic: 'Informations publiques',
   publicHelp:
     "Ces champs sont affichés sur la page publique du tournoi uniquement s'ils sont remplis.",
+  heroSubtitleLabel: 'Accroche (sous le nom du tournoi)',
+  heroSubtitlePlaceholder:
+    'Vide = accroche par défaut : « La compétition Overwatch 100 % féminine et inclusive. Cinq maps… »',
   descriptionLabel: 'Infos générales',
   descriptionPlaceholder:
     'Description du tournoi visible sur la page publique...',

@@ -329,6 +329,7 @@ export async function patchTournament(
     'rules_url',
     'default_stream_url',
     'description_info',
+    'hero_subtitle',
     'schedule_details',
     'schedule_rules',
     'format_details',

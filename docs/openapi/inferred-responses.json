@@ -22371,6 +22371,12 @@
          "null"
         ]
        },
+       "hero_subtitle": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "id": {
         "type": "string"
        },
@@ -22499,6 +22505,7 @@
        "format_details",
        "format_type",
        "game",
+       "hero_subtitle",
        "id",
        "is_featured",
        "is_public",
@@ -58032,6 +58039,12 @@
          "null"
         ]
        },
+       "hero_subtitle": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "id": {
         "type": "string"
        },
@@ -58160,6 +58173,7 @@
        "format_details",
        "format_type",
        "game",
+       "hero_subtitle",
        "id",
        "is_featured",
        "is_public",
@@ -68296,6 +68310,12 @@
          "null"
         ]
        },
+       "hero_subtitle": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "id": {
         "type": "string"
        },
@@ -68461,6 +68481,7 @@
        "format_details",
        "format_type",
        "game",
+       "hero_subtitle",
        "id",
        "is_featured",
        "j1_reminder_sent_at",
@@ -70339,6 +70360,12 @@
          "null"
         ]
        },
+       "hero_subtitle": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "id": {
         "type": "string"
        },
@@ -70504,6 +70531,7 @@
        "format_details",
        "format_type",
        "game",
+       "hero_subtitle",
        "id",
        "is_featured",
        "j1_reminder_sent_at",
@@ -80988,6 +81016,12 @@
          "null"
         ]
        },
+       "hero_subtitle": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
        "id": {
         "type": "string"
        },
@@ -81116,6 +81150,7 @@
        "format_details",
        "format_type",
        "game",
+       "hero_subtitle",
        "id",
        "is_featured",
        "is_public",

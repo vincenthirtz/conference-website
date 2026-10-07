@@ -72,6 +72,9 @@ export default {
   sectionPublic: 'Public information',
   publicHelp:
     "These fields are shown on the tournament's public page only if they're filled in.",
+  heroSubtitleLabel: 'Tagline (under the tournament name)',
+  heroSubtitlePlaceholder:
+    'Empty = default tagline: “The 100% women’s, inclusive Overwatch competition. Five maps…”',
   descriptionLabel: 'General info',
   descriptionPlaceholder: 'Tournament description shown on the public page...',
   scheduleDetailsLabel: 'Detailed schedule',
