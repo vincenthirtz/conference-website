@@ -15,7 +15,7 @@
 // MyScrimsCard…) le font toujours de leur côté. Un soir de match, l'action
 // principale (le check-in) est collée en bas du pouce.
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import Router from 'next/router';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
@@ -49,6 +49,7 @@ import ActiveTeamSwitcher from '@/components/player/ActiveTeamSwitcher';
 import { ButtonLink, Card } from '@/features/ruban';
 import { FilView } from '@/features/player/_shared/ui';
 import { usePlayerDashboard } from '@/features/player/dashboard/hooks/usePlayerDashboard';
+import { useDashboardSharedReads } from '@/features/player/dashboard/hooks/useDashboardSharedReads';
 import CategorySection from '@/features/player/dashboard/ui/CategorySection';
 import MatchReadinessCard, {
   CheckinActionLink,
@@ -61,16 +62,11 @@ import {
 } from '@/features/player/dashboard/ui/quickActions';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
-import type { NetworkStatus } from '@/features/player/network/schemas';
-import type { PlayerWelcomeGiftResponse } from '@/features/player/tcg/schemas';
-import { tcgClient } from '@/features/player/tcg/client';
-import { networkClient } from '@/features/player/network/client';
 import {
   DASHBOARD_ANCHORS,
   hashTargetId,
 } from '@/utils/player/dashboardAnchors';
 
-import { logger } from '../../../utils/logger';
 import nsPlayerIndex from '@/lib/i18n/locales/fr/playerIndex';
 
 // Ré-export : la catégorie a déménagé dans le module (lot P12).
@@ -111,41 +107,13 @@ export default function PlayerDashboardScreen() {
   const { confirm, dialog } = useConfirmDialog();
   const d = usePlayerDashboard({ ready, token, t, confirm });
 
-  // Lectures PARTAGÉES par deux cartes voisines, faites ici une seule fois
-  // (`null` = pas encore de réponse, ou échec : chaque carte se comporte alors
-  // comme pendant son propre chargement).
-  const [networkStatus, setNetworkStatus] = useState<NetworkStatus | null>(
-    null
-  );
-  const [welcomeGift, setWelcomeGift] =
-    useState<PlayerWelcomeGiftResponse | null>(null);
-  useEffect(() => {
-    if (!ready) return;
-    let cancelled = false;
-    // Hors inspection seulement : les deux cartes qui la lisent sont masquées
-    // en inspection, et la route ne suit pas `?as=`.
-    if (!isInspecting) {
-      networkClient
-        .networkStatus()
-        .then((data) => {
-          if (!cancelled) setNetworkStatus(data);
-        })
-        .catch((err: unknown) => {
-          logger.error('[player] network-status load error:', err);
-        });
-    }
-    tcgClient
-      .welcomeGift({ subjectId, actAs: isActingAs, teamId: null })
-      .then((data) => {
-        if (!cancelled) setWelcomeGift(data);
-      })
-      .catch((err: unknown) => {
-        logger.error('[player] welcome-gift load error:', err);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [ready, isInspecting, subjectId, isActingAs]);
+  // Lectures partagées par deux cartes voisines (réseau, cadeau d'accueil).
+  const { networkStatus, welcomeGift } = useDashboardSharedReads({
+    ready,
+    isInspecting,
+    subjectId,
+    isActingAs,
+  });
 
   // Arrivée sur `/player#…` : le navigateur a tenté le défilement pendant le
   // squelette. On le refait une fois le contenu rendu, puis à chaque hash.

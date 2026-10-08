@@ -1,5 +1,5 @@
 {
-  "measuredAt": "2026-10-06",
+  "measuredAt": "2026-10-08",
   "notes": {
     "perimetre": "Espace joueuse/capitaine/manager/coach/supportrice (§ 1 du plan). Site public hors périmètre : pages/player/[userId].tsx exclue.",
     "ecarts": [
@@ -25,7 +25,7 @@
     "api.directSupabaseAdmin": 20,
     "api.selectStar": 0,
     "api.freeErrorJson": 201,
-    "ui.useState": 315,
+    "ui.useState": 313,
     "ui.useAdminFetch": 23,
     "ui.rawApiUrl": 77,
     "ui.importFromApi": 7,
