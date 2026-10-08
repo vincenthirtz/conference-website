@@ -108,7 +108,9 @@ export async function tryAutoAdvanceFromMatch(params: {
     .from('matches')
     .select('id, status')
     .eq('stage_id', stageId)
-    .neq('status', 'cancelled');
+    .neq('status', 'cancelled')
+    // Un match supprimé ne bloque pas l'avancement (ni ne compte au classement).
+    .is('deleted_at', null);
   if (tenantId) matchesQuery = matchesQuery.eq('tenant_id', tenantId);
   const { data: matches, error: matchesErr } = await matchesQuery;
 

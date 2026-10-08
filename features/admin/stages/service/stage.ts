@@ -12,6 +12,7 @@ import type { StageSettings } from '@/types/stages';
 import type { StageType } from '@/types/admin';
 import { validateStageSettings } from '@/utils/stageSettings';
 import { getStageLockSnapshot } from '@/utils/stages/stageLockStatus';
+import { isCountedStatus } from '@/utils/stages/countedMatches';
 import { formatStaffLog, type StaffLog } from '@/utils/staffLogs';
 import { firstString } from '@/utils/admin/pathParams';
 import type { Audited } from '../../_shared/audited';
@@ -481,7 +482,8 @@ export async function completionStatus(ctx: ServiceContext, id: string) {
 
   const all = rows || [];
   const totalMatches = all.length;
-  const finishedMatches = all.filter((m) => m.status === 'finished').length;
+  // Forfait (walkover) = match clos, comme un score saisi.
+  const finishedMatches = all.filter((m) => isCountedStatus(m.status)).length;
   const pendingMatches = all.filter((m) => m.status === 'pending').length;
   const ongoingMatches = all.filter((m) => m.status === 'ongoing').length;
   const isComplete = totalMatches > 0 && finishedMatches === totalMatches;

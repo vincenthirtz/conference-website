@@ -16,6 +16,7 @@ import {
   type TiebreakerMatch,
 } from './tiebreakers';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
+import { isCountedMatch } from './countedMatches';
 
 export type StageStanding = {
   teamId: string;
@@ -46,6 +47,7 @@ export type GroupedStandings = {
 type DbMatch = {
   id: string;
   status: string;
+  deleted_at?: string | null;
   is_bye: boolean | null;
   round_number: number | null;
   team1_id: string | null;
@@ -120,22 +122,24 @@ export async function computeStageStandings(
     teamNameMap.set(st.team_id, st.team?.name ?? null);
   }
 
-  // Fetch finished matches for the stage
+  // Matchs de la phase, hors annulés et supprimés. Seuls les matchs tranchés
+  // (terminés OU forfaits) comptent ensuite — cf. countedMatches.
   const { data: matchesData, error: matchesErr } = await supabaseAdmin
     .from('matches')
     .select(
-      'id, status, is_bye, round_number, team1_id, team2_id, winner_team_id, team1_score, team2_score'
+      'id, status, is_bye, round_number, team1_id, team2_id, winner_team_id, team1_score, team2_score, deleted_at'
     )
     .eq('stage_id', stageId)
     .eq('tenant_id', tenantId)
-    .neq('status', 'cancelled');
+    .neq('status', 'cancelled')
+    .is('deleted_at', null);
 
   if (matchesErr) {
     throw new Error(`Failed to fetch matches: ${matchesErr.message}`);
   }
 
   const matches = (matchesData || []) as DbMatch[];
-  const finishedMatches = matches.filter((m) => m.status === 'finished');
+  const finishedMatches = matches.filter(isCountedMatch);
 
   let raw: StageStanding[];
   let cacheHit = false;
@@ -298,15 +302,16 @@ export async function computeGroupedStandings(
   const { data: matchesData } = await supabaseAdmin
     .from('matches')
     .select(
-      'id, status, is_bye, round_number, team1_id, team2_id, winner_team_id, team1_score, team2_score, group_key'
+      'id, status, is_bye, round_number, team1_id, team2_id, winner_team_id, team1_score, team2_score, group_key, deleted_at'
     )
     .eq('stage_id', stageId)
     .eq('tenant_id', tenantId)
-    .neq('status', 'cancelled');
+    .neq('status', 'cancelled')
+    .is('deleted_at', null);
 
   type GroupedMatchRow = DbMatch & { group_key: string | null };
   const matches = (matchesData || []) as GroupedMatchRow[];
-  const finishedMatches = matches.filter((m) => m.status === 'finished');
+  const finishedMatches = matches.filter(isCountedMatch);
 
   // 3) Index group_key par equipe (depuis settings)
   const teamToGroup = new Map<string, string>();

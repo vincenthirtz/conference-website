@@ -15,6 +15,7 @@
 import { supabaseAdmin } from '../supabase';
 import { computeSwissStandings } from './standings';
 import { generateSwissPairings } from './pairing';
+import { isCountedStatus } from '../stages/countedMatches';
 import { defaultSwissScoreConfig, resultsToPastMatches } from './utils';
 import type {
   SwissMatchResult,
@@ -114,7 +115,7 @@ function buildSwissResultsFromMatches(
 ): SwissMatchResult[] {
   const results: SwissMatchResult[] = [];
   for (const m of matches) {
-    if (m.status !== 'finished') continue;
+    if (!isCountedStatus(m.status)) continue;
     if (!m.team1_id) continue;
     const round = m.round_number ?? 0;
     if (m.is_bye || (!m.team2_id && m.team1_id)) {
@@ -283,7 +284,7 @@ export async function runSwissNextRound(
 
   if (maxExistingRound > 0) {
     const unfinished = allMatches.filter(
-      (m) => m.round_number === maxExistingRound && m.status !== 'finished'
+      (m) => m.round_number === maxExistingRound && !isCountedStatus(m.status)
     );
     if (unfinished.length > 0) {
       return {
@@ -304,7 +305,7 @@ export async function runSwissNextRound(
     (m) =>
       (m.round_number ?? 0) > 0 &&
       (m.round_number ?? 0) < nextRound &&
-      m.status === 'finished'
+      isCountedStatus(m.status)
   );
   const swissResults = buildSwissResultsFromMatches(pastFinished, scoreConfig);
 

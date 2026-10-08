@@ -18,6 +18,7 @@ import {
   type StageStanding,
 } from './standings';
 import type { TiebreakerKey } from './tiebreakers';
+import { COUNTED_MATCH_STATUSES } from './countedMatches';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
 
 /** Types de phase qui produisent un classement à points. */
@@ -86,7 +87,8 @@ function chronological(a: StandingsMatch, b: StandingsMatch): number {
 
 /**
  * Ajoute aux lignes du classement officiel les compteurs d'affichage.
- * PURE — `finished` = matchs terminés de la phase, déjà filtrés.
+ * PURE — `finished` = matchs tranchés (terminés ou forfaits) de la phase,
+ * déjà filtrés.
  */
 export function enrichStandings(
   standings: StageStanding[],
@@ -171,7 +173,10 @@ export async function readPublicStandings(
       )
       .eq('tenant_id', tenantId)
       .in('stage_id', stageIds)
-      .eq('status', 'finished'),
+      // Forfaits compris (match tranché), supprimés exclus : même règle que
+      // le classement officiel (utils/stages/countedMatches).
+      .in('status', COUNTED_MATCH_STATUSES as unknown as string[])
+      .is('deleted_at', null),
     supabaseAdmin
       .from('stage_teams')
       .select('team:teams(id, name, slug, short_name, logo_url)')

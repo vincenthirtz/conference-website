@@ -11,7 +11,7 @@ import { CLONE_SOURCE_MATCH_COLUMNS } from '../schemas';
 const STAGE_MATCH_COLUMNS =
   'id, tournament_id, stage_id, status, is_bye, round_number, team1_id, team2_id, winner_team_id, team1_score, team2_score' as const;
 
-/** Matchs non annulés d'une phase. */
+/** Matchs non annulés et non supprimés d'une phase. */
 export async function activeStageMatches(
   db: AdminDb,
   tenantId: string,
@@ -22,7 +22,8 @@ export async function activeStageMatches(
     .select(STAGE_MATCH_COLUMNS)
     .eq('tenant_id', tenantId)
     .eq('stage_id', stageId)
-    .neq('status', 'cancelled');
+    .neq('status', 'cancelled')
+    .is('deleted_at', null);
   return { rows: data, error };
 }
 

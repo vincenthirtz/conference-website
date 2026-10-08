@@ -9,6 +9,7 @@ import type { ServiceContext } from '@/utils/admin/serviceContext';
 import type { TablesInsert } from '@/types/database.generated';
 import { generateSwissPairings } from '@/utils/swiss/pairing';
 import { computeSwissStandings } from '@/utils/swiss/standings';
+import { isCountedStatus } from '@/utils/stages/countedMatches';
 import {
   defaultSwissScoreConfig,
   resultsToPastMatches,
@@ -103,8 +104,9 @@ export async function swissStatus(ctx: ServiceContext, id: string) {
   const currentRoundMatches = allMatches.filter(
     (m) => m.round_number === currentRound
   );
-  const finished = currentRoundMatches.filter(
-    (m) => m.status === 'finished'
+  // Un forfait (walkover) clôt le match au même titre qu'un score.
+  const finished = currentRoundMatches.filter((m) =>
+    isCountedStatus(m.status)
   ).length;
   const pending = currentRoundMatches.filter(
     (m) => m.status === 'pending'
@@ -119,7 +121,7 @@ export async function swissStatus(ctx: ServiceContext, id: string) {
     finished === currentRoundMatches.length;
 
   const { wins: winsMap, losses: lossesMap } = winLossMaps(
-    allMatches.filter((m) => m.status === 'finished')
+    allMatches.filter((m) => isCountedStatus(m.status))
   );
 
   const { ids: allTeamIds } = await stages.stageTeamIds(
@@ -227,7 +229,7 @@ function buildSwissResults(
 ): SwissMatchResult[] {
   const results: SwissMatchResult[] = [];
   for (const m of finished) {
-    if (m.status !== 'finished' || !m.team1_id) continue;
+    if (!isCountedStatus(m.status) || !m.team1_id) continue;
     const round = m.round_number ?? 0;
 
     if (m.is_bye || (!m.team2_id && m.team1_id)) {
@@ -344,7 +346,7 @@ export async function generateSwissRound(
 
   if (maxExistingRound > 0) {
     const unfinished = allMatches.filter(
-      (m) => m.round_number === maxExistingRound && m.status !== 'finished'
+      (m) => m.round_number === maxExistingRound && !isCountedStatus(m.status)
     );
     if (unfinished.length > 0) {
       throw fail(
@@ -363,7 +365,7 @@ export async function generateSwissRound(
     (m) =>
       (m.round_number ?? 0) > 0 &&
       (m.round_number ?? 0) < nextRound &&
-      m.status === 'finished'
+      isCountedStatus(m.status)
   );
   const swissResults = buildSwissResults(pastMatches, scoreConfig);
 
