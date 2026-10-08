@@ -94,5 +94,29 @@
       "/Users/Alicia/Documents/Vincent/conference-website/pages/api/admin/broadcast",
       "/Users/Alicia/Documents/Vincent/conference-website/pages/api/teams"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m graphify hook-guard search",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m graphify hook-guard read",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }

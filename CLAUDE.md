@@ -236,3 +236,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## graphify
+
+Ce dépôt a un graphe de connaissances dans `graphify-out/` (ignoré par git, reconstruit par le hook post-commit). Utilise-le pour **trouver les fichiers et les liens avant de grepper** : c'est plus rapide et bien moins coûteux en tokens.
+
+- Question sur le code (« où est… », « qui appelle… », « comment marche… ») : `graphify query "<question>"` d'abord (`--budget 800` pour borner la sortie). Relation entre deux concepts : `graphify path "<A>" "<B>"`. Un concept précis : `graphify explain "<concept>"`. Ces commandes renvoient un sous-graphe ciblé avec `src=` / `loc=` : ouvre ensuite directement ces fichiers.
+- Grep/Read restent la règle pour modifier ou déboguer des lignes précises, une fois orienté.
+- `graphify-out/GRAPH_REPORT.md` seulement pour une revue d'architecture large.
+- Le hook post-commit met le graphe à jour (AST seul, sans coût LLM). Après des changements non commités importants : `graphify update .`
+- Si `graphify` n'est pas trouvé : `python -m graphify …`.
