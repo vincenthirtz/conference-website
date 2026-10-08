@@ -200,10 +200,10 @@ absent d'ici, ou listé mais plus émis, fait échouer la suite.
 | `NOT_SWISS` | 400 | La phase n'est pas de type suisse. | `stages/[stageId]/next-round` |
 | `USE_ADMIN_UI` | 400 | Phase à seuils victoires/défaites : générer depuis l'admin. | `stages/[stageId]/next-round` |
 | `NO_PARTICIPANTS` | 400 | Aucune équipe inscrite à la phase. | `stages/[stageId]/next-round` |
-| `UNFINISHED_PREVIOUS_ROUND` | 400 | Des matchs du round précédent ne sont pas terminés. | `stages/[stageId]/next-round` |
+| `UNFINISHED_PREVIOUS_ROUND` | 400 | Des matchs du round précédent ne sont pas terminés (un match d'une équipe disqualifiée en mode `annul` ne bloque pas). | `stages/[stageId]/next-round` |
 | `ROUND_TOO_SMALL` | 409 | Le round demandé existe déjà. | `stages/[stageId]/next-round` |
 | `ROUND_BEYOND_TOTAL` | 400 | Round au-delà du nombre de rounds prévu. | `stages/[stageId]/next-round` |
-| `EMPTY_PAIRING` | 400 | Aucun appariement généré. | `stages/[stageId]/next-round` |
+| `EMPTY_PAIRING` | 400 | Aucun appariement généré, notamment quand le retrait des équipes disqualifiées laisse moins de 2 équipes éligibles (message : `Pas assez d'equipes a apparier : …`). | `stages/[stageId]/next-round` |
 | `REMATCHES_PRESENT` | 409 | L'appariement contient des rematchs : renvoyer `acceptRematches=true`. | `stages/[stageId]/next-round` |
 | `SCRIM_CHANGED` | 409 | Scrim modifié entre-temps (résultat ou statut) : recharger. | `scrims/[scrimId]` |
 | `FORBIDDEN_PERMISSION` | 403 | Le rôle dans l'équipe ne permet pas de gérer les scrims. | `scrims/requests` |
@@ -2778,6 +2778,16 @@ Response shape (truncated):
 | [`stages/[stageId]/auto-byes.ts`](../pages/api/bot/v1/stages/[stageId]/auto-byes.ts)   | POST    | yes   | `bot-stage-auto-byes`  |
 | [`stages/[stageId]/finalize.ts`](../pages/api/bot/v1/stages/[stageId]/finalize.ts)     | POST    | yes   | `bot-stage-finalize`   |
 | [`stages/[stageId]/next-round.ts`](../pages/api/bot/v1/stages/[stageId]/next-round.ts) | POST    | yes   | `bot-stage-next-round` |
+
+> **`next-round` et équipes disqualifiées** (`stage_teams.disqualified_at`) :
+> une équipe disqualifiée de la phase, quel que soit le mode, n'est jamais
+> appariée (ni adversaire, ni BYE) et n'apparaît donc jamais dans `preview`.
+> Un pool impair après retrait donne le BYE à une équipe éligible. Points,
+> Buchholz et historique anti-rematch suivent le classement : forfait compté,
+> annulé / supprimé ignorés, et en mode `annul` tous les matchs de la
+> disqualifiée ignorés pour tout le monde. Moins de 2 équipes éligibles →
+> `400 EMPTY_PAIRING` avant toute insertion. Règle partagée avec l'admin
+> (`utils/swiss/pairingPool.ts`).
 
 ### Tenant lifecycle (multi-tenant resolution)
 

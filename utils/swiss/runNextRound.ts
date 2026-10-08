@@ -11,11 +11,24 @@
 //   - dryRun=true                                  -> renvoie preview, n'insere rien
 //   - hasRematches && acceptRematches!==true       -> 409 REMATCHES_PRESENT + preview
 //   - sinon                                        -> insere les matchs + renvoie createdMatches
+//
+// Equipes disqualifiees : retirees du pool (jamais appariees, jamais BYE),
+// matchs « annul » ignores des points et de l'historique — regle partagee
+// avec l'admin dans ./pairingPool. Moins de 2 equipes eligibles -> 400
+// EMPTY_PAIRING.
 
 import { supabaseAdmin } from '../supabase';
 import { computeSwissStandings } from './standings';
 import { generateSwissPairings } from './pairing';
 import { isCountedStatus } from '../stages/countedMatches';
+import { readDisqualificationMapStrict } from '../stages/disqualification';
+import {
+  MIN_SWISS_PAIRING_TEAMS,
+  countedSwissMatches,
+  eligibleSwissTeams,
+  notEnoughEligibleTeamsMessage,
+  unfinishedRoundMatches,
+} from './pairingPool';
 import { defaultSwissScoreConfig, resultsToPastMatches } from './utils';
 import type {
   SwissMatchResult,
@@ -105,6 +118,7 @@ type DbMatchRow = {
   winner_team_id: string | null;
   team1_score: number | null;
   team2_score: number | null;
+  deleted_at: string | null;
 };
 
 type StageTeamRow = { team_id: string; seed: number | null };
@@ -237,15 +251,38 @@ export async function runSwissNextRound(
     };
   }
 
-  // 3) Matchs existants
+  // Disqualifiees : hors du pool. Lecture stricte — une disqualification
+  // illisible ferait apparier l'equipe.
+  const { map: dq, error: dqErr } = await readDisqualificationMapStrict(
+    input.tenantId,
+    stage.id
+  );
+  if (dqErr) {
+    return { ok: false, status: 500, code: 'DB_ERROR', error: dqErr };
+  }
+  const eligible = eligibleSwissTeams(participants, dq);
+  if (eligible.length < MIN_SWISS_PAIRING_TEAMS) {
+    return {
+      ok: false,
+      status: 400,
+      code: 'EMPTY_PAIRING',
+      error: notEnoughEligibleTeamsMessage(
+        eligible.length,
+        participants.length - eligible.length
+      ),
+    };
+  }
+
+  // 3) Matchs existants (hors annules et supprimes, comme l'admin)
   const { data: matchesRaw, error: mErr } = await supabaseAdmin
     .from('matches')
     .select(
-      'id, status, is_bye, round_number, team1_id, team2_id, winner_team_id, team1_score, team2_score'
+      'id, status, is_bye, round_number, team1_id, team2_id, winner_team_id, team1_score, team2_score, deleted_at'
     )
     .eq('tenant_id', input.tenantId)
     .eq('stage_id', stage.id)
-    .neq('status', 'cancelled');
+    .neq('status', 'cancelled')
+    .is('deleted_at', null);
   if (mErr) {
     return { ok: false, status: 500, code: 'DB_ERROR', error: mErr.message };
   }
@@ -283,9 +320,8 @@ export async function runSwissNextRound(
   }
 
   if (maxExistingRound > 0) {
-    const unfinished = allMatches.filter(
-      (m) => m.round_number === maxExistingRound && !isCountedStatus(m.status)
-    );
+    // Un match ignore par le classement (disqualifiee « annul ») ne bloque pas.
+    const unfinished = unfinishedRoundMatches(allMatches, dq, maxExistingRound);
     if (unfinished.length > 0) {
       return {
         ok: false,
@@ -301,12 +337,8 @@ export async function runSwissNextRound(
     ...defaultSwissScoreConfig,
     ...(input.scoreConfig ?? {}),
   };
-  const pastFinished = allMatches.filter(
-    (m) =>
-      (m.round_number ?? 0) > 0 &&
-      (m.round_number ?? 0) < nextRound &&
-      isCountedStatus(m.status)
-  );
+  // Points, Buchholz et historique anti-rematch : regles du classement.
+  const pastFinished = countedSwissMatches(allMatches, dq, nextRound);
   const swissResults = buildSwissResultsFromMatches(pastFinished, scoreConfig);
 
   const standingParticipants: SwissStandingParticipant[] = participants.map(
@@ -331,15 +363,13 @@ export async function runSwissNextRound(
       hadByeSet.add(m.team1_id);
   }
 
-  // 5) Pairings
-  const pairingParticipants: PairingParticipant[] = participants.map(
-    (p, idx) => ({
-      id: p.team_id,
-      seed: typeof p.seed === 'number' ? p.seed : idx + 1,
-      score: scoreByTeam.get(p.team_id) ?? 0,
-      hadBye: hadByeSet.has(p.team_id),
-    })
-  );
+  // 5) Pairings (equipes eligibles seulement)
+  const pairingParticipants: PairingParticipant[] = eligible.map((p, idx) => ({
+    id: p.team_id,
+    seed: typeof p.seed === 'number' ? p.seed : idx + 1,
+    score: scoreByTeam.get(p.team_id) ?? 0,
+    hadBye: hadByeSet.has(p.team_id),
+  }));
 
   const { pairings, hasRematches } = generateSwissPairings({
     participants: pairingParticipants,

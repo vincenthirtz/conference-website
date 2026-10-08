@@ -55,8 +55,34 @@ export async function readStageDisqualifications(
   tenantId: string,
   stageIds: string[]
 ): Promise<Map<string, DisqualificationMap>> {
+  if (!supabaseAdmin || stageIds.length === 0) return new Map();
+  const { map, error } = await queryStageDisqualifications(tenantId, stageIds);
+  if (error) {
+    logger.warn('[standings] disqualifications illisibles:', error);
+  }
+  return map;
+}
+
+/**
+ * Disqualifications d'UNE phase, SANS repli silencieux : `error` renseigné si
+ * la lecture échoue. Pour les chemins qui ÉCRIVENT (génération d'une ronde
+ * suisse) : ignorer une disqualification illisible y apparierait l'équipe.
+ */
+export async function readDisqualificationMapStrict(
+  tenantId: string,
+  stageId: string
+): Promise<{ map: DisqualificationMap; error: string | null }> {
+  const { map, error } = await queryStageDisqualifications(tenantId, [stageId]);
+  return { map: map.get(stageId) ?? new Map(), error };
+}
+
+async function queryStageDisqualifications(
+  tenantId: string,
+  stageIds: string[]
+): Promise<{ map: Map<string, DisqualificationMap>; error: string | null }> {
   const out = new Map<string, DisqualificationMap>();
-  if (!supabaseAdmin || stageIds.length === 0) return out;
+  if (stageIds.length === 0) return { map: out, error: null };
+  if (!supabaseAdmin) return { map: out, error: 'Service indisponible.' };
 
   const { data, error } = await supabaseAdmin
     .from('stage_teams')
@@ -67,10 +93,7 @@ export async function readStageDisqualifications(
     .in('stage_id', stageIds)
     .not('disqualified_at', 'is', null);
 
-  if (error) {
-    logger.warn('[standings] disqualifications illisibles:', error.message);
-    return out;
-  }
+  if (error) return { map: out, error: error.message };
 
   for (const row of (data ?? []) as DisqualificationRow[]) {
     if (!row.disqualified_at) continue;
@@ -84,7 +107,7 @@ export async function readStageDisqualifications(
     });
     out.set(row.stage_id, map);
   }
-  return out;
+  return { map: out, error: null };
 }
 
 /** Disqualifications d'UNE phase. */

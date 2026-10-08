@@ -4,12 +4,23 @@
 // Moteurs : utils/swiss/{pairing,standings,utils}. Ici, seulement la lecture
 // des matchs, les seuils d'élimination réglés sur la phase (win / loss, avec
 // le garde-fou « au moins 2 équipes actives ») et l'écriture des matchs.
+//
+// Équipes disqualifiées : retirées du pool, matchs « annul » ignorés — règle
+// partagée avec le bot dans utils/swiss/pairingPool.ts.
 
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import type { TablesInsert } from '@/types/database.generated';
 import { generateSwissPairings } from '@/utils/swiss/pairing';
 import { computeSwissStandings } from '@/utils/swiss/standings';
 import { isCountedStatus } from '@/utils/stages/countedMatches';
+import { readDisqualificationMapStrict } from '@/utils/stages/disqualification';
+import {
+  MIN_SWISS_PAIRING_TEAMS,
+  countedSwissMatches,
+  eligibleSwissTeams,
+  notEnoughEligibleTeamsMessage,
+  unfinishedRoundMatches,
+} from '@/utils/swiss/pairingPool';
 import {
   defaultSwissScoreConfig,
   resultsToPastMatches,
@@ -115,20 +126,34 @@ export async function swissStatus(ctx: ServiceContext, id: string) {
     (m) => m.status === 'ongoing'
   ).length;
 
+  const { map: dq, error: dqErr } = await readDisqualificationMapStrict(
+    ctx.tenantId,
+    id
+  );
+  if (dqErr) throw fail(500, 'Failed to fetch disqualifications');
+
+  // Même critère que la génération : un match ignoré par le classement
+  // (disqualifiée « annul ») ne retient pas la ronde.
   const allCurrentRoundFinished =
     currentRound > 0 &&
     currentRoundMatches.length > 0 &&
-    finished === currentRoundMatches.length;
+    unfinishedRoundMatches(allMatches, dq, currentRound).length === 0;
 
-  const { wins: winsMap, losses: lossesMap } = winLossMaps(
-    allMatches.filter((m) => isCountedStatus(m.status))
-  );
-
-  const { ids: allTeamIds } = await stages.stageTeamIds(
+  const { ids: registeredTeamIds } = await stages.stageTeamIds(
     ctx.db,
     ctx.tenantId,
     id
   );
+
+  // Mêmes règles que la génération : disqualifiées hors du pool, matchs
+  // « annul » ignorés pour tout le monde.
+  const { wins: winsMap, losses: lossesMap } = winLossMaps(
+    countedSwissMatches(allMatches, dq)
+  );
+  const allTeamIds = eligibleSwissTeams(
+    registeredTeamIds.map((team_id) => ({ team_id })),
+    dq
+  ).map((t) => t.team_id);
 
   const eliminated: EliminatedTeam[] = [];
   const eliminatedSet = new Set<string>();
@@ -207,7 +232,7 @@ export async function swissStatus(ctx: ServiceContext, id: string) {
     isComplete,
     eliminated,
     activeTeamCount: activeCount,
-    totalTeamCount: allTeamIds.length,
+    totalTeamCount: registeredTeamIds.length,
   };
 }
 
@@ -309,6 +334,28 @@ export async function generateSwissRound(
     throw fail(400, 'No participants found for this stage');
   }
 
+  // Disqualifiées : jamais appariées (ni BYE, ni adversaire). Lecture stricte :
+  // une disqualification illisible ferait apparier l'équipe.
+  const { map: dq, error: dqErr } = await readDisqualificationMapStrict(
+    ctx.tenantId,
+    id
+  );
+  if (dqErr) {
+    ctx.logger.error('generate-swiss-round disqualifications error:', dqErr);
+    throw fail(500, 'Failed to fetch disqualifications');
+  }
+  const eligible = eligibleSwissTeams(participants, dq);
+  if (eligible.length < MIN_SWISS_PAIRING_TEAMS) {
+    throw fail(
+      400,
+      notEnoughEligibleTeamsMessage(
+        eligible.length,
+        participants.length - eligible.length
+      ),
+      'EMPTY_PAIRING'
+    );
+  }
+
   const { rows, error: matchesErr } = await matches.activeStageMatches(
     ctx.db,
     ctx.tenantId,
@@ -345,9 +392,8 @@ export async function generateSwissRound(
   }
 
   if (maxExistingRound > 0) {
-    const unfinished = allMatches.filter(
-      (m) => m.round_number === maxExistingRound && !isCountedStatus(m.status)
-    );
+    // Un match ignoré par le classement (disqualifiée « annul ») ne bloque pas.
+    const unfinished = unfinishedRoundMatches(allMatches, dq, maxExistingRound);
     if (unfinished.length > 0) {
       throw fail(
         400,
@@ -361,12 +407,8 @@ export async function generateSwissRound(
     ...(body.scoreConfig || {}),
   };
 
-  const pastMatches = allMatches.filter(
-    (m) =>
-      (m.round_number ?? 0) > 0 &&
-      (m.round_number ?? 0) < nextRound &&
-      isCountedStatus(m.status)
-  );
+  // Points, Buchholz et historique anti-rematch : règles du classement.
+  const pastMatches = countedSwissMatches(allMatches, dq, nextRound);
   const swissResults = buildSwissResults(pastMatches, scoreConfig);
 
   const standingParticipants: SwissStandingParticipant[] = participants.map(
@@ -400,7 +442,7 @@ export async function generateSwissRound(
   const eliminatedTeams: EliminatedTeam[] = [];
   const eliminatedIds = new Set<string>();
 
-  for (const p of participants) {
+  for (const p of eligible) {
     const wins = winsMap.get(p.team_id) ?? 0;
     if (winThreshold !== null && wins >= winThreshold) {
       eliminatedTeams.push({
@@ -415,7 +457,7 @@ export async function generateSwissRound(
 
   if (lossThreshold !== null) {
     const candidates: { teamId: string; wins: number; losses: number }[] = [];
-    for (const p of participants) {
+    for (const p of eligible) {
       if (eliminatedIds.has(p.team_id)) continue;
       const losses = lossesMap.get(p.team_id) ?? 0;
       if (losses >= lossThreshold) {
@@ -428,7 +470,7 @@ export async function generateSwissRound(
     }
     const maxEliminations = Math.max(
       0,
-      participants.length - eliminatedIds.size - 2
+      eligible.length - eliminatedIds.size - 2
     );
     if (candidates.length <= maxEliminations) {
       for (const c of candidates) {
@@ -445,7 +487,7 @@ export async function generateSwissRound(
     }
   }
 
-  const active = participants.filter((p) => !eliminatedIds.has(p.team_id));
+  const active = eligible.filter((p) => !eliminatedIds.has(p.team_id));
 
   // Phase terminée (≤ 1 équipe active) : on la clôt. Pas de journal (origine).
   if (active.length <= 1) {
