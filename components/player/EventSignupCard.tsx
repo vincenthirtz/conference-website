@@ -9,7 +9,7 @@
 // EN UN CLIC, PARCE QU'ON SAIT DÉJÀ TOUT. Une joueuse connectée a un pseudo,
 // souvent un BattleTag, et une équipe (l'équipe active de son espace, ou son
 // unique équipe) : c'est exactement ce que demande le formulaire
-// d'inscription regroupée (`/api/tournament/<id>/pool`). Le bouton envoie ces
+// d'inscription regroupée (`dashboardUrls.eventPool`). Le bouton envoie ces
 // valeurs et affiche ce qui sera envoyé AVANT le clic — pas d'inscription
 // surprise. S'il manque quelque chose (pas de BattleTag valide, plusieurs
 // équipes sans équipe active), l'encart renvoie vers la page d'inscription
@@ -19,7 +19,6 @@
 // dont l'API accepte une inscription individuelle sans formulaire.
 
 import Image from 'next/image';
-import { useCallback, useEffect, useState } from 'react';
 
 import {
   homeEventSpotlight,
@@ -32,7 +31,7 @@ import { useLocale } from '@/lib/i18n/useLocale';
 import { useT, format } from '@/lib/i18n/useT';
 import nsSoloSignup from '@/lib/i18n/locales/fr/soloSignup';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
-import type { PoolStatusView } from '@/utils/tournaments/pool';
+import { useEventPoolSignup } from '@/features/player/dashboard/hooks/useEventPoolSignup';
 
 export default function EventSignupCard() {
   const event = homeEventSpotlight;
@@ -45,39 +44,17 @@ export default function EventSignupCard() {
   const { user, token } = usePlayerSession({ redirect: false });
   const { activeTeamId } = useActiveTeam();
 
-  const [view, setView] = useState<PoolStatusView | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const endpoint = event ? `/api/tournament/${event.tournamentId}/pool` : '';
-
-  const call = useCallback(
-    async (method: 'GET' | 'POST', body?: unknown) => {
-      const res = await fetch(endpoint, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          ...(body ? { 'Content-Type': 'application/json' } : {}),
-        },
-        body: body ? JSON.stringify(body) : undefined,
-      });
-      return { ok: res.ok, json: await res.json().catch(() => ({})) };
-    },
-    [endpoint, token]
+  // Lecture et inscription : features/player/dashboard (client + hook).
+  const { view, register, busy, errorKind } = useEventPoolSignup(
+    event?.tournamentId ?? '',
+    visible && !!token
   );
-
-  useEffect(() => {
-    if (!visible || !token) return;
-    let alive = true;
-    void call('GET')
-      .then(({ ok, json }) => {
-        if (alive && ok) setView(json as PoolStatusView);
-      })
-      .catch(() => undefined);
-    return () => {
-      alive = false;
-    };
-  }, [visible, token, call]);
+  const error =
+    errorKind === 'closed'
+      ? t.closedBody
+      : errorKind === 'generic'
+        ? t.errGeneric
+        : null;
 
   // Rien tant que l'état n'est pas lu : un bouton « en un clic » affiché puis
   // remplacé par « tu es inscrite » ferait cliquer pour rien.
@@ -105,28 +82,13 @@ export default function EventSignupCard() {
   const teamAmbiguous = !team && view.teams.length > 1;
   const oneClick = pseudo.length >= 2 && !!tag && !teamAmbiguous;
 
-  async function register() {
+  function registerOneClick() {
     if (!oneClick) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const { ok, json } = await call('POST', {
-        displayName: pseudo,
-        battleTag: tag,
-        originTeamId: team?.id ?? null,
-      });
-      if (!ok) {
-        setError(
-          json.code === 'REGISTRATION_CLOSED' ? t.closedBody : t.errGeneric
-        );
-        return;
-      }
-      setView(json as PoolStatusView);
-    } catch {
-      setError(t.errGeneric);
-    } finally {
-      setBusy(false);
-    }
+    register({
+      displayName: pseudo,
+      battleTag: tag,
+      originTeamId: team?.id ?? null,
+    });
   }
 
   const registered = !!view.entry;
@@ -198,7 +160,7 @@ export default function EventSignupCard() {
           <Button
             variant="primary"
             size="sm"
-            onClick={() => void register()}
+            onClick={registerOneClick}
             disabled={busy}
           >
             {t.eventCardOneClick}

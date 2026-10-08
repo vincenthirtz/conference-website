@@ -8,6 +8,7 @@
 // cadeau d'accueil par `tcgClient`, l'état réseau par `networkClient`.
 
 import { playerRequest, type PlayerScope } from '@/utils/player/playerHttp';
+import type { PoolStatusView } from '@/utils/tournaments/pool';
 
 const teamOnly = (s: PlayerScope): PlayerScope => ({
   subjectId: null,
@@ -19,6 +20,15 @@ export const dashboardUrls = {
   dashboard: '/api/player/dashboard',
   cancelDemande: '/api/demandes/cancel',
   leaveTeam: '/api/teams/leave',
+  /** Inscription regroupée d'un tournoi (encart « événement du moment »). */
+  eventPool: (tournamentId: string) => `/api/tournament/${tournamentId}/pool`,
+};
+
+/** Ce que l'inscription en un clic envoie (même forme que la page). */
+export type EventPoolRegisterBody = {
+  displayName: string;
+  battleTag: string;
+  originTeamId: string | null;
 };
 
 export const dashboardClient = {
@@ -34,5 +44,18 @@ export const dashboardClient = {
     playerRequest(dashboardUrls.leaveTeam, {
       method: 'POST',
       scope: teamOnly(scope),
+    }),
+  // Encart « événement du moment » : sans portée (la route lit la session),
+  // et sans redirection sur 401, comme l'appel direct d'origine — l'encart
+  // se tait ou affiche son erreur générique.
+  eventPoolStatus: (tournamentId: string) =>
+    playerRequest<PoolStatusView>(dashboardUrls.eventPool(tournamentId), {
+      skipAuthRedirect: true,
+    }),
+  eventPoolRegister: (tournamentId: string, body: EventPoolRegisterBody) =>
+    playerRequest<PoolStatusView>(dashboardUrls.eventPool(tournamentId), {
+      method: 'POST',
+      json: body,
+      skipAuthRedirect: true,
     }),
 };
