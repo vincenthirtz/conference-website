@@ -10,6 +10,7 @@ export default {
   tabsAriaLabel: 'Overlays page sections',
   tabSources: 'Sources & overlays',
   tabMvpPublic: 'Audience MVP',
+  tabRewards: 'Rewards',
   tournamentLabel: 'Tournament',
   noTournament:
     'No tournament in this space yet: match sources will appear with the first one.',

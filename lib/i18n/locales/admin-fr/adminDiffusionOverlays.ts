@@ -16,6 +16,7 @@ export default adminNs('adminDiffusionOverlays', {
   tabsAriaLabel: 'Sections de la page Overlays',
   tabSources: 'Sources & overlays',
   tabMvpPublic: 'MVP du public',
+  tabRewards: 'Récompenses',
   tournamentLabel: 'Tournoi',
   noTournament:
     'Aucun tournoi dans cet espace : les sources de match apparaîtront avec le premier.',

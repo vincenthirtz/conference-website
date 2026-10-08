@@ -28,6 +28,11 @@ const PublicMvpOverlayPanel = dynamic(
   () => import('@/features/admin/diffusion/ui/PublicMvpOverlayPanel'),
   { ssr: false }
 );
+// Onglet « Récompenses » : chargé à la demande, comme les autres panneaux.
+const TwitchRewardsPanel = dynamic(
+  () => import('@/components/admin/broadcast/TwitchRewardsPanel'),
+  { ssr: false }
+);
 const RegieLayoutPanel = dynamic(
   () => import('@/features/admin/diffusion/ui/RegieLayoutPanel'),
   { ssr: false }
@@ -173,6 +178,9 @@ export default function DiffusionOverlaysPage({
     }
   }, [baseUrl]);
 
+  const canManageRewards = (staff?.permissions ?? []).includes(
+    'manage_broadcast'
+  );
   // `?tab=mvp-public` : lien direct vers le pilotage du vote, partageable à
   // la régie. L'onglet n'existe qu'avec la capacité de régie (comme le panneau).
   const tabs = [
@@ -180,6 +188,8 @@ export default function DiffusionOverlaysPage({
     ...(canUseMatchOverlays
       ? [{ id: 'mvp-public', label: t.tabMvpPublic }]
       : []),
+    // Points de chaîne : le droit de leurs routes (`manage_broadcast`).
+    ...(canManageRewards ? [{ id: 'rewards', label: t.tabRewards }] : []),
   ];
   const [active, setActive] = useQueryTab(tabs);
 
@@ -268,7 +278,9 @@ export default function DiffusionOverlaysPage({
           id={tabPanelId(TABS_ID, active)}
           aria-labelledby={tabButtonId(TABS_ID, active)}
         >
-          {active === 'mvp-public' && canUseMatchOverlays ? (
+          {active === 'rewards' && canManageRewards ? (
+            <TwitchRewardsPanel />
+          ) : active === 'mvp-public' && canUseMatchOverlays ? (
             <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
               <PublicMvpOverlayPanel
                 tournamentId={selected?.id ?? null}
