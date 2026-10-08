@@ -19,6 +19,7 @@
 // le premier onglet est pire qu'un lien mort.
 
 import Head from 'next/head';
+import Link from 'next/link';
 import { withStaffPage } from '@/utils/staff';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
@@ -55,11 +56,6 @@ const TcgCataloguePanel = lazyPanel(
 );
 const TcgEngagementPanel = lazyPanel(
   () => import('@/components/admin/tcg/TcgEngagementPanel')
-);
-// Jeton et habillage de l'overlay TCG : câblés une fois, partagés avec
-// Diffusion › Overlays (lot 7).
-const TcgOverlaySection = lazyPanel(
-  () => import('@/components/admin/tcg/TcgOverlaySection')
 );
 const TcgWelcomeGiftCard = lazyPanel(
   () => import('@/components/admin/tcg/TcgWelcomeGiftCard')
@@ -126,7 +122,17 @@ function AdminTcgPage(_props: StaffProps) {
           ) : (
             <div className="space-y-6">
               <TcgOverviewPanel labels={tTcgOverview} />
-              <TcgOverlaySection />
+              {/* L'overlay TCG (drop Twitch, lien OBS, habillage) se gère
+                  dans Diffusion › Overlays, avec les autres sources. */}
+              <p className="text-sm text-[var(--t3,#a39ba6)]">
+                {tTcgOverview.overlayMovedNotice}{' '}
+                <Link
+                  href="/admin/diffusion/overlays"
+                  className="text-[var(--or-200,#eec4ff)] underline"
+                >
+                  {tTcgOverview.overlayMovedLink} →
+                </Link>
+              </p>
               <TcgWelcomeGiftCard
                 labels={{
                   heading: tTcgOverview.giftHeading,

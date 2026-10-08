@@ -15,7 +15,7 @@ export default {
     'These sources depend on a setting that lives on its own screen: copy the URL there.',
   twitchInteractions: 'Twitch & interactions',
   twitchInteractionsDesc:
-    'TCG drops, predictions, channel points and Twitch commands: what triggers the on-screen announcements.',
+    'Predictions, channel points and Twitch commands: what triggers the on-screen announcements.',
   sceneOverlays: 'Caster scenes',
   sceneOverlaysDesc: 'Scoreboard and branding, one URL per scene.',
   tcgOverlay: 'TCG announcements',

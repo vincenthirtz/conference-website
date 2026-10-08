@@ -13,7 +13,7 @@ export default {
   pageTitle: 'Admin – Twitch & interactions',
   heading: 'Twitch & interactions',
   subtitle:
-    'What you drive on the channel during a stream: TCG drop health, on-air status, predictions, channel points and Twitch commands.',
+    'What you drive on the channel during a stream: on-air status, predictions, channel points and Twitch commands. TCG drops are under Broadcast › Overlays.',
   twitchHeading: 'Twitch status',
   twitchLoading: 'Loading Twitch status…',
   twitchLive: '🔴 LIVE',
@@ -38,6 +38,9 @@ export default {
     'TWITCH_EVENTSUB_SECRET missing: every delivery would be rejected with a 403.',
   dropScopeMissing:
     'Scope channel:read:redemptions missing — reconnect the channel.',
+  dropManageScopeMissing:
+    'Scope channel:manage:redemptions missing: the site cannot create the reward — reconnect the channel.',
+  dropSetupFailed: 'Setup refused: {message}',
   dropRewardMissing:
     'No channel-point reward designated: nothing to listen to.',
   dropSetupCta: 'Set up the drop',

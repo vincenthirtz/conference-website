@@ -28,6 +28,10 @@
 // connectée, dix-huit comptes rattachés, zéro crédit versé. Un écran qui montre
 // une panne sans offrir le geste qui la répare n'est qu'à moitié un écran.
 //
+// VIT DANS DIFFUSION › OVERLAYS (via `TcgOverlaySection`), avec le lien et
+// l'habillage de l'overlay TCG : tout ce qui fait tomber puis afficher un drop
+// se règle au même endroit.
+//
 // SE MASQUE PLUTÔT QUE D'AFFICHER UN 403. La route exige `manage_broadcast`,
 // réservée à l'admin, alors que cette console est ouverte au rôle `caster`.
 // Une casteuse ne doit pas voir un bloc en erreur permanente : on rend `null`,
@@ -73,6 +77,9 @@ export default function TcgDropHealthCard() {
   const [featuredCard, setFeaturedCard] = useState('');
   const [featuredCost, setFeaturedCost] = useState(10_000);
   const [featuredError, setFeaturedError] = useState(false);
+  // La raison d'un échec de mise en service, telle que l'API la rend. Avalée,
+  // elle laissait la carte « À réparer » après le clic sans dire pourquoi.
+  const [setupError, setSetupError] = useState<string | null>(null);
 
   /**
    * Met le drop en service : la récompense, puis l'abonnement.
@@ -86,12 +93,14 @@ export default function TcgDropHealthCard() {
   const setup = useCallback(async () => {
     if (busy) return;
     setBusy(true);
+    setSetupError(null);
     try {
       const { rewardId } = await broadcastCardsClient.tcgDropSetupReward();
       await broadcastCardsClient.tcgDropSubscribe({ rewardId });
       await load();
     } catch (err) {
       logger.error('[admin/tcg-drop-health] setup error:', err);
+      setSetupError((err as Error)?.message || '—');
       // L'état est rechargé quoi qu'il arrive : la carte dira elle-même ce qui
       // reste bloquant, ce qui vaut mieux qu'un message d'erreur générique.
       await load();
@@ -139,6 +148,10 @@ export default function TcgDropHealthCard() {
   const blocking: string[] = [];
   if (!state.secretConfigured) blocking.push(t.dropSecretMissing);
   if (!state.hasScope) blocking.push(t.dropScopeMissing);
+  // `false` seulement : une API plus ancienne ne rend pas le champ.
+  const cannotCreateReward =
+    !state.rewardId && state.canManageRewards === false;
+  if (cannotCreateReward) blocking.push(t.dropManageScopeMissing);
   if (!state.rewardId) blocking.push(t.dropRewardMissing);
   if (!unknown && active.length === 0) blocking.push(t.dropNoSubscription);
 
@@ -187,16 +200,26 @@ export default function TcgDropHealthCard() {
           rattrapent d'ici, et proposer un bouton qui ne peut pas aboutir
           enverrait chercher au mauvais endroit — le reproche exact que
           l'en-tête de cette carte adresse au voyant rouge unique. */}
-      {!healthy && !unknown && state.secretConfigured && state.hasScope && (
-        <AdminButton
-          variant="secondary"
-          size="sm"
-          onClick={() => void setup()}
-          disabled={busy}
-          className="mt-3"
-        >
-          {busy ? t.dropSetupBusy : t.dropSetupCta}
-        </AdminButton>
+      {!healthy &&
+        !unknown &&
+        state.secretConfigured &&
+        state.hasScope &&
+        !cannotCreateReward && (
+          <AdminButton
+            variant="secondary"
+            size="sm"
+            onClick={() => void setup()}
+            disabled={busy}
+            className="mt-3"
+          >
+            {busy ? t.dropSetupBusy : t.dropSetupCta}
+          </AdminButton>
+        )}
+
+      {setupError && (
+        <p role="alert" className="mt-2 text-xs text-[#ffc2c2]">
+          {format(t.dropSetupFailed, { message: setupError })}
+        </p>
       )}
 
       {/* Le statut BRUT de chaque souscription en peine : les causes appellent

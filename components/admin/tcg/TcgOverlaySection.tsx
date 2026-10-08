@@ -1,21 +1,26 @@
 // components/admin/tcg/TcgOverlaySection.tsx
 //
-// L'overlay TCG de l'antenne : le jeton de sa source OBS (`TcgOverlayCard`) et
-// son habillage (`TcgOverlayThemeCard`).
+// TOUT L'OVERLAY TCG, EN UN SEUL ENDROIT — Diffusion › Overlays :
+//   * la santé du drop Twitch (`TcgDropHealthCard`) : récompense de points de
+//     chaîne + souscription EventSub, ce qui fait TOMBER les cartes ;
+//   * le jeton de la source OBS (`TcgOverlayCard`), qui les ANNONCE ;
+//   * son habillage (`TcgOverlayThemeCard`).
+// Ces réglages étaient éclatés entre « Twitch & interactions » et l'onglet
+// Économie du TCG : pour préparer une soirée, il fallait savoir où chercher.
 //
-// DEUX ÉCRANS, UN SEUL CÂBLAGE. On le règle depuis le TCG (onglet Économie) ET
-// depuis Diffusion › Overlays, où l'on prépare toutes les sources d'une
-// soirée. Les deux cartes attendent une cinquantaine de libellés : les câbler
-// deux fois, c'était la certitude qu'un libellé ajouté ici manque là.
-//
-// Droit `manage_tcg` : c'est celui des routes appelées
-// (routes /api/admin/tcg/overlay-token et overlay-theme). L'appelant décide
-// d'afficher la section ; les routes gardent leur contrôle.
+// Droit `manage_tcg` pour le jeton et l'habillage (routes
+// /api/admin/tcg/overlay-token et overlay-theme) ; la carte du drop exige en
+// plus `manage_broadcast` et se masque seule sans lui.
 
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import { lazyPanel } from '@/components/admin/lazyPanel';
+import { withAdminQuery } from '@/features/admin/_shared/query';
 import nsAdminTcgOverview from '@/lib/i18n/locales/admin-fr/adminTcgOverview';
 
+// Lit par le cache de requêtes : d'où `withAdminQuery` sur la section.
+const TcgDropHealthCard = lazyPanel(
+  () => import('@/components/admin/broadcast/TcgDropHealthCard')
+);
 const TcgOverlayCard = lazyPanel(
   () => import('@/components/admin/tcg/TcgOverlayCard')
 );
@@ -23,10 +28,11 @@ const TcgOverlayThemeCard = lazyPanel(
   () => import('@/components/admin/tcg/TcgOverlayThemeCard')
 );
 
-export default function TcgOverlaySection() {
+function TcgOverlaySection() {
   const t = useAdminT(nsAdminTcgOverview);
   return (
     <>
+      <TcgDropHealthCard />
       <TcgOverlayCard
         labels={{
           heading: t.overlayHeading,
@@ -89,3 +95,5 @@ export default function TcgOverlaySection() {
     </>
   );
 }
+
+export default withAdminQuery(TcgOverlaySection);

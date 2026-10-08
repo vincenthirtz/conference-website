@@ -27,6 +27,8 @@ export type TcgDropEventSubState = {
   callbackUrl: string;
   secretConfigured: boolean;
   hasScope: boolean;
+  /** Scope `channel:manage:redemptions` (création de la récompense). */
+  canManageRewards?: boolean;
   subscriptions: TcgDropSubscription[] | null;
 };
 

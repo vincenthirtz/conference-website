@@ -136,6 +136,9 @@ export default adminNs('adminTcgOverview', {
   overlaySaveError: 'L’opération a échoué, réessaie.',
   overlayObsHint:
     'Qui a ce lien voit les annonces. Il n’affiche que le pseudo Twitch et l’événement — jamais le nom du compte du site.',
+  overlayMovedNotice:
+    'Le drop Twitch, le lien OBS et l’habillage de l’overlay TCG se gèrent avec les autres sources de diffusion.',
+  overlayMovedLink: 'Diffusion › Overlays',
   overlayCopyRegie: 'Copier pour la Régie',
   overlayRegieHint:
     'Déjà la source /overlay/regie dans OBS ? Remplace son URL par ce lien (en gardant tes éventuels paramètres, ex. &mvp=0) : les annonces TCG s’y affichent, sans source de plus.',

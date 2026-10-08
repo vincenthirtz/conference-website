@@ -21,7 +21,7 @@ export default adminNs('adminDiffusionOverlays', {
     'Ces sources dépendent d’un réglage qui vit sur son propre écran : l’URL s’y copie.',
   twitchInteractions: 'Twitch & interactions',
   twitchInteractionsDesc:
-    'Drops TCG, prédictions, points de chaîne et commandes Twitch : ce qui déclenche les annonces à l’écran.',
+    'Prédictions, points de chaîne et commandes Twitch : ce qui déclenche les annonces à l’écran.',
   sceneOverlays: 'Scènes caster',
   sceneOverlaysDesc: 'Tableau de score et habillage, une URL par scène.',
   tcgOverlay: 'Annonces TCG',

@@ -571,6 +571,9 @@ export async function getTcgDropState(ctx: ServiceContext) {
     callbackUrl: tcgCallbackUrl(),
     secretConfigured: Boolean(secret),
     hasScope: hasScope(token.scope, TCG_REQUIRED_SCOPE),
+    // Exigé par la CRÉATION de la récompense (`tcg-drop/setup`) : sans lui, le
+    // bouton « Mettre en service » échouait en 409 sans que la carte le dise.
+    canManageRewards: hasScope(token.scope, 'channel:manage:redemptions'),
     subscriptions: subscriptionView(subs),
   };
 }

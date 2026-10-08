@@ -1,8 +1,8 @@
 // pages/admin/broadcast/live.tsx
 //
 // Diffusion › « Twitch & interactions » : ce qu'on pilote sur la chaîne Twitch
-// pendant un direct — santé des drops TCG, statut d'antenne, prédictions,
-// points de chaîne et commandes.
+// pendant un direct — statut d'antenne, prédictions, points de chaîne et
+// commandes. (La santé des drops TCG est passée dans Diffusion › Overlays.)
 //
 // L'URL est restée `/admin/broadcast/live` (c'est le retour par défaut de
 // l'OAuth Twitch, et des favoris pointent dessus), mais l'écran n'est plus la
@@ -18,7 +18,6 @@ import { withStaffPage } from '@/utils/staff';
 import { useToast } from '@/components/Toast';
 import LiveConsoleHeader from '@/components/admin/broadcast/LiveConsoleHeader';
 import TwitchStatusPanel from '@/components/admin/broadcast/TwitchStatusPanel';
-import TcgDropHealthCard from '@/components/admin/broadcast/TcgDropHealthCard';
 import TwitchDrivePanels from '@/components/admin/broadcast/TwitchDrivePanels';
 import { withAdminQuery } from '@/features/admin/_shared/query';
 import { useAdminT } from '@/lib/i18n/useAdminT';
@@ -61,14 +60,10 @@ function BroadcastLivePage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-header pb-8">
           <LiveConsoleHeader heading={t.heading} subtitle={t.subtitle} />
 
-          {/* Cartes ordonnées par urgence : la santé des drops d'abord (seule
-              panne invisible ailleurs — Twitch coupe une souscription sans
-              prévenir), puis le statut d'antenne, puis les deux panneaux
-              d'écriture. Chacune porte son « pourquoi » dans son propre
-              en-tête, et se masque seule quand elle n'a rien à montrer ou que
-              la permission manque — cet écran admet le rôle `caster`, plus
-              large que les routes qu'il appelle. */}
-          <TcgDropHealthCard />
+          {/* Le statut d'antenne, puis les deux panneaux d'écriture. Chacun se
+              masque seul quand la permission manque — cet écran admet le rôle
+              `caster`, plus large que les routes qu'il appelle. La santé des
+              drops TCG vit dans Diffusion › Overlays, avec l'overlay TCG. */}
           <TwitchStatusPanel />
           <TwitchDrivePanels />
         </div>

@@ -12,7 +12,7 @@ export default adminNs('adminBroadcastLive', {
   pageTitle: 'Admin – Twitch & interactions',
   heading: 'Twitch & interactions',
   subtitle:
-    'Ce qui se pilote sur la chaîne pendant un direct : santé des drops TCG, statut d’antenne, prédictions, points de chaîne et commandes Twitch.',
+    'Ce qui se pilote sur la chaîne pendant un direct : statut d’antenne, prédictions, points de chaîne et commandes Twitch. Les drops TCG se gèrent dans Diffusion › Overlays.',
   twitchHeading: 'Statut Twitch',
   twitchLoading: 'Chargement du statut Twitch…',
   twitchLive: '🔴 LIVE',
@@ -41,6 +41,10 @@ export default adminNs('adminBroadcastLive', {
     'TWITCH_EVENTSUB_SECRET absent : chaque livraison serait rejetée en 403.',
   dropScopeMissing:
     'Scope channel:read:redemptions manquant — reconnecte la chaîne.',
+  dropManageScopeMissing:
+    'Scope channel:manage:redemptions manquant : le site ne peut pas créer la récompense — reconnecte la chaîne.',
+  /** Interpole `{message}` — la raison rendue par l'API / Twitch. */
+  dropSetupFailed: 'Mise en service refusée : {message}',
   dropRewardMissing:
     'Aucune récompense de points de chaîne désignée : rien à écouter.',
   dropSetupCta: 'Mettre le drop en service',
