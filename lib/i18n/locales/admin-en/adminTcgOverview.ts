@@ -117,6 +117,9 @@ export default {
   overlaySaveError: 'The operation failed, please try again.',
   overlayObsHint:
     'Anyone with this link sees the announcements. It shows only the Twitch username and the event — never the site account name.',
+  overlayCopyRegie: 'Copy for the Régie',
+  overlayRegieHint:
+    'Already using the /overlay/regie source in OBS? Replace its URL with this link (keeping any parameters you use, e.g. &mvp=0): TCG announcements show up there, no extra source needed.',
 
   themeHeading: 'Overlay appearance',
   themeSubtitle:

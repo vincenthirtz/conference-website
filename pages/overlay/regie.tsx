@@ -15,6 +15,14 @@
 //   scale        0.5 → 2 (applique à tout)
 //   accent       RRGGBB
 //   tenant       slug d'espace
+//   tcg          jeton de l'overlay TCG — affiche les annonces de cartes
+//                (drops Twitch, victoires) à la place de `/overlay/tcg/<jeton>`
+//
+// LE TCG EST OPTIONNEL ET PORTÉ PAR SON JETON. Sa route (`/api/overlay/tcg/`)
+// est gardée par un jeton révocable, pas par l'espace : on ne peut donc pas le
+// servir dans `/api/overlay/alerts`. Sans `?tcg=`, aucun appel de plus. Il se
+// pose dans le coin réglé par son propre habillage (Diffusion › Overlays ›
+// Habillage TCG), comme dans la source dédiée.
 //
 // POURQUOI FUSIONNER. Quatre sources navigateur, c'est quatre fois le tour du
 // réseau, en boucle, pendant six heures. Le scrutin public interrogeait toutes
@@ -75,7 +83,22 @@ import {
 } from '@/utils/overlay/alertBox';
 import type { OverlayAlertsResponse } from '@/pages/api/overlay/alerts';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
+import nsOverlayTcg from '@/lib/i18n/locales/fr/overlayTcg';
 import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
+import { useTcgOverlayFeed } from '@/hooks/useTcgOverlayFeed';
+import TcgAnnouncement from '@/components/overlay/TcgAnnouncement';
+import type { OverlayPosition } from '@/utils/tcg/overlayThemeShape';
+
+/** Jeton TCG base64url ; même forme que celle admise par la route. */
+const TCG_TOKEN_RE = /^[A-Za-z0-9_-]{20,120}$/;
+
+/** Coin de la pile d'annonces TCG — repris de `/overlay/tcg/<jeton>`. */
+const TCG_ANCHOR: Record<OverlayPosition, string> = {
+  'top-left': 'justify-start items-start',
+  'top-right': 'justify-start items-end',
+  'bottom-left': 'justify-end items-start',
+  'bottom-right': 'justify-end items-end',
+};
 
 /** Respiration entre deux alertes : elles ne doivent pas se coller. */
 const GAP_MS = 900;
@@ -124,6 +147,22 @@ export default function RegieOverlayPage() {
   const scale = parseScale(firstParam(q.scale));
   const accent = parseAccent(firstParam(q.accent));
   const tenant = firstParam(q.tenant);
+  const tcgParam = firstParam(q.tcg) ?? '';
+  const avecTcg = tcgParam !== '';
+  const tcgValide = TCG_TOKEN_RE.test(tcgParam);
+  const tTcg = useT(nsOverlayTcg);
+
+  const tcg = useTcgOverlayFeed({
+    token: tcgValide ? tcgParam : null,
+    enabled: tcgValide,
+  });
+  const tcgLabels = {
+    dropEyebrow: tTcg.dropEyebrow,
+    winEyebrow: tTcg.winEyebrow,
+    dropLine: tTcg.dropLine,
+    winLine: tTcg.winLine,
+    anonymous: tTcg.anonymous,
+  };
 
   // UN SEUL APPEL pour les alertes ET le scrutin. `with=mvp` n'est demandé que
   // si le scrutin est affiché : une scène qui ne le montre pas n'en paie pas
@@ -224,6 +263,25 @@ export default function RegieOverlayPage() {
         body {
           background: transparent !important;
         }
+        @keyframes tcgOverlayIn {
+          from {
+            opacity: 0;
+            transform: translateX(-12px);
+          }
+          to {
+            opacity: 1;
+            transform: none;
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          @keyframes tcgOverlayIn {
+            from,
+            to {
+              opacity: 1;
+              transform: none;
+            }
+          }
+        }
       `}</style>
 
       <div className="relative h-screen w-screen overflow-hidden text-white">
@@ -307,6 +365,44 @@ export default function RegieOverlayPage() {
                     <p className="text-sm text-white/70">{t.donBody}</p>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Annonces TCG dans leur coin. Jeton refusé : message visible dans
+                l'aperçu OBS, comme sur la source dédiée — c'est le seul cas où
+                la régie doit intervenir. */}
+            {avecTcg && (
+              <div
+                className={`pointer-events-none absolute inset-0 flex flex-col p-6 ${TCG_ANCHOR[tcg.theme.position]}`}
+                style={
+                  scale !== 1
+                    ? {
+                        transform: `scale(${scale})`,
+                        transformOrigin: tcg.theme.position.replace('-', ' '),
+                      }
+                    : undefined
+                }
+              >
+                {!tcgValide ? (
+                  <p className="rounded-xl bg-black/70 px-4 py-2 text-sm text-red-200">
+                    {tTcg.invalidToken}
+                  </p>
+                ) : tcg.rejected ? (
+                  <p className="rounded-xl bg-black/70 px-4 py-2 text-sm text-red-200">
+                    {tTcg.rejected}
+                  </p>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {tcg.visible.map((item) => (
+                      <TcgAnnouncement
+                        key={item.id}
+                        item={item}
+                        theme={tcg.theme}
+                        labels={tcgLabels}
+                      />
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
 

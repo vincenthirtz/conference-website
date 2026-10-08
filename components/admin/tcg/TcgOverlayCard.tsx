@@ -61,7 +61,19 @@ export type TcgOverlayLabels = {
   loadError: string;
   saveError: string;
   obsHint: string;
+  copyRegie: string;
+  regieHint: string;
 };
+
+/**
+ * Le même jeton, porté par la source unique de la Régie (`/overlay/regie?tcg=`)
+ * plutôt que par une source OBS de plus. Dérivé du lien rendu par l'API pour
+ * en garder l'origine absolue.
+ */
+export function regieUrlFromTcgUrl(url: string): string | null {
+  const m = /^(.*)\/overlay\/tcg\/([A-Za-z0-9_-]+)$/.exec(url);
+  return m ? `${m[1]}/overlay/regie?tcg=${m[2]}` : null;
+}
 
 type Props = { labels: TcgOverlayLabels };
 
@@ -108,9 +120,11 @@ export default function TcgOverlayCard({ labels }: Props) {
     }
   };
 
-  const onCopy = async () => {
-    if (!state?.url) return;
-    if (await copyText(state.url)) {
+  const regieUrl = state?.url ? regieUrlFromTcgUrl(state.url) : null;
+
+  const onCopy = async (url: string | null | undefined) => {
+    if (!url) return;
+    if (await copyText(url)) {
       addToast(labels.copied, 'success');
     } else {
       // Même le repli a échoué : on révèle le lien pour qu'il reste copiable à
@@ -173,12 +187,24 @@ export default function TcgOverlayCard({ labels }: Props) {
               <AdminButton size="sm" onClick={() => setRevealed((v) => !v)}>
                 {revealed ? labels.hide : labels.reveal}
               </AdminButton>
-              <AdminButton variant="primary" size="sm" onClick={onCopy}>
+              <AdminButton
+                variant="primary"
+                size="sm"
+                onClick={() => void onCopy(state.url)}
+              >
                 {labels.copy}
               </AdminButton>
+              {regieUrl && (
+                <AdminButton size="sm" onClick={() => void onCopy(regieUrl)}>
+                  {labels.copyRegie}
+                </AdminButton>
+              )}
             </div>
 
             <p className="text-[11px] text-gray-500">{labels.obsHint}</p>
+            {regieUrl && (
+              <p className="text-[11px] text-gray-500">{labels.regieHint}</p>
+            )}
 
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500">
               {state.createdAt && (

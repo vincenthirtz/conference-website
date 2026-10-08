@@ -48,6 +48,8 @@ export default function TcgOverlaySection() {
           loadError: t.overlayLoadError,
           saveError: t.overlaySaveError,
           obsHint: t.overlayObsHint,
+          copyRegie: t.overlayCopyRegie,
+          regieHint: t.overlayRegieHint,
         }}
       />
       <TcgOverlayThemeCard
