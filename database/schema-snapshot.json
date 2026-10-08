@@ -832,6 +832,11 @@
       "dispute_resolved_by",
       "escalation_pinged_at",
       "forfeit_processed_at",
+      "forfeit_proposal_resolved_at",
+      "forfeit_proposal_resolved_by",
+      "forfeit_proposal_status",
+      "forfeit_proposed_at",
+      "forfeit_proposed_team_id",
       "forfeit_team_id",
       "group_key",
       "id",
@@ -1338,6 +1343,10 @@
     ],
     "stage_teams": [
       "created_at",
+      "disqualification_mode",
+      "disqualification_reason",
+      "disqualified_at",
+      "disqualified_by",
       "is_substitute",
       "notes",
       "seed",
@@ -2116,6 +2125,7 @@
       "format_details",
       "format_type",
       "game",
+      "hero_subtitle",
       "id",
       "is_featured",
       "j1_reminder_sent_at",
@@ -2714,6 +2724,14 @@
       "source": "match_score_reports",
       "target": "tenants"
     },
+    "matches_forfeit_proposal_resolved_by_fkey": {
+      "source": "matches",
+      "target": "staff"
+    },
+    "matches_forfeit_proposed_team_id_fkey": {
+      "source": "matches",
+      "target": "teams"
+    },
     "matches_forfeit_team_id_fkey": {
       "source": "matches",
       "target": "teams"
@@ -2973,6 +2991,10 @@
     "staff_planning_slots_tenant_id_fkey": {
       "source": "staff_planning_slots",
       "target": "tenants"
+    },
+    "stage_teams_disqualified_by_fkey": {
+      "source": "stage_teams",
+      "target": "staff"
     },
     "stage_teams_stage_id_fkey": {
       "source": "stage_teams",

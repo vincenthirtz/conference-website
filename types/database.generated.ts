@@ -3415,6 +3415,11 @@ export type Database = {
           dispute_resolved_by: string | null
           escalation_pinged_at: string | null
           forfeit_processed_at: string | null
+          forfeit_proposal_resolved_at: string | null
+          forfeit_proposal_resolved_by: string | null
+          forfeit_proposal_status: string | null
+          forfeit_proposed_at: string | null
+          forfeit_proposed_team_id: string | null
           forfeit_team_id: string | null
           group_key: string | null
           id: string
@@ -3480,6 +3485,11 @@ export type Database = {
           dispute_resolved_by?: string | null
           escalation_pinged_at?: string | null
           forfeit_processed_at?: string | null
+          forfeit_proposal_resolved_at?: string | null
+          forfeit_proposal_resolved_by?: string | null
+          forfeit_proposal_status?: string | null
+          forfeit_proposed_at?: string | null
+          forfeit_proposed_team_id?: string | null
           forfeit_team_id?: string | null
           group_key?: string | null
           id?: string
@@ -3545,6 +3555,11 @@ export type Database = {
           dispute_resolved_by?: string | null
           escalation_pinged_at?: string | null
           forfeit_processed_at?: string | null
+          forfeit_proposal_resolved_at?: string | null
+          forfeit_proposal_resolved_by?: string | null
+          forfeit_proposal_status?: string | null
+          forfeit_proposed_at?: string | null
+          forfeit_proposed_team_id?: string | null
           forfeit_team_id?: string | null
           group_key?: string | null
           id?: string
