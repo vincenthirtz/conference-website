@@ -5521,6 +5521,10 @@ export type Database = {
       stage_teams: {
         Row: {
           created_at: string
+          disqualification_mode: string | null
+          disqualification_reason: string | null
+          disqualified_at: string | null
+          disqualified_by: string | null
           is_substitute: boolean
           notes: string | null
           seed: number | null
@@ -5530,6 +5534,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          disqualification_mode?: string | null
+          disqualification_reason?: string | null
+          disqualified_at?: string | null
+          disqualified_by?: string | null
           is_substitute?: boolean
           notes?: string | null
           seed?: number | null
@@ -5539,6 +5547,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          disqualification_mode?: string | null
+          disqualification_reason?: string | null
+          disqualified_at?: string | null
+          disqualified_by?: string | null
           is_substitute?: boolean
           notes?: string | null
           seed?: number | null
@@ -5547,6 +5559,13 @@ export type Database = {
           tenant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "stage_teams_disqualified_by_fkey"
+            columns: ["disqualified_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stage_teams_stage_id_fkey"
             columns: ["stage_id"]

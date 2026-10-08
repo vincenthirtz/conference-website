@@ -65,6 +65,8 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   restore_bracket_snapshot: 'Restauration snapshot de bracket',
   set_tiebreaker_override: 'Override de départage ajouté',
   remove_tiebreaker_override: 'Override de départage retiré',
+  disqualify_team: 'Équipe disqualifiée de la phase',
+  reinstate_team: 'Équipe réintégrée dans la phase',
   // Matchs
   create_match: 'Création match',
   update_match: 'Modification match',

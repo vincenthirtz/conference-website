@@ -45,6 +45,10 @@ export const stageUrls = {
   snapshots: (id: string) => `${S}/${enc(id)}/snapshots`,
   /** GET / POST / DELETE (`{ id }`) des dérogations de départage. */
   tiebreakerOverride: (id: string) => `${S}/${enc(id)}/tiebreaker-override`,
+  /** POST `{ team_id, mode, reason }` (disqualifier) ; DELETE `?team_id=` (réintégrer). */
+  disqualify: (id: string) => `${S}/${enc(id)}/disqualify`,
+  reinstate: (id: string, teamId: string) =>
+    `${S}/${enc(id)}/disqualify?team_id=${enc(teamId)}`,
   batchScores: (id: string) => `${S}/${enc(id)}/batch-scores`,
 };
 
@@ -71,6 +75,57 @@ export type TiebreakerOverride = {
   set_at: string;
   winner?: { id: string; name: string } | null;
   loser?: { id: string; name: string } | null;
+};
+
+/** Mode de disqualification : matchs restants perdus par forfait, ou annulés. */
+export type { DisqualificationMode } from '../../../utils/stages/disqualification';
+import type { DisqualificationMode } from '../../../utils/stages/disqualification';
+
+/** Champs de disqualification d'une ligne de `GET …/teams` (`null` = pas disqualifiée). */
+export type StageTeamDisqualificationFields = {
+  disqualified_at: string | null;
+  disqualification_mode: DisqualificationMode | null;
+  disqualification_reason: string | null;
+  disqualified_by: string | null;
+};
+
+/** Corps de `POST …/disqualify`. */
+export type DisqualifyTeamRequest = {
+  team_id: string;
+  mode: DisqualificationMode;
+  /** 3 à 500 caractères (après trim). */
+  reason: string;
+};
+
+/** Réponse 201 de `POST …/disqualify`. */
+export type DisqualifyTeamResponse = {
+  mode: DisqualificationMode;
+  teamId: string;
+  teamName: string | null;
+  disqualifiedAt: string;
+  /** Matchs passés en forfait (mode `forfeit`). */
+  forfeited: string[];
+  /** Matchs annulés (mode `annul`). */
+  cancelled: string[];
+  /** Matchs laissés tels quels, à traiter à la main. */
+  skipped: Array<{
+    id: string;
+    reason: 'disputed' | 'no_opponent' | 'status_changed';
+  }>;
+  /** Match dont le traitement a échoué (le traitement s'arrête là). */
+  failed: { id: string; error: string } | null;
+  /** Matchs pas encore traités à cause de `failed`. */
+  notProcessed: string[];
+  /** `false` si `failed` : la disqualification est posée, des matchs restent. */
+  complete: boolean;
+};
+
+/** Réponse de `DELETE …/disqualify`. */
+export type ReinstateTeamResponse = {
+  teamId: string;
+  reinstated: true;
+  /** Matchs de la phase restés en forfait / annulés : rien n'est restauré. */
+  matchesNotRestored: number;
 };
 
 /** Une ligne du corps de `POST …/batch-scores`. */

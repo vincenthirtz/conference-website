@@ -15,6 +15,7 @@ import {
   computeStageStandings,
 } from '@/utils/stages/standings';
 import { createBracketSnapshot } from '@/utils/bracket/snapshot';
+import { readDisqualificationMap } from '@/utils/stages/disqualification';
 import type { Audited } from '../../_shared/audited';
 import * as stages from '../repository/stages';
 import { fail, settingsOrNull } from './common';
@@ -75,7 +76,12 @@ export async function advanceTeams(
       const perGroup = Number(rules.advance_per_group);
       teamIds = [];
       for (const ids of Object.values(grouped.groups)) {
-        teamIds.push(...ids.slice(0, perGroup).map((s) => s.teamId));
+        teamIds.push(
+          ...ids
+            .filter((s) => !s.disqualified)
+            .slice(0, perGroup)
+            .map((s) => s.teamId)
+        );
       }
     } else {
       const standings = await computeStageStandings(
@@ -84,6 +90,7 @@ export async function advanceTeams(
         sourceStage.stage_type || 'other'
       );
       teamIds = standings
+        .filter((s) => !s.disqualified)
         .slice(0, Number(rules.advance_top))
         .map((s) => s.teamId);
     }
@@ -119,6 +126,22 @@ export async function advanceTeams(
 
   const src = await stages.stageTeamIds(ctx.db, ctx.tenantId, sourceStageId);
   if (src.error) throw fail(500, 'Failed to fetch source stage teams');
+
+  // Une équipe disqualifiée de la phase source n'avance jamais, même choisie
+  // à la main (la réintégrer d'abord).
+  const disqualified = await readDisqualificationMap(
+    ctx.tenantId,
+    sourceStageId
+  );
+  const blocked = teamIds.filter((id) => disqualified.has(id));
+  if (blocked.length > 0) {
+    throw fail(
+      409,
+      `Equipes disqualifiees du stage source : ${blocked.join(', ')}`,
+      'TEAM_DISQUALIFIED',
+      { teamIds: blocked }
+    );
+  }
   const sourceTeamIds = new Set(src.ids);
   const invalidTeams = teamIds.filter((id) => !sourceTeamIds.has(id));
   if (invalidTeams.length > 0) {

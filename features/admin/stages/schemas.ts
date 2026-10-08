@@ -182,3 +182,38 @@ export const TiebreakerOverrideBody = looseBody([
 
 /** POST (ajout), PATCH (seed unitaire / `seeds`), DELETE (`teamId(s)`). */
 export const StageTeamsBody = looseBody(['teamId', 'seed', 'seeds', 'teamIds']);
+
+/* ---------------------------------------------------------------------------
+ * Disqualification d'une équipe (…/disqualify) — validée par zod (route neuve,
+ * pas de messages historiques à préserver).
+ * ------------------------------------------------------------------------ */
+
+const teamIdField = uuidPathParam('team_id doit être un UUID.');
+
+/** Mêmes valeurs que utils/stages/disqualification (DISQUALIFICATION_MODES). */
+export const DISQUALIFY_MODES = ['forfeit', 'annul'] as const;
+
+/** POST …/disqualify : disqualifier une équipe de la phase. */
+export const DisqualifyTeamBody = z.object({
+  team_id: teamIdField,
+  mode: z.enum(DISQUALIFY_MODES, {
+    error: "mode doit valoir 'forfeit' ou 'annul'.",
+  }),
+  reason: z
+    .string({ error: 'reason est requis.' })
+    .trim()
+    .min(3, { error: 'reason : 3 caractères minimum.' })
+    .max(500, { error: 'reason : 500 caractères maximum.' }),
+});
+
+/** DELETE …/disqualify : `team_id` en query OU dans le corps. */
+export const ReinstateTeamQuery = z.looseObject({
+  stageId,
+  team_id: teamIdField.optional(),
+});
+
+/** Corps facultatif du DELETE (`{ team_id }`) ; absent ou vide = `{}`. */
+export const ReinstateTeamBody = z.preprocess(
+  (v) => (v && typeof v === 'object' ? v : {}),
+  z.looseObject({ team_id: teamIdField.optional() })
+);

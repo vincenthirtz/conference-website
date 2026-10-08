@@ -48,6 +48,9 @@ export type StaffLogAction =
   | 'restore_bracket_snapshot'
   | 'set_tiebreaker_override'
   | 'remove_tiebreaker_override'
+  // Disqualification d'une équipe d'une phase (et sa levée).
+  | 'disqualify_team'
+  | 'reinstate_team'
   // --- Matchs ---
   | 'create_match'
   | 'update_match'

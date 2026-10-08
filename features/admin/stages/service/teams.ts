@@ -10,6 +10,7 @@
 import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { countPlayingMembers } from '@/utils/teams/roleKind';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
+import { readDisqualificationMap } from '@/utils/stages/disqualification';
 import type { Audited } from '../../_shared/audited';
 import * as stages from '../repository/stages';
 import * as matches from '../repository/matches';
@@ -55,6 +56,21 @@ export async function listStageTeams(ctx: ServiceContext, stageId: string) {
     throw fail(500, 'Failed to fetch stage teams');
   }
 
+  // Disqualification de chaque inscription (`null` partout = pas
+  // disqualifiée). Lue à part : une lecture en échec (migration pas encore
+  // appliquée) n'empêche pas l'écran de s'afficher.
+  const disqualified = await readDisqualificationMap(ctx.tenantId, stageId);
+  const teams = (rows || []).map((r) => {
+    const d = disqualified.get(r.team_id);
+    return {
+      ...r,
+      disqualified_at: d?.disqualifiedAt ?? null,
+      disqualification_mode: d?.mode ?? null,
+      disqualification_reason: d?.reason ?? null,
+      disqualified_by: d?.disqualifiedBy ?? null,
+    };
+  });
+
   return {
     stageId,
     // Même sous-ensemble que la lecture d'origine.
@@ -65,7 +81,7 @@ export async function listStageTeams(ctx: ServiceContext, stageId: string) {
       stage_type: s.stage_type,
     },
     tournament: tournament ?? null,
-    teams: rows || [],
+    teams,
   };
 }
 

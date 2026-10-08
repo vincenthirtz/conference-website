@@ -38,6 +38,9 @@ import {
   StageBulkMatchesBody,
   StageCloneBody,
   StageDeleteQuery,
+  DisqualifyTeamBody,
+  ReinstateTeamBody,
+  ReinstateTeamQuery,
   StageGroupMatchesBody,
   StageGroupsBody,
   StageHistoryQuery,
@@ -502,6 +505,18 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
     io: 'input',
   },
   'admin.stages/[stageId]/teams.body': { schema: StageTeamsBody, io: 'input' },
+  'admin.stages/[stageId]/disqualify.body': {
+    schema: DisqualifyTeamBody,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/disqualify.delete.query': {
+    schema: ReinstateTeamQuery,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/disqualify.delete.body': {
+    schema: ReinstateTeamBody,
+    io: 'input',
+  },
   'admin.twitchChannels.create': { schema: TwitchChannelBody, io: 'input' },
   'admin.twitchChannels.update': { schema: TwitchChannelPatch, io: 'input' },
   'admin.adherents.create': { schema: AdherentCreateBody, io: 'input' },

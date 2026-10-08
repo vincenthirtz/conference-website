@@ -226,6 +226,54 @@ export async function stageTeamsDetailed(
   return { rows: data, error };
 }
 
+/** Inscription d'une équipe + état de disqualification (disqualify.ts). */
+export async function stageTeamDisqualification(
+  db: AdminDb,
+  tenantId: string,
+  stageId: string,
+  teamId: string
+) {
+  const { data, error } = await db
+    .from('stage_teams')
+    .select(
+      'team_id, disqualified_at, disqualification_mode, disqualification_reason, disqualified_by, team:team_id(id, name)'
+    )
+    .eq('tenant_id', tenantId)
+    .eq('stage_id', stageId)
+    .eq('team_id', teamId)
+    .maybeSingle();
+  return { row: data, error };
+}
+
+/**
+ * Pose (ou retire, valeurs `null`) la disqualification d'une inscription.
+ * `onlyIfNotDisqualified` : écriture conditionnelle (deux staff qui
+ * disqualifient en même temps → une seule écriture, l'autre lit 0 ligne).
+ */
+export async function setStageTeamDisqualification(
+  db: AdminDb,
+  tenantId: string,
+  stageId: string,
+  teamId: string,
+  patch: {
+    disqualified_at: string | null;
+    disqualification_mode: string | null;
+    disqualification_reason: string | null;
+    disqualified_by: string | null;
+  },
+  onlyIfNotDisqualified = false
+) {
+  let q = db
+    .from('stage_teams')
+    .update(patch)
+    .eq('tenant_id', tenantId)
+    .eq('stage_id', stageId)
+    .eq('team_id', teamId);
+  if (onlyIfNotDisqualified) q = q.is('disqualified_at', null);
+  const { data, error } = await q.select('team_id');
+  return { count: (data ?? []).length, error };
+}
+
 /** Sous-ensemble de `teamIds` inscrit à la phase. */
 export async function stageTeamIdsAmong(
   db: AdminDb,

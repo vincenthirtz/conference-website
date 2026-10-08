@@ -27,6 +27,60 @@ export async function activeStageMatches(
   return { rows: data, error };
 }
 
+/**
+ * Matchs d'une équipe dans la phase (disqualification) : non supprimés,
+ * statut parmi `statuses`. `teamId` est un UUID validé en amont (zod).
+ */
+export async function teamStageMatches(
+  db: AdminDb,
+  tenantId: string,
+  stageId: string,
+  teamId: string,
+  statuses: readonly string[]
+) {
+  const { data, error } = await db
+    .from('matches')
+    .select(
+      'id, status, round_number, team1_id, team2_id, forfeit_team_id, notes, scheduled_at'
+    )
+    .eq('tenant_id', tenantId)
+    .eq('stage_id', stageId)
+    .is('deleted_at', null)
+    .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
+    .in('status', statuses as string[])
+    .order('round_number', { ascending: true, nullsFirst: false })
+    .order('scheduled_at', { ascending: true, nullsFirst: false });
+  return { rows: data, error };
+}
+
+/**
+ * Annule un match encore ouvert : statut `cancelled`, scores et vainqueur
+ * vidés, note complétée. Conditionnel au statut (un match passé en
+ * `finished` entre la lecture et l'écriture n'est pas touché → 0 ligne).
+ */
+export async function cancelOpenMatch(
+  db: AdminDb,
+  tenantId: string,
+  matchId: string,
+  notes: string,
+  openStatuses: readonly string[]
+) {
+  const { data, error } = await db
+    .from('matches')
+    .update({
+      status: 'cancelled',
+      team1_score: null,
+      team2_score: null,
+      winner_team_id: null,
+      notes,
+    })
+    .eq('tenant_id', tenantId)
+    .eq('id', matchId)
+    .in('status', openStatuses as string[])
+    .select('id');
+  return { count: (data ?? []).length, error };
+}
+
 /** Idem, éventuellement limité à un round (auto-byes). */
 export async function activeStageMatchesInRound(
   db: AdminDb,

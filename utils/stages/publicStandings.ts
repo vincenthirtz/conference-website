@@ -19,6 +19,11 @@ import {
 } from './standings';
 import type { TiebreakerKey } from './tiebreakers';
 import { COUNTED_MATCH_STATUSES } from './countedMatches';
+import {
+  excludeAnnulledMatches,
+  readStageDisqualifications,
+  type DisqualificationMode,
+} from './disqualification';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
 
 /** Types de phase qui produisent un classement à points. */
@@ -46,6 +51,10 @@ export type PublicStandingRow = {
   /** Du plus ancien au plus récent. */
   form: FormResult[];
   tiebrokenBy: TiebreakerKey | null;
+  /** Équipe disqualifiée de la phase : classée en dernier, à badger. */
+  disqualified: boolean;
+  /** `forfeit` (matchs restants perdus) ou `annul` (matchs ignorés). */
+  disqualificationMode: DisqualificationMode | null;
 };
 
 export type PublicStandingsTable = {
@@ -134,6 +143,8 @@ export function enrichStandings(
       mapsLost,
       form: form.slice(-FORM_LENGTH),
       tiebrokenBy: s.tiebrokenBy ?? null,
+      disqualified: s.disqualified === true,
+      disqualificationMode: s.disqualificationMode ?? null,
     };
   });
 }
@@ -165,7 +176,7 @@ export async function readPublicStandings(
   if (!stages || stages.length === 0) return [];
 
   const stageIds = stages.map((s: { id: string }) => s.id);
-  const [matchesRes, stageTeamsRes] = await Promise.all([
+  const [matchesRes, stageTeamsRes, disqualifications] = await Promise.all([
     supabaseAdmin
       .from('matches')
       .select(
@@ -182,6 +193,7 @@ export async function readPublicStandings(
       .select('team:teams(id, name, slug, short_name, logo_url)')
       .eq('tenant_id', tenantId)
       .in('stage_id', stageIds),
+    readStageDisqualifications(tenantId, stageIds),
   ]);
   if (matchesRes.error) {
     logger.error('public standings matches error:', matchesRes.error);
@@ -217,7 +229,12 @@ export async function readPublicStandings(
     name: string;
     stage_type: string;
   }[]) {
-    const finished = finishedByStage.get(stage.id) ?? [];
+    // Matchs d'une disqualifiée en mode « annul » : ni joués, ni maps, ni
+    // forme — comme dans le classement officiel.
+    const finished = excludeAnnulledMatches(
+      finishedByStage.get(stage.id) ?? [],
+      disqualifications.get(stage.id) ?? new Map()
+    );
     try {
       if (stage.stage_type === 'group') {
         const grouped = await computeGroupedStandings(tenantId, stage.id);

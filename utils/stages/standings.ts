@@ -17,6 +17,12 @@ import {
 } from './tiebreakers';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
 import { isCountedMatch } from './countedMatches';
+import {
+  demoteDisqualified,
+  excludeAnnulledMatches,
+  readDisqualificationMap,
+  type DisqualificationMode,
+} from './disqualification';
 
 export type StageStanding = {
   teamId: string;
@@ -35,6 +41,12 @@ export type StageStanding = {
    * un classement qu'on ne peut pas expliquer est un classement qu'on conteste.
    */
   tiebrokenBy?: TiebreakerKey | null;
+  /**
+   * Équipe disqualifiée de la phase (utils/stages/disqualification) : classée
+   * après toutes les autres, jamais qualifiée. Absent = pas disqualifiée.
+   */
+  disqualified?: boolean;
+  disqualificationMode?: DisqualificationMode;
 };
 
 export type GroupedStandings = {
@@ -138,7 +150,12 @@ export async function computeStageStandings(
     throw new Error(`Failed to fetch matches: ${matchesErr.message}`);
   }
 
-  const matches = (matchesData || []) as DbMatch[];
+  // Disqualifiées en mode « annul » : leurs matchs sortent du calcul de tous.
+  const disqualified = await readDisqualificationMap(tenantId, stageId);
+  const matches = excludeAnnulledMatches(
+    (matchesData || []) as DbMatch[],
+    disqualified
+  );
   const finishedMatches = matches.filter(isCountedMatch);
 
   let raw: StageStanding[];
@@ -193,7 +210,12 @@ export async function computeStageStandings(
         }));
   }
 
-  const final = await applyTiebreakerOverrides(tenantId, stageId, raw);
+  // Les disqualifiées passent en queue APRÈS les overrides : un override de
+  // départage ne peut pas remonter une équipe disqualifiée.
+  const final = demoteDisqualified(
+    await applyTiebreakerOverrides(tenantId, stageId, raw),
+    disqualified
+  );
   // Cache uniquement les stages swiss (calcul coûteux, cf. case 'swiss').
   if (stageType === 'swiss' && !cacheHit) {
     setCachedStandings(stageId, final);
@@ -310,7 +332,9 @@ export async function computeGroupedStandings(
     .is('deleted_at', null);
 
   type GroupedMatchRow = DbMatch & { group_key: string | null };
-  const matches = (matchesData || []) as GroupedMatchRow[];
+  const disqualified = await readDisqualificationMap(tenantId, stageId);
+  const allMatches = (matchesData || []) as GroupedMatchRow[];
+  const matches = excludeAnnulledMatches(allMatches, disqualified);
   const finishedMatches = matches.filter(isCountedMatch);
 
   // 3) Index group_key par equipe (depuis settings)
@@ -318,9 +342,10 @@ export async function computeGroupedStandings(
   for (const [gk, ids] of Object.entries(groupAssignments)) {
     for (const tid of ids) teamToGroup.set(tid, gk);
   }
-  // Fallback : utiliser le group_key des matchs si settings vide
+  // Fallback : utiliser le group_key des matchs si settings vide (tous les
+  // matchs, annulés par disqualification compris : ils disent la poule).
   if (teamToGroup.size === 0) {
-    for (const m of matches) {
+    for (const m of allMatches) {
       if (!m.group_key) continue;
       if (m.team1_id && !teamToGroup.has(m.team1_id))
         teamToGroup.set(m.team1_id, m.group_key);
@@ -359,13 +384,19 @@ export async function computeGroupedStandings(
   const groups: Record<string, StageStanding[]> = {};
   for (const [gk, teams] of teamsByGroup) {
     const groupMatches = matchesByGroup.get(gk) || [];
-    const standings = computeGroupStandings(teams, groupMatches);
+    const standings = demoteDisqualified(
+      computeGroupStandings(teams, groupMatches),
+      disqualified
+    );
     groups[gk] = standings.map((s) => ({ ...s, groupKey: gk }));
   }
 
   const unassigned: StageStanding[] =
     unassignedTeams.length > 0
-      ? computeGroupStandings(unassignedTeams, []).map((s) => ({
+      ? demoteDisqualified(
+          computeGroupStandings(unassignedTeams, []),
+          disqualified
+        ).map((s) => ({
           ...s,
           groupKey: null,
         }))

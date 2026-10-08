@@ -150,11 +150,15 @@ export async function tryAutoAdvanceFromMatch(params: {
   // 4) Calculer les standings et choisir les equipes a avancer
   // Fallback DEFAULT_TENANT_ID si tenantId pas fourni : preserve la compat
   // des tests existants. En prod, applyScore passe maintenant le tenantId.
-  const standings = await computeStageStandings(
-    tenantId ?? DEFAULT_TENANT_ID,
-    stageId,
-    stage.stage_type || 'other'
-  );
+  // Une équipe disqualifiée n'est JAMAIS qualifiée, même si le nombre de
+  // places dépasse celui des équipes restantes.
+  const standings = (
+    await computeStageStandings(
+      tenantId ?? DEFAULT_TENANT_ID,
+      stageId,
+      stage.stage_type || 'other'
+    )
+  ).filter((s) => !s.disqualified);
 
   if (standings.length === 0) {
     return { triggered: false, reason: 'standings_empty' };

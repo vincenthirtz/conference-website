@@ -101,11 +101,14 @@ export async function autoSeed(
     );
   }
 
-  const standings = await computeStageStandings(
-    ctx.tenantId,
-    sourceStageId,
-    sourceStage.stage_type || 'other'
-  );
+  // Les disqualifiées du stage source ne sont jamais placées dans le bracket.
+  const standings = (
+    await computeStageStandings(
+      ctx.tenantId,
+      sourceStageId,
+      sourceStage.stage_type || 'other'
+    )
+  ).filter((s) => !s.disqualified);
   if (standings.length === 0) {
     throw fail(400, 'Aucun classement disponible pour le stage source.');
   }
@@ -428,7 +431,9 @@ export async function seedingPreview(
           sourceMatch.stage_type ?? 'other'
         );
         proposed = computeProposedSeeding({
-          standings: standings.map((s) => ({ teamId: s.teamId, rank: s.rank })),
+          standings: standings
+            .filter((s) => !s.disqualified)
+            .map((s) => ({ teamId: s.teamId, rank: s.rank })),
           bracketMatches: bracketMatches.map((m) => ({ matchId: m.id })),
           pattern,
         });

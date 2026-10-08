@@ -33,6 +33,8 @@ function row(
     mapsLost: losses * 2,
     form: [],
     tiebrokenBy: null,
+    disqualified: false,
+    disqualificationMode: null,
   };
 }
 

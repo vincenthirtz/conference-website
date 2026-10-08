@@ -112,10 +112,13 @@ export function buildFinalsPhase(input: {
   raceMatches: RaceMatch[];
 }): FinalsPhase {
   const rows = [...input.standings].sort((a, b) => a.rank - b.rank);
+  // Une équipe disqualifiée (classée en dernier) n'est ni projetée en finale
+  // ni rivale de personne.
+  const eligible = rows.filter((r) => !r.disqualified);
   const finals = [...input.finals].sort(
     (a, b) => (b.round_number ?? 0) - (a.round_number ?? 0)
   );
-  const qualifiers = Math.min(finals.length * 2, rows.length);
+  const qualifiers = Math.min(finals.length * 2, eligible.length);
 
   const open = input.raceMatches.filter(
     (m) => !m.is_bye && OPEN_STATUSES.has(m.status)
@@ -134,7 +137,7 @@ export function buildFinalsPhase(input: {
             seed,
             // Avant le premier match, le classement n'est qu'un ordre
             // d'inscription : aucune projection.
-            team: seasonStarted ? toTeam(rows[seed - 1]) : null,
+            team: seasonStarted ? toTeam(eligible[seed - 1]) : null,
             projected: true,
           };
     return {
@@ -149,15 +152,21 @@ export function buildFinalsPhase(input: {
     return { row: r, remaining, maxPoints: r.points + remaining * ppw };
   });
   const cutPoints =
-    qualifiers > 0 && rows.length >= qualifiers
-      ? rows[qualifiers - 1].points
+    qualifiers > 0 && eligible.length >= qualifiers
+      ? eligible[qualifiers - 1].points
       : null;
 
   const race: RaceRow[] = withMax.map(({ row, remaining, maxPoints }, idx) => {
+    if (row.disqualified) {
+      return { ...row, zone: null, remaining, maxPoints, status: 'eliminated' };
+    }
     let status: RaceStatus = 'contention';
     if (qualifiers > 0 && cutPoints !== null) {
       const rivals = withMax.filter(
-        (o) => o.row.teamId !== row.teamId && o.maxPoints >= row.points
+        (o) =>
+          o.row.teamId !== row.teamId &&
+          !o.row.disqualified &&
+          o.maxPoints >= row.points
       ).length;
       if (seasonOver) {
         status = idx < qualifiers ? 'qualified' : 'eliminated';

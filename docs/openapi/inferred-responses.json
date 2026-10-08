@@ -416,6 +416,28 @@
     "additionalProperties": {}
    }
   },
+  "DELETE /api/admin/stages/{stageId}/disqualify": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "matchesNotRestored": {
+      "type": "number"
+     },
+     "reinstated": {
+      "type": "boolean",
+      "const": true
+     },
+     "teamId": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "matchesNotRestored",
+     "reinstated",
+     "teamId"
+    ]
+   }
+  },
   "DELETE /api/admin/stages/{stageId}/teams": {
    "200": {
     "type": "object",
@@ -5279,6 +5301,7 @@
           "discord_repair",
           "discord_revoke_access",
           "discord_revoke_role",
+          "disqualify_team",
           "download_association_document",
           "enable_webhook",
           "end_event_run",
@@ -5338,6 +5361,7 @@
           "record_scrim_result",
           "redeliver_webhook",
           "register_team",
+          "reinstate_team",
           "reject",
           "reject_circuit_partner",
           "reject_guild_link",
@@ -6339,6 +6363,7 @@
           "discord_repair",
           "discord_revoke_access",
           "discord_revoke_role",
+          "disqualify_team",
           "download_association_document",
           "enable_webhook",
           "end_event_run",
@@ -6398,6 +6423,7 @@
           "record_scrim_result",
           "redeliver_webhook",
           "register_team",
+          "reinstate_team",
           "reject",
           "reject_circuit_partner",
           "reject_guild_link",
@@ -8474,6 +8500,7 @@
           "discord_repair",
           "discord_revoke_access",
           "discord_revoke_role",
+          "disqualify_team",
           "download_association_document",
           "enable_webhook",
           "end_event_run",
@@ -8533,6 +8560,7 @@
           "record_scrim_result",
           "redeliver_webhook",
           "register_team",
+          "reinstate_team",
           "reject",
           "reject_circuit_partner",
           "reject_guild_link",
@@ -13731,6 +13759,7 @@
           "discord_repair",
           "discord_revoke_access",
           "discord_revoke_role",
+          "disqualify_team",
           "download_association_document",
           "enable_webhook",
           "end_event_run",
@@ -13790,6 +13819,7 @@
           "record_scrim_result",
           "redeliver_webhook",
           "register_team",
+          "reinstate_team",
           "reject",
           "reject_circuit_partner",
           "reject_guild_link",
@@ -14875,6 +14905,35 @@
       "items": {
        "type": "object",
        "properties": {
+        "disqualification_mode": {
+         "type": [
+          "string",
+          "null"
+         ],
+         "enum": [
+          "annul",
+          "forfeit",
+          null
+         ]
+        },
+        "disqualification_reason": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "disqualified_at": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "disqualified_by": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
         "is_substitute": {
          "type": "boolean"
         },
@@ -14927,6 +14986,10 @@
         }
        },
        "required": [
+        "disqualification_mode",
+        "disqualification_reason",
+        "disqualified_at",
+        "disqualified_by",
         "is_substitute",
         "notes",
         "seed",
@@ -20090,6 +20153,7 @@
           "discord_repair",
           "discord_revoke_access",
           "discord_revoke_role",
+          "disqualify_team",
           "download_association_document",
           "enable_webhook",
           "end_event_run",
@@ -20149,6 +20213,7 @@
           "record_scrim_result",
           "redeliver_webhook",
           "register_team",
+          "reinstate_team",
           "reject",
           "reject_circuit_partner",
           "reject_guild_link",
@@ -24752,6 +24817,7 @@
           "discord_repair",
           "discord_revoke_access",
           "discord_revoke_role",
+          "disqualify_team",
           "download_association_document",
           "enable_webhook",
           "end_event_run",
@@ -24811,6 +24877,7 @@
           "record_scrim_result",
           "redeliver_webhook",
           "register_team",
+          "reinstate_team",
           "reject",
           "reject_circuit_partner",
           "reject_guild_link",
@@ -66256,6 +66323,106 @@
     "required": [
      "clonedMatchCount",
      "stage"
+    ]
+   }
+  },
+  "POST /api/admin/stages/{stageId}/disqualify": {
+   "201": {
+    "type": "object",
+    "properties": {
+     "cancelled": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "complete": {
+      "type": "boolean"
+     },
+     "disqualifiedAt": {
+      "type": "string"
+     },
+     "failed": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "error": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "error",
+       "id"
+      ]
+     },
+     "forfeited": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "annul",
+       "forfeit"
+      ]
+     },
+     "notProcessed": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "skipped": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "reason": {
+         "type": "string",
+         "enum": [
+          "disputed",
+          "no_opponent",
+          "status_changed"
+         ]
+        }
+       },
+       "required": [
+        "id",
+        "reason"
+       ]
+      }
+     },
+     "teamId": {
+      "type": "string"
+     },
+     "teamName": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "cancelled",
+     "complete",
+     "disqualifiedAt",
+     "failed",
+     "forfeited",
+     "mode",
+     "notProcessed",
+     "skipped",
+     "teamId",
+     "teamName"
     ]
    }
   },

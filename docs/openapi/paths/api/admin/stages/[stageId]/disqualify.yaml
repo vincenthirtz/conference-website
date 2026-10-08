@@ -1,0 +1,184 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+post:
+  summary: Disqualify a team from a stage.
+  description: |
+    Guard `manage_tournaments`. Marks the team as disqualified from the stage
+    (`stage_teams.disqualified_at`, `disqualification_mode`,
+    `disqualification_reason`, `disqualified_by`), then processes its
+    remaining matches (status pending / ongoing / postponed, not deleted),
+    sequentially:
+    - `forfeit`: each match becomes a walkover lost by the team
+      (`applyMatchScore`: score 0 vs required wins, predictions voided,
+      bot events `match.finished` + `team.forfeit`, bracket propagation).
+    - `annul`: each match is cancelled (scores / winner cleared, note
+      appended), its open predictions settled as void. Every match of the
+      team, whatever its status, is then ignored by the standings.
+    Played matches are never modified. Disputed matches, and (forfeit mode)
+    matches without a known opponent, are left untouched and listed in
+    `skipped`. Processing stops at the first failing match: the
+    disqualification stays in place and the 201 response lists `failed` and
+    `notProcessed` with `complete: false`.
+    In standings (admin and public) a disqualified team is ranked after all
+    other teams and is never advanced.
+  operationId: adminDisqualifyStageTeam
+  x-zod-query: admin.stages/[stageId].query
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.stages/[stageId]/disqualify.body
+          type: object
+          required:
+            - team_id
+            - mode
+            - reason
+          properties:
+            team_id:
+              type: string
+              format: uuid
+            mode:
+              type: string
+              enum:
+                - forfeit
+                - annul
+            reason:
+              type: string
+              minLength: 3
+              maxLength: 500
+  responses:
+    '201':
+      description: Team disqualified; per-match outcome.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              mode:
+                type: string
+                enum:
+                  - forfeit
+                  - annul
+              teamId:
+                type: string
+                format: uuid
+              teamName:
+                type: string
+                nullable: true
+              disqualifiedAt:
+                type: string
+                format: date-time
+              forfeited:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+              cancelled:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+              skipped:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    reason:
+                      type: string
+                      enum:
+                        - disputed
+                        - no_opponent
+                        - status_changed
+              failed:
+                type: object
+                nullable: true
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  error:
+                    type: string
+              notProcessed:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+              complete:
+                type: boolean
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
+delete:
+  summary: Reinstate a disqualified team in a stage.
+  description: |
+    Guard `manage_tournaments`. Clears the four disqualification columns.
+    Forfeited / cancelled matches are NOT restored: `matchesNotRestored`
+    counts the team's matches of the stage still forfeited by it or
+    cancelled. `team_id` is read from the query string, or from the body.
+  operationId: adminReinstateStageTeam
+  x-zod-query: admin.stages/[stageId]/disqualify.delete.query
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  parameters:
+    - name: team_id
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          x-zod: admin.stages/[stageId]/disqualify.delete.body
+          type: object
+          properties:
+            team_id:
+              type: string
+              format: uuid
+  responses:
+    '200':
+      description: Team reinstated.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              teamId:
+                type: string
+                format: uuid
+              reinstated:
+                type: boolean
+              matchesNotRestored:
+                type: integer
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
