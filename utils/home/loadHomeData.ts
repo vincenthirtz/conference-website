@@ -22,7 +22,11 @@ import {
   type HomeMatchday,
 } from '@/utils/home/loadNextMatchday';
 import { getWallClockParts, SITE_TIMEZONE } from '@/utils/timezone';
-import { readPublicStandings } from '@/utils/stages/publicStandings';
+import {
+  readPublicStandings,
+  type PublicStandingRow,
+} from '@/utils/stages/publicStandings';
+import type { DisqualificationMode } from '@/utils/stages/disqualification';
 import { fetchTwitchClips } from '@/utils/twitch';
 
 // Marge de troncature du `content` des news de la home. HomeNewsSection ne rend
@@ -89,6 +93,14 @@ export type HomeStandingRow = {
   points: number;
   /** Différence de maps, déjà calculée : l'accueil ne recompte pas. */
   diff: number;
+  /**
+   * Équipe disqualifiée de la phase. Le classement public la range déjà en
+   * dernier (et ignore ses matchs en mode `annul`) ; l'accueil n'a qu'à la
+   * badger, sinon sa place ressemble à une mauvaise saison.
+   */
+  disqualified: boolean;
+  /** `forfeit` (matchs restants perdus) ou `annul` (matchs ignorés). */
+  disqualificationMode: DisqualificationMode | null;
 };
 
 /** Une équipe telle que la bande d'accueil en a besoin, et rien de plus. */
@@ -341,6 +353,43 @@ export async function loadCountdownSetting(): Promise<string | null> {
 }
 
 /**
+ * Lignes du mini-classement de l'accueil, depuis le classement public.
+ * PURE. Le rang et l'ordre ne sont PAS recalculés : une disqualifiée arrive
+ * déjà en dernier, ses matchs déjà retirés en mode `annul`
+ * (`readPublicStandings` → `computeStageStandings`). Tant que personne n'a
+ * joué, le classement n'est qu'un ordre d'inscription : rien à montrer.
+ */
+export function toHomeStandingRows(
+  rows: PublicStandingRow[]
+): HomeStandingRow[] {
+  if (!rows.some((r) => r.played > 0)) return [];
+  return rows.map((r) => ({
+    rank: r.rank,
+    teamId: r.teamId,
+    name: r.teamName,
+    shortName: r.shortName,
+    slug: r.slug,
+    logoUrl: r.logoUrl,
+    played: r.played,
+    wins: r.wins,
+    losses: r.losses,
+    points: r.points,
+    diff: r.mapsWon - r.mapsLost,
+    disqualified: r.disqualified === true,
+    disqualificationMode: r.disqualificationMode ?? null,
+  }));
+}
+
+/** Mini-classement de l'accueil : la première phase à points du tournoi. */
+export async function loadHomeStandings(
+  tenantId: string,
+  tournamentId: string
+): Promise<HomeStandingRow[]> {
+  const tables = await readPublicStandings(tenantId, tournamentId);
+  return toHomeStandingRows(tables[0]?.rows ?? []);
+}
+
+/**
  * Charge l'ensemble des données de la home. Sortie byte-identique à
  * l'ancien `getStaticProps` de `pages/index.tsx`.
  */
@@ -417,30 +466,12 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
     }
 
     // Le classement de la saison en cours. Même source que l'onglet Classement
-    // (confrontation directe et départages du staff compris) : deux calculs
-    // finiraient par se contredire, et c'est le classement qu'on conteste.
+    // (confrontation directe, départages du staff, disqualifications compris) :
+    // deux calculs finiraient par se contredire, et c'est le classement qu'on
+    // conteste.
     if (upcomingTournament?.id) {
       try {
-        const tables = await readPublicStandings(
-          tenantId,
-          upcomingTournament.id
-        );
-        const rows = tables[0]?.rows ?? [];
-        standings = rows.some((r) => r.played > 0)
-          ? rows.map((r) => ({
-              rank: r.rank,
-              teamId: r.teamId,
-              name: r.teamName,
-              shortName: r.shortName,
-              slug: r.slug,
-              logoUrl: r.logoUrl,
-              played: r.played,
-              wins: r.wins,
-              losses: r.losses,
-              points: r.points,
-              diff: r.mapsWon - r.mapsLost,
-            }))
-          : [];
+        standings = await loadHomeStandings(tenantId, upcomingTournament.id);
       } catch (error) {
         // Un classement illisible n'est pas une panne de la home.
         logger.error('[loadHomeData] standings error', error);

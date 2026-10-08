@@ -15,6 +15,7 @@ import type {
   RaceRow,
 } from '@/utils/tournament/finalsPhase';
 import nsTournamentBracket from '@/lib/i18n/locales/fr/tournamentBracket';
+import DisqualifiedBadge from '@/components/tournament/DisqualifiedBadge';
 
 type Dict = typeof nsTournamentBracket.fr;
 
@@ -277,18 +278,25 @@ function RaceTable({
                   </td>
                   <td className="py-2">
                     <span className="flex min-w-0 flex-col">
-                      {r.slug ? (
-                        <Link
-                          href={`/team/${r.slug}`}
-                          className="truncate font-medium text-gray-100 hover:text-white hover:underline"
-                        >
-                          {r.teamName}
-                        </Link>
-                      ) : (
-                        <span className="truncate font-medium text-gray-100">
-                          {r.teamName}
-                        </span>
-                      )}
+                      <span className="flex min-w-0 items-center gap-2">
+                        {r.slug ? (
+                          <Link
+                            href={`/team/${r.slug}`}
+                            className="truncate font-medium text-gray-100 hover:text-white hover:underline"
+                          >
+                            {r.teamName}
+                          </Link>
+                        ) : (
+                          <span className="truncate font-medium text-gray-100">
+                            {r.teamName}
+                          </span>
+                        )}
+                        {/* Disqualifiée : « éliminée » seul laisserait croire
+                            à une course perdue aux points. */}
+                        {r.disqualified && (
+                          <DisqualifiedBadge mode={r.disqualificationMode} />
+                        )}
+                      </span>
                       {r.zone !== null && finalNames[r.zone] && (
                         <span className="text-[10px] uppercase tracking-wider text-[var(--color-violet-light)]">
                           {finalNames[r.zone]}

@@ -27,6 +27,8 @@ import nsTournamentStats from '@/lib/i18n/locales/fr/tournamentStats';
 import { containsFfaStage } from '@/utils/stages/ffaStage';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
 import { readPublicStandings } from '@/utils/stages/publicStandings';
+import type { DisqualificationMode } from '@/utils/stages/disqualification';
+import DisqualifiedBadge from '@/components/tournament/DisqualifiedBadge';
 import {
   bracketTabMode,
   type BracketTabMode,
@@ -102,6 +104,11 @@ type Props = {
    * page triait par winrate, et son « Top 3 » contredisait le classement.
    */
   officialOrder: string[];
+  /**
+   * Équipes disqualifiées d'une phase à points → mode. Le classement officiel
+   * les range déjà en dernier ; la page les badge et les sort du Top 3.
+   */
+  disqualified: Record<string, DisqualificationMode>;
   hasReviews: boolean;
   seo: SeoProps;
 };
@@ -241,6 +248,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
         hasFfaStage,
         bracketTab,
         officialOrder: [],
+        disqualified: {},
         hasReviews,
         seo: buildStatsSeo(tournament as Tournament),
       },
@@ -283,6 +291,12 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
         .flatMap((tb) => tb.rows)
         .sort((a, b) => a.rank - b.rank)
         .map((r) => r.teamId),
+      disqualified: Object.fromEntries(
+        standingsTables
+          .flatMap((tb) => tb.rows)
+          .filter((r) => r.disqualified)
+          .map((r) => [r.teamId, r.disqualificationMode ?? 'forfeit'])
+      ),
       hasReviews,
       seo: buildStatsSeo(tournament as Tournament),
     },
@@ -298,6 +312,7 @@ export default function TournamentStatsPage({
   hasFfaStage,
   bracketTab,
   officialOrder,
+  disqualified,
   hasReviews,
 }: Props) {
   const t = useT(nsTournamentStats);
@@ -328,7 +343,10 @@ export default function TournamentStatsPage({
     return b.matchesPlayed - a.matchesPlayed;
   });
 
-  const topTeams = sortedByWinrate.slice(0, 3);
+  // Une disqualifiée n'a rien à faire sur un podium, même à trois équipes.
+  const topTeams = sortedByWinrate
+    .filter((s) => !disqualified[s.teamId])
+    .slice(0, 3);
 
   // Meilleur winrate / meilleure diff : à égalité, nommer UNE équipe revenait
   // à en choisir une au hasard (4 équipes à 100 % en début de saison).
@@ -542,8 +560,13 @@ export default function TournamentStatsPage({
                               )}
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-gray-100 text-[11px]">
+                              <span className="flex items-center gap-1.5 text-gray-100 text-[11px]">
                                 {t.teamShortName || t.teamName}
+                                {disqualified[t.teamId] && (
+                                  <DisqualifiedBadge
+                                    mode={disqualified[t.teamId]}
+                                  />
+                                )}
                               </span>
                               {t.teamShortName && (
                                 <span className="text-[10px] text-gray-500">

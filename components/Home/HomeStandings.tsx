@@ -16,6 +16,11 @@
 // de lien « classement complet » non plus (retiré le 2026-09-20) : l'accueil
 // répond à la question sur place, l'onglet Classement du tournoi reste la
 // porte d'entrée pour le détail.
+//
+// Une équipe disqualifiée arrive déjà en dernier (et, en mode « annul », ses
+// matchs sont déjà retirés pour tout le monde) : on lui pose le même badge
+// que sur l'onglet Classement, sans quoi sa place ressemblerait à une
+// mauvaise saison.
 
 import type { JSX } from 'react';
 import Link from 'next/link';
@@ -23,6 +28,7 @@ import Image from 'next/image';
 import { useT } from '@/lib/i18n/useT';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 import type { HomeStandingRow } from '@/utils/home/loadHomeData';
+import DisqualifiedBadge from '@/components/tournament/DisqualifiedBadge';
 
 function Monogram({ row }: { row: HomeStandingRow }) {
   return (
@@ -108,11 +114,17 @@ export default function HomeStandings({
                     >
                       <Monogram row={row} />
                       <span className="truncate">{row.name}</span>
+                      {row.disqualified && (
+                        <DisqualifiedBadge mode={row.disqualificationMode} />
+                      )}
                     </Link>
                   ) : (
                     <span className="flex items-center gap-2 text-white">
                       <Monogram row={row} />
                       <span className="truncate">{row.name}</span>
+                      {row.disqualified && (
+                        <DisqualifiedBadge mode={row.disqualificationMode} />
+                      )}
                     </span>
                   )}
                 </td>
