@@ -7,6 +7,8 @@ import Image from 'next/image';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminStageGroups from '@/lib/i18n/locales/admin-fr/adminStageGroups';
 import Chip from '@/features/admin/_shared/ui/Chip';
+import type { DisqualificationMode } from '../client';
+import DisqualifiedBadge from './DisqualifiedBadge';
 
 type Dict = typeof nsAdminStageGroups.fr;
 
@@ -26,6 +28,9 @@ export type GroupStandingRow = {
   losses: number;
   draws: number;
   score: number;
+  /** Disqualifiée de la phase : classée en dernier, jamais qualifiée. */
+  disqualified?: boolean;
+  disqualificationMode?: DisqualificationMode;
 };
 
 export function GroupLabel({ groupKey }: { groupKey: string }) {
@@ -121,8 +126,15 @@ export function GroupStandingsTable({
                 className="border-t border-[var(--line,rgba(194,196,201,.12))]"
               >
                 <td className="py-1 text-[var(--t4,#807984)]">{s.rank}</td>
-                <td className="max-w-[140px] truncate py-1 font-sans text-[var(--t1,#f4edf7)]">
-                  {s.teamName || s.teamId.slice(0, 6)}
+                <td className="py-1 font-sans text-[var(--t1,#f4edf7)]">
+                  <span className="flex items-center gap-1">
+                    <span className="max-w-[140px] truncate">
+                      {s.teamName || s.teamId.slice(0, 6)}
+                    </span>
+                    {s.disqualified && (
+                      <DisqualifiedBadge mode={s.disqualificationMode} />
+                    )}
+                  </span>
                 </td>
                 <td className="py-1 text-center text-[var(--lf,#7fca65)]">
                   {s.wins}

@@ -64,4 +64,69 @@ export default adminNs('adminStageTeams', {
   removing: 'Retrait…',
   remove: 'Retirer',
   stageNotFound: 'Phase introuvable.',
+
+  // --- Disqualification -----------------------------------------------
+  disqualify: 'Disqualifier',
+  reinstate: 'Réintégrer',
+  dqBadge: 'Disqualifiée',
+  dqModeForfeitShort: 'Matchs restants perdus par forfait',
+  dqModeAnnulShort: 'Tous ses résultats annulés',
+  dqBadgeTitle: 'Disqualifiée — {mode}',
+  dqBadgeTitleReason: 'Disqualifiée — {mode}. Motif : {reason}',
+  dqModalTitle: 'Disqualifier {team}',
+  dqModalIntro:
+    "L'équipe sera classée dernière de la phase, avec un badge « Disqualifiée », et ne pourra plus se qualifier. Choisis ce que deviennent ses matchs :",
+  dqModeLegend: 'Que deviennent ses matchs ?',
+  dqModeForfeitTitle: 'Garder les matchs joués',
+  dqModeForfeitDesc:
+    "Les matchs déjà joués gardent leur résultat. Ses matchs restants sont déclarés perdus par forfait : l'adversaire gagne (2-0 en BO3, etc.). Les pronostics sur ces matchs sont annulés.",
+  dqModeAnnulTitle: 'Annuler tous ses résultats',
+  dqModeAnnulDesc:
+    "Aucun de ses matchs ne compte plus au classement, pour personne : les matchs joués restent dans l'historique mais sont ignorés, ses matchs restants sont annulés. Les coins et pronostics déjà versés sur les matchs joués ne sont pas repris.",
+  dqReasonLabel: 'Motif (obligatoire)',
+  dqReasonPlaceholder:
+    'Ex. : triche avérée, abandon annoncé sur Discord, joueuse non éligible…',
+  dqReasonHelp: 'Entre 3 et 500 caractères. Visible dans le journal staff.',
+  dqSummaryPick: 'Choisis un mode pour voir ce qui va se passer.',
+  dqSummaryForfeit:
+    '{team} sera classée dernière ; ses matchs restants seront perdus par forfait.',
+  dqSummaryAnnul:
+    '{team} sera classée dernière ; ses matchs restants seront annulés et aucun de ses résultats ne comptera plus.',
+  dqSummaryCaveat:
+    "Les matchs en litige ne sont pas touchés : ils seront à traiter à la main. Réintégrer l'équipe plus tard ne restaurera pas ses matchs.",
+  dqCancel: 'Annuler',
+  dqConfirm: 'Disqualifier',
+  dqSubmitting: 'Disqualification…',
+  dqToastForfeit_one: '{team} disqualifiée : {count} match perdu par forfait.',
+  dqToastForfeit_other:
+    '{team} disqualifiée : {count} matchs perdus par forfait.',
+  dqToastAnnul_one: '{team} disqualifiée : {count} match annulé.',
+  dqToastAnnul_other: '{team} disqualifiée : {count} matchs annulés.',
+  dqErr: 'La disqualification a échoué.',
+  dqErrAlready: 'Cette équipe est déjà disqualifiée de la phase.',
+  dqErrCompleted:
+    'Le tournoi est terminé : rouvre-le avant de disqualifier une équipe.',
+  dqErrNotInStage: "Cette équipe n'est plus inscrite à la phase.",
+  dqReportTitle: '{team} est disqualifiée, mais des matchs restent à traiter',
+  dqReportIntro:
+    "Ces matchs n'ont pas été modifiés. Ouvre-les pour les régler à la main :",
+  dqReportIncomplete:
+    "Le traitement s'est arrêté sur une erreur : les matchs suivants n'ont pas été traités.",
+  dqSkipDisputed: 'en litige',
+  dqSkipNoOpponent: "pas d'adversaire",
+  dqSkipStatusChanged: 'statut modifié entre-temps',
+  dqFailed: 'échec : {error}',
+  dqNotProcessed: 'non traité',
+  dqOpenMatch: 'Ouvrir le match {id}',
+  dqReportDismiss: 'Masquer',
+  rsConfirmTitle: 'Réintégrer {team} ?',
+  rsConfirmSubtitle:
+    "L'équipe retrouve sa place normale au classement et peut de nouveau se qualifier. Ses matchs perdus par forfait ou annulés ne sont PAS restaurés : corrige-les à la main si besoin.",
+  rsToast: '{team} réintégrée.',
+  rsToastNotRestored_one:
+    '{team} réintégrée. {count} match reste en forfait ou annulé : à corriger à la main si besoin.',
+  rsToastNotRestored_other:
+    '{team} réintégrée. {count} matchs restent en forfait ou annulés : à corriger à la main si besoin.',
+  rsErr: 'La réintégration a échoué.',
+  rsErrNotDisqualified: "Cette équipe n'est pas disqualifiée de la phase.",
 });

@@ -7,7 +7,11 @@ import {
   rubanInset,
   rubanMuted,
 } from '@/features/admin/_shared/ui/ruban';
-import type { TiebreakerOverride } from '@/features/admin/stages/client';
+import type {
+  DisqualificationMode,
+  TiebreakerOverride,
+} from '@/features/admin/stages/client';
+import DisqualifiedBadge from '@/features/admin/stages/ui/DisqualifiedBadge';
 import {
   type OverrideDraft,
   validateOverrideDraft,
@@ -29,6 +33,9 @@ export type AdvanceStanding = {
    * classement qu'on conteste — et c'est le staff qui doit pouvoir répondre.
    */
   tiebrokenBy?: string | null;
+  /** Disqualifiée de la phase : classée en dernier, jamais qualifiée. */
+  disqualified?: boolean;
+  disqualificationMode?: DisqualificationMode;
 };
 
 /**
@@ -66,6 +73,11 @@ const StandingRow = React.memo(function StandingRow({
       </td>
       <td className="px-3 py-2 font-medium text-[var(--t1,#f4edf7)]">
         {s.teamName || s.teamId.slice(0, 8)}
+        {s.disqualified && (
+          <span className="ml-2">
+            <DisqualifiedBadge mode={s.disqualificationMode} />
+          </span>
+        )}
       </td>
       <td className="px-3 py-2 text-center font-mono text-[var(--lf,#7fca65)]">
         {s.wins}

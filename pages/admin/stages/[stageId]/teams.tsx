@@ -11,8 +11,13 @@ import { withStaffPage } from '@/utils/staff';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
 import { withAdminQuery } from '@/features/admin/_shared/query';
-import { stageUrls } from '@/features/admin/stages/client';
+import {
+  type StageTeamDisqualificationFields,
+  stageUrls,
+} from '@/features/admin/stages/client';
 import { useStageTeams } from '@/features/admin/stages/hooks/useStageTeams';
+import { useStageTeamDisqualification } from '@/features/admin/stages/hooks/useStageTeamDisqualification';
+import { DisqualificationNote } from '@/features/admin/stages/ui/DisqualifiedBadge';
 import { useTournamentTeams } from '@/features/admin/tournaments/hooks/useTournamentTeams';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -65,7 +70,7 @@ type StageTeam = {
     short_name: string | null;
     logo_url: string | null;
   } | null;
-};
+} & Partial<StageTeamDisqualificationFields>;
 
 type StageTeamsApiResponse = {
   stageId: string;
@@ -105,6 +110,7 @@ function AdminStageTeamsPage(_props: StaffProps) {
   const { confirm, dialog } = useConfirmDialog();
   const { adminFetchJson } = useAdminFetch();
   const { mutateJson: addTeamMutate } = useIdempotentMutation();
+  const dq = useStageTeamDisqualification(String(stageId ?? ''));
 
   const stageTeamsQuery = useStageTeams<StageTeamsApiResponse>(
     String(stageId ?? '')
@@ -401,6 +407,11 @@ function AdminStageTeamsPage(_props: StaffProps) {
                 {st.team.short_name}
               </span>
             )}
+            <DisqualificationNote
+              at={st.disqualified_at}
+              mode={st.disqualification_mode}
+              reason={st.disqualification_reason}
+            />
           </span>
         </span>
       ),
@@ -429,6 +440,16 @@ function AdminStageTeamsPage(_props: StaffProps) {
               {t.viewTeam}
             </AdminButtonLink>
           )}
+          <AdminButton
+            variant={st.disqualified_at ? 'secondary' : 'danger'}
+            size="xs"
+            disabled={dq.busyTeamId === st.team_id}
+            onClick={() =>
+              st.disqualified_at ? dq.reinstate(st) : dq.openDisqualify(st)
+            }
+          >
+            {st.disqualified_at ? t.reinstate : t.disqualify}
+          </AdminButton>
           <AdminButton
             variant="danger"
             size="xs"
@@ -475,6 +496,7 @@ function AdminStageTeamsPage(_props: StaffProps) {
         <AdminPageHeader title={t.heading} subtitle={t.subtitle} />
 
         {errorMsg && <div className={`mb-4 ${ERR_BOX}`}>{errorMsg}</div>}
+        {dq.ui}
         {loading && (
           <div className={`${CARD} text-sm text-[var(--t3,#a39ba6)]`}>
             {t.loadingTeams}

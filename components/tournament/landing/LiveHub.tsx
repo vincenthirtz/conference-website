@@ -21,6 +21,7 @@ import type {
   LiveHub as LiveHubData,
 } from '@/utils/tournament/liveHub';
 import type { PublicStandingsTable } from '@/utils/stages/publicStandings';
+import DisqualifiedBadge from '@/components/tournament/DisqualifiedBadge';
 import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
 const TZ = 'Europe/Paris';
@@ -269,6 +270,9 @@ function StandingsMini({ table, t }: { table: PublicStandingsTable; t: Dict }) {
                     <span className="truncate text-gray-100">
                       {row.teamName}
                     </span>
+                  )}
+                  {row.disqualified && (
+                    <DisqualifiedBadge mode={row.disqualificationMode} />
                   )}
                 </span>
               </td>

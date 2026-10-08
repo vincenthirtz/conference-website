@@ -63,4 +63,68 @@ export default {
   removing: 'Removing…',
   remove: 'Remove',
   stageNotFound: 'Stage not found.',
+
+  // --- Disqualification -----------------------------------------------
+  disqualify: 'Disqualify',
+  reinstate: 'Reinstate',
+  dqBadge: 'Disqualified',
+  dqModeForfeitShort: 'Remaining matches lost by forfeit',
+  dqModeAnnulShort: 'All results voided',
+  dqBadgeTitle: 'Disqualified — {mode}',
+  dqBadgeTitleReason: 'Disqualified — {mode}. Reason: {reason}',
+  dqModalTitle: 'Disqualify {team}',
+  dqModalIntro:
+    'The team will be ranked last in this stage with a “Disqualified” badge, and can no longer qualify. Choose what happens to its matches:',
+  dqModeLegend: 'What happens to its matches?',
+  dqModeForfeitTitle: 'Keep played matches',
+  dqModeForfeitDesc:
+    'Matches already played keep their result. Its remaining matches are declared lost by forfeit: the opponent wins (2-0 in a Bo3, and so on). Predictions on those matches are voided.',
+  dqModeAnnulTitle: 'Void all its results',
+  dqModeAnnulDesc:
+    'None of its matches count towards the standings any more, for anyone: played matches stay in the history but are ignored, and its remaining matches are cancelled. Coins and predictions already paid out on played matches are not clawed back.',
+  dqReasonLabel: 'Reason (required)',
+  dqReasonPlaceholder:
+    'e.g. confirmed cheating, withdrawal announced on Discord, ineligible player…',
+  dqReasonHelp: 'Between 3 and 500 characters. Shown in the staff log.',
+  dqSummaryPick: 'Pick an option to see what will happen.',
+  dqSummaryForfeit:
+    '{team} will be ranked last; its remaining matches will be lost by forfeit.',
+  dqSummaryAnnul:
+    '{team} will be ranked last; its remaining matches will be cancelled and none of its results will count any more.',
+  dqSummaryCaveat:
+    'Disputed matches are left untouched and will need handling by hand. Reinstating the team later will not restore its matches.',
+  dqCancel: 'Cancel',
+  dqConfirm: 'Disqualify',
+  dqSubmitting: 'Disqualifying…',
+  dqToastForfeit_one: '{team} disqualified: {count} match lost by forfeit.',
+  dqToastForfeit_other: '{team} disqualified: {count} matches lost by forfeit.',
+  dqToastAnnul_one: '{team} disqualified: {count} match cancelled.',
+  dqToastAnnul_other: '{team} disqualified: {count} matches cancelled.',
+  dqErr: 'Disqualification failed.',
+  dqErrAlready: 'This team is already disqualified from the stage.',
+  dqErrCompleted:
+    'The tournament is completed: reopen it before disqualifying a team.',
+  dqErrNotInStage: 'This team is no longer in the stage.',
+  dqReportTitle: '{team} is disqualified, but some matches still need handling',
+  dqReportIntro:
+    'These matches were left unchanged. Open them to sort them out by hand:',
+  dqReportIncomplete:
+    'Processing stopped on an error: the following matches were not processed.',
+  dqSkipDisputed: 'disputed',
+  dqSkipNoOpponent: 'no opponent',
+  dqSkipStatusChanged: 'status changed in the meantime',
+  dqFailed: 'failed: {error}',
+  dqNotProcessed: 'not processed',
+  dqOpenMatch: 'Open match {id}',
+  dqReportDismiss: 'Dismiss',
+  rsConfirmTitle: 'Reinstate {team}?',
+  rsConfirmSubtitle:
+    'The team gets its normal place back in the standings and can qualify again. Its forfeited or cancelled matches are NOT restored: fix them by hand if needed.',
+  rsToast: '{team} reinstated.',
+  rsToastNotRestored_one:
+    '{team} reinstated. {count} match is still forfeited or cancelled: fix it by hand if needed.',
+  rsToastNotRestored_other:
+    '{team} reinstated. {count} matches are still forfeited or cancelled: fix them by hand if needed.',
+  rsErr: 'Reinstatement failed.',
+  rsErrNotDisqualified: 'This team is not disqualified from the stage.',
 };

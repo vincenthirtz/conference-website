@@ -23,6 +23,7 @@ import {
 import type { TiebreakerKey } from '@/utils/stages/tiebreakers';
 import { useT, format } from '@/lib/i18n/useT';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
+import DisqualifiedBadge from '@/components/tournament/DisqualifiedBadge';
 import nsTournamentStandings from '@/lib/i18n/locales/fr/tournamentStandings';
 import {
   bracketTabMode,
@@ -308,6 +309,9 @@ function StandingRow({
         )}
       </span>
       <span className="truncate">{row.teamName}</span>
+      {row.disqualified && (
+        <DisqualifiedBadge mode={row.disqualificationMode} />
+      )}
     </span>
   );
 
