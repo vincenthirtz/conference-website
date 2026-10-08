@@ -61,7 +61,15 @@ const TcgOverlaySection = lazyPanel(
 
 type TournamentOption = { id: string; name: string; slug: string | null };
 
-type SsrProps = OverlayAccess & { tournaments: TournamentOption[] };
+type SsrProps = OverlayAccess & {
+  tournaments: TournamentOption[];
+  /**
+   * Tournoi du vote MVP du public NON CLOS le plus récent (ouvert, ou échu
+   * sans clôture), présélectionné à la place du plus récent : sans ça, un
+   * vote de la Cup restait invisible derrière un événement créé après elle.
+   */
+  activePollTournamentId: string | null;
+};
 
 const TABS_ID = 'diffusion-overlays';
 
@@ -72,16 +80,34 @@ export const getServerSideProps = withStaffPage<SsrProps>(
   'caster',
   async (_ctx, staffCtx) => {
     const access = await readOverlayAccess(staffCtx.tenantId);
-    if (!supabaseAdmin) return { ...access, tournaments: [] };
-    const { data, error } = await supabaseAdmin
-      .from('tournaments')
-      .select('id, name, slug')
-      .eq('tenant_id', staffCtx.tenantId)
-      .order('created_at', { ascending: false })
-      .limit(TOURNAMENT_LIMIT);
+    if (!supabaseAdmin) {
+      return { ...access, tournaments: [], activePollTournamentId: null };
+    }
+    const [{ data, error }, { data: pollRows }] = await Promise.all([
+      supabaseAdmin
+        .from('tournaments')
+        .select('id, name, slug')
+        .eq('tenant_id', staffCtx.tenantId)
+        .order('created_at', { ascending: false })
+        .limit(TOURNAMENT_LIMIT),
+      supabaseAdmin
+        .from('match_public_mvp_polls')
+        .select('opened_at, matches!inner(tournament_id)')
+        .eq('tenant_id', staffCtx.tenantId)
+        .is('closed_at', null)
+        .order('opened_at', { ascending: false })
+        .limit(1),
+    ]);
     if (error) logger.error('[diffusion/overlays] tournois illisibles', error);
+    // Illisible ou absent : pas de présélection, la page garde le défaut.
+    const pollMatch = (
+      pollRows?.[0] as
+        | { matches?: { tournament_id?: string | null } | null }
+        | undefined
+    )?.matches;
     return {
       ...access,
+      activePollTournamentId: pollMatch?.tournament_id ?? null,
       tournaments: ((data ?? []) as TournamentOption[]).map((x) => ({
         id: x.id,
         name: x.name,
@@ -99,6 +125,7 @@ export default function DiffusionOverlaysPage({
   canUseMatchOverlays,
   planLabel,
   isDefaultTenant,
+  activePollTournamentId,
 }: Props) {
   const t = useAdminT(nsAdminDiffusionOverlays);
   const router = useRouter();
@@ -107,7 +134,10 @@ export default function DiffusionOverlaysPage({
   const wanted =
     typeof router.query.tournament === 'string' ? router.query.tournament : '';
   const [selectedId, setSelectedId] = useState<string>(
-    tournaments.find((x) => x.id === wanted)?.id ?? tournaments[0]?.id ?? ''
+    tournaments.find((x) => x.id === wanted)?.id ??
+      tournaments.find((x) => x.id === activePollTournamentId)?.id ??
+      tournaments[0]?.id ??
+      ''
   );
   useEffect(() => {
     if (wanted && tournaments.some((x) => x.id === wanted)) {
