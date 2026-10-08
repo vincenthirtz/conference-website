@@ -189,6 +189,8 @@ export default function DiffusionOverlaysPage({
       ? [{ id: 'mvp-public', label: t.tabMvpPublic }]
       : []),
     // Points de chaîne : le droit de leurs routes (`manage_broadcast`).
+    // Réglages de la boîte d'alertes : mêmes conditions que le panneau.
+    ...(canTuneAlerts ? [{ id: 'alerts', label: t.tabAlerts }] : []),
     ...(canManageRewards ? [{ id: 'rewards', label: t.tabRewards }] : []),
   ];
   const [active, setActive] = useQueryTab(tabs);
@@ -278,7 +280,11 @@ export default function DiffusionOverlaysPage({
           id={tabPanelId(TABS_ID, active)}
           aria-labelledby={tabButtonId(TABS_ID, active)}
         >
-          {active === 'rewards' && canManageRewards ? (
+          {active === 'alerts' && canTuneAlerts ? (
+            <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
+              <StreamAlertsPanel />
+            </section>
+          ) : active === 'rewards' && canManageRewards ? (
             <TwitchRewardsPanel />
           ) : active === 'mvp-public' && canUseMatchOverlays ? (
             <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
@@ -303,12 +309,6 @@ export default function DiffusionOverlaysPage({
                     showDonation={isDefaultTenant}
                     presence={presence}
                   />
-                </section>
-              )}
-
-              {canTuneAlerts && (
-                <section className="mt-6 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
-                  <StreamAlertsPanel />
                 </section>
               )}
 

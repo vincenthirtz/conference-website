@@ -10,6 +10,7 @@ export default {
   tabsAriaLabel: 'Overlays page sections',
   tabSources: 'Sources & overlays',
   tabMvpPublic: 'Audience MVP',
+  tabAlerts: 'Alert box',
   tabRewards: 'Rewards',
   tournamentLabel: 'Tournament',
   noTournament:
