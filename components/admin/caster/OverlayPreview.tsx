@@ -228,8 +228,7 @@ export default function OverlayPreview({ scene }: Props) {
               ref={boxRef}
               // Ratio 16/9 préservé et débordement coupé : l'iframe fait
               // physiquement 1920×1080, seule sa transformée la fait tenir.
-              className="mt-2 w-full overflow-hidden rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-black"
-              style={{ aspectRatio: '16 / 9' }}
+              className="mt-2 aspect-video w-full overflow-hidden rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-black"
             >
               {scale > 0 && framing === 'allowed' && (
                 <iframe
