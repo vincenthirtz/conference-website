@@ -49,7 +49,7 @@ export default ns('tournamentStandings', {
   legend:
     'J : joués · V : victoires · D : défaites · +/- : différence de maps · Pts : points. Un astérisque signale une égalité de points départagée ; survolez-le pour le critère.',
   seeMatches: 'Voir tous les matchs',
-  disqualified: 'Disqualifiée',
+  disqualified: 'DNF',
   disqualifiedForfeitTitle:
     'Équipe disqualifiée : ses matchs restants sont perdus par forfait.',
   disqualifiedAnnulTitle:

@@ -67,14 +67,14 @@ export default {
   // --- Disqualification -----------------------------------------------
   disqualify: 'Disqualify',
   reinstate: 'Reinstate',
-  dqBadge: 'Disqualified',
+  dqBadge: 'DNF',
   dqModeForfeitShort: 'Remaining matches lost by forfeit',
   dqModeAnnulShort: 'All results voided',
   dqBadgeTitle: 'Disqualified — {mode}',
   dqBadgeTitleReason: 'Disqualified — {mode}. Reason: {reason}',
   dqModalTitle: 'Disqualify {team}',
   dqModalIntro:
-    'The team will be ranked last in this stage with a “Disqualified” badge, and can no longer qualify. Choose what happens to its matches:',
+    'The team will be ranked last in this stage with a “DNF” badge, and can no longer qualify. Choose what happens to its matches:',
   dqModeLegend: 'What happens to its matches?',
   dqModeForfeitTitle: 'Keep played matches',
   dqModeForfeitDesc:

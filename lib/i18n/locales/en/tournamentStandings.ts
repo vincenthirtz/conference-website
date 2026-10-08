@@ -51,7 +51,7 @@ export default {
   legend:
     'P: played · W: wins · L: losses · +/-: map differential · Pts: points. An asterisk marks a points tie that was broken; hover it for the criterion.',
   seeMatches: 'See all matches',
-  disqualified: 'Disqualified',
+  disqualified: 'DNF',
   disqualifiedForfeitTitle:
     'Disqualified team: its remaining matches are lost by forfeit.',
   disqualifiedAnnulTitle:

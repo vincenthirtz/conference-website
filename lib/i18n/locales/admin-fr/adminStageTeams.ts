@@ -68,14 +68,14 @@ export default adminNs('adminStageTeams', {
   // --- Disqualification -----------------------------------------------
   disqualify: 'Disqualifier',
   reinstate: 'Réintégrer',
-  dqBadge: 'Disqualifiée',
+  dqBadge: 'DNF',
   dqModeForfeitShort: 'Matchs restants perdus par forfait',
   dqModeAnnulShort: 'Tous ses résultats annulés',
   dqBadgeTitle: 'Disqualifiée — {mode}',
   dqBadgeTitleReason: 'Disqualifiée — {mode}. Motif : {reason}',
   dqModalTitle: 'Disqualifier {team}',
   dqModalIntro:
-    "L'équipe sera classée dernière de la phase, avec un badge « Disqualifiée », et ne pourra plus se qualifier. Choisis ce que deviennent ses matchs :",
+    "L'équipe sera classée dernière de la phase, avec un badge « DNF », et ne pourra plus se qualifier. Choisis ce que deviennent ses matchs :",
   dqModeLegend: 'Que deviennent ses matchs ?',
   dqModeForfeitTitle: 'Garder les matchs joués',
   dqModeForfeitDesc:

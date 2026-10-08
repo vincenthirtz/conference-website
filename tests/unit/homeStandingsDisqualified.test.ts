@@ -9,7 +9,7 @@
 //   - mode `annul` : ses matchs sont ignorés pour TOUT le monde (victoires,
 //     joués, maps) ; mode `forfeit` : ils comptent ;
 //   - un forfait compte, un match annulé ou supprimé non ;
-//   - le composant pose le badge public « Disqualifiée » sur sa ligne, et
+//   - le composant pose le badge public « DNF » sur sa ligne, et
 //     seulement sur elle.
 //
 // Rendu SSR via react-dom/server (pas de jsdom dans ce repo).
@@ -281,10 +281,10 @@ describe('<HomeStandings /> — badge', () => {
     expect(html.match(/data-testid="public-disqualified-badge"/g)).toHaveLength(
       1
     );
-    expect(html).toContain('Disqualifiée');
+    expect(html).toContain('>DNF<');
     expect(html).toContain('ses résultats ne comptent plus au classement');
     // Le badge suit le nom de l'équipe disqualifiée, pas celui de Beta.
-    expect(html.indexOf('Disqualifiée')).toBeGreaterThan(html.indexOf('Alpha'));
+    expect(html.indexOf('>DNF<')).toBeGreaterThan(html.indexOf('Alpha'));
   });
 
   it('mode forfeit : info-bulle des matchs perdus par forfait (ligne liée)', () => {
