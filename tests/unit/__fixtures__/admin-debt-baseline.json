@@ -1,5 +1,5 @@
 {
-  "measuredAt": "2026-10-06",
+  "measuredAt": "2026-10-08",
   "debt": {
     "api.routesNotDeclarative": 22,
     "api.manualMethodSwitch": 21,
@@ -11,9 +11,9 @@
     "api.manualLogStaffAction": 35,
     "api.relativeLoggerImport": 9,
     "ui.pagesImportSupabase": 12,
-    "ui.useState": 1317,
+    "ui.useState": 1306,
     "ui.inlineStyle": 69,
-    "ui.rawAdminUrl": 49,
+    "ui.rawAdminUrl": 43,
     "size.pagesOver800": 0,
     "size.componentsOver600": 26,
     "size.apiOver500": 3

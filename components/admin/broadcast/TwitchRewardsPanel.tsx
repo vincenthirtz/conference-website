@@ -21,383 +21,51 @@
 //
 // Se masque tant que la chaîne n'est pas connectée (la connexion se fait
 // depuis le panneau des prédictions ou la carte du drop TCG).
+//
+// Données et actions : features/admin/twitch/hooks/useTwitchRewards.ts ;
+// URLs : features/admin/twitch/client.ts ; validation des saisies :
+// features/admin/twitch/rewardDraft.ts. Ce fichier ne garde que l'affichage.
 
-import { useCallback, useEffect, useState } from 'react';
-import { useAdminFetch, AdminFetchError } from '@/hooks/useAdminFetch';
-import { useIdempotentMutation } from '@/hooks/useIdempotentMutation';
-import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useToast } from '@/components/Toast';
+import { useState } from 'react';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import Switch from '@/components/ui/Switch';
 import nsAdminTwitchCommands from '@/lib/i18n/locales/admin-fr/adminTwitchCommands';
+import { Spinner } from '@/components/admin/broadcast/twitchPanelUtils';
+import { useTwitchRewards } from '@/features/admin/twitch/hooks/useTwitchRewards';
 import {
-  Spinner,
-  adminErrorCode,
-  useBusySet,
-} from '@/components/admin/broadcast/twitchPanelUtils';
+  EMPTY_REWARD_DRAFT,
+  MAX_REWARD_PROMPT,
+  MAX_REWARD_TITLE,
+  type RewardDraft,
+  type RewardEdit,
+} from '@/features/admin/twitch/rewardDraft';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import * as R from '@/features/admin/_shared/ui/ruban';
 
-type TwitchConnection = { connected: boolean; broadcaster_login?: string };
-
-type Reward = {
-  id: string;
-  title: string;
-  cost?: number;
-  is_enabled?: boolean;
-  is_paused?: boolean;
-  prompt?: string;
-  background_color?: string;
-  /**
-   * Calculé ici : la récompense a-t-elle été créée par NOTRE application ?
-   * Helix ne permet de modifier / supprimer / traiter les échanges QUE de
-   * celles-là ; les autres (créées dans le tableau de bord Twitch) se lisent.
-   */
-  manageable: boolean;
-};
-type Redemption = { id: string; user_name: string; user_input?: string };
-
-// Limites Twitch : titre de reward ≤ 45, prompt ≤ 200 ; description de marker ≤ 140.
-const MAX_REWARD_TITLE = 45;
-const MAX_REWARD_PROMPT = 200;
-
 export default function TwitchRewardsPanel() {
   const t = useAdminT(nsAdminTwitchCommands);
-  const { adminFetchJson } = useAdminFetch();
-  const { mutateJson } = useIdempotentMutation();
-  const { confirm, dialog } = useConfirmDialog();
-  const { addToast } = useToast();
-  const [connected, setConnected] = useState<boolean | undefined>(undefined);
-  const [login, setLogin] = useState<string | null>(null);
-  const { isBusy, withBusy } = useBusySet();
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const json = await adminFetchJson<TwitchConnection>(
-          '/api/admin/twitch/connection'
-        );
-        if (!cancelled) {
-          setConnected(json.connected === true);
-          setLogin(json.broadcaster_login ?? null);
-        }
-      } catch {
-        // On dégrade en « non connecté » : le panneau Predictions gère l'invite
-        // à (re)connecter, inutile d'afficher une seconde erreur ici.
-        if (!cancelled) setConnected(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [adminFetchJson]);
-
-  // 409 NOT_CONNECTED renvoyé par une action → la chaîne s'est déconnectée, on
-  // masque le panneau (l'invite à reconnecter est au-dessus).
-  const handleNotConnected = useCallback(() => {
-    setConnected(false);
-    addToast(t.errorNotConnected, 'error');
-  }, [addToast, t.errorNotConnected]);
-
-  // Traduit une erreur d'action en toast + effet de bord (409/403).
-  const reportError = useCallback(
-    (err: unknown) => {
-      const code = adminErrorCode(err);
-      if (code === 'NOT_CONNECTED') {
-        handleNotConnected();
-        return;
-      }
-      if (code === 'MISSING_SCOPE') {
-        addToast(t.errorMissingScope, 'error');
-        return;
-      }
-      const msg = err instanceof AdminFetchError ? err.message : null;
-      addToast(msg || t.errorGeneric, 'error');
-    },
-    [addToast, handleNotConnected, t.errorMissingScope, t.errorGeneric]
-  );
-
-  const [rewards, setRewards] = useState<Reward[] | undefined>(undefined);
-  const [selectedReward, setSelectedReward] = useState<string>('');
-  const [redemptions, setRedemptions] = useState<Redemption[] | undefined>(
-    undefined
-  );
-
-  // TOUTES les récompenses de la chaîne (`?all=1`), croisées avec celles que
-  // l'application peut gérer : la liste montre tout, et dit pour chacune ce
-  // qu'on peut en faire d'ici. Si la liste complète échoue, on retombe sur
-  // les seules gérables plutôt que de ne rien montrer.
-  const loadRewards = useCallback(async () => {
-    try {
-      const [mine, all] = await Promise.all([
-        adminFetchJson<{ rewards: Omit<Reward, 'manageable'>[] }>(
-          '/api/admin/twitch/channel-points/rewards'
-        ),
-        adminFetchJson<{ rewards: Omit<Reward, 'manageable'>[] }>(
-          '/api/admin/twitch/channel-points/rewards?all=1'
-        ).catch(() => null),
-      ]);
-      const mineIds = new Set((mine.rewards ?? []).map((r) => r.id));
-      const list = (all?.rewards ?? mine.rewards ?? []).map((r) => ({
-        ...r,
-        manageable: mineIds.has(r.id),
-      }));
-      // Les gérables d'abord : ce sont celles sur lesquelles on agit.
-      list.sort((a, b) => Number(b.manageable) - Number(a.manageable));
-      setRewards(list);
-    } catch (err) {
-      if (adminErrorCode(err) === 'NOT_CONNECTED') {
-        handleNotConnected();
-        return;
-      }
-      setRewards([]);
-    }
-  }, [adminFetchJson, handleNotConnected]);
-
-  // Charge la liste des rewards une fois la connexion confirmée.
-  useEffect(() => {
-    if (connected) loadRewards();
-  }, [connected, loadRewards]);
-
-  const loadRedemptions = useCallback(
-    async (rewardId: string) => {
-      setRedemptions(undefined);
-      try {
-        const json = await adminFetchJson<{ redemptions: Redemption[] }>(
-          `/api/admin/twitch/channel-points/redemptions?reward_id=${encodeURIComponent(
-            rewardId
-          )}&status=UNFULFILLED`
-        );
-        setRedemptions(json.redemptions ?? []);
-      } catch (err) {
-        if (adminErrorCode(err) === 'NOT_CONNECTED') {
-          handleNotConnected();
-          return;
-        }
-        setRedemptions([]);
-        reportError(err);
-      }
-    },
-    [adminFetchJson, handleNotConnected, reportError]
-  );
-
-  function handleSelectReward(rewardId: string) {
-    setSelectedReward(rewardId);
-    if (rewardId) loadRedemptions(rewardId);
-    else setRedemptions(undefined);
-  }
-
-  async function resolveRedemption(
-    redemption: Redemption,
-    status: 'FULFILLED' | 'CANCELED'
-  ) {
-    if (!selectedReward) return;
-    if (status === 'CANCELED') {
-      const ok = await confirm({
-        title: t.redemptionRejectConfirmTitle,
-        subtitle: t.redemptionRejectConfirmSubtitle,
-        variant: 'danger',
-        confirmLabel: t.redemptionRejectConfirmLabel,
-      });
-      if (!ok) return;
-    }
-    const busyId = `redeem:${redemption.id}:${status}`;
-    await withBusy(busyId, async () => {
-      try {
-        await mutateJson('/api/admin/twitch/channel-points/redemptions', {
-          method: 'PATCH',
-          body: JSON.stringify({
-            reward_id: selectedReward,
-            redemption_ids: [redemption.id],
-            status,
-          }),
-        });
-        // Retire la demande traitée de la liste (elle n'est plus UNFULFILLED).
-        setRedemptions((prev) =>
-          prev ? prev.filter((r) => r.id !== redemption.id) : prev
-        );
-        addToast(
-          status === 'FULFILLED'
-            ? t.redemptionApproveSuccess
-            : t.redemptionRejectSuccess,
-          'success'
-        );
-      } catch (err) {
-        reportError(err);
-      }
-    });
-  }
-
-  // --- 4b. Créer / gérer les rewards ---------------------------------------
-
-  const [newTitle, setNewTitle] = useState('');
-  const [newCost, setNewCost] = useState('');
-  const [newPrompt, setNewPrompt] = useState('');
-  const [newUserInput, setNewUserInput] = useState(false);
-  const [newSkipQueue, setNewSkipQueue] = useState(false);
-  const [newColor, setNewColor] = useState('');
-
-  async function handleCreateReward() {
-    const title = newTitle.trim();
-    if (!title) {
-      addToast(t.rewardTitleRequired, 'error');
-      return;
-    }
-    const cost = Number(newCost);
-    if (!Number.isInteger(cost) || cost < 1) {
-      addToast(t.rewardCostInvalid, 'error');
-      return;
-    }
-    const body: {
-      title: string;
-      cost: number;
-      prompt?: string;
-      is_user_input_required?: boolean;
-      should_redemptions_skip_request_queue?: boolean;
-      background_color?: string;
-    } = { title, cost };
-    const prompt = newPrompt.trim();
-    if (prompt) body.prompt = prompt;
-    if (newUserInput) body.is_user_input_required = true;
-    if (newSkipQueue) body.should_redemptions_skip_request_queue = true;
-    const color = newColor.trim();
-    if (color) body.background_color = color;
-
-    await withBusy('reward-create', async () => {
-      try {
-        await mutateJson('/api/admin/twitch/channel-points/rewards', {
-          method: 'POST',
-          body: JSON.stringify(body),
-        });
-        addToast(t.rewardCreateSuccess, 'success');
-        setNewTitle('');
-        setNewCost('');
-        setNewPrompt('');
-        setNewUserInput(false);
-        setNewSkipQueue(false);
-        setNewColor('');
-        await loadRewards();
-      } catch (err) {
-        reportError(err);
-      }
-    });
-  }
-
-  async function toggleReward(reward: Reward) {
-    const next = !(reward.is_enabled ?? false);
-    await withBusy(`reward-toggle:${reward.id}`, async () => {
-      try {
-        await mutateJson(
-          `/api/admin/twitch/channel-points/rewards/${encodeURIComponent(
-            reward.id
-          )}`,
-          {
-            method: 'PATCH',
-            body: JSON.stringify({ is_enabled: next }),
-          }
-        );
-        addToast(
-          next ? t.rewardEnabledSuccess : t.rewardDisabledSuccess,
-          'success'
-        );
-        await loadRewards();
-      } catch (err) {
-        reportError(err);
-      }
-    });
-  }
-
-  async function togglePause(reward: Reward) {
-    const next = !(reward.is_paused ?? false);
-    await withBusy(`reward-pause:${reward.id}`, async () => {
-      try {
-        await mutateJson(
-          `/api/admin/twitch/channel-points/rewards/${encodeURIComponent(
-            reward.id
-          )}`,
-          { method: 'PATCH', body: JSON.stringify({ is_paused: next }) }
-        );
-        addToast(
-          next ? t.rewardPausedSuccess : t.rewardResumedSuccess,
-          'success'
-        );
-        await loadRewards();
-      } catch (err) {
-        reportError(err);
-      }
-    });
-  }
-
+  const {
+    connected,
+    login,
+    rewards,
+    selectedReward,
+    redemptions,
+    isBusy,
+    dialog,
+    selectReward,
+    resolveRedemption,
+    createReward,
+    toggleReward,
+    togglePause,
+    saveEdit,
+    deleteReward,
+  } = useTwitchRewards();
+  const [draft, setDraft] = useState<RewardDraft>(EMPTY_REWARD_DRAFT);
+  const setField = <K extends keyof RewardDraft>(k: K, v: RewardDraft[K]) =>
+    setDraft((d) => ({ ...d, [k]: v }));
   // Modification en ligne : titre, coût, message — ce que Helix accepte.
-  const [editing, setEditing] = useState<{
-    id: string;
-    title: string;
-    cost: string;
-    prompt: string;
-  } | null>(null);
-
-  async function saveEdit() {
-    if (!editing) return;
-    const title = editing.title.trim();
-    const cost = Number(editing.cost);
-    if (!title) return addToast(t.rewardTitleRequired, 'error');
-    if (!Number.isInteger(cost) || cost < 1) {
-      return addToast(t.rewardCostInvalid, 'error');
-    }
-    await withBusy(`reward-edit:${editing.id}`, async () => {
-      try {
-        await mutateJson(
-          `/api/admin/twitch/channel-points/rewards/${encodeURIComponent(
-            editing.id
-          )}`,
-          {
-            method: 'PATCH',
-            body: JSON.stringify({
-              title,
-              cost,
-              prompt: editing.prompt.trim(),
-            }),
-          }
-        );
-        addToast(t.rewardEditSuccess, 'success');
-        setEditing(null);
-        await loadRewards();
-      } catch (err) {
-        reportError(err);
-      }
-    });
-  }
-
-  async function deleteReward(reward: Reward) {
-    const ok = await confirm({
-      title: format(t.rewardDeleteConfirmTitle, { title: reward.title }),
-      subtitle: t.rewardDeleteConfirmSubtitle,
-      variant: 'danger',
-      confirmLabel: t.rewardDeleteConfirmLabel,
-    });
-    if (!ok) return;
-    await withBusy(`reward-delete:${reward.id}`, async () => {
-      try {
-        await mutateJson(
-          `/api/admin/twitch/channel-points/rewards/${encodeURIComponent(
-            reward.id
-          )}`,
-          { method: 'DELETE' }
-        );
-        addToast(t.rewardDeleteSuccess, 'success');
-        // Si le reward supprimé était sélectionné pour les demandes, on nettoie.
-        if (selectedReward === reward.id) {
-          setSelectedReward('');
-          setRedemptions(undefined);
-        }
-        await loadRewards();
-      } catch (err) {
-        reportError(err);
-      }
-    });
-  }
+  const [editing, setEditing] = useState<RewardEdit | null>(null);
 
   if (!connected) return null;
 
@@ -413,7 +81,7 @@ export default function TwitchRewardsPanel() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            handleCreateReward();
+            void createReward(draft, () => setDraft(EMPTY_REWARD_DRAFT));
           }}
           className="space-y-2"
         >
@@ -425,14 +93,14 @@ export default function TwitchRewardsPanel() {
               <input
                 id="twc-reward-title"
                 type="text"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
+                value={draft.title}
+                onChange={(e) => setField('title', e.target.value)}
                 maxLength={MAX_REWARD_TITLE}
                 placeholder={t.rewardTitlePlaceholder}
                 className={R.rubanInput}
               />
               <div className="mt-1 text-right text-[11px] text-neutral-500">
-                {format(t.rewardTitleCounter, { count: newTitle.length })}
+                {format(t.rewardTitleCounter, { count: draft.title.length })}
               </div>
             </div>
             <div className="w-28">
@@ -444,8 +112,8 @@ export default function TwitchRewardsPanel() {
                 type="number"
                 min={1}
                 step={1}
-                value={newCost}
-                onChange={(e) => setNewCost(e.target.value)}
+                value={draft.cost}
+                onChange={(e) => setField('cost', e.target.value)}
                 placeholder={t.rewardCostPlaceholder}
                 className={R.rubanInput}
               />
@@ -457,8 +125,8 @@ export default function TwitchRewardsPanel() {
               <input
                 id="twc-reward-color"
                 type="color"
-                value={newColor || '#9146ff'}
-                onChange={(e) => setNewColor(e.target.value)}
+                value={draft.color || '#9146ff'}
+                onChange={(e) => setField('color', e.target.value)}
                 aria-label={t.rewardColorLabel}
                 className="h-10 w-14 cursor-pointer rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-1"
               />
@@ -471,8 +139,8 @@ export default function TwitchRewardsPanel() {
             <input
               id="twc-reward-prompt"
               type="text"
-              value={newPrompt}
-              onChange={(e) => setNewPrompt(e.target.value)}
+              value={draft.prompt}
+              onChange={(e) => setField('prompt', e.target.value)}
               maxLength={MAX_REWARD_PROMPT}
               placeholder={t.rewardPromptPlaceholder}
               className={R.rubanInput}
@@ -481,13 +149,13 @@ export default function TwitchRewardsPanel() {
           <div className="flex flex-wrap gap-4">
             <Toggle
               label={t.rewardUserInput}
-              checked={newUserInput}
-              onChange={setNewUserInput}
+              checked={draft.userInput}
+              onChange={(v) => setField('userInput', v)}
             />
             <Toggle
               label={t.rewardSkipQueue}
-              checked={newSkipQueue}
-              onChange={setNewSkipQueue}
+              checked={draft.skipQueue}
+              onChange={(v) => setField('skipQueue', v)}
             />
           </div>
           <AdminButton
@@ -535,6 +203,9 @@ export default function TwitchRewardsPanel() {
                 return (
                   <li key={r.id} className={`px-3 py-2 ${R.rubanInset}`}>
                     <div className="flex flex-wrap items-center gap-3">
+                      {/* Style inline assumé : la couleur vient de Twitch,
+                          aucune classe ne peut la porter. Compensé au cliquet
+                          par OverlayPreview (aspectRatio → aspect-video). */}
                       <span
                         className="h-3 w-3 shrink-0 rounded-full"
                         style={{ background: r.background_color || '#9146ff' }}
@@ -626,7 +297,7 @@ export default function TwitchRewardsPanel() {
                       <form
                         onSubmit={(e) => {
                           e.preventDefault();
-                          void saveEdit();
+                          void saveEdit(editing, () => setEditing(null));
                         }}
                         className="mt-2 flex flex-wrap items-end gap-2"
                       >
@@ -713,7 +384,7 @@ export default function TwitchRewardsPanel() {
           <select
             id="twc-reward"
             value={selectedReward}
-            onChange={(e) => handleSelectReward(e.target.value)}
+            onChange={(e) => selectReward(e.target.value)}
             className={R.rubanInput}
           >
             <option value="">{t.rewardSelectPlaceholder}</option>
