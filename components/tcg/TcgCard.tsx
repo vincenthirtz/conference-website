@@ -15,8 +15,8 @@
 // aurait donné des couleurs contradictoires sur le profil de la MÊME joueuse —
 // le travers que `utils/tcg/rarity.ts` évite déjà côté calcul.
 //
-// AUCUNE IMAGE GÉNÉRÉE. Sans photo consentie ni avatar, la carte affiche un
-// fond de marque et l'initiale du nom. Le projet n'utilise pas d'imagerie IA,
+// AUCUNE IMAGE GÉNÉRÉE. Sans photo consentie ni avatar, la carte affiche le
+// logo du site en fond (logo d'événement du moment) et l'initiale du nom. Le projet n'utilise pas d'imagerie IA,
 // et un portrait inventé pour représenter une personne réelle serait pire
 // qu'un aplat.
 //
@@ -28,6 +28,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { JSX } from 'react';
 import LogoCredit from '@/components/Team/LogoCredit';
+import { useSiteLogo } from '@/lib/branding/useSiteLogo';
 import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
 import { figureUrl, type FigureRole } from '@/utils/tcg/roleFigures';
 import { heroFigureSlugFromName, heroFigureUrl } from '@/utils/tcg/heroFigures';
@@ -267,6 +268,7 @@ export default function TcgCard({
   insideInteractive = false,
   labels,
 }: TcgCardProps): JSX.Element {
+  const siteLogo = useSiteLogo();
   const name =
     subject.kind === 'player' ? subject.displayName : (subject.name ?? null);
   // Le cas particulier est l'ÉQUIPE, qui porte un `logoUrl` : joueuses et maps
@@ -388,14 +390,25 @@ export default function TcgCard({
             )}
           </>
         ) : (
-          // Ni photo, ni avatar, ni rôle connu : un aplat de marque et
-          // l'initiale — on n'attribue pas un rôle au hasard.
-          <span
-            aria-hidden
-            className="absolute inset-0 flex items-center justify-center text-4xl font-black text-white/70"
-          >
-            {initial(name)}
-          </span>
+          // Ni photo, ni avatar, ni rôle connu : le logo du site en fond (celui
+          // de la navbar, donc le logo d'événement du moment) et l'initiale —
+          // on n'attribue pas un rôle au hasard, mais la carte n'est pas vide.
+          <>
+            {/* biome-ignore lint/performance/noImgElement: logo distant possible (tenant, upload saisonnier) hors remotePatterns de next/image */}
+            <img
+              src={siteLogo}
+              alt=""
+              loading="lazy"
+              data-testid="tcg-card-logo-fallback"
+              className="absolute inset-0 h-full w-full object-contain p-6 opacity-40"
+            />
+            <span
+              aria-hidden
+              className="absolute inset-0 flex items-center justify-center text-4xl font-black text-white/70 [text-shadow:0_1px_6px_rgb(0_0_0/0.6)]"
+            >
+              {initial(name)}
+            </span>
+          </>
         )}
 
         {isFoil && (
