@@ -9,8 +9,23 @@
 //
 // À poser dans un conteneur `relative` qui fixe le cadre de la carte.
 
-import type { JSX } from 'react';
+import type { JSX, SyntheticEvent } from 'react';
 import { useSiteLogo } from '@/lib/branding/useSiteLogo';
+
+/**
+ * `onError` d'une image de carte : la masque et révèle le repli posé JUSTE
+ * APRÈS elle, dans un élément `hidden` (avatar Discord changé depuis, pièce
+ * jointe expirée → repli au lieu d'une icône d'image cassée).
+ *
+ * Sans état React, à dessein : le repli est déjà dans le HTML, l'erreur ne
+ * fait que basculer l'affichage — et ces composants restent sans `useState`
+ * (cliquet de dette, tests/unit/playerDebtRatchet.test.ts).
+ */
+export function revealCardFallback(e: SyntheticEvent<HTMLImageElement>): void {
+  const img = e.currentTarget;
+  img.style.display = 'none';
+  img.nextElementSibling?.removeAttribute('hidden');
+}
 
 function initial(name: string | null): string {
   const trimmed = (name ?? '').trim();

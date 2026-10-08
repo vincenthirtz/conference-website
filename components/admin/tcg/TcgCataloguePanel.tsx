@@ -18,7 +18,6 @@
 // aurait fait diverger deux fois la même précaution.
 
 import { useMemo, useState } from 'react';
-import Image from 'next/image';
 import { useTcgCatalogue } from '@/features/admin/tcg/hooks/useTcgAdmin';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import AlertBanner from '@/components/admin/AlertBanner';
@@ -31,8 +30,7 @@ import {
 import TcgPlayerPicker, {
   type PickedUser,
 } from '@/components/admin/tcg/TcgPlayerPicker';
-import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
-import TcgCardFallback from '@/components/tcg/TcgCardFallback';
+import TcgThumbnailImage from '@/components/tcg/TcgThumbnailImage';
 import type { TcgCardKind } from '@/utils/tcg/subjectKey';
 import nsAdminTcgPage from '@/lib/i18n/locales/admin-fr/adminTcgPage';
 import nsAdminTcgGrant from '@/lib/i18n/locales/admin-fr/adminTcgGrant';
@@ -193,23 +191,7 @@ export default function TcgCataloguePanel() {
                 }`}
               >
                 <span className="relative block aspect-[3/4] overflow-hidden rounded-[3px] bg-[var(--s1,#100812)]">
-                  {card.imageUrl ? (
-                    <Image
-                      src={card.imageUrl}
-                      alt=""
-                      fill
-                      sizes="(min-width: 1024px) 18vw, 45vw"
-                      loading="lazy"
-                      decoding="async"
-                      className="object-cover"
-                      // Hôte hors optimiseur (logo d'équipe distant…) : servie
-                      // telle quelle plutôt que laissée vide.
-                      unoptimized={!isOptimizableImageUrl(card.imageUrl)}
-                    />
-                  ) : (
-                    // Même repli que la carte des joueuses (TcgCard).
-                    <TcgCardFallback name={card.label} size="sm" />
-                  )}
+                  <TcgThumbnailImage url={card.imageUrl} name={card.label} />
                 </span>
                 <span className="mt-1.5 block truncate text-xs text-neutral-200">
                   {card.label}

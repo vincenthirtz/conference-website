@@ -75,6 +75,8 @@ describe('TcgCard — fond de repli', () => {
       displayName: 'Mei',
       imageUrl: 'https://example.supabase.co/storage/v1/object/public/a.png',
     });
-    expect(html).not.toContain('tcg-card-logo-fallback');
+    // Le repli est présent mais masqué : il ne s'affiche que si l'image
+    // échoue à charger (cf. revealCardFallback).
+    expect(html).toMatch(/<span hidden=""[^>]*>.*tcg-card-logo-fallback/s);
   });
 });

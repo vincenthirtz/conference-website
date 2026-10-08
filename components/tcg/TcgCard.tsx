@@ -28,7 +28,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { JSX } from 'react';
 import LogoCredit from '@/components/Team/LogoCredit';
-import TcgCardFallback from '@/components/tcg/TcgCardFallback';
+import TcgCardFallback, {
+  revealCardFallback,
+} from '@/components/tcg/TcgCardFallback';
 import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
 import { figureUrl, type FigureRole } from '@/utils/tcg/roleFigures';
 import { heroFigureSlugFromName, heroFigureUrl } from '@/utils/tcg/heroFigures';
@@ -328,66 +330,78 @@ export default function TcgCard({
       : (labels.roles?.[figure.role] ?? null)
     : null;
 
+  const noImageVisual = mascotUrl ? (
+    <>
+      {/* biome-ignore lint/performance/noImgElement: SVG rendu par nos soins — next/image n'optimise pas le SVG */}
+      <img
+        src={mascotUrl}
+        alt=""
+        loading="lazy"
+        className="absolute inset-0 h-full w-full object-contain"
+      />
+    </>
+  ) : figure ? (
+    // Ni photo consentie ni avatar, mais un rôle connu : une figurine.
+    //
+    // Celle de SON HÉROS quand il est déclaré ET sculpté, sinon celle de
+    // son rôle, aux couleurs de son équipe. L'ordre compte : une joueuse
+    // qui a nommé son héros préfère le voir lui plutôt qu'un archétype,
+    // et les 42 héros du registre ne sont pas tous modelés — un héros
+    // sans figurine retombe donc sur son rôle, jamais sur un trou.
+    <>
+      {/* biome-ignore lint/performance/noImgElement: SVG rendu par nos soins — next/image n'optimise pas le SVG */}
+      <img
+        src={
+          heroSlug
+            ? heroFigureUrl(heroSlug)
+            : figureUrl(figure.role, figure.color)
+        }
+        alt=""
+        loading="lazy"
+        className="absolute inset-0 h-full w-full object-contain"
+      />
+      {figureCaption && (
+        <span className="absolute bottom-1.5 left-1/2 max-w-[90%] -translate-x-1/2 truncate rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white/90">
+          {figureCaption}
+        </span>
+      )}
+    </>
+  ) : (
+    // Ni photo, ni avatar, ni rôle connu : le logo du site en fond (celui
+    // de la navbar, donc le logo d'événement du moment) et l'initiale —
+    // on n'attribue pas un rôle au hasard, mais la carte n'est pas vide.
+    <TcgCardFallback name={name} />
+  );
+
   const inner = (
     <>
       <div className="relative aspect-[3/4] w-full overflow-hidden rounded-t-xl bg-gradient-to-br from-[var(--color-violet)]/25 to-[var(--color-green)]/15">
         {imageUrl ? (
-          <Image
-            src={imageUrl}
-            alt=""
-            fill
-            sizes="(max-width: 640px) 45vw, 180px"
-            className={
-              usesTeamLogo || isAssociation
-                ? 'object-contain p-4'
-                : 'object-cover'
-            }
-            // Optimisée seulement quand c'est sûr (cf.
-            // `shouldOptimizeCardImage`) : c'est ce qui rend son `srcset` à
-            // `sizes`, que `unoptimized` rendait lettre morte.
-            unoptimized={!shouldOptimizeCardImage(imageUrl)}
-          />
-        ) : mascotUrl ? (
           <>
-            {/* biome-ignore lint/performance/noImgElement: SVG rendu par nos soins — next/image n'optimise pas le SVG */}
-            <img
-              src={mascotUrl}
+            <Image
+              src={imageUrl}
               alt=""
-              loading="lazy"
-              className="absolute inset-0 h-full w-full object-contain"
-            />
-          </>
-        ) : figure ? (
-          // Ni photo consentie ni avatar, mais un rôle connu : une figurine.
-          //
-          // Celle de SON HÉROS quand il est déclaré ET sculpté, sinon celle de
-          // son rôle, aux couleurs de son équipe. L'ordre compte : une joueuse
-          // qui a nommé son héros préfère le voir lui plutôt qu'un archétype,
-          // et les 42 héros du registre ne sont pas tous modelés — un héros
-          // sans figurine retombe donc sur son rôle, jamais sur un trou.
-          <>
-            {/* biome-ignore lint/performance/noImgElement: SVG rendu par nos soins — next/image n'optimise pas le SVG */}
-            <img
-              src={
-                heroSlug
-                  ? heroFigureUrl(heroSlug)
-                  : figureUrl(figure.role, figure.color)
+              fill
+              sizes="(max-width: 640px) 45vw, 180px"
+              className={
+                usesTeamLogo || isAssociation
+                  ? 'object-contain p-4'
+                  : 'object-cover'
               }
-              alt=""
-              loading="lazy"
-              className="absolute inset-0 h-full w-full object-contain"
+              // Optimisée seulement quand c'est sûr (cf.
+              // `shouldOptimizeCardImage`) : c'est ce qui rend son `srcset` à
+              // `sizes`, que `unoptimized` rendait lettre morte.
+              unoptimized={!shouldOptimizeCardImage(imageUrl)}
+              onError={revealCardFallback}
             />
-            {figureCaption && (
-              <span className="absolute bottom-1.5 left-1/2 max-w-[90%] -translate-x-1/2 truncate rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white/90">
-                {figureCaption}
-              </span>
-            )}
+            {/* Repli d'une image qui ne charge pas (avatar Discord changé depuis,
+                pièce jointe expirée) : révélé par `revealCardFallback`, sans état. */}
+            <span hidden className="absolute inset-0">
+              {noImageVisual}
+            </span>
           </>
         ) : (
-          // Ni photo, ni avatar, ni rôle connu : le logo du site en fond (celui
-          // de la navbar, donc le logo d'événement du moment) et l'initiale —
-          // on n'attribue pas un rôle au hasard, mais la carte n'est pas vide.
-          <TcgCardFallback name={name} />
+          noImageVisual
         )}
 
         {isFoil && (
