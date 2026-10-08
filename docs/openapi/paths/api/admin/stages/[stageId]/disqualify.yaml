@@ -70,8 +70,7 @@ post:
                 type: string
                 format: uuid
               teamName:
-                type: string
-                nullable: true
+                type: [string, 'null']
               disqualifiedAt:
                 type: string
                 format: date-time
@@ -100,8 +99,7 @@ post:
                         - no_opponent
                         - status_changed
               failed:
-                type: object
-                nullable: true
+                type: [object, 'null']
                 properties:
                   id:
                     type: string
@@ -125,18 +123,14 @@ post:
                   type: object
                   properties:
                     team1Name:
-                      type: string
-                      nullable: true
+                      type: [string, 'null']
                     team2Name:
-                      type: string
-                      nullable: true
+                      type: [string, 'null']
                     roundName:
-                      type: string
-                      nullable: true
+                      type: [string, 'null']
                     scheduledAt:
-                      type: string
+                      type: [string, 'null']
                       format: date-time
-                      nullable: true
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

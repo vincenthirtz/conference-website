@@ -33,11 +33,9 @@ get:
                   name:
                     type: string
                   stage_type:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
               tournament:
-                type: object
-                nullable: true
+                type: [object, 'null']
                 properties:
                   id:
                     type: string
@@ -45,8 +43,7 @@ get:
                   name:
                     type: string
                   slug:
-                    type: string
-                    nullable: true
+                    type: [string, 'null']
               standings:
                 type: array
                 items:
@@ -56,8 +53,7 @@ get:
                       type: string
                       format: uuid
                     team:
-                      type: object
-                      nullable: true
+                      type: [object, 'null']
                       additionalProperties: true
                     rank:
                       type: integer
@@ -76,14 +72,11 @@ get:
                     games_drawn:
                       type: integer
                     buchholz:
-                      type: number
-                      nullable: true
+                      type: [number, 'null']
                     opp_score_sum:
-                      type: number
-                      nullable: true
+                      type: [number, 'null']
                     opp_winrate:
-                      type: number
-                      nullable: true
+                      type: [number, 'null']
                     match_count:
                       type: integer
                     disqualified:
