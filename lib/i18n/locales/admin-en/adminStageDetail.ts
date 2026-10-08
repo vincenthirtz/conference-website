@@ -167,6 +167,8 @@ export default {
   seedModeRank: 'By ranking',
   seedModeManual: 'By selection order',
   seedModeNone: 'No seed',
+  advanceDisqualifiedLocked:
+    'Team disqualified from this stage: it cannot advance.',
   tbOverride: 'staff override',
   ovForce: 'Force order',
   ovCancel: 'Cancel',

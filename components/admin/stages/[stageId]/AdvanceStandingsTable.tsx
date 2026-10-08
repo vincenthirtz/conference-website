@@ -48,25 +48,45 @@ const StandingRow = React.memo(function StandingRow({
   selected,
   onToggle,
   tiebreakLabel,
+  lockedReason,
 }: {
   s: AdvanceStanding;
   selected: boolean;
   onToggle: (teamId: string) => void;
   tiebreakLabel: string | null;
+  /** Équipe disqualifiée : case désactivée, raison annoncée. */
+  lockedReason: string;
 }) {
+  // Disqualifiée : jamais qualifiable (advanceSelection) — case grisée, la
+  // raison est portée par `title` et lue par aria-describedby.
+  const locked = Boolean(s.disqualified);
+  const reasonId = `advance-locked-${s.teamId}`;
   return (
     <tr
-      onClick={() => onToggle(s.teamId)}
-      className={`cursor-pointer transition-colors ${
-        selected ? 'bg-[rgba(127,202,101,.1)]' : 'hover:bg-[var(--s2,#1d1520)]'
+      onClick={locked ? undefined : () => onToggle(s.teamId)}
+      data-disqualified={locked || undefined}
+      className={`transition-colors ${
+        locked
+          ? 'cursor-not-allowed opacity-60'
+          : selected
+            ? 'cursor-pointer bg-[rgba(127,202,101,.1)]'
+            : 'cursor-pointer hover:bg-[var(--s2,#1d1520)]'
       }`}
     >
       <td className="px-3 py-2">
         <input
           type="checkbox"
-          checked={selected}
+          checked={selected && !locked}
+          disabled={locked}
+          title={locked ? lockedReason : undefined}
+          aria-describedby={locked ? reasonId : undefined}
           onChange={() => onToggle(s.teamId)}
         />
+        {locked && (
+          <span id={reasonId} className="sr-only">
+            {lockedReason}
+          </span>
+        )}
       </td>
       <td className="px-3 py-2 font-mono text-xs text-[var(--t4,#807984)]">
         {s.rank}
@@ -405,6 +425,7 @@ function AdvanceStandingsTable({
                 s={s}
                 selected={selectedIds.has(s.teamId)}
                 onToggle={onToggleTeam}
+                lockedReason={t.advanceDisqualifiedLocked}
                 tiebreakLabel={
                   forcedAhead.has(s.teamId)
                     ? t.tbOverride

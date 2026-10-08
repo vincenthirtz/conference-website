@@ -167,6 +167,8 @@ export default adminNs('adminStageDetail', {
   seedModeRank: 'Par classement',
   seedModeManual: 'Par ordre de selection',
   seedModeNone: 'Aucun seed',
+  advanceDisqualifiedLocked:
+    'Équipe disqualifiée de la phase : elle ne peut pas être qualifiée.',
   // Dérogations de départage (« Forcer l'ordre »)
   tbOverride: 'dérogation staff',
   ovForce: "Forcer l'ordre",

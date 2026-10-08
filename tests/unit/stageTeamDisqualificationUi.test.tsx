@@ -301,6 +301,60 @@ describe('badge « Disqualifiée »', () => {
     expect(badges[0].closest('tr')?.textContent).toContain('Bravo');
   });
 
+  it('modale d’avancement : la case d’une disqualifiée est désactivée et dit pourquoi', () => {
+    const onToggleTeam = vi.fn();
+    const d = nsAdminStageDetail.fr;
+    render(
+      <AdvanceStandingsTable
+        standings={[
+          {
+            teamId: 'a',
+            teamName: 'Alpha',
+            rank: 1,
+            wins: 2,
+            losses: 0,
+            draws: 0,
+            score: 6,
+          },
+          {
+            teamId: 'b',
+            teamName: 'Bravo',
+            rank: 2,
+            wins: 1,
+            losses: 1,
+            draws: 0,
+            score: 3,
+            disqualified: true,
+            disqualificationMode: 'annul',
+          },
+        ]}
+        selectedIds={new Set(['b'])}
+        allSelected={false}
+        onToggleTeam={onToggleTeam}
+        onToggleAll={() => {}}
+        t={d}
+      />
+    );
+    const rows = screen.getAllByRole('row').slice(1);
+    const [alpha, bravo] = rows.map(
+      (r) => r.querySelector('input[type="checkbox"]') as HTMLInputElement
+    );
+    expect(alpha.disabled).toBe(false);
+    expect(bravo.disabled).toBe(true);
+    // Même si l'id traîne dans la sélection, la case n'apparaît pas cochée.
+    expect(bravo.checked).toBe(false);
+    expect(bravo.getAttribute('title')).toBe(d.advanceDisqualifiedLocked);
+    const describedBy = bravo.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy!)?.textContent).toBe(
+      d.advanceDisqualifiedLocked
+    );
+    fireEvent.click(rows[1]);
+    expect(onToggleTeam).not.toHaveBeenCalled();
+    fireEvent.click(rows[0]);
+    expect(onToggleTeam).toHaveBeenCalledWith('a');
+  });
+
   it('classement public : badge et info-bulle selon le mode', () => {
     const pub = nsTournamentStandings.fr;
     render(<PublicDisqualifiedBadge mode="annul" />);

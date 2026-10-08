@@ -16,6 +16,11 @@ import AdvanceStandingsTable, {
 } from './AdvanceStandingsTable';
 import type { TiebreakerOverride } from '@/features/admin/stages/client';
 import type { OverrideDraft } from '@/features/admin/stages/hooks/useTiebreakerOverrides';
+import {
+  areAllSelected,
+  countSelected,
+  selectableRows,
+} from '@/features/admin/stages/advanceSelection';
 
 type OtherStage = { id: string; name: string; stage_type: string | null };
 type SeedMode = 'rank' | 'manual' | 'none';
@@ -81,6 +86,9 @@ function AdvanceModal({
   onAddOverride,
   onRemoveOverride,
 }: Props) {
+  // Équipes disqualifiées : jamais sélectionnables, jamais comptées.
+  const selectedCount = countSelected(standings, selectedIds);
+  const selectableCount = selectableRows(standings).length;
   return (
     <Modal
       open={open}
@@ -96,7 +104,7 @@ function AdvanceModal({
         <div className="flex justify-between items-center w-full">
           <span className={`text-xs ${rubanMuted}`}>
             {format(t.advanceSelectedCount, {
-              count: selectedIds.size,
+              count: selectedCount,
             })}
           </span>
           <div className="flex gap-2">
@@ -107,7 +115,7 @@ function AdvanceModal({
               variant="primary"
               size="sm"
               onClick={onSubmit}
-              disabled={submitting || selectedIds.size === 0 || !targetStageId}
+              disabled={submitting || selectedCount === 0 || !targetStageId}
             >
               {submitting ? (
                 <>
@@ -160,7 +168,7 @@ function AdvanceModal({
                   <input
                     type="number"
                     min={1}
-                    max={standings.length}
+                    max={selectableCount}
                     value={topN}
                     onChange={(e) => onTopN(e.target.value)}
                     className={rubanFormInput}
@@ -198,8 +206,8 @@ function AdvanceModal({
             </div>
             <p className={`text-xs ${rubanMuted}`}>
               {format(t.advanceRatio, {
-                selected: selectedIds.size,
-                total: standings.length,
+                selected: selectedCount,
+                total: selectableCount,
               })}
             </p>
           </div>
@@ -209,7 +217,7 @@ function AdvanceModal({
             <AdvanceStandingsTable
               standings={standings}
               selectedIds={selectedIds}
-              allSelected={selectedIds.size === standings.length}
+              allSelected={areAllSelected(standings, selectedIds)}
               onToggleTeam={onToggleTeam}
               onToggleAll={onToggleAll}
               t={t}

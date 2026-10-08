@@ -20,6 +20,14 @@ import type { AdvanceStanding } from '@/components/admin/stages/[stageId]/Advanc
 import type { StageOption } from '@/utils/stages/stageOption';
 import type { Stage } from '@/types/admin';
 import { logger } from '@/utils/logger';
+import {
+  orderedSelection,
+  selectByMinScore,
+  selectByMinWins,
+  selectTopN,
+  toggleAll,
+  toggleTeam,
+} from '../advanceSelection';
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 
@@ -127,8 +135,7 @@ export function useStageAdvanceActions(deps: StageAdvanceActionsDeps) {
       setAdvanceMinWins('');
       const n = parseInt(value, 10);
       if (!isNaN(n) && n > 0) {
-        const ids = new Set(advanceStandings.slice(0, n).map((s) => s.teamId));
-        setAdvanceSelectedIds(ids);
+        setAdvanceSelectedIds(selectTopN(advanceStandings, n));
       }
     },
     [advanceStandings]
@@ -142,12 +149,7 @@ export function useStageAdvanceActions(deps: StageAdvanceActionsDeps) {
       setAdvanceMinWins('');
       const threshold = parseFloat(value);
       if (!isNaN(threshold)) {
-        const ids = new Set(
-          advanceStandings
-            .filter((s) => s.score >= threshold)
-            .map((s) => s.teamId)
-        );
-        setAdvanceSelectedIds(ids);
+        setAdvanceSelectedIds(selectByMinScore(advanceStandings, threshold));
       }
     },
     [advanceStandings]
@@ -161,49 +163,38 @@ export function useStageAdvanceActions(deps: StageAdvanceActionsDeps) {
       setAdvanceMinScore('');
       const threshold = parseInt(value, 10);
       if (!isNaN(threshold) && threshold > 0) {
-        const ids = new Set(
-          advanceStandings
-            .filter((s) => s.wins >= threshold)
-            .map((s) => s.teamId)
-        );
-        setAdvanceSelectedIds(ids);
+        setAdvanceSelectedIds(selectByMinWins(advanceStandings, threshold));
       }
     },
     [advanceStandings]
   );
 
+  // Une équipe disqualifiée n'est jamais cochée (advanceSelection).
   // biome-ignore lint/correctness/useExhaustiveDependencies: deps d'origine conservées (setters stables reçus en paramètre)
-  const toggleAdvanceTeam = useCallback((teamId: string) => {
-    setAdvanceSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(teamId)) next.delete(teamId);
-      else next.add(teamId);
-      return next;
-    });
-    setAdvanceTopN('');
-  }, []);
+  const toggleAdvanceTeam = useCallback(
+    (teamId: string) => {
+      setAdvanceSelectedIds((prev) =>
+        toggleTeam(prev, teamId, advanceStandings)
+      );
+      setAdvanceTopN('');
+    },
+    [advanceStandings]
+  );
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: deps d'origine conservées (setters stables reçus en paramètre)
   const toggleAdvanceAll = useCallback(() => {
-    setAdvanceSelectedIds((prev) =>
-      prev.size === advanceStandings.length
-        ? new Set()
-        : new Set(advanceStandings.map((s) => s.teamId))
-    );
+    setAdvanceSelectedIds((prev) => toggleAll(prev, advanceStandings));
     setAdvanceTopN('');
   }, [advanceStandings]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: deps d'origine conservées (setters stables reçus en paramètre)
   const handleAdvanceSubmit = useCallback(async () => {
-    if (!stageId || advanceSelectedIds.size === 0 || !advanceTargetStageId)
-      return;
+    // Ordre du classement, équipes disqualifiées exclues (une équipe cochée
+    // puis disqualifiée entre-temps — classement rafraîchi — n'est pas envoyée).
+    const orderedIds = orderedSelection(advanceStandings, advanceSelectedIds);
+    if (!stageId || orderedIds.length === 0 || !advanceTargetStageId) return;
     setAdvanceSubmitting(true);
     setErrorMsg(null);
-
-    // Preserve standings order for the selected teams
-    const orderedIds = advanceStandings
-      .filter((s) => advanceSelectedIds.has(s.teamId))
-      .map((s) => s.teamId);
 
     try {
       const res = await advanceMutate(stageUrls.advance(String(stageId)), {
