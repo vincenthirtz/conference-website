@@ -212,11 +212,29 @@ describe('/api/admin/matches/[matchId]/mvp-public', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.votable).toBe(true);
     const poll = (store.match_public_mvp_polls as any)[0];
-    expect(poll.closes_at).toBeTruthy();
+    // SANS LIMITE de temps (2026-10-08) : aucune échéance, clôture manuelle.
+    expect(poll.closes_at).toBeNull();
     expect(poll.closed_at).toBeNull();
     expect(poll.candidate_member_ids).toEqual(
       expect.arrayContaining([ALICE, BEA, CHLOE])
     );
+  });
+
+  it('un vote sans échéance reçoit encore des voix des heures plus tard', async () => {
+    await open();
+    (store.match_public_mvp_polls as any)[0].opened_at =
+      '2026-01-01T00:00:00.000Z';
+    const res = await vote('twitch', [
+      { voterKey: 'viewer1', memberId: ALICE },
+    ]);
+    expect(res.statusCode).toBe(200);
+    expect((store.match_public_mvp_votes as any).length).toBe(1);
+  });
+
+  it('une durée DEMANDÉE explicitement pose toujours une échéance', async () => {
+    const res = await call('POST', { action: 'open', windowMinutes: 15 });
+    expect(res.statusCode).toBe(200);
+    expect((store.match_public_mvp_polls as any)[0].closes_at).toBeTruthy();
   });
 
   it('ouvre aussi un match EN COURS (fin de diffusion, score pas encore saisi)', async () => {
