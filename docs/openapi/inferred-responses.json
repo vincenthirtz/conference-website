@@ -4294,13 +4294,52 @@
          "x",
          "y"
         ]
+       },
+       "tcg": {
+        "type": "object",
+        "properties": {
+         "anchor": {
+          "type": "string",
+          "enum": [
+           "bc",
+           "bl",
+           "br",
+           "mc",
+           "ml",
+           "mr",
+           "tc",
+           "tl",
+           "tr"
+          ]
+         },
+         "scale": {
+          "type": "number"
+         },
+         "visible": {
+          "type": "boolean"
+         },
+         "x": {
+          "type": "number"
+         },
+         "y": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anchor",
+         "scale",
+         "visible",
+         "x",
+         "y"
+        ]
        }
       },
       "required": [
        "alerts",
        "don",
        "mvp",
-       "partners"
+       "partners",
+       "tcg"
       ]
      }
     },
@@ -27530,6 +27569,9 @@
      "callbackUrl": {
       "type": "string"
      },
+     "canManageRewards": {
+      "type": "boolean"
+     },
      "featuredCandidates": {
       "type": "array",
       "items": {
@@ -27609,6 +27651,7 @@
     },
     "required": [
      "callbackUrl",
+     "canManageRewards",
      "featuredCandidates",
      "featuredFanartId",
      "featuredRewardId",
@@ -40363,13 +40406,52 @@
          "x",
          "y"
         ]
+       },
+       "tcg": {
+        "type": "object",
+        "properties": {
+         "anchor": {
+          "type": "string",
+          "enum": [
+           "bc",
+           "bl",
+           "br",
+           "mc",
+           "ml",
+           "mr",
+           "tc",
+           "tl",
+           "tr"
+          ]
+         },
+         "scale": {
+          "type": "number"
+         },
+         "visible": {
+          "type": "boolean"
+         },
+         "x": {
+          "type": "number"
+         },
+         "y": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anchor",
+         "scale",
+         "visible",
+         "x",
+         "y"
+        ]
        }
       },
       "required": [
        "alerts",
        "don",
        "mvp",
-       "partners"
+       "partners",
+       "tcg"
       ]
      },
      "publicMvp": {
@@ -40603,6 +40685,103 @@
        "frameUrl",
        "soundUrl",
        "soundVolume"
+      ]
+     },
+     "tcg": {
+      "type": "object",
+      "properties": {
+       "items": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "at": {
+           "type": "string"
+          },
+          "id": {
+           "type": "string"
+          },
+          "kind": {
+           "type": "string",
+           "enum": [
+            "match_win",
+            "scrim_win",
+            "twitch_drop"
+           ]
+          },
+          "twitchLogin": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "at",
+          "id",
+          "kind",
+          "twitchLogin"
+         ]
+        }
+       },
+       "theme": {
+        "type": "object",
+        "properties": {
+         "accentColor": {
+          "type": "string"
+         },
+         "dropLine": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "mediaKind": {
+          "type": [
+           "string",
+           "null"
+          ],
+          "enum": [
+           "image",
+           "video",
+           null
+          ]
+         },
+         "mediaUrl": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "position": {
+          "type": "string",
+          "enum": [
+           "bottom-left",
+           "bottom-right",
+           "top-left",
+           "top-right"
+          ]
+         },
+         "winLine": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
+        },
+        "required": [
+         "accentColor",
+         "dropLine",
+         "mediaKind",
+         "mediaUrl",
+         "position",
+         "winLine"
+        ]
+       }
+      },
+      "required": [
+       "items",
+       "theme"
       ]
      }
     },
@@ -79512,13 +79691,52 @@
          "x",
          "y"
         ]
+       },
+       "tcg": {
+        "type": "object",
+        "properties": {
+         "anchor": {
+          "type": "string",
+          "enum": [
+           "bc",
+           "bl",
+           "br",
+           "mc",
+           "ml",
+           "mr",
+           "tc",
+           "tl",
+           "tr"
+          ]
+         },
+         "scale": {
+          "type": "number"
+         },
+         "visible": {
+          "type": "boolean"
+         },
+         "x": {
+          "type": "number"
+         },
+         "y": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "anchor",
+         "scale",
+         "visible",
+         "x",
+         "y"
+        ]
        }
       },
       "required": [
        "alerts",
        "don",
        "mvp",
-       "partners"
+       "partners",
+       "tcg"
       ]
      }
     },
