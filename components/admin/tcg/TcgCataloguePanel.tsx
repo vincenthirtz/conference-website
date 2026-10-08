@@ -32,6 +32,7 @@ import TcgPlayerPicker, {
   type PickedUser,
 } from '@/components/admin/tcg/TcgPlayerPicker';
 import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
+import TcgCardFallback from '@/components/tcg/TcgCardFallback';
 import type { TcgCardKind } from '@/utils/tcg/subjectKey';
 import nsAdminTcgPage from '@/lib/i18n/locales/admin-fr/adminTcgPage';
 import nsAdminTcgGrant from '@/lib/i18n/locales/admin-fr/adminTcgGrant';
@@ -192,7 +193,7 @@ export default function TcgCataloguePanel() {
                 }`}
               >
                 <span className="relative block aspect-[3/4] overflow-hidden rounded-[3px] bg-[var(--s1,#100812)]">
-                  {card.imageUrl && isOptimizableImageUrl(card.imageUrl) ? (
+                  {card.imageUrl ? (
                     <Image
                       src={card.imageUrl}
                       alt=""
@@ -201,8 +202,14 @@ export default function TcgCataloguePanel() {
                       loading="lazy"
                       decoding="async"
                       className="object-cover"
+                      // Hôte hors optimiseur (logo d'équipe distant…) : servie
+                      // telle quelle plutôt que laissée vide.
+                      unoptimized={!isOptimizableImageUrl(card.imageUrl)}
                     />
-                  ) : null}
+                  ) : (
+                    // Même repli que la carte des joueuses (TcgCard).
+                    <TcgCardFallback name={card.label} size="sm" />
+                  )}
                 </span>
                 <span className="mt-1.5 block truncate text-xs text-neutral-200">
                   {card.label}

@@ -11,6 +11,7 @@ import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 
 import TcgCard, { type TcgCardProps } from '@/components/tcg/TcgCard';
+import TcgCardFallback from '@/components/tcg/TcgCardFallback';
 import { DEFAULT_SITE_LOGO_SRC } from '@/lib/branding/useSiteLogo';
 
 const labels: TcgCardProps['labels'] = {
@@ -53,6 +54,18 @@ describe('TcgCard — fond de repli', () => {
       cardImageUrl: null,
     } as TcgCardProps['subject']);
     expect(html).toContain('data-testid="tcg-card-logo-fallback"');
+  });
+
+  it('repli partagé (catalogue admin) : logo et initiale, « ? » sans nom', () => {
+    const named = renderToString(
+      createElement(TcgCardFallback, { name: ' hanamura', size: 'sm' })
+    );
+    expect(named).toContain(DEFAULT_SITE_LOGO_SRC);
+    expect(named).toContain('>H<');
+    const anonymous = renderToString(
+      createElement(TcgCardFallback, { name: null })
+    );
+    expect(anonymous).toContain('>?<');
   });
 
   it('carte avec photo : pas de logo de repli', () => {
