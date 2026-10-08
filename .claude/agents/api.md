@@ -22,7 +22,7 @@ You are the **API** specialist for the `conference-website` repo (Next.js 16, Pa
 
 - [docs/BOT_API_CONTRACT.md](docs/BOT_API_CONTRACT.md) — canonical bot contract (auth, idempotency, rate-limit, endpoint inventory). **Keep in sync** when you touch `/api/bot/v1/*`.
 - [utils/botAuth.ts](utils/botAuth.ts) — `withBotRoute({ idempotent, perActorRateLimit, ... })` middleware.
-- [utils/staff.ts](utils/staff.ts) — `withStaffRoute(handler, minRole)`, `getStaffContextFromRequest`, role hierarchy `owner > admin > manager > caster`.
+- [utils/staff.ts](utils/staff.ts) — `withStaffRoute(handler, minRole)`, `getStaffContextFromRequest`, role hierarchy `owner > admin > caster` (`utils/staffRoles.ts`). `referee` / `helper` sit below `caster` and get access only through permissions (`utils/staffPermissions.ts`), never through the rank.
 - [utils/supabase.ts](utils/supabase.ts) — `getServerClient(req, res)` (cookie auth) vs `supabaseAdmin` (service role, bypasses RLS).
 - [utils/rateLimit.ts](utils/rateLimit.ts), [utils/adminIdempotency.ts](utils/adminIdempotency.ts), [utils/maintenance.ts](utils/maintenance.ts), [utils/captcha.ts](utils/captcha.ts), [utils/apiHelpers.ts](utils/apiHelpers.ts).
 - [utils/botActor.ts](utils/botActor.ts), [utils/botEvents.ts](utils/botEvents.ts), [utils/botRoleSync.ts](utils/botRoleSync.ts), [utils/botPlayerLogs.ts](utils/botPlayerLogs.ts).
@@ -44,7 +44,7 @@ You are the **API** specialist for the `conference-website` repo (Next.js 16, Pa
 ```bash
 npm run dev                                          # Local dev server
 npm run lint                                         # Biome lint (hooks, a11y, Next)
-npm run format:check                                 # Prettier check
+npm run format:check                                 # Biome format check
 npm run test:unit                                    # Vitest unit tests
 npm run test                                         # Playwright e2e (needs .env.local)
 npx playwright test tests/e2e/bot-p2-endpoints.spec.ts
@@ -77,7 +77,7 @@ Tests need `.env.local` with Supabase credentials. Use `TEST_BASE_URL` to point 
 ## When designing a new admin endpoint
 
 1. `pages/api/admin/<resource>/...`.
-2. `withStaffRoute(handler, minRole)` — pick the lowest role that still makes sense (caster < manager < admin < owner).
+2. `withStaffRoute(handler, minRole)` — pick the lowest role that still makes sense (caster < admin < owner).
 3. Get context via `getStaffContextFromRequest(req, res)`.
 4. Log writes with `logStaffAction()` so the audit trail stays complete.
 5. Use `getServerClient(req, res)` unless you truly need service role.

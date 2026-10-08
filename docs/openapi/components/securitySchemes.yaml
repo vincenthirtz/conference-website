@@ -28,7 +28,8 @@ StaffSession:
   name: sb-access-token
   description: |
     Session Supabase staff. Le helper `withStaffRoute(handler, minRole)`
-    applique le check de rôle (`owner` > `admin` > `manager` > `caster`).
+    applique le check de rôle (`owner` > `admin` > `caster`) ; `referee` et
+    `helper` passent uniquement par les permissions (`utils/staffPermissions.ts`).
 PlayerBearer:
   type: http
   scheme: bearer

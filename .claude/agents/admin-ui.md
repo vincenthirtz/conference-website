@@ -14,7 +14,7 @@ You are the **admin-ui** specialist for the `conference-website` repo. Your scop
 | Admin components (admin-only) | `components/admin/*` — banners, modals, breadcrumb, status badges, match widgets |
 | Dashboard widgets | `components/admin/dashboard/*` — `StatCard`, `WidgetCard`, `Sparkline`, `DiscordHealthGrid`, `ActionableAlert`, `ScoreEntryModal`, `DisputeResolveModal`, `ConfirmAdvanceModal`, `UpcomingMatchRow`, `StageProgressBar`, `SupportTicketsDonut` |
 | Bracket / simulator | `components/admin/bracket/*`, `components/admin/simulator/*` |
-| Admin hooks | `hooks/useAdminFetch.ts`, `hooks/useIdempotentMutation.ts`, `hooks/useConfirmDialog.tsx`, `hooks/useStaffSession.ts`, `hooks/useToast.ts` (re-exported from `components/Toast`) |
+| Admin hooks | `hooks/useAdminFetch.ts`, `hooks/useIdempotentMutation.ts`, `hooks/useConfirmDialog.tsx`, `hooks/useStaffSession.ts`, `useToast` (exported by `components/Toast`) |
 | Staff SSR wrapper | `utils/staff.ts` → `withStaffPage(minRole, loader?)` |
 | E2E tests | `tests/e2e/admin-*.spec.ts`, `cast-members-admin.spec.ts`, `pole-members-admin.spec.ts` |
 | Styles | TailwindCSS **v4 (CSS-first)** — theme + custom colors live in `@theme` blocks in `styles/globals.css` (e.g. `--color-surface-*` for admin dark panels, `--color-neon-*`). There is **no** `tailwind.config.ts` (removed; v4 doesn't load JS config without `@config`). |
@@ -29,7 +29,7 @@ export const getServerSideProps = withStaffPage('admin', async (ctx, staffCtx) =
 });
 ```
 
-- Role hierarchy: `owner > admin > manager > caster`. Pick the **lowest** role that still makes sense.
+- Role hierarchy: `owner > admin > caster` (`utils/staffRoles.ts`). `referee` / `helper` sit below `caster` and get access only through permissions (`utils/staffPermissions.ts`), never through the rank. Pick the **lowest** role that still makes sense.
 - `withStaffPage()` defaults to `'admin'`. Unauthenticated → `/admin/login`. Wrong role → `/403`.
 - Page always receives `staff: { id, role, display_name }` in props. Render role-gated UI off `staff.role` (not a re-check on the client — the SSR wrapper is the gate).
 - Get session client-side via `useStaffSession()` only when you need reactive role-based UI inside a component.

@@ -77,7 +77,7 @@ The site sits at the center of a small ecosystem:
 ### Key Modules (utils/)
 
 - `supabase.ts` + `supabaseAdmin.ts` — browser/server clients (cookies via `@supabase/ssr`) and admin client (service role, bypasses RLS).
-- `staff.ts` — staff auth, roles, CSRF (`csrfCheck`), `withStaffRoute(handler, minRole)`, `withStaffPage(minRole, loader?)`, `getStaffContextFromRequest`. Roles: `owner > admin > caster`.
+- `staff.ts` — staff auth, roles, CSRF (`csrfCheck`), `withStaffRoute(handler, minRole)`, `withStaffPage(minRole, loader?)`, `getStaffContextFromRequest`. Roles: `owner > admin > caster` (rank in `utils/staffRoles.ts`); `referee` / `helper` sit below `caster` and go through permissions only (`utils/staffPermissions.ts`).
 - `casterAuth.ts` — caster-session gate (`withCasterRoute`), used by the two leftover `/api/caster/{me,briefing}` routes.
 - `tenant.ts` + `adminTenants.ts` — multi-tenant resolution (path-prefix from `tenants.slug`, legacy `DEFAULT_TENANT_ID` fallback, in-memory slug cache).
 - `botAuth.ts` + `botActor.ts` + `botEvents.ts` + `botPlayerLogs.ts` + `botRoleSync.ts` — Discord-bot API auth (per-tenant `x-api-key`), actor resolution, outbox event emission, audit logs.

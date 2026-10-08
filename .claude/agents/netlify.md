@@ -27,7 +27,7 @@ You are the **netlify** specialist for `conference-website`. Your scope is every
 | `checkin-cron` | `*/5 * * * *` | `/api/cron/checkin-process` | Per-match check-in flow: emails 1 h before, Discord reminders at T-30/T-15, auto-forfeit at T-0 |
 | `broadcast-cron` | `0 10 * * *` | `/api/cron/broadcast-process` | Daily 10:00 UTC (12 h Paris hiver / 11 h été). Brevo free-tier quota = 300 emails/day |
 | `outbox-maintenance-cron` | `0 * * * *` | (outbox cleanup) | Hourly: mark poison-pill `pending` → `failed` (default >6 h old), delete `delivered`/`failed` rows older than `OUTBOX_DELETE_AFTER_DAYS` (default 7), log p50/p95 latency |
-| `builds` | (manual / triggered) | Netlify build hook | Used by `pages/api/netlify-builds.ts` |
+| `builds` | (manual / triggered) | Netlify build hook | Handler `pages/api/netlify-builds.ts` removed on 2026-07-14; the route survives only in the OpenAPI spec (known exception in `tests/unit/openapiContractDrift.test.ts`) |
 
 ## Anatomy of a scheduled function
 
