@@ -20,7 +20,7 @@
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { listMvpCandidates } from '@/utils/mvp/service';
-import { readPublicVotes } from '@/utils/mvp/publicVote';
+import { isPublicPollOpen, readPublicVotes } from '@/utils/mvp/publicVote';
 import { MIN_VOTES_FOR_AWARD, tallySource } from '@/utils/mvp/awards';
 import { buildDemoPoll } from './publicMvpDemo';
 import { withoutBattleTagId } from '@/utils/mvp/publicLabel';
@@ -141,11 +141,15 @@ export async function readPublicMvpFeed(
 
   // Un scrutin OUVERT prime sur un résultat rémanent : si la régie enchaîne
   // deux matchs, c'est le vote en cours qui doit être à l'écran.
-  const ouvert = (polls ?? []).find(
-    (p) =>
-      !p.closed_at &&
-      p.closes_at &&
-      new Date(p.closes_at as string).getTime() > nowMs
+  // Sans échéance (`closes_at` vide) : ouvert jusqu'à la clôture manuelle.
+  const ouvert = (polls ?? []).find((p) =>
+    isPublicPollOpen(
+      {
+        closes_at: (p.closes_at as string | null) ?? null,
+        closed_at: (p.closed_at as string | null) ?? null,
+      },
+      nowMs
+    )
   );
   // Fenêtre passée SANS clôture (personne n'a cliqué « clôturer ») : on le
   // montre comme clos pendant RESULT_LINGER_MS après l'heure de fin, au lieu

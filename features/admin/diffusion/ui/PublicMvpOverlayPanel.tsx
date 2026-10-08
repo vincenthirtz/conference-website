@@ -18,13 +18,7 @@ import StatsMvpPanel from '@/components/admin/tournament/StatsMvpPanel';
 import { DEMO_TOTAL_MS } from '@/utils/overlay/publicMvpDemo';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
-import {
-  rubanEyebrow,
-  rubanFormInput,
-  rubanHelp,
-  rubanLabel,
-  rubanMuted,
-} from '@/features/ruban/ruban';
+import { rubanEyebrow, rubanHelp, rubanMuted } from '@/features/ruban/ruban';
 import { withAdminQuery } from '../../_shared/query';
 import { useMvpOverlay } from '../hooks/useMvpOverlay';
 import type { MvpOverlaySettings } from '../schemas';
@@ -190,22 +184,9 @@ function PublicMvpOverlayPanel({
             disabled={!canTuneSettings || busy}
             className="mt-3 grid gap-4 sm:grid-cols-2"
           >
-            <label>
-              <span className={rubanLabel}>{t.windowLabel}</span>
-              <input
-                type="number"
-                min={1}
-                max={360}
-                className={`${rubanFormInput} !w-28 font-mono`}
-                value={settings.window_minutes}
-                onChange={(e) =>
-                  setDraft({
-                    ...settings,
-                    window_minutes: Number(e.target.value),
-                  })
-                }
-              />
-            </label>
+            {/* Plus de durée par défaut : depuis le 2026-10-08, le vote du
+                public n'a pas de limite de temps et se clôt à la main.
+                `window_minutes` reste stocké, sans effet. */}
             <label className="flex items-center gap-2 self-end text-sm text-[var(--t2,#c7bfca)]">
               <input
                 type="checkbox"
@@ -275,11 +256,7 @@ function PublicMvpOverlayPanel({
             </AdminButton>
           )}
         {tournamentId ? (
-          <StatsMvpPanel
-            kind="public"
-            tournamentId={tournamentId}
-            defaultMinutes={state?.settings.window_minutes}
-          />
+          <StatsMvpPanel kind="public" tournamentId={tournamentId} />
         ) : (
           <p className={`text-sm ${rubanMuted}`}>{t.noTournament}</p>
         )}

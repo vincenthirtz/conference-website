@@ -14,6 +14,7 @@ import type { ServiceContext } from '@/utils/admin/serviceContext';
 import { listMvpCandidates } from '@/utils/mvp/service';
 import {
   castPublicVotes,
+  isPublicPollOpen,
   readPublicPoll,
   readPublicVotes,
 } from '@/utils/mvp/publicVote';
@@ -32,11 +33,7 @@ export async function getPublicMvp(ctx: ServiceContext, matchId: string) {
   const poll = await readPublicPoll(ctx.tenantId, matchId);
   const votes = poll ? await readPublicVotes(ctx.tenantId, matchId) : [];
 
-  const isOpen =
-    !!poll &&
-    !poll.closed_at &&
-    !!poll.closes_at &&
-    new Date(poll.closes_at).getTime() > Date.now();
+  const isOpen = isPublicPollOpen(poll);
 
   return {
     matchId,

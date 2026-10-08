@@ -4,8 +4,8 @@
 // GET /api/admin/tournament/[id]/mvp-votes (vote des équipes, lecture seule) ou
 // /mvp-public-votes (vote du public, Twitch + Discord additionnés).
 //
-// Le vote du PUBLIC se pilote aussi d'ici : le lancer à la main sur un match
-// terminé, ou le clore avant l'échéance — pour un match sans régie, où le
+// Le vote du PUBLIC se pilote aussi d'ici : le lancer à la main (SANS limite
+// de temps depuis le 2026-10-08), puis le clore à la main — pour un match sans régie, où le
 // cockpit caster n'est pas ouvert. Le site prévient le bot, qui poste le vote
 // dans son salon Discord (POST /api/admin/matches/[matchId]/mvp-public).
 //
@@ -63,8 +63,6 @@ type Response = VoteBoard & {
   openable?: OpenableMatch[];
 };
 
-/** Défaut du serveur (DEFAULT_PUBLIC_WINDOW_MINUTES), rappelé dans le champ. */
-const DEFAULT_PUBLIC_MINUTES = 10;
 type Filter = 'all' | 'open' | 'closed';
 type Dict = typeof nsAdminTournamentMvpVotes.fr;
 
@@ -102,7 +100,6 @@ function sourceLabel(t: Dict, s: string | null): string {
 export default function StatsMvpPanel({
   kind = 'teams',
   tournamentId: tournamentIdProp,
-  defaultMinutes = DEFAULT_PUBLIC_MINUTES,
 }: {
   kind?: StatsMvpKind;
   /**
@@ -110,8 +107,6 @@ export default function StatsMvpPanel({
    * Diffusion › Overlays le passe depuis son sélecteur (`?tournament=`).
    */
   tournamentId?: string;
-  /** Durée proposée à l'ouverture (réglage du sondage de l'espace). */
-  defaultMinutes?: number;
 }) {
   const router = useRouter();
   const { id } = router.query;
@@ -131,12 +126,6 @@ export default function StatsMvpPanel({
   );
   const data = votesQuery.data ?? null;
   const [openMatchId, setOpenMatchId] = useState('');
-  const [minutes, setMinutes] = useState(String(defaultMinutes));
-  // Le réglage de l'espace arrive après le premier rendu : il remplace la
-  // valeur proposée tant que personne ne l'a modifiée à la main.
-  useEffect(() => {
-    setMinutes(String(defaultMinutes));
-  }, [defaultMinutes]);
   const [busy, setBusy] = useState(false);
   const loading = votesQuery.isPending;
   const error = votesQuery.error
@@ -176,10 +165,7 @@ export default function StatsMvpPanel({
 
   /** Lancer / clore le vote du public d'un match, puis recharger. */
   const runPublic = useCallback(
-    async (
-      matchId: string,
-      body: { action: 'open'; windowMinutes: number } | { action: 'close' }
-    ) => {
+    async (matchId: string, body: { action: 'open' } | { action: 'close' }) => {
       setBusy(true);
       try {
         await adminRequest(tournamentMatchUrls.mvpPublic(matchId), {
@@ -206,12 +192,10 @@ export default function StatsMvpPanel({
    */
   const reopenPublic = useCallback(
     async (matchId: string) => {
-      const n = Number(minutes);
-      const windowMinutes =
-        n >= 1 && n <= 360 ? Math.round(n) : DEFAULT_PUBLIC_MINUTES;
+      // Sans durée : le vote reste ouvert jusqu'à « Clore maintenant ».
       const ok = await confirm({
         title: t.reopenConfirmTitle,
-        subtitle: format(t.reopenConfirmBody, { minutes: windowMinutes }),
+        subtitle: t.reopenConfirmBody,
         confirmLabel: t.reopenCta,
       });
       if (!ok) return;
@@ -219,7 +203,7 @@ export default function StatsMvpPanel({
       try {
         await adminRequest(tournamentMatchUrls.mvpPublic(matchId), {
           method: 'POST',
-          json: { action: 'open', windowMinutes },
+          json: { action: 'open' },
         });
         addToast(t.reopenDone, 'success');
         await load(true);
@@ -229,7 +213,7 @@ export default function StatsMvpPanel({
         setBusy(false);
       }
     },
-    [addToast, confirm, load, minutes, t]
+    [addToast, confirm, load, t]
   );
 
   const shown = useMemo(() => {
@@ -316,31 +300,11 @@ export default function StatsMvpPanel({
                   ))}
                 </select>
               </label>
-              <label className={`text-xs ${rubanMuted}`}>
-                {t.openMinutesLabel}
-                <input
-                  type="number"
-                  min={1}
-                  max={360}
-                  className={`mt-1 block !w-24 font-mono ${rubanFormInput}`}
-                  value={minutes}
-                  onChange={(e) => setMinutes(e.target.value)}
-                />
-              </label>
               <AdminButton
                 variant="primary"
                 size="sm"
-                disabled={
-                  busy ||
-                  !openMatchId ||
-                  !(Number(minutes) >= 1 && Number(minutes) <= 360)
-                }
-                onClick={() =>
-                  void runPublic(openMatchId, {
-                    action: 'open',
-                    windowMinutes: Math.round(Number(minutes)),
-                  })
-                }
+                disabled={busy || !openMatchId}
+                onClick={() => void runPublic(openMatchId, { action: 'open' })}
               >
                 {t.openCta}
               </AdminButton>

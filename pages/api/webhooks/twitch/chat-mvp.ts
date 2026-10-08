@@ -33,7 +33,7 @@ import {
   resolveChatCandidate,
 } from '@/utils/mvp/twitchChatVote';
 import { listMvpCandidates } from '@/utils/mvp/service';
-import { castPublicVotes } from '@/utils/mvp/publicVote';
+import { castPublicVotes, openPublicPollFilter } from '@/utils/mvp/publicVote';
 
 /** Le corps doit rester brut : la signature couvre les octets reçus. */
 export const config = { api: { bodyParser: false } };
@@ -73,7 +73,7 @@ async function openPollOf(tenantId: string) {
     .select('match_id, candidate_member_ids')
     .eq('tenant_id', tenantId)
     .is('closed_at', null)
-    .gt('closes_at', new Date().toISOString())
+    .or(openPublicPollFilter(new Date().toISOString()))
     .order('opened_at', { ascending: false })
     .limit(1);
   if (error) return undefined;

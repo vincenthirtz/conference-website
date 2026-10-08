@@ -43,19 +43,18 @@ export default {
   tbd: 'TBD',
   headingPublic: 'Audience MVP votes',
   introPublic:
-    'The “audience favourite”: opened by the broadcast crew from the caster cockpit, about ten minutes, Twitch viewers (!mvp N) and Discord supporters. Unlike the teams’ vote, both platforms are ADDED UP. “Leading” applies that rule: at least {min} votes in total, no tie.',
+    'The “audience favourite”: opened by the broadcast crew, with NO time limit until it is closed manually, Twitch viewers (!mvp N) and Discord supporters. Unlike the teams’ vote, both platforms are ADDED UP. “Leading” applies that rule: at least {min} votes in total, no tie.',
   emptyPublic:
     'No audience vote has been opened for this tournament yet. It opens from the caster cockpit (/admin/caster › MVP poll), with a match linked.',
   sourceCombined: 'Twitch + Discord',
   openTitle: 'Start an audience vote',
   openHelp:
-    'For a match in progress, finished or upcoming — e.g. at the end of a broadcast, before the score is entered. The bot posts the vote in its Discord channel (supporters), and Twitch chat votes with !mvp <name>.',
+    'For a match in progress, finished or upcoming — e.g. at the end of a broadcast, before the score is entered. The bot posts the vote in its Discord channel (supporters), and Twitch chat votes with !mvp <name>. The vote stays open until “Close now”.',
   openNone:
     'No match (in progress, finished or upcoming) without an audience vote.',
   openStateOngoing: 'In progress',
   openStateUpcoming: 'Upcoming',
   openMatchLabel: 'Match',
-  openMinutesLabel: 'Duration (min)',
   openCta: 'Start the vote',
   openDone: 'Audience vote started.',
   closeCta: 'Close now',
@@ -63,7 +62,7 @@ export default {
   reopenCta: 'Restart the vote',
   reopenConfirmTitle: 'Restart the audience vote?',
   reopenConfirmBody:
-    'The vote reopens for {minutes} min. Votes already cast are kept; the displayed result is cleared until the next close. If another player wins, she also receives her TCG coins.',
+    'The vote reopens with no time limit, until you close it. Votes already cast are kept; the displayed result is cleared until the next close. If another player wins, she also receives her TCG coins.',
   reopenDone: 'Audience vote restarted.',
   actionError: 'The operation failed.',
 };

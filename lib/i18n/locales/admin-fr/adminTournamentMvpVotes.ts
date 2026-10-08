@@ -45,27 +45,25 @@ export default adminNs('adminTournamentMvpVotes', {
   // --- Vote MVP DU PUBLIC (onglet `mvp-public`) ------------------------------
   headingPublic: 'Votes MVP du public',
   introPublic:
-    'Le « coup de cœur du public » : ouvert par la régie depuis le cockpit caster, une dizaine de minutes, les viewers Twitch (!mvp N) et les supporters Discord. Contrairement au vote des équipes, les deux plateformes s’ADDITIONNENT. Le « en tête » applique cette règle : au moins {min} voix au total, pas d’égalité.',
+    'Le « coup de cœur du public » : ouvert par la régie, SANS limite de temps jusqu’à sa clôture manuelle, les viewers Twitch (!mvp N) et les supporters Discord. Contrairement au vote des équipes, les deux plateformes s’ADDITIONNENT. Le « en tête » applique cette règle : au moins {min} voix au total, pas d’égalité.',
   emptyPublic:
     'Aucun vote du public n’a encore été ouvert pour ce tournoi. Il s’ouvre depuis le cockpit caster (/admin/caster › Poll MVP), match rattaché.',
   sourceCombined: 'Twitch + Discord',
   openTitle: 'Lancer un vote du public',
   openHelp:
-    'Pour un match en cours, terminé ou à venir — par exemple en fin de diffusion, avant la saisie du score. Le bot poste le vote dans son salon Discord (supporters), et le chat Twitch vote par !mvp <pseudo>.',
+    'Pour un match en cours, terminé ou à venir — par exemple en fin de diffusion, avant la saisie du score. Le bot poste le vote dans son salon Discord (supporters), et le chat Twitch vote par !mvp <pseudo>. Le vote reste ouvert jusqu’à « Clore maintenant ».',
   openNone: 'Aucun match (en cours, terminé ou à venir) sans vote du public.',
   openStateOngoing: 'En cours',
   openStateUpcoming: 'À venir',
   openMatchLabel: 'Match',
-  openMinutesLabel: 'Durée (min)',
   openCta: 'Lancer le vote',
   openDone: 'Vote du public lancé.',
   closeCta: 'Clore maintenant',
   closeDone: 'Vote du public clos.',
   reopenCta: 'Relancer le vote',
   reopenConfirmTitle: 'Relancer le vote du public ?',
-  /** Interpole `{minutes}`. */
   reopenConfirmBody:
-    'Le vote rouvre pour {minutes} min. Les voix déjà exprimées sont conservées ; le résultat affiché est effacé jusqu’à la nouvelle clôture. Si une autre joueuse l’emporte, elle reçoit aussi ses pièces TCG.',
+    'Le vote rouvre, sans limite de temps, jusqu’à ce que tu le clôtures. Les voix déjà exprimées sont conservées ; le résultat affiché est effacé jusqu’à la nouvelle clôture. Si une autre joueuse l’emporte, elle reçoit aussi ses pièces TCG.',
   reopenDone: 'Vote du public relancé.',
   actionError: 'L’opération a échoué.',
 });

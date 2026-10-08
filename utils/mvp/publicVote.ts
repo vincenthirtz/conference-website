@@ -67,6 +67,34 @@ export type PublicPollRow = {
 const POLL_COLUMNS =
   'id, match_id, opened_at, closes_at, closed_at, candidate_member_ids, winner_member_id, winner_battle_tag, winner_votes, total_votes, settled_at, discord_channel_id, discord_message_id';
 
+/**
+ * Le scrutin public reçoit-il des voix ?
+ *
+ * `closes_at` VIDE = SANS LIMITE : le vote reste ouvert jusqu'à la clôture
+ * manuelle (décision de l'orga du 2026-10-08 — le match dure ce qu'il dure,
+ * un compte à rebours fermait le vote avant la fin). Une échéance posée
+ * explicitement (`windowMinutes`) reste honorée.
+ *
+ * LA SEULE DÉFINITION : routes, overlay, chat Twitch et bot la partagent.
+ */
+export function isPublicPollOpen(
+  poll: {
+    opened_at?: string | null;
+    closes_at: string | null;
+    closed_at: string | null;
+  } | null,
+  nowMs: number = Date.now()
+): boolean {
+  if (!poll || poll.closed_at) return false;
+  if ('opened_at' in poll && !poll.opened_at) return false;
+  return !poll.closes_at || new Date(poll.closes_at).getTime() > nowMs;
+}
+
+/** Filtre PostgREST équivalent (`.or(...)`) : sans échéance, ou pas atteinte. */
+export function openPublicPollFilter(nowIso: string): string {
+  return `closes_at.is.null,closes_at.gt.${nowIso}`;
+}
+
 /** Lit le scrutin public d'un match (null si jamais ouvert). */
 export async function readPublicPoll(
   tenantId: string,
@@ -114,7 +142,8 @@ export async function openPublicVote(
   tenantId: string,
   matchId: string,
   opts: {
-    windowMinutes?: number;
+    /** Absente = sans limite (clôture manuelle). */
+    windowMinutes?: number | null;
     channelId?: string | null;
     messageId?: string | null;
   } = {}
@@ -126,11 +155,7 @@ export async function openPublicVote(
   // « Déjà ouvert » = pas clôturé ET fenêtre encore en cours. Un scrutin dont
   // la fenêtre est passée sans clôture se ROUVRE : sans ça, la régie qui
   // n'avait pas cliqué « clôturer » ne pouvait plus relancer le vote.
-  const stillOpen =
-    !!existing &&
-    !existing.closed_at &&
-    !!existing.closes_at &&
-    new Date(existing.closes_at).getTime() > Date.now();
+  const stillOpen = isPublicPollOpen(existing);
   if (existing && stillOpen) {
     // Déjà ouvert : on complète seulement l'ancrage Discord s'il manque, sans
     // toucher à la fenêtre ni aux candidates.
@@ -160,15 +185,18 @@ export async function openPublicVote(
   }
 
   const now = new Date();
-  const closesAt = new Date(
-    now.getTime() + clampWindow(opts.windowMinutes) * 60_000
-  );
+  // Sans durée demandée : AUCUNE échéance, clôture manuelle (cf.
+  // `isPublicPollOpen`).
+  const closesAt =
+    opts.windowMinutes == null
+      ? null
+      : new Date(now.getTime() + clampWindow(opts.windowMinutes) * 60_000);
 
   const row = {
     tenant_id: tenantId,
     match_id: matchId,
     opened_at: now.toISOString(),
-    closes_at: closesAt.toISOString(),
+    closes_at: closesAt ? closesAt.toISOString() : null,
     // Une RÉOUVERTURE efface la clôture et le résultat précédents : sans ça,
     // le dépouillement d'hier resterait affiché sur un scrutin rouvert.
     closed_at: null,
@@ -241,12 +269,7 @@ export async function castPublicVotes(
   const rejected = { closed: 0, notCandidate: 0, malformed: 0 };
 
   const poll = await readPublicPoll(tenantId, matchId);
-  const closed =
-    !poll ||
-    !!poll.closed_at ||
-    (poll.closes_at ? new Date(poll.closes_at).getTime() <= Date.now() : true);
-
-  if (closed) {
+  if (!poll || !isPublicPollOpen(poll)) {
     return { accepted: 0, rejected: { ...rejected, closed: votes.length } };
   }
 

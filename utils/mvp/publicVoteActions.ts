@@ -17,7 +17,7 @@
 
 import { listMvpCandidates } from '@/utils/mvp/service';
 import {
-  DEFAULT_PUBLIC_WINDOW_MINUTES,
+  openPublicPollFilter,
   openPublicVote,
   settlePublicVote,
 } from '@/utils/mvp/publicVote';
@@ -68,7 +68,7 @@ export async function openPublicVoteForMatch(
   tenantId: string,
   matchId: string,
   opts: {
-    windowMinutes?: number;
+    windowMinutes?: number | null;
     staffId?: string | null;
     notifyBot: boolean;
   }
@@ -105,7 +105,8 @@ export async function openPublicVoteForMatch(
   }
 
   const opened = await openPublicVote(tenantId, matchId, {
-    windowMinutes: opts.windowMinutes ?? DEFAULT_PUBLIC_WINDOW_MINUTES,
+    // Sans durée : vote sans limite, clos à la main (cf. isPublicPollOpen).
+    windowMinutes: opts.windowMinutes ?? null,
   });
   if (!opened) {
     return {
@@ -270,7 +271,7 @@ export async function stopChatVoteIfIdle(tenantId: string): Promise<void> {
     .select('id, closes_at')
     .eq('tenant_id', tenantId)
     .is('closed_at', null)
-    .gt('closes_at', new Date().toISOString())
+    .or(openPublicPollFilter(new Date().toISOString()))
     .limit(1);
   if ((data ?? []).length === 0) {
     await removeChatVoteSubscription({ tenantId });

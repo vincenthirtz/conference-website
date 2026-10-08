@@ -36,6 +36,7 @@ import { withBotRoute, type BotTenantRequest } from '@/utils/botAuth';
 import { listMvpCandidates } from '@/utils/mvp/service';
 import {
   castPublicVotes,
+  isPublicPollOpen,
   readPublicPoll,
   readPublicVotes,
 } from '@/utils/mvp/publicVote';
@@ -60,11 +61,7 @@ async function handler(req: BotTenantRequest, res: NextApiResponse) {
 
     const poll = await readPublicPoll(tenantId, matchId);
     const votes = poll ? await readPublicVotes(tenantId, matchId) : [];
-    const isOpen =
-      !!poll &&
-      !poll.closed_at &&
-      !!poll.closes_at &&
-      new Date(poll.closes_at).getTime() > Date.now();
+    const isOpen = isPublicPollOpen(poll);
 
     return res.status(200).json({
       matchId,
