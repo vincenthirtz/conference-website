@@ -26,6 +26,7 @@ import SupporterWelcomeCard from '@/components/player/SupporterWelcomeCard';
 import DiscordLinkCard from '@/components/player/DiscordLinkCard';
 import NetworkOnboardingCard from '@/components/player/NetworkOnboardingCard';
 import RegistrationDeadlineBanner from '@/components/player/RegistrationDeadlineBanner';
+import EventSignupCard from '@/components/player/EventSignupCard';
 import InvitationsSection from '@/components/player/InvitationsSection';
 import MyScrimsCard from '@/components/player/MyScrimsCard';
 import TeamRhythmCard from '@/components/player/TeamRhythmCard';
@@ -227,6 +228,10 @@ export default function PlayerDashboardScreen() {
               networkStatus={networkStatus}
             />
           )}
+
+          {/* L'événement du moment (config/homeEventSpotlight), inscription
+              en un clic. Se retire seul passé sa date d'affichage. */}
+          {!isInspecting && !readOnly && <EventSignupCard />}
 
           {/* Sélecteur d'équipe (manager multi-équipes) : tout ce qui suit
               porte sur l'équipe choisie. */}

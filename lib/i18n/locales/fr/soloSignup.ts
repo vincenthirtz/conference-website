@@ -120,4 +120,23 @@ export default ns('soloSignup', {
   poolWaitSoloBody:
     'Le staff te placera dans une équipe avant l’événement. Tu seras prévenue.',
   poolRecap: 'Inscrite en tant que {pseudo} ({tag}).',
+  // --- Encart événement de l’espace joueuse (EventSignupCard) ---------------
+  eventCardEyebrow: 'Événement',
+  eventCardTitle: 'Event Halloween — {date}',
+  eventCardPitch:
+    'Deux maps, un ultime aléatoire dans ton rôle et des bonbons virtuels à gagner. Inscris-toi en un clic !',
+  /** Interpole {pseudo}, {tag}, {team}. */
+  eventCardRecapTeam:
+    'Tu seras inscrite en tant que {pseudo} ({tag}) avec {team}.',
+  /** Interpole {pseudo}, {tag}. */
+  eventCardRecapSolo:
+    'Tu seras inscrite en tant que {pseudo} ({tag}) — le staff te placera dans une équipe.',
+  eventCardOneClick: 'M’inscrire en un clic',
+  eventCardComplete: 'Compléter mon inscription',
+  eventCardMissingInfo:
+    'Il manque ton pseudo ou ton BattleTag : renseigne-les sur la page d’inscription.',
+  eventCardDetails: 'Voir l’événement',
+  eventCardRegistered: 'Tu es inscrite à l’Event Halloween 🎃',
+  eventCardManage: 'Mon inscription',
+  eventCardLogoAlt: 'Logo de l’Event Halloween',
 });

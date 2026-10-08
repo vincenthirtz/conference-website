@@ -111,4 +111,19 @@ export default {
   poolWaitSoloBody:
     'Staff will place you in a team before the event. You’ll be notified.',
   poolRecap: 'Signed up as {pseudo} ({tag}).',
+  eventCardEyebrow: 'Event',
+  eventCardTitle: 'Halloween Event — {date}',
+  eventCardPitch:
+    'Two maps, a random ultimate in your role and virtual candy to win. Sign up in one click!',
+  eventCardRecapTeam: 'You will be signed up as {pseudo} ({tag}) with {team}.',
+  eventCardRecapSolo:
+    'You will be signed up as {pseudo} ({tag}) — staff will place you in a team.',
+  eventCardOneClick: 'Sign me up in one click',
+  eventCardComplete: 'Complete my sign-up',
+  eventCardMissingInfo:
+    'Your username or BattleTag is missing: fill them in on the sign-up page.',
+  eventCardDetails: 'See the event',
+  eventCardRegistered: 'You are signed up for the Halloween Event 🎃',
+  eventCardManage: 'My sign-up',
+  eventCardLogoAlt: 'Halloween Event logo',
 };
