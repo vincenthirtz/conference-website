@@ -240,6 +240,58 @@ function freshState(userId: string): PlayerRatingState {
   };
 }
 
+/**
+ * Le camp que l'historique a noté VAINQUEUR pour ce match : l'équipe des
+ * lignes `win`. `null` = aucune victoire notée (nul) ; `undefined` = illisible
+ * — on ne conclut alors à aucune correction plutôt que de rejouer à l'aveugle.
+ */
+async function recordedWinnerTeam(
+  tenantId: string,
+  matchId: string,
+  history: Array<{ user_id: string; result: string | null }>
+): Promise<string | null | undefined> {
+  const winners = new Set(
+    history.filter((h) => h.result === 'win').map((h) => h.user_id)
+  );
+  if (winners.size === 0) return null;
+  const { data, error } = await supabaseAdmin
+    .from('match_participants')
+    .select('team_id, user_id')
+    .eq('tenant_id', tenantId)
+    .eq('match_id', matchId);
+  if (error) {
+    logger.error('[rating] incremental: recorded winner read error', error);
+    return undefined;
+  }
+  const row = (
+    (data ?? []) as Array<{ team_id: string; user_id: string }>
+  ).find((p) => winners.has(p.user_id));
+  return row ? row.team_id : undefined;
+}
+
+/**
+ * Un match DÉJÀ noté dont le résultat a changé : le rating Glicko-2 est
+ * séquentiel, une correction se propage aux matchs suivants — seul le replay
+ * complet (`rebuildRatings`) dit juste. Puis on paie le vainqueur ACTUEL
+ * (idempotent par les contraintes UNIQUE : rien en double).
+ *
+ * Les gains déjà versés au camp qui n'avait pas gagné ne sont PAS repris : ils
+ * ont pu être dépensés, et un retrait n'aurait pas de bonne issue — même
+ * posture que la MVP du public rouverte (cf. grantPublicMvp.ts).
+ */
+async function reconcileCorrectedMatch(
+  tenantId: string,
+  matchId: string
+): Promise<void> {
+  logger.warn(
+    '[rating] match %s corrigé après notation : replay complet du rating',
+    matchId
+  );
+  // Le replay paie aussi les victoires versées au mauvais camp (cf.
+  // `repayCorrectedVictories`), dont celle-ci si elle est terminée.
+  await rebuildRatings(tenantId);
+}
+
 /* ---------------------------------------------------------------------------
  * applyMatchRatingIncremental
  * ------------------------------------------------------------------------- */
@@ -271,22 +323,46 @@ export async function applyMatchRatingIncremental(
 
     // 2) Filtres d'éligibilité.
     if (match.is_bye) return;
-    if (!SCORED_STATUSES.has(match.status)) return;
-    if (!match.winner_team_id || !match.team1_id || !match.team2_id) return;
+    const scored =
+      SCORED_STATUSES.has(match.status) &&
+      !!match.winner_team_id &&
+      !!match.team1_id &&
+      !!match.team2_id;
 
     // 3) Idempotence : si des lignes history existent déjà pour ce match, on
-    //    ne recompte pas (les corrections passent par le rebuild).
+    //    ne recompte pas… SAUF si le match a CHANGÉ depuis.
+    //
+    //    LA CORRECTION D'UN SCORE N'ÉTAIT REPRISE PAR RIEN. Un score saisi à
+    //    l'envers (ou un forfait donné au mauvais camp) puis corrigé gardait
+    //    l'historique du premier passage : défaites au profil de l'équipe qui
+    //    avait gagné, et pièces + paquets versés au camp adverse. Constaté le
+    //    2026-10-08 sur trois victoires des Chocomates. On compare donc le
+    //    vainqueur NOTÉ (celui des lignes `win`) au vainqueur ACTUEL : s'ils
+    //    divergent, ou si le match n'est plus terminé, on rejoue tout.
     const { data: existingHist, error: histErr } = await supabaseAdmin
       .from('player_rating_history')
-      .select('id')
+      .select('user_id, result')
       .eq('tenant_id', tenantId)
-      .eq('match_id', matchId)
-      .limit(1);
+      .eq('match_id', matchId);
     if (histErr) {
       logger.error('[rating] incremental: history probe error', histErr);
       return;
     }
-    if (existingHist && existingHist.length > 0) return;
+    if (existingHist && existingHist.length > 0) {
+      const recordedWinner = await recordedWinnerTeam(
+        tenantId,
+        matchId,
+        existingHist as Array<{ user_id: string; result: string | null }>
+      );
+      const stale =
+        !scored ||
+        (recordedWinner !== undefined &&
+          recordedWinner !== match.winner_team_id);
+      if (!stale) return;
+      await reconcileCorrectedMatch(tenantId, matchId);
+      return;
+    }
+    if (!scored) return;
 
     // 4) Garantir le snapshot des participants.
     await snapshotMatchParticipants(tenantId, {
@@ -756,9 +832,82 @@ export async function rebuildRatings(
       }
     }
 
+    // 7) Victoires payées au MAUVAIS camp (score corrigé après coup).
+    await repayCorrectedVictories(
+      tenantId,
+      notableMatches,
+      participantsByMatch
+    );
+
     return { players: ratings.size, matches: notableMatches.length };
   } catch (err) {
     logger.error('[rating] rebuildRatings exception', err);
     return { players: 0, matches: 0 };
+  }
+}
+
+/**
+ * Paie le vainqueur ACTUEL des matchs qui ont DÉJÀ payé une victoire — et
+ * seulement ceux-là.
+ *
+ * POURQUOI CE PÉRIMÈTRE. Un match payé, c'est un match que le TCG a reconnu ;
+ * si son vainqueur a changé depuis, ses gagnantes réelles n'ont rien reçu. Un
+ * match JAMAIS payé (joué avant le TCG, ou jamais noté) n'entre pas ici : le
+ * payer d'office au détour d'un recalcul de rating serait une distribution
+ * rétroactive massive, une décision d'économie qui ne se prend pas en douce.
+ *
+ * Idempotent : `grantVictoryRewards` n'écrit rien de déjà écrit (contraintes
+ * UNIQUE). Les gagnantes déjà payées ne reçoivent rien de plus.
+ */
+async function repayCorrectedVictories(
+  tenantId: string,
+  matches: readonly MatchRow[],
+  participantsByMatch: Map<string, RatingParticipant[]>
+): Promise<void> {
+  const refOf = (m: MatchRow) => (m.scrim_id ? `scrim:${m.scrim_id}` : m.id);
+  const refs = matches.map(refOf);
+  const paid = new Map<string, Set<string>>();
+  for (let i = 0; i < refs.length; i += 100) {
+    const { data, error } = await supabaseAdmin
+      .from('tcg_wallet_entries')
+      .select('source_ref, user_id')
+      .eq('tenant_id', tenantId)
+      .in('source_kind', ['match_win', 'scrim_win'])
+      .in('source_ref', refs.slice(i, i + 100));
+    if (error) {
+      // Illisible : on ne paie rien plutôt que de payer sur une lecture
+      // partielle. Le prochain recalcul reprendra.
+      logger.error('[rating] repay: wallet read error', error);
+      return;
+    }
+    for (const r of (data ?? []) as Array<{
+      source_ref: string;
+      user_id: string;
+    }>) {
+      const set = paid.get(r.source_ref) ?? new Set<string>();
+      set.add(r.user_id);
+      paid.set(r.source_ref, set);
+    }
+  }
+
+  for (const m of matches) {
+    const paidUsers = paid.get(refOf(m));
+    if (!paidUsers || !m.winner_team_id) continue;
+    const participants = participantsByMatch.get(m.id) ?? [];
+    const winners = participants.filter((p) => p.teamId === m.winner_team_id);
+    // Toutes les gagnantes déjà payées : rien à rattraper.
+    if (winners.every((p) => paidUsers.has(p.userId))) continue;
+    logger.warn(
+      '[rating] repay: victoire du match %s rattrapée pour le vainqueur actuel',
+      m.id
+    );
+    await grantVictoryRewards({
+      tenantId,
+      matchId: m.id,
+      winnerTeamId: m.winner_team_id,
+      isScrim: Boolean(m.scrim_id),
+      scrimId: m.scrim_id ?? null,
+      participants,
+    });
   }
 }
