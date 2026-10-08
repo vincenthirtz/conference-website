@@ -115,6 +115,28 @@ post:
                   format: uuid
               complete:
                 type: boolean
+              matches:
+                type: object
+                description: |
+                  Readable summary of every match id listed in `forfeited`,
+                  `cancelled`, `skipped`, `failed` and `notProcessed`, keyed
+                  by match id. A name that could not be read is `null`.
+                additionalProperties:
+                  type: object
+                  properties:
+                    team1Name:
+                      type: string
+                      nullable: true
+                    team2Name:
+                      type: string
+                      nullable: true
+                    roundName:
+                      type: string
+                      nullable: true
+                    scheduledAt:
+                      type: string
+                      format: date-time
+                      nullable: true
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

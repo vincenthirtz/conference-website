@@ -139,6 +139,7 @@ const baseResponse: DisqualifyTeamResponse = {
   failed: null,
   notProcessed: [],
   complete: true,
+  matches: {},
 };
 
 describe('useStageTeamDisqualification', () => {
@@ -223,10 +224,32 @@ describe('DisqualificationReport', () => {
           skipped: [{ id: 'skip-1111', reason: 'disputed' }],
           failed: { id: 'fail-2222', error: 'boom' },
           notProcessed: ['todo-3333'],
+          matches: {
+            'skip-1111': {
+              team1Name: 'Alpha',
+              team2Name: 'Bravo',
+              roundName: 'Ronde 2',
+              scheduledAt: null,
+            },
+            // Pas d'adversaire connu.
+            'fail-2222': {
+              team1Name: 'Alpha',
+              team2Name: null,
+              roundName: null,
+              scheduledAt: null,
+            },
+            // 'todo-3333' absent : repli sur l'id court.
+          },
         }}
         onDismiss={() => {}}
       />
     );
+    const links = Array.from(
+      screen.getByTestId('disqualification-report').querySelectorAll('li')
+    ).map((li) => li.textContent);
+    expect(links[0]).toContain('Alpha vs Bravo · Ronde 2');
+    expect(links[1]).toContain(`Alpha vs ${t.dqMatchTbd}`);
+    expect(links[2]).toContain('Ouvrir le match todo-333');
     const report = screen.getByTestId('disqualification-report');
     expect(report.textContent).toContain(t.dqReportIncomplete);
     expect(report.textContent).toContain(t.dqSkipDisputed);

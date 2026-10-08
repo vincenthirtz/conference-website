@@ -8,7 +8,7 @@ import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import { rubanWarnBox } from '@/features/admin/_shared/ui/ruban';
 import { format, useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminStageTeams from '@/lib/i18n/locales/admin-fr/adminStageTeams';
-import type { DisqualifyTeamResponse } from '../client';
+import type { DisqualifyMatchSummary, DisqualifyTeamResponse } from '../client';
 
 type Dict = typeof nsAdminStageTeams.fr;
 
@@ -37,6 +37,43 @@ function itemsOf(res: DisqualifyTeamResponse, t: Dict): Item[] {
       : []),
     ...res.notProcessed.map((id) => ({ id, note: t.dqNotProcessed })),
   ];
+}
+
+/**
+ * « Alpha vs Beta » ; un côté inconnu (pas d'adversaire) → « à déterminer ».
+ * Ni l'un ni l'autre (réponse ancienne, lecture en échec) → id court.
+ */
+function matchLabel(
+  id: string,
+  m: DisqualifyMatchSummary | undefined,
+  t: Dict
+): string {
+  if (!m || (!m.team1Name && !m.team2Name)) {
+    return format(t.dqOpenMatch, { id: id.slice(0, 8) });
+  }
+  return format(t.dqMatchVs, {
+    team1: m.team1Name ?? t.dqMatchTbd,
+    team2: m.team2Name ?? t.dqMatchTbd,
+  });
+}
+
+/** « · Ronde 2 · 12/10/2026 18:00 » — seulement ce qui est connu. */
+function matchDetails(m: DisqualifyMatchSummary | undefined): string {
+  if (!m) return '';
+  const parts: string[] = [];
+  if (m.roundName) parts.push(m.roundName);
+  if (m.scheduledAt) {
+    const d = new Date(m.scheduledAt);
+    if (!Number.isNaN(d.getTime())) {
+      parts.push(
+        d.toLocaleString(undefined, {
+          dateStyle: 'short',
+          timeStyle: 'short',
+        })
+      );
+    }
+  }
+  return parts.length > 0 ? ` · ${parts.join(' · ')}` : '';
 }
 
 export default function DisqualificationReport({
@@ -73,11 +110,13 @@ export default function DisqualificationReport({
           <li key={it.id}>
             <Link
               href={`/admin/matches/${encodeURIComponent(it.id)}/edit`}
-              className="font-mono underline underline-offset-2 hover:text-[var(--t1,#f4edf7)]"
+              className="underline underline-offset-2 hover:text-[var(--t1,#f4edf7)]"
             >
-              {format(t.dqOpenMatch, { id: it.id.slice(0, 8) })}
-            </Link>{' '}
-            — {it.note}
+              {matchLabel(it.id, result.matches?.[it.id], t)}
+            </Link>
+            {matchDetails(result.matches?.[it.id])}
+            {' — '}
+            {it.note}
           </li>
         ))}
       </ul>

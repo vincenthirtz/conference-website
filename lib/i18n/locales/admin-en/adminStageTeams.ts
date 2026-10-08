@@ -116,6 +116,8 @@ export default {
   dqFailed: 'failed: {error}',
   dqNotProcessed: 'not processed',
   dqOpenMatch: 'Open match {id}',
+  dqMatchVs: '{team1} vs {team2}',
+  dqMatchTbd: 'TBD',
   dqReportDismiss: 'Dismiss',
   rsConfirmTitle: 'Reinstate {team}?',
   rsConfirmSubtitle:

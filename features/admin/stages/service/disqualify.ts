@@ -35,6 +35,7 @@ import { oneRelation, type Relation } from '@/utils/supabase/relation';
 import type { Audited } from '../../_shared/audited';
 import type {
   DisqualificationMode,
+  DisqualifyMatchSummary,
   DisqualifyTeamResponse,
   ReinstateTeamResponse,
 } from '../client';
@@ -79,6 +80,51 @@ async function loadEntry(ctx: ServiceContext, stageId: string, teamId: string) {
     row.team as Relation<{ id: string; name: string | null }>
   );
   return { row, teamName: team?.name ?? null };
+}
+
+type MatchForSummary = {
+  id: string;
+  team1_id: string | null;
+  team2_id: string | null;
+  round_name?: string | null;
+  scheduled_at: string | null;
+};
+
+/**
+ * Résumé (équipes, ronde, date) des matchs cités dans la réponse. Une seule
+ * lecture des noms ; un échec ne casse pas la réponse — la disqualification
+ * est déjà faite — il laisse des noms `null`.
+ */
+async function summarizeMatches(
+  ctx: ServiceContext,
+  rows: MatchForSummary[],
+  ids: Set<string>
+): Promise<Record<string, DisqualifyMatchSummary>> {
+  const cited = rows.filter((r) => ids.has(r.id));
+  const teamIds = [
+    ...new Set(cited.flatMap((r) => [r.team1_id, r.team2_id]).filter(Boolean)),
+  ] as string[];
+  const names = new Map<string, string | null>();
+  if (teamIds.length > 0) {
+    try {
+      for (const t of await related.teamNames(ctx.db, ctx.tenantId, teamIds)) {
+        names.set(t.id, t.name ?? t.short_name ?? null);
+      }
+    } catch (err) {
+      ctx.logger.error('[disqualify] noms des équipes illisibles', err);
+    }
+  }
+  const nameOf = (id: string | null) => (id ? (names.get(id) ?? null) : null);
+  const out: Record<string, DisqualifyMatchSummary> = {};
+  for (const r of cited) {
+    out[r.id] = {
+      team1Name: nameOf(r.team1_id),
+      team2Name: nameOf(r.team2_id),
+      roundName: r.round_name ?? null,
+      scheduledAt: r.scheduled_at ?? null,
+    };
+  }
+  return out;
 }
 
 function cancelNote(existing: string | null, teamName: string | null) {
@@ -230,6 +276,15 @@ export async function disqualifyStageTeam(
   // Scores / statuts changés : le classement se recalcule à la lecture.
   invalidateStandingsCache(stageId);
 
+  const citedIds = new Set([
+    ...forfeited,
+    ...cancelled,
+    ...skipped.map((s) => s.id),
+    ...(failed ? [failed.id] : []),
+    ...notProcessed,
+  ]);
+  const matchSummaries = await summarizeMatches(ctx, openRows ?? [], citedIds);
+
   const result: DisqualifyTeamResponse = {
     mode,
     teamId,
@@ -241,6 +296,7 @@ export async function disqualifyStageTeam(
     failed,
     notProcessed,
     complete: failed === null,
+    matches: matchSummaries,
   };
 
   return {

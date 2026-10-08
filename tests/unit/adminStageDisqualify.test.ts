@@ -110,6 +110,11 @@ function seed(
       settings,
     },
   ] as any;
+  store.teams = [T1, T2, T3].map((id) => ({
+    id,
+    name: NAMES[id],
+    short_name: null,
+  })) as any;
   store.stage_teams = [T1, T2, T3].map((id, i) => ({
     stage_id: STAGE,
     team_id: id,
@@ -160,7 +165,12 @@ function seedMatches() {
       team1_score: 2,
       team2_score: 0,
     }),
-    m('m2', T1, T3, { round_number: 2, notes: 'Report demandé' }),
+    m('m2', T1, T3, {
+      round_number: 2,
+      round_name: 'Ronde 2',
+      scheduled_at: '2026-10-12T18:00:00.000Z',
+      notes: 'Report demandé',
+    }),
     m('m3', T2, T1, { round_number: 3, status: 'ongoing' }),
     m('m4', T3, T1, { round_number: 4, status: 'disputed' }),
     m('m5', T1, null, { round_number: 5 }),
@@ -324,6 +334,56 @@ describe('POST …/disqualify — mode forfeit', () => {
       forfeited_match_ids: ['m2', 'm3'],
       complete: true,
     });
+
+    // Chaque match cité est résumé (noms, ronde, date) ; les autres non.
+    expect(res.body.matches).toEqual({
+      m2: {
+        team1Name: 'Alpha',
+        team2Name: 'Gamma',
+        roundName: 'Ronde 2',
+        scheduledAt: '2026-10-12T18:00:00.000Z',
+      },
+      m3: {
+        team1Name: 'Beta',
+        team2Name: 'Alpha',
+        roundName: null,
+        scheduledAt: null,
+      },
+      m4: {
+        team1Name: 'Gamma',
+        team2Name: 'Alpha',
+        roundName: null,
+        scheduledAt: null,
+      },
+      m5: {
+        team1Name: 'Alpha',
+        team2Name: null,
+        roundName: null,
+        scheduledAt: null,
+      },
+    });
+  });
+
+  it('noms illisibles : le résumé reste, avec des noms null', async () => {
+    seed();
+    seedMatches();
+    store.teams = [] as any;
+    const res = await call({
+      body: { team_id: T1, mode: 'forfeit', reason: 'Abandon' },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(Object.keys(res.body.matches).sort()).toEqual([
+      'm2',
+      'm3',
+      'm4',
+      'm5',
+    ]);
+    expect(res.body.matches.m2).toEqual({
+      team1Name: null,
+      team2Name: null,
+      roundName: 'Ronde 2',
+      scheduledAt: '2026-10-12T18:00:00.000Z',
+    });
   });
 
   it('la disqualification est posée AVANT les forfaits (avancement auto)', async () => {
@@ -362,6 +422,18 @@ describe('POST …/disqualify — mode forfeit', () => {
       failed: { id: 'm3', error: 'verrou' },
       notProcessed: ['m4', 'm5', 'm8'],
       complete: false,
+    });
+    // Le résumé couvre aussi le match en échec et les non traités.
+    expect(Object.keys(res.body.matches).sort()).toEqual([
+      'm2',
+      'm3',
+      'm4',
+      'm5',
+      'm8',
+    ]);
+    expect(res.body.matches.m8).toMatchObject({
+      team1Name: 'Gamma',
+      team2Name: 'Alpha',
     });
     expect(applyMatchScore).toHaveBeenCalledTimes(2);
     expect(entry(T1).disqualified_at).toEqual(expect.any(String));

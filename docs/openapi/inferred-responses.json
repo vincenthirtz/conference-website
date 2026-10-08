@@ -66366,6 +66366,44 @@
        "type": "string"
       }
      },
+     "matches": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "object",
+       "properties": {
+        "roundName": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "scheduledAt": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team1Name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "team2Name": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "roundName",
+        "scheduledAt",
+        "team1Name",
+        "team2Name"
+       ]
+      }
+     },
      "mode": {
       "type": "string",
       "enum": [
@@ -66418,6 +66456,7 @@
      "disqualifiedAt",
      "failed",
      "forfeited",
+     "matches",
      "mode",
      "notProcessed",
      "skipped",

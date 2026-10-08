@@ -118,6 +118,8 @@ export default adminNs('adminStageTeams', {
   dqFailed: 'échec : {error}',
   dqNotProcessed: 'non traité',
   dqOpenMatch: 'Ouvrir le match {id}',
+  dqMatchVs: '{team1} vs {team2}',
+  dqMatchTbd: 'à déterminer',
   dqReportDismiss: 'Masquer',
   rsConfirmTitle: 'Réintégrer {team} ?',
   rsConfirmSubtitle:

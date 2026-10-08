@@ -41,7 +41,7 @@ export async function teamStageMatches(
   const { data, error } = await db
     .from('matches')
     .select(
-      'id, status, round_number, team1_id, team2_id, forfeit_team_id, notes, scheduled_at'
+      'id, status, round_number, round_name, team1_id, team2_id, forfeit_team_id, notes, scheduled_at'
     )
     .eq('tenant_id', tenantId)
     .eq('stage_id', stageId)

@@ -97,6 +97,14 @@ export type DisqualifyTeamRequest = {
   reason: string;
 };
 
+/** Résumé lisible d'un match cité dans la réponse de `POST …/disqualify`. */
+export type DisqualifyMatchSummary = {
+  team1Name: string | null;
+  team2Name: string | null;
+  roundName: string | null;
+  scheduledAt: string | null;
+};
+
 /** Réponse 201 de `POST …/disqualify`. */
 export type DisqualifyTeamResponse = {
   mode: DisqualificationMode;
@@ -118,6 +126,12 @@ export type DisqualifyTeamResponse = {
   notProcessed: string[];
   /** `false` si `failed` : la disqualification est posée, des matchs restent. */
   complete: boolean;
+  /**
+   * Résumé de CHAQUE match cité ci-dessus (forfeited, cancelled, skipped,
+   * failed, notProcessed), par id : de quoi l'afficher sans l'ouvrir. Un nom
+   * illisible vaut `null` (l'écran retombe sur l'id court).
+   */
+  matches: Record<string, DisqualifyMatchSummary>;
 };
 
 /** Réponse de `DELETE …/disqualify`. */
