@@ -12,11 +12,6 @@ import type { DisqualifyMatchSummary, DisqualifyTeamResponse } from '../client';
 
 type Dict = typeof nsAdminStageTeams.fr;
 
-/** Vrai si la réponse laisse des matchs à traiter à la main. */
-export function needsManualFollowUp(res: DisqualifyTeamResponse): boolean {
-  return !res.complete || res.skipped.length > 0;
-}
-
 type Item = { id: string; note: string };
 
 function itemsOf(res: DisqualifyTeamResponse, t: Dict): Item[] {

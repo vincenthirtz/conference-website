@@ -147,7 +147,9 @@ describe('useStageTeamDisqualification', () => {
     mutateJson.mockResolvedValue(baseResponse);
     renderHarness();
     fireEvent.click(screen.getByText('open'));
-    fireEvent.click(screen.getByRole('radio', { name: t.dqModeForfeitTitle }));
+    fireEvent.click(
+      await screen.findByRole('radio', { name: t.dqModeForfeitTitle })
+    );
     fillReason('  joueuse non éligible ');
     await act(async () => {
       fireEvent.click(confirmButton());
@@ -180,7 +182,9 @@ describe('useStageTeamDisqualification', () => {
     );
     renderHarness();
     fireEvent.click(screen.getByText('open'));
-    fireEvent.click(screen.getByRole('radio', { name: t.dqModeAnnulTitle }));
+    fireEvent.click(
+      await screen.findByRole('radio', { name: t.dqModeAnnulTitle })
+    );
     fillReason('motif valable');
     await act(async () => {
       fireEvent.click(confirmButton());

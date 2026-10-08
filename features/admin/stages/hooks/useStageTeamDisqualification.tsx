@@ -10,6 +10,7 @@
 // Après chaque geste, tout ce qui dépend de la phase est relu
 // (`stageKeys.one`) : liste des équipes, classements.
 
+import dynamic from 'next/dynamic';
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/Toast';
@@ -23,13 +24,24 @@ import {
   type ReinstateTeamResponse,
   stageUrls,
 } from '../client';
-import DisqualifyTeamModal, {
-  type DisqualifyDraft,
-} from '../ui/DisqualifyTeamModal';
-import DisqualificationReport, {
-  needsManualFollowUp,
-} from '../ui/DisqualificationReport';
+import type { DisqualifyDraft } from '../ui/DisqualifyTeamModal';
 import { stageKeys } from './keys';
+
+// Chargées à la demande : la modale ne s'ouvre qu'au clic, le bandeau qu'après
+// une disqualification incomplète. Hors du JS de premier chargement de la page
+// (cf. scripts/bundle-budget.mjs).
+const DisqualifyTeamModal = dynamic(() => import('../ui/DisqualifyTeamModal'), {
+  ssr: false,
+});
+const DisqualificationReport = dynamic(
+  () => import('../ui/DisqualificationReport'),
+  { ssr: false }
+);
+
+/** Des matchs restent à traiter à la main : le bandeau doit s'afficher. */
+export function needsManualFollowUp(res: DisqualifyTeamResponse): boolean {
+  return !res.complete || res.skipped.length > 0;
+}
 
 type Dict = typeof nsAdminStageTeams.fr;
 
