@@ -18,8 +18,9 @@
 //   tcg          0 pour masquer les annonces de cartes TCG (drops, victoires)
 //
 // LE TCG VOYAGE AVEC LES ALERTES (`?with=tcg`), servi par espace comme elles :
-// pas de jeton à coller, pas d'appel de plus. Les annonces se posent dans le
-// coin réglé par l'habillage TCG (Diffusion › Overlays). Toute autre valeur de
+// pas de jeton à coller, pas d'appel de plus. Les annonces se posent dans
+// leur emplacement de la mise en page (élément « Drops TCG », par défaut celui
+// des alertes) ; le coin de l'habillage TCG ne vaut que pour la source dédiée. Toute autre valeur de
 // `tcg` qu'un `0` — un ancien jeton collé dans l'URL — est sans effet.
 //
 // POURQUOI FUSIONNER. Quatre sources navigateur, c'est quatre fois le tour du
@@ -85,18 +86,7 @@ import nsOverlayTcg from '@/lib/i18n/locales/fr/overlayTcg';
 import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 import { useTcgAnnouncementQueue } from '@/hooks/useTcgOverlayFeed';
 import TcgAnnouncement from '@/components/overlay/TcgAnnouncement';
-import {
-  DEFAULT_OVERLAY_THEME,
-  type OverlayPosition,
-} from '@/utils/tcg/overlayThemeShape';
-
-/** Coin de la pile d'annonces TCG — repris de `/overlay/tcg/<jeton>`. */
-const TCG_ANCHOR: Record<OverlayPosition, string> = {
-  'top-left': 'justify-start items-start',
-  'top-right': 'justify-start items-end',
-  'bottom-left': 'justify-end items-start',
-  'bottom-right': 'justify-end items-end',
-};
+import { DEFAULT_OVERLAY_THEME } from '@/utils/tcg/overlayThemeShape';
 
 /** Respiration entre deux alertes : elles ne doivent pas se coller. */
 const GAP_MS = 900;
@@ -162,7 +152,8 @@ export default function RegieOverlayPage() {
     if (!router.isReady) return null;
     const p = new URLSearchParams();
     if (tenant) p.set('tenant', tenant);
-    const avec = [avecMvp && 'mvp', avecTcg && 'tcg'].filter(Boolean);
+    // `layout` : la mise en page, même sans scrutin (cf. l'API).
+    const avec = ['layout', avecMvp && 'mvp', avecTcg && 'tcg'].filter(Boolean);
     if (avec.length > 0) p.set('with', avec.join(','));
     const qs = p.toString();
     return `/api/overlay/alerts${qs ? `?${qs}` : ''}`;
@@ -369,21 +360,23 @@ export default function RegieOverlayPage() {
               </div>
             )}
 
-            {/* Annonces TCG dans le coin de leur habillage. Rien à annoncer =
-                rien à l'écran. */}
-            {avecTcg && (
+            {/* Annonces TCG dans leur EMPLACEMENT de la mise en page (par
+                défaut celui des alertes). Rien à annoncer = rien à l'écran. */}
+            {avecTcg && layout.tcg.visible && (
               <div
-                className={`pointer-events-none absolute inset-0 flex flex-col p-6 ${TCG_ANCHOR[tcgTheme.position]}`}
-                style={
-                  scale !== 1
-                    ? {
-                        transform: `scale(${scale})`,
-                        transformOrigin: tcgTheme.position.replace('-', ' '),
-                      }
-                    : undefined
-                }
+                className="pointer-events-none"
+                style={slotStyle(layout.tcg, { globalScale: scale })}
               >
-                <ul className="flex flex-col gap-2">
+                <ul
+                  style={SLOT_CONTENT_STYLE}
+                  className={`flex flex-col gap-2 ${
+                    anchorParts(layout.tcg.anchor).h === 'l'
+                      ? 'items-start'
+                      : anchorParts(layout.tcg.anchor).h === 'r'
+                        ? 'items-end'
+                        : 'items-center'
+                  }`}
+                >
                   {tcgQueue.visible.map((item) => (
                     <TcgAnnouncement
                       key={item.id}

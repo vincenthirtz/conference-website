@@ -1,6 +1,7 @@
 // features/admin/diffusion/ui/RegieLayoutPanel.tsx — Diffusion › Overlays ›
 // « Mise en page de la source Régie » : où la source OBS plein écran
-// `/overlay/regie` pose ses éléments (alertes, sondage MVP, partenaires, QR).
+// `/overlay/regie` pose ses éléments (alertes, drops TCG, sondage MVP,
+// partenaires, QR).
 //
 // L'APERÇU est la scène 1920×1080 réduite : chaque élément y est un bloc à sa
 // taille approximative, placé par la MÊME fonction que la source
@@ -48,6 +49,7 @@ const KEY = adminKey('diffusion', 'regie-layout');
 /** Taille approximative de chaque élément à l'échelle 1 (px de la scène). */
 const BOX: Record<RegieElement, { w: number; h: number; color: string }> = {
   alerts: { w: 760, h: 240, color: '#e5484d' },
+  tcg: { w: 620, h: 120, color: '#f0a238' },
   mvp: { w: 640, h: 440, color: '#b467d1' },
   partners: { w: 1500, h: 150, color: '#3b82f6' },
   don: { w: 420, h: 150, color: '#22c55e' },

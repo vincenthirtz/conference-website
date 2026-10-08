@@ -6,6 +6,7 @@ export default {
     'The /overlay/regie source is full screen (1920×1080): place each element here. Drag a block in the preview, or set it to the pixel. The source applies the layout on its next refresh (~10 s).',
   previewLabel: '1920×1080 scene preview',
   el_alerts: 'Alerts',
+  el_tcg: 'TCG drops',
   el_mvp: 'MVP poll',
   el_partners: 'Partners',
   el_don: 'Donation QR',

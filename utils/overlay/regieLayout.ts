@@ -9,8 +9,8 @@
 // change (un vote à 3 ou à 8 candidates, un bandeau de 2 ou 6 partenaires) ;
 // le décalage l'affine.
 //
-// DÉFAUTS = la mise en page d'avant ce réglage, à l'identique : alertes au
-// centre, sondage en haut, partenaires en bas, QR en bas à droite. Une ligne
+// DÉFAUTS = la mise en page d'avant ce réglage, à l'identique : alertes (et
+// annonces TCG) au centre, sondage en haut, partenaires en bas, QR en bas à droite. Une ligne
 // absente ou partielle retombe dessus élément par élément.
 //
 // Pur et sans dépendance : partagé par la source, l'API et l'éditeur admin,
@@ -18,7 +18,13 @@
 
 import type { CSSProperties } from 'react';
 
-export const REGIE_ELEMENTS = ['alerts', 'mvp', 'partners', 'don'] as const;
+export const REGIE_ELEMENTS = [
+  'alerts',
+  'tcg',
+  'mvp',
+  'partners',
+  'don',
+] as const;
 export type RegieElement = (typeof REGIE_ELEMENTS)[number];
 
 export const REGIE_ANCHORS = [
@@ -54,6 +60,10 @@ export const SCALE_MAX = 2;
 
 export const DEFAULT_REGIE_LAYOUT: RegieLayout = {
   alerts: { anchor: 'mc', x: 0, y: 0, scale: 1, visible: true },
+  // Annonces TCG (drops Twitch, victoires) : au même endroit que les alertes
+  // par défaut — ce sont des alertes elles aussi. À déplacer si les deux se
+  // chevauchent trop souvent.
+  tcg: { anchor: 'mc', x: 0, y: 0, scale: 1, visible: true },
   mvp: { anchor: 'tc', x: 0, y: 0, scale: 0.85, visible: true },
   partners: { anchor: 'bc', x: 0, y: 0, scale: 1, visible: true },
   // Au-dessus du bandeau partenaires : à sa hauteur d'origine, le QR
@@ -90,6 +100,7 @@ export function normalizeRegieLayout(raw: unknown): RegieLayout {
   >;
   return {
     alerts: slotOf(src.alerts, DEFAULT_REGIE_LAYOUT.alerts),
+    tcg: slotOf(src.tcg, DEFAULT_REGIE_LAYOUT.tcg),
     mvp: slotOf(src.mvp, DEFAULT_REGIE_LAYOUT.mvp),
     partners: slotOf(src.partners, DEFAULT_REGIE_LAYOUT.partners),
     don: slotOf(src.don, DEFAULT_REGIE_LAYOUT.don),

@@ -182,18 +182,21 @@ export default async function handler(
         .map((x) => x.trim().toLowerCase())
         .filter(Boolean)
     );
-    const [publicMvp, layout] = demande.has('mvp')
-      ? await Promise.all([
-          readPublicMvpFeed(tenantId, nowMs),
-          supabaseAdmin
+    // La mise en page part avec le scrutin (anciennes Régies) OU sur
+    // `with=layout` : sans ce second chemin, une Régie sans scrutin (`mvp=0`)
+    // ignorait la position réglée des autres éléments (TCG compris).
+    const [publicMvp, layout] = await Promise.all([
+      demande.has('mvp') ? readPublicMvpFeed(tenantId, nowMs) : undefined,
+      demande.has('mvp') || demande.has('layout')
+        ? supabaseAdmin
             .from('regie_overlay_layouts')
             .select('layout')
             .eq('tenant_id', tenantId)
             .maybeSingle()
             // Absente, illisible ou table pas encore créée : les défauts.
-            .then(({ data }) => normalizeRegieLayout(data?.layout ?? null)),
-        ])
-      : [undefined, undefined];
+            .then(({ data }) => normalizeRegieLayout(data?.layout ?? null))
+        : undefined,
+    ]);
     // Aucune des deux lectures ne lève (cf. leurs modules).
     const tcg: TcgOverlayPayload | undefined = demande.has('tcg')
       ? await Promise.all([

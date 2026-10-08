@@ -180,6 +180,9 @@ const RegieSlotBody = z.object({
 /** PUT — la mise en page complète (un emplacement par élément). */
 export const RegieLayoutBody = z.object({
   alerts: RegieSlotBody,
+  // Optionnel : un onglet admin ouvert avant l'ajout de l'élément enregistre
+  // sans lui, et la normalisation remet le défaut.
+  tcg: RegieSlotBody.optional(),
   mvp: RegieSlotBody,
   partners: RegieSlotBody,
   don: RegieSlotBody,

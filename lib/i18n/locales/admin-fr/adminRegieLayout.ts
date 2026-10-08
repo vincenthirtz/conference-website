@@ -12,6 +12,7 @@ export default adminNs('adminRegieLayout', {
     'La source /overlay/regie est plein écran (1920×1080) : placez chaque élément ici. Faites glisser un bloc dans l’aperçu, ou réglez-le au pixel. La source applique la mise en page à son rafraîchissement (~10 s).',
   previewLabel: 'Aperçu de la scène 1920×1080',
   el_alerts: 'Alertes',
+  el_tcg: 'Drops TCG',
   el_mvp: 'Sondage MVP',
   el_partners: 'Partenaires',
   el_don: 'QR de don',
