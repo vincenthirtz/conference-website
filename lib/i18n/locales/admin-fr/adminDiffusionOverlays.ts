@@ -13,6 +13,9 @@ export default adminNs('adminDiffusionOverlays', {
   heading: 'Overlays',
   subtitle:
     'Toutes les sources à coller dans OBS, au même endroit. Choisissez le tournoi : les sources de match suivent la rencontre du moment.',
+  tabsAriaLabel: 'Sections de la page Overlays',
+  tabSources: 'Sources & overlays',
+  tabMvpPublic: 'MVP du public',
   tournamentLabel: 'Tournoi',
   noTournament:
     'Aucun tournoi dans cet espace : les sources de match apparaîtront avec le premier.',

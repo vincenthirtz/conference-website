@@ -7,6 +7,9 @@ export default {
   heading: 'Overlays',
   subtitle:
     'Every source to paste into OBS, in one place. Pick the tournament: match sources follow the current game.',
+  tabsAriaLabel: 'Overlays page sections',
+  tabSources: 'Sources & overlays',
+  tabMvpPublic: 'Audience MVP',
   tournamentLabel: 'Tournament',
   noTournament:
     'No tournament in this space yet: match sources will appear with the first one.',

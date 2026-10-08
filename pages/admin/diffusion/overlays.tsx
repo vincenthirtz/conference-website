@@ -46,6 +46,11 @@ import DiffusionTabsNav from '@/components/admin/broadcast/DiffusionTabsNav';
 import StreamSourcesPanel from '@/components/admin/tournament/StreamSourcesPanel';
 import StreamAlertsPanel from '@/components/admin/tournament/StreamAlertsPanel';
 import { lazyPanel } from '@/components/admin/lazyPanel';
+import Tabs, {
+  useQueryTab,
+  tabPanelId,
+  tabButtonId,
+} from '@/components/admin/Tabs';
 import nsAdminDiffusionOverlays from '@/lib/i18n/locales/admin-fr/adminDiffusionOverlays';
 import { useOverlayPresence } from '@/hooks/useOverlayPresence';
 
@@ -57,6 +62,8 @@ const TcgOverlaySection = lazyPanel(
 type TournamentOption = { id: string; name: string; slug: string | null };
 
 type SsrProps = OverlayAccess & { tournaments: TournamentOption[] };
+
+const TABS_ID = 'diffusion-overlays';
 
 /** Les plus récents d'abord : c'est le tournoi en cours qu'on prépare. */
 const TOURNAMENT_LIMIT = 30;
@@ -136,6 +143,16 @@ export default function DiffusionOverlaysPage({
     }
   }, [baseUrl]);
 
+  // `?tab=mvp-public` : lien direct vers le pilotage du vote, partageable à
+  // la régie. L'onglet n'existe qu'avec la capacité de régie (comme le panneau).
+  const tabs = [
+    { id: 'sources', label: t.tabSources },
+    ...(canUseMatchOverlays
+      ? [{ id: 'mvp-public', label: t.tabMvpPublic }]
+      : []),
+  ];
+  const [active, setActive] = useQueryTab(tabs);
+
   const elsewhere = [
     {
       href: '/admin/broadcast/live',
@@ -202,98 +219,119 @@ export default function DiffusionOverlaysPage({
               </select>
             </label>
           )}
-          {selected && (
-            <div className="mt-4">
-              <StreamSourcesPanel
-                key={selected.id}
-                tournamentRef={selected.slug ?? selected.id}
-                tournamentId={canForceDay ? selected.id : undefined}
-                baseUrl={baseUrl}
-                enabled={canUseMatchOverlays}
-                planLabel={planLabel}
-                showDonation={isDefaultTenant}
-                presence={presence}
+        </section>
+
+        {/* Deux onglets sous le MÊME tournoi : les sources OBS d'un côté, le
+            pilotage du vote MVP du public de l'autre — ce dernier se manie
+            en plein direct, il ne doit pas se chercher sous dix panneaux. */}
+        <Tabs
+          tabs={tabs}
+          active={active}
+          onChange={setActive}
+          ariaLabel={t.tabsAriaLabel}
+          idBase={TABS_ID}
+          className="mt-6 mb-6"
+        />
+
+        <div
+          role="tabpanel"
+          id={tabPanelId(TABS_ID, active)}
+          aria-labelledby={tabButtonId(TABS_ID, active)}
+        >
+          {active === 'mvp-public' && canUseMatchOverlays ? (
+            <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
+              <PublicMvpOverlayPanel
+                tournamentId={selected?.id ?? null}
+                canTuneSettings={(staff?.permissions ?? []).includes(
+                  'manage_broadcast'
+                )}
               />
-            </div>
-          )}
-        </section>
-
-        {canTuneAlerts && (
-          <section className="mt-6 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
-            <StreamAlertsPanel />
-          </section>
-        )}
-
-        {/* La source Régie est plein écran : où poser chacun de ses éléments. */}
-        {canUseMatchOverlays && (
-          <section className="mt-6 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
-            <RegieLayoutPanel
-              canEdit={(staff?.permissions ?? []).includes('manage_broadcast')}
-            />
-          </section>
-        )}
-
-        {/* Le sondage MVP du public : tester, régler, piloter — il vit dans
-            la source Régie, comme la boîte d'alertes au-dessus. */}
-        {canUseMatchOverlays && (
-          <section className="mt-6 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
-            <PublicMvpOverlayPanel
-              tournamentId={selected?.id ?? null}
-              canTuneSettings={(staff?.permissions ?? []).includes(
-                'manage_broadcast'
+            </section>
+          ) : (
+            <>
+              {selected && (
+                <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
+                  <StreamSourcesPanel
+                    key={selected.id}
+                    tournamentRef={selected.slug ?? selected.id}
+                    tournamentId={canForceDay ? selected.id : undefined}
+                    baseUrl={baseUrl}
+                    enabled={canUseMatchOverlays}
+                    planLabel={planLabel}
+                    showDonation={isDefaultTenant}
+                    presence={presence}
+                  />
+                </section>
               )}
-            />
-          </section>
-        )}
 
-        {canTuneTcg && (
-          <section className="mt-6 space-y-6">
-            <TcgOverlaySection />
-          </section>
-        )}
+              {canTuneAlerts && (
+                <section className="mt-6 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
+                  <StreamAlertsPanel />
+                </section>
+              )}
 
-        <section className="mt-8">
-          <h2 className="font-[family-name:var(--fd)] text-lg font-bold uppercase tracking-[0.02em] text-[var(--t1,#f4edf7)]">
-            {t.elsewhereTitle}
-          </h2>
-          <p className="mt-1 text-sm text-[var(--t3,#a39ba6)]">
-            {t.elsewhereIntro}
-          </p>
-          <ul className="mt-3 grid gap-3 sm:grid-cols-3">
-            {elsewhere.map((item) =>
-              item.href ? (
-                <li key={item.title}>
-                  <Link
-                    href={item.href}
-                    className="block h-full rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 transition-colors hover:border-[rgba(180,103,209,.45)]"
-                  >
-                    <span className="block text-sm font-semibold text-[var(--t1,#f4edf7)]">
-                      {item.title}
-                    </span>
-                    <span className="mt-1 block text-xs text-[var(--t3,#a39ba6)]">
-                      {item.desc}
-                    </span>
-                    <span className="mt-2 inline-block text-xs text-[var(--or-200,#eec4ff)]">
-                      {t.open} →
-                    </span>
-                  </Link>
-                </li>
-              ) : (
-                <li
-                  key={item.title}
-                  className="h-full rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 opacity-80"
-                >
-                  <span className="block text-sm font-semibold text-[var(--t1,#f4edf7)]">
-                    {item.title}
-                  </span>
-                  <span className="mt-1 block text-xs text-[var(--t3,#a39ba6)]">
-                    {item.desc}
-                  </span>
-                </li>
-              )
-            )}
-          </ul>
-        </section>
+              {/* La source Régie est plein écran : où poser chacun de ses éléments. */}
+              {canUseMatchOverlays && (
+                <section className="mt-6 rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
+                  <RegieLayoutPanel
+                    canEdit={(staff?.permissions ?? []).includes(
+                      'manage_broadcast'
+                    )}
+                  />
+                </section>
+              )}
+
+              {canTuneTcg && (
+                <section className="mt-6 space-y-6">
+                  <TcgOverlaySection />
+                </section>
+              )}
+
+              <section className="mt-8">
+                <h2 className="font-[family-name:var(--fd)] text-lg font-bold uppercase tracking-[0.02em] text-[var(--t1,#f4edf7)]">
+                  {t.elsewhereTitle}
+                </h2>
+                <p className="mt-1 text-sm text-[var(--t3,#a39ba6)]">
+                  {t.elsewhereIntro}
+                </p>
+                <ul className="mt-3 grid gap-3 sm:grid-cols-3">
+                  {elsewhere.map((item) =>
+                    item.href ? (
+                      <li key={item.title}>
+                        <Link
+                          href={item.href}
+                          className="block h-full rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 transition-colors hover:border-[rgba(180,103,209,.45)]"
+                        >
+                          <span className="block text-sm font-semibold text-[var(--t1,#f4edf7)]">
+                            {item.title}
+                          </span>
+                          <span className="mt-1 block text-xs text-[var(--t3,#a39ba6)]">
+                            {item.desc}
+                          </span>
+                          <span className="mt-2 inline-block text-xs text-[var(--or-200,#eec4ff)]">
+                            {t.open} →
+                          </span>
+                        </Link>
+                      </li>
+                    ) : (
+                      <li
+                        key={item.title}
+                        className="h-full rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4 opacity-80"
+                      >
+                        <span className="block text-sm font-semibold text-[var(--t1,#f4edf7)]">
+                          {item.title}
+                        </span>
+                        <span className="mt-1 block text-xs text-[var(--t3,#a39ba6)]">
+                          {item.desc}
+                        </span>
+                      </li>
+                    )
+                  )}
+                </ul>
+              </section>
+            </>
+          )}
+        </div>
       </div>
     </>
   );
