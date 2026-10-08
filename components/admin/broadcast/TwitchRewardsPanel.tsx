@@ -39,7 +39,7 @@ import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import * as R from '@/features/admin/_shared/ui/ruban';
 
-type TwitchConnection = { connected: boolean };
+type TwitchConnection = { connected: boolean; broadcaster_login?: string };
 
 type Reward = {
   id: string;
@@ -48,6 +48,13 @@ type Reward = {
   is_enabled?: boolean;
   is_paused?: boolean;
   prompt?: string;
+  background_color?: string;
+  /**
+   * Calculé ici : la récompense a-t-elle été créée par NOTRE application ?
+   * Helix ne permet de modifier / supprimer / traiter les échanges QUE de
+   * celles-là ; les autres (créées dans le tableau de bord Twitch) se lisent.
+   */
+  manageable: boolean;
 };
 type Redemption = { id: string; user_name: string; user_input?: string };
 
@@ -62,6 +69,7 @@ export default function TwitchRewardsPanel() {
   const { confirm, dialog } = useConfirmDialog();
   const { addToast } = useToast();
   const [connected, setConnected] = useState<boolean | undefined>(undefined);
+  const [login, setLogin] = useState<string | null>(null);
   const { isBusy, withBusy } = useBusySet();
 
   useEffect(() => {
@@ -71,7 +79,10 @@ export default function TwitchRewardsPanel() {
         const json = await adminFetchJson<TwitchConnection>(
           '/api/admin/twitch/connection'
         );
-        if (!cancelled) setConnected(json.connected === true);
+        if (!cancelled) {
+          setConnected(json.connected === true);
+          setLogin(json.broadcaster_login ?? null);
+        }
       } catch {
         // On dégrade en « non connecté » : le panneau Predictions gère l'invite
         // à (re)connecter, inutile d'afficher une seconde erreur ici.
@@ -114,12 +125,28 @@ export default function TwitchRewardsPanel() {
     undefined
   );
 
+  // TOUTES les récompenses de la chaîne (`?all=1`), croisées avec celles que
+  // l'application peut gérer : la liste montre tout, et dit pour chacune ce
+  // qu'on peut en faire d'ici. Si la liste complète échoue, on retombe sur
+  // les seules gérables plutôt que de ne rien montrer.
   const loadRewards = useCallback(async () => {
     try {
-      const json = await adminFetchJson<{ rewards: Reward[] }>(
-        '/api/admin/twitch/channel-points/rewards'
-      );
-      setRewards(json.rewards ?? []);
+      const [mine, all] = await Promise.all([
+        adminFetchJson<{ rewards: Omit<Reward, 'manageable'>[] }>(
+          '/api/admin/twitch/channel-points/rewards'
+        ),
+        adminFetchJson<{ rewards: Omit<Reward, 'manageable'>[] }>(
+          '/api/admin/twitch/channel-points/rewards?all=1'
+        ).catch(() => null),
+      ]);
+      const mineIds = new Set((mine.rewards ?? []).map((r) => r.id));
+      const list = (all?.rewards ?? mine.rewards ?? []).map((r) => ({
+        ...r,
+        manageable: mineIds.has(r.id),
+      }));
+      // Les gérables d'abord : ce sont celles sur lesquelles on agit.
+      list.sort((a, b) => Number(b.manageable) - Number(a.manageable));
+      setRewards(list);
     } catch (err) {
       if (adminErrorCode(err) === 'NOT_CONNECTED') {
         handleNotConnected();
@@ -282,6 +309,67 @@ export default function TwitchRewardsPanel() {
     });
   }
 
+  async function togglePause(reward: Reward) {
+    const next = !(reward.is_paused ?? false);
+    await withBusy(`reward-pause:${reward.id}`, async () => {
+      try {
+        await mutateJson(
+          `/api/admin/twitch/channel-points/rewards/${encodeURIComponent(
+            reward.id
+          )}`,
+          { method: 'PATCH', body: JSON.stringify({ is_paused: next }) }
+        );
+        addToast(
+          next ? t.rewardPausedSuccess : t.rewardResumedSuccess,
+          'success'
+        );
+        await loadRewards();
+      } catch (err) {
+        reportError(err);
+      }
+    });
+  }
+
+  // Modification en ligne : titre, coût, message — ce que Helix accepte.
+  const [editing, setEditing] = useState<{
+    id: string;
+    title: string;
+    cost: string;
+    prompt: string;
+  } | null>(null);
+
+  async function saveEdit() {
+    if (!editing) return;
+    const title = editing.title.trim();
+    const cost = Number(editing.cost);
+    if (!title) return addToast(t.rewardTitleRequired, 'error');
+    if (!Number.isInteger(cost) || cost < 1) {
+      return addToast(t.rewardCostInvalid, 'error');
+    }
+    await withBusy(`reward-edit:${editing.id}`, async () => {
+      try {
+        await mutateJson(
+          `/api/admin/twitch/channel-points/rewards/${encodeURIComponent(
+            editing.id
+          )}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({
+              title,
+              cost,
+              prompt: editing.prompt.trim(),
+            }),
+          }
+        );
+        addToast(t.rewardEditSuccess, 'success');
+        setEditing(null);
+        await loadRewards();
+      } catch (err) {
+        reportError(err);
+      }
+    });
+  }
+
   async function deleteReward(reward: Reward) {
     const ok = await confirm({
       title: format(t.rewardDeleteConfirmTitle, { title: reward.title }),
@@ -428,53 +516,185 @@ export default function TwitchRewardsPanel() {
             {t.rewardsEmpty}
           </div>
         ) : (
-          <ul className="space-y-2">
-            {rewards.map((r) => {
-              const enabled = r.is_enabled ?? false;
-              const toggling = isBusy(`reward-toggle:${r.id}`);
-              const deleting = isBusy(`reward-delete:${r.id}`);
-              return (
-                <li
-                  key={r.id}
-                  className={`flex flex-wrap items-center gap-3 px-3 py-2 ${R.rubanInset}`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold text-[var(--t1,#f4edf7)]">
-                      {r.title}
-                    </div>
-                    {typeof r.cost === 'number' && (
-                      <div className="text-xs text-neutral-400">
-                        {format(t.rewardCostBadge, { cost: r.cost })}
+          <>
+            <p className="mb-2 text-xs text-neutral-400">
+              {format(t.rewardsSummary, {
+                total: rewards.length,
+                manageable: rewards.filter((r) => r.manageable).length,
+              })}
+            </p>
+            <ul className="space-y-2">
+              {rewards.map((r) => {
+                const enabled = r.is_enabled ?? false;
+                const paused = r.is_paused ?? false;
+                const toggling = isBusy(`reward-toggle:${r.id}`);
+                const deleting = isBusy(`reward-delete:${r.id}`);
+                const pausing = isBusy(`reward-pause:${r.id}`);
+                const busyRow = toggling || deleting || pausing;
+                const isEditing = editing?.id === r.id;
+                return (
+                  <li key={r.id} className={`px-3 py-2 ${R.rubanInset}`}>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span
+                        className="h-3 w-3 shrink-0 rounded-full"
+                        style={{ background: r.background_color || '#9146ff' }}
+                        aria-hidden
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold text-[var(--t1,#f4edf7)]">
+                          {r.title}
+                        </div>
+                        <div className="truncate text-xs text-neutral-400">
+                          {typeof r.cost === 'number' &&
+                            format(t.rewardCostBadge, { cost: r.cost })}
+                          {r.prompt ? ` · ${r.prompt}` : ''}
+                        </div>
                       </div>
+                      <Chip tone={enabled ? 'ok' : 'neutral'}>
+                        {enabled ? t.rewardStateEnabled : t.rewardStateDisabled}
+                      </Chip>
+                      {paused && <Chip tone="warn">{t.rewardStatePaused}</Chip>}
+                      {r.manageable ? (
+                        <>
+                          <AdminButton
+                            variant="ghost"
+                            size="xs"
+                            onClick={() =>
+                              setEditing(
+                                isEditing
+                                  ? null
+                                  : {
+                                      id: r.id,
+                                      title: r.title,
+                                      cost: String(r.cost ?? ''),
+                                      prompt: r.prompt ?? '',
+                                    }
+                              )
+                            }
+                            disabled={busyRow}
+                          >
+                            {t.rewardEdit}
+                          </AdminButton>
+                          <AdminButton
+                            variant="ghost"
+                            size="xs"
+                            onClick={() => togglePause(r)}
+                            disabled={busyRow}
+                          >
+                            {paused ? t.rewardResume : t.rewardPause}
+                          </AdminButton>
+                          <AdminButton
+                            variant="ghost"
+                            size="xs"
+                            onClick={() => toggleReward(r)}
+                            disabled={busyRow}
+                          >
+                            {toggling
+                              ? t.rewardToggling
+                              : enabled
+                                ? t.rewardDisable
+                                : t.rewardEnable}
+                          </AdminButton>
+                          <AdminButton
+                            variant="danger"
+                            size="xs"
+                            onClick={() => deleteReward(r)}
+                            disabled={busyRow}
+                          >
+                            {deleting ? t.rewardDeleting : t.rewardDelete}
+                          </AdminButton>
+                        </>
+                      ) : (
+                        <>
+                          <Chip tone="neutral">{t.rewardOriginTwitch}</Chip>
+                          {login && (
+                            <a
+                              href={`https://dashboard.twitch.tv/u/${encodeURIComponent(
+                                login
+                              )}/viewer-rewards/channel-points/rewards`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-[var(--or-200,#eec4ff)] underline"
+                            >
+                              {t.rewardManageOnTwitch}
+                            </a>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    {isEditing && editing && (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          void saveEdit();
+                        }}
+                        className="mt-2 flex flex-wrap items-end gap-2"
+                      >
+                        <label className="min-w-[10rem] flex-1">
+                          <span className={R.rubanLabel}>
+                            {t.rewardTitleLabel}
+                          </span>
+                          <input
+                            type="text"
+                            value={editing.title}
+                            maxLength={MAX_REWARD_TITLE}
+                            onChange={(e) =>
+                              setEditing({ ...editing, title: e.target.value })
+                            }
+                            className={R.rubanInput}
+                          />
+                        </label>
+                        <label className="w-28">
+                          <span className={R.rubanLabel}>
+                            {t.rewardCostLabel}
+                          </span>
+                          <input
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={editing.cost}
+                            onChange={(e) =>
+                              setEditing({ ...editing, cost: e.target.value })
+                            }
+                            className={R.rubanInput}
+                          />
+                        </label>
+                        <label className="min-w-[12rem] flex-[2]">
+                          <span className={R.rubanLabel}>
+                            {t.rewardPromptLabel}
+                          </span>
+                          <input
+                            type="text"
+                            value={editing.prompt}
+                            maxLength={MAX_REWARD_PROMPT}
+                            onChange={(e) =>
+                              setEditing({ ...editing, prompt: e.target.value })
+                            }
+                            className={R.rubanInput}
+                          />
+                        </label>
+                        <AdminButton
+                          variant="secondary"
+                          size="sm"
+                          type="submit"
+                          disabled={isBusy(`reward-edit:${r.id}`)}
+                        >
+                          {t.rewardEditSave}
+                        </AdminButton>
+                        <AdminButton
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditing(null)}
+                        >
+                          {t.rewardEditCancel}
+                        </AdminButton>
+                      </form>
                     )}
-                  </div>
-                  <Chip tone={enabled ? 'ok' : 'neutral'}>
-                    {enabled ? t.rewardStateEnabled : t.rewardStateDisabled}
-                  </Chip>
-                  <AdminButton
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => toggleReward(r)}
-                    disabled={toggling || deleting}
-                  >
-                    {toggling
-                      ? t.rewardToggling
-                      : enabled
-                        ? t.rewardDisable
-                        : t.rewardEnable}
-                  </AdminButton>
-                  <AdminButton
-                    variant="danger"
-                    size="xs"
-                    onClick={() => deleteReward(r)}
-                    disabled={toggling || deleting}
-                  >
-                    {deleting ? t.rewardDeleting : t.rewardDelete}
-                  </AdminButton>
-                </li>
-              );
-            })}
-          </ul>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
         )}
         <p className="mt-2 text-[11px] text-neutral-500">{t.rewardsCaveat}</p>
       </div>
@@ -497,11 +717,14 @@ export default function TwitchRewardsPanel() {
             className={R.rubanInput}
           >
             <option value="">{t.rewardSelectPlaceholder}</option>
-            {rewards.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.title}
-              </option>
-            ))}
+            {/* Helix ne livre les échanges QUE des récompenses de l'app. */}
+            {rewards
+              .filter((r) => r.manageable)
+              .map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.title}
+                </option>
+              ))}
           </select>
         )}
 

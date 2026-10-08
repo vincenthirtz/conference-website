@@ -72,7 +72,21 @@ export default adminNs('adminTwitchCommands', {
   rewardSelectPlaceholder: 'Choisir une récompense…',
   rewardsLoading: 'Chargement des récompenses…',
   rewardsCaveat:
-    'Seules les récompenses créées par cette application sont gérables ; la liste peut être vide sinon.',
+    'Toutes les récompenses de la chaîne sont listées. Twitch ne laisse modifier, mettre en pause, supprimer ou traiter les échanges QUE des récompenses créées par ce site ; celles créées dans le tableau de bord Twitch se gèrent là-bas (lien « Gérer sur Twitch »). Pour en reprendre la main ici : supprime-la sur Twitch, puis recrée-la ci-dessus.',
+  /** Interpole {total}, {manageable}. */
+  rewardsSummary:
+    '{total} récompense(s) sur la chaîne · {manageable} gérable(s) ici',
+  rewardOriginTwitch: 'Créée sur Twitch',
+  rewardManageOnTwitch: 'Gérer sur Twitch ↗',
+  rewardStatePaused: 'En pause',
+  rewardPause: 'Mettre en pause',
+  rewardResume: 'Reprendre',
+  rewardPausedSuccess: 'Récompense mise en pause.',
+  rewardResumedSuccess: 'Récompense reprise.',
+  rewardEdit: 'Modifier',
+  rewardEditSave: 'Enregistrer',
+  rewardEditCancel: 'Annuler',
+  rewardEditSuccess: 'Récompense modifiée.',
   redemptionsAria: 'Demandes en attente pour la récompense sélectionnée',
   redemptionsLoading: 'Chargement des demandes…',
   redemptionsEmpty: 'Aucune demande en attente.',
