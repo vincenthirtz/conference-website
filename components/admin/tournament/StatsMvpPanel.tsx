@@ -22,6 +22,7 @@ import {
 } from '@/features/admin/tournaments/client';
 import { useTournamentRead } from '@/features/admin/tournaments/hooks/useTournamentRead';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useDocumentVisible } from '@/hooks/useDocumentVisible';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -120,6 +121,7 @@ export default function StatsMvpPanel({
   const locale = useLocale();
   const visible = useDocumentVisible();
   const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
 
   const segment = kind === 'public' ? 'mvp-public-votes' : 'mvp-votes';
   const votesQuery = useTournamentRead<Response>(
@@ -196,6 +198,40 @@ export default function StatsMvpPanel({
     [addToast, load, t.openDone, t.closeDone, t.actionError]
   );
 
+  /**
+   * RELANCER un vote clos (ou échu) — le cas d'un vote clos trop tôt, match
+   * pas fini. Le serveur sait rouvrir (`openPublicVote` efface clôture et
+   * résultat, garde les voix) ; il manquait le geste : un match qui a déjà eu
+   * un scrutin n'est plus dans la liste « Lancer le vote ».
+   */
+  const reopenPublic = useCallback(
+    async (matchId: string) => {
+      const n = Number(minutes);
+      const windowMinutes =
+        n >= 1 && n <= 360 ? Math.round(n) : DEFAULT_PUBLIC_MINUTES;
+      const ok = await confirm({
+        title: t.reopenConfirmTitle,
+        subtitle: format(t.reopenConfirmBody, { minutes: windowMinutes }),
+        confirmLabel: t.reopenCta,
+      });
+      if (!ok) return;
+      setBusy(true);
+      try {
+        await adminRequest(tournamentMatchUrls.mvpPublic(matchId), {
+          method: 'POST',
+          json: { action: 'open', windowMinutes },
+        });
+        addToast(t.reopenDone, 'success');
+        await load(true);
+      } catch (err) {
+        addToast((err as AdminFetchError).message || t.actionError, 'error');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [addToast, confirm, load, minutes, t]
+  );
+
   const shown = useMemo(() => {
     const all = data?.matches ?? [];
     if (filter === 'open') {
@@ -211,6 +247,7 @@ export default function StatsMvpPanel({
 
   return (
     <div className="space-y-6">
+      {dialog}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-3xl">
           <h2 className="text-xl font-semibold">
@@ -353,6 +390,12 @@ export default function StatsMvpPanel({
                     ? () => void runPublic(m.id, { action: 'close' })
                     : undefined
                 }
+                onReopen={
+                  kind === 'public' &&
+                  (m.state === 'closed' || m.state === 'expired')
+                    ? () => void reopenPublic(m.id)
+                    : undefined
+                }
                 busy={busy}
               />
             ))}
@@ -372,6 +415,7 @@ function MatchCard({
   t,
   fmtDate,
   onClose,
+  onReopen,
   busy = false,
 }: {
   match: VoteBoardMatch;
@@ -379,6 +423,8 @@ function MatchCard({
   fmtDate: (iso: string) => string;
   /** Vote du public ouvert : le clore maintenant. */
   onClose?: () => void;
+  /** Vote du public clos ou échu : le relancer. */
+  onReopen?: () => void;
   busy?: boolean;
 }) {
   return (
@@ -416,6 +462,16 @@ function MatchCard({
               disabled={busy}
             >
               {t.closeCta}
+            </AdminButton>
+          )}
+          {onReopen && (
+            <AdminButton
+              size="xs"
+              className="mt-1"
+              onClick={onReopen}
+              disabled={busy}
+            >
+              {t.reopenCta}
             </AdminButton>
           )}
         </div>

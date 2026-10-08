@@ -60,5 +60,10 @@ export default {
   openDone: 'Audience vote started.',
   closeCta: 'Close now',
   closeDone: 'Audience vote closed.',
+  reopenCta: 'Restart the vote',
+  reopenConfirmTitle: 'Restart the audience vote?',
+  reopenConfirmBody:
+    'The vote reopens for {minutes} min. Votes already cast are kept; the displayed result is cleared until the next close. If another player wins, she also receives her TCG coins.',
+  reopenDone: 'Audience vote restarted.',
   actionError: 'The operation failed.',
 };

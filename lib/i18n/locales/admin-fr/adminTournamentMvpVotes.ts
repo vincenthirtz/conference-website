@@ -61,5 +61,11 @@ export default adminNs('adminTournamentMvpVotes', {
   openDone: 'Vote du public lancé.',
   closeCta: 'Clore maintenant',
   closeDone: 'Vote du public clos.',
+  reopenCta: 'Relancer le vote',
+  reopenConfirmTitle: 'Relancer le vote du public ?',
+  /** Interpole `{minutes}`. */
+  reopenConfirmBody:
+    'Le vote rouvre pour {minutes} min. Les voix déjà exprimées sont conservées ; le résultat affiché est effacé jusqu’à la nouvelle clôture. Si une autre joueuse l’emporte, elle reçoit aussi ses pièces TCG.',
+  reopenDone: 'Vote du public relancé.',
   actionError: 'L’opération a échoué.',
 });
