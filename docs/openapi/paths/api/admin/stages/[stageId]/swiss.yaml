@@ -1,0 +1,115 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+get:
+  summary: Swiss stage screen (enriched standings and rounds).
+  description: |
+    Guard `caster`. Swiss stages only (400 otherwise). Standings order is
+    the generic stage standings order (tiebreaker overrides applied,
+    disqualified teams ranked last and flagged with `disqualified` /
+    `disqualificationMode`). Swiss columns (games, Buchholz, opponents'
+    win rate) are computed on counted matches (finished or walkover), the
+    matches of a team disqualified in `annul` mode excluded. `rounds` lists
+    every non-deleted match of the stage by round, cancelled ones included.
+  operationId: adminGetStageSwiss
+  x-zod-query: admin.stages/[stageId].query
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  responses:
+    '200':
+      description: Swiss stage screen data.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              stage:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  stage_type:
+                    type: string
+                    nullable: true
+              tournament:
+                type: object
+                nullable: true
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  slug:
+                    type: string
+                    nullable: true
+              standings:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    team_id:
+                      type: string
+                      format: uuid
+                    team:
+                      type: object
+                      nullable: true
+                      additionalProperties: true
+                    rank:
+                      type: integer
+                    wins:
+                      type: integer
+                    losses:
+                      type: integer
+                    draws:
+                      type: integer
+                    points:
+                      type: number
+                    games_won:
+                      type: integer
+                    games_lost:
+                      type: integer
+                    games_drawn:
+                      type: integer
+                    buchholz:
+                      type: number
+                      nullable: true
+                    opp_score_sum:
+                      type: number
+                      nullable: true
+                    opp_winrate:
+                      type: number
+                      nullable: true
+                    match_count:
+                      type: integer
+                    disqualified:
+                      type: boolean
+                    disqualificationMode:
+                      type: string
+                      enum:
+                        - forfeit
+                        - annul
+              rounds:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    round_number:
+                      type: integer
+                    matches:
+                      type: array
+                      items:
+                        type: object
+                        additionalProperties: true
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'

@@ -23,6 +23,8 @@ import {
 import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
+import DisqualifiedBadge from '@/features/admin/stages/ui/DisqualifiedBadge';
+import type { DisqualificationMode } from '@/features/admin/stages/client';
 
 const CARD =
   'overflow-hidden rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)]';
@@ -65,6 +67,9 @@ type SwissStanding = {
   opp_score_sum: number | null;
   opp_winrate: number | null;
   match_count: number;
+  /** Disqualifiée : classée en dernier par le serveur, badge ci-dessous. */
+  disqualified?: boolean;
+  disqualificationMode?: DisqualificationMode;
 };
 
 type StageMini = {
@@ -477,6 +482,13 @@ function AdminSwissStagePage(_props: StaffProps) {
                                 <div>
                                   <div className="font-semibold text-[var(--t1,#f4edf7)]">
                                     {display}
+                                    {s.disqualified && (
+                                      <span className="ml-2">
+                                        <DisqualifiedBadge
+                                          mode={s.disqualificationMode}
+                                        />
+                                      </span>
+                                    )}
                                   </div>
                                   {s.team?.short_name && (
                                     <div className="text-[10px] text-[var(--t3,#a39ba6)]">

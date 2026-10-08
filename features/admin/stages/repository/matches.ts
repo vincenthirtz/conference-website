@@ -28,6 +28,28 @@ export async function activeStageMatches(
 }
 
 /**
+ * Matchs d'une phase suisse pour son écran (rondes + statistiques) : tous
+ * statuts, annulés compris (affichés dans leur ronde), hors supprimés.
+ */
+export async function swissOverviewMatches(
+  db: AdminDb,
+  tenantId: string,
+  stageId: string
+) {
+  const { data, error } = await db
+    .from('matches')
+    .select(
+      'id, tournament_id, stage_id, status, is_bye, round_number, best_of, scheduled_at, team1_id, team2_id, winner_team_id, team1_score, team2_score'
+    )
+    .eq('tenant_id', tenantId)
+    .eq('stage_id', stageId)
+    .is('deleted_at', null)
+    .order('round_number', { ascending: true, nullsFirst: false })
+    .order('scheduled_at', { ascending: true, nullsFirst: false });
+  return { rows: data, error };
+}
+
+/**
  * Matchs d'une équipe dans la phase (disqualification) : non supprimés,
  * statut parmi `statuses`. `teamId` est un UUID validé en amont (zod).
  */

@@ -14753,6 +14753,359 @@
     "additionalProperties": {}
    }
   },
+  "GET /api/admin/stages/{stageId}/swiss": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "rounds": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "matches": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "best_of": {
+            "type": [
+             "number",
+             "null"
+            ]
+           },
+           "id": {
+            "type": "string"
+           },
+           "is_bye": {
+            "type": [
+             "boolean",
+             "null"
+            ]
+           },
+           "round_number": {
+            "type": [
+             "number",
+             "null"
+            ]
+           },
+           "scheduled_at": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "stage_id": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "status": {
+            "type": "string",
+            "enum": [
+             "cancelled",
+             "disputed",
+             "finished",
+             "ongoing",
+             "pending",
+             "postponed",
+             "walkover"
+            ]
+           },
+           "team1": {
+            "type": [
+             "object",
+             "null"
+            ],
+            "properties": {
+             "id": {
+              "type": "string"
+             },
+             "logo_url": {
+              "type": [
+               "string",
+               "null"
+              ]
+             },
+             "name": {
+              "type": "string"
+             },
+             "short_name": {
+              "type": [
+               "string",
+               "null"
+              ]
+             }
+            },
+            "required": [
+             "id",
+             "logo_url",
+             "name",
+             "short_name"
+            ]
+           },
+           "team1_id": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "team1_score": {
+            "type": [
+             "number",
+             "null"
+            ]
+           },
+           "team2": {
+            "type": [
+             "object",
+             "null"
+            ],
+            "properties": {
+             "id": {
+              "type": "string"
+             },
+             "logo_url": {
+              "type": [
+               "string",
+               "null"
+              ]
+             },
+             "name": {
+              "type": "string"
+             },
+             "short_name": {
+              "type": [
+               "string",
+               "null"
+              ]
+             }
+            },
+            "required": [
+             "id",
+             "logo_url",
+             "name",
+             "short_name"
+            ]
+           },
+           "team2_id": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "team2_score": {
+            "type": [
+             "number",
+             "null"
+            ]
+           },
+           "tournament_id": {
+            "type": "string"
+           },
+           "winner_team_id": {
+            "type": [
+             "string",
+             "null"
+            ]
+           }
+          },
+          "required": [
+           "best_of",
+           "id",
+           "is_bye",
+           "round_number",
+           "scheduled_at",
+           "stage_id",
+           "status",
+           "team1",
+           "team1_id",
+           "team1_score",
+           "team2",
+           "team2_id",
+           "team2_score",
+           "tournament_id",
+           "winner_team_id"
+          ]
+         }
+        },
+        "round_number": {
+         "type": "number"
+        }
+       },
+       "required": [
+        "matches",
+        "round_number"
+       ]
+      }
+     },
+     "stage": {
+      "type": "object",
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "stage_type": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "id",
+       "name",
+       "stage_type"
+      ]
+     },
+     "standings": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "buchholz": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "disqualificationMode": {
+         "type": "string",
+         "enum": [
+          "annul",
+          "forfeit"
+         ]
+        },
+        "disqualified": {
+         "type": "boolean"
+        },
+        "draws": {
+         "type": "number"
+        },
+        "games_drawn": {
+         "type": "number"
+        },
+        "games_lost": {
+         "type": "number"
+        },
+        "games_won": {
+         "type": "number"
+        },
+        "losses": {
+         "type": "number"
+        },
+        "match_count": {
+         "type": "number"
+        },
+        "opp_score_sum": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "opp_winrate": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "points": {
+         "type": "number"
+        },
+        "rank": {
+         "type": "number"
+        },
+        "team": {
+         "type": [
+          "object",
+          "null"
+         ],
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "logo_url": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "name": {
+           "type": "string"
+          },
+          "short_name": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "id",
+          "logo_url",
+          "name",
+          "short_name"
+         ]
+        },
+        "team_id": {
+         "type": "string"
+        },
+        "wins": {
+         "type": "number"
+        }
+       },
+       "required": [
+        "buchholz",
+        "draws",
+        "games_drawn",
+        "games_lost",
+        "games_won",
+        "losses",
+        "match_count",
+        "opp_score_sum",
+        "opp_winrate",
+        "points",
+        "rank",
+        "team",
+        "team_id",
+        "wins"
+       ]
+      }
+     },
+     "tournament": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "slug": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "id",
+       "name",
+       "slug"
+      ]
+     }
+    },
+    "required": [
+     "rounds",
+     "stage",
+     "standings",
+     "tournament"
+    ]
+   }
+  },
   "GET /api/admin/stages/{stageId}/swiss-status": {
    "200": {
     "type": "object",
