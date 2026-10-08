@@ -33,6 +33,9 @@ import {
   readPublicMvpFeed,
   type OverlayPublicMvpPoll,
 } from '@/utils/overlay/publicMvpFeed';
+import { readTcgOverlayFeed } from '@/utils/tcg/overlayFeed';
+import { readOverlayTheme } from '@/utils/tcg/overlayTheme';
+import type { TcgOverlayPayload } from '@/pages/api/overlay/tcg/[token]';
 import {
   resolveAlertFrame,
   resolveAlertSoundUrl,
@@ -100,6 +103,15 @@ export type OverlayAlertsResponse = {
    * Diffusion › Overlays, appliquée au rafraîchissement suivant.
    */
   layout?: RegieLayout;
+  /**
+   * Annonces TCG (drops Twitch, victoires) et leur habillage, servies
+   * UNIQUEMENT sur `?with=tcg` (la Régie). Même frontière de confidentialité
+   * que `/api/overlay/tcg/<jeton>` — `utils/tcg/overlayFeed.ts` ne laisse
+   * sortir qu'un pseudo Twitch et une origine, déjà publics dans le chat, comme
+   * les pseudos des alertes servies ici. Le jeton reste celui de la source
+   * dédiée ; la Régie, publique par espace, n'en a pas besoin.
+   */
+  tcg?: TcgOverlayPayload;
   /** L'horloge du SERVEUR : celle du poste de régie peut être fausse. */
   serverTime: string;
 };
@@ -182,6 +194,13 @@ export default async function handler(
             .then(({ data }) => normalizeRegieLayout(data?.layout ?? null)),
         ])
       : [undefined, undefined];
+    // Aucune des deux lectures ne lève (cf. leurs modules).
+    const tcg: TcgOverlayPayload | undefined = demande.has('tcg')
+      ? await Promise.all([
+          readTcgOverlayFeed(tenantId, { now: nowMs }),
+          readOverlayTheme(tenantId),
+        ]).then(([items, theme]) => ({ items, theme }))
+      : undefined;
 
     const [eventsRes, donationsRes, settingsRes, rulesRes, branding] =
       await Promise.all([
@@ -289,6 +308,7 @@ export default async function handler(
       rules,
       ...(publicMvp !== undefined ? { publicMvp } : {}),
       ...(layout !== undefined ? { layout } : {}),
+      ...(tcg !== undefined ? { tcg } : {}),
       branding: branding
         ? {
             name: branding.name ?? null,

@@ -94,35 +94,9 @@ export default {
   kindMascot: 'Mascot',
   unknownSubject: 'Unknown subject',
 
-  overlayHeading: 'OBS overlay',
-  overlaySubtitle:
-    'Announces cards won, live. Paste into a “Browser” source in OBS or Streamlabs.',
-  overlayNone: 'No overlay link for this space.',
-  overlayCreatedAt: 'Created {date}',
-  overlayLastUsedAt: 'Last called: {date}',
-  overlayNeverUsed: 'Never used',
-  overlayReveal: 'Show',
-  overlayHide: 'Hide',
-  overlayCopy: 'Copy',
-  overlayCopied: 'Link copied',
-  overlayCreate: 'Create link',
-  overlayRotate: 'Regenerate',
-  overlayRotateWarning:
-    'The current link stops working immediately: an overlay already set up in OBS goes silent until you paste the new link. Do this if the link has been shared.',
-  overlayRevoke: 'Revoke',
-  overlayRevokeWarning:
-    'The overlay stops working and no new link is created. You can issue one later.',
-  overlayWorking: 'Working…',
-  overlayLoadError: 'Could not read the overlay link.',
-  overlaySaveError: 'The operation failed, please try again.',
-  overlayObsHint:
-    'Anyone with this link sees the announcements. It shows only the Twitch username and the event — never the site account name.',
   overlayMovedNotice:
-    'The Twitch drop, the OBS link and the TCG overlay appearance are managed with the other broadcast sources.',
+    'The Twitch drop and the TCG overlay appearance are managed with the other broadcast sources.',
   overlayMovedLink: 'Broadcast › Overlays',
-  overlayCopyRegie: 'Copy for the Régie',
-  overlayRegieHint:
-    'Already using the /overlay/regie source in OBS? Replace its URL with this link (keeping any parameters you use, e.g. &mvp=0): TCG announcements show up there, no extra source needed.',
 
   themeHeading: 'Overlay appearance',
   themeSubtitle:

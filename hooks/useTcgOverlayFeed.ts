@@ -67,12 +67,60 @@ type State = {
   theme: OverlayTheme;
 };
 
+/**
+ * La FILE D'ANNONCES, indépendante du transport : la source dédiée l'alimente
+ * par sa route à jeton, la Régie par `/api/overlay/alerts?with=tcg`. Mêmes
+ * règles des deux côtés — amorçage silencieux, pas de rejeu, file bornée.
+ */
+export function useTcgAnnouncementQueue() {
+  const [visible, setVisible] = useState<TcgOverlayItem[]>([]);
+  // Identifiants déjà annoncés. Une `ref` et non un état : la faire entrer dans
+  // le rendu déclencherait un cycle à chaque interrogation.
+  const seen = useRef<Set<string>>(new Set());
+  const primed = useRef(false);
+  const alive = useRef(true);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+
+  const ingest = useCallback((items: TcgOverlayItem[]) => {
+    if (!primed.current) {
+      // Amorçage silencieux : cf. l'en-tête.
+      for (const item of items) seen.current.add(item.id);
+      primed.current = true;
+      return;
+    }
+
+    const fresh = items.filter((item) => !seen.current.has(item.id));
+    if (fresh.length === 0) return;
+    for (const item of fresh) seen.current.add(item.id);
+
+    // Les plus anciennes d'abord, pour que la file les fasse défiler dans
+    // l'ordre où elles se sont produites.
+    const ordered = [...fresh].reverse();
+    setVisible((prev) => [...ordered, ...prev].slice(0, MAX_VISIBLE));
+
+    for (const item of ordered) {
+      window.setTimeout(() => {
+        if (!alive.current) return;
+        setVisible((prev) => prev.filter((x) => x.id !== item.id));
+      }, VISIBLE_MS);
+    }
+  }, []);
+
+  return { visible, ingest };
+}
+
 export function useTcgOverlayFeed({
   token,
   enabled = true,
   pollMs = POLL_MS,
 }: Options): State {
-  const [visible, setVisible] = useState<TcgOverlayItem[]>([]);
+  const { visible, ingest } = useTcgAnnouncementQueue();
   const [connecting, setConnecting] = useState(true);
   const [rejected, setRejected] = useState(false);
   const [theme, setTheme] = useState<OverlayTheme>(DEFAULT_OVERLAY_THEME);
@@ -81,11 +129,6 @@ export function useTcgOverlayFeed({
   // sondage — toutes les 5 secondes, pendant des heures de direct — remplacerait
   // l'objet par un équivalent et déclencherait un rendu de l'overlay pour rien.
   const themeSig = useRef<string>('');
-
-  // Identifiants déjà annoncés. Une `ref` et non un état : la faire entrer dans
-  // le rendu déclencherait un cycle à chaque interrogation.
-  const seen = useRef<Set<string>>(new Set());
-  const primed = useRef(false);
   const alive = useRef(true);
 
   const tick = useCallback(async () => {
@@ -128,34 +171,12 @@ export function useTcgOverlayFeed({
       }
 
       setConnecting(false);
-
-      if (!primed.current) {
-        // Amorçage silencieux : cf. l'en-tête.
-        for (const item of items) seen.current.add(item.id);
-        primed.current = true;
-        return;
-      }
-
-      const fresh = items.filter((item) => !seen.current.has(item.id));
-      if (fresh.length === 0) return;
-      for (const item of fresh) seen.current.add(item.id);
-
-      // Les plus anciennes d'abord, pour que la file les fasse défiler dans
-      // l'ordre où elles se sont produites.
-      const ordered = [...fresh].reverse();
-      setVisible((prev) => [...ordered, ...prev].slice(0, MAX_VISIBLE));
-
-      for (const item of ordered) {
-        window.setTimeout(() => {
-          if (!alive.current) return;
-          setVisible((prev) => prev.filter((x) => x.id !== item.id));
-        }, VISIBLE_MS);
-      }
+      ingest(items);
     } catch {
       // Réseau coupé : on ne change rien à l'écran.
       if (alive.current) setConnecting(false);
     }
-  }, [token]);
+  }, [token, ingest]);
 
   useEffect(() => {
     alive.current = true;

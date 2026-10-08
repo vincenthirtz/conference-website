@@ -111,37 +111,10 @@ export default adminNs('adminTcgOverview', {
   kindMascot: 'Mascotte',
   unknownSubject: 'Sujet inconnu',
 
-  // Source navigateur OBS / Streamlabs. Le lien est un secret PORTEUR : les
-  // textes disent ce que « régénérer » casse, avant qu'on clique.
-  overlayHeading: 'Overlay OBS',
-  overlaySubtitle:
-    'Annonce en direct les cartes gagnées. À coller dans une source « Navigateur » d’OBS ou Streamlabs.',
-  overlayNone: 'Aucun lien d’overlay pour cet espace.',
-  overlayCreatedAt: 'Créé le {date}',
-  overlayLastUsedAt: 'Dernier appel : {date}',
-  overlayNeverUsed: 'Jamais utilisé',
-  overlayReveal: 'Afficher',
-  overlayHide: 'Masquer',
-  overlayCopy: 'Copier',
-  overlayCopied: 'Lien copié',
-  overlayCreate: 'Créer le lien',
-  overlayRotate: 'Régénérer',
-  overlayRotateWarning:
-    'Le lien actuel cessera immédiatement de fonctionner : l’overlay déjà configuré dans OBS deviendra muet jusqu’à ce que tu y colles le nouveau lien. À faire si le lien a circulé.',
-  overlayRevoke: 'Révoquer',
-  overlayRevokeWarning:
-    'L’overlay cessera de fonctionner et aucun nouveau lien ne sera créé. Tu pourras en émettre un plus tard.',
-  overlayWorking: 'En cours…',
-  overlayLoadError: 'Impossible de lire le lien d’overlay.',
-  overlaySaveError: 'L’opération a échoué, réessaie.',
-  overlayObsHint:
-    'Qui a ce lien voit les annonces. Il n’affiche que le pseudo Twitch et l’événement — jamais le nom du compte du site.',
+  // Renvoi de l'onglet Économie : l'overlay TCG se gère dans Diffusion › Overlays.
   overlayMovedNotice:
-    'Le drop Twitch, le lien OBS et l’habillage de l’overlay TCG se gèrent avec les autres sources de diffusion.',
+    'Le drop Twitch et l’habillage de l’overlay TCG se gèrent avec les autres sources de diffusion.',
   overlayMovedLink: 'Diffusion › Overlays',
-  overlayCopyRegie: 'Copier pour la Régie',
-  overlayRegieHint:
-    'Déjà la source /overlay/regie dans OBS ? Remplace son URL par ce lien (en gardant tes éventuels paramètres, ex. &mvp=0) : les annonces TCG s’y affichent, sans source de plus.',
 
   // --- Habillage de l'overlay -------------------------------------------------
   // Ces clés sont les LIBELLÉS DE L'ÉDITEUR. Les deux phrases réglables, elles,

@@ -3,14 +3,14 @@
 // TOUT L'OVERLAY TCG, EN UN SEUL ENDROIT — Diffusion › Overlays :
 //   * la santé du drop Twitch (`TcgDropHealthCard`) : récompense de points de
 //     chaîne + souscription EventSub, ce qui fait TOMBER les cartes ;
-//   * le jeton de la source OBS (`TcgOverlayCard`), qui les ANNONCE ;
-//   * son habillage (`TcgOverlayThemeCard`).
-// Ces réglages étaient éclatés entre « Twitch & interactions » et l'onglet
-// Économie du TCG : pour préparer une soirée, il fallait savoir où chercher.
+//   * l'habillage des annonces (`TcgOverlayThemeCard`).
+// Les annonces s'affichent dans la source Régie (`/overlay/regie`), servies
+// par espace : plus de lien à jeton à émettre ni à coller. Ces réglages
+// étaient éclatés entre « Twitch & interactions » et l'onglet Économie du TCG.
 //
-// Droit `manage_tcg` pour le jeton et l'habillage (routes
-// /api/admin/tcg/overlay-token et overlay-theme) ; la carte du drop exige en
-// plus `manage_broadcast` et se masque seule sans lui.
+// Droit `manage_tcg` pour l'habillage (route /api/admin/tcg/overlay-theme) ;
+// la carte du drop exige en plus `manage_broadcast` et se masque seule sans
+// lui.
 
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import { lazyPanel } from '@/components/admin/lazyPanel';
@@ -21,9 +21,6 @@ import nsAdminTcgOverview from '@/lib/i18n/locales/admin-fr/adminTcgOverview';
 const TcgDropHealthCard = lazyPanel(
   () => import('@/components/admin/broadcast/TcgDropHealthCard')
 );
-const TcgOverlayCard = lazyPanel(
-  () => import('@/components/admin/tcg/TcgOverlayCard')
-);
 const TcgOverlayThemeCard = lazyPanel(
   () => import('@/components/admin/tcg/TcgOverlayThemeCard')
 );
@@ -33,31 +30,6 @@ function TcgOverlaySection() {
   return (
     <>
       <TcgDropHealthCard />
-      <TcgOverlayCard
-        labels={{
-          heading: t.overlayHeading,
-          subtitle: t.overlaySubtitle,
-          none: t.overlayNone,
-          createdAt: t.overlayCreatedAt,
-          lastUsedAt: t.overlayLastUsedAt,
-          neverUsed: t.overlayNeverUsed,
-          reveal: t.overlayReveal,
-          hide: t.overlayHide,
-          copy: t.overlayCopy,
-          copied: t.overlayCopied,
-          create: t.overlayCreate,
-          rotate: t.overlayRotate,
-          rotateWarning: t.overlayRotateWarning,
-          revoke: t.overlayRevoke,
-          revokeWarning: t.overlayRevokeWarning,
-          working: t.overlayWorking,
-          loadError: t.overlayLoadError,
-          saveError: t.overlaySaveError,
-          obsHint: t.overlayObsHint,
-          copyRegie: t.overlayCopyRegie,
-          regieHint: t.overlayRegieHint,
-        }}
-      />
       <TcgOverlayThemeCard
         labels={{
           heading: t.themeHeading,
