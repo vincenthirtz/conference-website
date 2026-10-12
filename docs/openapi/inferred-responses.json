@@ -17024,6 +17024,9 @@
          "rare"
         ]
        },
+       "descriptionMaxLength": {
+        "type": "number"
+       },
        "eventLogos": {
         "type": "array",
         "items": {
@@ -17068,6 +17071,12 @@
           "credit": {
            "type": "string"
           },
+          "description": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
           "id": {
            "type": "string"
           },
@@ -17099,6 +17108,7 @@
          "required": [
           "createdAt",
           "credit",
+          "description",
           "id",
           "imageUrl",
           "rarity",
@@ -17145,6 +17155,7 @@
       "required": [
        "defaultCredit",
        "defaultRarity",
+       "descriptionMaxLength",
        "eventLogos",
        "items",
        "maxBytes",
@@ -17163,6 +17174,12 @@
          },
          "credit": {
           "type": "string"
+         },
+         "description": {
+          "type": [
+           "string",
+           "null"
+          ]
          },
          "id": {
           "type": "string"
@@ -17195,6 +17212,7 @@
         "required": [
          "createdAt",
          "credit",
+         "description",
          "id",
          "imageUrl",
          "rarity",
@@ -17221,6 +17239,12 @@
        },
        "credit": {
         "type": "string"
+       },
+       "description": {
+        "type": [
+         "string",
+         "null"
+        ]
        },
        "id": {
         "type": "string"
@@ -17253,6 +17277,7 @@
       "required": [
        "createdAt",
        "credit",
+       "description",
        "id",
        "imageUrl",
        "rarity",
@@ -46539,6 +46564,7 @@
           "count": {
            "type": "number"
           },
+          "description": {},
           "displayName": {
            "type": [
             "string",
@@ -46671,6 +46697,7 @@
           "count": {
            "type": "number"
           },
+          "description": {},
           "displayName": {},
           "engagedCopies": {
            "type": "number"
@@ -46774,6 +46801,12 @@
           "count": {
            "type": "number"
           },
+          "description": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
           "displayName": {},
           "engagedCopies": {
            "type": "number"
@@ -46843,6 +46876,7 @@
           "artistUrl",
           "category",
           "count",
+          "description",
           "engagedCopies",
           "fanartId",
           "imageUrl",
@@ -46864,6 +46898,7 @@
           "count": {
            "type": "number"
           },
+          "description": {},
           "displayName": {},
           "engagedCopies": {
            "type": "number"
@@ -46950,6 +46985,7 @@
           "count": {
            "type": "number"
           },
+          "description": {},
           "displayName": {},
           "engagedCopies": {
            "type": "number"
@@ -47997,6 +48033,12 @@
            "enum": [
             "association",
             "fanart"
+           ]
+          },
+          "description": {
+           "type": [
+            "string",
+            "null"
            ]
           },
           "fanartId": {
@@ -78213,6 +78255,12 @@
             "fanart"
            ]
           },
+          "description": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
           "fanartId": {
            "type": [
             "string",
@@ -78258,6 +78306,7 @@
           "artistName",
           "artistUrl",
           "category",
+          "description",
           "fanartId",
           "imageUrl",
           "isFoil",
@@ -82715,6 +82764,12 @@
            "enum": [
             "association",
             "fanart"
+           ]
+          },
+          "description": {
+           "type": [
+            "string",
+            "null"
            ]
           },
           "fanartId": {

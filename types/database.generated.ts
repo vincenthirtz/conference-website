@@ -6274,6 +6274,7 @@ export type Database = {
           artist_url: string | null
           category: string
           created_at: string
+          description: string | null
           id: string
           image_path: string
           licence_accepted_at: string
@@ -6293,6 +6294,7 @@ export type Database = {
           artist_url?: string | null
           category?: string
           created_at?: string
+          description?: string | null
           id?: string
           image_path: string
           licence_accepted_at: string
@@ -6312,6 +6314,7 @@ export type Database = {
           artist_url?: string | null
           category?: string
           created_at?: string
+          description?: string | null
           id?: string
           image_path?: string
           licence_accepted_at?: string

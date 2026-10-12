@@ -33,6 +33,7 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { isMissingColumnError } from '@/utils/moderation/missingColumn';
 import { recommendCardHero } from '@/utils/heroes/recommendCardHero';
 import { maskBattleTag } from '@/utils/battleTag';
 import { TCG_BUCKET, tcgTeamImageUrl } from '@/utils/tcg/teamCardImage';
@@ -442,6 +443,12 @@ export type FanartFace = {
    * staff), pas l'œuvre d'une autrice. La carte l'affiche autrement.
    */
   category: FanartCategory;
+  /**
+   * Texte « à propos », rédigé par le staff — catégorie `association`
+   * seulement (CHECK `tcg_fanart_description_check`). `null` sinon, et aussi
+   * tant que la migration n'est pas appliquée.
+   */
+  description: string | null;
 };
 
 /**
@@ -463,27 +470,42 @@ export async function readFanartFaces(
   const ids = [...new Set(fanartIds.filter(Boolean))];
   if (ids.length === 0 || !supabaseAdmin) return faces;
 
-  const { data, error } = await supabaseAdmin
-    .from('tcg_fanart_cards')
-    .select('id, title, artist_name, artist_url, image_path, status, category')
-    .eq('tenant_id', tenantId)
-    .eq('status', 'approved')
-    .in('id', ids);
+  const base =
+    'id, title, artist_name, artist_url, image_path, status, category';
+  const query = (columns: string) =>
+    supabaseAdmin!
+      .from('tcg_fanart_cards')
+      .select(columns)
+      .eq('tenant_id', tenantId)
+      .eq('status', 'approved')
+      .in('id', ids);
+  let { data, error } = await query(`${base}, description`);
+  // Migration de la description pas encore appliquée : les faces d'avant,
+  // sans description, plutôt que plus aucune face de fan art.
+  if (error && isMissingColumnError(error, 'description')) {
+    ({ data, error } = await query(base));
+  }
   if (error) {
     logger.error('[tcg/faces] fan arts illisibles: %s', error.message);
     return faces;
   }
 
-  for (const row of (data ?? []) as Array<{
+  for (const row of (data ?? []) as unknown as Array<{
     id: string;
     title: string | null;
     artist_name: string | null;
     artist_url: string | null;
     image_path: string | null;
     category?: string | null;
+    description?: string | null;
   }>) {
+    const category = fanartCategoryOf(row.category);
     faces.set(row.id, {
-      category: fanartCategoryOf(row.category),
+      category,
+      // Une fan art n'a pas de description (CHECK) ; on ne la montrerait de
+      // toute façon pas : seul le staff rédige ce texte.
+      description:
+        category === 'association' ? (row.description ?? null) : null,
       fanartId: row.id,
       title: row.title,
       artistName: row.artist_name,

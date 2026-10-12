@@ -7,7 +7,14 @@
 //   POST  → `upload` : déposer une image ; `import_logo` : faire d'un logo
 //           d'événement (`site_settings.seasonal_logos`) une carte ;
 //           `voxel_logo` : la carte du logo par défaut EN VOXEL (le nœud).
-//   PATCH → `update` (titre, crédit, rareté), `revoke`, `restore`.
+//   PATCH → `update` (titre, crédit, rareté, description), `revoke`, `restore`.
+//
+// LA DESCRIPTION (texte « à propos », ≤ 280, texte brut) est écrite par le
+// staff ici et nulle part ailleurs : les règles de nettoyage vivent dans
+// `utils/tcg/cardDescription.ts`. Tant que la migration
+// `tcg_association_card_description.sql` n'est pas appliquée, les lectures
+// retombent sur les colonnes d'avant (pas de description) et seule
+// l'ÉCRITURE d'une description répond 503 `migration_pending`.
 //
 // PAS DE FILE DE MODÉRATION. Une fan art est l'œuvre d'une inconnue, relue
 // avant publication ; une carte de l'association est déposée par le staff
@@ -66,6 +73,11 @@ import {
 } from '@/utils/tcg/fanart';
 import { RARITY_ORDER } from '@/utils/tcg/rarity';
 import {
+  CARD_DESCRIPTION_MAX,
+  normalizeCardDescription,
+} from '@/utils/tcg/cardDescription';
+import { isMissingColumnError } from '@/utils/moderation/missingColumn';
+import {
   MASCOT_VERSION,
   mascotUrl,
   renderMascotSvg,
@@ -81,8 +93,35 @@ export const config = {
   api: { bodyParser: { sizeLimit: '4mb' } },
 };
 
-const SELECT =
+/** Colonnes d'avant la description : le repli tant qu'elle n'existe pas. */
+const SELECT_BASE =
   'id, title, artist_name, image_path, status, rarity, source_ref, created_at';
+const SELECT = `${SELECT_BASE}, description`;
+
+/** La colonne `description` manque-t-elle (migration non appliquée) ? */
+function descriptionMissing(error: unknown): boolean {
+  return isMissingColumnError(error, 'description');
+}
+
+/**
+ * Exécute une lecture (ou une écriture suivie d'un `select`) avec la colonne
+ * `description`, puis SANS si elle n'existe pas encore. PostgREST rejette la
+ * requête entière sur une colonne inconnue : l'écriture n'a donc pas eu lieu,
+ * la rejouer est sûr.
+ */
+async function withDescriptionFallback<T>(
+  run: (columns: string) => PromiseLike<{ data: T | null; error: unknown }>
+): Promise<{ data: T | null; error: unknown }> {
+  const first = await run(SELECT);
+  if (!first.error || !descriptionMissing(first.error)) return first;
+  return run(SELECT_BASE);
+}
+
+/** Description saisie : chaîne libre (nettoyée ensuite) ou `null`. */
+const description = z
+  .string()
+  .max(CARD_DESCRIPTION_MAX * 4)
+  .nullable();
 
 const rarityEnum = z.enum(['common', 'rare', 'epic', 'legendary']);
 const title = z.string().trim().min(2).max(FANART_LIMITS.title);
@@ -97,6 +136,7 @@ const postSchema = z.discriminatedUnion('action', [
       title,
       credit: credit.optional(),
       rarity: rarityEnum.optional(),
+      description: description.optional(),
     })
     .strict(),
   z
@@ -135,6 +175,7 @@ const patchSchema = z.discriminatedUnion('action', [
       title: title.optional(),
       credit: credit.optional(),
       rarity: rarityEnum.optional(),
+      description: description.optional(),
     })
     .strict(),
   z.object({ action: z.literal('revoke'), id: z.string().uuid() }).strict(),
@@ -150,7 +191,41 @@ type Row = {
   rarity: string | null;
   source_ref: string | null;
   created_at: string;
+  /** Absente tant que la migration de la description n'est pas appliquée. */
+  description?: string | null;
 };
+
+/**
+ * Nettoie la description reçue. `undefined` = champ absent (on n'y touche
+ * pas) ; sinon la valeur à écrire, ou le refus à renvoyer tel quel.
+ */
+function parseDescription(
+  raw: string | null | undefined
+):
+  | { ok: true; value: string | null | undefined }
+  | { ok: false; code: string } {
+  if (raw === undefined) return { ok: true, value: undefined };
+  const result = normalizeCardDescription(raw);
+  return result.ok
+    ? { ok: true, value: result.description }
+    : { ok: false, code: result.code };
+}
+
+function refuseDescription(res: NextApiResponse, code: string) {
+  return res.status(400).json({
+    error: 'Description refusée.',
+    code,
+    maxLength: CARD_DESCRIPTION_MAX,
+  });
+}
+
+function migrationPending(res: NextApiResponse) {
+  return res.status(503).json({
+    error:
+      'La description des cartes n’est pas encore disponible (migration en attente).',
+    code: 'migration_pending',
+  });
+}
 
 function publicUrl(path: string): string | null {
   return (
@@ -169,6 +244,7 @@ function toPayload(row: Row) {
     rarity: row.rarity,
     sourceRef: row.source_ref,
     createdAt: row.created_at,
+    description: row.description ?? null,
   };
 }
 
@@ -205,19 +281,21 @@ async function list(
     return;
   }
   const [cardsRes, rawLogos] = await Promise.all([
-    supabaseAdmin!
-      .from('tcg_fanart_cards')
-      .select(SELECT)
-      .eq('tenant_id', ctx.tenantId)
-      .eq('category', 'association')
-      .order('created_at', { ascending: false })
-      .limit(200),
+    withDescriptionFallback((columns) =>
+      supabaseAdmin!
+        .from('tcg_fanart_cards')
+        .select(columns)
+        .eq('tenant_id', ctx.tenantId)
+        .eq('category', 'association')
+        .order('created_at', { ascending: false })
+        .limit(200)
+    ),
     getSetting(SEASONAL_LOGOS_SETTING_KEY, ctx.tenantId),
   ]);
   if (cardsRes.error) {
     logger.error(
       '[admin/tcg/association] lecture impossible: %s',
-      cardsRes.error.message
+      (cardsRes.error as { message?: string }).message
     );
     return res.status(500).json({ error: 'Lecture impossible.' });
   }
@@ -247,6 +325,7 @@ async function list(
     defaultRarity: DEFAULT_FANART_RARITY,
     defaultCredit: ASSOCIATION_DEFAULT_CREDIT,
     maxBytes: IMAGE_MAX_BYTES,
+    descriptionMaxLength: CARD_DESCRIPTION_MAX,
   });
 }
 
@@ -272,6 +351,13 @@ async function create(
       .json({ error: 'Requête invalide.', code: 'VALIDATION' });
   }
   const body = parsed.data;
+
+  // Validée AVANT l'envoi du fichier : une description refusée ne doit pas
+  // laisser une image orpheline dans le bucket public.
+  const desc = parseDescription(
+    body.action === 'upload' ? body.description : undefined
+  );
+  if (!desc.ok) return refuseDescription(res, desc.code);
 
   let path: string;
   let cardTitle: string;
@@ -368,31 +454,34 @@ async function create(
   }
 
   const nowIso = new Date().toISOString();
-  const { data, error } = await supabaseAdmin!
-    .from('tcg_fanart_cards')
-    .insert({
-      tenant_id: ctx.tenantId,
-      category: 'association',
-      submitted_by: null,
-      source_ref: sourceRef,
-      title: cardTitle,
-      artist_name:
-        body.action === 'upload' && body.credit
-          ? body.credit
-          : ASSOCIATION_DEFAULT_CREDIT,
-      artist_url: null,
-      image_path: path,
-      status: 'approved',
-      rarity: body.rarity ?? DEFAULT_FANART_RARITY,
-      // Déposée par l'association elle-même : l'accord de diffusion est le sien.
-      licence_accepted_at: nowIso,
-      reviewed_by: ctx.staff.id,
-      reviewed_at: nowIso,
-      created_at: nowIso,
-      updated_at: nowIso,
-    })
-    .select(SELECT)
-    .single();
+  const { data, error } = await withDescriptionFallback((columns) =>
+    supabaseAdmin!
+      .from('tcg_fanart_cards')
+      .insert({
+        ...(desc.value ? { description: desc.value } : {}),
+        tenant_id: ctx.tenantId,
+        category: 'association',
+        submitted_by: null,
+        source_ref: sourceRef,
+        title: cardTitle,
+        artist_name:
+          body.action === 'upload' && body.credit
+            ? body.credit
+            : ASSOCIATION_DEFAULT_CREDIT,
+        artist_url: null,
+        image_path: path,
+        status: 'approved',
+        rarity: body.rarity ?? DEFAULT_FANART_RARITY,
+        // Déposée par l'association elle-même : l'accord de diffusion est le sien.
+        licence_accepted_at: nowIso,
+        reviewed_by: ctx.staff.id,
+        reviewed_at: nowIso,
+        created_at: nowIso,
+        updated_at: nowIso,
+      })
+      .select(columns)
+      .single()
+  );
 
   if (error || !data) {
     // Bucket PUBLIC : un fichier sans ligne ne pourrait plus être retiré.
@@ -400,11 +489,13 @@ async function create(
       .from(TCG_BUCKET)
       .remove([path])
       .catch(() => undefined);
-    const duplicate = error?.code === '23505';
+    const err = error as { code?: string; message?: string } | null;
+    const duplicate = err?.code === '23505';
     logger.error(
       '[admin/tcg/association] enregistrement impossible: %s',
-      error?.message ?? 'aucune ligne'
+      err?.message ?? 'aucune ligne'
     );
+    if (desc.value && descriptionMissing(error)) return migrationPending(res);
     return duplicate
       ? res.status(409).json({
           error: 'Ce logo est déjà une carte.',
@@ -459,28 +550,37 @@ async function patch(
     if (body.title) update.title = body.title;
     if (body.credit) update.artist_name = body.credit;
     if (body.rarity) update.rarity = body.rarity;
+    const desc = parseDescription(body.description);
+    if (!desc.ok) return refuseDescription(res, desc.code);
+    // `null` efface : c'est un geste valide, distinct d'un champ absent.
+    if (desc.value !== undefined) update.description = desc.value;
   } else {
     update.status = body.action === 'revoke' ? 'revoked' : 'approved';
     update.reviewed_by = ctx.staff.id;
     update.reviewed_at = nowIso;
   }
 
-  let query = supabaseAdmin!
-    .from('tcg_fanart_cards')
-    .update(update)
-    .eq('tenant_id', ctx.tenantId)
-    .eq('category', 'association')
-    .eq('id', body.id);
-  // Le statut de départ conditionne l'écriture : on ne retire que ce qui est
-  // publié, on ne rétablit que ce qui est retiré.
-  if (body.action === 'revoke') query = query.eq('status', 'approved');
-  if (body.action === 'restore') query = query.eq('status', 'revoked');
-
-  const { data, error } = await query.select(SELECT);
+  const writesDescription = 'description' in update;
+  const { data, error } = await withDescriptionFallback((columns) => {
+    let query = supabaseAdmin!
+      .from('tcg_fanart_cards')
+      .update(update)
+      .eq('tenant_id', ctx.tenantId)
+      .eq('category', 'association')
+      .eq('id', body.id);
+    // Le statut de départ conditionne l'écriture : on ne retire que ce qui
+    // est publié, on ne rétablit que ce qui est retiré.
+    if (body.action === 'revoke') query = query.eq('status', 'approved');
+    if (body.action === 'restore') query = query.eq('status', 'revoked');
+    return query.select(columns);
+  });
   if (error) {
+    if (writesDescription && descriptionMissing(error)) {
+      return migrationPending(res);
+    }
     logger.error(
       '[admin/tcg/association] mise à jour impossible: %s',
-      error.message
+      (error as { message?: string }).message
     );
     return res.status(500).json({ error: 'Mise à jour impossible.' });
   }
@@ -503,7 +603,11 @@ async function patch(
     entity_type: 'tcg_fanart',
     entity_id: body.id,
     tenant_id: ctx.tenantId,
-    payload: { title: rows[0].title, rarity: rows[0].rarity },
+    payload: {
+      title: rows[0].title,
+      rarity: rows[0].rarity,
+      ...(writesDescription ? { descriptionChanged: true } : {}),
+    },
   });
 
   return res.status(200).json({ item: toPayload(rows[0]) });

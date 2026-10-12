@@ -26,6 +26,17 @@ export default {
   labelTitle: 'Titre de la carte',
   labelCredit: 'Crédit affiché',
   labelRarity: 'Rareté',
+  labelDescription: 'Description (about)',
+  descriptionHelp:
+    'Shown on the card, in players’ collections. Plain text, no links or tags ({max} characters max).',
+  descriptionPlaceholder: 'Who or what does this card represent?',
+  descriptionCount: '{count}/{max}',
+  errorDescriptionLinks:
+    'The description cannot contain links (no web address, no Discord invite).',
+  errorDescriptionMarkup: 'The description is plain text: no HTML tags.',
+  errorDescriptionTooLong: 'The description is at most {max} characters.',
+  errorDescriptionPending:
+    'Descriptions are not available yet: the database migration is pending.',
   upload: 'Créer la carte',
   cardsTitle: 'Cartes publiées et retirées',
   cardsEmpty: 'Aucune carte de l’association pour l’instant.',

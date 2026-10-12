@@ -325,6 +325,7 @@ export async function openPack(ctx: TcgServiceContext, rawBody: unknown) {
           artistUrl: face?.artistUrl ?? null,
           imageUrl: face?.imageUrl ?? null,
           category: face?.category ?? 'fanart',
+          description: face?.description ?? null,
         };
       }
       if (c.subject_kind === 'mascot') {

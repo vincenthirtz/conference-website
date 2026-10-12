@@ -2,7 +2,12 @@
 //
 // La catégorie « L'association » du TCG : importer un logo d'événement en
 // carte, déposer une image, et gérer les cartes existantes (titre, crédit,
-// rareté, retrait). Droit `manage_tcg`, comme les fan arts.
+// rareté, description, retrait). Droit `manage_tcg`, comme les fan arts.
+//
+// LA DESCRIPTION (« à propos ») est affichée sur la carte chez les joueuses.
+// Le compteur utilise les MÊMES règles que la route
+// (`utils/tcg/cardDescription.ts`) : ce qu'il affiche est ce que le serveur
+// mesurera après nettoyage.
 //
 // PAS DE FILE D'ATTENTE : ce que le staff dépose ici est publié tout de suite
 // (cf. `pages/api/admin/tcg/association.ts`). Retirer n'est pas supprimer — les
@@ -22,6 +27,10 @@ import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTcgAssociation from '@/lib/i18n/locales/admin-fr/adminTcgAssociation';
 import { FANART_LIMITS } from '@/utils/tcg/fanart';
+import {
+  CARD_DESCRIPTION_MAX,
+  cardDescriptionLength,
+} from '@/utils/tcg/cardDescription';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import {
   rubanCard,
@@ -39,6 +48,8 @@ type Item = {
   rarity: string | null;
   sourceRef: string | null;
   createdAt: string;
+  /** Absente d'une API plus ancienne (déploiement en cours). */
+  description?: string | null;
 };
 
 type EventLogo = {
@@ -58,7 +69,19 @@ type Response = {
   defaultRarity: string;
   defaultCredit: string;
   maxBytes: number;
+  /** Optionnel : une API plus ancienne ne le rend pas. */
+  descriptionMaxLength?: number;
 };
+
+/** Codes de refus de la description, traduits ici plutôt qu'en français brut. */
+function descriptionErrorCode(err: unknown): string | null {
+  const payload = (err as { payload?: unknown } | null)?.payload;
+  const code =
+    payload && typeof payload === 'object'
+      ? (payload as { code?: unknown }).code
+      : null;
+  return typeof code === 'string' ? code : null;
+}
 
 const INPUT =
   'mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
@@ -81,8 +104,12 @@ export default function TcgAssociationPanel() {
   const [title, setTitle] = useState('');
   const [credit, setCredit] = useState('');
   const [rarity, setRarity] = useState('');
+  const [description, setDescription] = useState('');
   const [edits, setEdits] = useState<
-    Record<string, { title?: string; credit?: string; rarity?: string }>
+    Record<
+      string,
+      { title?: string; credit?: string; rarity?: string; description?: string }
+    >
   >({});
 
   const load = useCallback(
@@ -99,13 +126,25 @@ export default function TcgAssociationPanel() {
         await load();
         return true;
       } catch (err) {
-        addToast(err instanceof Error ? err.message : t.toastError, 'error');
+        const max = data?.descriptionMaxLength ?? CARD_DESCRIPTION_MAX;
+        const byCode: Record<string, string> = {
+          links_not_allowed: t.errorDescriptionLinks,
+          markup_not_allowed: t.errorDescriptionMarkup,
+          too_long: format(t.errorDescriptionTooLong, { max }),
+          migration_pending: t.errorDescriptionPending,
+        };
+        const code = descriptionErrorCode(err);
+        addToast(
+          (code && byCode[code]) ||
+            (err instanceof Error ? err.message : t.toastError),
+          'error'
+        );
         return false;
       } finally {
         setBusy(null);
       }
     },
-    [addToast, load, t.toastError]
+    [addToast, load, t, data?.descriptionMaxLength]
   );
 
   const importLogo = (logo: EventLogo) =>
@@ -166,6 +205,7 @@ export default function TcgAssociationPanel() {
           mimeType: file.type,
           title: cleanTitle,
           ...(credit.trim() ? { credit: credit.trim() } : {}),
+          ...(description.trim() ? { description } : {}),
           rarity: rarity || data?.defaultRarity,
         },
       },
@@ -174,6 +214,7 @@ export default function TcgAssociationPanel() {
     if (ok) {
       setTitle('');
       setCredit('');
+      setDescription('');
       if (fileRef.current) fileRef.current.value = '';
     }
   };
@@ -190,6 +231,10 @@ export default function TcgAssociationPanel() {
           ...(edit.title?.trim() ? { title: edit.title.trim() } : {}),
           ...(edit.credit?.trim() ? { credit: edit.credit.trim() } : {}),
           ...(edit.rarity ? { rarity: edit.rarity } : {}),
+          // Champ touché seulement : vidé, il EFFACE la description (null).
+          ...(edit.description !== undefined
+            ? { description: edit.description.trim() ? edit.description : null }
+            : {}),
         },
       },
       t.toastSaved
@@ -222,6 +267,43 @@ export default function TcgAssociationPanel() {
 
   const setEdit = (id: string, patch: Record<string, string>) =>
     setEdits((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+
+  const descriptionMax = data.descriptionMaxLength ?? CARD_DESCRIPTION_MAX;
+  const descriptionField = (
+    id: string,
+    value: string,
+    onChange: (next: string) => void,
+    className = ''
+  ) => {
+    const length = cardDescriptionLength(value);
+    const over = length > descriptionMax;
+    return (
+      <label className={`block text-xs text-neutral-400 ${className}`}>
+        {t.labelDescription}
+        <textarea
+          value={value}
+          rows={3}
+          // Marge large : le compteur mesure APRÈS nettoyage (espaces doublés,
+          // caractères invisibles), la saisie brute peut donc dépasser un peu.
+          maxLength={descriptionMax * 2}
+          placeholder={t.descriptionPlaceholder}
+          aria-describedby={`${id}-help`}
+          aria-invalid={over || undefined}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${INPUT} resize-y`}
+        />
+        <span
+          id={`${id}-help`}
+          className="mt-1 flex justify-between gap-2 text-[11px]"
+        >
+          <span>{format(t.descriptionHelp, { max: descriptionMax })}</span>
+          <span className={over ? 'text-red-300' : ''}>
+            {format(t.descriptionCount, { count: length, max: descriptionMax })}
+          </span>
+        </span>
+      </label>
+    );
+  };
 
   return (
     <section aria-labelledby="tcg-association-title" className="space-y-8">
@@ -358,6 +440,12 @@ export default function TcgAssociationPanel() {
               ))}
             </select>
           </label>
+          {descriptionField(
+            'tcg-association-new-description',
+            description,
+            setDescription,
+            'sm:col-span-2'
+          )}
           <div className="flex items-end">
             <AdminButton
               variant="primary"
@@ -445,6 +533,11 @@ export default function TcgAssociationPanel() {
                         ))}
                       </select>
                     </label>
+                    {descriptionField(
+                      `tcg-association-${item.id}-description`,
+                      edit.description ?? item.description ?? '',
+                      (next) => setEdit(item.id, { description: next })
+                    )}
                     <div className="flex flex-wrap gap-2 pt-1">
                       <AdminButton
                         variant="primary"

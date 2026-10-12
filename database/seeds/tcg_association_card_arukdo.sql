@@ -41,6 +41,10 @@
 --   - Rollback : ne PAS supprimer (`tcg_pack_cards` la référence en
 --     ON DELETE RESTRICT dès le premier tirage) ; la retirer via l'écran
 --     (`revoked`), ou `UPDATE … SET status = 'revoked'`.
+--   - Description : posée si `tcg_association_card_description.sql` est
+--     appliquée (sinon ignorée sans erreur ; rejouer le seed après la
+--     migration la pose). Par l'écran staff, la saisir dans le champ
+--     « Description (à propos) ».
 --   - NON APPLIQUÉ.
 
 BEGIN;
@@ -77,5 +81,27 @@ WHERE NOT EXISTS (
   WHERE tenant_id = 'ce69a726-773e-4d12-b5eb-d2503aa752b4'::uuid
     AND source_ref = 'staff:arukdo:v1'
 );
+
+-- Description « à propos » de départ : un texte NEUTRE, à réécrire par le
+-- staff depuis /admin/tcg → L'association. Posée seulement si la migration
+-- `tcg_association_card_description.sql` est appliquée, et seulement si la
+-- carte n'en a pas déjà une (on n'écrase pas un texte retouché par le staff).
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'tcg_fanart_cards'
+      AND column_name = 'description'
+  ) THEN
+    UPDATE public.tcg_fanart_cards
+    SET description = 'Arukdo fait partie de la direction de l''association et organise l''OW Women''s Cup. Sur la photo : son chat.',
+        updated_at = now()
+    WHERE tenant_id = 'ce69a726-773e-4d12-b5eb-d2503aa752b4'::uuid
+      AND source_ref = 'staff:arukdo:v1'
+      AND description IS NULL;
+  END IF;
+END
+$$;
 
 COMMIT;

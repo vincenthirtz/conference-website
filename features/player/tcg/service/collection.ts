@@ -408,6 +408,7 @@ export async function readCollection(
         artistUrl: face?.artistUrl ?? null,
         imageUrl: face?.imageUrl ?? null,
         category: face?.category ?? 'fanart',
+        description: face?.description ?? null,
         rarity: a.rarity,
         isFoil: a.hasFoil,
         count: a.count,

@@ -75,6 +75,8 @@ type CatalogCard =
       name: string | null;
       imageUrl: string | null;
       credit: string | null;
+      /** Texte « à propos » rédigé par le staff ; `null` sans description. */
+      description: string | null;
       rarity: TcgRarity;
     };
 
@@ -303,6 +305,7 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
                             artistName: card.credit,
                             artistUrl: null,
                             category: 'association',
+                            description: card.description,
                           }
                         : {
                             kind: 'map',
@@ -494,14 +497,27 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
   // L'ASSOCIATION : ses visuels publiés. Pas les fan arts de la communauté,
   // qui ont leur page de crédits (`/tcg/fan-art`).
   const { TCG_BUCKET } = await import('@/utils/tcg/teamCardImage');
-  const { data: assoRows, error: assoError } = await supabaseAdmin
-    .from('tcg_fanart_cards')
-    .select('id, title, artist_name, image_path, rarity')
-    .eq('tenant_id', DEFAULT_TENANT_ID)
-    .eq('category', 'association')
-    .eq('status', 'approved')
-    .order('created_at', { ascending: false })
-    .limit(100);
+  const { isMissingColumnError } = await import(
+    '@/utils/moderation/missingColumn'
+  );
+  const assoQuery = (columns: string) =>
+    supabaseAdmin!
+      .from('tcg_fanart_cards')
+      .select(columns)
+      .eq('tenant_id', DEFAULT_TENANT_ID)
+      .eq('category', 'association')
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(100);
+  const assoBase = 'id, title, artist_name, image_path, rarity';
+  let { data: assoRows, error: assoError } = await assoQuery(
+    `${assoBase}, description`
+  );
+  // Migration de la description pas encore appliquée : le catalogue d'avant,
+  // sans description — pas un catalogue dépublié pour une colonne manquante.
+  if (assoError && isMissingColumnError(assoError, 'description')) {
+    ({ data: assoRows, error: assoError } = await assoQuery(assoBase));
+  }
   noteReadError('visuels de l’association', assoError);
 
   const degraded = readErrors.length > 0;
@@ -510,12 +526,13 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
   }
 
   const associationCards: CatalogCard[] = (
-    (assoRows ?? []) as Array<{
+    (assoRows ?? []) as unknown as Array<{
       id: string;
       title: string;
       artist_name: string | null;
       image_path: string;
       rarity: TcgRarity | null;
+      description?: string | null;
     }>
   ).map((row) => ({
     kind: 'association',
@@ -525,6 +542,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
       supabaseAdmin.storage.from(TCG_BUCKET).getPublicUrl(row.image_path).data
         ?.publicUrl ?? null,
     credit: row.artist_name,
+    description: row.description ?? null,
     rarity: row.rarity ?? 'rare',
   }));
 

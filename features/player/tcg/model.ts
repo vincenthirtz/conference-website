@@ -127,6 +127,8 @@ export type CollectionCard = Engagement &
         imageUrl: string | null;
         /** `association` : visuel de l'association. Optionnel (réponse d'avant). */
         category?: 'fanart' | 'association';
+        /** Texte « à propos » (catégorie association, rédigé par le staff). */
+        description?: string | null;
         rarity: TcgRarity;
         isFoil: boolean;
         count: number;
@@ -186,6 +188,8 @@ export type DrawnCard = { position: number; isNew?: boolean } & (
       artistUrl: string | null;
       imageUrl: string | null;
       category?: 'fanart' | 'association';
+      /** Texte « à propos » (catégorie association, rédigé par le staff). */
+      description?: string | null;
       rarity: TcgRarity;
       isFoil: boolean;
     }
@@ -294,6 +298,7 @@ export function cardSubject(card: DrawnCard | CollectionCard): TcgCardSubject {
       artistName: card.artistName,
       artistUrl: card.artistUrl,
       category: card.category,
+      description: card.description ?? null,
     };
   }
   if (card.kind === 'mascot') {

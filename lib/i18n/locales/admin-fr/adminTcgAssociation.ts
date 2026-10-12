@@ -32,6 +32,18 @@ export default adminNs('adminTcgAssociation', {
   labelTitle: 'Titre de la carte',
   labelCredit: 'Crédit affiché',
   labelRarity: 'Rareté',
+  labelDescription: 'Description (à propos)',
+  descriptionHelp:
+    'Affichée sur la carte, chez les joueuses. Texte brut, sans lien ni balise ({max} caractères max).',
+  descriptionPlaceholder: 'Qui ou quoi représente cette carte ?',
+  descriptionCount: '{count}/{max}',
+  errorDescriptionLinks:
+    'La description ne peut pas contenir de lien (ni adresse web, ni invitation Discord).',
+  errorDescriptionMarkup:
+    'La description est du texte brut : pas de balises HTML.',
+  errorDescriptionTooLong: 'La description fait au plus {max} caractères.',
+  errorDescriptionPending:
+    'La description n’est pas encore disponible : la migration de la base est en attente.',
   upload: 'Créer la carte',
   cardsTitle: 'Cartes publiées et retirées',
   cardsEmpty: 'Aucune carte de l’association pour l’instant.',

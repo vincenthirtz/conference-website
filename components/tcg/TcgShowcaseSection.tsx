@@ -48,6 +48,7 @@ export function showcaseCardSubject(card: ShowcaseCard): TcgCardSubject {
       artistName: card.artistName,
       artistUrl: card.artistUrl,
       category: card.category,
+      description: card.description ?? null,
     };
   }
   if (card.kind === 'mascot') {

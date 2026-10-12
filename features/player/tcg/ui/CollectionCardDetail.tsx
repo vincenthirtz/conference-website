@@ -39,6 +39,9 @@ export default function CollectionCardDetail({
         isFoil={card.isFoil}
         count={card.count}
         labels={labels}
+        // Vue agrandie : la description d'une carte de l'association se lit
+        // en entier (la vignette de la grille la tronque).
+        fullDescription
       />
       {target && recycleRefund !== null && (
         <Button

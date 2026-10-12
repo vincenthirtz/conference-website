@@ -161,6 +161,12 @@ export type TcgCardSubject =
        * perd son sens) et marqué de la catégorie. Absent = fan art.
        */
       category?: 'fanart' | 'association';
+      /**
+       * Texte « à propos » d'une carte de l'association, rédigé par le staff
+       * (texte brut, ≤ 280). Rendu comme un nœud texte, jamais interprété.
+       * Ignoré pour une fan art : seul le staff écrit ce texte.
+       */
+      description?: string | null;
     }
   | {
       /**
@@ -201,6 +207,11 @@ export type TcgCardProps = {
    * ET ouvrirait la chaîne de l'artiste. Vrai ⇒ le nom est écrit sans lien.
    */
   insideInteractive?: boolean;
+  /**
+   * Affiche la description d'une carte de l'association EN ENTIER (vue
+   * agrandie). Par défaut, une vignette la tronque à trois lignes.
+   */
+  fullDescription?: boolean;
   /** Libellés traduits, fournis par la page hôte. */
   labels: {
     rarity: Record<TcgRarity, string>;
@@ -263,6 +274,7 @@ export default function TcgCard({
   count,
   noLink = false,
   insideInteractive = false,
+  fullDescription = false,
   labels,
 }: TcgCardProps): JSX.Element {
   const name =
@@ -278,6 +290,12 @@ export default function TcgCard({
   const usesTeamLogo = subject.kind === 'team' && !subject.cardImageUrl;
   const isAssociation =
     subject.kind === 'fanart' && subject.category === 'association';
+  // La description n'existe que pour l'association (cf. le type) : une fan
+  // art qui en porterait une par erreur ne l'afficherait pas.
+  const associationDescription =
+    isAssociation && subject.kind === 'fanart'
+      ? subject.description?.trim() || null
+      : null;
   const imageUrl =
     subject.kind === 'team'
       ? (subject.cardImageUrl ?? subject.logoUrl)
@@ -445,6 +463,19 @@ export default function TcgCard({
         {isAssociation && labels.association && (
           <p className="text-[11px] font-semibold text-emerald-300">
             {labels.association}
+          </p>
+        )}
+        {associationDescription && (
+          // Texte brut : un nœud texte React, jamais du HTML interprété.
+          // Tronqué dans une vignette (texte entier au survol), entier dans
+          // une vue agrandie (`fullDescription`).
+          <p
+            className={`whitespace-pre-line text-[11px] leading-snug text-gray-300 ${
+              fullDescription ? '' : 'line-clamp-3'
+            }`}
+            title={fullDescription ? undefined : associationDescription}
+          >
+            {associationDescription}
           </p>
         )}
         {subject.kind === 'fanart' &&

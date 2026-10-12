@@ -1161,6 +1161,16 @@ sixième `subject_kind` aurait imposé de recopier les deux CHECK de
   rendu en SVG côté serveur et déposé sous `tcg-association/` (action
   `voxel_logo`). `source_ref = 'voxel:noeud:v<MASCOT_VERSION>'` : une carte
   par version du modèle, jamais écrasée.
+- **Description « à propos »** (`description`, migration
+  [`tcg_association_card_description.sql`](../database/migrations/tcg_association_card_description.sql),
+  **non appliquée** au 2026-10-12) : ≤ 280 caractères, texte brut, rédigée par
+  le staff dans l'onglet ; liens et balises refusés, contrôles et invisibles
+  retirés ([`utils/tcg/cardDescription.ts`](../utils/tcg/cardDescription.ts)).
+  Réservée à l'association par un CHECK : une fan art n'a pas de prose non
+  relue. Affichée sur la carte (tronquée en vignette, entière dans la vue
+  agrandie de la collection) via `readFanartFaces` — collection, paquet,
+  vitrine, catalogue. Sans la colonne, tout se lit comme avant ; seule
+  l'écriture répond `503 migration_pending`.
 - **Affichage** : image en entier (`object-contain`), badge « L'association ».
   Filtre dédié sur le catalogue public `/tcg` ; absente de la page de crédits
   `/tcg/fan-art` et de la file de modération des fan arts.
