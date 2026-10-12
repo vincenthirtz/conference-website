@@ -406,6 +406,21 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
   const { readTeamRarities } = await import('@/utils/tcg/readTeamRarity');
   const { MAP_POOL_SLUGS, mapFace } = await import('@/utils/tcg/readMapFaces');
   const { POOL_LIMIT } = await import('@/utils/tcg/drawPack');
+  const { logger } = await import('@/utils/logger');
+  const { PHASE_PRODUCTION_BUILD } = await import('next/constants');
+
+  // UNE LECTURE RATÉE NE SE MET PAS EN CACHE. Ignorer l'`error` publiait
+  // « aucune équipe / 0 joueuse » pour 5 min (ISR). En régénération, on LÈVE :
+  // Next garde alors la dernière version réussie et retente à la requête
+  // suivante. Au BUILD, lever ferait échouer tout le déploiement pour un
+  // hoquet de base : on rend la moitié qui a réussi et on retente vite
+  // (revalidate 30), comme quand la base est injoignable ci-dessous.
+  const readErrors: string[] = [];
+  const noteReadError = (what: string, error: { message: string } | null) => {
+    if (!error) return;
+    logger.error('[tcg] catalogue : %s illisible(s) : %s', what, error.message);
+    readErrors.push(what);
+  };
 
   // Les MAPS ne coûtent aucune requête : le registre est en mémoire.
   const mapCards: CatalogCard[] = MAP_POOL_SLUGS.map((slug) => {
@@ -436,7 +451,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 
   // Le vivier des ÉQUIPES, aux mêmes filtres que l'ouverture de paquet : une
   // carte montrée ici doit être une carte réellement tirable.
-  const { data: teamRows } = await supabaseAdmin
+  const { data: teamRows, error: teamsError } = await supabaseAdmin
     .from('teams')
     .select('id')
     .eq('tenant_id', DEFAULT_TENANT_ID)
@@ -444,6 +459,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
     // `is_active` est NULLABLE : `.neq(..., false)` exclurait les lignes NULL.
     .or('is_active.is.null,is_active.eq.true')
     .limit(POOL_LIMIT);
+  noteReadError('équipes', teamsError);
 
   const teamIds = ((teamRows ?? []) as Array<{ id: string }>).map((r) => r.id);
   const [faces, rarities] = await Promise.all([
@@ -469,15 +485,16 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 
   // UN COMPTE, PAS UNE LISTE : `head: true` ne ramène aucune ligne, donc aucun
   // identifiant de joueuse ne transite — ce qui est tout l'objet de la page.
-  const { count } = await supabaseAdmin
+  const { count, error: countError } = await supabaseAdmin
     .from('player_ratings')
     .select('user_id', { count: 'exact', head: true })
     .eq('tenant_id', DEFAULT_TENANT_ID);
+  noteReadError('compte des joueuses', countError);
 
   // L'ASSOCIATION : ses visuels publiés. Pas les fan arts de la communauté,
   // qui ont leur page de crédits (`/tcg/fan-art`).
   const { TCG_BUCKET } = await import('@/utils/tcg/teamCardImage');
-  const { data: assoRows } = await supabaseAdmin
+  const { data: assoRows, error: assoError } = await supabaseAdmin
     .from('tcg_fanart_cards')
     .select('id, title, artist_name, image_path, rarity')
     .eq('tenant_id', DEFAULT_TENANT_ID)
@@ -485,6 +502,13 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
     .eq('status', 'approved')
     .order('created_at', { ascending: false })
     .limit(100);
+  noteReadError('visuels de l’association', assoError);
+
+  const degraded = readErrors.length > 0;
+  if (degraded && process.env.NEXT_PHASE !== PHASE_PRODUCTION_BUILD) {
+    throw new Error(`[tcg] catalogue non publié : ${readErrors.join(', ')}`);
+  }
+
   const associationCards: CatalogCard[] = (
     (assoRows ?? []) as Array<{
       id: string;
@@ -512,7 +536,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
       playerCount: count ?? 0,
       seo: buildSeo(cards),
     },
-    revalidate: 300,
+    revalidate: degraded ? 30 : 300,
   };
 };
 
