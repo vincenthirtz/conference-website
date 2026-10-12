@@ -380,13 +380,49 @@ export function overviewSums(db: AdminDb, tenantId: string) {
   ]);
 }
 
+/**
+ * Taille d'une tranche de `.in('pack_id', …)`. Jusqu'à OVERVIEW_MAX_PACKS
+ * identifiants en une seule liste font une URL que PostgREST refuse : même
+ * découpage que `utils/tcg/readTcgCatalogue.ts`.
+ */
+export const OVERVIEW_PACK_CHUNK = 200;
+/** Tranches lues en parallèle : borné, pour ne pas saturer le pool. */
+const OVERVIEW_CHUNK_CONCURRENCY = 4;
+
+const OVERVIEW_CARD_COLUMNS =
+  'pack_id, subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, rarity, is_foil, recycled_at';
+
+/**
+ * Les cartes des paquets donnés, lues par tranches puis fusionnées. Le plafond
+ * reste MAX_CARDS au TOTAL (au plus MAX_CARDS lignes rendues) : le service
+ * continue de lever `truncated` quand il est atteint. Une tranche en échec
+ * fait échouer l'ensemble — un total partiel se lirait comme un vrai chiffre.
+ */
 export async function overviewCards(db: AdminDb, packIds: string[]) {
-  const { data, error } = await db
-    .from('tcg_pack_cards')
-    .select(
-      'pack_id, subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, rarity, is_foil, recycled_at'
-    )
-    .in('pack_id', packIds)
-    .limit(MAX_CARDS);
-  return { rows: data ?? [], error };
+  const chunks: string[][] = [];
+  for (let i = 0; i < packIds.length; i += OVERVIEW_PACK_CHUNK) {
+    chunks.push(packIds.slice(i, i + OVERVIEW_PACK_CHUNK));
+  }
+
+  const rows: Array<Record<string, unknown>> = [];
+  for (let i = 0; i < chunks.length; i += OVERVIEW_CHUNK_CONCURRENCY) {
+    const wave = chunks.slice(i, i + OVERVIEW_CHUNK_CONCURRENCY);
+    const results = await Promise.all(
+      wave.map((chunk) =>
+        db
+          .from('tcg_pack_cards')
+          .select(OVERVIEW_CARD_COLUMNS)
+          .in('pack_id', chunk)
+          .limit(MAX_CARDS)
+      )
+    );
+    for (const { data, error } of results) {
+      if (error) return { rows: [], error };
+      rows.push(...((data ?? []) as Array<Record<string, unknown>>));
+    }
+    // Plafond atteint : inutile de lire la suite, le service signalera la
+    // troncature.
+    if (rows.length >= MAX_CARDS) break;
+  }
+  return { rows: rows.slice(0, MAX_CARDS), error: null };
 }
