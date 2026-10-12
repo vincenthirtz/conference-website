@@ -25,6 +25,9 @@ export default {
     team: 'Team',
     matches: 'Matches',
     tcg: 'TCG',
+    trades: 'Trading',
+    /** Barre basse mobile (5 colonnes à 360 px) : libellé court. */
+    tradesShort: 'Trading',
     activeTeam: 'Active team: {name}',
   },
   linkLabels: {

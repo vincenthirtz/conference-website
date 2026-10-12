@@ -24,6 +24,9 @@ export default ns('playerTopBar', {
     team: 'Équipe',
     matches: 'Matchs',
     tcg: 'TCG',
+    trades: 'Mes échanges',
+    /** Barre basse mobile (5 colonnes à 360 px) : libellé court. */
+    tradesShort: 'Échanges',
     activeTeam: 'Équipe active : {name}',
   },
   linkLabels: {

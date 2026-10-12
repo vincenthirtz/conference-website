@@ -83,7 +83,7 @@ describe('PlayerShell', () => {
     expect(nav()).toBeNull();
   });
 
-  it('joueuse connectée : 4 entrées ≥ 44 px, l’entrée courante marquée', () => {
+  it('joueuse connectée : 5 entrées ≥ 44 px, l’entrée courante marquée', () => {
     session.user = { id: 'u1' };
     render(
       <PlayerShell redirectTo="/login">
@@ -94,12 +94,14 @@ describe('PlayerShell', () => {
     expect(n).toBeTruthy();
     expect(n?.hasAttribute('data-player-nav')).toBe(true);
     const links = screen.getAllByRole('link');
-    expect(links.map((l) => l.textContent)).toEqual([
-      'Accueil',
-      'Équipe',
-      'Matchs',
-      'TCG',
-    ]);
+    // Nom accessible : le texte, ou l'aria-label quand la barre basse affiche
+    // un libellé court (« Échanges » sous `lg`, « Mes échanges » au-dessus).
+    expect(
+      links.map((l) => l.getAttribute('aria-label') ?? l.textContent)
+    ).toEqual(['Accueil', 'Équipe', 'Matchs', 'TCG', 'Mes échanges']);
+    expect(
+      screen.getByRole('link', { name: 'Mes échanges' }).getAttribute('href')
+    ).toBe('/player/tcg/echanges');
     for (const l of links) expect(l.className).toContain('min-h-14');
     expect(
       screen.getByRole('link', { name: 'Matchs' }).getAttribute('aria-current')
@@ -107,6 +109,32 @@ describe('PlayerShell', () => {
     expect(
       screen.getByRole('link', { name: 'Accueil' }).getAttribute('aria-current')
     ).toBeNull();
+  });
+
+  it('page des échanges : « Mes échanges » allumé, TCG éteint', () => {
+    session.user = { id: 'u1' };
+    const previous = router.pathname;
+    router.pathname = '/player/tcg/echanges';
+    try {
+      render(
+        <PlayerShell redirectTo="/login">
+          <p>x</p>
+        </PlayerShell>
+      );
+      const trades = screen.getByRole('link', { name: 'Mes échanges' });
+      expect(trades.getAttribute('aria-current')).toBe('page');
+      expect(
+        screen.getByRole('link', { name: 'TCG' }).getAttribute('aria-current')
+      ).toBeNull();
+      // Libellé court en barre basse, complet sur le rail (classes `lg`).
+      const spans = [...trades.querySelectorAll('span')];
+      expect(spans.map((s) => [s.textContent, s.className])).toEqual([
+        ['Échanges', 'lg:hidden'],
+        ['Mes échanges', 'hidden lg:inline'],
+      ]);
+    } finally {
+      router.pathname = previous;
+    }
   });
 
   it('inspection admin : ni coquille ni redirection', () => {
@@ -147,8 +175,12 @@ describe('isPlayerNavItemActive', () => {
     ['/player', 'home', true],
     ['/player/matches', 'home', false],
     ['/player/match/[matchId]', 'matches', true],
-    ['/player/tcg/echanges', 'tcg', true],
+    ['/player/tcg', 'tcg', true],
+    ['/player/tcg/echanges', 'tcg', false],
+    ['/player/tcg/echanges', 'trades', true],
+    ['/player/tcg', 'trades', false],
     ['/player/tcg-guide', 'tcg', false],
+    ['/player/tcg-guide', 'trades', false],
     ['/player/my-teams', 'team', true],
     ['/player/manage-team', 'team', true],
     ['/player/profile', 'team', false],

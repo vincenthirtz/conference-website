@@ -34,6 +34,7 @@ const ENTRIES = [
   ['Équipe', '/player/manage-team'],
   ['Matchs', '/player/matches'],
   ['TCG', '/player/tcg'],
+  ['Mes échanges', '/player/tcg/echanges'],
 ] as const;
 
 let playerId = '';
@@ -65,7 +66,7 @@ test.describe('Le Ruban — coquilles admin et joueuse', () => {
     await deleteTestStaff(STAFF_EMAIL);
   });
 
-  test('joueuse < lg : barre BASSE, 4 entrées ≥ 44×44, pas de coquille admin', async ({
+  test('joueuse < lg : barre BASSE, 5 entrées ≥ 44×44, pas de coquille admin', async ({
     page,
   }) => {
     test.skip(skipIfNoServiceRole(), 'Supabase service role manquant');

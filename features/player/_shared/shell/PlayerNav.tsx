@@ -29,6 +29,17 @@ const ICON_PATHS: Record<PlayerNavKey, string> = {
   team: 'M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm10 8v-1.5a3.5 3.5 0 0 0-2.5-3.35M15 4.15a3.5 3.5 0 0 1 0 6.7',
   matches: 'M4 5h16v14H4zM4 10h16M9 3v4M15 3v4',
   tcg: 'M7 4h10a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm5 5 1.5 3 3 .5-2.25 2 .5 3L12 16l-2.75 1.5.5-3-2.25-2 3-.5z',
+  // Deux flèches opposées : une carte donnée, une carte reçue.
+  trades: 'M4 8h13m0 0-3.5-3.5M17 8l-3.5 3.5M20 16H7m0 0 3.5-3.5M7 16l3.5 3.5',
+};
+
+/**
+ * Entrées au libellé trop long pour une colonne de la barre basse (5 colonnes
+ * de 72 px à 360 px) : libellé court en bas, complet sur le rail. Le nom
+ * accessible reste le libellé complet (`aria-label`).
+ */
+const SHORT_LABEL: Partial<Record<PlayerNavKey, 'tradesShort'>> = {
+  trades: 'tradesShort',
 };
 
 function NavIcon({ name }: { name: PlayerNavKey }) {
@@ -56,8 +67,8 @@ const FRAME: Record<PlayerNavVariant, string> = {
 };
 
 const LIST: Record<PlayerNavVariant, string> = {
-  responsive: 'grid grid-cols-4 lg:flex lg:flex-col lg:gap-1 lg:px-2 lg:pt-4',
-  bottom: 'grid grid-cols-4',
+  responsive: 'grid grid-cols-5 lg:flex lg:flex-col lg:gap-1 lg:px-2 lg:pt-4',
+  bottom: 'grid grid-cols-5',
   rail: 'flex flex-col gap-1 px-2 pt-4 pb-4',
 };
 
@@ -87,20 +98,33 @@ export default function PlayerNav({
       <ul className={LIST[variant]}>
         {PLAYER_NAV_ITEMS.map((item) => {
           const active = isPlayerNavItemActive(pathname, item);
+          const label = t.shell[item.key];
+          const shortKey = SHORT_LABEL[item.key];
+          const short = shortKey ? t.shell[shortKey] : null;
           return (
             <li key={item.key}>
               <Link
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
+                aria-label={short ? label : undefined}
                 data-testid={`player-nav-${item.key}`}
-                className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[var(--r-ctrl,4px)] px-1 py-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] transition-colors ${
+                className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[var(--r-ctrl,4px)] px-1 py-1.5 text-center text-[11px] font-semibold uppercase leading-tight tracking-[0.06em] transition-colors ${
                   active
                     ? 'text-[var(--t1,#f4edf7)] shadow-[inset_0_2px_0_var(--or,#b467d1)]'
                     : 'text-[var(--t3,#a39ba6)] hover:text-[var(--t1,#f4edf7)]'
                 }`}
               >
                 <NavIcon name={item.key} />
-                <span>{t.shell[item.key]}</span>
+                {!short || variant === 'rail' ? (
+                  <span>{label}</span>
+                ) : variant === 'bottom' ? (
+                  <span>{short}</span>
+                ) : (
+                  <>
+                    <span className="lg:hidden">{short}</span>
+                    <span className="hidden lg:inline">{label}</span>
+                  </>
+                )}
               </Link>
             </li>
           );
