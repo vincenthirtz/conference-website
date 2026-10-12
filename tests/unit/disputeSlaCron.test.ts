@@ -53,7 +53,8 @@ describe('runDisputeSlaCheck', () => {
 
     const counters = await runDisputeSlaCheck();
 
-    expect(counters.tenants_scanned).toBe(2);
+    // Seul l'espace A a un litige non escaladé : B n'est pas examiné.
+    expect(counters.tenants_scanned).toBe(1);
     expect(counters.breaches_found).toBe(1);
     expect(counters.events_emitted).toBe(1);
 
@@ -111,5 +112,38 @@ describe('runDisputeSlaCheck', () => {
       (c: any[]) => c[2]
     );
     expect(tenantIdsCalled.sort()).toEqual([TENANT_A, TENANT_B].sort());
+  });
+
+  it('ne balaie aucun espace quand aucun litige n’attend d’escalade', async () => {
+    store.matches = [
+      {
+        id: 'done',
+        tenant_id: TENANT_A,
+        status: 'completed',
+        dispute_opened_at: '2026-05-25T09:00:00.000Z',
+        escalation_pinged_at: null,
+      },
+    ] as any;
+    const counters = await runDisputeSlaCheck();
+    expect(counters.tenants_scanned).toBe(0);
+    expect((emitBotEvent as any).mock.calls).toHaveLength(0);
+  });
+
+  it('ignore un litige porté par un espace inactif', async () => {
+    store.tenants = [
+      { id: TENANT_A, dispute_sla_minutes: 60, is_active: false },
+    ] as any;
+    store.matches = [
+      {
+        id: 'a',
+        tenant_id: TENANT_A,
+        status: 'disputed',
+        dispute_opened_at: '2026-05-25T09:00:00.000Z',
+        escalation_pinged_at: null,
+      },
+    ] as any;
+    const counters = await runDisputeSlaCheck();
+    expect(counters.tenants_scanned).toBe(0);
+    expect((emitBotEvent as any).mock.calls).toHaveLength(0);
   });
 });

@@ -59,10 +59,38 @@ export async function runDisputeSlaCheck(): Promise<Counters> {
     return counters;
   }
 
+  // Sonde : y a-t-il seulement un litige non escaladé, tous espaces
+  // confondus ? Le cas courant est « aucun », et le balayage par espace
+  // coûtait 1 + 2 × N requêtes (liste des espaces, puis SLA et matchs de
+  // chacun) toutes les 5 min pour le constater. Une requête suffit, et elle
+  // désigne en prime les seuls espaces à examiner.
+  const { data: candidates, error: cErr } = await supabaseAdmin
+    .from('matches')
+    .select('tenant_id')
+    .eq('status', 'disputed')
+    .is('escalation_pinged_at', null);
+
+  if (cErr) {
+    logger.error('[cron/dispute-sla] candidates probe error', cErr);
+    counters.duration_ms = Date.now() - start;
+    return counters;
+  }
+
+  const candidateTenantIds = new Set(
+    ((candidates ?? []) as Array<{ tenant_id: string | null }>)
+      .map((c) => c.tenant_id)
+      .filter((id): id is string => typeof id === 'string')
+  );
+  if (candidateTenantIds.size === 0) {
+    counters.duration_ms = Date.now() - start;
+    return counters;
+  }
+
   const { data: tenants, error: tErr } = await supabaseAdmin
     .from('tenants')
     .select('id')
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .in('id', Array.from(candidateTenantIds));
 
   if (tErr) {
     logger.error('[cron/dispute-sla] tenants fetch error', tErr);
