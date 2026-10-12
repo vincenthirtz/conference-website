@@ -10,7 +10,8 @@
 //      description même si la ligne en portait une.
 //   3. UNE DESCRIPTION REFUSÉE NE LAISSE PAS D'IMAGE dans le bucket public.
 //   4. MIGRATION NON APPLIQUÉE : écrire une description répond 503
-//      `migration_pending`, pas 500.
+//      (`reason: 'migration_pending'`), pas 500. Les refus passent par le
+//      socle d'erreurs admin : `code` = famille, `reason` = motif stable.
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -208,7 +209,10 @@ describe('POST /api/admin/tcg/association — description au dépôt', () => {
       },
     });
     expect(res.statusCode).toBe(400);
-    expect(res.body.code).toBe('links_not_allowed');
+    expect(res.body).toMatchObject({
+      code: 'validation',
+      reason: 'links_not_allowed',
+    });
     expect(storageUploads).toHaveLength(0);
     expect(rows()).toHaveLength(0);
   });
@@ -299,8 +303,9 @@ describe('PATCH /api/admin/tcg/association — description', () => {
     });
     expect(res.statusCode).toBe(400);
     expect(res.body).toMatchObject({
-      code: 'markup_not_allowed',
-      maxLength: CARD_DESCRIPTION_MAX,
+      code: 'validation',
+      reason: 'markup_not_allowed',
+      fields: { description: 'markup_not_allowed' },
     });
     expect(byId(ASSO).description).toBeNull();
   });
@@ -324,7 +329,10 @@ describe('PATCH /api/admin/tcg/association — description', () => {
       body: { action: 'update', id: ASSO, description: 'À propos.' },
     });
     expect(res.statusCode).toBe(503);
-    expect(res.body.code).toBe('migration_pending');
+    expect(res.body).toMatchObject({
+      code: 'service_unavailable',
+      reason: 'migration_pending',
+    });
   });
 
   it('la liste staff rend la description et la borne', async () => {

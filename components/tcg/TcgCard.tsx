@@ -470,7 +470,7 @@ export default function TcgCard({
           // Tronqué dans une vignette (texte entier au survol), entier dans
           // une vue agrandie (`fullDescription`).
           <p
-            className={`whitespace-pre-line text-[11px] leading-snug text-gray-300 ${
+            className={`whitespace-pre-line text-[11px] leading-snug text-[var(--t2,#c7bfca)] ${
               fullDescription ? '' : 'line-clamp-3'
             }`}
             title={fullDescription ? undefined : associationDescription}

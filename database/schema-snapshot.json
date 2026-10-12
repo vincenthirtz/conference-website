@@ -1498,6 +1498,7 @@
       "artist_url",
       "category",
       "created_at",
+      "description",
       "id",
       "image_path",
       "licence_accepted_at",

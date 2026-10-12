@@ -77,6 +77,7 @@ import {
   normalizeCardDescription,
 } from '@/utils/tcg/cardDescription';
 import { isMissingColumnError } from '@/utils/moderation/missingColumn';
+import { AdminError } from '@/utils/admin/errors';
 import {
   MASCOT_VERSION,
   mascotUrl,
@@ -211,20 +212,36 @@ function parseDescription(
     : { ok: false, code: result.code };
 }
 
-function refuseDescription(res: NextApiResponse, code: string) {
-  return res.status(400).json({
-    error: 'Description refusée.',
-    code,
-    maxLength: CARD_DESCRIPTION_MAX,
-  });
+/**
+ * Les refus de la description passent par le socle d'erreurs admin
+ * (`AdminError` → `{ error, code, fields?, reason }`) : `code` dit la
+ * famille (`validation`, `service_unavailable`), `reason` le motif stable que
+ * l'écran traduit (`links_not_allowed`, `migration_pending`…).
+ */
+function sendAdminError(res: NextApiResponse, err: AdminError) {
+  return res.status(err.status).json(err.toBody());
+}
+
+function refuseDescription(res: NextApiResponse, reason: string) {
+  return sendAdminError(
+    res,
+    new AdminError(400, 'validation', 'Description refusée.', {
+      fields: { description: reason },
+      reason,
+    })
+  );
 }
 
 function migrationPending(res: NextApiResponse) {
-  return res.status(503).json({
-    error:
+  return sendAdminError(
+    res,
+    new AdminError(
+      503,
+      'service_unavailable',
       'La description des cartes n’est pas encore disponible (migration en attente).',
-    code: 'migration_pending',
-  });
+      { reason: 'migration_pending' }
+    )
+  );
 }
 
 function publicUrl(path: string): string | null {

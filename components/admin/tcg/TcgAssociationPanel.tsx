@@ -73,15 +73,24 @@ type Response = {
   descriptionMaxLength?: number;
 };
 
-/** Codes de refus de la description, traduits ici plutôt qu'en français brut. */
+/**
+ * Motif de refus de la description (`reason` du socle d'erreurs admin),
+ * traduit ici plutôt qu'affiché en français brut.
+ */
 function descriptionErrorCode(err: unknown): string | null {
   const payload = (err as { payload?: unknown } | null)?.payload;
-  const code =
+  const reason =
     payload && typeof payload === 'object'
-      ? (payload as { code?: unknown }).code
+      ? (payload as { reason?: unknown }).reason
       : null;
-  return typeof code === 'string' ? code : null;
+  return typeof reason === 'string' ? reason : null;
 }
+
+/**
+ * Clé du brouillon de la carte À CRÉER dans `edits` : sa description vit dans
+ * le même état que les modifications des cartes existantes.
+ */
+const NEW_CARD = '__new__';
 
 const INPUT =
   'mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
@@ -104,13 +113,13 @@ export default function TcgAssociationPanel() {
   const [title, setTitle] = useState('');
   const [credit, setCredit] = useState('');
   const [rarity, setRarity] = useState('');
-  const [description, setDescription] = useState('');
   const [edits, setEdits] = useState<
     Record<
       string,
       { title?: string; credit?: string; rarity?: string; description?: string }
     >
   >({});
+  const newDescription = edits[NEW_CARD]?.description ?? '';
 
   const load = useCallback(
     () => reloadTcg(tcgAdminKeys.association),
@@ -205,7 +214,7 @@ export default function TcgAssociationPanel() {
           mimeType: file.type,
           title: cleanTitle,
           ...(credit.trim() ? { credit: credit.trim() } : {}),
-          ...(description.trim() ? { description } : {}),
+          ...(newDescription.trim() ? { description: newDescription } : {}),
           rarity: rarity || data?.defaultRarity,
         },
       },
@@ -214,7 +223,10 @@ export default function TcgAssociationPanel() {
     if (ok) {
       setTitle('');
       setCredit('');
-      setDescription('');
+      setEdits((prev) => {
+        const { [NEW_CARD]: _done, ...rest } = prev;
+        return rest;
+      });
       if (fileRef.current) fileRef.current.value = '';
     }
   };
@@ -442,8 +454,8 @@ export default function TcgAssociationPanel() {
           </label>
           {descriptionField(
             'tcg-association-new-description',
-            description,
-            setDescription,
+            newDescription,
+            (next) => setEdit(NEW_CARD, { description: next }),
             'sm:col-span-2'
           )}
           <div className="flex items-end">
