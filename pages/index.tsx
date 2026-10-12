@@ -36,6 +36,11 @@ import HomeSupportStrip from '@/components/Home/HomeSupportStrip';
 import HomeOrganiserCta from '@/components/Home/HomeOrganiserCta';
 import HomeSocialWall from '@/components/Home/HomeSocialWall';
 import HomeEventSpotlight from '@/components/Home/HomeEventSpotlight';
+import HomeTcgShowcase from '@/components/Home/HomeTcgShowcase';
+import {
+  readHomeTcgShowcase,
+  type HomeTcgShowcase as HomeTcgShowcaseData,
+} from '@/utils/tcg/readHomeTcgShowcase';
 import {
   homeEventSpotlight,
   isHomeEventVisible,
@@ -53,6 +58,8 @@ type HomeProps = {
   standings: HomeStandingRow[];
   clips: HomeClip[];
   countdownTarget: string | null;
+  /** Le bloc TCG : trois cartes, le total à collectionner, le barème. */
+  tcg: HomeTcgShowcaseData;
   // L'horloge du rendu (ISR 15 min). Fabriquée ici plutôt que dans la carte :
   // un `new Date()` côté composant donne le build au serveur et la visite au
   // client — deux valeurs qui divergent dès qu'un minuit passe entre les deux.
@@ -65,7 +72,12 @@ type HomeProps = {
 // S5d: getStaticProps n'a pas la requête → DEFAULT_TENANT_ID. TODO(S7) SSR/ISR
 // par tenant en multi-tenant.
 export const getStaticProps: GetStaticProps<HomeProps> = async () => {
-  const data = await loadHomeData(DEFAULT_TENANT_ID);
+  const now = new Date();
+  // En parallèle : le bloc TCG ne lève jamais et n'attend rien du reste.
+  const [data, tcg] = await Promise.all([
+    loadHomeData(DEFAULT_TENANT_ID),
+    readHomeTcgShowcase(DEFAULT_TENANT_ID, now),
+  ]);
   return {
     props: {
       news: data.news,
@@ -77,7 +89,8 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
       standings: data.standings,
       clips: data.clips,
       countdownTarget: data.countdownTarget,
-      nowIso: new Date().toISOString(),
+      tcg,
+      nowIso: now.toISOString(),
       loadError: data.loadError,
     },
     revalidate: 900,
@@ -111,6 +124,7 @@ function Home({
   standings,
   clips,
   countdownTarget,
+  tcg,
   nowIso,
   loadError,
 }: HomeProps) {
@@ -170,6 +184,11 @@ function Home({
       {/* OÙ EN EST LA SAISON. Après « ce qui se joue », avant les actus :
           entre deux journées, c'est la question qu'on vient poser. */}
       {upcomingTournament && <HomeStandings rows={standings} />}
+
+      {/* Le TCG : prolongement des matchs (chaque match rapporte des pièces),
+          et seule porte vers le jeu de cartes pour qui ne s'est pas encore
+          inscrite. Avant les actus pour être vu sans tout faire défiler. */}
+      <HomeTcgShowcase showcase={tcg} />
 
       <HomeNewsV2 news={news} />
 

@@ -70,6 +70,7 @@ import enScrimsPage from './scrimsPage';
 import enScrimLanding from './scrimLanding';
 import enTournamentsList from './tournamentsList';
 import enHomeV2 from './homeV2';
+import enHomeTcg from './homeTcg';
 import enRegisterCta from './registerCta';
 import enHomeEvents from './homeEvents';
 import enHomeNews from './homeNews';
@@ -234,6 +235,7 @@ const enDict = {
   scrimLanding: enScrimLanding,
   tournamentsList: enTournamentsList,
   homeV2: enHomeV2,
+  homeTcg: enHomeTcg,
   registerCta: enRegisterCta,
   homeEvents: enHomeEvents,
   homeNews: enHomeNews,

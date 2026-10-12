@@ -68,6 +68,7 @@ import nsScrimsPage from './scrimsPage';
 import nsScrimLanding from './scrimLanding';
 import nsTournamentsList from './tournamentsList';
 import nsHomeV2 from './homeV2';
+import nsHomeTcg from './homeTcg';
 import nsRegisterCta from './registerCta';
 import nsHomeEvents from './homeEvents';
 import nsHomeNews from './homeNews';
@@ -232,6 +233,7 @@ export const frDict = {
   scrimLanding: nsScrimLanding.fr,
   tournamentsList: nsTournamentsList.fr,
   homeV2: nsHomeV2.fr,
+  homeTcg: nsHomeTcg.fr,
   registerCta: nsRegisterCta.fr,
   homeEvents: nsHomeEvents.fr,
   homeNews: nsHomeNews.fr,
