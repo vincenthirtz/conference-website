@@ -22,6 +22,10 @@ export default ns('tcgShowcase', {
     'Choisis jusqu’à {max} cartes de ta collection à montrer sur ta fiche publique. Rien n’est affiché tant que tu n’actives pas la vitrine, et le reste de ta collection reste privé.',
   consentNote:
     'Les photos des joueuses suivent leur consentement : si l’une retire la sienne, ta vitrine montre son avatar à la place.',
+  // Le consentement de la vitrine couvre aussi ces surfaces (utils/tcg/live.ts) :
+  // le dire AVANT l'activation, sinon il ne vaudrait pas pour elles.
+  publicSurfacesNote:
+    'Activée, ta vitrine fait aussi apparaître ton pseudo dans les derniers tirages rares et le classement des collectionneuses de la page TCG, ainsi que sur la fiche de ton équipe. Désactivée, tu y restes anonyme ou absente.',
   toggleLabel: 'Afficher ma vitrine sur ma fiche publique',
   statusOn: 'Visible sur ta fiche publique.',
   statusOff: 'Désactivée : rien n’est affiché.',

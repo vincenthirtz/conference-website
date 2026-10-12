@@ -288,7 +288,9 @@ export default function TcgShowcaseEditor({
       <p className="mt-1 max-w-prose text-sm text-gray-400">
         {format(t.editorIntro, { max: maxCards })}
       </p>
-      <p className="mt-1 max-w-prose text-xs text-gray-500">{t.consentNote}</p>
+      <p className="mt-1 max-w-prose text-xs text-gray-500">
+        {t.consentNote} {t.publicSurfacesNote}
+      </p>
 
       {state === 'loading' && (
         <div aria-hidden className="mt-4 space-y-3">

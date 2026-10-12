@@ -13,6 +13,8 @@ export default {
     'Pick up to {max} cards from your collection to show on your public profile. Nothing is displayed until you turn the showcase on, and the rest of your collection stays private.',
   consentNote:
     'Player photos follow their consent: if one of them withdraws hers, your showcase shows her avatar instead.',
+  publicSurfacesNote:
+    'When on, your showcase also shows your name in the latest rare pulls and the top collectors on the TCG page, and on your team page. When off, you stay anonymous or absent there.',
   toggleLabel: 'Show my showcase on my public profile',
   statusOn: 'Visible on your public profile.',
   statusOff: 'Turned off: nothing is displayed.',
