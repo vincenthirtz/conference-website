@@ -7,27 +7,64 @@
 export default {
   eyebrow: 'Trading cards',
   title: 'The Women’s Cup TCG',
-  lede: 'Every win hands out a pack of five cards: players, teams and maps from the circuit. Here is everything there is to collect.',
+  heroPitch:
+    'Your matches turn into cards. Play, earn coins, open {packSize}-card boosters and build your collection: teams, circuit maps, players and the faces of the association.',
+  heroCta: 'Start my collection',
+  heroCatalogLink: 'See every card',
+  stepsTitle: 'How it works',
+  step1Title: 'Play your matches',
+  step1Body:
+    'Every tournament match counts, won or lost — and ranked scrims too.',
+  step2Title: 'Earn coins',
+  step2Body:
+    'A win earns {winCoins} coins and a free pack, a loss {lossCoins} coins.',
+  step3Title: 'Open, collect, trade',
+  step3Body:
+    'A booster costs {boosterPrice} coins. Complete sets, trade your duplicates, show off your favourites.',
 
-  howTitle: 'How to get cards',
-  howEarnTitle: 'By winning a match',
-  howEarnBody:
-    'A pack of five cards is granted on every win, to the players on the winning side — in tournaments and in ranked scrims alike.',
-  howDropTitle: 'By watching a stream',
-  howDropBody:
-    'During a stream, Twitch channel points give a pack and coins. No team needed: it is the supporters’ way in.',
-  howPlacementTitle: 'By finishing high',
-  howPlacementBody:
-    'At the end of a tournament, players of the top 8 teams receive coins and up to three packs depending on their rank.',
-  howStreakTitle: 'By showing up',
-  howStreakBody:
-    'A team that checks in for several matches in a row earns its starters a pack and coins.',
-  howBattlenetTitle: 'By verifying your Battle.net account',
-  howBattlenetBody:
-    'Linking your Battle.net account to the site earns coins, only once.',
-  howShopTitle: 'By spending coins',
-  howShopBody:
-    'Coins buy boosters. They are earned, never bought — supporting the association and collecting cards remain two separate things.',
+  earnTitle: 'How to earn coins',
+  earnLede:
+    'The game’s actual rates. Coins are earned, never bought: supporting the association and collecting stay two separate things.',
+  earnBoosterTitle: 'The price of a booster',
+  earnBoosterBody:
+    '{price} coins for a {packSize}-card pack — {losses} tournament losses are enough.',
+  earnGroupPlay: 'By playing',
+  earnGroupTournament: 'At the end of a tournament',
+  earnGroupAround: 'Around the matches',
+  earnMatchWin: 'Tournament match win',
+  earnMatchLoss: 'Tournament match loss',
+  earnScrimWin: 'Ranked scrim win',
+  earnCheckinStreak: '{n} check-ins in a row by your team',
+  earnPlacementNote: 'For every player on the team, once per tournament.',
+  earnPlacementChampion: 'Champions',
+  earnPlacementFinalist: 'Finalists',
+  earnPlacementPodium: 'Podium',
+  earnPlacementTopCut: 'Top {rank}',
+  earnParticipation: 'Team out mid-tournament (DNF)',
+  earnParticipationNote: 'For playing part of the season.',
+  earnWelcome: 'Welcome gift',
+  earnWelcomeNote: 'Once per edition, for every participant.',
+  earnTwitchDrop: 'Drop during a Twitch stream',
+  earnTwitchDropNote: 'One per stream, no team needed: the supporters’ way in.',
+  earnPrediction: 'Correct prediction',
+  earnPredictionNote: 'No stake: a prediction costs nothing.',
+  earnPublicMvp: 'Crowd-voted MVP',
+  earnBattlenet: 'Verified Battle.net account',
+  earnBattlenetNote: 'Once only.',
+  earnCollectionSet: 'Completed set',
+  earnCollectionSetNote: 'Once per set.',
+  rewardCoins: '+{n} coins',
+  rewardPacks_one: '+{n} pack',
+  rewardPacks_other: '+{n} packs',
+  earnGuideNote:
+    'Forge, recycling duplicates, trades: every rule is in the player-area guide.',
+  earnGuideLink: 'Read the full guide',
+
+  assoEyebrow: 'The association',
+  assoTitle: 'The team behind the Cup',
+  assoLede:
+    'Volunteers, staff, emblems: the association has its own cards, to collect like all the others. Get to know them — and try to gather them all.',
+  assoShowAll: 'See the {n} association cards in the catalogue',
 
   rarityTitle: 'What makes a card rare',
   rarityLede:
@@ -66,9 +103,8 @@ export default {
   playersConsent:
     'A photo only reaches a card if the player uploaded it herself, and she can withdraw it at any time — including from cards already handed out.',
 
-  ctaTitle: 'Open my collection',
+  ctaTitle: 'Ready to open your first pack?',
   ctaBody:
     'The cards you own, your unopened packs and your progress live in your player space.',
-  ctaButton: 'See my cards',
   ctaGuide: 'How it works',
 };

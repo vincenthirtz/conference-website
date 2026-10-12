@@ -26,13 +26,33 @@
 // `userId`, aucun nom, aucune URL de photo (le bucket est public et le chemin
 // embarque l'identifiant) ne traverse ce HTML. C'est ce que vérifie le test
 // e2e, et c'est la raison pour laquelle la page est indexable sans réserve.
+//
+// STRUCTURE (de haut en bas) — la page doit DONNER ENVIE avant de lister :
+//   1. `TcgHero` : accroche, CTA « Commencer ma collection » et le jeu en trois
+//      étapes illustrées (jouer → gagner des pièces → ouvrir et collectionner) ;
+//   2. `TcgEarnSection` : le barème RÉEL, construit ici par
+//      `buildPublicTcgBareme()` (aucun montant dans les textes) ;
+//   3. `TcgAssociationSection` : les cartes de l'association, description
+//      comprise ;
+//   4. `TcgLiveSections` : POINT D'INSERTION des blocs « en action » (vide
+//      aujourd'hui, cf. `components/tcg/live/index.tsx`) ;
+//   5. ce qu'on fait de ses cartes, l'échelle de rareté ;
+//   6. le catalogue filtrable (`#catalogue`) ;
+//   7. l'encart des cartes de joueuses, puis le CTA final.
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { GetStaticProps } from 'next';
 
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import TcgCard, { TcgRarityPips, RARITY_TEXT } from '@/components/tcg/TcgCard';
+import TcgHero from '@/components/tcg/landing/TcgHero';
+import TcgEarnSection from '@/components/tcg/landing/TcgEarnSection';
+import TcgAssociationSection from '@/components/tcg/landing/TcgAssociationSection';
+import TcgStartCta from '@/components/tcg/landing/TcgStartCta';
+// Point d'insertion des blocs « en action » : vide tant qu'aucun n'est branché.
+import TcgLiveSections from '@/components/tcg/live';
+import type { PublicTcgBareme } from '@/utils/tcg/publicBareme';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import type { LogoCredit as LogoCreditValue } from '@/utils/teams/logoCredit';
 import { MAP_CARD_RARITY } from '@/utils/tcg/rarity';
@@ -84,15 +104,31 @@ type Props = {
   cards: CatalogCard[];
   /** Nombre de cartes de joueuses existantes — un COMPTE, jamais une liste. */
   playerCount: number;
+  /** Le barème réel des pièces et paquets, lu des constantes du jeu. */
+  bareme: PublicTcgBareme;
   seo: SeoProps;
 };
 
 type Filter = 'all' | 'team' | 'map' | 'association';
 
-function TcgCatalogPage({ cards, playerCount }: Props) {
+function TcgCatalogPage({ cards, playerCount, bareme }: Props) {
   const t = useT(nsTcgCatalog);
   const tc = useT(nsPlayerTcg);
   const [filter, setFilter] = useState<Filter>('all');
+  const catalogHeadingRef = useRef<HTMLHeadingElement>(null);
+
+  const associationCards = useMemo(
+    () => cards.flatMap((c) => (c.kind === 'association' ? [c] : [])),
+    [cards]
+  );
+
+  // « Voir toutes les cartes de l'association » : bascule le filtre et amène le
+  // FOCUS sur le titre du catalogue — le défilement suit, et une personne au
+  // clavier ou au lecteur d'écran repart de là plutôt que du bouton quitté.
+  const showAssociationInCatalog = () => {
+    setFilter('association');
+    catalogHeadingRef.current?.focus();
+  };
 
   const shown = useMemo(
     () => (filter === 'all' ? cards : cards.filter((c) => c.kind === filter)),
@@ -114,18 +150,8 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
     association: tc.cardAssociation,
   };
 
-  const earnSteps = [
-    { title: t.howEarnTitle, body: t.howEarnBody },
-    { title: t.howPlacementTitle, body: t.howPlacementBody },
-    { title: t.howStreakTitle, body: t.howStreakBody },
-    { title: t.howDropTitle, body: t.howDropBody },
-    { title: t.howBattlenetTitle, body: t.howBattlenetBody },
-    { title: t.howShopTitle, body: t.howShopBody },
-  ];
-
-  // Ce qu'une collection permet, une fois les cartes obtenues. Aucun montant
-  // ici : la page est publique et statique, le barème chiffré vit dans le guide
-  // de l'espace joueuse, lu depuis le serveur.
+  // Ce qu'une collection permet, une fois les cartes obtenues. Les montants
+  // sont dans `TcgEarnSection`, qui les lit du barème réel.
   const doItems = [
     { title: t.doSetsTitle, body: t.doSetsBody },
     { title: t.doTradesTitle, body: t.doTradesBody },
@@ -161,37 +187,20 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0d0b14] via-[#120f1c] to-[#0d0b14]">
-      <main className="mx-auto max-w-7xl px-4 pt-header-lg pb-16 sm:px-6 lg:px-8">
-        <header className="flex flex-col gap-4">
-          <p className="text-xs uppercase tracking-[0.22em] text-purple-300">
-            {t.eyebrow}
-          </p>
-          <h1 className="text-4xl font-black tracking-tight text-white sm:text-5xl">
-            {t.title}
-          </h1>
-          <p className="max-w-3xl text-gray-300">{t.lede}</p>
-        </header>
+      <main className="mx-auto max-w-7xl px-4 pt-header-lg pb-16 text-white sm:px-6 lg:px-8">
+        <TcgHero bareme={bareme} />
 
-        {/* Comment on obtient des cartes */}
-        <section className="mt-14">
-          <h2 className="text-2xl font-bold text-white">{t.howTitle}</h2>
-          <ol className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-            {earnSteps.map((step, i) => (
-              <li
-                key={step.title}
-                className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
-              >
-                <span className="font-mono text-xs text-purple-300">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <h3 className="mt-2 font-semibold text-white">{step.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-gray-400">
-                  {step.body}
-                </p>
-              </li>
-            ))}
-          </ol>
-        </section>
+        <TcgEarnSection bareme={bareme} />
+
+        <TcgAssociationSection
+          cards={associationCards}
+          labels={cardLabels}
+          onShowAll={showAssociationInCatalog}
+        />
+
+        {/* Blocs « en action » (tirages rares, collectionneuses, carte de la
+            semaine) : rien n'est rendu tant qu'aucun n'est branché. */}
+        <TcgLiveSections />
 
         {/* Ce qu'on fait de ses cartes */}
         <section className="mt-14">
@@ -235,8 +244,21 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
         </section>
 
         {/* Le catalogue */}
-        <section className="mt-16">
-          <h2 className="text-2xl font-bold text-white">{t.catalogTitle}</h2>
+        <section
+          id="catalogue"
+          aria-labelledby="tcg-catalog-title"
+          className="mt-16 scroll-mt-header"
+        >
+          <h2
+            id="tcg-catalog-title"
+            ref={catalogHeadingRef}
+            // Cible de focus programmatique seulement (cf.
+            // `showAssociationInCatalog`) : hors de l'ordre de tabulation.
+            tabIndex={-1}
+            className="scroll-mt-header text-2xl font-bold text-white focus:outline-none"
+          >
+            {t.catalogTitle}
+          </h2>
 
           {/* `role="group"` et non `<nav>` : ces boutons filtrent la grille,
               ils ne mènent nulle part. Un repère de navigation annoncerait
@@ -342,15 +364,10 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
             <p className="mt-1 text-sm text-gray-400">{t.ctaBody}</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link
-              href="/player/tcg"
-              className="inline-flex rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-purple-500"
-            >
-              {t.ctaButton}
-            </Link>
+            <TcgStartCta label={t.heroCta} />
             <Link
               href="/player/tcg-guide"
-              className="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-gray-200 transition hover:bg-white/10"
+              className="inline-flex min-h-11 items-center rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-gray-200 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
             >
               {t.ctaGuide}
             </Link>
@@ -363,12 +380,12 @@ function TcgCatalogPage({ cards, playerCount }: Props) {
 
 const tcgCatalogSeoFallback: SeoProps = {
   title: {
-    fr: 'Le TCG de la Women’s Cup — toutes les cartes',
-    en: 'The Women’s Cup TCG — every card',
+    fr: 'Le TCG de la Women’s Cup — joue, gagne, collectionne',
+    en: 'The Women’s Cup TCG — play, earn, collect',
   },
   description: {
-    fr: 'Les cartes à collectionner de la Women’s Cup : équipes, maps, comment on les gagne, séries, échanges et vitrine.',
-    en: 'The Women’s Cup trading cards: teams, maps, how to earn them, sets, trades and showcase.',
+    fr: 'Tes matchs deviennent des cartes : gagne des pièces en jouant, ouvre des boosters et collectionne les équipes, les maps et l’équipe de l’association.',
+    en: 'Your matches turn into cards: earn coins by playing, open boosters and collect the teams, the maps and the association’s team.',
   },
 };
 
@@ -379,8 +396,8 @@ function buildSeo(cards: CatalogCard[]): SeoProps {
   return {
     title: tcgCatalogSeoFallback.title,
     description: {
-      fr: `Les cartes à collectionner de la Women’s Cup : ${teams} équipes et ${maps} maps, l’échelle de rareté et les façons d’en gagner.`,
-      en: `The Women’s Cup trading cards: ${teams} teams and ${maps} maps, the rarity scale and how to earn them.`,
+      fr: `Tes matchs deviennent des cartes : gagne des pièces en jouant, ouvre des boosters et collectionne ${teams} équipes, ${maps} maps et l’équipe de l’association.`,
+      en: `Your matches turn into cards: earn coins by playing, open boosters and collect ${teams} teams, ${maps} maps and the association’s team.`,
     },
     jsonLd: [
       {
@@ -411,6 +428,10 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
   const { POOL_LIMIT } = await import('@/utils/tcg/drawPack');
   const { logger } = await import('@/utils/logger');
   const { PHASE_PRODUCTION_BUILD } = await import('next/constants');
+  const { buildPublicTcgBareme } = await import('@/utils/tcg/publicBareme');
+
+  // Le barème ne lit RIEN en base : il est juste même quand la base manque.
+  const bareme = buildPublicTcgBareme();
 
   // UNE LECTURE RATÉE NE SE MET PAS EN CACHE. Ignorer l'`error` publiait
   // « aucune équipe / 0 joueuse » pour 5 min (ISR). En régénération, on LÈVE :
@@ -444,6 +465,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
       props: {
         cards: mapCards,
         playerCount: 0,
+        bareme,
         seo: buildSeo(mapCards),
       },
       // Base injoignable au build : on rend la moitié statique de la page et
@@ -552,6 +574,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
     props: {
       cards,
       playerCount: count ?? 0,
+      bareme,
       seo: buildSeo(cards),
     },
     revalidate: degraded ? 30 : 300,
