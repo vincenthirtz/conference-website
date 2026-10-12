@@ -403,6 +403,8 @@ export function walletSourceLabel(
       return t.walletMatchPrediction;
     case 'public_mvp':
       return t.walletPublicMvp;
+    case 'tournament_participation':
+      return t.walletTournamentParticipation;
     default:
       return t.walletUnknownSource;
   }

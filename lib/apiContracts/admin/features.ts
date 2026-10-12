@@ -39,6 +39,7 @@ import {
   StageCloneBody,
   StageDeleteQuery,
   DisqualifyTeamBody,
+  ParticipationRewardBody,
   ReinstateTeamBody,
   ReinstateTeamQuery,
   StageGroupMatchesBody,
@@ -515,6 +516,10 @@ export const ADMIN_FEATURE_BODY_SCHEMAS: Record<string, ApiContractEntry> = {
   },
   'admin.stages/[stageId]/disqualify.delete.body': {
     schema: ReinstateTeamBody,
+    io: 'input',
+  },
+  'admin.stages/[stageId]/participation-reward.body': {
+    schema: ParticipationRewardBody,
     io: 'input',
   },
   'admin.twitchChannels.create': { schema: TwitchChannelBody, io: 'input' },

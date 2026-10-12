@@ -129,4 +129,15 @@ export default {
     '{team} reinstated. {count} matches are still forfeited or cancelled: fix them by hand if needed.',
   rsErr: 'Reinstatement failed.',
   rsErrNotDisqualified: 'This team is not disqualified from the stage.',
+  // TCG participation reward (DNF) — catch-up.
+  prReward: 'TCG reward',
+  prConfirmTitle: 'Grant the participation reward to {team}?',
+  prConfirmSubtitle:
+    "Every player who appeared on one of the team's match sheets in this tournament receives {coins} coins, and a message announces it in the team's Discord channel. No risk of duplicates: a player already paid is not paid twice, and the message is only posted once.",
+  prToastGranted_one: '{team}: {count} player credited with {coins} coins.',
+  prToastGranted_other: '{team}: {count} players credited with {coins} coins.',
+  prToastNothing: '{team}: nothing new to grant (already done).',
+  prToastNoChannel:
+    'Coins granted, but the team has no Discord channel: message not posted.',
+  prErr: 'The participation reward failed.',
 };

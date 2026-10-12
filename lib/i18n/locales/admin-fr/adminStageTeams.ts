@@ -131,4 +131,16 @@ export default adminNs('adminStageTeams', {
     '{team} réintégrée. {count} matchs restent en forfait ou annulés : à corriger à la main si besoin.',
   rsErr: 'La réintégration a échoué.',
   rsErrNotDisqualified: "Cette équipe n'est pas disqualifiée de la phase.",
+  // Récompense TCG de participation (DNF) — rattrapage.
+  prReward: 'Récompense TCG',
+  prConfirmTitle: 'Verser la récompense de participation à {team} ?',
+  prConfirmSubtitle:
+    "Chaque joueuse ayant figuré sur une feuille de match de l'équipe dans ce tournoi reçoit {coins} pièces, et un message l'annonce dans le salon Discord de l'équipe. Sans risque de doublon : une joueuse déjà payée ne l'est pas deux fois, et le message ne part qu'une fois.",
+  prToastGranted_one: '{team} : {count} joueuse créditée de {coins} pièces.',
+  prToastGranted_other:
+    '{team} : {count} joueuses créditées de {coins} pièces.',
+  prToastNothing: '{team} : rien de nouveau à verser (déjà fait).',
+  prToastNoChannel:
+    "Pièces versées, mais l'équipe n'a pas de salon Discord : message non posté.",
+  prErr: 'La récompense de participation a échoué.',
 });

@@ -225,6 +225,24 @@ export const MATCH_PREDICTION_COINS = Math.max(
  */
 export const PUBLIC_MVP_COINS = MATCH_WIN_COINS;
 
+/**
+ * Ce que rapporte la PARTICIPATION à un tournoi d'une équipe sortie en DNF
+ * (disqualifiée d'une phase, cf. `utils/tcg/grantTournamentParticipation.ts`),
+ * UNE FOIS par joueuse et par tournoi.
+ *
+ * 1000 PIÈCES, DÉCISION PRODUIT DU 2026-10-12 (cas Éclypse) : une équipe qui
+ * abandonne en cours de route repart sinon les mains vides, alors qu'elle a
+ * joué une partie de la saison. Écrit comme un MULTIPLE de `MATCH_WIN_COINS`,
+ * comme tout le barème : régler la référence règle celui-ci avec elle.
+ *
+ * ⚠️ PLUS QUE LE PALMARÈS EN PIÈCES (le titre vaut 5 victoires + 3 paquets).
+ * C'est le montant demandé ; le palmarès reste devant en paquets.
+ *
+ * DES PIÈCES SEULES : un paquet aurait exigé d'élargir les deux contraintes de
+ * `tcg_packs` (celles des 58 paquets du 2026-09-14).
+ */
+export const TOURNAMENT_PARTICIPATION_COINS = 10 * MATCH_WIN_COINS;
+
 export const PLACEMENT_TIERS: ReadonlyArray<{
   /** Rang maximal (inclus) ouvrant ce palier. */
   maxRank: number;
@@ -257,7 +275,8 @@ export type TcgEarnSourceKey =
   | 'battlenet_verified'
   | 'collection_set'
   | 'match_prediction'
-  | 'public_mvp';
+  | 'public_mvp'
+  | 'tournament_participation';
 
 /**
  * Ce que `source_ref` doit contenir — donc ce qu'« une occurrence » veut dire.
@@ -542,6 +561,23 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
     coins: PUBLIC_MVP_COINS,
     // `source_ref` = le MATCH : un titre payé par match et par personne.
     refKind: 'match',
+    maxPerRef: 1,
+    schemaReady: true,
+  },
+  {
+    // Écrite par `utils/tcg/grantTournamentParticipation.ts` quand une équipe
+    // est disqualifiée (DNF) d'une phase, et par la route admin
+    // `POST /api/admin/stages/[stageId]/participation-reward` (rattrapage).
+    // Migration `tcg_tournament_participation_reward.sql` (NON appliquée au
+    // 2026-10-12) : drapeau levé avec le code, comme `public_mvp` — sans la
+    // migration, le crédit est refusé (23514), journalisé, et la route admin
+    // le rejoue une fois la migration passée.
+    key: 'tournament_participation',
+    packs: 0,
+    coins: TOURNAMENT_PARTICIPATION_COINS,
+    // `source_ref` = le TOURNOI : une participation payée par personne et par
+    // tournoi, même passée par deux équipes sorties en DNF.
+    refKind: 'tournament',
     maxPerRef: 1,
     schemaReady: true,
   },

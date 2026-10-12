@@ -1,0 +1,83 @@
+parameters:
+  - $ref: '#/components/parameters/StageId'
+post:
+  summary: Grant the TCG participation reward to a team already out (DNF).
+  description: |
+    Guard `manage_tournaments`. Catch-up for a team already disqualified
+    from the stage (`stage_teams.disqualified_at`): applies the same rule as
+    the disqualification itself. Each player who appeared on one of the
+    team's match sheets in the stage's tournament (starters and substitutes;
+    fallback when the team has none: current members except coach /
+    manager) receives `TOURNAMENT_PARTICIPATION_COINS` (1000) once per
+    tournament (`tcg_wallet_entries.source_kind = tournament_participation`,
+    `source_ref` = tournament id). If this call credited at least one player,
+    ONE bot event `team.message` (`kind: tcg_participation`) announces it in
+    the team's Discord channel. Safe to replay: nobody is credited twice and
+    the message is not posted again.
+  operationId: adminGrantStageTeamParticipationReward
+  x-zod-query: admin.stages/[stageId].query
+  tags:
+    - admin/stages
+  security:
+    - StaffSession: []
+  parameters:
+    - $ref: '#/components/parameters/IdempotencyKey'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          x-zod: admin.stages/[stageId]/participation-reward.body
+          type: object
+          required:
+            - team_id
+          properties:
+            team_id:
+              type: string
+              format: uuid
+  responses:
+    '200':
+      description: Reward applied (or nothing new to grant).
+      content:
+        application/json:
+          schema:
+            type: object
+            description: |
+              TCG participation reward (DNF): each player who appeared on one of the
+              team's match sheets in this tournament (fallback: current non-staff
+              members) is credited `coins` once per tournament, then ONE `team.message`
+              (`kind: tcg_participation`) announces it in the team's Discord channel.
+            properties:
+              teamId:
+                type: string
+                format: uuid
+              teamName:
+                type: [string, 'null']
+              status:
+                type: string
+                enum: [granted, nothing, not_dnf, not_ready, error]
+              coins:
+                type: integer
+              eligible:
+                type: integer
+              granted:
+                type: integer
+                description: Players credited by THIS call (0 on a replay).
+              rosterSource:
+                type: [string, 'null']
+                enum: [match_participants, team_members, null]
+              message:
+                type: string
+                enum: [sent, skipped, duplicate, no_channel, error]
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '403':
+      $ref: '#/components/responses/Forbidden'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '409':
+      $ref: '#/components/responses/Conflict'
+    '503':
+      description: Wallet write refused (migration not applied) or registry not ready.

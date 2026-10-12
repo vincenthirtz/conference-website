@@ -138,6 +138,7 @@ export type TcgOverviewLabels = {
   coinsSourceCollectionSet: string;
   coinsSourceMatchPrediction: string;
   coinsSourcePublicMvp: string;
+  coinsSourceTournamentParticipation: string;
   /** Repli d'une origine inconnue de ce panneau. Interpole `{kind}`. */
   coinsSourceUnknown: string;
 
@@ -264,6 +265,8 @@ function coinSourceLabel(kind: string, labels: TcgOverviewLabels): string {
       return labels.coinsSourceMatchPrediction;
     case 'public_mvp':
       return labels.coinsSourcePublicMvp;
+    case 'tournament_participation':
+      return labels.coinsSourceTournamentParticipation;
     default:
       return format(labels.coinsSourceUnknown, { kind });
   }

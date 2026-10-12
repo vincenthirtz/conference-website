@@ -131,6 +131,30 @@ post:
                     scheduledAt:
                       type: [string, 'null']
                       format: date-time
+              participationReward:
+                type: object
+                description: |
+                  TCG participation reward (DNF): each player who appeared on one of the
+                  team's match sheets in this tournament (fallback: current non-staff
+                  members) is credited `coins` once per tournament, then ONE `team.message`
+                  (`kind: tcg_participation`) announces it in the team's Discord channel.
+                properties:
+                  status:
+                    type: string
+                    enum: [granted, nothing, not_dnf, not_ready, error]
+                  coins:
+                    type: integer
+                  eligible:
+                    type: integer
+                  granted:
+                    type: integer
+                    description: Players credited by THIS call (0 on a replay).
+                  rosterSource:
+                    type: [string, 'null']
+                    enum: [match_participants, team_members, null]
+                  message:
+                    type: string
+                    enum: [sent, skipped, duplicate, no_channel, error]
     '400':
       $ref: '#/components/responses/BadRequest'
     '401':

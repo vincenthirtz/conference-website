@@ -32,6 +32,7 @@ import { settleMatchPredictions } from '@/utils/predictions/settle';
 import { invalidateStandingsCache } from '@/utils/stages/standingsCache';
 import { parseDisqualificationMode } from '@/utils/stages/disqualification';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
+import { grantTournamentParticipation } from '@/utils/tcg/grantTournamentParticipation';
 import type { Audited } from '../../_shared/audited';
 import type {
   DisqualificationMode,
@@ -285,6 +286,19 @@ export async function disqualifyStageTeam(
   ]);
   const matchSummaries = await summarizeMatches(ctx, openRows ?? [], citedIds);
 
+  // 3) Récompense TCG de participation (DNF) : la disqualification clôt la
+  //    participation de l'équipe. Idempotente, ne lève jamais — un échec est
+  //    rendu dans la réponse et se rejoue par `…/participation-reward`.
+  const participationReward = await grantTournamentParticipation({
+    tenantId: ctx.tenantId,
+    tournamentId: stage.tournament_id,
+    teamId,
+    source: 'admin',
+  });
+  if (participationReward.status === 'error') {
+    ctx.logger.error('[disqualify] récompense de participation en échec');
+  }
+
   const result: DisqualifyTeamResponse = {
     mode,
     teamId,
@@ -297,6 +311,7 @@ export async function disqualifyStageTeam(
     notProcessed,
     complete: failed === null,
     matches: matchSummaries,
+    participationReward,
   };
 
   return {
@@ -316,6 +331,7 @@ export async function disqualifyStageTeam(
         failed,
         not_processed_match_ids: notProcessed,
         complete: result.complete,
+        participation_reward: participationReward,
       },
     },
   };

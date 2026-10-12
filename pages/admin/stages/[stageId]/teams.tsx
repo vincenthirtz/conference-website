@@ -450,6 +450,16 @@ function AdminStageTeamsPage(_props: StaffProps) {
           >
             {st.disqualified_at ? t.reinstate : t.disqualify}
           </AdminButton>
+          {st.disqualified_at && (
+            <AdminButton
+              variant="secondary"
+              size="xs"
+              disabled={dq.busyTeamId === st.team_id}
+              onClick={() => dq.grantParticipation(st)}
+            >
+              {t.prReward}
+            </AdminButton>
+          )}
           <AdminButton
             variant="danger"
             size="xs"

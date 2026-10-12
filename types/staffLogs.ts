@@ -51,6 +51,8 @@ export type StaffLogAction =
   // Disqualification d'une équipe d'une phase (et sa levée).
   | 'disqualify_team'
   | 'reinstate_team'
+  // Récompense TCG de participation d'une équipe en DNF (rattrapage).
+  | 'grant_participation_reward'
   // --- Matchs ---
   | 'create_match'
   | 'update_match'

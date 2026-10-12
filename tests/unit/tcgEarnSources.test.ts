@@ -62,6 +62,7 @@ describe('intégrité du registre', () => {
         'collection_set',
         'match_prediction',
         'public_mvp',
+        'tournament_participation',
       ])
     );
   });
@@ -125,6 +126,12 @@ describe('intégrité du registre', () => {
         continue;
       }
       if (source.key === 'public_mvp') {
+        expect(source.packs).toBe(0);
+        continue;
+      }
+      // Des pièces de participation, pas une ouverture de paquet
+      // (cf. `TOURNAMENT_PARTICIPATION_COINS`).
+      if (source.key === 'tournament_participation') {
         expect(source.packs).toBe(0);
         continue;
       }
@@ -368,6 +375,11 @@ describe('schemaReady', () => {
       // d'un compte staff hors roster, qui n'en avait aucune.
       'staff_welcome',
       'supporter_welcome',
+      // `tcg_tournament_participation_reward.sql` (NON appliquée au
+      // 2026-10-12) : levé avec le code, comme `public_mvp` — sans la
+      // migration, le crédit est refusé, journalisé, et la route admin de
+      // rattrapage le rejoue une fois la migration passée.
+      'tournament_participation',
       'tournament_placement',
       'twitch_drop',
       'welcome_gift',

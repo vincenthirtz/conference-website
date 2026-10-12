@@ -21,11 +21,13 @@ import nsAdminStageTeams from '@/lib/i18n/locales/admin-fr/adminStageTeams';
 import {
   type DisqualifyTeamRequest,
   type DisqualifyTeamResponse,
+  type ParticipationRewardResponse,
   type ReinstateTeamResponse,
   stageUrls,
 } from '../client';
 import type { DisqualifyDraft } from '../ui/DisqualifyTeamModal';
 import { stageKeys } from './keys';
+import { TOURNAMENT_PARTICIPATION_COINS } from '@/utils/tcg/earnSources';
 
 // Chargées à la demande : la modale ne s'ouvre qu'au clic, le bandeau qu'après
 // une disqualification incomplète. Hors du JS de premier chargement de la page
@@ -67,6 +69,8 @@ export function disqualificationErrorMessage(
       return t.dqErrNotInStage;
     case 'NOT_DISQUALIFIED':
       return t.rsErrNotDisqualified;
+    case 'PARTICIPATION_REWARD_FAILED':
+      return t.prErr;
     default:
       return (err as Error | null)?.message || fallback;
   }
@@ -88,6 +92,27 @@ export function disqualifyToast(res: DisqualifyTeamResponse, t: Dict): string {
   return format(key, { team, count });
 }
 
+/** Toast de la récompense de participation (rattrapage d'une équipe en DNF). */
+export function participationRewardToast(
+  res: ParticipationRewardResponse,
+  t: Dict
+): { message: string; tone: 'success' | 'warning' } {
+  const team = res.teamName ?? res.teamId.slice(0, 8);
+  if (res.granted === 0) {
+    return { message: format(t.prToastNothing, { team }), tone: 'success' };
+  }
+  if (res.message === 'no_channel' || res.message === 'error') {
+    return { message: t.prToastNoChannel, tone: 'warning' };
+  }
+  return {
+    message: format(
+      res.granted > 1 ? t.prToastGranted_other : t.prToastGranted_one,
+      { team, count: res.granted, coins: res.coins }
+    ),
+    tone: 'success',
+  };
+}
+
 const nameOf = (row: DisqualifiableTeam) =>
   row.team?.name ?? row.team_id.slice(0, 8);
 
@@ -98,6 +123,7 @@ export function useStageTeamDisqualification(stageId: string) {
   const { confirm, dialog } = useConfirmDialog();
   const { mutateJson: disqualifyMutate } = useIdempotentMutation();
   const { mutateJson: reinstateMutate } = useIdempotentMutation();
+  const { mutateJson: rewardMutate } = useIdempotentMutation();
 
   const [target, setTarget] = useState<DisqualifiableTeam | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -177,6 +203,36 @@ export function useStageTeamDisqualification(stageId: string) {
     [stageId, confirm, t, reinstateMutate, addToast, refresh]
   );
 
+  const grantParticipation = useCallback(
+    async (row: DisqualifiableTeam) => {
+      if (!stageId) return;
+      const team = nameOf(row);
+      const ok = await confirm({
+        title: format(t.prConfirmTitle, { team }),
+        subtitle: format(t.prConfirmSubtitle, {
+          coins: TOURNAMENT_PARTICIPATION_COINS,
+        }),
+        variant: 'info',
+        confirmLabel: t.prReward,
+      });
+      if (!ok) return;
+      setBusyTeamId(row.team_id);
+      try {
+        const res = await rewardMutate<ParticipationRewardResponse>(
+          stageUrls.participationReward(stageId),
+          { method: 'POST', body: JSON.stringify({ team_id: row.team_id }) }
+        );
+        const toast = participationRewardToast(res, t);
+        addToast(toast.message, toast.tone);
+      } catch (err) {
+        addToast(disqualificationErrorMessage(err, t.prErr, t), 'error');
+      } finally {
+        setBusyTeamId(null);
+      }
+    },
+    [stageId, confirm, t, rewardMutate, addToast]
+  );
+
   const ui = (
     <>
       {dialog}
@@ -198,5 +254,5 @@ export function useStageTeamDisqualification(stageId: string) {
     </>
   );
 
-  return { openDisqualify, reinstate, busyTeamId, ui };
+  return { openDisqualify, reinstate, grantParticipation, busyTeamId, ui };
 }

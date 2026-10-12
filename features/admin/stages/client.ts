@@ -11,6 +11,8 @@
 // phase. Le domaine « lobbies » a son propre écran ; ces chemins restent ici
 // tant que les deux n'ont pas été rapprochés.
 
+import type { ParticipationRewardReport } from '@/utils/tcg/grantTournamentParticipation';
+
 const S = '/api/admin/stages';
 const enc = encodeURIComponent;
 
@@ -47,6 +49,7 @@ export const stageUrls = {
   tiebreakerOverride: (id: string) => `${S}/${enc(id)}/tiebreaker-override`,
   /** POST `{ team_id, mode, reason }` (disqualifier) ; DELETE `?team_id=` (réintégrer). */
   disqualify: (id: string) => `${S}/${enc(id)}/disqualify`,
+  participationReward: (id: string) => `${S}/${enc(id)}/participation-reward`,
   reinstate: (id: string, teamId: string) =>
     `${S}/${enc(id)}/disqualify?team_id=${enc(teamId)}`,
   batchScores: (id: string) => `${S}/${enc(id)}/batch-scores`,
@@ -132,6 +135,17 @@ export type DisqualifyTeamResponse = {
    * illisible vaut `null` (l'écran retombe sur l'id court).
    */
   matches: Record<string, DisqualifyMatchSummary>;
+  /**
+   * Récompense TCG de participation versée aux joueuses de l'équipe (DNF),
+   * avec le statut du message posté dans son salon Discord.
+   */
+  participationReward: ParticipationRewardReport;
+};
+
+/** Réponse de `POST …/participation-reward` (rattrapage d'une équipe en DNF). */
+export type ParticipationRewardResponse = ParticipationRewardReport & {
+  teamId: string;
+  teamName: string | null;
 };
 
 /** Réponse de `DELETE …/disqualify`. */

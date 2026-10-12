@@ -140,6 +140,14 @@ const baseResponse: DisqualifyTeamResponse = {
   notProcessed: [],
   complete: true,
   matches: {},
+  participationReward: {
+    status: 'granted',
+    coins: 1000,
+    eligible: 6,
+    granted: 6,
+    rosterSource: 'match_participants',
+    message: 'sent',
+  },
 };
 
 describe('useStageTeamDisqualification', () => {

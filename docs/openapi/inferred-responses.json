@@ -5322,6 +5322,7 @@
           "forward_scrim_request",
           "generate_group_matches",
           "generate_plan_checkout",
+          "grant_participation_reward",
           "grant_tenant_staff",
           "helloasso_sync",
           "import_default_maps",
@@ -6384,6 +6385,7 @@
           "forward_scrim_request",
           "generate_group_matches",
           "generate_plan_checkout",
+          "grant_participation_reward",
           "grant_tenant_staff",
           "helloasso_sync",
           "import_default_maps",
@@ -8521,6 +8523,7 @@
           "forward_scrim_request",
           "generate_group_matches",
           "generate_plan_checkout",
+          "grant_participation_reward",
           "grant_tenant_staff",
           "helloasso_sync",
           "import_default_maps",
@@ -13780,6 +13783,7 @@
           "forward_scrim_request",
           "generate_group_matches",
           "generate_plan_checkout",
+          "grant_participation_reward",
           "grant_tenant_staff",
           "helloasso_sync",
           "import_default_maps",
@@ -20552,6 +20556,7 @@
           "forward_scrim_request",
           "generate_group_matches",
           "generate_plan_checkout",
+          "grant_participation_reward",
           "grant_tenant_staff",
           "helloasso_sync",
           "import_default_maps",
@@ -25216,6 +25221,7 @@
           "forward_scrim_request",
           "generate_group_matches",
           "generate_plan_checkout",
+          "grant_participation_reward",
           "grant_tenant_staff",
           "helloasso_sync",
           "import_default_maps",
@@ -66867,6 +66873,59 @@
        "type": "string"
       }
      },
+     "participationReward": {
+      "type": "object",
+      "properties": {
+       "coins": {
+        "type": "number"
+       },
+       "eligible": {
+        "type": "number"
+       },
+       "granted": {
+        "type": "number"
+       },
+       "message": {
+        "type": "string",
+        "enum": [
+         "duplicate",
+         "error",
+         "no_channel",
+         "sent",
+         "skipped"
+        ]
+       },
+       "rosterSource": {
+        "type": [
+         "string",
+         "null"
+        ],
+        "enum": [
+         "match_participants",
+         "team_members",
+         null
+        ]
+       },
+       "status": {
+        "type": "string",
+        "enum": [
+         "error",
+         "granted",
+         "not_dnf",
+         "not_ready",
+         "nothing"
+        ]
+       }
+      },
+      "required": [
+       "coins",
+       "eligible",
+       "granted",
+       "message",
+       "rosterSource",
+       "status"
+      ]
+     },
      "skipped": {
       "type": "array",
       "items": {
@@ -66909,6 +66968,7 @@
      "matches",
      "mode",
      "notProcessed",
+     "participationReward",
      "skipped",
      "teamId",
      "teamName"
@@ -66988,6 +67048,72 @@
     "required": [
      "seeded",
      "totalMatches"
+    ]
+   }
+  },
+  "POST /api/admin/stages/{stageId}/participation-reward": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "coins": {
+      "type": "number"
+     },
+     "eligible": {
+      "type": "number"
+     },
+     "granted": {
+      "type": "number"
+     },
+     "message": {
+      "type": "string",
+      "enum": [
+       "duplicate",
+       "error",
+       "no_channel",
+       "sent",
+       "skipped"
+      ]
+     },
+     "rosterSource": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "match_participants",
+       "team_members",
+       null
+      ]
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "error",
+       "granted",
+       "not_dnf",
+       "not_ready",
+       "nothing"
+      ]
+     },
+     "teamId": {
+      "type": "string"
+     },
+     "teamName": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "coins",
+     "eligible",
+     "granted",
+     "message",
+     "rosterSource",
+     "status",
+     "teamId",
+     "teamName"
     ]
    }
   },

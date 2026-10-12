@@ -317,6 +317,7 @@ export default ns('playerTcg', {
   walletCollectionSet: 'Série complétée',
   walletMatchPrediction: 'Pronostic juste',
   walletPublicMvp: 'MVP du public',
+  walletTournamentParticipation: 'Participation au tournoi',
 
   // Rattachement Twitch, contextualisé : ce qu'on gagne, en une phrase. Affiché
   // SEULEMENT si le drop est réellement branché (montant rendu par l'API).

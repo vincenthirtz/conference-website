@@ -59,6 +59,7 @@ export default {
   coinsSourceCollectionSet: 'Completed sets',
   coinsSourceMatchPrediction: 'Correct predictions',
   coinsSourcePublicMvp: "Viewers' MVP",
+  coinsSourceTournamentParticipation: 'Participation (DNF)',
   coinsSourceUnknown: 'Other ({kind})',
 
   cardsTitle: 'Cards',

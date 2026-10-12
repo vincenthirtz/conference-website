@@ -251,6 +251,7 @@ export default {
   walletCollectionSet: 'Set completed',
   walletMatchPrediction: 'Correct prediction',
   walletPublicMvp: "Viewers' MVP",
+  walletTournamentParticipation: 'Tournament participation',
 
   twitchPitchTitle: 'Earn coins by watching our streams',
   twitchPitchBody:

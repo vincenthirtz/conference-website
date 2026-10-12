@@ -217,3 +217,6 @@ export const ReinstateTeamBody = z.preprocess(
   (v) => (v && typeof v === 'object' ? v : {}),
   z.looseObject({ team_id: teamIdField.optional() })
 );
+
+/** POST …/participation-reward : récompense TCG d'une équipe déjà en DNF. */
+export const ParticipationRewardBody = z.object({ team_id: teamIdField });

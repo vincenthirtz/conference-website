@@ -67,6 +67,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   remove_tiebreaker_override: 'Override de départage retiré',
   disqualify_team: 'Équipe disqualifiée de la phase',
   reinstate_team: 'Équipe réintégrée dans la phase',
+  grant_participation_reward: 'Récompense de participation (DNF) versée',
   // Matchs
   create_match: 'Création match',
   update_match: 'Modification match',
