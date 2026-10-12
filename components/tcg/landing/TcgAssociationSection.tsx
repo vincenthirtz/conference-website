@@ -93,27 +93,47 @@ export default function TcgAssociationSection({
         {t.assoLede}
       </p>
 
-      <ul className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {featured.map((card) => (
-          <li key={card.id} className="mx-auto w-full max-w-xs">
-            <TcgCard
-              subject={{
-                kind: 'fanart',
-                fanartId: card.id,
-                name: card.name,
-                imageUrl: card.imageUrl,
-                artistName: card.credit,
-                artistUrl: null,
-                category: 'association',
-                description: card.description,
-              }}
-              rarity={card.rarity}
-              labels={labels}
-              fullDescription
-            />
-          </li>
-        ))}
-      </ul>
+      {/* Sous `md`, un rang qui défile horizontalement : empilées en pleine
+          largeur, huit cartes à description entière faisaient des milliers de
+          pixels de haut sur un téléphone. La carte suivante dépasse du bord
+          (≈ 72 % de largeur) — c'est l'indice principal qu'on peut faire
+          défiler ; la phrase au-dessus le dit pour qui ne le verrait pas.
+          Le conteneur est focusable et nommé : au clavier, les flèches le font
+          défiler, Tab en sort normalement (aucun piège de focus). À partir de
+          `md`, la grille d'origine. */}
+      <p className="mt-4 text-xs opacity-70 md:hidden">{t.assoScrollHint}</p>
+      <div
+        role="region"
+        aria-label={t.assoCarouselLabel}
+        // Focusable : sans focus, son contenu hors champ est inatteignable au clavier.
+        tabIndex={0}
+        className="-mx-4 mt-3 overflow-x-auto overscroll-x-contain rounded-xl px-4 pb-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)] md:mx-0 md:mt-6 md:overflow-visible md:px-0 md:pb-0"
+      >
+        <ul className="flex snap-x snap-mandatory scroll-px-4 items-start gap-4 md:grid md:snap-none md:grid-cols-2 md:gap-6 lg:grid-cols-4">
+          {featured.map((card) => (
+            <li
+              key={card.id}
+              className="w-[72%] max-w-xs shrink-0 snap-start md:mx-auto md:w-full"
+            >
+              <TcgCard
+                subject={{
+                  kind: 'fanart',
+                  fanartId: card.id,
+                  name: card.name,
+                  imageUrl: card.imageUrl,
+                  artistName: card.credit,
+                  artistUrl: null,
+                  category: 'association',
+                  description: card.description,
+                }}
+                rarity={card.rarity}
+                labels={labels}
+                fullDescription
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
 
       {hidden > 0 && onShowAll && (
         <button

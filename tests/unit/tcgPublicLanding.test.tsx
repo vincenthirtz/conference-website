@@ -243,6 +243,21 @@ describe('/tcg — la page entière', () => {
     ).toBeGreaterThan(0);
   });
 
+  it('mobile : rang défilant nommé et focusable, une carte par élément', () => {
+    render(<TcgCatalogPage {...props} />);
+    const region = screen.getByRole('region', {
+      name: 'Cartes de l’association, défilement horizontal',
+    });
+    // Atteignable au clavier (flèches pour défiler), sans piège : un seul
+    // arrêt de tabulation, pas de gestionnaire de touche.
+    expect(region.getAttribute('tabindex')).toBe('0');
+    expect(region.className).toContain('overflow-x-auto');
+    expect(region.className).toContain('md:overflow-visible');
+    const items = region.querySelectorAll('li');
+    expect(items).toHaveLength(8);
+    for (const li of items) expect(li.className).toContain('snap-start');
+  });
+
   it('« voir toutes » bascule le catalogue sur l’association', () => {
     render(<TcgCatalogPage {...props} />);
     fireEvent.click(screen.getByRole('button', { name: /Voir les 10 cartes/ }));

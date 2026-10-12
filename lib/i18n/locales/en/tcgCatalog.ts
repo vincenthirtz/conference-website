@@ -64,6 +64,8 @@ export default {
   assoTitle: 'The team behind the Cup',
   assoLede:
     'Volunteers, staff, emblems: the association has its own cards, to collect like all the others. Get to know them — and try to gather them all.',
+  assoScrollHint: 'Swipe to see the other cards →',
+  assoCarouselLabel: 'Association cards, horizontal scroll',
   assoShowAll: 'See the {n} association cards in the catalogue',
 
   rarityTitle: 'What makes a card rare',

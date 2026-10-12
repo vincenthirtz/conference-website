@@ -73,6 +73,8 @@ export default ns('tcgCatalog', {
   assoTitle: 'L’équipe derrière la Cup',
   assoLede:
     'Bénévoles, staff, emblèmes : l’association a ses propres cartes, à collectionner comme les autres. Fais connaissance — et essaie de toutes les réunir.',
+  assoScrollHint: 'Fais glisser pour voir les autres cartes →',
+  assoCarouselLabel: 'Cartes de l’association, défilement horizontal',
   assoShowAll: 'Voir les {n} cartes de l’association dans le catalogue',
 
   rarityTitle: 'Ce qui rend une carte rare',
