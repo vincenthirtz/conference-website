@@ -37,6 +37,7 @@ export default {
     Équipes: 'Teams',
     Classement: 'Leaderboard',
     Ligues: 'Leagues',
+    Cartes: 'Cards',
     Communauté: 'Community',
     // /recrutement n'etait lie ni en navbar ni en footer : 0 annonce d'equipe
     // face a 13 joueuses libres. Les deux faces du marche sont cote a cote.
@@ -44,7 +45,6 @@ export default {
     'Recruter une joueuse': 'Recruit a player',
     "L'association": 'The association',
     Ambassadeur·rices: 'Ambassadors',
-    'Cartes à collectionner': 'Trading cards',
     Partenaires: 'Partners',
     'Édition 2025': '2025 edition',
   },

@@ -16,6 +16,11 @@ export default ns('footer', {
   colLegal: 'Légal & contact',
   leaderboard: 'Classement des joueuses',
   palmares: 'Palmarès',
+  // « Cartes à collectionner » et non « Cartes » comme la navbar : le pied de
+  // page est rendu sur la même page qu'elle, et deux liens au texte identique
+  // vers /tcg feraient deux correspondances là où un test en attend une (même
+  // raison que `joinTeam` ci-dessous). Le libellé long dit aussi ce que c'est.
+  cards: 'Cartes à collectionner',
   ambassadors: 'Ambassadeur·rices',
   rules: 'Règlement',
   news: 'Actualités OW',

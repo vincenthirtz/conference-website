@@ -10,6 +10,8 @@ import {
   flatPublicLinks,
   publicLinkKey,
 } from '@/components/Navbar/navigation';
+import nsNavbar from '@/lib/i18n/locales/fr/navbar';
+import enNavbar from '@/lib/i18n/locales/en/navbar';
 
 describe('PUBLIC_LINKS / flatPublicLinks', () => {
   it('les entrées masquées ne sortent dans AUCUN menu, barres comprises', () => {
@@ -55,5 +57,27 @@ describe('activePublicLinkRef', () => {
 
   it('une page de sous-menu active son entrée parente', () => {
     expect(activePublicLinkRef('/rejoindre')).toBe(key('Communauté'));
+  });
+
+  it('« Cartes » actif sur le catalogue et ses sous-pages', () => {
+    expect(activePublicLinkRef('/tcg')).toBe(key('Cartes'));
+    expect(activePublicLinkRef('/tcg/fan-art')).toBe(key('Cartes'));
+  });
+});
+
+describe('le TCG au premier niveau du menu', () => {
+  it('« Cartes » mène à /tcg, hors de tout sous-menu', () => {
+    const cards = PUBLIC_LINKS.find((l) => l.title === 'Cartes');
+    expect(cards?.ref).toBe('/tcg');
+    expect(cards?.subMenu).toBeUndefined();
+    // Un seul chemin vers /tcg : un doublon sous « Communauté » ferait deux
+    // entrées actives pour la même page.
+    const refs = flatPublicLinks().filter((l) => l.ref === '/tcg');
+    expect(refs).toHaveLength(1);
+  });
+
+  it('localisé « Cartes » / « Cards »', () => {
+    expect(nsNavbar.fr.publicLinks.Cartes).toBe('Cartes');
+    expect(enNavbar.publicLinks.Cartes).toBe('Cards');
   });
 });

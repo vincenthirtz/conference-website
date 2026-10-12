@@ -27,6 +27,7 @@ import {
   BlueskyIcon,
   DiscordIcon,
   LinkIcon,
+  CardsIcon,
 } from '@/components/Icons';
 import nsFooter from '@/lib/i18n/locales/fr/footer';
 import { DISPLAY_SOCIALS, type SocialKey } from '@/config/socials';
@@ -49,6 +50,9 @@ type FooterDict = typeof nsFooter.fr;
 const tournoiLinks = (t: FooterDict): FooterLink[] => [
   { label: t.leaderboard, href: '/leaderboard', Icon: TrophyIcon },
   { label: t.palmares, href: '/palmares', Icon: TrophyIcon },
+  // Le TCG est le prolongement du tournoi : chaque match y rapporte des
+  // pièces. Absent de tout lien de pied de page, on ne le trouvait pas.
+  { label: t.cards, href: '/tcg', Icon: CardsIcon },
   { label: t.ambassadors, href: '/ambassadors', Icon: LiveIcon },
   { label: t.rules, href: '/rules', Icon: RulesIcon },
   { label: t.news, href: '/actualites', Icon: NewsIcon },

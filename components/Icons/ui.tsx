@@ -532,3 +532,44 @@ export function LinkIcon({ className, fill }: Readonly<SVGTypes>): JSX.Element {
     </svg>
   );
 }
+
+/** Deux cartes en éventail — le TCG (cartes à collectionner). */
+export function CardsIcon({
+  className,
+  fill,
+}: Readonly<SVGTypes>): JSX.Element {
+  const stroke = fill || 'currentColor';
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M8.2 6.1 5.1 5.3a1.5 1.5 0 0 0-1.83 1.06L1.8 12.2a1.5 1.5 0 0 0 1.06 1.83l3.4.9"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <rect
+        x="8.5"
+        y="3.5"
+        width="11"
+        height="16"
+        rx="1.8"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.6"
+      />
+      <path
+        d="m14 8.5 1.1 2.2 2.4.35-1.75 1.7.42 2.4L14 14l-2.17 1.15.42-2.4-1.75-1.7 2.4-.35L14 8.5Z"
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

@@ -21,6 +21,10 @@
     "ref": "/leagues"
   },
   {
+    "title": "Cartes",
+    "ref": "/tcg"
+  },
+  {
     "title": "Communauté",
     "subMenu": [
       {
@@ -38,10 +42,6 @@
       {
         "title": "Ambassadeur·rices",
         "ref": "/live"
-      },
-      {
-        "title": "Cartes à collectionner",
-        "ref": "/tcg"
       },
       {
         "title": "Partenaires",

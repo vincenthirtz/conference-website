@@ -36,6 +36,9 @@ export default ns('navbar', {
     Équipes: 'Équipes',
     Classement: 'Classement',
     Ligues: 'Ligues',
+    // Le TCG au premier niveau : rangé sous « Communauté », personne ne le
+    // trouvait. `/tcg/fan-art` l'active aussi (cf. activePublicLinkRef).
+    Cartes: 'Cartes',
     Communauté: 'Communauté',
     // /recrutement n'etait lie ni en navbar ni en footer : 0 annonce d'equipe
     // face a 13 joueuses libres. Les deux faces du marche sont cote a cote.
@@ -43,7 +46,6 @@ export default ns('navbar', {
     'Recruter une joueuse': 'Recruter une joueuse',
     "L'association": "L'association",
     Ambassadeur·rices: 'Ambassadeur·rices',
-    'Cartes à collectionner': 'Cartes à collectionner',
     Partenaires: 'Partenaires',
     'Édition 2025': 'Édition 2025',
   },

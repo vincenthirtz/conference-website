@@ -22,4 +22,5 @@ export {
   CodeIcon,
   TrophyIcon,
   LinkIcon,
+  CardsIcon,
 } from './ui';
