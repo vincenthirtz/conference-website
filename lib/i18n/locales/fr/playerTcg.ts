@@ -156,6 +156,7 @@ export default ns('playerTcg', {
   errAlreadyRecycled: 'Cette carte a déjà été recyclée.',
 
   walletMatchWin: 'Victoire en match',
+  walletMatchLoss: 'Défaite en match',
   walletScrimWin: 'Victoire en scrim',
   walletBoosterPurchase: 'Achat d’un booster',
   walletAdminGrant: 'Ajustement par l’équipe',

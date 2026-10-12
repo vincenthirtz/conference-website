@@ -18,6 +18,7 @@ import { join } from 'node:path';
 
 import {
   BOOSTER_PRICE_COINS,
+  MATCH_LOSS_COINS,
   MATCH_WIN_COINS,
   SCRIM_WIN_COINS,
 } from '../../utils/tcg/economy';
@@ -48,6 +49,7 @@ describe('intégrité du registre', () => {
     expect(new Set(keys)).toEqual(
       new Set([
         'match_win',
+        'match_loss',
         'scrim_win',
         'booster_purchase',
         'twitch_drop',
@@ -116,6 +118,12 @@ describe('intégrité du registre', () => {
         continue;
       }
       // Un titre, pas une ouverture de paquet (cf. `PUBLIC_MVP_COINS`).
+      // Une défaite paie des pièces, la victoire garde son paquet
+      // (cf. `MATCH_LOSS_COINS`).
+      if (source.key === 'match_loss') {
+        expect(source.packs).toBe(0);
+        continue;
+      }
       if (source.key === 'public_mvp') {
         expect(source.packs).toBe(0);
         continue;
@@ -198,6 +206,37 @@ describe('pronostic juste', () => {
   it('attache la récompense au match, une fois par personne', () => {
     expect(getEarnSource('match_prediction')?.refKind).toBe('match');
     expect(getEarnSource('match_prediction')?.maxPerRef).toBe(1);
+  });
+});
+
+describe('défaite en match de tournoi', () => {
+  it('rapporte le montant d’une victoire, en pièces seules', () => {
+    // La demande produit : « chaque défaite rapporte 100 pièces » — soit le
+    // montant d’une victoire, dont il est dérivé (jamais « 100 » recopié).
+    expect(MATCH_LOSS_COINS).toBe(MATCH_WIN_COINS);
+    expect(earnReward('match_loss')).toEqual({
+      packs: 0,
+      coins: MATCH_LOSS_COINS,
+    });
+  });
+
+  it('paie un booster en trois défaites, ni plus ni moins', () => {
+    expect(3 * MATCH_LOSS_COINS).toBe(BOOSTER_PRICE_COINS);
+    expect(2 * MATCH_LOSS_COINS).toBeLessThan(BOOSTER_PRICE_COINS);
+  });
+
+  it('reste sous la victoire : mêmes pièces, sans le paquet', () => {
+    const win = earnReward('match_win');
+    const loss = earnReward('match_loss');
+    expect(loss.coins).toBeLessThanOrEqual(win.coins);
+    expect(loss.packs).toBeLessThan(win.packs);
+  });
+
+  it('attache la récompense au match, comme la victoire', () => {
+    expect(getEarnSource('match_loss')?.refKind).toBe('match');
+    expect(getEarnSource('match_loss')?.refKind).toBe(
+      getEarnSource('match_win')?.refKind
+    );
   });
 });
 
@@ -317,6 +356,8 @@ describe('schemaReady', () => {
       // `match_predictions.sql` (appliquée le 2026-09-15) :
       // levé avec le code. Sans la migration, la table des pronostics n'existe
       // pas : aucun pronostic ne s'enregistre, donc aucun n'est dû.
+      // `tcg_match_loss_reward.sql` (2026-10-12) : levé avec le code.
+      'match_loss',
       'match_prediction',
       'match_win',
       // `tcg_public_mvp.sql` : levé avec le code. Sans la migration, le

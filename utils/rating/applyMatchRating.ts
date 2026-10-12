@@ -28,6 +28,11 @@ import {
 import { deriveTeamRatings } from './deriveTeamRatings';
 import { isNonPlayingTeamRole } from '../teams/roleKind';
 import { grantVictoryRewards } from '../tcg/grantVictoryRewards';
+import {
+  defeatRewardLoserTeam,
+  grantDefeatRewards,
+  MATCH_LOSS_SOURCE_KIND,
+} from '../tcg/grantDefeatRewards';
 
 const SCORED_STATUSES = new Set(['finished', 'walkover']);
 
@@ -278,6 +283,10 @@ async function recordedWinnerTeam(
  * Les gains déjà versés au camp qui n'avait pas gagné ne sont PAS repris : ils
  * ont pu être dépensés, et un retrait n'aurait pas de bonne issue — même
  * posture que la MVP du public rouverte (cf. grantPublicMvp.ts).
+ *
+ * Les pièces de DÉFAITE suivent la même règle : le camp d'abord payé en défaite
+ * les garde et reçoit la victoire ; le camp d'abord payé en victoire la garde et
+ * ne reçoit PAS la défaite en plus (cf. grantDefeatRewards.ts).
  */
 async function reconcileCorrectedMatch(
   tenantId: string,
@@ -514,6 +523,18 @@ export async function applyMatchRatingIncremental(
       scrimId: match.scrim_id ?? null,
       participants,
     });
+
+    // 12) Pièces de défaite du camp perdant — même moment, mêmes contrats.
+    //     Ni scrim ni forfait (cf. grantDefeatRewards.ts). Ne lève jamais.
+    const loserTeamId = defeatRewardLoserTeam(match);
+    if (loserTeamId) {
+      await grantDefeatRewards({
+        tenantId,
+        matchId,
+        loserTeamId,
+        participants,
+      });
+    }
   } catch (err) {
     logger.error('[rating] applyMatchRatingIncremental exception', err);
   }
@@ -858,6 +879,13 @@ export async function rebuildRatings(
  *
  * Idempotent : `grantVictoryRewards` n'écrit rien de déjà écrit (contraintes
  * UNIQUE). Les gagnantes déjà payées ne reçoivent rien de plus.
+ *
+ * LES DÉFAITES, MÊME PÉRIMÈTRE : seul un match qui a DÉJÀ payé une défaite
+ * (`match_loss`) voit ses perdantes actuelles rattrapées. Sans cette borne, le
+ * premier recalcul après la mise en service paierait d'un coup toutes les
+ * défaites antérieures au barème — la distribution rétroactive refusée
+ * ci-dessus. `grantDefeatRewards` écarte de lui-même les joueuses déjà payées
+ * en victoire sur ce match (score corrigé : pas de double paiement).
  */
 async function repayCorrectedVictories(
   tenantId: string,
@@ -867,12 +895,14 @@ async function repayCorrectedVictories(
   const refOf = (m: MatchRow) => (m.scrim_id ? `scrim:${m.scrim_id}` : m.id);
   const refs = matches.map(refOf);
   const paid = new Map<string, Set<string>>();
+  // Défaites déjà payées : id du match -> joueuses créditées.
+  const paidLoss = new Map<string, Set<string>>();
   for (let i = 0; i < refs.length; i += 100) {
     const { data, error } = await supabaseAdmin
       .from('tcg_wallet_entries')
-      .select('source_ref, user_id')
+      .select('source_ref, user_id, source_kind')
       .eq('tenant_id', tenantId)
-      .in('source_kind', ['match_win', 'scrim_win'])
+      .in('source_kind', ['match_win', 'scrim_win', MATCH_LOSS_SOURCE_KIND])
       .in('source_ref', refs.slice(i, i + 100));
     if (error) {
       // Illisible : on ne paie rien plutôt que de payer sur une lecture
@@ -883,7 +913,14 @@ async function repayCorrectedVictories(
     for (const r of (data ?? []) as Array<{
       source_ref: string;
       user_id: string;
+      source_kind?: string;
     }>) {
+      if (r.source_kind === MATCH_LOSS_SOURCE_KIND) {
+        const lossSet = paidLoss.get(r.source_ref) ?? new Set<string>();
+        lossSet.add(r.user_id);
+        paidLoss.set(r.source_ref, lossSet);
+        continue;
+      }
       const set = paid.get(r.source_ref) ?? new Set<string>();
       set.add(r.user_id);
       paid.set(r.source_ref, set);
@@ -891,9 +928,16 @@ async function repayCorrectedVictories(
   }
 
   for (const m of matches) {
+    const participants = participantsByMatch.get(m.id) ?? [];
+    await repayCorrectedDefeat(
+      tenantId,
+      m,
+      participants,
+      paidLoss.get(m.id),
+      paid.get(refOf(m))
+    );
     const paidUsers = paid.get(refOf(m));
     if (!paidUsers || !m.winner_team_id) continue;
-    const participants = participantsByMatch.get(m.id) ?? [];
     const winners = participants.filter((p) => p.teamId === m.winner_team_id);
     // Toutes les gagnantes déjà payées : rien à rattraper.
     if (winners.every((p) => paidUsers.has(p.userId))) continue;
@@ -910,4 +954,38 @@ async function repayCorrectedVictories(
       participants,
     });
   }
+}
+
+/**
+ * Rattrape les pièces de défaite d'un match qui en a DÉJÀ payé (cf.
+ * `repayCorrectedVictories`). Idempotent : la contrainte UNIQUE écarte les
+ * perdantes déjà créditées, et `grantDefeatRewards` celles payées en victoire.
+ *
+ * Le tri préalable n'est PAS l'idempotence : il évite seulement d'appeler
+ * l'écrivain (lecture + écriture + recalcul de solde) pour chacun des matchs
+ * déjà réglés, à chaque recalcul complet.
+ */
+async function repayCorrectedDefeat(
+  tenantId: string,
+  m: MatchRow,
+  participants: readonly RatingParticipant[],
+  paidLossUsers: ReadonlySet<string> | undefined,
+  paidWinUsers: ReadonlySet<string> | undefined
+): Promise<void> {
+  if (!paidLossUsers) return;
+  const loserTeamId = defeatRewardLoserTeam(m);
+  if (!loserTeamId) return;
+  const missing = participants.some(
+    (p) =>
+      p.teamId === loserTeamId &&
+      !paidLossUsers.has(p.userId) &&
+      !paidWinUsers?.has(p.userId)
+  );
+  if (!missing) return;
+  await grantDefeatRewards({
+    tenantId,
+    matchId: m.id,
+    loserTeamId,
+    participants,
+  });
 }

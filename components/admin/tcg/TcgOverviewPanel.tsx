@@ -125,6 +125,7 @@ export type TcgOverviewLabels = {
   coinsBySourceTitle: string;
   coinsBySourceEmpty: string;
   coinsSourceMatchWin: string;
+  coinsSourceMatchLoss: string;
   coinsSourceScrimWin: string;
   coinsSourceTwitchDrop: string;
   coinsSourceWelcomeGift: string;
@@ -237,6 +238,8 @@ function coinSourceLabel(kind: string, labels: TcgOverviewLabels): string {
   switch (kind) {
     case 'match_win':
       return labels.coinsSourceMatchWin;
+    case 'match_loss':
+      return labels.coinsSourceMatchLoss;
     case 'scrim_win':
       return labels.coinsSourceScrimWin;
     case 'twitch_drop':

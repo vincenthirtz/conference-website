@@ -137,3 +137,65 @@ describe('score corrigé après notation', () => {
     expect(grantVictoryRewards).not.toHaveBeenCalled();
   });
 });
+
+/** Les pièces de défaite écrites pour ce match, par joueuse. */
+function lossPaidTo(): string[] {
+  return (store.tcg_wallet_entries || [])
+    .filter((e) => e.source_kind === 'match_loss' && e.source_ref === MATCH)
+    .map((e) => e.user_id as string)
+    .sort();
+}
+
+describe('pièces de défaite', () => {
+  it('paie le camp perdant à la notation du match', async () => {
+    seed(TEAM_A);
+    await applyMatchRatingIncremental(TENANT, MATCH);
+    expect(lossPaidTo()).toEqual([B1, B2].sort());
+  });
+
+  it("score corrigé : le camp d'abord payé en victoire ne reçoit pas la défaite en plus", async () => {
+    seed(TEAM_B); // saisi à l'envers : A perd
+    await applyMatchRatingIncremental(TENANT, MATCH);
+    expect(lossPaidTo()).toEqual([A1, A2].sort());
+    // Ce que la victoire (mockée ici) aurait écrit pour B.
+    for (const user_id of [B1, B2]) {
+      (store.tcg_wallet_entries as Array<Record<string, unknown>>).push({
+        tenant_id: TENANT,
+        user_id,
+        amount: 100,
+        source_kind: 'match_win',
+        source_ref: MATCH,
+      });
+    }
+
+    (store.matches as Array<Record<string, unknown>>)[0].winner_team_id =
+      TEAM_A; // corrigé
+    await applyMatchRatingIncremental(TENANT, MATCH);
+
+    // Aucune reprise : A garde sa défaite (et recevra la victoire) ; B garde
+    // sa victoire et ne touche PAS la défaite.
+    expect(lossPaidTo()).toEqual([A1, A2].sort());
+  });
+
+  it("le rebuild ne paie pas les défaites d'un match qui n'en a jamais payé", async () => {
+    seed(TEAM_A);
+    paidTo([A1, A2]); // victoire payée avant la mise en service des défaites
+    await rebuildRatings(TENANT);
+    expect(lossPaidTo()).toEqual([]);
+  });
+
+  it('le rebuild rattrape une perdante oubliée quand le match a déjà payé une défaite', async () => {
+    seed(TEAM_A);
+    store.tcg_wallet_entries = [
+      {
+        tenant_id: TENANT,
+        user_id: B1,
+        amount: 100,
+        source_kind: 'match_loss',
+        source_ref: MATCH,
+      },
+    ];
+    await rebuildRatings(TENANT);
+    expect(lossPaidTo()).toEqual([B1, B2].sort());
+  });
+});

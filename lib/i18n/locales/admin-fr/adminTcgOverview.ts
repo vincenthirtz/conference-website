@@ -59,6 +59,7 @@ export default adminNs('adminTcgOverview', {
   coinsBySourceTitle: 'Origine des gains',
   coinsBySourceEmpty: 'Aucun gain enregistré.',
   coinsSourceMatchWin: 'Victoires en match',
+  coinsSourceMatchLoss: 'Défaites en match',
   coinsSourceScrimWin: 'Victoires en scrim',
   coinsSourceTwitchDrop: 'Drops en direct',
   coinsSourceWelcomeGift: 'Cadeaux de bienvenue',

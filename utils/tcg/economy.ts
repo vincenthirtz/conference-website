@@ -46,6 +46,21 @@ export const SCRIM_WIN_COINS = Math.round(
 export const BOOSTER_PRICE_COINS = 3 * MATCH_WIN_COINS;
 
 /**
+ * Pièces gagnées pour une DÉFAITE en match de tournoi (2026-10-12).
+ *
+ * Décision produit : « chaque défaite rapporte 100 pièces, trois défaites
+ * donnent un booster ». D'où le montant d'une victoire, et pas un chiffre écrit
+ * en dur : `BOOSTER_PRICE_COINS = 3 * MATCH_WIN_COINS`, donc trois défaites
+ * paient exactement un booster, et un réglage du barème emporte les deux.
+ *
+ * LA VICTOIRE RESTE AU-DESSUS : elle donne les mêmes pièces PLUS un paquet
+ * offert. Une défaite ne donne que des pièces.
+ *
+ * Pas de pendant en scrim ni en forfait : cf. `utils/tcg/grantDefeatRewards.ts`.
+ */
+export const MATCH_LOSS_COINS = MATCH_WIN_COINS;
+
+/**
  * Ce que rapporte le recyclage d'un DOUBLON.
  *
  * Un dixième du booster : dix doublons pour en racheter un. Le rapport se

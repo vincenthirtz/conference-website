@@ -121,6 +121,7 @@ export default {
   errAlreadyRecycled: 'That card has already been recycled.',
 
   walletMatchWin: 'Match win',
+  walletMatchLoss: 'Match loss',
   walletScrimWin: 'Scrim win',
   walletBoosterPurchase: 'Booster purchase',
   walletAdminGrant: 'Adjusted by the team',

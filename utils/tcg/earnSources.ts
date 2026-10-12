@@ -59,6 +59,7 @@
 
 import {
   BOOSTER_PRICE_COINS,
+  MATCH_LOSS_COINS,
   MATCH_WIN_COINS,
   SCRIM_WIN_COINS,
 } from './economy';
@@ -244,6 +245,7 @@ export const PLACEMENT_TIERS: ReadonlyArray<{
 
 export type TcgEarnSourceKey =
   | 'match_win'
+  | 'match_loss'
   | 'scrim_win'
   | 'booster_purchase'
   | 'twitch_drop'
@@ -349,6 +351,24 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
     key: 'match_win',
     packs: 1,
     coins: MATCH_WIN_COINS,
+    refKind: 'match',
+    maxPerRef: 1,
+    schemaReady: true,
+  },
+  {
+    // ALLUMÉE le 2026-10-12 avec `tcg_match_loss_reward.sql` (CHECK élargi),
+    // écrite par `utils/tcg/grantDefeatRewards.ts` au même moment que la
+    // victoire. Levée avec le code, comme `public_mvp` : tant que la
+    // migration manque, l'écriture est refusée en 23514 et journalisée, sans
+    // gêner le score ni le rating.
+    key: 'match_loss',
+    // DES PIÈCES SEULES : la victoire garde son paquet, c'est ce qui la laisse
+    // au-dessus de la défaite à montant de pièces égal (cf. `MATCH_LOSS_COINS`).
+    packs: 0,
+    coins: MATCH_LOSS_COINS,
+    // `source_ref` = le MATCH, comme `match_win` : une défaite payée par
+    // match et par personne. Pas de scrim (son miroir se recrée sous un autre
+    // id), pas de forfait.
     refKind: 'match',
     maxPerRef: 1,
     schemaReady: true,

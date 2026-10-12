@@ -47409,6 +47409,21 @@
          "packs"
         ]
        },
+       "matchLoss": {
+        "type": "object",
+        "properties": {
+         "coins": {
+          "type": "number"
+         },
+         "packs": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "coins",
+         "packs"
+        ]
+       },
        "matchPrediction": {
         "type": "object",
         "properties": {
@@ -47463,6 +47478,7 @@
        "battlenetVerified",
        "checkinStreak",
        "collectionSet",
+       "matchLoss",
        "matchPrediction",
        "matchWin",
        "placement",

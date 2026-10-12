@@ -37,6 +37,7 @@ import {
 import { DEFAULT_TENANT_ID } from '../../utils/tenant';
 import {
   BOOSTER_PRICE_COINS,
+  MATCH_LOSS_COINS,
   MATCH_WIN_COINS,
   SCRIM_WIN_COINS,
 } from '../../utils/tcg/economy';
@@ -157,6 +158,10 @@ describe('GET /api/player/tcg/packs', () => {
     expect(res.body.boosterPrice).toBe(BOOSTER_PRICE_COINS);
     expect(res.body.earn).toEqual({
       matchWin: MATCH_WIN_COINS,
+      matchLoss: {
+        coins: MATCH_LOSS_COINS,
+        packs: earnReward('match_loss').packs,
+      },
       scrimWin: SCRIM_WIN_COINS,
       // Ajouté pour le guide (`/player/tcg-guide`), qui énonce le barème et ne
       // doit surtout pas le recopier. Ce `toEqual` STRICT est volontaire : il

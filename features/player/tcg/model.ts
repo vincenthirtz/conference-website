@@ -364,6 +364,8 @@ export function walletSourceLabel(
   switch (sourceKind) {
     case 'match_win':
       return t.walletMatchWin;
+    case 'match_loss':
+      return t.walletMatchLoss;
     case 'scrim_win':
       return t.walletScrimWin;
     case 'booster_purchase':

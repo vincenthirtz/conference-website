@@ -46,6 +46,7 @@ export default {
   coinsBySourceTitle: 'Where gains come from',
   coinsBySourceEmpty: 'No gain recorded.',
   coinsSourceMatchWin: 'Match wins',
+  coinsSourceMatchLoss: 'Match losses',
   coinsSourceScrimWin: 'Scrim wins',
   coinsSourceTwitchDrop: 'Live drops',
   coinsSourceWelcomeGift: 'Welcome gifts',

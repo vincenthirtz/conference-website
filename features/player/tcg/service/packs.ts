@@ -35,6 +35,7 @@ import {
 } from '@/utils/tcg/pageCursor';
 import {
   BOOSTER_PRICE_COINS,
+  MATCH_LOSS_COINS,
   MATCH_WIN_COINS,
   SCRIM_WIN_COINS,
   RECYCLE_REFUND_COINS,
@@ -119,6 +120,11 @@ export async function listPacks(ctx: TcgServiceContext, query: PacksQuery) {
     boosterPrice: BOOSTER_PRICE_COINS,
     earn: {
       matchWin: MATCH_WIN_COINS,
+      // Défaite en match de tournoi (2026-10-12) : des pièces seules.
+      matchLoss: {
+        coins: MATCH_LOSS_COINS,
+        packs: earnReward('match_loss').packs,
+      },
       scrimWin: SCRIM_WIN_COINS,
       // Inconditionnels : des barèmes, pas des promesses.
       welcomeGift: WELCOME_GIFT_COINS,
