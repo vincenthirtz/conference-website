@@ -28,6 +28,7 @@ import {
   MATCH_PREDICTION_COINS,
   CHECKIN_STREAK_LENGTH,
   PLACEMENT_TIERS,
+  TOURNAMENT_PARTICIPATION_COINS,
   TCG_EARN_SOURCES,
   TWITCH_DROP_COINS,
   earnReward,
@@ -292,6 +293,12 @@ describe('hiérarchie des récompenses', () => {
     expect(champion?.coins).toBeGreaterThan(BOOSTER_PRICE_COINS);
   });
 
+  it('fait valoir toute place du classement plus qu’un abandon (DNF)', () => {
+    for (const tier of PLACEMENT_TIERS) {
+      expect(tier.coins).toBeGreaterThan(TOURNAMENT_PARTICIPATION_COINS);
+    }
+  });
+
   it('décroît strictement du meilleur rang au moins bon', () => {
     for (let i = 1; i < PLACEMENT_TIERS.length; i++) {
       expect(PLACEMENT_TIERS[i].maxRank).toBeGreaterThan(
@@ -471,12 +478,12 @@ describe('earnReward', () => {
 
   it('résout le palmarès selon le rang', () => {
     expect(earnReward('tournament_placement', { rank: 1 })).toEqual({
-      packs: 3,
-      coins: 5 * MATCH_WIN_COINS,
+      packs: 5,
+      coins: 30 * MATCH_WIN_COINS,
     });
     expect(earnReward('tournament_placement', { rank: 3 })).toEqual({
-      packs: 1,
-      coins: 2 * MATCH_WIN_COINS,
+      packs: 2,
+      coins: 15 * MATCH_WIN_COINS,
     });
   });
 

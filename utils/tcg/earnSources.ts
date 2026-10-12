@@ -235,8 +235,9 @@ export const PUBLIC_MVP_COINS = MATCH_WIN_COINS;
  * joué une partie de la saison. Écrit comme un MULTIPLE de `MATCH_WIN_COINS`,
  * comme tout le barème : régler la référence règle celui-ci avec elle.
  *
- * ⚠️ PLUS QUE LE PALMARÈS EN PIÈCES (le titre vaut 5 victoires + 3 paquets).
- * C'est le montant demandé ; le palmarès reste devant en paquets.
+ * TOUJOURS SOUS LE PALMARÈS : chaque palier de `PLACEMENT_TIERS` (même le
+ * top 8) rapporte davantage, en pièces comme en paquets — terminer un tournoi
+ * doit valoir plus que l'abandonner (barème relevé le 2026-10-12).
  *
  * DES PIÈCES SEULES : un paquet aurait exigé d'élargir les deux contraintes de
  * `tcg_packs` (celles des 58 paquets du 2026-09-14).
@@ -251,10 +252,12 @@ export const PLACEMENT_TIERS: ReadonlyArray<{
   coins: number;
   packs: number;
 }> = [
-  { maxRank: 1, badgeKey: 'champion', coins: 5 * MATCH_WIN_COINS, packs: 3 },
-  { maxRank: 2, badgeKey: 'finalist', coins: 3 * MATCH_WIN_COINS, packs: 2 },
-  { maxRank: 3, badgeKey: 'podium', coins: 2 * MATCH_WIN_COINS, packs: 1 },
-  { maxRank: 8, badgeKey: 'top_cut', coins: 1 * MATCH_WIN_COINS, packs: 1 },
+  // Relevé le 2026-10-12 (décision produit, Cup 2026) : chaque palier passe
+  // au-dessus de la participation d'une équipe en DNF (1000 pièces).
+  { maxRank: 1, badgeKey: 'champion', coins: 30 * MATCH_WIN_COINS, packs: 5 },
+  { maxRank: 2, badgeKey: 'finalist', coins: 20 * MATCH_WIN_COINS, packs: 3 },
+  { maxRank: 3, badgeKey: 'podium', coins: 15 * MATCH_WIN_COINS, packs: 2 },
+  { maxRank: 8, badgeKey: 'top_cut', coins: 12 * MATCH_WIN_COINS, packs: 1 },
 ] as const;
 
 /* ---------------------------------------------------------------------------

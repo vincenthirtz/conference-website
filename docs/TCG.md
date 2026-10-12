@@ -393,7 +393,7 @@ ne remplace pas la première.
 | `RECYCLE_REFUND_COINS` | 30     | `BOOSTER_PRICE_COINS / 10`, plancher à 1               |
 | `TWITCH_DROP_COINS`    | 25     | `SCRIM_WIN_COINS / 2`, plancher à 1 — + un paquet      |
 | `CHECKIN_STREAK_COINS` | 50     | `SCRIM_WIN_COINS` — + un paquet, tous les 5 check-ins  |
-| `PLACEMENT_TIERS`      | 1→8    | rang 1 : 500 + 3 paquets · 2 : 300 + 2 · 3 : 200 + 1 · 4-8 : 100 + 1 |
+| `PLACEMENT_TIERS`      | 1→8    | rang 1 : 3000 + 5 paquets · 2 : 2000 + 3 · 3 : 1500 + 2 · 4-8 : 1200 + 1 (relevé le 2026-10-12, au-dessus du DNF à 1000) |
 | `BATTLENET_VERIFIED_COINS` | 100 | `MATCH_WIN_COINS`, **sans paquet** — une fois à vie, compte Battle.net prouvé |
 | `COLLECTION_SET_COINS` | 100 | `MATCH_WIN_COINS`, **sans paquet** — une fois par série complétée (cf. « Les séries ») |
 | `MATCH_PREDICTION_COINS` | 25 | `SCRIM_WIN_COINS / 2`, plancher à 1, **sans paquet** — un pronostic juste par match (cf. « Les pronostics ») |
