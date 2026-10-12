@@ -15,6 +15,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { runEmailDispatcher } from '@/utils/emailDispatcher';
+import { runCronSingleFlight } from '@/utils/cronSingleFlight';
 
 function isAuthorized(req: NextApiRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -44,6 +45,12 @@ export default async function handler(
     return res.status(500).json({ error: 'Supabase admin not configured' });
   }
 
+  // Un passage à la fois : sur un serveur persistant, le passage abandonné par
+  // la fonction planifiée (délai 20 s) continue — cf. utils/cronSingleFlight.
+  return runCronSingleFlight('email-digest', res, () => processTick(res));
+}
+
+async function processTick(res: NextApiResponse) {
   try {
     const stats = await runEmailDispatcher();
     logger.info(

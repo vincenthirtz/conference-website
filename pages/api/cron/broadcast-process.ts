@@ -7,6 +7,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/utils/supabase';
 import { processCampaignWave } from '@/utils/broadcasts';
+import { runCronSingleFlight } from '@/utils/cronSingleFlight';
 
 import { logger } from '../../../utils/logger';
 function isAuthorized(req: NextApiRequest): boolean {
@@ -37,6 +38,12 @@ export default async function handler(
     return res.status(500).json({ error: 'Supabase admin not configured' });
   }
 
+  // Un passage à la fois : sur un serveur persistant, le passage abandonné par
+  // la fonction planifiée (délai 20 s) continue — cf. utils/cronSingleFlight.
+  return runCronSingleFlight('broadcast-process', res, () => processTick(res));
+}
+
+async function processTick(res: NextApiResponse) {
   // Liste les campagnes éligibles
   const { data: schedules, error } = await supabaseAdmin
     .from('broadcast_schedules')

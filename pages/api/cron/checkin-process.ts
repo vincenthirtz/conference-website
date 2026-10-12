@@ -8,6 +8,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { processCheckinForUpcomingMatches } from '@/utils/checkin';
 import { writeCronHeartbeat } from '@/utils/cronHeartbeat';
+import { runCronSingleFlight } from '@/utils/cronSingleFlight';
 
 import { logger } from '../../../utils/logger';
 export const config = {
@@ -48,6 +49,17 @@ export default async function handler(
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // Un passage à la fois : sur un serveur persistant, le passage abandonné par
+  // la fonction planifiée (délai 20 s) continue — cf. utils/cronSingleFlight.
+  return runCronSingleFlight(
+    'checkin-process',
+    res,
+    () => processTick(res),
+    5 * 60_000
+  );
+}
+
+async function processTick(res: NextApiResponse) {
   try {
     // S5c : le cron tourne en mode cross-tenant intentionnellement — il scrute
     // tous les matchs proches du kickoff, peu importe le tenant. La logique

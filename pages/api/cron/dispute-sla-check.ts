@@ -24,6 +24,7 @@ import {
   markEscalationPinged,
 } from '@/utils/disputes/slaBreaches';
 import { logger } from '@/utils/logger';
+import { runCronSingleFlight } from '@/utils/cronSingleFlight';
 
 type Counters = {
   tenants_scanned: number;
@@ -165,6 +166,18 @@ export default async function handler(
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // Un passage à la fois : deux passages concurrents verraient la même brèche
+  // avant le tampon `escalation_pinged_at` et la signaleraient deux fois — cf.
+  // utils/cronSingleFlight.
+  return runCronSingleFlight(
+    'dispute-sla-check',
+    res,
+    () => processTick(res),
+    5 * 60_000
+  );
+}
+
+async function processTick(res: NextApiResponse) {
   try {
     const counters = await runDisputeSlaCheck();
     logger.info(

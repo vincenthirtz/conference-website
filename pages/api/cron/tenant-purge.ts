@@ -26,6 +26,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { runCronSingleFlight } from '@/utils/cronSingleFlight';
 import { PURGEABLE_TABLES } from '@/utils/tenants/tenantTables';
 import { PROTECTED_TENANT_SLUGS } from '@/utils/adminTenants';
 import { invalidateLifecycleCache } from '@/utils/tenants/lifecycle';
@@ -98,6 +99,12 @@ export default async function handler(
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // Un passage à la fois : sur un serveur persistant, le passage abandonné par
+  // la fonction planifiée (délai 20 s) continue — cf. utils/cronSingleFlight.
+  return runCronSingleFlight('tenant-purge', res, () => processTick(res));
+}
+
+async function processTick(res: NextApiResponse) {
   const nowIso = new Date().toISOString();
 
   const { data, error } = await supabaseAdmin

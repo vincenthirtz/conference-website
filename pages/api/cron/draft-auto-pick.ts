@@ -9,6 +9,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { runDraftAutoPickTick } from '@/utils/draftEngine';
 import { writeCronHeartbeat } from '@/utils/cronHeartbeat';
+import { runCronSingleFlight } from '@/utils/cronSingleFlight';
 import { logger } from '../../../utils/logger';
 
 function isAuthorized(req: NextApiRequest): boolean {
@@ -38,6 +39,17 @@ export default async function handler(
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // Un passage à la fois : sur un serveur persistant, le passage abandonné par
+  // la fonction planifiée (délai 20 s) continue — cf. utils/cronSingleFlight.
+  return runCronSingleFlight(
+    'draft-auto-pick',
+    res,
+    () => processTick(res),
+    5 * 60_000
+  );
+}
+
+async function processTick(res: NextApiResponse) {
   try {
     const summary = await runDraftAutoPickTick();
 

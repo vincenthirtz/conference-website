@@ -36,6 +36,7 @@ import { emitBotEvent } from '@/utils/botEvents';
 import { getIntegrationSecret } from '@/utils/integrationSecrets';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { runCronSingleFlight } from '@/utils/cronSingleFlight';
 import {
   alreadyMirrored,
   buildMirrorPayload,
@@ -346,6 +347,13 @@ export default async function handler(
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // Un passage à la fois : deux passages concurrents liraient le même curseur
+  // et émettraient deux fois. Sur un serveur persistant, le passage abandonné
+  // par la fonction planifiée (délai 20 s) continue — cf. utils/cronSingleFlight.
+  return runCronSingleFlight('social-mirror', res, () => processTick(req, res));
+}
+
+async function processTick(req: NextApiRequest, res: NextApiResponse) {
   const tenantIds = await resolveTargetTenants(req);
   const results: Array<Record<string, unknown>> = [];
 

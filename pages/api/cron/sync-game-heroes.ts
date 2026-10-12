@@ -9,6 +9,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { syncAllGameHeroes } from '@/utils/gameHeroesSync';
 import { supabaseAdmin } from '@/utils/supabase';
+import { runCronSingleFlight } from '@/utils/cronSingleFlight';
 import { logger } from '../../../utils/logger';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
@@ -39,6 +40,12 @@ export default async function handler(
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // Un passage à la fois : sur un serveur persistant, le passage abandonné par
+  // la fonction planifiée (délai 20 s) continue — cf. utils/cronSingleFlight.
+  return runCronSingleFlight('sync-game-heroes', res, () => processTick(res));
+}
+
+async function processTick(res: NextApiResponse) {
   try {
     const summary = await syncAllGameHeroes();
 
