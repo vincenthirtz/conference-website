@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # our-product.sh [fichier-sortie.md]
 #
-# Inventaire de NOTRE produit (conference-website + bot docker-box), lu dans le
+# Inventaire de NOTRE produit (conference-website + bot owwc-discord-bot), lu dans le
 # CODE, avec la preuve (fichier) de chaque ligne. La comparaison avec un
 # concurrent ne doit jamais reposer sur la mémoire d'une conversation : un plan
 # « gratuit » qui ne l'est plus, une capacité retirée… se lisent ici.

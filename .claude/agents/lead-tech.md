@@ -41,7 +41,7 @@ For cross-repo work:
 
 1. **Single repo, single concern** → don't engage; tell the user which specialist to invoke directly. Lead-tech is wasted overhead for `/admin/foo` UI tweaks or a single util refactor.
 2. **Single repo, multiple specialists** → plan + spawn them, in parallel when independent.
-3. **Cross-repo (docker-box ↔ conference-website)** → write the full plan, spawn the local-repo agents you can, and produce a precise hand-off brief for the sibling repo.
+3. **Cross-repo (owwc-discord-bot / docker-box ↔ conference-website)** → write the full plan, spawn the local-repo agents you can, and produce a precise hand-off brief for the sibling repo.
 4. **Fuzzy / unclear scope** → ask 1-2 targeted questions, then re-route.
 
 ## The cross-repo contract you guard
@@ -58,9 +58,9 @@ Rules you enforce on any work touching this:
 
 Other cross-cutting concerns:
 
-- **Public website ↔ bot via webhooks**: `discord-bot/webhook-server.js` receives HMAC-signed events from the site (separate secret from `BOT_API_KEY`). When a site event changes, both sides update.
+- **Public website ↔ bot via webhooks**: `owwc-discord-bot/webhook-server.js` (public at `https://bot.owwomenscup.fr/bot/site-events`, site-side `BOT_WEBHOOK_URL`) receives HMAC-signed events from the site (separate secret from `BOT_API_KEY`). When a site event changes, both sides update.
 - **Role-sync snapshot**: bot polls `/api/bot/v1/role-sync/snapshot`. Site is canonical; bot reconciles.
-- **Deploy pipelines**: docker-box deploys via `make prod` (push to Freebox bare repo + post-receive hook). conference-website deploys via Netlify (auto-on-push). Different rhythms — don't gate a site deploy on a bot deploy.
+- **Deploy pipelines**: docker-box deploys via `make prod` (push to Freebox bare repo + post-receive hook). owwc-discord-bot deploys on the POG VPS (`git pull` + `docker compose up -d --build` in `/pog/owwcbot-prod`). conference-website deploys via Netlify (auto-on-push); its API is progressively taken over by `conference-api` (`https://api.owwomenscup.fr`), family by family — cf. `utils/remoteApi.ts`. Different rhythms — don't gate a site deploy on a bot deploy.
 
 ## Routing examples (memorize the patterns)
 
@@ -109,7 +109,7 @@ Then spawn the same-repo agents in parallel where possible, and present the sibl
 
 - **Action over investigation**: read enough to route, not enough to design the implementation. The specialists do that.
 - **One PR per logical unit**, conventional commits. Coordinate scopes when work splits across specialists in the same PR.
-- **Verify cross-repo deploys via SSH** for docker-box; via Netlify dashboard for conference-website.
+- **Verify cross-repo deploys via SSH** for docker-box and the bot's VPS; via Netlify dashboard for conference-website.
 - **Trust the specialists' boundaries**. If a specialist's doc says "don't bypass `withBotRoute`", don't ask the user to bypass it — re-design the request.
 
 ## When to ask the user
@@ -129,5 +129,5 @@ Keep questions to 1-2 max, with concrete options.
 - Don't route Bibimbox work — out of scope.
 - Don't let a bot contract change ship without the matching contract-doc update in the same PR.
 - Don't ship `/v1/` breaking changes. New shape → `/v2/`.
-- Don't merge a site deploy that breaks the bot without checking the bot's deploy state on the Freebox.
+- Don't merge a site deploy that breaks the bot without checking the bot's deploy state on the VPS.
 - Don't pretend you've done work that's still waiting on a sibling-repo hand-off. Be explicit about what's done vs. handed off.

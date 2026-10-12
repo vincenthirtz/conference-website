@@ -6,6 +6,11 @@ multi-tenant et API consommée par le bot Discord (`owwc-discord-bot`) et l'app 
 Next.js (pages router) · Supabase (Postgres + RLS) · TailwindCSS v4 · Biome · Vitest + Playwright ·
 déployé sur Netlify (crons inclus).
 
+L'API est en cours d'extraction vers le dépôt privé `conference-api` (https://api.owwomenscup.fr) :
+la bascule se fait famille de routes par famille (`utils/remoteApi.ts`, variables
+`NEXT_PUBLIC_API_BASE_URL` / `NEXT_PUBLIC_API_REMOTE_PREFIXES`) ; tout ce qui n'est pas basculé reste
+servi par ce dépôt. Le bot Discord tourne sur un VPS dédié (https://bot.owwomenscup.fr).
+
 ## Démarrer
 
 ```bash

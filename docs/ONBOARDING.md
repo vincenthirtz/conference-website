@@ -86,7 +86,7 @@ D'où la **clé plateforme** (`tenant_secrets.is_platform_key`, opt-in, fausse p
 défaut) : une clé ainsi marquée peut agir pour un autre tenant, et c'est le
 serveur d'origine — `x-guild-id`, vérifié contre `discord_guilds` — qui
 détermine lequel. Le bot envoie ce header sur tous ses appels tenant-scopés
-(guild ambiant, cf. `services/discord-bot/request-context.js`).
+(guild ambiant, cf. `owwc-discord-bot/request-context.js`).
 
 Les secrets révélés à l'étape 4 restent utiles pour qui veut **auto-héberger**
 son bot : une clé ordinaire est strictement scopée à son tenant, ne peut pas
@@ -136,7 +136,7 @@ déclaré un ; à défaut, vers la plateforme.
 | `TURNSTILE_SECRET_KEY`              | server-side | yes (prod) | `utils/turnstile.ts`                  | If unset in production, all submissions fail closed with `missing-server-secret`. Unset in non-prod = bypass.                  |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`    | client-side | yes (prod) | UI agent's `<Turnstile />` widget     | Public Cloudflare site key. Must be paired with the secret above (same Turnstile widget).                                      |
 | `DISCORD_CLIENT_ID`                 | server-side | yes        | `utils/onboard.ts::buildBotInviteUrl` | Discord application client id. Without it, `/api/onboard/status/[id]` returns `botInviteUrl: null` (the UI must surface this). |
-| `DISCORD_BOT_PERMISSIONS`           | server-side | no         | `utils/onboard.ts::buildBotInviteUrl` | Bitfield string. Defaults to `1099780063312` — keep an eye on parity with `services/discord-bot/permissions.js`.               |
+| `DISCORD_BOT_PERMISSIONS`           | server-side | no         | `utils/onboard.ts::buildBotInviteUrl` | Bitfield string. Defaults to `1099780063312` — keep an eye on parity with `owwc-discord-bot/permissions.js`.               |
 | `SITE_URL` / `NEXT_PUBLIC_SITE_URL` | both        | yes        | `utils/onboard.ts::getSiteUrl`        | Used to build verify/reveal/redirect URLs in emails and redirects.                                                             |
 | `BREVO_API_KEY`                     | server-side | yes        | `utils/email.ts`                      | Compte de la PLATEFORME uniquement. Un tenant enregistre le sien (cf. « Envoi d'emails »).                                                                                  |
 | `EMAIL_FROM` / `EMAIL_FROM_NAME`    | server-side | yes        | `utils/email.ts`                      | Existing.                                                                                                                      |
@@ -151,7 +151,7 @@ API agent** — coordinate with the operator before flipping the feature on.
 | -------------------------------- | ------------ | ---------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | client       | yes (prod) | `pages/onboard/request.tsx`                                   | Public Cloudflare site key for the Turnstile widget. Missing in dev → form falls back to a warning but still submits.             |
 | `DISCORD_CLIENT_ID`              | server (SSR) | yes        | `pages/onboard/invite-bot/[id].tsx` (via `buildBotInviteUrl`) | Without it, the invite button shows a "missing env" error.                                                                        |
-| `DISCORD_BOT_PERMISSIONS`        | server       | no         | `utils/onboard.ts::buildBotInviteUrl`                         | Default bitfield `1099780063312`. `TODO`: keep in sync with `services/discord-bot/permissions.js` in the docker-box sibling repo. |
+| `DISCORD_BOT_PERMISSIONS`        | server       | no         | `utils/onboard.ts::buildBotInviteUrl`                         | Default bitfield `1099780063312`. `TODO`: keep in sync with `permissions.js` in the `owwc-discord-bot` sibling repo. |
 
 ### Public UI pages
 

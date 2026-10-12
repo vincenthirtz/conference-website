@@ -77,7 +77,7 @@
 - **Zones touchées** : `tenant_discord_config.placement_roles` (migration appliquée),
   `utils/discord/placementRoles.ts` (pur, 20 tests), finalisation tournoi, éditeur admin
   dans la config Discord du tenant, routes de lecture bot.
-- **Reste à faire (docker-box)** : consommer `placement_roles`, poser les rôles via
+- **Reste à faire (owwc-discord-bot)** : consommer `placement_roles`, poser les rôles via
   `user_discord_links`, idempotent, et journaliser les joueuses sans lien Discord plutôt
   que d'échouer. Contrat : [BOT_API_CONTRACT.md](./BOT_API_CONTRACT.md#rôles-discord-par-classement-t3).
 - **Dépendances** : role-sync + `user_discord_links` (existants).

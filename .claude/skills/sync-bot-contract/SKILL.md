@@ -19,10 +19,10 @@ Determine the CWD and the sibling repo path:
 
 ```bash
 pwd
-ls ../docker-box ../conference-website 2>/dev/null
+ls ../owwc-discord-bot ../conference-website 2>/dev/null
 ```
 
-The two repos are sibling directories: typically `/Users/.../Vincent/docker-box/` and `/Users/.../Vincent/conference-website/`. If only one is reachable, stop and tell the user — partial audit produces misleading reports.
+The two repos are local clones, not always siblings: typically `C:Usershirtzworkspaceowwc-discord-bot` and `C:Usershirtzdepotconference-website` (the bot left `docker-box/services/discord-bot` for its own repo). If only one is reachable, stop and tell the user — partial audit produces misleading reports.
 
 ## Step 0b — let the tests do the mechanical part
 
@@ -102,7 +102,7 @@ If everything aligns: report 🟢 "Contract is in sync across all three sources"
 For each finding, propose the owning agent + the concrete action:
 
 - Doc stale → invoke `api` agent in conference-website to update `docs/BOT_API_CONTRACT.md`.
-- Client stale → invoke `discord-bot` agent in docker-box to update `api-client.js`.
+- Client stale → invoke `discord-bot` agent in owwc-discord-bot to update `api-client.js`.
 - Handler missing for documented route → either delete the doc entry (`api` agent) or re-implement the handler.
 - Header missing on bot side (idempotency, etc.) → `discord-bot` agent.
 

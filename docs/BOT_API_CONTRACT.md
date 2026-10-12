@@ -1,7 +1,8 @@
 # Bot ↔ Site API Contract — `/api/bot/v1/`
 
 Canonical contract for the HTTP API consumed by the Discord bot
-([`owwc-discord-bot`](https://github.com/vincenthirtz/owwc-discord-bot) — private sibling repo, formerly `owwc-discord-bot`).
+([`owwc-discord-bot`](https://github.com/vincenthirtz/owwc-discord-bot) — private sibling repo, formerly `docker-box/services/discord-bot`;
+hosted on a dedicated VPS, public URL `https://bot.owwomenscup.fr`).
 The website is the source of truth for shapes; the bot is the only authorised
 consumer.
 
@@ -18,6 +19,10 @@ endpoint so the bot side can be code-reviewed against a single page.
 - **Versioning**: path-prefixed. A breaking change ships under `/v2/` rather
   than mutating `/v1/`. No deprecation header today — coordinate cuts via PR.
 - **Production host**: site origin (see `SITE_URL` / `NEXT_PUBLIC_SITE_URL`).
+  `/api/bot/v1/*` is still served by the site (Netlify). The private
+  `conference-api` repo (`https://api.owwomenscup.fr`) takes the API over
+  family by family — only `/api/public/` so far, cf.
+  [`utils/remoteApi.ts`](../utils/remoteApi.ts); the bot family is not cut over.
 - **Transport**: HTTPS, JSON in/out.
 
 ## Authentication
@@ -49,11 +54,12 @@ afin de ne pas couper le bot en place ; `DELETE` sur la meme route la revoque
 immediatement. The endpoint
 returns the two plain values **once** in the response body. The operator:
 
-1. Updates the **bot side** podman secrets on the Freebox VM:
+1. Updates the **bot side** `.env` on the bot's VPS (`/pog/owwcbot-prod`,
+   Docker Compose — the bot left the Freebox on 2026-10-12):
    ```bash
-   printf '%s' '<new-api-key>'        | sudo podman secret create --replace discord_bot_api_key -
-   printf '%s' '<new-webhook-secret>' | sudo podman secret create --replace discord_bot_webhook_secret -
-   sudo systemctl restart discord-bot.service
+   cd /pog/owwcbot-prod
+   $EDITOR .env    # BOT_API_KEY=<new-api-key>, BOT_WEBHOOK_SECRET=<new-webhook-secret>
+   docker compose up -d
    ```
 2. **Does NOT need to update Netlify env vars** for the bot/v1 API: the site
    resolves both the API key and the webhook signing secret per-tenant from
@@ -318,7 +324,8 @@ site has **no Discord token**, so the admin "list channels" picker relays to the
 bot, which owns the discord.js client.
 
 - **Bot endpoint**: `GET /guild-inventory?guildId=<snowflake>` on the webhook
-  server (proxied publicly as `/bot/guild-inventory`, cf. docker-box nginx).
+  server (exposed publicly as `https://bot.owwomenscup.fr/bot/guild-inventory`,
+  resolved by the site relative to `BOT_WEBHOOK_URL`).
 - **Auth**: HMAC-SHA256 of the canonical string `` `${guildId}:${timestamp}` ``
   with the tenant's `bot_webhook_secret`, sent as `X-Webhook-Signature` +
   `X-Webhook-Timestamp` (ISO). Anti-replay: timestamp bounded to a 5-min skew.
@@ -3606,7 +3613,7 @@ comptee dans `skipped`, jamais droppee en silence.
 **Rate limit** : 10/min (`bot-team-messages`), 3/min par acteur.
 **Idempotency** : oui.
 
-Cote docker-box, le script one-shot
+Cote bot, le script one-shot
 `owwc-discord-bot/scripts/send-team-roster-reminder.js` appelle cet endpoint
 (`--send` pour sortir du dry-run, `--mention`, `--only=`, `--teams=`,
 `--template-file=`).
@@ -4513,7 +4520,7 @@ reste là où le podium est figé.
   `/bot/v1/tenants/by-guild/[guildId]`) exposent la colonne, pour que le bot
   puisse réconcilier hors événement.
 
-**Reste à faire côté bot** (docker-box) : consommer `placement_roles` de
+**Reste à faire côté bot** (owwc-discord-bot) : consommer `placement_roles` de
 `tournament.finalized`, poser les rôles sur les membres des équipes via
 `user_discord_links`, de façon idempotente, en journalisant les joueuses sans
 lien Discord plutôt qu'en échouant.
@@ -4598,7 +4605,7 @@ que 14 matchs ont bougé le 2026-09-09 sans que l'event Discord ne suive.
   "previousScheduledAt": "<date retirée>", "enriched": { … } | null }
 ```
 
-**Consommation bot** (docker-box, les trois événements sont consommés) :
+**Consommation bot** (owwc-discord-bot, les trois événements sont consommés) :
 
 - `match.scheduled` → crée ou édite l'event Discord natif.
 - `match.rescheduled` → édite l'event Discord natif. Nouvelle date lue dans

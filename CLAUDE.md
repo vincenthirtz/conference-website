@@ -36,14 +36,15 @@ For Playwright: never use `--ignore-pattern` (invalid flag), use `--grep-invert`
 The site sits at the center of a small ecosystem:
 
 - **`conference-website`** (this repo) — public site, admin dashboard, REST API, PWA.
-- **`owwc-discord-bot`** (private sibling repo `vincenthirtz/owwc-discord-bot`, local clone `C:\Users\hirtz\workspace\owwc-discord-bot`; formerly `docker-box/services/discord-bot`) — Discord bot that consumes `/api/bot/v1/*`.
+- **`conference-api`** (private repo) — copy of `pages/api`, kept in sync, served on `https://api.owwomenscup.fr` (CloudFront → Lightsail Stockholm). Cutover is progressive, by route family: only the families listed in `NEXT_PUBLIC_API_REMOTE_PREFIXES` (today `/api/public/`) are rewritten browser-side to `NEXT_PUBLIC_API_BASE_URL` — see [utils/remoteApi.ts](utils/remoteApi.ts). Everything else in `pages/api` is still served by Netlify and in production here.
+- **`owwc-discord-bot`** (private sibling repo `vincenthirtz/owwc-discord-bot`, local clone `C:\Users\hirtz\workspace\owwc-discord-bot`; formerly `docker-box/services/discord-bot`) — Discord bot that consumes `/api/bot/v1/*`. Runs on a dedicated VPS since 2026-10-12 (no longer on the Freebox); public URL `https://bot.owwomenscup.fr`, site → bot webhooks on `/bot/site-events` (`BOT_WEBHOOK_URL`).
 - **`womenscup-caster`** (sibling) — separate caster-tooling repo.
 
 ### Directory Structure
 
 - **pages/** — Next.js pages and API routes
   - **pages/api/admin/** — staff-gated admin endpoints (cookie session)
-  - **pages/api/bot/v1/** — Discord-bot API. Contract: [docs/BOT_API_CONTRACT.md](docs/BOT_API_CONTRACT.md). Auth: `x-api-key` per-tenant (`tenant_secrets`, no env fallback) + `x-tenant-id`. Idempotency + rate limits. Sibling repo: `docker-box/services/discord-bot/`.
+  - **pages/api/bot/v1/** — Discord-bot API. Contract: [docs/BOT_API_CONTRACT.md](docs/BOT_API_CONTRACT.md). Auth: `x-api-key` per-tenant (`tenant_secrets`, no env fallback) + `x-tenant-id`. Idempotency + rate limits. Sibling repo: `owwc-discord-bot`.
   - **pages/api/caster/** — read API of the `womenscup-caster` desktop app (`v1/*` + legacy aliases, public GET — [docs/CASTER_API_CONTRACT.md](docs/CASTER_API_CONTRACT.md)), plus two leftover caster-session routes (`me`, `briefing/[matchId]`)
   - **pages/api/player/** — player espace endpoints (user session)
   - **pages/api/cron/** — invoked by Netlify scheduled functions
@@ -226,6 +227,8 @@ Required in `.env.local` (see `example.env.local`):
 - `CAPTCHA_SECRET` — optional override (falls back to service-role key). Challenges are stored server-side (`captcha_challenges`): the token carries only a signed nonce, a correct answer consumes the challenge, and 3 attempts max are counted.
 - `TURNSTILE_SECRET_KEY` — Cloudflare Turnstile (onboarding)
 - `BOT_API_KEY` — legacy key for **non-v1 routes only** (`/api/news` ingest, `/api/support/ticket`). `/api/bot/v1/*` auth is now 100% per-tenant (`tenant_secrets`); the v1 env fallback + the `BOT_WEBHOOK_SECRET` webhook-signing fallback were removed, so `BOT_WEBHOOK_SECRET` is no longer read by the site.
+- `BOT_WEBHOOK_URL` — bot webhook for site → bot events (prod `https://bot.owwomenscup.fr/bot/site-events`; guild inventory is resolved next to it). Unset → no HTTP push, events stay in the outbox for the bot's poller.
+- `NEXT_PUBLIC_API_BASE_URL` / `NEXT_PUBLIC_API_REMOTE_PREFIXES` — progressive cutover to `conference-api` ([utils/remoteApi.ts](utils/remoteApi.ts)). Unset → no rewrite.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
