@@ -1,5 +1,5 @@
 // config/maps/overwatch.ts
-// Recettes de maquettes voxel — pool Overwatch complet (30 maps).
+// Recettes de maquettes voxel — pool Overwatch complet (31 maps).
 //
 // Une recette décrit une AMBIANCE, jamais un plan : palette dominante, type de
 // lieu (architecture + décor alentour) et deux à trois silhouettes génériques.
@@ -157,6 +157,20 @@ export const OVERWATCH_RECIPES: MapRecipe[] = [
     environment: { kind: 'sand', color: '#d7a765' },
     mood: 'day',
     scatter: 0.6,
+  },
+  {
+    slug: 'observatoire-grimsvotn',
+    // Nom officiel FR, tel qu'il figure sur les visuels de l'organisation :
+    // nouvelle map Escorte de 2026, sans équivalent dans le reste du pool.
+    name: 'Observatoire : Grímsvötn',
+    layout: 'escort',
+    // Station de veille sur volcan sous-glaciaire : basalte, glace, lave, acier.
+    palette: ['#3b3f45', '#cfdde6', '#e0662f', '#2f5f8c'],
+    architecture: 'industrial',
+    landmarks: ['dish', 'smokestack', 'tower'],
+    environment: { kind: 'snow', color: '#dbe6ee' },
+    mood: 'day',
+    scatter: 0.3,
   },
   {
     slug: 'rialto',

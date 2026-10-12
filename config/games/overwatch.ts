@@ -49,6 +49,11 @@ export const OVERWATCH: GameDef = {
     { name: 'Dorado', type: 'escort', image: `${ART}/dorado.svg` },
     { name: 'Havana', type: 'escort', image: `${ART}/havana.svg` },
     { name: 'Junkertown', type: 'escort', image: `${ART}/junkertown.svg` },
+    {
+      name: 'Observatoire : Grímsvötn',
+      type: 'escort',
+      image: `${ART}/observatoire-grimsvotn.svg`,
+    },
     { name: 'Rialto', type: 'escort', image: `${ART}/rialto.svg` },
     { name: 'Route 66', type: 'escort', image: `${ART}/route-66.svg` },
     {

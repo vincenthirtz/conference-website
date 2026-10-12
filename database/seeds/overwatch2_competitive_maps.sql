@@ -1,6 +1,6 @@
 -- Seed data: pool de maps Overwatch « Standard Play » (compétitif 5v5)
 --
--- État de référence : saison 3 / 2026 (30 maps). Aligné sur le registre
+-- État de référence : saison 3 / 2026 (31 maps). Aligné sur le registre
 -- config/games/overwatch.ts — les deux DOIVENT rester identiques.
 --
 -- Les vignettes sont NOS maquettes voxel (public/img/maps/overwatch/*.svg),
@@ -29,34 +29,35 @@ VALUES
   ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Oasis', 'control', '/img/maps/overwatch/oasis.svg', true, 6),
   ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Samoa', 'control', '/img/maps/overwatch/samoa.svg', true, 7),
 
-  -- Escort (8)
+  -- Escort (9)
   ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Circuit Royal', 'escort', '/img/maps/overwatch/circuit-royal.svg', true, 8),
   ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Dorado', 'escort', '/img/maps/overwatch/dorado.svg', true, 9),
   ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Havana', 'escort', '/img/maps/overwatch/havana.svg', true, 10),
   ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Junkertown', 'escort', '/img/maps/overwatch/junkertown.svg', true, 11),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Rialto', 'escort', '/img/maps/overwatch/rialto.svg', true, 12),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Route 66', 'escort', '/img/maps/overwatch/route-66.svg', true, 13),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Shambali Monastery', 'escort', '/img/maps/overwatch/shambali-monastery.svg', true, 14),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Watchpoint: Gibraltar', 'escort', '/img/maps/overwatch/watchpoint-gibraltar.svg', true, 15),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Observatoire : Grímsvötn', 'escort', '/img/maps/overwatch/observatoire-grimsvotn.svg', true, 12),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Rialto', 'escort', '/img/maps/overwatch/rialto.svg', true, 13),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Route 66', 'escort', '/img/maps/overwatch/route-66.svg', true, 14),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Shambali Monastery', 'escort', '/img/maps/overwatch/shambali-monastery.svg', true, 15),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Watchpoint: Gibraltar', 'escort', '/img/maps/overwatch/watchpoint-gibraltar.svg', true, 16),
 
   -- Hybrid (8)
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Blizzard World', 'hybrid', '/img/maps/overwatch/blizzard-world.svg', true, 16),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Eichenwalde', 'hybrid', '/img/maps/overwatch/eichenwalde.svg', true, 17),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Hollywood', 'hybrid', '/img/maps/overwatch/hollywood.svg', true, 18),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'King''s Row', 'hybrid', '/img/maps/overwatch/kings-row.svg', true, 19),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Midtown', 'hybrid', '/img/maps/overwatch/midtown.svg', true, 20),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Neon Junction', 'hybrid', '/img/maps/overwatch/neon-junction.svg', true, 21),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Numbani', 'hybrid', '/img/maps/overwatch/numbani.svg', true, 22),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Paraíso', 'hybrid', '/img/maps/overwatch/paraiso.svg', true, 23),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Blizzard World', 'hybrid', '/img/maps/overwatch/blizzard-world.svg', true, 17),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Eichenwalde', 'hybrid', '/img/maps/overwatch/eichenwalde.svg', true, 18),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Hollywood', 'hybrid', '/img/maps/overwatch/hollywood.svg', true, 19),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'King''s Row', 'hybrid', '/img/maps/overwatch/kings-row.svg', true, 20),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Midtown', 'hybrid', '/img/maps/overwatch/midtown.svg', true, 21),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Neon Junction', 'hybrid', '/img/maps/overwatch/neon-junction.svg', true, 22),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Numbani', 'hybrid', '/img/maps/overwatch/numbani.svg', true, 23),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Paraíso', 'hybrid', '/img/maps/overwatch/paraiso.svg', true, 24),
 
   -- Push (4)
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Colosseo', 'push', '/img/maps/overwatch/colosseo.svg', true, 24),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Esperança', 'push', '/img/maps/overwatch/esperanca.svg', true, 25),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'New Queen Street', 'push', '/img/maps/overwatch/new-queen-street.svg', true, 26),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Runasapi', 'push', '/img/maps/overwatch/runasapi.svg', true, 27),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Colosseo', 'push', '/img/maps/overwatch/colosseo.svg', true, 25),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Esperança', 'push', '/img/maps/overwatch/esperanca.svg', true, 26),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'New Queen Street', 'push', '/img/maps/overwatch/new-queen-street.svg', true, 27),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Runasapi', 'push', '/img/maps/overwatch/runasapi.svg', true, 28),
 
   -- Flashpoint (3)
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Aatlis', 'flashpoint', '/img/maps/overwatch/aatlis.svg', true, 28),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'New Junk City', 'flashpoint', '/img/maps/overwatch/new-junk-city.svg', true, 29),
-  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Suravasa', 'flashpoint', '/img/maps/overwatch/suravasa.svg', true, 30)
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Aatlis', 'flashpoint', '/img/maps/overwatch/aatlis.svg', true, 29),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'New Junk City', 'flashpoint', '/img/maps/overwatch/new-junk-city.svg', true, 30),
+  ('e8fa740c-d92b-49d8-a654-05a37d0eea3b', 'Suravasa', 'flashpoint', '/img/maps/overwatch/suravasa.svg', true, 31)
 ON CONFLICT DO NOTHING;
