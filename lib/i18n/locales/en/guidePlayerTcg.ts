@@ -29,6 +29,9 @@ export default {
   earnIntro:
     'Every path gives coins, and most also give a pack. The amounts below are the ones actually applied, read from the server — not examples.',
   earnMatchWin: 'Tournament match win',
+  earnMatchLoss: 'Tournament match loss',
+  earnMatchLossNote:
+    'Losing a tournament match also earns coins: {count} losses pay for a booster. You have to have played — a forfeit earns nothing, and scrims only pay the win.',
   earnScrimWin: 'Ranked scrim win',
   earnWelcome: 'Welcome gift, once',
   earnTwitchDrop: 'Card claimed during a stream',

@@ -50,6 +50,8 @@ type Bareme = {
   recycleRefund: number;
   earn: {
     matchWin: number;
+    /** Ajoutée le 2026-10-12. Optionnelle : une API plus ancienne l'omet. */
+    matchLoss?: { coins: number; packs: number };
     scrimWin: number;
     /** Absent quand le drop n'est pas branché. Cf. l'en-tête. */
     twitchDrop?: number;
@@ -196,6 +198,14 @@ function TcgGuide(): JSX.Element {
           {earn && (
             <ul className="space-y-2">
               <EarnRow label={t.earnMatchWin} coins={earn.matchWin} t={t} />
+              {earn.matchLoss && (
+                <EarnRow
+                  label={t.earnMatchLoss}
+                  coins={earn.matchLoss.coins}
+                  packs={earn.matchLoss.packs}
+                  t={t}
+                />
+              )}
               <EarnRow label={t.earnScrimWin} coins={earn.scrimWin} t={t} />
               {typeof earn.welcomeGift === 'number' && (
                 <EarnRow label={t.earnWelcome} coins={earn.welcomeGift} t={t} />
@@ -242,6 +252,15 @@ function TcgGuide(): JSX.Element {
                 />
               )}
             </ul>
+          )}
+          {/* Le nombre de défaites pour un booster est CALCULÉ depuis le
+              barème rendu par l'API, jamais écrit « trois » en dur. */}
+          {earn?.matchLoss && earn.matchLoss.coins > 0 && bareme && (
+            <p>
+              {format(t.earnMatchLossNote, {
+                count: Math.ceil(bareme.boosterPrice / earn.matchLoss.coins),
+              })}
+            </p>
           )}
           {earn?.placement && earn.placement.length > 0 && (
             <>

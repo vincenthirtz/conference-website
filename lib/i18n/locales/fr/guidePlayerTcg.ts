@@ -37,6 +37,10 @@ export default ns('guidePlayerTcg', {
   earnIntro:
     'Chaque voie donne des pièces, et la plupart un paquet en plus. Les montants ci-dessous sont ceux réellement appliqués, lus depuis le serveur — pas des exemples.',
   earnMatchWin: 'Victoire en match de tournoi',
+  earnMatchLoss: 'Défaite en match de tournoi',
+  /** Interpole `{count}` (défaites pour un booster, calculé depuis le barème). */
+  earnMatchLossNote:
+    'Perdre un match de tournoi rapporte aussi des pièces : {count} défaites paient un booster. Il faut avoir joué — un forfait ne rapporte rien, et les scrims ne paient que la victoire.',
   earnScrimWin: 'Victoire en scrim classé',
   earnWelcome: 'Cadeau de bienvenue, une fois',
   earnTwitchDrop: 'Carte récupérée pendant un direct',
