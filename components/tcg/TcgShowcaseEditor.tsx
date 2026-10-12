@@ -173,6 +173,7 @@ export default function TcgShowcaseEditor({
     foil: tTcg.foil,
     copies: tTcg.copies,
     logoCredit: tTcg.logoCredit,
+    associationCredit: tTcg.associationCredit,
     association: tTcg.cardAssociation,
   };
 

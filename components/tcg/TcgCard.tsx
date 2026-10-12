@@ -224,6 +224,14 @@ export type TcgCardProps = {
      */
     logoCredit?: string;
     /**
+     * Gabarit du crédit d'une carte de l'ASSOCIATION, avec `{artist}`
+     * (« Crédit : {artist} »). Ce n'est pas forcément un logo (bénévole,
+     * staff, visuel d'événement) : « Logo : » y serait faux. Les fan arts
+     * gardent `logoCredit`. Absent ⇒ repli sur `logoCredit`, pour ne jamais
+     * perdre l'attribution d'une œuvre.
+     */
+    associationCredit?: string;
+    /**
      * Nom de chaque rôle, sous la figurine (« Tank »). Optionnel : sans lui,
      * seule une héroïne CHOISIE par la joueuse est nommée — jamais de texte
      * en dur dans une seule langue.
@@ -296,6 +304,11 @@ export default function TcgCard({
     isAssociation && subject.kind === 'fanart'
       ? subject.description?.trim() || null
       : null;
+  // Libellé du crédit d'artiste : « Crédit : » pour l'association (pas
+  // toujours un logo), celui des fan arts sinon.
+  const fanartCredit = isAssociation
+    ? (labels.associationCredit ?? labels.logoCredit)
+    : labels.logoCredit;
   const imageUrl =
     subject.kind === 'team'
       ? (subject.cardImageUrl ?? subject.logoUrl)
@@ -478,17 +491,15 @@ export default function TcgCard({
             {associationDescription}
           </p>
         )}
-        {subject.kind === 'fanart' &&
-          subject.artistName &&
-          labels.logoCredit && (
-            <LogoCredit
-              name={subject.artistName}
-              url={subject.artistUrl}
-              label={labels.logoCredit}
-              linkable={!href && !insideInteractive}
-              className="truncate text-[11px]"
-            />
-          )}
+        {subject.kind === 'fanart' && subject.artistName && fanartCredit && (
+          <LogoCredit
+            name={subject.artistName}
+            url={subject.artistUrl}
+            label={fanartCredit}
+            linkable={!href && !insideInteractive}
+            className="truncate text-[11px]"
+          />
+        )}
         {typeof count === 'number' && count > 1 && (
           <p className="text-[11px] text-gray-400">
             {labels.copies.replace('{count}', String(count))}

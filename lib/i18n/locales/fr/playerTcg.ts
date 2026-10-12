@@ -230,6 +230,9 @@ export default ns('playerTcg', {
   // la carte ET la fiche l'affichent, et une seule clé leur garantit la même
   // formulation. `{artist}` devient le lien vers l'artiste.
   logoCredit: 'Logo : {artist}',
+  // Crédit d'une carte de l'association : ce n'est pas toujours un logo
+  // (bénévole, staff, visuel d'événement), d'où un libellé neutre.
+  associationCredit: 'Crédit : {artist}',
   // Badge des cartes de la catégorie « L'association » (logos d'événement,
   // visuels déposés par le staff).
   cardAssociation: 'L’association',

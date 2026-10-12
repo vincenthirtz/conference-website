@@ -36,5 +36,6 @@ export default ns('homeTcg', {
   foil: 'Brillante',
   copies: '×{count}',
   logoCredit: 'Logo : {artist}',
+  associationCredit: 'Crédit : {artist}',
   cardAssociation: 'L’association',
 });

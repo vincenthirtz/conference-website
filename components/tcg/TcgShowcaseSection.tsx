@@ -106,6 +106,7 @@ export default function TcgShowcaseSection({
                 foil: tTcg.foil,
                 copies: tTcg.copies,
                 logoCredit: tTcg.logoCredit,
+                associationCredit: tTcg.associationCredit,
                 association: tTcg.cardAssociation,
               }}
             />

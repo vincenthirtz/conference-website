@@ -19,6 +19,7 @@ export function useTcgCardLabels() {
       foil: t.foil,
       copies: t.copies,
       logoCredit: t.logoCredit,
+      associationCredit: t.associationCredit,
       association: t.cardAssociation,
       // Sous la figurine d'une joueuse sans photo : son rôle.
       roles: {

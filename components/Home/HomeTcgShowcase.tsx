@@ -96,6 +96,7 @@ export default function HomeTcgShowcase({
     foil: t.foil,
     copies: t.copies,
     logoCredit: t.logoCredit,
+    associationCredit: t.associationCredit,
     association: t.cardAssociation,
   };
 

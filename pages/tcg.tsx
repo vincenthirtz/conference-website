@@ -147,6 +147,7 @@ function TcgCatalogPage({ cards, playerCount, bareme }: Props) {
     // Sans ce gabarit, `TcgCard` n'affiche aucun crédit : c'est l'écran qui
     // décide, pour qu'aucun texte en dur ne s'affiche dans une seule langue.
     logoCredit: tc.logoCredit,
+    associationCredit: tc.associationCredit,
     association: tc.cardAssociation,
   };
 

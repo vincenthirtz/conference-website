@@ -95,3 +95,40 @@ describe('TcgCard — description de l’association', () => {
     expect(container.querySelector('p.whitespace-pre-line')).toBeNull();
   });
 });
+
+describe('TcgCard — libellé du crédit', () => {
+  const withCredits: TcgCardProps['labels'] = {
+    ...labels,
+    logoCredit: 'Logo : {artist}',
+    associationCredit: 'Crédit : {artist}',
+  };
+
+  it('association : « Crédit : », jamais « Logo : »', () => {
+    const { container } = render(
+      <TcgCard subject={subject()} rarity="rare" labels={withCredits} />
+    );
+    expect(container.textContent).toContain('Crédit : Arukdo');
+    expect(container.textContent).not.toContain('Logo :');
+  });
+
+  it('fan art : garde son libellé', () => {
+    const { container } = render(
+      <TcgCard
+        subject={subject({ category: 'fanart', description: null })}
+        rarity="rare"
+        labels={withCredits}
+      />
+    );
+    expect(container.textContent).toContain('Logo : Arukdo');
+    expect(container.textContent).not.toContain('Crédit :');
+  });
+
+  it('association sans gabarit dédié : l’attribution reste affichée', () => {
+    const { associationCredit: _omit, ...legacy } = withCredits;
+    const { container } = render(
+      <TcgCard subject={subject()} rarity="rare" labels={legacy} />
+    );
+    expect(container.textContent).toContain('Arukdo');
+    expect(container.textContent).toContain('Logo : Arukdo');
+  });
+});

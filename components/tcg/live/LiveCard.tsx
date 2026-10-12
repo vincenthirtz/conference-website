@@ -33,6 +33,7 @@ export default function LiveCard({
         foil: tTcg.foil,
         copies: tTcg.copies,
         logoCredit: tTcg.logoCredit,
+        associationCredit: tTcg.associationCredit,
         association: tTcg.cardAssociation,
       }}
     />

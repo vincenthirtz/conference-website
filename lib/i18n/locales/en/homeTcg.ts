@@ -23,5 +23,6 @@ export default {
   foil: 'Foil',
   copies: '×{count}',
   logoCredit: 'Logo by {artist}',
+  associationCredit: 'Credit: {artist}',
   cardAssociation: 'The association',
 };
