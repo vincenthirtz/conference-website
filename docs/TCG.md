@@ -437,16 +437,27 @@ ne remplace pas la première.
 
 | Constante              | Valeur | Dérivation                                             |
 | ---------------------- | ------ | ------------------------------------------------------ |
-| `MATCH_WIN_COINS`      | 100    | valeur de référence de tout le barème                  |
-| `SCRIM_WIN_COINS`      | 50     | `MATCH_WIN_COINS × SCRIM_RATING_WEIGHT` (0,5)          |
-| `BOOSTER_PRICE_COINS`  | 300    | `3 × MATCH_WIN_COINS` — trois victoires, ou six scrims |
+| `COIN_UNIT`            | 100    | valeur de référence de tout le barème                  |
+| `MATCH_WIN_COINS`      | 200    | `2 × COIN_UNIT` — relevée le 2026-10-12 (décision produit), + un paquet |
+| `MATCH_LOSS_COINS`     | 100    | `COIN_UNIT`, **sans paquet** — trois défaites = un booster |
+| `SCRIM_WIN_COINS`      | 50     | `COIN_UNIT × SCRIM_RATING_WEIGHT` (0,5)                |
+| `BOOSTER_PRICE_COINS`  | 300    | `3 × COIN_UNIT` — trois défaites, une victoire et demie, ou six scrims |
 | `RECYCLE_REFUND_COINS` | 30     | `BOOSTER_PRICE_COINS / 10`, plancher à 1               |
 | `TWITCH_DROP_COINS`    | 25     | `SCRIM_WIN_COINS / 2`, plancher à 1 — + un paquet      |
 | `CHECKIN_STREAK_COINS` | 50     | `SCRIM_WIN_COINS` — + un paquet, tous les 5 check-ins  |
-| `PLACEMENT_TIERS`      | 1→8    | rang 1 : 3000 + 5 paquets · 2 : 2000 + 3 · 3 : 1500 + 2 · 4-8 : 1200 + 1 (relevé le 2026-10-12, au-dessus du DNF à 1000) |
-| `BATTLENET_VERIFIED_COINS` | 100 | `MATCH_WIN_COINS`, **sans paquet** — une fois à vie, compte Battle.net prouvé |
-| `COLLECTION_SET_COINS` | 100 | `MATCH_WIN_COINS`, **sans paquet** — une fois par série complétée (cf. « Les séries ») |
+| `PLACEMENT_TIERS`      | 1→8    | `30/20/15/12 × COIN_UNIT` — rang 1 : 3000 + 5 paquets · 2 : 2000 + 3 · 3 : 1500 + 2 · 4-8 : 1200 + 1 (relevé le 2026-10-12, au-dessus du DNF à 1000) |
+| `TOURNAMENT_PARTICIPATION_COINS` | 1000 | `10 × COIN_UNIT`, **sans paquet** — équipe en DNF |
+| `WELCOME_GIFT_COINS`   | 100    | `COIN_UNIT` — + un paquet (les trois cadeaux d'accueil) |
+| `BATTLENET_VERIFIED_COINS` | 100 | `COIN_UNIT`, **sans paquet** — une fois à vie, compte Battle.net prouvé |
+| `COLLECTION_SET_COINS` | 100 | `COIN_UNIT`, **sans paquet** — une fois par série complétée (cf. « Les séries ») |
+| `PUBLIC_MVP_COINS`     | 100    | `COIN_UNIT`, **sans paquet** — MVP du public d'un match |
 | `MATCH_PREDICTION_COINS` | 25 | `SCRIM_WIN_COINS / 2`, plancher à 1, **sans paquet** — un pronostic juste par match (cf. « Les pronostics ») |
+
+**Unité et victoire sont distinctes depuis le 2026-10-12.** Tout le barème
+s'exprimait en multiples de `MATCH_WIN_COINS` ; la victoire est passée à 200
+pièces sans que rien d'autre ne bouge, donc chaque montant est désormais indexé
+sur `COIN_UNIT` (100) avec son multiple d'avant. Non rétroactif : les victoires
+déjà payées gardent leur montant d'alors.
 
 Aucun de ces montants n'est écrit en dur ailleurs : **le rapport scrim/match est
 importé, pas recopié.** Le dépôt pondère déjà un scrim à `SCRIM_RATING_WEIGHT`
@@ -752,7 +763,7 @@ elle a été retirée entre-temps, auquel cas le tirage est ordinaire.
 ### Le cadeau de bienvenue
 
 [`utils/tcg/grantWelcomeGift.ts`](../utils/tcg/grantWelcomeGift.ts) offre, une
-fois par édition, **un paquet et `MATCH_WIN_COINS`** à chaque participante
+fois par édition, **un paquet et `WELCOME_GIFT_COINS`** (une unité, 100) à chaque participante
 engagée. Il ouvre la porte plutôt que de la montrer : sans lui, une joueuse
 arrive sur un TCG au porte-monnaie vide et le reste jusqu'à sa première
 victoire — c'est-à-dire au moment précis où on voudrait qu'elle découvre la
@@ -776,7 +787,7 @@ déploiement.
 ### L'accueil qu'on se réclame : supportrices ET staff
 
 [`utils/tcg/grantSelfWelcome.ts`](../utils/tcg/grantSelfWelcome.ts) offre **un
-paquet et `MATCH_WIN_COINS`**, une fois par compte et par espace, à qui n'a
+paquet et `WELCOME_GIFT_COINS`**, une fois par compte et par espace, à qui n'a
 aucune autre porte d'entrée. Deux motifs, un seul chemin d'écriture.
 
 **`supporter`** — à qui porte le rôle de compte `supporter` (cf. §1). Les
@@ -916,10 +927,10 @@ Le bot en fait un DM (raison d'abord, gain ensuite), dédoublonné par
 
 Une équipe disqualifiée d'une phase (DNF, `stage_teams.disqualified_at`) touche
 une récompense de participation : **1000 pièces** par joueuse
-(`TOURNAMENT_PARTICIPATION_COINS = 10 × MATCH_WIN_COINS`, pièces seules), source
+(`TOURNAMENT_PARTICIPATION_COINS = 10 × COIN_UNIT`, pièces seules), source
 `tournament_participation`, `source_ref` = le tournoi — une fois par joueuse et
-par tournoi. Décision produit du 2026-10-12 (cas Éclypse) ; le montant dépasse
-celui du titre en pièces, le palmarès reste devant en paquets.
+par tournoi. Décision produit du 2026-10-12 (cas Éclypse) ; chaque palier du
+palmarès reste devant, en pièces comme en paquets.
 
 - **Qui** : les joueuses des feuilles de match de l'équipe sur le tournoi
   (`match_participants`, titulaires ET remplaçantes — on paie la participation,
@@ -1002,7 +1013,8 @@ serveur : sa rotation casserait la règle « une fois par compte ».
   porte du TCG, la vérification n'ouvre rien. Un paquet aurait aussi exigé
   d'élargir les deux contraintes de `tcg_packs` — celles des 58 paquets du
   2026-09-14 — pour une récompense ponctuelle.
-- **100 pièces, soit une victoire de match et un tiers de booster** : de quoi
+- **100 pièces (une unité du barème : une défaite de match, la moitié d'une
+  victoire depuis le 2026-10-12) et un tiers de booster** : de quoi
   rapprocher du prochain paquet sans en offrir un, et moins que chacun des deux
   cadeaux d'accueil (mêmes pièces, plus un paquet).
 - **Aucune rétroactivité automatique.** Les comptes vérifiés avant la
@@ -1141,7 +1153,8 @@ a crédité, et seul lui déclenche l'annonce.
 - **Pas de `?as=`** : une inspection staff ne récompense pas au nom de
   quelqu'un.
 
-**Le montant.** Une victoire de match, un tiers de booster. Pas de paquet : la
+**Le montant.** Une unité du barème (100, une défaite de match — la victoire en
+vaut deux depuis le 2026-10-12), un tiers de booster. Pas de paquet : la
 série se complète en ouvrant des paquets, en rendre un nourrirait la boucle
 qu'on récompense. Un espace d'une quinzaine de séries plafonne ce gain à ~5
 boosters sur toute la vie d'un compte, là où les compléter toutes demande des
