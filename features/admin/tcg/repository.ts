@@ -30,7 +30,12 @@ export async function searchTenantPlayers(
 
 const GRANT_SOURCE_KIND = 'admin_grant';
 
-/** L'écriture déjà portée par cette clé (`error` distinct de « rien »). */
+/**
+ * L'écriture déjà portée par cette clé (`error` distinct de « rien »). Sans
+ * `userId`, la recherche couvre toutes les joueuses : une clé `admin_grant`
+ * est unique par tenant (index `uq_tcg_wallet_entries_admin_grant_key`,
+ * migration `tcg_admin_grant_key_unique.sql`), pas seulement par joueuse.
+ */
 export async function findGrantByKey(
   db: AdminDb,
   tenantId: string,

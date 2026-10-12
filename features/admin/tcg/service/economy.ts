@@ -243,6 +243,23 @@ async function findByKey(
   return { row, error: null };
 }
 
+/**
+ * Relecture APRÈS une écriture refusée ou incertaine. La ligne de CETTE
+ * joueuse d'abord ; à défaut, la clé toutes joueuses confondues : depuis
+ * `tcg_admin_grant_key_unique.sql`, une clé servie à une AUTRE joueuse fait
+ * échouer l'écriture (23505), et c'est cette ligne-là qui l'explique — elle
+ * part dans `replay`, qui refuse, au lieu d'un 500 « écriture refusée ».
+ */
+async function recheckByKey(
+  ctx: ServiceContext,
+  key: string,
+  userId: string
+): Promise<{ row: EntryRow | null; error: string | null }> {
+  const mine = await findByKey(ctx, key, userId);
+  if (mine.error || mine.row) return mine;
+  return findByKey(ctx, key);
+}
+
 /** Solde lu au REGISTRE (somme paginée), repli sur le cache après écriture. */
 async function currentBalance(ctx: ServiceContext, userId: string) {
   const sum = await sumLedgerPaginated(ctx.tenantId, userId);
@@ -360,7 +377,7 @@ export async function grantCoins(
       case 'duplicate':
       case 'error': {
         // La contrainte a tranché : on constate son verdict par la clé.
-        const recheck = await findByKey(ctx, idempotencyKey, userId);
+        const recheck = await recheckByKey(ctx, idempotencyKey, userId);
         if (recheck.error || !recheck.row) {
           ctx.logger.error(
             '[admin/tcg/grant] retrait indéterminé pour la clé %s: %s',
@@ -369,7 +386,9 @@ export async function grantCoins(
           );
           throw correctionFailed();
         }
-        if (debit.kind === 'duplicate') {
+        // Doublon, ou ligne d'une AUTRE joueuse : `replay` tranche (rejeu
+        // légitime ou clé déjà servie à une autre correction).
+        if (debit.kind === 'duplicate' || recheck.row.user_id !== userId) {
           return replay(ctx, recheck.row, userId, amount);
         }
         ctx.logger.warn(
@@ -393,7 +412,7 @@ export async function grantCoins(
 
     if (inserted.error || !entryId) {
       // UNE ERREUR N'EST PAS UNE ABSENCE D'ÉCRITURE (504 après commit).
-      const recheck = await findByKey(ctx, idempotencyKey, userId);
+      const recheck = await recheckByKey(ctx, idempotencyKey, userId);
       if (recheck.error) {
         ctx.logger.error(
           '[admin/tcg/grant] état indéterminé pour la clé %s: %s',
@@ -411,7 +430,11 @@ export async function grantCoins(
         throw correctionFailed();
       }
       // 23505 = une requête CONCURRENTE portant la même clé a gagné.
-      if ((inserted.error as { code?: string } | null)?.code === '23505') {
+      // Une ligne d'une AUTRE joueuse n'est jamais « notre » écriture.
+      if (
+        (inserted.error as { code?: string } | null)?.code === '23505' ||
+        recheck.row.user_id !== userId
+      ) {
         return replay(ctx, recheck.row, userId, amount);
       }
       ctx.logger.warn(

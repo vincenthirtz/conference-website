@@ -33,6 +33,8 @@
 // created_at, updated_at).
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 vi.mock('@/utils/supabase', async () => {
   const m = await import('./__helpers__/supabaseMock');
@@ -539,6 +541,80 @@ describe('POST /api/admin/tcg/grant — idempotence', () => {
     // La correction a eu lieu : elle doit être tracée.
     expect(logStaffAction).toHaveBeenCalledTimes(1);
   });
+
+  /*
+   * UNE CLÉ, UNE JOUEUSE (tcg_admin_grant_key_unique.sql). La contrainte
+   * historique inclut `user_id` : sans l'index partiel, la même clé pouvait
+   * créditer deux joueuses en course. Avec lui, la seconde écriture prend un
+   * 23505 — et la route doit le lire comme une clé déjà servie, pas comme un
+   * rejeu de SA correction ni comme une panne.
+   */
+  it('même clé, même joueuse : rejeu idempotent, une seule ligne', async () => {
+    const first = await callGrant(body());
+    const again = await callGrant(body());
+    expect(again.statusCode).toBe(200);
+    expect(again.body).toMatchObject({
+      entryId: first.body.entryId,
+      replayed: true,
+    });
+    expect(grants()).toHaveLength(1);
+  });
+
+  it('course sur la même clé pour une AUTRE joueuse (23505) : refusée, aucun second crédit', async () => {
+    const winner = {
+      id: 'e0000000-0000-4000-8000-0000000000a1',
+      tenant_id: TENANT,
+      user_id: OTHER_PLAYER,
+      amount: 150,
+      source_kind: 'admin_grant',
+      source_ref: KEY_A,
+    };
+    // n°1 relecture préalable (vide), n°2 rattachement, n°3 insertion.
+    injectEntryOnRegistryCall(3, winner);
+    setTableWriteError('tcg_wallet_entries', {
+      message: 'duplicate key value violates unique constraint',
+      code: '23505',
+    } as any);
+
+    const res = await callGrant(body());
+    expect(res.statusCode).toBe(400);
+    expect(res.body.code).toBe('INVALID_BODY');
+    expect(grants()).toHaveLength(1);
+    expect(grants()[0].user_id).toBe(OTHER_PLAYER);
+    expect(logStaffAction).not.toHaveBeenCalled();
+  });
+
+  it('erreur incertaine + ligne d’une AUTRE joueuse : jamais prise pour notre écriture', async () => {
+    const other = {
+      id: 'e0000000-0000-4000-8000-0000000000a2',
+      tenant_id: TENANT,
+      user_id: OTHER_PLAYER,
+      amount: 150,
+      source_kind: 'admin_grant',
+      source_ref: KEY_A,
+    };
+    injectEntryOnRegistryCall(3, other);
+    setTableWriteError('tcg_wallet_entries', { message: '504 upstream' });
+
+    const res = await callGrant(body());
+    expect(res.statusCode).toBe(400);
+    expect(res.body.code).toBe('INVALID_BODY');
+    expect(logStaffAction).not.toHaveBeenCalled();
+  });
+
+  it('la base porte la garde : index unique partiel sur la clé `admin_grant`', () => {
+    const sql = readFileSync(
+      join(process.cwd(), 'database/migrations/tcg_admin_grant_key_unique.sql'),
+      'utf8'
+    )
+      .split('\n')
+      .map((line) => line.replace(/--.*$/, ''))
+      .join('\n')
+      .replace(/\s+/g, ' ');
+    expect(sql).toContain(
+      "CREATE UNIQUE INDEX IF NOT EXISTS uq_tcg_wallet_entries_admin_grant_key ON public.tcg_wallet_entries (tenant_id, source_kind, source_ref) WHERE source_kind = 'admin_grant';"
+    );
+  });
 });
 
 /* -------------------------------------------------------------------------- */
@@ -674,6 +750,35 @@ describe('POST /api/admin/tcg/grant — retrait', () => {
     const res = await callGrant(body({ amount: -100 }));
     expect(res.statusCode).toBe(200);
     expect(res.body).toMatchObject({ entryId: winner.id, replayed: true });
+    expect(grants()).toHaveLength(1);
+    expect(logStaffAction).not.toHaveBeenCalled();
+  });
+
+  it('course sur la même clé pour une AUTRE joueuse (23505) : refusée, pas de retrait', async () => {
+    seedBalance(300);
+    const winner = {
+      id: 'e0000000-0000-4000-8000-0000000000a3',
+      tenant_id: TENANT,
+      user_id: OTHER_PLAYER,
+      amount: -100,
+      source_kind: 'admin_grant',
+      source_ref: KEY_A,
+    };
+    setRpcResult('tcg_admin_debit', {
+      error: { code: '23505', message: 'duplicate key' },
+    });
+    const realRpc = supabaseAdmin.rpc;
+    vi.spyOn(supabaseAdmin, 'rpc').mockImplementation(
+      (fn: string, params?: any) => {
+        if (fn === 'tcg_admin_debit') {
+          (store.tcg_wallet_entries as any[]).push(winner);
+        }
+        return realRpc(fn, params);
+      }
+    );
+    const res = await callGrant(body({ amount: -100 }));
+    expect(res.statusCode).toBe(400);
+    expect(res.body.code).toBe('INVALID_BODY');
     expect(grants()).toHaveLength(1);
     expect(logStaffAction).not.toHaveBeenCalled();
   });

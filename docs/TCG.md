@@ -17,6 +17,8 @@
 > `tcg_card_trades.sql` (échanges, cf. §4 « Les échanges »),
 > `tcg_wallet_atomic_balance.sql`, `tcg_admin_search_players_scoped.sql` et
 > `tcg_scrim_win_stable_ref.sql` (correctifs de sécurité du 2026-09-15, §7),
+> `tcg_admin_grant_key_unique.sql` (une clé de correction staff = une seule
+> joueuse, garantie en base),
 > [`components/tcg/TcgCard.tsx`](../components/tcg/TcgCard.tsx),
 > [`components/overlay/TcgAnnouncement.tsx`](../components/overlay/TcgAnnouncement.tsx) et
 > [`pages/player/tcg.tsx`](../pages/player/tcg.tsx).
