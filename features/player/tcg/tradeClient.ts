@@ -38,18 +38,25 @@ export const tradeClient = {
       json: { acceptsProposals },
       idempotent: true,
     }),
-  list: (box: Box, state: ListState, cursor: string | null) => {
+  list: (
+    box: Box,
+    state: ListState,
+    cursor: string | null,
+    signal?: AbortSignal
+  ) => {
     const params = new URLSearchParams({ box, state });
     if (cursor) params.set('cursor', cursor);
     return playerRequest<{ trades: TradeView[]; nextCursor: string | null }>(
-      `${tradeUrls.trades}?${params.toString()}`
+      `${tradeUrls.trades}?${params.toString()}`,
+      { signal }
     );
   },
   partners: () => playerRequest<{ partners: Partner[] }>(tradeUrls.partners),
   myCards: () => playerRequest<{ cards: MyCard[] }>(tradeUrls.cards),
-  partnerCards: (userId: string) =>
+  partnerCards: (userId: string, signal?: AbortSignal) =>
     playerRequest<{ cards: TradeCardView[] }>(
-      `${tradeUrls.cards}?userId=${encodeURIComponent(userId)}`
+      `${tradeUrls.cards}?userId=${encodeURIComponent(userId)}`,
+      { signal }
     ),
   propose: (body: {
     recipientId: string;

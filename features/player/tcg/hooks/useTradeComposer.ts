@@ -7,8 +7,13 @@
 // ERREUR DE LECTURE ≠ LISTE VIDE (écart assumé du lot P14) : partenaires ou
 // cartes illisibles affichaient « personne » / « aucun double » ; ils ont
 // désormais un état d'erreur, avec de quoi réessayer.
+//
+// SEULE LA DERNIÈRE PARTENAIRE ÉCRIT. Choisir A puis B vite : la réponse de A,
+// plus lente, ne doit pas remplacer les doubles de B. Chaque choix annule la
+// lecture précédente (AbortController) et une réponse dont le signal est
+// annulé est ignorée — sans toast : ce n'est pas une erreur, c'est un abandon.
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useT } from '@/lib/i18n/useT';
 import nsTcgTrade from '@/lib/i18n/locales/fr/tcgTrade';
@@ -62,16 +67,25 @@ export function useTradeComposer(opts: {
     }
   }, []);
 
+  const partnerReqRef = useRef<AbortController | null>(null);
+  useEffect(() => () => partnerReqRef.current?.abort(), []);
+
   const choosePartner = useCallback(
     async (id: string) => {
+      partnerReqRef.current?.abort();
+      const controller = new AbortController();
+      partnerReqRef.current = controller;
       setPartnerId(id);
       setRequested([]);
       setTheirCards(null);
       setTheirError(null);
       if (!id) return;
       try {
-        setTheirCards((await tradeClient.partnerCards(id)).cards);
+        const { cards } = await tradeClient.partnerCards(id, controller.signal);
+        if (controller.signal.aborted) return;
+        setTheirCards(cards);
       } catch (err) {
+        if (controller.signal.aborted) return;
         const text = tradeErrorText(
           t,
           err instanceof PlayerHttpError ? err.code : null
