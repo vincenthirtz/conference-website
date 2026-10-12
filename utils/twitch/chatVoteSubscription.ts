@@ -21,7 +21,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { clientCreds, getAccessToken } from '@/utils/twitch';
 import { getValidBroadcasterToken, hasScope } from '@/utils/twitchBroadcaster';
-import { absoluteSiteUrl } from '@/utils/siteUrl';
+import {
+  classifyEventsubCallback,
+  eventsubCallbackUrl,
+} from '@/utils/twitch/eventsubCallback';
 import { EVENTSUB_SECRET_ENV } from '@/utils/twitch/eventsubRequest';
 
 const HELIX_EVENTSUB = 'https://api.twitch.tv/helix/eventsub/subscriptions';
@@ -32,8 +35,51 @@ export const CHAT_VOTE_SCOPES = [
   'channel:bot',
 ] as const;
 
-export const chatVoteCallbackUrl = () =>
-  absoluteSiteUrl('/api/webhooks/twitch/chat-mvp');
+const CHAT_VOTE_PATH = '/api/webhooks/twitch/chat-mvp';
+
+/** Origine : `EVENTSUB_CALLBACK_ORIGIN`, sinon le site (eventsubCallback.ts). */
+export const chatVoteCallbackUrl = () => eventsubCallbackUrl(CHAT_VOTE_PATH);
+
+type HelixChatSub = {
+  id: string;
+  condition?: { broadcaster_user_id?: string };
+  transport?: { callback?: string };
+};
+
+/** Nos abonnements au chat de `broadcasterId` (`[]` si la liste échoue). */
+async function listOurChatSubs(
+  headers: Record<string, string>,
+  broadcasterId: string
+): Promise<{ sub: HelixChatSub; kind: 'current' | 'stale' }[]> {
+  const list = await fetch(
+    `${HELIX_EVENTSUB}?type=${encodeURIComponent(CHAT_VOTE_EVENT)}`,
+    { headers }
+  );
+  if (!list.ok) return [];
+  const json = (await list.json()) as { data?: HelixChatSub[] };
+  const out: { sub: HelixChatSub; kind: 'current' | 'stale' }[] = [];
+  for (const sub of json.data ?? []) {
+    if (sub.condition?.broadcaster_user_id !== broadcasterId) continue;
+    const kind = classifyEventsubCallback(
+      sub.transport?.callback,
+      CHAT_VOTE_PATH
+    );
+    if (kind) out.push({ sub, kind });
+  }
+  return out;
+}
+
+async function deleteSubs(
+  headers: Record<string, string>,
+  subs: HelixChatSub[]
+): Promise<void> {
+  for (const s of subs) {
+    await fetch(`${HELIX_EVENTSUB}?id=${encodeURIComponent(s.id)}`, {
+      method: 'DELETE',
+      headers,
+    });
+  }
+}
 
 export type ChatVoteStatus =
   | 'subscribed'
@@ -83,24 +129,42 @@ export async function ensureChatVoteSubscription(
     const appToken = await getAccessToken();
     if (!appToken) return 'error';
 
-    const res = await fetch(HELIX_EVENTSUB, {
-      method: 'POST',
-      headers: {
-        'Client-ID': creds.id,
-        Authorization: `Bearer ${appToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        type: CHAT_VOTE_EVENT,
-        version: '1',
-        condition: {
-          broadcaster_user_id: token.broadcasterId,
-          user_id: token.broadcasterId,
-        },
-        transport: { method: 'webhook', callback, secret },
-      }),
-    });
-    if (res.ok || res.status === 409) return 'subscribed';
+    const headers = {
+      'Client-ID': creds.id,
+      Authorization: `Bearer ${appToken}`,
+    };
+    // Un abonnement resté sur une ANCIENNE origine de callback (Twitch ne sait
+    // pas en changer) est remplacé : création d'abord, suppression ensuite.
+    let stale = (
+      await listOurChatSubs(headers, token.broadcasterId).catch(() => [])
+    )
+      .filter((s) => s.kind === 'stale')
+      .map((s) => s.sub);
+    const create = () =>
+      fetch(HELIX_EVENTSUB, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: CHAT_VOTE_EVENT,
+          version: '1',
+          condition: {
+            broadcaster_user_id: token.broadcasterId,
+            user_id: token.broadcasterId,
+          },
+          transport: { method: 'webhook', callback, secret },
+        }),
+      });
+    let res = await create();
+    if (res.status === 409 && stale.length > 0) {
+      // Twitch tient l'ancien pour le même : on le retire, puis on recrée.
+      await deleteSubs(headers, stale);
+      stale = [];
+      res = await create();
+    }
+    if (res.ok || res.status === 409) {
+      if (stale.length > 0) await deleteSubs(headers, stale);
+      return 'subscribed';
+    }
     logger.error('[twitch/chat-vote] abonnement refusé: HTTP %s', res.status);
     return 'error';
   } catch (err) {
@@ -111,7 +175,8 @@ export async function ensureChatVoteSubscription(
 
 /**
  * Supprime les abonnements au chat de la chaîne `broadcasterId` (ou de celle
- * de l'espace) qui pointent vers NOTRE récepteur. Best-effort, silencieux.
+ * de l'espace) qui pointent vers NOTRE récepteur — à l'origine actuelle comme à
+ * une ancienne. Best-effort, silencieux.
  */
 export async function removeChatVoteSubscription(opts: {
   tenantId?: string;
@@ -135,30 +200,10 @@ export async function removeChatVoteSubscription(opts: {
       'Client-ID': creds.id,
       Authorization: `Bearer ${appToken}`,
     };
-    const list = await fetch(
-      `${HELIX_EVENTSUB}?type=${encodeURIComponent(CHAT_VOTE_EVENT)}`,
-      { headers }
+    const mine = (await listOurChatSubs(headers, broadcasterId)).map(
+      (s) => s.sub
     );
-    if (!list.ok) return 0;
-    const json = (await list.json()) as {
-      data?: {
-        id: string;
-        condition?: { broadcaster_user_id?: string };
-        transport?: { callback?: string };
-      }[];
-    };
-    const callback = chatVoteCallbackUrl();
-    const mine = (json.data ?? []).filter(
-      (s) =>
-        s.condition?.broadcaster_user_id === broadcasterId &&
-        s.transport?.callback === callback
-    );
-    for (const s of mine) {
-      await fetch(`${HELIX_EVENTSUB}?id=${encodeURIComponent(s.id)}`, {
-        method: 'DELETE',
-        headers,
-      });
-    }
+    await deleteSubs(headers, mine);
     return mine.length;
   } catch (err) {
     logger.error('[twitch/chat-vote] désabonnement impossible', err);

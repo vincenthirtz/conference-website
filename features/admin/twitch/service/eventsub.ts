@@ -7,6 +7,11 @@
 //   * `tcg-drop`   : transport WEBHOOK vers /api/webhooks/twitch/tcg-drop,
 //     conditionné par la récompense désignée.
 //
+// L'origine des callbacks webhook vient de `utils/twitch/eventsubCallback.ts`
+// (`EVENTSUB_CALLBACK_ORIGIN`, sinon le site). Un abonnement resté sur une
+// ancienne origine est RECRÉÉ à l'abonnement suivant puis supprimé : Twitch ne
+// sait pas modifier un callback.
+//
 // JETON D'APPLICATION pour le transport webhook (`client_credentials`), jeton
 // UTILISATEUR pour le websocket — l'inversion contre-intuitive documentée
 // historiquement dans les routes. La CONDITION porte toujours le
@@ -23,7 +28,10 @@ import {
   helixFetch,
   type ValidBroadcasterToken,
 } from '@/utils/twitchBroadcaster';
-import { absoluteSiteUrl } from '@/utils/siteUrl';
+import {
+  classifyEventsubCallback,
+  eventsubCallbackUrl,
+} from '@/utils/twitch/eventsubCallback';
 import { EVENTSUB_SECRET_ENV } from '@/utils/twitch/eventsubRequest';
 import { ALERT_SUBSCRIPTIONS } from '@/utils/twitch/alertEventMapping';
 import type { Audited } from '../../_shared/audited';
@@ -269,11 +277,68 @@ function helixCreate(
   });
 }
 
+/** L'abonnement porte-t-il sur la chaîne `broadcasterId` ? */
+function isForBroadcaster(sub: HelixSub, broadcasterId: string): boolean {
+  const c = sub.condition ?? {};
+  return (
+    c.broadcaster_user_id === broadcasterId ||
+    c.to_broadcaster_user_id === broadcasterId
+  );
+}
+
+/** Supprime des abonnements, sans s'arrêter au premier échec. */
+async function helixDeleteAll(
+  subs: HelixSub[],
+  clientId: string,
+  appToken: string,
+  ctx: ServiceContext
+): Promise<number> {
+  let removed = 0;
+  for (const sub of subs) {
+    if (!sub.id) continue;
+    try {
+      if (await helixDelete(sub.id, clientId, appToken)) removed += 1;
+    } catch (err) {
+      ctx.logger.error('[eventsub] suppression échouée', sub.id, err);
+    }
+  }
+  return removed;
+}
+
+/**
+ * Crée l'abonnement `body` en REMPLAÇANT ceux de `stale` (même type et même
+ * condition, mais un callback vers une ancienne origine — Twitch ne permet pas
+ * de modifier un callback). La création passe d'abord : l'ancien abonnement
+ * reste servi jusqu'à ce que le nouveau existe, quitte à une livraison double
+ * pendant l'instant de la bascule. Si Twitch répond 409 parce qu'il tient
+ * l'ancien pour le même, on le supprime et on recrée une fois.
+ */
+async function helixCreateReplacingStale(
+  ctx: ServiceContext,
+  clientId: string,
+  appToken: string,
+  body: Record<string, unknown>,
+  stale: HelixSub[]
+): Promise<Response> {
+  let pending = stale;
+  let upstream = await helixCreate(clientId, appToken, body);
+  if (upstream.status === 409 && pending.length > 0) {
+    await helixDeleteAll(pending, clientId, appToken, ctx);
+    pending = [];
+    upstream = await helixCreate(clientId, appToken, body);
+  }
+  if ((upstream.ok || upstream.status === 409) && pending.length > 0) {
+    await helixDeleteAll(pending, clientId, appToken, ctx);
+  }
+  return upstream;
+}
+
 /* ===========================================================================
  * Alertes — /twitch/eventsub/alerts
  * ======================================================================== */
 
-const alertsCallbackUrl = () => absoluteSiteUrl('/api/webhooks/twitch/alerts');
+const ALERTS_PATH = '/api/webhooks/twitch/alerts';
+const alertsCallbackUrl = () => eventsubCallbackUrl(ALERTS_PATH);
 
 type AlertPerType = {
   type: string;
@@ -290,6 +355,11 @@ type AlertsContext = {
   token: ValidBroadcasterToken;
   appToken: string;
   existing: HelixSub[] | null;
+  /**
+   * Abonnements de CETTE chaîne vers notre récepteur sur une ANCIENNE origine
+   * (changement d'`EVENTSUB_CALLBACK_ORIGIN`) : à recréer, puis supprimer.
+   */
+  stale: HelixSub[];
 };
 
 /** Préalables communs aux trois méthodes, dans l'ordre d'origine. */
@@ -320,25 +390,34 @@ async function alertsContext(ctx: ServiceContext): Promise<AlertsContext> {
   }
   // Les abonnements de CETTE route, chez Twitch (`null` = illisible).
   let existing: HelixSub[] | null;
+  let stale: HelixSub[] = [];
   try {
     const all = await helixList(
       `${HELIX_EVENTSUB}?status=enabled`,
       creds.id,
       appToken
     );
-    const callback = alertsCallbackUrl();
-    existing = all?.filter((s) => s.transport?.callback === callback) ?? null;
+    const kind = (s: HelixSub) =>
+      classifyEventsubCallback(s.transport?.callback, ALERTS_PATH);
+    existing = all?.filter((s) => kind(s) === 'current') ?? null;
+    stale =
+      all?.filter(
+        (s) => kind(s) === 'stale' && isForBroadcaster(s, token.broadcasterId)
+      ) ?? [];
   } catch {
     existing = null;
   }
-  return { creds, token, appToken, existing };
+  return { creds, token, appToken, existing, stale };
 }
 
 export async function getAlertsState(ctx: ServiceContext) {
-  const { token, existing } = await alertsContext(ctx);
+  const { token, existing, stale } = await alertsContext(ctx);
   const existingTypes = new Set((existing ?? []).map((s) => s.type));
   return {
     callback: alertsCallbackUrl(),
+    // Abonnements encore dirigés vers une ancienne origine : « S'abonner » les
+    // recrée vers l'actuelle.
+    staleCallbacks: stale.length,
     broadcasterLogin: null,
     secretConfigured: Boolean(process.env[EVENTSUB_SECRET_ENV]),
     // `null` = la liste n'a pas pu être lue ; ce n'est pas « rien d'abonné ».
@@ -362,7 +441,7 @@ export async function subscribeAlerts(ctx: ServiceContext): Promise<
     missingScopes: (string | null)[];
   }>
 > {
-  const { creds, token, appToken } = await alertsContext(ctx);
+  const { creds, token, appToken, stale } = await alertsContext(ctx);
   const secret = process.env[EVENTSUB_SECRET_ENV];
   if (!secret) {
     // Sans secret partagé, le récepteur rejetterait chaque livraison en 403.
@@ -402,12 +481,18 @@ export async function subscribeAlerts(ctx: ServiceContext): Promise<
           : { broadcaster_user_id: token.broadcasterId };
 
     try {
-      const upstream = await helixCreate(creds.id, appToken, {
-        type: sub.type,
-        version: sub.version,
-        condition,
-        transport: { method: 'webhook', callback, secret },
-      });
+      const upstream = await helixCreateReplacingStale(
+        ctx,
+        creds.id,
+        appToken,
+        {
+          type: sub.type,
+          version: sub.version,
+          condition,
+          transport: { method: 'webhook', callback, secret },
+        },
+        stale.filter((s) => s.type === sub.type)
+      );
       const json = await readJson<{ message?: string; error?: string }>(
         upstream
       );
@@ -463,19 +548,17 @@ export async function subscribeAlerts(ctx: ServiceContext): Promise<
 export async function unsubscribeAlerts(
   ctx: ServiceContext
 ): Promise<{ ok: true; removed: number }> {
-  const { creds, appToken, existing } = await alertsContext(ctx);
+  const { creds, appToken, existing, stale } = await alertsContext(ctx);
   if (existing === null) {
     throw fail(502, 'Liste des abonnements illisible.', 'TWITCH_HELIX_ERROR');
   }
-  let removed = 0;
-  for (const sub of existing) {
-    if (!sub.id) continue;
-    try {
-      if (await helixDelete(sub.id, creds.id, appToken)) removed += 1;
-    } catch {
-      // Un échec de suppression n'est pas bloquant : l'appel se rejoue.
-    }
-  }
+  // Un échec de suppression n'est pas bloquant : l'appel se rejoue.
+  const removed = await helixDeleteAll(
+    [...existing, ...stale],
+    creds.id,
+    appToken,
+    ctx
+  );
   return { ok: true, removed };
 }
 
@@ -489,7 +572,8 @@ const TCG_SUBSCRIPTION_TYPE =
 const TCG_SUBSCRIPTION_VERSION = '1';
 const TCG_REQUIRED_SCOPE = 'channel:read:redemptions';
 
-const tcgCallbackUrl = () => absoluteSiteUrl('/api/webhooks/twitch/tcg-drop');
+const TCG_PATH = '/api/webhooks/twitch/tcg-drop';
+const tcgCallbackUrl = () => eventsubCallbackUrl(TCG_PATH);
 
 type TcgContext = {
   clientId: string;
@@ -519,12 +603,17 @@ async function tcgContext(ctx: ServiceContext): Promise<TcgContext> {
   return { clientId, secret, token, appToken };
 }
 
-/** Nos abonnements webhook de ce type, quel que soit leur état. */
+/**
+ * Nos abonnements webhook de ce type, quel que soit leur état : `current`
+ * (callback actuel) et `stale` (notre récepteur sur une ancienne origine,
+ * restreint à la chaîne `broadcasterId`). `null` = liste illisible.
+ */
 async function listTcgSubscriptions(
   ctx: ServiceContext,
   appToken: string,
-  clientId: string
-): Promise<HelixSub[] | null> {
+  clientId: string,
+  broadcasterId: string
+): Promise<{ current: HelixSub[]; stale: HelixSub[] } | null> {
   try {
     const all = await helixList(
       `${HELIX_EVENTSUB}?type=${encodeURIComponent(TCG_SUBSCRIPTION_TYPE)}`,
@@ -536,10 +625,15 @@ async function listTcgSubscriptions(
       ctx.logger.error('[eventsub/tcg-drop] list non-OK');
       return null;
     }
-    const ours = tcgCallbackUrl();
-    return all.filter(
-      (s) => s.transport?.method === 'webhook' && s.transport?.callback === ours
-    );
+    const webhooks = all.filter((s) => s.transport?.method === 'webhook');
+    const kind = (s: HelixSub) =>
+      classifyEventsubCallback(s.transport?.callback, TCG_PATH);
+    return {
+      current: webhooks.filter((s) => kind(s) === 'current'),
+      stale: webhooks.filter(
+        (s) => kind(s) === 'stale' && isForBroadcaster(s, broadcasterId)
+      ),
+    };
   } catch (err) {
     ctx.logger.error('[eventsub/tcg-drop] list error', err);
     return null;
@@ -558,7 +652,12 @@ const textOrNull = (v: unknown) =>
 
 export async function getTcgDropState(ctx: ServiceContext) {
   const { clientId, secret, token, appToken } = await tcgContext(ctx);
-  const subs = await listTcgSubscriptions(ctx, appToken, clientId);
+  const subs = await listTcgSubscriptions(
+    ctx,
+    appToken,
+    clientId,
+    token.broadcasterId
+  );
   const [row, candidates] = await Promise.all([
     findTcgRewardIds(ctx.db, ctx.tenantId),
     listFeaturedCandidates(ctx.db, ctx.tenantId),
@@ -574,7 +673,9 @@ export async function getTcgDropState(ctx: ServiceContext) {
     // Exigé par la CRÉATION de la récompense (`tcg-drop/setup`) : sans lui, le
     // bouton « Mettre en service » échouait en 409 sans que la carte le dise.
     canManageRewards: hasScope(token.scope, 'channel:manage:redemptions'),
-    subscriptions: subscriptionView(subs),
+    subscriptions: subscriptionView(subs?.current ?? null),
+    // Encore dirigés vers une ancienne origine : « S'abonner » les recrée.
+    staleSubscriptions: subscriptionView(subs?.stale ?? null),
   };
 }
 
@@ -639,17 +740,34 @@ export async function subscribeTcgDrop(ctx: ServiceContext, rawBody: unknown) {
 
   let upstreamStatus = 0;
   let refused: { status: number; message: string } | null = null;
+  // Les abonnements de CETTE récompense encore dirigés vers une ancienne
+  // origine : remplacés par celui-ci. Liste illisible = rien à remplacer.
+  const before = await listTcgSubscriptions(
+    ctx,
+    appToken,
+    clientId,
+    token.broadcasterId
+  );
+  const stale = (before?.stale ?? []).filter(
+    (s) => s.condition?.reward_id === rewardId
+  );
   try {
-    const upstream = await helixCreate(clientId, appToken, {
-      type: TCG_SUBSCRIPTION_TYPE,
-      version: TCG_SUBSCRIPTION_VERSION,
-      condition: {
-        broadcaster_user_id: token.broadcasterId,
-        // Limite les notifications à CETTE récompense.
-        reward_id: rewardId,
+    const upstream = await helixCreateReplacingStale(
+      ctx,
+      clientId,
+      appToken,
+      {
+        type: TCG_SUBSCRIPTION_TYPE,
+        version: TCG_SUBSCRIPTION_VERSION,
+        condition: {
+          broadcaster_user_id: token.broadcasterId,
+          // Limite les notifications à CETTE récompense.
+          reward_id: rewardId,
+        },
+        transport: { method: 'webhook', callback, secret },
       },
-      transport: { method: 'webhook', callback, secret },
-    });
+      stale
+    );
     upstreamStatus = upstream.status;
     const json = await readJson<{ message?: string; error?: string }>(upstream);
     const upstreamMessage = json?.message || json?.error || '';
@@ -677,13 +795,18 @@ export async function subscribeTcgDrop(ctx: ServiceContext, rawBody: unknown) {
     );
   }
 
-  const subs = await listTcgSubscriptions(ctx, appToken, clientId);
+  const subs = await listTcgSubscriptions(
+    ctx,
+    appToken,
+    clientId,
+    token.broadcasterId
+  );
   return {
     result: {
       rewardId,
       callbackUrl: callback,
       alreadyExisted: upstreamStatus === 409,
-      subscriptions: subscriptionView(subs),
+      subscriptions: subscriptionView(subs?.current ?? null),
     },
     // Journalisé SANS le secret : un journal se relit.
     audit: {
@@ -700,20 +823,24 @@ export async function subscribeTcgDrop(ctx: ServiceContext, rawBody: unknown) {
 }
 
 export async function unsubscribeTcgDrop(ctx: ServiceContext) {
-  const { clientId, appToken } = await tcgContext(ctx);
-  const subs = await listTcgSubscriptions(ctx, appToken, clientId);
+  const { clientId, token, appToken } = await tcgContext(ctx);
+  const subs = await listTcgSubscriptions(
+    ctx,
+    appToken,
+    clientId,
+    token.broadcasterId
+  );
   if (subs === null) {
     throw fail(502, 'Twitch EventSub injoignable.', 'TWITCH_HELIX_ERROR');
   }
-  let removed = 0;
-  for (const sub of subs) {
-    if (!sub.id) continue;
-    try {
-      if (await helixDelete(sub.id, clientId, appToken)) removed += 1;
-    } catch (err) {
-      ctx.logger.error('[eventsub/tcg-drop] suppression échouée', sub.id, err);
-    }
-  }
+  // Les abonnements vers une ancienne origine partent aussi : « se désabonner »
+  // ne doit rien laisser qui livre encore.
+  const removed = await helixDeleteAll(
+    [...subs.current, ...subs.stale],
+    clientId,
+    appToken,
+    ctx
+  );
   // La récompense désignée reste : la ressaisir serait une corvée inutile.
   return {
     result: { removed },

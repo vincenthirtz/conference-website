@@ -27936,6 +27936,9 @@
      "secretConfigured": {
       "type": "boolean"
      },
+     "staleCallbacks": {
+      "type": "number"
+     },
      "subscriptions": {
       "type": "array",
       "items": {
@@ -27978,6 +27981,7 @@
      "callback",
      "readable",
      "secretConfigured",
+     "staleCallbacks",
      "subscriptions"
     ]
    }
@@ -28034,6 +28038,40 @@
      "secretConfigured": {
       "type": "boolean"
      },
+     "staleSubscriptions": {
+      "type": [
+       "array",
+       "null"
+      ],
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "rewardId": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "status": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "id",
+        "rewardId",
+        "status"
+       ]
+      }
+     },
      "subscriptions": {
       "type": [
        "array",
@@ -28078,6 +28116,7 @@
      "hasScope",
      "rewardId",
      "secretConfigured",
+     "staleSubscriptions",
      "subscriptions"
     ]
    }
