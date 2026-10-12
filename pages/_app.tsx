@@ -16,6 +16,12 @@ import { TenantBrandingProvider } from '@/lib/branding/TenantBrandingProvider';
 import { ActiveTeamProvider } from '@/components/player/ActiveTeamContext';
 import type { TenantBranding } from '@/utils/tenant';
 import { resolveAppChrome } from '@/utils/layout/appChrome';
+import { installRemoteApiFetch } from '@/utils/remoteApi';
+
+// Au chargement du module, AVANT le premier rendu : les familles d'API
+// basculées vers api.owwomenscup.fr (NEXT_PUBLIC_API_REMOTE_PREFIXES) doivent
+// l'être dès le premier fetch. Sans variable, ne fait rien.
+installRemoteApiFetch();
 
 const workSans = Work_Sans({
   subsets: ['latin'],

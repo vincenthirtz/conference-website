@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { sanitizeAnalyticsOrigin } from '@/lib/analytics/config';
+import { readRemoteApiConfig } from '@/utils/remoteApi';
 
 // The CSP template is static except for the per-request nonce (script-src) and
 // frame-ancestors (embed vs strict). We precompute the static portions once at
@@ -62,10 +63,17 @@ const LOCAL_SUPABASE_SRC = localSupabaseConnectSrc(
   process.env.NEXT_PUBLIC_SUPABASE_URL
 );
 
+// API sortie du site (conference-api, cf. utils/remoteApi.ts) : autorisée en
+// connect-src seulement quand des familles y sont réellement basculées. Sans
+// config, '' : CSP byte-identique.
+const REMOTE_API = readRemoteApiConfig();
+const REMOTE_API_SRC = REMOTE_API ? ` ${REMOTE_API.origin}` : '';
+
 const CONNECT_SRC_BASE =
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.twitch.tv https://id.twitch.tv https://challenges.cloudflare.com" +
   ANALYTICS_SRC +
-  LOCAL_SUPABASE_SRC;
+  LOCAL_SUPABASE_SRC +
+  REMOTE_API_SRC;
 // Cockpit caster web (/admin/caster) UNIQUEMENT : pilotage d'OBS en local
 // (obs-websocket sur ws://localhost:4455) + chat IRC et EventSub Twitch en
 // WebSocket direct. Le loopback en clair depuis une page HTTPS est permis par
