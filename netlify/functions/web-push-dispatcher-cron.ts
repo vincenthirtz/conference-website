@@ -10,6 +10,7 @@
 import type { Handler } from '@netlify/functions';
 
 import { logger } from '../../utils/logger';
+import { cronBaseUrl } from './_lib/cronBaseUrl';
 
 export const handler: Handler = async () => {
   const secret = process.env.CRON_SECRET;
@@ -21,8 +22,7 @@ export const handler: Handler = async () => {
     };
   }
 
-  const baseUrl =
-    process.env.URL || process.env.SITE_URL || 'https://owwomenscup.fr';
+  const baseUrl = cronBaseUrl();
   const target = `${baseUrl.replace(/\/$/, '')}/api/cron/web-push-dispatch`;
 
   // Cap à 25s : le handler interne a un soft budget à 8s mais peut prendre

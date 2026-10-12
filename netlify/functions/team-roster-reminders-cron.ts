@@ -13,6 +13,7 @@
 import type { Handler } from '@netlify/functions';
 
 import { logger } from '../../utils/logger';
+import { cronBaseUrl } from './_lib/cronBaseUrl';
 
 export const handler: Handler = async () => {
   const secret = process.env.CRON_SECRET;
@@ -24,8 +25,7 @@ export const handler: Handler = async () => {
     };
   }
 
-  const baseUrl =
-    process.env.URL || process.env.SITE_URL || 'https://owwomenscup.fr';
+  const baseUrl = cronBaseUrl();
   const target = `${baseUrl.replace(/\/$/, '')}/api/cron/team-roster-reminders`;
 
   const controller = new AbortController();
