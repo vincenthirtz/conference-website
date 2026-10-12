@@ -23,6 +23,7 @@ import enMatchPrediction from './matchPrediction';
 import enOrganiserFemininPage from './organiserFemininPage';
 import enCircuitPartnersPage from './circuitPartnersPage';
 import enTcgShowcase from './tcgShowcase';
+import enTcgLive from './tcgLive';
 import enPlayerIndex from './playerIndex';
 import enSupportAssoCard from './supportAssoCard';
 import enCopyButton from './copyButton';
@@ -354,6 +355,7 @@ const enDict = {
   organiserFemininPage: enOrganiserFemininPage,
   circuitPartnersPage: enCircuitPartnersPage,
   tcgShowcase: enTcgShowcase,
+  tcgLive: enTcgLive,
   playerHeroPrefs: enPlayerHeroPrefs,
   playerDiscordLink: enPlayerDiscordLink,
   playerTwitchLink: enPlayerTwitchLink,

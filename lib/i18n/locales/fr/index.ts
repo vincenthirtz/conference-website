@@ -17,6 +17,7 @@ import nsMatchPrediction from './matchPrediction';
 import nsOrganiserFemininPage from './organiserFemininPage';
 import nsCircuitPartnersPage from './circuitPartnersPage';
 import nsTcgShowcase from './tcgShowcase';
+import nsTcgLive from './tcgLive';
 import nsPlayerIndex from './playerIndex';
 import nsSupportAssoCard from './supportAssoCard';
 import nsCopyButton from './copyButton';
@@ -348,6 +349,7 @@ export const frDict = {
   organiserFemininPage: nsOrganiserFemininPage.fr,
   circuitPartnersPage: nsCircuitPartnersPage.fr,
   tcgShowcase: nsTcgShowcase.fr,
+  tcgLive: nsTcgLive.fr,
   playerHeroPrefs: nsPlayerHeroPrefs.fr,
   playerDiscordLink: nsPlayerDiscordLink.fr,
   playerTwitchLink: nsPlayerTwitchLink.fr,

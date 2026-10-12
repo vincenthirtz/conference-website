@@ -31,6 +31,7 @@ import type {
   WalletResponse,
 } from './model';
 import type { TcgSetCompletedNotice } from '@/components/tcg/TcgSetsPanel';
+import type { TcgLiveResponse } from '@/utils/tcg/live';
 
 export const tcgUrls = {
   collection: '/api/player/tcg/collection',
@@ -47,6 +48,8 @@ export const tcgUrls = {
   photo: '/api/player/tcg/photo',
   exclusion: '/api/player/tcg/exclusion',
   welcomeGift: '/api/player/tcg/welcome-gift',
+  /** PUBLIQUE : le TCG en action de la page `/tcg` (`components/tcg/live`). */
+  live: '/api/public/tcg/live',
 };
 
 /** Sujet inspecté seul (`?as=`), sans l'équipe active. */
@@ -154,3 +157,26 @@ export const tcgClient = {
       idempotent: true,
     }),
 };
+
+/** Normalise la réponse du TCG en action : un champ faux vaut un bloc vide. */
+export function normalizeTcgLive(data: unknown): TcgLiveResponse {
+  const body = (data ?? {}) as Partial<TcgLiveResponse>;
+  return {
+    recentPulls: Array.isArray(body.recentPulls) ? body.recentPulls : [],
+    collectors: Array.isArray(body.collectors) ? body.collectors : [],
+    cardOfWeek: body.cardOfWeek ?? null,
+  };
+}
+
+/**
+ * Lit le TCG en action. `fetch` NU, sans session : la route est publique et
+ * mise en cache CDN pour toutes ; un `Authorization` la rendrait propre à
+ * chaque visiteuse (et la ferait sortir du cache) sans rien apporter.
+ */
+export async function fetchTcgLive(
+  signal?: AbortSignal
+): Promise<TcgLiveResponse> {
+  const res = await fetch(tcgUrls.live, { signal });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return normalizeTcgLive(await res.json());
+}
