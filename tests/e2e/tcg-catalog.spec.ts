@@ -27,11 +27,23 @@ test.describe('TCG — catalogue public', () => {
     await expect(
       page.getByRole('heading', { level: 1, name: /TCG/i })
     ).toBeVisible();
-    // La vitrine explique comment on gagne des cartes : sans elle, la page
-    // n'est qu'une grille muette pour qui découvre.
+    // La vitrine explique comment on gagne des pièces, barème réel à l'appui :
+    // sans elle, la page n'est qu'une grille muette pour qui découvre.
     await expect(
-      page.getByText(/comment on obtient des cartes/i)
+      page.getByRole('heading', { name: /comment gagner des pièces/i })
     ).toBeVisible();
+  });
+
+  test('le CTA mène à la connexion, avec retour vers la collection', async ({
+    page,
+  }) => {
+    await page.goto('/tcg');
+    // Visiteuse anonyme : la connexion, puis l'espace TCG.
+    const cta = page
+      .getByRole('link', { name: 'Commencer ma collection' })
+      .first();
+    await expect(cta).toBeVisible();
+    await expect(cta).toHaveAttribute('href', '/login?next=/player/tcg');
   });
 
   test('ne sert AUCUNE photo de joueuse', async ({ page }) => {

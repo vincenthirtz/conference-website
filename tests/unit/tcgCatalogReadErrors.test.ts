@@ -81,6 +81,8 @@ describe('/tcg — getStaticProps face à une lecture ratée', () => {
     const r = (await getStaticProps({} as never)) as any;
     expect(r.revalidate).toBe(300);
     expect(r.props.playerCount).toBe(42);
+    // Le barème public voyage avec le catalogue (cf. utils/tcg/publicBareme).
+    expect(r.props.bareme.boosterPrice).toBeGreaterThan(0);
     expect(r.props.cards.some((c: { kind: string }) => c.kind === 'team')).toBe(
       true
     );
@@ -105,6 +107,8 @@ describe('/tcg — getStaticProps face à une lecture ratée', () => {
     results.teams = { data: null, error: { message: 'boom' } };
     const r = (await getStaticProps({} as never)) as any;
     expect(r.revalidate).toBe(30);
+    // Le barème ne lit rien en base : présent même en page dégradée.
+    expect(r.props.bareme.matchWin.coins).toBeGreaterThan(0);
     expect(r.props.cards.some((c: { kind: string }) => c.kind === 'map')).toBe(
       true
     );
