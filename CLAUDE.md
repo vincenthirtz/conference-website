@@ -229,6 +229,7 @@ Required in `.env.local` (see `example.env.local`):
 - `BOT_API_KEY` — legacy key for **non-v1 routes only** (`/api/news` ingest, `/api/support/ticket`). `/api/bot/v1/*` auth is now 100% per-tenant (`tenant_secrets`); the v1 env fallback + the `BOT_WEBHOOK_SECRET` webhook-signing fallback were removed, so `BOT_WEBHOOK_SECRET` is no longer read by the site.
 - `BOT_WEBHOOK_URL` — bot webhook for site → bot events (prod `https://bot.owwomenscup.fr/bot/site-events`; guild inventory is resolved next to it). Unset → no HTTP push, events stay in the outbox for the bot's poller.
 - `NEXT_PUBLIC_API_BASE_URL` / `NEXT_PUBLIC_API_REMOTE_PREFIXES` — progressive cutover to `conference-api` ([utils/remoteApi.ts](utils/remoteApi.ts)). Unset → no rewrite.
+- `API_PROXY_PREFIXES` / `API_PROXY_ORIGIN` / `EDGE_PROXY_SECRET` — same-origin relay of cookie-bound `/api/*` families to `conference-api` via the Netlify Edge Function [netlify/edge-functions/api-proxy.ts](netlify/edge-functions/api-proxy.ts) ([docs/EDGE-API-PROXY.md](docs/EDGE-API-PROXY.md)). Prefixes or secret unset → `context.next()`, Next serves as before.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

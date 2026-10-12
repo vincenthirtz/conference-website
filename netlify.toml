@@ -229,6 +229,29 @@
 [functions."blacklist-expiry-cron"]
   schedule = "23 * * * *"
 
+# Edge Function: relais même-origine /api/<famille>/… → conference-api
+# (https://api.owwomenscup.fr) pour les familles liées aux cookies du site.
+# INERTE TANT QUE API_PROXY_PREFIXES ET EDGE_PROXY_SECRET NE SONT PAS POSÉS :
+# chaque requête /api/* rend alors la main (`context.next()`) à la fonction
+# serveur Next, comme avant. Doc : docs/EDGE-API-PROXY.md.
+#
+# Pourquoi netlify.toml plutôt que `export const config` dans le fichier :
+#   - Les Edge Functions s'exécutent en tête de chaîne, avant le cache, les
+#     redirections et les fonctions serverless — dont la fonction serveur que
+#     génère @netlify/plugin-nextjs pour pages/api. `context.next()` passe la
+#     requête à la suite de cette chaîne.
+#   - Entre Edge Functions, celles de netlify.toml passent avant celles
+#     déclarées en ligne (ordre de déclaration, puis alphabétique). Ici la
+#     seule autre est le middleware Next (proxy.ts), dont le matcher exclut
+#     /api : pas de concurrence sur ce chemin.
+#   - Le dépôt centralise déjà routage et planning dans ce fichier.
+# Source : https://docs.netlify.com/edge-functions/declarations/ (ordre de
+# traitement) et https://docs.netlify.com/edge-functions/overview/.
+# Limite à garder en tête : premier octet de réponse sous 40 s, sinon 502.
+[[edge_functions]]
+  path = "/api/*"
+  function = "api-proxy"
+
 [[headers]]
   for = "/*"
   [headers.values]
