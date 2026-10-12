@@ -16,7 +16,7 @@
 // Ce qui ne sort pas ne peut pas fuir : un second overlay écrit plus tard, ou
 // un curieux qui lit la réponse JSON à la main, n'y trouvera rien.
 //
-// Le jumeau de cette fonction vit dans le bot (`services/discord-bot/
+// Le jumeau de cette fonction vit dans le bot (`owwc-discord-bot/
 // mvp-vote.js`). Deux dépôts, deux implémentations — c'est le prix de la
 // séparation, et la raison pour laquelle chacune est testée chez elle.
 

@@ -10,7 +10,7 @@
 // déjà en salon + email + DM (utils/scrimRequestNotify.ts), que ce module calque.
 //
 // UN SEUL CANAL : L'EMAIL. Le DM Discord du scrim passe par l'événement bot
-// `scrim.request`, que le bot (repo docker-box) sait traiter. Il n'existe aucun
+// `scrim.request`, que le bot (dépôt owwc-discord-bot) sait traiter. Il n'existe aucun
 // événement « candidature » dans le contrat (utils/botEventNames.ts), et en
 // déclarer un sans gestionnaire côté bot produirait des événements que personne
 // n'écoute. Le DM viendra avec son gestionnaire, pas avant.

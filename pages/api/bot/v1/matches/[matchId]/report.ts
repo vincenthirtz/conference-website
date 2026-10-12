@@ -28,7 +28,7 @@
 //   * 409 MATCH_NOT_STARTED        : coup d'envoi pas encore passe, match pas 'ongoing' ;
 //   * 400 INVALID_SCORE_FOR_FORMAT : score impossible pour le best-of du match ;
 //   * 409 FINALIZATION_IN_PROGRESS : l'autre capitaine finalise au meme instant.
-// Le bot affiche le champ `error` TEL QUEL a la capitaine (services/discord-bot/
+// Le bot affiche le champ `error` TEL QUEL a la capitaine (owwc-discord-bot/
 // report-score.js : « ❌ Report échoué : <error> ») : ces messages sont donc
 // rediges pour etre lus sur Discord, accents et consigne compris.
 

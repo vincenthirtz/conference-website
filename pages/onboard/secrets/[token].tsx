@@ -264,8 +264,8 @@ function SuccessView(props: SuccessProps) {
                 <span>
                   {t.step1a} <span className="font-mono text-white">.env</span>{' '}
                   {t.step1b}{' '}
-                  <span className="font-mono">services/discord-bot/.env</span>{' '}
-                  {t.step1c} <code className="font-mono">docker-box</code>
+                  <span className="font-mono">owwc-discord-bot/.env</span>{' '}
+                  {t.step1c} <code className="font-mono">VPS</code>
                   {t.step1d}
                 </span>
               </li>

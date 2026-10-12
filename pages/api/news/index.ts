@@ -138,7 +138,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   //
   // Pourquoi on NE migre PAS vers `withBotRoute` ici (cf. docs/BOT_API_CONTRACT
   // .md §"Per-tenant secrets rotation") : le caller legacy
-  // `services/discord-bot/news-forwarder.js` envoie `x-api-key: BOT_API_KEY`
+  // `owwc-discord-bot/news-forwarder.js` envoie `x-api-key: BOT_API_KEY`
   // (clé GLOBALE) + `x-tenant-id: <guild→tenant>`. Il n'envoie PAS de clé
   // per-tenant seedée dans `tenant_secrets`. Passer la route sous
   // `withBotRoute` ferait donc échouer toute ingestion (401) tant que le bot

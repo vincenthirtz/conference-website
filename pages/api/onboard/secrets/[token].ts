@@ -159,7 +159,7 @@ export default async function handler(
     botWebhookSecret,
     instructions: {
       dotEnvSnippet: [
-        '# Add to your docker-box bot service .env :',
+        '# Add to your owwc-discord-bot .env :',
         `BOT_API_KEY=${botApiKey}`,
         `BOT_WEBHOOK_SECRET=${botWebhookSecret}`,
         `TENANT_ID=${row.created_tenant_id ?? ''}`,

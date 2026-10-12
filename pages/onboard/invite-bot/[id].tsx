@@ -43,7 +43,7 @@ type ServerProps = {
   // TODO(perms) : bot permissions actuellement définies via env
   //   DISCORD_BOT_PERMISSIONS (`utils/onboard.ts`). Le bitfield par défaut
   //   est `1099780063312`, à garder en parité avec
-  //   services/discord-bot/permissions.js (sibling repo docker-box).
+  //   permissions.js du dépôt frère owwc-discord-bot.
 };
 
 const POLL_INTERVAL_MS = 5000;

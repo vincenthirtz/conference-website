@@ -4,7 +4,7 @@
 // team.member.added / team.member.removed / team.captain.changed /
 // staff.role.changed avant emitBotEvent.
 //
-// Le bot (services/discord-bot/role-sync.js) attend exactement la forme
+// Le bot (owwc-discord-bot/role-sync.js) attend exactement la forme
 // SnapshotUser ci-dessous — c'est la même que celle servie par
 // GET /api/bot/v1/role-sync/snapshot, mais résolue pour un seul authUserId
 // au moment où l'event est émis. `teams[]` porte TOUTES les appartenances :

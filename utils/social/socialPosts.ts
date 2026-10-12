@@ -14,7 +14,7 @@
 // publication, une fois le site et Discord déjà servis.
 //
 // LE SENS DU FLUX S'INVERSE ICI. Jusqu'à présent, le pont site ↔ Discord allait
-// dans l'autre sens : `services/discord-bot/news-forwarder.js` surveille le
+// dans l'autre sens : `owwc-discord-bot/news-forwarder.js` surveille le
 // salon d'annonces et transforme chaque message en actualité, avec un titre
 // deviné à partir de la première ligne. L'admin devient la source ; l'ingestion
 // reste en place, c'est le chemin rapide depuis un téléphone.

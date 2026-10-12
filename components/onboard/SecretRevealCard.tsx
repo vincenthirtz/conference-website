@@ -50,7 +50,7 @@ export default function SecretRevealCard({
   const fallbackEnv =
     dotEnvSnippet ??
     [
-      '# Add to your docker-box bot service .env :',
+      '# Add to your owwc-discord-bot .env :',
       `BOT_API_KEY=${botApiKey}`,
       `BOT_WEBHOOK_SECRET=${botWebhookSecret}`,
       tenantId ? `TENANT_ID=${tenantId}` : null,

@@ -2,7 +2,7 @@
 //
 // Pourquoi : le gestionnaire de VM Freebox n'a aucun autostart. Après une
 // coupure de courant la box reboote mais laisse la VM éteinte → toute la stack
-// (Bibimbox, discord-bot, etc.) reste down. Un bot hébergé SUR la VM ne peut
+// (Bibimbox, etc.) reste down. Un bot hébergé SUR la VM ne peut
 // pas la réveiller (il est down aussi). Cette fonction tourne dans le cloud
 // Netlify et joint la box via son API distante (`*.fbxos.fr`), donc elle reste
 // joignable même quand la VM est éteinte (dès que la box elle-même est revenue).
