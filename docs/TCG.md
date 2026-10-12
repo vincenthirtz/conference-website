@@ -304,6 +304,36 @@ vitrine, l'écran lui dit qu'elle ne s'affiche encore nulle part
 (`publicProfileUrl: null`). Un **échange** ne régénère pas la fiche de la
 cédante : la carte cédée disparaît à la prochaine régénération ISR (≤ 300 s).
 
+### 2.6 Le TCG « en action » : ce que la vitrine rend public, et rien d'autre
+
+`GET /api/public/tcg/live` ([`utils/tcg/live.ts`](../utils/tcg/live.ts),
+affichage [`components/tcg/live/`](../components/tcg/live/index.tsx), point
+d'insertion `<TcgLiveSections />` sur `/tcg`) publie trois blocs : les
+derniers tirages rare+ (paquets d'échange écartés), le top 10 des
+collectionneuses par complétion (même dénominateur que la barre de
+progression) et une carte de la semaine. La fiche d'équipe montre en plus les
+vitrines actives de ses membres.
+
+- **Le seul consentement est la vitrine ACTIVE, dans cet espace.** L'opt-in de
+  découverte n'en est pas un (surface derrière connexion, « aucune surface
+  publique » par construction) ; une joueuse retirée du TCG reste sans nom,
+  le nom passant par `readPlayerFaces`. Le réglage de la vitrine annonce ces
+  surfaces AVANT l'activation (`tcgShowcase.publicSurfacesNote`).
+- **Tirage sans consentement : « Une joueuse ». Classement sans consentement :
+  absente.** Un tirage anonyme reste une information sur le TCG ; une ligne de
+  classement anonyme ne dit rien d'utile et décrit pourtant une personne, de
+  façon stable donc recoupable.
+- **Ni identifiant de compte, ni horodatage** : l'âge d'un tirage est en heures
+  entières. Cache CDN 120 s, posé sur les seuls 200.
+- **La carte de la semaine n'est jamais une joueuse** : équipes, maps, fan arts
+  approuvées, mascottes. Ordre de passage mélangé par année ISO (empreinte
+  FNV-1a de `année:clé`), semaine N = N-ième carte : aucune redite avant
+  d'avoir tout montré ; la jointure d'année évite deux semaines de suite
+  identiques.
+
+Limite connue : les vitrines activées AVANT l'ajout de ces surfaces les
+couvrent sans que leur autrice ait lu la nouvelle mention.
+
 ## 3. Le barème de rareté
 
 Quatre paliers : `common`, `rare`, `epic`, `legendary`
