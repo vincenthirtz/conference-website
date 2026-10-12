@@ -42,7 +42,7 @@ import {
   grantTournamentParticipation,
 } from '../../utils/tcg/grantTournamentParticipation';
 import { TOURNAMENT_PARTICIPATION_COINS } from '../../utils/tcg/earnSources';
-import { MATCH_WIN_COINS } from '../../utils/tcg/economy';
+import { COIN_UNIT } from '../../utils/tcg/economy';
 import disqualifyHandler from '../../pages/api/admin/stages/[stageId]/disqualify';
 import rewardHandler from '../../pages/api/admin/stages/[stageId]/participation-reward';
 
@@ -190,9 +190,9 @@ beforeEach(() => {
 });
 
 describe('montant', () => {
-  it('vaut 1000 pièces, dérivé de la victoire de match', () => {
+  it('vaut 1000 pièces, dérivé de l’unité du barème', () => {
     expect(TOURNAMENT_PARTICIPATION_COINS).toBe(1000);
-    expect(TOURNAMENT_PARTICIPATION_COINS).toBe(10 * MATCH_WIN_COINS);
+    expect(TOURNAMENT_PARTICIPATION_COINS).toBe(10 * COIN_UNIT);
   });
 });
 

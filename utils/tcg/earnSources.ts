@@ -59,6 +59,7 @@
 
 import {
   BOOSTER_PRICE_COINS,
+  COIN_UNIT,
   MATCH_LOSS_COINS,
   MATCH_WIN_COINS,
   SCRIM_WIN_COINS,
@@ -75,7 +76,7 @@ import { STREAK_BADGE_MIN } from '@/utils/profile/achievements';
  * DEMI-SCRIM, ET C'EST VOULU. Regarder n'est pas jouer : le drop doit rester
  * la plus petite récompense du barème, sans quoi suivre un live paierait mieux
  * que disputer un match. On le dérive du plus petit gain existant plutôt que
- * d'écrire « 25 », pour que régler `MATCH_WIN_COINS` entraîne celui-ci avec lui.
+ * d'écrire « 25 », pour que régler `COIN_UNIT` entraîne celui-ci avec lui.
  *
  * `Math.round` parce que les pièces sont entières, et un plancher à 1 pour
  * qu'un réglage agressif ne rende jamais le drop nul — une récompense qui ne
@@ -116,20 +117,21 @@ export const CHECKIN_STREAK_COINS = SCRIM_WIN_COINS;
  *
  * LE CADEAU EST D'ABORD UN PAQUET (cf. son entrée au registre), et ces pièces
  * viennent en plus. C'est ce qui a décidé du montant : le prix d'un booster
- * aurait doublé le présent, puisque le paquet est déjà donné. Une victoire de
- * match, elle, dit « voilà de quoi continuer » sans remplacer le fait de jouer.
+ * aurait doublé le présent, puisque le paquet est déjà donné. Une unité du
+ * barème (le montant d'une défaite de match), elle, dit « voilà de quoi
+ * continuer » sans remplacer le fait de jouer.
  *
- * DÉRIVÉ, JAMAIS ÉCRIT EN DUR, comme tout le barème : régler `MATCH_WIN_COINS`
+ * DÉRIVÉ, JAMAIS ÉCRIT EN DUR, comme tout le barème : régler `COIN_UNIT`
  * emporte le cadeau avec lui, et les deux ne peuvent pas diverger.
  *
  * IL NE REMPLACE PAS LA VICTOIRE. Une seule fois, par édition : de quoi ouvrir
  * la porte, pas de quoi se constituer une collection sans jouer — la victoire
  * reste la voie principale (cf. `BOOSTER_PRICE_COINS`).
  */
-export const WELCOME_GIFT_COINS = MATCH_WIN_COINS;
+export const WELCOME_GIFT_COINS = COIN_UNIT;
 
 /**
- * Palmarès de fin de tournoi : multiplicateurs appliqués à `MATCH_WIN_COINS`.
+ * Palmarès de fin de tournoi : multiplicateurs appliqués à `COIN_UNIT`.
  *
  * LES SEUILS SONT CEUX DES BADGES, pas une nouvelle échelle. `achievements.ts`
  * classe déjà : rang 1 champion, rang 2 finalist, rang <= 3 podium, rang <= 8
@@ -142,8 +144,9 @@ export const WELCOME_GIFT_COINS = MATCH_WIN_COINS;
  * celui-ci doit bouger.
  *
  * Les multiplicateurs, eux, sont des RAPPORTS et non des montants — même forme
- * que `BOOSTER_PRICE_COINS = 3 * MATCH_WIN_COINS`. Une victoire de tournoi vaut
- * cinq matchs gagnés : plus qu'aucune autre source unitaire, parce que c'est le
+ * que `BOOSTER_PRICE_COINS = 3 * COIN_UNIT`. Le titre de champion vaut trente
+ * unités, quinze victoires de match depuis que la victoire en vaut deux
+ * (2026-10-12) : plus qu'aucune autre source unitaire, parce que c'est le
  * seul fait qu'on ne peut obtenir qu'une fois par tournoi et par personne.
  *
  * Ordonné du meilleur rang au moins bon : la première borne atteinte gagne.
@@ -158,13 +161,14 @@ export const WELCOME_GIFT_COINS = MATCH_WIN_COINS;
  * aurait aussi exigé d'élargir les DEUX contraintes de `tcg_packs` — celles
  * qui ont coûté 58 paquets le 2026-09-14 — pour une récompense ponctuelle.
  *
- * UNE VICTOIRE DE MATCH, soit un TIERS DE BOOSTER : la vérification rapproche
+ * UNE UNITÉ DU BARÈME (une défaite de match, la moitié d'une victoire depuis
+ * le 2026-10-12), soit un TIERS DE BOOSTER : la vérification rapproche
  * du prochain paquet sans en acheter un à elle seule. Reste sous chacun des
  * deux cadeaux d'accueil (le même montant, sans leur paquet).
  *
  * DÉRIVÉ, JAMAIS ÉCRIT EN DUR, comme tout le barème.
  */
-export const BATTLENET_VERIFIED_COINS = MATCH_WIN_COINS;
+export const BATTLENET_VERIFIED_COINS = COIN_UNIT;
 
 /**
  * Ce que rapporte une SÉRIE complétée (`utils/tcg/collectionSets.ts`), UNE FOIS
@@ -176,7 +180,8 @@ export const BATTLENET_VERIFIED_COINS = MATCH_WIN_COINS;
  * d'élargir les deux contraintes de `tcg_packs` — celles des 58 paquets du
  * 2026-09-14.
  *
- * UNE VICTOIRE DE MATCH, soit UN TIERS DE BOOSTER. Prudent par construction :
+ * UNE UNITÉ DU BARÈME (une défaite de match, la moitié d'une victoire depuis
+ * le 2026-10-12), soit UN TIERS DE BOOSTER. Prudent par construction :
  * une série de six cartes demande, au hasard du tirage, bien plus de six
  * paquets — la récompense rembourse une fraction de l'effort, elle ne le paie
  * pas. Un espace comptant ~15 séries (5 modes de maps, une série d'équipes et
@@ -186,7 +191,7 @@ export const BATTLENET_VERIFIED_COINS = MATCH_WIN_COINS;
  *
  * DÉRIVÉ, JAMAIS ÉCRIT EN DUR, comme tout le barème.
  */
-export const COLLECTION_SET_COINS = MATCH_WIN_COINS;
+export const COLLECTION_SET_COINS = COIN_UNIT;
 
 /**
  * Ce que rapporte un PRONOSTIC JUSTE sur un match de tournoi
@@ -214,16 +219,17 @@ export const MATCH_PREDICTION_COINS = Math.max(
 /**
  * Ce que rapporte le titre de MVP du public sur un match.
  *
- * LE PRIX D'UNE VICTOIRE DE MATCH. C'est une distinction individuelle, rare
- * (une par match diffusé, et seulement si le scrutin désigne quelqu'un — ni
- * égalité, ni trop peu de voix) : la payer moins qu'une victoire en ferait un
- * lot de consolation, la payer plus ferait qu'un vote du chat pèse davantage
- * que le match lui-même.
+ * UNE UNITÉ DU BARÈME. C'est une distinction individuelle, rare (une par match
+ * diffusé, et seulement si le scrutin désigne quelqu'un — ni égalité, ni trop
+ * peu de voix). Elle valait une victoire de match tant que la victoire valait
+ * une unité ; depuis le relèvement de la victoire (2026-10-12) elle reste à
+ * son montant, donc SOUS la victoire : un vote du chat ne doit pas peser
+ * davantage que le match lui-même.
  *
  * DES PIÈCES SEULES, comme `MATCH_PREDICTION_COINS` : un paquet aurait exigé
  * d'élargir les deux contraintes de `tcg_packs`.
  */
-export const PUBLIC_MVP_COINS = MATCH_WIN_COINS;
+export const PUBLIC_MVP_COINS = COIN_UNIT;
 
 /**
  * Ce que rapporte la PARTICIPATION à un tournoi d'une équipe sortie en DNF
@@ -232,7 +238,7 @@ export const PUBLIC_MVP_COINS = MATCH_WIN_COINS;
  *
  * 1000 PIÈCES, DÉCISION PRODUIT DU 2026-10-12 (cas Éclypse) : une équipe qui
  * abandonne en cours de route repart sinon les mains vides, alors qu'elle a
- * joué une partie de la saison. Écrit comme un MULTIPLE de `MATCH_WIN_COINS`,
+ * joué une partie de la saison. Écrit comme un MULTIPLE de `COIN_UNIT`,
  * comme tout le barème : régler la référence règle celui-ci avec elle.
  *
  * TOUJOURS SOUS LE PALMARÈS : chaque palier de `PLACEMENT_TIERS` (même le
@@ -242,7 +248,7 @@ export const PUBLIC_MVP_COINS = MATCH_WIN_COINS;
  * DES PIÈCES SEULES : un paquet aurait exigé d'élargir les deux contraintes de
  * `tcg_packs` (celles des 58 paquets du 2026-09-14).
  */
-export const TOURNAMENT_PARTICIPATION_COINS = 10 * MATCH_WIN_COINS;
+export const TOURNAMENT_PARTICIPATION_COINS = 10 * COIN_UNIT;
 
 export const PLACEMENT_TIERS: ReadonlyArray<{
   /** Rang maximal (inclus) ouvrant ce palier. */
@@ -254,10 +260,10 @@ export const PLACEMENT_TIERS: ReadonlyArray<{
 }> = [
   // Relevé le 2026-10-12 (décision produit, Cup 2026) : chaque palier passe
   // au-dessus de la participation d'une équipe en DNF (1000 pièces).
-  { maxRank: 1, badgeKey: 'champion', coins: 30 * MATCH_WIN_COINS, packs: 5 },
-  { maxRank: 2, badgeKey: 'finalist', coins: 20 * MATCH_WIN_COINS, packs: 3 },
-  { maxRank: 3, badgeKey: 'podium', coins: 15 * MATCH_WIN_COINS, packs: 2 },
-  { maxRank: 8, badgeKey: 'top_cut', coins: 12 * MATCH_WIN_COINS, packs: 1 },
+  { maxRank: 1, badgeKey: 'champion', coins: 30 * COIN_UNIT, packs: 5 },
+  { maxRank: 2, badgeKey: 'finalist', coins: 20 * COIN_UNIT, packs: 3 },
+  { maxRank: 3, badgeKey: 'podium', coins: 15 * COIN_UNIT, packs: 2 },
+  { maxRank: 8, badgeKey: 'top_cut', coins: 12 * COIN_UNIT, packs: 1 },
 ] as const;
 
 /* ---------------------------------------------------------------------------
@@ -385,7 +391,8 @@ export const TCG_EARN_SOURCES: readonly TcgEarnSource[] = [
     // gêner le score ni le rating.
     key: 'match_loss',
     // DES PIÈCES SEULES : la victoire garde son paquet, c'est ce qui la laisse
-    // au-dessus de la défaite à montant de pièces égal (cf. `MATCH_LOSS_COINS`).
+    // au-dessus de la défaite, avec le double de pièces depuis le 2026-10-12
+    // (cf. `MATCH_LOSS_COINS`).
     packs: 0,
     coins: MATCH_LOSS_COINS,
     // `source_ref` = le MATCH, comme `match_win` : une défaite payée par

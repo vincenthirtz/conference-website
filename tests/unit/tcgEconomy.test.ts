@@ -12,7 +12,11 @@ import { describe, expect, it } from 'vitest';
 import { SCRIM_RATING_WEIGHT } from '../../utils/rating/computePlayerRatings';
 import {
   BOOSTER_PRICE_COINS,
+  COIN_UNIT,
+  FORGE_FEE_COINS,
+  MATCH_LOSS_COINS,
   MATCH_WIN_COINS,
+  RECYCLE_REFUND_COINS,
   SCRIM_WIN_COINS,
   canAfford,
   coinsForWin,
@@ -21,9 +25,33 @@ import {
 describe('barème', () => {
   it('dérive le gain de scrim de la pondération du rating', () => {
     // Si quelqu'un change SCRIM_RATING_WEIGHT, ce test suit — c'est le but.
-    expect(SCRIM_WIN_COINS).toBe(
-      Math.round(MATCH_WIN_COINS * SCRIM_RATING_WEIGHT)
-    );
+    // Appliqué à l'UNITÉ du barème, pas à la victoire de tournoi : relever la
+    // victoire (2026-10-12) ne devait pas relever les scrims.
+    expect(SCRIM_WIN_COINS).toBe(Math.round(COIN_UNIT * SCRIM_RATING_WEIGHT));
+  });
+
+  it('fait valoir la victoire de tournoi deux unités (décision du 2026-10-12)', () => {
+    expect(MATCH_WIN_COINS).toBe(2 * COIN_UNIT);
+    expect(MATCH_WIN_COINS).toBe(200);
+  });
+
+  it('fait rapporter une victoire plus qu’une défaite', () => {
+    expect(MATCH_WIN_COINS).toBeGreaterThan(MATCH_LOSS_COINS);
+  });
+
+  it('paie un booster en trois défaites', () => {
+    expect(3 * MATCH_LOSS_COINS).toBe(BOOSTER_PRICE_COINS);
+  });
+
+  it('garde au centime près le reste du barème après le relèvement', () => {
+    // Seule la victoire a bougé le 2026-10-12. Ces montants sont écrits en
+    // clair EXPRÈS : ils figent la décision « le reste ne bouge pas ».
+    expect(COIN_UNIT).toBe(100);
+    expect(MATCH_LOSS_COINS).toBe(100);
+    expect(BOOSTER_PRICE_COINS).toBe(300);
+    expect(SCRIM_WIN_COINS).toBe(50);
+    expect(RECYCLE_REFUND_COINS).toBe(30);
+    expect(FORGE_FEE_COINS).toBe(150);
   });
 
   it('rend des montants entiers', () => {
@@ -38,7 +66,7 @@ describe('barème', () => {
     expect(SCRIM_WIN_COINS).toBeGreaterThan(0);
   });
 
-  it('fixe le booster à plusieurs victoires, pas à une', () => {
+  it('fixe le booster au-dessus d’une victoire, pas à une', () => {
     // Sinon la monnaie doublerait mécaniquement les paquets et la voie
     // « offerte à la victoire » perdrait son sens.
     expect(BOOSTER_PRICE_COINS).toBeGreaterThan(MATCH_WIN_COINS);

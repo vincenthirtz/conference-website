@@ -13,52 +13,72 @@
 // LE RAPPORT SCRIM/MATCH EST DÉRIVÉ, PAS RECOPIÉ. Le dépôt pondère déjà un
 // scrim à `SCRIM_RATING_WEIGHT` (0,5) pour le rating, avec cette justification :
 // « un scrim informe moitié moins qu'un match officiel ». Le même rapport vaut
-// pour la récompense, et l'IMPORTER plutôt que d'écrire « 50 » garantit que les
-// deux barèmes ne divergeront pas si l'un bouge.
+// pour la récompense — appliqué à l'unité du barème (`COIN_UNIT`), donc à la
+// défaite de tournoi, la victoire ayant été relevée à part le 2026-10-12 — et
+// l'IMPORTER plutôt que d'écrire « 50 » garantit que les deux barèmes ne
+// divergeront pas si l'un bouge.
 
 import { SCRIM_RATING_WEIGHT } from '@/utils/rating/computePlayerRatings';
 
 /**
+ * Valeur de référence du barème.
+ *
+ * Tous les montants du TCG s'expriment en multiples de cette unité, pour qu'un
+ * réglage d'ensemble se fasse à un seul endroit. Elle a longtemps été confondue
+ * avec la victoire de tournoi (`MATCH_WIN_COINS`) ; elle en est séparée depuis
+ * le 2026-10-12, quand la victoire a été relevée SANS que le reste bouge.
+ */
+export const COIN_UNIT = 100;
+
+/**
  * Pièces gagnées pour une victoire en match de tournoi.
  *
- * Valeur de référence de tout le barème : les autres montants s'expriment par
- * rapport à elle, pour qu'un réglage se fasse à un seul endroit.
+ * DEUX UNITÉS, DÉCISION PRODUIT DU 2026-10-12 : « une victoire rapporte
+ * 200 pièces, la défaite reste à 100, le booster reste à 300 ». La victoire
+ * passe ainsi nettement au-dessus de la défaite (le double, plus un paquet
+ * offert), sans renchérir ni déprécier le reste du barème — qui, lui, reste
+ * indexé sur `COIN_UNIT`. Non rétroactif : les victoires déjà payées gardent
+ * leur montant d'alors (aucune réécriture du registre).
  */
-export const MATCH_WIN_COINS = 100;
+export const MATCH_WIN_COINS = 2 * COIN_UNIT;
 
 /**
  * Victoire en scrim classé. Dérivée, jamais écrite en dur — cf. l'en-tête.
  *
+ * Indexée sur `COIN_UNIT` et non sur `MATCH_WIN_COINS` : le relèvement de la
+ * victoire de tournoi (2026-10-12) ne concerne pas les scrims, qui restent à
+ * une demi-unité.
+ *
  * `Math.round` parce que les pièces sont entières : un poids qui ne tomberait
  * pas juste ne doit pas produire un solde fractionnaire.
  */
-export const SCRIM_WIN_COINS = Math.round(
-  MATCH_WIN_COINS * SCRIM_RATING_WEIGHT
-);
+export const SCRIM_WIN_COINS = Math.round(COIN_UNIT * SCRIM_RATING_WEIGHT);
 
 /**
  * Prix d'un booster acheté.
  *
- * Trois victoires de tournoi, ou six scrims. Le paquet OFFERT à chaque victoire
+ * Trois unités : trois défaites de tournoi, six scrims, ou une victoire et
+ * demie depuis que la victoire vaut deux unités (2026-10-12). Le paquet OFFERT à chaque victoire
  * reste gratuit : la monnaie ouvre une seconde voie, plus lente et choisie, elle
  * ne remplace pas la première.
  */
-export const BOOSTER_PRICE_COINS = 3 * MATCH_WIN_COINS;
+export const BOOSTER_PRICE_COINS = 3 * COIN_UNIT;
 
 /**
  * Pièces gagnées pour une DÉFAITE en match de tournoi (2026-10-12).
  *
  * Décision produit : « chaque défaite rapporte 100 pièces, trois défaites
- * donnent un booster ». D'où le montant d'une victoire, et pas un chiffre écrit
- * en dur : `BOOSTER_PRICE_COINS = 3 * MATCH_WIN_COINS`, donc trois défaites
- * paient exactement un booster, et un réglage du barème emporte les deux.
+ * donnent un booster ». D'où UNE unité, et pas un chiffre écrit en dur :
+ * `BOOSTER_PRICE_COINS = 3 * COIN_UNIT`, donc trois défaites paient exactement
+ * un booster, et un réglage du barème emporte les deux.
  *
- * LA VICTOIRE RESTE AU-DESSUS : elle donne les mêmes pièces PLUS un paquet
- * offert. Une défaite ne donne que des pièces.
+ * LA VICTOIRE RESTE AU-DESSUS : depuis le 2026-10-12 elle rapporte le double
+ * (`MATCH_WIN_COINS = 2 * COIN_UNIT`), PLUS un paquet offert. Une défaite ne
+ * donne que des pièces.
  *
  * Pas de pendant en scrim ni en forfait : cf. `utils/tcg/grantDefeatRewards.ts`.
  */
-export const MATCH_LOSS_COINS = MATCH_WIN_COINS;
+export const MATCH_LOSS_COINS = COIN_UNIT;
 
 /**
  * Ce que rapporte le recyclage d'un DOUBLON.

@@ -18,6 +18,7 @@ import { join } from 'node:path';
 
 import {
   BOOSTER_PRICE_COINS,
+  COIN_UNIT,
   MATCH_LOSS_COINS,
   MATCH_WIN_COINS,
   SCRIM_WIN_COINS,
@@ -25,6 +26,9 @@ import {
 import {
   BATTLENET_VERIFIED_COINS,
   CHECKIN_STREAK_COINS,
+  COLLECTION_SET_COINS,
+  PUBLIC_MVP_COINS,
+  WELCOME_GIFT_COINS,
   MATCH_PREDICTION_COINS,
   CHECKIN_STREAK_LENGTH,
   PLACEMENT_TIERS,
@@ -143,7 +147,7 @@ describe('intégrité du registre', () => {
 
 describe('montants dérivés', () => {
   it('dérive le drop Twitch du gain de scrim', () => {
-    // Si MATCH_WIN_COINS bouge, SCRIM_WIN_COINS suit, et le drop aussi.
+    // Si COIN_UNIT bouge, SCRIM_WIN_COINS suit, et le drop aussi.
     expect(TWITCH_DROP_COINS).toBe(
       Math.max(1, Math.round(SCRIM_WIN_COINS / 2))
     );
@@ -186,11 +190,28 @@ describe('montants dérivés', () => {
     expect(mins).toEqual([...mins].sort((a, b) => b - a));
   });
 
-  it('dérive chaque palier de palmarès de la victoire de match', () => {
+  it('dérive chaque palier de palmarès de l’unité du barème', () => {
     for (const tier of PLACEMENT_TIERS) {
-      expect(tier.coins % MATCH_WIN_COINS).toBe(0);
-      expect(tier.coins / MATCH_WIN_COINS).toBeGreaterThanOrEqual(1);
+      expect(tier.coins % COIN_UNIT).toBe(0);
+      expect(tier.coins / COIN_UNIT).toBeGreaterThanOrEqual(1);
     }
+  });
+
+  it('garde ses montants quand la victoire passe à deux unités (2026-10-12)', () => {
+    // Écrits en clair EXPRÈS : la décision était « seule la victoire bouge ».
+    // Un retour à une dérivation sur MATCH_WIN_COINS doublerait tout en silence.
+    expect(MATCH_WIN_COINS).toBe(200);
+    expect(TWITCH_DROP_COINS).toBe(25);
+    expect(MATCH_PREDICTION_COINS).toBe(25);
+    expect(CHECKIN_STREAK_COINS).toBe(50);
+    expect(WELCOME_GIFT_COINS).toBe(100);
+    expect(BATTLENET_VERIFIED_COINS).toBe(100);
+    expect(COLLECTION_SET_COINS).toBe(100);
+    expect(PUBLIC_MVP_COINS).toBe(100);
+    expect(TOURNAMENT_PARTICIPATION_COINS).toBe(1000);
+    expect(PLACEMENT_TIERS.map((t) => t.coins)).toEqual([
+      3000, 2000, 1500, 1200,
+    ]);
   });
 });
 
@@ -218,10 +239,11 @@ describe('pronostic juste', () => {
 });
 
 describe('défaite en match de tournoi', () => {
-  it('rapporte le montant d’une victoire, en pièces seules', () => {
-    // La demande produit : « chaque défaite rapporte 100 pièces » — soit le
-    // montant d’une victoire, dont il est dérivé (jamais « 100 » recopié).
-    expect(MATCH_LOSS_COINS).toBe(MATCH_WIN_COINS);
+  it('rapporte une unité du barème, en pièces seules', () => {
+    // La demande produit : « chaque défaite rapporte 100 pièces » — soit une
+    // unité, dont elle est dérivée (jamais « 100 » recopié). La victoire, elle,
+    // en vaut deux depuis le 2026-10-12.
+    expect(MATCH_LOSS_COINS).toBe(COIN_UNIT);
     expect(earnReward('match_loss')).toEqual({
       packs: 0,
       coins: MATCH_LOSS_COINS,
@@ -233,11 +255,19 @@ describe('défaite en match de tournoi', () => {
     expect(2 * MATCH_LOSS_COINS).toBeLessThan(BOOSTER_PRICE_COINS);
   });
 
-  it('reste sous la victoire : mêmes pièces, sans le paquet', () => {
+  it('reste sous la victoire : moins de pièces, et sans le paquet', () => {
     const win = earnReward('match_win');
     const loss = earnReward('match_loss');
-    expect(loss.coins).toBeLessThanOrEqual(win.coins);
+    expect(loss.coins).toBeLessThan(win.coins);
     expect(loss.packs).toBeLessThan(win.packs);
+  });
+
+  it('fait rapporter une victoire plus qu’une défaite', () => {
+    expect(MATCH_WIN_COINS).toBeGreaterThan(MATCH_LOSS_COINS);
+  });
+
+  it('paie un booster en 3 défaites', () => {
+    expect(3 * MATCH_LOSS_COINS).toBe(BOOSTER_PRICE_COINS);
   });
 
   it('attache la récompense au match, comme la victoire', () => {
@@ -249,11 +279,11 @@ describe('défaite en match de tournoi', () => {
 });
 
 describe('vérification Battle.net', () => {
-  it('rapporte une victoire de match, en pièces seules', () => {
-    expect(BATTLENET_VERIFIED_COINS).toBe(MATCH_WIN_COINS);
+  it('rapporte une unité du barème, en pièces seules', () => {
+    expect(BATTLENET_VERIFIED_COINS).toBe(COIN_UNIT);
     expect(earnReward('battlenet_verified')).toEqual({
       packs: 0,
-      coins: MATCH_WIN_COINS,
+      coins: COIN_UNIT,
     });
   });
 
@@ -479,11 +509,11 @@ describe('earnReward', () => {
   it('résout le palmarès selon le rang', () => {
     expect(earnReward('tournament_placement', { rank: 1 })).toEqual({
       packs: 5,
-      coins: 30 * MATCH_WIN_COINS,
+      coins: 30 * COIN_UNIT,
     });
     expect(earnReward('tournament_placement', { rank: 3 })).toEqual({
       packs: 2,
-      coins: 15 * MATCH_WIN_COINS,
+      coins: 15 * COIN_UNIT,
     });
   });
 
