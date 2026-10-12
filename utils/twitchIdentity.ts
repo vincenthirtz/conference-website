@@ -37,6 +37,8 @@ import { logger } from '@/utils/logger';
 const AUTHORIZE_ENDPOINT = 'https://id.twitch.tv/oauth2/authorize';
 const TOKEN_ENDPOINT = 'https://id.twitch.tv/oauth2/token';
 const HELIX_USERS = 'https://api.twitch.tv/helix/users';
+/** Borne de chaque appel Twitch : un échec propre plutôt qu'un callback suspendu. */
+const FETCH_TIMEOUT_MS = 15_000;
 
 /** Un state plus vieux que ça est refusé, même bien signé. */
 const STATE_MAX_AGE_MS = 10 * 60 * 1000;
@@ -131,6 +133,7 @@ export async function exchangeCodeForIdentity(
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!res.ok) {
       logger.error('[twitchIdentity] échange refusé: HTTP %s', res.status);
@@ -155,6 +158,7 @@ export async function exchangeCodeForIdentity(
         Authorization: `Bearer ${accessToken}`,
         'Client-Id': cfg.clientId,
       },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!res.ok) {
       logger.error('[twitchIdentity] helix/users: HTTP %s', res.status);

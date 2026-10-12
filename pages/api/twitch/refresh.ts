@@ -21,6 +21,9 @@ type TwitchTokenResponse = {
 type ErrorResponse = { error: string; code?: string };
 
 const TOKEN_ENDPOINT = 'https://id.twitch.tv/oauth2/token';
+// Même borne que /api/twitch/exchange : une erreur propre plutôt qu'une
+// requête suspendue jusqu'au délai du relais.
+const FETCH_TIMEOUT_MS = 15_000;
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
@@ -70,6 +73,7 @@ export default async function handler(
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString(),
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
 
     if (!upstream.ok) {

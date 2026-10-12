@@ -22,6 +22,10 @@ type TwitchTokenResponse = {
 type ErrorResponse = { error: string; code?: string };
 
 const TOKEN_ENDPOINT = 'https://id.twitch.tv/oauth2/token';
+// Borne l'appel à Twitch : sans elle, un id.twitch.tv qui ne répond pas tient
+// la requête jusqu'au délai du relais (~40 s) et finit en 502 opaque. 15 s,
+// comme les autres appels Twitch serveur (utils/twitchBroadcaster.ts).
+const FETCH_TIMEOUT_MS = 15_000;
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
@@ -89,6 +93,7 @@ export default async function handler(
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString(),
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
 
     if (!upstream.ok) {

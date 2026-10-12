@@ -15,6 +15,10 @@ type LiveResponse =
 const CLIENT_ID = process.env.TWITCH_CLIENT_ID;
 const CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET;
 
+// Borne chaque appel Twitch : deux appels en série, sans borne, peuvent
+// dépasser le délai du relais (~40 s) et finir en 502 opaque.
+const FETCH_TIMEOUT_MS = 10_000;
+
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
 async function getAccessToken() {
@@ -35,6 +39,7 @@ async function getAccessToken() {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: params.toString(),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
   if (!res.ok) {
@@ -94,6 +99,7 @@ export default async function handler(
           'Client-ID': CLIENT_ID,
           Authorization: `Bearer ${token}`,
         },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       }
     );
 
