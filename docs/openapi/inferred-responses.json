@@ -49623,7 +49623,7 @@
        },
        "maxAcceptedPerDay": {
         "type": "number",
-        "const": 3
+        "const": 6
        },
        "maxCardsPerSide": {
         "type": "number",
@@ -49631,11 +49631,11 @@
        },
        "maxPendingReceived": {
         "type": "number",
-        "const": 10
+        "const": 20
        },
        "maxPendingSent": {
         "type": "number",
-        "const": 5
+        "const": 10
        },
        "minAccountAgeDays": {
         "type": "number",
@@ -49647,7 +49647,7 @@
        },
        "ttlHours": {
         "type": "number",
-        "const": 72
+        "const": 168
        }
       },
       "required": [
