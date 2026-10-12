@@ -58,6 +58,9 @@ export async function revokeOverlayToken(tenantId: string): Promise<void> {
     .eq('tenant_id', tenantId)
     .is('revoked_at', null);
   if (error) logger.error('[tcg/overlayToken] révocation impossible', error);
+  // Le cache de résolution ne doit pas prolonger, sur cette instance, un lien
+  // qu'on vient de couper. Les autres instances attendent leur TTL.
+  forgetResolvedTokensOfTenant(tenantId);
 }
 
 /**
@@ -89,20 +92,67 @@ export async function rotateOverlayToken(
 }
 
 /**
+ * Résolutions récentes, en mémoire du process : jeton → tenant.
+ *
+ * POURQUOI. Une source OBS interroge `/api/overlay/tcg/[token]` toutes les
+ * 5 secondes, pendant des heures, et chaque passage relisait le jeton puis
+ * réécrivait `last_used_at` : deux requêtes base (donc deux lignes de journal
+ * Supabase) sur les quatre du passage, pour une réponse qui ne change pas.
+ *
+ * Ce qu'on met en cache : les SUCCÈS seulement, 60 s. Un jeton inconnu est
+ * relu à chaque fois (un lien fraîchement émis marche tout de suite). Le prix,
+ * explicite : un lien révoqué peut encore servir jusqu'à 60 s sur une instance
+ * déjà chaude — un pseudo Twitch et une origine d'événement, rien de plus.
+ * Sur l'instance qui révoque, la purge est immédiate.
+ */
+const RESOLVE_TTL_MS = 60_000;
+const RESOLVE_CACHE_MAX = 200;
+const resolvedTokens = new Map<
+  string,
+  { tenantId: string; expiresAt: number }
+>();
+
+/**
+ * Pas minimal entre deux écritures de `last_used_at`. La donnée sert à
+ * constater qu'un lien oublié sert ENCORE : une précision à l'heure suffit,
+ * et l'écrire à chaque sondage faisait une écriture toutes les 5 s par source.
+ */
+export const OVERLAY_LAST_USED_WRITE_INTERVAL_MS = 60 * 60_000;
+
+function forgetResolvedTokensOfTenant(tenantId: string): void {
+  for (const [token, entry] of resolvedTokens) {
+    if (entry.tenantId === tenantId) resolvedTokens.delete(token);
+  }
+}
+
+/** Oublie le cache de résolution. Usage strictement test. */
+export function __resetOverlayTokenCacheForTests(): void {
+  resolvedTokens.clear();
+}
+
+/**
  * Le tenant derrière un jeton, ou `null` si le jeton est inconnu ou révoqué.
  *
- * Marque `last_used_at` au passage, en BEST-EFFORT : c'est ce qui permet de
- * constater qu'un lien oublié sert encore. Un échec d'horodatage ne doit
- * jamais empêcher l'overlay de s'afficher — il tourne pendant un direct.
+ * Marque `last_used_at` au passage, au plus une fois par heure et en
+ * BEST-EFFORT : c'est ce qui permet de constater qu'un lien oublié sert
+ * encore. Un échec d'horodatage ne doit jamais empêcher l'overlay de
+ * s'afficher — il tourne pendant un direct.
  */
 export async function resolveTenantFromOverlayToken(
   token: string
 ): Promise<string | null> {
   if (!supabaseAdmin || !token) return null;
 
+  const nowMs = Date.now();
+  const cached = resolvedTokens.get(token);
+  if (cached) {
+    if (cached.expiresAt > nowMs) return cached.tenantId;
+    resolvedTokens.delete(token);
+  }
+
   const { data, error } = await supabaseAdmin
     .from('tcg_overlay_tokens')
-    .select('id, tenant_id')
+    .select('id, tenant_id, last_used_at')
     .eq('token', token)
     .is('revoked_at', null)
     .maybeSingle();
@@ -113,19 +163,40 @@ export async function resolveTenantFromOverlayToken(
   }
   if (!data) return null;
 
-  const row = data as { id: string; tenant_id: string };
-  void supabaseAdmin
-    .from('tcg_overlay_tokens')
-    .update({ last_used_at: new Date().toISOString() })
-    .eq('id', row.id)
-    .then(({ error: touchErr }) => {
-      if (touchErr) {
-        logger.warn(
-          '[tcg/overlayToken] horodatage non posé: %s',
-          touchErr.message
-        );
-      }
-    });
+  const row = data as {
+    id: string;
+    tenant_id: string;
+    last_used_at?: string | null;
+  };
+  const lastUsedMs = row.last_used_at ? Date.parse(row.last_used_at) : NaN;
+  if (
+    !Number.isFinite(lastUsedMs) ||
+    nowMs - lastUsedMs >= OVERLAY_LAST_USED_WRITE_INTERVAL_MS
+  ) {
+    void supabaseAdmin
+      .from('tcg_overlay_tokens')
+      .update({ last_used_at: new Date(nowMs).toISOString() })
+      .eq('id', row.id)
+      .then(({ error: touchErr }) => {
+        if (touchErr) {
+          logger.warn(
+            '[tcg/overlayToken] horodatage non posé: %s',
+            touchErr.message
+          );
+        }
+      });
+  }
+
+  if (resolvedTokens.size >= RESOLVE_CACHE_MAX) {
+    // Borne mémoire : on repart de l'entrée la plus ancienne. En pratique,
+    // une poignée de régies — pas de LRU pour si peu.
+    const oldest = resolvedTokens.keys().next().value;
+    if (oldest !== undefined) resolvedTokens.delete(oldest);
+  }
+  resolvedTokens.set(token, {
+    tenantId: row.tenant_id,
+    expiresAt: nowMs + RESOLVE_TTL_MS,
+  });
 
   return row.tenant_id;
 }

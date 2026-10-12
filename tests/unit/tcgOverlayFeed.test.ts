@@ -34,6 +34,7 @@ import {
   rotateOverlayToken,
   revokeOverlayToken,
   resolveTenantFromOverlayToken,
+  __resetOverlayTokenCacheForTests,
 } from '../../utils/tcg/overlayToken';
 
 const TENANT = 'ce69a726-773e-4d12-b5eb-d2503aa752b4';
@@ -150,6 +151,36 @@ describe('jeton d’overlay', () => {
 
     await expect(resolveTenantFromOverlayToken(token!)).resolves.toBeNull();
     await expect(getActiveOverlayToken(TENANT)).resolves.toBeNull();
+  });
+
+  it('ne relit pas la base à chaque sondage, et horodate au plus une fois par heure', async () => {
+    const token = await rotateOverlayToken(TENANT, ALICE);
+    await expect(resolveTenantFromOverlayToken(token!)).resolves.toBe(TENANT);
+    await new Promise((r) => setTimeout(r, 0));
+    const row = (store.tcg_overlay_tokens as any[]).find(
+      (t) => t.token === token
+    );
+    expect(row.last_used_at).toBeTruthy();
+
+    // Le jeton disparaît de la base SANS passer par la révocation : seule la
+    // mémoire de l'instance peut encore répondre.
+    store.tcg_overlay_tokens = [] as any;
+    await expect(resolveTenantFromOverlayToken(token!)).resolves.toBe(TENANT);
+
+    __resetOverlayTokenCacheForTests();
+    await expect(resolveTenantFromOverlayToken(token!)).resolves.toBeNull();
+  });
+
+  it('n’écrit pas last_used_at quand la trace a moins d’une heure', async () => {
+    const token = await rotateOverlayToken(TENANT, ALICE);
+    const recent = new Date(Date.now() - 10 * 60_000).toISOString();
+    const row = (store.tcg_overlay_tokens as any[]).find(
+      (t) => t.token === token
+    );
+    row.last_used_at = recent;
+    await expect(resolveTenantFromOverlayToken(token!)).resolves.toBe(TENANT);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(row.last_used_at).toBe(recent);
   });
 
   it('refuse un jeton inconnu', async () => {
