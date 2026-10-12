@@ -62,6 +62,11 @@ async function scrapePatchNotes(): Promise<PatchNoteItem[]> {
       'User-Agent': 'OW-WC Patch Notes fetcher',
       'Accept-Language': 'fr-FR,fr;q=0.9',
     },
+    // Même plafond que blizzard-news / blizzard-media. Sans lui, un Blizzard
+    // lent tenait la requête ouverte sans limite : sur Netlify la fonction
+    // finissait coupée, derrière le relais (premier octet < 40 s) c'est un 502
+    // au lieu du repli sur la base ci-dessous.
+    signal: AbortSignal.timeout(10_000),
   });
 
   if (!response.ok) {

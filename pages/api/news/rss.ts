@@ -5,7 +5,10 @@ import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 
 import { logger } from '../../../utils/logger';
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://example.com';
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
+  // Même repli que les autres routes (calendar.ics, agenda.ics…) : sans la
+  // variable, le flux pointait vers example.com au lieu du site.
+  'https://owwomenscup.fr';
 
 function xmlEscape(str: string) {
   return str
