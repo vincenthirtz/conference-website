@@ -426,8 +426,8 @@ export async function resolveTenantIdForPublicRequestAsync(
     // et que l'appelant réessaiera.
     //
     // Chemin étroit par construction : la lecture n'a lieu que pour un hôte
-    // ÉTRANGER (ni owwomenscup.fr, ni *.netlify.app, ni localhost), donc jamais
-    // pour le trafic normal ni pour les previews.
+    // ÉTRANGER (ni owwomenscup.fr, ni l'API, ni *.netlify.app, ni localhost),
+    // donc jamais pour le trafic normal ni pour les previews.
     throw new Error(`tenant_host_lookup_failed: ${byHost.error}`);
   }
   if (byHost.tenantId) return byHost.tenantId;
@@ -639,10 +639,41 @@ function normalizeHost(host: string | null | undefined): string | null {
 }
 
 /**
- * Host propre à la plateforme (domaine « officiel » OW Women's Cup, previews
- * Netlify, dev local). Sur ces hosts on ne résout AUCUN tenant custom : le
- * défaut historique s'applique. Évite un lookup DB inutile à chaque requête
- * sur le domaine principal.
+ * Hôtes de la plateforme connus d'avance.
+ *
+ * L'API séparée (`conference-api`, même `pages/api`) est servie sur
+ * `api.owwomenscup.fr` derrière CloudFront, qui la joint sur
+ * `origin-api.owwomenscup.fr` : c'est CE nom qu'elle reçoit en `Host`. Sans
+ * eux ici, chaque requête de l'API lisait la table `tenants` pour rien, et un
+ * échec de cette lecture la faisait tomber en 5xx `tenant_host_lookup_failed`.
+ */
+const PLATFORM_HOSTS: readonly string[] = [
+  'owwomenscup.fr',
+  'www.owwomenscup.fr',
+  'api.owwomenscup.fr',
+  'origin-api.owwomenscup.fr',
+];
+
+/** Nom d'hôte (minuscules) d'une URL d'environnement, `null` si illisible. */
+function hostnameOf(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.toLowerCase() || null;
+  } catch {
+    // Variable mal formée → ignorée, la liste explicite suffit.
+    return null;
+  }
+}
+
+/**
+ * Host propre à la plateforme (domaine « officiel » OW Women's Cup, API
+ * séparée, previews Netlify, dev local). Sur ces hosts on ne résout AUCUN
+ * tenant custom : le défaut historique s'applique. Évite un lookup DB inutile
+ * à chaque requête sur le domaine principal.
+ *
+ * Outre `PLATFORM_HOSTS`, dérivés de l'environnement : l'hôte du site
+ * (`NEXT_PUBLIC_SITE_URL`, avec son jumeau www) et celui de l'API
+ * (`NEXT_PUBLIC_API_BASE_URL`).
  */
 function isPlatformDefaultHost(host: string): boolean {
   if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') {
@@ -651,22 +682,16 @@ function isPlatformDefaultHost(host: string): boolean {
   // Previews / branches Netlify (*.netlify.app) = plateforme, jamais un tenant.
   if (host.endsWith('.netlify.app')) return true;
 
-  const defaults = new Set<string>(['owwomenscup.fr', 'www.owwomenscup.fr']);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  if (siteUrl) {
-    try {
-      const parsed = new URL(siteUrl).hostname.toLowerCase();
-      if (parsed) {
-        defaults.add(parsed);
-        defaults.add(
-          parsed.startsWith('www.') ? parsed.slice(4) : `www.${parsed}`
-        );
-      }
-    } catch {
-      // NEXT_PUBLIC_SITE_URL mal formée → on ignore, les défauts hardcodés
-      // suffisent.
-    }
+  const defaults = new Set<string>(PLATFORM_HOSTS);
+  const siteHost = hostnameOf(process.env.NEXT_PUBLIC_SITE_URL);
+  if (siteHost) {
+    defaults.add(siteHost);
+    defaults.add(
+      siteHost.startsWith('www.') ? siteHost.slice(4) : `www.${siteHost}`
+    );
   }
+  const apiHost = hostnameOf(process.env.NEXT_PUBLIC_API_BASE_URL);
+  if (apiHost) defaults.add(apiHost);
   return defaults.has(host);
 }
 

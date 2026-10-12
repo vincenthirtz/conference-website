@@ -132,6 +132,49 @@ describe('resolveTenantByHostResult', () => {
     expect(db.calls.filter((t) => t === 'tenants')).toHaveLength(0);
   });
 
+  it("n'interroge PAS la base pour l'API séparée, même si la lecture échouerait", async () => {
+    // L'API reçoit `origin-api.owwomenscup.fr` en Host derrière CloudFront :
+    // une lecture ici coûtait une requête par appel, et son échec un 5xx
+    // `tenant_host_lookup_failed`.
+    db.byTable.tenants = { data: null, error: TIMEOUT };
+    for (const host of [
+      'api.owwomenscup.fr',
+      'origin-api.owwomenscup.fr',
+      'ORIGIN-API.owwomenscup.fr:443',
+    ]) {
+      expect(await resolveTenantByHostResult(host)).toEqual({
+        ok: true,
+        tenantId: null,
+      });
+    }
+    expect(db.calls.filter((t) => t === 'tenants')).toHaveLength(0);
+  });
+
+  it("dérive l'hôte de l'API de NEXT_PUBLIC_API_BASE_URL", async () => {
+    db.byTable.tenants = { data: null, error: TIMEOUT };
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.staging.example.test');
+    try {
+      expect(
+        await resolveTenantByHostResult('api.staging.example.test')
+      ).toEqual({ ok: true, tenantId: null });
+      expect(db.calls.filter((t) => t === 'tenants')).toHaveLength(0);
+      // Variable mal formée : ignorée, sans casser la liste explicite.
+      vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'pas une url');
+      expect(await resolveTenantByHostResult('api.owwomenscup.fr')).toEqual({
+        ok: true,
+        tenantId: null,
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('un sous-domaine voisin reste un hôte étranger (lecture faite)', async () => {
+    db.byTable.tenants = { data: [], error: null };
+    await resolveTenantByHostResult('evil-api.owwomenscup.fr');
+    expect(db.calls.filter((t) => t === 'tenants')).toHaveLength(1);
+  });
+
   it('rend `ok` sans tenant pour un hôte étranger inconnu', async () => {
     db.byTable.tenants = { data: [], error: null };
     expect(await resolveTenantByHostResult(nextHost())).toEqual({
