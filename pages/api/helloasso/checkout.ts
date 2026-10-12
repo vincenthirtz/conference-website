@@ -3,6 +3,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { createCheckoutIntent } from '@/utils/helloasso';
 import * as z from 'zod';
 import { formatZodError } from '@/utils/validation';
+import { requestOrigin } from '@/utils/requestOrigin';
 
 import { logger } from '../../../utils/logger';
 const checkoutSchema = z.object({
@@ -45,9 +46,7 @@ export default async function handler(
   const { amount, firstName, lastName, email } = parsed.data;
 
   // Build absolute callback URLs from the request origin
-  const proto = req.headers['x-forwarded-proto'] || 'https';
-  const host = req.headers.host;
-  const origin = `${proto}://${host}`;
+  const origin = requestOrigin(req);
 
   try {
     const checkout = await createCheckoutIntent({

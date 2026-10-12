@@ -23,6 +23,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { applyRateLimit } from '@/utils/rateLimit';
 import { createCheckoutIntent } from '@/utils/helloasso';
 import { formatZodError } from '@/utils/validation';
+import { requestOrigin } from '@/utils/requestOrigin';
 import { resolveTenantIdForPublicRequestAsync } from '@/utils/tenant';
 import { buildPrizeCheckoutMetadata } from '@/utils/billing/prizePoolFunding';
 import { resolveCollectingAccount } from '@/utils/billing/helloassoAccount';
@@ -152,9 +153,7 @@ export default async function handler(
   ).trim();
 
   // Callback URLs vers la page publique du tournoi.
-  const proto = req.headers['x-forwarded-proto'] || 'https';
-  const host = req.headers.host;
-  const origin = `${proto}://${host}`;
+  const origin = requestOrigin(req);
   const tournamentUrl = `${origin}/tournament/${pool.tournament_id}`;
 
   let checkout: { id: number; redirectUrl: string };
