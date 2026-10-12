@@ -26,6 +26,7 @@ import {
   readCollectorsLeaderboard,
   readRecentRarePulls,
   readPoolTotal,
+  readTeamMemberShowcases,
 } from '../../utils/tcg/live';
 import { MAP_POOL_SLUGS } from '../../utils/tcg/readMapFaces';
 import { GAME_MASCOT_SLUGS } from '../../utils/tcg/gameMascots';
@@ -400,6 +401,41 @@ describe('carte de la semaine', () => {
     const b = await readCardOfWeek(TENANT, new Date('2026-10-18T22:00:00Z'));
     expect(a?.week).toBe('2026-W42');
     expect(a?.card.key).toBe(b?.card.key);
+  });
+});
+
+/* ---------------------------------------------------------------------- */
+
+describe('vitrines sur la fiche d’équipe', () => {
+  it('seules les vitrines ACTIVES de cet espace, dans l’ordre du roster', async () => {
+    store.player_ratings = [rating(ALICE, 'Alice'), rating(BEA, 'Bea')] as any;
+    store.tcg_showcases = [
+      { ...showcase(ALICE, true), subject_keys: [`team:${TEAM}`] },
+      { ...showcase(BEA, false), subject_keys: [`team:${TEAM}`] },
+      { ...showcase(CLEO, true, OTHER_TENANT), subject_keys: [`team:${TEAM}`] },
+    ] as any;
+    seedPack(ALICE, [{ kind: 'team', id: TEAM, rarity: 'rare' }]);
+    seedPack(BEA, [{ kind: 'team', id: TEAM, rarity: 'rare' }]);
+    seedPack(CLEO, [{ kind: 'team', id: TEAM, rarity: 'rare' }]);
+
+    const showcases = await readTeamMemberShowcases(TENANT, [
+      { userId: CLEO, name: 'Cleo' },
+      { userId: BEA, name: 'Bea' },
+      { userId: ALICE, name: 'Alice' },
+      { userId: null, name: 'Sans compte' },
+    ]);
+    expect(showcases.map((s) => s.name)).toEqual(['Alice']);
+    expect(showcases[0].cards[0].key).toBe(`team:${TEAM}`);
+    expect(showcases[0].cards[0].rarity).toBe('rare');
+  });
+
+  it('une vitrine active dont aucune carte n’est encore possédée n’apparaît pas', async () => {
+    store.tcg_showcases = [
+      { ...showcase(ALICE, true), subject_keys: [`team:${TEAM}`] },
+    ] as any;
+    expect(
+      await readTeamMemberShowcases(TENANT, [{ userId: ALICE, name: 'Alice' }])
+    ).toEqual([]);
   });
 });
 

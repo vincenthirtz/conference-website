@@ -17,16 +17,12 @@ import {
   rubanStrong,
 } from '@/features/ruban/ruban';
 import Link from 'next/link';
-import type { ShowcaseCard } from '@/utils/tcg/showcase';
+import type { TeamMemberShowcase } from '@/utils/tcg/live';
 import { format, useT } from '@/lib/i18n/useT';
 import nsTcgLive from '@/lib/i18n/locales/fr/tcgLive';
 import LiveCard from './LiveCard';
 
-export type TeamMemberShowcase = {
-  userId: string;
-  name: string;
-  cards: ShowcaseCard[];
-};
+export type { TeamMemberShowcase };
 
 export default function TeamShowcasesSection({
   showcases,

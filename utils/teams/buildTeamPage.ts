@@ -41,6 +41,10 @@ import {
 } from '@/utils/teams/memberDisplayName';
 import type { Achievement, Sponsor } from '@/utils/markdown/teamPublicMarkdown';
 import { readTeamRarity } from '@/utils/tcg/readTeamRarity';
+import {
+  readTeamMemberShowcases,
+  type TeamMemberShowcase,
+} from '@/utils/tcg/live';
 import { tcgTeamImageUrl } from '@/utils/tcg/teamCardImage';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
@@ -194,6 +198,11 @@ export type TeamPageProps = {
    * comme la fiche joueuse l'est pour les cartes de joueuses.
    */
   tcgRarity: TcgRarity;
+  /**
+   * Vitrines TCG ACTIVES des membres (`utils/tcg/live.ts`) : le consentement
+   * est porté par la vitrine elle-même. `[]` quand aucune n'est activée.
+   */
+  memberShowcases: TeamMemberShowcase[];
   /** SEO par-entité, lu par `_app.tsx` → DefaultSeo (seule source des meta). */
   seo: SeoProps;
 };
@@ -665,6 +674,18 @@ export async function buildTeamPage(slug: string): Promise<TeamPageResult> {
   // n'engage personne. Une PHOTO retirée, si.
   const tcgRarity = await readTeamRarity(tenantId, teamId);
 
+  // Les vitrines des joueuses, sous le nom que le roster public montre déjà
+  // (pseudo, sinon BattleTag masqué). Même ISR (60 s) : une vitrine
+  // DÉSACTIVÉE met jusqu'à une minute à quitter la fiche d'équipe, là où sa
+  // propre fiche est régénérée tout de suite (`revalidatePlayerCard`).
+  const memberShowcases = await readTeamMemberShowcases(
+    tenantId,
+    members.map((m) => ({
+      userId: m.user_id,
+      name: m.display_name ?? m.battle_tag ?? null,
+    }))
+  );
+
   return {
     kind: 'ok',
     props: {
@@ -683,6 +704,7 @@ export async function buildTeamPage(slug: string): Promise<TeamPageResult> {
       reliability,
       skillAverage,
       tcgRarity,
+      memberShowcases,
       seo: buildTeamSeo(team),
     },
   };

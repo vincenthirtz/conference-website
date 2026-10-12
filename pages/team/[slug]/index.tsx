@@ -44,6 +44,7 @@ import {
 // que depuis `getStaticProps`, que Next retire du bundle client ; les types
 // passent par `import type` et disparaissent à la compilation.
 import { buildTeamPage } from '@/utils/teams/buildTeamPage';
+import TeamShowcasesSection from '@/components/tcg/live/TeamShowcasesSection';
 import type { TeamPageProps } from '@/utils/teams/buildTeamPage';
 
 import { teamPageSeoFallback } from '@/components/Team/teamPageSeo';
@@ -96,6 +97,7 @@ export default function TeamPage({
   embedHost,
   announcementActive,
   tcgRarity,
+  memberShowcases,
 }: TeamPageProps) {
   const t = useT(nsTeamDetail);
   const tRank = useT(nsOverwatchRank);
@@ -585,6 +587,10 @@ export default function TeamPage({
             </p>
           </div>
         </section>
+
+        {/* Les vitrines TCG de ses joueuses — seulement celles qu'elles ont
+            ACTIVÉES (consentement porté par la vitrine) ; rien sinon. */}
+        <TeamShowcasesSection showcases={memberShowcases} />
 
         {(scrimHistory.length > 0 || reliability.responseRate !== null) && (
           <section className="mb-6 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4">

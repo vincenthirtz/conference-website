@@ -57,6 +57,7 @@ import { DEFAULT_FANART_RARITY } from './fanart';
 import {
   buildShowcaseCards,
   parseShowcaseKey,
+  readPublicShowcase,
   type ShowcaseCard,
   type ShowcaseSubject,
 } from './showcase';
@@ -555,4 +556,69 @@ export async function readTcgLive(
     settle(readCardOfWeek(tenantId, now), null as LiveCardOfWeek | null),
   ]);
   return { recentPulls, collectors, cardOfWeek };
+}
+
+/* -------------------------------------------------------------------------
+ * Fiche d'équipe : les vitrines de ses joueuses
+ * ---------------------------------------------------------------------- */
+
+/** Vitrines montrées au plus sur une fiche d'équipe. */
+export const MAX_TEAM_SHOWCASES = 8;
+
+export type TeamMemberShowcase = {
+  userId: string;
+  name: string;
+  cards: ShowcaseCard[];
+};
+
+/**
+ * Les vitrines ACTIVES des membres d'une équipe, dans l'ordre du roster.
+ *
+ * Le consentement est celui de la vitrine elle-même — c'est exactement ce
+ * qu'elle publie déjà sur la fiche de la joueuse ; la fiche d'équipe n'en est
+ * qu'un second point d'entrée, et le nom affiché est celui que le roster
+ * public montre déjà. Une seule lecture filtre d'abord les vitrines actives :
+ * on ne relit une collection que pour celles qui ont dit oui.
+ *
+ * Chaque vitrine passe par `readPublicShowcase` (possession relue, faces
+ * filtrées, « dans le doute, rien »). Ne lève jamais ; `[]` sur échec.
+ */
+export async function readTeamMemberShowcases(
+  tenantId: string,
+  members: ReadonlyArray<{ userId: string | null; name: string | null }>
+): Promise<TeamMemberShowcase[]> {
+  try {
+    const roster = members.filter(
+      (m): m is { userId: string; name: string } =>
+        Boolean(m.userId) && Boolean(m.name?.trim())
+    );
+    const consenting = await readConsentingUserIds(
+      tenantId,
+      roster.map((m) => m.userId)
+    );
+    if (!consenting || consenting.size === 0) return [];
+    const seen = new Set<string>();
+    const wanted = roster
+      .filter((m) => {
+        if (!consenting.has(m.userId) || seen.has(m.userId)) return false;
+        seen.add(m.userId);
+        return true;
+      })
+      .slice(0, MAX_TEAM_SHOWCASES);
+    const cards = await Promise.all(
+      wanted.map((m) => readPublicShowcase(tenantId, m.userId))
+    );
+    return wanted.flatMap((m, i) => {
+      const shown = cards[i];
+      return shown && shown.length > 0
+        ? [{ userId: m.userId, name: m.name.trim(), cards: shown }]
+        : [];
+    });
+  } catch (err) {
+    logger.warn(
+      '[tcg/live] vitrines d’équipe indisponibles: %s',
+      err instanceof Error ? err.message : String(err)
+    );
+    return [];
+  }
 }
