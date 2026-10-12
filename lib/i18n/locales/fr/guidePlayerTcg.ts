@@ -94,7 +94,7 @@ export default ns('guidePlayerTcg', {
 
   tradesTitle: 'Les échanges',
   tradesBody:
-    'Tu peux échanger des cartes avec une autre collectionneuse de ton espace : carte contre carte, jamais de pièces ni de paquets. Les échanges sont désactivés par défaut — personne ne peut te faire de proposition tant que tu ne les as pas activés.',
+    'Tu peux échanger des cartes avec une autre collectionneuse de ton espace : carte contre carte, jamais de pièces ni de paquets. Les échanges sont activés par défaut : une autre collectionneuse peut te faire une proposition dès que ton compte et ta collection ont l’ancienneté requise. Tu peux les désactiver à tout moment depuis la page des échanges.',
   /** Interpole `{ttl}` (en jours), `{perDay}`, `{accountDays}`, `{collectionDays}`. */
   tradesRules:
     'Une proposition expire au bout de {ttl} jours. Tu peux accepter jusqu’à {perDay} échanges par jour, à condition que ton compte ait au moins {accountDays} jours et ta collection au moins {collectionDays}.',

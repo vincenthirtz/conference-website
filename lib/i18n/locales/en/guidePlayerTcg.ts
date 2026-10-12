@@ -76,7 +76,7 @@ export default {
 
   tradesTitle: 'Trades',
   tradesBody:
-    'You can trade cards with another collector in your space: card for card, never coins or packs. Trading is off by default — no one can send you an offer until you turn it on.',
+    'You can trade cards with another collector in your space: card for card, never coins or packs. Trading is on by default: another collector can send you an offer once your account and collection are old enough. You can turn it off at any time from the trading page.',
   tradesRules:
     'An offer expires after {ttl} days. You can accept up to {perDay} trades a day, provided your account is at least {accountDays} days old and your collection at least {collectionDays}.',
   tradesWhat:

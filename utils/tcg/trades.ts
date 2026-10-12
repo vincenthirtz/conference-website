@@ -58,7 +58,9 @@ export const TRADES_PAGE_PATH = '/player/tcg/echanges';
 /* -------------------------------------------------------------------------- */
 
 /**
- * « Accepte-t-elle des propositions ? » — pas de ligne = NON (opt-in).
+ * « Accepte-t-elle des propositions ? » — pas de ligne = NON. Depuis le
+ * 2026-10-12 la base crée la ligne (à true) au premier paquet : seule une
+ * joueuse sans aucun paquet — donc inéligible de toute façon — n'en a pas.
  *
  * Une lecture en échec rend `ok: false`, JAMAIS `false` : prendre une erreur
  * pour « désactivé » ferait annuler à tort des propositions à l'appelant qui

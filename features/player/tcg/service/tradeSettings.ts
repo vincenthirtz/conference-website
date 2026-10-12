@@ -2,8 +2,12 @@
 // partenaires, blocages (lot P14, extraits de pages/api/player/tcg/trades/
 // {settings,partners,blocks}.ts, même contrat).
 //
-// DÉSACTIVÉ PAR DÉFAUT (opt-in) : être sollicitable est une décision. ACTIVER
-// EXIGE L'ANCIENNETÉ (compte ET collection, calculée par la base). DÉSACTIVER
+// ACTIVÉ PAR DÉFAUT depuis le 2026-10-12 (opt-OUT) : la base crée la ligne
+// `accepts_proposals = true` au premier paquet d'une collectionneuse
+// (migration tcg_trade_opt_in_default_on.sql) ; un « non » explicite reste un
+// non. ACTIVER EXIGE L'ANCIENNETÉ (compte ET collection, calculée par la base),
+// et la fonction de proposition la revérifie pour la destinataire : un compte
+// neuf, activé d'office, n'est pas sollicitable pour autant. DÉSACTIVER
 // NE LAISSE RIEN EN ATTENTE : reçues annulées (`trading_disabled`, annoncées),
 // envoyées retirées (`proposer_cancelled`, sans annonce).
 //
