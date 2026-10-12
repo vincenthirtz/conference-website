@@ -166,6 +166,12 @@ function Profile({
     <>
       <ProfileHeader player={player} label={label} />
 
+      {/* La vitrine n'existe que si la joueuse l'a ACTIVÉE : `null` sinon, et
+          la section ne rend rien. Cf. `utils/tcg/showcase.ts`. Juste sous
+          l'en-tête : c'est ce qu'elle a CHOISI de montrer, ça passe avant ce
+          que la fiche calcule d'elle (badges, carte, courbe). */}
+      <TcgShowcaseSection cards={tcgShowcase} />
+
       <BadgesSection badges={achievements.badges} />
 
       <TcgCardSection
@@ -175,10 +181,6 @@ function Profile({
         tcgPhotoUrl={tcgPhotoUrl}
         tcgFigure={tcgFigure}
       />
-
-      {/* La vitrine n'existe que si la joueuse l'a ACTIVÉE : `null` sinon, et
-          la section ne rend rien. Cf. `utils/tcg/showcase.ts`. */}
-      <TcgShowcaseSection cards={tcgShowcase} />
 
       {/* Une courbe vide n'apprend rien et occupe le haut de la fiche d'une
           joueuse qui n'a pas encore joué. */}
