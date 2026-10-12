@@ -26,6 +26,11 @@
 //   - Le texte de la vitrine (namespace `tcgShowcase`) le dit AVANT qu'on
 //     l'active : un consentement qui couvre une surface non annoncée n'en
 //     serait pas un.
+//   - D'où la DATE : une vitrine activée avant que l'éditeur n'annonce ces
+//     surfaces (`SHOWCASE_PUBLIC_SURFACES_SINCE`) n'y figure pas. Elle n'a
+//     consenti qu'à sa fiche joueuse — qui, elle, ne change pas (elle lit
+//     `readPublicShowcase`, sans cette condition). L'enregistrer de nouveau
+//     depuis l'éditeur, qui affiche la mention, vaut acceptation.
 //
 // CE QUI NE SORT JAMAIS.
 //   - Aucun identifiant de compte de la tireuse ou de la collectionneuse : un
@@ -65,6 +70,46 @@ import {
 /* -------------------------------------------------------------------------
  * Bornes
  * ---------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------------
+ * Consentement daté
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Date d'introduction de la mention `publicSurfacesNote` (namespace
+ * `tcgShowcase`) dans l'éditeur de vitrine : à partir d'elle, activer sa
+ * vitrine, c'est accepter d'apparaître dans les surfaces du TCG « en action »
+ * (derniers tirages, classement, vitrines de la fiche d'équipe).
+ *
+ * Une vitrine n'y est donc prise que si elle est active ET enregistrée depuis
+ * (`tcg_showcases.updated_at`, posé par `upsertShowcaseSettings` à chaque
+ * enregistrement de l'éditeur). Ne JAMAIS avancer cette date : ce serait
+ * étendre après coup un consentement donné sans la mention.
+ */
+export const SHOWCASE_PUBLIC_SURFACES_SINCE = '2026-10-12T18:00:00Z';
+
+const PUBLIC_SURFACES_SINCE_MS = Date.parse(SHOWCASE_PUBLIC_SURFACES_SINCE);
+
+/**
+ * Une ligne `tcg_showcases` vaut-elle consentement aux surfaces publiques ?
+ * Active (booléen strict : un opt-in ne se présume jamais) ET enregistrée
+ * depuis `SHOWCASE_PUBLIC_SURFACES_SINCE`. Une date illisible ne vaut rien.
+ * Pure, exportée pour être testée.
+ */
+export function consentsToPublicSurfaces(row: {
+  enabled: unknown;
+  updated_at: unknown;
+}): boolean {
+  if (row.enabled !== true || typeof row.updated_at !== 'string') return false;
+  const at = Date.parse(row.updated_at);
+  return Number.isFinite(at) && at >= PUBLIC_SURFACES_SINCE_MS;
+}
+
+type ShowcaseConsentRow = {
+  user_id: string;
+  enabled: unknown;
+  updated_at: unknown;
+};
 
 /** Tirages rares montrés. */
 export const RECENT_PULLS_LIMIT = 8;
@@ -248,7 +293,9 @@ export function rankCollectors(
  * ---------------------------------------------------------------------- */
 
 /**
- * Parmi `userIds`, celles qui ont une vitrine ACTIVE dans cet espace.
+ * Parmi `userIds`, celles qui ont une vitrine ACTIVE dans cet espace,
+ * enregistrée depuis `SHOWCASE_PUBLIC_SURFACES_SINCE` (cf.
+ * `consentsToPublicSurfaces`).
  * `null` = lecture en échec : l'appelant n'affiche alors AUCUN nom.
  */
 export async function readConsentingUserIds(
@@ -260,18 +307,19 @@ export async function readConsentingUserIds(
   if (!supabaseAdmin) return null;
   const { data, error } = await supabaseAdmin
     .from('tcg_showcases')
-    .select('user_id, enabled')
+    .select('user_id, enabled, updated_at')
     .eq('tenant_id', tenantId)
     .eq('enabled', true)
+    .gte('updated_at', SHOWCASE_PUBLIC_SURFACES_SINCE)
     .in('user_id', ids);
   if (error) {
     logger.warn('[tcg/live] vitrines illisibles: %s', error.message);
     return null;
   }
   return new Set(
-    ((data ?? []) as Array<{ user_id: string; enabled: unknown }>)
+    ((data ?? []) as ShowcaseConsentRow[])
       // Revérifié : un opt-in ne se présume jamais.
-      .filter((r) => r.enabled === true)
+      .filter(consentsToPublicSurfaces)
       .map((r) => r.user_id)
   );
 }
@@ -402,24 +450,28 @@ export async function readPoolTotal(tenantId: string): Promise<number | null> {
   );
 }
 
-/** Le top des collectionneuses CONSENTANTES de l'espace. `[]` sur échec. */
+/**
+ * Le top des collectionneuses CONSENTANTES de l'espace (vitrine active et
+ * enregistrée depuis `SHOWCASE_PUBLIC_SURFACES_SINCE`). `[]` sur échec.
+ */
 export async function readCollectorsLeaderboard(
   tenantId: string
 ): Promise<LiveCollector[]> {
   if (!supabaseAdmin) return [];
   const { data, error } = await supabaseAdmin
     .from('tcg_showcases')
-    .select('user_id, enabled')
+    .select('user_id, enabled, updated_at')
     .eq('tenant_id', tenantId)
     .eq('enabled', true)
+    .gte('updated_at', SHOWCASE_PUBLIC_SURFACES_SINCE)
     .order('user_id', { ascending: true })
     .limit(MAX_COLLECTORS_SCANNED + 1);
   if (error) {
     logger.warn('[tcg/live] vitrines illisibles: %s', error.message);
     return [];
   }
-  const rows = ((data ?? []) as Array<{ user_id: string; enabled: unknown }>)
-    .filter((r) => r.enabled === true)
+  const rows = ((data ?? []) as ShowcaseConsentRow[])
+    .filter(consentsToPublicSurfaces)
     .map((r) => r.user_id);
   if (rows.length > MAX_COLLECTORS_SCANNED) {
     logger.warn(
@@ -577,8 +629,10 @@ export type TeamMemberShowcase = {
  * Le consentement est celui de la vitrine elle-même — c'est exactement ce
  * qu'elle publie déjà sur la fiche de la joueuse ; la fiche d'équipe n'en est
  * qu'un second point d'entrée, et le nom affiché est celui que le roster
- * public montre déjà. Une seule lecture filtre d'abord les vitrines actives :
- * on ne relit une collection que pour celles qui ont dit oui.
+ * public montre déjà. Mais ce point d'entrée est NOUVEAU : seule une vitrine
+ * enregistrée depuis `SHOWCASE_PUBLIC_SURFACES_SINCE` y figure (cf.
+ * `readConsentingUserIds`). Une seule lecture filtre d'abord les vitrines
+ * consentantes : on ne relit une collection que pour celles qui ont dit oui.
  *
  * Chaque vitrine passe par `readPublicShowcase` (possession relue, faces
  * filtrées, « dans le doute, rien »). Ne lève jamais ; `[]` sur échec.

@@ -331,8 +331,28 @@ vitrines actives de ses membres.
   d'avoir tout montré ; la jointure d'année évite deux semaines de suite
   identiques.
 
-Limite connue : les vitrines activées AVANT l'ajout de ces surfaces les
-couvrent sans que leur autrice ait lu la nouvelle mention.
+- **Un consentement daté.** Les vitrines activées AVANT l'ajout de ces
+  surfaces n'avaient consenti qu'à la fiche joueuse : elles n'alimentent ni les
+  derniers tirages (tireuse anonyme), ni le classement, ni les vitrines de la
+  fiche d'équipe. Une vitrine n'y compte que si elle est active ET que
+  `tcg_showcases.updated_at >= SHOWCASE_PUBLIC_SURFACES_SINCE`
+  (`2026-10-12T18:00:00Z`, date d'introduction de `publicSurfacesNote`,
+  constante dans `utils/tcg/live.ts`, vérifiée par `consentsToPublicSurfaces`
+  en plus du filtre SQL). La réactiver ou la modifier depuis l'éditeur, qui
+  affiche la mention, vaut acceptation. La vitrine de la fiche joueuse
+  (`readPublicShowcase`) ne dépend pas de cette date. Ne jamais avancer la
+  constante : ce serait étendre après coup un consentement donné sans la
+  mention.
+
+Limite connue : `updated_at` n'est pas écrit QUE par l'éditeur. Acheter un
+habillage (RPC `tcg_buy_cosmetic`, migration
+`tcg_forge_function.sql`) ou en poser un (`upsertEquippedCosmetics`) le
+rafraîchit aussi, depuis le panneau des habillages de la collection, qui
+n'affiche pas la mention. Une vitrine activée avant la date puis habillée
+après compte donc comme consentante. Le correctif propre est une colonne
+dédiée (p. ex. `public_surfaces_accepted_at`), posée par le seul
+`upsertShowcaseSettings` : elle demande une migration, à appliquer avant le
+code qui la lit.
 
 ## 3. Le barème de rareté
 

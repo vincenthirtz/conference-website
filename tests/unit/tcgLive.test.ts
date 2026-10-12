@@ -27,7 +27,10 @@ import {
   readRecentRarePulls,
   readPoolTotal,
   readTeamMemberShowcases,
+  consentsToPublicSurfaces,
+  SHOWCASE_PUBLIC_SURFACES_SINCE,
 } from '../../utils/tcg/live';
+import { readPublicShowcase } from '../../utils/tcg/showcase';
 import { MAP_POOL_SLUGS } from '../../utils/tcg/readMapFaces';
 import { GAME_MASCOT_SLUGS } from '../../utils/tcg/gameMascots';
 import handler, {
@@ -55,12 +58,23 @@ function rating(userId: string, name: string, tenantId = TENANT) {
   };
 }
 
-function showcase(userId: string, enabled: boolean, tenantId = TENANT) {
+/** Enregistrée APRÈS l'introduction de la mention : consentement valable. */
+const SAVED_AFTER = '2026-10-12T19:00:00.000Z';
+/** Enregistrée AVANT : ne couvre que la fiche joueuse. */
+const SAVED_BEFORE = '2026-10-01T10:00:00.000Z';
+
+function showcase(
+  userId: string,
+  enabled: boolean,
+  tenantId = TENANT,
+  updatedAt = SAVED_AFTER
+) {
   return {
     tenant_id: tenantId,
     user_id: userId,
     enabled,
     subject_keys: [],
+    updated_at: updatedAt,
   };
 }
 
@@ -146,7 +160,52 @@ describe('âge d’un tirage', () => {
   });
 });
 
+describe('consentement daté — consentsToPublicSurfaces', () => {
+  it('active ET enregistrée depuis la mention, sinon non', () => {
+    expect(
+      consentsToPublicSurfaces({ enabled: true, updated_at: SAVED_AFTER })
+    ).toBe(true);
+    expect(
+      consentsToPublicSurfaces({
+        enabled: true,
+        updated_at: SHOWCASE_PUBLIC_SURFACES_SINCE,
+      })
+    ).toBe(true);
+    // Format Postgres (`+00:00`) : comparé en instant, pas en texte.
+    expect(
+      consentsToPublicSurfaces({
+        enabled: true,
+        updated_at: '2026-10-12 18:00:00+00',
+      })
+    ).toBe(true);
+    expect(
+      consentsToPublicSurfaces({ enabled: true, updated_at: SAVED_BEFORE })
+    ).toBe(false);
+    expect(
+      consentsToPublicSurfaces({ enabled: false, updated_at: SAVED_AFTER })
+    ).toBe(false);
+    expect(
+      consentsToPublicSurfaces({ enabled: 'true', updated_at: SAVED_AFTER })
+    ).toBe(false);
+    expect(consentsToPublicSurfaces({ enabled: true, updated_at: null })).toBe(
+      false
+    );
+    expect(
+      consentsToPublicSurfaces({ enabled: true, updated_at: 'pas une date' })
+    ).toBe(false);
+  });
+});
+
 describe('derniers tirages rares — consentement', () => {
+  it('une vitrine activée AVANT la mention ne nomme pas la tireuse', async () => {
+    store.player_ratings = [rating(ALICE, 'Alice')] as any;
+    store.tcg_showcases = [showcase(ALICE, true, TENANT, SAVED_BEFORE)] as any;
+    seedPack(ALICE, [{ kind: 'team', id: TEAM, rarity: 'epic' }]);
+    const pulls = await readRecentRarePulls(TENANT, NOW);
+    expect(pulls).toHaveLength(1);
+    expect(pulls[0].collector).toBeNull();
+  });
+
   it('nomme la vitrine active, anonymise le reste, ne sort aucun identifiant', async () => {
     store.player_ratings = [rating(ALICE, 'Alice'), rating(BEA, 'Bea')] as any;
     store.tcg_showcases = [showcase(ALICE, true), showcase(BEA, false)] as any;
@@ -297,6 +356,18 @@ describe('classement — consentement et multi-tenant', () => {
     expect(JSON.stringify(board)).not.toMatch(/Une joueuse|null/);
   });
 
+  it('une vitrine activée AVANT la mention n’entre pas au classement', async () => {
+    store.player_ratings = [rating(ALICE, 'Alice'), rating(BEA, 'Bea')] as any;
+    store.tcg_showcases = [
+      showcase(ALICE, true, TENANT, SAVED_BEFORE),
+      showcase(BEA, true),
+    ] as any;
+    seedPack(ALICE, [{ kind: 'team', id: TEAM, rarity: 'common' }]);
+    seedPack(BEA, [{ kind: 'team', id: TEAM, rarity: 'common' }]);
+    const board = await readCollectorsLeaderboard(TENANT);
+    expect(board.map((c) => c.name)).toEqual(['Bea']);
+  });
+
   it('les cartes possédées dans un autre espace ne comptent pas ici', async () => {
     store.player_ratings = [rating(ALICE, 'Alice')] as any;
     store.tcg_showcases = [showcase(ALICE, true)] as any;
@@ -427,6 +498,28 @@ describe('vitrines sur la fiche d’équipe', () => {
     expect(showcases.map((s) => s.name)).toEqual(['Alice']);
     expect(showcases[0].cards[0].key).toBe(`team:${TEAM}`);
     expect(showcases[0].cards[0].rarity).toBe('rare');
+  });
+
+  it('une vitrine activée AVANT la mention : absente de l’équipe, intacte sur la fiche joueuse', async () => {
+    store.player_ratings = [rating(ALICE, 'Alice'), rating(BEA, 'Bea')] as any;
+    store.tcg_showcases = [
+      {
+        ...showcase(ALICE, true, TENANT, SAVED_BEFORE),
+        subject_keys: [`team:${TEAM}`],
+      },
+      { ...showcase(BEA, true), subject_keys: [`team:${TEAM}`] },
+    ] as any;
+    seedPack(ALICE, [{ kind: 'team', id: TEAM, rarity: 'rare' }]);
+    seedPack(BEA, [{ kind: 'team', id: TEAM, rarity: 'rare' }]);
+
+    const showcases = await readTeamMemberShowcases(TENANT, [
+      { userId: ALICE, name: 'Alice' },
+      { userId: BEA, name: 'Bea' },
+    ]);
+    expect(showcases.map((s) => s.name)).toEqual(['Bea']);
+    // La surface existante (fiche joueuse) ne dépend pas de la date.
+    const own = await readPublicShowcase(TENANT, ALICE);
+    expect(own?.map((c) => c.key)).toEqual([`team:${TEAM}`]);
   });
 
   it('une vitrine active dont aucune carte n’est encore possédée n’apparaît pas', async () => {
