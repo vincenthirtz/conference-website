@@ -15,7 +15,7 @@ import RecentPullsSection, {
 import CollectorsLeaderboard from '../../components/tcg/live/CollectorsLeaderboard';
 import CardOfWeekSection from '../../components/tcg/live/CardOfWeekSection';
 import TeamShowcasesSection from '../../components/tcg/live/TeamShowcasesSection';
-import { normalizeTcgLive } from '../../features/player/tcg/client';
+import { normalizeTcgLive } from '../../utils/tcg/useTcgLive';
 import nsTcgLive from '../../lib/i18n/locales/fr/tcgLive';
 import type { ShowcaseCard } from '../../utils/tcg/showcase';
 

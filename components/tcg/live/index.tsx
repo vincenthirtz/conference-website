@@ -20,7 +20,7 @@ import nsTcgLive from '@/lib/i18n/locales/fr/tcgLive';
 import CardOfWeekSection from './CardOfWeekSection';
 import CollectorsLeaderboard from './CollectorsLeaderboard';
 import RecentPullsSection from './RecentPullsSection';
-import { useTcgLive } from '@/features/player/tcg/hooks/useTcgLive';
+import { useTcgLive } from '@/utils/tcg/useTcgLive';
 
 export { default as CardOfWeekSection } from './CardOfWeekSection';
 export { default as CollectorsLeaderboard } from './CollectorsLeaderboard';
@@ -28,7 +28,7 @@ export { default as RecentPullsSection } from './RecentPullsSection';
 export { default as TeamShowcasesSection } from './TeamShowcasesSection';
 export type { TeamMemberShowcase } from './TeamShowcasesSection';
 export { default as LiveCard } from './LiveCard';
-export { useTcgLive } from '@/features/player/tcg/hooks/useTcgLive';
+export { useTcgLive } from '@/utils/tcg/useTcgLive';
 
 export default function TcgLiveSections({
   className = '',

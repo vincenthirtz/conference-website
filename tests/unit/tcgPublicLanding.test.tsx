@@ -175,10 +175,19 @@ describe('CTA « Commencer ma collection »', () => {
   });
 });
 
-describe('TcgLiveSections — point d’insertion vide', () => {
-  it('ne rend rien tant qu’aucun bloc n’est branché', () => {
-    const { container } = render(<TcgLiveSections />);
-    expect(container.innerHTML).toBe('');
+describe('TcgLiveSections — blocs « en action »', () => {
+  it('ne rend rien si la route publique échoue (la page reste intacte)', async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (() =>
+      Promise.reject(new Error('réseau'))) as typeof fetch;
+    try {
+      const { container } = render(<TcgLiveSections />);
+      await new Promise((r) => setTimeout(r, 0));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(container.textContent ?? '').toBe('');
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 });
 
