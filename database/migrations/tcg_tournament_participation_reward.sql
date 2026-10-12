@@ -41,6 +41,7 @@ ALTER TABLE public.tcg_wallet_entries
   ADD CONSTRAINT tcg_wallet_entries_source_kind_check
   CHECK (source_kind = ANY (ARRAY[
     'match_win'::text,
+    'match_loss'::text,
     'scrim_win'::text,
     'booster_purchase'::text,
     'admin_grant'::text,
