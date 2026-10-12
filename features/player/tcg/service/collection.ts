@@ -16,20 +16,19 @@
 import { LegacyAdminError } from '@/utils/admin/errors';
 import { cardFigureOf } from '@/utils/tcg/roleFigures';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
-import { POOL_LIMIT } from '@/utils/tcg/drawPack';
 import {
   readFanartFaces,
   readPlayerFaces,
   readTeamFaces,
 } from '@/utils/tcg/readCardFaces';
-import { readMapFaces, MAP_POOL_SLUGS } from '@/utils/tcg/readMapFaces';
+import { readMapFaces } from '@/utils/tcg/readMapFaces';
 import { cardSubjectKey, type TcgCardKind } from '@/utils/tcg/subjectKey';
 import { readOwnedCardRows } from '@/utils/tcg/readOwnedCards';
-import { readDrawPoolSizes } from '@/utils/tcg/readDrawPool';
 import {
-  GAME_MASCOT_SLUGS,
-  gameMascotDisplayName,
-} from '@/utils/tcg/gameMascots';
+  countCollectableCards,
+  readDrawPoolSizes,
+} from '@/utils/tcg/readDrawPool';
+import { gameMascotDisplayName } from '@/utils/tcg/gameMascots';
 import { copyRef, readEngagedCopies } from '@/utils/tcg/engagedCards';
 import {
   compareCollectionOrder,
@@ -155,12 +154,8 @@ async function readPoolDistinct(
     logger.warn('[tcg/collection] vivier illisible: %s', sizes.error);
     return null;
   }
-  const players = Math.min(sizes.value.players, POOL_LIMIT);
-  const teams = Math.min(sizes.value.teams, POOL_LIMIT);
-  const fanarts = Math.min(sizes.value.fanarts, POOL_LIMIT);
-  const maps = Math.min(MAP_POOL_SLUGS.length, POOL_LIMIT);
-  const mascots = Math.min(GAME_MASCOT_SLUGS.length, POOL_LIMIT);
-  return { distinct: players + teams + maps + fanarts + mascots };
+  // La somme vit à côté du vivier : l'accueil public annonce le même total.
+  return { distinct: countCollectableCards(sizes.value) };
 }
 
 /** Paramètres de page bruts (query), validés ici dans l'ordre historique. */

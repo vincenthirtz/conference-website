@@ -17,6 +17,8 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { POOL_LIMIT } from './drawPack';
+import { MAP_POOL_SLUGS } from './readMapFaces';
+import { GAME_MASCOT_SLUGS } from './gameMascots';
 
 export type DrawPool = {
   playerIds: string[];
@@ -139,6 +141,30 @@ export type DrawPoolSizesResult =
  * `.limit()` : au delà, le tirage ne regarde pas les sujets suivants, donc les
  * compter rendrait la complétion inatteignable.
  */
+/**
+ * Combien de cartes DIFFÉRENTES existent : le dénominateur de la collection.
+ *
+ * LES CINQ TYPES, chacun plafonné à `POOL_LIMIT` comme le tirage les plafonne.
+ * Maps et mascottes ne se comptent pas en base : leur vivier EST le registre
+ * en mémoire, celui que reçoit le tirage.
+ *
+ * UNE SEULE SOMME. L'espace joueuse (« 12 sur 48 ») et l'accueil public
+ * (« 48 cartes à collectionner ») disent le même nombre : s'ils l'additionnaient
+ * chacun de leur côté, l'oubli d'un type dans l'un des deux suffirait à les
+ * faire diverger — c'est arrivé au dénominateur, qui a longtemps ignoré fan
+ * arts et mascottes.
+ */
+export function countCollectableCards(sizes: DrawPoolSizes): number {
+  const cap = (n: number) => Math.min(n, POOL_LIMIT);
+  return (
+    cap(sizes.players) +
+    cap(sizes.teams) +
+    cap(sizes.fanarts) +
+    cap(MAP_POOL_SLUGS.length) +
+    cap(GAME_MASCOT_SLUGS.length)
+  );
+}
+
 export async function readDrawPoolSizes(
   tenantId: string
 ): Promise<DrawPoolSizesResult> {
