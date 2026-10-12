@@ -8,6 +8,7 @@
 import type { NextApiResponse } from 'next';
 import { defineAdminRoute, mutate, read } from '@/utils/admin/defineAdminRoute';
 import { logger } from '@/utils/logger';
+import { revalidatePaths } from '@/utils/revalidate';
 import { NewsIdQuery } from '../schemas';
 import { announcePublished, deleteNews, getNews, updateNews } from '../service';
 
@@ -19,13 +20,11 @@ async function revalidateNewsPages(res: NextApiResponse, slugs: string[]) {
     '/actualites',
     ...slugs.filter(Boolean).map((slug) => `/news/${slug}`),
   ];
-  await Promise.all(
-    paths.map((path) =>
-      res.revalidate(path).catch((err) => {
-        logger.error(`[admin/news/id] revalidate ${path} failed`, err);
-      })
-    )
-  );
+  await revalidatePaths(res, paths, {
+    onError: (path, err) => {
+      logger.error(`[admin/news/id] revalidate ${path} failed`, err);
+    },
+  });
 }
 
 export default defineAdminRoute({

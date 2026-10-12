@@ -17,6 +17,7 @@
 
 import type { NextApiResponse } from 'next';
 import { logger } from './logger';
+import { revalidatePaths } from './revalidate';
 
 /** Les pages dont le contenu dépend du staff de l'association. */
 const ASSOCIATION_PATHS = ['/association'];
@@ -24,15 +25,10 @@ const ASSOCIATION_PATHS = ['/association'];
 export async function revalidateAssociationPages(
   res: NextApiResponse
 ): Promise<void> {
-  // `res.revalidate` n'existe pas partout (tests avec un double de réponse,
-  // runtimes exotiques) : on ne suppose rien.
-  if (typeof res.revalidate !== 'function') return;
-
-  await Promise.all(
-    ASSOCIATION_PATHS.map((path) =>
-      res.revalidate(path).catch((err: unknown) => {
-        logger.error(`[revalidateAssociation] ${path} failed`, err);
-      })
-    )
-  );
+  // Mode local ou distant : voir utils/revalidate.ts.
+  await revalidatePaths(res, ASSOCIATION_PATHS, {
+    onError: (path, err) => {
+      logger.error(`[revalidateAssociation] ${path} failed`, err);
+    },
+  });
 }

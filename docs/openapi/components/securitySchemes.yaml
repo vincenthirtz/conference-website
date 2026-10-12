@@ -45,6 +45,13 @@ CronSecret:
   description: |
     Token partagé entre Netlify scheduled functions et l'API. Vérifié
     par `requireCronAuth()`. Routes idempotentes côté serveur.
+RevalidateSecret:
+  type: apiKey
+  in: header
+  name: x-revalidate-secret
+  description: |
+    Secret partagé `REVALIDATE_SECRET` entre conference-api et le site
+    Netlify, comparé en temps constant. Absent côté site → la route répond 404.
 PublicApiToken:
   type: http
   scheme: bearer

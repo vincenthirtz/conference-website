@@ -97,11 +97,40 @@ export function resolveEdgeProxyConfig(raw: {
   return { origin, prefixes, secret };
 }
 
-/** Le chemin (déjà normalisé par `URL`) relève-t-il d'un préfixe relayé ? */
+/**
+ * Routes JAMAIS relayées, quoi que dise API_PROXY_PREFIXES (même `/api/`) :
+ * `/api/internal/*` doit être servi par Netlify. C'est là que conference-api
+ * déclenche la régénération ISR des pages du site
+ * (`pages/api/internal/revalidate.ts`) ; relayée, la demande reviendrait à
+ * l'API, qui ne peut rien régénérer côté Netlify.
+ */
+const NEVER_PROXIED = '/api/internal';
+
+/**
+ * Le chemin relève-t-il des routes servies exclusivement par le site ?
+ * Comparaison sur le chemin décodé et en minuscules : `%69nternal` ou
+ * `/API/Internal` ne doivent pas contourner l'exclusion.
+ */
+export function isNeverProxiedPath(pathname: string): boolean {
+  let p = pathname;
+  try {
+    p = decodeURIComponent(pathname);
+  } catch {
+    // Encodage invalide : on garde le chemin brut.
+  }
+  p = p.toLowerCase();
+  return p === NEVER_PROXIED || p.startsWith(`${NEVER_PROXIED}/`);
+}
+
+/**
+ * Le chemin (déjà normalisé par `URL`) relève-t-il d'un préfixe relayé ?
+ * Toujours `false` pour `/api/internal/*` (cf. `isNeverProxiedPath`).
+ */
 export function matchesProxyPrefix(
   pathname: string,
   prefixes: readonly string[]
 ): boolean {
+  if (isNeverProxiedPath(pathname)) return false;
   return prefixes.some((p) => pathname.startsWith(p));
 }
 

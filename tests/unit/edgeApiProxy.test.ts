@@ -13,6 +13,7 @@ import {
   buildUpstreamHeaders,
   buildUpstreamUrl,
   DEFAULT_API_PROXY_ORIGIN,
+  isNeverProxiedPath,
   isNullBodyStatus,
   matchesProxyPrefix,
   methodHasBody,
@@ -87,6 +88,27 @@ describe('matchesProxyPrefix', () => {
   ])('%s → %s', (path, expected) => {
     expect(matchesProxyPrefix(path, prefixes)).toBe(expected);
   });
+});
+
+describe('/api/internal/* jamais relayé', () => {
+  it.each([
+    '/api/internal/revalidate',
+    '/api/internal',
+    '/api/internal/autre',
+    '/api/%69nternal/revalidate',
+    '/API/Internal/revalidate',
+  ])('%s exclu même avec le préfixe /api/', (path) => {
+    expect(isNeverProxiedPath(path)).toBe(true);
+    expect(matchesProxyPrefix(path, ['/api/'])).toBe(false);
+    expect(matchesProxyPrefix(path, ['/api/internal/'])).toBe(false);
+  });
+  it.each(['/api/internals/x', '/api/onboard/internal', '/api/internalx'])(
+    '%s reste relayable',
+    (path) => {
+      expect(isNeverProxiedPath(path)).toBe(false);
+      expect(matchesProxyPrefix(path, ['/api/'])).toBe(true);
+    }
+  );
 });
 
 describe('buildUpstreamUrl', () => {
@@ -279,6 +301,23 @@ describe('edge function api-proxy', () => {
     vi.stubGlobal('fetch', fetchSpy);
     const c = ctx();
     await apiProxy(new Request('https://owwomenscup.fr/api/onboard/x'), c);
+    expect(c.next).toHaveBeenCalledOnce();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('/api/internal/revalidate → context.next() même avec /api/ relayé', async () => {
+    stubEnv({ API_PROXY_PREFIXES: '/api/', EDGE_PROXY_SECRET: SECRET });
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    const c = ctx();
+    const res = await apiProxy(
+      new Request('https://owwomenscup.fr/api/internal/revalidate', {
+        method: 'POST',
+        body: '{"paths":["/"]}',
+      }),
+      c
+    );
+    expect(res).toBe(NEXT);
     expect(c.next).toHaveBeenCalledOnce();
     expect(fetchSpy).not.toHaveBeenCalled();
   });

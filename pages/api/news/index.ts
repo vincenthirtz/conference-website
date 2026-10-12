@@ -6,6 +6,7 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { parsePagination } from '@/utils/apiHelpers';
 import { resolveNewsImageUrl } from '@/utils/news/newsImage';
 import { emitBotEvent } from '@/utils/botEvents';
+import { revalidatePaths } from '@/utils/revalidate';
 import {
   resolveTenantIdForPublicRequestAsync,
   resolveTenantId,
@@ -207,13 +208,11 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
 
   if (status === 'published') {
     const paths = ['/', '/actualites', `/news/${data.slug}`];
-    await Promise.all(
-      paths.map((path) =>
-        res.revalidate(path).catch((err) => {
-          logger.error(`[news] revalidate ${path} failed`, err);
-        })
-      )
-    );
+    await revalidatePaths(res, paths, {
+      onError: (path, err) => {
+        logger.error(`[news] revalidate ${path} failed`, err);
+      },
+    });
 
     void emitBotEvent(
       'news.published',

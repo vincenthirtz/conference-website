@@ -77336,6 +77336,29 @@
     ]
    }
   },
+  "POST /api/internal/revalidate": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "failed": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "revalidated": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     }
+    },
+    "required": [
+     "failed",
+     "revalidated"
+    ]
+   }
+  },
   "POST /api/invitations/{token}": {
    "200": {}
   },

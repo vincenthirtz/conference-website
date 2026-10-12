@@ -115,6 +115,11 @@ const ALLOWLIST_AUTH_MISMATCH = new Set<string>([
   // inscrit. Un seul fichier, deux surfaces — `detectAuth()` raisonne au
   // fichier.
   'GET /api/teams/invite-links/by-token',
+  // Route serveur à serveur (conference-api → site) : secret partagé
+  // `x-revalidate-secret` vérifié inline en temps constant, aucun wrapper —
+  // `detectAuth()` y voit `public`. La spec déclare légitimement
+  // RevalidateSecret.
+  'POST /api/internal/revalidate',
 ]);
 
 /** Bot client URLs that intentionally don't have a matching openapi entry. */

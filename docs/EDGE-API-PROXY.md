@@ -46,6 +46,35 @@ constant). Sans ça, n'importe qui appelant l'API en direct choisit son IP pour
 le rate limit. Les redirections et URL absolues construites depuis le host
 doivent utiliser `X-Owwc-Host`, pas `Host` (qui vaut `api.owwomenscup.fr`).
 
+## Régénération ISR depuis conference-api
+
+Les handlers appellent la régénération à la demande des pages publiques
+(news, matchs, fiches joueuses — dont le retrait de photo TCG, RGPD, qui doit
+disparaître en secondes). Sur conference-api, `res.revalidate` ne régénère
+rien d'utile : les pages sont servies par Netlify. Tout passe donc par
+[utils/revalidate.ts](../utils/revalidate.ts) (`revalidatePaths`) :
+
+| Variable | Où | Rôle |
+|---|---|---|
+| `REVALIDATE_REMOTE_URL` | **conference-api UNIQUEMENT** : `https://owwomenscup.fr/api/internal/revalidate` | URL https stricte de la route de régénération du site |
+| `REVALIDATE_SECRET` | **les deux côtés**, même valeur (`openssl rand -hex 32`) | En-tête `x-revalidate-secret`, comparé en temps constant |
+
+- Les deux posées (conference-api) → un `POST {"paths": [...]}` vers le site
+  (timeout 8 s, lots de 50 chemins). Échec journalisé, la requête n'échoue pas.
+- Sinon (site Netlify, local) → `res.revalidate(path)` par chemin, comme avant.
+  **Ne jamais poser `REVALIDATE_REMOTE_URL` côté Netlify.**
+- Route réceptrice : [pages/api/internal/revalidate.ts](../pages/api/internal/revalidate.ts).
+  `REVALIDATE_SECRET` absent côté site → 404 ; secret faux → 401 ; chemins
+  validés (≤ 50, commencent par `/`, sans `//` ni schéma). Réponse
+  `{ revalidated, failed }`.
+- **`/api/internal/*` n'est JAMAIS relayé**, même avec `API_PROXY_PREFIXES=/api/`
+  (`isNeverProxiedPath` dans `utils/edgeApiProxy.ts`) : relayée, la demande
+  reviendrait à l'API.
+
+Vérification après bascule : retirer une photo TCG de test et constater sa
+disparition de `/player/<id>` en quelques secondes ; en cas d'échec, chercher
+`revalidatePlayerCard` dans les logs de conference-api.
+
 ## Ordre de bascule recommandé
 
 Une famille à la fois, en vérifiant chaque étape en prod avant la suivante :

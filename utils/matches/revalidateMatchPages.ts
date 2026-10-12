@@ -15,6 +15,7 @@
 import type { NextApiResponse } from 'next';
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
+import { revalidatePaths } from '../revalidate';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
 
 /**
@@ -51,8 +52,6 @@ export async function revalidateMatchPages(
   res: NextApiResponse,
   opts: { tenantId: string; matchId: string }
 ): Promise<void> {
-  if (typeof res?.revalidate !== 'function') return;
-
   let tournamentRef: string | null = null;
   try {
     const { data } = await supabaseAdmin!
@@ -76,11 +75,13 @@ export async function revalidateMatchPages(
     logger.warn('[revalidateMatchPages] tournoi illisible', err);
   }
 
-  await Promise.all(
-    matchRevalidationPaths(opts.matchId, tournamentRef).map((path) =>
-      res.revalidate(path).catch((err: unknown) => {
+  await revalidatePaths(
+    res,
+    matchRevalidationPaths(opts.matchId, tournamentRef),
+    {
+      onError: (path, err) => {
         logger.warn(`[revalidateMatchPages] ${path} a échoué`, err);
-      })
-    )
+      },
+    }
   );
 }

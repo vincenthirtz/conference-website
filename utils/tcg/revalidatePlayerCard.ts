@@ -35,6 +35,7 @@
 
 import type { NextApiResponse } from 'next';
 import { logger } from '@/utils/logger';
+import { revalidatePaths } from '@/utils/revalidate';
 import { readShowcaseOwnersShowing } from './showcase';
 
 /**
@@ -47,20 +48,22 @@ export async function revalidatePlayerCard(
   res: NextApiResponse,
   userId: string
 ): Promise<void> {
-  // `res.revalidate` n'existe pas partout (doubles de réponse dans les tests,
-  // runtimes exotiques) : on ne suppose rien.
-  if (typeof res.revalidate !== 'function') return;
   if (!userId) return;
 
-  const revalidate = res.revalidate.bind(res);
-  const one = async (id: string) => {
-    const path = `/player/${encodeURIComponent(id)}`;
-    await revalidate(path).catch((err: unknown) => {
-      logger.error(`[revalidatePlayerCard] ${path} failed`, err);
-    });
-  };
+  // Mode local ou distant (conference-api → site Netlify) : utils/revalidate.ts.
+  const many = (ids: string[]) =>
+    revalidatePaths(
+      res,
+      ids.map((id) => `/player/${encodeURIComponent(id)}`),
+      {
+        onError: (path, err) => {
+          logger.error(`[revalidatePlayerCard] ${path} failed`, err);
+        },
+      }
+    );
 
-  await one(userId);
+  // Sa propre fiche D'ABORD, seule : c'est elle que le retrait vise.
+  await many([userId]);
 
   // Les vitrines qui exposent SA carte. `readShowcaseOwnersShowing` ne lève
   // jamais ; on se garde quand même d'un rejet inattendu, la mutation étant
@@ -68,5 +71,5 @@ export async function revalidatePlayerCard(
   const owners = await readShowcaseOwnersShowing(`player:${userId}`).catch(
     () => [] as string[]
   );
-  await Promise.all(owners.filter((id) => id !== userId).map(one));
+  await many(owners.filter((id) => id !== userId));
 }

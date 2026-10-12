@@ -15,6 +15,7 @@ import {
   mutateSubject,
   readSubject,
 } from '@/utils/player/defineSubjectRoute';
+import { revalidatePaths } from '@/utils/revalidate';
 import { UpdatePlayerProfileBody } from '../schemas';
 import { readTwitchSource, updateProfile } from '../service';
 
@@ -24,14 +25,12 @@ async function revalidatePublicProfile(
   userId: string,
   log: { error: (...a: unknown[]) => void }
 ): Promise<void> {
-  // `res.revalidate` n'existe pas partout (doubles de réponse en test).
-  if (typeof res.revalidate !== 'function') return;
   const path = `/player/${encodeURIComponent(userId)}`;
-  try {
-    await res.revalidate(path);
-  } catch (err) {
-    log.error(`[player/update-profile] revalidate ${path} failed`, err);
-  }
+  await revalidatePaths(res, [path], {
+    onError: (p, err) => {
+      log.error(`[player/update-profile] revalidate ${p} failed`, err);
+    },
+  });
 }
 
 export default defineSubjectRoute({

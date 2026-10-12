@@ -219,6 +219,8 @@ tags:
     description: 'Autres endpoints admin.'
   - name: cron
     description: 'Tâches planifiées appelées par les fonctions Netlify.'
+  - name: internal
+    description: 'Routes serveur à serveur (conference-api → site), jamais relayées par le proxy edge.'
   - name: public/teams
     description: 'Équipes : pages publiques et gestion par la capitaine.'
   - name: public/tournaments

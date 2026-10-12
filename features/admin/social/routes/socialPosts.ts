@@ -12,6 +12,7 @@ import {
   read,
 } from '@/utils/admin/defineAdminRoute';
 import { logger } from '@/utils/logger';
+import { revalidatePaths } from '@/utils/revalidate';
 import { SocialPostDoc, SocialPostListQuery } from '../schemas';
 import { composeSocialPost, listSocialPosts } from '../service/posts';
 
@@ -40,13 +41,11 @@ export default defineAdminRoute({
       }
       // ISR : best-effort, une revalidation ratée ne fait pas échouer une
       // publication déjà partie.
-      await Promise.all(
-        out.revalidate.map((path) =>
-          res.revalidate(path).catch((err) => {
-            logger.error(`[admin/social-posts] revalidate ${path} failed`, err);
-          })
-        )
-      );
+      await revalidatePaths(res, out.revalidate, {
+        onError: (path, err) => {
+          logger.error(`[admin/social-posts] revalidate ${path} failed`, err);
+        },
+      });
       ctx.audit(out.audit);
       res.status(201).json(out.body);
       return RESPONSE_SENT;

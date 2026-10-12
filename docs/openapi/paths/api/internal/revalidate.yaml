@@ -1,0 +1,61 @@
+post:
+  tags:
+    - internal
+  summary: Régénération ISR à distance des pages du site (appelée par conference-api).
+  operationId: internalRevalidatePost
+  description: |
+    Les handlers /api/* servis par conference-api ne peuvent pas régénérer les
+    pages Netlify avec leur propre `res.revalidate` : `utils/revalidate.ts`
+    POSTe ici quand `REVALIDATE_REMOTE_URL` et `REVALIDATE_SECRET` sont posés.
+    La route appelle `res.revalidate` pour chaque chemin.
+
+    Toujours servie par Netlify : `/api/internal/*` est exclu du relais edge
+    (`utils/edgeApiProxy.ts`), quoi que dise `API_PROXY_PREFIXES`.
+
+    `REVALIDATE_SECRET` absent côté site → `404`.
+  security:
+    - RevalidateSecret: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - paths
+          properties:
+            paths:
+              type: array
+              minItems: 1
+              maxItems: 50
+              description: Chemins de pages commençant par `/`, sans `//`, schéma, query ni fragment.
+              items:
+                type: string
+                maxLength: 512
+  responses:
+    '200':
+      description: Rapport par chemin.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - revalidated
+              - failed
+            properties:
+              revalidated:
+                type: array
+                items:
+                  type: string
+              failed:
+                type: array
+                items:
+                  type: string
+    '400':
+      $ref: '#/components/responses/BadRequest'
+    '401':
+      $ref: '#/components/responses/Unauthorized'
+    '404':
+      $ref: '#/components/responses/NotFound'
+    '405':
+      description: Méthode autre que POST.
