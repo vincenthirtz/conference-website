@@ -55,7 +55,7 @@ export default ns('tcgTrade', {
   rulesDoubles: 'Tu ne peux demander que des cartes qu’elle a en double.',
   rulesSets:
     'Une carte reçue par échange ne compte pas pour compléter une série : seules les cartes que tu as tirées toi-même comptent.',
-  rulesExpiry: 'Une proposition expire au bout de {hours} h.',
+  rulesExpiry: 'Une proposition expire au bout de {days} jours.',
   rulesLimits:
     '{sent} propositions envoyées en attente au plus, et {daily} échanges acceptés par jour.',
   rulesCooldown:

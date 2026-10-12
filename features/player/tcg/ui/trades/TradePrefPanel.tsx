@@ -99,7 +99,9 @@ export default function TradePrefPanel({
               <li>{t.rulesDoubles}</li>
               <li>{t.rulesSets}</li>
               <li>
-                {format(t.rulesExpiry, { hours: settings.limits.ttlHours })}
+                {format(t.rulesExpiry, {
+                  days: Math.round(settings.limits.ttlHours / 24),
+                })}
               </li>
               <li>
                 {format(t.rulesLimits, {

@@ -47,7 +47,7 @@ export default {
   rulesDoubles: 'You can only ask for cards she has duplicates of.',
   rulesSets:
     'A card received through a trade doesn’t count towards completing a set: only cards you drew yourself do.',
-  rulesExpiry: 'An offer expires after {hours} h.',
+  rulesExpiry: 'An offer expires after {days} days.',
   rulesLimits:
     'At most {sent} pending sent offers, and {daily} accepted trades per day.',
   rulesCooldown:

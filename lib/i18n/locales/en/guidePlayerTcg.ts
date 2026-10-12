@@ -78,7 +78,7 @@ export default {
   tradesBody:
     'You can trade cards with another collector in your space: card for card, never coins or packs. Trading is off by default — no one can send you an offer until you turn it on.',
   tradesRules:
-    'An offer expires after {ttl} h. You can accept up to {perDay} trades a day, provided your account is at least {accountDays} days old and your collection at least {collectionDays}.',
+    'An offer expires after {ttl} days. You can accept up to {perDay} trades a day, provided your account is at least {accountDays} days old and your collection at least {collectionDays}.',
   tradesWhat:
     'You never see another player’s collection, only her tradeable duplicates. Cards from gifts, drops and sets cannot be traded. Your least valuable copy is always the one that goes.',
   tradesPhoto:

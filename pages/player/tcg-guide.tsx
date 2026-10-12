@@ -301,7 +301,7 @@ function TcgGuide(): JSX.Element {
           <p>{t.tradesBody}</p>
           <p>
             {format(t.tradesRules, {
-              ttl: TRADE_TTL_HOURS,
+              ttl: Math.round(TRADE_TTL_HOURS / 24),
               perDay: TRADE_MAX_ACCEPTED_PER_DAY,
               accountDays: TRADE_MIN_ACCOUNT_AGE_DAYS,
               collectionDays: TRADE_MIN_COLLECTION_AGE_DAYS,

@@ -7,22 +7,26 @@
 //
 // PUR : aucune entrée-sortie, aucun import serveur. zod seulement.
 //
-// POURQUOI CES VALEURS (choix produit par défaut, les plus conservateurs) :
+// POURQUOI CES VALEURS. Lancées au plus conservateur, puis élargies le
+// 2026-10-12 (×2 sur l'expiration, les boîtes et le débit quotidien) à la
+// demande de l'organisation, en même temps que le passage de l'opt-in à
+// « activé par défaut ». La parité, les anciennetés et le filtre des sources
+// de paquets — les vraies gardes anti-multicomptes — n'ont pas bougé.
 //
 //   - CARTE CONTRE CARTE, À PARITÉ, 1 à 5 de chaque côté. La parité n'est pas
 //     une coquetterie : sans elle, un compte secondaire céderait cinq cartes
 //     contre une seule, c'est-à-dire un don déguisé vers un compte principal.
 //     Cinq = la taille d'un paquet ; au-delà, une proposition devient un
 //     inventaire qu'on accepte sans le lire.
-//   - 72 H D'EXPIRATION : un week-end de tournoi, pas une semaine. Une
-//     proposition qui traîne bloque des cartes (celles offertes ne peuvent pas
-//     être promises ailleurs).
-//   - 5 PROPOSITIONS EN ATTENTE ENVOYÉES, 10 REÇUES : on ne peut pas arroser
-//     l'espace, et une boîte ne se remplit pas au point d'être illisible.
+//   - 7 JOURS D'EXPIRATION (72 h à l'origine) : une semaine pour répondre.
+//     Une proposition qui traîne bloque des cartes (celles offertes ne
+//     peuvent pas être promises ailleurs) : c'est le prix de ce délai.
+//   - 10 PROPOSITIONS EN ATTENTE ENVOYÉES, 20 REÇUES (5 / 10 à l'origine) :
+//     on ne peut pas arroser l'espace, et une boîte reste lisible.
 //   - UNE seule proposition en attente par paire (index unique en base).
 //   - 24 H APRÈS UN REFUS avant de reproposer à la même personne : « non » ne
 //     doit pas être une invitation à insister.
-//   - 3 ÉCHANGES ACCEPTÉS PAR 24 H GLISSANTES, par personne : garde contre
+//   - 6 ÉCHANGES ACCEPTÉS PAR 24 H GLISSANTES (3 à l'origine), par personne : garde contre
 //     l'aspiration de cartes par des comptes multiples (combinée à la parité).
 //   - 14 JOURS D'ANCIENNETÉ DE COMPTE ET 7 DE COLLECTION (premier paquet
 //     gagné) pour activer les échanges : un compte créé pour réclamer un
