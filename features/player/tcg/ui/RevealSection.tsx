@@ -56,6 +56,8 @@ export default function RevealSection({
             : null,
         dismiss: t.revealDismiss,
         revealAll: t.revealAll,
+        openPack: t.revealOpenPack,
+        openPackHint: t.revealOpenPackHint,
         newCard: t.revealNewCard,
         duplicate: t.revealDuplicate,
         card: labels,

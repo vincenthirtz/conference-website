@@ -118,6 +118,10 @@ export default ns('playerTcg', {
   revealDismiss: 'Fermer',
   revealAll: 'Tout révéler',
   revealNewCard: 'Nouvelle',
+  // Le sachet scellé qu'on déchire avant de voir ses cartes. `revealOpenPack`
+  // est le nom du bouton (lu tel quel) ; l'aide ne sert qu'à l'œil.
+  revealOpenPack: 'Ouvrir le paquet',
+  revealOpenPackHint: 'Touche le sachet ou glisse pour le déchirer',
 
   // Historique du porte-monnaie. Les libellés sont ici et non côté serveur :
   // l'API rend le FAIT (`sourceKind`), l'interface le formule — traduire au

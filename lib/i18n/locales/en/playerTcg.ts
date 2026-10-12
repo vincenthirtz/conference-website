@@ -92,6 +92,8 @@ export default {
   revealDismiss: 'Close',
   revealAll: 'Reveal all',
   revealNewCard: 'New',
+  revealOpenPack: 'Open the pack',
+  revealOpenPackHint: 'Tap the pack or swipe to tear it open',
 
   walletTitle: 'My coins',
   walletShow: 'View history',

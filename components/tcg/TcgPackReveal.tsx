@@ -10,24 +10,33 @@
 //     même pas que quelque chose s'est ouvert. L'ANNONCE de ce qui a été
 //     obtenu, elle, appartient à la page hôte : une région `aria-live` doit
 //     exister AVANT que son contenu change, ce qu'un composant monté à
-//     l'instant ne peut pas garantir.
-//   - Pour qui a demandé moins de mouvement : les cartes sont posées face
-//     visible d'emblée, sans retournement ni halo (cf. le bloc
-//     `prefers-reduced-motion` de `globals.css`, ET la séquence ci-dessous qui
-//     se saute elle-même). Aucune information ne dépend de l'animation.
+//     l'instant ne peut pas garantir. Même règle quand une commande de la
+//     révélation disparaît sous le doigt (« Ouvrir le paquet », « Tout
+//     révéler ») : le focus revient au titre au lieu de tomber dans le vide.
+//   - Pour qui a demandé moins de mouvement : pas de sachet, pas de
+//     déchirure, pas d'éventail — les cartes sont posées face visible
+//     d'emblée, sans retournement ni halo (cf. le bloc `prefers-reduced-motion`
+//     de `globals.css`, ET la séquence ci-dessous qui se saute elle-même).
+//     Aucune information ne dépend de l'animation.
 //
-// LE RETOURNEMENT EST DÉCORATIF, PAS STRUCTUREL. Les cartes arrivent face
-// cachée et se retournent l'une après l'autre — mais leur contenu est dans le
-// DOM dès le premier rendu. Un lecteur d'écran lit donc le paquet entier sans
-// attendre la fin de la séquence, et le dos porte `aria-hidden` +
-// `pointer-events: none` : il ne masque ni un lien, ni une cible de clic. La
-// seule chose qu'on retarde, c'est ce que l'ŒIL voit.
+// LA SÉQUENCE : sachet scellé → déchirure → éventail → retournements. Son
+// ordre et son calendrier vivent dans `utils/tcg/packRevealSequence.ts`
+// (testés sans DOM) ; ce composant ne fait que programmer les minuteries et
+// dessiner la phase courante (`data-phase`, lu par le CSS).
+//
+// LE SACHET ET LE RETOURNEMENT SONT DÉCORATIFS, PAS STRUCTURELS. Les cartes
+// sont dans le DOM dès le premier rendu — sous le sachet, invisibles mais
+// présentes. Un lecteur d'écran lit donc le paquet entier sans attendre la fin
+// de la séquence, et le dos porte `aria-hidden` + `pointer-events: none` : il
+// ne masque ni un lien, ni une cible de clic. La seule chose qu'on retarde,
+// c'est ce que l'ŒIL voit.
 //
 // POURQUOI AUCUNE CARTE FACE CACHÉE N'EST CLIQUABLE. On aurait pu laisser
 // retourner une carte au clic. Ce serait un second chemin d'interaction posé
 // SUR un lien déjà existant (la carte mène à la fiche de son sujet) : deux
 // gestes au même endroit, dont l'un n'existe que pendant deux secondes. Une
-// seule commande, donc — « tout révéler » — qui saute la séquence d'un coup.
+// seule commande, donc — « tout révéler » — qui saute la séquence ENTIÈRE,
+// déchirure comprise, d'un coup.
 //
 // « NOUVELLE » OU « DOUBLON » EST ÉCRIT, PAS SEULEMENT COLORÉ. Et c'est le
 // SERVEUR qui le dit (`isNew`) : la collection étant paginée, la page ne sait
@@ -38,10 +47,24 @@
 //
 // Aucune chaîne en dur : tout vient de `labels`, fourni par la page hôte.
 
-import { useEffect, useRef, useState, type JSX } from 'react';
+import {
+  useEffect,
+  useReducer,
+  useRef,
+  type CSSProperties,
+  type JSX,
+} from 'react';
 
 import TcgCard, { type TcgCardSubject } from '@/components/tcg/TcgCard';
+import TcgPackSachet from '@/components/tcg/TcgPackSachet';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
+import {
+  BURST_MS,
+  TEAR_MS,
+  flipTimeline,
+  initialRevealState,
+  revealReducer,
+} from '@/utils/tcg/packRevealSequence';
 
 export type TcgRevealCard = {
   /** Clé stable dans le paquet (sa position). */
@@ -66,6 +89,10 @@ export type TcgPackRevealProps = {
     dismiss: string;
     /** Saute la séquence et retourne toutes les cartes d'un coup. */
     revealAll: string;
+    /** Nom accessible (et texte visible) du sachet scellé. */
+    openPack: string;
+    /** Aide visuelle sous le sachet (« touche ou glisse… »). */
+    openPackHint: string;
     newCard: string;
     duplicate: string;
     card: {
@@ -81,20 +108,6 @@ export type TcgPackRevealProps = {
 };
 
 /**
- * Délai entre deux retournements.
- *
- * MESURÉ CONTRE LA DURÉE DU RETOURNEMENT (640 ms, cf. `globals.css`) : plus
- * court, les cartes se chevauchent et la séquence devient un brouillon ; plus
- * long, un paquet de cinq dépasse les trois secondes et on a le temps de
- * s'ennuyer. 260 ms laisse voir chaque carte partir avant que la suivante
- * bouge, pour ~1,9 s au total.
- */
-const STAGGER_MS = 260;
-
-/** Avant la première carte : le temps que la grille se pose. */
-const LEAD_IN_MS = 220;
-
-/**
  * Le halo joué au retournement, par rareté.
  *
  * Une commune n'a pas à scintiller — la nuance est le message. Les teintes
@@ -108,14 +121,40 @@ const RARITY_HALO: Record<TcgRarity, string> = {
   legendary: 'rgba(34, 211, 238, 0.65)',
 };
 
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
+/**
+ * Variables CSS d'une carte : son halo, et sa position de départ dans
+ * l'éventail (elle part du centre du paquet, inclinée selon son rang).
+ */
+function cardVars(card: TcgRevealCard, i: number, n: number): CSSProperties {
+  const fromCenter = i - (n - 1) / 2;
+  return {
+    '--tcg-halo': RARITY_HALO[card.rarity],
+    '--fan-i': String(i),
+    '--fan-x': `${(-fromCenter * 70).toFixed(0)}%`,
+    '--fan-rot': `${(fromCenter * 9).toFixed(0)}deg`,
+  } as CSSProperties;
+}
+
 export default function TcgPackReveal({
   cards,
   onDismiss,
   labels,
 }: TcgPackRevealProps): JSX.Element {
   const headingRef = useRef<HTMLHeadingElement>(null);
-  /** Nombre de cartes déjà retournées, dans l'ordre du paquet. */
-  const [flipped, setFlipped] = useState(0);
+  const [state, dispatch] = useReducer(
+    revealReducer,
+    cards.map((c) => c.rarity),
+    initialRevealState
+  );
+  const { phase, flipped } = state;
 
   useEffect(() => {
     // Focus d'abord (cf. l'en-tête), la séquence ensuite.
@@ -123,29 +162,68 @@ export default function TcgPackReveal({
 
     // MOUVEMENT RÉDUIT : on ne se contente pas de neutraliser l'animation CSS,
     // on saute la séquence. Sans ce test, le CSS poserait bien les cartes face
-    // visible, mais l'état React les croirait encore cachées — le bouton
-    // « tout révéler » resterait affiché pour une grille déjà révélée.
-    const reduced =
-      typeof window !== 'undefined' &&
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduced || cards.length === 0) {
-      setFlipped(cards.length);
-      return;
+    // visible, mais l'état React les croirait encore cachées — « ouvrir » et
+    // « tout révéler » resteraient affichés pour une grille déjà révélée.
+    if (prefersReducedMotion()) {
+      dispatch({ type: 'revealAll', celebrate: false });
     }
+  }, []);
 
-    const timers = cards.map((_, i) =>
-      window.setTimeout(
-        // `Math.max` : un « tout révéler » a pu passer devant ; une minuterie
-        // en retard ne doit jamais REVENIR en arrière et recacher une carte.
-        () => setFlipped((n) => Math.max(n, i + 1)),
-        LEAD_IN_MS + i * STAGGER_MS
-      )
-    );
-    return () => {
-      for (const t of timers) window.clearTimeout(t);
-    };
-  }, [cards]);
+  // Une phase = une minuterie (ou un calendrier, pour les retournements).
+  // Quitter la phase — « tout révéler » compris — les annule toutes.
+  useEffect(() => {
+    if (phase === 'tearing') {
+      const t = window.setTimeout(() => dispatch({ type: 'torn' }), TEAR_MS);
+      return () => window.clearTimeout(t);
+    }
+    if (phase === 'burst') {
+      const t = window.setTimeout(
+        () => dispatch({ type: 'burstDone' }),
+        BURST_MS
+      );
+      return () => window.clearTimeout(t);
+    }
+    if (phase === 'flipping') {
+      const timers: number[] = [];
+      for (const step of flipTimeline(state.rarities)) {
+        if (step.tenseAt !== null) {
+          const tenseAt = step.tenseAt;
+          timers.push(
+            window.setTimeout(
+              () => dispatch({ type: 'tense', index: step.index }),
+              tenseAt
+            )
+          );
+        }
+        timers.push(
+          window.setTimeout(
+            () => dispatch({ type: 'flip', index: step.index }),
+            step.flipAt
+          )
+        );
+      }
+      return () => {
+        for (const t of timers) window.clearTimeout(t);
+      };
+    }
+    return undefined;
+  }, [phase, state.rarities]);
+
+  /** Une commande qui disparaît rend le focus au titre (cf. l'en-tête). */
+  const keepFocus = () => {
+    window.requestAnimationFrame(() => headingRef.current?.focus());
+  };
+
+  const open = () => {
+    if (phase !== 'sealed') return;
+    dispatch({ type: 'open' });
+    keepFocus();
+  };
+
+  const revealAll = () => {
+    dispatch({ type: 'revealAll', celebrate: !prefersReducedMotion() });
+    keepFocus();
+  };
 
   const hasDuplicate = cards.some((c) => c.isNew === false);
   const allFlipped = flipped >= cards.length;
@@ -177,7 +255,7 @@ export default function TcgPackReveal({
           {!allFlipped && (
             <button
               type="button"
-              onClick={() => setFlipped(cards.length)}
+              onClick={revealAll}
               className="min-h-11 rounded-full border border-[var(--color-green)]/40 px-4 py-2 text-sm font-semibold text-[var(--color-green)] transition hover:border-[var(--color-green)] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
             >
               {labels.revealAll}
@@ -193,64 +271,79 @@ export default function TcgPackReveal({
         </div>
       </div>
 
-      <ul className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
-        {cards.map((card, i) => {
-          const revealed = i < flipped;
-          return (
-            <li key={card.key} className="tcg-flip">
-              {/* Toujours une ligne, même vide : sans elle, les cartes d'une
-                  même rangée ne s'aligneraient plus dès qu'une seule porte un
-                  badge. Invisible tant que la carte est face cachée — mais
-                  présente, donc lue. */}
-              <p
-                className={`mb-1 flex h-5 items-center justify-center text-[11px] font-bold uppercase tracking-wider transition-opacity duration-300 ${
-                  revealed ? 'opacity-100' : 'opacity-0'
-                }`}
-              >
-                {card.isNew === true && (
-                  <span className="rounded-full bg-[var(--color-green)]/15 px-2 text-[var(--color-green)]">
-                    {labels.newCard}
-                  </span>
-                )}
-                {card.isNew === false && (
-                  <span className="rounded-full bg-white/10 px-2 text-gray-300">
-                    {labels.duplicate}
-                  </span>
-                )}
-              </p>
+      <div className="tcg-pack-stage mt-5" data-phase={phase}>
+        {(phase === 'sealed' || phase === 'tearing') && (
+          <TcgPackSachet
+            phase={phase}
+            onOpen={open}
+            labels={{
+              openPack: labels.openPack,
+              openPackHint: labels.openPackHint,
+            }}
+          />
+        )}
 
-              <div className="tcg-flip-inner" data-revealed={String(revealed)}>
-                <div
-                  className={`tcg-flip-face rounded-xl ${
-                    // Le reflet n'appartient qu'aux brillantes : c'est ce qui
-                    // les distingue, et le jouer partout le viderait de sens.
-                    card.isFoil ? 'tcg-sheen relative' : ''
-                  } tcg-halo`}
-                  data-revealed={String(revealed)}
-                  style={
-                    {
-                      '--tcg-halo': RARITY_HALO[card.rarity],
-                    } as React.CSSProperties
-                  }
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+          {cards.map((card, i) => {
+            const revealed = i < flipped;
+            return (
+              <li
+                key={card.key}
+                className="tcg-flip"
+                style={cardVars(card, i, cards.length)}
+              >
+                {/* Toujours une ligne, même vide : sans elle, les cartes d'une
+                    même rangée ne s'aligneraient plus dès qu'une seule porte un
+                    badge. Invisible tant que la carte est face cachée — mais
+                    présente, donc lue. */}
+                <p
+                  className={`mb-1 flex h-5 items-center justify-center text-[11px] font-bold uppercase tracking-wider transition-opacity duration-300 ${
+                    revealed ? 'opacity-100' : 'opacity-0'
+                  }`}
                 >
-                  <TcgCard
-                    subject={card.subject}
-                    rarity={card.rarity}
-                    isFoil={card.isFoil}
-                    labels={labels.card}
+                  {card.isNew === true && (
+                    <span className="rounded-full bg-[var(--color-green)]/15 px-2 text-[var(--color-green)]">
+                      {labels.newCard}
+                    </span>
+                  )}
+                  {card.isNew === false && (
+                    <span className="rounded-full bg-white/10 px-2 text-gray-300">
+                      {labels.duplicate}
+                    </span>
+                  )}
+                </p>
+
+                <div
+                  className="tcg-flip-inner"
+                  data-revealed={String(revealed)}
+                >
+                  <div
+                    className={`tcg-flip-face rounded-xl ${
+                      // Le reflet n'appartient qu'aux brillantes : c'est ce qui
+                      // les distingue, et le jouer partout le viderait de sens.
+                      card.isFoil ? 'tcg-sheen relative' : ''
+                    } tcg-halo`}
+                    data-revealed={String(revealed)}
+                  >
+                    <TcgCard
+                      subject={card.subject}
+                      rarity={card.rarity}
+                      isFoil={card.isFoil}
+                      labels={labels.card}
+                    />
+                  </div>
+                  {/* Le dos. Décoratif de bout en bout : jamais annoncé, jamais
+                      cliquable — il ne fait que cacher, et il laisse passer. */}
+                  <div
+                    className="tcg-flip-back pointer-events-none"
+                    aria-hidden
                   />
                 </div>
-                {/* Le dos. Décoratif de bout en bout : jamais annoncé, jamais
-                    cliquable — il ne fait que cacher, et il laisse passer. */}
-                <div
-                  className="tcg-flip-back pointer-events-none"
-                  aria-hidden
-                />
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
 
       {hasDuplicate && labels.duplicateHint && (
         <p className="mt-4 text-xs text-gray-400">{labels.duplicateHint}</p>

@@ -2566,11 +2566,364 @@ a:focus-visible,
   }
 }
 
+/* ─── Le sachet scellé, puis l'éventail ───────────────────────────────────
+ * Avant les cartes, un sachet aux couleurs de la Cup (cf. TcgPackSachet). Il
+ * se déchire le long de la ligne pointillée : deux pièces qui partagent la
+ * MÊME découpe en dents de scie (clip-path), le haut s'envole, le corps
+ * s'efface — puis les cartes jaillissent en éventail vers leur place.
+ *
+ * Le glissé est suivi sans React : `--tear` (0 → 1) est écrit sur le bouton
+ * et soulève le haut du sachet. Les phases viennent de `data-phase`
+ * (utils/tcg/packRevealSequence.ts). Rien de tout cela sous mouvement réduit.
+ * ------------------------------------------------------------------------- */
+
+.tcg-pack-stage {
+  position: relative;
+}
+
+/* Tant que le sachet est là, la zone garde sa hauteur même si les visuels des
+   cartes (posées dessous, invisibles) ne sont pas encore chargés. */
+.tcg-pack-stage[data-phase="sealed"],
+.tcg-pack-stage[data-phase="tearing"] {
+  min-height: 21rem;
+}
+
+.tcg-sachet-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+.tcg-sachet {
+  --tear: 0;
+  --lift: 0deg;
+  position: relative;
+  width: clamp(9.5rem, 40vw, 13rem);
+  aspect-ratio: 5 / 7;
+  border: 0;
+  border-radius: 0.9rem;
+  background: transparent;
+  padding: 0;
+  cursor: grab;
+  pointer-events: auto;
+  /* Le glissé horizontal est à nous ; le défilement vertical reste à la page. */
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+  filter: drop-shadow(
+    0 18px 28px color-mix(in srgb, var(--color-violet-deep) 55%, transparent)
+  );
+}
+
+.tcg-sachet[data-phase="sealed"] {
+  animation: tcg-sachet-float 3.4s ease-in-out infinite;
+}
+
+.tcg-sachet[data-phase="sealed"]:hover {
+  --lift: -3deg;
+}
+
+.tcg-sachet:active {
+  cursor: grabbing;
+}
+
+.tcg-sachet:focus-visible {
+  outline: 2px solid var(--color-yellow);
+  outline-offset: 6px;
+}
+
+.tcg-sachet[data-phase="tearing"] {
+  pointer-events: none;
+}
+
+.tcg-sachet-piece {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.9rem;
+  background:
+    linear-gradient(
+      115deg,
+      transparent 30%,
+      color-mix(in srgb, var(--color-yellow-light) 22%, transparent) 46%,
+      transparent 60%
+    ),
+    repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--color-yellow) 9%, transparent) 0 6px,
+      transparent 6px 14px
+    ),
+    radial-gradient(
+      circle at 50% 58%,
+      color-mix(in srgb, var(--color-green) 38%, transparent) 0%,
+      transparent 58%
+    ),
+    linear-gradient(
+      165deg,
+      var(--color-violet) 0%,
+      var(--color-violet-deep) 55%,
+      var(--color-surface-deep) 100%
+    );
+  box-shadow: inset 0 0 0 1.5px
+    color-mix(in srgb, var(--color-green-light) 45%, transparent);
+}
+
+/* Les deux pièces partagent EXACTEMENT les mêmes dents : aucune fente visible
+   tant que le sachet est fermé. */
+.tcg-sachet-top {
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 20%,
+    95% 22.5%,
+    90% 20%,
+    85% 22.5%,
+    80% 20%,
+    75% 22.5%,
+    70% 20%,
+    65% 22.5%,
+    60% 20%,
+    55% 22.5%,
+    50% 20%,
+    45% 22.5%,
+    40% 20%,
+    35% 22.5%,
+    30% 20%,
+    25% 22.5%,
+    20% 20%,
+    15% 22.5%,
+    10% 20%,
+    5% 22.5%,
+    0 20%
+  );
+  transform-origin: 0% 22%;
+  transform: translate(calc(var(--tear) * 5%), calc(var(--tear) * -7%))
+    rotate(calc(var(--tear) * -11deg + var(--lift)));
+  transition: transform 200ms ease-out;
+}
+
+/* Le sertissage du haut du sachet : de fines stries, comme un vrai booster. */
+.tcg-sachet-top::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 7%;
+  background: repeating-linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-surface-deep) 45%, transparent) 0 2px,
+    transparent 2px 6px
+  );
+}
+
+.tcg-sachet-body {
+  clip-path: polygon(
+    0 20%,
+    5% 22.5%,
+    10% 20%,
+    15% 22.5%,
+    20% 20%,
+    25% 22.5%,
+    30% 20%,
+    35% 22.5%,
+    40% 20%,
+    45% 22.5%,
+    50% 20%,
+    55% 22.5%,
+    60% 20%,
+    65% 22.5%,
+    70% 20%,
+    75% 22.5%,
+    80% 20%,
+    85% 22.5%,
+    90% 20%,
+    95% 22.5%,
+    100% 20%,
+    100% 100%,
+    0 100%
+  );
+}
+
+/* Le nœud de la marque, au cœur du sachet. */
+.tcg-sachet-mark {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  width: 54%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(
+    0 0 14px color-mix(in srgb, var(--color-green) 55%, transparent)
+  );
+}
+
+.tcg-sachet-tearline {
+  position: absolute;
+  left: 3%;
+  right: 3%;
+  top: 21.25%;
+  border-top: 2px dashed
+    color-mix(in srgb, var(--color-yellow-light) 75%, transparent);
+  opacity: 0.85;
+}
+
+.tcg-sachet-flash {
+  position: absolute;
+  left: -25%;
+  right: -25%;
+  top: 2%;
+  height: 40%;
+  pointer-events: none;
+  opacity: 0;
+  mix-blend-mode: screen;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    color-mix(in srgb, var(--color-yellow-light) 85%, transparent) 0%,
+    color-mix(in srgb, var(--color-green) 40%, transparent) 35%,
+    transparent 70%
+  );
+}
+
+.tcg-sachet-label {
+  position: absolute;
+  left: 50%;
+  bottom: 7%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-yellow-light);
+  background: color-mix(in srgb, var(--color-surface-deep) 72%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-yellow) 35%, transparent);
+}
+
+.tcg-sachet-hint {
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--color-yellow-light) 70%, transparent);
+}
+
+/* La déchirure : le haut part en vrillant, l'éclair jaillit de la découpe, le
+   corps s'efface en descendant. Durées alignées sur TEAR_MS (620 ms). */
+.tcg-sachet[data-phase="tearing"] .tcg-sachet-top {
+  animation: tcg-sachet-tear-top 520ms cubic-bezier(0.3, 0.6, 0.3, 1) forwards;
+}
+.tcg-sachet[data-phase="tearing"] .tcg-sachet-body {
+  animation: tcg-sachet-tear-body 620ms ease-in forwards;
+}
+.tcg-sachet[data-phase="tearing"] .tcg-sachet-flash {
+  animation: tcg-sachet-flash 520ms ease-out forwards;
+}
+.tcg-sachet[data-phase="tearing"] .tcg-sachet-tearline,
+.tcg-sachet[data-phase="tearing"] .tcg-sachet-label {
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+@keyframes tcg-sachet-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(1deg);
+  }
+}
+
+@keyframes tcg-sachet-tear-top {
+  0% {
+    opacity: 1;
+    transform: translate(5%, -7%) rotate(-11deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(60%, -150%) rotate(-40deg);
+  }
+}
+
+@keyframes tcg-sachet-tear-body {
+  0% {
+    opacity: 1;
+    transform: none;
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(16%) scale(0.86);
+  }
+}
+
+@keyframes tcg-sachet-flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+/* Les cartes attendent DANS le sachet (invisibles, mais dans le DOM et lues),
+   puis jaillissent en éventail : chacune part du centre (`--fan-x`), inclinée
+   (`--fan-rot`), avec un léger décalage (`--fan-i`). Durée totale alignée sur
+   BURST_MS (560 ms + 4 × 50 ms). */
+.tcg-pack-stage[data-phase="sealed"] .tcg-flip,
+.tcg-pack-stage[data-phase="tearing"] .tcg-flip {
+  opacity: 0;
+  transform: translate(var(--fan-x, 0%), 30%) rotate(var(--fan-rot, 0deg))
+    scale(0.55);
+}
+
+.tcg-pack-stage[data-phase="burst"] .tcg-flip {
+  animation: tcg-burst 560ms cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
+  animation-delay: calc(var(--fan-i, 0) * 50ms);
+}
+
+@keyframes tcg-burst {
+  0% {
+    opacity: 0;
+    transform: translate(var(--fan-x, 0%), 30%) rotate(var(--fan-rot, 0deg))
+      scale(0.55);
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tcg-flip-inner,
   .tcg-flip-inner[data-revealed="true"] {
     transition: none;
     transform: none;
+  }
+  /* Pas de sachet à déchirer : le paquet est ouvert d'emblée, cartes posées. */
+  .tcg-sachet-stage {
+    display: none;
+  }
+  .tcg-pack-stage[data-phase] .tcg-flip {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+  .tcg-pack-stage[data-phase] {
+    min-height: 0;
   }
   /* Sans retournement, le dos ne doit plus exister : il recouvrirait la carte. */
   .tcg-flip-back {

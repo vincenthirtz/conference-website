@@ -38,6 +38,8 @@ const labels = {
   duplicateHint: null,
   dismiss: 'Fermer',
   revealAll: 'Tout révéler',
+  openPack: 'Ouvrir le paquet',
+  openPackHint: 'Touche le sachet ou glisse pour le déchirer',
   newCard: 'Nouvelle',
   duplicate: 'Doublon',
   card: {
@@ -131,6 +133,20 @@ describe('TcgPackReveal — premier rendu', () => {
     const html = render();
     const sheens = html.match(/tcg-sheen/g) ?? [];
     expect(sheens).toHaveLength(1);
+  });
+
+  it('pose d’abord un sachet SCELLÉ, ouvrable par un vrai bouton', () => {
+    const html = render();
+    // La phase lue par le CSS : les cartes attendent dans le sachet.
+    expect(html).toContain('data-phase="sealed"');
+    // Un <button> natif : clic, tap, Entrée et Espace l'ouvrent, et son nom
+    // accessible est son texte visible.
+    expect(html).toMatch(/<button[^>]*class="tcg-sachet"[^>]*>/);
+    expect(html).toContain('Ouvrir le paquet');
+  });
+
+  it('n’a pas de sachet pour un paquet vide', () => {
+    expect(render([])).not.toContain('tcg-sachet');
   });
 
   it('n’affiche pas « tout révéler » pour un paquet vide', () => {
