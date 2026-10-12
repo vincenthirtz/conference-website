@@ -221,9 +221,16 @@ export default async function handler(
     return;
 
   const ip = getClientIp(req);
+  // Sel secret : sans lui, une empreinte d'IPv4 se retrouve par force brute.
+  // Même repli que utils/captcha.ts quand CAPTCHA_SECRET n'est pas défini
+  // (c'est le cas du serveur conference-api).
+  const ipHashSalt =
+    process.env.CAPTCHA_SECRET ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    'salt';
   const ipHash = crypto
     .createHash('sha256')
-    .update(`${ip}|${process.env.CAPTCHA_SECRET ?? 'salt'}`)
+    .update(`${ip}|${ipHashSalt}`)
     .digest('hex');
 
   const payload: Record<string, unknown> = {
