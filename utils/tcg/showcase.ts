@@ -233,9 +233,46 @@ export async function resolveShowcaseCards(
   }
 
   const kept = wanted.filter((key) => best.has(key));
-  const subjects = kept
-    .map(parseShowcaseKey)
-    .filter((s): s is ShowcaseSubject => s !== null);
+  const cards = await buildShowcaseCards(
+    tenantId,
+    kept
+      .map(parseShowcaseKey)
+      .filter((s): s is ShowcaseSubject => s !== null)
+      .map((subject) => ({
+        subject,
+        ...(best.get(showcaseKey(subject)) as {
+          rarity: TcgRarity;
+          isFoil: boolean;
+        }),
+      }))
+  );
+
+  return { ok: true, cards, unavailable: wanted.length - kept.length };
+}
+
+/** Un sujet à mettre en face, avec la rareté et la brillance à montrer. */
+export type ShowcaseCardInput = {
+  subject: ShowcaseSubject;
+  rarity: TcgRarity;
+  isFoil: boolean;
+};
+
+/**
+ * Met des FACES sur des sujets, dans l'ordre reçu, sans rien vérifier de la
+ * possession : c'est l'affaire de l'appelant (`resolveShowcaseCards` relit la
+ * collection ; les blocs publics de `utils/tcg/live.ts` partent de cartes
+ * réellement tirées).
+ *
+ * Les faces passent par les lecteurs porteurs du filtre de consentement
+ * (`readCardFaces.ts`) : une joueuse retirée du TCG reste anonyme, une photo
+ * révoquée n'est jamais servie. Ne lève pas plus que ces lecteurs.
+ */
+export async function buildShowcaseCards(
+  tenantId: string,
+  items: readonly ShowcaseCardInput[]
+): Promise<ShowcaseCard[]> {
+  if (items.length === 0) return [];
+  const subjects = items.map((item) => item.subject);
 
   // Les faces, par les lecteurs porteurs du filtre de consentement.
   const [playerFaces, teamFaces, mapFaces, fanartFaces] = await Promise.all([
@@ -254,12 +291,8 @@ export async function resolveShowcaseCards(
     ),
   ]);
 
-  const cards: ShowcaseCard[] = subjects.map((subject) => {
+  return items.map(({ subject, rarity, isFoil }): ShowcaseCard => {
     const key = showcaseKey(subject);
-    const { rarity, isFoil } = best.get(key) as {
-      rarity: TcgRarity;
-      isFoil: boolean;
-    };
     if (subject.kind === 'player') {
       const face = playerFaces.get(subject.id);
       return {
@@ -327,8 +360,6 @@ export async function resolveShowcaseCards(
       isFoil,
     };
   });
-
-  return { ok: true, cards, unavailable: wanted.length - kept.length };
 }
 
 /**
