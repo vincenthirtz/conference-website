@@ -460,7 +460,9 @@ se replie jamais.
 (`tcg_earn_sources_drop_streak_placement.sql`, appliquée le 2026-09-15), et
 `battlenet_verified` (`tcg_battlenet_verified.sql`, **non appliquée** à la
 rédaction, 2026-09-15), et `collection_set` (`tcg_collection_set.sql`, **non
-appliquée** à la rédaction, 2026-09-15). Côté paquets, `tcg_packs.source_kind` admet `victory`, `purchase`,
+appliquée** à la rédaction, 2026-09-15), et `tournament_participation`
+(`tcg_tournament_participation_reward.sql`, **non appliquée** à la rédaction,
+2026-10-12). Côté paquets, `tcg_packs.source_kind` admet `victory`, `purchase`,
 `welcome`, et avec la même migration `drop`, `placement` et `streak`.
 `admin_grant` est écrit par `POST /api/admin/tcg/grant` (correction tracée
 par l'équipe, `source_ref` = clé d'idempotence). Son **motif est lisible par
@@ -859,6 +861,32 @@ sur un rejeu, donc relancer une finalisation ne renotifie personne. `packs` est
 le nombre de paquets RÉELLEMENT créés, pour ne jamais annoncer un paquet refusé.
 Le bot en fait un DM (raison d'abord, gain ensuite), dédoublonné par
 `(joueuse, source, sourceRef)`.
+
+### La participation d'une équipe en DNF
+
+Une équipe disqualifiée d'une phase (DNF, `stage_teams.disqualified_at`) touche
+une récompense de participation : **1000 pièces** par joueuse
+(`TOURNAMENT_PARTICIPATION_COINS = 10 × MATCH_WIN_COINS`, pièces seules), source
+`tournament_participation`, `source_ref` = le tournoi — une fois par joueuse et
+par tournoi. Décision produit du 2026-10-12 (cas Éclypse) ; le montant dépasse
+celui du titre en pièces, le palmarès reste devant en paquets.
+
+- **Qui** : les joueuses des feuilles de match de l'équipe sur le tournoi
+  (`match_participants`, titulaires ET remplaçantes — on paie la participation,
+  pas la performance). Sans aucune feuille (abandon avant le premier match) :
+  membres actuels hors coach / manager.
+- **Quand** : à la disqualification (`POST /api/admin/stages/[stageId]/disqualify`,
+  champ `participationReward` de la réponse), sans attendre la clôture du
+  tournoi. Rattrapage d'une équipe déjà en DNF :
+  `POST /api/admin/stages/[stageId]/participation-reward` (bouton « Récompense
+  TCG » de la liste des équipes de la phase), rejouable sans doublon.
+- **Annonce** : un seul `team.message` (`kind: 'tcg_participation'`) dans le
+  salon Discord de l'équipe, en français ou en anglais selon
+  `teams.preferred_locale`, émis seulement si l'appel a crédité au moins une
+  joueuse (garde durable) et sous l'`idempotencyKey`
+  `tcg.participation:<tournoi>:<équipe>`. Pas de DM individuel
+  (`tcg.reward_granted` ne connaît pas cette raison côté bot).
+- **Réintégration** : les pièces versées ne sont pas reprises.
 
 ### La vérification d'un compte Battle.net
 

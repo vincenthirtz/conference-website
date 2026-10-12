@@ -3620,8 +3620,10 @@ Cote bot, le script one-shot
 
 #### Event `team.message` (site → bot, via outbox/webhook)
 
-Emis par `/api/admin/team-messages`, `/api/bot/v1/teams/messages` et le cron
-`/api/cron/team-roster-reminders`. Consomme par `team-message.js`.
+Emis par `/api/admin/team-messages`, `/api/bot/v1/teams/messages`, le cron
+`/api/cron/team-roster-reminders` et la recompense TCG de participation d'une
+equipe en DNF (`utils/tcg/grantTournamentParticipation.ts`, depuis le
+2026-10-12). Consomme par `team-message.js`.
 
 **Payload** : `{ teamId, teamName, channelId, roleId, content, mentionRole,
 kind, source, tournamentId }`.
@@ -3630,7 +3632,11 @@ kind, source, tournamentId }`.
 - `mentionRole` autorise le ping : le bot passe
   `allowedMentions: { parse: [], roles: [roleId] }` si vrai, `{ parse: [] }`
   sinon — donc un `@everyone` glisse dans un gabarit admin reste inerte.
-- `kind` : `incomplete` / `complete_with_warnings` / `complete` / `custom`.
+- `kind` : `incomplete` / `complete_with_warnings` / `complete` / `custom` /
+  `tcg_participation` (annonce des 1000 pieces de participation d'une equipe
+  en DNF ; `mentionRole: false`, `source: 'admin'`, id d'event derive de
+  `tcg.participation:<tournoi>:<equipe>`). Le bot ne lit `kind` que pour son
+  journal : aucun changement requis cote bot.
 - `source` : `admin` / `bot` / `cron`.
 - Contenu tronque a 1900 caracteres cote bot — mais le site coupe DEJA le texte
   a la source (700 caracteres pour une legende Instagram, qui peut monter a
