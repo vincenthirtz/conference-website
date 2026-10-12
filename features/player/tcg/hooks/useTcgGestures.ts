@@ -37,7 +37,7 @@ export function useTcgGestures(
 ) {
   const t = useT(nsPlayerTcg);
   const { addToast } = useToast();
-  const { load, setBusy, cards, recycleRefund } = home;
+  const { reloadKeeping, setBusy, recycleRefund } = home;
 
   // Les cartes du dernier paquet ouvert. `id` = clé de montage : ouvrir un
   // second paquet REJOUE l'apparition et le déplacement du focus.
@@ -57,8 +57,6 @@ export function useTcgGestures(
     setAnnouncement('');
     requestAnimationFrame(() => setAnnouncement(text));
   }, []);
-
-  const reloadKeeping = useCallback(() => load(cards.length), [load, cards]);
 
   const openPack = useCallback(
     async (packId: string) => {

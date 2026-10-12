@@ -25,13 +25,25 @@ vi.mock('next/router', () => ({
   useRouter: () => ({ asPath: '/player/tcg', query: {}, replace }),
 }));
 // Panneaux autonomes (leurs propres lectures, testés ailleurs) : hors sujet.
+// Forge et cosmétiques : seul leur rappel (`onForged` / `onChanged`) compte
+// ici — on le capture pour vérifier la relecture qu'il déclenche.
+const panelProps = vi.hoisted(() => ({
+  onForged: null as null | (() => void),
+  onChanged: null as null | (() => void),
+}));
 vi.mock('@/features/player/tcg/ui/lazyPanels', () => {
   const Null = () => null;
   return {
     FanartSubmitPanel: Null,
     TcgShowcaseEditor: Null,
-    TcgForgePanel: Null,
-    TcgCosmeticsPanel: Null,
+    TcgForgePanel: (p: { onForged: () => void }) => {
+      panelProps.onForged = p.onForged;
+      return null;
+    },
+    TcgCosmeticsPanel: (p: { onChanged: () => void }) => {
+      panelProps.onChanged = p.onChanged;
+      return null;
+    },
     TcgPhotoInvite: Null,
     TcgPackReveal: Null,
     loadPackReveal: async () => ({}),
@@ -200,5 +212,46 @@ describe('« Ma collection » — gestes monétaires', () => {
       await screen.findByText('Doublon recyclé : +30 pièces.')
     ).toBeTruthy();
     await waitFor(() => expect(reads('/api/player/tcg/collection')).toBe(2));
+  });
+});
+
+describe('« Ma collection » — relecture après forge ou cosmétique', () => {
+  // 50 cartes affichées (plus d'une page de 40) : la relecture doit en
+  // redemander AU MOINS autant, jamais revenir à la première page.
+  const many = Array.from({ length: 50 }, (_, i) => ({
+    kind: 'player',
+    userId: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+    displayName: `Joueuse ${i}`,
+    imageUrl: null,
+    rarity: 'common',
+    isFoil: false,
+    count: 1,
+    recyclable: null,
+    engagedCopies: 0,
+    recyclableEngaged: false,
+  }));
+
+  it.each([
+    ['forge', () => panelProps.onForged],
+    ['cosmétique', () => panelProps.onChanged],
+  ])('%s : la collection est relue sans perdre la position', async (_n, cb) => {
+    replies['GET /api/player/tcg/collection'] = {
+      status: 200,
+      body: {
+        ...(COLLECTION_OK.body as object),
+        cards: many,
+        nextCursor: 'c1',
+      },
+    };
+    renderScreen();
+    await screen.findByRole('button', { name: /Joueuse 49/ });
+    expect(reads('/api/player/tcg/collection')).toBe(1);
+
+    cb()!();
+    await waitFor(() => expect(reads('/api/player/tcg/collection')).toBe(2));
+    const reread = calls.filter((c) =>
+      c.url.startsWith('/api/player/tcg/collection')
+    )[1];
+    expect(reread.url).toContain('limit=50');
   });
 });

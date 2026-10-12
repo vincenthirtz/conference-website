@@ -146,6 +146,12 @@ export function useTcgHome() {
     [fetchCollection, applyPacks, applyCollectionMeta, addToast, t]
   );
 
+  /**
+   * Relecture après un geste (ouverture, achat, recyclage, forge, cosmétique) :
+   * garde au moins les cartes déjà affichées, sans revenir à la page 1.
+   */
+  const reloadKeeping = useCallback(() => load(cards.length), [load, cards]);
+
   useEffect(() => {
     void load();
   }, [load]);
@@ -214,6 +220,7 @@ export function useTcgHome() {
     busy,
     setBusy,
     load,
+    reloadKeeping,
     retryLoad,
     loadMorePacks,
     loadMoreCards,

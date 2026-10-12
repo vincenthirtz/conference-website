@@ -273,9 +273,9 @@ export default function TcgCollectionScreen() {
       <TcgForgePanel
         cards={forgeCards}
         balance={balance}
-        onForged={() => void home.load()}
+        onForged={() => void home.reloadKeeping()}
       />
-      <TcgCosmeticsPanel onChanged={() => void home.load()} />
+      <TcgCosmeticsPanel onChanged={() => void home.reloadKeeping()} />
       <p className="text-xs text-[var(--t3,#a39ba6)]">
         <Link href="/player/profile" className="hover:text-[var(--t1,#f4edf7)]">
           {t.title}
