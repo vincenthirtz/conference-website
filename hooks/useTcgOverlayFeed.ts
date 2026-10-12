@@ -183,10 +183,22 @@ export function useTcgOverlayFeed({
     if (!enabled || !token) return;
 
     void tick();
-    const id = window.setInterval(() => void tick(), pollMs);
+    // Source masquée (scène inactive avec « couper la source quand elle n'est
+    // pas visible » dans OBS, onglet en arrière-plan) : on ne sonde pas. Chaque
+    // sondage coûte des lectures base, et une source oubliée tournait jour et
+    // nuit. Au retour, rattrapage immédiat — comme `useOverlayPoll`.
+    const id = window.setInterval(() => {
+      if (document.hidden) return;
+      void tick();
+    }, pollMs);
+    const onVisible = () => {
+      if (!document.hidden) void tick();
+    };
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       alive.current = false;
       window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [enabled, token, pollMs, tick]);
 
