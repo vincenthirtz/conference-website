@@ -51665,6 +51665,685 @@
     "additionalProperties": {}
    }
   },
+  "GET /api/public/tcg/live": {
+   "200": {
+    "type": "object",
+    "properties": {
+     "cardOfWeek": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "card": {
+        "anyOf": [
+         {
+          "type": "object",
+          "properties": {
+           "displayName": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "imageUrl": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "isFoil": {
+            "type": "boolean"
+           },
+           "key": {
+            "type": "string"
+           },
+           "kind": {
+            "type": "string",
+            "const": "player"
+           },
+           "rarity": {
+            "type": "string",
+            "enum": [
+             "common",
+             "epic",
+             "legendary",
+             "rare"
+            ]
+           },
+           "userId": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "displayName",
+           "imageUrl",
+           "isFoil",
+           "key",
+           "kind",
+           "rarity",
+           "userId"
+          ]
+         },
+         {
+          "type": "object",
+          "properties": {
+           "cardImageUrl": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "isFoil": {
+            "type": "boolean"
+           },
+           "key": {
+            "type": "string"
+           },
+           "kind": {
+            "type": "string",
+            "const": "team"
+           },
+           "logoCredit": {
+            "type": [
+             "object",
+             "null"
+            ],
+            "properties": {
+             "name": {
+              "type": "string"
+             },
+             "url": {
+              "type": [
+               "string",
+               "null"
+              ]
+             }
+            },
+            "required": [
+             "name",
+             "url"
+            ]
+           },
+           "logoUrl": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "name": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "rarity": {
+            "type": "string",
+            "enum": [
+             "common",
+             "epic",
+             "legendary",
+             "rare"
+            ]
+           },
+           "slug": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "teamId": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "cardImageUrl",
+           "isFoil",
+           "key",
+           "kind",
+           "logoCredit",
+           "logoUrl",
+           "name",
+           "rarity",
+           "slug",
+           "teamId"
+          ]
+         },
+         {
+          "type": "object",
+          "properties": {
+           "imageUrl": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "isFoil": {
+            "type": "boolean"
+           },
+           "key": {
+            "type": "string"
+           },
+           "kind": {
+            "type": "string",
+            "const": "map"
+           },
+           "name": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "rarity": {
+            "type": "string",
+            "enum": [
+             "common",
+             "epic",
+             "legendary",
+             "rare"
+            ]
+           },
+           "slug": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "imageUrl",
+           "isFoil",
+           "key",
+           "kind",
+           "name",
+           "rarity",
+           "slug"
+          ]
+         },
+         {
+          "type": "object",
+          "properties": {
+           "artistName": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "artistUrl": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "category": {
+            "type": "string",
+            "enum": [
+             "association",
+             "fanart"
+            ]
+           },
+           "description": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "fanartId": {
+            "type": "string"
+           },
+           "imageUrl": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "isFoil": {
+            "type": "boolean"
+           },
+           "key": {
+            "type": "string"
+           },
+           "kind": {
+            "type": "string",
+            "const": "fanart"
+           },
+           "rarity": {
+            "type": "string",
+            "enum": [
+             "common",
+             "epic",
+             "legendary",
+             "rare"
+            ]
+           },
+           "title": {
+            "type": [
+             "string",
+             "null"
+            ]
+           }
+          },
+          "required": [
+           "artistName",
+           "artistUrl",
+           "fanartId",
+           "imageUrl",
+           "isFoil",
+           "key",
+           "kind",
+           "rarity",
+           "title"
+          ]
+         },
+         {
+          "type": "object",
+          "properties": {
+           "isFoil": {
+            "type": "boolean"
+           },
+           "key": {
+            "type": "string"
+           },
+           "kind": {
+            "type": "string",
+            "const": "mascot"
+           },
+           "name": {
+            "type": [
+             "string",
+             "null"
+            ]
+           },
+           "rarity": {
+            "type": "string",
+            "enum": [
+             "common",
+             "epic",
+             "legendary",
+             "rare"
+            ]
+           },
+           "slug": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "isFoil",
+           "key",
+           "kind",
+           "name",
+           "rarity",
+           "slug"
+          ]
+         }
+        ]
+       },
+       "week": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "card",
+       "week"
+      ]
+     },
+     "collectors": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "completion": {
+         "type": "number"
+        },
+        "name": {
+         "type": "string"
+        },
+        "owned": {
+         "type": "number"
+        },
+        "rank": {
+         "type": "number"
+        },
+        "total": {
+         "type": "number"
+        }
+       },
+       "required": [
+        "completion",
+        "name",
+        "owned",
+        "rank",
+        "total"
+       ]
+      }
+     },
+     "recentPulls": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "ageHours": {
+         "type": "number"
+        },
+        "card": {
+         "anyOf": [
+          {
+           "type": "object",
+           "properties": {
+            "displayName": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "imageUrl": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "isFoil": {
+             "type": "boolean"
+            },
+            "key": {
+             "type": "string"
+            },
+            "kind": {
+             "type": "string",
+             "const": "player"
+            },
+            "rarity": {
+             "type": "string",
+             "enum": [
+              "common",
+              "epic",
+              "legendary",
+              "rare"
+             ]
+            },
+            "userId": {
+             "type": "string"
+            }
+           },
+           "required": [
+            "displayName",
+            "imageUrl",
+            "isFoil",
+            "key",
+            "kind",
+            "rarity",
+            "userId"
+           ]
+          },
+          {
+           "type": "object",
+           "properties": {
+            "cardImageUrl": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "isFoil": {
+             "type": "boolean"
+            },
+            "key": {
+             "type": "string"
+            },
+            "kind": {
+             "type": "string",
+             "const": "team"
+            },
+            "logoCredit": {
+             "type": [
+              "object",
+              "null"
+             ],
+             "properties": {
+              "name": {
+               "type": "string"
+              },
+              "url": {
+               "type": [
+                "string",
+                "null"
+               ]
+              }
+             },
+             "required": [
+              "name",
+              "url"
+             ]
+            },
+            "logoUrl": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "name": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "rarity": {
+             "type": "string",
+             "enum": [
+              "common",
+              "epic",
+              "legendary",
+              "rare"
+             ]
+            },
+            "slug": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "teamId": {
+             "type": "string"
+            }
+           },
+           "required": [
+            "cardImageUrl",
+            "isFoil",
+            "key",
+            "kind",
+            "logoCredit",
+            "logoUrl",
+            "name",
+            "rarity",
+            "slug",
+            "teamId"
+           ]
+          },
+          {
+           "type": "object",
+           "properties": {
+            "imageUrl": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "isFoil": {
+             "type": "boolean"
+            },
+            "key": {
+             "type": "string"
+            },
+            "kind": {
+             "type": "string",
+             "const": "map"
+            },
+            "name": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "rarity": {
+             "type": "string",
+             "enum": [
+              "common",
+              "epic",
+              "legendary",
+              "rare"
+             ]
+            },
+            "slug": {
+             "type": "string"
+            }
+           },
+           "required": [
+            "imageUrl",
+            "isFoil",
+            "key",
+            "kind",
+            "name",
+            "rarity",
+            "slug"
+           ]
+          },
+          {
+           "type": "object",
+           "properties": {
+            "artistName": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "artistUrl": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "category": {
+             "type": "string",
+             "enum": [
+              "association",
+              "fanart"
+             ]
+            },
+            "description": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "fanartId": {
+             "type": "string"
+            },
+            "imageUrl": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "isFoil": {
+             "type": "boolean"
+            },
+            "key": {
+             "type": "string"
+            },
+            "kind": {
+             "type": "string",
+             "const": "fanart"
+            },
+            "rarity": {
+             "type": "string",
+             "enum": [
+              "common",
+              "epic",
+              "legendary",
+              "rare"
+             ]
+            },
+            "title": {
+             "type": [
+              "string",
+              "null"
+             ]
+            }
+           },
+           "required": [
+            "artistName",
+            "artistUrl",
+            "fanartId",
+            "imageUrl",
+            "isFoil",
+            "key",
+            "kind",
+            "rarity",
+            "title"
+           ]
+          },
+          {
+           "type": "object",
+           "properties": {
+            "isFoil": {
+             "type": "boolean"
+            },
+            "key": {
+             "type": "string"
+            },
+            "kind": {
+             "type": "string",
+             "const": "mascot"
+            },
+            "name": {
+             "type": [
+              "string",
+              "null"
+             ]
+            },
+            "rarity": {
+             "type": "string",
+             "enum": [
+              "common",
+              "epic",
+              "legendary",
+              "rare"
+             ]
+            },
+            "slug": {
+             "type": "string"
+            }
+           },
+           "required": [
+            "isFoil",
+            "key",
+            "kind",
+            "name",
+            "rarity",
+            "slug"
+           ]
+          }
+         ]
+        },
+        "collector": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "ageHours",
+        "card",
+        "collector"
+       ]
+      }
+     }
+    },
+    "required": [
+     "cardOfWeek",
+     "collectors",
+     "recentPulls"
+    ]
+   }
+  },
   "GET /api/public/team-openings": {
    "200": {
     "type": "object",

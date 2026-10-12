@@ -1,0 +1,30 @@
+get:
+  tags:
+    - public/tcg
+  summary: Le TCG en action — derniers tirages rares, classement, carte de la semaine.
+  description: >-
+    Trois blocs de la page publique `/tcg`, chacun vide (ou `null`) si sa
+    lecture echoue, sans faire tomber les autres.
+
+    CONSENTEMENT. Un nom n'apparait que pour une joueuse dont la vitrine TCG est
+    ACTIVE dans cet espace (et qui ne s'est pas retiree du TCG) : sinon
+    `collector: null` sur un tirage (« Une joueuse »), et AUCUNE ligne au
+    classement. Aucun identifiant de compte, aucun horodatage : l'age d'un
+    tirage est en heures entieres. Les paquets d'echange ne sont pas des
+    ouvertures et sont ecartes.
+
+    La carte de la semaine est deterministe par semaine ISO, parmi les equipes,
+    maps, fan arts approuvees et mascottes du vivier (jamais une carte de
+    joueuse). Cache CDN 120 s (`stale-while-revalidate` 600 s), pose sur les
+    seules reponses 200.
+  operationId: getPublicTcgLive
+  security: []
+  parameters:
+    - $ref: '#/components/parameters/PublicTenant'
+  responses:
+    '405':
+      description: Methode non autorisee.
+    '429':
+      $ref: '#/components/responses/RateLimited'
+    '503':
+      description: Base indisponible.
