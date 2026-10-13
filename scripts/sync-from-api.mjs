@@ -126,6 +126,14 @@ const entries = [
     ),
   ...SITE_ENTRY_FILES.filter((f) => fs.existsSync(path.join(site, f))),
 ].filter((r) => /\.(tsx?|jsx?|mjs|cjs)$/.test(r));
+// Un fichier que l'API possède est lu dans SA version : c'est elle qui sera
+// copiée, et ses imports peuvent viser un fichier que le site n'a pas encore
+// (2026-10-13 : `utils/botEvents.ts` importait un `utils/outboxActivity.ts`
+// tout neuf ; lu côté site, l'ancienne copie ne le citait pas, le fichier
+// n'était pas rapatrié et le typecheck de la synchro tombait).
+const ownedByApi = (rel) =>
+  API_DIRS.some((d) => rel.startsWith(`${d}/`)) &&
+  fs.existsSync(path.join(api, rel));
 const seen = new Map(); // rel → 'site' | 'api'
 const stack = entries.map((r) => ({ rel: r, where: 'site' }));
 while (stack.length) {
@@ -133,7 +141,7 @@ while (stack.length) {
   if (seen.has(rel)) continue;
   seen.set(rel, where);
   if (!/\.(tsx?|jsx?|mjs|cjs)$/.test(rel)) continue;
-  const abs = path.join(where === 'site' ? site : api, rel);
+  const abs = path.join(where === 'api' || ownedByApi(rel) ? api : site, rel);
   for (const m of fs.readFileSync(abs, 'utf8').matchAll(IMPORT_RE)) {
     const hit = resolve(rel, m[1] || m[2] || m[3] || m[4]);
     if (hit && !hit.rel.startsWith('pages/api/')) stack.push(hit);

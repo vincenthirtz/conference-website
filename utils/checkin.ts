@@ -1366,13 +1366,84 @@ export type BulkProcessResult = {
   errors: number;
   details: ProcessStepResult[];
   /**
-   * Set to `true` when the cron short-circuited because no tournament window is
-   * currently active (see `hasActiveTournamentWindow`). Purely observability —
-   * a skipped run leaves `scanned/acted/errors` at 0. Absent on normal runs and
-   * on the targeted admin path (which bypasses the guard).
+   * Set to `true` when the cron short-circuited: no pending match anywhere
+   * near the check-in window (see `nextPendingKickoffMs`), or no tournament
+   * window currently active (see `hasActiveTournamentWindow`). Purely
+   * observability — a skipped run leaves `scanned/acted/errors` at 0. Absent
+   * on normal runs and on the targeted admin path (which bypasses the guards).
    */
   skipped?: boolean;
+  /** ISO du prochain coup d'envoi connu quand le passage a dormi (`skipped`). */
+  nextKickoffAt?: string | null;
 };
+
+/**
+ * DORMANCE DU CRON. Le check-in tourne toutes les cinq minutes pendant toute la
+ * saison, mais un match n'a lieu que quelques soirs par semaine : hors de ces
+ * soirs, chaque passage lisait tournois puis matchs pour ne rien trouver.
+ *
+ * Une seule requête donne le PROCHAIN coup d'envoi en attente (statut
+ * `pending`, pas plus ancien que la fenêtre de rattrapage du forfait). Tant
+ * qu'il est au-delà de la fenêtre d'ouverture du check-in, le passage rend la
+ * main. Le résultat est mémorisé `CHECKIN_PROBE_MEMO_MS` : un match créé ou
+ * déplacé pendant ce laps est vu au passage suivant — au pire quelques minutes
+ * de retard sur l'ouverture du check-in, qui s'ouvre une heure avant.
+ */
+export const CHECKIN_PROBE_MEMO_MS = 5 * 60_000;
+/** Fenêtre d'ouverture du check-in, plus la marge d'un cron en retard. */
+const CHECKIN_LOOKAHEAD_MINUTES = 65;
+type KickoffProbeMemo = { kickoffMs: number | null; checkedAtMs: number };
+let kickoffProbeMemo: KickoffProbeMemo | null = null;
+
+/** Oublie le mémo du prochain coup d'envoi. Usage strictement test. */
+export function __resetCheckinProbeMemoForTests(): void {
+  kickoffProbeMemo = null;
+}
+
+/**
+ * Prochain coup d'envoi `pending` à partir de `windowStartIso` (ms), `null`
+ * s'il n'y en a aucun, `undefined` si la requête échoue (FAIL-OPEN : le
+ * scanner tourne alors comme avant).
+ */
+export async function nextPendingKickoffMs(
+  now: Date,
+  windowStartIso: string
+): Promise<number | null | undefined> {
+  if (!supabaseAdmin) return undefined;
+  const nowMs = now.getTime();
+  if (
+    kickoffProbeMemo &&
+    nowMs - kickoffProbeMemo.checkedAtMs < CHECKIN_PROBE_MEMO_MS
+  ) {
+    return kickoffProbeMemo.kickoffMs;
+  }
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('matches')
+      .select('scheduled_at')
+      .eq('status', 'pending')
+      .not('scheduled_at', 'is', null)
+      .gte('scheduled_at', windowStartIso)
+      .order('scheduled_at', { ascending: true })
+      .limit(1);
+    if (error) {
+      logger.error('[checkin] nextPendingKickoffMs query error:', error);
+      return undefined;
+    }
+    const first = (data ?? [])[0] as { scheduled_at: string | null } | undefined;
+    const kickoffMs = first?.scheduled_at
+      ? Date.parse(first.scheduled_at)
+      : null;
+    kickoffProbeMemo = {
+      kickoffMs: Number.isFinite(kickoffMs as number) ? kickoffMs : null,
+      checkedAtMs: nowMs,
+    };
+    return kickoffProbeMemo.kickoffMs;
+  } catch (e) {
+    logger.error('[checkin] nextPendingKickoffMs exception:', e);
+    return undefined;
+  }
+}
 
 /**
  * True s'il existe ≥1 tournoi « actif » (status ∈ published|running) dont la
@@ -1461,17 +1532,6 @@ export async function processCheckinForUpcomingMatches(opts?: {
 
   const now = new Date();
 
-  // Garde « hors période tournoi » : le cron (sans tournamentId ciblé) ne doit
-  // scanner que pendant la fenêtre d'un tournoi actif. Le chemin admin ciblé
-  // (avec tournamentId) BYPASSE ce garde — il sait ce qu'il déclenche.
-  if (!opts?.tournamentId) {
-    const active = await hasActiveTournamentWindow(now);
-    if (!active) {
-      logger.info('[checkin] hors période tournoi — scan ignoré');
-      return { ...summary, skipped: true };
-    }
-  }
-
   // Past edge must cover the widest possible auto-forfeit catch-up span: a
   // tournament may set checkin_grace_minutes up to GRACE_MAX (120), so a match
   // can still be forfeit-eligible up to ~that many minutes after kickoff. We
@@ -1479,7 +1539,30 @@ export async function processCheckinForUpcomingMatches(opts?: {
   const windowStart = new Date(
     now.getTime() - (GRACE_MAX + 5) * 60_000
   ).toISOString();
-  const windowEnd = new Date(now.getTime() + 65 * 60_000).toISOString();
+  const windowEndMs = now.getTime() + CHECKIN_LOOKAHEAD_MINUTES * 60_000;
+  const windowEnd = new Date(windowEndMs).toISOString();
+
+  if (!opts?.tournamentId) {
+    // Dormance : pas de match en attente avant la fenêtre d'ouverture → rien à
+    // faire, et pas la peine de lire les tournois. Le chemin admin ciblé (avec
+    // tournamentId) BYPASSE les gardes — il sait ce qu'il déclenche.
+    const kickoffMs = await nextPendingKickoffMs(now, windowStart);
+    if (kickoffMs === null || (kickoffMs !== undefined && kickoffMs > windowEndMs)) {
+      return {
+        ...summary,
+        skipped: true,
+        nextKickoffAt: kickoffMs === null ? null : new Date(kickoffMs).toISOString(),
+      };
+    }
+
+    // Garde « hors période tournoi » : le cron ne doit scanner que pendant la
+    // fenêtre d'un tournoi actif.
+    const active = await hasActiveTournamentWindow(now);
+    if (!active) {
+      logger.info('[checkin] hors période tournoi — scan ignoré');
+      return { ...summary, skipped: true };
+    }
+  }
 
   let q = supabaseAdmin
     .from('matches')

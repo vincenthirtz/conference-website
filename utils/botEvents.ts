@@ -20,6 +20,7 @@
 import crypto from 'crypto';
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
+import { noteOutboxWrite } from './outboxActivity';
 
 // Liste runtime des events sortants — SOURCE UNIQUE : le type `BotEventName`
 // en derive. Expose aussi le dropdown de filtre du journal Discord
@@ -188,6 +189,9 @@ async function persistOutbox(params: {
       .maybeSingle();
 
     if (!error) {
+      // Les dispatchers dormants (Web Push) ne relisent l'outbox que si une
+      // écriture a eu lieu depuis leur dernier passage.
+      noteOutboxWrite();
       return { ok: true, id: (data?.id as number | undefined) ?? null };
     }
 
@@ -210,6 +214,7 @@ async function persistOutbox(params: {
         '[botEvents] outbox: ligne déjà écrite par la tentative précédente (%s)',
         params.eventId
       );
+      noteOutboxWrite();
       return { ok: true, id: null };
     }
 
