@@ -24,7 +24,7 @@ import { useT } from '@/lib/i18n/useT';
 import { useOverlayPoll } from '@/hooks/useOverlayPoll';
 import { DEFAULT_OVERLAY_ACCENT } from '@/components/overlay/match/MatchSources';
 import { ScrimResultSource } from '@/components/overlay/match/ScrimResultSource';
-import type { OverlayScrimResultResponse } from '@/pages/api/overlay/scrim-result';
+import type { OverlayScrimResultResponse } from '@/utils/overlay/scrimResultOverlay';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 

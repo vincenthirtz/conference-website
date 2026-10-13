@@ -32,26 +32,21 @@ import { findMemberTeam } from '@/utils/teams/memberTeam';
 import {
   buildEncounterHistory,
   normalizeReviewContent,
-  type Encounter,
   type EncounterInput,
   type ReviewSubjectType,
 } from '@/utils/teams/teamReviews';
 import { logger } from '@/utils/logger';
 import { parseBody } from '../../../utils/player/errors';
 import { TeamReviewBody } from '../../../features/player/team/schemas';
+import type { TeamReviewsResponse } from '../../../features/player/team/responses';
 import { readRequestedTeamId } from '@/utils/teams/teamScope';
 
 /** Profondeur d'historique : au-delà, personne ne fait défiler. */
 const HISTORY_LIMIT = 60;
 
-export type TeamReviewsResponse = {
-  teamId: string | null;
-  teamName: string | null;
-  encounters: Encounter[];
-  /** Adversaires rencontrés, pour le filtre. */
-  opponents: Array<{ id: string; name: string; count: number }>;
-  reviewedCount: number;
-};
+// Le type de réponse vit dans features/player/team/responses.ts (lot 4b) ;
+// réexporté pour les tests de cette route.
+export type { TeamReviewsResponse };
 
 type Row = Record<string, unknown>;
 

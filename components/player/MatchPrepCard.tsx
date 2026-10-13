@@ -21,7 +21,7 @@ import { useToast } from '@/components/Toast';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 import { useT } from '@/lib/i18n/useT';
 import { MAX_OBJECTIVES_LENGTH } from '@/utils/teams/teamReviews';
-import type { TeamReviewsResponse } from '@/pages/api/player/team-reviews';
+import type { TeamReviewsResponse } from '@/features/player/team/responses';
 import nsPlayerMatch from '@/lib/i18n/locales/fr/playerMatch';
 
 import { logger } from '../../utils/logger';

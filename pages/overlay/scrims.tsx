@@ -31,7 +31,7 @@ import {
   UpcomingScrimsSource,
   parseScrimsPosition,
 } from '@/components/overlay/match/UpcomingScrimsSource';
-import type { OverlayScrimsResponse } from '@/pages/api/overlay/scrims';
+import type { OverlayScrimsResponse } from '@/utils/overlay/scrimsOverlay';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 

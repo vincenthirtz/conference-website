@@ -22,21 +22,13 @@ import {
   parseScrimHorizon,
   parseScrimLimit,
   selectUpcomingScrims,
-  type OverlayScrimView,
   type ScrimRowForOverlay,
+  type OverlayScrimsResponse,
 } from '@/utils/overlay/scrimsOverlay';
 
-export type OverlayScrimsResponse = {
-  scrims: OverlayScrimView[];
-  /** Nombre total de scrims retenus, avant la coupe à `limit`. */
-  total: number;
-  branding: {
-    name: string | null;
-    logoUrl: string | null;
-    accent: string | null;
-  } | null;
-  serverTime: string;
-};
+// Le type de réponse vit dans utils/overlay/scrimsOverlay.ts (lot 4b) ;
+// réexporté pour les tests de cette route.
+export type { OverlayScrimsResponse };
 
 function firstParam(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;

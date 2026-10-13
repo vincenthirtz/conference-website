@@ -10,7 +10,7 @@
 import { adminRequest } from '@/utils/admin/adminHttp';
 import type { AccountLog } from './manageModel';
 import type { getStaffPermissions } from './service/permissions';
-import type { AdminUserProfilePayload } from '@/pages/api/admin/users/[userId]/profile';
+import type { AdminUserProfilePayload } from '../users/profileModel';
 
 const USERS = '/api/admin/users';
 const MANAGE = `${USERS}/manage`;

@@ -5,7 +5,7 @@
 // Chaque geste renvoie la vue à jour : elle remplace le cache, sans relecture.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AdminPoolView } from '@/pages/api/admin/tournament/[id]/pool';
+import type { AdminPoolView } from '@/features/admin/tournaments/service/pool';
 import { adminRequest } from '@/utils/admin/adminHttp';
 import { tournamentsClient, tournamentUrls } from '../client';
 import { MOUNT_ONLY, tournamentKeys } from './keys';

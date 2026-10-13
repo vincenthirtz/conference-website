@@ -26,26 +26,15 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 import { applyRateLimit } from '@/utils/rateLimit';
 import { resolveTenantFromOverlayToken } from '@/utils/tcg/overlayToken';
-import {
-  readTcgOverlayFeed,
-  type OverlayFeedItem,
-} from '@/utils/tcg/overlayFeed';
+import { readTcgOverlayFeed } from '@/utils/tcg/overlayFeed';
 import { readOverlayTheme } from '@/utils/tcg/overlayTheme';
-import type { OverlayTheme } from '@/utils/tcg/overlayThemeShape';
+import type { TcgOverlayPayload } from '@/utils/tcg/overlayPayload';
 import { logger } from '@/utils/logger';
 
-// L'habillage voyage AVEC les annonces plutôt que par une seconde route : cela
-// éviterait un point d'entrée anonyme de plus, et la source interroge déjà
-// celle-ci toutes les 5 secondes. Le thème est petit et se met en cache avec le
-// reste.
-//
-// Il ne transite PAS par `overlayFeed.ts`, qui est la frontière de
-// confidentialité : l'habillage ne porte aucune donnée personnelle, et l'y
-// faire passer diluerait la seule raison d'être de ce module.
-export type TcgOverlayPayload = {
-  items: OverlayFeedItem[];
-  theme: OverlayTheme;
-};
+// L'habillage voyage AVEC les annonces plutôt que par une seconde route (la
+// raison est dans utils/tcg/overlayPayload.ts, où vit le type — lot 4b) ;
+// réexporté pour les tests de cette route.
+export type { TcgOverlayPayload };
 
 type ApiResponse = TcgOverlayPayload | { error: string; code?: string };
 

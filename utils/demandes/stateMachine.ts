@@ -21,7 +21,12 @@
 // admin peuvent en avoir besoin pour rouvrir une demande. À refuser plus
 // strictement si on veut une politique "terminal = immuable" plus tard.
 
-import type { DemandeStatus } from '../../pages/api/admin/demandes';
+/**
+ * Les statuts d'une demande — déclarés ICI, avec la machine qui les fait
+ * passer de l'un à l'autre (la route admin les réexporte ; lot 4b : `utils`
+ * n'importe pas `pages/api`).
+ */
+export type DemandeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 const ALLOWED_TRANSITIONS: Record<DemandeStatus, DemandeStatus[]> = {
   pending: ['pending', 'approved', 'rejected', 'cancelled'],

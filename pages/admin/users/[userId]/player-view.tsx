@@ -88,7 +88,7 @@ const PlayerMatchesScreen = lazyPanel(
 const PlayerNotificationsScreen = lazyPanel(
   () => import('@/components/player/screens/PlayerNotificationsScreen')
 );
-import type { AdminUserProfilePayload } from '@/pages/api/admin/users/[userId]/profile';
+import type { AdminUserProfilePayload } from '@/features/admin/users/profileModel';
 
 import { logger } from '../../../../utils/logger';
 import nsAdminUserPlayerView from '@/lib/i18n/locales/admin-fr/adminUserPlayerView';

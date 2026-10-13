@@ -35,7 +35,7 @@ import {
   DonationAlertSource,
   type DonationAlertFeed,
 } from '@/components/overlay/match/DonationAlertSource';
-import type { OverlayDonationsResponse } from '@/pages/api/overlay/donations';
+import type { OverlayDonationsResponse } from '@/utils/overlay/donationsOverlay';
 import {
   DEMO_INTERVAL_MS,
   demoDonation,

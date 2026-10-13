@@ -19,6 +19,7 @@ import {
   type OverlayMatchView,
   type TeamRowForOverlay,
 } from '@/utils/overlay/matchOverlay';
+import type { OverlayBranding } from './branding';
 
 export const OVERLAY_DAY_TIME_ZONE = 'Europe/Paris';
 
@@ -210,3 +211,21 @@ export function parseDayLimit(raw: string | null | undefined): number {
   if (!Number.isFinite(n)) return 8;
   return Math.min(12, Math.max(1, n));
 }
+
+/** `GET /api/overlay/day` — ce que la source OBS « journée » reçoit. */
+export type OverlayDayResponse = {
+  /** Jour affiché, `YYYY-MM-DD` à Paris. */
+  date: string;
+  matches: OverlayDayMatchView[];
+  /** Le match mis en avant (en cours, sinon prochain, sinon dernier résultat). */
+  currentMatchId: string | null;
+  tournament: {
+    id: string;
+    slug: string | null;
+    name: string | null;
+    shortName: string | null;
+    game: string | null;
+  };
+  branding: OverlayBranding | null;
+  serverTime: string;
+};

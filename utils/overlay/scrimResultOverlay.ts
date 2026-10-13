@@ -9,6 +9,7 @@
 // recalculée à l'écran (même parti pris que les sources par match).
 
 import type { OverlayTeamView } from '@/utils/overlay/matchOverlay';
+import type { OverlayBranding } from './branding';
 
 export type ScrimResultTeamRow = {
   name: string | null;
@@ -181,3 +182,10 @@ export function buildScrimResultView(
     team2: teamView(row.team2, row.team2_score, phase === 'final' && winner2),
   };
 }
+
+/** `GET /api/overlay/scrim-result` — ce que la source OBS « résultat de scrim » reçoit. */
+export type OverlayScrimResultResponse = {
+  scrim: OverlayScrimResultView | null;
+  branding: OverlayBranding | null;
+  serverTime: string;
+};

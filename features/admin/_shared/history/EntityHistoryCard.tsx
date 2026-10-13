@@ -11,7 +11,7 @@ import { useState } from 'react';
 import EntityHistoryDrawer from '@/components/admin/EntityHistoryDrawer';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminEntityHistory from '@/lib/i18n/locales/admin-fr/adminEntityHistory';
-import type { HistoryEntityType } from '@/pages/api/admin/entity-history';
+import type { HistoryEntityType } from '@/features/admin/logs/schemas';
 import { adminRequest } from '@/utils/admin/adminHttp';
 import { adminKey } from '../query';
 import { FicheSection } from '../ui/Fiche';

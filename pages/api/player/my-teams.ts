@@ -18,38 +18,17 @@ import { applyRateLimit } from '@/utils/rateLimit';
 import { withSubjectRoute } from '@/utils/subject';
 import { getManagedTeams } from '@/utils/teams/managementAccess';
 import { CHECKIN_OPEN_MINUTES } from '@/utils/checkin';
-import type { TeamPermission } from '@/utils/teamRoles';
-
 import { logger } from '../../../utils/logger';
+// Chemin RELATIF : l'alias vers features/player marquerait cette route comme
+// migrée (playerBoundariesGuard règle 6) alors que sa logique est encore ici.
+import type {
+  MyTeamRow,
+  MyTeamsPayload,
+} from '../../../features/player/team/responses';
 
-export type MyTeamRow = {
-  team: {
-    id: string;
-    name: string;
-    slug: string | null;
-    logoUrl: string | null;
-  };
-  isCaptain: boolean;
-  permissions: TeamPermission[];
-  roster: {
-    size: number;
-    minPlayers: number | null;
-    /** Manquants pour atteindre le minimum du prochain tournoi joué. */
-    shortfall: number;
-  };
-  nextMatch: {
-    id: string;
-    scheduledAt: string | null;
-    opponentName: string | null;
-    checkedIn: boolean;
-    checkinOpensAt: string | null;
-    checkinIsOpen: boolean;
-    lineupValidated: boolean;
-  } | null;
-  pendingJoinRequests: number;
-};
-
-export type MyTeamsPayload = { teams: MyTeamRow[] };
+// Les types de réponse vivent dans features/player/team/responses.ts (lot 4b) ;
+// réexportés pour les tests de cette route.
+export type { MyTeamRow, MyTeamsPayload };
 
 export default withSubjectRoute(async function handler(
   req: NextApiRequest,

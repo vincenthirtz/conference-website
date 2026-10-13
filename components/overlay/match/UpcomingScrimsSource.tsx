@@ -20,7 +20,7 @@
 import type { CSSProperties } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
-import type { OverlayScrimsResponse } from '@/pages/api/overlay/scrims';
+import type { OverlayScrimsResponse } from '@/utils/overlay/scrimsOverlay';
 import type { OverlayScrimView } from '@/utils/overlay/scrimsOverlay';
 import type { OverlayTeamView } from '@/utils/overlay/matchOverlay';
 import { hourLabel } from '@/components/overlay/match/MatchSources';

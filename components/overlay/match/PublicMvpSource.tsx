@@ -30,7 +30,7 @@
 import { useEffect, useState } from 'react';
 
 import { format, useT } from '@/lib/i18n/useT';
-import type { OverlayPublicMvpResponse } from '@/pages/api/overlay/mvp-public';
+import type { OverlayPublicMvpResponse } from '@/utils/overlay/publicMvpFeed';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 import { candidateName } from '@/utils/mvp/twitchChatVote';
 

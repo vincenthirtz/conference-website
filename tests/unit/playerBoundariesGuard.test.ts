@@ -81,15 +81,9 @@ const uiFiles = [
 /** Dette gelée des règles 7 à 9 — ne peut que DÉCROÎTRE. */
 const FROZEN = {
   // Règle 7 — types de réponse importés depuis le fichier handler.
-  importsPagesApi: [
-    'components/player/AgendaCard.tsx',
-    'components/player/MatchPrepCard.tsx',
-    'components/player/TeamHealthCard.tsx',
-    'components/player/TeamMemoryCard.tsx',
-    'components/player/TeamRegistrationCard.tsx',
-    'components/player/TeamRhythmCard.tsx',
-    'components/player/screens/PlayerMyTeamsScreen.tsx',
-  ],
+  // À ZÉRO depuis le lot 4b (2026-10-13) : les types de réponse vivent dans
+  // features/player/<domaine>/schemas.ts ou utils/, plus dans les routes.
+  importsPagesApi: [] as string[],
   // Règle 8 — appels `/api/admin/*` depuis l'UI joueuse (hors commentaire) :
   // nombre d'appels par fichier.
   // À ZÉRO depuis P10 : `admin/teams/my` → `/api/player/team`.

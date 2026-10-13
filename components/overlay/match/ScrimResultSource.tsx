@@ -13,7 +13,7 @@
 import type { CSSProperties } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
-import type { OverlayScrimResultResponse } from '@/pages/api/overlay/scrim-result';
+import type { OverlayScrimResultResponse } from '@/utils/overlay/scrimResultOverlay';
 import type { OverlayTeamView } from '@/utils/overlay/matchOverlay';
 import { useViewportSize } from '@/hooks/useStageFit';
 import { format } from '@/lib/i18n/useT';

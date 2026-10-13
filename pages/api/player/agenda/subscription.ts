@@ -18,6 +18,7 @@ import {
   getActiveCalendarToken,
   revokeCalendarToken,
   rotateCalendarToken,
+  type AgendaSubscription,
 } from '@/utils/player/calendarToken';
 
 const SITE_URL = (
@@ -26,14 +27,9 @@ const SITE_URL = (
   'https://owwomenscup.fr'
 ).replace(/\/$/, '');
 
-export type AgendaSubscription = {
-  /** URL https du flux, ou `null` si aucun abonnement actif. */
-  url: string | null;
-  /** Même flux en `webcal://` — ce que les clients d'agenda savent ouvrir. */
-  webcalUrl: string | null;
-  createdAt: string | null;
-  lastUsedAt: string | null;
-};
+// Le type de réponse vit dans utils/player/calendarToken.ts (lot 4b) ;
+// réexporté pour les tests de cette route.
+export type { AgendaSubscription };
 
 function present(
   token: string | null,

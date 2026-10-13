@@ -15,7 +15,7 @@ import EntityHistoryDrawer from './EntityHistoryDrawer';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminEntityHistory from '@/lib/i18n/locales/admin-fr/adminEntityHistory';
-import type { HistoryEntityType } from '@/pages/api/admin/entity-history';
+import type { HistoryEntityType } from '@/features/admin/logs/schemas';
 
 export default function EntityHistoryButton({
   entityType,

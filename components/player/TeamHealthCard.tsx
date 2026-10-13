@@ -21,7 +21,7 @@ import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
 import { useT, format } from '@/lib/i18n/useT';
 import type { HealthCode, HealthSeverity } from '../../utils/teams/teamHealth';
-import type { TeamHealthResponse } from '../../pages/api/player/team-health';
+import type { TeamHealthResponse } from '@/features/player/team/responses';
 import { logger } from '../../utils/logger';
 import nsTeamHealth from '@/lib/i18n/locales/fr/teamHealth';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';

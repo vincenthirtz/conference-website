@@ -24,7 +24,7 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import nsPlayerAgenda from '@/lib/i18n/locales/fr/playerAgenda';
 import type { AgendaEntry, PlayerAgenda } from '@/utils/player/agenda';
-import type { AgendaSubscription } from '@/pages/api/player/agenda/subscription';
+import type { AgendaSubscription } from '@/utils/player/calendarToken';
 import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
 
 import { logger } from '../../utils/logger';

@@ -41,7 +41,7 @@ import {
   type AlertRuleMap,
   type StreamAlert,
 } from '@/utils/overlay/alertBox';
-import type { OverlayAlertsResponse } from '@/pages/api/overlay/alerts';
+import type { OverlayAlertsResponse } from '@/utils/overlay/alertsOverlay';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 

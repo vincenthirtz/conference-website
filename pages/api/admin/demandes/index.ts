@@ -15,7 +15,10 @@ import {
   isValidUUID,
 } from '@/utils/apiHelpers';
 import { emitScrimEvent } from '@/utils/scrimEvents';
-import { validateDemandeBatchTransitions } from '@/utils/demandes/stateMachine';
+import {
+  validateDemandeBatchTransitions,
+  type DemandeStatus,
+} from '@/utils/demandes/stateMachine';
 import {
   insertTeamMember,
   setTeamCaptain,
@@ -33,7 +36,9 @@ export type DemandeType =
   | 'caster_application'
   | 'other';
 
-export type DemandeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+// Déclaré avec la machine à états (utils/demandes/stateMachine.ts, lot 4b) ;
+// réexporté pour les routes et tests qui le lisaient ici.
+export type { DemandeStatus };
 
 /**
  * Le contenu JSONB d'une demande, tel que les ÉCRIVAINS le remplissent.

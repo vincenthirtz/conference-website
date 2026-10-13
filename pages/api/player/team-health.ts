@@ -27,11 +27,7 @@ import { getManagedTeamForRequest } from '@/utils/teams/teamScope';
 import { isNonPlayingTeamRole } from '@/utils/teams/roleKind';
 import { resolveCurrentTournamentId } from '@/utils/currentTournament';
 import { MAX_TEAM_PLAYERS } from '@/utils/constants';
-import {
-  computeTeamHealth,
-  countBlocking,
-  type HealthIssue,
-} from '@/utils/teams/teamHealth';
+import { computeTeamHealth, countBlocking } from '@/utils/teams/teamHealth';
 import {
   buildRhythmHeatmap,
   coreRhythmSlots,
@@ -44,16 +40,12 @@ import { loadPlayedGames } from '@/utils/teams/playedGames';
 import { getDiscordLinksForUsers } from '@/utils/discordLinks';
 import { logger } from '@/utils/logger';
 
-export type TeamHealthResponse = {
-  teamId: string | null;
-  teamName: string | null;
-  issues: HealthIssue[];
-  blockingCount: number;
-  memberCount: number;
-  /** Effectif requis, et d'où il vient — l'UI l'explique différemment. */
-  requiredStarters: number;
-  requiredStartersSource: 'tournament' | 'lineup';
-};
+// Le type de réponse vit dans features/player/team/responses.ts (lot 4b) ;
+// réexporté pour les tests de cette route. Chemin RELATIF : l'alias vers
+// features/player marquerait cette route comme migrée (playerBoundariesGuard
+// règle 6) alors que sa logique est encore ici.
+import type { TeamHealthResponse } from '../../../features/player/team/responses';
+export type { TeamHealthResponse };
 
 type Row = Record<string, unknown>;
 

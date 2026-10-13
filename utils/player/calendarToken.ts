@@ -131,3 +131,17 @@ export async function resolveCalendarToken(
 
   return { userId: row.auth_user_id, tenantId: row.tenant_id };
 }
+
+/**
+ * `GET /api/player/agenda/subscription` — le lien d'abonnement courant de la
+ * personne, ou `null` partout si elle n'en a jamais créé. Déclaré ici pour
+ * que la carte Agenda (components/player) ne tire pas pages/api (lot 4b).
+ */
+export type AgendaSubscription = {
+  /** URL https du flux, ou `null` si aucun abonnement actif. */
+  url: string | null;
+  /** Même flux en `webcal://` — ce que les clients d'agenda savent ouvrir. */
+  webcalUrl: string | null;
+  createdAt: string | null;
+  lastUsedAt: string | null;
+};

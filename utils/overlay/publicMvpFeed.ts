@@ -249,3 +249,10 @@ export async function readPublicMvpFeed(
     display,
   };
 }
+
+/** `GET /api/overlay/mvp-public` — ce que la source OBS du scrutin reçoit. */
+export type OverlayPublicMvpResponse = {
+  /** `null` quand aucun scrutin n'est à l'écran : la source n'affiche rien. */
+  poll: OverlayPublicMvpPoll | null;
+  serverTime: string;
+};

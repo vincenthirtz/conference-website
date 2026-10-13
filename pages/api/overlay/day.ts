@@ -34,7 +34,7 @@ import {
   buildDayOverlay,
   resolveDayBounds,
   selectDayMatches,
-  type OverlayDayMatchView,
+  type OverlayDayResponse,
 } from '@/utils/overlay/dayOverlay';
 import { activeDayOverride } from '@/utils/overlay/dayOverride';
 
@@ -54,26 +54,9 @@ type TournamentRow = {
   overlay_day_set_at: string | null;
 };
 
-export type OverlayDayResponse = {
-  /** Jour affiché, `YYYY-MM-DD` à Paris. */
-  date: string;
-  matches: OverlayDayMatchView[];
-  /** Le match mis en avant (en cours, sinon prochain, sinon dernier résultat). */
-  currentMatchId: string | null;
-  tournament: {
-    id: string;
-    slug: string | null;
-    name: string | null;
-    shortName: string | null;
-    game: string | null;
-  };
-  branding: {
-    name: string | null;
-    logoUrl: string | null;
-    accent: string | null;
-  } | null;
-  serverTime: string;
-};
+// Le type de réponse vit dans utils/overlay/dayOverlay.ts (lot 4b) ; réexporté
+// pour les tests de cette route.
+export type { OverlayDayResponse };
 
 function firstParam(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;

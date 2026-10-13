@@ -27,7 +27,7 @@ import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import StatTile from '@/features/admin/_shared/ui/StatTile';
-import type { NetworkFunnel } from '@/pages/api/admin/network-funnel';
+import type { NetworkFunnel } from '@/features/admin/dashboard/service/networkFunnel';
 import nsAdminNetworkFunnel from '@/lib/i18n/locales/admin-fr/adminNetworkFunnel';
 
 // Garde par PERMISSION et non par rôle : `manage_settings`, la même que les

@@ -35,7 +35,7 @@ import {
 import { ADMIN_LINKS, filterAdminLinks } from '@/components/Navbar/adminLinks';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminCommandPalette from '@/lib/i18n/locales/admin-fr/adminCommandPalette';
-import type { AdminSearchPayload } from '@/pages/api/admin/search';
+import type { AdminSearchPayload } from '@/features/admin/dashboard/service/hub';
 
 import { logger } from '../../utils/logger';
 

@@ -27,7 +27,6 @@ import {
   normalizeRhythmSlots,
   projectRhythmSlots,
   rhythmCoreThreshold,
-  type RhythmHeatmap,
   type RhythmMemberInput,
 } from '@/utils/teams/teamRhythm';
 import {
@@ -46,39 +45,14 @@ import { getTimeZoneOffsetMinutes } from '@/utils/timezone';
 import { logger } from '@/utils/logger';
 import { parseBody } from '../../../utils/player/errors';
 import { TeamRhythmBody } from '../../../features/player/team/schemas';
+import type { TeamRhythmResponse } from '../../../features/player/team/responses';
 import { readRequestedTeamId } from '@/utils/teams/teamScope';
 
 const DEFAULT_TIMEZONE = 'Europe/Paris';
 
-export type TeamRhythmResponse = {
-  teamId: string | null;
-  teamName: string | null;
-  /** Fuseau dans lequel la heatmap et le noyau sont exprimés. */
-  referenceTimezone: string;
-  /** Ma déclaration (clés de créneaux) et mon fuseau. */
-  mySlots: string[];
-  myTimezone: string;
-  /** Nom d'affichage par `user_id` — pour dire QUI est dispo sur un créneau. */
-  memberNames: Record<string, string>;
-  /** Effectif pris en compte pour le seuil de noyau. */
-  memberCount: number;
-  /** Nombre de membres ayant déclaré quelque chose. */
-  declaredCount: number;
-  threshold: number;
-  heatmap: RhythmHeatmap;
-  coreSlots: string[];
-  /** Prochaines occurrences réelles du noyau, prêtes pour une annonce. */
-  suggestedSlots: string[];
-  /**
-   * Créneau d'entraînement suggéré (N6) : disponible et pourtant jamais joué.
-   * `null` quand il n'y a rien à proposer — cas normal.
-   */
-  suggestion: TrainingSuggestion | null;
-  /** Prochaines occurrences du seul créneau suggéré. */
-  suggestionSlots: string[];
-  /** L'utilisateur peut-il créer la recherche de scrim depuis le noyau ? */
-  canAnnounce: boolean;
-};
+// Le type de réponse vit dans features/player/team/responses.ts (lot 4b) ;
+// réexporté pour les tests de cette route.
+export type { TeamRhythmResponse };
 
 /** Un fuseau IANA que le runtime sait interpréter — sinon on retombe sur Paris. */
 function safeTimezone(input: unknown): string | null {

@@ -29,7 +29,7 @@ import {
   rhythmMinutesOfDay,
   rhythmSlotKey,
 } from '../../utils/teams/teamRhythm';
-import type { TeamRhythmResponse } from '../../pages/api/player/team-rhythm';
+import type { TeamRhythmResponse } from '@/features/player/team/responses';
 import { logger } from '../../utils/logger';
 import nsTeamRhythm from '@/lib/i18n/locales/fr/teamRhythm';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';

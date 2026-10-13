@@ -22,30 +22,19 @@ import { withStaffRoute, type AuthenticatedStaffContext } from '@/utils/staff';
 import { logStaffAction } from '@/utils/staffLogs';
 
 import { logger } from '../../../../../utils/logger';
+// Chemin RELATIF : l'alias vers features/admin marquerait cette route comme
+// migrée (adminBoundariesGuard « ne font que réexporter ») alors que sa logique
+// est encore ici. Les types vivent dans features/admin/users/profileModel.ts
+// (lot 4b) ; réexportés pour les tests de cette route.
+import type {
+  AdminUserProfilePayload,
+  AdminUserProfileUser,
+} from '../../../../../features/admin/users/profileModel';
+export type { AdminUserProfilePayload, AdminUserProfileUser };
 
 /** uuid v1-v5 (Supabase émet du v4, on reste tolérant). */
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-export type AdminUserProfileUser = {
-  id: string;
-  email: string | null;
-  displayName: string | null;
-  battleTag: string | null;
-  avatarUrl: string | null;
-  role: string | null;
-  createdAt: string | null;
-};
-
-export type AdminUserProfilePayload = {
-  user: AdminUserProfileUser;
-  /**
-   * Équipe de la cible dans le tenant actif, si elle en a une. Réduit au
-   * strict nécessaire (badge d'en-tête + cible des actions transfert /
-   * capitanat) : le détail du roster est rendu par les écrans joueur.
-   */
-  team: { id: string; name: string; role: string | null } | null;
-};
 
 export default withStaffRoute(async function handler(
   req: NextApiRequest,

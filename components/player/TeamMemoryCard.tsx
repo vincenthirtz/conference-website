@@ -20,7 +20,7 @@ import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { MAX_NOTES_LENGTH } from '../../utils/teams/teamReviews';
-import type { TeamReviewsResponse } from '../../pages/api/player/team-reviews';
+import type { TeamReviewsResponse } from '@/features/player/team/responses';
 import type { Encounter } from '../../utils/teams/teamReviews';
 import { logger } from '../../utils/logger';
 import nsTeamMemory from '@/lib/i18n/locales/fr/teamMemory';

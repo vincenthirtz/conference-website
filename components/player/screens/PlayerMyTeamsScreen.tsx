@@ -23,7 +23,10 @@ import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
 import nsPlayerMyTeams from '@/lib/i18n/locales/fr/playerMyTeams';
-import type { MyTeamRow, MyTeamsPayload } from '@/pages/api/player/my-teams';
+import type {
+  MyTeamRow,
+  MyTeamsPayload,
+} from '@/features/player/team/responses';
 
 import { logger } from '../../../utils/logger';
 

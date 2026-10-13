@@ -20,7 +20,7 @@
 
 import { useT } from '@/lib/i18n/useT';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
-import type { OverlayDayResponse } from '@/pages/api/overlay/day';
+import type { OverlayDayResponse } from '@/utils/overlay/dayOverlay';
 import type { OverlayDayMatchView } from '@/utils/overlay/dayOverlay';
 import { dayWindow } from '@/utils/overlay/dayOverlay';
 import type { OverlayTeamView } from '@/utils/overlay/matchOverlay';

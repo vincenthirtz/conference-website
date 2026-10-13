@@ -11,6 +11,7 @@
 // les prochains, dans l'ordre, sans fantômes.
 
 import type { OverlayTeamView } from '@/utils/overlay/matchOverlay';
+import type { OverlayBranding } from './branding';
 
 /**
  * Un scrim `scheduled` dont l'heure est passée depuis plus longtemps que ça
@@ -128,3 +129,12 @@ export function parseScrimLimit(raw: string | null | undefined): number {
   if (!Number.isFinite(n)) return 6;
   return Math.min(10, Math.max(1, n));
 }
+
+/** `GET /api/overlay/scrims` — ce que la source OBS « prochains scrims » reçoit. */
+export type OverlayScrimsResponse = {
+  scrims: OverlayScrimView[];
+  /** Nombre total de scrims retenus, avant la coupe à `limit`. */
+  total: number;
+  branding: OverlayBranding | null;
+  serverTime: string;
+};

@@ -12,7 +12,7 @@ import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminUserPlayerView from '@/lib/i18n/locales/admin-fr/adminUserPlayerView';
-import type { AdminUserProfilePayload } from '@/pages/api/admin/users/[userId]/profile';
+import type { AdminUserProfilePayload } from '../profileModel';
 import {
   ROLE_OPTIONS,
   canGrantRole,

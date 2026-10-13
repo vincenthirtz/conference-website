@@ -25,8 +25,8 @@ import { capabilityDenial } from '@/utils/billing/tenantCapabilityGate';
 import {
   buildScrimResultView,
   pickLatestResultScrim,
-  type OverlayScrimResultView,
   type ScrimRowForResult,
+  type OverlayScrimResultResponse,
 } from '@/utils/overlay/scrimResultOverlay';
 
 /** Strictement ce que l'écran affiche : ni lobby, ni litige, ni notes. */
@@ -35,15 +35,9 @@ const SCRIM_COLUMNS = `id, name, slug, status, scheduled_date, completed_at,
   team1:teams!scrims_team1_id_fkey(name, short_name, logo_url),
   team2:teams!scrims_team2_id_fkey(name, short_name, logo_url)`;
 
-export type OverlayScrimResultResponse = {
-  scrim: OverlayScrimResultView | null;
-  branding: {
-    name: string | null;
-    logoUrl: string | null;
-    accent: string | null;
-  } | null;
-  serverTime: string;
-};
+// Le type de réponse vit dans utils/overlay/scrimResultOverlay.ts (lot 4b) ;
+// réexporté pour les tests de cette route.
+export type { OverlayScrimResultResponse };
 
 function firstParam(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;

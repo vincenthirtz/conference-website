@@ -16,7 +16,7 @@ import { useEffect, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminEntityHistory from '@/lib/i18n/locales/admin-fr/adminEntityHistory';
-import type { HistoryEntityType } from '@/pages/api/admin/entity-history';
+import type { HistoryEntityType } from '@/features/admin/logs/schemas';
 import AuditChangesView from './AuditChanges';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 

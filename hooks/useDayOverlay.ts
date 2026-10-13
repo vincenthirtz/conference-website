@@ -5,7 +5,7 @@
 // `useOverlayPoll` ; 15 s, comme le cache CDN de la route — un programme bouge
 // moins qu'un tableau de score.
 
-import type { OverlayDayResponse } from '@/pages/api/overlay/day';
+import type { OverlayDayResponse } from '@/utils/overlay/dayOverlay';
 import { useOverlayPoll } from '@/hooks/useOverlayPoll';
 
 type Options = {

@@ -43,7 +43,7 @@ import Switch from '@/components/ui/Switch';
 import { PlayerAreaProvider } from '@/components/player/PlayerAreaContext';
 import PlayerManageTeamScreen from '@/components/player/screens/PlayerManageTeamScreen';
 import { withSubjectParam } from '@/utils/subjectParam';
-import type { AdminUserProfilePayload } from '@/pages/api/admin/users/[userId]/profile';
+import type { AdminUserProfilePayload } from '@/features/admin/users/profileModel';
 
 import { logger } from '../../../../utils/logger';
 import nsAdminUserCaptainView from '@/lib/i18n/locales/admin-fr/adminUserCaptainView';

@@ -17,7 +17,7 @@ import {
   getDemandeTypeLabels,
   initials,
 } from '@/components/admin/users/playerViewDisplay';
-import type { AdminUserProfilePayload } from '@/pages/api/admin/users/[userId]/profile';
+import type { AdminUserProfilePayload } from '../profileModel';
 
 /** Ton de la puce de rôle (reprend les teintes de l'ancien badge). */
 export function roleChipTone(role: string | null): ChipTone {

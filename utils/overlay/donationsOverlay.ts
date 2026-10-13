@@ -12,6 +12,8 @@
 // Aucune donnée du donateur ne transite : la table n'en contient pas, et la
 // vue ci-dessous ne rend que id / montant / devise / date.
 
+import type { OverlayBranding } from './branding';
+
 /** Au-delà, un don n'est plus « récent » pour une alerte. */
 export const DONATION_LIST_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** Nombre maximal de dons rendus dans la liste. */
@@ -119,3 +121,17 @@ export function sumDonationsSince(
   }
   return { totalCents, count };
 }
+
+/** `GET /api/overlay/donations` — ce que la source OBS « alerte don » reçoit. */
+export type OverlayDonationsResponse = {
+  /** Dons des dernières 24 h (au plus 20), plus récents d'abord. */
+  donations: OverlayDonationView[];
+  /** Somme des dons depuis minuit (Paris) du jour `from`, en centimes. */
+  totalCents: number;
+  /** Nombre de dons comptés dans `totalCents`. */
+  count: number;
+  /** Jour de départ de la jauge, `YYYY-MM-DD`. */
+  from: string;
+  branding: OverlayBranding | null;
+  serverTime: string;
+};

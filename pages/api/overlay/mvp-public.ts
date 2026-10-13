@@ -27,19 +27,16 @@ import { resolveEmbedTenantId } from '@/utils/embed';
 import { capabilityDenial } from '@/utils/billing/tenantCapabilityGate';
 import {
   readPublicMvpFeed,
-  type OverlayPublicMvpPoll,
+  type OverlayPublicMvpResponse,
 } from '@/utils/overlay/publicMvpFeed';
 
+// Les types vivent dans utils/overlay/publicMvpFeed.ts (lot 4b) ; réexportés
+// pour les tests de cette route.
 export type {
   OverlayPublicMvpCandidate,
   OverlayPublicMvpPoll,
+  OverlayPublicMvpResponse,
 } from '@/utils/overlay/publicMvpFeed';
-
-export type OverlayPublicMvpResponse = {
-  /** `null` quand aucun scrutin n'est à l'écran : la source n'affiche rien. */
-  poll: OverlayPublicMvpPoll | null;
-  serverTime: string;
-};
 
 export default async function handler(
   req: NextApiRequest,

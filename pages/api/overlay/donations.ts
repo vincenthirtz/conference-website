@@ -33,25 +33,12 @@ import {
   selectRecentDonations,
   sumDonationsSince,
   type DonationRowForOverlay,
-  type OverlayDonationView,
+  type OverlayDonationsResponse,
 } from '@/utils/overlay/donationsOverlay';
 
-export type OverlayDonationsResponse = {
-  /** Dons des dernières 24 h (au plus 20), plus récents d'abord. */
-  donations: OverlayDonationView[];
-  /** Somme des dons depuis minuit (Paris) du jour `from`, en centimes. */
-  totalCents: number;
-  /** Nombre de dons comptés dans `totalCents`. */
-  count: number;
-  /** Jour de départ de la jauge, `YYYY-MM-DD`. */
-  from: string;
-  branding: {
-    name: string | null;
-    logoUrl: string | null;
-    accent: string | null;
-  } | null;
-  serverTime: string;
-};
+// Le type de réponse vit dans utils/overlay/donationsOverlay.ts (lot 4b) ;
+// réexporté pour les tests de cette route.
+export type { OverlayDonationsResponse };
 
 function firstParam(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
