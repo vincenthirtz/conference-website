@@ -8903,6 +8903,48 @@ export type Database = {
           },
         ]
       }
+      twitch_tcg_featured_rewards: {
+        Row: {
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          fanart_id: string
+          reward_id: string
+          tenant_id: string
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          fanart_id: string
+          reward_id: string
+          tenant_id: string
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          fanart_id?: string
+          reward_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twitch_tcg_featured_rewards_fanart_id_fkey"
+            columns: ["fanart_id"]
+            isOneToOne: false
+            referencedRelation: "tcg_fanart_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "twitch_tcg_featured_rewards_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_battlenet_links: {
         Row: {
           auth_user_id: string
