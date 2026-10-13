@@ -535,6 +535,40 @@ jour au lendemain, pour un retard de paiement d'une journée.
 | Facturation multi-devises, TVA, factures conformes | HelloAsso couvre le cadre associatif actuel. À rouvrir si un client hors association arrive. |
 | Isolation physique (base par espace) | Le cloisonnement par `tenant_id` tient à cette échelle. Un changement de modèle coûterait plus que tout ce plan réuni. |
 
+## Dette ouverte — isolation des routes joueuse (lot 10, non fusionné)
+
+**Le trou.** Les routes joueuse (`pages/api/player/**`, `demandes/**`,
+`teams/**`, `withSubjectRoute`) ne résolvent pas leur espace :
+`resolveTenantIdForUserRequest` (synchrone, `utils/tenant.ts`, `TODO(S7)`)
+**ignore ses arguments et rend toujours l'espace par défaut** — ~37 routes
+en dépendent (report de score, pronostics, les 14 routes TCG, profil,
+tableau de bord…). La version asynchrone lit `team_members … limit(1)`
+**sans ordre** : une joueuse membre dans deux espaces tombe sur l'un ou
+l'autre d'une requête à l'autre. Dès qu'un second espace a de vraies
+joueuses, une joueuse de B écrit ses pronostics, pièces et paquets dans A.
+
+**État au 2026-10-13.** Inerte : `conference` 18 équipes / 66 joueuses,
+`pogtv` et `test` 0 équipe / 0 joueuse. Aucune urgence tant que POGTV reste
+vide — **à traiter AVANT d'y inscrire la première équipe.**
+
+**La spécification existe.** Branche `spec/player-tenant-resolver`
+(3 commits du 2026-09-17, base `cd847ff64`) : résolveur unique
+`resolvePlayerTenant` (équipe active `?teamId=` prouvée par
+l'appartenance → domaine propre vérifié → appartenance la plus ancienne →
+défaut ; lecture impossible = 500, jamais le défaut ; `?as=` résolu pour la
+joueuse inspectée, 403 `subject_other_tenant`), test de parité route par
+route contre un oracle de l'ancien code (`tests/unit/playerTenantParity.test.ts`,
+77 routes × 4 profils × 4 hôtes) et la doc complète (section « Isolation des
+routes joueuse » de cette même page, sur la branche).
+
+**Ne pas rebaser.** La branche a 649 commits de retard et un merge à blanc
+donne 42 conflits, tous sur les routes qu'elle réécrit. Réimplémenter sur
+`work` en reprenant tels quels le résolveur, ses tests et la doc — ce sont
+les routes qui ont divergé — et en gardant l'approche du test de parité,
+qui est ce qui rend le changement démontrablement neutre à un seul espace.
+Points restés ouverts dans la spec : appartenance dans un espace archivé,
+`/team/[slug]/edit` pour une manager multi-espaces sans `?teamId=`.
+
 ## Ce que ce plan ne résout pas
 
 Rien ici ne rend l'espace **plus facile à remplir**. Un organisateur qui a un
