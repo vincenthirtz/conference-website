@@ -90,6 +90,31 @@ Une famille à la fois, en vérifiant chaque étape en prod avant la suivante :
 Vider `API_PROXY_PREFIXES` (ou retirer une famille de la liste) dans Netlify,
 puis redéployer. Le code reste en place, inerte.
 
+## État (2026-10-13) et deploy previews
+
+- **Production : `API_PROXY_PREFIXES=/api/`** depuis le 2026-10-12 — tout
+  `owwomenscup.fr/api/*` est servi par conference-api. Les handlers de
+  `pages/api` restent construits et déployés sur Netlify mais n'y répondent
+  plus (l'Edge Function passe avant).
+- **Deploy previews : préfixe factice** (`/api/__preview-sans-relais__/`) —
+  le relais rend la main et c'est le `pages/api` de la PR qui répond. Une PR
+  qui touche un handler est donc encore testable dans sa preview.
+- Les previews utilisent **la même base Supabase que la prod** (mêmes
+  `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` dans tous les
+  contextes Netlify) : relayer une preview vers `api.owwomenscup.fr` ne change
+  rien à ce qu'elle peut écrire, seulement QUEL code répond.
+
+**Décision 4d (2026-10-13)** — quand `pages/api` quittera le site (étape 4e du
+README de conference-api), les previews passent elles aussi en relais complet :
+`API_PROXY_PREFIXES=/api/` dans le contexte `deploy-preview`, origine
+`https://api.owwomenscup.fr` par défaut. Conséquence assumée : un changement de
+handler n'est plus exercé par sa preview, seulement par les tests unitaires du
+site et le typecheck de conference-api. Les alternatives (relais des seules
+lectures `/api/public/`, qui impose de garder `pages/api` ; un conteneur API
+par preview, sans place sur l'instance) ont été écartées. **Ne pas basculer
+les previews avant 4e** : jusque-là, leur `pages/api` est le seul endroit où le
+code d'une PR d'API tourne avant la prod.
+
 ## À vérifier sur deploy preview
 
 Un appel relayé se reconnaît aux en-têtes CloudFront de la réponse
