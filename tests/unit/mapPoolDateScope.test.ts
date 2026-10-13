@@ -13,7 +13,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
 import { supabaseAdmin } from '@/utils/supabase';
-import { resolveEffectiveMapPool } from '@/utils/maps/pool';
 import {
   applyPoolScope,
   buildDateOptions,
@@ -57,6 +56,8 @@ function row(
     play_date: scope.date ?? null,
   };
 }
+
+/* ── Vue par SOIRÉE (sélecteur de la page publique) ─────────────────────── */
 
 describe('isValidPlayDate / parseDateParam', () => {
   it('accepte un YYYY-MM-DD calendaire réel', () => {
@@ -129,81 +130,6 @@ describe('applyPoolScope (mock PostgREST)', () => {
     expect(await names({ kind: 'date', date: '2026-09-30' })).toEqual([
       'Oasis',
     ]);
-  });
-});
-
-describe('resolveEffectiveMapPool — priorité date > journée > défaut', () => {
-  beforeEach(() => {
-    resetSupabaseMock();
-    store.tournament_maps = [
-      row('Busan', {}, 0),
-      row('Ilios', {}, 1),
-      row('Nepal', { round: 2 }),
-      row('Oasis', { date: '2026-09-30' }, 0),
-      row('Havana', { date: '2026-09-30' }, 1),
-    ] as any;
-  });
-
-  const base = {
-    tenantId: TENANT,
-    tournamentId: TID,
-    game: 'overwatch',
-  };
-
-  it('un match du 30/09 en J2 prend le pool du 30/09', async () => {
-    const res = await resolveEffectiveMapPool(supabaseAdmin, {
-      ...base,
-      roundNumber: 2,
-      playDate: '2026-09-30',
-    });
-    expect(res.source).toBe('tournament-date');
-    expect(res.maps.map((m) => m.name)).toEqual(['Oasis', 'Havana']);
-  });
-
-  it('une autre date de J2, sans pool daté, prend le pool de J2', async () => {
-    const res = await resolveEffectiveMapPool(supabaseAdmin, {
-      ...base,
-      roundNumber: 2,
-      playDate: '2026-09-23',
-    });
-    expect(res.source).toBe('tournament-round');
-    expect(res.maps.map((m) => m.name)).toEqual(['Nepal']);
-  });
-
-  it('ni date ni journée couvertes → pool par défaut, SANS les lignes datées', async () => {
-    const res = await resolveEffectiveMapPool(supabaseAdmin, {
-      ...base,
-      roundNumber: 5,
-      playDate: '2026-10-16',
-    });
-    expect(res.source).toBe('tournament');
-    expect(res.maps.map((m) => m.name)).toEqual(['Busan', 'Ilios']);
-  });
-
-  it('sans paramètre, le pool par défaut ne mêle ni dates ni journées', async () => {
-    const res = await resolveEffectiveMapPool(supabaseAdmin, base);
-    expect(res.maps.map((m) => m.name)).toEqual(['Busan', 'Ilios']);
-  });
-
-  it('une date invalide est ignorée (retombe sur la journée)', async () => {
-    const res = await resolveEffectiveMapPool(supabaseAdmin, {
-      ...base,
-      roundNumber: 2,
-      playDate: '30/09',
-    });
-    expect(res.source).toBe('tournament-round');
-  });
-
-  it('un pool daté désactivé ne masque pas la journée', async () => {
-    for (const r of store.tournament_maps as any[]) {
-      if (r.play_date) r.enabled = false;
-    }
-    const res = await resolveEffectiveMapPool(supabaseAdmin, {
-      ...base,
-      roundNumber: 2,
-      playDate: '2026-09-30',
-    });
-    expect(res.source).toBe('tournament-round');
   });
 });
 
@@ -377,8 +303,6 @@ describe('usePoolScope — helpers purs', () => {
     );
   });
 });
-
-/* ── Vue par SOIRÉE (sélecteur de la page publique) ─────────────────────── */
 
 describe('buildEveningPools — la maille est la soirée, pas la journée', () => {
   // Le cas réel de la Cup 2026 : les journées s'étalent sur plusieurs soirées

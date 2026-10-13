@@ -28,10 +28,7 @@ import {
   MAX_SHOWCASE_CARDS,
   parseShowcaseKey,
   readPublicShowcase,
-  readShowcaseOwnersShowing,
 } from '../../utils/tcg/showcase';
-import { revalidatePlayerCard } from '../../utils/tcg/revalidatePlayerCard';
-import handler from '../../pages/api/player/tcg/showcase';
 import { SHOWCASE_MAX_CARDS } from '../../features/player/tcg/schemas';
 import { getStaticProps } from '@/pages/player/[userId]';
 
@@ -44,39 +41,6 @@ const TEAM = '60718293-a4b5-46c7-98e9-f0a1b2c3d4e5';
 const PHOTO_PATH = 'tcg/star.png';
 const PHOTO_URL = `https://storage.example.test/teams-images/${PHOTO_PATH}`;
 const STAR_AVATAR = 'https://cdn.test/star-avatar.png';
-
-let _token = 0;
-function makeReq(over: Partial<Record<string, unknown>> = {}): any {
-  _token += 1;
-  return {
-    method: 'GET',
-    headers: { host: 'h', authorization: `Bearer t-${Date.now()}-${_token}` },
-    cookies: {},
-    query: {},
-    body: {},
-    ...over,
-  };
-}
-
-function makeRes(): any {
-  const res: any = {
-    statusCode: 200,
-    body: undefined,
-    headers: {},
-    revalidated: [] as string[],
-  };
-  res.status = (c: number) => ((res.statusCode = c), res);
-  res.json = (b: unknown) => ((res.body = b), res);
-  res.end = () => res;
-  res.setHeader = (k: string, v: unknown) => {
-    res.headers[k] = v;
-  };
-  // `res.revalidate` n'existe que dans le runtime Next : doublé ici.
-  res.revalidate = async (path: string) => {
-    res.revalidated.push(path);
-  };
-  return res;
-}
 
 function seedPeople() {
   store.player_ratings = [
@@ -208,124 +172,6 @@ describe('clés de sujet', () => {
   });
 });
 
-describe('GET /api/player/tcg/showcase', () => {
-  it('est désactivée par défaut', async () => {
-    seedPeople();
-    const res = makeRes();
-    await handler(makeReq(), res);
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toMatchObject({
-      enabled: false,
-      cards: [],
-      unavailable: 0,
-      maxCards: 3,
-    });
-    expect(res.headers['Cache-Control']).toBe('private, no-store');
-    // Classée : la fiche publique existe.
-    expect(res.body.publicProfileUrl).toBe(`/player/${OWNER}`);
-  });
-});
-
-describe('PUT /api/player/tcg/showcase', () => {
-  it('active une vitrine de cartes possédées et régénère la fiche', async () => {
-    seedPeople();
-    seedCards(OWNER, [
-      { kind: 'player', id: STAR, rarity: 'rare' },
-      { kind: 'team', id: TEAM },
-    ]);
-
-    const res = makeRes();
-    await handler(
-      makeReq({
-        method: 'PUT',
-        body: { enabled: true, cards: [`player:${STAR}`, `team:${TEAM}`] },
-      }),
-      res
-    );
-    expect(res.statusCode).toBe(200);
-    expect(res.body.enabled).toBe(true);
-    expect(res.body.cards.map((c: { key: string }) => c.key)).toEqual([
-      `player:${STAR}`,
-      `team:${TEAM}`,
-    ]);
-    expect(store.tcg_showcases).toEqual([
-      expect.objectContaining({
-        tenant_id: TENANT,
-        user_id: OWNER,
-        enabled: true,
-        subject_keys: [`player:${STAR}`, `team:${TEAM}`],
-      }),
-    ]);
-    expect(res.revalidated).toContain(`/player/${OWNER}`);
-  });
-
-  it('refuse une carte non possédée (409 not_owned)', async () => {
-    seedPeople();
-    seedCards(OWNER, [{ kind: 'team', id: TEAM }]);
-    const res = makeRes();
-    await handler(
-      makeReq({
-        method: 'PUT',
-        body: { enabled: true, cards: [`player:${STAR}`] },
-      }),
-      res
-    );
-    expect(res.statusCode).toBe(409);
-    expect(res.body.code).toBe('not_owned');
-    expect(store.tcg_showcases ?? []).toHaveLength(0);
-  });
-
-  it('refuse plus de trois cartes et une clé mal formée', async () => {
-    const tooMany = makeRes();
-    await handler(
-      makeReq({
-        method: 'PUT',
-        body: {
-          enabled: true,
-          cards: ['map:a', 'map:b', 'map:c', 'map:d'],
-        },
-      }),
-      tooMany
-    );
-    expect(tooMany.statusCode).toBe(400);
-    expect(tooMany.body.code).toBe('invalid_body');
-
-    const bad = makeRes();
-    await handler(
-      makeReq({ method: 'PUT', body: { enabled: true, cards: ['x:y'] } }),
-      bad
-    );
-    expect(bad.statusCode).toBe(400);
-    expect(bad.body.code).toBe('invalid_card');
-  });
-
-  it('ne bloque JAMAIS une désactivation, même si une carte a été cédée', async () => {
-    seedPeople();
-    store.tcg_showcases = [
-      {
-        tenant_id: TENANT,
-        user_id: OWNER,
-        enabled: true,
-        subject_keys: [`player:${STAR}`],
-      },
-    ] as any;
-    // Plus aucune carte : celle de STAR est partie.
-    const res = makeRes();
-    await handler(
-      makeReq({
-        method: 'PUT',
-        body: { enabled: false, cards: [`player:${STAR}`] },
-      }),
-      res
-    );
-    expect(res.statusCode).toBe(200);
-    expect(res.body.enabled).toBe(false);
-    expect(res.body.unavailable).toBe(1);
-    expect((store.tcg_showcases as any[])[0].enabled).toBe(false);
-    expect(res.revalidated).toContain(`/player/${OWNER}`);
-  });
-});
-
 describe('readPublicShowcase — ce que voit une visiteuse', () => {
   it('rend null sans réglage, et null quand la vitrine est désactivée', async () => {
     seedPeople();
@@ -411,46 +257,6 @@ describe('readPublicShowcase — ce que voit une visiteuse', () => {
     (store.tcg_player_cards as any[])[0].photo_status = 'pending';
     const pending = await readPublicShowcase(TENANT, OWNER);
     expect(JSON.stringify(pending)).not.toContain(PHOTO_PATH);
-  });
-});
-
-describe('régénération des vitrines qui exposent une joueuse', () => {
-  it('régénère la fiche de la joueuse ET celles des vitrines actives qui l’exposent', async () => {
-    store.tcg_showcases = [
-      {
-        tenant_id: TENANT,
-        user_id: OWNER,
-        enabled: true,
-        subject_keys: [`player:${STAR}`],
-      },
-      // Désactivée : sa fiche n'expose rien, inutile de la régénérer.
-      {
-        tenant_id: TENANT,
-        user_id: OTHER,
-        enabled: false,
-        subject_keys: [`player:${STAR}`],
-      },
-    ] as any;
-
-    expect(await readShowcaseOwnersShowing(`player:${STAR}`)).toEqual([OWNER]);
-
-    const res = makeRes();
-    await revalidatePlayerCard(res, STAR);
-    expect(res.revalidated).toEqual([`/player/${STAR}`, `/player/${OWNER}`]);
-  });
-
-  it('ne régénère rien de plus quand aucune vitrine n’expose la joueuse', async () => {
-    store.tcg_showcases = [
-      {
-        tenant_id: TENANT,
-        user_id: OWNER,
-        enabled: true,
-        subject_keys: [`team:${TEAM}`],
-      },
-    ] as any;
-    const res = makeRes();
-    await revalidatePlayerCard(res, STAR);
-    expect(res.revalidated).toEqual([`/player/${STAR}`]);
   });
 });
 

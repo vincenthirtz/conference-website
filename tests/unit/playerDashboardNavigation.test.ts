@@ -17,7 +17,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const session = vi.hoisted(() => ({
   value: {
@@ -35,17 +34,11 @@ vi.mock('@/hooks/useAdminFetch', () => ({
 }));
 
 import {
-  DASHBOARD_ANCHORS,
   hashTargetId,
   sectionPanelId,
   shouldExpandForHash,
 } from '../../utils/player/dashboardAnchors';
-import { buildTodo } from '../../features/player/dashboard/service/todo';
-import { EMPTY_NEXT_MATCH } from '../../features/player/dashboard/schemas';
-import PlayerDashboardScreen, {
-  CategorySection,
-} from '../../components/player/screens/PlayerDashboardScreen';
-import { ToastProvider } from '../../components/Toast';
+import { CategorySection } from '../../components/player/screens/PlayerDashboardScreen';
 import { CAPTAIN_CTA_URL } from '../../utils/scrimRequestNotify';
 
 describe('ancres du tableau de bord', () => {
@@ -83,53 +76,6 @@ describe('ancres du tableau de bord', () => {
   });
 });
 
-describe('bandeau « à faire » — liens vers une cible réelle', () => {
-  const base = {
-    userId: 'u-1',
-    nextMatch: EMPTY_NEXT_MATCH,
-    unreadMessages: 0,
-    members: [],
-    canManage: true,
-    permissions: [],
-  };
-
-  it('invitation → l’enveloppe d’InvitationsSection, pas `/player` seul', () => {
-    const todo = buildTodo({
-      ...base,
-      pendingScrims: [],
-      pendingInvitations: 2,
-    });
-    expect(todo).toEqual([
-      {
-        id: 'invitation',
-        href: `/player#${DASHBOARD_ANCHORS.invitations}`,
-        count: 2,
-      },
-    ]);
-  });
-
-  it('scrims → le bloc des scrims qui attendent une réponse, pas les grilles', () => {
-    const todo = buildTodo({
-      ...base,
-      pendingScrims: [{ id: 's-1' } as never],
-      pendingInvitations: 0,
-      permissions: ['manage_scrims'],
-    });
-    expect(todo[0].href).toBe(`/player#${DASHBOARD_ANCHORS.pendingScrims}`);
-    expect(todo[0].href).not.toContain('scrim-plannings');
-  });
-
-  it('pas d’item scrims sans `manage_scrims` : la section et son ancre n’existent pas', () => {
-    const todo = buildTodo({
-      ...base,
-      pendingScrims: [{ id: 's-1' } as never],
-      pendingInvitations: 0,
-      permissions: ['validate_lineup'],
-    });
-    expect(todo.map((i) => i.id)).not.toContain('scrims');
-  });
-});
-
 describe('CategorySection', () => {
   it('pose l’id du panneau et rend le lien d’en-tête hors du bouton de pli', () => {
     const html = renderToString(
@@ -155,42 +101,5 @@ describe('CategorySection', () => {
     // Le lien n'est pas DANS le bouton : il reste cliquable section repliée.
     const buttonEnd = html.indexOf('</button>');
     expect(html.indexOf('href="/player/matches"')).toBeGreaterThan(buttonEnd);
-  });
-});
-
-describe('PlayerDashboardScreen — déconnectée', () => {
-  function render() {
-    // La page réelle est enveloppée par `withPlayerQuery` (P5).
-    return renderToString(
-      createElement(
-        QueryClientProvider,
-        { client: new QueryClient() },
-        createElement(ToastProvider, null, createElement(PlayerDashboardScreen))
-      )
-    );
-  }
-
-  it('montre « Connecte-toi » avec retour au tableau de bord, pas un squelette', () => {
-    session.value = { user: null, token: null, loading: false, ready: false };
-    const html = render();
-    expect(html).toContain('href="/login?next=/player"');
-    expect(html).not.toContain('aria-busy="true"');
-  });
-
-  it('garde le squelette tant que la session se résout', () => {
-    session.value = { user: null, token: null, loading: true, ready: false };
-    const html = render();
-    expect(html).toContain('aria-busy="true"');
-  });
-
-  it('garde le squelette pendant le premier chargement d’une session prête', () => {
-    session.value = {
-      user: { id: 'u-1', email: 'a@b.c', user_metadata: {} },
-      token: 't',
-      loading: false,
-      ready: true,
-    };
-    const html = render();
-    expect(html).toContain('aria-busy="true"');
   });
 });

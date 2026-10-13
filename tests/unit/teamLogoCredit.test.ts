@@ -20,11 +20,8 @@ import { renderToString } from 'react-dom/server';
 import {
   store,
   resetSupabaseMock,
-  setAuthUser,
   CONFERENCE_TENANT_ID,
 } from './__helpers__/supabaseMock';
-import { invalidateStaffCache } from '../../utils/staff';
-import type { StaffMember } from '../../types/staff';
 
 vi.mock('@/utils/botEvents', () => ({
   emitBotEvent: vi.fn(async () => ({ delivered: true, status: 200 })),
@@ -38,7 +35,6 @@ import {
   resolveLogoCredit,
 } from '@/utils/teams/logoCredit';
 import { readTeamFaces } from '../../utils/tcg/readCardFaces';
-import handler from '../../pages/api/admin/teams/[teamId]';
 
 const TEAM_ID = '550e8400-e29b-41d4-a716-4466554400b2';
 const TWITCH = 'https://www.twitch.tv/madamekuma';
@@ -81,6 +77,22 @@ function renderCard(
 
 /* ---------------------------------------------------------------------------
  * Règles pures
+ * ------------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------------
+ * Lecteur de faces
+ * ------------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------------
+ * Carte TCG
+ * ------------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------------
+ * Bloc de la fiche publique
+ * ------------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------------
+ * Route staff
  * ------------------------------------------------------------------------- */
 
 describe('resolveLogoCredit / displayableLogoCreditUrl', () => {
@@ -139,10 +151,6 @@ describe('parseLogoCreditInput', () => {
   });
 });
 
-/* ---------------------------------------------------------------------------
- * Lecteur de faces
- * ------------------------------------------------------------------------- */
-
 describe('readTeamFaces — crédit du logo', () => {
   beforeEach(() => {
     resetSupabaseMock();
@@ -189,10 +197,6 @@ describe('readTeamFaces — crédit du logo', () => {
   });
 });
 
-/* ---------------------------------------------------------------------------
- * Carte TCG
- * ------------------------------------------------------------------------- */
-
 describe('TcgCard — crédit du logo', () => {
   it('le rend, en lien, quand la carte montre le logo (sans lien de carte)', () => {
     const html = renderCard(teamSubject(), { noLink: true });
@@ -236,10 +240,6 @@ describe('TcgCard — crédit du logo', () => {
   });
 });
 
-/* ---------------------------------------------------------------------------
- * Bloc de la fiche publique
- * ------------------------------------------------------------------------- */
-
 describe('LogoCredit — bloc de la fiche', () => {
   const render = (name: string | null, url: string | null) =>
     renderToString(
@@ -279,97 +279,5 @@ describe('LogoCredit — bloc de la fiche', () => {
       })
     );
     expect(html).toMatch(/Logo by .*madamekuma/);
-  });
-});
-
-/* ---------------------------------------------------------------------------
- * Route staff
- * ------------------------------------------------------------------------- */
-
-describe('PATCH /api/admin/teams/[teamId] — crédit du logo', () => {
-  function makeStaffRow(): StaffMember {
-    return {
-      id: 'staff-1',
-      auth_user_id: 'user-1',
-      email: 'a@a.com',
-      role: 'admin',
-      display_name: null,
-      avatar_url: null,
-      created_at: '2026-01-01T00:00:00.000Z',
-    };
-  }
-
-  let n = 0;
-  const makeReq = (body: Record<string, unknown>): any => {
-    n += 1;
-    return {
-      method: 'PATCH',
-      headers: { host: 'h', authorization: `Bearer lc-${Date.now()}-${n}` },
-      query: { teamId: TEAM_ID },
-      body,
-    };
-  };
-  const makeRes = () => {
-    const res: any = { statusCode: 200, body: undefined, headers: {} };
-    res.status = (c: number) => ((res.statusCode = c), res);
-    res.json = (b: unknown) => ((res.body = b), res);
-    res.setHeader = (k: string, v: unknown) => {
-      res.headers[k] = v;
-    };
-    return res;
-  };
-  const team = () => (store.teams as any[]).find((t) => t.id === TEAM_ID);
-
-  beforeEach(() => {
-    resetSupabaseMock();
-    invalidateStaffCache();
-    setAuthUser({ id: 'user-1' });
-    store.staff = [makeStaffRow()] as any;
-    store.teams = [
-      {
-        id: TEAM_ID,
-        tenant_id: CONFERENCE_TENANT_ID,
-        name: 'Team Positivité',
-        slug: 'team-positivite',
-        is_active: true,
-        deleted_at: null,
-        logo_credit_name: null,
-        logo_credit_url: null,
-      },
-    ] as any;
-  });
-
-  it('le staff pose le crédit (nom rogné)', async () => {
-    const res = makeRes();
-    await handler(
-      makeReq({ logo_credit_name: ' madamekuma ', logo_credit_url: TWITCH }),
-      res
-    );
-    expect(res.statusCode).toBe(200);
-    expect(team().logo_credit_name).toBe('madamekuma');
-    expect(team().logo_credit_url).toBe(TWITCH);
-  });
-
-  it('refuse un lien http ou un nom trop court, sans rien écrire', async () => {
-    for (const body of [
-      { logo_credit_name: 'madamekuma', logo_credit_url: 'http://x.test' },
-      { logo_credit_name: 'm' },
-    ]) {
-      const res = makeRes();
-      await handler(makeReq(body), res);
-      expect(res.statusCode).toBe(400);
-      expect(team().logo_credit_name).toBeNull();
-    }
-  });
-
-  it('efface sur chaîne vide', async () => {
-    store.teams = [
-      { ...team(), logo_credit_name: 'madamekuma', logo_credit_url: TWITCH },
-    ] as any;
-    const res = makeRes();
-    await handler(makeReq({ logo_credit_name: '', logo_credit_url: '' }), res);
-    expect(res.statusCode).toBe(200);
-    expect(team().logo_credit_name).toBeNull();
-    expect(team().logo_credit_url).toBeNull();
   });
 });

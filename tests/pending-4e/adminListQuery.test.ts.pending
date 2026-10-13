@@ -1,0 +1,31 @@
+// adminListQuery.test.ts — blocs mis de côté à la bascule 4e (2026-10-13).
+// Ils appelaient un handler de pages/api PUIS rendaient de l'UI du site avec sa
+// réponse : route → composant. La route vit désormais dans conference-api ; à
+// réécrire ici contre une FIXTURE de réponse (la route est testée là-bas), puis
+// ce fichier disparaît. Non compilé, non exécuté : voir tests/pending-4e/README.md.
+
+// utils/admin/listQuery.ts — le contrat des listes admin serveur (lot L13).
+
+import { describe, it, expect } from 'vitest';
+import * as z from 'zod';
+import {
+  adminListQuery,
+  listRange,
+  searchOrFilter,
+} from '../../utils/admin/listQuery';
+
+const Q = adminListQuery({
+  sortable: ['last_name', 'created_at'],
+  pageSize: 50,
+  filters: { role: z.enum(['member', 'board']).optional() },
+});
+
+describe('pageWindow (pagination numérotée de DataTable)', () => {
+  it('toutes les pages jusqu’à 7, sinon bords + voisines avec sauts', async () => {
+    const { pageWindow } = await import('../../components/admin/DataTable');
+    expect(pageWindow(1, 3)).toEqual([1, 2, 3]);
+    expect(pageWindow(5, 12)).toEqual([1, null, 4, 5, 6, null, 12]);
+    expect(pageWindow(1, 12)).toEqual([1, 2, null, 12]);
+    expect(pageWindow(12, 12)).toEqual([1, null, 11, 12]);
+  });
+});

@@ -24,7 +24,6 @@ import {
   shapeMatchdayMatch,
   type HomeMatchday,
 } from '@/utils/home/loadNextMatchday';
-import { matchRevalidationPaths } from '@/utils/matches/revalidateMatchPages';
 import type { PublicMatch } from '@/utils/public/readMatches';
 import type { HomeTeam } from '@/utils/home/loadHomeData';
 import HomeMatchdayStrip from '@/components/Home/HomeMatchdayStrip';
@@ -57,6 +56,28 @@ function match(over: Partial<PublicMatch> = {}): PublicMatch {
 }
 
 const NOW_THURSDAY = new Date('2026-09-17T10:00:00.000Z');
+
+/* ------------------------------------------------------------------------ */
+
+function matchday(over: Partial<HomeMatchday> = {}): HomeMatchday {
+  const shaped = shapeMatchdayMatch(match(), new Map());
+  if (!shaped) throw new Error('fixture invalide');
+  return { date: '2026-09-18', matches: [shaped], totalCount: 1, ...over };
+}
+
+/* ── « Et après ? » ────────────────────────────────────────────────────────
+ *
+ * Une seule journée laissait la question ouverte : à la Cup 2026 on joue le
+ * mercredi et le vendredi, et savoir « ce soir » sans savoir « et après »
+ * oblige à ouvrir le calendrier.
+ */
+
+/* ── Fraîcheur ─────────────────────────────────────────────────────────────
+ *
+ * L'accueil et les pages de tournoi sont statiques (ISR 15 min). Un score
+ * saisi doit s'y voir tout de suite : sinon la carte « prochain rendez-vous »
+ * annonce encore un match déjà joué, ce qui s'est produit le 18/09/2026.
+ */
 
 describe('selectNextMatchday — quelle journée on annonce', () => {
   it('retient le premier jour à venir', () => {
@@ -170,14 +191,6 @@ describe('shapeMatchdayMatch — ce que l’affiche emprunte aux engagées', () 
   });
 });
 
-/* ------------------------------------------------------------------------ */
-
-function matchday(over: Partial<HomeMatchday> = {}): HomeMatchday {
-  const shaped = shapeMatchdayMatch(match(), new Map());
-  if (!shaped) throw new Error('fixture invalide');
-  return { date: '2026-09-18', matches: [shaped], totalCount: 1, ...over };
-}
-
 describe('HomeMatchdayStrip', () => {
   function render(m: HomeMatchday): string {
     return renderToString(
@@ -290,13 +303,6 @@ describe('HomeSpotlight — affiches ou équipes, jamais un vide', () => {
   });
 });
 
-/* ── « Et après ? » ────────────────────────────────────────────────────────
- *
- * Une seule journée laissait la question ouverte : à la Cup 2026 on joue le
- * mercredi et le vendredi, et savoir « ce soir » sans savoir « et après »
- * oblige à ouvrir le calendrier.
- */
-
 describe('selectNextMatchdays — la journée suivante', () => {
   const nextWednesday = '2026-09-23T18:00:00.000Z';
 
@@ -385,30 +391,5 @@ describe('HomeMatchdayStrip — journée suivante en résumé', () => {
       })
     );
     expect(html).not.toContain('Puis');
-  });
-});
-
-/* ── Fraîcheur ─────────────────────────────────────────────────────────────
- *
- * L'accueil et les pages de tournoi sont statiques (ISR 15 min). Un score
- * saisi doit s'y voir tout de suite : sinon la carte « prochain rendez-vous »
- * annonce encore un match déjà joué, ce qui s'est produit le 18/09/2026.
- */
-
-describe('matchRevalidationPaths', () => {
-  it('rafraîchit l’accueil, la fiche du match et les pages du tournoi', () => {
-    expect(matchRevalidationPaths('m-1', 'ow-womens-cup-2026')).toEqual([
-      '/',
-      '/match/m-1',
-      '/tournament/ow-womens-cup-2026',
-      '/tournament/ow-womens-cup-2026/matches',
-      '/tournament/ow-womens-cup-2026/standings',
-      '/tournament/ow-womens-cup-2026/stats',
-      '/tournament/ow-womens-cup-2026/bracket',
-    ]);
-  });
-
-  it('se limite à l’accueil et au match pour un scrim (sans tournoi)', () => {
-    expect(matchRevalidationPaths('m-1', null)).toEqual(['/', '/match/m-1']);
   });
 });

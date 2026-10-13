@@ -1,21 +1,21 @@
 {
-  "measuredAt": "2026-10-08",
+  "measuredAt": "2026-10-13",
   "debt": {
-    "api.routesNotDeclarative": 22,
-    "api.manualMethodSwitch": 21,
-    "api.directSupabaseAdmin": 13,
-    "api.selectStar": 7,
-    "api.reqBodyCast": 6,
-    "api.freeErrorJson": 184,
-    "api.adHocSuccessEnvelope": 9,
-    "api.manualLogStaffAction": 35,
-    "api.relativeLoggerImport": 9,
+    "api.routesNotDeclarative": 0,
+    "api.manualMethodSwitch": 0,
+    "api.directSupabaseAdmin": 0,
+    "api.selectStar": 0,
+    "api.reqBodyCast": 0,
+    "api.freeErrorJson": 0,
+    "api.adHocSuccessEnvelope": 0,
+    "api.manualLogStaffAction": 0,
+    "api.relativeLoggerImport": 0,
     "ui.pagesImportSupabase": 12,
     "ui.useState": 1306,
     "ui.inlineStyle": 69,
     "ui.rawAdminUrl": 43,
     "size.pagesOver800": 0,
     "size.componentsOver600": 26,
-    "size.apiOver500": 3
+    "size.apiOver500": 0
   }
 }

@@ -9,7 +9,6 @@ import Link from 'next/link';
 import type { GetStaticProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
-import { buildPublicSpec } from '@/utils/openapi/publicSpec';
 import nsDeveloppeursReference from '@/lib/i18n/locales/fr/developpeursReference';
 
 type Json = Record<string, any>;
@@ -583,10 +582,23 @@ function OperationCard({
 
 type PageProps = { spec: Json };
 
+// La spec vit avec l'API (conference-api, `docs/openapi/`) et y est servie par
+// `GET /api/public/openapi` : la page la lit là, au build puis toutes les
+// heures (ISR). Si l'API ne répond pas au build, on garde la version
+// précédente plutôt que de publier une référence vide.
+const PUBLIC_SPEC_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'https://api.owwomenscup.fr'}/api/public/openapi`;
+
 export const getStaticProps: GetStaticProps<PageProps> = async () => {
-  // JSON round-trip strips any `undefined` (Next refuses to serialise those).
-  const spec = JSON.parse(JSON.stringify(buildPublicSpec()));
-  return { props: { spec } };
+  const res = await fetch(PUBLIC_SPEC_URL, {
+    headers: { accept: 'application/json' },
+  });
+  if (!res.ok) {
+    throw new Error(
+      `Spec publique indisponible (${res.status}) : ${PUBLIC_SPEC_URL}`
+    );
+  }
+  const spec = (await res.json()) as Json;
+  return { props: { spec }, revalidate: 3600 };
 };
 
 function ApiReferencePage({ spec }: PageProps) {

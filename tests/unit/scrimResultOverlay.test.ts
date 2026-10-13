@@ -11,7 +11,7 @@
 //   3. ON NE DIFFUSE QUE LE PUBLIC : ni privé, ni brouillon, ni supprimé.
 //   4. PAS DE SCORE INVENTÉ : un scrim sans résultat n'affiche pas « 0 : 0 ».
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
 
@@ -20,8 +20,6 @@ vi.mock('@/utils/supabase', async () => {
   return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
 });
 
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
-import { DEFAULT_TENANT_ID } from '../../utils/tenant';
 import {
   buildScrimResultView,
   pickLatestResultScrim,
@@ -29,7 +27,6 @@ import {
   UPCOMING_LATE_MS,
   type ScrimRowForResult,
 } from '../../utils/overlay/scrimResultOverlay';
-import handler from '../../pages/api/overlay/scrim-result';
 import {
   ScrimResultSource,
   resultFit,
@@ -156,98 +153,6 @@ describe('le scrim du moment', () => {
     ];
     expect(pickLatestResultScrim(rows, NOW)?.id).toBe('latest');
     expect(pickLatestResultScrim([rows[0]!], NOW)).toBeNull();
-  });
-});
-
-function makeReq(query: Record<string, unknown> = {}): any {
-  return {
-    method: 'GET',
-    headers: { host: 'h' },
-    cookies: {},
-    query,
-    body: {},
-  };
-}
-
-function makeRes(): any {
-  const res: any = { statusCode: 200, body: undefined, headers: {} };
-  res.status = (c: number) => ((res.statusCode = c), res);
-  res.json = (b: unknown) => ((res.body = b), res);
-  res.end = () => res;
-  res.setHeader = (k: string, v: unknown) => {
-    res.headers[k] = v;
-  };
-  return res;
-}
-
-describe('GET /api/overlay/scrim-result', () => {
-  beforeEach(() => {
-    resetSupabaseMock();
-    const base = {
-      tenant_id: DEFAULT_TENANT_ID,
-      is_public: true,
-      deleted_at: null,
-      status: 'completed',
-      scheduled_date: new Date(Date.now() - 3 * HOUR).toISOString(),
-      completed_at: new Date(Date.now() - HOUR).toISOString(),
-      team1_id: null,
-      team2_id: null,
-      team1_score: 2,
-      team2_score: 0,
-      winner_team_id: null,
-    };
-    store.scrims = [
-      {
-        ...base,
-        id: 'bbbbbbbb-0000-4000-8000-000000000001',
-        name: 'Public',
-        slug: 'scrim-public',
-      },
-      {
-        ...base,
-        id: 'bbbbbbbb-0000-4000-8000-000000000002',
-        name: 'Privé',
-        slug: 'scrim-prive',
-        is_public: false,
-      },
-      {
-        ...base,
-        id: 'bbbbbbbb-0000-4000-8000-000000000003',
-        name: 'Brouillon',
-        slug: 'scrim-draft',
-        status: 'draft',
-      },
-    ];
-  });
-
-  it('sert un scrim public par son slug', async () => {
-    const res = makeRes();
-    await handler(makeReq({ scrim: 'scrim-public' }), res);
-    expect(res.statusCode).toBe(200);
-    expect(res.body.scrim.slug).toBe('scrim-public');
-    expect(res.body.scrim.phase).toBe('final');
-    expect(res.headers['Cache-Control']).toContain('s-maxage=5');
-  });
-
-  it('ne sert ni un scrim privé ni un brouillon', async () => {
-    for (const slug of ['scrim-prive', 'scrim-draft']) {
-      const res = makeRes();
-      await handler(makeReq({ scrim: slug }), res);
-      expect(res.statusCode).toBe(404);
-    }
-  });
-
-  it('suit le scrim du moment par défaut', async () => {
-    const res = makeRes();
-    await handler(makeReq({}), res);
-    expect(res.statusCode).toBe(200);
-    expect(res.body.scrim.slug).toBe('scrim-public');
-  });
-
-  it('refuse un identifiant mal formé', async () => {
-    const res = makeRes();
-    await handler(makeReq({ scrim: '<script>' }), res);
-    expect(res.statusCode).toBe(400);
   });
 });
 

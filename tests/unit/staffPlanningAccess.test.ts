@@ -14,8 +14,6 @@ import {
   uncoveredNights,
 } from '../../features/admin/staff-planning/coverage';
 import { monthStats } from '../../features/admin/staff-planning/view';
-import { withStaffUncoveredNights } from '../../features/admin/dashboard/service';
-import { summarizeAlerts } from '../../utils/dashboard/buildTournamentDashboard';
 import { AdminError } from '../../utils/admin/errors';
 
 describe('« Mes dispos » — access', () => {
@@ -87,20 +85,5 @@ describe('couverture des soirs de match — définition partagée', () => {
       uncoveredNights(nights, slots).map((n) => n.date)
     );
     expect(stats.coveredNights).toBe(1);
-  });
-});
-
-describe('badge d’alertes — signal planning', () => {
-  it('ajoute les soirs sans staff au total et au détail', () => {
-    const base = summarizeAlerts(null);
-    const out = withStaffUncoveredNights(base, 2);
-    expect(out.total).toBe(base.total + 2);
-    expect(out.breakdown.staffUncoveredNights).toBe(2);
-    expect(out.breakdown.disputes).toBe(0);
-  });
-
-  it('zéro soir : total inchangé', () => {
-    const base = summarizeAlerts(null);
-    expect(withStaffUncoveredNights(base, 0).total).toBe(base.total);
   });
 });

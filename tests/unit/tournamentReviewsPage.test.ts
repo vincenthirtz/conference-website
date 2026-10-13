@@ -19,7 +19,6 @@ import { DEFAULT_TENANT_ID } from '../../utils/tenant';
 import { getStaticProps } from '../../pages/tournament/[id]/reviews';
 import { getStaticProps as getStandingsProps } from '../../pages/tournament/[id]/standings';
 import { isMissingColumnError } from '../../utils/tournaments/reviewsPlaylist';
-import { normalizePlaylistInput } from '../../features/admin/tournaments/service/reviewsPlaylist';
 
 const TOUR = 'eeeeeeee-0000-4000-8000-000000000001';
 const PL = 'PLBu9E8qChrHcAbCdEfGhIjKlMnOpQrStU';
@@ -137,21 +136,5 @@ describe('tolérance à la migration absente', () => {
     expect(isMissingColumnError({ code: '42501', message: 'denied' })).toBe(
       false
     );
-  });
-});
-
-describe('admin — normalisation de la saisie', () => {
-  it('URL ou ID → ID ; vide/null → retrait ; le reste → refus', () => {
-    expect(
-      normalizePlaylistInput(`https://www.youtube.com/playlist?list=${PL}`)
-    ).toBe(PL);
-    expect(normalizePlaylistInput(PL)).toBe(PL);
-    expect(normalizePlaylistInput('')).toBeNull();
-    expect(normalizePlaylistInput('  ')).toBeNull();
-    expect(normalizePlaylistInput(null)).toBeNull();
-    expect(normalizePlaylistInput('https://example.com/?list=abc')).toBe(
-      undefined
-    );
-    expect(normalizePlaylistInput(123)).toBe(undefined);
   });
 });

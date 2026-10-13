@@ -19,14 +19,8 @@
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import {
-  resetSupabaseMock,
-  setAuthUser,
-  store,
-  supabaseAdmin,
-} from './__helpers__/supabaseMock';
 import {
   TCG_REWARD_BATTLENET,
   TCG_REWARD_QUERY_PARAM,
@@ -39,9 +33,6 @@ import { BATTLENET_VERIFIED_COINS } from '../../utils/tcg/earnSources';
 import { format } from '../../lib/i18n/useT';
 import frVerify from '../../lib/i18n/locales/fr/battlenetVerify';
 import enVerify from '../../lib/i18n/locales/en/battlenetVerify';
-import statusHandler from '../../pages/api/player/battlenet-status';
-
-const ALICE = '3f6c2a1e-8b4d-4c7e-9a2b-1d5e6f7a8b9c';
 
 const offer = (claimable: boolean) => ({
   coins: BATTLENET_VERIFIED_COINS,
@@ -119,83 +110,5 @@ describe('le retour d’OAuth', () => {
     expect(format(frVerify.fr.toastRewardCredited, { coins: 100 })).toContain(
       '+100'
     );
-  });
-});
-
-describe('GET /api/player/battlenet-status — reward', () => {
-  function makeRes(): any {
-    const res: any = { statusCode: 200, headers: {} };
-    res.status = (c: number) => ((res.statusCode = c), res);
-    res.json = (b: unknown) => ((res.body = b), res);
-    res.end = () => res;
-    res.setHeader = (k: string, v: unknown) => {
-      res.headers[k] = v;
-    };
-    return res;
-  }
-  let n = 0;
-  async function call() {
-    n += 1;
-    const res = makeRes();
-    await statusHandler(
-      {
-        method: 'GET',
-        headers: {
-          host: 'h',
-          authorization: `Bearer t-${n}`,
-          'x-real-ip': `10.2.0.${n}`,
-        },
-        cookies: {},
-        query: {},
-        body: {},
-      } as any,
-      res
-    );
-    return res;
-  }
-
-  beforeEach(() => {
-    resetSupabaseMock();
-    vi.restoreAllMocks();
-    setAuthUser({ id: ALICE });
-  });
-
-  it('offre le montant du registre, réclamable tant que rien n’est reçu', async () => {
-    const res = await call();
-    expect(res.statusCode).toBe(200);
-    expect(res.body.reward).toEqual(offer(true));
-  });
-
-  it('n’est plus réclamable une fois reçue, dans n’importe quel tenant', async () => {
-    store.tcg_wallet_entries = [
-      {
-        id: 'e0000000-0000-4000-8000-000000000009',
-        tenant_id: '5b8e2f14-7c3a-4d9e-8f1b-2a6c4e8d0f13',
-        user_id: ALICE,
-        amount: BATTLENET_VERIFIED_COINS,
-        source_kind: 'battlenet_verified',
-        source_ref: 'bnet:x',
-      },
-    ] as any;
-    const res = await call();
-    expect(res.body.reward).toEqual(offer(false));
-  });
-
-  it('registre illisible : pas réclamable — on ne promet pas à l’aveugle', async () => {
-    const original = supabaseAdmin.from.bind(supabaseAdmin);
-    vi.spyOn(supabaseAdmin, 'from').mockImplementation(((table: string) => {
-      if (table !== 'tcg_wallet_entries') return original(table);
-      const failing: any = {
-        select: () => failing,
-        eq: () => failing,
-        then: (resolve: (v: unknown) => unknown) =>
-          resolve({ data: null, count: null, error: { message: 'boom' } }),
-      };
-      return failing;
-    }) as any);
-
-    const res = await call();
-    expect(res.statusCode).toBe(200);
-    expect(res.body.reward).toEqual(offer(false));
   });
 });

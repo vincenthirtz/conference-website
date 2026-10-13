@@ -25,11 +25,8 @@ import {
   store,
 } from './__helpers__/supabaseMock';
 import { DEFAULT_TENANT_ID } from '../../utils/tenant';
-import { PACK_SIZE } from '../../utils/tcg/drawPack';
 import { resolveShowcaseCards } from '../../utils/tcg/showcase';
 import { readSubjectFaces } from '../../utils/tcg/trades';
-import collectionHandler from '../../pages/api/player/tcg/collection';
-import packsHandler from '../../pages/api/player/tcg/packs';
 import TcgCatalogPage, { getStaticProps } from '@/pages/tcg';
 import TcgShowcaseSection from '@/components/tcg/TcgShowcaseSection';
 import TcgCard from '@/components/tcg/TcgCard';
@@ -39,34 +36,9 @@ const OWNER = '11111111-1111-4111-8111-111111111111';
 const PLAYER = 'aaaaaaaa-0000-4000-8000-000000000001';
 const TEAM = '33333333-3333-4333-8333-333333333333';
 const PACK = '22222222-2222-4222-8222-222222222222';
-const FANART = '44444444-4444-4444-8444-444444444444';
 
 const TWITCH = 'https://www.twitch.tv/madamekuma';
 const CREDIT = { name: 'madamekuma', url: TWITCH };
-
-let _token = 0;
-function makeReq(over: Partial<Record<string, unknown>> = {}): any {
-  _token += 1;
-  return {
-    method: 'GET',
-    headers: { host: 'h', authorization: `Bearer t-${Date.now()}-${_token}` },
-    cookies: {},
-    query: {},
-    body: {},
-    ...over,
-  };
-}
-
-function makeRes(): any {
-  const res: any = { statusCode: 200, body: undefined, headers: {} };
-  res.status = (c: number) => ((res.statusCode = c), res);
-  res.json = (b: unknown) => ((res.body = b), res);
-  res.end = () => res;
-  res.setHeader = (k: string, v: unknown) => {
-    res.headers[k] = v;
-  };
-  return res;
-}
 
 /** Team Positivité, logo crédité — le cas réel de production. */
 function seedTeam(over: Record<string, unknown> = {}) {
@@ -169,91 +141,9 @@ afterEach(() => {
  * Routes et helpers : le crédit voyage avec la face
  * ------------------------------------------------------------------------- */
 
-describe('GET /api/player/tcg/collection', () => {
-  it('la carte d’équipe expose le crédit ; la joueuse n’en reçoit pas', async () => {
-    seedTeam();
-    seedPlayer();
-    seedOwnedCards();
-
-    const res = makeRes();
-    await collectionHandler(makeReq(), res);
-
-    expect(res.statusCode).toBe(200);
-    const team = res.body.cards.find((c: any) => c.kind === 'team');
-    expect(team.logoCredit).toEqual(CREDIT);
-    expect(res.body.cards.some((c: any) => c.kind === 'player')).toBe(true);
-    expectNoCreditOutsideTeams(res.body.cards);
-  });
-
-  it('une équipe sans artiste nommée rend `null`, pas une clé absente', async () => {
-    // `null` explicite : l'interface distingue « pas de crédit » d'une réponse
-    // antérieure au déploiement, qu'elle tolère aussi (`?? null`).
-    seedTeam({ logo_credit_name: null, logo_credit_url: null });
-    seedPlayer();
-    seedOwnedCards();
-
-    const res = makeRes();
-    await collectionHandler(makeReq(), res);
-
-    const team = res.body.cards.find((c: any) => c.kind === 'team');
-    expect(team).toHaveProperty('logoCredit', null);
-  });
-});
-
-describe('POST /api/player/tcg/packs — révélation', () => {
-  it('la carte d’équipe tirée expose le crédit ; joueuse, map et fan art non', async () => {
-    seedTeam();
-    seedPlayer();
-    // Une fan art validée, pour que l'emplacement de décor en tire une.
-    store.tcg_fanart_cards = [
-      {
-        id: FANART,
-        tenant_id: TENANT,
-        title: 'Positivité en garde',
-        artist_name: 'Lya',
-        artist_url: 'https://lya.example/art',
-        image_path: 'tcg-fanart/lya.png',
-        status: 'approved',
-        rarity: 'epic',
-      },
-    ] as any;
-    store.tcg_packs = [
-      {
-        id: PACK,
-        tenant_id: TENANT,
-        user_id: OWNER,
-        source_kind: 'victory',
-        granted_at: '2026-01-01T00:00:00.000Z',
-        opened_at: null,
-      },
-    ] as any;
-    // Tirage figé à 0 : l'emplacement de décor devient la fan art (sous le
-    // seuil de partage) — sans quoi le cas « fan art » ne serait exercé qu'un
-    // tirage sur N. L'unique équipe du vivier occupe de toute façon son
-    // emplacement réservé.
-    vi.spyOn(Math, 'random').mockReturnValue(0);
-
-    const res = makeRes();
-    await packsHandler(
-      makeReq({ method: 'POST', body: { packId: PACK } }),
-      res
-    );
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body.cards).toHaveLength(PACK_SIZE);
-    const kinds = new Set(res.body.cards.map((c: any) => c.kind));
-    expect(kinds.has('team')).toBe(true);
-    expect(kinds.has('player')).toBe(true);
-    expect(kinds.has('fanart')).toBe(true);
-
-    const team = res.body.cards.find((c: any) => c.kind === 'team');
-    expect(team.logoCredit).toEqual(CREDIT);
-    expectNoCreditOutsideTeams(res.body.cards);
-    // La fan art garde SON crédit d'autrice, intact.
-    const fanart = res.body.cards.find((c: any) => c.kind === 'fanart');
-    expect(fanart.artistName).toBe('Lya');
-  });
-});
+/* ---------------------------------------------------------------------------
+ * Rendu serveur des écrans
+ * ------------------------------------------------------------------------- */
 
 describe('/tcg — catalogue public (getStaticProps)', () => {
   it('la carte d’équipe porte le crédit ; les maps non', async () => {
@@ -310,10 +200,6 @@ describe('échanges — readSubjectFaces', () => {
     ] as any);
   });
 });
-
-/* ---------------------------------------------------------------------------
- * Rendu serveur des écrans
- * ------------------------------------------------------------------------- */
 
 describe('rendu — « Logo : madamekuma » sur les écrans de cartes', () => {
   it('/tcg : la grille publique affiche le crédit, sans lien dans la carte-lien', async () => {

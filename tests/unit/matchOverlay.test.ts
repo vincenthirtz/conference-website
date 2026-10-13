@@ -22,7 +22,7 @@ vi.mock('@/utils/supabase', async () => {
   return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
 });
 
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import { resetSupabaseMock } from './__helpers__/supabaseMock';
 import { DEFAULT_TENANT_ID } from '../../utils/tenant';
 import {
   buildOverlayMatch,
@@ -33,35 +33,12 @@ import {
   STARTING_SOON_MS,
   type MatchRowForOverlay,
 } from '../../utils/overlay/matchOverlay';
-import handler from '../../pages/api/overlay/match/[matchId]';
 import { splitRemaining } from '../../components/overlay/match/MatchSources';
 
 const T1 = 'aaaaaaaa-0000-4000-8000-000000000001';
 const T2 = 'aaaaaaaa-0000-4000-8000-000000000002';
 const MATCH = 'bbbbbbbb-0000-4000-8000-000000000001';
 const TOURNAMENT = 'cccccccc-0000-4000-8000-000000000001';
-const OTHER_TENANT = 'dddddddd-0000-4000-8000-000000000009';
-
-function makeReq(query: Record<string, unknown> = {}): any {
-  return {
-    method: 'GET',
-    headers: { host: 'h' },
-    cookies: {},
-    query,
-    body: {},
-  };
-}
-
-function makeRes(): any {
-  const res: any = { statusCode: 200, body: undefined, headers: {} };
-  res.status = (c: number) => ((res.statusCode = c), res);
-  res.json = (b: unknown) => ((res.body = b), res);
-  res.end = () => res;
-  res.setHeader = (k: string, v: unknown) => {
-    res.headers[k] = v;
-  };
-  return res;
-}
 
 function matchRow(over: Partial<Record<string, unknown>> = {}) {
   return {
@@ -85,33 +62,6 @@ function matchRow(over: Partial<Record<string, unknown>> = {}) {
   };
 }
 
-function seedPublicMatch(over: Partial<Record<string, unknown>> = {}) {
-  store.matches = [matchRow(over)];
-  store.tournaments = [
-    {
-      id: TOURNAMENT,
-      slug: 'cup-2026',
-      name: 'Cup 2026',
-      short_name: 'Cup',
-      game: 'overwatch',
-      visibility: 'public',
-      tenant_id: DEFAULT_TENANT_ID,
-    },
-  ];
-  store.teams = [
-    { id: T1, name: 'Venom Valkyries', short_name: 'VNM', logo_url: null },
-    { id: T2, name: 'Hinode', short_name: 'HIN', logo_url: null },
-  ];
-  store.tenants = [
-    {
-      id: DEFAULT_TENANT_ID,
-      plan: 'foundation',
-      plan_status: 'active',
-      plan_expires_at: null,
-    },
-  ];
-}
-
 beforeEach(() => {
   resetSupabaseMock();
   vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -119,6 +69,8 @@ beforeEach(() => {
 });
 
 /* ── Le cœur pur ───────────────────────────────────────────────────────── */
+
+/* ── Le point d'entrée ─────────────────────────────────────────────────── */
 
 describe('phase du match', () => {
   it('un match clos est final, quelle que soit l’orthographe du statut', () => {
@@ -340,102 +292,5 @@ describe('paramètre source', () => {
     expect(parseOverlaySource('n’importe quoi')).toBe('scoreboard');
     expect(parseOverlaySource(undefined)).toBe('scoreboard');
     expect(parseOverlaySource('COUNTDOWN')).toBe('countdown');
-  });
-});
-
-/* ── Le point d'entrée ─────────────────────────────────────────────────── */
-
-describe('GET /api/overlay/match/[matchId]', () => {
-  it('refuse un identifiant qui n’est pas un match', async () => {
-    const res = makeRes();
-    await handler(makeReq({ matchId: 'pas-un-uuid' }), res);
-    expect(res.statusCode).toBe(400);
-  });
-
-  it('exige le tournoi pour « le match du moment »', async () => {
-    const res = makeRes();
-    await handler(makeReq({ matchId: 'next' }), res);
-    expect(res.statusCode).toBe(400);
-  });
-
-  it('sert le match, ses équipes et ses manches', async () => {
-    seedPublicMatch({
-      status: 'finished',
-      team1_score: 2,
-      team2_score: 1,
-      winner_team_id: T1,
-    });
-    store.games = [
-      {
-        match_id: MATCH,
-        map_name: 'Busan',
-        map_order: 1,
-        team1_score: 2,
-        team2_score: 1,
-        winner_team_id: T1,
-      },
-    ];
-
-    const res = makeRes();
-    await handler(makeReq({ matchId: MATCH }), res);
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body.match.team1.name).toBe('Venom Valkyries');
-    expect(res.body.match.team1.isWinner).toBe(true);
-    expect(res.body.match.maps).toHaveLength(1);
-    expect(res.body.tournament.name).toBe('Cup 2026');
-    // Le compte à rebours a besoin de l'heure du serveur, pas de celle du PC.
-    expect(typeof res.body.serverTime).toBe('string');
-  });
-
-  it('ne diffuse pas un tournoi privé', async () => {
-    seedPublicMatch();
-    store.tournaments[0]!.visibility = 'private';
-
-    const res = makeRes();
-    await handler(makeReq({ matchId: MATCH }), res);
-    expect(res.statusCode).toBe(404);
-  });
-
-  it('ne diffuse pas un match supprimé', async () => {
-    seedPublicMatch({ deleted_at: '2026-09-17T10:00:00.000Z' });
-
-    const res = makeRes();
-    await handler(makeReq({ matchId: MATCH }), res);
-    expect(res.statusCode).toBe(404);
-  });
-
-  it('refuse par le palier quand l’espace n’a pas les overlays', async () => {
-    seedPublicMatch({ tenant_id: OTHER_TENANT });
-    store.tournaments[0]!.tenant_id = OTHER_TENANT;
-    store.tenants = [
-      {
-        id: OTHER_TENANT,
-        plan: 'discovery',
-        plan_status: 'active',
-        plan_expires_at: null,
-      },
-    ];
-
-    const res = makeRes();
-    await handler(makeReq({ matchId: MATCH }), res);
-    expect(res.statusCode).toBe(402);
-    expect(res.body.code).toBe('PLAN_CAPABILITY_REQUIRED');
-    expect(res.body.capability).toBe('matchOverlays');
-  });
-
-  it('rend un écran d’attente, pas une erreur, quand aucun match n’est à montrer', async () => {
-    seedPublicMatch({
-      status: 'finished',
-      completed_at: '2020-01-01T00:00:00.000Z',
-      scheduled_at: null,
-    });
-
-    const res = makeRes();
-    await handler(makeReq({ matchId: 'next', tournament: 'cup-2026' }), res);
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body.match).toBeNull();
-    expect(res.body.tournament.slug).toBe('cup-2026');
   });
 });

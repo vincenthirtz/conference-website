@@ -104,16 +104,14 @@ puis redéployer. Le code reste en place, inerte.
   contextes Netlify) : relayer une preview vers `api.owwomenscup.fr` ne change
   rien à ce qu'elle peut écrire, seulement QUEL code répond.
 
-**Décision 4d (2026-10-13)** — quand `pages/api` quittera le site (étape 4e du
-README de conference-api), les previews passent elles aussi en relais complet :
-`API_PROXY_PREFIXES=/api/` dans le contexte `deploy-preview`, origine
-`https://api.owwomenscup.fr` par défaut. Conséquence assumée : un changement de
-handler n'est plus exercé par sa preview, seulement par les tests unitaires du
-site et le typecheck de conference-api. Les alternatives (relais des seules
-lectures `/api/public/`, qui impose de garder `pages/api` ; un conteneur API
-par preview, sans place sur l'instance) ont été écartées. **Ne pas basculer
-les previews avant 4e** : jusque-là, leur `pages/api` est le seul endroit où le
-code d'une PR d'API tourne avant la prod.
+**Décision 4d, appliquée le 2026-10-13 avec la bascule 4e** — `pages/api` a
+quitté le site (il ne reste que `pages/api/internal/*`) ; les previews sont
+elles aussi en relais complet : `API_PROXY_PREFIXES=/api/` dans le contexte
+`deploy-preview`, origine `https://api.owwomenscup.fr` par défaut. Conséquence
+assumée : un changement de handler n'est exercé que par les tests unitaires et
+le typecheck de conference-api, pas par une preview du site. Les alternatives
+(relais des seules lectures `/api/public/`, qui imposait de garder `pages/api` ;
+un conteneur API par preview, sans place sur l'instance) ont été écartées.
 
 ## À vérifier sur deploy preview
 

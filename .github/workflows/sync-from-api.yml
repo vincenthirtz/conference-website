@@ -1,0 +1,85 @@
+# Synchro inversée : conference-api porte toute l'API ; les fichiers que les
+# pages de ce site importent aussi (manifeste `.api-sync-manifest.json`) sont
+# recopiés d'elle. Déclenchée par conference-api à chaque push sur son `main`
+# (`repository_dispatch` api-updated, voir son workflow notify-site-sync.yml),
+# et par un cron en filet. Un typecheck ou des tests rouges bloquent le commit.
+name: sync-from-api
+
+on:
+  repository_dispatch:
+    types: [api-updated]
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: sync-from-api
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      ok: ${{ steps.token.outputs.ok }}
+    steps:
+      - id: token
+        env:
+          API_REPO_TOKEN: ${{ secrets.API_REPO_DISPATCH_TOKEN }}
+        run: |
+          if [ -n "$API_REPO_TOKEN" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"
+          else echo "::warning::secret API_REPO_DISPATCH_TOKEN absent : synchro inactive"; echo "ok=false" >> "$GITHUB_OUTPUT"; fi
+
+  sync:
+    needs: check
+    if: needs.check.outputs.ok == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work
+          path: site
+      - uses: actions/checkout@v4
+        with:
+          repository: vincenthirtz/conference-api
+          ref: main
+          token: ${{ secrets.API_REPO_DISPATCH_TOKEN }}
+          path: api
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Recopier les fichiers appartenant à l'API
+        working-directory: site
+        run: node scripts/sync-from-api.mjs ../api
+      - name: Dépendances
+        working-directory: site
+        run: npm ci --no-audit --no-fund
+      - name: Typecheck
+        working-directory: site
+        run: npm run typecheck
+      - name: Tests unitaires
+        working-directory: site
+        run: npx vitest run
+
+      - name: Commit + push
+        working-directory: site
+        run: |
+          api_sha="$(git -C ../api rev-parse HEAD)"
+          git add -A
+          if git diff --cached --quiet -- . ':(exclude).api-sync-manifest.json'; then
+            echo "Rien à synchroniser (conference-api @ ${api_sha::9})."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -q -m "sync: conference-api@${api_sha::9}"
+          if ! git push origin HEAD:work; then
+            git pull --rebase origin work
+            git push origin HEAD:work
+          fi
+          git show --stat --format='%h %s' HEAD | tail -n 1 >> "$GITHUB_STEP_SUMMARY"

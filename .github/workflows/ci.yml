@@ -37,16 +37,30 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Synchro inversée à blanc (bascule 4e, 2026-10-13) : les fichiers que ce
+      # site importe et qui appartiennent à conference-api (.api-sync-manifest.json)
+      # doivent être identiques à ceux de son `main`. Un écart = quelqu'un a
+      # édité une copie ici, ou conference-api a avancé sans que la synchro
+      # (sync-from-api.yml) soit passée. Le checkout est retiré aussitôt : le
+      # tsconfig inclut **/*.ts et l'embarquerait.
+      - name: Synchro inversée à blanc (conference-api)
+        if: ${{ env.API_REPO_DISPATCH_TOKEN != '' }}
+        env:
+          API_REPO_DISPATCH_TOKEN: ${{ secrets.API_REPO_DISPATCH_TOKEN }}
+        uses: actions/checkout@v4
+        with:
+          repository: vincenthirtz/conference-api
+          ref: main
+          token: ${{ secrets.API_REPO_DISPATCH_TOKEN }}
+          path: .api-src
+          persist-credentials: false
+      - if: ${{ hashFiles('.api-src/package.json') != '' }}
+        run: |
+          node scripts/sync-from-api.mjs .api-src --check
+          rm -rf .api-src
+
       - name: Lint + format (Biome)
         run: npx biome ci .
-
-      # Lint de la spec OpenAPI, assemblée depuis docs/openapi/. Redocly n'est
-      # PAS une dépendance du repo (zero-dependency policy) : version épinglée,
-      # exécutée à la volée. Bloquant sur les erreurs, pas sur les avertissements.
-      - name: Lint OpenAPI (Redocly)
-        run: |
-          npm run openapi:build
-          npx --yes @redocly/cli@2.53.1 lint .generated/openapi.json --config docs/redocly.yaml
 
       # TypeScript 7 natif (~22 s à froid contre ~95 s pour tsc 6). Passer par
       # le script : `npx tsc` peut résoudre le tsc 6 hissé par

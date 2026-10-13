@@ -1,0 +1,278 @@
+// donationAlertOverlay.test.ts — blocs mis de côté à la bascule 4e (2026-10-13).
+// Ils appelaient un handler de pages/api PUIS rendaient de l'UI du site avec sa
+// réponse : route → composant. La route vit désormais dans conference-api ; à
+// réécrire ici contre une FIXTURE de réponse (la route est testée là-bas), puis
+// ce fichier disparaît. Non compilé, non exécuté : voir tests/pending-4e/README.md.
+
+// Source OBS « alerte don » (`/overlay/don-alert`).
+// Targets : utils/helloasso/donationEvent.ts (pur),
+//           pages/api/helloasso/webhook.ts (branche don),
+//           utils/overlay/donationsOverlay.ts (pur), pages/api/overlay/donations.ts,
+//           utils/overlay/donAlert.ts (pur), components/overlay/match/DonationAlertSource.tsx
+//
+// CE QUE CES CAS PROTÈGENT :
+//   1. SEUL UN DON EST ANNONCÉ : ni adhésion, ni abonnement de plan, ni
+//      cagnotte — « merci pour ce don » sur une cotisation serait faux.
+//   2. JAMAIS LE DONATEUR : la ligne stockée ne porte ni nom ni email.
+//   3. UN REJEU HELLOASSO NE COMPTE PAS DEUX FOIS.
+//   4. PAS DE RAFALE À L'OUVERTURE DE LA SOURCE : le premier chargement est
+//      « déjà vu », les alertes suivantes passent une par une.
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { createElement } from 'react';
+
+vi.mock('@/utils/supabase', async () => {
+  const m = await import('./__helpers__/supabaseMock');
+  return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
+});
+
+import { DEFAULT_TENANT_ID } from '../../utils/tenant';
+import type { HelloAssoWebhookEvent } from '../../utils/helloasso';
+import {
+  buildDonationRow,
+  classifyDonation,
+  type DonationContext,
+} from '../../utils/helloasso/donationEvent';
+import {
+  parseDonationAfter,
+  selectRecentDonations,
+  sumDonationsSince,
+} from '../../utils/overlay/donationsOverlay';
+import {
+  ALERT_MAX_AGE_MS,
+  demoDonation,
+  demoTotalCents,
+  formatEuros,
+  gaugeRatio,
+  ingestDonations,
+  initialQueueState,
+  parseAlertDurationMs,
+  parseGoalCents,
+  shiftQueue,
+  type DonAlertDonation,
+} from '../../utils/overlay/donAlert';
+import { DonationGauge } from '../../components/overlay/match/DonationAlertSource';
+
+const OTHER_TENANT = '99999999-0000-4000-8000-000000000009';
+const PLAN_TENANT = '11111111-1111-4111-8111-111111111111';
+const POOL = '33333333-3333-4333-8333-333333333333';
+const NOW_DEMO = Date.parse('2026-09-17T19:00:00.000Z');
+
+function makeRes(): any {
+  return {
+    statusCode: 200,
+    body: undefined,
+    headers: {} as Record<string, unknown>,
+    status(c: number) {
+      this.statusCode = c;
+      return this;
+    },
+    json(b: unknown) {
+      this.body = b;
+      return this;
+    },
+    setHeader(k: string, v: unknown) {
+      this.headers[k] = v;
+    },
+  };
+}
+
+function payment(
+  over: Partial<HelloAssoWebhookEvent['data']> = {},
+  root: Partial<HelloAssoWebhookEvent> = {}
+): HelloAssoWebhookEvent {
+  return {
+    eventType: 'Payment',
+    ...root,
+    data: {
+      id: 7001,
+      amount: 2000,
+      state: 'Authorized',
+      payer: { firstName: 'Camille', lastName: 'Martin', email: 'c@m.fr' },
+      order: { id: 1, formType: 'Donation', formSlug: 'soutenir-la-coupe' },
+      items: [{ name: 'Don', amount: 2000, type: 'Donation' }] as never,
+      ...over,
+    },
+  };
+}
+
+const PLATFORM: DonationContext = {
+  source: 'platform',
+  planCorrelated: false,
+  prizeCorrelated: false,
+};
+
+/* ===========================================================================
+ * Classification
+ * =========================================================================*/
+
+
+
+/* ===========================================================================
+ * Webhook
+ * =========================================================================*/
+
+
+
+/* ===========================================================================
+ * API publique
+ * =========================================================================*/
+
+
+
+
+
+/* ===========================================================================
+ * Source OBS : file, formats, paramètres
+ * =========================================================================*/
+
+describe('classifyDonation', () => {
+  it('formulaire Donation → don', () => {
+    const c = classifyDonation(payment(), PLATFORM);
+    expect(c.isDonation).toBe(true);
+    expect(c.formType).toBe('Donation');
+    expect(c.formSlug).toBe('soutenir-la-coupe');
+  });
+
+  it('formulaire Donation sur le compte d’un espace tiers → don', () => {
+    const c = classifyDonation(payment(), { ...PLATFORM, source: 'tenant' });
+    expect(c.isDonation).toBe(true);
+  });
+
+  it('formulaire absent mais item de type Donation → don', () => {
+    const c = classifyDonation(payment({ order: undefined }), PLATFORM);
+    expect(c).toMatchObject({ isDonation: true, formType: null });
+  });
+
+  it('checkout de la page /don (non corrélé, compte association) → don', () => {
+    const c = classifyDonation(
+      payment({
+        order: { id: 2, formType: 'Checkout', formSlug: 'checkout' },
+        items: [{ name: "Don pour l'association", amount: 2000 }],
+      }),
+      PLATFORM
+    );
+    expect(c.isDonation).toBe(true);
+  });
+
+  it('checkout reçu d’un espace tiers → pas un don (ce n’est pas notre /don)', () => {
+    const c = classifyDonation(
+      payment({ order: { formType: 'Checkout' }, items: [] }),
+      { ...PLATFORM, source: 'tenant' }
+    );
+    expect(c).toMatchObject({ isDonation: false, reason: 'foreign_checkout' });
+  });
+
+  it('adhésion → pas un don, même avec un don en option', () => {
+    const c = classifyDonation(
+      payment({
+        order: { formType: 'Membership', formSlug: 'adhesion-2026-2027' },
+        items: [
+          { name: 'Adhésion', amount: 1000, type: 'Membership' },
+          { name: 'Don', amount: 500, type: 'Donation' },
+        ] as never,
+      }),
+      PLATFORM
+    );
+    expect(c).toMatchObject({ isDonation: false, reason: 'non_donation_form' });
+  });
+
+  it('billetterie et boutique → pas des dons', () => {
+    for (const formType of ['Event', 'Shop']) {
+      expect(
+        classifyDonation(payment({ order: { formType } }), PLATFORM).isDonation
+      ).toBe(false);
+    }
+  });
+
+  it('abonnement de plan (metadata ou corrélation) → pas un don', () => {
+    const checkout = { order: { formType: 'Checkout' } };
+    expect(
+      classifyDonation(
+        payment({
+          ...checkout,
+          metadata: { kind: 'tenant_plan', tenant_id: PLAN_TENANT },
+        }),
+        PLATFORM
+      )
+    ).toMatchObject({ isDonation: false, reason: 'plan_payment' });
+    expect(
+      classifyDonation(payment(checkout), {
+        ...PLATFORM,
+        planCorrelated: true,
+      })
+    ).toMatchObject({ isDonation: false, reason: 'plan_payment' });
+  });
+
+  it('contribution de cagnotte (même avec un item Donation) → pas un don', () => {
+    expect(
+      classifyDonation(
+        payment({ order: undefined }, { metadata: { kind: 'prize_pool' } }),
+        PLATFORM
+      )
+    ).toMatchObject({ isDonation: false, reason: 'prize_contribution' });
+    expect(
+      classifyDonation(payment({ order: { formType: 'Checkout' } }), {
+        ...PLATFORM,
+        prizeCorrelated: true,
+      })
+    ).toMatchObject({ isDonation: false, reason: 'prize_contribution' });
+  });
+
+  it('checkout dont la corrélation a échoué → pas un don (prudence)', () => {
+    const c = classifyDonation(payment({ order: { formType: 'Checkout' } }), {
+      ...PLATFORM,
+      planCorrelated: null,
+    });
+    expect(c).toMatchObject({
+      isDonation: false,
+      reason: 'correlation_unknown',
+    });
+  });
+
+  it('champs manquants ou invalides → pas un don', () => {
+    expect(
+      classifyDonation(
+        payment({ order: undefined, items: undefined }),
+        PLATFORM
+      )
+    ).toMatchObject({ isDonation: false, reason: 'no_donation_item' });
+    expect(
+      classifyDonation(payment({ state: 'Refused' }), PLATFORM).isDonation
+    ).toBe(false);
+    expect(
+      classifyDonation(payment({}, { eventType: 'Order' }), PLATFORM).isDonation
+    ).toBe(false);
+    expect(classifyDonation(payment({ amount: 0 }), PLATFORM).isDonation).toBe(
+      false
+    );
+    expect(
+      classifyDonation(payment({ amount: 12.5 }), PLATFORM).isDonation
+    ).toBe(false);
+    expect(
+      classifyDonation(payment({ id: undefined as never }), PLATFORM).isDonation
+    ).toBe(false);
+    expect(
+      classifyDonation({ eventType: 'Payment' } as never, PLATFORM).isDonation
+    ).toBe(false);
+  });
+
+  it('la ligne ne porte que montant, devise et formulaire', () => {
+    const event = payment();
+    const row = buildDonationRow(
+      event,
+      DEFAULT_TENANT_ID,
+      classifyDonation(event, PLATFORM)
+    );
+    expect(row).toEqual({
+      tenant_id: DEFAULT_TENANT_ID,
+      helloasso_payment_id: '7001',
+      amount_cents: 2000,
+      currency: 'EUR',
+      form_type: 'Donation',
+      form_slug: 'soutenir-la-coupe',
+    });
+    expect(JSON.stringify(row)).not.toMatch(/Camille|Martin|c@m\.fr/);
+  });
+});

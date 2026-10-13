@@ -4,11 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run openapi:build",
     "build": "next build",
-    "openapi:build": "node --import ./scripts/register-ts.mjs scripts/openapi/build.mjs",
-    "contract:bot-inventory": "node --import ./scripts/register-ts.mjs scripts/openapi/bot-inventory.mjs",
-    "openapi:responses": "node scripts/openapi/infer-responses.cjs",
     "tcg:audit": "node scripts/tcg-audit.mjs",
     "bundle:budget": "node scripts/bundle-budget.mjs",
     "admin:metrics": "node --import ./scripts/register-ts.mjs scripts/admin-metrics.ts",

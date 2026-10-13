@@ -1,0 +1,74 @@
+// tournamentReviewsPage.test.ts — blocs mis de côté à la bascule 4e (2026-10-13).
+// Ils appelaient un handler de pages/api PUIS rendaient de l'UI du site avec sa
+// réponse : route → composant. La route vit désormais dans conference-api ; à
+// réécrire ici contre une FIXTURE de réponse (la route est testée là-bas), puis
+// ce fichier disparaît. Non compilé, non exécuté : voir tests/pending-4e/README.md.
+
+// Page publique /tournament/[id]/reviews — getStaticProps (ISR) et onglet.
+//
+// CE QUE CE CAS PROTÈGE :
+//   - pas de playlist (ou colonne pas encore migrée) → 404, onglet masqué ;
+//   - la liste vient du flux RSS lu CÔTÉ SERVEUR, avec un cache ISR long en
+//     cas de succès et court après un échec (une erreur passagère ne doit pas
+//     rester figée une heure) ;
+//   - les pages sœurs exposent `hasReviews` pour afficher l'onglet.
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+vi.mock('@/utils/supabase', async () => {
+  const m = await import('./__helpers__/supabaseMock');
+  return { supabaseAdmin: m.supabaseAdmin, getServerClient: m.getServerClient };
+});
+
+import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
+import { DEFAULT_TENANT_ID } from '../../utils/tenant';
+import { getStaticProps } from '../../pages/tournament/[id]/reviews';
+import { getStaticProps as getStandingsProps } from '../../pages/tournament/[id]/standings';
+import { isMissingColumnError } from '../../utils/tournaments/reviewsPlaylist';
+import { normalizePlaylistInput } from '../../features/admin/tournaments/service/reviewsPlaylist';
+
+const TOUR = 'eeeeeeee-0000-4000-8000-000000000001';
+const PL = 'PLBu9E8qChrHcAbCdEfGhIjKlMnOpQrStU';
+
+const FEED = `<feed><entry><yt:videoId>dQw4w9WgXcQ</yt:videoId><title>Review 1</title><published>2026-09-20T18:00:00+00:00</published></entry></feed>`;
+
+function seed(extra: Record<string, unknown> = {}) {
+  store.tournaments = [
+    {
+      id: TOUR,
+      tenant_id: DEFAULT_TENANT_ID,
+      slug: 'cup',
+      name: 'Cup',
+      status: 'published',
+      visibility: 'public',
+      ...extra,
+    },
+  ] as any;
+  store.tournament_stages = [] as any;
+}
+
+beforeEach(() => {
+  resetSupabaseMock();
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe('admin — normalisation de la saisie', () => {
+  it('URL ou ID → ID ; vide/null → retrait ; le reste → refus', () => {
+    expect(
+      normalizePlaylistInput(`https://www.youtube.com/playlist?list=${PL}`)
+    ).toBe(PL);
+    expect(normalizePlaylistInput(PL)).toBe(PL);
+    expect(normalizePlaylistInput('')).toBeNull();
+    expect(normalizePlaylistInput('  ')).toBeNull();
+    expect(normalizePlaylistInput(null)).toBeNull();
+    expect(normalizePlaylistInput('https://example.com/?list=abc')).toBe(
+      undefined
+    );
+    expect(normalizePlaylistInput(123)).toBe(undefined);
+  });
+});

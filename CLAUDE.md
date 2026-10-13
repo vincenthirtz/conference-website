@@ -35,7 +35,8 @@ npm run lint             # Biome lint (hooks, a11y, Next) — code mort via tsco
 npm run format           # Biome format --write (remplace Prettier)
 npm run format:check     # Biome format (vérification)
 npm run test             # Playwright e2e tests (95 specs)
-npm run test:unit        # Vitest unit tests (185 files, ~3350 tests)
+npm run test:unit        # Vitest unit tests (~210 files, site side; API tests run in conference-api)
+npm run sync:api         # recopie depuis conference-api les fichiers du manifeste (sync:api:check = à blanc)
 npm run test:unit:watch  # Vitest watch mode
 npm run test:unit:coverage  # Vitest + v8 coverage (utils/** + pages/api/**)
 ```
@@ -59,43 +60,31 @@ For Playwright: never use `--ignore-pattern` (invalid flag), use `--grep-invert`
 The site sits at the center of a small ecosystem:
 
 - **`conference-website`** (this repo) — public site, admin dashboard, REST API, PWA.
-- **`conference-api`** (private repo, local clone `C:\Users\hirtz\depot\conference-api`) — copy of `pages/api` + shared dirs, re-synced automatically from `work` (CI), served on `https://api.owwomenscup.fr` (CloudFront → Lightsail Stockholm). **Since 2026-10-12 the whole `/api/*` surface runs there in production**: the Netlify Edge Function [netlify/edge-functions/api-proxy.ts](netlify/edge-functions/api-proxy.ts) relays `owwomenscup.fr/api/*` same-origin (`API_PROXY_PREFIXES=/api/` in prod, dummy prefix on deploy previews → Next serves locally), and `/api/public/*` is additionally called cross-origin by the browser (`NEXT_PUBLIC_API_REMOTE_PREFIXES`, [utils/remoteApi.ts](utils/remoteApi.ts)). The handlers in `pages/api` here remain the source of truth (edit here, never in conference-api) and still run on Netlify previews — until step 4e of conference-api's README, when previews switch to the full relay too (decision 4d, [docs/EDGE-API-PROXY.md](docs/EDGE-API-PROXY.md)). Never import `pages/api` from the rest of the site, even for a type (`tests/unit/apiTypeImportsGuard.test.ts`). Rollback: clear `API_PROXY_PREFIXES` in Netlify and redeploy. **Target (decided 2026-10-13, plan in conference-api's README step 4): conference-api owns the whole backend**; the ~483 files the site's pages also import will be delivered the other way round by `npm run sync:api` ([scripts/sync-from-api.mjs](scripts/sync-from-api.mjs), `--check` = dry run) — until that cutover, the site is still where everything is edited. Interactive reference: `https://api.owwomenscup.fr/api/docs` (Scalar, built from `docs/openapi/`).
+- **`conference-api`** (private repo, local clone `C:\Users\hirtz\depot\conference-api`) — **owns the whole backend since the 2026-10-13 cutover**: routes (`pages/api`), business logic (`features/*/routes|service|repository`), contracts (`lib/apiContracts`, `docs/openapi`), domain utils, the **database schema** (`database/`: migrations, seeds, schema snapshot) and their tests. Served on `https://api.owwomenscup.fr` (CloudFront → Lightsail Stockholm). The Netlify Edge Function [netlify/edge-functions/api-proxy.ts](netlify/edge-functions/api-proxy.ts) relays `owwomenscup.fr/api/*` there same-origin (`API_PROXY_PREFIXES=/api/` in production AND deploy previews), and `/api/public/*` is additionally called cross-origin by the browser (`NEXT_PUBLIC_API_REMOTE_PREFIXES`, [utils/remoteApi.ts](utils/remoteApi.ts)). **This repo has no API code any more** except `pages/api/internal/*` (ISR regeneration, must run on Netlify). The ~350 shared files its pages still import (zod contracts, `utils/tcg`, `utils/teams`, `utils/matches`, `utils/overlay`, `config/games`, feature models/schemas…) are **copies delivered by the reverse sync**: `npm run sync:api` ([scripts/sync-from-api.mjs](scripts/sync-from-api.mjs), manifest `.api-sync-manifest.json`, `sync:api:check` = dry run, run by CI and by `.github/workflows/sync-from-api.yml` on `repository_dispatch api-updated` + hourly cron). **Never edit a manifest file here — edit it in conference-api.** Backend work (a route, a validation rule, a TCG rule, a migration) is done in conference-api; guards: `tests/unit/apiOwnershipGuard.test.ts`, `apiTypeImportsGuard.test.ts`. Route → UI integration tests parked in `tests/pending-4e/` (ratchet `pending4eRatchet.test.ts`). Interactive reference: `https://api.owwomenscup.fr/api/docs` (Scalar, built from `docs/openapi/`).
 - **`owwc-discord-bot`** (private sibling repo `vincenthirtz/owwc-discord-bot`, local clone `C:\Users\hirtz\workspace\owwc-discord-bot`; formerly `docker-box/services/discord-bot`) — Discord bot that consumes `/api/bot/v1/*`. Runs on a dedicated VPS since 2026-10-12 (no longer on the Freebox); public URL `https://bot.owwomenscup.fr`, site → bot webhooks on `/bot/site-events` (`BOT_WEBHOOK_URL`).
 - **`womenscup-caster`** (sibling) — separate caster-tooling repo.
 
 ### Directory Structure
 
-- **pages/** — Next.js pages and API routes
-  - **pages/api/admin/** — staff-gated admin endpoints (cookie session)
-  - **pages/api/bot/v1/** — Discord-bot API. Contract: [docs/BOT_API_CONTRACT.md](docs/BOT_API_CONTRACT.md). Auth: `x-api-key` per-tenant (`tenant_secrets`, no env fallback) + `x-tenant-id`. Idempotency + rate limits. Sibling repo: `owwc-discord-bot`.
-  - **pages/api/caster/** — read API of the `womenscup-caster` desktop app (`v1/*` + legacy aliases, public GET — [docs/CASTER_API_CONTRACT.md](docs/CASTER_API_CONTRACT.md)), plus two leftover caster-session routes (`me`, `briefing/[matchId]`)
-  - **pages/api/player/** — player espace endpoints (user session)
-  - **pages/api/cron/** — invoked by Netlify scheduled functions
-  - **pages/api/** — public endpoints (matches, news, teams, Twitch, HelloAsso, captcha, support). Public team creation (`teams/create-with-member`) is anonymous-by-design but captcha + honeypot + rate-limit gated. The legacy `POST /api/news` ingest (global `BOT_API_KEY`) rejects an unknown/inactive `x-tenant-id` with `400 UNKNOWN_TENANT`.
+- **pages/** — Next.js pages. **No API routes here any more** (they live in conference-api: `pages/api/{admin,bot/v1,caster,player,cron,public,…}`, contracts `docs/BOT_API_CONTRACT.md` / `CASTER_API_CONTRACT.md` / `PUBLIC_API_CONTRACT.md` there too). Only `pages/api/internal/revalidate.ts` remains (remote ISR regeneration, called by conference-api).
   - **pages/admin/** — admin dashboard (tournaments, teams, news, broadcast, scrims, disputes, demandes, onboarding queue, site settings, stats, logs, users, etc.)
   - **pages/player/** — player espace (`/player/*`)
   - **pages/onboard/** — self-service tenant onboarding flow ([docs/ONBOARDING.md](docs/ONBOARDING.md))
   - **pages/[tenantSlug]/** — multi-tenant path-prefix routes (POC: `tournois.tsx`)
 - **components/** — React components. `components/admin/*` is admin-only. Public landing/UX components live at the root.
-- **utils/** — shared logic (see "Key Modules" below)
+- **features/** — `features/<espace>/<domaine>/` modules: here only their UI side (`ui/`, `client.ts`, `hooks/`) plus models/schemas synced from the API; `routes/`, `service/`, `repository/` live in conference-api.
+- **utils/** — site-side logic, plus the domain utils synced from conference-api (manifest) — see "Key Modules" below
 - **hooks/** — React hooks (`useStaffSession`, `usePlayerSession`, `useAdminFetch`, `useIdempotentMutation`, `useRealtimeChannel`, `useDraftState`, `useDraftTimer`, `useOnlineStatus`, `useCookieConsent`, …)
 - **types/** — domain TS types (`bracket`, `swiss`, `draft`, `matches`, `stages`, `staff`, `validation`, …)
 - **config/** — static config (speakers, teams, social links, past results)
-- **database/** — Postgres SQL
-  - **database/migrations/** — versioned migrations (~137 files)
-  - **database/seeds/** — seed data
-  - **database/schema-snapshot.json** — colonnes réellement exposées par
-    PostgREST, table par table. Sert de référence au garde-fou
-    `tests/unit/supabaseSelectSchema.test.ts`. **À régénérer après toute
-    migration qui ajoute ou retire une colonne** :
-    `node scripts/refresh-schema-snapshot.mjs`
-  - Loose `*.sql` patches at root (legacy)
-- **netlify/functions/** — Netlify scheduled functions (cron entry points calling `/api/cron/*`)
-- **docs/** — [BOT_API_CONTRACT.md](docs/BOT_API_CONTRACT.md), [ONBOARDING.md](docs/ONBOARDING.md), spec OpenAPI découpée par handler [docs/openapi/](docs/openapi/) (`paths/api/…` calqué sur `pages/api/…`, assemblée par `utils/openapi/assemble.ts`, JSON généré au build par `npm run openapi:build`)
+- **database/** — **moved to conference-api** (migrations, seeds, `schema-snapshot.json`, `scripts/refresh-schema-snapshot.mjs`). A migration is written there; the `new-migration` skill applies there.
+- **netlify/functions/** — Netlify scheduled functions (cron entry points calling `/api/cron/*` over HTTP — relayed to conference-api)
+- **docs/** — [ONBOARDING.md](docs/ONBOARDING.md), [EDGE-API-PROXY.md](docs/EDGE-API-PROXY.md) (the relay and the cutover). API contracts and the OpenAPI spec (`docs/openapi/`) live in conference-api; `/developpeurs/reference` fetches the public spec from `api.owwomenscup.fr/api/public/openapi` at build (ISR 1 h).
   - Feuilles de route par espace : [PLAN-espace-joueur.md](docs/PLAN-espace-joueur.md) (joueuse / coach / manager / capitaine) et [PLAN-espace-admin.md](docs/PLAN-espace-admin.md) (staff) — lots séquencés autour de la 1re journée Cup 2026 (14/09/2026)
 - **tests/e2e/** — Playwright specs (~95)
-- **tests/unit/** — Vitest specs (~185 files, heavy API-route coverage with in-memory Supabase mock under `tests/unit/__helpers__/`)
-- **scripts/** — small ops scripts (`create-team-news.mjs`)
+- **tests/unit/** — Vitest specs (~210 files: pages, components, hooks, site utils, guards). API/business/schema tests live in conference-api (~630 files).
+- **tests/pending-4e/** — route → UI tests parked at the cutover, to rewrite against response fixtures (see its README; ratchet).
+- **scripts/** — ops scripts (`create-team-news.mjs`, `sync-from-api.mjs`, metrics, bundle budget)
 - **proxy.ts** — Edge middleware: per-request CSP nonce, Turnstile allowances, PWA worker/manifest allowances
 
 ### Key Modules (utils/)
@@ -207,34 +196,15 @@ After fixing files, verify you haven't modified files outside scope. Run `git di
 ### ⚠️ Le mock Supabase ne valide pas les colonnes
 
 Le double en mémoire répond à n'importe quel `.select()`, y compris sur une
-colonne qui n'existe pas. En production, PostgREST rejette au contraire la
-requête **entière** (`42703 undefined_column`) : le handler répond 500 et
-l'écran qui en dépend n'affiche plus rien. Trois occurrences avant garde-fou
-(mvp-leaderboard ; `matches.best_of` / `started_at` qui bloquait
-`/admin/scrims/[id]` ; `cast_members.user_id` dans la régie), et quatre autres
-trouvées le jour de sa mise en place.
-
-`tests/unit/supabaseSelectSchema.test.ts` confronte donc chaque colonne citée
-dans un `.select()` à `database/schema-snapshot.json` — 1770 selects, 6213
-références, 123 tables couvertes, ~6 % d'angle mort (selects dynamiques, bornés
-par un budget). L'analyseur vit dans `tests/unit/__helpers__/supabaseSelectScan.ts`
-(volontairement hors de `utils/`, pour que `node:fs` et `typescript` n'entrent
-jamais dans le bundle client).
-
-Le garde-fou vérifie AUSSI les indices de relation (`teams!matches_team1_fk`) :
-un nom de contrainte inexistant fait rejeter la requête entière par PostgREST
-(`PGRST200`), exactement comme une colonne fantôme. Les noms de contraintes ne
-sont pas déductibles du document OpenAPI ; ils viennent de la fonction
-`public.introspect_foreign_keys()` (réservée au rôle de service). ⚠️ Les
-contraintes de ce schéma ne suivent PAS toutes la convention Supabase :
-`matches_team1_fk`, pas `matches_team1_id_fkey`. PostgREST accepte par ailleurs
-le nom de la COLONNE comme indice (`teams!team_id`) — les deux formes sont
-valides.
-
-Deux réflexes :
-- après une migration → `node scripts/refresh-schema-snapshot.mjs` ;
-- le test échoue sur une colonne fantôme ou un indice inconnu → c'est un 500 en
-  production, pas un faux positif.
+colonne qui n'existe pas ; en production, PostgREST rejette la requête
+entière (`42703`, `PGRST200` pour un indice de relation inconnu) → 500. Le
+garde-fou `supabaseSelectSchema.test.ts` (colonnes et indices de relation
+confrontés à `database/schema-snapshot.json`) vit désormais **dans
+conference-api**, avec le schéma. Réflexes inchangés, là-bas : après une
+migration → `node scripts/refresh-schema-snapshot.mjs` ; le test rouge sur une
+colonne fantôme = un 500 en prod, pas un faux positif. Les pages SSR de ce
+dépôt qui font leurs propres `.select()` ne sont plus couvertes par ce
+garde-fou : vérifier les colonnes contre le snapshot de conference-api.
 
 ## OBS overlays
 

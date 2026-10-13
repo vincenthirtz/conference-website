@@ -12,7 +12,7 @@
 //   4. LE QR DE DON EST SUR FOND BLANC (sinon il ne se scanne pas) et n'est
 //      proposé qu'à l'espace de la Women's Cup, à qui il appartient.
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
 
@@ -26,8 +26,6 @@ vi.mock('next/router', () => ({
   useRouter: () => ({ query: routerQuery.current, isReady: true }),
 }));
 
-import { store, resetSupabaseMock } from './__helpers__/supabaseMock';
-import { DEFAULT_TENANT_ID } from '../../utils/tenant';
 import {
   parseScrimHorizon,
   parseScrimLimit,
@@ -35,7 +33,6 @@ import {
   STALE_SCHEDULED_MS,
   type ScrimRowForOverlay,
 } from '../../utils/overlay/scrimsOverlay';
-import handler from '../../pages/api/overlay/scrims';
 import DonationOverlayPage from '../../pages/overlay/don';
 import StreamSourcesPanel from '../../components/admin/tournament/StreamSourcesPanel';
 import {
@@ -104,92 +101,6 @@ describe('sélection des scrims à venir', () => {
     expect(parseScrimHorizon('365')).toBe(60);
     expect(parseScrimLimit('0')).toBe(1);
     expect(parseScrimLimit(undefined)).toBe(6);
-  });
-});
-
-function makeReq(query: Record<string, unknown> = {}): any {
-  return {
-    method: 'GET',
-    headers: { host: 'h' },
-    cookies: {},
-    query,
-    body: {},
-  };
-}
-
-function makeRes(): any {
-  const res: any = { statusCode: 200, body: undefined, headers: {} };
-  res.status = (c: number) => ((res.statusCode = c), res);
-  res.json = (b: unknown) => ((res.body = b), res);
-  res.end = () => res;
-  res.setHeader = (k: string, v: unknown) => {
-    res.headers[k] = v;
-  };
-  return res;
-}
-
-describe('GET /api/overlay/scrims', () => {
-  const future = new Date(Date.now() + 24 * HOUR).toISOString();
-
-  beforeEach(() => {
-    resetSupabaseMock();
-    const base = {
-      tenant_id: DEFAULT_TENANT_ID,
-      is_public: true,
-      deleted_at: null,
-      status: 'scheduled',
-      scheduled_date: future,
-      team1_id: null,
-      team2_id: null,
-    };
-    store.scrims = [
-      { ...base, id: 's-public', name: 'Public', slug: 's-public' },
-      {
-        ...base,
-        id: 's-private',
-        name: 'Privé',
-        slug: 's-private',
-        is_public: false,
-      },
-      {
-        ...base,
-        id: 's-draft',
-        name: 'Brouillon',
-        slug: 's-draft',
-        status: 'draft',
-      },
-      {
-        ...base,
-        id: 's-deleted',
-        name: 'Supprimé',
-        slug: 's-deleted',
-        deleted_at: future,
-      },
-      {
-        ...base,
-        id: 's-other',
-        name: 'Autre espace',
-        slug: 's-other',
-        tenant_id: 'dddddddd-0000-4000-8000-000000000009',
-      },
-    ];
-  });
-
-  it('ne sert que les scrims publics, programmés, de l’espace', async () => {
-    const res = makeRes();
-    await handler(makeReq({}), res);
-    expect(res.statusCode).toBe(200);
-    expect(res.body.scrims.map((s: { id: string }) => s.id)).toEqual([
-      's-public',
-    ]);
-    expect(res.body.total).toBe(1);
-    expect(res.headers['Cache-Control']).toContain('s-maxage=30');
-  });
-
-  it('refuse les autres méthodes', async () => {
-    const res = makeRes();
-    await handler({ ...makeReq({}), method: 'POST' }, res);
-    expect(res.statusCode).toBe(405);
   });
 });
 
