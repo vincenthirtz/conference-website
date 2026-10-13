@@ -1430,7 +1430,9 @@ export async function nextPendingKickoffMs(
       logger.error('[checkin] nextPendingKickoffMs query error:', error);
       return undefined;
     }
-    const first = (data ?? [])[0] as { scheduled_at: string | null } | undefined;
+    const first = (data ?? [])[0] as
+      | { scheduled_at: string | null }
+      | undefined;
     const kickoffMs = first?.scheduled_at
       ? Date.parse(first.scheduled_at)
       : null;
@@ -1547,11 +1549,15 @@ export async function processCheckinForUpcomingMatches(opts?: {
     // faire, et pas la peine de lire les tournois. Le chemin admin ciblé (avec
     // tournamentId) BYPASSE les gardes — il sait ce qu'il déclenche.
     const kickoffMs = await nextPendingKickoffMs(now, windowStart);
-    if (kickoffMs === null || (kickoffMs !== undefined && kickoffMs > windowEndMs)) {
+    if (
+      kickoffMs === null ||
+      (kickoffMs !== undefined && kickoffMs > windowEndMs)
+    ) {
       return {
         ...summary,
         skipped: true,
-        nextKickoffAt: kickoffMs === null ? null : new Date(kickoffMs).toISOString(),
+        nextKickoffAt:
+          kickoffMs === null ? null : new Date(kickoffMs).toISOString(),
       };
     }
 
