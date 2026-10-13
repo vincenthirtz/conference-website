@@ -182,6 +182,7 @@ export default function JoinAsPlayerForm({
         <p className="mt-4 text-xs text-gray-300">
           {t.successCardBody}{' '}
           <Link
+            prefetch={false}
             href="/player/discovery"
             className="font-semibold text-[var(--color-green-light)] underline underline-offset-2"
           >

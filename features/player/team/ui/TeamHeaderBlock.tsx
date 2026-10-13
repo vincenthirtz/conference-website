@@ -52,6 +52,7 @@ export default function TeamHeaderBlock({
       actions={
         <div className="flex flex-col items-end gap-1">
           <Link
+            prefetch={false}
             href={`/team/${slug}`}
             className="text-sm text-purple-300 hover:text-purple-200"
           >
@@ -61,6 +62,7 @@ export default function TeamHeaderBlock({
               alors que le geste existe (page publique → Éditer). */}
           {canEditPublicPage && (
             <Link
+              prefetch={false}
               href={`/team/${slug}/edit`}
               className="text-xs text-gray-400 hover:text-white"
             >

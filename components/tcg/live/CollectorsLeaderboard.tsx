@@ -94,6 +94,7 @@ export default function CollectorsLeaderboard({
         )}
         <p className={`mt-3 text-xs ${rubanFaint}`}>
           <Link
+            prefetch={false}
             href="/player/tcg"
             className="underline hover:text-[var(--t1,#f4edf7)]"
           >

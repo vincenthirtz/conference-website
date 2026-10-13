@@ -65,7 +65,10 @@ export default function TeamRoster({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {shown.map((team, i) => (
           <Reveal key={team.id} stagger={((i % 5) + 1) as 1 | 2 | 3 | 4 | 5}>
-            <Link href={`/team/${encodeURIComponent(team.slug || team.id)}`}>
+            <Link
+              prefetch={false}
+              href={`/team/${encodeURIComponent(team.slug || team.id)}`}
+            >
               <div className="group flex h-full flex-col items-center gap-3 rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent px-3 py-6 text-center transition-all duration-300 hover:-translate-y-1 hover:border-[var(--color-green)]/50 hover:shadow-[0_10px_40px_-10px_rgba(123,201,106,0.3)]">
                 <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition-colors group-hover:border-[var(--color-green)]/40">
                   {team.logo_url ? (

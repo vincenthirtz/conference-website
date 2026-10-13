@@ -50,7 +50,7 @@ export default function RegisterTeamCta({
   // découragerait une inscription légitime.
   if (loading || !isFull) {
     return (
-      <Link href="/team/create" className={className}>
+      <Link prefetch={false} href="/team/create" className={className}>
         {children ?? label}
       </Link>
     );

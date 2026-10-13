@@ -67,6 +67,7 @@ export default function ActiveTeamSwitcher({
         {/* Vue d'ensemble (J4) : ce sélecteur fait passer d'une équipe à
             l'autre ; la console les montre TOUTES d'un coup. */}
         <Link
+          prefetch={false}
           href="/player/my-teams"
           className="text-purple-300 transition hover:text-purple-200"
         >

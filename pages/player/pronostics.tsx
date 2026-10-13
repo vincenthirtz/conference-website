@@ -46,6 +46,7 @@ function PlayerPredictions(): JSX.Element {
               {t.backToPlayer}
             </Link>
             <Link
+              prefetch={false}
               href="/player/tcg"
               className="inline-flex items-center rounded-xl border border-purple-400/20 bg-purple-500/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-purple-500/20"
             >

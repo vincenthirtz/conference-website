@@ -46,7 +46,7 @@ export default function ScrimRequestForm({
       <Notice title={t.noTeamTitle}>
         <p>
           {t.noTeamScrim}{' '}
-          <Link href="/player/join-team" className="underline">
+          <Link prefetch={false} href="/player/join-team" className="underline">
             {t.joinTeam}
           </Link>
         </p>

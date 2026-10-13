@@ -367,6 +367,7 @@ function TcgCatalogPage({ cards, playerCount, bareme }: Props) {
           <div className="flex flex-wrap gap-3">
             <TcgStartCta label={t.heroCta} />
             <Link
+              prefetch={false}
               href="/player/tcg-guide"
               className="inline-flex min-h-11 items-center rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-gray-200 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
             >

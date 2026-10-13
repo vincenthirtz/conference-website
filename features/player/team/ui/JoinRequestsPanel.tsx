@@ -68,6 +68,7 @@ function JoinRequestRow({
           <div className="font-medium text-sm">
             {profileId ? (
               <Link
+                prefetch={false}
                 href={`/player/${encodeURIComponent(profileId)}`}
                 className="text-purple-200 hover:text-purple-100 underline underline-offset-2"
                 title={format(tO.viewProfile, { name })}

@@ -343,6 +343,7 @@ function JoinTeamPage() {
                   })}
                 </p>
                 <Link
+                  prefetch={false}
                   href="/player/requests"
                   className="mt-3 inline-block text-purple-300 hover:text-purple-200 underline"
                 >
@@ -439,6 +440,7 @@ function JoinTeamPage() {
                           </li>
                           <li>
                             <Link
+                              prefetch={false}
                               href="/player/request-captain"
                               className="block rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 hover:bg-white/10 transition"
                             >
@@ -571,6 +573,7 @@ function JoinTeamPage() {
             <p>
               {t.ctaQuestion}{' '}
               <Link
+                prefetch={false}
                 href="/player/request-captain"
                 className="text-purple-400 hover:text-purple-300"
               >

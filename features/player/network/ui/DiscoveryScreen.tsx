@@ -107,6 +107,7 @@ function Discovery() {
               {t.notDiscoverableBanner}
             </p>
             <Link
+              prefetch={false}
               href={`/player/profile#${DISCOVERY_ANCHOR}`}
               className="mt-1 inline-block text-xs font-medium text-[var(--or-300,#dea3f6)] underline underline-offset-2"
             >

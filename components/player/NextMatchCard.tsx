@@ -285,6 +285,7 @@ export default function NextMatchCard({
         {/* Dossier d'adversaire (N5) — c'est ICI qu'on prépare un match, pas
             dans un annuaire qu'on n'ouvre pas la veille d'une rencontre. */}
         <Link
+          prefetch={false}
           href={`/player/scouting/${encodeURIComponent(data.opponent.id)}`}
           className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
         >

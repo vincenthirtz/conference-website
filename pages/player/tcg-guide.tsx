@@ -180,6 +180,7 @@ function TcgGuide(): JSX.Element {
             {t.heroSubtitle}
           </p>
           <Link
+            prefetch={false}
             href="/player/tcg"
             className="mt-5 inline-flex items-center rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
           >
@@ -329,6 +330,7 @@ function TcgGuide(): JSX.Element {
           <p>{t.tradesWhat}</p>
           <p>{t.tradesPhoto}</p>
           <Link
+            prefetch={false}
             href="/player/tcg/echanges"
             className="inline-flex items-center text-sm font-medium text-purple-300 transition hover:text-purple-200"
           >
@@ -373,6 +375,7 @@ function TcgGuide(): JSX.Element {
         <Section index={10} title={t.supporterTitle} t={t}>
           <p>{t.supporterBody}</p>
           <Link
+            prefetch={false}
             href="/player/tcg"
             className="inline-flex items-center text-sm font-medium text-purple-300 transition hover:text-purple-200"
           >
@@ -384,6 +387,7 @@ function TcgGuide(): JSX.Element {
           <h2 className="text-lg font-semibold text-white">{t.ctaTitle}</h2>
           <p className="mt-1 text-sm text-gray-300">{t.ctaBody}</p>
           <Link
+            prefetch={false}
             href="/player/tcg"
             className="mt-4 inline-flex items-center rounded-xl bg-[var(--color-violet-cta)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
           >

@@ -277,7 +277,11 @@ export default function TcgCollectionScreen() {
       />
       <TcgCosmeticsPanel onChanged={() => void home.reloadKeeping()} />
       <p className="text-xs text-[var(--t3,#a39ba6)]">
-        <Link href="/player/profile" className="hover:text-[var(--t1,#f4edf7)]">
+        <Link
+          prefetch={false}
+          href="/player/profile"
+          className="hover:text-[var(--t1,#f4edf7)]"
+        >
           {t.title}
         </Link>
       </p>

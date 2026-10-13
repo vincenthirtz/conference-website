@@ -95,6 +95,7 @@ export default function HomeEventSpotlight({
                   {t.eventCtaRegister}
                 </Link>
                 <Link
+                  prefetch={false}
                   href={`/tournament/${event.tournamentSlug}`}
                   className="flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-medium text-white backdrop-blur transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 sm:text-base"
                 >

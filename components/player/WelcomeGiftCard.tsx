@@ -105,6 +105,7 @@ export default function WelcomeGiftCard({
         </div>
 
         <Link
+          prefetch={false}
           href="/player/tcg"
           className="rounded-xl bg-[var(--color-violet-cta)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
         >

@@ -123,6 +123,7 @@ function NewsCard({ item }: { item: NewsItem }) {
 
   return (
     <Link
+      prefetch={false}
       href={`/news/${item.slug}`}
       className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition hover:border-blue-400/50 hover:bg-white/[0.06]"
     >

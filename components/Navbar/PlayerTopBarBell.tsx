@@ -92,6 +92,7 @@ export default function PlayerTopBarBell() {
 
   return (
     <Link
+      prefetch={false}
       href="/player/notifications"
       aria-label={label}
       className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-neutral-300 transition-all hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"

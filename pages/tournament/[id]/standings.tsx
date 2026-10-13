@@ -335,6 +335,7 @@ function StandingRow({
       <td className="py-2 pr-2 text-left text-white max-w-[14rem]">
         {row.slug ? (
           <Link
+            prefetch={false}
             href={`/team/${row.slug}`}
             className="hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)] rounded"
           >

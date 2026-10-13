@@ -58,6 +58,7 @@ export default function ScrimPlanningsDashboardCard({
           const count = myAvailability.length;
           return (
             <Link
+              prefetch={false}
               key={planning.id}
               href={`/player/scrim-planning/${planning.id}`}
               className="block p-4 rounded-xl border border-white/10 bg-black/30 hover:bg-black/50 transition"

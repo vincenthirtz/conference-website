@@ -161,7 +161,7 @@ export default function TransferRequestForm({ screen }: Props) {
       <Notice title={t.noTeamTitle}>
         <p>
           {t.noTeamTransfer}{' '}
-          <Link href="/player/join-team" className="underline">
+          <Link prefetch={false} href="/player/join-team" className="underline">
             {t.joinTeam}
           </Link>
         </p>

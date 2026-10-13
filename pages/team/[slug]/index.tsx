@@ -668,6 +668,7 @@ export default function TeamPage({
             // formulaire connecté, adversaire pré-sélectionné (multi-créneaux,
             // négociation, notifications) plutôt que sur le formulaire public.
             <Link
+              prefetch={false}
               href={`/player/requests?tab=scrim&team=${encodeURIComponent(team.id)}`}
               className="flex-shrink-0 px-4 py-2 rounded-lg bg-[var(--color-violet-cta)] hover:brightness-110 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
             >
@@ -862,6 +863,7 @@ export default function TeamPage({
                 <div className="space-y-2">
                   {tournaments.slice(0, 8).map((tournament) => (
                     <Link
+                      prefetch={false}
                       key={tournament.id}
                       href={`/tournament/${tournament.slug || tournament.id}`}
                     >
@@ -985,7 +987,11 @@ export default function TeamPage({
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {activeTournaments.slice(0, 3).map((t) => (
-                        <Link key={t.id} href={`/tournament/${t.slug || t.id}`}>
+                        <Link
+                          prefetch={false}
+                          key={t.id}
+                          href={`/tournament/${t.slug || t.id}`}
+                        >
                           <span className="px-2 py-1 rounded-full bg-[var(--color-violet)]/20 text-[var(--color-violet-light)] border border-[var(--color-violet)]/40 text-[10px] hover:bg-[var(--color-violet)]/30 transition-colors cursor-pointer">
                             {t.name}
                           </span>

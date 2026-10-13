@@ -719,7 +719,7 @@ function MatchRow({
       : '';
 
   return (
-    <Link href={`/match/${match.id}`}>
+    <Link prefetch={false} href={`/match/${match.id}`}>
       <div
         className={`match-row group grid gap-2 items-center px-2 py-1.5 rounded-xl bg-white/3 border border-white/10 hover:border-emerald-400/70 hover:bg-emerald-500/5 cursor-pointer transition-colors text-[11px] ${
           showDate
@@ -1017,6 +1017,7 @@ function MatchMonthCalendar({
                   <span className="flex flex-col gap-0.5">
                     {shown.map((ev) => (
                       <Link
+                        prefetch={false}
                         key={ev.id}
                         href={`/match/${ev.id}`}
                         title={`${ev.time} — ${ev.label}`}

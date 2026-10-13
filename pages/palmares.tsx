@@ -84,6 +84,7 @@ function PlayerRow({
           #{player.position}
         </span>
         <Link
+          prefetch={false}
           href={`/player/${encodeURIComponent(player.userId)}`}
           className="flex min-w-0 flex-1 items-center gap-3 hover:text-[var(--color-yellow)]"
         >
@@ -128,6 +129,7 @@ function PlayerRow({
             <li key={placement.tournamentId}>
               {placement.tournamentSlug || placement.tournamentId ? (
                 <Link
+                  prefetch={false}
                   href={`/tournament/${placement.tournamentSlug || placement.tournamentId}`}
                   className="hover:text-white hover:underline"
                 >

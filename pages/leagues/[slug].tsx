@@ -331,6 +331,7 @@ function Standings({ standings }: { standings: LeagueStandingPublic[] }) {
                       )}
                       {s.teamSlug ? (
                         <Link
+                          prefetch={false}
                           href={`/team/${s.teamSlug}`}
                           className="font-medium hover:text-[var(--color-violet-light)]"
                         >
@@ -391,6 +392,7 @@ function Tournaments({ tournaments }: { tournaments: LeagueTournamentRef[] }) {
           <li key={tr.id}>
             {tr.slug ? (
               <Link
+                prefetch={false}
                 href={`/tournament/${tr.slug}`}
                 className="block text-sm transition-colors hover:bg-white/[0.03] hover:text-[var(--color-violet-light)]"
               >
@@ -437,6 +439,7 @@ function Scrims({ scrims }: { scrims: LeagueScrimRef[] }) {
         return (
           <li key={sc.id}>
             <Link
+              prefetch={false}
               href={`/scrim/${sc.slug ?? sc.id}`}
               className="block text-sm transition-colors hover:bg-white/[0.03] hover:text-[var(--color-violet-light)]"
             >

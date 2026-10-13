@@ -118,6 +118,7 @@ export default function TradesScreen() {
         subtitle={
           <>
             <Link
+              prefetch={false}
               href="/player/tcg"
               className="block text-sm text-[var(--or-300,#dea3f6)] underline-offset-4 hover:underline"
             >

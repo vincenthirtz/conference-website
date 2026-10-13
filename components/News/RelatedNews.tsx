@@ -44,6 +44,7 @@ export default function RelatedNews({
         {items.map((item) => (
           <li key={item.id}>
             <Link
+              prefetch={false}
               href={`/news/${item.slug}`}
               className="card-brand group flex h-full flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] transition-colors hover:border-[var(--color-violet)]/40"
             >

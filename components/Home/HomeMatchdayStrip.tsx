@@ -104,6 +104,7 @@ function MatchRow({ match }: { match: HomeMatchdayMatch }): JSX.Element {
   return (
     <li>
       <Link
+        prefetch={false}
         href={`/match/${match.id}`}
         aria-label={label}
         className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3 transition-colors hover:border-[var(--color-violet-light)]/50 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] sm:gap-3 sm:px-4"

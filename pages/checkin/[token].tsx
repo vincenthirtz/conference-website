@@ -205,6 +205,7 @@ export default function CheckinPage() {
                         match leur était demandée. */}
                     <p className="mt-3 text-emerald-100/90">{t.nextStepBody}</p>
                     <Link
+                      prefetch={false}
                       href={`/player/match/${data.matchId}`}
                       className="mt-2 inline-block rounded-lg bg-emerald-500/20 border border-emerald-400/50 px-3 py-1.5 font-medium text-emerald-100 hover:bg-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
                     >

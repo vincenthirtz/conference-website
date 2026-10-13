@@ -230,6 +230,7 @@ export default function LeaderboardPage({
                           </td>
                           <td className="px-4 py-3">
                             <Link
+                              prefetch={false}
                               href={`/player/${p.userId}`}
                               className="flex items-center gap-3 hover:text-[var(--color-yellow)]"
                             >
@@ -374,6 +375,7 @@ function MoverPanel({
           <>
             {' '}
             <Link
+              prefetch={false}
               href={`/leagues/${seasonSlug}`}
               className="text-[var(--color-violet-light)] hover:underline"
             >
@@ -431,6 +433,7 @@ function MoverPanel({
                       </td>
                       <td className="px-4 py-3">
                         <Link
+                          prefetch={false}
                           href={`/player/${p.userId}`}
                           className="flex items-center gap-3 hover:text-[var(--color-yellow)]"
                         >

@@ -310,6 +310,7 @@ function MatchRow({ match, tz }: { match: SimpleMatch; tz: string }) {
 
   return (
     <Link
+      prefetch={false}
       href={`/match/${match.id}`}
       className="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2 transition hover:border-[color-mix(in_srgb,var(--color-violet)_45%,transparent)] hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
     >
@@ -713,12 +714,14 @@ function Timeline2026Page({
 
         <div className="mt-10 flex flex-wrap gap-4 text-sm">
           <Link
+            prefetch={false}
             href={`/tournament/${tournamentIdentifier}/matches`}
             className="text-[var(--color-violet-200)] transition hover:text-white"
           >
             {t.viewAllTournament}
           </Link>
           <Link
+            prefetch={false}
             href={`/tournament/${tournamentIdentifier}`}
             className="text-neutral-400 transition hover:text-white"
           >

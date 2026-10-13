@@ -228,6 +228,7 @@ export default function FreePlayersList({
           <p className="mt-1 text-xs text-gray-500">
             {t.listCardHint}{' '}
             <Link
+              prefetch={false}
               href="/player/discovery"
               className="font-semibold text-gray-300 underline underline-offset-2 hover:text-white"
             >

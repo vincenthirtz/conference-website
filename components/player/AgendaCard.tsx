@@ -175,6 +175,7 @@ export default function AgendaCard() {
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold">{t.title}</h2>
         <Link
+          prefetch={false}
           href="/player/matches"
           className="text-xs text-purple-300 transition hover:text-purple-200"
         >

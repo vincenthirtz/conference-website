@@ -32,6 +32,7 @@ export default function ScoutingScreen({
   const data = dossier.data ?? null;
   const back = (
     <Link
+      prefetch={false}
       href="/player/teams"
       className="mb-4 inline-flex min-h-11 items-center text-xs font-semibold text-[var(--t3,#a39ba6)] underline hover:text-[var(--t1,#f4edf7)]"
     >
@@ -103,6 +104,7 @@ export default function ScoutingScreen({
                     )}
                     {target.slug && (
                       <Link
+                        prefetch={false}
                         href={`/team/${target.slug}`}
                         className="underline hover:text-[var(--t1,#f4edf7)]"
                       >

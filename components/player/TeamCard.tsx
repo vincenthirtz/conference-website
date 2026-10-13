@@ -194,6 +194,7 @@ export default function TeamCard({
           <div className="space-y-2">
             {isCaptain && (
               <Link
+                prefetch={false}
                 href="/player/manage-team"
                 className="block w-full text-center px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm font-semibold transition"
               >
@@ -202,6 +203,7 @@ export default function TeamCard({
             )}
 
             <Link
+              prefetch={false}
               href={`/team/${encodeURIComponent(team.slug || team.id)}`}
               className="block w-full text-center px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm text-gray-300 transition"
             >
@@ -210,6 +212,7 @@ export default function TeamCard({
 
             {!isCaptain && (
               <Link
+                prefetch={false}
                 href="/player/requests?tab=transfer"
                 className="block w-full text-center px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm text-gray-300 transition"
               >
@@ -219,6 +222,7 @@ export default function TeamCard({
 
             {isCaptain && (
               <Link
+                prefetch={false}
                 href="/player/requests?tab=scrim"
                 className="block w-full text-center px-4 py-2 rounded-xl border border-blue-400/20 bg-blue-500/10 hover:bg-blue-500/20 text-sm text-blue-200 transition"
               >
@@ -228,6 +232,7 @@ export default function TeamCard({
 
             {isCaptain && (
               <Link
+                prefetch={false}
                 href="/player/messages"
                 className="block w-full text-center px-4 py-2 rounded-xl border border-emerald-400/20 bg-emerald-500/10 hover:bg-emerald-500/20 text-sm text-emerald-200 transition"
               >
@@ -319,6 +324,7 @@ export default function TeamCard({
           {!hasPendingRequest && (
             <div className="space-y-3">
               <Link
+                prefetch={false}
                 href="/player/join-team"
                 className="block w-full text-center px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white text-sm font-semibold transition"
               >
@@ -336,6 +342,7 @@ export default function TeamCard({
                 {t.signalFreePlayer}
               </Link>
               <Link
+                prefetch={false}
                 href="/player/request-captain"
                 className="block w-full text-center px-4 py-3 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white text-sm font-medium transition"
               >
@@ -344,6 +351,7 @@ export default function TeamCard({
               {/* R7 : les équipes qui recrutent et les joueuses libres
                   s'ignoraient. L'annuaire les met face à face. */}
               <Link
+                prefetch={false}
                 href="/player/teams?filter=recruiting"
                 className="block w-full text-center px-4 py-3 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/10 text-gray-200 text-sm font-medium transition"
               >

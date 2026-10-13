@@ -27,6 +27,7 @@ export default function ProfileSummaryCard({ user, displayName }: Props) {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">{t.title}</h2>
         <Link
+          prefetch={false}
           href="/player/profile"
           className="text-xs text-purple-300 hover:text-purple-200"
         >
@@ -87,6 +88,7 @@ export default function ProfileSummaryCard({ user, displayName }: Props) {
       </div>
 
       <Link
+        prefetch={false}
         href="/player/profile"
         className="mt-5 inline-flex w-full items-center justify-center rounded-lg bg-purple-600 hover:bg-purple-500 px-3 py-2 text-sm font-medium transition"
       >

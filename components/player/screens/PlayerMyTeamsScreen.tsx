@@ -131,7 +131,7 @@ function TeamCardRow({
             ) : nm.checkedIn ? (
               <Cell tone="ok">{t.checkinDone}</Cell>
             ) : nm.checkinIsOpen ? (
-              <Link href={`/player/match/${nm.id}`}>
+              <Link prefetch={false} href={`/player/match/${nm.id}`}>
                 <Cell tone="todo">{t.checkinOpen} →</Cell>
               </Link>
             ) : (
@@ -152,7 +152,7 @@ function TeamCardRow({
             ) : !nm.checkedIn ? (
               <Cell tone="muted">{t.lineupLocked}</Cell>
             ) : canLineup ? (
-              <Link href={`/player/match/${nm.id}`}>
+              <Link prefetch={false} href={`/player/match/${nm.id}`}>
                 <Cell tone="todo">{t.lineupTodo} →</Cell>
               </Link>
             ) : (

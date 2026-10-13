@@ -199,6 +199,7 @@ function ScrimsPage({ scrims, ladder }: ScrimsPageProps) {
                       <td className="px-4 py-2.5">
                         {row.slug ? (
                           <Link
+                            prefetch={false}
                             href={`/team/${row.slug}`}
                             className="hover:underline"
                           >
@@ -275,6 +276,7 @@ function ScrimSection({
       <div className="grid gap-3">
         {scrims.map((s) => (
           <Link
+            prefetch={false}
             key={s.id}
             href={`/scrim/${s.slug || s.id}`}
             className="block bg-neutral-800/50 hover:bg-neutral-800 border border-neutral-700/50 rounded-xl px-5 py-4 transition-colors"

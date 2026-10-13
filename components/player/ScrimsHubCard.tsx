@@ -139,6 +139,7 @@ export default function ScrimsHubCard({
       {/* CTA principaux */}
       <div className="mt-5 flex flex-wrap gap-2">
         <Link
+          prefetch={false}
           href="/player/requests?tab=scrim"
           className="inline-flex items-center gap-1 rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-neutral-900 transition hover:-translate-y-0.5 motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
         >
@@ -163,6 +164,7 @@ export default function ScrimsHubCard({
             10 min, sans créneaux ni niveau) — c'est là que se lit qui est
             disponible, quand, et avec quels créneaux en commun. */}
         <Link
+          prefetch={false}
           href="/player/teams"
           className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
         >

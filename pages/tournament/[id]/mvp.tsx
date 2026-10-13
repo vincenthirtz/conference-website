@@ -428,6 +428,7 @@ export default function TournamentMvpPage({
                       <div className="col-span-5">
                         {entry.userId ? (
                           <Link
+                            prefetch={false}
                             href={`/player/${encodeURIComponent(entry.userId)}`}
                             className="text-sm font-semibold truncate block hover:text-[var(--color-violet-light)] hover:underline"
                           >
@@ -442,6 +443,7 @@ export default function TournamentMvpPage({
                       <div className="col-span-4 text-sm text-gray-300 truncate">
                         {entry.teamName && entry.teamSlug ? (
                           <Link
+                            prefetch={false}
                             href={`/team/${entry.teamSlug}`}
                             className="hover:text-white hover:underline"
                           >
@@ -478,6 +480,7 @@ export default function TournamentMvpPage({
                         </div>
                         <div className="col-span-3 text-sm text-gray-300 truncate">
                           <Link
+                            prefetch={false}
                             href={`/match/${m.matchId}`}
                             className="hover:text-white hover:underline"
                           >
@@ -487,6 +490,7 @@ export default function TournamentMvpPage({
                         <div className="col-span-3 text-sm font-medium text-[var(--color-violet-light)] truncate">
                           {m.userId ? (
                             <Link
+                              prefetch={false}
                               href={`/player/${encodeURIComponent(m.userId)}`}
                               className="hover:underline"
                             >
@@ -499,6 +503,7 @@ export default function TournamentMvpPage({
                         <div className="col-span-3 text-sm text-gray-300 truncate text-right">
                           {m.teamName && m.teamSlug ? (
                             <Link
+                              prefetch={false}
                               href={`/team/${m.teamSlug}`}
                               className="hover:text-white hover:underline"
                             >

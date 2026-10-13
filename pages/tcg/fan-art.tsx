@@ -95,12 +95,14 @@ function FanArtCreditsPage({ credits }: Props) {
         <p className="mt-4 max-w-2xl text-lg text-gray-200">{t.creditsIntro}</p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
+            prefetch={false}
             href="/player/tcg"
             className="rounded-lg bg-purple-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-purple-400"
           >
             {t.creditsSubmitCta}
           </Link>
           <Link
+            prefetch={false}
             href="/player/tcg-guide"
             className="rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-gray-100 transition hover:border-white/40"
           >

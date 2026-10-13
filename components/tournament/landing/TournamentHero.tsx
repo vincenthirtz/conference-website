@@ -196,7 +196,11 @@ export default function TournamentHero({
                   {t.seasonLabel}
                 </span>
                 {leagues.map((league) => (
-                  <Link key={league.slug} href={`/leagues/${league.slug}`}>
+                  <Link
+                    prefetch={false}
+                    key={league.slug}
+                    href={`/leagues/${league.slug}`}
+                  >
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium text-gray-200 transition-colors hover:border-[var(--color-violet)]/50 hover:text-[var(--color-violet-light)]">
                       {league.name}
                     </span>

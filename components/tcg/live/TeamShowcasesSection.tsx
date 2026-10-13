@@ -45,6 +45,7 @@ export default function TeamShowcasesSection({
           <li key={s.userId}>
             <h3 className={`mb-2 text-sm ${rubanStrong}`}>
               <Link
+                prefetch={false}
                 href={`/player/${encodeURIComponent(s.userId)}`}
                 className="hover:underline"
               >

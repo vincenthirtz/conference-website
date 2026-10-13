@@ -75,6 +75,7 @@ export default function DirectoryPlayerRow({
     <Card as="li" padding="sm" className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
         <Link
+          prefetch={false}
           href={`/player/${player.authUserId}`}
           className="flex min-w-0 items-center gap-3 rounded-[var(--r-ctrl,4px)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--or,#b467d1)]"
         >
@@ -111,7 +112,11 @@ export default function DirectoryPlayerRow({
           {teams.map((team, i) => (
             <li key={`${team.slug ?? team.name}-${i}`}>
               {team.slug ? (
-                <Link href={`/team/${team.slug}`} className="inline-flex">
+                <Link
+                  prefetch={false}
+                  href={`/team/${team.slug}`}
+                  className="inline-flex"
+                >
                   <Chip>{team.name}</Chip>
                 </Link>
               ) : (

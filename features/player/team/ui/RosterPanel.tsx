@@ -128,6 +128,7 @@ export default function RosterPanel({
           </p>
           <p className="text-xs text-purple-200/80 mb-4">{t.onboardingBody}</p>
           <Link
+            prefetch={false}
             href={`/team/${slug}`}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm font-semibold transition"
           >

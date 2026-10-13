@@ -910,6 +910,7 @@ function MvpBanner({
           <p className="truncate text-sm font-semibold text-white">
             {member?.user_id ? (
               <Link
+                prefetch={false}
                 href={`/player/${encodeURIComponent(member.user_id)}`}
                 className="hover:underline"
               >
@@ -998,7 +999,11 @@ function LineupPanel({
       <div className="mb-3 flex items-center gap-2">
         <p className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
           {team?.slug ? (
-            <Link href={`/team/${team.slug}`} className="hover:underline">
+            <Link
+              prefetch={false}
+              href={`/team/${team.slug}`}
+              className="hover:underline"
+            >
               {teamName}
             </Link>
           ) : (
@@ -1101,6 +1106,7 @@ function LineupRow({
       </span>
       {member.user_id ? (
         <Link
+          prefetch={false}
           href={`/player/${encodeURIComponent(member.user_id)}`}
           className={`${nameClass} hover:underline`}
         >
@@ -1152,6 +1158,7 @@ function TeamHeader({
         <span className="text-sm font-semibold text-white">
           {team ? (
             <Link
+              prefetch={false}
               href={`/team/${encodeURIComponent(team.slug || team.id)}`}
               className="hover:text-emerald-300"
             >

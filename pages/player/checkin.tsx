@@ -245,6 +245,7 @@ function PlayerCheckin() {
         <div className="mb-8">
           <div className="flex items-center gap-3 text-sm text-gray-400">
             <Link
+              prefetch={false}
               href="/player/matches"
               className="hover:text-white transition"
             >
@@ -288,6 +289,7 @@ function PlayerCheckin() {
             <p className="text-lg font-semibold text-white">{t.noMatchTitle}</p>
             <p className="mt-2 text-sm text-gray-400">{t.noMatchBody}</p>
             <Link
+              prefetch={false}
               href="/player/matches"
               className="mt-6 inline-flex items-center justify-center rounded-full bg-purple-600 hover:bg-purple-500 px-5 py-2.5 text-sm font-medium text-white transition"
             >
@@ -353,6 +355,7 @@ function PlayerCheckin() {
                 porte vers le reste plutôt que de la fermer. */}
             {match?.id && (
               <Link
+                prefetch={false}
                 href={`/player/match/${encodeURIComponent(match.id)}`}
                 className="inline-flex items-center gap-1 text-sm text-purple-300 transition hover:text-purple-200"
               >

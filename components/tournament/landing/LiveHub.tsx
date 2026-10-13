@@ -114,6 +114,7 @@ function MatchRow({
   return (
     <li>
       <Link
+        prefetch={false}
         href={`/match/${match.id}`}
         aria-label={format(t.hubMatchAria, {
           team1: teamLabel(match.team1, t),
@@ -261,6 +262,7 @@ function StandingsMini({ table, t }: { table: PublicStandingsTable; t: Dict }) {
                   <TeamLogo team={team} size={20} />
                   {row.slug ? (
                     <Link
+                      prefetch={false}
                       href={`/team/${row.slug}`}
                       className="truncate text-gray-100 hover:text-white hover:underline"
                     >

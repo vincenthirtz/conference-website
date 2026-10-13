@@ -105,6 +105,7 @@ function NewsCard({ item }: { item: HomeNewsItem }) {
         )}
         <h3 className="text-balance text-[17px] font-bold leading-snug text-white">
           <Link
+            prefetch={false}
             href={`/news/${item.slug}`}
             className="after:absolute after:inset-0 after:rounded-2xl focus:outline-none"
           >

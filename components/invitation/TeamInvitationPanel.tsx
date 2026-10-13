@@ -157,6 +157,7 @@ export default function TeamInvitationPanel({
         </p>
         {done === 'accept' && (
           <Link
+            prefetch={false}
             href="/player/manage-team"
             className="mt-6 inline-flex rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-semibold transition hover:bg-purple-500"
           >

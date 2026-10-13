@@ -103,6 +103,7 @@ export default function LeaguesPage({
               return (
                 <li key={league.id}>
                   <Link
+                    prefetch={false}
                     href={`/leagues/${league.slug}`}
                     className="group card-brand flex h-full flex-col rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5 transition-colors hover:bg-neutral-900/70"
                   >

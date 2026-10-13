@@ -230,6 +230,7 @@ export default function TcgEarnSection({
       <p className="mt-6 flex flex-col gap-2 text-sm opacity-90 sm:flex-row sm:items-center sm:gap-4">
         <span>{t.earnGuideNote}</span>
         <Link
+          prefetch={false}
           href="/player/tcg-guide"
           className="inline-flex min-h-11 items-center font-semibold text-[var(--color-green-light)] underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-green)]"
         >

@@ -109,6 +109,7 @@ export default function HomeStandings({
                 <td className="py-2 pr-2">
                   {row.slug ? (
                     <Link
+                      prefetch={false}
                       href={`/team/${row.slug}`}
                       className="flex items-center gap-2 text-white transition hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
                     >

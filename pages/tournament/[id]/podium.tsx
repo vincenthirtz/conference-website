@@ -301,6 +301,7 @@ export default function TournamentPodiumPage({
                       )}
                       {r.team_slug ? (
                         <Link
+                          prefetch={false}
                           href={`/team/${r.team_slug}`}
                           className="font-bold text-lg hover:text-[var(--color-yellow)]"
                         >
@@ -366,6 +367,7 @@ export default function TournamentPodiumPage({
                       ) : null}
                       {r.team_slug ? (
                         <Link
+                          prefetch={false}
                           href={`/team/${r.team_slug}`}
                           className="hover:text-[var(--color-yellow)]"
                         >

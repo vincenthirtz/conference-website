@@ -61,6 +61,7 @@ function PlayerRequestsPage() {
           {/* Cette page n'émet que des demandes : les candidatures REÇUES se
               traitent dans la gestion d'équipe. */}
           <Link
+            prefetch={false}
             href="/player/manage-team"
             className="mb-6 flex items-center justify-between gap-3 rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] px-4 py-3 text-sm hover:bg-[var(--s2,#1d1520)]"
           >

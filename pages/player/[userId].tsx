@@ -508,6 +508,7 @@ function TcgCardSection({
               vers son espace, pas une information pour les visiteuses. */}
           {user?.id === player.userId && (
             <Link
+              prefetch={false}
               href="/player/tcg"
               className="mt-3 inline-flex rounded-full border border-neutral-700 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition hover:border-[var(--color-violet)]/60 hover:text-white"
             >
@@ -542,6 +543,7 @@ function PalmaresSection({ placements }: { placements: ProfilePlacement[] }) {
               <div className="truncate text-neutral-200">
                 {p.tournamentName ? (
                   <Link
+                    prefetch={false}
                     href={`/tournament/${p.tournamentSlug ?? p.tournamentId}`}
                     className="hover:text-[var(--color-violet-light)] hover:underline"
                   >
@@ -557,6 +559,7 @@ function PalmaresSection({ placements }: { placements: ProfilePlacement[] }) {
                 <div className="truncate text-xs text-neutral-500">
                   {t.withTeam}{' '}
                   <Link
+                    prefetch={false}
                     href={`/team/${p.teamId}`}
                     className="hover:text-[var(--color-violet-light)] hover:underline"
                   >
@@ -658,6 +661,7 @@ function SeasonsSection({ seasons }: { seasons: ProfileSeason[] }) {
                   {s.leagueName ? (
                     s.leagueSlug ? (
                       <Link
+                        prefetch={false}
                         href={`/leagues/${s.leagueSlug}`}
                         className="hover:text-[var(--color-violet-light)] hover:underline"
                       >
@@ -923,6 +927,7 @@ function ProfileSocial({ authUserId }: { authUserId: string }) {
               {i > 0 && ', '}
               {team.slug ? (
                 <Link
+                  prefetch={false}
                   href={`/team/${team.slug}`}
                   className="text-neutral-200 underline underline-offset-2 hover:text-white"
                 >
@@ -1113,6 +1118,7 @@ function RecentMatches({ matches }: { matches: PlayerProfileRecentMatch[] }) {
                     <span className="truncate text-neutral-200">
                       {t.vs}{' '}
                       <Link
+                        prefetch={false}
                         href={`/team/${m.opponentTeamId}`}
                         className="hover:text-[var(--color-violet-light)] hover:underline"
                       >
@@ -1196,6 +1202,7 @@ function HeadToHead({ rows }: { rows: PlayerProfileH2H[] }) {
                   >
                     <td className="px-4 py-3">
                       <Link
+                        prefetch={false}
                         href={`/player/${r.opponentUserId}`}
                         className="hover:text-[var(--color-violet-light)]"
                       >

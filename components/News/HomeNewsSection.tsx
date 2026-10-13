@@ -179,6 +179,7 @@ function FeaturedCard({ item }: { item: HomeNewsItem }) {
   const date = formatDate(item, locale);
   return (
     <Link
+      prefetch={false}
       href={`/news/${item.slug}`}
       className="news-featured card-brand group relative flex h-full flex-col overflow-hidden rounded-3xl bg-white/5 transition-all duration-300"
     >
@@ -238,6 +239,7 @@ function CompactCard({ item }: { item: HomeNewsItem }) {
   const date = formatDate(item, locale);
   return (
     <Link
+      prefetch={false}
       href={`/news/${item.slug}`}
       className="news-compact card-brand group flex gap-3 overflow-hidden rounded-2xl bg-white/5 p-3 transition-all duration-300"
     >

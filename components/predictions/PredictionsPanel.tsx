@@ -170,6 +170,7 @@ export default function PredictionsPanel({
                   className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2 text-sm"
                 >
                   <Link
+                    prefetch={false}
                     href={`/match/${item.matchId}`}
                     className="text-gray-200 hover:text-white"
                   >
@@ -257,6 +258,7 @@ function OpenItem({
         })}
       </div>
       <Link
+        prefetch={false}
         href={`/match/${item.matchId}`}
         className="mt-2 inline-block text-xs text-gray-400 underline underline-offset-2 hover:text-white"
       >

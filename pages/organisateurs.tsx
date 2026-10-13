@@ -229,6 +229,7 @@ function OrganisateursPage({ proof }: Props) {
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3 border-t border-white/10 pt-6 text-sm">
               {proof.showcase && (
                 <Link
+                  prefetch={false}
                   href={`/tournament/${proof.showcase.slug}`}
                   className="rounded-lg border border-white/20 px-4 py-2 font-semibold text-gray-100 transition hover:border-white/40"
                   data-test="proof-showcase-cta"

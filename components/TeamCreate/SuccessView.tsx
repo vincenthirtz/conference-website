@@ -138,7 +138,11 @@ export default function SuccessView({ w }: { w: TeamCreateWizard }) {
 
           <div className="flex flex-wrap items-center gap-3 pt-1">
             {teamSlug && (
-              <Link href={`/team/${teamSlug}`} className={primaryBtn}>
+              <Link
+                prefetch={false}
+                href={`/team/${teamSlug}`}
+                className={primaryBtn}
+              >
                 {t.viewTeamPage}
               </Link>
             )}

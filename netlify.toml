@@ -1,6 +1,13 @@
 [build]
   command = "npm ci && npm run build"
   publish = ".next"
+  # Pas de déploiement pour un commit qui ne touche que les tests, la doc, les
+  # fichiers Markdown ou les workflows GitHub : rien de ce qui est servi ne
+  # change, et chaque déploiement vide le cache ISR — la première visite
+  # régénère alors des dizaines de pages, chacune relisant Supabase (journée du
+  # 2026-10-13 : huit déploiements pour des commits de tests, ~1 000 lectures
+  # chacun). Sortie 0 = build ignoré, 1 = build.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':(exclude)tests' ':(exclude)docs' ':(exclude)*.md' ':(exclude).github'"
 
 [build.environment]
   # Node 24 (LTS) partout : .nvmrc, CI, Netlify. Ce n'est plus un confort :

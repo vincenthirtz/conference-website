@@ -176,6 +176,7 @@ export default function DiscoverySettingsPanel() {
           <p className={`max-w-prose ${rubanHelp}`}>{t.cardDesc}</p>
         </div>
         <Link
+          prefetch={false}
           href="/player/discovery"
           className="shrink-0 text-xs font-medium text-[var(--or-300,#dea3f6)]"
         >

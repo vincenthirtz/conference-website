@@ -21,10 +21,10 @@ export default function TcgHeaderLinks({
   const tTrade = useT(nsTcgTrade);
   return (
     <span className="flex flex-wrap items-baseline gap-4 text-sm">
-      <Link href="/player/tcg-guide" className={LINK}>
+      <Link prefetch={false} href="/player/tcg-guide" className={LINK}>
         {t.guideLink}
       </Link>
-      <Link href="/player/tcg/echanges" className={LINK}>
+      <Link prefetch={false} href="/player/tcg/echanges" className={LINK}>
         {tTrade.entryLink}
         {/* Le chiffre est décoratif ; le nom accessible du lien porte la
             phrase complète, un « 2 » seul ne dirait rien. */}

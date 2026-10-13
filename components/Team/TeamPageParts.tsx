@@ -103,6 +103,7 @@ export function MemberCard({
           {member.user_id ? (
             // Maillage interne : lien vers le profil public de la joueuse.
             <Link
+              prefetch={false}
               href={`/player/${encodeURIComponent(member.user_id)}`}
               className={`text-sm font-semibold truncate hover:underline ${substitute ? 'text-gray-300 hover:text-white' : 'text-white hover:text-[var(--color-violet-light)]'}`}
             >
@@ -397,7 +398,7 @@ export function MatchCard({
     : 'border-white/10 hover:border-white/30';
 
   return (
-    <Link href={`/match/${match.id}`}>
+    <Link prefetch={false} href={`/match/${match.id}`}>
       <div
         className={`flex items-center gap-3 bg-white/5 border ${cardBorderColor} rounded-xl px-4 py-3 transition-colors cursor-pointer group`}
       >

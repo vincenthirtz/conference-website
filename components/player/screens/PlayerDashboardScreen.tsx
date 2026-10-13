@@ -236,6 +236,7 @@ export default function PlayerDashboardScreen() {
             action={
               isInspecting ? undefined : (
                 <Link
+                  prefetch={false}
                   href="/player/matches"
                   className="shrink-0 text-xs font-medium text-purple-300 transition hover:text-purple-200"
                 >

@@ -176,6 +176,7 @@ function FinalCard({
               : t.finalsConfirmed}
         </span>
         <Link
+          prefetch={false}
           href={`/match/${match.id}`}
           className="text-xs font-semibold text-[var(--color-violet-light)] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] rounded"
         >
@@ -281,6 +282,7 @@ function RaceTable({
                       <span className="flex min-w-0 items-center gap-2">
                         {r.slug ? (
                           <Link
+                            prefetch={false}
                             href={`/team/${r.slug}`}
                             className="truncate font-medium text-gray-100 hover:text-white hover:underline"
                           >

@@ -47,7 +47,7 @@ const BASELINE: Record<string, number> = {
   'components/player/screens/PlayerManageTeamScreen.tsx': 255,
   // 2026-10-08 : 450 écrites (encart EventSignupCard), redescendu à 418 en
   // sortant les lectures partagées dans `useDashboardSharedReads`. Le gel suit.
-  'components/player/screens/PlayerDashboardScreen.tsx': 418,
+  'components/player/screens/PlayerDashboardScreen.tsx': 419,
   'components/player/screens/PlayerMatchScreen.tsx': 195,
   // Routes (> 500) : parties dans conference-api (bascule 4e, 2026-10-13).
 };

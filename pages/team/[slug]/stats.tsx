@@ -271,7 +271,10 @@ export default function TeamStatsPage({
             </div>
 
             <div className="flex flex-wrap gap-2 justify-end">
-              <Link href={`/team/${encodeURIComponent(team.slug || team.id)}`}>
+              <Link
+                prefetch={false}
+                href={`/team/${encodeURIComponent(team.slug || team.id)}`}
+              >
                 <Button
                   type="button"
                   className="text-xs px-4 py-2 bg-transparent border border-white/40 hover:border-blue-400"
