@@ -1,26 +1,10 @@
-// playerMessagesService.test.ts — blocs mis de côté à la bascule 4e (2026-10-13).
-// Ils appelaient un handler de pages/api PUIS rendaient de l'UI du site avec sa
-// réponse : route → composant. La route vit désormais dans conference-api ; à
-// réécrire ici contre une FIXTURE de réponse (la route est testée là-bas), puis
-// ce fichier disparaît. Non compilé, non exécuté : voir tests/pending-4e/README.md.
-
 // Messagerie entre capitaines et réseau — fonctions pures des modules du lot
 // P15 (docs/PLAN-industrialisation-joueur.md) : identifiant de conversation
 // (garde anti-injection de filtre PostgREST), regroupement de la boîte,
 // mise à jour locale de l'annuaire après un suivi.
 
 import { describe, expect, it } from 'vitest';
-import {
-  conversationKey,
-  groupConversations,
-  parseConversationId,
-} from '../../features/player/messages/service';
 import { applyFollowChange } from '../../features/player/network/hooks/useDiscovery';
-import type { CaptainMessageRow } from '../../features/player/messages/schemas';
-
-const A = '11111111-1111-4111-8111-111111111111';
-const B = '22222222-2222-4222-8222-222222222222';
-const C = '33333333-3333-4333-8333-333333333333';
 
 describe('annuaire : suivi local', () => {
   const page = (players: Array<{ id: string; f: boolean; n: number }>) => ({

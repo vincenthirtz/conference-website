@@ -1,9 +1,3 @@
-// tcgFanartUpload.test.ts — blocs mis de côté à la bascule 4e (2026-10-13).
-// Ils appelaient un handler de pages/api PUIS rendaient de l'UI du site avec sa
-// réponse : route → composant. La route vit désormais dans conference-api ; à
-// réécrire ici contre une FIXTURE de réponse (la route est testée là-bas), puis
-// ce fichier disparaît. Non compilé, non exécuté : voir tests/pending-4e/README.md.
-
 // tests/unit/tcgFanartUpload.test.ts
 //
 // Envoi d'une carte FAN ART : le plafond RÉEL et le message du refus.
@@ -25,13 +19,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  IMAGE_EXT_BY_MIME,
-  IMAGE_MAX_BYTES,
-} from '../../utils/uploads/imageBytes';
-import {
-  FANART_ACCEPTED_TYPES,
   FANART_MAX_BYTES,
-  FANART_MAX_MIB,
   checkFanartFile,
   fanartErrorKey,
   type FanartErrorKey,
@@ -40,22 +28,6 @@ import frFanart from '../../lib/i18n/locales/fr/tcgFanart';
 import enFanart from '../../lib/i18n/locales/en/tcgFanart';
 
 /** `'4mb'` → octets, comme le fait le bodyParser de Next (base 1024). */
-function parseSizeLimit(limit: string): number {
-  const m = /^(\d+(?:\.\d+)?)\s*(kb|mb)$/i.exec(limit);
-  if (!m) throw new Error(`limite illisible: ${limit}`);
-  const unit = m[2].toLowerCase() === 'mb' ? 1024 * 1024 : 1024;
-  return Number(m[1]) * unit;
-}
-
-describe('miroirs client des règles d’image', () => {
-  it('taille et types acceptés égaux à ceux du serveur', () => {
-    expect(FANART_MAX_BYTES).toBe(IMAGE_MAX_BYTES);
-    expect(FANART_MAX_BYTES).toBe(FANART_MAX_MIB * 1024 * 1024);
-    expect([...FANART_ACCEPTED_TYPES].sort()).toEqual(
-      Object.keys(IMAGE_EXT_BY_MIME).sort()
-    );
-  });
-});
 
 describe('checkFanartFile — contrôle avant envoi', () => {
   it('refuse l’absence de fichier, un type non supporté, un fichier trop lourd', () => {

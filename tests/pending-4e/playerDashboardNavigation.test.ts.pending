@@ -54,53 +54,6 @@ import PlayerDashboardScreen, {
 import { ToastProvider } from '../../components/Toast';
 import { CAPTAIN_CTA_URL } from '../../utils/scrimRequestNotify';
 
-describe('bandeau « à faire » — liens vers une cible réelle', () => {
-  const base = {
-    userId: 'u-1',
-    nextMatch: EMPTY_NEXT_MATCH,
-    unreadMessages: 0,
-    members: [],
-    canManage: true,
-    permissions: [],
-  };
-
-  it('invitation → l’enveloppe d’InvitationsSection, pas `/player` seul', () => {
-    const todo = buildTodo({
-      ...base,
-      pendingScrims: [],
-      pendingInvitations: 2,
-    });
-    expect(todo).toEqual([
-      {
-        id: 'invitation',
-        href: `/player#${DASHBOARD_ANCHORS.invitations}`,
-        count: 2,
-      },
-    ]);
-  });
-
-  it('scrims → le bloc des scrims qui attendent une réponse, pas les grilles', () => {
-    const todo = buildTodo({
-      ...base,
-      pendingScrims: [{ id: 's-1' } as never],
-      pendingInvitations: 0,
-      permissions: ['manage_scrims'],
-    });
-    expect(todo[0].href).toBe(`/player#${DASHBOARD_ANCHORS.pendingScrims}`);
-    expect(todo[0].href).not.toContain('scrim-plannings');
-  });
-
-  it('pas d’item scrims sans `manage_scrims` : la section et son ancre n’existent pas', () => {
-    const todo = buildTodo({
-      ...base,
-      pendingScrims: [{ id: 's-1' } as never],
-      pendingInvitations: 0,
-      permissions: ['validate_lineup'],
-    });
-    expect(todo.map((i) => i.id)).not.toContain('scrims');
-  });
-});
-
 describe('PlayerDashboardScreen — déconnectée', () => {
   function render() {
     // La page réelle est enveloppée par `withPlayerQuery` (P5).

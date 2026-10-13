@@ -1,9 +1,3 @@
-// nonprofitAndProof.test.ts — blocs mis de côté à la bascule 4e (2026-10-13).
-// Ils appelaient un handler de pages/api PUIS rendaient de l'UI du site avec sa
-// réponse : route → composant. La route vit désormais dans conference-api ; à
-// réécrire ici contre une FIXTURE de réponse (la route est testée là-bas), puis
-// ce fichier disparaît. Non compilé, non exécuté : voir tests/pending-4e/README.md.
-
 // Lot 1 du rapport : « rendre l'offre lisible et gagnable ».
 // Targets : utils/billing/nonprofitGrant.ts, utils/marketing/platformProof.ts,
 //           utils/billing/planFeatures.ts (entryPlanPrice).
@@ -25,21 +19,11 @@
 import { describe, it, expect } from 'vitest';
 
 import {
-  isBillableTenant,
-  nonprofitDiscoveryIsFree,
-} from '../../utils/billing/nonprofitGrant';
-import {
   MIN_TILES_TO_RENDER,
   PROOF_THRESHOLDS,
   selectProofTiles,
   type PlatformProofCounts,
 } from '../../utils/marketing/platformProof';
-import {
-  PLAN_PRICES_EUR,
-  entryPlanPrice,
-} from '../../utils/billing/planFeatures';
-
-const VERIFIED = '2026-09-16T08:00:00.000Z';
 
 describe('preuve chiffrée de /organisateurs', () => {
   const full: PlatformProofCounts = {
