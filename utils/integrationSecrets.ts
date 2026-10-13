@@ -24,6 +24,32 @@ import {
   isSecretEncryptionConfigured,
 } from '@/utils/crypto';
 import { logger } from '@/utils/logger';
+import { registerProcessCache } from '@/utils/processCaches';
+
+/**
+ * Cache mémoire de la valeur CHIFFRÉE d'un secret (ou de son absence), par
+ * (tenant, clé). Le miroir social relisait `bluesky_handle` pour chaque espace
+ * à chaque passage (toutes les quinze minutes), pour une valeur qui ne change
+ * qu'à la main dans l'admin — et cette écriture passe par ce module, qui
+ * invalide aussitôt. Le TTL ne couvre qu'une écriture faite hors du processus.
+ * On garde le chiffré, pas le clair : le déchiffrement reste local à l'appel.
+ */
+const SECRET_CACHE_TTL_MS = 5 * 60_000;
+const secretCache = new Map<
+  string,
+  { encrypted: string | null; expiresAt: number }
+>();
+const cacheKey = (tenantId: string, key: string) => `${tenantId}:${key}`;
+registerProcessCache(() => secretCache.clear());
+
+/** Oublie un secret mis en cache (ou tous). Instance courante seulement. */
+export function invalidateIntegrationSecretCache(
+  tenantId?: string,
+  key?: string
+): void {
+  if (tenantId && key) secretCache.delete(cacheKey(tenantId, key));
+  else secretCache.clear();
+}
 
 /**
  * Clés connues. Liste FERMÉE : un secret se nomme une fois, et une faute de
@@ -78,21 +104,33 @@ export async function getIntegrationSecret(
 ): Promise<string | null> {
   if (!isSecretEncryptionConfigured()) return null;
 
-  const { data, error } = await supabaseAdmin
-    .from('integration_secrets')
-    .select('value_encrypted')
-    .eq('tenant_id', tenantId)
-    .eq('key', key)
-    .maybeSingle();
+  const ck = cacheKey(tenantId, key);
+  const hit = secretCache.get(ck);
+  let encrypted: string | null;
+  if (hit && hit.expiresAt > Date.now()) {
+    encrypted = hit.encrypted;
+  } else {
+    const { data, error } = await supabaseAdmin
+      .from('integration_secrets')
+      .select('value_encrypted')
+      .eq('tenant_id', tenantId)
+      .eq('key', key)
+      .maybeSingle();
 
-  if (error) {
-    logger.error('[integrationSecrets] lecture impossible', error);
-    return null;
+    if (error) {
+      logger.error('[integrationSecrets] lecture impossible', error);
+      return null;
+    }
+    encrypted = (data?.value_encrypted as string | undefined) || null;
+    secretCache.set(ck, {
+      encrypted,
+      expiresAt: Date.now() + SECRET_CACHE_TTL_MS,
+    });
   }
-  if (!data?.value_encrypted) return null;
+  if (!encrypted) return null;
 
   try {
-    return decryptSecret(data.value_encrypted);
+    return decryptSecret(encrypted);
   } catch (err) {
     // Déchiffrement en échec = la clé d'environnement a changé, ou la valeur a
     // été altérée. Dans les deux cas le secret est PERDU, pas absent : le dire
@@ -128,6 +166,7 @@ export async function setIntegrationSecret(
     { onConflict: 'tenant_id,key' }
   );
   if (error) throw error;
+  invalidateIntegrationSecretCache(tenantId, key);
 }
 
 /** Supprime un secret. */
@@ -141,6 +180,7 @@ export async function deleteIntegrationSecret(
     .eq('tenant_id', tenantId)
     .eq('key', key);
   if (error) throw error;
+  invalidateIntegrationSecretCache(tenantId, key);
 }
 
 /** `true` si le secret existe — sans le déchiffrer ni le rapatrier. */

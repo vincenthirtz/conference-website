@@ -1,6 +1,6 @@
 {
-  "apiCommit": "3f68f1390cccc2a5e35586d3fe56d0ecb63bb058",
-  "syncedAt": "2026-10-13T15:28:22.969Z",
+  "apiCommit": "96e6940c0f928a3053bc7ce555381c3056043652",
+  "syncedAt": "2026-10-13T16:08:47.074Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -197,6 +197,7 @@
     "utils/predictions/readState.ts",
     "utils/predictions/rules.ts",
     "utils/predictions/settle.ts",
+    "utils/processCaches.ts",
     "utils/profile/achievements.ts",
     "utils/public/readMatches.ts",
     "utils/public/readStandings.ts",

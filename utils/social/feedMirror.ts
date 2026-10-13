@@ -22,6 +22,7 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { registerProcessCache } from '@/utils/processCaches';
 import { social } from '@/config/socials';
 
 /** Salon cible, commun aux sources. Vider la valeur désactive tous les miroirs. */
@@ -350,12 +351,68 @@ export type SettingRead =
   | { ok: true; value: string | null }
   | { ok: false; error: string };
 
+/**
+ * INSTANTANÉ DES RÉGLAGES D'UN ESPACE, chargé en une requête par passage.
+ *
+ * Le cron lisait chaque réglage séparément — salon, chaîne YouTube, un
+ * curseur par source — soit six lectures `site_settings` par espace et par
+ * quart d'heure, pour des valeurs que seul ce cron fait bouger (les curseurs)
+ * ou que l'admin change rarement. `preloadMirrorSettings` les charge d'un
+ * coup ; `readSettingResult` sert ensuite depuis l'instantané, et
+ * `writeCursor` le tient à jour. Si le chargement échoue, pas d'instantané :
+ * chaque lecture repasse par la base, avec sa sémantique d'erreur intacte
+ * (un curseur illisible interdit d'émettre).
+ */
+const SNAPSHOT_TTL_MS = 5 * 60_000;
+type SettingsSnapshot = {
+  values: Map<string, string | null>;
+  expiresAt: number;
+};
+const settingsSnapshots = new Map<string, SettingsSnapshot>();
+registerProcessCache(() => settingsSnapshots.clear());
+
+const normalizeSetting = (v: unknown): string | null =>
+  typeof v === 'string' && v.trim() ? v.trim() : null;
+
+export async function preloadMirrorSettings(
+  tenantId: string,
+  keys: readonly string[]
+): Promise<void> {
+  settingsSnapshots.delete(tenantId);
+  if (!supabaseAdmin || keys.length === 0) return;
+  const { data, error } = await supabaseAdmin
+    .from('site_settings')
+    .select('key, value')
+    .eq('tenant_id', tenantId)
+    .in('key', [...keys]);
+  if (error) {
+    logger.warn(
+      '[feedMirror] préchargement des réglages impossible: %s',
+      error.message
+    );
+    return;
+  }
+  const values = new Map<string, string | null>();
+  for (const k of keys) values.set(k, null);
+  for (const row of (data ?? []) as Array<{ key: string; value?: unknown }>) {
+    values.set(row.key, normalizeSetting(row.value));
+  }
+  settingsSnapshots.set(tenantId, {
+    values,
+    expiresAt: Date.now() + SNAPSHOT_TTL_MS,
+  });
+}
+
 export async function readSettingResult(
   tenantId: string,
   key: string
 ): Promise<SettingRead> {
   if (!supabaseAdmin) {
     return { ok: false, error: 'supabase_admin_unavailable' };
+  }
+  const snap = settingsSnapshots.get(tenantId);
+  if (snap && snap.expiresAt > Date.now() && snap.values.has(key)) {
+    return { ok: true, value: snap.values.get(key) ?? null };
   }
   const { data, error } = await supabaseAdmin
     .from('site_settings')
@@ -427,6 +484,7 @@ export async function writeCursor(
     { onConflict: 'tenant_id,key' }
   );
   if (error) throw error;
+  settingsSnapshots.get(tenantId)?.values.set(CURSOR_KEYS[source], at);
 }
 
 /* -------------------------------------------------------------------------- */

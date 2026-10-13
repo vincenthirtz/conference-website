@@ -19,16 +19,20 @@
 //   - une ligne absente : un tenant fraîchement créé doit être vu tout de
 //     suite, pas deux minutes plus tard.
 //
-// FRAÎCHEUR. Un changement de plan, de cycle de vie ou d'activité prend effet en
-// ≤ 120 s (au lieu de ≤ 60 s). Les écritures connues invalident l'instance
-// courante via `invalidateTenantGateRow` (cf. lifecycle.ts) ; les autres
-// instances attendent le TTL. Les clés d'API (`tenant_secrets`) ne passent PAS
-// par ici : leur cache reste à 60 s (révocation).
+// FRAÎCHEUR. Toutes les écritures connues de cette ligne passent par ce
+// processus et invalident l'entrée aussitôt (`invalidateTenantGateRow` :
+// cycle de vie dans lifecycle.ts, plan dans botPlanGate.ts,
+// circuitPartnerGrant.ts et tenantPlanBilling.ts). Le TTL ne couvre donc que
+// les écritures faites hors du processus (SQL à la main). Il valait 120 s,
+// toujours voisin de la cadence du bot : ~25 lectures `tenants` par heure la
+// nuit pour une ligne qui ne change pas. Dix minutes. Les clés d'API
+// (`tenant_secrets`) ne passent PAS par ici (cf. botAuth.ts).
 
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
+import { registerProcessCache } from '../processCaches';
 
-export const TENANT_GATE_ROW_TTL_MS = 120_000;
+export const TENANT_GATE_ROW_TTL_MS = 10 * 60_000;
 
 export type TenantGateRow = {
   id: string;
@@ -50,6 +54,10 @@ const GATE_COLUMNS =
 
 const cache = new Map<string, { row: TenantGateRow; expiresAt: number }>();
 const inFlight = new Map<string, Promise<TenantGateLookup>>();
+registerProcessCache(() => {
+  cache.clear();
+  inFlight.clear();
+});
 
 /** Oublie la ligne d'un tenant (ou toutes). Instance courante seulement. */
 export function invalidateTenantGateRow(tenantId?: string): void {

@@ -41,6 +41,7 @@ import type { NextApiRequest } from 'next';
 import type { IncomingMessage } from 'http';
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
+import { registerProcessCache } from './processCaches';
 import {
   tenantHasCapability,
   type TenantPlan,
@@ -132,6 +133,7 @@ export function __resetTenantLookupCachesForTests(): void {
   guildTenantCache.clear();
   invalidateTenantGateRow();
 }
+registerProcessCache(__resetTenantLookupCachesForTests);
 
 /** Le tenant existe-t-il et est-il actif ? */
 export async function isActiveTenantId(tenantId: string): Promise<boolean> {
@@ -266,6 +268,7 @@ const TENANT_SLUG_CACHE_TTL_MS = 60_000;
  * Exporté pour `__resetTenantSlugCacheForTests` (utilisé en unit tests).
  */
 const tenantSlugCache = new Map<string, TenantSlugCacheEntry>();
+registerProcessCache(() => __resetTenantSlugCacheForTests());
 
 /**
  * Reset le cache. À usage strictement test.
