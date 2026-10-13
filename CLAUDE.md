@@ -2,6 +2,29 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Rules — scope & production safety
+
+- Do only what was asked. If you think extra changes are needed (Dockerfile, lockfiles, `.gitignore`, e2e checks, refactors), propose them first and do not apply them.
+- Never run builds on the bot VPS / any prod host, read production secrets, or write to the production DB (including via subagents) without explicit approval. State these constraints in every subagent prompt.
+- For Supabase DDL, write the migration file under `database/migrations/` and give the exact SQL/CLI commands to apply it (including `supabase link`); do not apply DDL to prod yourself.
+
+## Environment
+
+- This is a Windows machine (PowerShell). Prefer PowerShell or Node scripts over bash heredocs, `sed`, and `cat` pipelines.
+- For multi-line file edits, use the Write/Edit tools instead of shell text manipulation — `sed` newline handling differs across shells and can corrupt imports.
+- Watch for CRLF line endings.
+- npm script quoting must work under Windows cmd.
+
+## Session start
+
+**Production branch is `work`** (Netlify publishes `work`; `master` is stale since July 2026 — never target it). conference-api deploys from its `main`.
+
+When I say « pull les repos » or start a session, `git pull` the repos below, report the branch and status of each, then wait for the next instruction:
+
+- `C:\Users\hirtz\depot\conference-website` (this repo, site)
+- `C:\Users\hirtz\workspace\owwc-discord-bot` (Discord bot)
+- `C:\Users\hirtz\depot\conference-api` (API mirror, Lightsail)
+
 ## Build and Development Commands
 
 ```bash
@@ -36,7 +59,7 @@ For Playwright: never use `--ignore-pattern` (invalid flag), use `--grep-invert`
 The site sits at the center of a small ecosystem:
 
 - **`conference-website`** (this repo) — public site, admin dashboard, REST API, PWA.
-- **`conference-api`** (private repo) — copy of `pages/api`, kept in sync, served on `https://api.owwomenscup.fr` (CloudFront → Lightsail Stockholm). Cutover is progressive, by route family: only the families listed in `NEXT_PUBLIC_API_REMOTE_PREFIXES` (today `/api/public/`) are rewritten browser-side to `NEXT_PUBLIC_API_BASE_URL` — see [utils/remoteApi.ts](utils/remoteApi.ts). Everything else in `pages/api` is still served by Netlify and in production here.
+- **`conference-api`** (private repo, local clone `C:\Users\hirtz\depot\conference-api`) — copy of `pages/api` + shared dirs, re-synced automatically from `work` (CI), served on `https://api.owwomenscup.fr` (CloudFront → Lightsail Stockholm). **Since 2026-10-12 the whole `/api/*` surface runs there in production**: the Netlify Edge Function [netlify/edge-functions/api-proxy.ts](netlify/edge-functions/api-proxy.ts) relays `owwomenscup.fr/api/*` same-origin (`API_PROXY_PREFIXES=/api/` in prod, dummy prefix on deploy previews → Next serves locally), and `/api/public/*` is additionally called cross-origin by the browser (`NEXT_PUBLIC_API_REMOTE_PREFIXES`, [utils/remoteApi.ts](utils/remoteApi.ts)). The handlers in `pages/api` here remain the source of truth (edit here, never in conference-api) and still run on Netlify previews. Rollback: clear `API_PROXY_PREFIXES` in Netlify and redeploy. Interactive reference: `https://api.owwomenscup.fr/api/docs` (Scalar, built from `docs/openapi/`).
 - **`owwc-discord-bot`** (private sibling repo `vincenthirtz/owwc-discord-bot`, local clone `C:\Users\hirtz\workspace\owwc-discord-bot`; formerly `docker-box/services/discord-bot`) — Discord bot that consumes `/api/bot/v1/*`. Runs on a dedicated VPS since 2026-10-12 (no longer on the Freebox); public URL `https://bot.owwomenscup.fr`, site → bot webhooks on `/bot/site-events` (`BOT_WEBHOOK_URL`).
 - **`womenscup-caster`** (sibling) — separate caster-tooling repo.
 
@@ -175,6 +198,12 @@ After fixing files, verify you haven't modified files outside scope. Run `git di
 - Unit: Vitest with an in-memory Supabase mock under `tests/unit/__helpers__/testSetup.ts`. Tests cover API handlers heavily (`apiRoutesBatch*.test.ts`, `apiAdmin*.test.ts`, `apiBot*.test.ts`).
 - Coverage excludes `pages/api/blizzard-media.ts` (~1500 lines of static fallback data, drags totals). React hooks and components can now be tested with `@testing-library/react` in a `// @vitest-environment happy-dom` file (`*.test.tsx`).
 
+### Before pushing
+
+- Run the tests and read the actual pass/fail counts (and check the count is > 0); don't trust the exit code alone.
+- Never push with a failing test.
+- After a deploy, verify the change on the prod URL.
+
 ### ⚠️ Le mock Supabase ne valide pas les colonnes
 
 Le double en mémoire répond à n'importe quel `.select()`, y compris sur une
@@ -207,9 +236,12 @@ Deux réflexes :
 - le test échoue sur une colonne fantôme ou un indice inconnu → c'est un 500 en
   production, pas un faux positif.
 
-## Shell Commands
+## OBS overlays
 
-- This repo runs on Windows (PowerShell). When editing multiline strings via shell, prefer Edit/Write tools or `node -e` scripts over `sed` — sed newline handling differs across shells and can corrupt imports.
+- Design overlays for 1920x1080 browser sources, not the 800x600 OBS default.
+- Keep aspect ratios fixed (QR codes, logos) and make sure text never crops.
+- Handle all match statuses, including walkover, so scores always show.
+- Don't add decorative elements like « VS » — the OBS scene already has them.
 
 ## Environment Variables
 
@@ -228,8 +260,9 @@ Required in `.env.local` (see `example.env.local`):
 - `TURNSTILE_SECRET_KEY` — Cloudflare Turnstile (onboarding)
 - `BOT_API_KEY` — legacy key for **non-v1 routes only** (`/api/news` ingest, `/api/support/ticket`). `/api/bot/v1/*` auth is now 100% per-tenant (`tenant_secrets`); the v1 env fallback + the `BOT_WEBHOOK_SECRET` webhook-signing fallback were removed, so `BOT_WEBHOOK_SECRET` is no longer read by the site.
 - `BOT_WEBHOOK_URL` — bot webhook for site → bot events (prod `https://bot.owwomenscup.fr/bot/site-events`; guild inventory is resolved next to it). Unset → no HTTP push, events stay in the outbox for the bot's poller.
-- `NEXT_PUBLIC_API_BASE_URL` / `NEXT_PUBLIC_API_REMOTE_PREFIXES` — progressive cutover to `conference-api` ([utils/remoteApi.ts](utils/remoteApi.ts)). Unset → no rewrite.
-- `API_PROXY_PREFIXES` / `API_PROXY_ORIGIN` / `EDGE_PROXY_SECRET` — same-origin relay of cookie-bound `/api/*` families to `conference-api` via the Netlify Edge Function [netlify/edge-functions/api-proxy.ts](netlify/edge-functions/api-proxy.ts) ([docs/EDGE-API-PROXY.md](docs/EDGE-API-PROXY.md)). Prefixes or secret unset → `context.next()`, Next serves as before.
+- `NEXT_PUBLIC_API_BASE_URL` / `NEXT_PUBLIC_API_REMOTE_PREFIXES` — browser-side cross-origin calls to `conference-api` ([utils/remoteApi.ts](utils/remoteApi.ts)); prod: `https://api.owwomenscup.fr` + `/api/public/`. Unset → no rewrite.
+- `API_PROXY_PREFIXES` / `API_PROXY_ORIGIN` / `EDGE_PROXY_SECRET` — same-origin relay of `/api/*` to `conference-api` via the Netlify Edge Function [netlify/edge-functions/api-proxy.ts](netlify/edge-functions/api-proxy.ts) ([docs/EDGE-API-PROXY.md](docs/EDGE-API-PROXY.md)); prod: `/api/` (everything), deploy-preview: dummy prefix. Prefixes or secret unset → `context.next()`, Next serves as before.
+- `REVALIDATE_SECRET` — shared with conference-api for remote ISR regeneration (`/api/internal/revalidate`); `REVALIDATE_REMOTE_URL` must NEVER be set on Netlify.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

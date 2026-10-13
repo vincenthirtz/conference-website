@@ -117,6 +117,18 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm run typecheck --silent 2>&1 | head -20",
+            "timeout": 90
+          }
+        ]
+      }
     ]
   }
 }
