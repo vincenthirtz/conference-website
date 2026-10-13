@@ -18,7 +18,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { API, UI, walk } from '../../scripts/player-metrics.ts';
+import { UI, walk } from '../../scripts/player-metrics.ts';
 
 const ROOT = path.resolve(__dirname, '../..');
 const FEATURES = 'features/player';
@@ -183,17 +183,9 @@ describe('frontières des modules features/player', () => {
     expect(v).toEqual([]);
   });
 
-  it('6. les routes API migrées ne font que réexporter leur module', () => {
-    const fat = API.flatMap((r) => walk(r))
-      .filter((rel) => read(rel).includes('@/features/player/'))
-      .filter(
-        (rel) =>
-          read(rel)
-            .split('\n')
-            .filter((l) => l.trim() && !l.trim().startsWith('//')).length > 5
-      );
-    expect(fat).toEqual([]);
-  });
+  // Règle 6 (« les routes API migrées ne font que réexporter leur module ») :
+  // partie avec pages/api dans conference-api (apiBoundariesGuard là-bas),
+  // bascule 4e, 2026-10-13.
 
   it('7. aucune UI joueuse n’importe pages/api (gel, ne peut que baisser)', () => {
     const now = uiFiles

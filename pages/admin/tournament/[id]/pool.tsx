@@ -35,7 +35,7 @@ import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import type { StaffProps } from '@/types/admin';
-import type { AdminPoolEntry } from '@/features/admin/tournaments/service/pool';
+import type { AdminPoolEntry } from '@/features/admin/tournaments/model';
 import nsAdminTournamentPool from '@/lib/i18n/locales/admin-fr/adminTournamentPool';
 
 export const getServerSideProps = withStaffPage({

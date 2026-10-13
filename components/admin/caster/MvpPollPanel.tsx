@@ -33,7 +33,7 @@ import {
 } from '@/utils/caster/mvpTally';
 import { useMvpPublicRelay } from '@/hooks/useMvpPublicRelay';
 import { casterClient } from '@/features/admin/caster/client';
-import type { CasterRecentMatch } from '@/features/admin/caster/service';
+import type { CasterRecentMatch } from '@/features/admin/caster/model';
 import {
   MIN_CANDIDATES,
   buildPollSnapshot,

@@ -8,22 +8,22 @@
 //
 // Comment un fichier est reconnu comme « appartenant à l'API » : il est
 // atteint par la fermeture d'imports du site (pages hors pages/api,
-// composants, hooks, fonctions Netlify, middleware, scripts, tests) ET il
-// existe dans conference-api sous l'un de ses dossiers de code
-// (`API_DIRS`). Le manifeste `.api-sync-manifest.json` fige la liste du
-// dernier passage : un fichier qui en sort est supprimé ici, un fichier qui y
-// entre est copié.
+// composants, hooks, fonctions Netlify, middleware, scripts) ET il existe
+// dans conference-api sous l'un de ses dossiers de code (`API_DIRS`). Un
+// import qui ne se résout pas côté site est résolu chez elle : un fichier
+// qu'elle vient d'ajouter est ainsi rapatrié au premier passage. Le manifeste
+// `.api-sync-manifest.json` fige la liste du dernier passage : un fichier qui
+// en sort est supprimé ici, un fichier qui y entre est copié.
 //
 //   node scripts/sync-from-api.mjs [chemin/vers/conference-api] [--check]
 //
 // `--check` (à blanc) : ne touche à rien, imprime ce qui serait copié, ce qui
 // diffère, ce qui manquerait — et sort en erreur si la copie n'est pas à
-// jour. C'est le mode de la CI avant suppression côté site (étape 3 du plan,
-// README de conference-api).
+// jour. C'est le mode de la CI.
 
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
 
 const site = path.resolve(import.meta.dirname, '..');
 const args = process.argv.slice(2);
@@ -37,15 +37,13 @@ if (!fs.existsSync(path.join(api, 'pages', 'api'))) {
   process.exit(1);
 }
 
-// Dossiers de code de l'API : un fichier du site qui y a un homonyme est
-// à elle. `pages/api` n'en fait pas partie : le site ne l'importe plus
+// Dossiers de code de l'API : un fichier du site qui y a un homonyme est à
+// elle. `pages/api` n'en fait pas partie : le site ne l'importe plus
 // (tests/unit/apiTypeImportsGuard.test.ts) et ne le recopie pas.
 const API_DIRS = ['utils', 'lib', 'features', 'config', 'types', 'components'];
 // Points d'entrée du site : tout ce qui n'est pas l'API. Pas les tests : ceux
-// qui exercent des routes partent avec elles (ils tournent déjà dans
-// conference-api), et ceux du code partagé n'atteignent rien que les pages
-// n'atteignent pas. Une garde vérifie à part qu'aucun test ne sort du
-// manifeste.
+// qui exercent des routes sont partis avec elles, et ceux du code partagé
+// n'atteignent rien que les pages n'atteignent pas.
 const SITE_ENTRY_DIRS = ['pages', 'components', 'hooks', 'netlify', 'scripts'];
 const SITE_ENTRY_FILES = ['proxy.ts', 'middleware.ts'];
 const MANIFEST = path.join(site, '.api-sync-manifest.json');
@@ -74,7 +72,7 @@ const EXTS = [
 const IMPORT_RE =
   /(?:import|export)\s[^'"]*?from\s*['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)|require\(\s*['"]([^'"]+)['"]\s*\)|import\s+['"]([^'"]+)['"]/g;
 
-const rel = (f) => path.relative(site, f).split(path.sep).join('/');
+const toRel = (root, abs) => path.relative(root, abs).split(path.sep).join('/');
 const walk = (dir, out = []) => {
   if (!fs.existsSync(dir)) return out;
   for (const d of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -86,72 +84,82 @@ const walk = (dir, out = []) => {
   return out;
 };
 
-function resolve(from, spec) {
+/** Résout `spec` importé par `fromRel` dans l'arbre `root` ; chemin relatif ou null. */
+function resolveIn(root, fromRel, spec) {
   const cands = [];
-  if (spec.startsWith('.')) cands.push(path.resolve(path.dirname(from), spec));
+  if (spec.startsWith('.'))
+    cands.push(path.resolve(path.dirname(path.join(root, fromRel)), spec));
   else
     for (const [k, targets] of Object.entries(aliases)) {
       const prefix = k.replace('*', '');
       if (k.endsWith('*') ? spec.startsWith(prefix) : spec === k)
         for (const t of targets)
           cands.push(
-            path.join(site, t.replace('*', spec.slice(prefix.length)))
+            path.join(root, t.replace('*', spec.slice(prefix.length)))
           );
     }
   for (const c of cands) {
-    if (fs.existsSync(c) && fs.statSync(c).isFile()) return path.normalize(c);
+    if (fs.existsSync(c) && fs.statSync(c).isFile()) return toRel(root, c);
     for (const e of EXTS)
-      if (fs.existsSync(c + e)) return path.normalize(c + e);
+      if (fs.existsSync(c + e)) return toRel(root, path.normalize(c + e));
   }
   return null;
 }
+/** D'abord le site, sinon conference-api (dossiers de code seulement). */
+function resolve(fromRel, spec) {
+  const inSite = resolveIn(site, fromRel, spec);
+  if (inSite) return { rel: inSite, where: 'site' };
+  const inApi = resolveIn(api, fromRel, spec);
+  if (inApi && API_DIRS.some((d) => inApi.startsWith(`${d}/`)))
+    return { rel: inApi, where: 'api' };
+  return null;
+}
 
-// Fermeture du site. Les entrées sous pages/api sont exclues : elles partent.
+// Fermeture du site, en chemins relatifs. pages/api est parti (sauf
+// internal/, propre au site) ; on ne traverse jamais pages/api : c'est l'API
+// elle-même, pas du partagé.
 const entries = [
-  ...SITE_ENTRY_DIRS.flatMap((d) => walk(path.join(site, d))).filter(
-    (f) => !rel(f).startsWith('pages/api/')
-  ),
-  ...SITE_ENTRY_FILES.map((f) => path.join(site, f)).filter((f) =>
-    fs.existsSync(f)
-  ),
-].filter((f) => /\.(tsx?|jsx?|mjs|cjs)$/.test(f));
-const seen = new Set();
-const stack = [...entries];
+  ...SITE_ENTRY_DIRS.flatMap((d) => walk(path.join(site, d)))
+    .map((f) => toRel(site, f))
+    .filter(
+      (r) => !r.startsWith('pages/api/') || r.startsWith('pages/api/internal/')
+    ),
+  ...SITE_ENTRY_FILES.filter((f) => fs.existsSync(path.join(site, f))),
+].filter((r) => /\.(tsx?|jsx?|mjs|cjs)$/.test(r));
+const seen = new Map(); // rel → 'site' | 'api'
+const stack = entries.map((r) => ({ rel: r, where: 'site' }));
 while (stack.length) {
-  const f = stack.pop();
-  if (seen.has(f)) continue;
-  seen.add(f);
-  if (!/\.(tsx?|jsx?|mjs|cjs)$/.test(f)) continue;
-  for (const m of fs.readFileSync(f, 'utf8').matchAll(IMPORT_RE)) {
-    const r = resolve(f, m[1] || m[2] || m[3] || m[4]);
-    // On ne traverse jamais pages/api : c'est l'API elle-même, pas du partagé.
-    if (r && !rel(r).startsWith('pages/api/')) stack.push(r);
+  const { rel, where } = stack.pop();
+  if (seen.has(rel)) continue;
+  seen.set(rel, where);
+  if (!/\.(tsx?|jsx?|mjs|cjs)$/.test(rel)) continue;
+  const abs = path.join(where === 'site' ? site : api, rel);
+  for (const m of fs.readFileSync(abs, 'utf8').matchAll(IMPORT_RE)) {
+    const hit = resolve(rel, m[1] || m[2] || m[3] || m[4]);
+    if (hit && !hit.rel.startsWith('pages/api/')) stack.push(hit);
   }
 }
 
 // Ce qui appartient à l'API : atteint par le site ET présent chez elle.
-const owned = [];
-const missingAtApi = [];
-for (const f of seen) {
-  const r = rel(f);
-  if (!API_DIRS.some((d) => r.startsWith(`${d}/`))) continue;
-  const src = path.join(api, r);
-  if (fs.existsSync(src)) owned.push(r);
-}
-owned.sort();
+const owned = [...seen.keys()]
+  .filter(
+    (r) =>
+      API_DIRS.some((d) => r.startsWith(`${d}/`)) &&
+      fs.existsSync(path.join(api, r))
+  )
+  .sort();
 const previous = fs.existsSync(MANIFEST)
   ? (JSON.parse(fs.readFileSync(MANIFEST, 'utf8')).files ?? [])
   : [];
-for (const r of previous)
-  if (!owned.includes(r) && !fs.existsSync(path.join(api, r)))
-    missingAtApi.push(r);
+const missingAtApi = previous.filter(
+  (r) => !owned.includes(r) && !fs.existsSync(path.join(api, r))
+);
 
 const normalize = (buf) => buf.toString('utf8').replace(/\r\n/g, '\n');
 const differs = owned.filter((r) => {
   const a = fs.readFileSync(path.join(api, r));
-  const s = fs.existsSync(path.join(site, r))
-    ? fs.readFileSync(path.join(site, r))
-    : null;
+  const sitePath = path.join(site, r);
+  const s = fs.existsSync(sitePath) ? fs.readFileSync(sitePath) : null;
   return s === null || normalize(a) !== normalize(s);
 });
 const removed = previous.filter((r) => !owned.includes(r));

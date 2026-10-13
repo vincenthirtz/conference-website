@@ -42,7 +42,7 @@ import type { RegistrationField } from '@/utils/registrationFields';
 import type {
   TeamRegistrationBlocker,
   TeamRegistrationStatus,
-} from '@/features/player/demandes/service/registerTeam';
+} from '@/features/player/demandes/model';
 import { logger } from '../../utils/logger';
 import nsTeamRegistration from '@/lib/i18n/locales/fr/teamRegistration';
 

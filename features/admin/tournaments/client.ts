@@ -13,7 +13,7 @@
 // n'ont pas été rapprochés.
 
 import { AdminHttpError, adminRequest } from '@/utils/admin/adminHttp';
-import type { AdminPoolView } from '@/features/admin/tournaments/service/pool';
+import type { AdminPoolView } from '@/features/admin/tournaments/model';
 import type { TournamentTemplate } from '@/config/tournament-templates';
 
 const T = '/api/admin/tournament';

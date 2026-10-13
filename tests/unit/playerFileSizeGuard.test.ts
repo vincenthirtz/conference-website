@@ -49,13 +49,7 @@ const BASELINE: Record<string, number> = {
   // sortant les lectures partagées dans `useDashboardSharedReads`. Le gel suit.
   'components/player/screens/PlayerDashboardScreen.tsx': 418,
   'components/player/screens/PlayerMatchScreen.tsx': 195,
-  // Routes (> 500)
-  'pages/api/teams/create-with-member.ts': 4,
-  'pages/api/player/tcg/packs.ts': 4,
-  'pages/api/player/dashboard.ts': 5,
-  'pages/api/player/matches/[matchId]/report-score.ts': 4,
-  'pages/api/player/tcg/collection.ts': 4,
-  'pages/api/demandes/register-team.ts': 8,
+  // Routes (> 500) : parties dans conference-api (bascule 4e, 2026-10-13).
 };
 
 const countLines = (file: string) =>

@@ -292,21 +292,7 @@ describe('frontières des modules features/admin', () => {
     expect(v).toEqual([]);
   });
 
-  it('les pages/api migrées ne font que réexporter leur module', () => {
-    const api = walk('pages/api/admin')
-      .map((rel) => ({
-        rel,
-        src: fs.readFileSync(path.join(ROOT, rel), 'utf8'),
-      }))
-      .filter(({ src }) => src.includes('@/features/admin/'));
-    const fat = api
-      .filter(({ src }) => {
-        const code = src
-          .split('\n')
-          .filter((l) => l.trim() && !l.trim().startsWith('//'));
-        return code.length > 5;
-      })
-      .map(({ rel }) => rel);
-    expect(fat).toEqual([]);
-  });
+  // La règle « les pages/api migrées ne font que réexporter leur module » a
+  // suivi pages/api dans conference-api (tests/unit/apiBoundariesGuard.test.ts
+  // là-bas) — bascule 4e, 2026-10-13.
 });

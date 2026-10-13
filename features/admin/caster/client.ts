@@ -8,7 +8,7 @@
 // requêtes.
 
 import { adminRequest } from '@/utils/admin/adminHttp';
-import type { CasterRecentMatch } from './service';
+import type { CasterRecentMatch } from './model';
 
 const TWITCH = '/api/admin/twitch';
 
