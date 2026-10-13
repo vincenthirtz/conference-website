@@ -17,6 +17,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const session = vi.hoisted(() => ({
   value: {
@@ -38,7 +39,10 @@ import {
   sectionPanelId,
   shouldExpandForHash,
 } from '../../utils/player/dashboardAnchors';
-import { CategorySection } from '../../components/player/screens/PlayerDashboardScreen';
+import PlayerDashboardScreen, {
+  CategorySection,
+} from '../../components/player/screens/PlayerDashboardScreen';
+import { ToastProvider } from '../../components/Toast';
 
 describe('ancres du tableau de bord', () => {
   it('lit la cible d’un hash, encodé ou non, sans lever', () => {
@@ -101,5 +105,44 @@ describe('CategorySection', () => {
     // Le lien n'est pas DANS le bouton : il reste cliquable section repliée.
     const buttonEnd = html.indexOf('</button>');
     expect(html.indexOf('href="/player/matches"')).toBeGreaterThan(buttonEnd);
+  });
+});
+
+// Les items du bandeau « à faire » (`buildTodo`) sont calculés côté API et
+// testés là-bas (conference-api, tests/unit/playerDashboardNavigation.routes.test.ts).
+describe('PlayerDashboardScreen — déconnectée', () => {
+  function render() {
+    // La page réelle est enveloppée par `withPlayerQuery` (P5).
+    return renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: new QueryClient() },
+        createElement(ToastProvider, null, createElement(PlayerDashboardScreen))
+      )
+    );
+  }
+
+  it('montre « Connecte-toi » avec retour au tableau de bord, pas un squelette', () => {
+    session.value = { user: null, token: null, loading: false, ready: false };
+    const html = render();
+    expect(html).toContain('href="/login?next=/player"');
+    expect(html).not.toContain('aria-busy="true"');
+  });
+
+  it('garde le squelette tant que la session se résout', () => {
+    session.value = { user: null, token: null, loading: true, ready: false };
+    const html = render();
+    expect(html).toContain('aria-busy="true"');
+  });
+
+  it('garde le squelette pendant le premier chargement d’une session prête', () => {
+    session.value = {
+      user: { id: 'u-1', email: 'a@b.c', user_metadata: {} },
+      token: 't',
+      loading: false,
+      ready: true,
+    };
+    const html = render();
+    expect(html).toContain('aria-busy="true"');
   });
 });

@@ -11,17 +11,10 @@ import path from 'node:path';
 const DIR = path.resolve(__dirname, '../pending-4e');
 
 /** Fichier → nombre de blocs de premier niveau (`describe(`/`it(` en colonne 0). */
-// 2026-10-13 soir : 22 fichiers / 38 blocs à la bascule, 7 / 9 après le
-// second tri (les blocs purement route ou purement UI ont rejoint leur dépôt).
-const FROZEN: Record<string, number> = {
-  'circuitPartners.test.ts.pending': 1,
-  'overlayAlertFrame.test.ts.pending': 1,
-  'playerDashboardNavigation.test.ts.pending': 1,
-  'playerSecurityP0.test.ts.pending': 2,
-  'staffPlanningView.test.ts.pending': 1,
-  'teamLogoCredit.test.ts.pending': 1,
-  'teamNamesBatch.test.ts.pending': 2,
-};
+// 2026-10-13 : 22 fichiers / 38 blocs à la bascule, 7 / 9 après le second tri,
+// 0 / 0 le soir même — tout a rejoint son dépôt (route → API, UI → site,
+// parité → même littéral gelé des deux côtés). Le stock reste à zéro.
+const FROZEN: Record<string, number> = {};
 
 const countBlocks = (src: string) =>
   (src.match(/^(describe|it|test)(\.\w+)?\(/gm) ?? []).length;
