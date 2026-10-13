@@ -19,6 +19,8 @@
     "lint": "biome lint .",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
     "verify": "node scripts/verify.mjs",
+    "sync:api": "node scripts/sync-from-api.mjs",
+    "sync:api:check": "node scripts/sync-from-api.mjs --check",
     "test": "playwright test",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
