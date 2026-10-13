@@ -54,3 +54,8 @@ map-previews.html
 
 # graphify (graphe de connaissances local, reconstruit par le hook post-commit)
 graphify-out/
+
+# Claude Code : worktrees d'agents et réglages propres au poste. Le reste de
+# .claude/ (agents, skills, contextes, settings.json) est partagé, donc suivi.
+.claude/worktrees/
+.claude/settings.local.json
