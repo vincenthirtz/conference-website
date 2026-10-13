@@ -100,10 +100,17 @@ const revealedCount = (c: HTMLElement) =>
 
 beforeEach(() => {
   vi.useFakeTimers();
+  // happy-dom charge vraiment la source de chaque <img> (mascottes des
+  // cartes) via window.fetch → ECONNREFUSED sur localhost:3000 dans la
+  // sortie. Une réponse vide suffit : seule la séquence compte ici.
+  vi.spyOn(window, 'fetch').mockResolvedValue(
+    new Response(null, { status: 204 })
+  );
 });
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.useRealTimers();
 });
 
