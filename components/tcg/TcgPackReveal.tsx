@@ -61,6 +61,7 @@ import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 import {
   BURST_MS,
   TEAR_MS,
+  TENSION_MS,
   flipTimeline,
   initialRevealState,
   revealReducer,
@@ -130,13 +131,16 @@ function prefersReducedMotion(): boolean {
 }
 
 /**
- * Variables CSS d'une carte : son halo, et sa position de départ dans
- * l'éventail (elle part du centre du paquet, inclinée selon son rang).
+ * Variables CSS d'une carte : son halo (au retournement ET pendant la tension
+ * qui le précède — la même teinte, pour que l'œil relie les deux), la durée
+ * de cette tension, et sa position de départ dans l'éventail (elle part du
+ * centre du paquet, inclinée selon son rang).
  */
 function cardVars(card: TcgRevealCard, i: number, n: number): CSSProperties {
   const fromCenter = i - (n - 1) / 2;
   return {
     '--tcg-halo': RARITY_HALO[card.rarity],
+    '--tension-ms': `${TENSION_MS[card.rarity]}ms`,
     '--fan-i': String(i),
     '--fan-x': `${(-fromCenter * 70).toFixed(0)}%`,
     '--fan-rot': `${(fromCenter * 9).toFixed(0)}deg`,
@@ -154,7 +158,7 @@ export default function TcgPackReveal({
     cards.map((c) => c.rarity),
     initialRevealState
   );
-  const { phase, flipped } = state;
+  const { phase, flipped, tense } = state;
 
   useEffect(() => {
     // Focus d'abord (cf. l'en-tête), la séquence ensuite.
@@ -290,6 +294,10 @@ export default function TcgPackReveal({
               <li
                 key={card.key}
                 className="tcg-flip"
+                // La carte rare (et au-delà) tremble et s'illumine juste avant
+                // de se retourner — cf. `TENSION_MS`. Décoratif : rien n'est
+                // annoncé, la rareté est déjà écrite sur la carte.
+                data-tense={String(tense === i)}
                 style={cardVars(card, i, cards.length)}
               >
                 {/* Toujours une ligne, même vide : sans elle, les cartes d'une

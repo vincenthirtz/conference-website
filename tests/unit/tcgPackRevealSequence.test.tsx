@@ -28,6 +28,9 @@ import { RARITY_ORDER } from '../../utils/tcg/rarity';
 
 // La célébration charge `canvas-confetti` à la demande : hors sujet ici.
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }));
+// happy-dom irait chercher l'image du sachet sur localhost:3000 : sans objet
+// pour la séquence, et bruyant (ECONNREFUSED) dans la sortie des tests.
+vi.mock('next/image', () => ({ default: () => null }));
 
 const labels = {
   title: 'Ton paquet',
@@ -148,6 +151,35 @@ describe('TcgPackReveal — séquence', () => {
     expect(revealedCount(container)).toBe(RARITY_ORDER.length);
     expect(stage(container).dataset.phase).toBe('done');
     expect(screen.queryByRole('button', { name: 'Tout révéler' })).toBeNull();
+  });
+
+  it('fait trembler une carte rare AVANT de la retourner', () => {
+    mockReducedMotion(false);
+    const { container } = mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Ouvrir le paquet' }));
+    // Une phase à la fois : la minuterie suivante n'est posée qu'au rendu.
+    act(() => {
+      vi.advanceTimersByTime(TEAR_MS);
+    });
+    act(() => {
+      vi.advanceTimersByTime(BURST_MS);
+    });
+    const items = container.querySelectorAll<HTMLElement>('.tcg-flip');
+    const [, rare] = flipTimeline(RARITY_ORDER);
+    act(() => {
+      vi.advanceTimersByTime(rare.tenseAt ?? 0);
+    });
+    // La commune n'a pas tremblé ; la rare tremble, encore face cachée.
+    expect(items[0].dataset.tense).toBe('false');
+    expect(items[1].dataset.tense).toBe('true');
+    expect(revealedCount(container)).toBe(1);
+    act(() => {
+      vi.advanceTimersByTime(rare.flipAt - (rare.tenseAt ?? 0));
+    });
+    expect(items[1].dataset.tense).toBe('false');
+    expect(revealedCount(container)).toBe(2);
+    // La durée de la tension est portée par la carte, pour le CSS.
+    expect(items[3].style.getPropertyValue('--tension-ms')).toBe('1050ms');
   });
 
   it('ouvre aussi d’un glissé horizontal', () => {

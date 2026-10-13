@@ -2907,11 +2907,55 @@ a:focus-visible,
   }
 }
 
+/* La tension : juste avant de se retourner, une carte rare (et au-delà)
+   tremble et son dos s'illumine à la teinte de sa rareté (`--tcg-halo`), le
+   temps de `--tension-ms` — plus long à mesure que la carte est rare (cf.
+   TENSION_MS). Le tremblement reste faible (1,5 px, < 1°) : on sent la carte,
+   on ne la secoue pas. Le retournement prend le relais avec son propre halo. */
+.tcg-flip[data-tense="true"] {
+  animation: tcg-tension-shake 110ms linear infinite;
+}
+
+.tcg-flip[data-tense="true"] .tcg-flip-back {
+  animation: tcg-tension-glow var(--tension-ms, 600ms) ease-in forwards;
+}
+
+@keyframes tcg-tension-shake {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(-1.5px, 0.5px) rotate(-0.7deg);
+  }
+  75% {
+    transform: translate(1.5px, -0.5px) rotate(0.7deg);
+  }
+}
+
+@keyframes tcg-tension-glow {
+  0% {
+    box-shadow: 0 0 0 0 transparent;
+    filter: brightness(1);
+  }
+  100% {
+    box-shadow:
+      0 0 30px 8px var(--tcg-halo),
+      inset 0 0 26px 2px var(--tcg-halo);
+    filter: brightness(1.35);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tcg-flip-inner,
   .tcg-flip-inner[data-revealed="true"] {
     transition: none;
     transform: none;
+  }
+  /* Aucun tremblement, aucune lueur d'attente. */
+  .tcg-flip[data-tense="true"],
+  .tcg-flip[data-tense="true"] .tcg-flip-back {
+    animation: none;
   }
   /* Pas de sachet à déchirer : le paquet est ouvert d'emblée, cartes posées. */
   .tcg-sachet-stage {
