@@ -47,12 +47,13 @@ import {
   broadcastCardsClient,
   type TcgDropEventSubState as EventSubState,
 } from '@/features/admin/diffusion/liveClient';
+import TcgFeaturedRewardsBlock from '@/features/admin/diffusion/ui/TcgFeaturedRewardsBlock';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import { logger } from '../../../utils/logger';
 import nsAdminBroadcastLive from '@/lib/i18n/locales/admin-fr/adminBroadcastLive';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
-import { rubanEyebrow, rubanInput } from '@/features/admin/_shared/ui/ruban';
+import { rubanEyebrow } from '@/features/admin/_shared/ui/ruban';
 
 /** Le seul état où les drops tombent réellement. */
 const HEALTHY = 'enabled';
@@ -74,9 +75,6 @@ export default function TcgDropHealthCard() {
     }
   }, [stateQuery.error]);
   const [busy, setBusy] = useState(false);
-  const [featuredCard, setFeaturedCard] = useState('');
-  const [featuredCost, setFeaturedCost] = useState(10_000);
-  const [featuredError, setFeaturedError] = useState(false);
   // La raison d'un échec de mise en service, telle que l'API la rend. Avalée,
   // elle laissait la carte « À réparer » après le clic sans dire pourquoi.
   const [setupError, setSetupError] = useState<string | null>(null);
@@ -108,32 +106,6 @@ export default function TcgDropHealthCard() {
       setBusy(false);
     }
   }, [busy, load]);
-
-  /**
-   * La récompense MISE EN AVANT : même enchaînement que le drop (récompense,
-   * puis abonnement), avec la carte que son paquet garantit.
-   */
-  const setupFeatured = async (fanartId: string) => {
-    if (busy || !fanartId) return;
-    setBusy(true);
-    setFeaturedError(false);
-    try {
-      const { rewardId } = await broadcastCardsClient.tcgDropSetupReward({
-        cost: featuredCost,
-        featuredFanartId: fanartId,
-      });
-      await broadcastCardsClient.tcgDropSubscribe({
-        rewardId,
-        featuredFanartId: fanartId,
-      });
-    } catch (err) {
-      logger.error('[admin/tcg-drop-health] featured setup error:', err);
-      setFeaturedError(true);
-    } finally {
-      await load();
-      setBusy(false);
-    }
-  };
 
   if (!state) return null;
 
@@ -246,104 +218,12 @@ export default function TcgDropHealthCard() {
         </p>
       )}
 
+      {/* Les récompenses à carte garantie — plusieurs à la fois (lot 1 de
+          PLAN-tcg-2). Le bloc porte sa saisie et ses appels ; il n'est caché
+          que face à une API trop ancienne pour rendre les candidates. */}
       {state.featuredCandidates && (
-        <FeaturedRewardBlock
-          t={t}
-          state={state}
-          busy={busy}
-          card={featuredCard}
-          cost={featuredCost}
-          error={featuredError}
-          onCard={setFeaturedCard}
-          onCost={setFeaturedCost}
-          onSetup={(id) => void setupFeatured(id)}
-        />
+        <TcgFeaturedRewardsBlock state={state} reload={load} />
       )}
     </section>
-  );
-}
-
-/** L'encart de la récompense mise en avant, sous l'état du drop. */
-function FeaturedRewardBlock({
-  t,
-  state,
-  busy,
-  card,
-  cost,
-  error,
-  onCard,
-  onCost,
-  onSetup,
-}: {
-  t: typeof nsAdminBroadcastLive.fr;
-  state: EventSubState;
-  busy: boolean;
-  card: string;
-  cost: number;
-  error: boolean;
-  onCard: (id: string) => void;
-  onCost: (cost: number) => void;
-  onSetup: (id: string) => void;
-}) {
-  const candidates = state.featuredCandidates ?? [];
-  const current = candidates.find((c) => c.id === state.featuredFanartId);
-  const live = Boolean(state.featuredRewardId && current);
-  const selected = card || current?.id || candidates[0]?.id || '';
-  const input = `mt-1 ${rubanInput}`;
-
-  return (
-    <div className="mt-4 border-t border-[var(--line,rgba(194,196,201,.12))] pt-3">
-      <h3 className={rubanEyebrow}>{t.dropFeaturedHeading}</h3>
-      <p className="mt-1 text-[11px] text-neutral-400">{t.dropFeaturedIntro}</p>
-      {live && current && (
-        <p className="mt-2 text-xs text-[var(--lf-200,#b3e7a3)]">
-          {format(t.dropFeaturedActive, { title: current.title })}
-        </p>
-      )}
-      {candidates.length === 0 ? (
-        <p className="mt-2 text-xs text-neutral-400">{t.dropFeaturedNone}</p>
-      ) : (
-        <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_10rem_auto] sm:items-end">
-          <label className="block text-[11px] text-neutral-400">
-            {t.dropFeaturedCard}
-            <select
-              value={selected}
-              onChange={(e) => onCard(e.target.value)}
-              className={input}
-            >
-              {candidates.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-[11px] text-neutral-400">
-            {t.dropFeaturedCost}
-            <input
-              type="number"
-              min={1}
-              step={100}
-              value={cost}
-              onChange={(e) => onCost(Number(e.target.value) || 1)}
-              className={input}
-            />
-          </label>
-          <AdminButton
-            variant="secondary"
-            size="sm"
-            disabled={busy || !selected}
-            onClick={() => onSetup(selected)}
-          >
-            {busy ? t.dropSetupBusy : t.dropFeaturedCta}
-          </AdminButton>
-        </div>
-      )}
-      {error && (
-        <p role="alert" className="mt-2 text-xs text-[#ffc2c2]">
-          {t.dropFeaturedError}
-        </p>
-      )}
-    </div>
   );
 }

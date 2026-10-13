@@ -739,26 +739,43 @@ L'annonce bot `tcg.drop_granted` porte, **en ajout rétrocompatible**,
 `pack: { id: string } | null` : un bot ancien l'ignore, un bot à jour ne dit
 « un paquet t'attend » que lorsque c'est vrai.
 
-**La récompense « mise en avant »** (2026-09-28). Une seconde récompense
-Twitch, plus chère, dont le paquet **garantit une carte** de « L'association »
-— le logo Octobre Rose en octobre. Même barème que le drop (pièces + un
-paquet), mais le paquet porte `tcg_packs.guaranteed_fanart_id` : à
-l'ouverture, cette carte prend l'emplacement de décor (jamais celui d'une
-joueuse). La garantie voyage avec le paquet, pas avec le réglage : un paquet
-attribué en octobre et ouvert en novembre sort toujours la carte — sauf si
-elle a été retirée entre-temps, auquel cas le tirage est ordinaire.
+**Les récompenses « mises en avant »** (2026-09-28 ; plusieurs à la fois
+depuis le 2026-10-13, lot 1 de [PLAN-tcg-2.md](./PLAN-tcg-2.md)). Des
+récompenses Twitch plus chères, dont le paquet **garantit une carte** de
+« L'association » — Octobre Rose et Halloween en même temps, à côté du drop
+ordinaire. Même barème que le drop (pièces + un paquet), mais le paquet porte
+`tcg_packs.guaranteed_fanart_id` : à l'ouverture, cette carte prend
+l'emplacement de décor (jamais celui d'une joueuse). La garantie voyage avec le
+paquet, pas avec le réglage : un paquet attribué en octobre et ouvert en
+novembre sort toujours la carte — sauf si elle a été retirée entre-temps,
+auquel cas le tirage est ordinaire.
 
-- Réglage : `twitch_broadcaster_connections.tcg_featured_reward_id` +
-  `tcg_featured_fanart_id` (migration `tcg_twitch_featured_reward.sql`),
-  posés depuis la carte « Drop TCG » de la console régie (`/admin/broadcast/live`).
+- Réglage : une ligne par récompense dans `twitch_tcg_featured_rewards`
+  (`tenant_id, reward_id, fanart_id, cost`, migration
+  `twitch_tcg_featured_rewards.sql`) — **une carte n'a qu'une récompense**
+  (`UNIQUE (tenant_id, fanart_id)`). Les deux colonnes héritées
+  `twitch_broadcaster_connections.tcg_featured_*` (une seule récompense) ne
+  sont plus écrites ; le webhook et l'écran les lisent en repli tant que la
+  table ne connaît pas la récompense qu'elles citent (déploiement avant
+  migration). À supprimer au lot 10.
+- Écran : bloc « Récompenses à carte garantie » de la carte « Drops TCG »
+  (Diffusion › Overlays, onglet TCG) : la liste en service (carte, coût,
+  publiée ou retirée), un formulaire qui ne propose que les cartes pas encore
+  liées, et « Retirer » — qui supprime l'abonnement EventSub de cette seule
+  récompense, la **désactive** sur Twitch (pas supprimée : réactivable depuis
+  l'onglet Récompenses), puis efface la désignation, dans cet ordre
+  (`DELETE /api/admin/twitch/tcg-drop/featured/[id]`).
 - Titre de la récompense `Carte à collectionner — <carte>` : il sert de clé
   de reprise, comme celui du drop. Elle doit être créée PAR LE SITE — une
   récompense créée dans la console Twitch ne peut être ni honorée ni
   remboursée par l'API.
-- Limite : une par direct et par personne (`source_ref = <direct>:featured`),
-  indépendante du drop ordinaire — les deux se réclament sur le même live.
+- Limite : une par direct, par personne **et par récompense**
+  (`source_ref = <direct>:featured:<reward_id>`), indépendante du drop
+  ordinaire — Octobre Rose, Halloween et le drop se réclament sur le même live.
 - Seules les cartes « L'association » publiées peuvent être garanties :
-  l'œuvre d'une autrice n'est pas mise aux enchères de points.
+  l'œuvre d'une autrice n'est pas mise aux enchères de points. Une carte
+  révoquée reste désignée (l'écran le signale) et son paquet retombe sur un
+  tirage ordinaire.
 
 ### Le cadeau de bienvenue
 

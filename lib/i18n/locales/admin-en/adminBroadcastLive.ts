@@ -44,13 +44,26 @@ export default {
   dropRewardMissing:
     'No channel-point reward designated: nothing to listen to.',
   dropSetupCta: 'Set up the drop',
-  dropFeaturedHeading: 'Featured reward',
+  dropFeaturedHeading: 'Guaranteed-card rewards',
   dropFeaturedIntro:
-    'A second, pricier Twitch reward whose pack is guaranteed to contain an association card (the Pink October logo, for instance).',
+    'Pricier Twitch rewards, each with a pack guaranteed to contain an association card. Several can run at once, next to the regular drop; a card has one reward only.',
+  dropFeaturedListLabel: 'Guaranteed-card rewards live',
   dropFeaturedCard: 'Guaranteed card',
   dropFeaturedCost: 'Channel points cost',
-  dropFeaturedCta: 'Set up',
-  dropFeaturedActive: 'Live — guaranteed card: {title}',
+  dropFeaturedCostValue: '{cost} points',
+  dropFeaturedAdd: 'Add the reward',
+  dropFeaturedLive: 'Live',
+  dropFeaturedUnpublished: 'Card withdrawn — regular draw',
+  dropFeaturedEmpty: 'No guaranteed-card reward is live.',
+  dropFeaturedAllBound:
+    'Every published association card already has its reward.',
+  dropFeaturedRemove: 'Remove',
+  dropFeaturedRemoving: 'Removing…',
+  dropFeaturedRemoveAria: 'Remove the “{title}” reward',
+  dropFeaturedRemoveError:
+    'Could not remove “{title}”: nothing was removed, try again.',
+  dropFeaturedRemovedStillEnabled:
+    '“{title}” is removed, but Twitch did not disable the reward: disable it in the Rewards tab, or a redemption will give nothing.',
   dropFeaturedNone: 'No published association card: create one in Admin → TCG.',
   dropFeaturedError:
     'Setup failed. If the reward was created by hand in Twitch, delete it: only a reward created by the site can be fulfilled or refunded.',

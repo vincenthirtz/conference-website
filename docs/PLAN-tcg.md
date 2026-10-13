@@ -1,5 +1,9 @@
 # Plan — TCG (cartes à collectionner)
 
+> **Suite :** [PLAN-tcg-2.md](./PLAN-tcg-2.md) (2026-10-13) reprend la mesure et
+> séquence dix nouveaux lots ; T7 et T8 y sont repris. Ce plan reste la trace
+> de la première passe.
+>
 > Établi le **2026-09-27**, à partir d'une mesure de la base de production faite
 > le jour même. Périmètre : `utils/tcg/*` (51 modules), `pages/api/player/tcg/*`,
 > `pages/api/admin/tcg/*`, le webhook `webhooks/twitch/tcg-drop`, la route bot

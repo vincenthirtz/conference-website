@@ -48,14 +48,32 @@ export default adminNs('adminBroadcastLive', {
   dropRewardMissing:
     'Aucune récompense de points de chaîne désignée : rien à écouter.',
   dropSetupCta: 'Mettre le drop en service',
-  // Récompense « mise en avant » : un paquet avec une carte garantie.
-  dropFeaturedHeading: 'Récompense mise en avant',
+  // Récompenses « mises en avant » : des paquets avec une carte garantie,
+  // plusieurs à la fois (Octobre Rose ET Halloween).
+  dropFeaturedHeading: 'Récompenses à carte garantie',
   dropFeaturedIntro:
-    'Une seconde récompense Twitch, plus chère, dont le paquet contient à coup sûr une carte de « L’association » (le logo Octobre Rose, par exemple).',
+    'Des récompenses Twitch plus chères, chacune avec un paquet qui contient à coup sûr une carte de « L’association ». Plusieurs peuvent tourner en même temps, à côté du drop ordinaire ; une carte n’a qu’une récompense.',
+  dropFeaturedListLabel: 'Récompenses à carte garantie en service',
   dropFeaturedCard: 'Carte garantie',
   dropFeaturedCost: 'Coût en points de chaîne',
-  dropFeaturedCta: 'Mettre en service',
-  dropFeaturedActive: 'En service — carte garantie : {title}',
+  /** Interpole `{cost}`. */
+  dropFeaturedCostValue: '{cost} points',
+  dropFeaturedAdd: 'Ajouter la récompense',
+  dropFeaturedLive: 'En service',
+  dropFeaturedUnpublished: 'Carte retirée — tirage ordinaire',
+  dropFeaturedEmpty: 'Aucune récompense à carte garantie en service.',
+  dropFeaturedAllBound:
+    'Toutes les cartes « L’association » publiées ont déjà leur récompense.',
+  dropFeaturedRemove: 'Retirer',
+  dropFeaturedRemoving: 'Retrait…',
+  /** Interpole `{title}`. */
+  dropFeaturedRemoveAria: 'Retirer la récompense « {title} »',
+  /** Interpole `{title}`. */
+  dropFeaturedRemoveError:
+    'Retrait de « {title} » impossible : rien n’a été retiré, réessayez.',
+  /** Interpole `{title}`. */
+  dropFeaturedRemovedStillEnabled:
+    '« {title} » est retirée, mais Twitch n’a pas désactivé la récompense : désactivez-la dans l’onglet Récompenses, sinon un échange ne donnera rien.',
   dropFeaturedNone:
     'Aucune carte « L’association » publiée : créez-en une dans Admin → TCG.',
   dropFeaturedError:

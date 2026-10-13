@@ -18,9 +18,26 @@ type TcgDropSubscription = {
   rewardId: string | null;
 };
 
+/** Une récompense Twitch « mise en avant » : son paquet garantit une carte. */
+export type TcgFeaturedReward = {
+  rewardId: string;
+  fanartId: string;
+  title: string;
+  /** Coût en points de chaîne à la création ; `null` si inconnu (désignation héritée). */
+  cost: number | null;
+  /** `false` = carte révoquée : désignée encore, mais le paquet retombe sur un tirage ordinaire. */
+  published: boolean;
+};
+
 export type TcgDropEventSubState = {
   rewardId: string | null;
-  /** Optionnels : une API plus ancienne (déploiement en cours) ne les rend pas. */
+  /**
+   * Toutes les récompenses à carte garantie (plusieurs depuis le 2026-10-13).
+   * Optionnel : une API plus ancienne (déploiement en cours) ne le rend pas et
+   * ne connaît que `featuredRewardId` / `featuredFanartId` (la première).
+   */
+  featured?: TcgFeaturedReward[];
+  /** Hérités : la première récompense mise en avant. */
   featuredRewardId?: string | null;
   featuredFanartId?: string | null;
   featuredCandidates?: Array<{ id: string; title: string }>;
@@ -34,6 +51,7 @@ export type TcgDropEventSubState = {
 
 const TCG_EVENTSUB = '/api/admin/twitch/eventsub/tcg-drop';
 const TCG_SETUP = '/api/admin/twitch/tcg-drop/setup';
+const TCG_FEATURED = '/api/admin/twitch/tcg-drop/featured';
 
 export const broadcastCardsClient = {
   /** Lecture seule, ouverte au rôle caster ; pas de redirection sur 401. */
@@ -47,11 +65,26 @@ export const broadcastCardsClient = {
   tcgDropSetupReward: (
     body: { cost?: number; featuredFanartId?: string } = {}
   ) =>
-    adminRequest<{ rewardId: string }>(TCG_SETUP, {
+    adminRequest<{ rewardId: string; cost?: number }>(TCG_SETUP, {
       method: 'POST',
       json: body,
     }),
   /** Abonnement EventSub (vérifie l'existence avant de créer). */
-  tcgDropSubscribe: (body: { rewardId: string; featuredFanartId?: string }) =>
-    adminRequest<unknown>(TCG_EVENTSUB, { method: 'POST', json: body }),
+  tcgDropSubscribe: (body: {
+    rewardId: string;
+    featuredFanartId?: string;
+    cost?: number;
+  }) => adminRequest<unknown>(TCG_EVENTSUB, { method: 'POST', json: body }),
+  /**
+   * Retire UNE récompense mise en avant : son abonnement, la récompense
+   * désactivée sur Twitch (pas supprimée), puis la désignation.
+   */
+  tcgDropFeaturedRemove: (rewardId: string) =>
+    adminRequest<{
+      rewardId: string;
+      removedSubscriptions: number;
+      rewardDisabled: boolean;
+    }>(`${TCG_FEATURED}/${encodeURIComponent(rewardId)}`, {
+      method: 'DELETE',
+    }),
 };
