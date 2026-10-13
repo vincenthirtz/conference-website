@@ -9,16 +9,14 @@
 
 import { adminRequest } from '@/utils/admin/adminHttp';
 import type { AccountLog } from './manageModel';
-import type { getStaffPermissions } from './service/permissions';
+import type { StaffPermissionsPayload } from './model';
 import type { AdminUserProfilePayload } from '../users/profileModel';
 
 const USERS = '/api/admin/users';
 const MANAGE = `${USERS}/manage`;
 const enc = encodeURIComponent;
 
-export type StaffPermissionsPayload = Awaited<
-  ReturnType<typeof getStaffPermissions>
->;
+export type { StaffPermissionsPayload };
 
 /** Fiche staff (GET /api/admin/users/[userId]/staff). */
 export type StaffRecordPayload<TStaff, TSpace> = {

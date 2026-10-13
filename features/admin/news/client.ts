@@ -3,13 +3,13 @@
 
 import { adminRequest } from '@/utils/admin/adminHttp';
 import type { NewsPayload } from './schemas';
-import type { createNews, getNews, updateNews } from './service';
+import type { NewsRow, NewsUpdateResult } from './model';
 
 const BASE = '/api/admin/news';
 
-export type NewsItem = Awaited<ReturnType<typeof getNews>>;
-export type NewsCreated = Awaited<ReturnType<typeof createNews>>;
-export type NewsUpdated = Awaited<ReturnType<typeof updateNews>>['row'];
+export type NewsItem = NewsRow;
+export type NewsCreated = NewsRow;
+export type NewsUpdated = NewsUpdateResult['row'];
 
 const byId = (id: string) => `${BASE}/${encodeURIComponent(id)}`;
 

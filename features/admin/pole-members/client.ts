@@ -3,14 +3,12 @@
 
 import { AdminHttpError, adminRequest } from '@/utils/admin/adminHttp';
 import type { PoleMemberPayload } from './schemas';
-import type { getPoleMember, updatePoleMember } from './service';
+import type { PoleMemberRow, PoleMemberUpdateResult } from './model';
 
 const BASE = '/api/admin/pole-members';
 
-export type PoleMember = NonNullable<Awaited<ReturnType<typeof getPoleMember>>>;
-export type PoleMemberUpdated = Awaited<
-  ReturnType<typeof updatePoleMember>
->['row'];
+export type PoleMember = PoleMemberRow;
+export type PoleMemberUpdated = PoleMemberUpdateResult['row'];
 
 const byId = (id: string) => `${BASE}/${encodeURIComponent(id)}`;
 

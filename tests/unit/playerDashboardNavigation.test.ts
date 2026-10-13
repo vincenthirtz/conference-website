@@ -39,7 +39,6 @@ import {
   shouldExpandForHash,
 } from '../../utils/player/dashboardAnchors';
 import { CategorySection } from '../../components/player/screens/PlayerDashboardScreen';
-import { CAPTAIN_CTA_URL } from '../../utils/scrimRequestNotify';
 
 describe('ancres du tableau de bord', () => {
   it('lit la cible d’un hash, encodé ou non, sans lever', () => {
@@ -69,10 +68,11 @@ describe('ancres du tableau de bord', () => {
     expect(shouldExpandForHash('', panel, containsPending)).toBe(false);
   });
 
-  it('le mail de scrim vise le panneau de la section Scrims', () => {
-    expect(
-      CAPTAIN_CTA_URL.endsWith(`/player#${sectionPanelId('scrims')}`)
-    ).toBe(true);
+  it('le panneau de la section Scrims garde l’ancre que le mail de scrim vise', () => {
+    // L'autre moitié de cette parité vit dans conference-api
+    // (tests/unit/scrimRequestNotify.test.ts : CAPTAIN_CTA_URL se termine par
+    // `/player#section-scrims`). Même littéral des deux côtés, à dessein.
+    expect(sectionPanelId('scrims')).toBe('section-scrims');
   });
 });
 

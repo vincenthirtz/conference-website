@@ -5,25 +5,23 @@
 import { adminRequest } from '@/utils/admin/adminHttp';
 import type { PartnerPayload } from './schemas';
 import type {
-  createPartner,
-  getPartner,
-  listPartners,
-  listPartnershipRequests,
-  updatePartner,
-} from './service';
+  PartnerList,
+  PartnerListItem,
+  PartnerRow,
+  PartnerUpdateResult,
+  PartnershipRequestList,
+  PartnershipRequestListItem,
+} from './model';
 
 const PARTNERS = '/api/admin/partners';
 const REQUESTS = '/api/admin/partnership-requests';
 
-export type PartnerList = Awaited<ReturnType<typeof listPartners>>;
-export type PartnerListRow = PartnerList['items'][number];
-export type Partner = Awaited<ReturnType<typeof getPartner>>;
-export type PartnerUpdated = Awaited<ReturnType<typeof updatePartner>>['row'];
-export type PartnerCreated = Awaited<ReturnType<typeof createPartner>>;
-export type PartnershipRequestList = Awaited<
-  ReturnType<typeof listPartnershipRequests>
->;
-export type PartnershipRequestListRow = PartnershipRequestList['items'][number];
+export type { PartnerList, PartnershipRequestList };
+export type PartnerListRow = PartnerListItem;
+export type Partner = PartnerRow;
+export type PartnerUpdated = PartnerUpdateResult['row'];
+export type PartnerCreated = PartnerRow;
+export type PartnershipRequestListRow = PartnershipRequestListItem;
 
 /**
  * Fiche d'une demande (route héritée `partnership-requests/[id]`, sans

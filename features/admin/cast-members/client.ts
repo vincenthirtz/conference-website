@@ -3,14 +3,12 @@
 
 import { AdminHttpError, adminRequest } from '@/utils/admin/adminHttp';
 import type { CastMemberPayload } from './schemas';
-import type { getCastMember, updateCastMember } from './service';
+import type { CastMemberRow, CastMemberUpdateResult } from './model';
 
 const BASE = '/api/admin/cast-members';
 
-export type CastMember = NonNullable<Awaited<ReturnType<typeof getCastMember>>>;
-export type CastMemberUpdated = Awaited<
-  ReturnType<typeof updateCastMember>
->['row'];
+export type CastMember = CastMemberRow;
+export type CastMemberUpdated = CastMemberUpdateResult['row'];
 
 const byId = (id: string) => `${BASE}/${encodeURIComponent(id)}`;
 

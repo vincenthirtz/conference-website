@@ -7,12 +7,12 @@
 
 import { adminRequest } from '@/utils/admin/adminHttp';
 import type { RegistrationField } from '@/utils/registrationFields';
-import type { getDemande } from './service/demandes';
+import type { DemandeDetail } from './model';
 
 const BASE = '/api/admin/demandes';
 const enc = encodeURIComponent;
 
-export type DemandeDetail = Awaited<ReturnType<typeof getDemande>>;
+export type { DemandeDetail };
 
 export type DemandeStatusUpdate = {
   ids: string[];
