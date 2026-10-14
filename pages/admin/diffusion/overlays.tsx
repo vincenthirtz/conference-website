@@ -63,6 +63,16 @@ import { useOverlayPresence } from '@/hooks/useOverlayPresence';
 const TcgOverlaySection = lazyPanel(
   () => import('@/components/admin/tcg/TcgOverlaySection')
 );
+// Santé du drop TCG, dans l'onglet « Récompenses » : le drop EST une
+// récompense de points de chaîne. Elle lit par le cache de requêtes, chargé
+// avec elle pour ne pas peser sur le premier chargement de la page.
+const TcgDropHealthCard = lazyPanel(async () => {
+  const [{ default: Card }, { withAdminQuery }] = await Promise.all([
+    import('@/components/admin/broadcast/TcgDropHealthCard'),
+    import('@/features/admin/_shared/query'),
+  ]);
+  return { default: withAdminQuery(Card) };
+});
 
 type TournamentOption = { id: string; name: string; slug: string | null };
 
@@ -285,7 +295,10 @@ export default function DiffusionOverlaysPage({
               <StreamAlertsPanel />
             </section>
           ) : active === 'rewards' && canManageRewards ? (
-            <TwitchRewardsPanel />
+            <>
+              <TcgDropHealthCard />
+              <TwitchRewardsPanel />
+            </>
           ) : active === 'mvp-public' && canUseMatchOverlays ? (
             <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
               <PublicMvpOverlayPanel

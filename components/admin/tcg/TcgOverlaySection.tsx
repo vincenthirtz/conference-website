@@ -1,16 +1,15 @@
 // components/admin/tcg/TcgOverlaySection.tsx
 //
-// TOUT L'OVERLAY TCG, EN UN SEUL ENDROIT — Diffusion › Overlays :
-//   * la santé du drop Twitch (`TcgDropHealthCard`) : récompense de points de
-//     chaîne + souscription EventSub, ce qui fait TOMBER les cartes ;
-//   * l'habillage des annonces (`TcgOverlayThemeCard`).
-// Les annonces s'affichent dans la source Régie (`/overlay/regie`), servies
-// par espace : plus de lien à jeton à émettre ni à coller. Ces réglages
-// étaient éclatés entre « Twitch & interactions » et l'onglet Économie du TCG.
+// L'OVERLAY TCG — Diffusion › Overlays : l'habillage des annonces
+// (`TcgOverlayThemeCard`). Les annonces s'affichent dans la source Régie
+// (`/overlay/regie`), servies par espace : plus de lien à jeton à émettre ni à
+// coller.
 //
-// Droit `manage_tcg` pour l'habillage (route /api/admin/tcg/overlay-theme) ;
-// la carte du drop exige en plus `manage_broadcast` et se masque seule sans
-// lui.
+// La santé du drop Twitch (`TcgDropHealthCard`) n'est plus ici : elle vit
+// dans l'onglet « Récompenses » de la même page, avec les points de chaîne
+// dont le drop fait partie.
+//
+// Droit `manage_tcg` pour l'habillage (route /api/admin/tcg/overlay-theme).
 
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import { lazyPanel } from '@/components/admin/lazyPanel';
@@ -18,9 +17,6 @@ import { withAdminQuery } from '@/features/admin/_shared/query';
 import nsAdminTcgOverview from '@/lib/i18n/locales/admin-fr/adminTcgOverview';
 
 // Lit par le cache de requêtes : d'où `withAdminQuery` sur la section.
-const TcgDropHealthCard = lazyPanel(
-  () => import('@/components/admin/broadcast/TcgDropHealthCard')
-);
 const TcgOverlayThemeCard = lazyPanel(
   () => import('@/components/admin/tcg/TcgOverlayThemeCard')
 );
@@ -29,7 +25,6 @@ function TcgOverlaySection() {
   const t = useAdminT(nsAdminTcgOverview);
   return (
     <>
-      <TcgDropHealthCard />
       <TcgOverlayThemeCard
         labels={{
           heading: t.themeHeading,

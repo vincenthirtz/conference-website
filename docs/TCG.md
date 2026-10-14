@@ -759,7 +759,7 @@ auquel cas le tirage est ordinaire.
   table ne connaît pas la récompense qu'elles citent (déploiement avant
   migration). À supprimer au lot 10.
 - Écran : bloc « Récompenses à carte garantie » de la carte « Drops TCG »
-  (Diffusion › Overlays, onglet TCG) : la liste en service (carte, coût,
+  (Diffusion › Overlays, onglet Récompenses) : la liste en service (carte, coût,
   publiée ou retirée), un formulaire qui ne propose que les cartes pas encore
   liées, et « Retirer » — qui supprime l'abonnement EventSub de cette seule
   récompense, la **désactive** sur Twitch (pas supprimée : réactivable depuis

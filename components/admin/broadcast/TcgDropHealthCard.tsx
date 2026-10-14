@@ -28,9 +28,9 @@
 // connectée, dix-huit comptes rattachés, zéro crédit versé. Un écran qui montre
 // une panne sans offrir le geste qui la répare n'est qu'à moitié un écran.
 //
-// VIT DANS DIFFUSION › OVERLAYS (via `TcgOverlaySection`), avec le lien et
-// l'habillage de l'overlay TCG : tout ce qui fait tomber puis afficher un drop
-// se règle au même endroit.
+// VIT DANS DIFFUSION › OVERLAYS, ONGLET « RÉCOMPENSES », au-dessus des points
+// de chaîne : le drop est une récompense de points de chaîne, et ses
+// récompenses se modifient dans le panneau juste en dessous.
 //
 // SE MASQUE PLUTÔT QUE D'AFFICHER UN 403. La route exige `manage_broadcast`,
 // réservée à l'admin, alors que cette console est ouverte au rôle `caster`.

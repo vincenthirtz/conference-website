@@ -77,8 +77,11 @@ listes déplacées (casteuses) redirigent.
    présélectionne, c'est le lien que garde l'onglet Outils d'un tournoi ;
 2. les **réglages de la boîte d'alertes**, pour l'espace de l'association doté
    de la capacité de régie ET avec `manage_broadcast` ;
-3. l'**overlay TCG** (jeton + habillage, `TcgOverlaySection`) avec `manage_tcg` ;
-4. des renvois vers ce qui se règle sur son propre écran (Twitch &
+3. l'**overlay TCG** (habillage, `TcgOverlaySection`) avec `manage_tcg` ;
+4. l'onglet **Récompenses** (`manage_broadcast`) : la carte « Drops TCG »
+   (`TcgDropHealthCard` — souscriptions EventSub, récompenses à carte
+   garantie) au-dessus des points de chaîne (`TwitchRewardsPanel`) ;
+5. des renvois vers ce qui se règle sur son propre écran (Twitch &
    interactions, scènes caster, TCG pour qui n'a pas le droit ci-dessus).
 
 La capacité « overlays de régie » (palier `matchOverlays`, espace de
