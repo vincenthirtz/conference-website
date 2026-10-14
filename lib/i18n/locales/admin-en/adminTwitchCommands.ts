@@ -80,6 +80,12 @@ export default {
   rewardManageOnTwitch: 'Manage on Twitch ↗',
   rewardStatePaused: 'Paused',
   rewardStateSkipQueue: 'Skips the queue',
+  /** Interpolates {max}. */
+  rewardStateMaxPerStream: '{max} per viewer per stream',
+  rewardMaxPerStreamLabel: 'Max per viewer per stream',
+  rewardMaxPerStreamPlaceholder: 'Unlimited',
+  rewardMaxPerStreamInvalid:
+    'The per-viewer-per-stream limit must be a whole number ≥ 1 (empty = unlimited).',
   rewardPause: 'Pause',
   rewardResume: 'Resume',
   rewardPausedSuccess: 'Reward paused.',

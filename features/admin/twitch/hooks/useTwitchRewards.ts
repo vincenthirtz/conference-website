@@ -41,6 +41,11 @@ export type Reward = {
   is_paused?: boolean;
   /** Échanges FULFILLED d'office : le site ne peut ni les honorer ni les rembourser. */
   should_redemptions_skip_request_queue?: boolean;
+  /** Limite d'échanges par personne et par live, telle que Helix la rend. */
+  max_per_user_per_stream_setting?: {
+    is_enabled?: boolean;
+    max_per_user_per_stream?: number;
+  };
   prompt?: string;
   background_color?: string;
   /**
@@ -64,7 +69,11 @@ export function useTwitchRewards() {
 
   const draftErrorToast = (error: RewardDraftError) =>
     addToast(
-      error === 'titleRequired' ? t.rewardTitleRequired : t.rewardCostInvalid,
+      error === 'titleRequired'
+        ? t.rewardTitleRequired
+        : error === 'maxPerStreamInvalid'
+          ? t.rewardMaxPerStreamInvalid
+          : t.rewardCostInvalid,
       'error'
     );
 

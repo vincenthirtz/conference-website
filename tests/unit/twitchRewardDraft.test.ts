@@ -63,6 +63,7 @@ describe('rewardEditPatch', () => {
     cost: '10',
     prompt: '',
     skipQueue: false,
+    maxPerStream: '',
   };
 
   it('envoie toujours le message, vide compris (pour l’effacer)', () => {
@@ -73,9 +74,36 @@ describe('rewardEditPatch', () => {
         cost: 10,
         prompt: '',
         should_redemptions_skip_request_queue: false,
+        is_max_per_user_per_stream_enabled: false,
       },
     });
   });
+
+  it('limite par live : vide = coupée, un entier = activée avec sa valeur', () => {
+    const off = rewardEditPatch(edit);
+    expect(off.ok && off.value).toMatchObject({
+      is_max_per_user_per_stream_enabled: false,
+    });
+    expect(off.ok && 'max_per_user_per_stream' in off.value).toBe(false);
+
+    expect(rewardEditPatch({ ...edit, maxPerStream: ' 1 ' })).toMatchObject({
+      ok: true,
+      value: {
+        is_max_per_user_per_stream_enabled: true,
+        max_per_user_per_stream: 1,
+      },
+    });
+  });
+
+  it.each(['0', '-1', '1.5', 'abc'])(
+    'refuse la limite par live %j',
+    (maxPerStream) => {
+      expect(rewardEditPatch({ ...edit, maxPerStream })).toEqual({
+        ok: false,
+        error: 'maxPerStreamInvalid',
+      });
+    }
+  );
 
   it('envoie la file d’attente, `false` compris : c’est ce qui rend les échanges du drop TCG remboursables', () => {
     const off = rewardEditPatch(edit);

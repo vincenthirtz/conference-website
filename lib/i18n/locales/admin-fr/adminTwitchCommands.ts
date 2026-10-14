@@ -80,6 +80,12 @@ export default adminNs('adminTwitchCommands', {
   rewardManageOnTwitch: 'Gérer sur Twitch ↗',
   rewardStatePaused: 'En pause',
   rewardStateSkipQueue: 'Sans file d’attente',
+  /** Interpole {max}. */
+  rewardStateMaxPerStream: '{max} par personne et par live',
+  rewardMaxPerStreamLabel: 'Max. par personne et par live',
+  rewardMaxPerStreamPlaceholder: 'Illimité',
+  rewardMaxPerStreamInvalid:
+    'La limite par personne et par live doit être un entier ≥ 1 (vide = illimité).',
   rewardPause: 'Mettre en pause',
   rewardResume: 'Reprendre',
   rewardPausedSuccess: 'Récompense mise en pause.',

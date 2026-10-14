@@ -12,7 +12,7 @@
 // Contrat (inchangé) :
 //  - GET    /api/admin/twitch/channel-points/rewards → { rewards }  ⚠ PAS { data }
 //  - POST   /api/admin/twitch/channel-points/rewards body { title, cost, prompt?, is_user_input_required?, background_color?, should_redemptions_skip_request_queue? }
-//  - PATCH  /api/admin/twitch/channel-points/rewards/{id} body { is_enabled?, is_paused?, title?, cost?, prompt?, should_redemptions_skip_request_queue? }
+//  - PATCH  /api/admin/twitch/channel-points/rewards/{id} body { is_enabled?, is_paused?, title?, cost?, prompt?, should_redemptions_skip_request_queue?, is_max_per_user_per_stream_enabled?, max_per_user_per_stream? }
 //  - DELETE /api/admin/twitch/channel-points/rewards/{id}
 //  - GET    /api/admin/twitch/channel-points/redemptions?reward_id=&status=UNFULFILLED → { redemptions }  ⚠ PAS { data }
 //  - PATCH  /api/admin/twitch/channel-points/redemptions body { reward_id, redemption_ids, status }
@@ -64,7 +64,7 @@ export default function TwitchRewardsPanel() {
   const [draft, setDraft] = useState<RewardDraft>(EMPTY_REWARD_DRAFT);
   const setField = <K extends keyof RewardDraft>(k: K, v: RewardDraft[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
-  // Modification en ligne : titre, coût, message, file d'attente.
+  // Modification en ligne : titre, coût, message, file d'attente, limite par live.
   const [editing, setEditing] = useState<RewardEdit | null>(null);
 
   if (!connected) return null;
@@ -197,6 +197,12 @@ export default function TwitchRewardsPanel() {
                 const paused = r.is_paused ?? false;
                 const skipsQueue =
                   r.should_redemptions_skip_request_queue ?? false;
+                // `null` = pas de limite par personne et par live.
+                const maxPerStream = r.max_per_user_per_stream_setting
+                  ?.is_enabled
+                  ? (r.max_per_user_per_stream_setting
+                      .max_per_user_per_stream ?? null)
+                  : null;
                 const toggling = isBusy(`reward-toggle:${r.id}`);
                 const deleting = isBusy(`reward-delete:${r.id}`);
                 const pausing = isBusy(`reward-pause:${r.id}`);
@@ -230,6 +236,13 @@ export default function TwitchRewardsPanel() {
                       {skipsQueue && (
                         <Chip tone="neutral">{t.rewardStateSkipQueue}</Chip>
                       )}
+                      {maxPerStream !== null && (
+                        <Chip tone="neutral">
+                          {format(t.rewardStateMaxPerStream, {
+                            max: maxPerStream,
+                          })}
+                        </Chip>
+                      )}
                       {r.manageable ? (
                         <>
                           <AdminButton
@@ -245,6 +258,10 @@ export default function TwitchRewardsPanel() {
                                       cost: String(r.cost ?? ''),
                                       prompt: r.prompt ?? '',
                                       skipQueue: skipsQueue,
+                                      maxPerStream:
+                                        maxPerStream === null
+                                          ? ''
+                                          : String(maxPerStream),
                                     }
                               )
                             }
@@ -346,6 +363,25 @@ export default function TwitchRewardsPanel() {
                             maxLength={MAX_REWARD_PROMPT}
                             onChange={(e) =>
                               setEditing({ ...editing, prompt: e.target.value })
+                            }
+                            className={R.rubanInput}
+                          />
+                        </label>
+                        <label className="w-40">
+                          <span className={R.rubanLabel}>
+                            {t.rewardMaxPerStreamLabel}
+                          </span>
+                          <input
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={editing.maxPerStream}
+                            placeholder={t.rewardMaxPerStreamPlaceholder}
+                            onChange={(e) =>
+                              setEditing({
+                                ...editing,
+                                maxPerStream: e.target.value,
+                              })
                             }
                             className={R.rubanInput}
                           />
