@@ -1,12 +1,18 @@
 // features/admin/tcg/hooks/useTcgAdmin.ts — lectures des panneaux de
 // /admin/tcg hors files de modération (vue d'ensemble, catalogue,
-// engagement, association, cadeau de bienvenue, rattrapage Battle.net).
+// engagement, historique des gains, association, cadeau de bienvenue,
+// rattrapage Battle.net).
 //
 // Pas de relecture au retour sur l'onglet : ces panneaux se relisaient à
 // l'ouverture et après chaque geste (inchangé). Le jeton d'overlay n'est PAS
 // ici : il reste hors cache (cf. client.ts).
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { adminKey } from '../../_shared/query';
 import { tcgAdminClient as client } from '../client';
@@ -18,6 +24,7 @@ export const tcgAdminKeys = {
   catalogue: (userId: string | null) =>
     adminKey('tcg', 'catalogue', userId ?? ''),
   engagement: (weeks: number) => adminKey('tcg', 'engagement', weeks),
+  packHistory: (source: string) => adminKey('tcg', 'pack-history', source),
   association: adminKey('tcg', 'association'),
   welcomeGift: adminKey('tcg', 'welcome-gift'),
   battlenetBackfill: adminKey('tcg', 'battlenet-backfill'),
@@ -44,6 +51,34 @@ export function useTcgEngagement<T>(weeks: number) {
   return useQuery({
     queryKey: tcgAdminKeys.engagement(weeks),
     queryFn: () => client.engagement<T>(weeks),
+    ...NO_FOCUS,
+  });
+}
+
+/**
+ * Journal des paquets distribués, paginé par curseur (« Charger plus »).
+ * `source` vide = toutes les voies. Le type de page est celui du panneau.
+ *
+ * Les pages du filtre précédent restent servies (`isPlaceholderData`)
+ * pendant qu'un autre se lit : le panneau en garde les comptes par source,
+ * qui ne dépendent pas du filtre, et masque la liste.
+ */
+export function useTcgPackHistory<P extends { nextCursor: string | null }>(
+  source: string,
+  pageSize: number
+) {
+  return useInfiniteQuery({
+    queryKey: tcgAdminKeys.packHistory(source),
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) => {
+      const params = new URLSearchParams();
+      params.set('limit', String(pageSize));
+      if (source) params.set('source', source);
+      if (pageParam) params.set('cursor', pageParam);
+      return client.packHistory<P>(params.toString());
+    },
+    getNextPageParam: (last) => last.nextCursor ?? null,
+    placeholderData: keepPreviousData,
     ...NO_FOCUS,
   });
 }

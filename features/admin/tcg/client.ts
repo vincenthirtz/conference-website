@@ -78,6 +78,9 @@ export const tcgAdminClient = {
     ),
   engagement: <T>(weeks: number) =>
     adminRequest<T>(`${TCG}/engagement?weeks=${weeks}`),
+  /** Journal des paquets distribués (`source`, `cursor`, `limit`). */
+  packHistory: <T>(params: string) =>
+    adminRequest<T>(`${TCG}/pack-history?${params}`),
   association: <T>() => adminRequest<T>(`${TCG}/association`),
   associationWrite: ({ method, json }: TcgAssociationWrite) =>
     adminRequest(`${TCG}/association`, { method, json, idempotent: true }),

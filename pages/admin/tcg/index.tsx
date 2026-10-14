@@ -28,7 +28,8 @@ import Tabs, {
   tabPanelId,
   tabButtonId,
 } from '@/components/admin/Tabs';
-import type { StaffProps } from '@/types/admin';
+import type { StaffProps, StaffRole } from '@/types/admin';
+import { canAccess } from '@/utils/admin/adminAccess';
 import { lazyPanel } from '@/components/admin/lazyPanel';
 import { withAdminQuery } from '@/features/admin/_shared/query';
 import nsAdminTcgPage from '@/lib/i18n/locales/admin-fr/adminTcgPage';
@@ -57,6 +58,9 @@ const TcgCataloguePanel = lazyPanel(
 const TcgEngagementPanel = lazyPanel(
   () => import('@/components/admin/tcg/TcgEngagementPanel')
 );
+const TcgPackHistoryPanel = lazyPanel(
+  () => import('@/components/admin/tcg/TcgPackHistoryPanel')
+);
 const TcgWelcomeGiftCard = lazyPanel(
   () => import('@/components/admin/tcg/TcgWelcomeGiftCard')
 );
@@ -67,8 +71,15 @@ const TcgBattlenetBackfillCard = lazyPanel(
   () => import('@/components/admin/tcg/TcgBattlenetBackfillCard')
 );
 
-function AdminTcgPage(_props: StaffProps) {
+function AdminTcgPage({ staff }: StaffProps) {
   const t = useAdminT(nsAdminTcgPage);
+  // `manage_tcg` s'accorde à l'unité, sans l'arbitrage : un lien vers la fiche
+  // d'un match mènerait ces personnes en 403.
+  const canOpenMatch = canAccess(
+    { permission: 'arbitrate_matches' },
+    staff.role as StaffRole,
+    staff.permissions
+  );
   const tTcgOverview = useAdminT(nsAdminTcgOverview);
   const tTcgPhotos = useAdminT(nsAdminTcgPhotos);
   const tTcgFanart = useAdminT(nsAdminTcgFanart);
@@ -83,6 +94,7 @@ function AdminTcgPage(_props: StaffProps) {
     { id: 'association', label: tTcgAssociation.tabLabel },
     { id: 'vue', label: t.tabCatalogue },
     { id: 'dormants', label: t.tabEngagement },
+    { id: 'historique', label: t.tabHistory },
   ];
   const [active, setActive] = useQueryTab(tabs);
 
@@ -109,7 +121,9 @@ function AdminTcgPage(_props: StaffProps) {
           id={tabPanelId(ID_BASE, active)}
           aria-labelledby={tabButtonId(ID_BASE, active)}
         >
-          {active === 'dormants' ? (
+          {active === 'historique' ? (
+            <TcgPackHistoryPanel canOpenMatch={canOpenMatch} />
+          ) : active === 'dormants' ? (
             <TcgEngagementPanel />
           ) : active === 'vue' ? (
             <TcgCataloguePanel />
