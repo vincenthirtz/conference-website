@@ -6,12 +6,14 @@
 // Pure — aucun DOM, aucun réseau, `now` injecté. La source (`/overlay/alertes`)
 // ne fait qu'habiller ce que ce module décide, et l'API ne fait que lire.
 //
-// DEUX FLUX, UNE SEULE FILE. Les events Twitch viennent de
+// TROIS FLUX, UNE SEULE FILE. Les events Twitch viennent de
 // `stream_alert_events` (webhook EventSub), les dons de `helloasso_donations`
-// (webhook HelloAsso). Ils n'ont ni la même table ni le même espace
-// d'identifiants — d'où le préfixage (`tw:` / `don:`) : deux lignes portant le
-// même UUID dans deux tables ne doivent pas se faire passer l'une pour l'autre
-// dans le registre des alertes déjà vues.
+// (webhook HelloAsso), les annonces TCG du registre TCG (`tcgAlertsFromFeed`,
+// depuis le 2026-10-14 : un drop s'annonce DANS la boîte, avec son nœud, au
+// lieu d'un affichage à part). Ils n'ont ni la même table ni le même espace
+// d'identifiants — d'où le préfixage (`tw:` / `don:` / `tcg:`) : deux lignes
+// portant le même UUID dans deux tables ne doivent pas se faire passer l'une
+// pour l'autre dans le registre des alertes déjà vues.
 //
 // CE MODULE REPREND LA DISCIPLINE DE `donAlert.ts`, dont il généralise la file :
 // pas de rafale à l'ouverture de la source, pas de doublon, pas d'alerte
@@ -23,8 +25,10 @@ import { formatEuros } from '@/utils/overlay/donAlert';
 /* ── Les types d'alerte ────────────────────────────────────────────────── */
 
 /**
- * Dans l'ordre où l'éditeur les présente. `donation` est ici alors qu'il ne
- * vient pas de Twitch : pour la régie, c'est une alerte comme une autre.
+ * Dans l'ordre où l'éditeur les présente. `donation` et les deux types TCG
+ * sont ici alors qu'ils ne viennent pas de Twitch : pour la régie, ce sont des
+ * alertes comme les autres — `tcg_drop` une carte gagnée en points de chaîne,
+ * `tcg_win` un paquet gagné en match ou en scrim.
  */
 export const ALERT_KINDS = [
   'follow',
@@ -34,6 +38,8 @@ export const ALERT_KINDS = [
   'cheer',
   'raid',
   'donation',
+  'tcg_drop',
+  'tcg_win',
 ] as const;
 
 export type AlertKind = (typeof ALERT_KINDS)[number];
@@ -90,6 +96,9 @@ export const DEFAULT_ALERT_MESSAGES: Record<AlertKind, string> = {
   cheer: '{name} envoie {amount} !',
   raid: '{name} débarque avec {amount} !',
   donation: 'Merci pour ce don de {amount} !',
+  // Les phrases de l'ancien affichage TCG, reprises telles quelles.
+  tcg_drop: '{name} remporte une carte !',
+  tcg_win: '{name} gagne un paquet !',
 };
 
 /** Quand Twitch ne donne pas de nom (sub ou gift anonyme). */
@@ -250,6 +259,41 @@ export function mergeAlertSources(
     return d !== 0 ? d : b.id.localeCompare(a.id);
   });
   return merged;
+}
+
+/**
+ * Une annonce du registre TCG, telle que `utils/tcg/overlayFeed.ts` la sert.
+ * Redéclarée ici en structure, pas importée : ce module est pur et recopié
+ * côté site, il ne doit pas tirer le lecteur de base qui la produit.
+ */
+export type TcgFeedAlertInput = {
+  id: string;
+  /** `twitch_drop` | `match_win` | `scrim_win`. */
+  kind: string;
+  twitchLogin: string | null;
+  at: string;
+};
+
+/**
+ * Les annonces TCG, en alertes de la boîte.
+ *
+ * Un drop de points de chaîne devient `tcg_drop`, une victoire (match ou
+ * scrim) `tcg_win`. L'identifiant est préfixé `tcg:` — cf. l'en-tête : le
+ * registre des alertes déjà vues ne doit pas confondre deux tables. Le nom est
+ * le pseudo Twitch, ou personne (la phrase prend alors `ANONYMOUS_ACTOR`) :
+ * une victoire peut revenir à une joueuse sans compte Twitch rattaché.
+ */
+export function tcgAlertsFromFeed(
+  items: readonly TcgFeedAlertInput[]
+): StreamAlert[] {
+  return items.map((item) => ({
+    id: `tcg:${item.id}`,
+    kind: item.kind === 'twitch_drop' ? 'tcg_drop' : 'tcg_win',
+    actorName: item.twitchLogin ?? null,
+    amount: null,
+    tier: null,
+    createdAt: item.at,
+  }));
 }
 
 /* ── La file d'attente ─────────────────────────────────────────────────── */

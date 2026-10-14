@@ -641,6 +641,31 @@
           "deeplink_admin": "/admin/aide-tournoi#tournoi-bracket"
         },
         {
+          "name": "matchs",
+          "signature": "/matchs [jours:1-14]",
+          "role": "public",
+          "phase": "matchs",
+          "prereqs": ["Aucun"],
+          "endpoint": "GET /api/bot/v1/matches/upcoming",
+          "impact": {
+            "db": [],
+            "ui": ["/tournament/<slug>"]
+          },
+          "examples": [
+            {
+              "label": "Matchs de la semaine",
+              "payload": null,
+              "expected": "Embed des matchs programmés sur 7 jours, groupés par jour : heure de Paris, horodatages Discord, équipes, phase / tour, lien de stream."
+            },
+            {
+              "label": "Matchs des deux prochaines semaines",
+              "payload": { "jours": 14 },
+              "expected": "Même liste sur 14 jours ; message clair si rien n'est programmé."
+            }
+          ],
+          "deeplink_admin": "/admin/aide-tournoi#matchs"
+        },
+        {
           "name": "moi actions",
           "signature": "/moi actions  •  Bouton 💤 « Snooze 1h » (customId `actions:snooze:<actionKey>`)",
           "role": "player",
@@ -900,20 +925,20 @@
         },
         {
           "name": "classement",
-          "signature": "/classement [periode:all|month] [tournoi-id:<uuid>]",
+          "signature": "/classement",
           "role": "public",
           "phase": "cloture",
           "prereqs": ["Aucun"],
-          "endpoint": "GET /api/bot/v1/leaderboards/teams",
+          "endpoint": "GET /api/bot/v1/standings",
           "impact": {
             "db": [],
-            "ui": ["/classement"]
+            "ui": ["/ (bloc « Classement de la saison »)"]
           },
           "examples": [
             {
-              "label": "Classement global toutes périodes",
+              "label": "Classement de la saison en cours",
               "payload": null,
-              "expected": "Top 25 équipes par wins, embed Discord paginé."
+              "expected": "Embed Discord identique au bloc de la page d'accueil : rang, équipe, V–D, différence de maps, points (DNF pour une disqualifiée). Message clair s'il n'y a pas de tournoi ou pas encore de match joué."
             }
           ],
           "deeplink_admin": "/admin/aide-tournoi#classement"
