@@ -57,19 +57,44 @@ describe('rewardCreateBody', () => {
 });
 
 describe('rewardEditPatch', () => {
+  const edit = {
+    id: 'r1',
+    title: 'T',
+    cost: '10',
+    prompt: '',
+    skipQueue: false,
+  };
+
   it('envoie toujours le message, vide compris (pour l’effacer)', () => {
-    expect(
-      rewardEditPatch({ id: 'r1', title: ' T ', cost: '10', prompt: '   ' })
-    ).toEqual({ ok: true, value: { title: 'T', cost: 10, prompt: '' } });
+    expect(rewardEditPatch({ ...edit, title: ' T ', prompt: '   ' })).toEqual({
+      ok: true,
+      value: {
+        title: 'T',
+        cost: 10,
+        prompt: '',
+        should_redemptions_skip_request_queue: false,
+      },
+    });
+  });
+
+  it('envoie la file d’attente, `false` compris : c’est ce qui rend les échanges du drop TCG remboursables', () => {
+    const off = rewardEditPatch(edit);
+    expect(off.ok && off.value.should_redemptions_skip_request_queue).toBe(
+      false
+    );
+    const on = rewardEditPatch({ ...edit, skipQueue: true });
+    expect(on.ok && on.value.should_redemptions_skip_request_queue).toBe(true);
   });
 
   it('applique la même règle que la création', () => {
-    expect(
-      rewardEditPatch({ id: 'r1', title: '', cost: '10', prompt: '' })
-    ).toEqual({ ok: false, error: 'titleRequired' });
-    expect(
-      rewardEditPatch({ id: 'r1', title: 'T', cost: '0', prompt: '' })
-    ).toEqual({ ok: false, error: 'costInvalid' });
+    expect(rewardEditPatch({ ...edit, title: '' })).toEqual({
+      ok: false,
+      error: 'titleRequired',
+    });
+    expect(rewardEditPatch({ ...edit, cost: '0' })).toEqual({
+      ok: false,
+      error: 'costInvalid',
+    });
   });
 });
 

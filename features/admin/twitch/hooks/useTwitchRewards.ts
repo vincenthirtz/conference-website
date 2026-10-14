@@ -39,6 +39,8 @@ export type Reward = {
   cost?: number;
   is_enabled?: boolean;
   is_paused?: boolean;
+  /** Échanges FULFILLED d'office : le site ne peut ni les honorer ni les rembourser. */
+  should_redemptions_skip_request_queue?: boolean;
   prompt?: string;
   background_color?: string;
   /**

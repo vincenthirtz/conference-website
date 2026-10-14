@@ -12,7 +12,7 @@
 // Contrat (inchangé) :
 //  - GET    /api/admin/twitch/channel-points/rewards → { rewards }  ⚠ PAS { data }
 //  - POST   /api/admin/twitch/channel-points/rewards body { title, cost, prompt?, is_user_input_required?, background_color?, should_redemptions_skip_request_queue? }
-//  - PATCH  /api/admin/twitch/channel-points/rewards/{id} body { is_enabled? }
+//  - PATCH  /api/admin/twitch/channel-points/rewards/{id} body { is_enabled?, is_paused?, title?, cost?, prompt?, should_redemptions_skip_request_queue? }
 //  - DELETE /api/admin/twitch/channel-points/rewards/{id}
 //  - GET    /api/admin/twitch/channel-points/redemptions?reward_id=&status=UNFULFILLED → { redemptions }  ⚠ PAS { data }
 //  - PATCH  /api/admin/twitch/channel-points/redemptions body { reward_id, redemption_ids, status }
@@ -64,7 +64,7 @@ export default function TwitchRewardsPanel() {
   const [draft, setDraft] = useState<RewardDraft>(EMPTY_REWARD_DRAFT);
   const setField = <K extends keyof RewardDraft>(k: K, v: RewardDraft[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
-  // Modification en ligne : titre, coût, message — ce que Helix accepte.
+  // Modification en ligne : titre, coût, message, file d'attente.
   const [editing, setEditing] = useState<RewardEdit | null>(null);
 
   if (!connected) return null;
@@ -195,6 +195,8 @@ export default function TwitchRewardsPanel() {
               {rewards.map((r) => {
                 const enabled = r.is_enabled ?? false;
                 const paused = r.is_paused ?? false;
+                const skipsQueue =
+                  r.should_redemptions_skip_request_queue ?? false;
                 const toggling = isBusy(`reward-toggle:${r.id}`);
                 const deleting = isBusy(`reward-delete:${r.id}`);
                 const pausing = isBusy(`reward-pause:${r.id}`);
@@ -225,6 +227,9 @@ export default function TwitchRewardsPanel() {
                         {enabled ? t.rewardStateEnabled : t.rewardStateDisabled}
                       </Chip>
                       {paused && <Chip tone="warn">{t.rewardStatePaused}</Chip>}
+                      {skipsQueue && (
+                        <Chip tone="neutral">{t.rewardStateSkipQueue}</Chip>
+                      )}
                       {r.manageable ? (
                         <>
                           <AdminButton
@@ -239,6 +244,7 @@ export default function TwitchRewardsPanel() {
                                       title: r.title,
                                       cost: String(r.cost ?? ''),
                                       prompt: r.prompt ?? '',
+                                      skipQueue: skipsQueue,
                                     }
                               )
                             }
@@ -344,6 +350,13 @@ export default function TwitchRewardsPanel() {
                             className={R.rubanInput}
                           />
                         </label>
+                        <Toggle
+                          label={t.rewardSkipQueue}
+                          checked={editing.skipQueue}
+                          onChange={(v) =>
+                            setEditing({ ...editing, skipQueue: v })
+                          }
+                        />
                         <AdminButton
                           variant="secondary"
                           size="sm"

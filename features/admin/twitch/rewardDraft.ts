@@ -38,12 +38,18 @@ export type RewardCreateBody = {
   background_color?: string;
 };
 
-/** Modification en ligne : titre, coût, message — ce que Helix accepte. */
+/** Modification en ligne : titre, coût, message, file d'attente — ce que Helix accepte. */
 export type RewardEdit = {
   id: string;
   title: string;
   cost: string;
   prompt: string;
+  /**
+   * Sauter la file d'attente. Modifiable après coup parce qu'une récompense
+   * du drop TCG DOIT garder sa file : sautée, l'échange est FULFILLED d'office
+   * et Twitch refuse de l'annuler — le site ne peut plus rembourser.
+   */
+  skipQueue: boolean;
 };
 
 export type RewardDraftError = 'titleRequired' | 'costInvalid';
@@ -81,11 +87,24 @@ export function rewardCreateBody(
   return { ok: true, value: body };
 }
 
-/** Corps du PATCH : le message est toujours envoyé (vide = l'effacer). */
-export function rewardEditPatch(
-  edit: RewardEdit
-): Checked<{ title: string; cost: number; prompt: string }> {
+/**
+ * Corps du PATCH : le message est toujours envoyé (vide = l'effacer), la file
+ * d'attente aussi (`false` est une valeur, pas une absence).
+ */
+export function rewardEditPatch(edit: RewardEdit): Checked<{
+  title: string;
+  cost: number;
+  prompt: string;
+  should_redemptions_skip_request_queue: boolean;
+}> {
   const base = checkTitleAndCost(edit.title, edit.cost);
   if (!base.ok) return base;
-  return { ok: true, value: { ...base.value, prompt: edit.prompt.trim() } };
+  return {
+    ok: true,
+    value: {
+      ...base.value,
+      prompt: edit.prompt.trim(),
+      should_redemptions_skip_request_queue: edit.skipQueue,
+    },
+  };
 }

@@ -79,6 +79,7 @@ export default {
   rewardOriginTwitch: 'Created on Twitch',
   rewardManageOnTwitch: 'Manage on Twitch ↗',
   rewardStatePaused: 'Paused',
+  rewardStateSkipQueue: 'Skips the queue',
   rewardPause: 'Pause',
   rewardResume: 'Resume',
   rewardPausedSuccess: 'Reward paused.',

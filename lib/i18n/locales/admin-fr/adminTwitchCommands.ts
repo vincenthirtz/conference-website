@@ -79,6 +79,7 @@ export default adminNs('adminTwitchCommands', {
   rewardOriginTwitch: 'Créée sur Twitch',
   rewardManageOnTwitch: 'Gérer sur Twitch ↗',
   rewardStatePaused: 'En pause',
+  rewardStateSkipQueue: 'Sans file d’attente',
   rewardPause: 'Mettre en pause',
   rewardResume: 'Reprendre',
   rewardPausedSuccess: 'Récompense mise en pause.',
