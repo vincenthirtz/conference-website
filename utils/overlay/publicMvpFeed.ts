@@ -20,7 +20,11 @@
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { listMvpCandidates } from '@/utils/mvp/service';
-import { isPublicPollOpen, readPublicVotes } from '@/utils/mvp/publicVote';
+import {
+  isPublicPollOpen,
+  publicPollDeadline,
+  readPublicVotes,
+} from '@/utils/mvp/publicVote';
 import { MIN_VOTES_FOR_AWARD, tallySource } from '@/utils/mvp/awards';
 import { buildDemoPoll } from './publicMvpDemo';
 import { withoutBattleTagId } from '@/utils/mvp/publicLabel';
@@ -120,7 +124,7 @@ export async function readPublicMvpFeed(
     supabaseAdmin
       .from('match_public_mvp_polls')
       .select(
-        'match_id, closes_at, closed_at, candidate_member_ids, winner_member_id'
+        'match_id, opened_at, closes_at, closed_at, candidate_member_ids, winner_member_id'
       )
       .eq('tenant_id', tenantId)
       .or(`closed_at.is.null,closed_at.gte.${depuis}`)
@@ -141,26 +145,29 @@ export async function readPublicMvpFeed(
 
   // Un scrutin OUVERT prime sur un résultat rémanent : si la régie enchaîne
   // deux matchs, c'est le vote en cours qui doit être à l'écran.
-  // Sans échéance (`closes_at` vide) : ouvert jusqu'à la clôture manuelle.
-  const ouvert = (polls ?? []).find((p) =>
-    isPublicPollOpen(
-      {
-        closes_at: (p.closes_at as string | null) ?? null,
-        closed_at: (p.closed_at as string | null) ?? null,
-      },
-      nowMs
-    )
-  );
-  // Fenêtre passée SANS clôture (personne n'a cliqué « clôturer ») : on le
+  // Sans échéance (`closes_at` vide) : ouvert jusqu'à la clôture manuelle,
+  // dans la limite du plafond — d'où `opened_at`, sans lequel un vote oublié
+  // resterait « en cours » à l'écran du direct suivant.
+  const fenetre = (p: {
+    opened_at?: unknown;
+    closes_at?: unknown;
+    closed_at?: unknown;
+  }) => ({
+    opened_at: (p.opened_at as string | null) ?? null,
+    closes_at: (p.closes_at as string | null) ?? null,
+    closed_at: (p.closed_at as string | null) ?? null,
+  });
+  const ouvert = (polls ?? []).find((p) => isPublicPollOpen(fenetre(p), nowMs));
+  // Échéance passée SANS clôture (le cron passe toutes les 5 min) : on le
   // montre comme clos pendant RESULT_LINGER_MS après l'heure de fin, au lieu
   // de vider l'écran au moment où le public attend le résultat.
-  const echu = (polls ?? []).find(
-    (p) =>
-      !p.closed_at &&
-      p.closes_at &&
-      new Date(p.closes_at as string).getTime() <= nowMs &&
-      new Date(p.closes_at as string).getTime() > nowMs - RESULT_LINGER_MS
-  );
+  const echu = (polls ?? []).find((p) => {
+    if (p.closed_at) return false;
+    const deadline = publicPollDeadline(fenetre(p));
+    if (!deadline) return false;
+    const end = new Date(deadline).getTime();
+    return end <= nowMs && end > nowMs - RESULT_LINGER_MS;
+  });
   const recent = (polls ?? []).find((p) => p.closed_at);
   const poll = ouvert ?? recent ?? echu ?? null;
 

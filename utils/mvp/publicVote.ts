@@ -48,6 +48,22 @@ export const DEFAULT_PUBLIC_WINDOW_MINUTES = 10;
 const MIN_WINDOW_MINUTES = 1;
 const MAX_WINDOW_MINUTES = 360;
 
+/**
+ * PLAFOND d'un vote ouvert SANS LIMITE, en minutes après l'ouverture
+ * (décision de l'orga du 2026-10-14).
+ *
+ * « Sans limite » voulait dire « jusqu'à la fin du match », pas « pour
+ * toujours » : oubliés ouverts, des scrutins ont reçu des voix plus d'un jour
+ * après leur match, sont restés « en cours » dans l'overlay du direct suivant,
+ * et ont capté les `!mvp` du chat à la place du bon match. Quatre heures
+ * couvrent un BO5 et l'annonce du résultat ; la régie peut toujours clore
+ * avant. Passé ce délai le vote n'accepte plus de voix, et le cron
+ * (`/api/cron/mvp-public-close`) le dépouille comme un clic sur « Clore ».
+ */
+export const PUBLIC_POLL_MAX_OPEN_MINUTES = 240;
+
+const MAX_OPEN_MS = PUBLIC_POLL_MAX_OPEN_MINUTES * 60_000;
+
 export type PublicPollRow = {
   id: string;
   match_id: string;
@@ -68,14 +84,31 @@ const POLL_COLUMNS =
   'id, match_id, opened_at, closes_at, closed_at, candidate_member_ids, winner_member_id, winner_battle_tag, winner_votes, total_votes, settled_at, discord_channel_id, discord_message_id';
 
 /**
+ * L'ÉCHÉANCE EFFECTIVE d'un scrutin : celle posée à l'ouverture
+ * (`windowMinutes`), sinon l'ouverture + `PUBLIC_POLL_MAX_OPEN_MINUTES`.
+ * `null` quand le scrutin n'a ni l'une ni l'autre (jamais ouvert).
+ */
+export function publicPollDeadline(poll: {
+  opened_at?: string | null;
+  closes_at: string | null;
+}): string | null {
+  if (poll.closes_at) return poll.closes_at;
+  if (!poll.opened_at) return null;
+  return new Date(new Date(poll.opened_at).getTime() + MAX_OPEN_MS).toISOString();
+}
+
+/**
  * Le scrutin public reçoit-il des voix ?
  *
- * `closes_at` VIDE = SANS LIMITE : le vote reste ouvert jusqu'à la clôture
- * manuelle (décision de l'orga du 2026-10-08 — le match dure ce qu'il dure,
- * un compte à rebours fermait le vote avant la fin). Une échéance posée
- * explicitement (`windowMinutes`) reste honorée.
+ * `closes_at` VIDE = SANS LIMITE DÉCLARÉE : le vote reste ouvert jusqu'à la
+ * clôture manuelle (décision de l'orga du 2026-10-08 — le match dure ce qu'il
+ * dure, un compte à rebours fermait le vote avant la fin), DANS LA LIMITE du
+ * plafond `PUBLIC_POLL_MAX_OPEN_MINUTES` (décision du 2026-10-14). Une
+ * échéance posée explicitement (`windowMinutes`) reste honorée.
  *
- * LA SEULE DÉFINITION : routes, overlay, chat Twitch et bot la partagent.
+ * LA SEULE DÉFINITION : routes, overlay, chat Twitch, bot et cron la
+ * partagent. Un appelant qui ne passe pas `opened_at` n'a pas de plafond à
+ * appliquer : qu'il le lise.
  */
 export function isPublicPollOpen(
   poll: {
@@ -87,12 +120,31 @@ export function isPublicPollOpen(
 ): boolean {
   if (!poll || poll.closed_at) return false;
   if ('opened_at' in poll && !poll.opened_at) return false;
-  return !poll.closes_at || new Date(poll.closes_at).getTime() > nowMs;
+  const deadline = publicPollDeadline(poll);
+  return !deadline || new Date(deadline).getTime() > nowMs;
 }
 
-/** Filtre PostgREST équivalent (`.or(...)`) : sans échéance, ou pas atteinte. */
+/** Début de la fenêtre où un vote sans échéance compte encore (cf. plafond). */
+function capStartIso(nowIso: string): string {
+  return new Date(new Date(nowIso).getTime() - MAX_OPEN_MS).toISOString();
+}
+
+/**
+ * Filtre PostgREST équivalent (`.or(...)`), à combiner avec
+ * `.is('closed_at', null)` : échéance pas atteinte, ou sans échéance et
+ * ouvert depuis moins que le plafond.
+ */
 export function openPublicPollFilter(nowIso: string): string {
-  return `closes_at.is.null,closes_at.gt.${nowIso}`;
+  return `closes_at.gt.${nowIso},and(closes_at.is.null,opened_at.gt.${capStartIso(nowIso)})`;
+}
+
+/**
+ * Filtre PostgREST des scrutins À DÉPOUILLER (le contraire du précédent),
+ * à combiner avec `.is('closed_at', null)` : échéance atteinte, ou sans
+ * échéance et ouvert depuis plus que le plafond.
+ */
+export function duePublicPollFilter(nowIso: string): string {
+  return `closes_at.lte.${nowIso},and(closes_at.is.null,opened_at.lte.${capStartIso(nowIso)})`;
 }
 
 /** Lit le scrutin public d'un match (null si jamais ouvert). */
@@ -185,8 +237,8 @@ export async function openPublicVote(
   }
 
   const now = new Date();
-  // Sans durée demandée : AUCUNE échéance, clôture manuelle (cf.
-  // `isPublicPollOpen`).
+  // Sans durée demandée : AUCUNE échéance déclarée — clôture manuelle, ou au
+  // plafond par le cron (cf. `isPublicPollOpen`).
   const closesAt =
     opts.windowMinutes == null
       ? null
