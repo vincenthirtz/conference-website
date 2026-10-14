@@ -94,7 +94,9 @@ export function publicPollDeadline(poll: {
 }): string | null {
   if (poll.closes_at) return poll.closes_at;
   if (!poll.opened_at) return null;
-  return new Date(new Date(poll.opened_at).getTime() + MAX_OPEN_MS).toISOString();
+  return new Date(
+    new Date(poll.opened_at).getTime() + MAX_OPEN_MS
+  ).toISOString();
 }
 
 /**
