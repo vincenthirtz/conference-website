@@ -43,13 +43,13 @@ export default {
   tbd: 'TBD',
   headingPublic: 'Audience MVP votes',
   introPublic:
-    'The “audience favourite”: opened by the broadcast crew, with NO time limit until it is closed manually, Twitch viewers (!mvp N) and Discord supporters. Unlike the teams’ vote, both platforms are ADDED UP. “Leading” applies that rule: at least {min} votes in total, no tie.',
+    'The “audience favourite”: opened by the broadcast crew until it is closed manually (4 h at most, then it closes by itself), Twitch viewers (!mvp N) and Discord supporters. Unlike the teams’ vote, both platforms are ADDED UP. “Leading” applies that rule: at least {min} votes in total, no tie.',
   emptyPublic:
     'No audience vote has been opened for this tournament yet. It opens from the caster cockpit (/admin/caster › MVP poll), with a match linked.',
   sourceCombined: 'Twitch + Discord',
   openTitle: 'Start an audience vote',
   openHelp:
-    'For a match in progress, finished or upcoming — e.g. at the end of a broadcast, before the score is entered. The bot posts the vote in its Discord channel (supporters), and Twitch chat votes with !mvp <name>. The vote stays open until “Close now”.',
+    'For a match in progress, finished or upcoming — e.g. at the end of a broadcast, before the score is entered. The bot posts the vote in its Discord channel (supporters), and Twitch chat votes with !mvp <name>. The vote stays open until “Close now”, 4 h at most: after that, it closes and is settled by itself.',
   openNone:
     'No match (in progress, finished or upcoming) without an audience vote.',
   openStateOngoing: 'In progress',
@@ -58,11 +58,20 @@ export default {
   openCta: 'Start the vote',
   openDone: 'Audience vote started.',
   closeCta: 'Close now',
+  closeConfirmTitle: 'Close the audience vote?',
+  closeConfirmBody:
+    '{match} — {votes} votes. Settling names the audience MVP and pays her TCG coins. “Restart the vote” would reopen it, keeping the votes.',
   closeDone: 'Audience vote closed.',
+  twitchChatMissingScope:
+    'Vote started, but Twitch chat is not counting !mvp: the channel must be reconnected (chat permissions). Discord votes count.',
+  twitchChatNotConnected:
+    'Vote started, but no Twitch channel is connected: only Discord votes count.',
+  twitchChatFailed:
+    'Vote started, but the Twitch chat subscription failed: chat !mvp will not be counted. Discord votes count.',
   reopenCta: 'Restart the vote',
   reopenConfirmTitle: 'Restart the audience vote?',
   reopenConfirmBody:
-    'The vote reopens with no time limit, until you close it. Votes already cast are kept; the displayed result is cleared until the next close. If another player wins, she also receives her TCG coins.',
+    'The vote reopens until you close it, 4 h at most. Votes already cast are kept; the displayed result is cleared until the next close. If another player wins, she also receives her TCG coins.',
   reopenDone: 'Audience vote restarted.',
   actionError: 'The operation failed.',
 };

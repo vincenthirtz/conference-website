@@ -69,6 +69,14 @@
 [functions."dispute-sla-cron"]
   schedule = "*/5 * * * *"
 
+# Scheduled function: clôture automatique du vote MVP du public. Clôt et
+# dépouille les scrutins dont l'échéance est passée (`closes_at` atteinte, ou
+# ouverts sans limite depuis plus de 4 h) — même geste que « Clore » : élue,
+# pièces TCG, message Discord édité, chat Twitch libéré. Une requête quand il
+# n'y a rien à faire (index partiel `closed_at IS NULL`).
+[functions."mvp-public-close-cron"]
+  schedule = "*/5 * * * *"
+
 # Scheduled function: refresh the global LoL/Dota 2 hero pool (Lot 1 — MOBA
 # draft system). Hits Riot Data Dragon + OpenDota once per day and upserts
 # into public.game_heroes. Off-peak UTC slot so upstream APIs are quiet and

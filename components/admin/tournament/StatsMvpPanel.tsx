@@ -4,8 +4,9 @@
 // GET /api/admin/tournament/[id]/mvp-votes (vote des équipes, lecture seule) ou
 // /mvp-public-votes (vote du public, Twitch + Discord additionnés).
 //
-// Le vote du PUBLIC se pilote aussi d'ici : le lancer à la main (SANS limite
-// de temps depuis le 2026-10-08), puis le clore à la main — pour un match sans régie, où le
+// Le vote du PUBLIC se pilote aussi d'ici : le lancer à la main (sans durée
+// depuis le 2026-10-08 ; 4 h au plus depuis le 2026-10-14, le cron
+// `mvp-public-close` le clôt ensuite), puis le clore à la main — pour un match sans régie, où le
 // cockpit caster n'est pas ouvert. Le site prévient le bot, qui poste le vote
 // dans son salon Discord (POST /api/admin/matches/[matchId]/mvp-public).
 //
@@ -90,6 +91,30 @@ function stateLabel(t: Dict, s: MvpPollState): string {
 /** Quel vote le panneau suit : celui des équipes, ou celui du public. */
 export type StatsMvpKind = 'teams' | 'public';
 
+/**
+ * Réponse d'une ouverture : `twitchChat` dit si le chat Twitch compte VRAIMENT
+ * les `!mvp` (abonnement EventSub pris). Absent d'une API plus ancienne.
+ */
+type OpenResponse = {
+  twitchChat?:
+    | 'subscribed'
+    | 'not_configured'
+    | 'not_connected'
+    | 'missing_scope'
+    | 'error';
+};
+
+/** L'avertissement à afficher, ou `null` quand le chat vote (ou statut inconnu). */
+function twitchChatWarning(
+  t: Dict,
+  status: OpenResponse['twitchChat']
+): string | null {
+  if (!status || status === 'subscribed') return null;
+  if (status === 'missing_scope') return t.twitchChatMissingScope;
+  if (status === 'not_connected') return t.twitchChatNotConnected;
+  return t.twitchChatFailed;
+}
+
 function sourceLabel(t: Dict, s: string | null): string {
   if (s === 'combined') return t.sourceCombined;
   if (s === 'twitch') return t.sourceTwitch;
@@ -168,12 +193,18 @@ export default function StatsMvpPanel({
     async (matchId: string, body: { action: 'open' } | { action: 'close' }) => {
       setBusy(true);
       try {
-        await adminRequest(tournamentMatchUrls.mvpPublic(matchId), {
-          method: 'POST',
-          json: body,
-        });
+        const res = await adminRequest<OpenResponse>(
+          tournamentMatchUrls.mvpPublic(matchId),
+          { method: 'POST', json: body }
+        );
         addToast(body.action === 'open' ? t.openDone : t.closeDone, 'success');
-        if (body.action === 'open') setOpenMatchId('');
+        if (body.action === 'open') {
+          setOpenMatchId('');
+          // Le vote est ouvert, mais le chat Twitch compte-t-il ? Un échec
+          // d'abonnement passait inaperçu (0 voix Twitch le 2026-10-09).
+          const warning = twitchChatWarning(t, res?.twitchChat);
+          if (warning) addToast(warning, 'warning');
+        }
         await load(true);
       } catch (err) {
         addToast((err as AdminFetchError).message || t.actionError, 'error');
@@ -181,7 +212,31 @@ export default function StatsMvpPanel({
         setBusy(false);
       }
     },
-    [addToast, load, t.openDone, t.closeDone, t.actionError]
+    [addToast, load, t]
+  );
+
+  /**
+   * CLORE demande confirmation, en NOMMANT le match. Un clic suffisait : le
+   * 2026-10-07, un vote a été clos 8 s après son ouverture — sur une liste
+   * qui se réordonne quand un vote s'ouvre, le bouton visé n'était plus là.
+   * La clôture dépouille et paie l'élue : elle mérite la même confirmation
+   * que « Relancer ».
+   */
+  const closePublic = useCallback(
+    async (m: VoteBoardMatch) => {
+      const ok = await confirm({
+        title: t.closeConfirmTitle,
+        subtitle: format(t.closeConfirmBody, {
+          match: `${m.team1Name ?? t.tbd} ${t.vs} ${m.team2Name ?? t.tbd}`,
+          votes: m.totalVotes,
+        }),
+        variant: 'warning',
+        confirmLabel: t.closeCta,
+      });
+      if (!ok) return;
+      await runPublic(m.id, { action: 'close' });
+    },
+    [confirm, runPublic, t]
   );
 
   /**
@@ -192,7 +247,8 @@ export default function StatsMvpPanel({
    */
   const reopenPublic = useCallback(
     async (matchId: string) => {
-      // Sans durée : le vote reste ouvert jusqu'à « Clore maintenant ».
+      // Sans durée : le vote reste ouvert jusqu'à « Clore maintenant », 4 h
+      // au plus (clôture automatique ensuite).
       const ok = await confirm({
         title: t.reopenConfirmTitle,
         subtitle: t.reopenConfirmBody,
@@ -201,11 +257,13 @@ export default function StatsMvpPanel({
       if (!ok) return;
       setBusy(true);
       try {
-        await adminRequest(tournamentMatchUrls.mvpPublic(matchId), {
-          method: 'POST',
-          json: { action: 'open' },
-        });
+        const res = await adminRequest<OpenResponse>(
+          tournamentMatchUrls.mvpPublic(matchId),
+          { method: 'POST', json: { action: 'open' } }
+        );
         addToast(t.reopenDone, 'success');
+        const warning = twitchChatWarning(t, res?.twitchChat);
+        if (warning) addToast(warning, 'warning');
         await load(true);
       } catch (err) {
         addToast((err as AdminFetchError).message || t.actionError, 'error');
@@ -351,7 +409,7 @@ export default function StatsMvpPanel({
                 onClose={
                   kind === 'public' &&
                   (m.state === 'open' || m.state === 'expired')
-                    ? () => void runPublic(m.id, { action: 'close' })
+                    ? () => void closePublic(m)
                     : undefined
                 }
                 onReopen={
