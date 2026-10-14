@@ -77,7 +77,10 @@ listes déplacées (casteuses) redirigent.
    présélectionne, c'est le lien que garde l'onglet Outils d'un tournoi ;
 2. les **réglages de la boîte d'alertes**, pour l'espace de l'association doté
    de la capacité de régie ET avec `manage_broadcast` ;
-3. l'**overlay TCG** (habillage, `TcgOverlaySection`) avec `manage_tcg` ;
+3. plus d'habillage TCG à part (2026-10-14) : les drops et victoires TCG
+   s'annoncent dans la **boîte d'alertes** (types `tcg_drop` / `tcg_win`,
+   phrase et activation dans les réglages des alertes, nœud ou habillage de la
+   boîte) ; la source dédiée `/overlay/tcg/<jeton>` garde son affichage ;
 4. l'onglet **Récompenses** (`manage_broadcast`) : la carte « Drops TCG »
    (`TcgDropHealthCard` — souscriptions EventSub, récompenses à carte
    garantie) au-dessus des points de chaîne (`TwitchRewardsPanel`) ;

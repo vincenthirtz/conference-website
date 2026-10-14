@@ -1,7 +1,11 @@
 // features/admin/diffusion/ui/RegieLayoutPanel.tsx — Diffusion › Overlays ›
 // « Mise en page de la source Régie » : où la source OBS plein écran
-// `/overlay/regie` pose ses éléments (alertes, drops TCG, sondage MVP,
-// partenaires, QR).
+// `/overlay/regie` pose ses éléments (alertes, sondage MVP, partenaires, QR).
+//
+// PLUS D'ÉLÉMENT « DROPS TCG » (2026-10-14) : les annonces TCG passent par la
+// boîte d'alertes et prennent son emplacement. La clé `tcg` reste dans le
+// modèle (`REGIE_ELEMENTS`, API) pour lire sans casse les mises en page déjà
+// enregistrées ; elle n'est simplement plus proposée ici.
 //
 // L'APERÇU est la scène 1920×1080 réduite : chaque élément y est un bloc à sa
 // taille approximative, placé par la MÊME fonction que la source
@@ -54,6 +58,9 @@ const BOX: Record<RegieElement, { w: number; h: number; color: string }> = {
   partners: { w: 1500, h: 150, color: '#3b82f6' },
   don: { w: 420, h: 150, color: '#22c55e' },
 };
+
+/** Les éléments que la source affiche encore (cf. l'en-tête : sans `tcg`). */
+const SHOWN_ELEMENTS = REGIE_ELEMENTS.filter((el) => el !== 'tcg');
 
 const clamp = (n: number, min: number, max: number) =>
   Math.min(max, Math.max(min, n));
@@ -206,7 +213,7 @@ function RegieLayoutPanel({ canEdit }: { canEdit: boolean }) {
             onPointerUp={onPointerUp}
             onPointerLeave={onPointerUp}
           >
-            {REGIE_ELEMENTS.map((el) => {
+            {SHOWN_ELEMENTS.map((el) => {
               const s = layout[el];
               const box = BOX[el];
               const active = el === selected;
@@ -301,7 +308,7 @@ function RegieLayoutPanel({ canEdit }: { canEdit: boolean }) {
             aria-label={t.title}
             className="flex flex-wrap gap-1.5"
           >
-            {REGIE_ELEMENTS.map((el) => (
+            {SHOWN_ELEMENTS.map((el) => (
               <AdminButton
                 key={el}
                 type="button"

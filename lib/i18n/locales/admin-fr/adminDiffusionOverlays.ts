@@ -29,9 +29,5 @@ export default adminNs('adminDiffusionOverlays', {
     'Prédictions, points de chaîne et commandes Twitch : ce qui déclenche les annonces à l’écran.',
   sceneOverlays: 'Scènes caster',
   sceneOverlaysDesc: 'Tableau de score et habillage, une URL par scène.',
-  tcgOverlay: 'Annonces TCG',
-  tcgOverlayDesc: 'Les cartes tirées pendant le direct, par jeton privé.',
-  tcgOverlayNoAccess:
-    'Son jeton se règle avec le droit TCG : demandez-le à un·e admin.',
   open: 'Ouvrir',
 });

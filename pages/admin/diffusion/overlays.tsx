@@ -59,10 +59,6 @@ import Tabs, {
 import nsAdminDiffusionOverlays from '@/lib/i18n/locales/admin-fr/adminDiffusionOverlays';
 import { useOverlayPresence } from '@/hooks/useOverlayPresence';
 
-// Chargée à la demande : seul qui a `manage_tcg` la voit.
-const TcgOverlaySection = lazyPanel(
-  () => import('@/components/admin/tcg/TcgOverlaySection')
-);
 // Santé du drop TCG, dans l'onglet « Récompenses » : le drop EST une
 // récompense de points de chaîne. Elle lit par le cache de requêtes, chargé
 // avec elle pour ne pas peser sur le premier chargement de la page.
@@ -172,8 +168,6 @@ export default function DiffusionOverlaysPage({
     isDefaultTenant &&
     canUseMatchOverlays &&
     (staff?.permissions ?? []).includes('manage_broadcast');
-  // L'overlay TCG : le droit de ses routes (jeton, habillage).
-  const canTuneTcg = (staff?.permissions ?? []).includes('manage_tcg');
   // « Forcer le jour » de la source « Matchs du jour » écrit via une route
   // `manage_tournaments` : sans ce droit, le panneau ne reçoit pas le tournoi
   // à piloter et n'affiche que les URL, au lieu d'un bouton qui échoue.
@@ -216,19 +210,10 @@ export default function DiffusionOverlaysPage({
       title: t.sceneOverlays,
       desc: t.sceneOverlaysDesc,
     },
-    // Qui a `manage_tcg` règle l'overlay TCG juste au-dessus. Pour les
-    // autres, une carte qui dit que la source existe et QUI la règle — sans
-    // lien : /admin/tcg exige ce même droit, le lien menait à un 403.
-    ...(canTuneTcg
-      ? []
-      : [
-          {
-            href: null,
-            title: t.tcgOverlay,
-            desc: `${t.tcgOverlayDesc} ${t.tcgOverlayNoAccess}`,
-          },
-        ]),
-  ];
+    // Plus de carte « Overlay TCG » : depuis le 2026-10-14, ses annonces
+    // passent par la boîte d'alertes (onglet Alertes) et n'ont plus de
+    // réglage à part.
+  ] as Array<{ href: string | null; title: string; desc: string }>;
 
   return (
     <>
@@ -333,12 +318,6 @@ export default function DiffusionOverlaysPage({
                       'manage_broadcast'
                     )}
                   />
-                </section>
-              )}
-
-              {canTuneTcg && (
-                <section className="mt-6 space-y-6">
-                  <TcgOverlaySection />
                 </section>
               )}
 

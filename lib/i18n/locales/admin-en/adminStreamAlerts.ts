@@ -103,6 +103,8 @@ export default {
   kind_cheer: 'Bits',
   kind_raid: 'Raid',
   kind_donation: 'Donation',
+  kind_tcg_drop: 'TCG drop (channel points)',
+  kind_tcg_win: 'TCG pack won (match, scrim)',
 
   unit_resub: 'months',
   unit_gift: 'subs',

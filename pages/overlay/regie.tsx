@@ -17,11 +17,14 @@
 //   tenant       slug d'espace
 //   tcg          0 pour masquer les annonces de cartes TCG (drops, victoires)
 //
-// LE TCG VOYAGE AVEC LES ALERTES (`?with=tcg`), servi par espace comme elles :
-// pas de jeton à coller, pas d'appel de plus. Les annonces se posent dans
-// leur emplacement de la mise en page (élément « Drops TCG », par défaut celui
-// des alertes) ; le coin de l'habillage TCG ne vaut que pour la source dédiée. Toute autre valeur de
-// `tcg` qu'un `0` — un ancien jeton collé dans l'URL — est sans effet.
+// LE TCG S'ANNONCE DANS LA BOÎTE D'ALERTES (`?with=tcg`, depuis le
+// 2026-10-14) : un drop ou une victoire devient une alerte (`tcg_drop`,
+// `tcg_win` — `tcgAlertsFromFeed`), avec le nœud ou l'habillage de la boîte,
+// son son, sa phrase réglée dans « Réglages des alertes », et SA file — il ne
+// se superpose plus à un follow. Il n'a donc plus d'emplacement ni
+// d'habillage à lui ; `?alertes=0` le masque avec le reste de la boîte. Toute
+// autre valeur de `tcg` qu'un `0` — un ancien jeton collé dans l'URL — est
+// sans effet. La source dédiée `/overlay/tcg/<jeton>` garde son affichage.
 //
 // POURQUOI FUSIONNER. Quatre sources navigateur, c'est quatre fois le tour du
 // réseau, en boucle, pendant six heures. Le scrutin public interrogeait toutes
@@ -77,16 +80,13 @@ import {
   initialAlertQueue,
   ingestAlerts,
   shiftAlertQueue,
+  tcgAlertsFromFeed,
   type AlertRuleMap,
   type StreamAlert,
 } from '@/utils/overlay/alertBox';
 import type { OverlayAlertsResponse } from '@/utils/overlay/alertsOverlay';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
-import nsOverlayTcg from '@/lib/i18n/locales/fr/overlayTcg';
 import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
-import { useTcgAnnouncementQueue } from '@/hooks/useTcgOverlayFeed';
-import TcgAnnouncement from '@/components/overlay/TcgAnnouncement';
-import { DEFAULT_OVERLAY_THEME } from '@/utils/tcg/overlayThemeShape';
 
 /** Respiration entre deux alertes : elles ne doivent pas se coller. */
 const GAP_MS = 900;
@@ -136,14 +136,6 @@ export default function RegieOverlayPage() {
   const accent = parseAccent(firstParam(q.accent));
   const tenant = firstParam(q.tenant);
   const avecTcg = actif(firstParam(q.tcg));
-  const tTcg = useT(nsOverlayTcg);
-  const tcgLabels = {
-    dropEyebrow: tTcg.dropEyebrow,
-    winEyebrow: tTcg.winEyebrow,
-    dropLine: tTcg.dropLine,
-    winLine: tTcg.winLine,
-    anonymous: tTcg.anonymous,
-  };
 
   // UN SEUL APPEL pour les alertes, le TCG ET le scrutin. `with=mvp` et
   // `with=tcg` ne sont demandés que si l'élément est affiché : une scène qui ne
@@ -162,15 +154,6 @@ export default function RegieOverlayPage() {
   const { data, fatal } = useOverlayPoll<OverlayAlertsResponse>(url, {
     intervalMs: LIVE_OVERLAY_POLL_MS,
   });
-
-  // Annonces TCG : la file (déjà-vus, amorçage silencieux) est celle de la
-  // source dédiée, nourrie ici par la réponse commune.
-  const tcgQueue = useTcgAnnouncementQueue();
-  const { ingest: ingestTcg } = tcgQueue;
-  const tcgTheme = data?.tcg?.theme ?? DEFAULT_OVERLAY_THEME;
-  useEffect(() => {
-    if (data?.tcg) ingestTcg(data.tcg.items);
-  }, [data, ingestTcg]);
 
   // Les partenaires gardent leur route, cachée quinze minutes côté serveur :
   // la rafraîchir souvent ne servirait à rien.
@@ -201,14 +184,18 @@ export default function RegieOverlayPage() {
 
   useEffect(() => {
     if (!data || !avecAlertes) return;
+    // Les annonces TCG rejoignent la MÊME file : mêmes garde-fous (pas de
+    // rafale à l'ouverture, pas de doublon, pas d'annonce périmée) et une
+    // seule alerte à la fois à l'écran.
+    const tcg = avecTcg && data.tcg ? tcgAlertsFromFeed(data.tcg.items) : [];
     setQueue((state) =>
       ingestAlerts(
         state,
-        { alerts: data.alerts, serverTime: data.serverTime },
+        { alerts: [...data.alerts, ...tcg], serverTime: data.serverTime },
         rules
       )
     );
-  }, [data, rules, avecAlertes]);
+  }, [data, rules, avecAlertes, avecTcg]);
 
   useEffect(() => {
     if (current || queue.queue.length === 0) return undefined;
@@ -254,25 +241,6 @@ export default function RegieOverlayPage() {
         html,
         body {
           background: transparent !important;
-        }
-        @keyframes tcgOverlayIn {
-          from {
-            opacity: 0;
-            transform: translateX(-12px);
-          }
-          to {
-            opacity: 1;
-            transform: none;
-          }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          @keyframes tcgOverlayIn {
-            from,
-            to {
-              opacity: 1;
-              transform: none;
-            }
-          }
         }
       `}</style>
 
@@ -357,35 +325,6 @@ export default function RegieOverlayPage() {
                     <p className="text-sm text-white/70">{t.donBody}</p>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* Annonces TCG dans leur EMPLACEMENT de la mise en page (par
-                défaut celui des alertes). Rien à annoncer = rien à l'écran. */}
-            {avecTcg && layout.tcg.visible && (
-              <div
-                className="pointer-events-none"
-                style={slotStyle(layout.tcg, { globalScale: scale })}
-              >
-                <ul
-                  style={SLOT_CONTENT_STYLE}
-                  className={`flex flex-col gap-2 ${
-                    anchorParts(layout.tcg.anchor).h === 'l'
-                      ? 'items-start'
-                      : anchorParts(layout.tcg.anchor).h === 'r'
-                        ? 'items-end'
-                        : 'items-center'
-                  }`}
-                >
-                  {tcgQueue.visible.map((item) => (
-                    <TcgAnnouncement
-                      key={item.id}
-                      item={item}
-                      theme={tcgTheme}
-                      labels={tcgLabels}
-                    />
-                  ))}
-                </ul>
               </div>
             )}
 

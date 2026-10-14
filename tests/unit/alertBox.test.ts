@@ -32,6 +32,7 @@ import {
   renderAlertMessage,
   resolveRule,
   shiftAlertQueue,
+  tcgAlertsFromFeed,
   type AlertRuleMap,
   type StreamAlert,
 } from '@/utils/overlay/alertBox';
@@ -133,6 +134,83 @@ describe('mergeAlertSources', () => {
 });
 
 /* ── Les règles de la régie ────────────────────────────────────────────── */
+
+describe('tcgAlertsFromFeed — les annonces TCG entrent dans la boîte', () => {
+  it('un drop devient `tcg_drop`, une victoire (match ou scrim) `tcg_win`', () => {
+    const out = tcgAlertsFromFeed([
+      { id: 'a', kind: 'twitch_drop', twitchLogin: 'viewer1', at: NOW },
+      { id: 'b', kind: 'match_win', twitchLogin: null, at: NOW },
+      { id: 'c', kind: 'scrim_win', twitchLogin: 'joueuse', at: NOW },
+    ]);
+    expect(out.map((a) => a.kind)).toEqual(['tcg_drop', 'tcg_win', 'tcg_win']);
+    expect(out[0]).toEqual({
+      id: 'tcg:a',
+      kind: 'tcg_drop',
+      actorName: 'viewer1',
+      amount: null,
+      tier: null,
+      createdAt: NOW,
+    });
+  });
+
+  it('préfixe `tcg:` : un même UUID ailleurs ne se fait pas passer pour vu', () => {
+    const [tcg] = tcgAlertsFromFeed([
+      { id: 'x', kind: 'twitch_drop', twitchLogin: 'v', at: NOW },
+    ]);
+    const merged = mergeAlertSources(
+      [
+        {
+          id: 'x',
+          kind: 'follow',
+          actor_name: 'v',
+          amount: null,
+          tier: null,
+          created_at: NOW,
+        },
+      ],
+      []
+    );
+    expect(tcg.id).not.toBe(merged[0].id);
+  });
+
+  it('s’annonce avec la phrase de sa règle, ou le défaut, et le nom à défaut', () => {
+    const [drop, win] = tcgAlertsFromFeed([
+      { id: 'a', kind: 'twitch_drop', twitchLogin: 'viewer1', at: NOW },
+      { id: 'b', kind: 'match_win', twitchLogin: null, at: NOW },
+    ]);
+    expect(renderAlertMessage(drop, {})).toBe('viewer1 remporte une carte !');
+    expect(renderAlertMessage(win, {})).toBe(
+      `${ANONYMOUS_ACTOR} gagne un paquet !`
+    );
+    const rules: AlertRuleMap = {
+      tcg_drop: {
+        kind: 'tcg_drop',
+        enabled: true,
+        message: '🎴 {name} tire une carte',
+        minAmount: null,
+      },
+    };
+    expect(renderAlertMessage(drop, rules)).toBe('🎴 viewer1 tire une carte');
+  });
+
+  it('suit la file comme les autres : une règle éteinte le fait taire', () => {
+    const primed = ingestAlerts(initialAlertQueue(), feed([]));
+    const items = tcgAlertsFromFeed([
+      { id: 'a', kind: 'twitch_drop', twitchLogin: 'v', at: NOW },
+      { id: 'b', kind: 'match_win', twitchLogin: 'w', at: NOW },
+    ]);
+    const rules: AlertRuleMap = {
+      tcg_win: {
+        kind: 'tcg_win',
+        enabled: false,
+        message: null,
+        minAmount: null,
+      },
+    };
+    const next = ingestAlerts(primed, feed(items), rules);
+    expect(next.queue.map((a) => a.id)).toEqual(['tcg:a']);
+  });
+});
 
 describe('resolveRule / alertPassesRule', () => {
   it('une règle ABSENTE vaut « activé »', () => {

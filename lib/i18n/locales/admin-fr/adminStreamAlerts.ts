@@ -114,6 +114,10 @@ export default adminNs('adminStreamAlerts', {
   kind_cheer: 'Bits',
   kind_raid: 'Raid',
   kind_donation: 'Don',
+  // Annonces TCG (2026-10-14) : dans la boîte, avec son nœud. `{name}` = le
+  // pseudo Twitch.
+  kind_tcg_drop: 'Drop TCG (points de chaîne)',
+  kind_tcg_win: 'Paquet TCG gagné (match, scrim)',
 
   unit_resub: 'mois',
   unit_gift: 'abos',

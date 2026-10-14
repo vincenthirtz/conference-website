@@ -97,45 +97,8 @@ export default {
   unknownSubject: 'Unknown subject',
 
   overlayMovedNotice:
-    'The Twitch drop and the TCG overlay appearance are managed with the other broadcast sources.',
+    'The Twitch drop is managed in the Rewards tab, and its on-stream announcements in the alert box settings.',
   overlayMovedLink: 'Broadcast › Overlays',
-
-  themeHeading: 'Overlay appearance',
-  themeSubtitle:
-    'The preview below is the real OBS render, not a mock-up: what you see there is what the stream will show.',
-  themePreviewTitle: 'Preview',
-  themeAccent: 'Accent colour',
-  themePosition: 'Anchor corner in the scene',
-  themePosTopLeft: 'Top left',
-  themePosTopRight: 'Top right',
-  themePosBottomLeft: 'Bottom left',
-  themePosBottomRight: 'Bottom right',
-  themeDropLine: 'Wording for a drop',
-  themeWinLine: 'Wording for a win',
-  themeLinePlaceholder: '{name} claims a card',
-  themeLineHint:
-    '{name} is replaced by the Twitch username. Leave empty for the default, translated wording.',
-  themeMedia: 'Image or video',
-  themeMediaHint:
-    'PNG, JPEG or WebP (2 MB), MP4 or WebM (8 MB). Replaces the star before the wording. A video plays muted and looped.',
-  themeMediaChoose: 'Choose a file',
-  themeMediaRemove: 'Remove',
-  themeSaving: 'Saving…',
-  themeSaved: 'Appearance saved.',
-  themeLoadError: 'Could not read the appearance.',
-  themeSaveError: 'Saving failed, please try again.',
-  themeErrUnsupportedType:
-    'Unsupported format. Use a PNG, JPEG, WebP, MP4 or WebM.',
-  themeErrTooLarge: 'File too large.',
-  themeErrContentMismatch:
-    'This file is not the type it claims: its contents do not match.',
-  themeErrInvalidColor: 'Invalid colour.',
-
-  themePreviewDropEyebrow: 'Drop',
-  themePreviewWinEyebrow: 'Win',
-  themePreviewDropLine: '{name} claims a card',
-  themePreviewWinLine: '{name} wins a pack',
-  themePreviewName: 'A player',
 
   giftHeading: 'Welcome gift',
   giftSubtitle:

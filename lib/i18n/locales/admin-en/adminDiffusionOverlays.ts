@@ -23,8 +23,5 @@ export default {
     'Predictions, channel points and Twitch commands: what triggers the on-screen announcements.',
   sceneOverlays: 'Caster scenes',
   sceneOverlaysDesc: 'Scoreboard and branding, one URL per scene.',
-  tcgOverlay: 'TCG announcements',
-  tcgOverlayDesc: 'Cards drawn during the stream, via a private token.',
-  tcgOverlayNoAccess: 'Its token needs the TCG permission: ask an admin.',
   open: 'Open',
 };
