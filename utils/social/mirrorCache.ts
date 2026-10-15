@@ -37,7 +37,9 @@ import { registerProcessCache } from '@/utils/processCaches';
  */
 export const MIRROR_CONFIG_TTL_MS = 30 * 60_000;
 
-export type CacheLoad<V> = { ok: true; value: V } | { ok: false; error: unknown };
+export type CacheLoad<V> =
+  | { ok: true; value: V }
+  | { ok: false; error: unknown };
 
 export type MirrorCache<V> = {
   /** Valeur fraîche, ou `undefined`. Ne lit jamais la base. */
@@ -104,7 +106,10 @@ export function createMirrorCache<V>(ttlMs: number): MirrorCache<V> {
         .catch((error: unknown): CacheLoad<V> => ({ ok: false, error }))
         .then((res) => {
           if (res.ok && stamp(key) === startedAt) {
-            entries.set(key, { value: res.value, expiresAt: Date.now() + ttlMs });
+            entries.set(key, {
+              value: res.value,
+              expiresAt: Date.now() + ttlMs,
+            });
           }
           return res;
         })
@@ -145,13 +150,17 @@ const activeTenants = createMirrorCache<string[]>(MIRROR_CONFIG_TTL_MS);
 
 export async function loadActiveMirrorTenants(): Promise<CacheLoad<string[]>> {
   return activeTenants.load(ACTIVE_TENANTS_KEY, async () => {
-    if (!supabaseAdmin) return { ok: false, error: 'supabase_admin_unavailable' };
+    if (!supabaseAdmin)
+      return { ok: false, error: 'supabase_admin_unavailable' };
     const { data, error } = await supabaseAdmin
       .from('tenants')
       .select('id')
       .eq('is_active', true);
     if (error) {
-      logger.error('[mirrorCache] lecture des espaces actifs impossible', error);
+      logger.error(
+        '[mirrorCache] lecture des espaces actifs impossible',
+        error
+      );
       return { ok: false, error };
     }
     return {

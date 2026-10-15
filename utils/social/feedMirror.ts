@@ -383,9 +383,8 @@ export type SettingRead =
  * base, avec sa sémantique d'erreur intacte (un curseur illisible interdit
  * d'émettre). Une erreur n'est jamais gardée.
  */
-const settingsCache = createMirrorCache<ReadonlyMap<string, string | null>>(
-  MIRROR_CONFIG_TTL_MS
-);
+const settingsCache =
+  createMirrorCache<ReadonlyMap<string, string | null>>(MIRROR_CONFIG_TTL_MS);
 
 const normalizeSetting = (v: unknown): string | null =>
   typeof v === 'string' && v.trim() ? v.trim() : null;

@@ -89,7 +89,9 @@ async function readPoleAdminFlag(
     logger.error(`[adminTenants] ${label} staff lookup error`, staffErr);
     return false;
   }
-  return (staffRow as { is_pole_admin?: boolean } | null)?.is_pole_admin === true;
+  return (
+    (staffRow as { is_pole_admin?: boolean } | null)?.is_pole_admin === true
+  );
 }
 
 /**
