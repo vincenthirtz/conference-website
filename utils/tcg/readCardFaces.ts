@@ -42,7 +42,11 @@ import {
   fanartCategoryOf,
   type FanartCategory,
 } from '@/utils/tcg/fanart';
-import { resolveLogoCredit, type LogoCredit } from '@/utils/teams/logoCredit';
+import {
+  displayableLogoCreditUrl,
+  resolveLogoCredit,
+  type LogoCredit,
+} from '@/utils/teams/logoCredit';
 import {
   figureRoleFromHeroRole,
   normalizeFigureColor,
@@ -509,7 +513,13 @@ export async function readFanartFaces(
       fanartId: row.id,
       title: row.title,
       artistName: row.artist_name,
-      artistUrl: displayableArtistUrl(row.artist_url),
+      // Le lien d'une carte de l'association (le site d'un partenaire) est
+      // posé par le staff : `https://` seulement, comme le crédit d'un logo
+      // d'équipe. Celui d'une fan art reste celui que son autrice a donné.
+      artistUrl:
+        category === 'association'
+          ? displayableLogoCreditUrl(row.artist_url)
+          : displayableArtistUrl(row.artist_url),
       imageUrl: row.image_path
         ? (supabaseAdmin.storage.from(BUCKET).getPublicUrl(row.image_path).data
             ?.publicUrl ?? null)

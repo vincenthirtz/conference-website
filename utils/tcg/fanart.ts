@@ -185,6 +185,29 @@ export function seasonalLogoSourceRef(logoId: string): string {
 }
 
 /**
+ * Les PARTENAIRES de l'association entrent dans la même catégorie : une carte
+ * de partenaire est une carte de l'association dont le crédit nomme le
+ * partenaire et pointe sur son site (`artist_url`, `https://` seulement — même
+ * règle que le crédit d'un logo d'équipe, `utils/teams/logoCredit.ts`).
+ *
+ * L'origine est notée dans `source_ref` (`partner:<id>`) : un partenaire
+ * importé deux fois ne fait pas deux cartes (index unique par espace), et
+ * l'écran sait dire d'où vient la carte. Le préfixe tient dans la borne du
+ * CHECK (3 à 120 caractères) avec un UUID.
+ */
+const PARTNER_SOURCE_PREFIX = 'partner:';
+
+/** `source_ref` d'un partenaire importé. */
+export function partnerSourceRef(partnerId: string): string {
+  return `${PARTNER_SOURCE_PREFIX}${partnerId}`;
+}
+
+/** Cette carte vient-elle d'un partenaire ? */
+export function isPartnerSourceRef(ref: string | null | undefined): boolean {
+  return typeof ref === 'string' && ref.startsWith(PARTNER_SOURCE_PREFIX);
+}
+
+/**
  * Le chemin DANS LE BUCKET d'une URL publique Supabase Storage, ou `null`.
  *
  * Un logo d'événement est une URL (upload du back-office → bucket public, ou
