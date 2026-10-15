@@ -207,6 +207,27 @@ export const BOT_EVENT_NAMES = [
   // la branche par défaut du dispatcher préviendrait tout le staff du tenant.
   'tcg.set_completed',
 
+  // TCG — LE SALON PUBLIC #tcg (`utils/tcg/announceFeed.ts`, bot
+  // `tcg-feed.js`). La seule voie où le TCG parle en PUBLIC sur Discord.
+  //
+  // `tcg.rare_pulled` : un paquet ouvert contient une carte épique ou
+  //   légendaire. UN event par paquet, émis après l'écriture des cartes.
+  //   `{ packId, collector, cards: [{ position, rarity, isFoil, card }], ctaUrl }`
+  // `tcg.fanart_published` : une fan art vient d'être validée.
+  //   `{ fanartId, title, artistName, artistUrl, imageUrl, rarity, target, ctaUrl }`
+  // `tcg.fanart_revoked` : une fan art validée vient d'être retirée ; le bot
+  //   supprime son annonce. `{ fanartId }`
+  // `tcg.set_completed` (ci-dessus) porte aussi `collector` pour son annonce.
+  //
+  // `collector` = le nom de la joueuse SEULEMENT si sa vitrine vaut
+  // consentement au salon Discord (`SHOWCASE_DISCORD_SINCE`), sinon `null`.
+  // Aucun identifiant de compte, aucune photo.
+  //
+  // Hors `WEB_PUSH_EVENT_TYPES` : une annonce de salon ne regarde pas le staff.
+  'tcg.rare_pulled',
+  'tcg.fanart_published',
+  'tcg.fanart_revoked',
+
   // TCG — ÉCHANGES de cartes entre joueuses (`utils/tcg/trades.ts`).
   //
   // `tcg.trade_proposed` : à la DESTINATAIRE, une fois, à la création.

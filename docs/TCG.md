@@ -344,6 +344,15 @@ vitrines actives de ses membres.
   constante : ce serait étendre après coup un consentement donné sans la
   mention.
 
+- **Le salon #tcg du Discord, consentement daté à part.** Le bot y annonce les
+  tirages épiques et légendaires, les fan arts validées (retirées du salon si
+  elles sont retirées), les séries complétées et la carte de la semaine
+  (conference-api `utils/tcg/announceFeed.ts`, bot `tcg-feed.js`). La mention
+  `publicSurfacesNote` cite ce salon depuis `SHOWCASE_DISCORD_SINCE`
+  (`2026-10-15T20:00:00Z`) : un nom n'y part que si la vitrine est active ET
+  enregistrée depuis cette date (`consentsToDiscordFeed`), sinon « une
+  joueuse ». Aucune photo, aucun identifiant de compte, aucun pseudo Discord.
+
 Limite connue : `updated_at` n'est pas écrit QUE par l'éditeur. Acheter un
 habillage (RPC `tcg_buy_cosmetic`, migration
 `tcg_forge_function.sql`) ou en poser un (`upsertEquippedCosmetics`) le

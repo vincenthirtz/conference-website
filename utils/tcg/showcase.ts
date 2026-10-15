@@ -35,6 +35,7 @@ import { gameMascotDisplayName } from './gameMascots';
 import { heroCardDisplayName, heroCardRole } from './heroCards';
 import type { OverwatchRole } from '@/utils/heroes/overwatch';
 import type { LogoCredit } from '@/utils/teams/logoCredit';
+import type { FanartTargetView } from './fanart';
 import { readMapFaces } from './readMapFaces';
 import { cardSubjectKey } from './subjectKey';
 
@@ -135,6 +136,12 @@ export type ShowcaseCard =
       category?: 'fanart' | 'association';
       /** Texte « à propos » (catégorie association, rédigé par le staff). */
       description?: string | null;
+      /**
+       * Illustration alternative d'un héros ou d'une map (`FanartFace`).
+       * Optionnelle : une vitrine composée côté client avant la
+       * fonctionnalité ne la porte pas.
+       */
+      target?: FanartTargetView | null;
       rarity: TcgRarity;
       isFoil: boolean;
     }
@@ -343,6 +350,7 @@ export async function buildShowcaseCards(
         imageUrl: face?.imageUrl ?? null,
         category: face?.category ?? 'fanart',
         description: face?.description ?? null,
+        target: face?.target ?? null,
         rarity,
         isFoil,
       };

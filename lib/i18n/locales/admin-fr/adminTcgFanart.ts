@@ -26,6 +26,15 @@ export default adminNs('adminTcgFanart', {
   notesAre: 'Note : {notes}',
   imageAlt: '{title}, par {artist}',
   labelRarity: 'Rareté à attribuer',
+  // Illustration alternative : une carte EN PLUS de la carte voxel du héros
+  // ou de la map, jamais une image qui la remplace.
+  labelTarget: 'Illustration alternative de…',
+  hintTarget:
+    'Validée, l’œuvre devient une carte de plus, au nom du héros ou de la map. La carte voxel du jeu ne change pas.',
+  targetNone: 'Aucune — fan art libre',
+  targetHeroes: 'Héros',
+  targetMaps: 'Maps',
+  targetIs: 'Illustration alternative de {name}',
   labelNotes: 'Note (obligatoire pour un refus ou un retrait)',
   approve: 'Valider',
   reject: 'Refuser',

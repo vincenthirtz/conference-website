@@ -21,6 +21,7 @@ export function useTcgCardLabels() {
       logoCredit: t.logoCredit,
       associationCredit: t.associationCredit,
       association: t.cardAssociation,
+      alternateArt: t.cardAlternateArt,
       // Sous la figurine d'une joueuse sans photo : son rôle.
       roles: {
         tank: t.roleTank,

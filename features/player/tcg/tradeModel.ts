@@ -5,6 +5,7 @@
 
 import type { TcgCardSubject } from '@/components/tcg/TcgCard';
 import type { GameMascotSlug } from '@/utils/tcg/gameMascots';
+import { fanartCardName } from '@/utils/tcg/fanart';
 // Types SEULEMENT : effacés à la compilation. Importer le module lui-même ferait
 // entrer `supabaseAdmin` dans le bundle navigateur.
 import type { TradeCardView, TradeView } from '@/utils/tcg/trades';
@@ -104,6 +105,8 @@ export function subjectOf(card: TradeCardView): TcgCardSubject {
       artistName: card.artistName,
       artistUrl: card.artistUrl,
       category: card.category,
+      // Une variante proposée à l'échange garde sa face (nom, badge, rôle).
+      target: card.target ?? null,
     };
   }
   if (card.kind === 'mascot') {
@@ -132,7 +135,8 @@ export function subjectOf(card: TradeCardView): TcgCardSubject {
 
 export function nameOf(card: TradeCardView): string | null {
   if (card.kind === 'player') return card.displayName;
-  if (card.kind === 'fanart') return card.title;
+  // Illustration alternative : le nom de sa cible, comme sur sa face.
+  if (card.kind === 'fanart') return fanartCardName(card);
   return card.name;
 }
 

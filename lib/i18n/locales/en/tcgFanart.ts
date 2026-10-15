@@ -28,6 +28,13 @@ export default {
   hintArtistName:
     'The name you want to be known by — not necessarily your account name.',
   labelArtistUrl: 'Link to your work (optional)',
+  labelTarget: 'Alternate art of… (optional)',
+  hintTarget:
+    'Does your drawing show a hero or a map? Pick it: once approved, your card will carry its name, alongside the game’s own card.',
+  targetNone: 'None — free fan art',
+  targetHeroes: 'Heroes',
+  targetMaps: 'Maps',
+  mineTarget: 'Alternate art of {name}',
   labelLicence:
     'This artwork is mine, and I agree to it being published as a TCG card, with my credit.',
   submit: 'Submit',
@@ -56,6 +63,9 @@ export default {
   errorArtistName: 'The name to credit must be between 2 and {max} characters.',
   errorArtistUrl:
     'Invalid link: paste the full address, starting with https://.',
+  errorTarget: 'That hero or map doesn’t exist: pick one from the list.',
+  errorTargetUnavailable:
+    'Alternate art isn’t open yet: submit your card without a target, or try again later.',
   errorGeneric: 'Couldn’t send it right now. Try again.',
   loadError: 'Couldn’t load your submissions.',
 };

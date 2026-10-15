@@ -31,6 +31,7 @@ import type { ShowcaseCard } from '@/utils/tcg/showcase';
 import type { LogoCredit } from '@/utils/teams/logoCredit';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import type { OverwatchRole } from '@/utils/heroes/overwatch';
+import { fanartCardName, type FanartTargetView } from '@/utils/tcg/fanart';
 import { useT, format } from '@/lib/i18n/useT';
 import nsTcgShowcase from '@/lib/i18n/locales/fr/tcgShowcase';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
@@ -87,6 +88,8 @@ type CollectionCard =
       artistUrl: string | null;
       imageUrl: string | null;
       category?: 'fanart' | 'association';
+      // Suit l'étalement vers la carte de vitrine, comme `logoCredit`.
+      target?: FanartTargetView | null;
       rarity: TcgRarity;
       isFoil: boolean;
     }
@@ -135,7 +138,7 @@ export function collectionToShowcaseCard(card: CollectionCard): ShowcaseCard {
 
 function cardName(card: ShowcaseCard): string | null {
   if (card.kind === 'player') return card.displayName;
-  if (card.kind === 'fanart') return card.title;
+  if (card.kind === 'fanart') return fanartCardName(card);
   return card.name;
 }
 
@@ -187,6 +190,7 @@ export default function TcgShowcaseEditor({
     logoCredit: tTcg.logoCredit,
     associationCredit: tTcg.associationCredit,
     association: tTcg.cardAssociation,
+    alternateArt: tTcg.cardAlternateArt,
   };
 
   const apply = useCallback((data: ShowcaseResponse, keepSelection = false) => {

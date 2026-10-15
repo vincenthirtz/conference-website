@@ -40,6 +40,15 @@ export default ns('tcgFanart', {
   hintArtistName:
     'Le nom sous lequel tu veux être reconnue — pas forcément ton pseudo de compte.',
   labelArtistUrl: 'Lien vers ton travail (facultatif)',
+  // « Illustration alternative » : une carte EN PLUS de la carte voxel du
+  // héros ou de la map, jamais une image qui la remplace.
+  labelTarget: 'Illustration alternative de… (facultatif)',
+  hintTarget:
+    'Ton dessin représente un héros ou une map ? Choisis-le : validée, ta carte portera son nom, en plus de la carte du jeu.',
+  targetNone: 'Aucun — fan art libre',
+  targetHeroes: 'Héros',
+  targetMaps: 'Maps',
+  mineTarget: 'Illustration alternative de {name}',
   labelLicence:
     'Cette œuvre est la mienne, et j’accepte qu’elle soit diffusée en carte du TCG, avec mon crédit.',
   submit: 'Proposer',
@@ -71,6 +80,10 @@ export default ns('tcgFanart', {
   errorArtistName: 'Le nom à créditer doit faire entre 2 et {max} caractères.',
   errorArtistUrl:
     'Lien invalide : colle l’adresse complète, commençant par https://.',
+  errorTarget:
+    'Ce héros ou cette map n’existe pas : choisis-en un dans la liste.',
+  errorTargetUnavailable:
+    'Les illustrations alternatives ne sont pas encore ouvertes : propose ta carte sans cible, ou réessaie plus tard.',
   errorGeneric: 'Envoi impossible pour le moment. Réessaie.',
   loadError: 'Impossible de charger tes propositions.',
 });

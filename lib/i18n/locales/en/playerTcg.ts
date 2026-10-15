@@ -187,6 +187,7 @@ export default {
   logoCredit: 'Logo by {artist}',
   associationCredit: 'Credit: {artist}',
   cardAssociation: 'The association',
+  cardAlternateArt: 'Alternate art',
   roleTank: 'Tank',
   roleDamage: 'Damage',
   roleSupport: 'Support',

@@ -34,6 +34,7 @@ import { heroCardDisplayName, heroCardRole } from './heroCards';
 import { heroCardsReady, withHeroColumn } from './heroCardsReady';
 import type { OverwatchRole } from '@/utils/heroes/overwatch';
 import type { LogoCredit } from '@/utils/teams/logoCredit';
+import type { FanartTargetView } from './fanart';
 import { readMapFaces } from './readMapFaces';
 import {
   MAX_SCAN_PACKS,
@@ -350,6 +351,11 @@ export type TradeCardView =
       imageUrl: string | null;
       /** `association` : visuel de l'association (cf. `FanartFace`). */
       category?: 'fanart' | 'association';
+      /**
+       * Illustration alternative d'un héros ou d'une map (`FanartFace`).
+       * Optionnelle : une réponse d'avant la fonctionnalité ne la porte pas.
+       */
+      target?: FanartTargetView | null;
     })
   | (CardBase & {
       kind: 'mascot';
@@ -437,6 +443,9 @@ export async function readSubjectFaces(
         artistUrl: f?.artistUrl ?? null,
         imageUrl: f?.imageUrl ?? null,
         category: f?.category ?? 'fanart',
+        // Une variante proposée à l'échange garde sa face : le nom du héros
+        // ou de la map qu'elle illustre, et son badge.
+        target: f?.target ?? null,
         ...base,
       };
     }

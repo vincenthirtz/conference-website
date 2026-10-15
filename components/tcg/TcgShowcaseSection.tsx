@@ -49,6 +49,8 @@ export function showcaseCardSubject(card: ShowcaseCard): TcgCardSubject {
       artistUrl: card.artistUrl,
       category: card.category,
       description: card.description ?? null,
+      // `?? null` : une carte venue de l'éditeur peut précéder le déploiement.
+      target: card.target ?? null,
     };
   }
   if (card.kind === 'mascot') {
@@ -117,6 +119,7 @@ export default function TcgShowcaseSection({
                 logoCredit: tTcg.logoCredit,
                 associationCredit: tTcg.associationCredit,
                 association: tTcg.cardAssociation,
+                alternateArt: tTcg.cardAlternateArt,
               }}
             />
           </li>

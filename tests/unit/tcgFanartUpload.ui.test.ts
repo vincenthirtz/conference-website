@@ -73,10 +73,25 @@ describe('fanartErrorKey — un refus définitif ne dit jamais « réessaie »',
       ['artist_url', 'errorArtistUrl'],
       ['licence', 'errorLicence'],
       ['too_many_pending', 'errorTooManyPending'],
+      // « Illustration alternative de… » : héros ou map inconnu, ou cibles
+      // pas encore ouvertes (migration `tcg_fanart_targets.sql` absente).
+      ['target', 'errorTarget'],
+      ['target_unavailable', 'errorTargetUnavailable'],
     ];
     for (const [code, key] of definitive) {
-      const status = code === 'too_many_pending' ? 409 : 400;
+      const status =
+        code === 'too_many_pending' || code === 'target_unavailable'
+          ? 409
+          : 400;
       expect(fanartErrorKey(status, code)).toBe(key);
+    }
+  });
+
+  it('une cible inconnue dit quoi faire, sans inviter à réessayer', () => {
+    for (const dict of [frFanart.fr, enFanart]) {
+      const d = dict as Record<string, string>;
+      expect(d.errorTarget).not.toMatch(/réessaie|try again/i);
+      expect(d.errorTargetUnavailable).toBeTruthy();
     }
   });
 

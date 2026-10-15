@@ -40,8 +40,17 @@ import { TCG_BUCKET, tcgTeamImageUrl } from '@/utils/tcg/teamCardImage';
 import {
   displayableArtistUrl,
   fanartCategoryOf,
+  fanartTargetRefOf,
   type FanartCategory,
+  type FanartTargetView,
 } from '@/utils/tcg/fanart';
+import { resolveFanartTarget } from '@/utils/tcg/fanartTargets';
+import {
+  fanartTargetsReady,
+  isMissingFanartTargetColumn,
+  markFanartTargetsUnavailable,
+  withFanartTargetColumns,
+} from '@/utils/tcg/fanartTargetsReady';
 import {
   displayableLogoCreditUrl,
   resolveLogoCredit,
@@ -453,6 +462,13 @@ export type FanartFace = {
    * tant que la migration n'est pas appliquée.
    */
   description: string | null;
+  /**
+   * Le héros ou la map dont cette fan art est une ILLUSTRATION ALTERNATIVE
+   * (`utils/tcg/fanart.ts`), résolu depuis le registre. `null` pour une fan
+   * art libre, pour une carte de l'association, et tant que la migration
+   * `tcg_fanart_targets.sql` n'est pas appliquée.
+   */
+  target: FanartTargetView | null;
 };
 
 /**
@@ -483,11 +499,28 @@ export async function readFanartFaces(
       .eq('tenant_id', tenantId)
       .eq('status', 'approved')
       .in('id', ids);
-  let { data, error } = await query(`${base}, description`);
+  // Les colonnes de cible ne sont citées qu'une fois leur migration vue
+  // (`fanartTargetsReady`) : avant, elles feraient tomber toutes les faces.
+  let withTargets = await fanartTargetsReady();
+  let withDescription = true;
+  const columnsOf = () =>
+    withFanartTargetColumns(
+      withDescription ? `${base}, description` : base,
+      withTargets
+    );
+  let { data, error } = await query(columnsOf());
+  // Migration des cibles annoncée mais refusée (cache de schéma pas encore
+  // rechargé) : les faces sans cible, et les lectures suivantes aussi.
+  if (error && withTargets && isMissingFanartTargetColumn(error)) {
+    markFanartTargetsUnavailable();
+    withTargets = false;
+    ({ data, error } = await query(columnsOf()));
+  }
   // Migration de la description pas encore appliquée : les faces d'avant,
   // sans description, plutôt que plus aucune face de fan art.
   if (error && isMissingColumnError(error, 'description')) {
-    ({ data, error } = await query(base));
+    withDescription = false;
+    ({ data, error } = await query(columnsOf()));
   }
   if (error) {
     logger.error('[tcg/faces] fan arts illisibles: %s', error.message);
@@ -502,10 +535,20 @@ export async function readFanartFaces(
     image_path: string | null;
     category?: string | null;
     description?: string | null;
+    target_kind?: string | null;
+    target_slug?: string | null;
   }>) {
     const category = fanartCategoryOf(row.category);
     faces.set(row.id, {
       category,
+      // Une carte de l'association n'illustre pas un héros (CHECK
+      // `tcg_fanart_target_category`) : on ne lui en prête jamais un.
+      target:
+        category === 'fanart'
+          ? resolveFanartTarget(
+              fanartTargetRefOf(row.target_kind, row.target_slug)
+            )
+          : null,
       // Une fan art n'a pas de description (CHECK) ; on ne la montrerait de
       // toute façon pas : seul le staff rédige ce texte.
       description:

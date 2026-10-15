@@ -12,6 +12,7 @@ import type { LogoCredit } from '@/utils/teams/logoCredit';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import type { GameMascotSlug } from '@/utils/tcg/gameMascots';
 import type { OverwatchRole } from '@/utils/heroes/overwatch';
+import { fanartCardName, type FanartTargetView } from '@/utils/tcg/fanart';
 import type nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 
 export type Pack = {
@@ -130,6 +131,11 @@ export type CollectionCard = Engagement &
         category?: 'fanart' | 'association';
         /** Texte « à propos » (catégorie association, rédigé par le staff). */
         description?: string | null;
+        /**
+         * Illustration alternative d'un héros ou d'une map. Optionnelle : une
+         * réponse d'avant la fonctionnalité ne la porte pas.
+         */
+        target?: FanartTargetView | null;
         rarity: TcgRarity;
         isFoil: boolean;
         count: number;
@@ -202,6 +208,8 @@ export type DrawnCard = { position: number; isNew?: boolean } & (
       category?: 'fanart' | 'association';
       /** Texte « à propos » (catégorie association, rédigé par le staff). */
       description?: string | null;
+      /** Illustration alternative — même contrat que `CollectionCard`. */
+      target?: FanartTargetView | null;
       rarity: TcgRarity;
       isFoil: boolean;
     }
@@ -287,7 +295,7 @@ export function cardLabel(card: CollectionCard): string {
   if (card.kind === 'player') return card.displayName ?? card.userId;
   if (card.kind === 'team') return card.name ?? card.teamId;
   if (card.kind === 'map') return card.name ?? card.slug;
-  if (card.kind === 'fanart') return card.title ?? card.fanartId;
+  if (card.kind === 'fanart') return fanartCardName(card) ?? card.fanartId;
   return card.name ?? card.slug;
 }
 
@@ -320,6 +328,7 @@ export function cardSubject(card: DrawnCard | CollectionCard): TcgCardSubject {
       artistUrl: card.artistUrl,
       category: card.category,
       description: card.description ?? null,
+      target: card.target ?? null,
     };
   }
   if (card.kind === 'mascot') {
@@ -358,8 +367,9 @@ export function cardSubject(card: DrawnCard | CollectionCard): TcgCardSubject {
 export function cardName(card: DrawnCard | CollectionCard): string | null {
   if (card.kind === 'player') return card.displayName;
   // Une fan art porte un TITRE, pas un nom : c'est le même champ pour la
-  // lectrice, et l'omettre laisserait la carte anonyme.
-  if (card.kind === 'fanart') return card.title;
+  // lectrice, et l'omettre laisserait la carte anonyme. Une illustration
+  // alternative porte le nom de sa cible, comme sa face.
+  if (card.kind === 'fanart') return fanartCardName(card);
   return card.name;
 }
 

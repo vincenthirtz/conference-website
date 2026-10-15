@@ -40,6 +40,7 @@ import {
 import { heroFigureSlugFromName, heroFigureUrl } from '@/utils/tcg/heroFigures';
 import { heroCardImageUrl } from '@/utils/tcg/heroCards';
 import { gameMascotUrl, type GameMascotSlug } from '@/utils/tcg/gameMascots';
+import type { FanartTargetView } from '@/utils/tcg/fanart';
 import type { OverwatchRole } from '@/utils/heroes/overwatch';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 
@@ -180,6 +181,11 @@ export type TcgCardSubject =
        * Ignoré pour une fan art : seul le staff écrit ce texte.
        */
       description?: string | null;
+      /**
+       * ILLUSTRATION ALTERNATIVE d'un héros ou d'une map : la carte porte son
+       * nom, un badge et le rôle d'un héros. Une carte EN PLUS de la voxel.
+       */
+      target?: FanartTargetView | null;
     }
   | {
       /**
@@ -268,6 +274,8 @@ export type TcgCardProps = {
      * sans lui, la carte s'affiche sans badge plutôt qu'en une seule langue.
      */
     association?: string;
+    /** Badge d'une illustration alternative ; absent ⇒ pas de badge. */
+    alternateArt?: string;
   };
 };
 
@@ -311,8 +319,18 @@ export default function TcgCard({
   fullDescription = false,
   labels,
 }: TcgCardProps): JSX.Element {
+  const isAssociation =
+    subject.kind === 'fanart' && subject.category === 'association';
+  // Illustration alternative : le nom de sa cible, à défaut le titre de
+  // l'œuvre (sujet sorti du registre). Jamais pour l'association.
+  const variant =
+    subject.kind === 'fanart' && !isAssociation
+      ? (subject.target ?? null)
+      : null;
   const name =
-    subject.kind === 'player' ? subject.displayName : (subject.name ?? null);
+    subject.kind === 'player'
+      ? subject.displayName
+      : (variant?.name ?? subject.name ?? null);
   // Le cas particulier est l'ÉQUIPE, qui porte un `logoUrl` : joueuses et maps
   // nomment toutes deux leur image `imageUrl`. Écrit dans ce sens pour qu'un
   // quatrième sujet n'ait rien à ajouter ici.
@@ -322,8 +340,6 @@ export default function TcgCard({
   // que les deux décisions n'en font qu'une : une illustration est faite pour
   // remplir le cadre, un logo pour y flotter sans être rogné.
   const usesTeamLogo = subject.kind === 'team' && !subject.cardImageUrl;
-  const isAssociation =
-    subject.kind === 'fanart' && subject.category === 'association';
   // La description n'existe que pour l'association (cf. le type) : une fan
   // art qui en porterait une par erreur ne l'afficherait pas.
   const associationDescription =
@@ -361,12 +377,13 @@ export default function TcgCard({
    * `labels.roles` ; sinon le mot du JEU (« Tank », « Damage », « Support »),
    * qui est une donnée du registre et non un texte d'interface.
    */
-  const heroRole =
-    subject.kind === 'hero' ? figureRoleFromHeroRole(subject.role) : null;
-  const heroRoleCaption =
-    subject.kind === 'hero' && subject.role
-      ? ((heroRole ? labels.roles?.[heroRole] : null) ?? subject.role)
-      : null;
+  // Même pastille pour l'illustration alternative d'un héros.
+  const shownRole =
+    subject.kind === 'hero' ? subject.role : (variant?.role ?? null);
+  const heroRole = shownRole ? figureRoleFromHeroRole(shownRole) : null;
+  const heroRoleCaption = shownRole
+    ? ((heroRole ? labels.roles?.[heroRole] : null) ?? shownRole)
+    : null;
   const href = noLink
     ? null
     : subject.kind === 'player'
@@ -470,6 +487,9 @@ export default function TcgCard({
               unoptimized={!shouldOptimizeCardImage(imageUrl)}
               onError={revealCardFallback}
             />
+            {heroRoleCaption && (
+              <span className={FIGURE_CAPTION_CLASS}>{heroRoleCaption}</span>
+            )}
             {/* Repli d'une image qui ne charge pas (avatar Discord changé depuis,
                 pièce jointe expirée) : révélé par `revealCardFallback`, sans état. */}
             <span hidden className="absolute inset-0">
@@ -521,6 +541,11 @@ export default function TcgCard({
         {isAssociation && labels.association && (
           <p className="text-[11px] font-semibold text-emerald-300">
             {labels.association}
+          </p>
+        )}
+        {variant && labels.alternateArt && (
+          <p className="text-[11px] font-semibold text-[var(--color-yellow)]">
+            {labels.alternateArt}
           </p>
         )}
         {associationDescription && (

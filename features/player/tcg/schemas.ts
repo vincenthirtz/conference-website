@@ -11,6 +11,11 @@
 
 import * as z from 'zod';
 import { looseUuid, stringOrIgnored } from '../_shared/zod';
+import {
+  FANART_TARGET_KINDS,
+  FANART_TARGET_SLUG_MAX,
+  FANART_TARGET_SLUG_RE,
+} from '../../../utils/tcg/fanart';
 
 /** POST /api/player/tcg/packs (ouverture) — refus `missing_pack`. */
 export const OpenPackBody = z.object({
@@ -83,8 +88,32 @@ export const FanartSubmitBody = z.object({
   artistName: stringOrIgnored(z.string()),
   artistUrl: stringOrIgnored(z.string()),
   licenceAccepted: z.unknown().optional(),
+  /**
+   * « Illustration alternative de… » : un héros ou une map, ou `null`. Lu
+   * TOLÉRANT ici et vérifié par la route avec `FanartTargetBody` puis contre
+   * le registre, pour garder un `code` par champ (`target`).
+   */
+  target: z.unknown().optional(),
 });
-export type FanartSubmitInput = z.infer<typeof FanartSubmitBody>;
+
+/**
+ * La cible d'une fan art (`utils/tcg/fanart.ts`) : FORME seulement. Que le
+ * slug désigne un héros ou une map qui existe se vérifie contre le registre
+ * (`utils/tcg/fanartTargets.ts`), que ce module ne charge pas — il est lu par
+ * le navigateur.
+ */
+export const FanartTargetBody = z
+  .object({
+    kind: z.enum(FANART_TARGET_KINDS),
+    slug: z.string().max(FANART_TARGET_SLUG_MAX).regex(FANART_TARGET_SLUG_RE),
+  })
+  .strict();
+export type FanartTargetInput = z.infer<typeof FanartTargetBody>;
+
+export type FanartSubmitInput = Omit<
+  z.infer<typeof FanartSubmitBody>,
+  'target'
+> & { target?: FanartTargetInput | null };
 
 /**
  * PUT /api/player/tcg/showcase (lot P14) — refus `invalid_body`. Les clés de

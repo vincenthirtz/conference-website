@@ -240,6 +240,9 @@ export default ns('playerTcg', {
   // Badge des cartes de la catégorie « L'association » (logos d'événement,
   // visuels déposés par le staff).
   cardAssociation: 'L’association',
+  // Badge d'une fan art qui illustre un héros ou une map : une carte EN PLUS
+  // de la carte voxel du jeu, jamais à sa place.
+  cardAlternateArt: 'Illustration alternative',
   roleTank: 'Tank',
   roleDamage: 'Dégâts',
   roleSupport: 'Soutien',

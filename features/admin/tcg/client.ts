@@ -3,6 +3,12 @@
 // encore migrés.
 
 import { adminRequest } from '@/utils/admin/adminHttp';
+import type {
+  FanartTargetKind,
+  FanartTargetRef,
+  FanartTargetView,
+} from '@/utils/tcg/fanart';
+import type { FanartTargetOption } from '@/utils/tcg/fanartTargets';
 
 export type FanartStatus = 'pending' | 'approved' | 'rejected' | 'revoked';
 
@@ -16,6 +22,11 @@ export type FanartItem = {
   rarity: string | null;
   reviewNotes: string | null;
   createdAt: string;
+  /**
+   * Le héros ou la map dont l'œuvre est une ILLUSTRATION ALTERNATIVE (une
+   * carte en plus de la voxel). Absent d'une réponse d'avant la fonctionnalité.
+   */
+  target?: FanartTargetView | null;
 };
 
 export type FanartList = {
@@ -23,6 +34,8 @@ export type FanartList = {
   status: FanartStatus;
   rarities: string[];
   defaultRarity: string;
+  /** Cibles possibles ; `null`/absent tant que la migration des cibles manque. */
+  targets?: Record<FanartTargetKind, FanartTargetOption[]> | null;
 };
 
 export type FanartDecision = {
@@ -30,6 +43,8 @@ export type FanartDecision = {
   id: string;
   rarity?: string;
   notes?: string;
+  /** `approve` : absente = garder la cible proposée, `null` = la retirer. */
+  target?: FanartTargetRef | null;
 };
 
 export type PhotoDecision = {

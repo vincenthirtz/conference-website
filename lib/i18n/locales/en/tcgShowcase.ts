@@ -14,7 +14,7 @@ export default {
   consentNote:
     'Player photos follow their consent: if one of them withdraws hers, your showcase shows her avatar instead.',
   publicSurfacesNote:
-    'When on, your showcase also shows your name in the latest rare pulls and the top collectors on the TCG page, and on your team page. When off, you stay anonymous or absent there.',
+    'When on, your showcase also shows your name in the latest rare pulls and the top collectors on the TCG page, on your team page, and in the #tcg channel of the Discord server (epic or legendary pulls, completed sets). When off, you stay anonymous or absent there.',
   toggleLabel: 'Show my showcase on my public profile',
   statusOn: 'Visible on your public profile.',
   statusOff: 'Turned off: nothing is displayed.',

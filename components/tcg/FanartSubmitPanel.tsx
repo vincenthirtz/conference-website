@@ -27,7 +27,14 @@ import { ApiHttpError } from '@/utils/http/authedRequest';
 import { useToast } from '@/components/Toast';
 import { useT, format } from '@/lib/i18n/useT';
 import nsTcgFanart from '@/lib/i18n/locales/fr/tcgFanart';
-import { FANART_LIMITS } from '@/utils/tcg/fanart';
+import {
+  FANART_LIMITS,
+  fanartTargetKey,
+  fanartTargetRefFromKey,
+  type FanartTargetKind,
+  type FanartTargetView,
+} from '@/utils/tcg/fanart';
+import type { FanartTargetOption } from '@/utils/tcg/fanartTargets';
 import {
   FANART_ACCEPT,
   FANART_MAX_MIB,
@@ -44,6 +51,8 @@ type Submission = {
   imageUrl: string | null;
   status: 'pending' | 'approved' | 'rejected' | 'revoked';
   reviewNotes: string | null;
+  /** Illustration alternative proposée ; absente d'une réponse d'avant. */
+  target?: FanartTargetView | null;
 };
 
 type Response = {
@@ -51,6 +60,11 @@ type Response = {
   pending: number;
   maxPending: number;
   maxBytes: number;
+  /**
+   * Ce qu'une proposition peut illustrer. `null` (ou absent) tant que la
+   * migration des cibles n'est pas appliquée : le choix n'est pas proposé.
+   */
+  targets?: Record<FanartTargetKind, FanartTargetOption[]> | null;
 };
 
 export default function FanartSubmitPanel({
@@ -69,6 +83,9 @@ export default function FanartSubmitPanel({
   const [licence, setLicence] = useState(false);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  // Sélecteur NON CONTRÔLÉ, comme le fichier : sa valeur n'est lue qu'à
+  // l'envoi, aucun rendu n'en dépend.
+  const targetRef = useRef<HTMLSelectElement | null>(null);
   const loadedOnce = useRef(false);
 
   const load = useCallback(async () => {
@@ -137,6 +154,8 @@ export default function FanartSubmitPanel({
           artistName: artistName.trim(),
           artistUrl: artistUrl.trim() || undefined,
           licenceAccepted: licence,
+          // `hero:mercy` → `{ kind, slug }` ; « aucune » n'envoie rien.
+          target: fanartTargetRefFromKey(targetRef.current?.value) ?? undefined,
         });
       } catch (err) {
         // Réponse HTTP de refus (statut + `code`) ; un échec réseau remonte
@@ -159,6 +178,7 @@ export default function FanartSubmitPanel({
       setArtistUrl('');
       setLicence(false);
       if (fileRef.current) fileRef.current.value = '';
+      if (targetRef.current) targetRef.current.value = '';
       await load();
     } catch {
       addToast(t.errorGeneric, 'error');
@@ -310,6 +330,44 @@ export default function FanartSubmitPanel({
             maxLength={FANART_LIMITS.artistUrl}
           />
         </div>
+        {data?.targets && (
+          // « Illustration alternative de… » : proposé seulement quand l'API
+          // l'ouvre (migration des cibles appliquée).
+          <div className="sm:col-span-2">
+            <label htmlFor="fanart-target" className={label}>
+              {t.labelTarget}
+            </label>
+            <select
+              id="fanart-target"
+              ref={targetRef}
+              defaultValue=""
+              className={input}
+              aria-describedby="fanart-target-hint"
+            >
+              <option value="">{t.targetNone}</option>
+              <optgroup label={t.targetHeroes}>
+                {data.targets.hero.map((o) => (
+                  <option key={o.slug} value={fanartTargetKey(o)}>
+                    {o.name}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label={t.targetMaps}>
+                {data.targets.map.map((o) => (
+                  <option key={o.slug} value={fanartTargetKey(o)}>
+                    {o.name}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+            <p
+              id="fanart-target-hint"
+              className="mt-1 text-xs text-[var(--t3,#a39ba6)]"
+            >
+              {t.hintTarget}
+            </p>
+          </div>
+        )}
       </div>
 
       <label className="mt-4 flex min-h-11 items-start gap-3 text-sm text-gray-200">
@@ -351,6 +409,11 @@ export default function FanartSubmitPanel({
                 <span className="ml-2 text-xs text-gray-400">
                   {statusLabel[submission.status]}
                 </span>
+                {submission.target?.name && (
+                  <span className="block text-xs text-[var(--t3,#a39ba6)]">
+                    {format(t.mineTarget, { name: submission.target.name })}
+                  </span>
+                )}
                 {submission.status === 'rejected' && submission.reviewNotes && (
                   <span className="mt-1 block text-xs text-gray-400">
                     {format(t.rejectedReason, {

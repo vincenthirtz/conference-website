@@ -20,6 +20,13 @@ export default {
   notesAre: 'Note : {notes}',
   imageAlt: '{title}, par {artist}',
   labelRarity: 'Rareté à attribuer',
+  labelTarget: 'Illustration alternative de…',
+  hintTarget:
+    'Validée, l’œuvre devient une carte de plus, au nom du héros ou de la map. La carte voxel du jeu ne change pas.',
+  targetNone: 'Aucune — fan art libre',
+  targetHeroes: 'Héros',
+  targetMaps: 'Maps',
+  targetIs: 'Illustration alternative de {name}',
   labelNotes: 'Note (obligatoire pour un refus ou un retrait)',
   approve: 'Valider',
   reject: 'Refuser',

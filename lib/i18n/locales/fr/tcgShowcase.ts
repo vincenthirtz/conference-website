@@ -25,7 +25,7 @@ export default ns('tcgShowcase', {
   // Le consentement de la vitrine couvre aussi ces surfaces (utils/tcg/live.ts) :
   // le dire AVANT l'activation, sinon il ne vaudrait pas pour elles.
   publicSurfacesNote:
-    'Activée, ta vitrine fait aussi apparaître ton pseudo dans les derniers tirages rares et le classement des collectionneuses de la page TCG, ainsi que sur la fiche de ton équipe. Désactivée, tu y restes anonyme ou absente.',
+    'Activée, ta vitrine fait aussi apparaître ton pseudo dans les derniers tirages rares et le classement des collectionneuses de la page TCG, sur la fiche de ton équipe, et dans le salon #tcg du Discord (tirages épiques ou légendaires, séries complétées). Désactivée, tu y restes anonyme ou absente.',
   toggleLabel: 'Afficher ma vitrine sur ma fiche publique',
   statusOn: 'Visible sur ta fiche publique.',
   statusOff: 'Désactivée : rien n’est affiché.',

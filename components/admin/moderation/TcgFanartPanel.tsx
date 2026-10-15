@@ -13,9 +13,15 @@
 //
 // L'ÉCRAN MONTRE L'ŒUVRE ET SON CRÉDIT, pas l'identité du compte qui l'a
 // déposée : on modère une image et un nom d'artiste.
+//
+// ILLUSTRATION ALTERNATIVE. Une œuvre peut viser un héros ou une map : le
+// staff garde, change ou retire cette cible AVANT de valider. Validée, elle
+// devient une carte de plus — la carte voxel du jeu ne change pas. Le choix
+// n'apparaît que lorsque l'API rend `targets` (migration des cibles appliquée).
 
 import { useCallback, useState } from 'react';
 import type { FanartItem, FanartStatus } from '@/features/admin/tcg/client';
+import { fanartTargetKey, fanartTargetRefFromKey } from '@/utils/tcg/fanart';
 import {
   useDecideTcgFanart,
   useTcgFanart,
@@ -29,6 +35,10 @@ type Status = FanartStatus;
 type Item = FanartItem;
 
 const STATUSES: Status[] = ['pending', 'approved', 'rejected', 'revoked'];
+
+/** Champs de saisie de la file (rareté, cible, note) : une seule chaîne. */
+const FIELD_CLASS =
+  'mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 export default function TcgFanartPanel() {
   const t = useAdminT(nsAdminTcgFanart);
@@ -44,7 +54,13 @@ export default function TcgFanartPanel() {
       ? 'error'
       : 'ready';
   const [notes, setNotes] = useState<Record<string, string>>({});
-  const [rarities, setRarities] = useState<Record<string, string>>({});
+  // Les choix de validation par œuvre : rareté et cible (`hero:mercy`, `''`
+  // = aucune). Une cible ABSENTE d'ici = celle proposée, gardée telle quelle.
+  const [choices, setChoices] = useState<
+    Record<string, { rarity?: string; target?: string }>
+  >({});
+  const choose = (id: string, patch: { rarity?: string; target?: string }) =>
+    setChoices((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
   const [busy, setBusy] = useState<string | null>(null);
 
   const decide = useCallback(
@@ -54,13 +70,18 @@ export default function TcgFanartPanel() {
         addToast(t.notesRequired, 'error');
         return;
       }
+      const choice = choices[item.id] ?? {};
       setBusy(item.id);
       try {
         await decideMutation.mutateAsync({
           action,
           id: item.id,
           ...(action === 'approve'
-            ? { rarity: rarities[item.id] ?? data?.defaultRarity }
+            ? { rarity: choice.rarity ?? data?.defaultRarity }
+            : {}),
+          // Envoyée seulement si le staff l'a touchée : `null` la retire.
+          ...(action === 'approve' && choice.target !== undefined
+            ? { target: fanartTargetRefFromKey(choice.target) }
             : {}),
           ...(note ? { notes: note } : {}),
         });
@@ -78,7 +99,7 @@ export default function TcgFanartPanel() {
         setBusy(null);
       }
     },
-    [decideMutation, addToast, data?.defaultRarity, notes, rarities, t]
+    [decideMutation, addToast, data?.defaultRarity, notes, choices, t]
   );
 
   const statusLabel: Record<Status, string> = {
@@ -162,6 +183,11 @@ export default function TcgFanartPanel() {
                       {t.artistLink}
                     </a>
                   )}
+                  {item.target?.name && (
+                    <p className="mt-1 text-xs text-[var(--or-200,#eec4ff)]">
+                      {format(t.targetIs, { name: item.target.name })}
+                    </p>
+                  )}
                   {item.rarity && (
                     <p className="mt-1 text-xs text-neutral-400">
                       {format(t.rarityIs, { rarity: item.rarity })}
@@ -180,14 +206,11 @@ export default function TcgFanartPanel() {
                       <label className="block text-xs text-neutral-400">
                         {t.labelRarity}
                         <select
-                          value={rarities[item.id] ?? data.defaultRarity}
+                          value={choices[item.id]?.rarity ?? data.defaultRarity}
                           onChange={(e) =>
-                            setRarities((prev) => ({
-                              ...prev,
-                              [item.id]: e.target.value,
-                            }))
+                            choose(item.id, { rarity: e.target.value })
                           }
-                          className="mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white focus:border-[var(--or,#b467d1)] focus:outline-none"
+                          className={FIELD_CLASS}
                         >
                           {data.rarities.map((rarity) => (
                             <option key={rarity} value={rarity}>
@@ -195,6 +218,38 @@ export default function TcgFanartPanel() {
                             </option>
                           ))}
                         </select>
+                      </label>
+                    )}
+                    {item.status === 'pending' && data.targets && (
+                      <label className="block text-xs text-neutral-400">
+                        {t.labelTarget}
+                        <select
+                          value={
+                            choices[item.id]?.target ??
+                            fanartTargetKey(item.target)
+                          }
+                          onChange={(e) =>
+                            choose(item.id, { target: e.target.value })
+                          }
+                          className={FIELD_CLASS}
+                        >
+                          <option value="">{t.targetNone}</option>
+                          <optgroup label={t.targetHeroes}>
+                            {data.targets.hero.map((o) => (
+                              <option key={o.slug} value={fanartTargetKey(o)}>
+                                {o.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label={t.targetMaps}>
+                            {data.targets.map.map((o) => (
+                              <option key={o.slug} value={fanartTargetKey(o)}>
+                                {o.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        </select>
+                        <span className="mt-1 block">{t.hintTarget}</span>
                       </label>
                     )}
                     <label className="block text-xs text-neutral-400">
@@ -207,7 +262,7 @@ export default function TcgFanartPanel() {
                             [item.id]: e.target.value,
                           }))
                         }
-                        className="mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-white focus:border-[var(--or,#b467d1)] focus:outline-none"
+                        className={FIELD_CLASS}
                       />
                     </label>
                     <div className="flex flex-wrap gap-2">

@@ -37,6 +37,8 @@ export type FanartErrorKey =
   | 'errorArtistUrl'
   | 'errorLicence'
   | 'errorTooManyPending'
+  | 'errorTarget'
+  | 'errorTargetUnavailable'
   | 'errorGeneric';
 
 /**
@@ -85,6 +87,12 @@ export function fanartErrorKey(status: number, code: unknown): FanartErrorKey {
       return 'errorLicence';
     case 'too_many_pending':
       return 'errorTooManyPending';
+    // « Illustration alternative de… » : héros ou map inconnu (définitif),
+    // ou cibles pas encore ouvertes — l'écran d'avant la migration.
+    case 'target':
+      return 'errorTarget';
+    case 'target_unavailable':
+      return 'errorTargetUnavailable';
     default:
       return 'errorGeneric';
   }

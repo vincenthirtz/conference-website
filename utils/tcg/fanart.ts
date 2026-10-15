@@ -17,6 +17,7 @@
 // paquet, seulement occuper une place que personne ne réclame ». Une fan art
 // non plus.
 
+import type { OverwatchRole } from '../heroes/overwatch';
 import type { TcgRarity } from './rarity';
 
 export const FANART_STATUSES = [
@@ -270,4 +271,106 @@ export function bucketPathFromPublicUrl(
   const path = decodeURIComponent(url.slice(at + marker.length).split('?')[0]);
   if (!path || path.includes('..') || path.startsWith('/')) return null;
   return path;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Les illustrations ALTERNATIVES d'un héros ou d'une map                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Une fan art peut viser un HÉROS ou une MAP : elle devient alors une
+ * « illustration alternative » de ce sujet (migration
+ * `tcg_fanart_targets.sql`, colonnes `target_kind` + `target_slug`).
+ *
+ * C'EST UNE CARTE EN PLUS, PAS UNE IMAGE QUI REMPLACE. La carte héros ou map,
+ * avec sa figurine voxel, reste dans le jeu telle quelle ; la variante est une
+ * carte FAN ART à part entière — même sujet `fanart` dans `tcg_pack_cards`,
+ * donc tirée, possédée, échangée et recyclée exactement comme les autres. Seule
+ * sa face change : le nom de la cible, un badge, le rôle pour un héros, et le
+ * crédit de l'autrice. Plusieurs variantes d'un même héros sont autant de
+ * cartes distinctes (une ligne de `tcg_fanart_cards` chacune).
+ *
+ * Seule la catégorie `fanart` (la communauté) prend une cible : une carte de
+ * l'association n'illustre pas un héros (CHECK `tcg_fanart_target_category`).
+ *
+ * Le registre (le slug désigne-t-il un héros, une map ?) est vérifié par
+ * `utils/tcg/fanartTargets.ts` ; ce module-ci reste pur et lisible par le
+ * navigateur, sans traîner les registres avec lui.
+ */
+export const FANART_TARGET_KINDS = ['hero', 'map'] as const;
+export type FanartTargetKind = (typeof FANART_TARGET_KINDS)[number];
+
+/**
+ * Format d'un slug de cible, aligné sur le CHECK `tcg_fanart_target_slug_format`
+ * : celui des héros (`soldier76`) comme celui des maps (`kings-row`).
+ */
+export const FANART_TARGET_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const FANART_TARGET_SLUG_MAX = 64;
+
+/** Une cible telle qu'elle est stockée : un type et un slug, rien de plus. */
+export type FanartTargetRef = { kind: FanartTargetKind; slug: string };
+
+/**
+ * Une cible telle que la face l'affiche, résolue depuis le registre.
+ *
+ * `name` vaut `null` pour un sujet sorti du registre (même contrat que les
+ * cartes héros et mascottes) : la carte retombe alors sur le titre de l'œuvre.
+ * `role` n'existe que pour un héros — le mot du JEU (« Tank »…), traduit par
+ * l'écran.
+ */
+export type FanartTargetView = {
+  kind: FanartTargetKind;
+  slug: string;
+  name: string | null;
+  role: OverwatchRole | null;
+};
+
+export function isFanartTargetKind(v: unknown): v is FanartTargetKind {
+  return (FANART_TARGET_KINDS as readonly unknown[]).includes(v);
+}
+
+/**
+ * Deux colonnes lues en base ramenées à une cible, ou `null`.
+ *
+ * Les deux ou rien (CHECK `tcg_fanart_target_pair`) : une ligne qui n'aurait
+ * que l'une des deux — impossible après la migration, mais un lecteur ne doit
+ * pas en dépendre — se lit comme une fan art sans cible.
+ */
+export function fanartTargetRefOf(
+  kind: unknown,
+  slug: unknown
+): FanartTargetRef | null {
+  if (!isFanartTargetKind(kind) || typeof slug !== 'string') return null;
+  if (slug.length > FANART_TARGET_SLUG_MAX) return null;
+  return FANART_TARGET_SLUG_RE.test(slug) ? { kind, slug } : null;
+}
+
+/**
+ * Une cible en une chaîne, `hero:mercy` — la forme des clés de sujet
+ * (`subjectKey.ts`), et la valeur d'une option des sélecteurs. `''` sans cible.
+ */
+export function fanartTargetKey(
+  ref: { kind: FanartTargetKind; slug: string } | null | undefined
+): string {
+  return ref ? `${ref.kind}:${ref.slug}` : '';
+}
+
+/** `hero:mercy` → la cible ; `null` pour `''` ou une valeur mal formée. */
+export function fanartTargetRefFromKey(
+  key: string | null | undefined
+): FanartTargetRef | null {
+  const at = (key ?? '').indexOf(':');
+  if (!key || at < 0) return null;
+  return fanartTargetRefOf(key.slice(0, at), key.slice(at + 1));
+}
+
+/**
+ * Le nom à écrire sur une carte fan art : celui de sa cible quand elle en a
+ * une (et que le registre la connaît), sinon le titre donné par l'autrice.
+ */
+export function fanartCardName(card: {
+  title: string | null;
+  target?: { name: string | null } | null;
+}): string | null {
+  return card.target?.name ?? card.title;
 }

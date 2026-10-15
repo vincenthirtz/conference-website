@@ -1,6 +1,6 @@
 {
-  "apiCommit": "b6490dff1b8d7d2d0276a59869af8597f32d6071",
-  "syncedAt": "2026-10-15T15:42:45.038Z",
+  "apiCommit": "867bb14a6d7409c8c51622b03a6ef2be0c6187b7",
+  "syncedAt": "2026-10-15T18:02:23.654Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -252,6 +252,8 @@
     "utils/tcg/earnSources.ts",
     "utils/tcg/economy.ts",
     "utils/tcg/fanart.ts",
+    "utils/tcg/fanartTargets.ts",
+    "utils/tcg/fanartTargetsReady.ts",
     "utils/tcg/fanartUploadErrors.ts",
     "utils/tcg/forge.ts",
     "utils/tcg/gameMascots.ts",

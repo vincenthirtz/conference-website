@@ -6285,6 +6285,8 @@ export type Database = {
           source_ref: string | null
           status: string
           submitted_by: string | null
+          target_kind: string | null
+          target_slug: string | null
           tenant_id: string
           title: string
           updated_at: string
@@ -6305,6 +6307,8 @@ export type Database = {
           source_ref?: string | null
           status?: string
           submitted_by?: string | null
+          target_kind?: string | null
+          target_slug?: string | null
           tenant_id: string
           title: string
           updated_at?: string
@@ -6325,6 +6329,8 @@ export type Database = {
           source_ref?: string | null
           status?: string
           submitted_by?: string | null
+          target_kind?: string | null
+          target_slug?: string | null
           tenant_id?: string
           title?: string
           updated_at?: string
