@@ -146,6 +146,23 @@ export const MAP_CARD_RARITY: TcgRarity = 'common';
  */
 export const MASCOT_CARD_RARITY: TcgRarity = 'rare';
 
+/**
+ * La rareté d'une carte HÉROS — la même pour toutes, toujours.
+ *
+ * Exactement le raisonnement des mascottes. Un héros du jeu n'a pas de
+ * palmarès DANS CE TOURNOI : le hiérarchiser (méta, taux de pick, ancienneté,
+ * goût de qui écrit la liste) inventerait une seconde échelle de prestige à
+ * côté de celle des joueuses — ce que ce module refuse depuis l'origine. Et
+ * surtout pas une rareté par RÔLE : un tank ne vaut pas plus qu'un soutien.
+ *
+ * `rare` et non `common`, pour la même raison de fréquence que les mascottes :
+ * un héros ne sort qu'une fois sur huit sur le seul emplacement de décor
+ * (`HERO_DECOR_SHARE`), réparti entre 54 héros — chacun est plus difficile à
+ * obtenir qu'une mascotte. La rareté dit ce qu'on a de la peine à obtenir, sans
+ * rien mesurer du mérite de personne.
+ */
+export const HERO_CARD_RARITY: TcgRarity = 'rare';
+
 /* ---------------------------------------------------------------------------
  * Cartes d'ÉQUIPE
  * ------------------------------------------------------------------------- */

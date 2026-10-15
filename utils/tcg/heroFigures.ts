@@ -67,7 +67,7 @@ export const HERO_FIGURE_VERSION = 1;
 /**
  * Les héros modelés, par slug d'URL.
  *
- * Le registre `utils/heroes/overwatch.ts` en compte 45 : celui-ci se remplit
+ * Le registre `utils/heroes/overwatch.ts` en compte 54 : celui-ci se remplit
  * par lots, chacun relu avant le suivant. Un héros absent d'ici retombe sur la
  * figurine de son rôle — jamais sur un trou.
  */
@@ -114,6 +114,21 @@ export const HERO_FIGURE_SLUGS = [
   'lucio',
   'moira',
   'zenyatta',
+  // Lot du 2026-10-15 : les douze héros arrivés au registre après la première
+  // campagne. Chacun sculpté d'après les visuels officiels de sa page héros
+  // (overwatch.blizzard.com/heroes/<héros>), jamais de mémoire.
+  'domina',
+  'dmon',
+  'anran',
+  'emre',
+  'freja',
+  'shion',
+  'sierra',
+  'doctrine',
+  'fika',
+  'juno',
+  'mizuki',
+  'wuyang',
 ] as const;
 
 export type HeroFigureSlug = (typeof HERO_FIGURE_SLUGS)[number];
@@ -159,7 +174,22 @@ type HeroPalette = {
   glow: string;
   /** La matière du corps (tissu, peau, métal sombre). */
   body: string;
+  /**
+   * Un QUATRIÈME ton, facultatif : la peau du visage, posé avec le rôle
+   * `SKIN`. Il sert quand les trois autres sont tous pris par le costume et
+   * que la tête, faute de teinte à elle, se fondait dans le buste (cf. le lot
+   * du 2026-10-15). Absent, la recette ne change pas d'un octet.
+   */
+  skin?: string;
 };
+
+/**
+ * Le rôle qui porte la teinte `skin`. Le moteur des maquettes réserve
+ * `environment` à la nappe de décor autour d'une map et en tire la couleur de
+ * `MapRecipe.environment` plutôt que de la palette : une figurine n'a pas de
+ * nappe, ce rôle est donc libre pour un quatrième ton.
+ */
+const SKIN: BrickRole = 'environment';
 
 const PEDESTAL = '#2c2837';
 
@@ -248,6 +278,46 @@ const PALETTES: Record<HeroFigureSlug, HeroPalette> = {
   moira: { main: '#6b3fa0', glow: '#f2c14e', body: '#191625' },
   // Laiton de l'omniaque, cyan des sphères.
   zenyatta: { main: '#d9b061', glow: '#8fe3ff', body: '#4a4234' },
+  // Or du harnais de lumière dure, blanc de la jupe, noir du haut.
+  domina: { main: '#d1a03c', glow: '#f2efe8', body: '#2b2930' },
+  // Rouge de la méca, plasma vert du sabre, blanc des membres.
+  dmon: { main: '#c8323a', glow: '#6dff9a', body: '#d9dbe2' },
+  // Orange de la tenue, or des éventails, noir des manches et des cheveux.
+  anran: { main: '#e8762b', glow: '#ffc94a', body: '#2a2630' },
+  // Rouge de l'écharpe et du noyau, bronze du fusil, armure noire.
+  emre: { main: '#b8352f', glow: '#c08a50', body: '#2d2a2e' },
+  // Blanc glacé de la veste et de la cape, roux des cheveux, cuir sombre.
+  freja: {
+    main: '#dde8f0',
+    glow: '#e2733a',
+    body: '#3b2f2b',
+    skin: '#f0c4a4',
+  },
+  // Blanc de la chevelure et de la veste, rouge des cornes, noir du dessous.
+  shion: { main: '#ecebef', glow: '#e0303a', body: '#2b2a33' },
+  // Vert du haut, rouge du béret et du bras, gris du fusil.
+  sierra: { main: '#3fa04a', glow: '#dc3a52', body: '#3a3a40' },
+  // Cramoisi de la doublure, or du bras, manteau sombre, peau brune.
+  doctrine: {
+    main: '#b82a4e',
+    glow: '#ddb04c',
+    body: '#2f2c33',
+    skin: '#a8704a',
+  },
+  // Pelage roux, jetpack bleu, plastron blanc.
+  fika: { main: '#e58a3a', glow: '#f5ecdc', body: '#2f5db5' },
+  // Orange de la veste, cyan du casque-bulle, sarcelle de la combinaison.
+  juno: { main: '#e8792f', glow: '#a8f0ff', body: '#2e6f80' },
+  // Sarcelle de la tunique, liseré vert du chapeau, bronze sombre du chapeau
+  // et du masque.
+  mizuki: {
+    main: '#2f9c8c',
+    glow: '#7dffb0',
+    body: '#5a4638',
+    skin: '#e2b48e',
+  },
+  // Bleu de la tenue, rouge du bâton, peau des bras nus.
+  wuyang: { main: '#2f58b0', glow: '#d33a3a', body: '#c8956e' },
 };
 
 /** Le socle commun : un disque d'ardoise, bordé de la dominante du héros. */
@@ -1624,6 +1694,587 @@ function buildZenyatta(b: SceneBuilder): void {
   }
 }
 
+/* ---------------------------------------------------------------------------
+ * Lot du 2026-10-15 — les douze héros arrivés après la première campagne.
+ *
+ * SOURCE : la page officielle de chaque héros (overwatch.blizzard.com/heroes),
+ * ses visuels en pied et ses captures. Aucun de ces modèles n'est tiré de
+ * mémoire : la plupart de ces héros sont trop récents pour cela, et un dessin
+ * inventé apprendrait aux joueuses une apparence qui n'existe pas.
+ *
+ * TROIS LEÇONS DE CE LOT, en plus de celles des précédents :
+ *
+ *   1. UNE TÊTE DE LA COULEUR DU TORSE DISPARAÎT. Les têtes sont du rôle
+ *      `structure` ; chez Anran, Emre, Shion ou Doctrine, le haut du corps
+ *      l'était aussi, et la tête fondait dans le buste au premier jet. Il faut
+ *      soit un buste d'une autre teinte juste dessous, soit un visage repeint
+ *      (peau, ou blanc), soit un col qui l'encadre. Quand les trois teintes
+ *      sont déjà prises par le costume, le quatrième ton `skin` est là pour
+ *      ça (Doctrine, Freja, Mizuki).
+ *   2. UNE ARME LONGUE PORTÉE CÔTÉ +z TRAVERSE LE CORPS À L'ÉCRAN. Le +z est
+ *      le flanc vu de face ; ce qui s'y étend vers +x passe DEVANT le buste.
+ *      Les armes tenues en avant (fusils, arbalète) vont donc côté -z, comme
+ *      chez Soldier : 76 ou Sojourn ; côté +z, seulement ce qui est debout.
+ *   3. UNE COIFFURE PLATE ET SOMBRE SE LIT COMME UN CHAPEAU. Une masse de
+ *      cheveux posée à plat sur la tête, d'une autre teinte que le visage, a
+ *      donné un chapeau noir à Emre et un casque roux à Freja. Des pointes, ou
+ *      un cadre autour du visage, rendent la chevelure.
+ * -------------------------------------------------------------------------*/
+
+/**
+ * Disque DEBOUT face à +x (plan y-z), épais de `depth` vers -x. Il écrase ce
+ * qui est déjà posé : il sert à poser un anneau puis son cœur par-dessus.
+ */
+function frontDisc(
+  b: SceneBuilder,
+  x0: number,
+  cy: number,
+  cz: number,
+  r: number,
+  depth: number,
+  role: BrickRole
+): void {
+  for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y += 1) {
+    for (let z = Math.floor(cz - r); z <= Math.ceil(cz + r); z += 1) {
+      if ((y - cy) ** 2 + (z - cz) ** 2 > r * r) continue;
+      for (let x = 0; x < depth; x += 1) {
+        b.place(x0 - x, y, z, role, { keepExisting: false });
+      }
+    }
+  }
+}
+
+/**
+ * DOMINA — le harnais de lumière dure. Silhouette : la plus large du lot à
+ * hauteur d'épaules, deux panneaux dorés qui dépassent derrière elle.
+ * Accessoire : les deux disques à anneau lumineux du harnais, de part et
+ * d'autre du buste.
+ *
+ * Les bras mécaniques flottants du harnais ne sont PAS posés : deux bras de
+ * plus, détachés du corps, auraient fait un personnage à quatre bras — et un
+ * quatrième détail. Le cyan des anneaux devient du blanc : trois teintes
+ * seulement, et le blanc de la jupe pesait plus lourd dans la silhouette.
+ */
+function buildDomina(b: SceneBuilder): void {
+  pedestal(b, 7);
+  b.box(0, 2, -3, 3, 3, 3, 'structure');
+  b.box(0, 2, 1, 3, 3, 3, 'structure');
+  // Jupe crayon blanche, ceinture d'or à boucle en saillie.
+  b.box(-1, 5, -4, 5, 5, 8, 'highlight');
+  b.box(-1, 10, -4, 5, 1, 8, 'accent');
+  b.box(4, 10, -1, 1, 1, 2, 'accent');
+  // Haut noir, veste blanche jetée sur les épaules.
+  b.box(-1, 11, -4, 5, 4, 8, 'structure');
+  b.box(-1, 13, -5, 5, 2, 10, 'highlight');
+  b.box(0, 9, -6, 3, 5, 2, 'highlight');
+  b.box(0, 9, 4, 3, 5, 2, 'highlight');
+  // Col doré : sans lui, la tête noire se fondait dans le haut noir.
+  b.box(0, 15, -2, 4, 1, 4, 'accent');
+  head(b, 16, -2, { visor: false });
+  // La mèche blonde, sur le devant seulement : étendue à tout le dessus du
+  // crâne, elle se lisait comme une couronne.
+  b.box(2, 19, -2, 2, 1, 3, 'accent', { keepExisting: false });
+  b.box(3, 18, -2, 1, 1, 2, 'accent', { keepExisting: false });
+  // LE HARNAIS. Premier jet : disques à hauteur de tête, qui se lisaient
+  // comme un casque audio. Abaissés aux épaules et écartés, ils redeviennent
+  // ce qu'ils sont — des pièces portées dans le dos.
+  b.box(-4, 10, -3, 3, 5, 6, 'structure');
+  for (const side of [-1, 1] as const) {
+    const zc = side * 9.5;
+    b.box(-5, 8, side < 0 ? -13 : 7, 2, 10, 7, 'accent');
+    b.box(-5, 18, side < 0 ? -13 : 10, 2, 2, 4, 'accent');
+    b.box(-3, 11, side < 0 ? -11 : 9, 3, 5, 3, 'structure');
+    frontDisc(b, 0, 13, zc, 3.9, 2, 'highlight');
+    frontDisc(b, 0, 13, zc, 2.4, 2, 'structure');
+  }
+}
+
+/**
+ * D.MON — la méca rouge au sabre. Silhouette : une méca DEBOUT, bras épais
+ * et poing au sol — tout le contraire de la coque basse à canons de D.Va, sa
+ * coéquipière du MEKA. Accessoire : le sabre à plasma vert, debout côté +z.
+ *
+ * Pas de pilote, pour la même raison que chez D.Va : une figurine dans la
+ * figurine devient une bouillie. Le dôme vert du cockpit, lui, reste — c'est
+ * la seule autre tache verte, et il fait écho au sabre.
+ */
+function buildDmon(b: SceneBuilder): void {
+  pedestal(b, 8);
+  // Pieds blancs larges, tibias rouges.
+  for (const z of [-5, 2] as const) {
+    b.box(-1, 2, z - 1, 6, 2, 4, 'structure');
+    b.box(0, 4, z, 4, 4, 3, 'accent');
+  }
+  // Coque rouge, plastron blanc.
+  b.box(-2, 8, -6, 7, 7, 12, 'accent');
+  b.box(4, 9, -3, 1, 4, 6, 'structure', { keepExisting: false });
+  // Dôme du cockpit : une calotte posée sur le dos. Premier jet : une sphère
+  // entière, qui traversait la coque et ressortait derrière en grumeaux verts.
+  for (let y = 15; y <= 18; y += 1) {
+    const r = Math.sqrt(4.4 * 4.4 - (y - 14) ** 2);
+    b.disc(-1, 0, r, y, 1, 'highlight');
+  }
+  // Tête de la méca, œil vert.
+  b.box(2, 15, -2, 3, 2, 4, 'accent');
+  b.box(5, 15, -1, 1, 1, 2, 'highlight');
+  // Épaulières.
+  b.box(-1, 13, -10, 5, 4, 4, 'accent');
+  b.box(-1, 13, 6, 5, 4, 4, 'accent');
+  // Bras -z, poing au sol : l'appui qui fait le poids, comme chez Winston.
+  b.box(0, 8, -10, 4, 5, 3, 'structure');
+  b.box(-1, 3, -11, 6, 5, 5, 'accent');
+  // LE SABRE, porté loin du corps : au premier jet, collé à l'épaule, son vert
+  // touchait celui du dôme et les deux ne faisaient plus qu'une tache.
+  b.box(0, 9, 7, 4, 4, 4, 'structure');
+  b.box(1, 8, 11, 3, 4, 3, 'accent');
+  b.box(1, 5, 12, 2, 3, 2, 'structure');
+  b.box(1, 12, 12, 3, 11, 2, 'highlight');
+}
+
+/**
+ * ANRAN — les éventails de feu. Silhouette : garde basse, jambes très
+ * écartées, bras tendus à l'horizontale. Accessoire : les DEUX éventails, des
+ * demi-disques d'or au bout des bras — ce sont eux qui font la largeur du
+ * modèle, et aucune autre figurine ne porte cette forme.
+ */
+function buildAnran(b: SceneBuilder): void {
+  pedestal(b, 7);
+  // Jambes écartées, plus que chez aucune autre.
+  b.box(0, 2, -6, 3, 6, 3, 'structure');
+  b.box(0, 2, 3, 3, 6, 3, 'structure');
+  // Tenue orange à flancs noirs.
+  b.box(-1, 7, -4, 5, 2, 8, 'accent');
+  b.box(-1, 9, -4, 5, 6, 8, 'accent');
+  b.box(3, 9, -4, 1, 6, 1, 'structure', { keepExisting: false });
+  b.box(3, 9, 3, 1, 6, 1, 'structure', { keepExisting: false });
+  // Épaules ORANGE : au premier jet un bandeau noir y passait, et la tête
+  // noire, posée dessus, s'y fondait.
+  b.box(-1, 13, -5, 5, 2, 10, 'accent');
+  // Manches noires, bras tendus.
+  b.box(0, 12, -8, 3, 3, 4, 'structure');
+  b.box(0, 12, 4, 3, 3, 4, 'structure');
+  head(b, 15, -2, { visor: false });
+  // Chignon haut, en arrière : en colonne droite, il se lisait comme une
+  // cheminée.
+  b.box(-1, 19, -2, 3, 2, 3, 'structure');
+  b.box(-1, 21, -1, 2, 1, 2, 'structure');
+  b.box(-2, 16, -2, 2, 3, 4, 'structure');
+  // LES ÉVENTAILS : demi-disques DEBOUT dans le plan (x, y), tranche d'or et
+  // feuille orange, chacun dans le prolongement d'une main.
+  for (const z of [-11, 9] as const) {
+    for (let dx = -5; dx <= 5; dx += 1) {
+      for (let dy = 0; dy <= 5; dy += 1) {
+        const d2 = dx * dx + dy * dy;
+        if (d2 > 30) continue;
+        const role: BrickRole = d2 > 16 ? 'highlight' : 'accent';
+        b.box(1 + dx, 12 + dy, z, 1, 1, 2, role);
+      }
+    }
+  }
+}
+
+/**
+ * EMRE — l'écharpe rouge. Silhouette : soldat carré en armure noire, dont deux
+ * longs pans d'écharpe rouge tombent dans le dos jusqu'aux mollets.
+ * Accessoire : cette écharpe, nouée haut autour du cou ; le fusil de bronze
+ * n'est qu'un support, porté en avant comme celui de Soldier : 76.
+ *
+ * Le noyau rouge de la poitrine est posé en saillie, à la manière de
+ * l'accélérateur de Tracer : plaqué, il ne prenait aucune ombre.
+ */
+function buildEmre(b: SceneBuilder): void {
+  pedestal(b, 7);
+  b.box(0, 2, -4, 4, 6, 3, 'structure');
+  b.box(0, 2, 1, 4, 6, 3, 'structure');
+  b.box(-1, 2, -5, 6, 2, 4, 'structure');
+  b.box(-1, 2, 1, 6, 2, 4, 'structure');
+  b.box(-1, 8, -5, 5, 7, 10, 'structure');
+  // Le noyau, en saillie sur le plastron.
+  b.box(4, 10, -2, 2, 3, 4, 'structure');
+  b.box(6, 11, -1, 1, 1, 2, 'accent');
+  b.box(0, 9, 6, 3, 5, 3, 'structure');
+  // Épaulière lourde, côté du fusil.
+  b.box(-1, 13, -8, 5, 3, 3, 'structure');
+  // L'ÉCHARPE : col épais, puis deux pans qui tombent côté +z, celui qu'on
+  // voit. Premier jet : des pans flottant droit derrière lui (-x), cachés par
+  // son propre dos — l'écharpe se réduisait à un col.
+  b.box(-1, 15, -4, 5, 2, 8, 'accent');
+  b.box(-3, 5, 3, 2, 11, 3, 'accent');
+  b.box(-4, 3, 5, 2, 10, 2, 'accent');
+  head(b, 17, -2, { visor: false });
+  // Visage hâlé : la tête de la couleur de l'armure disparaissait dans le
+  // buste.
+  b.box(0, 17, -2, 4, 3, 4, 'highlight', { keepExisting: false });
+  // Crinière dressée et rejetée en arrière : en pointes, sinon elle se lit
+  // comme un chapeau noir.
+  b.box(-1, 20, -2, 5, 1, 4, 'structure');
+  b.box(-1, 21, -2, 4, 1, 3, 'structure');
+  b.box(1, 22, -2, 2, 1, 2, 'structure');
+  b.box(-2, 22, -1, 2, 1, 2, 'structure');
+  b.box(-3, 19, -1, 2, 2, 2, 'structure');
+  b.box(-2, 17, -2, 2, 4, 4, 'structure');
+  b.box(3, 19, -2, 1, 1, 2, 'structure', { keepExisting: false });
+  // Le fusil de bronze, côté -z : boîtier épais, canon plus fin.
+  b.box(0, 9, -8, 4, 4, 3, 'structure');
+  b.box(3, 9, -10, 6, 4, 3, 'highlight');
+  b.box(9, 10, -9, 4, 2, 2, 'highlight');
+  b.box(13, 10, -9, 1, 2, 2, 'structure');
+}
+
+/**
+ * FREJA — la chasseuse de primes. Silhouette : veste blanche à col de
+ * fourrure, cape-planeur qui s'évase jusqu'au socle derrière elle, cheveux
+ * roux autour d'un visage clair. Accessoire : l'arbalète, tenue debout.
+ *
+ * L'ARBALÈTE A DEMANDÉ QUATRE ESSAIS. De profil (branches verticales au bout
+ * du fût), elle se lisait comme une pioche ; l'arc fermé par sa corde, comme
+ * une masse ; couchée à plat et toute sombre, comme un bâton noir. Ce qui
+ * marche : debout, l'arc CLAIR en travers de l'écran, et la corde tirée en V.
+ * Vendetta avait buté sur la même arme (cf. son modèle).
+ */
+function buildFreja(b: SceneBuilder): void {
+  pedestal(b, 7);
+  // Bottes hautes et short de cuir sombre.
+  b.box(0, 2, -3, 3, 6, 3, 'structure');
+  b.box(0, 2, 1, 3, 6, 3, 'structure');
+  b.box(-1, 8, -4, 5, 3, 8, 'structure');
+  // Veste blanche glacée, col de fourrure.
+  b.box(-1, 11, -4, 5, 4, 8, 'accent');
+  b.box(0, 10, -7, 3, 5, 3, 'accent');
+  b.box(0, 10, 4, 3, 5, 3, 'accent');
+  b.box(-1, 14, -4, 5, 2, 8, 'accent');
+  head(b, 16, -2, { visor: false });
+  // UN VISAGE EN PEAU, toute la face avant, et la chevelure rousse sur le
+  // dessus, les côtés et la nuque — jamais devant. Deux états avant : le roux
+  // posé sur toute la tête en faisait un bloc sans visage, et une fenêtre
+  // claire de deux briques au milieu ne suffisait pas à en dessiner un.
+  b.box(0, 16, -2, 4, 3, 4, SKIN, { keepExisting: false });
+  b.box(0, 19, -2, 4, 1, 4, 'highlight', { keepExisting: false });
+  b.box(-1, 20, -3, 5, 1, 6, 'highlight');
+  b.box(-1, 15, -3, 4, 5, 1, 'highlight');
+  b.box(-1, 15, 2, 4, 5, 1, 'highlight');
+  b.box(-2, 14, -3, 2, 7, 6, 'highlight');
+  // La cape-planeur : un pan dans le dos, de plus en plus large en descendant.
+  for (let y = 2; y <= 15; y += 1) {
+    const half = 4 + Math.round((15 - y) * 0.45);
+    b.box(-3, y, -half, 2, 1, half * 2, 'accent');
+  }
+  // L'ARBALÈTE, TENUE DEBOUT côté -z, comme sur le visuel en pied : un fût
+  // vertical sombre, et à son sommet l'arc CLAIR, recourbé vers le bas. L'arc
+  // court selon la diagonale (+x, -z) : c'est la seule direction du plan du
+  // sol qui s'affiche parfaitement à l'horizontale, si bien que fût et arc
+  // dessinent à l'écran une vraie croix. Couchée à plat et toute sombre, elle
+  // se lisait comme un bâton noir sur le fond. Elle est tenue À BOUT DE BRAS :
+  // plus près, la moitié de l'arc passait derrière la tête et ce qui restait
+  // se lisait comme une lame de faux.
+  b.box(0, 10, -10, 4, 3, 3, 'accent');
+  b.box(3, 7, -12, 2, 16, 2, 'structure');
+  for (let u = -4; u <= 4; u += 1) {
+    const droop = Math.abs(u) === 4 ? 1 : 0;
+    b.box(3 + u, 19 - droop, -12 - u, 2, 2, 2, 'accent');
+  }
+  // La corde, tendue en V des pointes jusqu'au fût. Sans elle, l'arc
+  // recourbé sur son manche se lisait comme une pioche.
+  // Deux briques de haut par marche : d'une seule, la corde n'était qu'un
+  // pointillé de cubes qui ne se touchaient que par un coin.
+  for (let u = -4; u <= 4; u += 1) {
+    b.box(4 + u, 13 + Math.abs(u), -12 - u, 1, 2, 1, 'accent');
+  }
+}
+
+/**
+ * SHION — les cornes d'oni. Silhouette : longue et droite, chevelure blanche
+ * raide qui tombe jusqu'à la taille. Accessoire : les deux cornes rouges sur
+ * le crâne — la seule couleur vive du haut du modèle, grossies à dessein :
+ * fidèles à leur taille réelle, elles disparaissaient à 180 px.
+ *
+ * Ni pistolets ni moto : deux armes de poing ne font qu'un doigt à cette
+ * taille, et la moto serait une seconde figurine.
+ */
+function buildShion(b: SceneBuilder): void {
+  pedestal(b, 6);
+  // Combinaison blanche, bottes rouges.
+  b.box(0, 2, -3, 3, 6, 3, 'accent');
+  b.box(0, 2, 1, 3, 6, 3, 'accent');
+  b.box(0, 2, -3, 4, 2, 3, 'highlight', { keepExisting: false });
+  b.box(0, 2, 1, 4, 2, 3, 'highlight', { keepExisting: false });
+  // Haut NOIR sous une veste blanche ouverte. Premier jet : veste presque
+  // fermée — le blanc de la chevelure n'avait plus rien sur quoi tomber.
+  b.box(-1, 8, -4, 5, 7, 8, 'structure');
+  b.box(-1, 8, -5, 5, 7, 1, 'accent');
+  b.box(-1, 8, 4, 5, 7, 1, 'accent');
+  b.box(-1, 13, -6, 5, 2, 12, 'accent');
+  b.box(0, 8, -7, 3, 5, 2, 'accent');
+  b.box(0, 8, 5, 3, 5, 2, 'accent');
+  head(b, 15, -2, { visor: false });
+  // Visage pâle : la tête sombre et le haut noir faisaient un seul bloc.
+  b.box(0, 15, -2, 4, 4, 4, 'accent', { keepExisting: false });
+  // Visage en retrait d'une brique : la frange et les mèches, de la même
+  // teinte, ne s'en distinguent que par l'ombre de ce creux.
+  b.carveBox(3, 15, -1, 1, 3, 2);
+  // La chevelure : longue, raide, qui tombe SUR le haut noir.
+  b.box(-1, 19, -3, 5, 1, 6, 'accent');
+  b.box(-2, 7, -3, 2, 13, 6, 'accent');
+  b.box(0, 9, -3, 4, 10, 1, 'accent', { keepExisting: false });
+  b.box(0, 9, 2, 4, 10, 1, 'accent', { keepExisting: false });
+  // LES CORNES : épaisses à la base, hautes, qui s'écartent en montant — et
+  // plantées aux deux bords du crâne. À deux briques de côté et trois de
+  // haut, elles se perdaient à 180 px ; plus larges vers le milieu, elles se
+  // touchaient à l'écran et ne faisaient plus qu'un nœud rouge.
+  for (const side of [-1, 1] as const) {
+    b.box(0, 20, side < 0 ? -4 : 2, 3, 2, 2, 'highlight');
+    b.box(1, 22, side < 0 ? -5 : 3, 2, 2, 2, 'highlight');
+    b.box(1, 24, side < 0 ? -5 : 4, 1, 2, 1, 'highlight');
+  }
+}
+
+/**
+ * SIERRA — le béret. Silhouette : haut court vert sur pantalon sombre, un
+ * bras prothétique d'une autre couleur que le reste. Accessoire : le béret
+ * rouge, une galette penchée qui déborde la tête.
+ *
+ * Le rouge du béret et le rose du bras partagent UNE teinte, un rose-rouge :
+ * trois couleurs par héros, et ce sont les deux taches vives qu'on retient.
+ */
+function buildSierra(b: SceneBuilder): void {
+  pedestal(b, 6);
+  b.box(0, 2, -4, 3, 6, 3, 'structure');
+  b.box(0, 2, 1, 3, 6, 3, 'structure');
+  b.box(-1, 8, -4, 5, 3, 8, 'structure');
+  // Haut vert.
+  b.box(-1, 11, -4, 5, 4, 8, 'accent');
+  b.box(-1, 14, -5, 5, 1, 10, 'accent');
+  // Le bras prothétique, côté vu.
+  b.box(0, 9, 4, 3, 6, 3, 'highlight');
+  head(b, 15, -2, { visor: false });
+  // Béret : une galette plus large que la tête, qui retombe d'un côté. Plus
+  // haute et sans ce pan tombant, elle se lisait comme une casquette.
+  b.box(-1, 19, -3, 6, 1, 7, 'highlight');
+  b.box(-1, 20, -2, 5, 1, 6, 'highlight');
+  b.box(-1, 18, 2, 5, 1, 2, 'highlight');
+  b.box(-2, 17, 2, 3, 1, 2, 'highlight');
+  // Le fusil, gris, porté en avant côté -z.
+  b.box(0, 10, -8, 3, 3, 3, 'structure');
+  b.box(2, 9, -9, 9, 3, 3, 'structure');
+  b.box(11, 10, -8, 2, 1, 1, 'structure');
+}
+
+/**
+ * DOCTRINE — le bras d'or. Silhouette : long manteau sombre jusqu'au socle,
+ * col montant doublé de cramoisi, visage brun aux lunettes rouges.
+ * Accessoire : le bras mécanique doré, articulé, du côté vu.
+ *
+ * SES DRONES-LAMES NE SONT PAS POSÉS. Trois lames d'or en arc au-dessus de
+ * l'épaule se lisaient comme un pointillé de cubes flottants — exactement le
+ * défaut des premiers pétales de Lifeweaver. Le bras d'or porte seul.
+ *
+ * Le cramoisi est la dominante (socle, col, doublure) et l'or le détail
+ * clair : avec l'or en dominante, la palette était celle de Doomfist.
+ */
+function buildDoctrine(b: SceneBuilder): void {
+  pedestal(b, 7);
+  // Manteau long, évasé au pied, ouvert sur une doublure cramoisie.
+  b.box(-2, 2, -5, 7, 4, 10, 'structure');
+  b.box(-1, 6, -5, 5, 9, 10, 'structure');
+  b.box(4, 2, -2, 1, 4, 1, 'accent', { keepExisting: false });
+  b.box(4, 2, 1, 1, 4, 1, 'accent', { keepExisting: false });
+  b.box(3, 6, -2, 1, 9, 1, 'accent', { keepExisting: false });
+  b.box(3, 6, 1, 1, 9, 1, 'accent', { keepExisting: false });
+  b.box(-1, 13, -6, 5, 2, 12, 'structure');
+  b.box(0, 9, -7, 3, 5, 2, 'structure');
+  // UN VISAGE EN PEAU, relevé d'un cran sur un cou qui le détache des
+  // épaules. Premier état : tête sombre enfoncée dans le col, sur un manteau
+  // sombre — la figurine se lisait comme un manteau vide, sans personne
+  // dedans.
+  b.box(1, 15, -1, 2, 2, 2, SKIN);
+  head(b, 17, -2, { visor: false });
+  b.box(0, 17, -2, 4, 3, 4, SKIN, { keepExisting: false });
+  // Col montant, doublé de cramoisi, qui encadre la tête.
+  b.box(-2, 15, -4, 2, 8, 8, 'structure');
+  b.box(0, 15, -4, 1, 7, 8, 'accent');
+  // Les locks : sombres, sur le crâne et tombant derrière les joues. Posées
+  // sur tout le flanc de la tête, elles ne laissaient voir du visage qu'une
+  // bande.
+  b.box(-1, 20, -3, 5, 1, 6, 'structure');
+  b.box(-1, 14, -3, 2, 6, 1, 'structure', { keepExisting: false });
+  b.box(-1, 14, 2, 2, 6, 1, 'structure', { keepExisting: false });
+  // Lunettes rondes rouges, en saillie comme la visière de Soldier : 76.
+  b.box(4, 18, -2, 1, 1, 4, 'accent');
+  // LE BRAS D'OR, ARTICULÉ : épaulière, bras, coude, avant-bras, poignet,
+  // main — les articulations dans le cramoisi de ses néons. D'un seul bloc,
+  // il se lisait comme une brique d'or posée contre le manteau.
+  b.box(-1, 13, 5, 5, 4, 4, 'highlight');
+  b.box(0, 10, 6, 3, 3, 3, 'highlight');
+  b.box(0, 9, 6, 3, 1, 3, 'accent');
+  b.box(1, 7, 6, 3, 2, 3, 'highlight');
+  b.box(1, 6, 6, 3, 1, 3, 'accent');
+  b.box(1, 4, 5, 4, 2, 4, 'highlight');
+}
+
+/**
+ * FIKA (« Jetpack Cat ») — la chatte rousse. Silhouette : PAS HUMAINE, une
+ * chatte assise, tête plus large que le corps, deux oreilles en pointe, queue
+ * enroulée au sol. Accessoire : le jetpack bleu, deux nacelles qui débordent
+ * de chaque côté, et les lunettes d'aviateur sur le front.
+ *
+ * Même levier qu'Orisa ou Wrecking Ball : une silhouette qui sort du gabarit
+ * humain se nomme d'un coup. Premier jet : tête de la largeur du corps et
+ * oreilles d'une brique — un animal roux indéterminé. Ce sont la tête élargie
+ * et les oreilles pointues qui en font une chatte.
+ */
+function buildFika(b: SceneBuilder): void {
+  pedestal(b, 6);
+  // Arrière-train assis, pattes avant droites, chaussettes blanches.
+  b.box(-3, 2, -3, 5, 4, 6, 'accent');
+  b.box(2, 2, -3, 2, 5, 2, 'accent');
+  b.box(2, 2, 1, 2, 5, 2, 'accent');
+  b.box(2, 2, -3, 3, 1, 2, 'highlight', { keepExisting: false });
+  b.box(2, 2, 1, 3, 1, 2, 'highlight', { keepExisting: false });
+  // Buste, plastron blanc en saillie.
+  b.box(-2, 6, -3, 5, 4, 6, 'accent');
+  b.box(3, 6, -2, 1, 4, 4, 'highlight');
+  // Tête plus large que le corps, museau et joues blancs.
+  b.box(-1, 10, -4, 6, 5, 8, 'accent');
+  b.box(4, 10, -3, 1, 2, 6, 'highlight', { keepExisting: false });
+  b.box(5, 10, -2, 1, 2, 4, 'highlight');
+  // Oreilles : deux pointes franches aux coins du crâne.
+  for (const z0 of [-4, 1] as const) {
+    b.box(0, 15, z0, 3, 2, 3, 'accent');
+    b.box(0, 17, z0 < 0 ? -4 : 2, 2, 1, 2, 'accent');
+    b.box(1, 18, z0 < 0 ? -4 : 3, 1, 1, 1, 'accent');
+  }
+  // Lunettes d'aviateur, un bandeau bleu en saillie sur le front.
+  b.box(4, 13, -4, 2, 2, 8, 'structure');
+  // Queue enroulée au sol, côté vu, bout blanc.
+  b.box(-4, 2, 3, 3, 2, 2, 'accent');
+  b.box(-1, 2, 4, 4, 2, 2, 'accent');
+  b.box(3, 2, 4, 1, 2, 2, 'highlight');
+  // Le jetpack : dosseret et deux nacelles qui débordent des flancs.
+  b.box(-5, 6, -3, 2, 6, 6, 'structure');
+  b.box(-6, 9, -7, 5, 3, 3, 'structure');
+  b.box(-6, 9, 4, 5, 3, 3, 'structure');
+}
+
+/**
+ * JUNO — la Martienne. Silhouette : astronaute trapue, grosses surbottes,
+ * veste matelassée orange sur combinaison sarcelle. Accessoire : le
+ * casque-bulle lumineux, plus gros que la tête, ouvert sur le visage.
+ *
+ * LA BULLE N'EST PAS UNE SPHÈRE. Une sphère de rayon 4 rendait un chou-fleur
+ * cyan, toutes marches et grumeaux ; un cube aux arêtes abattues se lit comme
+ * une bulle à cette taille, et sa fenêtre comme une visière.
+ */
+function buildJuno(b: SceneBuilder): void {
+  pedestal(b, 6);
+  // Surbottes martiennes, plus larges que les jambes.
+  b.box(-1, 2, -4, 5, 3, 3, 'accent');
+  b.box(-1, 2, 1, 5, 3, 3, 'accent');
+  b.box(0, 5, -3, 3, 4, 2, 'structure');
+  b.box(0, 5, 1, 3, 4, 2, 'structure');
+  // Combinaison sarcelle, veste orange.
+  b.box(-1, 9, -4, 5, 3, 8, 'structure');
+  b.box(-1, 12, -4, 5, 4, 8, 'accent');
+  b.box(0, 11, -6, 3, 5, 2, 'accent');
+  b.box(0, 11, 4, 3, 5, 2, 'accent');
+  head(b, 16, -2, { visor: false });
+  // Casque-bulle : un cube de 6 aux arêtes abattues, fenêtre sur le visage.
+  for (let x = -1; x <= 4; x += 1) {
+    for (let y = 15; y <= 20; y += 1) {
+      for (let z = -3; z <= 2; z += 1) {
+        const edges =
+          Number(x === -1 || x === 4) +
+          Number(y === 15 || y === 20) +
+          Number(z === -3 || z === 2);
+        if (edges >= 2) continue;
+        b.place(x, y, z, 'highlight');
+      }
+    }
+  }
+  b.carveBox(4, 16, -2, 1, 3, 4);
+}
+
+/**
+ * MIZUKI — le kasa. Silhouette : un chapeau conique plus large que le socle,
+ * qui coiffe toute la figurine. Accessoire : ce chapeau, bordé d'un liseré
+ * vert lumineux. La tunique sarcelle fait la couleur.
+ *
+ * Le chapeau de Cassidy est l'autre grand bord du roster : lui est clair,
+ * rectangulaire et plat ; celui-ci est bronze sombre, ROND, conique et cerclé
+ * de lumière.
+ *
+ * LE VISAGE DOIT SE VOIR SOUS LE BORD. Dans les deux premiers états, tête
+ * sombre et chapeau centré sur elle, la figurine n'était plus qu'une colonne
+ * sarcelle sous un disque : une lampe, personne dessous. D'où le visage en
+ * peau (quatrième ton, `skin`) et le kasa porté en arrière.
+ */
+function buildMizuki(b: SceneBuilder): void {
+  pedestal(b, 7);
+  b.box(0, 2, -4, 3, 6, 3, 'structure');
+  b.box(0, 2, 1, 3, 6, 3, 'structure');
+  // Tunique fendue : pans évasés en bas, taille serrée, épaules larges.
+  b.box(-2, 5, -5, 6, 4, 10, 'accent');
+  b.box(-1, 9, -4, 5, 1, 8, 'structure');
+  b.box(-1, 10, -4, 5, 5, 8, 'accent');
+  b.box(-1, 13, -6, 5, 2, 12, 'accent');
+  b.box(0, 8, -7, 3, 5, 3, 'structure');
+  b.box(0, 8, 4, 3, 5, 3, 'structure');
+  head(b, 15, -2, { visor: false });
+  // Le visage : la tête entière en peau sous un rang de cheveux, et le masque
+  // de bronze du nez au menton, en saillie pour prendre une ombre. Un seul
+  // rang de peau à l'avant ne se lisait pas comme un visage, seulement comme
+  // un liseré sur un bloc brun.
+  b.box(0, 15, -2, 4, 3, 4, SKIN, { keepExisting: false });
+  b.box(4, 15, -1, 1, 2, 2, 'structure');
+  // Le kasa : coiffe sur la tête, puis bord lumineux, puis cône en gradins.
+  // CENTRÉ EN ARRIÈRE DE LA TÊTE ET RELEVÉ D'UN CRAN, porté en arrière
+  // comme sur le visuel en pied : centré sur la tête, son bord avant passait
+  // à l'écran devant le visage et la figurine n'avait plus de tête.
+  b.box(-1, 19, -2, 4, 2, 4, 'structure');
+  b.ring(-1, 0, 6.5, 1.4, 21, 1, 'highlight');
+  b.disc(-1, 0, 5.3, 22, 1, 'structure');
+  b.disc(-1, 0, 3.6, 23, 1, 'structure');
+  b.disc(-1, 0, 2, 24, 1, 'structure');
+}
+
+/**
+ * WUYANG — le bâton en travers du dos. Silhouette : la seule DIAGONALE du
+ * roster, un long bâton rouge qui part du sol à gauche et dépasse au-dessus
+ * de l'épaule opposée. Accessoire : ce bâton, aux embouts dorés.
+ *
+ * Debout côté +z, comme tant d'autres armes du lot, il n'était qu'un poteau
+ * de plus ; en travers, il dessine la pose du visuel officiel (le bâton
+ * porté sur l'épaule) et une silhouette que personne d'autre n'a.
+ *
+ * La peau tient le rôle `structure` : bras nus, visage. Les cheveux, d'un
+ * noir bleuté, prennent le bleu de la tenue — trois teintes, et un bleu-noir
+ * séparé n'aurait pas tenu à côté du bleu.
+ */
+function buildWuyang(b: SceneBuilder): void {
+  pedestal(b, 7);
+  // Pantalon large, ceinture rouge, haut bleu sans manches.
+  b.box(-1, 2, -5, 5, 6, 4, 'accent');
+  b.box(-1, 2, 1, 5, 6, 4, 'accent');
+  b.box(-1, 8, -4, 5, 1, 8, 'highlight');
+  b.box(-1, 9, -4, 5, 6, 8, 'accent');
+  // Bras nus.
+  b.box(0, 9, -7, 3, 5, 3, 'structure');
+  b.box(0, 9, 4, 3, 5, 3, 'structure');
+  head(b, 15, -2, { visor: false });
+  // Cheveux en épi, pas en calotte : une masse plate et large se lisait comme
+  // un casque.
+  b.box(-1, 19, -2, 5, 1, 4, 'accent');
+  b.box(0, 20, -2, 3, 1, 2, 'accent');
+  b.box(-2, 16, -2, 2, 4, 4, 'accent');
+  b.box(3, 18, -1, 1, 1, 3, 'accent', { keepExisting: false });
+  // Le bâton, en travers du dos : une marche par étage, section de 2 × 2.
+  for (let i = 0; i <= 18; i += 1) {
+    b.box(-3, 4 + i, 8 - i, 2, 2, 2, 'highlight');
+  }
+  // Embouts : la teinte de peau, la plus proche de leur or.
+  b.box(-3, 2, 8, 2, 3, 3, 'structure');
+  b.box(-3, 22, -11, 2, 3, 3, 'structure');
+}
+
 const BUILDERS: Record<HeroFigureSlug, (b: SceneBuilder) => void> = {
   reinhardt: buildReinhardt,
   tracer: buildTracer,
@@ -1667,6 +2318,18 @@ const BUILDERS: Record<HeroFigureSlug, (b: SceneBuilder) => void> = {
   lucio: buildLucio,
   moira: buildMoira,
   zenyatta: buildZenyatta,
+  domina: buildDomina,
+  dmon: buildDmon,
+  anran: buildAnran,
+  emre: buildEmre,
+  freja: buildFreja,
+  shion: buildShion,
+  sierra: buildSierra,
+  doctrine: buildDoctrine,
+  fika: buildFika,
+  juno: buildJuno,
+  mizuki: buildMizuki,
+  wuyang: buildWuyang,
 };
 
 /** Bornes inclusives d'une liste de briques. */
@@ -1700,6 +2363,10 @@ export function buildHeroFigure(slug: HeroFigureSlug): VoxelScene {
     palette: [PEDESTAL, palette.body, palette.main, palette.glow],
     landmarks: [],
     mood: 'day',
+    // `kind` n'est lu par personne ici : seul `color` sert, au rôle `SKIN`.
+    ...(palette.skin
+      ? { environment: { kind: 'sand' as const, color: palette.skin } }
+      : {}),
   };
 
   const bricks = b.toBricks();

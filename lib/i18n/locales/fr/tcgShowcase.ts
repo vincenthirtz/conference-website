@@ -56,6 +56,7 @@ export default ns('tcgShowcase', {
   kindMap: 'Map',
   kindFanart: 'Fan art',
   kindMascot: 'Mascotte',
+  kindHero: 'Héros',
 
   save: 'Enregistrer la vitrine',
   saving: 'Enregistrement…',

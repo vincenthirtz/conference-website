@@ -11,6 +11,7 @@ import type { CardFigure } from '@/utils/tcg/roleFigures';
 import type { LogoCredit } from '@/utils/teams/logoCredit';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import type { GameMascotSlug } from '@/utils/tcg/gameMascots';
+import type { OverwatchRole } from '@/utils/heroes/overwatch';
 import type nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 
 export type Pack = {
@@ -143,6 +144,17 @@ export type CollectionCard = Engagement &
         count: number;
         recyclable?: Recyclable;
       }
+    | {
+        kind: 'hero';
+        slug: string;
+        name: string | null;
+        /** Rôle du jeu (« Tank »…) ; `null` pour un héros sorti du registre. */
+        role: OverwatchRole | null;
+        rarity: TcgRarity;
+        isFoil: boolean;
+        count: number;
+        recyclable?: Recyclable;
+      }
   );
 
 /**
@@ -200,6 +212,14 @@ export type DrawnCard = { position: number; isNew?: boolean } & (
       rarity: TcgRarity;
       isFoil: boolean;
     }
+  | {
+      kind: 'hero';
+      slug: string;
+      name: string | null;
+      role: OverwatchRole | null;
+      rarity: TcgRarity;
+      isFoil: boolean;
+    }
 );
 
 export type Earn = {
@@ -252,6 +272,7 @@ export function subjectKey(card: DrawnCard | CollectionCard): string {
   if (card.kind === 'map') return `m-${card.slug}`;
   if (card.kind === 'fanart') return `f-${card.fanartId}`;
   if (card.kind === 'mascot') return `x-${card.slug}`;
+  if (card.kind === 'hero') return `h-${card.slug}`;
   return `t-${card.teamId}`;
 }
 
@@ -306,6 +327,14 @@ export function cardSubject(card: DrawnCard | CollectionCard): TcgCardSubject {
       kind: 'mascot',
       slug: card.slug as GameMascotSlug,
       name: card.name,
+    };
+  }
+  if (card.kind === 'hero') {
+    return {
+      kind: 'hero',
+      slug: card.slug,
+      name: card.name,
+      role: card.role ?? null,
     };
   }
   // `team` en DERNIER, et seulement pour `team`. Cette branche était le

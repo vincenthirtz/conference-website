@@ -94,6 +94,7 @@ export default {
   kindFanart: 'Fan art',
   kindAssociation: 'L’association',
   kindMascot: 'Mascot',
+  kindHero: 'Hero',
   unknownSubject: 'Unknown subject',
 
   overlayMovedNotice:

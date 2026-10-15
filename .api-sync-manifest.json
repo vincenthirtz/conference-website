@@ -1,6 +1,6 @@
 {
-  "apiCommit": "7261521226daeefebea054dacbdca59384a596e6",
-  "syncedAt": "2026-10-15T09:36:55.858Z",
+  "apiCommit": "b6490dff1b8d7d2d0276a59869af8597f32d6071",
+  "syncedAt": "2026-10-15T15:42:45.038Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -261,6 +261,8 @@
     "utils/tcg/grantPublicMvp.ts",
     "utils/tcg/grantTournamentParticipation.ts",
     "utils/tcg/grantVictoryRewards.ts",
+    "utils/tcg/heroCards.ts",
+    "utils/tcg/heroCardsReady.ts",
     "utils/tcg/heroFigures.ts",
     "utils/tcg/live.ts",
     "utils/tcg/overlayFeed.ts",

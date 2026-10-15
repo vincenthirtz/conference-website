@@ -68,6 +68,7 @@ export default {
   catalogueKindFanart: 'Fan art',
   catalogueKindAssociation: 'L’association',
   catalogueKindMascots: 'Mascots',
+  catalogueKindHeroes: 'Heroes',
   catalogueHolders: '{count} holder(s)',
   catalogueNoHolder: 'never drawn',
 };

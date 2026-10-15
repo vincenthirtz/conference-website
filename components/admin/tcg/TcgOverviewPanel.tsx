@@ -173,6 +173,7 @@ export type TcgOverviewLabels = {
   kindFanart: string;
   kindAssociation: string;
   kindMascot: string;
+  kindHero: string;
   unknownSubject: string;
 };
 
@@ -694,7 +695,9 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
                                 : labels.kindFanart
                               : subject.kind === 'mascot'
                                 ? labels.kindMascot
-                                : labels.kindPlayer}
+                                : subject.kind === 'hero'
+                                  ? labels.kindHero
+                                  : labels.kindPlayer}
                       </Chip>
 
                       {/* Un brillant est un exemplaire, pas une carte de plus :

@@ -11,7 +11,8 @@
 //
 // UNE PLACE DE DÉCOR, PAS UNE PLACE DE JOUEUSE. Le paquet garde sa composition
 // (« trois joueuses, une équipe, une carte de décor ») : la fan art partage
-// l'emplacement de la map, jamais celui d'une joueuse. `drawPack.ts` le dit
+// l'emplacement de la map (avec les mascottes et les héros), jamais celui
+// d'une joueuse. `drawPack.ts` le dit
 // depuis toujours — les maps « ne doivent jamais évincer une joueuse d'un
 // paquet, seulement occuper une place que personne ne réclame ». Une fan art
 // non plus.
@@ -70,21 +71,62 @@ export const FANART_DECOR_SHARE = 0.5;
 export const MASCOT_DECOR_SHARE = 0.25;
 
 /**
- * La carte de décor de ce paquet : une map, une fan art, ou une mascotte.
+ * Part des paquets où la carte de décor est un HÉROS, quand le vivier des
+ * héros est ouvert (`utils/tcg/heroCardsReady.ts`).
+ *
+ * UNE SUR HUIT, PRISE SUR LA PART DES MAPS ET SUR ELLE SEULE. Les parts des fan
+ * arts et des mascottes ont chacune leur raison, écrite ci-dessus, et l'arrivée
+ * des héros n'en change aucune : une fan art reste vue un paquet sur deux. Les
+ * héros et les maps sont, eux, le décor du JEU — ils se partagent ce qui reste,
+ * à parts égales quand fan arts et mascottes sont là (un huitième chacun).
+ *
+ * Le prix est assumé : une map sort deux fois moins souvent qu'avant les
+ * héros. Leur donner un quart aurait fait disparaître les maps du TCG.
+ */
+export const HERO_DECOR_SHARE = 0.125;
+
+/**
+ * Les types de carte de DÉCOR, dans l'ordre où le tirage lit leurs parts.
+ *
+ * La map ferme la marche parce qu'elle est le vivier de REPLI : elle prend
+ * tout ce que les autres parts laissent. C'est ce qui rend l'ajout d'un type
+ * inoffensif : un vivier vide ne prend aucun segment, et le tirage d'avant se
+ * retrouve à l'identique.
+ */
+export const DECOR_KINDS = ['fanart', 'mascot', 'hero', 'map'] as const;
+export type DecorKind = (typeof DECOR_KINDS)[number];
+
+/** La part fixe de chaque type de décor ; la map n'en a pas, elle prend le reste. */
+const DECOR_SHARES: Record<Exclude<DecorKind, 'map'>, number> = {
+  fanart: FANART_DECOR_SHARE,
+  mascot: MASCOT_DECOR_SHARE,
+  hero: HERO_DECOR_SHARE,
+};
+
+/**
+ * La carte de décor de ce paquet : une map, une fan art, une mascotte ou un
+ * héros.
  *
  * `roll` dans [0, 1) — même convention que `isFoil` : l'aléa entre par un
  * paramètre, jamais par `Math.random()` ici, pour que le tirage reste
  * reproductible et testable.
  *
- * LES PARTS SE LISENT DANS L'ORDRE, chacune sur le segment qui lui revient :
- * fan art en premier (0 → 0,5), mascotte ensuite (0,5 → 0,75), map pour le
- * reste. Quand un vivier manque, sa part revient aux autres au lieu de
- * produire un trou — un paquet ne doit jamais sortir avec un décor vide alors
- * qu'un vivier était disponible.
+ * LES PARTS SE LISENT DANS L'ORDRE DE `DECOR_KINDS`, chacune sur le segment qui
+ * lui revient, et SEULEMENT POUR LES VIVIERS DISPONIBLES : fan art (0 → 0,5),
+ * mascotte (0,5 → 0,75), héros (0,75 → 0,875), map pour le reste (0,875 → 1).
+ * Le vivier de REPLI prend tout ce qui reste : la map quand elle existe, sinon
+ * le dernier vivier disponible dans l'ordre. Quand un vivier manque, sa part
+ * revient donc au repli au lieu de produire un trou — un paquet ne doit jamais
+ * sortir avec un décor vide alors qu'un vivier était disponible.
  *
- * UN TIRAGE ABSENT OU ABERRANT REND « map » : c'est le comportement d'avant
- * les fan arts. Un doute ne doit pas faire apparaître une carte d'un type
- * nouveau.
+ * Probabilités résultantes :
+ *   - les quatre viviers : fan art 50 %, mascotte 25 %, héros 12,5 %, map 12,5 % ;
+ *   - sans fan art : mascotte 25 %, héros 12,5 %, map 62,5 % ;
+ *   - sans héros : EXACTEMENT les parts d'avant les héros (50 / 25 / 25).
+ *
+ * UN TIRAGE ABSENT OU ABERRANT REND LE VIVIER DE REPLI (« map » quand il y a
+ * des maps) : c'est le comportement d'avant les fan arts. Un doute ne doit pas
+ * faire apparaître une carte d'un type nouveau.
  */
 export function pickDecorKind(input: {
   roll: number;
@@ -92,32 +134,36 @@ export function pickDecorKind(input: {
   hasMaps: boolean;
   /** Le registre des mascottes ; absent = comportement d'avant les mascottes. */
   hasMascots?: boolean;
-}): 'map' | 'fanart' | 'mascot' | 'none' {
-  const hasMascots = input.hasMascots === true;
-  if (!input.hasFanart && !input.hasMaps && !hasMascots) return 'none';
+  /** Le registre des héros, s'il est ouvert ; absent = comportement d'avant. */
+  hasHeroes?: boolean;
+}): DecorKind | 'none' {
+  const available: Record<DecorKind, boolean> = {
+    fanart: input.hasFanart,
+    mascot: input.hasMascots === true,
+    hero: input.hasHeroes === true,
+    map: input.hasMaps,
+  };
+  const present = DECOR_KINDS.filter((kind) => available[kind]);
+  if (present.length === 0) return 'none';
+
+  const fallback: DecorKind = available.map
+    ? 'map'
+    : present[present.length - 1];
 
   const safe =
     Number.isFinite(input.roll) && input.roll >= 0 && input.roll < 1
       ? input.roll
       : 1;
 
-  // Un seul vivier disponible : il prend tout, le tirage ne sert à rien.
-  if (!input.hasFanart && !hasMascots) return 'map';
-  if (!input.hasMaps && !hasMascots) return 'fanart';
-  if (!input.hasFanart && !input.hasMaps) return 'mascot';
-
-  // Deux viviers sur trois : la part du manquant revient au vivier de repli,
-  // qui est la map quand elle existe, sinon le premier disponible.
-  if (!hasMascots) return safe < FANART_DECOR_SHARE ? 'fanart' : 'map';
-  if (!input.hasFanart) return safe < MASCOT_DECOR_SHARE ? 'mascot' : 'map';
-  if (!input.hasMaps) {
-    return safe < FANART_DECOR_SHARE ? 'fanart' : 'mascot';
+  // Segments successifs. Un seul vivier disponible ne pose aucun segment : il
+  // est le repli, il prend tout, et le tirage ne sert à rien.
+  let edge = 0;
+  for (const kind of present) {
+    if (kind === fallback || kind === 'map') continue;
+    edge += DECOR_SHARES[kind];
+    if (safe < edge) return kind;
   }
-
-  // Les trois : segments successifs.
-  if (safe < FANART_DECOR_SHARE) return 'fanart';
-  if (safe < FANART_DECOR_SHARE + MASCOT_DECOR_SHARE) return 'mascot';
-  return 'map';
+  return fallback;
 }
 
 /** Une fan art, telle que la lisent le tirage, les faces et les crédits. */

@@ -58,6 +58,15 @@ export function showcaseCardSubject(card: ShowcaseCard): TcgCardSubject {
       name: card.name,
     };
   }
+  if (card.kind === 'hero') {
+    return {
+      kind: 'hero',
+      slug: card.slug,
+      name: card.name,
+      // `?? null` : une carte venue de l'éditeur peut précéder le déploiement.
+      role: card.role ?? null,
+    };
+  }
   return {
     kind: 'team',
     teamId: card.teamId,

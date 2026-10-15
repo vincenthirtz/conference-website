@@ -87,7 +87,7 @@ if (!url || !key) {
  * et le contrôle n°6 perdrait tout son sens s'il lisait la même liste que le
  * code qu'il surveille. Ici, la copie EST le témoin.
  */
-const KNOWN_KINDS = ['player', 'team', 'map', 'fanart', 'mascot'];
+const KNOWN_KINDS = ['player', 'team', 'map', 'fanart', 'mascot', 'hero'];
 
 async function rest(path) {
   const res = await fetch(`${url}/rest/v1/${path}`, {
@@ -180,15 +180,26 @@ async function main() {
     legacyScrim.slice(0, 10).map((r) => `${r.user_id} ← ${r.source_ref}`)
   );
 
-  const cards = await rest(
-    'tcg_pack_cards?select=pack_id,position,subject_kind,card_user_id,card_team_id,card_map_slug,card_fanart_id,card_mascot_slug&limit=100000'
-  );
+  // `card_hero_slug` n'existe qu'une fois `tcg_hero_cards.sql` appliquée
+  // (conference-api) : avant, la lecture se refait sans elle — aucune carte
+  // héros ne peut alors exister.
+  const cardColumns =
+    'pack_id,position,subject_kind,card_user_id,card_team_id,card_map_slug,card_fanart_id,card_mascot_slug';
+  let cards;
+  try {
+    cards = await rest(
+      `tcg_pack_cards?select=${cardColumns},card_hero_slug&limit=100000`
+    );
+  } catch {
+    cards = await rest(`tcg_pack_cards?select=${cardColumns}&limit=100000`);
+  }
   const column = {
     player: 'card_user_id',
     team: 'card_team_id',
     map: 'card_map_slug',
     fanart: 'card_fanart_id',
     mascot: 'card_mascot_slug',
+    hero: 'card_hero_slug',
   };
   const orphan = cards.filter((c) => {
     const col = column[c.subject_kind];

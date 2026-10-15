@@ -31,8 +31,8 @@
  * n'échouait — les cartes disparaissaient simplement, ou tombaient dans le
  * `return` final d'un lecteur et ressortaient déguisées en équipe.
  *
- * L'ORDRE EST CELUI DU TIRAGE : les trois sujets du site d'abord, puis les
- * deux qui se partagent l'emplacement de décor.
+ * L'ORDRE EST CELUI DU TIRAGE : les trois sujets du site d'abord, puis ceux
+ * qui se partagent l'emplacement de décor (fan art, mascotte, héros).
  */
 export const TCG_CARD_KINDS = [
   'player',
@@ -40,6 +40,7 @@ export const TCG_CARD_KINDS = [
   'map',
   'fanart',
   'mascot',
+  'hero',
 ] as const;
 
 export type TcgCardKind = (typeof TCG_CARD_KINDS)[number];
@@ -58,6 +59,7 @@ export const CARD_SUBJECT_COLUMN = {
   map: 'card_map_slug',
   fanart: 'card_fanart_id',
   mascot: 'card_mascot_slug',
+  hero: 'card_hero_slug',
 } as const satisfies Record<TcgCardKind, keyof CardSubjectRow>;
 
 /** La part « sujet » d'une ligne de `tcg_pack_cards`. */
@@ -68,6 +70,11 @@ export type CardSubjectRow = {
   card_map_slug?: string | null;
   card_fanart_id?: string | null;
   card_mascot_slug?: string | null;
+  /**
+   * Absente des lectures tant que la migration `tcg_hero_cards.sql` n'est pas
+   * appliquée (`heroCardsReady.ts`) : aucune carte héros n'existe alors.
+   */
+  card_hero_slug?: string | null;
 };
 
 /** `true` si ce `subject_kind` est un type que le code connaît. */

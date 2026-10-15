@@ -111,6 +111,7 @@ export default adminNs('adminTcgOverview', {
   kindFanart: 'Fan art',
   kindAssociation: 'L’association',
   kindMascot: 'Mascotte',
+  kindHero: 'Héros',
   unknownSubject: 'Sujet inconnu',
 
   // Renvoi de l'onglet Économie : le drop se règle dans Diffusion › Overlays,

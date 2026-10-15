@@ -71,6 +71,7 @@ const KIND_ORDER: CatalogueGroup[] = [
   'fanart',
   'association',
   'mascot',
+  'hero',
 ];
 
 function groupOf(card: { kind: CatalogueKind; category?: string }) {
@@ -114,7 +115,9 @@ export default function TcgCataloguePanel() {
             ? t.catalogueKindMaps
             : kind === 'mascot'
               ? t.catalogueKindMascots
-              : t.catalogueKindFanart;
+              : kind === 'hero'
+                ? t.catalogueKindHeroes
+                : t.catalogueKindFanart;
 
   return (
     <div>

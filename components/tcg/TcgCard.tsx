@@ -32,9 +32,15 @@ import TcgCardFallback, {
   revealCardFallback,
 } from '@/components/tcg/TcgCardFallback';
 import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
-import { figureUrl, type FigureRole } from '@/utils/tcg/roleFigures';
+import {
+  figureRoleFromHeroRole,
+  figureUrl,
+  type FigureRole,
+} from '@/utils/tcg/roleFigures';
 import { heroFigureSlugFromName, heroFigureUrl } from '@/utils/tcg/heroFigures';
+import { heroCardImageUrl } from '@/utils/tcg/heroCards';
 import { gameMascotUrl, type GameMascotSlug } from '@/utils/tcg/gameMascots';
+import type { OverwatchRole } from '@/utils/heroes/overwatch';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 
 /**
@@ -60,6 +66,13 @@ export const RARITY_TEXT: Record<TcgRarity, string> = {
   epic: 'text-yellow-300',
   legendary: 'text-cyan-200',
 };
+
+/**
+ * La pastille sous une figurine : le rôle ou le héros favori d'une joueuse, le
+ * rôle d'une carte héros. Une seule chaîne pour les deux usages.
+ */
+const FIGURE_CAPTION_CLASS =
+  'absolute bottom-1.5 left-1/2 max-w-[90%] -translate-x-1/2 truncate rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white/90';
 
 /**
  * Repère de rareté qui ne dépend PAS de la couleur : un à quatre losanges.
@@ -183,6 +196,19 @@ export type TcgCardSubject =
       kind: 'mascot';
       slug: GameMascotSlug;
       name: string | null;
+    }
+  | {
+      /**
+       * Un HÉROS du jeu (Reinhardt, Mercy…). Même contrat que la mascotte : le
+       * visuel est TOUJOURS sa figurine voxel — la même que celle d'une carte
+       * de joueuse qui a choisi ce héros —, sans photo ni page de destination.
+       * Son rôle (le mot du jeu) s'écrit sous la figurine, traduit par
+       * `labels.roles` quand l'écran le fournit.
+       */
+      kind: 'hero';
+      slug: string;
+      name: string | null;
+      role: OverwatchRole | null;
     };
 
 export type TcgCardProps = {
@@ -312,26 +338,44 @@ export default function TcgCard({
   const imageUrl =
     subject.kind === 'team'
       ? (subject.cardImageUrl ?? subject.logoUrl)
-      : subject.kind === 'mascot'
+      : subject.kind === 'mascot' || subject.kind === 'hero'
         ? // PAS ici : `imageUrl` part dans `next/image`, qui ne sert pas de
-          // SVG. La figurine de la mascotte est rendue plus bas par une balise
-          // `img` brute, comme celle des rôles et des héros.
+          // SVG. La figurine d'une mascotte ou d'un héros est rendue plus bas
+          // par une balise `img` brute, comme celle des rôles.
           null
         : subject.imageUrl;
 
   /**
-   * La figurine d'une mascotte. Elle ne manque JAMAIS — c'est le seul visuel de
-   * carte sans repli, puisqu'une mascotte n'a ni photo consentie ni avatar.
+   * La figurine d'une mascotte ou d'une carte héros. Elle ne manque pas — une
+   * mascotte ou un héros n'a ni photo consentie ni avatar ; seul un héros sorti
+   * du registre (carte orpheline) retombe sur l'aplat de marque.
    */
   const mascotUrl =
-    subject.kind === 'mascot' ? gameMascotUrl(subject.slug) : null;
+    subject.kind === 'mascot'
+      ? gameMascotUrl(subject.slug)
+      : subject.kind === 'hero'
+        ? heroCardImageUrl(subject.slug)
+        : null;
+  /**
+   * Le rôle d'une carte héros, dans la langue de l'écran quand elle fournit
+   * `labels.roles` ; sinon le mot du JEU (« Tank », « Damage », « Support »),
+   * qui est une donnée du registre et non un texte d'interface.
+   */
+  const heroRole =
+    subject.kind === 'hero' ? figureRoleFromHeroRole(subject.role) : null;
+  const heroRoleCaption =
+    subject.kind === 'hero' && subject.role
+      ? ((heroRole ? labels.roles?.[heroRole] : null) ?? subject.role)
+      : null;
   const href = noLink
     ? null
     : subject.kind === 'player'
       ? `/player/${subject.userId}`
-      : subject.kind === 'mascot' || subject.kind === 'fanart'
-        ? // Aucune page par mascotte ni par œuvre n'existe, et en créer une
-          // pour rendre la carte cliquable donnerait une page vide.
+      : subject.kind === 'mascot' ||
+          subject.kind === 'fanart' ||
+          subject.kind === 'hero'
+        ? // Aucune page par mascotte, par œuvre ni par héros n'existe, et en
+          // créer une pour rendre la carte cliquable donnerait une page vide.
           null
         : subject.kind === 'map'
           ? // Aucune page par map n'existe : on vise l'ancre de la maquette sur
@@ -370,6 +414,9 @@ export default function TcgCard({
         loading="lazy"
         className="absolute inset-0 h-full w-full object-contain"
       />
+      {heroRoleCaption && (
+        <span className={FIGURE_CAPTION_CLASS}>{heroRoleCaption}</span>
+      )}
     </>
   ) : figure ? (
     // Ni photo consentie ni avatar, mais un rôle connu : une figurine.
@@ -392,9 +439,7 @@ export default function TcgCard({
         className="absolute inset-0 h-full w-full object-contain"
       />
       {figureCaption && (
-        <span className="absolute bottom-1.5 left-1/2 max-w-[90%] -translate-x-1/2 truncate rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white/90">
-          {figureCaption}
-        </span>
+        <span className={FIGURE_CAPTION_CLASS}>{figureCaption}</span>
       )}
     </>
   ) : (

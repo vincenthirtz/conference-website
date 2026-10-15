@@ -30,6 +30,9 @@ import {
   readFanartFaces,
 } from './readCardFaces';
 import { gameMascotDisplayName } from './gameMascots';
+import { heroCardDisplayName, heroCardRole } from './heroCards';
+import { heroCardsReady, withHeroColumn } from './heroCardsReady';
+import type { OverwatchRole } from '@/utils/heroes/overwatch';
 import type { LogoCredit } from '@/utils/teams/logoCredit';
 import { readMapFaces } from './readMapFaces';
 import {
@@ -352,10 +355,17 @@ export type TradeCardView =
       kind: 'mascot';
       slug: string;
       name: string | null;
+    })
+  | (CardBase & {
+      kind: 'hero';
+      slug: string;
+      name: string | null;
+      /** Rôle du jeu (« Tank »…), `null` pour un héros sorti du registre. */
+      role: OverwatchRole | null;
     });
 
 /**
- * LES CINQ TYPES, pas trois. Les cartes de fan art et de mascotte étaient
+ * TOUS LES TYPES, pas trois. Les cartes de fan art et de mascotte étaient
  * inéchangeables jusqu'au 2026-09-20 : `tcg_trade_items` n'avait pas de colonne
  * pour elles, et ce type le reflétait. On pouvait les ouvrir, les posséder, les
  * voir — jamais les proposer. Le trou ne produisait aucune erreur : la carte
@@ -437,6 +447,16 @@ export async function readSubjectFaces(
         kind: 'mascot',
         slug: s.id,
         name: gameMascotDisplayName(s.id),
+        ...base,
+      };
+    }
+    if (s.kind === 'hero') {
+      // Comme une mascotte : nom et rôle viennent du registre. Rien à lire.
+      return {
+        kind: 'hero',
+        slug: s.id,
+        name: heroCardDisplayName(s.id),
+        role: heroCardRole(s.id),
         ...base,
       };
     }
@@ -683,6 +703,8 @@ export type TradeItemRow = {
   card_map_slug: string | null;
   card_fanart_id: string | null;
   card_mascot_slug: string | null;
+  /** Lue seulement une fois la migration des héros appliquée. */
+  card_hero_slug?: string | null;
   rarity: TcgRarity | null;
   is_foil: boolean | null;
 };
@@ -724,10 +746,16 @@ export async function hydrateTrades(
   if (!supabaseAdmin) return { ok: false };
   if (rows.length === 0) return { ok: true, trades: [] };
 
+  // La colonne des héros n'est citée qu'une fois la migration appliquée (elle
+  // ajoute `tcg_trade_items.card_hero_slug` dans la même transaction que
+  // `tcg_pack_cards.card_hero_slug`, que la sonde regarde).
   const { data, error } = await supabaseAdmin
     .from('tcg_trade_items')
     .select(
-      'trade_id, side, ordinal, subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, rarity, is_foil'
+      withHeroColumn(
+        'trade_id, side, ordinal, subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, rarity, is_foil',
+        await heroCardsReady()
+      )
     )
     .in(
       'trade_id',
@@ -743,7 +771,7 @@ export async function hydrateTrades(
     );
     return { ok: false };
   }
-  const items = (data ?? []) as TradeItemRow[];
+  const items = (data ?? []) as unknown as TradeItemRow[];
 
   const subjectOf = (i: TradeItemRow): SubjectRef | null => {
     const key = cardSubjectKey(i);

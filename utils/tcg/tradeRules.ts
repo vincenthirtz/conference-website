@@ -115,8 +115,9 @@ const UUID = z
   .transform((s) => s.toLowerCase());
 
 /**
- * Un SUJET de carte : joueuse, équipe ou fanart par UUID, map et mascotte par
- * slug. Même forme que les clés de `subjectKey.ts` (`<kind>:<id>`), en objet.
+ * Un SUJET de carte : joueuse, équipe ou fanart par UUID, map, mascotte et
+ * héros par slug. Même forme que les clés de `subjectKey.ts` (`<kind>:<id>`),
+ * en objet.
  *
  * LES CINQ TYPES, PAS TROIS. Cette union a longtemps listé joueuse / équipe /
  * map alors que la base connaissait déjà les fanarts, et les mascottes sont
@@ -142,6 +143,16 @@ export const tradeSubjectSchema = z.discriminatedUnion('kind', [
     .object({
       kind: z.literal('mascot'),
       id: z.string().regex(/^[a-z0-9-]{1,64}$/, 'slug de mascotte attendu'),
+    })
+    .strict(),
+  // Les héros, par slug comme les mascottes. Avant la migration
+  // `tcg_hero_cards.sql`, personne ne possède de carte héros : une proposition
+  // qui en citerait une serait refusée par la fonction SQL (`invalid_items`),
+  // sans rien écrire.
+  z
+    .object({
+      kind: z.literal('hero'),
+      id: z.string().regex(/^[a-z0-9-]{1,64}$/, 'slug de héros attendu'),
     })
     .strict(),
 ]);

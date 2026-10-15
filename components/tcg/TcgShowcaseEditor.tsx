@@ -30,6 +30,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import type { ShowcaseCard } from '@/utils/tcg/showcase';
 import type { LogoCredit } from '@/utils/teams/logoCredit';
 import type { TcgRarity } from '@/utils/tcg/rarity';
+import type { OverwatchRole } from '@/utils/heroes/overwatch';
 import { useT, format } from '@/lib/i18n/useT';
 import nsTcgShowcase from '@/lib/i18n/locales/fr/tcgShowcase';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
@@ -95,6 +96,14 @@ type CollectionCard =
       name: string | null;
       rarity: TcgRarity;
       isFoil: boolean;
+    }
+  | {
+      kind: 'hero';
+      slug: string;
+      name: string | null;
+      role: OverwatchRole | null;
+      rarity: TcgRarity;
+      isFoil: boolean;
     };
 
 /**
@@ -113,6 +122,9 @@ export function collectionToShowcaseCard(card: CollectionCard): ShowcaseCard {
   }
   if (card.kind === 'mascot') {
     return { ...card, key: `mascot:${card.slug}` };
+  }
+  if (card.kind === 'hero') {
+    return { ...card, key: `hero:${card.slug}`, role: card.role ?? null };
   }
   return {
     ...card,
@@ -455,7 +467,9 @@ export default function TcgShowcaseEditor({
                               : t.kindFanart
                             : card.kind === 'mascot'
                               ? t.kindMascot
-                              : t.kindMap;
+                              : card.kind === 'hero'
+                                ? t.kindHero
+                                : t.kindMap;
                     return (
                       <li key={card.key}>
                         <label

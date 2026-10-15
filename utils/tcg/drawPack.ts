@@ -36,10 +36,10 @@ export const TEAM_SLOTS = 1;
 export const MAP_SLOTS = 1;
 
 /**
- * L'emplacement de DÉCOR, partagé entre les maps et les fan arts validées.
- * Même valeur que `MAP_SLOTS` : les fan arts n'ajoutent pas de carte au paquet,
- * elles prennent la place du décor une fois sur deux
- * (`FANART_DECOR_SHARE`).
+ * L'emplacement de DÉCOR, partagé entre les maps, les fan arts validées, les
+ * mascottes et les héros. Même valeur que `MAP_SLOTS` : aucun de ces types
+ * n'ajoute de carte au paquet, chacun prend la place du décor selon sa part
+ * (`pickDecorKind`, `utils/tcg/fanart.ts`).
  */
 export const DECOR_SLOTS = MAP_SLOTS;
 
@@ -60,7 +60,8 @@ export type DrawnSubject =
   | { kind: 'team'; teamId: string }
   | { kind: 'map'; slug: string }
   | { kind: 'fanart'; fanartId: string }
-  | { kind: 'mascot'; slug: string };
+  | { kind: 'mascot'; slug: string }
+  | { kind: 'hero'; slug: string };
 
 /**
  * Choisit `count` éléments distincts, ou moins si le vivier est trop petit.
@@ -123,10 +124,18 @@ export function pickPackSubjects(input: {
    */
   mascotSlugs?: readonly string[];
   /**
-   * Tirage qui décide du décor : map ou fan art. Séparé des `rolls` pour que
-   * l'ajout des fan arts ne décale pas l'aléa des autres emplacements — un
-   * paquet tiré avec les mêmes `rolls` qu'avant sort identique tant qu'aucune
-   * fan art n'est validée.
+   * Héros du jeu (`utils/tcg/heroCards.ts`) ; vide = comportement d'avant les
+   * héros, au tirage près. L'appelant ne les passe QUE si la migration est
+   * appliquée (`readDrawPool`) : ce module pur n'en sait rien. Même
+   * emplacement de DÉCOR que maps, fan arts et mascottes — jamais celui d'une
+   * joueuse ni d'une équipe.
+   */
+  heroSlugs?: readonly string[];
+  /**
+   * Tirage qui décide du décor : map, fan art, mascotte ou héros. Séparé des
+   * `rolls` pour que l'ajout d'un type de décor ne décale pas l'aléa des autres
+   * emplacements — un paquet tiré avec les mêmes `rolls` qu'avant sort
+   * identique tant que le vivier du nouveau type est vide.
    */
   decorRoll?: number;
   /** Au moins `PACK_SIZE` valeurs dans [0, 1). */
@@ -136,17 +145,19 @@ export function pickPackSubjects(input: {
   const mapSlugs = input.mapSlugs ?? [];
   const fanartIds = input.fanartIds ?? [];
   const mascotSlugs = input.mascotSlugs ?? [];
+  const heroSlugs = input.heroSlugs ?? [];
 
   const teamCount = Math.min(TEAM_SLOTS, teamIds.length);
   const teams = pickDistinct(teamIds, teamCount, rolls);
 
-  // L'emplacement de DÉCOR : une map, ou une fan art de la communauté. Un seul
-  // des deux, jamais les deux — la composition du paquet ne bouge pas.
+  // L'emplacement de DÉCOR : une map, une fan art, une mascotte ou un héros.
+  // Un seul, jamais deux — la composition du paquet ne bouge pas.
   const decor = pickDecorKind({
     roll: input.decorRoll ?? Number.NaN,
     hasFanart: fanartIds.length > 0,
     hasMaps: mapSlugs.length > 0,
     hasMascots: mascotSlugs.length > 0,
+    hasHeroes: heroSlugs.length > 0,
   });
 
   const mapCount = decor === 'map' ? Math.min(MAP_SLOTS, mapSlugs.length) : 0;
@@ -160,35 +171,59 @@ export function pickPackSubjects(input: {
     rolls.slice(teamCount + mapCount)
   );
 
+  // Les héros juste après les mascottes dans l'aléa. Hors décor « héros »,
+  // `heroCount` vaut 0 et aucune tranche ne bouge : c'est ce qui garde le
+  // tirage d'avant intact tant que le vivier des héros est vide.
+  const heroCount =
+    decor === 'hero' ? Math.min(DECOR_SLOTS, heroSlugs.length) : 0;
+  const heroes = pickDistinct(
+    heroSlugs,
+    heroCount,
+    rolls.slice(teamCount + mapCount + mascotCount)
+  );
+
   const fanartCount =
     decor === 'fanart' ? Math.min(DECOR_SLOTS, fanartIds.length) : 0;
   const fanarts = pickDistinct(
     fanartIds,
     fanartCount,
-    rolls.slice(teamCount + mapCount + mascotCount)
+    rolls.slice(teamCount + mapCount + mascotCount + heroCount)
   );
 
   // Les joueuses occupent le reste, et comblent les emplacements réservés
   // laissés vacants par un vivier d'équipes ou de décor trop court.
   const playerCount =
-    PACK_SIZE - teams.length - maps.length - fanarts.length - mascots.length;
+    PACK_SIZE -
+    teams.length -
+    maps.length -
+    fanarts.length -
+    mascots.length -
+    heroes.length;
   const players = pickDistinct(
     playerIds,
     playerCount,
-    rolls.slice(teamCount + mapCount + mascotCount + fanartCount)
+    rolls.slice(teamCount + mapCount + mascotCount + heroCount + fanartCount)
   );
 
   // Si les joueuses n'ont pas suffi, on complète avec d'autres équipes, puis
-  // avec d'autres maps — dans cet ordre, cf. l'en-tête de la fonction.
+  // avec d'autres maps — dans cet ordre, cf. l'en-tête de la fonction. Jamais
+  // avec des héros ni des mascottes : un paquet de comblement reste « du
+  // tournoi » autant que possible.
   let shortfall =
     PACK_SIZE -
     teams.length -
     maps.length -
     fanarts.length -
     mascots.length -
+    heroes.length -
     players.length;
   const consumed =
-    teamCount + mapCount + mascotCount + fanartCount + players.length;
+    teamCount +
+    mapCount +
+    mascotCount +
+    heroCount +
+    fanartCount +
+    players.length;
 
   const extraTeams =
     shortfall > 0
@@ -213,6 +248,7 @@ export function pickPackSubjects(input: {
     ...players.map((userId): DrawnSubject => ({ kind: 'player', userId })),
     ...teams.map((teamId): DrawnSubject => ({ kind: 'team', teamId })),
     ...mascots.map((slug): DrawnSubject => ({ kind: 'mascot', slug })),
+    ...heroes.map((slug): DrawnSubject => ({ kind: 'hero', slug })),
     ...extraTeams.map((teamId): DrawnSubject => ({ kind: 'team', teamId })),
     ...maps.map((slug): DrawnSubject => ({ kind: 'map', slug })),
     ...extraMaps.map((slug): DrawnSubject => ({ kind: 'map', slug })),

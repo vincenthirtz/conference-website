@@ -32,13 +32,15 @@ import {
 } from '../../utils/tcg/subjectKey';
 
 describe('types de carte TCG — la liste canonique', () => {
-  it('couvre les cinq types, dans l’ordre du tirage', () => {
+  it('couvre les six types, dans l’ordre du tirage', () => {
+    // `hero` : les cartes héros (2026-10-15), sur l'emplacement de décor.
     expect([...TCG_CARD_KINDS]).toEqual([
       'player',
       'team',
       'map',
       'fanart',
       'mascot',
+      'hero',
     ]);
   });
 

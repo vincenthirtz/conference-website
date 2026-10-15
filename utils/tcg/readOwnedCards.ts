@@ -27,6 +27,7 @@
 import { supabaseAdmin } from '@/utils/supabase';
 import type { TcgCardKind } from './subjectKey';
 import type { TcgRarity } from './rarity';
+import { heroCardsReady, withHeroColumn } from './heroCardsReady';
 
 /** Taille d'une page de lecture : le plafond PostgREST. */
 export const READ_PAGE = 1000;
@@ -51,9 +52,19 @@ export type OwnedCardRow = {
    */
   card_fanart_id?: string | null;
   card_mascot_slug?: string | null;
+  /**
+   * Héros. Lue SEULEMENT une fois la migration appliquée (`heroCardsReady`) :
+   * avant, la citer ferait échouer la lecture entière (42703) — et aucune carte
+   * héros n'existe encore à lire.
+   */
+  card_hero_slug?: string | null;
   rarity: TcgRarity;
   is_foil: boolean;
 };
+
+/** Colonnes d'une carte possédée, sans la colonne des héros (cf. ci-dessus). */
+const OWNED_CARD_COLUMNS =
+  'pack_id, position, subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, rarity, is_foil';
 
 export type ReadResult<T> =
   | { ok: true; value: T; truncated: boolean }
@@ -122,6 +133,7 @@ export async function readCardsOfPacks(
 ): Promise<ReadResult<OwnedCardRow[]>> {
   if (!supabaseAdmin) return { ok: false, error: 'supabaseAdmin absent' };
 
+  const columns = withHeroColumn(OWNED_CARD_COLUMNS, await heroCardsReady());
   const rows: OwnedCardRow[] = [];
   for (let i = 0; i < packIds.length; i += PACK_CHUNK) {
     const chunk = packIds.slice(i, i + PACK_CHUNK);
@@ -130,9 +142,7 @@ export async function readCardsOfPacks(
     for (let from = 0; ; from += READ_PAGE) {
       const { data, error } = await supabaseAdmin
         .from('tcg_pack_cards')
-        .select(
-          'pack_id, position, subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, rarity, is_foil'
-        )
+        .select(columns)
         .in('pack_id', chunk)
         .is('recycled_at', null)
         // Ordre total `(pack_id, position)` = la clé primaire : indispensable
@@ -142,7 +152,7 @@ export async function readCardsOfPacks(
         .range(from, from + READ_PAGE - 1);
       if (error) return { ok: false, error: error.message };
 
-      const page = (data ?? []) as OwnedCardRow[];
+      const page = (data ?? []) as unknown as OwnedCardRow[];
       rows.push(...page);
       if (page.length < READ_PAGE) break;
     }
@@ -188,6 +198,11 @@ export async function readOwnedSubjectKeys(
     /** Optionnels : un appelant qui ne s'y intéresse pas ne les passe pas. */
     fanarts?: string[];
     mascots?: string[];
+    /**
+     * Non vide seulement quand un héros vient d'être TIRÉ — donc migration
+     * appliquée : la colonne n'est jamais citée avant.
+     */
+    heroes?: string[];
   },
   excludePackId: string
 ): Promise<ReadResult<Set<string>>> {
@@ -207,7 +222,8 @@ export async function readOwnedSubjectKeys(
       | 'card_team_id'
       | 'card_map_slug'
       | 'card_fanart_id'
-      | 'card_mascot_slug';
+      | 'card_mascot_slug'
+      | 'card_hero_slug';
     ids: string[];
   }> = [
     { kind: 'player', column: 'card_user_id', ids: subjects.players },
@@ -215,6 +231,7 @@ export async function readOwnedSubjectKeys(
     { kind: 'map', column: 'card_map_slug', ids: subjects.maps },
     { kind: 'fanart', column: 'card_fanart_id', ids: subjects.fanarts ?? [] },
     { kind: 'mascot', column: 'card_mascot_slug', ids: subjects.mascots ?? [] },
+    { kind: 'hero', column: 'card_hero_slug', ids: subjects.heroes ?? [] },
   ];
 
   for (let i = 0; i < packIds.length; i += PACK_CHUNK) {

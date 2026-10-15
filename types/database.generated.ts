@@ -6408,6 +6408,7 @@ export type Database = {
       tcg_pack_cards: {
         Row: {
           card_fanart_id: string | null
+          card_hero_slug: string | null
           card_map_slug: string | null
           card_mascot_slug: string | null
           card_team_id: string | null
@@ -6421,6 +6422,7 @@ export type Database = {
         }
         Insert: {
           card_fanart_id?: string | null
+          card_hero_slug?: string | null
           card_map_slug?: string | null
           card_mascot_slug?: string | null
           card_team_id?: string | null
@@ -6434,6 +6436,7 @@ export type Database = {
         }
         Update: {
           card_fanart_id?: string | null
+          card_hero_slug?: string | null
           card_map_slug?: string | null
           card_mascot_slug?: string | null
           card_team_id?: string | null
@@ -6696,6 +6699,7 @@ export type Database = {
       tcg_trade_items: {
         Row: {
           card_fanart_id: string | null
+          card_hero_slug: string | null
           card_map_slug: string | null
           card_mascot_slug: string | null
           card_team_id: string | null
@@ -6713,6 +6717,7 @@ export type Database = {
         }
         Insert: {
           card_fanart_id?: string | null
+          card_hero_slug?: string | null
           card_map_slug?: string | null
           card_mascot_slug?: string | null
           card_team_id?: string | null
@@ -6730,6 +6735,7 @@ export type Database = {
         }
         Update: {
           card_fanart_id?: string | null
+          card_hero_slug?: string | null
           card_map_slug?: string | null
           card_mascot_slug?: string | null
           card_team_id?: string | null

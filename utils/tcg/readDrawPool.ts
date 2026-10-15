@@ -14,18 +14,37 @@
 //
 // Les maps n'y sont pas : leur vivier est le registre en mémoire
 // (`MAP_POOL_SLUGS`), sans requête.
+//
+// LES HÉROS Y SONT, alors que leur vivier est aussi un registre en mémoire
+// (`HERO_CARD_SLUGS`) : ils n'existent dans les paquets qu'une fois la migration
+// `tcg_hero_cards.sql` appliquée (`heroCardsReady.ts`), et c'est ICI que le
+// tirage, les séries, le catalogue et le dénominateur l'apprennent — ensemble.
+// Un dénominateur qui compterait les héros avant qu'un paquet puisse en donner
+// promettrait 54 cartes introuvables.
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { POOL_LIMIT } from './drawPack';
 import { MAP_POOL_SLUGS } from './readMapFaces';
 import { GAME_MASCOT_SLUGS } from './gameMascots';
+import { HERO_CARD_SLUGS } from './heroCards';
+import { heroCardsReady } from './heroCardsReady';
 
 export type DrawPool = {
   playerIds: string[];
   teamIds: string[];
   /** Fan arts VALIDÉES : elles partagent l'emplacement de décor avec les maps. */
   fanartIds: string[];
+  /**
+   * Héros tirables : le registre entier une fois la migration appliquée, VIDE
+   * avant — le tirage retombe alors exactement sur celui d'avant les héros.
+   */
+  heroSlugs: string[];
 };
+
+/** Le vivier des héros : le registre si la migration est là, rien sinon. */
+async function readHeroPool(): Promise<string[]> {
+  return (await heroCardsReady()) ? [...HERO_CARD_SLUGS] : [];
+}
 
 export type DrawPoolResult =
   | { ok: true; value: DrawPool }
@@ -122,6 +141,8 @@ export type DrawPoolSizes = {
   players: number;
   teams: number;
   fanarts: number;
+  /** 0 tant que la migration des cartes héros n'est pas appliquée. */
+  heroes: number;
 };
 
 export type DrawPoolSizesResult =
@@ -144,9 +165,10 @@ export type DrawPoolSizesResult =
 /**
  * Combien de cartes DIFFÉRENTES existent : le dénominateur de la collection.
  *
- * LES CINQ TYPES, chacun plafonné à `POOL_LIMIT` comme le tirage les plafonne.
+ * LES SIX TYPES, chacun plafonné à `POOL_LIMIT` comme le tirage les plafonne.
  * Maps et mascottes ne se comptent pas en base : leur vivier EST le registre
- * en mémoire, celui que reçoit le tirage.
+ * en mémoire, celui que reçoit le tirage. Les héros aussi, mais leur nombre
+ * vient de `sizes.heroes` : 0 tant que le tirage ne peut pas en donner.
  *
  * UNE SEULE SOMME. L'espace joueuse (« 12 sur 48 ») et l'accueil public
  * (« 48 cartes à collectionner ») disent le même nombre : s'ils l'additionnaient
@@ -161,7 +183,8 @@ export function countCollectableCards(sizes: DrawPoolSizes): number {
     cap(sizes.teams) +
     cap(sizes.fanarts) +
     cap(MAP_POOL_SLUGS.length) +
-    cap(GAME_MASCOT_SLUGS.length)
+    cap(GAME_MASCOT_SLUGS.length) +
+    cap(sizes.heroes)
   );
 }
 
@@ -178,9 +201,10 @@ export async function readDrawPoolSizes(
     return { ok: false, error: 'retraits TCG illisibles' };
   }
 
-  const [playersRes, teamsRes, fanartRes] = await Promise.all(
-    poolQueries(tenantId, true, excluded)
-  );
+  const [[playersRes, teamsRes, fanartRes], heroSlugs] = await Promise.all([
+    Promise.all(poolQueries(tenantId, true, excluded)),
+    readHeroPool(),
+  ]);
 
   if (playersRes.error || teamsRes.error || fanartRes.error) {
     return {
@@ -199,6 +223,7 @@ export async function readDrawPoolSizes(
       players: playersRes.count ?? 0,
       teams: teamsRes.count ?? 0,
       fanarts: fanartRes.count ?? 0,
+      heroes: heroSlugs.length,
     },
   };
 }
@@ -214,9 +239,10 @@ export async function readDrawPool(tenantId: string): Promise<DrawPoolResult> {
     return { ok: false, error: 'retraits TCG illisibles' };
   }
 
-  const [playersRes, teamsRes, fanartRes] = await Promise.all(
-    poolQueries(tenantId, false, excluded)
-  );
+  const [[playersRes, teamsRes, fanartRes], heroSlugs] = await Promise.all([
+    Promise.all(poolQueries(tenantId, false, excluded)),
+    readHeroPool(),
+  ]);
 
   if (playersRes.error || teamsRes.error || fanartRes.error) {
     return {
@@ -241,6 +267,7 @@ export async function readDrawPool(tenantId: string): Promise<DrawPoolResult> {
       fanartIds: ((fanartRes.data ?? []) as Array<{ id: string }>).map(
         (r) => r.id
       ),
+      heroSlugs,
     },
   };
 }

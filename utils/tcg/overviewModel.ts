@@ -32,7 +32,7 @@
 // que `TcgCard` a déjà payé sur chaque carte d'équipe.
 
 import { RARITY_ORDER } from '@/utils/tcg/rarity';
-import type { TcgCardKind } from './subjectKey';
+import { isTcgCardKind, type TcgCardKind } from './subjectKey';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 
 /* ---------------------------------------------------------------------------
@@ -197,22 +197,13 @@ function asText(value: unknown): string | null {
 
 function normalizeSubject(raw: unknown): TcgOverviewSubject | null {
   const rec = asRecord(raw);
-  // LES CINQ TYPES. Une nature absente d'ici rend `null`, donc la ligne est
-  // ÉCARTÉE : c'est volontaire pour une valeur inconnue, mais ça a rendu les
+  // TOUS LES TYPES, lus dans la liste unique (`isTcgCardKind`). Une nature
+  // absente rend `null`, donc la ligne est ÉCARTÉE : c'est volontaire pour une
+  // valeur inconnue, mais la chaîne de ternaires qui vivait ici a rendu les
   // mascottes et les fan arts invisibles dans le panneau staff — un total de
   // cartes distribuées faux, sans rien qui le signale.
   const kind =
-    rec.kind === 'player'
-      ? 'player'
-      : rec.kind === 'team'
-        ? 'team'
-        : rec.kind === 'map'
-          ? 'map'
-          : rec.kind === 'fanart'
-            ? 'fanart'
-            : rec.kind === 'mascot'
-              ? 'mascot'
-              : null;
+    typeof rec.kind === 'string' && isTcgCardKind(rec.kind) ? rec.kind : null;
   // Sans nature, on ne sait ni comment étiqueter la ligne ni où elle pointe :
   // on l'écarte plutôt que d'inventer l'une ou l'autre.
   if (!kind) return null;
@@ -225,10 +216,9 @@ function normalizeSubject(raw: unknown): TcgOverviewSubject | null {
     asText(rec.teamId) ?? (kind === 'team' ? asText(rec.id) : null);
   // Pour une map, le slug EST l'identifiant : elle n'a pas d'uuid, son registre
   // n'étant pas une table. Pour une équipe, le slug n'est qu'une adresse.
-  // Une mascotte s'identifie comme une map : par son slug.
-  const slug =
-    asText(rec.slug) ??
-    (kind === 'map' || kind === 'mascot' ? asText(rec.id) : null);
+  // Mascottes et héros s'identifient comme une map : par leur slug.
+  const bySlug = kind === 'map' || kind === 'mascot' || kind === 'hero';
+  const slug = asText(rec.slug) ?? (bySlug ? asText(rec.id) : null);
   const fanartId =
     asText(rec.fanartId) ?? (kind === 'fanart' ? asText(rec.id) : null);
 
@@ -237,7 +227,7 @@ function normalizeSubject(raw: unknown): TcgOverviewSubject | null {
     id:
       kind === 'player'
         ? userId
-        : kind === 'map' || kind === 'mascot'
+        : bySlug
           ? slug
           : kind === 'fanart'
             ? fanartId
@@ -265,10 +255,10 @@ function normalizeSubject(raw: unknown): TcgOverviewSubject | null {
             slug
             ? `/maps-voxel#${slug}`
             : null
-          : kind === 'mascot' || kind === 'fanart'
-            ? // Ni mascotte ni œuvre n'a de page. Sans ce test, une mascotte
-              // tombait dans la branche « équipe » et sortait avec un lien
-              // `/team/<slug-de-mascotte>` — un 404 offert au clic.
+          : kind === 'mascot' || kind === 'fanart' || kind === 'hero'
+            ? // Ni mascotte, ni œuvre, ni héros n'a de page. Sans ce test, une
+              // mascotte tombait dans la branche « équipe » et sortait avec un
+              // lien `/team/<slug-de-mascotte>` — un 404 offert au clic.
               null
             : // Une équipe s'adresse par son slug ; son uuid ne mène nulle part.
               slug

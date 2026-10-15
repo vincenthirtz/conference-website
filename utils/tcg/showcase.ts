@@ -32,6 +32,8 @@ import {
   readFanartFaces,
 } from './readCardFaces';
 import { gameMascotDisplayName } from './gameMascots';
+import { heroCardDisplayName, heroCardRole } from './heroCards';
+import type { OverwatchRole } from '@/utils/heroes/overwatch';
 import type { LogoCredit } from '@/utils/teams/logoCredit';
 import { readMapFaces } from './readMapFaces';
 import { cardSubjectKey } from './subjectKey';
@@ -49,7 +51,8 @@ export type ShowcaseSubject =
   | { kind: 'team'; id: string }
   | { kind: 'map'; id: string }
   | { kind: 'fanart'; id: string }
-  | { kind: 'mascot'; id: string };
+  | { kind: 'mascot'; id: string }
+  | { kind: 'hero'; id: string };
 
 /**
  * Lit une clé de sujet. `null` = forme invalide.
@@ -71,7 +74,7 @@ export function parseShowcaseKey(value: unknown): ShowcaseSubject | null {
     return { kind, id: id.toLowerCase() };
   }
   if (
-    (kind === 'map' || kind === 'mascot') &&
+    (kind === 'map' || kind === 'mascot' || kind === 'hero') &&
     id.length <= 64 &&
     SLUG_RE.test(id)
   ) {
@@ -140,6 +143,16 @@ export type ShowcaseCard =
       kind: 'mascot';
       slug: string;
       name: string | null;
+      rarity: TcgRarity;
+      isFoil: boolean;
+    }
+  | {
+      key: string;
+      kind: 'hero';
+      slug: string;
+      name: string | null;
+      /** Rôle du jeu (« Tank »…), `null` pour un héros sorti du registre. */
+      role: OverwatchRole | null;
       rarity: TcgRarity;
       isFoil: boolean;
     };
@@ -340,6 +353,17 @@ export async function buildShowcaseCards(
         kind: 'mascot',
         slug: subject.id,
         name: gameMascotDisplayName(subject.id),
+        rarity,
+        isFoil,
+      };
+    }
+    if (subject.kind === 'hero') {
+      return {
+        key,
+        kind: 'hero',
+        slug: subject.id,
+        name: heroCardDisplayName(subject.id),
+        role: heroCardRole(subject.id),
         rarity,
         isFoil,
       };

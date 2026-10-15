@@ -43,6 +43,7 @@ export default {
   kindMap: 'Map',
   kindFanart: 'Fan art',
   kindMascot: 'Mascot',
+  kindHero: 'Hero',
 
   save: 'Save showcase',
   saving: 'Saving…',

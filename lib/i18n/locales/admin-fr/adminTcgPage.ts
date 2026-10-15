@@ -77,6 +77,7 @@ export default adminNs('adminTcgPage', {
   catalogueKindFanart: 'Fan art',
   catalogueKindAssociation: 'L’association',
   catalogueKindMascots: 'Mascottes',
+  catalogueKindHeroes: 'Héros',
   catalogueHolders: '{count} détentrice(s)',
   catalogueNoHolder: 'jamais tirée',
 });

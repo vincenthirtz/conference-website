@@ -46,7 +46,7 @@ export type ListState = 'open' | 'closed';
 /**
  * Clé d'un sujet : même forme que `utils/tcg/subjectKey.ts`.
  *
- * LES CINQ TYPES. Ces trois fonctions ont longtemps traité `map` comme cas
+ * TOUS LES TYPES. Ces trois fonctions ont longtemps traité `map` comme cas
  * final : tout sujet qu'elles ne nommaient pas devenait une carte de map au
  * slug `undefined`. Deux cartes mascotte partageaient alors la clé
  * `map:undefined` — même clé React, même identité pour la sélection : cocher
@@ -57,6 +57,7 @@ export function keyOf(card: TradeCardView): string {
   if (card.kind === 'team') return `team:${card.teamId}`;
   if (card.kind === 'fanart') return `fanart:${card.fanartId}`;
   if (card.kind === 'mascot') return `mascot:${card.slug}`;
+  if (card.kind === 'hero') return `hero:${card.slug}`;
   return `map:${card.slug}`;
 }
 
@@ -68,6 +69,7 @@ export function subjectRefOf(card: TradeCardView): {
   if (card.kind === 'team') return { kind: 'team', id: card.teamId };
   if (card.kind === 'fanart') return { kind: 'fanart', id: card.fanartId };
   if (card.kind === 'mascot') return { kind: 'mascot', id: card.slug };
+  if (card.kind === 'hero') return { kind: 'hero', id: card.slug };
   return { kind: 'map', id: card.slug };
 }
 
@@ -109,6 +111,15 @@ export function subjectOf(card: TradeCardView): TcgCardSubject {
       kind: 'mascot',
       slug: card.slug as GameMascotSlug,
       name: card.name,
+    };
+  }
+  if (card.kind === 'hero') {
+    return {
+      kind: 'hero',
+      slug: card.slug,
+      name: card.name,
+      // `?? null` : une réponse antérieure au déploiement ne le porte pas.
+      role: card.role ?? null,
     };
   }
   return {

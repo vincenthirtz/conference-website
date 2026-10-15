@@ -49,11 +49,21 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
-import { MASCOT_CARD_RARITY, MAP_CARD_RARITY, type TcgRarity } from './rarity';
+import {
+  HERO_CARD_RARITY,
+  MASCOT_CARD_RARITY,
+  MAP_CARD_RARITY,
+  type TcgRarity,
+} from './rarity';
 import { readPlayerFaces } from './readCardFaces';
-import { readDrawPool, readDrawPoolSizes } from './readDrawPool';
+import {
+  countCollectableCards,
+  readDrawPool,
+  readDrawPoolSizes,
+} from './readDrawPool';
 import { MAP_POOL_SLUGS } from './readMapFaces';
 import { GAME_MASCOT_SLUGS } from './gameMascots';
+import { heroCardsReady, withHeroColumn } from './heroCardsReady';
 import { readOwnedCardRows } from './readOwnedCards';
 import { readTeamRarities } from './readTeamRarity';
 import { cardSubjectKey, type CardSubjectRow } from './subjectKey';
@@ -380,10 +390,15 @@ export async function readRecentRarePulls(
   if (packs.length === 0) return [];
   const packById = new Map(packs.map((p) => [p.id, p]));
 
+  // La colonne des héros n'est citée qu'une fois la migration appliquée :
+  // avant, elle ferait échouer la lecture entière (cf. `heroCardsReady`).
   const { data: cardData, error: cardErr } = await supabaseAdmin
     .from('tcg_pack_cards')
     .select(
-      'pack_id, position, subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, rarity, is_foil'
+      withHeroColumn(
+        'pack_id, position, subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, rarity, is_foil',
+        await heroCardsReady()
+      )
     )
     .in(
       'pack_id',
@@ -395,7 +410,7 @@ export async function readRecentRarePulls(
     return [];
   }
 
-  const picked = ((cardData ?? []) as PullRow[])
+  const picked = ((cardData ?? []) as unknown as PullRow[])
     .filter((c) => RARE_TIERS.includes(c.rarity) && packById.has(c.pack_id))
     .map((c) => ({ row: c, pack: packById.get(c.pack_id) as PackRow }))
     .sort(
@@ -436,18 +451,16 @@ export async function readRecentRarePulls(
 /**
  * Le dénominateur de la complétion — LE MÊME que la barre de progression de
  * la joueuse (`features/player/tcg/service/collection.ts`) : vivier du tirage,
- * cinq types, chacun plafonné à `POOL_LIMIT`. `null` si illisible.
+ * tous types, chacun plafonné à `POOL_LIMIT`. `null` si illisible.
+ *
+ * PAR `countCollectableCards`, et non par une somme recopiée : la copie qui
+ * vivait ici aurait ignoré les héros, et le classement aurait lu « 87 % » là
+ * où la barre de la joueuse dit « 79 % ».
  */
 export async function readPoolTotal(tenantId: string): Promise<number | null> {
   const sizes = await readDrawPoolSizes(tenantId);
   if (!sizes.ok) return null;
-  return (
-    Math.min(sizes.value.players, POOL_LIMIT) +
-    Math.min(sizes.value.teams, POOL_LIMIT) +
-    Math.min(sizes.value.fanarts, POOL_LIMIT) +
-    Math.min(MAP_POOL_SLUGS.length, POOL_LIMIT) +
-    Math.min(GAME_MASCOT_SLUGS.length, POOL_LIMIT)
-  );
+  return countCollectableCards(sizes.value);
 }
 
 /**
@@ -513,7 +526,8 @@ export async function readCollectorsLeaderboard(
 
 /**
  * Les cartes ÉLIGIBLES à la carte de la semaine : équipes, maps, fan arts
- * approuvées, mascottes — tout le vivier SAUF les cartes de joueuses.
+ * approuvées, mascottes, héros (une fois leur migration appliquée) — tout le
+ * vivier SAUF les cartes de joueuses.
  *
  * Pourquoi pas les joueuses : la mise en avant d'une personne réelle, une
  * semaine entière en tête de la page publique, n'est couverte par aucun de ses
@@ -529,6 +543,7 @@ async function readWeeklyCandidates(
     ...MAP_POOL_SLUGS.map((slug) => `map:${slug}`),
     ...pool.value.fanartIds.slice(0, POOL_LIMIT).map((id) => `fanart:${id}`),
     ...GAME_MASCOT_SLUGS.map((slug) => `mascot:${slug}`),
+    ...pool.value.heroSlugs.map((slug) => `hero:${slug}`),
   ];
 }
 
@@ -542,6 +557,7 @@ async function readSubjectRarity(
   }
   if (subject.kind === 'map') return MAP_CARD_RARITY;
   if (subject.kind === 'mascot') return MASCOT_CARD_RARITY;
+  if (subject.kind === 'hero') return HERO_CARD_RARITY;
   if (subject.kind === 'fanart' && supabaseAdmin) {
     const { data } = await supabaseAdmin
       .from('tcg_fanart_cards')
