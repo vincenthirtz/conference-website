@@ -22,6 +22,19 @@ export default adminNs('adminTcgAssociation', {
   eventLogoNotImportable:
     'Hébergé hors du stockage : redéposez-le depuis le calendrier des logos pour pouvoir l’importer.',
   importLogo: 'Importer en carte',
+  partnersTitle: 'Partenaires de l’association',
+  partnersIntro:
+    'Les partenaires actifs (admin → Partenaires). Importer en fait une carte : son logo est copié, et le crédit de la carte nomme le partenaire avec un lien vers son site. Modifier ou retirer le partenaire ne touche pas la carte.',
+  partnersEmpty: 'Aucun partenaire actif.',
+  importPartner: 'Importer en carte',
+  partnerLogoNotImportable:
+    'Logo hébergé hors du stockage : déposez l’image ci-dessous, avec le nom du partenaire en crédit et le lien de son site.',
+  partnerWebsiteNotHttps:
+    'Site absent ou pas en https:// : corrigez-le dans Partenaires pour pouvoir l’importer.',
+  toastPartnerImported: 'Partenaire importé en carte.',
+  fromPartner: 'Partenaire',
+  labelCreditUrl: 'Lien du crédit (https://, facultatif)',
+  errorCreditUrl: 'Le lien du crédit doit commencer par https://.',
   voxelTitle: 'Logo par défaut en voxel',
   voxelIntro:
     'Le nœud de l’association, en briques — la même figurine que celle du moteur voxel. La carte en fige le rendu actuel.',

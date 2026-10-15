@@ -95,6 +95,8 @@ type CatalogCard =
       name: string | null;
       imageUrl: string | null;
       credit: string | null;
+      /** Lien du crédit (le site d'un partenaire), `https://` seulement. */
+      creditUrl?: string | null;
       /** Texte « à propos » rédigé par le staff ; `null` sans description. */
       description: string | null;
       rarity: TcgRarity;
@@ -326,7 +328,7 @@ function TcgCatalogPage({ cards, playerCount, bareme }: Props) {
                             name: card.name,
                             imageUrl: card.imageUrl,
                             artistName: card.credit,
-                            artistUrl: null,
+                            artistUrl: card.creditUrl ?? null,
                             category: 'association',
                             description: card.description,
                           }
@@ -524,6 +526,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
   const { isMissingColumnError } = await import(
     '@/utils/moderation/missingColumn'
   );
+  const { displayableLogoCreditUrl } = await import('@/utils/teams/logoCredit');
   const assoQuery = (columns: string) =>
     supabaseAdmin!
       .from('tcg_fanart_cards')
@@ -533,7 +536,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
       .eq('status', 'approved')
       .order('created_at', { ascending: false })
       .limit(100);
-  const assoBase = 'id, title, artist_name, image_path, rarity';
+  const assoBase = 'id, title, artist_name, artist_url, image_path, rarity';
   let { data: assoRows, error: assoError } = await assoQuery(
     `${assoBase}, description`
   );
@@ -554,6 +557,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
       id: string;
       title: string;
       artist_name: string | null;
+      artist_url?: string | null;
       image_path: string;
       rarity: TcgRarity | null;
       description?: string | null;
@@ -566,6 +570,8 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
       supabaseAdmin.storage.from(TCG_BUCKET).getPublicUrl(row.image_path).data
         ?.publicUrl ?? null,
     credit: row.artist_name,
+    // Le site d'un partenaire : https seulement, comme sur la carte.
+    creditUrl: displayableLogoCreditUrl(row.artist_url),
     description: row.description ?? null,
     rarity: row.rarity ?? 'rare',
   }));

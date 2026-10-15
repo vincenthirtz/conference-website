@@ -24,7 +24,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import { MAP_CARD_RARITY, RARITY_ORDER } from '@/utils/tcg/rarity';
-import type { LogoCredit } from '@/utils/teams/logoCredit';
+import {
+  displayableLogoCreditUrl,
+  type LogoCredit,
+} from '@/utils/teams/logoCredit';
 import { MATCH_LOSS_COINS, MATCH_WIN_COINS } from '@/utils/tcg/economy';
 import {
   PLACEMENT_TIERS,
@@ -55,6 +58,8 @@ export type HomeTcgCard =
       name: string | null;
       imageUrl: string | null;
       credit: string | null;
+      /** Lien du crédit (le site d'un partenaire), `https://` seulement. */
+      creditUrl?: string | null;
       description: string | null;
       rarity: TcgRarity;
     }
@@ -103,6 +108,7 @@ type AssociationRow = {
   id: string;
   title: string;
   artist_name: string | null;
+  artist_url?: string | null;
   image_path: string;
   rarity: TcgRarity | null;
   description?: string | null;
@@ -228,7 +234,7 @@ async function readAssociationCard(
       .eq('status', 'approved')
       .order('created_at', { ascending: false })
       .limit(100);
-  const base = 'id, title, artist_name, image_path, rarity';
+  const base = 'id, title, artist_name, artist_url, image_path, rarity';
   let { data, error } = await query(`${base}, description`);
   // Même tolérance que le catalogue : une migration pas encore appliquée ne
   // retire pas la carte.
@@ -252,6 +258,8 @@ async function readAssociationCard(
       db.storage.from(TCG_BUCKET).getPublicUrl(row.image_path).data
         ?.publicUrl ?? null,
     credit: row.artist_name,
+    // Le site d'un partenaire : https seulement, comme sur la carte.
+    creditUrl: displayableLogoCreditUrl(row.artist_url),
     description: row.description ?? null,
     rarity: row.rarity ?? 'rare',
   };

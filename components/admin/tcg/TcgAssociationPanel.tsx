@@ -1,8 +1,9 @@
 // components/admin/tcg/TcgAssociationPanel.tsx
 //
-// La catégorie « L'association » du TCG : importer un logo d'événement en
-// carte, déposer une image, et gérer les cartes existantes (titre, crédit,
-// rareté, description, retrait). Droit `manage_tcg`, comme les fan arts.
+// La catégorie « L'association » du TCG : importer un logo d'événement ou un
+// partenaire en carte, déposer une image, et gérer les cartes existantes
+// (titre, crédit et son lien https, rareté, description, retrait). Droit
+// `manage_tcg`, comme les fan arts. Partenaires : `TcgAssociationPartners`.
 //
 // LA DESCRIPTION (« à propos ») est affichée sur la carte chez les joueuses.
 // Le compteur utilise les MÊMES règles que la route
@@ -26,7 +27,7 @@ import {
 import { useToast } from '@/components/Toast';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminTcgAssociation from '@/lib/i18n/locales/admin-fr/adminTcgAssociation';
-import { FANART_LIMITS } from '@/utils/tcg/fanart';
+import { FANART_LIMITS, isPartnerSourceRef } from '@/utils/tcg/fanart';
 import {
   CARD_DESCRIPTION_MAX,
   cardDescriptionLength,
@@ -38,11 +39,18 @@ import {
   rubanInset,
   rubanMuted,
 } from '@/features/admin/_shared/ui/ruban';
+import TcgAssociationPartners, {
+  ASSOCIATION_INPUT as INPUT,
+  type AssociationDraftField,
+  type AssociationPartner,
+  CreditFields,
+} from './TcgAssociationPartners';
 
 type Item = {
   id: string;
   title: string;
   credit: string;
+  creditUrl?: string | null;
   imageUrl: string | null;
   status: 'approved' | 'revoked' | string;
   rarity: string | null;
@@ -63,6 +71,8 @@ type EventLogo = {
 type Response = {
   items: Item[];
   eventLogos: EventLogo[];
+  /** `null` hors de l'espace de l'association ; absent d'une API plus ancienne. */
+  partners?: AssociationPartner[] | null;
   /** Optionnel : une API plus ancienne (déploiement en cours) ne le rend pas. */
   voxelLogo?: { previewUrl: string; cardId: string | null };
   rarities: string[];
@@ -74,8 +84,8 @@ type Response = {
 };
 
 /**
- * Motif de refus de la description (`reason` du socle d'erreurs admin),
- * traduit ici plutôt qu'affiché en français brut.
+ * Motif de refus (description, lien du crédit : `reason` du socle d'erreurs
+ * admin), traduit ici plutôt qu'affiché en français brut.
  */
 function descriptionErrorCode(err: unknown): string | null {
   const payload = (err as { payload?: unknown } | null)?.payload;
@@ -91,9 +101,6 @@ function descriptionErrorCode(err: unknown): string | null {
  * le même état que les modifications des cartes existantes.
  */
 const NEW_CARD = '__new__';
-
-const INPUT =
-  'mt-1 w-full rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-2 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 export default function TcgAssociationPanel() {
   const t = useAdminT(nsAdminTcgAssociation);
@@ -114,10 +121,7 @@ export default function TcgAssociationPanel() {
   const [credit, setCredit] = useState('');
   const [rarity, setRarity] = useState('');
   const [edits, setEdits] = useState<
-    Record<
-      string,
-      { title?: string; credit?: string; rarity?: string; description?: string }
-    >
+    Record<string, Partial<Record<AssociationDraftField, string>>>
   >({});
   const newDescription = edits[NEW_CARD]?.description ?? '';
 
@@ -141,6 +145,7 @@ export default function TcgAssociationPanel() {
           markup_not_allowed: t.errorDescriptionMarkup,
           too_long: format(t.errorDescriptionTooLong, { max }),
           migration_pending: t.errorDescriptionPending,
+          credit_url_https_required: t.errorCreditUrl,
         };
         const code = descriptionErrorCode(err);
         addToast(
@@ -214,6 +219,7 @@ export default function TcgAssociationPanel() {
           mimeType: file.type,
           title: cleanTitle,
           ...(credit.trim() ? { credit: credit.trim() } : {}),
+          creditUrl: edits[NEW_CARD]?.creditUrl?.trim() || undefined,
           ...(newDescription.trim() ? { description: newDescription } : {}),
           rarity: rarity || data?.defaultRarity,
         },
@@ -242,6 +248,9 @@ export default function TcgAssociationPanel() {
           id: item.id,
           ...(edit.title?.trim() ? { title: edit.title.trim() } : {}),
           ...(edit.credit?.trim() ? { credit: edit.credit.trim() } : {}),
+          ...(edit.creditUrl !== undefined
+            ? { creditUrl: edit.creditUrl.trim() || null }
+            : {}),
           ...(edit.rarity ? { rarity: edit.rarity } : {}),
           // Champ touché seulement : vidé, il EFFACE la description (null).
           ...(edit.description !== undefined
@@ -373,6 +382,16 @@ export default function TcgAssociationPanel() {
         )}
       </div>
 
+      {/* Partenaires de l'association (absent hors de son espace) */}
+      {data.partners && (
+        <TcgAssociationPartners
+          partners={data.partners}
+          busy={busy}
+          rarity={data.defaultRarity}
+          run={run}
+        />
+      )}
+
       {/* Le logo par défaut, en voxel */}
       {data.voxelLogo && (
         <div className={`flex flex-wrap items-center gap-4 p-4 ${rubanCard}`}>
@@ -428,16 +447,13 @@ export default function TcgAssociationPanel() {
               className={INPUT}
             />
           </label>
-          <label className="block text-xs text-neutral-400">
-            {t.labelCredit}
-            <input
-              value={credit}
-              maxLength={FANART_LIMITS.artistName}
-              placeholder={data.defaultCredit}
-              onChange={(e) => setCredit(e.target.value)}
-              className={INPUT}
-            />
-          </label>
+          <CreditFields
+            credit={credit}
+            creditUrl={edits[NEW_CARD]?.creditUrl ?? ''}
+            placeholder={data.defaultCredit}
+            onCredit={setCredit}
+            onCreditUrl={(v) => setEdit(NEW_CARD, { creditUrl: v })}
+          />
           <label className="block text-xs text-neutral-400">
             {t.labelRarity}
             <select
@@ -505,7 +521,9 @@ export default function TcgAssociationPanel() {
                       {item.status === 'approved'
                         ? t.statusApproved
                         : t.statusRevoked}
-                      {item.sourceRef ? ` · ${t.fromEventLogo}` : ''}
+                      {item.sourceRef
+                        ? ` · ${isPartnerSourceRef(item.sourceRef) ? t.fromPartner : t.fromEventLogo}`
+                        : ''}
                     </p>
                     <label className="block text-xs text-neutral-400">
                       {t.labelTitle}
@@ -518,17 +536,12 @@ export default function TcgAssociationPanel() {
                         className={INPUT}
                       />
                     </label>
-                    <label className="block text-xs text-neutral-400">
-                      {t.labelCredit}
-                      <input
-                        value={edit.credit ?? item.credit}
-                        maxLength={FANART_LIMITS.artistName}
-                        onChange={(e) =>
-                          setEdit(item.id, { credit: e.target.value })
-                        }
-                        className={INPUT}
-                      />
-                    </label>
+                    <CreditFields
+                      credit={edit.credit ?? item.credit}
+                      creditUrl={edit.creditUrl ?? item.creditUrl ?? ''}
+                      onCredit={(v) => setEdit(item.id, { credit: v })}
+                      onCreditUrl={(v) => setEdit(item.id, { creditUrl: v })}
+                    />
                     <label className="block text-xs text-neutral-400">
                       {t.labelRarity}
                       <select

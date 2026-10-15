@@ -24,6 +24,8 @@ export type AssociationCardView = {
   name: string | null;
   imageUrl: string | null;
   credit: string | null;
+  /** Lien du crédit (le site d'un partenaire), `https://` seulement. */
+  creditUrl?: string | null;
   description: string | null;
   rarity: TcgRarity;
 };
@@ -122,7 +124,7 @@ export default function TcgAssociationSection({
                   name: card.name,
                   imageUrl: card.imageUrl,
                   artistName: card.credit,
-                  artistUrl: null,
+                  artistUrl: card.creditUrl ?? null,
                   category: 'association',
                   description: card.description,
                 }}

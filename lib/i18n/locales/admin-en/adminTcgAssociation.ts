@@ -16,6 +16,19 @@ export default {
   eventLogoNotImportable:
     'Hébergé hors du stockage : redéposez-le depuis le calendrier des logos pour pouvoir l’importer.',
   importLogo: 'Importer en carte',
+  partnersTitle: 'Association partners',
+  partnersIntro:
+    'Active partners (admin → Partners). Importing one makes it a card: its logo is copied, and the card credit names the partner with a link to its website. Editing or removing the partner does not change the card.',
+  partnersEmpty: 'No active partners.',
+  importPartner: 'Import as a card',
+  partnerLogoNotImportable:
+    'Logo hosted outside storage: upload the image below, with the partner name as credit and its website link.',
+  partnerWebsiteNotHttps:
+    'No website, or not https://: fix it in Partners to import it.',
+  toastPartnerImported: 'Partner imported as a card.',
+  fromPartner: 'Partner',
+  labelCreditUrl: 'Credit link (https://, optional)',
+  errorCreditUrl: 'The credit link must start with https://.',
   voxelTitle: 'Logo par défaut en voxel',
   voxelIntro:
     'Le nœud de l’association, en briques — la même figurine que celle du moteur voxel. La carte en fige le rendu actuel.',

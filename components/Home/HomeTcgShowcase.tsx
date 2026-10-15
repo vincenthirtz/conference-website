@@ -61,7 +61,7 @@ export function homeCardSubject(card: HomeTcgCard): TcgCardProps['subject'] {
         name: card.name,
         imageUrl: card.imageUrl,
         artistName: card.credit,
-        artistUrl: null,
+        artistUrl: card.creditUrl ?? null,
         category: 'association',
         description: card.description,
       };
