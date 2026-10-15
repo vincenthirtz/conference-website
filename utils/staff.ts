@@ -27,7 +27,8 @@ import type {
 import type { TenantKind } from './tenantKind';
 
 import { logger } from './logger';
-import { clearTenantRoleCache } from './staffRoleCache';
+import { registerProcessCache } from './processCaches';
+import { invalidateStaffTenants } from './staffTenantsCache';
 import {
   aalFromAccessToken,
   isMfaSensitiveGuard,
@@ -77,24 +78,55 @@ export {
 };
 
 /* -----------------------------------------------------------
- * Récupérer le staff d'un user (avec cache mémoire TTL 5 min)
+ * Récupérer le staff d'un user — cache mémoire court (60 s)
  * ---------------------------------------------------------*/
 
-const STAFF_CACHE_TTL = 5 * 60 * 1_000; // 5 minutes
+// La fiche `staff` d'un compte auth est relue à chaque requête admin
+// (`getStaffContextFromRequest`) et par /api/admin/me à chaque page du
+// back-office : 142 + 60 GET `staff` en 24 h mesurés le 2026-10-15.
+//
+// C'est une donnée d'AUTORISATION (rôle, actif, pôle-admin, permissions à
+// l'unité) : un retrait ne doit pas traîner.
+//   - Toute écriture de `staff` faite par ce processus invalide aussitôt
+//     (`invalidateStaffCache`, appelé par les repositories et services qui
+//     l'écrivent).
+//   - TTL court (60 s ; c'était 5 min) : il ne couvre que les écritures
+//     faites hors du processus — et la copie de ce module côté site (Netlify),
+//     qui ne voit pas les écritures de l'API.
+//   - Une lecture EN VOL au moment d'une invalidation n'est pas mise en cache
+//     (compteur d'époque) : elle a pu lire l'état d'avant l'écriture.
+//   - Jamais d'erreur en cache. L'ABSENCE, si : la plupart des appels viennent
+//     de comptes qui ne sont PAS staff (pronostics, espace joueuse), et sans
+//     elle chacun relisait `staff` à chaque requête — ce que ce cache existe
+//     pour éviter. Un staff créé par ce processus passe quand même tout de
+//     suite : chaque insertion de `staff` invalide le compte (repository des
+//     utilisateurs, invitations, promotion caster, inscription développeur,
+//     auto-claim et inscription du bot). Une fiche DÉSACTIVÉE se cache aussi
+//     (c'est une ligne lue, et elle refuse) ; sa réactivation invalide.
+
+const STAFF_CACHE_TTL = 60 * 1_000;
+const STAFF_CACHE_MAX_ENTRIES = 1_000;
+
+type StaffRow = StaffMember & {
+  is_active?: boolean | null;
+  deleted_at?: string | null;
+};
+type StaffRowLookup = { ok: true; row: StaffRow | null } | { ok: false };
+
 const staffCache = new Map<
   string,
-  { data: StaffMember | null; expiresAt: number }
+  { row: StaffRow | null; expiresAt: number }
 >();
+const staffInFlight = new Map<string, Promise<StaffRowLookup>>();
+let staffCacheEpoch = 0;
+registerProcessCache(() => {
+  staffCacheEpoch += 1;
+  staffCache.clear();
+  staffInFlight.clear();
+});
 
-export async function getStaffByUserId(
-  userId: string
-): Promise<StaffMember | null> {
-  const now = Date.now();
-  const cached = staffCache.get(userId);
-  if (cached && cached.expiresAt > now) {
-    return cached.data;
-  }
-
+async function fetchStaffRow(userId: string): Promise<StaffRowLookup> {
+  const startedAt = staffCacheEpoch;
   const { data, error } = await supabaseAdmin
     .from('staff')
     .select('*')
@@ -103,38 +135,71 @@ export async function getStaffByUserId(
 
   if (error) {
     logger.error('getStaffByUserId error:', error);
-    return null;
+    return { ok: false };
   }
+
+  const row = (data as StaffRow | null) ?? null;
+  // Absence comprise (cf. l'en-tête) : invalidée par chaque création de staff.
+  if (startedAt === staffCacheEpoch) {
+    if (staffCache.size >= STAFF_CACHE_MAX_ENTRIES) staffCache.clear();
+    staffCache.set(userId, { row, expiresAt: Date.now() + STAFF_CACHE_TTL });
+  }
+  return { ok: true, row };
+}
+
+/** Fiche brute (désactivée comprise), depuis le cache ou lue une fois. */
+function loadStaffRow(userId: string): Promise<StaffRowLookup> {
+  const hit = staffCache.get(userId);
+  if (hit && hit.expiresAt > Date.now()) {
+    return Promise.resolve({ ok: true, row: hit.row });
+  }
+  const pending = staffInFlight.get(userId);
+  if (pending) return pending;
+
+  const p = fetchStaffRow(userId).finally(() => {
+    if (staffInFlight.get(userId) === p) staffInFlight.delete(userId);
+  });
+  staffInFlight.set(userId, p);
+  return p;
+}
+
+export async function getStaffByUserId(
+  userId: string
+): Promise<StaffMember | null> {
+  const lookup = await loadStaffRow(userId);
+  if (!lookup.ok || !lookup.row) return null;
 
   // Soft-delete filtering : un staff is_active=false (ou deleted_at non-null,
   // pour les anciens enregistrements pré-migration) est traité comme s'il
   // n'existait pas → plus de droits. La row reste pour préserver l'audit
   // staff_logs.
-  let result: StaffMember | null = (data as StaffMember) ?? null;
-  if (result) {
-    const r = result as StaffMember & {
-      is_active?: boolean | null;
-      deleted_at?: string | null;
-    };
-    if (r.is_active === false || r.deleted_at) {
-      result = null;
-    }
-  }
-  staffCache.set(userId, { data: result, expiresAt: now + STAFF_CACHE_TTL });
-  return result;
+  if (lookup.row.is_active === false || lookup.row.deleted_at) return null;
+
+  // Copie : la ligne en cache est partagée entre requêtes — un appelant qui
+  // la modifierait la modifierait pour tous.
+  return { ...lookup.row };
 }
 
-/** Invalidate the staff cache for a specific user (call after role changes). */
+/**
+ * Oublie la fiche staff d'un compte auth (ou toutes), et les rattachements
+ * aux espaces. À appeler APRÈS toute écriture de `staff`. Sans argument quand
+ * l'écriture vise `staff.id` plutôt que le compte auth : la table est petite,
+ * tout relire coûte quelques requêtes.
+ */
 export function invalidateStaffCache(userId?: string) {
+  staffCacheEpoch += 1;
   if (userId) {
     staffCache.delete(userId);
+    staffInFlight.delete(userId);
   } else {
     staffCache.clear();
+    staffInFlight.clear();
   }
-  // Le rôle d'un staff a désormais deux composantes : le rôle global (ci-dessus)
-  // et le rôle porté par `tenant_staff` sur le tenant actif. Invalider l'un sans
-  // l'autre laisserait servir une autorisation périmée pendant une minute.
-  clearTenantRoleCache();
+  // Le rôle d'un staff a deux composantes : le rôle global (ci-dessus) et le
+  // rôle porté par `tenant_staff` sur le tenant actif. Invalider l'un sans
+  // l'autre laisserait servir une autorisation périmée. On ne connaît ici que
+  // le compte auth, pas `staff.id` : tous les rattachements sont oubliés.
+  invalidateStaffTenants();
 }
 
 export async function getStaffRole(userId: string): Promise<StaffRole | null> {
@@ -367,12 +432,13 @@ export async function requireStaffRoleFromRequest(
 
   // S7 : resolution du tenant actif via cookie `staff_active_tenant_id`,
   // fallback sur le premier tenant accessible (par slug ASC) puis sur
-  // DEFAULT_TENANT_ID. La query DB cote `resolveActiveTenant` est minuscule
-  // (tenant_staff est petit) — pas de cache pour V1.
+  // DEFAULT_TENANT_ID. Le cookie n'est posé que par le sélecteur d'espace :
+  // le repli est le chemin courant, servi par les caches du processus
+  // (rattachements 60 s, annuaire des espaces 10 min — cf. adminTenants.ts).
   //
   // On passe `is_pole_admin` en hint pour eviter un re-SELECT cote
   // `resolveActiveTenant` / `canAccessTenant` : la row staff est deja
-  // chargee ici via `getStaffByUserId` (cache 5min).
+  // chargee ici via `getStaffByUserId` (cache 60 s).
   //
   // Import dynamique pour eviter un cycle (`utils/adminTenants` reimporte
   // `hasAtLeastRole` depuis ce module).
@@ -778,10 +844,12 @@ export function withStaffPage<
       // Nature du tenant actif (organizer/developer) : sert à filtrer la nav
       // admin et les cartes du dashboard côté SSR. Fail-safe 'organizer' en cas
       // d'échec (jamais durcir accidentellement l'accès des tenants existants).
-      const { getTenantKind } = await import('./tenantKind');
+      // Lue dans l'annuaire des espaces déjà chargé pour résoudre le tenant
+      // actif : pas de requête de plus par navigation.
+      const { readTenantKind } = await import('./adminTenants');
       let activeTenantKind: TenantKind = 'organizer';
       try {
-        activeTenantKind = await getTenantKind(staffCtx.tenantId);
+        activeTenantKind = await readTenantKind(staffCtx.tenantId);
       } catch (e) {
         logger.error('withStaffPage getTenantKind error:', e);
       }

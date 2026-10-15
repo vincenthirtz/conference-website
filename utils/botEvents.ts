@@ -189,8 +189,8 @@ async function persistOutbox(params: {
       .maybeSingle();
 
     if (!error) {
-      // Les dispatchers dormants (Web Push) ne relisent l'outbox que si une
-      // écriture a eu lieu depuis leur dernier passage.
+      // Les lecteurs dormants (Web Push, file `pending` du bot) ne relisent
+      // l'outbox que si une écriture a eu lieu depuis leur dernier passage.
       noteOutboxWrite();
       return { ok: true, id: (data?.id as number | undefined) ?? null };
     }
@@ -231,6 +231,9 @@ async function persistOutbox(params: {
       );
     }
   }
+  // Échec rendu, mais un 504 a pu valider la dernière tentative : on réveille
+  // les lecteurs dormants plutôt que de risquer une ligne `pending` invisible.
+  noteOutboxWrite();
   return { ok: false, error: lastError };
 }
 
@@ -443,6 +446,9 @@ export async function emitBotEvents(
         }))
       )
       .select('id, event_id');
+    // Réveille les lecteurs dormants de l'outbox (Web Push, file `pending` du
+    // bot) — même en erreur : un 504 peut avoir validé l'insertion.
+    noteOutboxWrite();
     if (error) {
       logger.error('[botEvents] outbox batch insert error', error);
     } else {

@@ -22,6 +22,8 @@ import {
   type MvpVoteSource,
 } from '@/utils/mvp/awards';
 import { logger } from '@/utils/logger';
+// Chaque écriture de `match_mvp_polls` réveille les lecteurs dormants.
+import { noteMvpPollWrite } from '@/utils/mvp/pollMemo';
 
 /**
  * Durée d'ouverture par défaut d'un vote de match.
@@ -375,6 +377,7 @@ export async function openMvpVote(
       .eq('id', existing.id)
       .select('*')
       .maybeSingle();
+    noteMvpPollWrite();
     return {
       poll: (data as MvpPollRow) ?? existing,
       // La liste du vote en cours, corrections du staff comprises — pas une
@@ -429,6 +432,7 @@ export async function openMvpVote(
       .eq('id', existing.id)
       .select('*')
       .maybeSingle();
+    noteMvpPollWrite();
     if (error) {
       logger.error('[mvp] openMvpVote update error:', error);
       return null;
@@ -446,6 +450,7 @@ export async function openMvpVote(
     .insert({ tenant_id: tenantId, match_id: matchId, ...payload })
     .select('*')
     .maybeSingle();
+  noteMvpPollWrite();
   if (error) {
     logger.error('[mvp] openMvpVote insert error:', error);
     return null;
@@ -648,6 +653,7 @@ export async function editMvpCandidates(
     .eq('id', poll.id)
     .select('*')
     .maybeSingle();
+  noteMvpPollWrite();
   if (error || !data) {
     logger.error('[mvp] editMvpCandidates update error:', error);
     return { ok: false, error: 'write_failed' };
@@ -790,6 +796,7 @@ export async function settleMatchMvp(
     .update(update)
     .eq('tenant_id', tenantId)
     .eq('id', poll.id);
+  noteMvpPollWrite();
 
   if (error) logger.error('[mvp] settleMatchMvp update error:', error);
 

@@ -13,8 +13,18 @@
 //       Resout le tenant actif d'un staff selon l'ordre cookie -> fallback
 //       first (premier tenant par slug ASC) -> fallback DEFAULT_TENANT_ID.
 //
-// Toutes les fonctions utilisent `supabaseAdmin` (service_role) car les
+// Toutes les lectures passent par `supabaseAdmin` (service_role) car les
 // tables `tenants` / `tenant_staff` sont restreintes par RLS.
+//
+// LECTURES EN MÉMOIRE. Ces fonctions tournent à CHAQUE requête admin
+// (`requireStaffRoleFromRequest`) : elles lisent deux caches du processus
+// plutôt que la base.
+//   - utils/staffTenantsCache.ts : les rattachements `tenant_staff` d'un staff
+//     (accès, rôle par espace, repli « premier espace ») — 60 s, invalidés par
+//     chaque écriture de `tenant_staff` ;
+//   - utils/tenantDirectoryCache.ts : l'annuaire des espaces (slug, nom, actif,
+//     nature) — 10 min, invalidé par chaque écriture qui le touche.
+// Le pourquoi chiffré et les règles de fraîcheur sont dans ces deux fichiers.
 
 import type { StaffRole } from '@/types/admin';
 import { supabaseAdmin } from './supabase';
@@ -22,11 +32,12 @@ import { DEFAULT_TENANT_ID } from './tenant';
 import { logger } from './logger';
 import { hasAtLeastRole, STAFF_ROLES } from './staff';
 import type { TenantSource } from '@/types/staff';
+import { getTenantKind, type TenantKind } from './tenantKind';
+import { invalidateStaffTenants, loadStaffTenants } from './staffTenantsCache';
 import {
-  readCachedTenantRole,
-  writeCachedTenantRole,
-  clearTenantRoleCache,
-} from './staffRoleCache';
+  loadTenantDirectory,
+  type TenantDirectoryRow,
+} from './tenantDirectoryCache';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -38,61 +49,47 @@ export function isValidTenantUuid(value: unknown): value is string {
   return typeof value === 'string' && UUID_RE.test(value);
 }
 
-/* -----------------------------------------------------------
- * Cache mémoire court (TTL 60 s) pour `canAccessTenant`.
- *
- * `resolveActiveTenant` (chemin nominal cookie) fait un SELECT `tenant_staff`
- * par navigation admin. L'appartenance staff→tenant est stable à l'échelle
- * d'une session : on mémoïse le booléen d'accès par `(staffId, tenantId)`
- * sur une courte fenêtre. Invalidation par simple expiration (TTL).
- *
- * On ne cache QUE les décisions issues d'une lecture réussie ; une erreur DB
- * (fail-closed → false) n'est jamais mémoïsée. Le fast-path `isPoleAdmin`
- * hint=true ne touche pas le cache (aucune requête à éviter).
- * ---------------------------------------------------------*/
-
-const ACCESS_CACHE_TTL = 60 * 1_000; // 60 secondes
-const ACCESS_CACHE_MAX_ENTRIES = 5_000;
-const accessCache = new Map<string, { allowed: boolean; expiresAt: number }>();
-
-function accessCacheKey(staffId: string, tenantId: string): string {
-  return `${staffId}:${tenantId}`;
-}
-
-function setAccessCache(key: string, allowed: boolean, now: number): void {
-  // Purge des entrées expirées au passage + cap de taille (éviction des plus
-  // anciennes selon l'ordre d'insertion de la Map).
-  for (const [k, v] of accessCache) {
-    if (v.expiresAt <= now) accessCache.delete(k);
-  }
-  accessCache.delete(key);
-  while (accessCache.size >= ACCESS_CACHE_MAX_ENTRIES) {
-    const oldest = accessCache.keys().next().value;
-    if (oldest === undefined) break;
-    accessCache.delete(oldest);
-  }
-  accessCache.set(key, { allowed, expiresAt: now + ACCESS_CACHE_TTL });
-}
-
 /**
- * Invalide le cache d'accès de `canAccessTenant`. Sans argument : purge
- * totale. Utile après une modification de `tenant_staff` ou du flag
- * `is_pole_admin`. Optionnel — le TTL 60 s rattrape toute divergence.
+ * Invalide les rattachements en mémoire (`tenant_staff`) d'un staff, ou de
+ * tous. Nom historique : c'était le cache d'accès de `canAccessTenant`, qui lit
+ * désormais les rattachements (utils/staffTenantsCache.ts). Le second argument
+ * est ignoré — un staff a peu de rattachements, on les oublie tous.
  */
 export function invalidateTenantAccessCache(
   staffId?: string,
-  tenantId?: string
+  _tenantId?: string
 ): void {
-  if (staffId && tenantId) {
-    accessCache.delete(accessCacheKey(staffId, tenantId));
-  } else if (staffId) {
-    const prefix = `${staffId}:`;
-    for (const k of accessCache.keys()) {
-      if (k.startsWith(prefix)) accessCache.delete(k);
-    }
-  } else {
-    accessCache.clear();
+  invalidateStaffTenants(staffId);
+}
+
+/** Premier espace par slug ASC (copie triée ; l'entrée n'est pas modifiée). */
+function firstBySlug(
+  rows: readonly TenantDirectoryRow[]
+): TenantDirectoryRow | undefined {
+  return [...rows].sort((a, b) =>
+    (a.slug ?? '').localeCompare(b.slug ?? '')
+  )[0];
+}
+
+/**
+ * Lit le drapeau `staff.is_pole_admin` d'un staff, quand l'appelant ne l'a pas
+ * fourni. Chemin rare (bascule d'espace), volontairement NON mis en cache : un
+ * drapeau retiré doit fermer l'accès cross-tenant tout de suite.
+ */
+async function readPoleAdminFlag(
+  staffId: string,
+  label: string
+): Promise<boolean> {
+  const { data: staffRow, error: staffErr } = await supabaseAdmin
+    .from('staff')
+    .select('is_pole_admin')
+    .eq('id', staffId)
+    .maybeSingle();
+  if (staffErr) {
+    logger.error(`[adminTenants] ${label} staff lookup error`, staffErr);
+    return false;
   }
+  return (staffRow as { is_pole_admin?: boolean } | null)?.is_pole_admin === true;
 }
 
 /**
@@ -115,6 +112,9 @@ export type ActiveTenantResolution = {
  * passer par `tenant_staff`. On accepte un `isPoleAdmin` hint pour eviter
  * un re-SELECT quand l'appelant a deja le staff row charge (typiquement
  * via `requireStaffRoleFromRequest`). Sans hint, on fait un SELECT minimal.
+ *
+ * Les rattachements sont lus en mémoire (60 s, invalidés à chaque écriture).
+ * Une erreur de lecture refuse (fail-closed) sans que le refus soit retenu.
  */
 export async function canAccessTenant(
   staffId: string,
@@ -123,53 +123,20 @@ export async function canAccessTenant(
 ): Promise<boolean> {
   if (!isValidTenantUuid(tenantId)) return false;
 
-  // Fast-path : hint deja fourni par l'appelant. Aucune requete a eviter,
-  // donc pas de cache.
+  // Fast-path : hint deja fourni par l'appelant.
   if (opts?.isPoleAdmin === true) return true;
 
-  const cacheKey = accessCacheKey(staffId, tenantId);
-  const now = Date.now();
-  const cached = accessCache.get(cacheKey);
-  if (cached && cached.expiresAt > now) {
-    return cached.allowed;
+  if (
+    opts?.isPoleAdmin === undefined &&
+    (await readPoleAdminFlag(staffId, 'canAccessTenant'))
+  ) {
+    return true;
   }
 
-  // Si pas de hint, on lit le flag (cheap : staff est cache 5 min dans
-  // `getStaffByUserId` mais ici on contourne le cache car on a juste
-  // l'id du staff, pas l'auth_user_id).
-  if (opts?.isPoleAdmin === undefined) {
-    const { data: staffRow, error: staffErr } = await supabaseAdmin
-      .from('staff')
-      .select('is_pole_admin')
-      .eq('id', staffId)
-      .maybeSingle();
-    if (staffErr) {
-      logger.error(
-        '[adminTenants] canAccessTenant staff lookup error',
-        staffErr
-      );
-    } else if (
-      (staffRow as { is_pole_admin?: boolean } | null)?.is_pole_admin
-    ) {
-      setAccessCache(cacheKey, true, now);
-      return true;
-    }
-  }
-
-  const { data, error } = await supabaseAdmin
-    .from('tenant_staff')
-    .select('staff_id')
-    .eq('staff_id', staffId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle();
-  if (error) {
-    logger.error('[adminTenants] canAccessTenant error', error);
-    // On ne cache pas les erreurs (fail-closed non fige).
-    return false;
-  }
-  const allowed = !!data;
-  setAccessCache(cacheKey, allowed, now);
-  return allowed;
+  const memberships = await loadStaffTenants(staffId);
+  if (!memberships.ok) return false;
+  const target = tenantId.toLowerCase();
+  return memberships.rows.some((r) => r.tenant_id.toLowerCase() === target);
 }
 
 /**
@@ -197,90 +164,44 @@ export async function listAccessibleTenants(
   staffId: string,
   opts?: { isPoleAdmin?: boolean }
 ): Promise<AccessibleTenantRow[]> {
-  let isPoleAdmin = opts?.isPoleAdmin ?? false;
-
-  if (opts?.isPoleAdmin === undefined) {
-    const { data: staffRow, error: staffErr } = await supabaseAdmin
-      .from('staff')
-      .select('is_pole_admin')
-      .eq('id', staffId)
-      .maybeSingle();
-    if (staffErr) {
-      logger.error(
-        '[adminTenants] listAccessibleTenants staff lookup error',
-        staffErr
-      );
-    } else if (
-      (staffRow as { is_pole_admin?: boolean } | null)?.is_pole_admin
-    ) {
-      isPoleAdmin = true;
-    }
-  }
+  const isPoleAdmin =
+    opts?.isPoleAdmin === undefined
+      ? await readPoleAdminFlag(staffId, 'listAccessibleTenants')
+      : opts.isPoleAdmin;
 
   if (isPoleAdmin) {
-    const { data, error } = await supabaseAdmin
-      .from('tenants')
-      .select('id, slug, name, is_active')
-      .eq('is_active', true)
-      .order('slug', { ascending: true });
-    if (error) {
-      logger.error('[adminTenants] listAccessibleTenants (pole) error', error);
-      return [];
-    }
-    type Row = { id: string; slug: string; name: string; is_active: boolean };
-    return ((data as Row[] | null) ?? []).map((t) => ({
-      id: t.id,
-      slug: t.slug,
-      name: t.name,
-      is_active: t.is_active,
-      role: 'pole_admin',
-    }));
+    const dir = await loadTenantDirectory();
+    if (!dir.ok) return [];
+    return [...dir.rows]
+      .filter((t) => t.is_active === true)
+      .sort((a, b) => (a.slug ?? '').localeCompare(b.slug ?? ''))
+      .map((t) => ({
+        id: t.id,
+        slug: t.slug,
+        name: t.name as string,
+        is_active: t.is_active as boolean,
+        role: 'pole_admin',
+      }));
   }
 
-  // Default : lookup via tenant_staff (2 requetes, mock-friendly).
-  const { data: rows, error } = await supabaseAdmin
-    .from('tenant_staff')
-    .select('tenant_id, role')
-    .eq('staff_id', staffId);
+  const memberships = await loadStaffTenants(staffId);
+  if (!memberships.ok || memberships.rows.length === 0) return [];
 
-  if (error) {
-    logger.error('[adminTenants] listAccessibleTenants error', error);
-    return [];
-  }
-
-  type StaffRow = { tenant_id: string; role: string };
-  const staffRows = ((rows as StaffRow[] | null) ?? []).filter(
-    (r) => typeof r.tenant_id === 'string'
+  const dir = await loadTenantDirectory(
+    memberships.rows.map((r) => r.tenant_id)
   );
-  const ids = staffRows.map((r) => r.tenant_id);
-  if (ids.length === 0) return [];
+  if (!dir.ok) return [];
 
-  const { data: tenantsData, error: tErr } = await supabaseAdmin
-    .from('tenants')
-    .select('id, slug, name, is_active')
-    .in('id', ids);
-  if (tErr) {
-    logger.error(
-      '[adminTenants] listAccessibleTenants tenants lookup error',
-      tErr
-    );
-    return [];
-  }
-  type TRow = { id: string; slug: string; name: string; is_active: boolean };
-  const tenantsById = new Map<string, TRow>(
-    ((tenantsData as TRow[] | null) ?? []).map((t) => [t.id, t])
-  );
-
-  return staffRows
+  return memberships.rows
     .map((r) => {
-      const t = tenantsById.get(r.tenant_id);
+      const t = dir.byId.get(r.tenant_id.toLowerCase());
       if (!t) return null;
       return {
         id: t.id,
         slug: t.slug,
-        name: t.name,
-        is_active: t.is_active,
-        role: r.role,
+        name: t.name as string,
+        is_active: t.is_active as boolean,
+        role: r.role as string,
       } as AccessibleTenantRow;
     })
     .filter((t): t is AccessibleTenantRow => t !== null)
@@ -302,19 +223,8 @@ export async function requireManagerRoleAcrossAnyTenant(
   staffRole: StaffRole | null | undefined
 ): Promise<boolean> {
   if (!hasAtLeastRole(staffRole, 'admin')) return false;
-  const { data, error } = await supabaseAdmin
-    .from('tenant_staff')
-    .select('tenant_id')
-    .eq('staff_id', staffId)
-    .limit(1);
-  if (error) {
-    logger.error(
-      '[adminTenants] requireManagerRoleAcrossAnyTenant error',
-      error
-    );
-    return false;
-  }
-  return Array.isArray(data) && data.length > 0;
+  const memberships = await loadStaffTenants(staffId);
+  return memberships.ok && memberships.rows.length > 0;
 }
 
 /**
@@ -328,8 +238,10 @@ export async function requireManagerRoleAcrossAnyTenant(
  * charge la row staff), on accepte tout tenant_id valide en cookie et le
  * fallback pioche dans tous les tenants actifs par slug ASC.
  *
- * Note perf : `tenant_staff` est minuscule (< 100 rows attendus), une
- * requete par appel est negligeable. Pas de cache V1.
+ * Le repli (2) est le chemin NOMINAL de quiconque n'a jamais utilisé le
+ * sélecteur d'espace (seul à poser le cookie) : il est servi par les deux
+ * caches du processus (rattachements + annuaire), sans requête la plupart du
+ * temps.
  */
 export async function resolveActiveTenant(
   staffId: string,
@@ -351,19 +263,12 @@ export async function resolveActiveTenant(
 
   // Pole admin sans cookie valide → premier tenant actif par slug ASC.
   if (isPoleAdmin) {
-    const { data: tenantsData, error: tErr } = await supabaseAdmin
-      .from('tenants')
-      .select('id, slug')
-      .eq('is_active', true)
-      .order('slug', { ascending: true });
-    if (!tErr && Array.isArray(tenantsData) && tenantsData.length > 0) {
-      const sorted = (tenantsData as Array<{ id: string; slug: string }>).sort(
-        (a, b) => (a.slug ?? '').localeCompare(b.slug ?? '')
-      );
-      const first = sorted[0];
-      if (first?.id) {
-        return { tenantId: first.id, source: 'fallback_first' };
-      }
+    const dir = await loadTenantDirectory();
+    const first = dir.ok
+      ? firstBySlug(dir.rows.filter((t) => t.is_active === true))
+      : undefined;
+    if (first?.id) {
+      return { tenantId: first.id, source: 'fallback_first' };
     }
     // Pas de tenant actif → fallback degrade.
     logger.warn(
@@ -374,48 +279,22 @@ export async function resolveActiveTenant(
   }
 
   // 2) Fallback first : premier tenant par slug ASC dans tenant_staff.
-  // On fait 2 requetes pour rester compatible avec les mocks de test (pas
-  // d'embed PostgREST) : (a) lister les tenant_id, puis (b) lire les
-  // slugs depuis `tenants` pour les trier.
-  const { data: rows, error } = await supabaseAdmin
-    .from('tenant_staff')
-    .select('tenant_id')
-    .eq('staff_id', staffId);
-
-  if (error) {
-    logger.error(
-      '[adminTenants] resolveActiveTenant fallback_first error',
-      error
-    );
-  } else if (Array.isArray(rows) && rows.length > 0) {
-    const tenantIds = (rows as Array<{ tenant_id: string }>)
-      .map((r) => r.tenant_id)
-      .filter((v): v is string => typeof v === 'string' && v.length > 0);
-
-    if (tenantIds.length > 0) {
-      const { data: tenantsData, error: tErr } = await supabaseAdmin
-        .from('tenants')
-        .select('id, slug')
-        .in('id', tenantIds);
-      if (tErr) {
-        logger.error(
-          '[adminTenants] resolveActiveTenant tenants lookup error',
-          tErr
-        );
-      } else {
-        const sorted = (
-          (tenantsData as Array<{ id: string; slug: string }>) ?? []
-        )
-          .filter((t) => tenantIds.includes(t.id))
-          .sort((a, b) => (a.slug ?? '').localeCompare(b.slug ?? ''));
-        const first = sorted[0];
-        if (first?.id) {
-          return { tenantId: first.id, source: 'fallback_first' };
-        }
-        // Tenants table vide mais on a tenant_staff rows → utilise la
-        // premiere row brute (cas degrade).
-        return { tenantId: tenantIds[0], source: 'fallback_first' };
+  const memberships = await loadStaffTenants(staffId);
+  if (memberships.ok && memberships.rows.length > 0) {
+    const tenantIds = memberships.rows.map((r) => r.tenant_id);
+    const dir = await loadTenantDirectory(tenantIds);
+    if (dir.ok) {
+      const first = firstBySlug(
+        tenantIds
+          .map((id) => dir.byId.get(id.toLowerCase()))
+          .filter((t): t is TenantDirectoryRow => t !== undefined)
+      );
+      if (first?.id) {
+        return { tenantId: first.id, source: 'fallback_first' };
       }
+      // Tenants table vide mais on a tenant_staff rows → utilise la
+      // premiere row brute (cas degrade).
+      return { tenantId: tenantIds[0], source: 'fallback_first' };
     }
   }
 
@@ -425,6 +304,21 @@ export async function resolveActiveTenant(
     { staffId }
   );
   return { tenantId: DEFAULT_TENANT_ID, source: 'fallback_default' };
+}
+
+/**
+ * Nature (organizer/developer) d'un espace, lue dans l'annuaire en mémoire —
+ * celui qui sert déjà la résolution de l'espace actif : pas de requête de plus
+ * par navigation admin. Annuaire illisible → `getTenantKind` (lecture unitaire,
+ * fail-safe 'organizer'). Espace inconnu → 'organizer', comme `getTenantKind`.
+ */
+export async function readTenantKind(tenantId: string): Promise<TenantKind> {
+  if (!tenantId) return 'organizer';
+  const dir = await loadTenantDirectory([tenantId]);
+  if (!dir.ok) return getTenantKind(tenantId);
+  return dir.byId.get(tenantId.toLowerCase())?.kind === 'developer'
+    ? 'developer'
+    : 'organizer';
 }
 
 /**
@@ -461,9 +355,9 @@ export function buildActiveTenantSetCookie(tenantId: string): string {
  * Rôle d'un staff SUR un tenant donné
  * -------------------------------------------------------------------------*/
 
-/** Purge le cache des rôles par tenant. Usage test. */
+/** Purge les rattachements en mémoire (dont les rôles par tenant). Usage test. */
 export function __resetTenantRoleCacheForTests(): void {
-  clearTenantRoleCache();
+  invalidateStaffTenants();
 }
 
 /**
@@ -482,7 +376,9 @@ export function __resetTenantRoleCacheForTests(): void {
  * propriétaire de tenant en gagne chez lui.
  *
  * Une valeur inconnue (colonne libre en base) est ignorée plutôt que
- * devinée — un rôle non reconnu n'élève rien.
+ * devinée — un rôle non reconnu n'élève rien. Lue dans les rattachements en
+ * mémoire (60 s, invalidés à chaque écriture de `tenant_staff`) ; une erreur
+ * de lecture rend `null` sans être retenue.
  */
 export async function readTenantStaffRole(
   staffId: string,
@@ -490,27 +386,15 @@ export async function readTenantStaffRole(
 ): Promise<StaffRole | null> {
   if (!staffId || !isValidTenantUuid(tenantId)) return null;
 
-  const cached = readCachedTenantRole(staffId, tenantId);
-  if (cached !== undefined) return cached;
+  const memberships = await loadStaffTenants(staffId);
+  if (!memberships.ok) return null;
 
-  const { data, error } = await supabaseAdmin
-    .from('tenant_staff')
-    .select('role')
-    .eq('staff_id', staffId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle();
-
-  if (error) {
-    logger.error('[adminTenants] readTenantStaffRole error', error);
-    return null; // erreur transitoire → pas de mise en cache
-  }
-
-  const raw = (data as { role?: string } | null)?.role;
-  const role =
-    typeof raw === 'string' && (STAFF_ROLES as readonly string[]).includes(raw)
-      ? (raw as StaffRole)
-      : null;
-
-  writeCachedTenantRole(staffId, tenantId, role);
-  return role;
+  const target = tenantId.toLowerCase();
+  const raw = memberships.rows.find(
+    (r) => r.tenant_id.toLowerCase() === target
+  )?.role;
+  return typeof raw === 'string' &&
+    (STAFF_ROLES as readonly string[]).includes(raw)
+    ? (raw as StaffRole)
+    : null;
 }

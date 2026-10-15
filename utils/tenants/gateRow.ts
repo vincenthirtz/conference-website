@@ -8,31 +8,35 @@
 // ligne. Le bot interroge chaque tenant toutes les 1 à 3 minutes (live-announcer,
 // mvp-due, reminders…), donc à un rythme voisin du TTL : presque chaque appel
 // était un miss, et un miss coûtait jusqu'à TROIS lectures de la même ligne —
-// 4 326 GET `tenants` en 24 h mesurés. Ici : une seule requête, un seul cache,
-// TTL 120 s, et les appels concurrents d'une même instance partagent la même
-// requête en vol.
+// 4 326 GET `tenants` en 24 h mesurés. Ici : une seule requête, un seul cache
+// (TTL ci-dessous), et les appels concurrents d'une même instance partagent la
+// même requête en vol.
 //
 // CE QUI N'EST PAS MIS EN CACHE :
 //   - une erreur de lecture : chaque appelant garde son repli historique
 //     (lifecycle → `active`, plan → `discovery`, actif → refus), et la
 //     tentative suivante relit ;
 //   - une ligne absente : un tenant fraîchement créé doit être vu tout de
-//     suite, pas deux minutes plus tard.
+//     suite, pas une demi-heure plus tard.
 //
 // FRAÎCHEUR. Toutes les écritures connues de cette ligne passent par ce
 // processus et invalident l'entrée aussitôt (`invalidateTenantGateRow` :
 // cycle de vie dans lifecycle.ts, plan dans botPlanGate.ts,
-// circuitPartnerGrant.ts et tenantPlanBilling.ts). Le TTL ne couvre donc que
-// les écritures faites hors du processus (SQL à la main). Il valait 120 s,
-// toujours voisin de la cadence du bot : ~25 lectures `tenants` par heure la
-// nuit pour une ligne qui ne change pas. Dix minutes. Les clés d'API
-// (`tenant_secrets`) ne passent PAS par ici (cf. botAuth.ts).
+// circuitPartnerGrant.ts et tenantPlanBilling.ts, `is_active` dans
+// updateTenantDetail de features/admin/tenants/repository/tenants.ts). Le TTL
+// ne couvre donc que les écritures faites hors du processus (SQL à la main).
+// Il valait 120 s, toujours voisin de la cadence du bot : ~25 lectures
+// `tenants` par heure la nuit pour une ligne qui ne change pas. Puis dix
+// minutes : encore 222 GET/jour mesurés pour trois espaces. Trente minutes —
+// une demi-heure de retard sur une modification faite à la main en SQL reste
+// acceptable. Les clés d'API (`tenant_secrets`) ne passent PAS par ici (cf.
+// botAuth.ts).
 
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
 import { registerProcessCache } from '../processCaches';
 
-export const TENANT_GATE_ROW_TTL_MS = 10 * 60_000;
+export const TENANT_GATE_ROW_TTL_MS = 30 * 60_000;
 
 export type TenantGateRow = {
   id: string;

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { DEFAULT_TENANT_ID } from '@/utils/tenantId';
+import { readSiteSettingCached } from '@/utils/siteSettingsCache';
 
 /* -----------------------------------------------------------
  * Catalogue des permissions team
@@ -180,20 +181,35 @@ export function serializeTeamRoles(roles: TeamRole[]): string {
  * lisent tous le tenant par défaut. Le passer explicitement est ce qui rendra
  * les rôles configurables par tenant — et ce qui débloque le lot J3 côté
  * joueur.
+ *
+ * CACHE (utils/siteSettingsCache.ts, 10 min par tenant) : chaque action de
+ * gestion d'équipe et chaque notification ciblée relisaient la même ligne —
+ * 268 GET/jour mesurés. L'écran des rôles d'équipe et les autres écrivains de
+ * `site_settings` invalident aussitôt. Une erreur de lecture rend les rôles par
+ * défaut, comme avant, mais n'est pas mise en cache.
  */
 export async function loadTeamRolesFromSupabase(
   admin: SupabaseClient,
   tenantId: string = DEFAULT_TENANT_ID
 ): Promise<TeamRole[]> {
-  const { data } = await admin
-    .from('site_settings')
-    .select('value')
-    .eq('tenant_id', tenantId)
-    .eq('key', TEAM_ROLES_SETTING_KEY)
-    .maybeSingle();
-  return parseTeamRoles(
-    (data as { value?: string | null } | null)?.value ?? null
+  const lookup = await readSiteSettingCached(
+    tenantId,
+    TEAM_ROLES_SETTING_KEY,
+    async () => {
+      const { data, error } = await admin
+        .from('site_settings')
+        .select('value')
+        .eq('tenant_id', tenantId)
+        .eq('key', TEAM_ROLES_SETTING_KEY)
+        .maybeSingle();
+      if (error) return { ok: false, error };
+      return {
+        ok: true,
+        value: (data as { value?: string | null } | null)?.value ?? null,
+      };
+    }
   );
+  return parseTeamRoles(lookup.ok ? lookup.value : null);
 }
 
 /* -----------------------------------------------------------

@@ -114,10 +114,28 @@ export function resolveTenantId(req: NextApiRequest): string {
  * -----------------------------------------------------------------------
  *
  * Deux lookups minuscules mais appelés très souvent (chaque requête du bot,
- * chaque ouverture de ticket) : on les cache 60 s, positifs ET négatifs.
+ * chaque ouverture de ticket).
+ *
+ * Tenant actif : seul le négatif « tenant inconnu » est caché ici (60 s), le
+ * positif l'est par ./tenants/gateRow.ts.
+ *
+ * Guild → tenant : le POSITIF est gardé 15 min, le NÉGATIF 60 s.
+ *   - Pourquoi 15 min : à 60 s, chaque guild active relisait `discord_guilds`
+ *     presque à chaque appel du bot (271 GET/jour mesurés pour 3 guilds),
+ *     alors que ce lien ne change qu'au rattachement d'un serveur. Toutes les
+ *     écritures de `discord_guilds` passent par ce processus et invalident
+ *     aussitôt (`invalidateGuildTenantCache`, appelé via
+ *     `invalidateGuildLinkCaches` de ./tenants/botGuildConfigs.ts : link-guild,
+ *     attachGuildToTenant, rattachement d'une guild en attente, purge). Le TTL
+ *     ne couvre qu'une écriture faite hors du processus.
+ *   - Pourquoi le négatif reste à 60 s : une guild qu'on vient de lier hors du
+ *     processus doit être reconnue vite — et c'est le cas rare.
+ *   - Une erreur de lecture n'est jamais cachée.
  */
 
 const TENANT_LOOKUP_TTL_MS = 60_000;
+export const GUILD_TENANT_POSITIVE_TTL_MS = 15 * 60_000;
+export const GUILD_TENANT_NEGATIVE_TTL_MS = TENANT_LOOKUP_TTL_MS;
 const activeTenantCache = new Map<
   string,
   { active: boolean; expiresAt: number }
@@ -126,11 +144,31 @@ const guildTenantCache = new Map<
   string,
   { tenantId: string | null; expiresAt: number }
 >();
+const guildTenantInFlight = new Map<string, Promise<GuildTenantLookup>>();
+// Une lecture partie avant une invalidation n'entre pas dans le cache : elle
+// pourrait rapporter l'état d'avant l'écriture et le figer 15 min.
+let guildTenantGeneration = 0;
+
+/**
+ * Oublie la résolution guild → tenant d'une guild (ou de toutes). Instance
+ * courante seulement. Les écrivains de `discord_guilds` passent par
+ * `invalidateGuildLinkCaches` (./tenants/botGuildConfigs.ts), qui l'appelle.
+ */
+export function invalidateGuildTenantCache(guildId?: string): void {
+  guildTenantGeneration += 1;
+  if (guildId) {
+    guildTenantCache.delete(guildId);
+    guildTenantInFlight.delete(guildId);
+  } else {
+    guildTenantCache.clear();
+    guildTenantInFlight.clear();
+  }
+}
 
 /** Purge les caches d'existence. Usage strictement test. */
 export function __resetTenantLookupCachesForTests(): void {
   activeTenantCache.clear();
-  guildTenantCache.clear();
+  invalidateGuildTenantCache();
   invalidateTenantGateRow();
 }
 registerProcessCache(__resetTenantLookupCachesForTests);
@@ -156,7 +194,7 @@ export async function isActiveTenantId(tenantId: string): Promise<boolean> {
 
   const data = lookup.row;
   const active = !!data && data.is_active !== false;
-  // Une ligne présente est déjà cachée par gateRow (120 s) : un second étage
+  // Une ligne présente est déjà cachée par gateRow (30 min) : un second étage
   // ajouterait son TTL au sien. Seul le négatif « tenant inconnu », que gateRow
   // ne garde pas, est mémorisé ici.
   if (!data) {
@@ -184,16 +222,7 @@ export type GuildTenantLookup =
   | { ok: true; tenantId: string | null }
   | { ok: false; error: string };
 
-export async function resolveGuildTenant(
-  guildId: string
-): Promise<GuildTenantLookup> {
-  if (!guildId) return { ok: true, tenantId: null };
-  const now = Date.now();
-  const cached = guildTenantCache.get(guildId);
-  if (cached && cached.expiresAt > now) {
-    return { ok: true, tenantId: cached.tenantId };
-  }
-
+async function fetchGuildTenant(guildId: string): Promise<GuildTenantLookup> {
   if (!supabaseAdmin) {
     return { ok: false, error: 'supabase_admin_unavailable' };
   }
@@ -209,11 +238,43 @@ export async function resolveGuildTenant(
   }
 
   const tenantId = (data as { tenant_id?: string } | null)?.tenant_id ?? null;
-  guildTenantCache.set(guildId, {
-    tenantId,
-    expiresAt: now + TENANT_LOOKUP_TTL_MS,
-  });
   return { ok: true, tenantId };
+}
+
+export async function resolveGuildTenant(
+  guildId: string
+): Promise<GuildTenantLookup> {
+  if (!guildId) return { ok: true, tenantId: null };
+  const cached = guildTenantCache.get(guildId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return { ok: true, tenantId: cached.tenantId };
+  }
+
+  const pending = guildTenantInFlight.get(guildId);
+  if (pending) return pending;
+
+  const startedAt = guildTenantGeneration;
+  const p = fetchGuildTenant(guildId)
+    .then((lookup) => {
+      if (lookup.ok && guildTenantGeneration === startedAt) {
+        guildTenantCache.set(guildId, {
+          tenantId: lookup.tenantId,
+          expiresAt:
+            Date.now() +
+            (lookup.tenantId
+              ? GUILD_TENANT_POSITIVE_TTL_MS
+              : GUILD_TENANT_NEGATIVE_TTL_MS),
+        });
+      }
+      return lookup;
+    })
+    .finally(() => {
+      if (guildTenantInFlight.get(guildId) === p) {
+        guildTenantInFlight.delete(guildId);
+      }
+    });
+  guildTenantInFlight.set(guildId, p);
+  return p;
 }
 
 /* -----------------------------------------------------------------------

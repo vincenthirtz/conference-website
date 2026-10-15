@@ -37,9 +37,32 @@ import {
   type MirrorPost,
   type MirrorSource,
 } from './feedMirror';
+import { createMirrorCache } from './mirrorCache';
 
 /** Sous-dossier du bucket public, à côté de `news/`. */
 const IMAGE_PREFIX = 'social';
+
+/**
+ * PUBLICATIONS DÉJÀ SUR LE MUR, par espace et par source, en mémoire.
+ *
+ * POURQUOI. Chaque passage demandait à la base « lesquelles de ces vingt
+ * publications as-tu déjà ? » — une lecture par source et par espace, toutes
+ * les quinze minutes (~310 par jour), pour une réponse qui ne change que
+ * lorsqu'on publie. Ici on retient ce que la base a confirmé, plus ce qu'on
+ * vient d'y écrire : un flux sans nouveauté ne coûte plus aucune requête.
+ *
+ * SIX HEURES, et pas trente minutes comme les réglages : l'ensemble ne fait que
+ * GRANDIR (une ligne n'est jamais retirée par le dépôt, hors purge d'un espace
+ * désactivé), donc il ne peut être faux que d'une façon — une ligne effacée à
+ * la main resterait « connue », et ne serait réécrite qu'à l'échéance. Une
+ * erreur de lecture, elle, n'est jamais retenue.
+ */
+export const KNOWN_FEED_IDS_TTL_MS = 6 * 60 * 60_000;
+const knownFeedIds = createMirrorCache<ReadonlySet<string>>(
+  KNOWN_FEED_IDS_TTL_MS
+);
+const knownKey = (tenantId: string, source: MirrorSource) =>
+  `${tenantId}:${source}`;
 
 /**
  * Nouveautés écrites par passage et par source.
@@ -85,21 +108,30 @@ export async function persistFeedItems(
 ): Promise<number> {
   if (!supabaseAdmin || posts.length === 0) return 0;
 
+  const cacheKey = knownKey(tenantId, source);
   try {
     const ids = posts.map((p) => p.id);
-    const { data: existing, error } = await supabaseAdmin
-      .from('social_feed_items')
-      .select('external_id')
-      .eq('tenant_id', tenantId)
-      .eq('source', source)
-      .in('external_id', ids);
-    if (error) throw error;
+    // Ne demande à la base que ce qu'on ne sait pas déjà : en régime de
+    // croisière, rien — le flux rend les mêmes vingt publications.
+    const remembered = knownFeedIds.peek(cacheKey);
+    let known: ReadonlySet<string>;
+    if (remembered) {
+      const unknown = ids.filter((id) => !remembered.has(id));
+      if (unknown.length === 0) return 0;
+      const found = await existingIds(tenantId, source, unknown);
+      known = new Set([...remembered, ...found]);
+      if (found.length > 0) {
+        knownFeedIds.update(cacheKey, (set) => new Set([...set, ...found]));
+      }
+    } else {
+      const loaded = await knownFeedIds.load(cacheKey, async () => ({
+        ok: true,
+        value: new Set(await existingIds(tenantId, source, ids)),
+      }));
+      if (!loaded.ok) throw loaded.error;
+      known = loaded.value;
+    }
 
-    const known = new Set(
-      ((existing ?? []) as Array<{ external_id: string }>).map(
-        (r) => r.external_id
-      )
-    );
     const fresh = posts
       .filter((p) => !known.has(p.id))
       // Les plus RÉCENTES d'abord : si la borne coupe, elle doit couper dans
@@ -137,6 +169,10 @@ export async function persistFeedItems(
       });
     if (writeError) throw writeError;
 
+    // Écrites (ou déjà là : `ignoreDuplicates`) — connues désormais, sans
+    // relecture au passage suivant.
+    const written = rows.map((r) => r.external_id);
+    knownFeedIds.update(cacheKey, (set) => new Set([...set, ...written]));
     return rows.length;
   } catch (err) {
     logger.error(
@@ -146,6 +182,29 @@ export async function persistFeedItems(
     );
     return 0;
   }
+}
+
+/**
+ * Parmi `ids`, ceux qui ont déjà une ligne sur le mur. Lève sur une erreur de
+ * lecture : l'appelant ne doit ni la retenir, ni conclure « rien n'existe »
+ * (il recopierait alors des vignettes déjà recopiées).
+ */
+async function existingIds(
+  tenantId: string,
+  source: MirrorSource,
+  ids: string[]
+): Promise<string[]> {
+  if (!supabaseAdmin) throw new Error('supabase_admin_unavailable');
+  const { data, error } = await supabaseAdmin
+    .from('social_feed_items')
+    .select('external_id')
+    .eq('tenant_id', tenantId)
+    .eq('source', source)
+    .in('external_id', ids);
+  if (error) throw error;
+  return ((data ?? []) as Array<{ external_id: string }>).map(
+    (r) => r.external_id
+  );
 }
 
 /**

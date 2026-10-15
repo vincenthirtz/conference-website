@@ -12,6 +12,7 @@ import { hasNoStream } from '../matches/streamUrl';
 
 import { logger } from '../logger';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
+import { countUnresolvedMvpPolls } from '../mvp/pollMemo';
 /* -----------------------------------------------------------
  * Types exportés
  * ---------------------------------------------------------*/
@@ -876,7 +877,7 @@ export async function fetchDashboardData(
     const [
       pendingTeamsCountRes,
       supportHighRes,
-      activeMvpPollsRes,
+      activeMvpPollsCount,
       teamMembersCountRes,
       recentLogsRes,
       ticketsBreakdownRes,
@@ -895,12 +896,9 @@ export async function fetchDashboardData(
         .eq('tournament_id', tournamentId)
         .eq('severity', 'high')
         .eq('status', 'open'),
-      supabaseAdmin
-        .from('match_mvp_polls')
-        .select('match_id, matches!inner(tournament_id)')
-        .eq('tenant_id', tenantId)
-        .is('winner_member_id', null)
-        .eq('matches.tournament_id', tournamentId),
+      // Mémorisé entre deux écritures de scrutin, comme pour le badge
+      // (utils/mvp/pollMemo.ts) : les deux chemins lisent la même valeur.
+      countUnresolvedMvpPolls(tenantId, tournamentId),
       tournament.min_players && tournament.roster_locked_at
         ? supabaseAdmin
             .from('team_members')
@@ -1358,7 +1356,7 @@ export async function fetchDashboardData(
       pendingTeamsCount: pendingTeamsCountRes.count ?? 0,
       rosterLockProximity,
       supportHighOpen: supportHighRes.count ?? 0,
-      activeMvpPolls: activeMvpPollsRes.data?.length ?? 0,
+      activeMvpPolls: activeMvpPollsCount,
       stagesReadyToAdvance,
       liveMatches,
       velocity,

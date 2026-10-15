@@ -22,8 +22,13 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
-import { registerProcessCache } from '@/utils/processCaches';
 import { social } from '@/config/socials';
+import {
+  MIRROR_CONFIG_TTL_MS,
+  createMirrorCache,
+  noteMirrorConfigChange,
+} from './mirrorCache';
+import { YOUTUBE_CHANNEL_KEY } from './youtubeMirror';
 
 /** Salon cible, commun aux sources. Vider la valeur désactive tous les miroirs. */
 export const MIRROR_CHANNEL_KEY = 'bluesky_mirror_channel_id';
@@ -37,6 +42,17 @@ export const CURSOR_KEYS = {
 } as const;
 
 export type MirrorSource = keyof typeof CURSOR_KEYS;
+
+/**
+ * Tous les réglages `site_settings` que lit un passage du miroir : salon,
+ * chaîne YouTube, un curseur par source. C'est aussi la liste des clés dont
+ * l'écriture par l'admin doit invalider l'instantané (`invalidateMirrorSettings`).
+ */
+export const MIRROR_SETTING_KEYS: readonly string[] = [
+  MIRROR_CHANNEL_KEY,
+  YOUTUBE_CHANNEL_KEY,
+  ...Object.values(CURSOR_KEYS),
+];
 
 /**
  * Au tout premier passage, il n'y a pas de curseur. On ne recopie alors que ce
@@ -352,24 +368,24 @@ export type SettingRead =
   | { ok: false; error: string };
 
 /**
- * INSTANTANÉ DES RÉGLAGES D'UN ESPACE, chargé en une requête par passage.
+ * INSTANTANÉ DES RÉGLAGES D'UN ESPACE, gardé `MIRROR_CONFIG_TTL_MS`.
  *
  * Le cron lisait chaque réglage séparément — salon, chaîne YouTube, un
  * curseur par source — soit six lectures `site_settings` par espace et par
- * quart d'heure, pour des valeurs que seul ce cron fait bouger (les curseurs)
- * ou que l'admin change rarement. `preloadMirrorSettings` les charge d'un
- * coup ; `readSettingResult` sert ensuite depuis l'instantané, et
- * `writeCursor` le tient à jour. Si le chargement échoue, pas d'instantané :
- * chaque lecture repasse par la base, avec sa sémantique d'erreur intacte
- * (un curseur illisible interdit d'émettre).
+ * quart d'heure ; puis une seule (2026-10-13), mais encore à CHAQUE passage,
+ * pour des valeurs que seul ce cron fait bouger (les curseurs) ou que l'admin
+ * change rarement. Depuis, l'instantané survit d'un passage à l'autre :
+ *   - `writeCursor` le tient à jour en place (le curseur est écrit ici) ;
+ *   - l'admin qui enregistre l'une de ces clés l'invalide
+ *     (`invalidateMirrorSettings`, appelé par les routes /api/admin/site-settings) ;
+ *   - le TTL ne couvre que le SQL à la main.
+ * Si le chargement échoue, pas d'instantané : chaque lecture repasse par la
+ * base, avec sa sémantique d'erreur intacte (un curseur illisible interdit
+ * d'émettre). Une erreur n'est jamais gardée.
  */
-const SNAPSHOT_TTL_MS = 5 * 60_000;
-type SettingsSnapshot = {
-  values: Map<string, string | null>;
-  expiresAt: number;
-};
-const settingsSnapshots = new Map<string, SettingsSnapshot>();
-registerProcessCache(() => settingsSnapshots.clear());
+const settingsCache = createMirrorCache<ReadonlyMap<string, string | null>>(
+  MIRROR_CONFIG_TTL_MS
+);
 
 const normalizeSetting = (v: unknown): string | null =>
   typeof v === 'string' && v.trim() ? v.trim() : null;
@@ -378,29 +394,49 @@ export async function preloadMirrorSettings(
   tenantId: string,
   keys: readonly string[]
 ): Promise<void> {
-  settingsSnapshots.delete(tenantId);
   if (!supabaseAdmin || keys.length === 0) return;
-  const { data, error } = await supabaseAdmin
-    .from('site_settings')
-    .select('key, value')
-    .eq('tenant_id', tenantId)
-    .in('key', [...keys]);
-  if (error) {
-    logger.warn(
-      '[feedMirror] préchargement des réglages impossible: %s',
-      error.message
-    );
-    return;
-  }
-  const values = new Map<string, string | null>();
-  for (const k of keys) values.set(k, null);
-  for (const row of (data ?? []) as Array<{ key: string; value?: unknown }>) {
-    values.set(row.key, normalizeSetting(row.value));
-  }
-  settingsSnapshots.set(tenantId, {
-    values,
-    expiresAt: Date.now() + SNAPSHOT_TTL_MS,
+  // Instantané frais qui couvre déjà ces clés : rien à relire. C'est le cas de
+  // la plupart des passages, et c'est tout l'intérêt.
+  const hit = settingsCache.peek(tenantId);
+  if (hit && keys.every((k) => hit.has(k))) return;
+  // Des clés manquent : on recharge l'ensemble, sans perdre celles qu'on avait.
+  const wanted = [...new Set([...(hit?.keys() ?? []), ...keys])];
+  if (hit) settingsCache.invalidate(tenantId);
+
+  await settingsCache.load(tenantId, async () => {
+    const { data, error } = await supabaseAdmin
+      .from('site_settings')
+      .select('key, value')
+      .eq('tenant_id', tenantId)
+      .in('key', wanted);
+    if (error) {
+      logger.warn(
+        '[feedMirror] préchargement des réglages impossible: %s',
+        error.message
+      );
+      return { ok: false, error };
+    }
+    const values = new Map<string, string | null>();
+    for (const k of wanted) values.set(k, null);
+    for (const row of (data ?? []) as Array<{ key: string; value?: unknown }>) {
+      values.set(row.key, normalizeSetting(row.value));
+    }
+    return { ok: true, value: values };
   });
+}
+
+/**
+ * Oublie l'instantané d'un espace après une écriture de l'une de SES clés
+ * (`MIRROR_SETTING_KEYS`). Une autre clé ne le touche pas. Sans `key`, oublie
+ * tout de l'espace. Instance courante seulement.
+ *
+ * C'est ce qui rend effectif TOUT DE SUITE un salon tout juste configuré, une
+ * chaîne YouTube changée ou un curseur reculé à la main dans l'admin.
+ */
+export function invalidateMirrorSettings(tenantId: string, key?: string): void {
+  if (key !== undefined && !MIRROR_SETTING_KEYS.includes(key)) return;
+  settingsCache.invalidate(tenantId);
+  noteMirrorConfigChange(tenantId);
 }
 
 export async function readSettingResult(
@@ -410,9 +446,9 @@ export async function readSettingResult(
   if (!supabaseAdmin) {
     return { ok: false, error: 'supabase_admin_unavailable' };
   }
-  const snap = settingsSnapshots.get(tenantId);
-  if (snap && snap.expiresAt > Date.now() && snap.values.has(key)) {
-    return { ok: true, value: snap.values.get(key) ?? null };
+  const snap = settingsCache.peek(tenantId);
+  if (snap?.has(key)) {
+    return { ok: true, value: snap.get(key) ?? null };
   }
   const { data, error } = await supabaseAdmin
     .from('site_settings')
@@ -467,24 +503,50 @@ export async function readCursor(
   return new Date(Date.now() - FIRST_RUN_WINDOW_MS);
 }
 
+/** Deux horodatages désignent-ils le même instant ? (`Z` ≡ `+00:00`). */
+function sameInstant(a: string | null | undefined, b: string): boolean {
+  if (a === b) return true;
+  if (!a) return false;
+  const ta = new Date(a).getTime();
+  const tb = new Date(b).getTime();
+  return Number.isFinite(ta) && Number.isFinite(tb) && ta === tb;
+}
+
+/**
+ * Avance le curseur d'une source.
+ *
+ * N'ÉCRIT QUE SI LA VALEUR CHANGE. L'instantané dit ce que la base contient :
+ * réécrire le même instant serait un upsert facturé pour rien. Après une
+ * écriture réussie, l'instantané est mis à jour en place — le passage suivant
+ * lit le nouveau curseur sans relire la base.
+ */
 export async function writeCursor(
   tenantId: string,
   source: MirrorSource,
   at: string
 ): Promise<void> {
   if (!supabaseAdmin) return;
+  const key = CURSOR_KEYS[source];
+  const snap = settingsCache.peek(tenantId);
+  if (snap?.has(key) && sameInstant(snap.get(key), at)) return;
+
   const { error } = await supabaseAdmin.from('site_settings').upsert(
     {
       tenant_id: tenantId,
-      key: CURSOR_KEYS[source],
+      key,
       value: at,
       description: `Horodatage de la dernière publication ${source} recopiée dans Discord. Reculer cette valeur rejoue ce qui est postérieur.`,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'tenant_id,key' }
   );
-  if (error) throw error;
-  settingsSnapshots.get(tenantId)?.values.set(CURSOR_KEYS[source], at);
+  if (error) {
+    // Issue incertaine (une écriture expirée a pu passer) : l'instantané ne
+    // sait plus ce que contient la base, le prochain passage relira.
+    settingsCache.invalidate(tenantId);
+    throw error;
+  }
+  settingsCache.update(tenantId, (values) => new Map(values).set(key, at));
 }
 
 /* -------------------------------------------------------------------------- */

@@ -33,6 +33,9 @@ import {
 import { listMvpCandidates, type MvpCandidate } from '@/utils/mvp/service';
 import { logger } from '@/utils/logger';
 import { grantPublicMvpCoins } from '@/utils/tcg/grantPublicMvp';
+// Chaque écriture de `match_public_mvp_polls` réveille les lecteurs dormants
+// (source OBS, cron de clôture).
+import { notePublicMvpPollWrite } from '@/utils/mvp/pollMemo';
 
 /**
  * Durée d'ouverture par défaut, en MINUTES.
@@ -229,6 +232,7 @@ export async function openPublicVote(
         .eq('id', existing.id)
         .select(POLL_COLUMNS)
         .maybeSingle();
+      notePublicMvpPollWrite();
       return {
         poll: (data as PublicPollRow) ?? existing,
         candidates,
@@ -268,6 +272,7 @@ export async function openPublicVote(
   const { error } = await supabaseAdmin
     .from('match_public_mvp_polls')
     .upsert(row, { onConflict: 'match_id' });
+  notePublicMvpPollWrite();
 
   if (error) {
     logger.error('[mvp-public] openPublicVote error:', error);
@@ -509,6 +514,7 @@ export async function settlePublicVote(
     .update(update)
     .eq('tenant_id', tenantId)
     .eq('id', poll.id);
+  notePublicMvpPollWrite();
 
   if (error) logger.error('[mvp-public] settlePublicVote update error:', error);
 

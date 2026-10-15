@@ -28,6 +28,7 @@ import {
 import { MIN_VOTES_FOR_AWARD, tallySource } from '@/utils/mvp/awards';
 import { buildDemoPoll } from './publicMvpDemo';
 import { withoutBattleTagId } from '@/utils/mvp/publicLabel';
+import { publicFeedEmptyMemo } from '@/utils/mvp/pollMemo';
 
 /**
  * Combien de temps le résultat survit à la clôture.
@@ -75,6 +76,16 @@ export const DEFAULT_PUBLIC_MVP_DISPLAY: PublicMvpDisplay = {
   showSources: true,
 };
 
+/** Ce que la lecture des scrutins à l'écran rend (cf. son `.select()`). */
+type OnScreenPollRow = {
+  match_id: string;
+  opened_at: string | null;
+  closes_at: string | null;
+  closed_at: string | null;
+  candidate_member_ids: string[] | null;
+  winner_member_id: string | null;
+};
+
 type OverlaySettingsRow = {
   position: string | null;
   show_sources: boolean | null;
@@ -113,23 +124,32 @@ export function provisionalWinner(
  * COÛT : deux requêtes en parallèle quand rien n'est ouvert (scrutins +
  * réglages d'affichage, qui portent aussi le TEST), six quand un scrutin
  * tourne. C'est la raison pour laquelle le cas « rien à l'écran » sort tôt.
+ *
+ * DORMANCE : « aucun scrutin à l'écran » ne change qu'à une écriture de
+ * scrutin (un scrutin clos ne fait que vieillir). Ce constat est mémorisé
+ * (`utils/mvp/pollMemo.ts`) : la source, qui interroge toutes les 10 s pendant
+ * le direct, ne relit alors plus que les réglages (le TEST en dépend).
  */
 export async function readPublicMvpFeed(
   tenantId: string,
   nowMs: number = Date.now()
 ): Promise<OverlayPublicMvpPoll | null> {
   const depuis = new Date(nowMs - RESULT_LINGER_MS).toISOString();
+  const knownEmpty = publicFeedEmptyMemo.get(tenantId, nowMs) !== undefined;
+  const ticket = publicFeedEmptyMemo.ticket(nowMs);
 
   const [{ data: polls, error }, { data: settings }] = await Promise.all([
-    supabaseAdmin
-      .from('match_public_mvp_polls')
-      .select(
-        'match_id, opened_at, closes_at, closed_at, candidate_member_ids, winner_member_id'
-      )
-      .eq('tenant_id', tenantId)
-      .or(`closed_at.is.null,closed_at.gte.${depuis}`)
-      .order('opened_at', { ascending: false })
-      .limit(5),
+    knownEmpty
+      ? Promise.resolve({ data: [] as OnScreenPollRow[], error: null })
+      : supabaseAdmin
+          .from('match_public_mvp_polls')
+          .select(
+            'match_id, opened_at, closes_at, closed_at, candidate_member_ids, winner_member_id'
+          )
+          .eq('tenant_id', tenantId)
+          .or(`closed_at.is.null,closed_at.gte.${depuis}`)
+          .order('opened_at', { ascending: false })
+          .limit(5),
     supabaseAdmin
       .from('public_mvp_overlay_settings')
       .select('position, show_sources, demo_started_at, demo_until')
@@ -140,6 +160,9 @@ export async function readPublicMvpFeed(
   if (error) {
     logger.error('[overlay/mvp] read error', error);
     return null;
+  }
+  if (!knownEmpty && (polls ?? []).length === 0) {
+    publicFeedEmptyMemo.set(tenantId, true, ticket);
   }
   const display = displayOf((settings as OverlaySettingsRow | null) ?? null);
 
