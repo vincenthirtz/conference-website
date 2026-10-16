@@ -13,7 +13,7 @@ import Paragraph from '@/components/Typography/paragraph';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
-import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { readPublicTournament } from '@/utils/tournament/readPublicTournament';
 import { useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
@@ -24,7 +24,6 @@ import {
   bracketTabMode,
   type BracketTabMode,
 } from '@/utils/stages/bracketStage';
-import { readReviewsPlaylistId } from '@/utils/tournaments/reviewsPlaylist';
 import {
   fetchPlaylistVideos,
   reviewsRevalidateSeconds,
@@ -76,30 +75,29 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
   const tenantId = DEFAULT_TENANT_ID;
 
-  const tournament = await findTournamentByIdOrSlug<Tournament>(
+  // Ligne du tournoi ET playlist Reviews en une lecture.
+  const read = await readPublicTournament<Tournament>(
     id,
     'id, name, slug, status, visibility',
     tenantId
   );
-  if (
-    !tournament ||
-    (tournament.visibility != null && tournament.visibility !== 'public')
-  )
+  if (!read) return { notFound: true, revalidate: 60 };
+  const { tournament, reviewsPlaylistId: playlistId } = read;
+  if (tournament.visibility != null && tournament.visibility !== 'public')
     return { notFound: true, revalidate: 60 };
+  // Revalidation courte : une playlist ajoutée dans l'admin fait apparaître la
+  // page en une minute. (L'onglet des pages sœurs suit, lui, leur propre
+  // fenêtre, qui dépend de l'état du tournoi.)
+  if (!playlistId) return { notFound: true, revalidate: 60 };
 
-  const [playlistId, stagesRes] = await Promise.all([
-    readReviewsPlaylistId(tenantId, tournament.id),
+  const [stagesRes, feed] = await Promise.all([
     supabaseAdmin
       .from('tournament_stages')
       .select('stage_type')
       .eq('tenant_id', tenantId)
       .eq('tournament_id', tournament.id),
+    fetchPlaylistVideos(playlistId),
   ]);
-  // Revalidation courte : une playlist ajoutée dans l'admin fait apparaître la
-  // page en une minute, comme l'onglet sur les pages sœurs.
-  if (!playlistId) return { notFound: true, revalidate: 60 };
-
-  const feed = await fetchPlaylistVideos(playlistId);
 
   return {
     props: {

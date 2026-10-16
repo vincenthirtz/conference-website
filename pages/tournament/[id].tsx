@@ -1,7 +1,8 @@
 // pages/tournament/[id].tsx
 //
 // Landing tournoi — refonte premium esport. La page est un ORCHESTRATEUR mince :
-// getStaticProps agrège les données (ISR 60 s), le rendu compose des sections
+// getStaticProps agrège les données (ISR selon l'état du tournoi : 60 s en
+// cours, plus long une fois terminé — utils/isr/stateRevalidate), le rendu compose des sections
 // autonomes sous components/tournament/landing/*. Chaque section se masque
 // d'elle-même quand elle n'a pas de donnée réelle à montrer.
 
@@ -33,9 +34,14 @@ import TournamentInfoCards from '@/components/tournament/landing/TournamentInfoC
 import LiveHub from '@/components/tournament/landing/LiveHub';
 import {
   buildLiveHub,
-  type HubMatch,
   type LiveHub as LiveHubData,
 } from '@/utils/tournament/liveHub';
+import {
+  summarizeLandingMatches,
+  type LandingMatchRow,
+} from '@/utils/tournament/landingMatches';
+import { readPublicTournament } from '@/utils/tournament/readPublicTournament';
+import { tournamentRevalidateSeconds } from '@/utils/isr/stateRevalidate';
 import {
   readPublicStandings,
   type PublicStandingsTable,
@@ -56,7 +62,6 @@ import {
 } from '@/utils/stages/bracketStage';
 import { gameLabel } from '@/config/games';
 import { tournamentRegisterHref } from '@/utils/tournaments/registerHref';
-import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 type TournamentPageProps = {
   tournament: LandingTournament & {
@@ -113,40 +118,20 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
     return { notFound: true, revalidate: 60 };
   }
 
-  const asString = String(rawId);
-  const isUuid =
-    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
-      asString
-    );
-
   const tournamentColumns =
     'id, name, short_name, slug, game, status, format, max_teams, solo_mode, pooled_teams, start_date, end_date, rules_url, logo_url, banner_url, description_info, hero_subtitle, schedule_details, schedule_rules, format_details, visibility, created_at, updated_at';
 
   const tenantId = DEFAULT_TENANT_ID;
 
-  let tournament: TournamentPageProps['tournament'] | null = null;
-
-  if (isUuid) {
-    const { data, error } = await supabaseAdmin
-      .from('tournaments')
-      .select(tournamentColumns)
-      .eq('tenant_id', tenantId)
-      .eq('id', asString)
-      .single();
-    if (!error && data) tournament = data as TournamentPageProps['tournament'];
-  }
-
-  if (!tournament) {
-    const { data } = await supabaseAdmin
-      .from('tournaments')
-      .select(tournamentColumns)
-      .eq('tenant_id', tenantId)
-      .eq('slug', asString)
-      .single();
-    if (data) tournament = data as TournamentPageProps['tournament'];
-  }
-
-  if (!tournament) return { notFound: true, revalidate: 60 };
+  // Ligne du tournoi ET playlist Reviews en une lecture (UUID ou slug).
+  const read = await readPublicTournament<TournamentPageProps['tournament']>(
+    String(rawId),
+    tournamentColumns,
+    tenantId
+  );
+  if (!read) return { notFound: true, revalidate: 60 };
+  const tournament = read.tournament;
+  const hasReviews = read.reviewsPlaylistId !== null;
 
   const t = tournament as TournamentPageProps['tournament'] & {
     visibility?: string | null;
@@ -157,17 +142,17 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
 
   const tournamentId = tournament.id;
 
+  // UNE lecture des matchs pour toute la page : le bloc de suivi, les deux
+  // compteurs, l'aperçu des manches et le coup d'envoi en sont dérivés
+  // (`summarizeLandingMatches`). Il y en avait cinq, dont deux `count` et une
+  // séquentielle, à chaque régénération.
   const [
     stagesResult,
-    totalCountResult,
-    finishedCountResult,
     teamsResult,
     leaguesResult,
     partnersResult,
-    roundsResult,
-    hubMatchesResult,
+    matchesResult,
     standings,
-    hasReviews,
   ] = await Promise.all([
     supabaseAdmin
       .from('tournament_stages')
@@ -177,20 +162,6 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId)
       .order('created_at', { ascending: true }),
-
-    supabaseAdmin
-      .from('matches')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .eq('tournament_id', tournamentId)
-      .neq('status', 'cancelled'),
-
-    supabaseAdmin
-      .from('matches')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .eq('tournament_id', tournamentId)
-      .eq('status', 'finished'),
 
     supabaseAdmin
       .from('tournament_teams')
@@ -212,24 +183,13 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       .order('display_order', { ascending: true })
       .order('created_at', { ascending: true }),
 
-    // Manches réelles : l'aperçu du déroulé est dérivé des matchs (round robin
-    // vs arbre d'élimination), pas d'un schéma codé en dur. Projection minimale
-    // — seuls le numéro, le nom et le côté de bracket comptent ici.
-    supabaseAdmin
-      .from('matches')
-      .select('round_number, round_name, bracket_side')
-      .eq('tenant_id', tenantId)
-      .eq('tournament_id', tournamentId)
-      .neq('status', 'cancelled')
-      .order('round_number', { ascending: true }),
-
-    // Bloc de suivi : tous les matchs avec leurs équipes. Un tournoi en compte
-    // quelques dizaines — le tri direct / à suivre / résultats se fait en
-    // mémoire (utils/tournament/liveHub.ts), testable sans base.
+    // Tous les matchs avec leurs équipes. Un tournoi en compte quelques
+    // dizaines — le tri direct / à suivre / résultats, les compteurs et les
+    // manches se font en mémoire, testables sans base.
     supabaseAdmin
       .from('matches')
       .select(
-        'id, scheduled_at, status, is_bye, round_name, match_format, team1_score, team2_score, winner_team_id, forfeit_team_id, stream_url, team1:team1_id ( id, slug, name, short_name, logo_url ), team2:team2_id ( id, slug, name, short_name, logo_url )'
+        'id, scheduled_at, status, is_bye, round_name, round_number, bracket_side, match_format, team1_score, team2_score, winner_team_id, forfeit_team_id, stream_url, team1:team1_id ( id, slug, name, short_name, logo_url ), team2:team2_id ( id, slug, name, short_name, logo_url )'
       )
       .eq('tenant_id', tenantId)
       .eq('tournament_id', tournamentId)
@@ -237,40 +197,25 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       .neq('status', 'cancelled'),
 
     readPublicStandings(tenantId, tournamentId),
-
-    hasReviewsPlaylist(tenantId, tournamentId),
   ]);
 
   if (stagesResult.error)
     logger.error('tournament stages error:', stagesResult.error);
-  if (totalCountResult.error)
-    logger.error('tournament matches count error:', totalCountResult.error);
-  if (finishedCountResult.error)
-    logger.error('tournament finished count error:', finishedCountResult.error);
   if (teamsResult.error)
     logger.error('tournament teams error:', teamsResult.error);
   if (leaguesResult.error)
     logger.error('tournament leagues error:', leaguesResult.error);
   if (partnersResult.error)
     logger.error('tournament partners error:', partnersResult.error);
-  if (roundsResult.error)
-    logger.error('tournament rounds error:', roundsResult.error);
-  if (hubMatchesResult.error)
-    logger.error('tournament hub matches error:', hubMatchesResult.error);
+  if (matchesResult.error)
+    logger.error('tournament matches error:', matchesResult.error);
 
-  // Embeds `team1:…` / `team2:…` : objet ou tableau selon PostgREST.
-  const one = <T,>(v: T | T[] | null | undefined): T | null =>
-    Array.isArray(v) ? (v[0] ?? null) : (v ?? null);
-  const hubMatches: HubMatch[] = (
-    (hubMatchesResult.data ?? []) as unknown as (Omit<
-      HubMatch,
-      'team1' | 'team2'
-    > & {
-      team1: HubMatch['team1'] | HubMatch['team1'][];
-      team2: HubMatch['team2'] | HubMatch['team2'][];
-    })[]
-  ).map((m) => ({ ...m, team1: one(m.team1), team2: one(m.team2) }));
-  const hub = buildLiveHub(hubMatches, new Date());
+  const now = new Date();
+  const { hubMatches, rounds, totalMatches, finishedMatchesCount, kickoffAt } =
+    summarizeLandingMatches(
+      (matchesResult.data ?? []) as unknown as LandingMatchRow[]
+    );
+  const hub = buildLiveHub(hubMatches, now);
 
   const rawStages = (stagesResult.data || []) as unknown as (LandingStage & {
     visible?: boolean | null;
@@ -285,9 +230,6 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       swiss_rounds: s.swiss_rounds ?? null,
       bracket_format: s.bracket_format ?? null,
     }));
-
-  const totalMatches = totalCountResult.count ?? 0;
-  const finishedMatchesCount = finishedCountResult.count ?? 0;
 
   // Supabase infère les embeds (`team:teams(...)`) comme des tableaux ; on
   // normalise via un cast local — pattern hérité du hub tournoi.
@@ -345,61 +287,15 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       websiteUrl: r.website_url ?? null,
     }));
 
-  // Agrégation des matchs par manche : une entrée par (round_number,
-  // bracket_side), dans l'ordre du calendrier.
-  const roundRows = (roundsResult.data ?? []) as unknown as {
-    round_number: number | null;
-    round_name: string | null;
-    bracket_side: string | null;
-  }[];
-  const roundMap = new Map<string, LandingRound>();
-  roundRows.forEach((r) => {
-    const side = (
-      r.bracket_side === 'wb' ||
-      r.bracket_side === 'lb' ||
-      r.bracket_side === 'final'
-        ? r.bracket_side
-        : 'none'
-    ) as LandingRound['side'];
-    const number = r.round_number ?? 0;
-    const key = `${side}:${number}`;
-    const existing = roundMap.get(key);
-    if (existing) {
-      existing.matchCount += 1;
-      existing.name = existing.name ?? r.round_name ?? null;
-    } else {
-      roundMap.set(key, {
-        number,
-        name: r.round_name ?? null,
-        matchCount: 1,
-        side,
-      });
-    }
-  });
-  const rounds = Array.from(roundMap.values()).sort(
-    (a, b) => a.number - b.number
+  // Une lecture en échec ne fige pas une page incomplète pour une heure ou un
+  // jour : fenêtre du direct, le temps de se rattraper.
+  const degraded = Boolean(
+    stagesResult.error ||
+      teamsResult.error ||
+      leaguesResult.error ||
+      partnersResult.error ||
+      matchesResult.error
   );
-
-  // Coup d'envoi RÉEL : l'horodatage du premier match programmé. `start_date`
-  // est une date nue, que `new Date()` lit à minuit UTC (2h du matin à Paris) —
-  // le compte à rebours tombait donc à zéro dix-sept heures trop tôt, et
-  // affichait autre chose que celui de l'accueil, qui vise le bon instant.
-  // Se recale tout seul si le premier match est déplacé.
-  const { data: firstMatch } = await supabaseAdmin
-    .from('matches')
-    .select('scheduled_at')
-    .eq('tenant_id', tenantId)
-    .eq('tournament_id', tournament.id)
-    .is('deleted_at', null)
-    .neq('status', 'cancelled')
-    .not('scheduled_at', 'is', null)
-    .order('scheduled_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  const kickoffAt =
-    (firstMatch as { scheduled_at?: string | null } | null)?.scheduled_at ??
-    null;
 
   return {
     props: {
@@ -419,7 +315,10 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       hasReviews,
       seo: buildTournamentSeo(tournament),
     },
-    revalidate: 60,
+    // En cours : 60 s (un score régénère la page à la demande, le reste —
+    // programmation, inscriptions — attend la fenêtre). Terminé : 1 h, puis
+    // un jour au-delà d'une semaine (utils/isr/stateRevalidate).
+    revalidate: tournamentRevalidateSeconds(tournament, now, { degraded }),
   };
 };
 

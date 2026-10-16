@@ -12,7 +12,8 @@ import Paragraph from '@/components/Typography/paragraph';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
-import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { readPublicTournament } from '@/utils/tournament/readPublicTournament';
+import { tournamentRevalidateSeconds } from '@/utils/isr/stateRevalidate';
 import {
   FORM_LENGTH,
   readPublicStandings,
@@ -29,7 +30,6 @@ import {
   bracketTabMode,
   type BracketTabMode,
 } from '@/utils/stages/bracketStage';
-import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 type StandingsDict = typeof nsTournamentStandings.fr;
 
@@ -38,6 +38,8 @@ type Tournament = {
   slug: string | null;
   name: string;
   status: string;
+  start_date?: string | null;
+  end_date?: string | null;
   visibility: string | null;
 };
 
@@ -78,26 +80,27 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
   const tenantId = DEFAULT_TENANT_ID;
 
-  const tournament = await findTournamentByIdOrSlug<Tournament>(
+  // Ligne du tournoi ET playlist Reviews en une lecture.
+  const read = await readPublicTournament<Tournament>(
     id,
-    'id, slug, name, status, visibility',
+    'id, slug, name, status, start_date, end_date, visibility',
     tenantId
   );
-  if (!tournament) {
+  if (!read) {
     return { notFound: true, revalidate: 60 };
   }
+  const { tournament } = read;
   if (tournament.visibility && tournament.visibility !== 'public') {
     return { notFound: true, revalidate: 60 };
   }
 
-  const [tables, stagesRes, hasReviews] = await Promise.all([
+  const [tables, stagesRes] = await Promise.all([
     readPublicStandings(tenantId, tournament.id),
     supabaseAdmin
       .from('tournament_stages')
       .select('stage_type')
       .eq('tenant_id', tenantId)
       .eq('tournament_id', tournament.id),
-    hasReviewsPlaylist(tenantId, tournament.id),
   ]);
   const stageTypes = (stagesRes.data || []).map(
     (s: { stage_type: string }) => s.stage_type
@@ -110,10 +113,14 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       hasFfaStage: stageTypes.includes('ffa'),
       bracketTab: bracketTabMode(stageTypes),
       formLength: FORM_LENGTH,
-      hasReviews,
+      hasReviews: read.reviewsPlaylistId !== null,
       seo: buildStandingsSeo(tournament),
     },
-    revalidate: 60,
+    // Un score régénère cet onglet à la demande ; la fenêtre suit l'état du
+    // tournoi (60 s en cours, plus long une fois terminé).
+    revalidate: tournamentRevalidateSeconds(tournament, new Date(), {
+      degraded: Boolean(stagesRes.error),
+    }),
   };
 };
 

@@ -171,6 +171,19 @@ const nextConfig = {
           },
         ],
       },
+      // Embeds (iframes OBS / sites tiers) : rendus en SSR et mis en cache CDN
+      // (`publicCdnCacheControl`), ils lisent `?theme`, `?accent` et
+      // `?tenant`. Sans cette règle, la première variante mise en cache était
+      // servie à toutes les autres — le bug des API du 16/09. `_document`
+      // choisit en plus l'habillage de l'espace d'après `x-forwarded-host` :
+      // varier dessus empêche qu'un en-tête forgé fige l'habillage d'un autre
+      // espace sous le domaine principal.
+      {
+        source: '/embed/:path*',
+        headers: [
+          { key: 'Netlify-Vary', value: 'query,header=x-forwarded-host' },
+        ],
+      },
     ];
   },
 };

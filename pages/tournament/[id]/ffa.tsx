@@ -10,7 +10,8 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
-import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { readPublicTournament } from '@/utils/tournament/readPublicTournament';
+import { tournamentRevalidateSeconds } from '@/utils/isr/stateRevalidate';
 import {
   readPublicFfaStandings,
   type PublicFfaStandingRow,
@@ -19,13 +20,14 @@ import { useT } from '@/lib/i18n/useT';
 import { logger } from '@/utils/logger';
 import TournamentTabs from '@/components/tournament/TournamentTabs';
 import nsFfaStandings from '@/lib/i18n/locales/fr/ffaStandings';
-import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 type TournamentLite = {
   id: string;
   slug: string | null;
   name: string;
   status: string;
+  start_date?: string | null;
+  end_date?: string | null;
   visibility: string | null;
 };
 
@@ -63,20 +65,23 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 
   const tenantId = DEFAULT_TENANT_ID;
 
-  const tournament = await findTournamentByIdOrSlug<TournamentLite>(
+  // Ligne du tournoi ET playlist Reviews en une lecture.
+  const read = await readPublicTournament<TournamentLite>(
     id,
-    'id, slug, name, status, visibility',
+    'id, slug, name, status, start_date, end_date, visibility',
     tenantId
   );
-  if (!tournament) {
+  if (!read) {
     return { notFound: true, revalidate: 60 };
   }
+  const { tournament } = read;
   if (tournament.visibility && tournament.visibility !== 'public') {
     return { notFound: true, revalidate: 60 };
   }
 
   let stageName: string | null = null;
   let standings: PublicFfaStandingRow[] = [];
+  let degraded = false;
   try {
     const result = await readPublicFfaStandings(tournament.id, tenantId);
     if (result) {
@@ -84,6 +89,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       standings = result.standings;
     }
   } catch (err) {
+    degraded = true;
     logger.error('public ffa standings page error:', err);
   }
 
@@ -95,10 +101,14 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       standings,
       isCompleted:
         tournament.status === 'finished' || tournament.status === 'completed',
-      hasReviews: await hasReviewsPlaylist(tenantId, tournament.id),
+      hasReviews: read.reviewsPlaylistId !== null,
       seo: buildFfaSeo(tournament.name, stageName),
     },
-    revalidate: 60,
+    // Pas de régénération à la demande pour cet onglet : 60 s tant que le
+    // tournoi se joue, plus long une fois terminé.
+    revalidate: tournamentRevalidateSeconds(tournament, new Date(), {
+      degraded,
+    }),
   };
 };
 

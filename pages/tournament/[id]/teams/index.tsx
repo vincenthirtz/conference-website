@@ -18,7 +18,8 @@ import Button from '@/components/Buttons/button';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
-import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { readPublicTournament } from '@/utils/tournament/readPublicTournament';
+import { tournamentRevalidateSeconds } from '@/utils/isr/stateRevalidate';
 import { publicTeamHref } from '@/utils/teams/publicTeamHref';
 import { logger } from '@/utils/logger';
 import { useT, format } from '@/lib/i18n/useT';
@@ -30,7 +31,6 @@ import {
   bracketTabMode,
   type BracketTabMode,
 } from '@/utils/stages/bracketStage';
-import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 type Tournament = {
   id: string;
@@ -87,20 +87,21 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
   const tenantId = DEFAULT_TENANT_ID;
 
-  // Tournoi (UUID ou slug). Même garde de visibilité que la fiche d'équipe.
-  const tournament = await findTournamentByIdOrSlug<Tournament>(
+  // Tournoi (UUID ou slug) et playlist Reviews, en une lecture. Même garde de
+  // visibilité que la fiche d'équipe.
+  const read = await readPublicTournament<Tournament>(
     id,
     'id, name, slug, game, status, start_date, end_date, visibility',
     tenantId
   );
-  if (
-    !tournament ||
-    (tournament.visibility != null && tournament.visibility !== 'public')
-  )
+  if (!read) return { notFound: true, revalidate: 60 };
+  const { tournament } = read;
+  const hasReviews = read.reviewsPlaylistId !== null;
+  if (tournament.visibility != null && tournament.visibility !== 'public')
     return { notFound: true, revalidate: 60 };
 
   // Équipes inscrites (via tournament_teams) + phases (pour l'onglet FFA).
-  const [teamsRes, stagesRes, hasReviews] = await Promise.all([
+  const [teamsRes, stagesRes] = await Promise.all([
     supabaseAdmin
       .from('tournament_teams')
       .select('team:teams ( id, slug, name, short_name, logo_url )')
@@ -111,7 +112,6 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       .select('stage_type')
       .eq('tenant_id', tenantId)
       .eq('tournament_id', tournament.id),
-    hasReviewsPlaylist(tenantId, tournament.id),
   ]);
 
   if (teamsRes.error)
@@ -142,7 +142,11 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       hasReviews,
       seo: buildTeamsListSeo(tournament, teams.length),
     },
-    revalidate: 60,
+    // Inscriptions et retraits ne régénèrent pas la page : 5 min avant le coup
+    // d'envoi, 60 s pendant, plus long une fois le tournoi terminé.
+    revalidate: tournamentRevalidateSeconds(tournament, new Date(), {
+      degraded: Boolean(teamsRes.error || stagesRes.error),
+    }),
   };
 };
 

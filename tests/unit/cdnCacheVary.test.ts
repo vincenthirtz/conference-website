@@ -112,6 +112,20 @@ describe('Netlify-Vary sur les routes API', () => {
     expect(directives(values[0]).allQuery).toBe(true);
   });
 
+  it.each([
+    '/embed/tournament/ow-womens-cup-2026/standings',
+    '/embed/tournament/56e20536-9f49-4875-b1e1-eeef25a26331/schedule',
+  ])(
+    '%s (embed en cache CDN) varie sur la query et sur x-forwarded-host',
+    async (path) => {
+      const values = varyFor(await varyRules(), path);
+      expect(values).toHaveLength(1);
+      const d = directives(values[0]);
+      expect(d.allQuery).toBe(true);
+      expect(d.headers.has('x-forwarded-host')).toBe(true);
+    }
+  );
+
   it('les pages hors API ne sont pas touchées', async () => {
     // Les pages ISR ne lisent pas la query côté serveur ; varier dessus ne
     // ferait que fragmenter leur cache.

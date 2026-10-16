@@ -8,7 +8,8 @@ import Paragraph from '@/components/Typography/paragraph';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
-import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { readPublicTournament } from '@/utils/tournament/readPublicTournament';
+import { tournamentRevalidateSeconds } from '@/utils/isr/stateRevalidate';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import { formatDateRange } from '@/utils/tournamentDates';
@@ -33,7 +34,6 @@ import {
   type BracketTabMode,
 } from '@/utils/stages/bracketStage';
 import { gameLabel } from '@/config/games';
-import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 type MapsDict = typeof nsTournamentMaps.fr;
 type Tournament = {
   id: string;
@@ -250,15 +250,16 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
   const tenantId = DEFAULT_TENANT_ID;
 
-  // 1) Tournoi (UUID ou slug)
-  const tournament = await findTournamentByIdOrSlug<Tournament>(
+  // 1) Tournoi (UUID ou slug) et playlist Reviews, en une lecture
+  const read = await readPublicTournament<Tournament>(
     id,
     'id, slug, name, game, status, format, start_date, end_date, visibility',
     tenantId
   );
-  if (!tournament) {
+  if (!read) {
     return { notFound: true, revalidate: 60 };
   }
+  const { tournament } = read;
   if (tournament.visibility && tournament.visibility !== 'public') {
     return { notFound: true, revalidate: 60 };
   }
@@ -318,9 +319,10 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   // planning (round_name / scheduled_at côté matches). Une journée ou une date
   // sans pool propre n'apparaît pas — elle reprend le niveau suivant.
   //
-  // Fraîcheur : ISR `revalidate: 60` ci-dessous. L'API d'édition du pool ne
-  // déclenche pas de revalidation à la demande ; un pool ajouté ou modifié
-  // (journée comme date) apparaît donc au plus tard une minute après.
+  // Fraîcheur : fenêtre ISR selon l'état du tournoi, ci-dessous. L'API
+  // d'édition du pool ne déclenche pas de revalidation à la demande ; un pool
+  // ajouté ou modifié (journée comme date) apparaît donc au plus tard une
+  // minute après tant que le tournoi se joue, cinq avant son coup d'envoi.
   const { scopedPools, evenings } = await loadScopedPools(
     tenantId,
     tournamentId
@@ -407,10 +409,12 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       hasVetoData,
       hasFfaStage,
       bracketTab,
-      hasReviews: await hasReviewsPlaylist(tenantId, tournamentId),
+      hasReviews: read.reviewsPlaylistId !== null,
       seo: buildMapsSeo(tournament as Tournament),
     },
-    revalidate: 60,
+    revalidate: tournamentRevalidateSeconds(tournament, new Date(), {
+      degraded: Boolean(poolRes.error || matchesRes.error),
+    }),
   };
 };
 

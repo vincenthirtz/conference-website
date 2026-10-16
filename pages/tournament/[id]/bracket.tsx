@@ -2,7 +2,7 @@
 //
 // Vue publique du BRACKET d'un tournoi (arbre d'élimination simple/double).
 // Page ISR (getStaticProps + revalidate) alignée sur ses sœurs (matches, stats…) :
-// même chemin de données service-role (findTournamentByIdOrSlug + supabaseAdmin),
+// même chemin de données service-role (readPublicTournament + supabaseAdmin),
 // en ne projetant QUE des colonnes publiques non-PII. Rendu via BracketTreeView
 // (le même arbre que l'admin) en LECTURE SEULE — aucun `onScoreSaved` n'est passé,
 // donc aucune affordance d'édition n'apparaît. Le layout (Navbar/Footer) vient de
@@ -14,7 +14,8 @@ import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
-import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { readPublicTournament } from '@/utils/tournament/readPublicTournament';
+import { tournamentRevalidateSeconds } from '@/utils/isr/stateRevalidate';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import { formatDateRange } from '@/utils/tournamentDates';
@@ -41,7 +42,6 @@ import {
 } from '@/utils/tournament/finalsPhase';
 import FinalsPhaseView from '@/components/tournament/FinalsPhaseView';
 import { gameLabel } from '@/config/games';
-import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 type BracketDict = typeof nsTournamentBracket.fr;
 
@@ -128,19 +128,22 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
 
   const tenantId = DEFAULT_TENANT_ID;
 
-  const tournament = await findTournamentByIdOrSlug<Tournament>(
+  // Ligne du tournoi ET playlist Reviews en une lecture.
+  const read = await readPublicTournament<Tournament>(
     id,
     'id, slug, name, game, status, format, start_date, end_date, visibility',
     tenantId
   );
-  if (!tournament) {
+  if (!read) {
     return { notFound: true, revalidate: 60 };
   }
+  const { tournament } = read;
+  const hasReviews = read.reviewsPlaylistId !== null;
   if (tournament.visibility && tournament.visibility !== 'public') {
     return { notFound: true, revalidate: 60 };
   }
 
-  const [stagesResult, matchesResult, hasReviews] = await Promise.all([
+  const [stagesResult, matchesResult] = await Promise.all([
     supabaseAdmin
       .from('tournament_stages')
       .select('stage_type')
@@ -180,7 +183,6 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       // l'ordre d'insertion (created_at) reflète la position dans le round.
       .order('round_number', { ascending: true })
       .order('created_at', { ascending: true }),
-    hasReviewsPlaylist(tenantId, tournament.id),
   ]);
 
   if (stagesResult.error)
@@ -241,7 +243,11 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       hasReviews,
       seo: buildBracketSeo(tournament as Tournament, tabMode),
     },
-    revalidate: 60,
+    // Un score (et sa propagation dans l'arbre) régénère cet onglet à la
+    // demande ; la fenêtre suit l'état du tournoi (60 s en cours).
+    revalidate: tournamentRevalidateSeconds(tournament, new Date(), {
+      degraded: Boolean(stagesResult.error || matchesResult.error),
+    }),
   };
 };
 

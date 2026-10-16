@@ -10,7 +10,8 @@ import Button from '@/components/Buttons/button';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
-import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { readPublicTournament } from '@/utils/tournament/readPublicTournament';
+import { tournamentRevalidateSeconds } from '@/utils/isr/stateRevalidate';
 import type { MatchStatus as BaseMatchStatus } from '@/types/admin';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -31,7 +32,6 @@ import nsTournamentMatches from '@/lib/i18n/locales/fr/tournamentMatches';
 import { containsFfaStage } from '@/utils/stages/ffaStage';
 import { bracketTabMode } from '@/utils/stages/bracketStage';
 import { gameLabel } from '@/config/games';
-import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 // Fuseau de référence pour placer les matchs dans la grille mensuelle.
 const MATCHES_TZ = 'Europe/Paris';
@@ -122,15 +122,12 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
   const tenantId = DEFAULT_TENANT_ID;
 
-  // 1) Tournoi (UUID ou slug)
-  const tournament = await findTournamentByIdOrSlug<Tournament>(
-    id,
-    '*',
-    tenantId
-  );
-  if (!tournament) {
+  // 1) Tournoi (UUID ou slug) — `*` porte déjà la playlist Reviews.
+  const read = await readPublicTournament<Tournament>(id, '*', tenantId);
+  if (!read) {
     return { notFound: true, revalidate: 60 };
   }
+  const { tournament } = read;
   if (tournament.visibility && tournament.visibility !== 'public') {
     return { notFound: true, revalidate: 60 };
   }
@@ -184,10 +181,14 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       tournament: tournament as Tournament,
       stages: (stages || []) as Stage[],
       matches,
-      hasReviews: await hasReviewsPlaylist(tenantId, tournamentId),
+      hasReviews: read.reviewsPlaylistId !== null,
       seo: buildMatchesSeo(tournament as Tournament),
     },
-    revalidate: 60,
+    // Un score régénère cet onglet à la demande ; la programmation attend la
+    // fenêtre, qui suit l'état du tournoi (60 s en cours).
+    revalidate: tournamentRevalidateSeconds(tournament, new Date(), {
+      degraded: Boolean(sErr || mErr),
+    }),
   };
 };
 

@@ -7,7 +7,8 @@ import Paragraph from '@/components/Typography/paragraph';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
-import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { readPublicTournament } from '@/utils/tournament/readPublicTournament';
+import { tournamentRevalidateSeconds } from '@/utils/isr/stateRevalidate';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import { formatDateRange } from '@/utils/tournamentDates';
@@ -34,7 +35,6 @@ import {
   type BracketTabMode,
 } from '@/utils/stages/bracketStage';
 import { gameLabel } from '@/config/games';
-import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 /** Recopie du `.select()` embarquant l'équipe depuis `stage_teams`. */
 type StageTeamEmbedRow = { team: Relation<SimpleTeam> };
@@ -140,37 +140,38 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
   const tenantId = DEFAULT_TENANT_ID;
 
-  // Phase A : tournoi (UUID ou slug)
-  const tournament = await findTournamentByIdOrSlug<Tournament>(
+  // Phase A : tournoi (UUID ou slug) et playlist Reviews, en une lecture
+  const read = await readPublicTournament<Tournament>(
     id,
     'id, slug, name, game, status, format, start_date, end_date, visibility',
     tenantId
   );
-  if (!tournament) {
+  if (!read) {
     return { notFound: true, revalidate: 60 };
   }
+  const { tournament } = read;
+  const hasReviews = read.reviewsPlaylistId !== null;
   if (tournament.visibility && tournament.visibility !== 'public') {
     return { notFound: true, revalidate: 60 };
   }
   const tournamentId = tournament.id;
+  const now = new Date();
 
   // Phase B : stages + matches + classement officiel en parallèle
-  const [stagesRes, matchesRes, standingsTables, hasReviews] =
-    await Promise.all([
-      supabaseAdmin
-        .from('tournament_stages')
-        .select('id, stage_type')
-        .eq('tenant_id', tenantId)
-        .eq('tournament_id', tournamentId),
-      supabaseAdmin
-        .from('matches')
-        .select('id, status, is_bye, team1_id, team2_id, winner_team_id')
-        .eq('tenant_id', tenantId)
-        .eq('tournament_id', tournamentId)
-        .neq('status', 'cancelled'),
-      readPublicStandings(tenantId, tournamentId),
-      hasReviewsPlaylist(tenantId, tournamentId),
-    ]);
+  const [stagesRes, matchesRes, standingsTables] = await Promise.all([
+    supabaseAdmin
+      .from('tournament_stages')
+      .select('id, stage_type')
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId),
+    supabaseAdmin
+      .from('matches')
+      .select('id, status, is_bye, team1_id, team2_id, winner_team_id')
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId)
+      .neq('status', 'cancelled'),
+    readPublicStandings(tenantId, tournamentId),
+  ]);
 
   if (matchesRes.error) {
     logger.error('stats page matches error:', matchesRes.error);
@@ -226,6 +227,17 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     logger.error('stats page games error:', gamesRes.error);
   }
 
+  // Un score régénère cet onglet à la demande ; la fenêtre suit l'état du
+  // tournoi (60 s en cours, plus long une fois terminé).
+  const revalidate = tournamentRevalidateSeconds(tournament, now, {
+    degraded: Boolean(
+      stagesRes.error ||
+        matchesRes.error ||
+        stageTeamsRes.error ||
+        gamesRes.error
+    ),
+  });
+
   const teamMap = new Map<string, SimpleTeam>();
   ((stageTeamsRes.data || []) as StageTeamEmbedRow[]).forEach((row) => {
     // `team` est un embed PostgREST : objet OU tableau. Le code lisait
@@ -252,7 +264,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
         hasReviews,
         seo: buildStatsSeo(tournament as Tournament),
       },
-      revalidate: 60,
+      revalidate,
     };
   }
 
@@ -300,7 +312,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       hasReviews,
       seo: buildStatsSeo(tournament as Tournament),
     },
-    revalidate: 60,
+    revalidate,
   };
 };
 

@@ -8,7 +8,8 @@ import Paragraph from '@/components/Typography/paragraph';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
-import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { readPublicTournament } from '@/utils/tournament/readPublicTournament';
+import { tournamentRevalidateSeconds } from '@/utils/isr/stateRevalidate';
 import { maskBattleTag } from '@/utils/battleTag';
 import {
   resolveMissingDisplayNames,
@@ -24,7 +25,6 @@ import {
   bracketTabMode,
   type BracketTabMode,
 } from '@/utils/stages/bracketStage';
-import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 /** Recopie du `.select()` des matchs terminés, embed du sondage MVP compris. */
 type FinishedMatchRow = {
@@ -79,6 +79,8 @@ type Tournament = {
   slug?: string | null;
   name: string;
   status: string;
+  start_date?: string | null;
+  end_date?: string | null;
   visibility?: string | null;
 };
 
@@ -118,16 +120,15 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   // S5d: getStaticProps → DEFAULT_TENANT_ID (TODO(S7) — SSR/ISR per tenant).
   const tenantId = DEFAULT_TENANT_ID;
 
-  // Phase A : tournoi (UUID ou slug)
-  const tournament = await findTournamentByIdOrSlug<Tournament>(
+  // Phase A : tournoi (UUID ou slug) et playlist Reviews, en une lecture
+  const read = await readPublicTournament<Tournament>(
     id,
-    'id, name, slug, status, visibility',
+    'id, name, slug, status, start_date, end_date, visibility',
     tenantId
   );
-  if (
-    !tournament ||
-    (tournament.visibility != null && tournament.visibility !== 'public')
-  )
+  if (!read) return { notFound: true, revalidate: 60 };
+  const { tournament } = read;
+  if (tournament.visibility != null && tournament.visibility !== 'public')
     return { notFound: true, revalidate: 60 };
   const tournamentId = tournament.id;
 
@@ -299,10 +300,14 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       perMatch,
       hasFfaStage,
       bracketTab,
-      hasReviews: await hasReviewsPlaylist(tenantId, tournamentId),
+      hasReviews: read.reviewsPlaylistId !== null,
       seo: buildMvpSeo(tournament.name),
     },
-    revalidate: 60,
+    // Le MVP importé par le staff ne régénère pas la page : 60 s tant que le
+    // tournoi se joue, plus long une fois terminé.
+    revalidate: tournamentRevalidateSeconds(tournament, new Date(), {
+      degraded: Boolean(matchesRes.error),
+    }),
   };
 };
 

@@ -11,6 +11,10 @@ import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { maskBattleTag } from '@/utils/battleTag';
 import { resolveStreamUrl } from '@/utils/matches/streamUrl';
+import {
+  ISR_MATCH_SETTLING_S,
+  matchRevalidateSeconds,
+} from '@/utils/isr/stateRevalidate';
 import { formatSiteDate } from '@/utils/timezone';
 import { splitTeamMembers, isNonPlayingTeamRole } from '@/utils/teams/roleKind';
 import {
@@ -362,11 +366,12 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       return oa - ob;
     }) ?? [];
 
-  const [lineups, mvp, publicMvp] = await Promise.all([
-    readMatchLineups(match),
-    readMatchMvp(match.id),
-    readMatchPublicMvp(match.id),
-  ]);
+  const [{ lineups, failed: lineupsFailed }, mvp, publicMvp] =
+    await Promise.all([
+      readMatchLineups(match),
+      readMatchMvp(match.id),
+      readMatchPublicMvp(match.id),
+    ]);
 
   return {
     props: {
@@ -376,7 +381,12 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       publicMvp,
       seo: buildMatchSeo(match, lineups, mvp),
     },
-    revalidate: 30,
+    // Match à jouer ou en cours : 30 s. Tranché : 5 min pendant 24 h (MVP du
+    // public, MVP importé, maps), puis un jour — un score corrigé régénère la
+    // fiche à la demande. Cf. utils/isr/stateRevalidate.
+    revalidate: lineupsFailed
+      ? Math.min(matchRevalidateSeconds(match), ISR_MATCH_SETTLING_S)
+      : matchRevalidateSeconds(match),
   };
 };
 
@@ -412,11 +422,15 @@ async function readPublicScrimPath(scrimId: string): Promise<string | null> {
  * Le pseudo suit le même repli que partout ailleurs (surcharge d'équipe →
  * pseudo de compte), et le BattleTag est masqué.
  */
-async function readMatchLineups(match: Match): Promise<MatchLineups> {
+async function readMatchLineups(
+  match: Match
+): Promise<{ lineups: MatchLineups; failed: boolean }> {
   const teamIds = [match.team1?.id, match.team2?.id].filter(
     (id): id is string => Boolean(id)
   );
-  if (teamIds.length === 0) return { team1: [], team2: [] };
+  if (teamIds.length === 0) {
+    return { lineups: { team1: [], team2: [] }, failed: false };
+  }
 
   const { data, error } = await supabaseAdmin
     .from('team_members')
@@ -428,7 +442,9 @@ async function readMatchLineups(match: Match): Promise<MatchLineups> {
 
   if (error) {
     logger.error('match lineups error:', error);
-    return { team1: [], team2: [] };
+    // Signalé à l'appelant : une fiche aux compositions vides ne doit pas
+    // rester figée un jour entier.
+    return { lineups: { team1: [], team2: [] }, failed: true };
   }
 
   const rows = (data || []) as LineupRow[];
@@ -449,7 +465,10 @@ async function readMatchLineups(match: Match): Promise<MatchLineups> {
       }));
   };
 
-  return { team1: toLineup(match.team1), team2: toLineup(match.team2) };
+  return {
+    lineups: { team1: toLineup(match.team1), team2: toLineup(match.team2) },
+    failed: false,
+  };
 }
 
 /** MVP du match, si le staff a importé le résultat du sondage Discord. */

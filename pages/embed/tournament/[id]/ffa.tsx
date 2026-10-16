@@ -14,6 +14,10 @@ import Head from 'next/head';
 import { resolveEmbedChrome } from '@/utils/embed';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
 import {
+  publicCdnCacheControl,
+  tournamentRevalidateSeconds,
+} from '@/utils/isr/stateRevalidate';
+import {
   readPublicFfaStandings,
   type PublicFfaStandingRow,
 } from '@/utils/public/readFfaStandings';
@@ -27,6 +31,9 @@ type TournamentLite = {
   slug: string | null;
   name: string;
   visibility: string | null;
+  status?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
 };
 
 type Props = {
@@ -48,7 +55,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 
   const tournament = await findTournamentByIdOrSlug<TournamentLite>(
     id,
-    'id, slug, name, visibility',
+    'id, slug, name, visibility, status, start_date, end_date',
     tenantId
   );
   if (!tournament) {
@@ -61,6 +68,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 
   let stageName: string | null = null;
   let standings: PublicFfaStandingRow[] = [];
+  let degraded = false;
   try {
     const result = await readPublicFfaStandings(tournament.id, tenantId);
     if (result) {
@@ -68,8 +76,19 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
       standings = result.standings;
     }
   } catch (err) {
+    degraded = true;
     logger.error('embed ffa standings error:', err);
   }
+
+  // La réponse ne dépend que de l'URL (chemin + `?theme`, `?accent`,
+  // `?tenant`) : le CDN la sert à toutes les visiteuses, dans la fenêtre que
+  // fixe l'état du tournoi (60 s au plus pendant qu'il se joue).
+  ctx.res.setHeader(
+    'Cache-Control',
+    publicCdnCacheControl(
+      tournamentRevalidateSeconds(tournament, new Date(), { degraded })
+    )
+  );
 
   const publicSlug = tournament.slug || tournament.id;
   const publicUrl = `/tournament/${publicSlug}/ffa`;

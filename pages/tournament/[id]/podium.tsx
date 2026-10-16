@@ -12,7 +12,11 @@ import Paragraph from '@/components/Typography/paragraph';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
-import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import { readPublicTournament } from '@/utils/tournament/readPublicTournament';
+import {
+  ISR_UPCOMING_S,
+  tournamentRevalidateSeconds,
+} from '@/utils/isr/stateRevalidate';
 import { formatSiteDate } from '@/utils/timezone';
 import { useT, format } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
@@ -25,7 +29,6 @@ import {
   bracketTabMode,
   type BracketTabMode,
 } from '@/utils/stages/bracketStage';
-import { hasReviewsPlaylist } from '@/utils/tournaments/reviewsPlaylist';
 
 /** Recopie du `.select()` du palmarès figé, embed compris. */
 type PodiumRankRow = {
@@ -101,28 +104,36 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   }
 
   const tenantId = DEFAULT_TENANT_ID;
-  const tournament = await findTournamentByIdOrSlug<Tournament>(
+  // Ligne du tournoi ET playlist Reviews en une lecture.
+  const read = await readPublicTournament<Tournament>(
     id,
     'id, slug, name, game, status, start_date, end_date, visibility',
     tenantId
   );
-  if (!tournament) {
+  if (!read) {
     return { notFound: true, revalidate: 60 };
   }
+  const { tournament } = read;
+  const hasReviews = read.reviewsPlaylistId !== null;
   if (tournament.visibility && tournament.visibility !== 'public') {
     return { notFound: true, revalidate: 60 };
   }
+  const now = new Date();
   if (tournament.status !== 'completed') {
     // Pas encore terminé : on ne montre pas de podium pour éviter de
-    // pré-révéler un classement intermédiaire.
-    return { notFound: true, revalidate: 60 };
+    // pré-révéler un classement intermédiaire. Fenêtre selon l'état : 60 s
+    // pendant le tournoi, 5 min avant son coup d'envoi.
+    return {
+      notFound: true,
+      revalidate: tournamentRevalidateSeconds(tournament, now),
+    };
   }
 
   if (!supabaseAdmin) {
     return { notFound: true, revalidate: 60 };
   }
 
-  const [{ data: rankRows, error }, stagesRes, hasReviews] = await Promise.all([
+  const [{ data: rankRows, error }, stagesRes] = await Promise.all([
     supabaseAdmin
       .from('final_rankings')
       .select(
@@ -147,7 +158,6 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       .select('stage_type')
       .eq('tenant_id', tenantId)
       .eq('tournament_id', tournament.id),
-    hasReviewsPlaylist(tenantId, tournament.id),
   ]);
 
   if (error) {
@@ -159,7 +169,17 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   const bracketTab = bracketTabMode(stagesRes.data);
 
   if (!rankRows || rankRows.length === 0) {
-    return { notFound: true, revalidate: 60 };
+    // Podium pas encore figé (ou illisible) : il le sera sous peu après la
+    // fin du tournoi, et rien ne régénère la page à ce moment-là.
+    return {
+      notFound: true,
+      revalidate: Math.min(
+        tournamentRevalidateSeconds(tournament, now, {
+          degraded: Boolean(error),
+        }),
+        ISR_UPCOMING_S
+      ),
+    };
   }
 
   const rankings: RankingRow[] = (rankRows as PodiumRankRow[]).map((r) => {
@@ -189,7 +209,10 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       hasReviews,
       seo: buildPodiumSeo(tournament),
     },
-    revalidate: 60,
+    // Un podium figé ne bouge plus : 1 h la première semaine, un jour ensuite.
+    revalidate: tournamentRevalidateSeconds(tournament, now, {
+      degraded: Boolean(stagesRes.error),
+    }),
   };
 };
 

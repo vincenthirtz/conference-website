@@ -26,6 +26,7 @@ import { type HomeMatchday } from '@/utils/home/loadNextMatchday';
 import { type HomeClip, type HomeStandingRow } from '@/utils/home/loadHomeData';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { loadHomeData } from '@/utils/home/loadHomeData';
+import { homeRevalidateSeconds } from '@/utils/isr/stateRevalidate';
 import { useT } from '@/lib/i18n/useT';
 import { useTwitchLive } from '@/components/Home/useTwitchLive';
 import HomeHeroV2 from '@/components/Home/HomeHeroV2';
@@ -60,7 +61,7 @@ type HomeProps = {
   countdownTarget: string | null;
   /** Le bloc TCG : trois cartes, le total à collectionner, le barème. */
   tcg: HomeTcgShowcaseData;
-  // L'horloge du rendu (ISR 15 min). Fabriquée ici plutôt que dans la carte :
+  // L'horloge du rendu (ISR 15 min à 1 h). Fabriquée ici plutôt que dans la carte :
   // un `new Date()` côté composant donne le build au serveur et la visite au
   // client — deux valeurs qui divergent dès qu'un minuit passe entre les deux.
   nowIso: string;
@@ -93,7 +94,15 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
       nowIso: now.toISOString(),
       loadError: data.loadError,
     },
-    revalidate: 900,
+    // 15 min un jour de matchs (dès 2 h avant le premier coup d'envoi), 1 h
+    // sinon. Scores et actualités régénèrent l'accueil à la demande ; le reste
+    // (mur des réseaux, clips, vitrine TCG, compteur d'inscrites) supporte
+    // l'heure. Cf. utils/isr/stateRevalidate.
+    revalidate: homeRevalidateSeconds(
+      data.matchdays[0]?.matches[0]?.scheduledAt ?? null,
+      now,
+      { degraded: data.loadError }
+    ),
   };
 };
 

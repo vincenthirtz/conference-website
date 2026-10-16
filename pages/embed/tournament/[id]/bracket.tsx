@@ -15,6 +15,10 @@ import Head from 'next/head';
 import { supabaseAdmin } from '@/utils/supabase';
 import { resolveEmbedChrome } from '@/utils/embed';
 import { findTournamentByIdOrSlug } from '@/utils/tournamentLookup';
+import {
+  publicCdnCacheControl,
+  tournamentRevalidateSeconds,
+} from '@/utils/isr/stateRevalidate';
 import EmbedBracket, { type EmbedTheme } from '@/components/embed/EmbedBracket';
 import type {
   BracketRound,
@@ -28,6 +32,8 @@ type TournamentLite = {
   name: string;
   visibility: string | null;
   status: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
 };
 
 type Props = {
@@ -72,7 +78,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   // 1) Tournament (UUID or slug) — same lookup as the public matches view.
   const tournament = await findTournamentByIdOrSlug<TournamentLite>(
     id,
-    'id, slug, name, visibility, status',
+    'id, slug, name, visibility, status, start_date, end_date',
     tenantId
   );
   if (!tournament) {
@@ -141,6 +147,18 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 
   const rounds = buildRounds(mainMatches);
   const loserRounds = buildRounds(lbMatches);
+
+  // La réponse ne dépend que de l'URL (chemin + `?theme`, `?accent`,
+  // `?tenant`) : le CDN la sert à toutes les visiteuses, dans la fenêtre que
+  // fixe l'état du tournoi (60 s au plus pendant qu'il se joue).
+  ctx.res.setHeader(
+    'Cache-Control',
+    publicCdnCacheControl(
+      tournamentRevalidateSeconds(tournament, new Date(), {
+        degraded: Boolean(mErr),
+      })
+    )
+  );
 
   const publicSlug = tournament.slug || tournament.id;
   const publicUrl = `/tournament/${publicSlug}/bracket`;
