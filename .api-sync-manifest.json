@@ -1,6 +1,6 @@
 {
-  "apiCommit": "1b30ce64083dd1c43b62255be8b147f0a9da2543",
-  "syncedAt": "2026-10-15T21:46:59.896Z",
+  "apiCommit": "0f7b465f782fe668e6b87422d5c01e506fd97b21",
+  "syncedAt": "2026-10-16T13:18:56.292Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -110,6 +110,7 @@
     "utils/bracket/snapshot.ts",
     "utils/caster/heroBans.ts",
     "utils/checkin.ts",
+    "utils/competitionWrites.ts",
     "utils/constants.ts",
     "utils/contactLimits.ts",
     "utils/crypto.ts",

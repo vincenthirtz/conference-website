@@ -38,6 +38,7 @@ import type { ApplyMatchScoreResult } from '../types/matches';
 import { emitBotEvent } from './botEvents';
 import { isCheckinTeamRole } from './teams/canCheckIn';
 import { grantCheckinStreakReward } from './tcg/grantCheckinStreak';
+import { noteMatchWrite } from './competitionWrites';
 
 import { logger } from './logger';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
@@ -375,6 +376,7 @@ export async function redeemCheckinToken(
     .is('forfeit_processed_at', null);
   if (resolved.scheduledAt) update = update.gte('scheduled_at', now);
   const { data: written, error } = await update.select('id');
+  noteMatchWrite();
 
   if (error) {
     logger.error('[checkin] redeem update error:', error);
@@ -707,6 +709,7 @@ async function runCheckinOpenStep(
       .update(updates)
       .eq('tenant_id', match.tenant_id)
       .eq('id', match.id);
+    noteMatchWrite();
 
     if (error) {
       result.errors.push(`token gen: ${error.message}`);
@@ -767,6 +770,7 @@ async function runCheckinOpenStep(
     .update({ checkin_email_sent_at: new Date().toISOString() })
     .eq('tenant_id', match.tenant_id)
     .eq('id', match.id);
+  noteMatchWrite();
 
   if (markErr) {
     result.errors.push(`mark email sent: ${markErr.message}`);
@@ -907,6 +911,7 @@ async function runLineupReminderStep(
       .update({ [s.field]: new Date().toISOString() })
       .eq('tenant_id', match.tenant_id)
       .eq('id', match.id);
+    noteMatchWrite();
     if (error) {
       result.errors.push(`mark lineup reminder ${s.field}: ${error.message}`);
     }
@@ -1007,6 +1012,7 @@ async function runReminderStep(
     .update({ [field]: new Date().toISOString() })
     .eq('tenant_id', match.tenant_id)
     .eq('id', match.id);
+  noteMatchWrite();
 
   if (error) {
     result.errors.push(`mark reminder ${minutes}: ${error.message}`);
@@ -1041,6 +1047,7 @@ async function recordNoShowReason(
       .update({ no_show_reason: reason })
       .eq('tenant_id', tenantId)
       .eq('id', matchId);
+    noteMatchWrite();
     if (error) {
       logger.warn('[checkin] no_show_reason write skipped:', error.message);
     }
@@ -1108,6 +1115,7 @@ async function runForfeitStep(
       })
       .eq('tenant_id', match.tenant_id)
       .eq('id', match.id);
+    noteMatchWrite();
     if (error) {
       result.errors.push(`cancel both: ${error.message}`);
       return;
@@ -1351,6 +1359,7 @@ async function markForfeitProcessed(
     .update({ forfeit_processed_at: new Date().toISOString() })
     .eq('tenant_id', tenantId)
     .eq('id', matchId);
+  noteMatchWrite();
   if (error) {
     result.errors.push(`mark forfeit processed: ${error.message}`);
   }
@@ -1872,6 +1881,7 @@ export async function staffCheckInTeam(
     .is(field, null)
     .is('forfeit_processed_at', null)
     .select('id');
+  noteMatchWrite();
 
   if (error) {
     logger.error('[checkin] staff check-in update error:', error);

@@ -23,6 +23,7 @@
 
 import { supabaseAdmin } from '../supabase';
 import { emitBotEvent } from '../botEvents';
+import { noteMatchWrite } from '../competitionWrites';
 import { logger } from '../logger';
 import { absoluteSiteUrl } from '../siteUrl';
 import { effectiveTenantRole, isAdminOrOwnerRole } from '../staffRoles';
@@ -222,6 +223,7 @@ export async function createForfeitProposal(opts: {
       .is(COL_STATUS, null)
       .select(`id, team1_id, team2_id, ${FORFEIT_PROPOSAL_COLUMNS}`)
       .maybeSingle();
+    noteMatchWrite();
     if (error) {
       if (isForfeitProposalSchemaMissing(error)) {
         return { outcome: 'unavailable' };
@@ -268,6 +270,7 @@ export async function overridePendingForfeitProposal(opts: {
       .eq(COL_STATUS, 'pending')
       .select('id')
       .maybeSingle();
+    noteMatchWrite();
     if (error) {
       // Migration absente : aucune proposition ne peut exister, rien à faire.
       if (!isForfeitProposalSchemaMissing(error)) {

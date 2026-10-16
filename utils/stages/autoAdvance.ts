@@ -9,6 +9,7 @@ import { supabaseAdmin } from '../supabase';
 import { computeStageStandings } from './standings';
 import { logStaffAction } from '../staffLogs';
 import { DEFAULT_TENANT_ID } from '../tenant';
+import { noteTournamentWrite } from '../competitionWrites';
 
 import { logger } from '../logger';
 export type AdvancementRules = {
@@ -219,6 +220,7 @@ export async function tryAutoAdvanceFromMatch(params: {
       .eq('id', stageId);
     if (tenantId) deactivate = deactivate.eq('tenant_id', tenantId);
     await deactivate;
+    noteTournamentWrite();
     return {
       triggered: false,
       reason: 'already_advanced',
@@ -265,6 +267,7 @@ export async function tryAutoAdvanceFromMatch(params: {
     .eq('id', stageId);
   if (tenantId) deactivateSource = deactivateSource.eq('tenant_id', tenantId);
   await deactivateSource;
+  noteTournamentWrite();
 
   // 8) Log staff
   if (staffId) {

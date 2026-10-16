@@ -5,6 +5,7 @@ import { supabaseAdmin } from '../supabase';
 import type { MatchRow, PropagationResult } from '@/types/bracket';
 import type { TiebreakerPolicy } from '@/types/admin';
 
+import { noteMatchWrite } from '../competitionWrites';
 import { logger } from '../logger';
 export type { MatchStatus } from '@/types/admin';
 export type { BracketSide } from '@/types/admin';
@@ -101,6 +102,7 @@ export async function propagateBracketForMatch(
         .update({ winner_team_id: winnerTeamId })
         .eq('tenant_id', tenantId)
         .eq('id', matchId);
+      noteMatchWrite();
     }
   }
 
@@ -338,6 +340,7 @@ async function applyTeamToNextMatchSlot(
     .eq('tournament_id', tournamentId)
     .select('id')
     .maybeSingle();
+  noteMatchWrite();
 
   if (error) {
     throw new Error(
@@ -454,6 +457,7 @@ export async function restorePropagationSlots(
 
   if (updates.length > 0) {
     await Promise.all(updates);
+    noteMatchWrite();
   }
 }
 
@@ -612,6 +616,7 @@ async function createTiebreakerMatch(
     })
     .select('id')
     .single();
+  noteMatchWrite();
 
   if (insertErr || !tbMatch) {
     throw new Error(
@@ -631,6 +636,7 @@ async function createTiebreakerMatch(
     })
     .eq('tenant_id', tenantId)
     .eq('id', match.id);
+  noteMatchWrite();
 
   return tbMatch.id;
 }
@@ -688,5 +694,6 @@ export async function resetPropagationForMatch(
 
   if (updates.length > 0) {
     await Promise.all(updates);
+    noteMatchWrite();
   }
 }

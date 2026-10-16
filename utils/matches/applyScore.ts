@@ -16,6 +16,7 @@ import { invalidateStandingsCache } from '../stages/standingsCache';
 import { tryAutoAdvanceFromMatch } from '../stages/autoAdvance';
 import { notifyMatchResult, notifyBracketUpdate } from '../discord';
 import { emitBotEvent } from '../botEvents';
+import { noteMatchWrite } from '../competitionWrites';
 import { enrichMatchEvent } from './botEventEnrich';
 import { applyMatchRatingIncremental } from '../rating/applyMatchRating';
 import { settleMatchPredictions } from '../predictions/settle';
@@ -373,6 +374,7 @@ export async function applyMatchScore(
       .eq('status', currentStatus)
       .select('updated_at')
       .maybeSingle();
+    noteMatchWrite();
     if (claimErr) {
       logger.error('applyMatchScore: claim finalization error', claimErr);
       throw new Error('Erreur lors de la réservation de la finalisation');
@@ -501,6 +503,7 @@ export async function applyMatchScore(
     .eq('updated_at', lockUpdatedAt)
     .select('*')
     .maybeSingle();
+  noteMatchWrite();
 
   if (updateErr || !updated) {
     const concurrent = !updateErr && !updated;
@@ -580,6 +583,7 @@ export async function applyMatchScore(
             .eq('tenant_id', tenantId)
             .eq('id', matchId)
         ).then(async ({ error: rollbackErr }) => {
+          noteMatchWrite();
           if (rollbackErr) {
             logger.error(
               'applyMatchScore: match rollback failed!',

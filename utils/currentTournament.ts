@@ -20,26 +20,38 @@ export const DEFAULT_CURRENT_TOURNAMENT_ID =
 export async function resolveCurrentTournamentId(
   tenantId: string = DEFAULT_TENANT_ID
 ): Promise<string | null> {
-  if (!supabaseAdmin) return null;
+  return (await resolveCurrentTournament(tenantId)).id;
+}
+
+/**
+ * La même résolution, plus `reliable: false` quand une des lectures a échoué
+ * (elle passe alors à l'étape suivante, comme toujours) : un appelant qui
+ * mémorise le résultat ne doit pas garder celui-là.
+ */
+export async function resolveCurrentTournament(
+  tenantId: string = DEFAULT_TENANT_ID
+): Promise<{ id: string | null; reliable: boolean }> {
+  if (!supabaseAdmin) return { id: null, reliable: false };
 
   // 1. Default UUID si encore actif
-  const { data: defaultTournament } = await supabaseAdmin
+  const { data: defaultTournament, error: defaultErr } = await supabaseAdmin
     .from('tournaments')
     .select('id, status')
     .eq('id', DEFAULT_CURRENT_TOURNAMENT_ID)
     .eq('tenant_id', tenantId)
     .maybeSingle();
+  let reliable = !defaultErr;
 
   if (
     defaultTournament &&
     defaultTournament.status !== 'archived' &&
     defaultTournament.status !== 'completed'
   ) {
-    return defaultTournament.id;
+    return { id: defaultTournament.id, reliable };
   }
 
   // 2. Le plus récent en 'running'
-  const { data: running } = await supabaseAdmin
+  const { data: running, error: runningErr } = await supabaseAdmin
     .from('tournaments')
     .select('id')
     .eq('tenant_id', tenantId)
@@ -47,12 +59,13 @@ export async function resolveCurrentTournamentId(
     .order('start_date', { ascending: false, nullsFirst: false })
     .limit(1)
     .maybeSingle();
+  if (runningErr) reliable = false;
 
-  if (running) return running.id;
+  if (running) return { id: running.id, reliable };
 
   // 3. Le plus récent en 'published' (start_date > now - 30j)
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: published } = await supabaseAdmin
+  const { data: published, error: publishedErr } = await supabaseAdmin
     .from('tournaments')
     .select('id')
     .eq('tenant_id', tenantId)
@@ -61,6 +74,7 @@ export async function resolveCurrentTournamentId(
     .order('start_date', { ascending: false, nullsFirst: false })
     .limit(1)
     .maybeSingle();
+  if (publishedErr) reliable = false;
 
-  return published?.id ?? null;
+  return { id: published?.id ?? null, reliable };
 }

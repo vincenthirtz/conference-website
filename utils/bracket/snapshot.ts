@@ -6,6 +6,7 @@
 // (admin) après plusieurs mutations.
 
 import { supabaseAdmin } from '../supabase';
+import { noteMatchWrite } from '../competitionWrites';
 import { logger } from '../logger';
 
 export type SnapshotMatchRow = {
@@ -129,6 +130,7 @@ export async function restoreBracketSnapshot(
         { count: 'exact' }
       )
       .eq('id', row.id);
+    noteMatchWrite();
     if (updErr) {
       logger.error(
         `[bracket/snapshot] restore update error for match ${row.id}`,
