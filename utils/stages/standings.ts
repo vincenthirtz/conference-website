@@ -21,6 +21,7 @@ import {
   demoteDisqualified,
   excludeAnnulledMatches,
   readDisqualificationMap,
+  type DisqualificationMap,
   type DisqualificationMode,
 } from './disqualification';
 
@@ -89,27 +90,68 @@ type StageTeamRow = {
  * à la main aux deux endroits, sur des lignes `any` — `oneRelation` le fait une
  * fois, et le type dit pourquoi la question se pose.
  */
-type StageTeamQueryRow = {
+export type StageTeamQueryRow = {
   team_id: string;
   seed: number | null;
   team: Relation<{ id: string; name: string; short_name: string | null }>;
 };
 
+/** Ligne de `matches` lue pour un classement, poule comprise. */
+export type StageMatchRow = DbMatch & { group_key: string | null };
+
+/** Ligne de `stage_tiebreaker_overrides`. */
+export type TiebreakerOverrideRow = {
+  winner_team_id: string;
+  loser_team_id: string;
+};
+
+/** Une lecture faite en amont : ses lignes, ou son erreur. */
+export type PrefetchedRead<T> = {
+  data: T[] | null;
+  error: { message: string } | null;
+};
+
+/**
+ * Les lectures d'UNE phase, faites en amont par l'appelant — en pratique une
+ * lecture groupée pour toutes les phases d'un tournoi
+ * (`prefetchStandingsInputs`, utils/stages/publicStandings) au lieu de 4 à 5
+ * requêtes par phase.
+ *
+ * Chaque champ rend ce que la lecture propre à la phase aurait rendu (mêmes
+ * lignes, même ordre, même erreur) : le calcul qui suit est le même, au
+ * caractère près. Absentes, les fonctions de calcul lisent elles-mêmes, comme
+ * avant (admin, bot, overlays, crons).
+ */
+export type PrefetchedStageInputs = {
+  /** `stage_teams` de la phase, embed `team` (id, name, short_name). */
+  stageTeams: PrefetchedRead<StageTeamQueryRow>;
+  /** `matches` de la phase hors `cancelled` et supprimés, `group_key` lu. */
+  matches: PrefetchedRead<StageMatchRow>;
+  disqualified: DisqualificationMap;
+  /** `tournament_stages.settings` de la phase. */
+  settings: unknown;
+  /** Départages manuels de la phase, dans l'ordre lu. */
+  overrides: TiebreakerOverrideRow[];
+};
+
 export async function computeStageStandings(
   tenantId: string,
   stageId: string,
-  stageType: string
+  stageType: string,
+  prefetched?: PrefetchedStageInputs
 ): Promise<StageStanding[]> {
   if (!supabaseAdmin) {
     throw new Error('Supabase admin client not available');
   }
 
   // Fetch stage teams with team names
-  const { data: stageTeamsData, error: teamsErr } = await supabaseAdmin
-    .from('stage_teams')
-    .select('team_id, seed, team:teams(id, name, short_name)')
-    .eq('stage_id', stageId)
-    .eq('tenant_id', tenantId);
+  const { data: stageTeamsData, error: teamsErr } = prefetched
+    ? prefetched.stageTeams
+    : await supabaseAdmin
+        .from('stage_teams')
+        .select('team_id, seed, team:teams(id, name, short_name)')
+        .eq('stage_id', stageId)
+        .eq('tenant_id', tenantId);
 
   if (teamsErr) {
     throw new Error(`Failed to fetch stage teams: ${teamsErr.message}`);
@@ -136,22 +178,26 @@ export async function computeStageStandings(
 
   // Matchs de la phase, hors annulés et supprimés. Seuls les matchs tranchés
   // (terminés OU forfaits) comptent ensuite — cf. countedMatches.
-  const { data: matchesData, error: matchesErr } = await supabaseAdmin
-    .from('matches')
-    .select(
-      'id, status, is_bye, round_number, team1_id, team2_id, winner_team_id, team1_score, team2_score, deleted_at'
-    )
-    .eq('stage_id', stageId)
-    .eq('tenant_id', tenantId)
-    .neq('status', 'cancelled')
-    .is('deleted_at', null);
+  const { data: matchesData, error: matchesErr } = prefetched
+    ? prefetched.matches
+    : await supabaseAdmin
+        .from('matches')
+        .select(
+          'id, status, is_bye, round_number, team1_id, team2_id, winner_team_id, team1_score, team2_score, deleted_at'
+        )
+        .eq('stage_id', stageId)
+        .eq('tenant_id', tenantId)
+        .neq('status', 'cancelled')
+        .is('deleted_at', null);
 
   if (matchesErr) {
     throw new Error(`Failed to fetch matches: ${matchesErr.message}`);
   }
 
   // Disqualifiées en mode « annul » : leurs matchs sortent du calcul de tous.
-  const disqualified = await readDisqualificationMap(tenantId, stageId);
+  const disqualified = prefetched
+    ? prefetched.disqualified
+    : await readDisqualificationMap(tenantId, stageId);
   const matches = excludeAnnulledMatches(
     (matchesData || []) as DbMatch[],
     disqualified
@@ -177,15 +223,12 @@ export async function computeStageStandings(
       // L'ordre de departage vit dans les settings du stage. Absent, on prend
       // le defaut (confrontation directe d'abord) : une regle par defaut
       // explicite vaut mieux qu'un tri implicite que personne n'a choisi.
-      const { data: stageRow } = await supabaseAdmin
-        .from('tournament_stages')
-        .select('settings')
-        .eq('id', stageId)
-        .eq('tenant_id', tenantId)
-        .maybeSingle();
+      const settings = prefetched
+        ? prefetched.settings
+        : await readStageSettings(tenantId, stageId);
       const order =
         parseTiebreakerOrder(
-          (stageRow?.settings as { standings_tiebreakers?: unknown } | null)
+          (settings as { standings_tiebreakers?: unknown } | null | undefined)
             ?.standings_tiebreakers
         ) ?? DEFAULT_TIEBREAKER_ORDER;
       raw = computeGroupStandings(stageTeams, finishedMatches, order);
@@ -213,7 +256,12 @@ export async function computeStageStandings(
   // Les disqualifiées passent en queue APRÈS les overrides : un override de
   // départage ne peut pas remonter une équipe disqualifiée.
   const final = demoteDisqualified(
-    await applyTiebreakerOverrides(tenantId, stageId, raw),
+    await applyTiebreakerOverrides(
+      tenantId,
+      stageId,
+      raw,
+      prefetched?.overrides
+    ),
     disqualified
   );
   // Cache uniquement les stages swiss (calcul coûteux, cf. case 'swiss').
@@ -221,6 +269,20 @@ export async function computeStageStandings(
     setCachedStandings(stageId, final);
   }
   return final;
+}
+
+/** `tournament_stages.settings` d'une phase ; `undefined` si illisible. */
+async function readStageSettings(
+  tenantId: string,
+  stageId: string
+): Promise<unknown> {
+  const { data: stageRow } = await supabaseAdmin
+    .from('tournament_stages')
+    .select('settings')
+    .eq('id', stageId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+  return stageRow?.settings;
 }
 
 /**
@@ -231,28 +293,34 @@ export async function computeStageStandings(
  * skip — l'admin doit corriger le score d'abord.
  *
  * Re-numérote les ranks après les swaps appliqués.
+ *
+ * `prefetched` : les overrides de la phase déjà lus (cf.
+ * PrefetchedStageInputs) — la lecture est alors sautée.
  */
 async function applyTiebreakerOverrides(
   tenantId: string,
   stageId: string,
-  standings: StageStanding[]
+  standings: StageStanding[],
+  prefetched?: TiebreakerOverrideRow[]
 ): Promise<StageStanding[]> {
   if (!supabaseAdmin || standings.length < 2) return standings;
 
-  const { data: overrides, error } = await supabaseAdmin
-    .from('stage_tiebreaker_overrides')
-    .select('winner_team_id, loser_team_id')
-    .eq('stage_id', stageId)
-    .eq('tenant_id', tenantId);
-  if (error || !overrides || overrides.length === 0) return standings;
+  let overrides = prefetched;
+  if (!overrides) {
+    const { data, error } = await supabaseAdmin
+      .from('stage_tiebreaker_overrides')
+      .select('winner_team_id, loser_team_id')
+      .eq('stage_id', stageId)
+      .eq('tenant_id', tenantId);
+    if (error || !data) return standings;
+    overrides = data as TiebreakerOverrideRow[];
+  }
+  if (overrides.length === 0) return standings;
 
   const list = standings.slice();
   const idx = new Map(list.map((s, i) => [s.teamId, i]));
 
-  for (const o of overrides as {
-    winner_team_id: string;
-    loser_team_id: string;
-  }[]) {
+  for (const o of overrides) {
     const wi = idx.get(o.winner_team_id);
     const li = idx.get(o.loser_team_id);
     if (wi === undefined || li === undefined) continue;
@@ -282,36 +350,50 @@ async function applyTiebreakerOverrides(
  *
  * Renvoie aussi `unassigned` pour les equipes presentes dans stage_teams mais
  * pas dans group_assignments (cas degrade — devrait etre vide en prod).
+ *
+ * `prefetched` : lectures de la phase déjà faites (cf. PrefetchedStageInputs).
  */
 export async function computeGroupedStandings(
   tenantId: string,
-  stageId: string
+  stageId: string,
+  prefetched?: PrefetchedStageInputs
 ): Promise<GroupedStandings> {
   if (!supabaseAdmin) {
     throw new Error('Supabase admin client not available');
   }
 
   // 1) Charger le stage pour recuperer group_assignments
-  const { data: stage, error: stageErr } = await supabaseAdmin
-    .from('tournament_stages')
-    .select('id, stage_type, settings')
-    .eq('id', stageId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle();
+  let settings = prefetched?.settings;
+  if (!prefetched) {
+    const { data: stage, error: stageErr } = await supabaseAdmin
+      .from('tournament_stages')
+      .select('id, stage_type, settings')
+      .eq('id', stageId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
 
-  if (stageErr || !stage) {
-    throw new Error(`Stage ${stageId} not found`);
+    if (stageErr || !stage) {
+      throw new Error(`Stage ${stageId} not found`);
+    }
+    settings = stage.settings;
   }
 
   const groupAssignments: Record<string, string[]> =
-    stage.settings?.group_assignments || {};
+    (
+      settings as
+        | { group_assignments?: Record<string, string[]> }
+        | null
+        | undefined
+    )?.group_assignments || {};
 
   // 2) Charger les stage_teams + matchs
-  const { data: stageTeamsData } = await supabaseAdmin
-    .from('stage_teams')
-    .select('team_id, seed, team:teams(id, name, short_name)')
-    .eq('stage_id', stageId)
-    .eq('tenant_id', tenantId);
+  const { data: stageTeamsData } = prefetched
+    ? prefetched.stageTeams
+    : await supabaseAdmin
+        .from('stage_teams')
+        .select('team_id, seed, team:teams(id, name, short_name)')
+        .eq('stage_id', stageId)
+        .eq('tenant_id', tenantId);
 
   const stageTeams: StageTeamRow[] = (
     (stageTeamsData || []) as StageTeamQueryRow[]
@@ -321,19 +403,22 @@ export async function computeGroupedStandings(
     team: oneRelation(row.team),
   }));
 
-  const { data: matchesData } = await supabaseAdmin
-    .from('matches')
-    .select(
-      'id, status, is_bye, round_number, team1_id, team2_id, winner_team_id, team1_score, team2_score, group_key, deleted_at'
-    )
-    .eq('stage_id', stageId)
-    .eq('tenant_id', tenantId)
-    .neq('status', 'cancelled')
-    .is('deleted_at', null);
+  const { data: matchesData } = prefetched
+    ? prefetched.matches
+    : await supabaseAdmin
+        .from('matches')
+        .select(
+          'id, status, is_bye, round_number, team1_id, team2_id, winner_team_id, team1_score, team2_score, group_key, deleted_at'
+        )
+        .eq('stage_id', stageId)
+        .eq('tenant_id', tenantId)
+        .neq('status', 'cancelled')
+        .is('deleted_at', null);
 
-  type GroupedMatchRow = DbMatch & { group_key: string | null };
-  const disqualified = await readDisqualificationMap(tenantId, stageId);
-  const allMatches = (matchesData || []) as GroupedMatchRow[];
+  const disqualified = prefetched
+    ? prefetched.disqualified
+    : await readDisqualificationMap(tenantId, stageId);
+  const allMatches = (matchesData || []) as StageMatchRow[];
   const matches = excludeAnnulledMatches(allMatches, disqualified);
   const finishedMatches = matches.filter(isCountedMatch);
 

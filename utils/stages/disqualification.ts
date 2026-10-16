@@ -28,7 +28,8 @@ export type StageDisqualification = {
 /** teamId → disqualification, pour UNE phase. */
 export type DisqualificationMap = Map<string, StageDisqualification>;
 
-type DisqualificationRow = {
+/** Colonnes de `stage_teams` lues pour les disqualifications. */
+export type DisqualificationRow = {
   stage_id: string;
   team_id: string;
   disqualified_at: string | null;
@@ -95,7 +96,24 @@ async function queryStageDisqualifications(
 
   if (error) return { map: out, error: error.message };
 
-  for (const row of (data ?? []) as DisqualificationRow[]) {
+  return {
+    map: groupDisqualificationsByStage((data ?? []) as DisqualificationRow[]),
+    error: null,
+  };
+}
+
+/**
+ * Disqualifications par phase, depuis des lignes `stage_teams`. PURE.
+ *
+ * Les lignes sans `disqualified_at` sont ignorées : une lecture plus large
+ * (toutes les équipes des phases, cf. `prefetchStandingsInputs`) donne la
+ * même carte que la lecture ciblée ci-dessus.
+ */
+export function groupDisqualificationsByStage(
+  rows: DisqualificationRow[]
+): Map<string, DisqualificationMap> {
+  const out = new Map<string, DisqualificationMap>();
+  for (const row of rows) {
     if (!row.disqualified_at) continue;
     const map = out.get(row.stage_id) ?? new Map();
     map.set(row.team_id, {
@@ -107,7 +125,7 @@ async function queryStageDisqualifications(
     });
     out.set(row.stage_id, map);
   }
-  return { map: out, error: null };
+  return out;
 }
 
 /** Disqualifications d'UNE phase. */
