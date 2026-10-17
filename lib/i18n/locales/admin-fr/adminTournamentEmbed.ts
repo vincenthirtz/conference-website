@@ -94,6 +94,9 @@ export default adminNs('adminTournamentEmbed', {
   source_day_name: 'Matchs du jour',
   source_day_desc:
     'Le programme de la journée (heure de Paris) : horaires, affiches, scores en direct, match du moment mis en avant. Ajoutez &date=AAAA-MM-JJ pour un autre jour, &limit=N pour le nombre de lignes.',
+  source_standings_name: 'Classement',
+  source_standings_desc:
+    'Le classement en cours, identique à la page Classement (forfaits et disqualifiées compris), avec la zone des finales en couleur. Ajoutez &limit=N pour le nombre de lignes, &qualify=N pour la zone qualificative (0 la masque), &stage=<clé> pour une autre phase.',
   presenceLive: '● Affichée',
   presenceStale: 'Vue il y a {ago}',
   presenceNever: 'Jamais affichée',

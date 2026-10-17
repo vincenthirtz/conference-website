@@ -59,6 +59,23 @@ export default {
     'Add ?tournament=<id or slug> to the URL to show the day’s matches.',
   dayTeamTbd: 'TBD',
 
+  standingsDocTitle: 'Stream source — standings',
+  standingsMissingTournament:
+    'Add ?tournament=<id or slug> to the URL to show the standings.',
+  standingsColRank: '#',
+  standingsColTeam: 'Team',
+  standingsColPlayed: 'P',
+  standingsColWins: 'W',
+  standingsColLosses: 'L',
+  standingsColDraws: 'D',
+  standingsColPoints: 'Pts',
+  standingsColMaps: 'Maps',
+  standingsColForm: 'Form',
+  standingsFormW: 'W',
+  standingsFormL: 'L',
+  standingsFormD: 'D',
+  standingsDisqualified: 'DNF',
+
   scrimsDocTitle: 'Stream source — upcoming scrims',
   scrimsDateTbd: 'Date TBD',
 

@@ -1,6 +1,6 @@
 {
-  "apiCommit": "c22f31b2630412f85e2e32662b4d5a7c46dbdad0",
-  "syncedAt": "2026-10-17T17:09:27.457Z",
+  "apiCommit": "9be3a224571cccbda480cc7412a5b2b7848f2064",
+  "syncedAt": "2026-10-17T19:28:04.747Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -186,6 +186,7 @@
     "utils/overlay/regieLayout.ts",
     "utils/overlay/scrimResultOverlay.ts",
     "utils/overlay/scrimsOverlay.ts",
+    "utils/overlay/standingsOverlay.ts",
     "utils/overlays/heartbeat.ts",
     "utils/overwatchRank.ts",
     "utils/player/agenda.ts",

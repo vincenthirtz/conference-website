@@ -62,6 +62,24 @@ export default ns('overlay', {
     'Ajoutez ?tournament=<identifiant ou slug> à l’URL pour afficher les matchs du jour.',
   dayTeamTbd: 'À déterminer',
 
+  // Source « classement » (`/overlay/standings`).
+  standingsDocTitle: 'Source de stream — classement',
+  standingsMissingTournament:
+    'Ajoutez ?tournament=<identifiant ou slug> à l’URL pour afficher le classement.',
+  standingsColRank: '#',
+  standingsColTeam: 'Équipe',
+  standingsColPlayed: 'J',
+  standingsColWins: 'V',
+  standingsColLosses: 'D',
+  standingsColDraws: 'N',
+  standingsColPoints: 'Pts',
+  standingsColMaps: 'Maps',
+  standingsColForm: 'Forme',
+  standingsFormW: 'V',
+  standingsFormL: 'D',
+  standingsFormD: 'N',
+  standingsDisqualified: 'DNF',
+
   // Source « scrims à venir » (`/overlay/scrims`).
   scrimsDocTitle: 'Source de stream — scrims à venir',
   scrimsDateTbd: 'Date à fixer',

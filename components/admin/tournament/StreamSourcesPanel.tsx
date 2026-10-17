@@ -87,6 +87,9 @@ const SOURCES = [
   // Pas une source « par match » : elle montre toute la journée, d'où son URL
   // à part (cf. sourceUrl).
   { key: 'day', size: '1920×1080' },
+  // Le classement EN COURS du tournoi (celui de la page « Classement ») : pas
+  // par match non plus, une URL pour toute la saison.
+  { key: 'standings', size: '1920×1080' },
   // Pas liée au tournoi : les scrims publics de tout l'espace.
   { key: 'scrims', size: '1920×1080' },
   { key: 'scrimResult', size: '1920×1080' },
@@ -146,6 +149,8 @@ function parisToday(): string {
 function sourceUrl(baseUrl: string, tournamentRef: string, key: string) {
   const tournament = encodeURIComponent(tournamentRef);
   if (key === 'day') return `${baseUrl}/overlay/day?tournament=${tournament}`;
+  if (key === 'standings')
+    return `${baseUrl}/overlay/standings?tournament=${tournament}`;
   if (key === 'scrims') return `${baseUrl}/overlay/scrims`;
   if (key === 'regie') return `${baseUrl}/overlay/regie`;
   if (key === 'scrimResult') return `${baseUrl}/overlay/scrim-result`;
