@@ -70,6 +70,17 @@ const TcgDropHealthCard = lazyPanel(async () => {
   return { default: withAdminQuery(Card) };
 });
 
+// Onglet « MVP des équipes » : l'historique du vote des équipes, le même
+// tableau que l'onglet Résultats › Votes MVP du tournoi (lecture seule). Il lit
+// par le cache de requêtes, chargé avec lui.
+const TeamMvpVotesPanel = lazyPanel(async () => {
+  const [{ default: Panel }, { withAdminQuery }] = await Promise.all([
+    import('@/components/admin/tournament/StatsMvpPanel'),
+    import('@/features/admin/_shared/query'),
+  ]);
+  return { default: withAdminQuery(Panel) };
+});
+
 type TournamentOption = { id: string; name: string; slug: string | null };
 
 type SsrProps = OverlayAccess & {
@@ -192,6 +203,10 @@ export default function DiffusionOverlaysPage({
     ...(canUseMatchOverlays
       ? [{ id: 'mvp-public', label: t.tabMvpPublic }]
       : []),
+    // `?tab=mvp-teams` : l'historique du vote des équipes, à côté de celui du
+    // public. Pas d'overlay derrière, donc pas de condition de régie : la
+    // route demande `caster`, comme cette page.
+    { id: 'mvp-teams', label: t.tabMvpTeams },
     // Points de chaîne : le droit de leurs routes (`manage_broadcast`).
     // Réglages de la boîte d'alertes : mêmes conditions que le panneau.
     ...(canTuneAlerts ? [{ id: 'alerts', label: t.tabAlerts }] : []),
@@ -293,6 +308,12 @@ export default function DiffusionOverlaysPage({
                 )}
               />
             </section>
+          ) : active === 'mvp-teams' ? (
+            selected && (
+              <section className="rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4">
+                <TeamMvpVotesPanel kind="teams" tournamentId={selected.id} />
+              </section>
+            )
           ) : (
             <>
               {selected && (
