@@ -84,6 +84,12 @@
     "portrait": "https://d15f34w2p8l1cc.cloudfront.net/overwatch/ca48b96dbae6ea7f58ce8a5e73513c8c62b1685bdbf258020fb78bb21a008b5f.png"
   },
   {
+    "key": "doctrine",
+    "name": "Doctrine",
+    "role": "support",
+    "portrait": "https://d15f34w2p8l1cc.cloudfront.net/overwatch/2492a15c575c12314907d0d77501ec337b4d56796bc7f03e5dfb50d415612bae.png"
+  },
+  {
     "key": "domina",
     "name": "Domina",
     "role": "tank",
@@ -222,6 +228,12 @@
     "portrait": "https://d15f34w2p8l1cc.cloudfront.net/overwatch/551fbe070c16fdfcc17f7f1de63af22c53e7d2f1340fc2f3172441504527bc4e.png"
   },
   {
+    "key": "shion",
+    "name": "Shion",
+    "role": "damage",
+    "portrait": "https://d15f34w2p8l1cc.cloudfront.net/overwatch/070481cf871590a2b45a51d1335f9fe3d65eb4e4d361ecdd998b34fae2ed65d5.png"
+  },
+  {
     "key": "sierra",
     "name": "Sierra",
     "role": "damage",
@@ -248,7 +260,7 @@
   {
     "key": "sombra",
     "name": "Sombra",
-    "role": "damage",
+    "role": "support",
     "portrait": "https://d15f34w2p8l1cc.cloudfront.net/overwatch/47727b02a16e3bd7b2447d86ae1edf11587bc320b2aecb4f2f16a7ca4ad4e8a0.png"
   },
   {

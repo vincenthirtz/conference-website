@@ -76,7 +76,6 @@ export const OVERWATCH_HEROES: readonly OverwatchHero[] = [
   { name: 'Reaper', role: 'Damage' },
   { name: 'Sojourn', role: 'Damage' },
   { name: 'Soldier: 76', role: 'Damage' },
-  { name: 'Sombra', role: 'Damage' },
   { name: 'Symmetra', role: 'Damage' },
   { name: 'Torbjorn', role: 'Damage' },
   { name: 'Tracer', role: 'Damage' },
@@ -97,6 +96,9 @@ export const OVERWATCH_HEROES: readonly OverwatchHero[] = [
   { name: 'Lucio', role: 'Support' },
   { name: 'Mercy', role: 'Support' },
   { name: 'Moira', role: 'Support' },
+  // Sombra est passée Damage → Support en jeu. Constaté le 2026-10-17 sur le
+  // wiki Overwatch et OverFast (`lib/data/ow-heroes.json`), qui concordent.
+  { name: 'Sombra', role: 'Support' },
   { name: 'Zenyatta', role: 'Support' },
   { name: 'Doctrine', role: 'Support' },
   // « Fika » est le nom de l'héroïne ; « Jetpack Cat » est son indicatif, et
