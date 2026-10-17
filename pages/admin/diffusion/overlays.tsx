@@ -91,6 +91,13 @@ type SsrProps = OverlayAccess & {
    * vote de la Cup restait invisible derrière un événement créé après elle.
    */
   activePollTournamentId: string | null;
+  /**
+   * À défaut de vote ouvert : tournoi du DERNIER vote MVP lancé (équipes ou
+   * public). Sans lui, la page retombait sur le tournoi créé le plus
+   * récemment — un événement à venir, sans match ni vote — au lieu de celui
+   * qu'on diffuse.
+   */
+  recentVoteTournamentId: string | null;
 };
 
 const TABS_ID = 'diffusion-overlays';
@@ -103,9 +110,19 @@ export const getServerSideProps = withStaffPage<SsrProps>(
   async (_ctx, staffCtx) => {
     const access = await readOverlayAccess(staffCtx.tenantId);
     if (!supabaseAdmin) {
-      return { ...access, tournaments: [], activePollTournamentId: null };
+      return {
+        ...access,
+        tournaments: [],
+        activePollTournamentId: null,
+        recentVoteTournamentId: null,
+      };
     }
-    const [{ data, error }, { data: pollRows }] = await Promise.all([
+    const [
+      { data, error },
+      { data: pollRows },
+      { data: lastPublicRows },
+      { data: lastTeamRows },
+    ] = await Promise.all([
       supabaseAdmin
         .from('tournaments')
         .select('id, name, slug')
@@ -119,17 +136,46 @@ export const getServerSideProps = withStaffPage<SsrProps>(
         .is('closed_at', null)
         .order('opened_at', { ascending: false })
         .limit(1),
+      // Dernier vote du public, clos ou non.
+      supabaseAdmin
+        .from('match_public_mvp_polls')
+        .select('opened_at, matches!inner(tournament_id)')
+        .eq('tenant_id', staffCtx.tenantId)
+        .order('opened_at', { ascending: false })
+        .limit(1),
+      // Dernier vote des équipes posté (un vote pas encore posté n'a pas de
+      // date : il passe après les autres).
+      supabaseAdmin
+        .from('match_mvp_polls')
+        .select('posted_at, matches!inner(tournament_id)')
+        .eq('tenant_id', staffCtx.tenantId)
+        .order('posted_at', { ascending: false, nullsFirst: false })
+        .limit(1),
     ]);
     if (error) logger.error('[diffusion/overlays] tournois illisibles', error);
     // Illisible ou absent : pas de présélection, la page garde le défaut.
-    const pollMatch = (
-      pollRows?.[0] as
-        | { matches?: { tournament_id?: string | null } | null }
-        | undefined
-    )?.matches;
+    const tournamentOf = (row: unknown) =>
+      (
+        row as
+          | { matches?: { tournament_id?: string | null } | null }
+          | undefined
+      )?.matches?.tournament_id ?? null;
+    const lastPublic = lastPublicRows?.[0] as
+      | { opened_at?: string | null }
+      | undefined;
+    const lastTeam = lastTeamRows?.[0] as
+      | { posted_at?: string | null }
+      | undefined;
+    // Le plus récent des deux votes (dates ISO : l'ordre des chaînes suit
+    // celui des instants).
+    const recentVote =
+      (lastTeam?.posted_at ?? '') > (lastPublic?.opened_at ?? '')
+        ? lastTeam
+        : (lastPublic ?? lastTeam);
     return {
       ...access,
-      activePollTournamentId: pollMatch?.tournament_id ?? null,
+      activePollTournamentId: tournamentOf(pollRows?.[0]),
+      recentVoteTournamentId: tournamentOf(recentVote),
       tournaments: ((data ?? []) as TournamentOption[]).map((x) => ({
         id: x.id,
         name: x.name,
@@ -148,6 +194,7 @@ export default function DiffusionOverlaysPage({
   planLabel,
   isDefaultTenant,
   activePollTournamentId,
+  recentVoteTournamentId,
 }: Props) {
   const t = useAdminT(nsAdminDiffusionOverlays);
   const router = useRouter();
@@ -158,6 +205,7 @@ export default function DiffusionOverlaysPage({
   const [selectedId, setSelectedId] = useState<string>(
     tournaments.find((x) => x.id === wanted)?.id ??
       tournaments.find((x) => x.id === activePollTournamentId)?.id ??
+      tournaments.find((x) => x.id === recentVoteTournamentId)?.id ??
       tournaments[0]?.id ??
       ''
   );
