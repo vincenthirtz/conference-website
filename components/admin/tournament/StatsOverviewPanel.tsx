@@ -12,6 +12,8 @@ import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminTournamentStats from '@/lib/i18n/locales/admin-fr/adminTournamentStats';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import StatTile, { type StatTone } from '@/features/admin/_shared/ui/StatTile';
+import DisqualifiedBadge from '@/features/admin/stages/ui/DisqualifiedBadge';
+import type { DisqualificationMode } from '@/features/admin/stages/client';
 import {
   rubanCardFlush,
   rubanErrBox,
@@ -43,6 +45,10 @@ type TeamStat = {
   mapsWon: number;
   mapsLost: number;
   mapDiff: number;
+  /** Disqualifiée d'une phase : classée en dernier par l'API. */
+  disqualified?: true;
+  disqualificationMode?: DisqualificationMode;
+  disqualificationReason?: string | null;
 };
 
 type MapStat = {
@@ -228,7 +234,15 @@ export default function StatsOverviewPanel() {
                             {idx + 1}
                           </td>
                           <td className="px-4 py-2">
-                            <TeamCell team={ts.team} />
+                            <div className="flex items-center gap-2">
+                              <TeamCell team={ts.team} />
+                              {ts.disqualified && (
+                                <DisqualifiedBadge
+                                  mode={ts.disqualificationMode}
+                                  reason={ts.disqualificationReason}
+                                />
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-2 text-center text-emerald-400 font-semibold">
                             {ts.wins}
