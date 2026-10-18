@@ -1,6 +1,6 @@
 {
-  "apiCommit": "9be3a224571cccbda480cc7412a5b2b7848f2064",
-  "syncedAt": "2026-10-17T19:28:04.747Z",
+  "apiCommit": "c3259710624d9fb5ce9ae4ba14eaadfd69ced4a2",
+  "syncedAt": "2026-10-18T14:07:26.748Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -140,6 +140,7 @@
     "utils/logger.ts",
     "utils/maps/builder.ts",
     "utils/maps/isoSvg.ts",
+    "utils/maps/pool.ts",
     "utils/maps/poolScope.ts",
     "utils/maps/rng.ts",
     "utils/maps/roundPools.ts",
@@ -181,6 +182,7 @@
     "utils/overlay/donAlert.ts",
     "utils/overlay/donationsOverlay.ts",
     "utils/overlay/matchOverlay.ts",
+    "utils/overlay/matchStatsOverlay.ts",
     "utils/overlay/publicMvpDemo.ts",
     "utils/overlay/publicMvpFeed.ts",
     "utils/overlay/regieLayout.ts",

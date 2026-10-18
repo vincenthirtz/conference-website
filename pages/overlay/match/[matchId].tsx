@@ -34,7 +34,9 @@ import { parseOverlaySource } from '@/utils/overlay/matchOverlay';
 import {
   MatchSourceSurface,
   DEFAULT_OVERLAY_ACCENT,
+  isPreMatch,
 } from '@/components/overlay/match/MatchSources';
+import { useMatchStatsOverlay } from '@/hooks/useMatchStatsOverlay';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 
@@ -95,6 +97,18 @@ function MatchOverlayPage() {
     enabled: router.isReady && !configError,
   });
 
+  // Carte « avant-match » : lue pour la source `maps` seulement, et tant
+  // qu'aucune map n'est choisie — dès le premier veto, la source liste les
+  // maps et la boucle se tait.
+  const statsMatchId =
+    source === 'maps' && data?.match && isPreMatch(data.match)
+      ? data.match.id
+      : null;
+  const { data: stats } = useMatchStatsOverlay({
+    matchId: statsMatchId,
+    enabled: router.isReady && !configError,
+  });
+
   const accent =
     parseAccent(firstParam(router.query.accent)) ??
     data?.branding?.accent ??
@@ -134,6 +148,7 @@ function MatchOverlayPage() {
           <MatchSourceSurface
             source={source}
             payload={data}
+            stats={stats}
             clockSkewMs={clockSkewMs}
             accent={accent}
             scale={scale}

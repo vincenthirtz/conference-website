@@ -61,7 +61,7 @@ export default adminNs('adminTournamentEmbed', {
     'Carte plein cadre avant le coup d’envoi : logos et affiche.',
   source_maps_name: 'Maps et veto',
   source_maps_desc:
-    'Les manches jouées avec leur score, ou le veto tant qu’aucune manche n’existe.',
+    'Les manches jouées avec leur score, le veto tant qu’aucune manche n’existe, et avant le veto les stats du tournoi (classement, forme, face-à-face, bilan sur le pool du soir, bans).',
   source_countdown_name: 'Compte à rebours',
   source_countdown_desc:
     'Décompte jusqu’au coup d’envoi, sur l’heure du serveur.',

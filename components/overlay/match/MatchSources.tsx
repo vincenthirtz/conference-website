@@ -26,12 +26,19 @@ import type {
   OverlayTeamView,
 } from '@/utils/overlay/matchOverlay';
 import type { MatchOverlayPayload } from '@/hooks/useMatchOverlay';
+import type { OverlayMatchStats } from '@/utils/overlay/matchStatsOverlay';
+import { MatchStatsCard } from '@/components/overlay/match/MatchStatsCard';
 
 type Dict = typeof nsOverlay.fr;
 
 export type MatchSourceProps = {
   source: OverlaySource;
   payload: MatchOverlayPayload | null;
+  /**
+   * Carte « avant-match » de la source `maps` (GET …/stats), lue seulement
+   * tant qu'aucune map n'est choisie ; null sinon ou pas encore reçue.
+   */
+  stats?: OverlayMatchStats | null;
   /** Décalage horloge locale ↔ serveur, en ms (cf. useMatchOverlay). */
   clockSkewMs: number;
   /** Couleur d'accent résolue (branding de l'espace ou `?accent=`). */
@@ -271,6 +278,15 @@ function MapsCard({
   );
 }
 
+/**
+ * Ni manche jouée ni veto : la source `maps` n'a rien à lister, c'est
+ * l'avant-match. La page s'en sert aussi pour ne lire les stats qu'à ce
+ * moment-là.
+ */
+export function isPreMatch(match: OverlayMatchView): boolean {
+  return match.maps.length === 0 && match.veto.length === 0;
+}
+
 /* ── 4. Compte à rebours (centre) ──────────────────────────────────────── */
 
 function Countdown({
@@ -413,6 +429,7 @@ function WaitingScreen({
 export function MatchSourceSurface({
   source,
   payload,
+  stats = null,
   clockSkewMs,
   accent,
   scale,
@@ -438,9 +455,18 @@ export function MatchSourceSurface({
   }
 
   if (source === 'maps') {
+    // Avant le premier veto, rien à lister : la carte avant-match prend la
+    // place — à condition de porter sur CE match (au passage d'un match au
+    // suivant, l'ancienne réponse reste en main le temps d'une lecture).
+    const preMatch = isPreMatch(match);
+    const card = !preMatch ? (
+      <MapsCard match={match} accent={accent} t={t} />
+    ) : stats && stats.matchId === match.id ? (
+      <MatchStatsCard match={match} stats={stats} accent={accent} t={t} />
+    ) : null;
     return (
       <div className="fixed bottom-10 left-10 origin-bottom-left" style={zoom}>
-        <MapsCard match={match} accent={accent} t={t} />
+        {card}
       </div>
     );
   }

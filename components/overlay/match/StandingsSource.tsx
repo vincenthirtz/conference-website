@@ -40,7 +40,7 @@ export function formatMapDiff(n: number): string {
   return '0';
 }
 
-function FormChips({ form, t }: { form: string[]; t: Dict }) {
+export function FormChips({ form, t }: { form: string[]; t: Dict }) {
   const letter = (r: string) =>
     r === 'W'
       ? t.standingsFormW

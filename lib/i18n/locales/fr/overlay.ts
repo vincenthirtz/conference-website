@@ -56,6 +56,27 @@ export default ns('overlay', {
   matchMapDecider: 'Belle',
   matchTeamFallback: 'Équipe',
 
+  // Carte « avant-match » de la source `maps`, tant qu'aucune map n'est
+  // choisie. Tout est calculé AVANT le match affiché.
+  statsTitle: 'Avant-match',
+  statsRankLabel: 'Classement',
+  statsRank: '{rank}e',
+  statsRankFirst: '1re',
+  statsRecordLabel: 'Bilan',
+  statsRecord: '{wins}V – {losses}D',
+  statsRecordDraws: '{wins}V – {draws}N – {losses}D',
+  statsMapDiffLabel: 'Écart de maps',
+  statsFormLabel: 'Forme',
+  statsHeadToHeadLabel: 'Face-à-face',
+  statsFirstMeeting: 'Première confrontation dans le tournoi',
+  statsHeroBansLabel: 'Bans favoris',
+  statsHeroBanCount: '{name} ×{count}',
+  statsPoolDate: 'Pool du {date}',
+  statsPoolRound: 'Pool {round}',
+  statsPoolTournament: 'Pool du tournoi',
+  statsPoolCatalog: 'Pool de maps',
+  statsMapRecord: '{wins}–{losses}',
+
   // Source « matchs du jour » (`/overlay/day`).
   dayDocTitle: 'Source de stream — matchs du jour',
   dayMissingTournament:

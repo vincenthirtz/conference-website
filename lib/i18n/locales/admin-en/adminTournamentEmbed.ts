@@ -58,7 +58,7 @@ export default {
   source_teams_desc: 'Full-frame card before kick-off: logos and match-up.',
   source_maps_name: 'Maps and veto',
   source_maps_desc:
-    'Played maps with their score, or the veto while no map has been played.',
+    'Played maps with their score, the veto while no map has been played, and before the veto the tournament stats (standing, form, head-to-head, record on the evening map pool, bans).',
   source_countdown_name: 'Countdown',
   source_countdown_desc: 'Counts down to kick-off, on server time.',
   source_waiting_name: 'Waiting screen',
