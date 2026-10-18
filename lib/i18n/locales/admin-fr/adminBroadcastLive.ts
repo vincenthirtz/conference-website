@@ -81,6 +81,10 @@ export default adminNs('adminBroadcastLive', {
   dropSetupBusy: 'Mise en service…',
   dropNoSubscription:
     'Aucune souscription active : Twitch n’enverra aucun échange.',
+  /** Interpole `{name}` — titre de la carte garantie, ou le drop ordinaire. */
+  dropRewardUnsubscribed:
+    'Récompense « {name} » sans souscription active : ses échanges n’arrivent pas au site (points dépensés, rien reçu, aucun remboursement).',
+  dropRewardOrdinaryName: 'drop ordinaire',
   /** Interpole `{status}` — le statut BRUT de Twitch, jamais reformulé. */
   dropSubscriptionAiling: 'Souscription en défaut : {status}',
   /** Interpole `{count}`. */

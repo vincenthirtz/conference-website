@@ -58,6 +58,61 @@ import { rubanEyebrow } from '@/features/admin/_shared/ui/ruban';
 /** Le seul état où les drops tombent réellement. */
 const HEALTHY = 'enabled';
 
+export type UnsubscribedReward = {
+  rewardId: string;
+  /** Titre de la carte garantie ; `null` pour le drop ordinaire. */
+  title: string | null;
+  /** Carte garantie, pour ré-abonner une mise en avant ; absent = drop. */
+  fanartId?: string;
+};
+
+/**
+ * Récompenses DÉSIGNÉES (drop ordinaire et mises en avant) qu'aucun abonnement
+ * actif ne vise. PURE.
+ *
+ * POURQUOI. Twitch filtre chaque abonnement sur UNE récompense : une
+ * récompense désignée sans le sien n'envoie rien au site, et ses échanges
+ * coûtent des points pour rien, sans remboursement ni message. La carte se
+ * disait pourtant « saine » dès qu'UN abonnement était actif — c'est le cas
+ * d'une désignation refaite en base sans passer par Twitch (Octobre Rose, le
+ * 2026-10-14). Constaté le 2026-10-18 : plus aucun drop crédité depuis le 7.
+ *
+ * Muette si aucun abonnement actif ne porte son `rewardId` (API plus ancienne,
+ * ou aucun abonnement — déjà signalé par `dropNoSubscription`) : sans la
+ * donnée, elle crierait à tort sur chaque récompense.
+ */
+export function unsubscribedRewards(
+  state: EventSubState
+): UnsubscribedReward[] {
+  const active = (state.subscriptions ?? []).filter(
+    (s) => s.status === HEALTHY
+  );
+  const covered = new Set(
+    active.map((s) => s.rewardId).filter((id): id is string => !!id)
+  );
+  if (covered.size === 0) return [];
+
+  const designated: UnsubscribedReward[] = [];
+  if (state.rewardId)
+    designated.push({ rewardId: state.rewardId, title: null });
+  if (state.featured) {
+    for (const f of state.featured) {
+      designated.push({
+        rewardId: f.rewardId,
+        title: f.title,
+        fanartId: f.fanartId,
+      });
+    }
+  } else if (state.featuredRewardId) {
+    designated.push({
+      rewardId: state.featuredRewardId,
+      title: null,
+      fanartId: state.featuredFanartId ?? undefined,
+    });
+  }
+  return designated.filter((d) => !covered.has(d.rewardId));
+}
+
 export default function TcgDropHealthCard() {
   const t = useAdminT(nsAdminBroadcastLive);
   // Absente tant qu'elle n'est pas lue, et si elle est illisible (droits
@@ -95,6 +150,15 @@ export default function TcgDropHealthCard() {
     try {
       const { rewardId } = await broadcastCardsClient.tcgDropSetupReward();
       await broadcastCardsClient.tcgDropSubscribe({ rewardId });
+      // Les mises en avant restées sans abonnement : le même appel les
+      // ré-abonne (désignation reprise telle quelle, 409 = déjà là).
+      for (const missing of state ? unsubscribedRewards(state) : []) {
+        if (!missing.fanartId) continue;
+        await broadcastCardsClient.tcgDropSubscribe({
+          rewardId: missing.rewardId,
+          featuredFanartId: missing.fanartId,
+        });
+      }
       await load();
     } catch (err) {
       logger.error('[admin/tcg-drop-health] setup error:', err);
@@ -105,7 +169,7 @@ export default function TcgDropHealthCard() {
     } finally {
       setBusy(false);
     }
-  }, [busy, load]);
+  }, [busy, load, state]);
 
   if (!state) return null;
 
@@ -126,6 +190,13 @@ export default function TcgDropHealthCard() {
   if (cannotCreateReward) blocking.push(t.dropManageScopeMissing);
   if (!state.rewardId) blocking.push(t.dropRewardMissing);
   if (!unknown && active.length === 0) blocking.push(t.dropNoSubscription);
+  for (const missing of unsubscribedRewards(state)) {
+    blocking.push(
+      format(t.dropRewardUnsubscribed, {
+        name: missing.title ?? t.dropRewardOrdinaryName,
+      })
+    );
+  }
 
   const healthy = blocking.length === 0 && !unknown && ailing.length === 0;
 

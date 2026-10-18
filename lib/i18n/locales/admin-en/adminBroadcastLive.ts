@@ -70,6 +70,9 @@ export default {
   dropSetupBusy: 'Setting up…',
   dropNoSubscription:
     'No active subscription: Twitch will send no redemption at all.',
+  dropRewardUnsubscribed:
+    'Reward “{name}” has no active subscription: its redemptions never reach the site (points spent, nothing received, no refund).',
+  dropRewardOrdinaryName: 'regular drop',
   dropSubscriptionAiling: 'Subscription failing: {status}',
   dropHealthyDetail: '{count} active subscription(s) — drops can land.',
 };

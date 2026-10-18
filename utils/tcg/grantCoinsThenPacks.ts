@@ -69,6 +69,12 @@ export type CoinsThenPacksGrant = {
    * « mise en avant ».
    */
   guaranteedFanartId?: string;
+  /**
+   * `tcg_wallet_entries.note` de l'écriture. Absente = colonne laissée à NULL,
+   * comme avant. Le drop Twitch y garde l'identifiant de la demande, pour
+   * distinguer un retry de Twitch d'un second échange (cf. tcg-drop).
+   */
+  note?: string;
 };
 
 export type CoinsThenPacksCredit = {
@@ -181,6 +187,7 @@ export async function grantCoinsThenPacks(input: {
           source_kind: walletSourceKind,
           source_ref: grant.sourceRef,
           created_at: nowIso,
+          ...(grant.note ? { note: grant.note } : {}),
         })),
         {
           onConflict: 'tenant_id,user_id,source_kind,source_ref',
