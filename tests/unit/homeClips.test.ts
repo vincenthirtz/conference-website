@@ -73,6 +73,8 @@ const matchday: HomeMatchday = {
       team1Score: null,
       team2Score: null,
       winnerTeamId: null,
+      roundName: null,
+      outOfStage: false,
     },
   ],
 };

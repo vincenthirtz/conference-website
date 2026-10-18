@@ -26,7 +26,10 @@ import {
 } from '@/utils/home/loadNextMatchday';
 import type { PublicMatch } from '@/utils/public/readMatches';
 import type { HomeTeam } from '@/utils/home/loadHomeData';
-import HomeMatchdayStrip from '@/components/Home/HomeMatchdayStrip';
+import HomeMatchdayStrip, {
+  LARGE_MATCHDAY_MAX,
+  shouldShowRound,
+} from '@/components/Home/HomeMatchdayStrip';
 import HomeSpotlight from '@/components/Home/HomeSpotlight';
 import type { UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 
@@ -174,14 +177,14 @@ describe('shapeMatchdayMatch — ce que l’affiche emprunte aux engagées', () 
 
   it('reprend nom court et slug de l’équipe déjà chargée', () => {
     const shaped = shapeMatchdayMatch(match(), known);
-    expect(shaped?.team1.shortName).toBe('CHOC');
-    expect(shaped?.team1.slug).toBe('chocomates');
+    expect(shaped?.team1?.shortName).toBe('CHOC');
+    expect(shaped?.team1?.slug).toBe('chocomates');
   });
 
   it('tient sans rien connaître de l’équipe', () => {
     const shaped = shapeMatchdayMatch(match(), new Map());
-    expect(shaped?.team2.name).toBe('Eclypse');
-    expect(shaped?.team2.shortName).toBeNull();
+    expect(shaped?.team2?.name).toBe('Eclypse');
+    expect(shaped?.team2?.shortName).toBeNull();
   });
 
   it('écarte une affiche dont un côté n’a pas de nom', () => {
@@ -361,6 +364,8 @@ describe('HomeMatchdayStrip — journée suivante en résumé', () => {
           team1Score: null,
           team2Score: null,
           winnerTeamId: null,
+          roundName: null,
+          outOfStage: false,
         },
       ],
     };
@@ -391,5 +396,132 @@ describe('HomeMatchdayStrip — journée suivante en résumé', () => {
       })
     );
     expect(html).not.toContain('Puis');
+  });
+});
+
+/* ── Finales : deux affiches, un finaliste à venir ──────────────────────────
+ *
+ * Le 23/10/2026, la petite finale attendait son second finaliste : la home
+ * écartait l'affiche et annonçait « 1 match au programme » un soir de deux
+ * finales. Un côté inconnu s'affiche désormais « À déterminer » — jamais un
+ * exempt —, la manche se nomme, et une journée de deux affiches se montre en
+ * grandes cartes.
+ */
+
+describe('finales : un côté pas encore connu', () => {
+  const tbd = () =>
+    match({ id: 'petite', team2_id: null, team2_name: null, stage_id: null });
+
+  it('s’affiche « à déterminer » quand on sait que ce n’est pas un exempt', () => {
+    const shaped = shapeMatchdayMatch(tbd(), new Map(), {
+      roundName: 'Petite finale',
+      isBye: false,
+    });
+    expect(shaped?.team1?.name).toBe('Chocomates');
+    expect(shaped?.team2).toBeNull();
+    expect(shaped?.roundName).toBe('Petite finale');
+    expect(shaped?.outOfStage).toBe(true);
+  });
+
+  it('un exempt, ou un match sans renseignement, reste écarté', () => {
+    expect(
+      shapeMatchdayMatch(tbd(), new Map(), { roundName: null, isBye: true })
+    ).toBeNull();
+    expect(shapeMatchdayMatch(tbd(), new Map())).toBeNull();
+  });
+
+  it('la journée retient l’affiche incomplète quand le filtre l’autorise', () => {
+    const all = [tbd(), match({ id: 'grande' })];
+    expect(
+      selectNextMatchday(all, NOW_THURSDAY)?.matches.map((m) => m.id)
+    ).toEqual(['grande']);
+    const picked = selectNextMatchdays(
+      all,
+      NOW_THURSDAY,
+      1,
+      (m) => m.id === 'petite'
+    )[0];
+    expect(picked?.matches.map((m) => m.id).sort()).toEqual([
+      'grande',
+      'petite',
+    ]);
+  });
+});
+
+describe('nom de manche sur l’affiche', () => {
+  function shaped(over: Partial<PublicMatch>, roundName: string | null) {
+    const s = shapeMatchdayMatch(match(over), new Map(), {
+      roundName,
+      isBye: false,
+    });
+    if (!s) throw new Error('fixture invalide');
+    return s;
+  }
+
+  it('toujours pour une finale hors phase', () => {
+    const grande = shaped({ stage_id: null }, 'Grande finale');
+    expect(shouldShowRound(grande, [grande])).toBe(true);
+  });
+
+  it('pas sur une journée de saison toute dans la même manche', () => {
+    const a = shaped({ id: 'a', stage_id: 'stage-1' }, 'J7');
+    const b = shaped({ id: 'b', stage_id: 'stage-1' }, 'J7');
+    expect(shouldShowRound(a, [a, b])).toBe(false);
+  });
+
+  it('quand la journée mêle plusieurs manches, et jamais sans nom', () => {
+    const a = shaped({ id: 'a', stage_id: 'stage-1' }, 'J7');
+    const b = shaped({ id: 'b', stage_id: 'stage-1' }, 'J8');
+    expect(shouldShowRound(a, [a, b])).toBe(true);
+    const anon = shaped({ id: 'c', stage_id: null }, null);
+    expect(shouldShowRound(anon, [anon])).toBe(false);
+  });
+});
+
+describe('HomeMatchdayStrip — soir de finales', () => {
+  function finalsDay(): HomeMatchday {
+    const petite = shapeMatchdayMatch(
+      match({
+        id: 'petite',
+        team2_id: null,
+        team2_name: null,
+        scheduled_at: '2026-10-23T17:00:00.000Z',
+      }),
+      new Map(),
+      { roundName: 'Petite finale', isBye: false }
+    );
+    const grande = shapeMatchdayMatch(
+      match({ id: 'grande', scheduled_at: '2026-10-23T18:30:00.000Z' }),
+      new Map(),
+      { roundName: 'Grande finale', isBye: false }
+    );
+    if (!petite || !grande) throw new Error('fixture invalide');
+    return { date: '2026-10-23', matches: [petite, grande], totalCount: 2 };
+  }
+
+  it('annonce les deux finales, nommées, et le finaliste à venir', () => {
+    const html = renderToString(
+      createElement(HomeMatchdayStrip, {
+        matchday: finalsDay(),
+        matchesHref: '/tournament/ow-womens-cup-2026/matches',
+      })
+    );
+    expect(html).toContain('2 matchs au programme');
+    expect(html).toContain('Petite finale');
+    expect(html).toContain('Grande finale');
+    expect(html).toContain('À déterminer');
+  });
+
+  it('montre une journée de deux affiches en grandes cartes', () => {
+    expect(LARGE_MATCHDAY_MAX).toBe(2);
+    const html = renderToString(
+      createElement(HomeMatchdayStrip, {
+        matchday: finalsDay(),
+        matchesHref: '/tournament/ow-womens-cup-2026/matches',
+      })
+    );
+    // Grand format : rembourrage et blasons agrandis.
+    expect(html).toContain('py-5');
+    expect(html).toContain('h-12 w-12');
   });
 });

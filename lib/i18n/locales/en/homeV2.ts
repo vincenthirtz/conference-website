@@ -42,6 +42,7 @@ export default {
   spotTitle: "What's next",
   matchdayTitle_one: '{count} match on the schedule',
   matchdayTitle_other: '{count} matches on the schedule',
+  matchdayTbd: 'TBD',
   matchdayLive: 'Live',
   matchdayFinished: 'Final',
   matchdayMatchAria: '{home} versus {away}, at {time}',

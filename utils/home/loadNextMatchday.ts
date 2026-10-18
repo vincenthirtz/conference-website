@@ -15,14 +15,19 @@
 //
 // CE QU'ON NE MONTRE PAS :
 //   - un match sans `scheduled_at` : sans heure, ce n'est pas une affiche ;
-//   - un match dont un côté n'est pas connu (`team1_id`/`team2_id` nuls) :
-//     demi-finale à pourvoir, exempt (bye)… « À déterminer » contre une équipe
-//     réelle n'annonce rien, et un bye n'est pas un match.
-// Ces matchs ne DISQUALIFIENT PAS leur journée pour autant : on choisit d'abord
-// le jour, on liste ensuite ce qui s'y joue vraiment.
+//   - un EXEMPT (bye) : ce n'est pas un match.
+// Un côté pas encore connu, lui, S'AFFICHE « À déterminer » (2026-10-18) : la
+// petite finale du 23/10 attendait son second finaliste, et la home annonçait
+// « 1 match au programme » un soir de deux finales. Le drapeau `is_bye` et le
+// nom de la manche (« Petite finale », « Grande finale ») ne sont pas rendus
+// par la lecture publique : ils sont lus à part (`readMatchMeta`). Sans eux,
+// on retombe sur la règle d'avant — pas d'affiche à un côté inconnu.
+// Ces matchs ne DISQUALIFIENT PAS leur journée : on choisit d'abord le jour,
+// on liste ensuite ce qui s'y joue vraiment.
 
 import type { HomeTeam } from '@/utils/home/loadHomeData';
 import { logger } from '@/utils/logger';
+import { supabaseAdmin } from '@/utils/supabase';
 import {
   readPublicTournamentMatches,
   type PublicMatch,
@@ -36,19 +41,27 @@ import { getWallClockParts, SITE_TIMEZONE } from '@/utils/timezone';
  */
 export const HOME_MATCHDAY_MAX = 6;
 
-/** Une affiche : deux équipes connues, une heure, un état. */
+/** Une affiche : deux côtés, une heure, un état. */
 export type HomeMatchdayMatch = {
   id: string;
   /** ISO, jamais nul — un match sans horaire n'entre pas ici. */
   scheduledAt: string;
   /** `pending` | `ongoing` | `finished` (cf. PUBLIC_MATCH_STATUSES). */
   status: string;
-  team1: HomeTeam;
-  team2: HomeTeam;
+  /** `null` = pas encore connue (« À déterminer »), jamais un exempt. */
+  team1: HomeTeam | null;
+  team2: HomeTeam | null;
   team1Score: number | null;
   team2Score: number | null;
   winnerTeamId: string | null;
+  /** « Petite finale », « J7 »… ; null si inconnu. */
+  roundName: string | null;
+  /** Hors phase (finales) : la manche se nomme toujours sur l'affiche. */
+  outOfStage: boolean;
 };
+
+/** Ce que la lecture publique ne rend pas d'un match. */
+export type MatchMeta = { roundName: string | null; isBye: boolean };
 
 export type HomeMatchday = {
   /** Jour calendaire à Paris (YYYY-MM-DD) de la journée annoncée. */
@@ -88,14 +101,19 @@ export function selectNextMatchday(
 export function selectNextMatchdays(
   matches: PublicMatch[],
   now: Date,
-  limit = 2
+  limit = 2,
+  /**
+   * Garde un match à un côté inconnu (cf. l'en-tête). Absent = jamais : sans
+   * savoir qu'un match n'est pas un exempt, on ne l'annonce pas.
+   */
+  allowUnknownSide: (m: PublicMatch) => boolean = () => false
 ): { date: string; matches: PublicMatch[] }[] {
   const today = getWallClockParts(now, SITE_TIMEZONE).date;
   const byDate = new Map<string, PublicMatch[]>();
 
   for (const m of matches) {
     if (!m.scheduled_at) continue;
-    if (!m.team1_id || !m.team2_id) continue;
+    if ((!m.team1_id || !m.team2_id) && !allowUnknownSide(m)) continue;
     const at = new Date(m.scheduled_at);
     if (Number.isNaN(at.getTime())) continue;
     const date = getWallClockParts(at, SITE_TIMEZONE).date;
@@ -148,15 +166,29 @@ function toHomeTeam(
   };
 }
 
-/** Met une affiche en forme, ou `null` si une équipe reste sans nom. */
+/**
+ * Met une affiche en forme, ou `null` si elle n'annonce rien : pas d'heure,
+ * une équipe connue mais sans nom, ou un côté inconnu sans `meta` qui prouve
+ * que ce n'est pas un exempt.
+ */
 export function shapeMatchdayMatch(
   m: PublicMatch,
-  known: Map<string, HomeTeam>
+  known: Map<string, HomeTeam>,
+  meta?: MatchMeta
 ): HomeMatchdayMatch | null {
-  if (!m.team1_id || !m.team2_id || !m.scheduled_at) return null;
-  const team1 = toHomeTeam(m.team1_id, m.team1_name, m.team1_logo_url, known);
-  const team2 = toHomeTeam(m.team2_id, m.team2_name, m.team2_logo_url, known);
-  if (!team1 || !team2) return null;
+  if (!m.scheduled_at) return null;
+  const unknownAllowed = meta !== undefined && !meta.isBye;
+  const side = (
+    id: string | null,
+    name: string | null,
+    logoUrl: string | null
+  ): HomeTeam | null | undefined => {
+    if (!id) return unknownAllowed ? null : undefined;
+    return toHomeTeam(id, name, logoUrl, known) ?? undefined;
+  };
+  const team1 = side(m.team1_id, m.team1_name, m.team1_logo_url);
+  const team2 = side(m.team2_id, m.team2_name, m.team2_logo_url);
+  if (team1 === undefined || team2 === undefined) return null;
   return {
     id: m.id,
     scheduledAt: m.scheduled_at,
@@ -166,7 +198,49 @@ export function shapeMatchdayMatch(
     team1Score: m.team1_score,
     team2Score: m.team2_score,
     winnerTeamId: m.winner_team_id,
+    roundName: meta?.roundName ?? null,
+    outOfStage: m.stage_id == null,
   };
+}
+
+/**
+ * Nom de manche et drapeau d'exempt des matchs du tournoi, que la lecture
+ * publique ne rend pas. UNE requête par régénération de la home (ISR 15 min).
+ * Lecture en échec → carte vide : la home garde la règle d'avant (pas de côté
+ * inconnu, pas de nom de manche), elle ne tombe pas.
+ */
+async function readMatchMeta(
+  tenantId: string,
+  tournamentId: string
+): Promise<Map<string, MatchMeta>> {
+  const meta = new Map<string, MatchMeta>();
+  if (!supabaseAdmin) return meta;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('matches')
+      .select('id, round_name, is_bye')
+      .eq('tenant_id', tenantId)
+      .eq('tournament_id', tournamentId)
+      .is('deleted_at', null)
+      .limit(500);
+    if (error) {
+      logger.error('[loadNextMatchday] meta error', error);
+      return meta;
+    }
+    for (const row of (data ?? []) as Array<{
+      id: string;
+      round_name: string | null;
+      is_bye: boolean | null;
+    }>) {
+      meta.set(row.id, {
+        roundName: row.round_name?.trim() || null,
+        isBye: row.is_bye === true,
+      });
+    }
+  } catch (err) {
+    logger.error('[loadNextMatchday] meta exception', err);
+  }
+  return meta;
 }
 
 /**
@@ -208,11 +282,13 @@ export async function loadNextMatchdays(
   }
 
   const known = new Map(teams.map((t) => [t.id, t]));
+  const meta = await readMatchMeta(tenantId, tournamentId);
+  const notBye = (m: PublicMatch) => meta.get(m.id)?.isBye === false;
   const days: HomeMatchday[] = [];
 
-  for (const picked of selectNextMatchdays(all, now, limit)) {
+  for (const picked of selectNextMatchdays(all, now, limit, notBye)) {
     const shaped = picked.matches
-      .map((m) => shapeMatchdayMatch(m, known))
+      .map((m) => shapeMatchdayMatch(m, known, meta.get(m.id)))
       .filter((m): m is HomeMatchdayMatch => m !== null);
     // Une journée dont aucune affiche n'est complète ne s'affiche pas — mais
     // elle ne doit pas non plus masquer la suivante.

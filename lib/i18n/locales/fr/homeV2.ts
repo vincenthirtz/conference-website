@@ -64,6 +64,8 @@ export default ns('homeV2', {
   // dans la langue de l'interface (« vendredi 18 septembre »).
   matchdayTitle_one: '{count} match au programme',
   matchdayTitle_other: '{count} matchs au programme',
+  // Un côté pas encore connu (finaliste à venir).
+  matchdayTbd: 'À déterminer',
   matchdayLive: 'En direct',
   matchdayFinished: 'Terminé',
   matchdayMatchAria: '{home} contre {away}, à {time}',

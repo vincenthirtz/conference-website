@@ -33,40 +33,74 @@ import type {
 import type { HomeTeam } from '@/utils/home/loadHomeData';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 
-/** Un côté de l'affiche. `align` met les deux équipes en miroir. */
+/**
+ * Un côté de l'affiche. `align` met les deux équipes en miroir. `team` nul =
+ * pas encore connue (finaliste à venir) : « À déterminer », sans blason.
+ */
 function MatchSide({
   team,
   align,
   dimmed,
+  large,
 }: {
-  team: HomeTeam;
+  team: HomeTeam | null;
   align: 'start' | 'end';
   dimmed: boolean;
+  large: boolean;
 }): JSX.Element {
+  const t = useT(nsHomeV2);
+  const nameClass = large
+    ? 'text-base sm:text-lg font-bold'
+    : 'text-[13px] sm:text-sm font-semibold';
   return (
     <span
-      className={`flex min-w-0 items-center gap-2 ${
+      className={`flex min-w-0 items-center ${large ? 'gap-3' : 'gap-2'} ${
         align === 'end' ? 'flex-row-reverse text-right' : 'text-left'
       }`}
     >
-      <TeamAvatar
-        name={team.name}
-        shortName={team.shortName}
-        logoUrl={team.logoUrl}
-        size="sm"
-      />
+      {team ? (
+        <TeamAvatar
+          name={team.name}
+          shortName={team.shortName}
+          logoUrl={team.logoUrl}
+          size={large ? 'md' : 'sm'}
+        />
+      ) : (
+        <span
+          aria-hidden
+          className={`flex shrink-0 items-center justify-center rounded-full border border-dashed border-white/25 font-bold text-gray-400 ${
+            large ? 'h-12 w-12 text-base' : 'h-8 w-8 text-xs'
+          }`}
+        >
+          ?
+        </span>
+      )}
       <span
-        className={`min-w-0 truncate text-[13px] font-semibold leading-tight transition-colors sm:text-sm ${
-          dimmed ? 'text-gray-400' : 'text-white'
+        className={`min-w-0 truncate leading-tight transition-colors ${nameClass} ${
+          !team
+            ? 'italic text-gray-400'
+            : dimmed
+              ? 'text-gray-400'
+              : 'text-white'
         }`}
       >
-        {team.name}
+        {team?.name ?? t.matchdayTbd}
       </span>
     </span>
   );
 }
 
-function MatchRow({ match }: { match: HomeMatchdayMatch }): JSX.Element {
+function MatchRow({
+  match,
+  showRound,
+  large,
+}: {
+  match: HomeMatchdayMatch;
+  /** Nommer la manche sur l'affiche (finales, journée à manches mêlées). */
+  showRound: boolean;
+  /** Journée de une ou deux affiches : cartes agrandies. */
+  large: boolean;
+}): JSX.Element {
   const t = useT(nsHomeV2);
   const locale = useLocale();
 
@@ -82,24 +116,24 @@ function MatchRow({ match }: { match: HomeMatchdayMatch }): JSX.Element {
     (isLive || isDone) && match.team1Score != null && match.team2Score != null;
   // Terminé : le perdant s'efface, sans qu'il faille lire les chiffres pour
   // savoir qui l'emporte. Tant que rien n'est joué, les deux sont à égalité.
-  const dimmed = (teamId: string) =>
-    isDone && !!match.winnerTeamId && match.winnerTeamId !== teamId;
+  const dimmed = (team: HomeTeam | null) =>
+    isDone && !!team && !!match.winnerTeamId && match.winnerTeamId !== team.id;
+  const home = match.team1?.name ?? t.matchdayTbd;
+  const away = match.team2?.name ?? t.matchdayTbd;
+  const round = showRound ? match.roundName : null;
 
   // Le nom accessible est RÉDIGÉ plutôt que déduit du contenu : lu tel quel,
   // « Chocomates 2 – 1 Eclypse 20:30 » ne dit pas qui affronte qui.
-  const label = hasScore
+  const matchLabel = hasScore
     ? format(t.matchdayMatchAriaScore, {
-        home: match.team1.name,
-        away: match.team2.name,
+        home,
+        away,
         score1: match.team1Score as number,
         score2: match.team2Score as number,
         time,
       })
-    : format(t.matchdayMatchAria, {
-        home: match.team1.name,
-        away: match.team2.name,
-        time,
-      });
+    : format(t.matchdayMatchAria, { home, away, time });
+  const label = round ? `${round} : ${matchLabel}` : matchLabel;
 
   return (
     <li>
@@ -107,29 +141,54 @@ function MatchRow({ match }: { match: HomeMatchdayMatch }): JSX.Element {
         prefetch={false}
         href={`/match/${match.id}`}
         aria-label={label}
-        className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3 transition-colors hover:border-[var(--color-violet-light)]/50 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] sm:gap-3 sm:px-4"
+        className={`grid grid-cols-[1fr_auto_1fr] items-center rounded-2xl border border-white/10 bg-white/[0.03] transition-colors hover:border-[var(--color-violet-light)]/50 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] ${
+          large
+            ? 'gap-x-3 gap-y-3 px-4 py-5 sm:gap-x-4 sm:px-6'
+            : 'gap-2 px-3 py-3 sm:gap-3 sm:px-4'
+        }`}
       >
+        {round && (
+          <span
+            className={`col-span-3 text-center font-bold uppercase tracking-[0.18em] text-[var(--color-violet-light)] ${
+              large ? 'text-xs sm:text-sm' : 'text-[10px]'
+            }`}
+          >
+            {round}
+          </span>
+        )}
+
         <MatchSide
           team={match.team1}
           align="end"
-          dimmed={dimmed(match.team1.id)}
+          dimmed={dimmed(match.team1)}
+          large={large}
         />
 
         <span className="flex shrink-0 flex-col items-center gap-1">
           {hasScore ? (
-            <span className="text-base font-extrabold tabular-nums text-white sm:text-lg">
-              <span className={dimmed(match.team1.id) ? 'text-gray-400' : ''}>
+            <span
+              className={`font-extrabold tabular-nums text-white ${
+                large ? 'text-2xl sm:text-3xl' : 'text-base sm:text-lg'
+              }`}
+            >
+              <span className={dimmed(match.team1) ? 'text-gray-400' : ''}>
                 {match.team1Score}
               </span>
               <span className="mx-1 text-gray-400" aria-hidden>
                 –
               </span>
-              <span className={dimmed(match.team2.id) ? 'text-gray-400' : ''}>
+              <span className={dimmed(match.team2) ? 'text-gray-400' : ''}>
                 {match.team2Score}
               </span>
             </span>
           ) : (
-            <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[13px] font-bold tabular-nums text-white">
+            <span
+              className={`rounded-full border border-white/10 bg-white/5 font-bold tabular-nums text-white ${
+                large
+                  ? 'px-3.5 py-1.5 text-base sm:text-lg'
+                  : 'px-2.5 py-1 text-[13px]'
+              }`}
+            >
               {time}
             </span>
           )}
@@ -153,11 +212,29 @@ function MatchRow({ match }: { match: HomeMatchdayMatch }): JSX.Element {
         <MatchSide
           team={match.team2}
           align="start"
-          dimmed={dimmed(match.team2.id)}
+          dimmed={dimmed(match.team2)}
+          large={large}
         />
       </Link>
     </li>
   );
+}
+
+/** Au plus autant d'affiches : la journée se montre en grandes cartes (finales). */
+export const LARGE_MATCHDAY_MAX = 2;
+
+/**
+ * Nommer la manche sur les affiches : toujours hors phase (finales), et
+ * quand la journée mêle plusieurs manches. Une journée de saison, toute en
+ * « J7 », ne le répète pas sur chaque carte. PURE.
+ */
+export function shouldShowRound(
+  match: HomeMatchdayMatch,
+  day: HomeMatchdayMatch[]
+): boolean {
+  if (!match.roundName) return false;
+  if (match.outOfStage) return true;
+  return new Set(day.map((m) => m.roundName ?? '')).size > 1;
 }
 
 export default function HomeMatchdayStrip({
@@ -237,6 +314,7 @@ function DaySection({
     month: 'long',
   });
   const hidden = matchday.totalCount - matchday.matches.length;
+  const large = matchday.matches.length <= LARGE_MATCHDAY_MAX;
 
   return (
     <div className={following ? 'mt-6 border-t border-white/5 pt-6' : ''}>
@@ -254,9 +332,18 @@ function DaySection({
         </p>
       </div>
 
-      <ul className="grid list-none grid-cols-1 gap-2 px-4 sm:px-6 lg:grid-cols-2">
+      <ul
+        className={`grid list-none grid-cols-1 px-4 sm:px-6 lg:grid-cols-2 ${
+          large ? 'gap-3' : 'gap-2'
+        }`}
+      >
         {matchday.matches.map((m) => (
-          <MatchRow key={m.id} match={m} />
+          <MatchRow
+            key={m.id}
+            match={m}
+            showRound={shouldShowRound(m, matchday.matches)}
+            large={large}
+          />
         ))}
       </ul>
 
