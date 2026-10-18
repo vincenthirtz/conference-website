@@ -113,6 +113,38 @@ export function unsubscribedRewards(
   return designated.filter((d) => !covered.has(d.rewardId));
 }
 
+export type RepairStep =
+  /** Aucune récompense désignée : la créer (ou la reprendre), puis l'abonner. */
+  | { kind: 'setupThenSubscribe' }
+  /** Ré-abonner une récompense DÉJÀ désignée, telle quelle (409 = déjà là). */
+  | { kind: 'subscribe'; rewardId: string; featuredFanartId?: string };
+
+/**
+ * Ce que fait « Mettre le drop en service », dans l'ordre. PURE.
+ *
+ * UNE RÉCOMPENSE DÉJÀ DÉSIGNÉE SE RÉ-ABONNE, ELLE NE SE RECHERCHE PAS. La mise
+ * en service retrouve la sienne par son TITRE exact (« Carte à collectionner »).
+ * Renommée dans Twitch — « Carte à collectionner simple », 8 000 points, la
+ * Cup 2026 —, elle n'était plus reconnue : le bouton en créait une SECONDE à
+ * 1 000 points et la désignait à sa place, pendant que celle que le public
+ * échangeait restait sourde. Le titre ne sert donc qu'en l'absence de
+ * désignation.
+ */
+export function repairSteps(state: EventSubState | null): RepairStep[] {
+  const steps: RepairStep[] = state?.rewardId
+    ? [{ kind: 'subscribe', rewardId: state.rewardId }]
+    : [{ kind: 'setupThenSubscribe' }];
+  for (const missing of state ? unsubscribedRewards(state) : []) {
+    if (!missing.fanartId) continue;
+    steps.push({
+      kind: 'subscribe',
+      rewardId: missing.rewardId,
+      featuredFanartId: missing.fanartId,
+    });
+  }
+  return steps;
+}
+
 export default function TcgDropHealthCard() {
   const t = useAdminT(nsAdminBroadcastLive);
   // Absente tant qu'elle n'est pas lue, et si elle est illisible (droits
@@ -135,29 +167,34 @@ export default function TcgDropHealthCard() {
   const [setupError, setSetupError] = useState<string | null>(null);
 
   /**
-   * Met le drop en service : la récompense, puis l'abonnement.
+   * Met le drop en service : la récompense, puis l'abonnement (cf.
+   * `repairSteps`).
    *
-   * DEUX APPELS, MAIS UN SEUL EFFET DE BORD REJOUABLE. `setup` reprend la
-   * récompense existante plutôt que d'en créer une seconde, et l'abonnement
-   * vérifie l'existence avant de créer : relancer après un échec partiel est
-   * sans danger — c'est ce qui permet d'offrir un simple bouton « réessayer »
-   * plutôt qu'une procédure.
+   * CHAQUE ÉTAPE SE REJOUE SANS DANGER. `setup` reprend la récompense existante
+   * plutôt que d'en créer une seconde, une récompense déjà désignée est
+   * ré-abonnée telle quelle, et l'abonnement vérifie l'existence avant de
+   * créer : relancer après un échec partiel est sans danger — c'est ce qui
+   * permet d'offrir un simple bouton « réessayer » plutôt qu'une procédure.
    */
   const setup = useCallback(async () => {
     if (busy) return;
     setBusy(true);
     setSetupError(null);
     try {
-      const { rewardId } = await broadcastCardsClient.tcgDropSetupReward();
-      await broadcastCardsClient.tcgDropSubscribe({ rewardId });
-      // Les mises en avant restées sans abonnement : le même appel les
-      // ré-abonne (désignation reprise telle quelle, 409 = déjà là).
-      for (const missing of state ? unsubscribedRewards(state) : []) {
-        if (!missing.fanartId) continue;
-        await broadcastCardsClient.tcgDropSubscribe({
-          rewardId: missing.rewardId,
-          featuredFanartId: missing.fanartId,
-        });
+      for (const step of repairSteps(state)) {
+        if (step.kind === 'setupThenSubscribe') {
+          const { rewardId } = await broadcastCardsClient.tcgDropSetupReward();
+          await broadcastCardsClient.tcgDropSubscribe({ rewardId });
+        } else {
+          await broadcastCardsClient.tcgDropSubscribe(
+            step.featuredFanartId
+              ? {
+                  rewardId: step.rewardId,
+                  featuredFanartId: step.featuredFanartId,
+                }
+              : { rewardId: step.rewardId }
+          );
+        }
       }
       await load();
     } catch (err) {

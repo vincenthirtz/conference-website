@@ -1,16 +1,24 @@
 // Carte « Drops TCG » (Diffusion › Overlays, onglet Récompenses) : les
 // récompenses désignées qu'aucun abonnement EventSub ne couvre.
-// Target : components/admin/broadcast/TcgDropHealthCard.tsx (unsubscribedRewards)
+// Target : components/admin/broadcast/TcgDropHealthCard.tsx
+//          (unsubscribedRewards, repairSteps)
 //
 // CE QUE CES CAS PROTÈGENT. Twitch filtre chaque abonnement sur UNE récompense.
 // Une récompense désignée sans le sien ne livre rien au site : ses échanges
 // coûtent des points pour rien, sans remboursement ni message — et la carte se
 // disait « saine » dès qu'un seul abonnement était actif (constaté le
-// 2026-10-18 : aucun drop crédité depuis le 7, Octobre Rose re-désignée en
-// base le 14 sans passer par Twitch).
+// 2026-10-18 : aucun drop ordinaire crédité, jamais ; Octobre Rose
+// re-désignée en base le 14 sans passer par Twitch).
+//
+// ET LA RÉPARATION NE DOIT PAS CRÉER UNE SECONDE RÉCOMPENSE : celle du drop,
+// renommée dans Twitch (« Carte à collectionner simple »), n'est plus
+// retrouvée par son titre — elle se ré-abonne par son identifiant.
 
 import { describe, expect, it } from 'vitest';
-import { unsubscribedRewards } from '@/components/admin/broadcast/TcgDropHealthCard';
+import {
+  repairSteps,
+  unsubscribedRewards,
+} from '@/components/admin/broadcast/TcgDropHealthCard';
 import type { TcgDropEventSubState } from '@/features/admin/diffusion/liveClient';
 
 const DROP = '870157ee-45b0-4a37-b61e-3ab1a90d838e';
@@ -109,5 +117,30 @@ describe('récompenses désignées sans abonnement', () => {
         })
       )
     ).toEqual([{ rewardId: ROSE, title: null, fanartId: 'fan-rose' }]);
+  });
+});
+
+describe('mise en service : ce que fait le bouton', () => {
+  it('une récompense de drop DÉSIGNÉE se ré-abonne par son identifiant, sans recherche par titre', () => {
+    expect(
+      repairSteps(
+        state({
+          subscriptions: [{ id: 's2', status: 'enabled', rewardId: HALLOWEEN }],
+        })
+      )
+    ).toEqual([
+      { kind: 'subscribe', rewardId: DROP },
+      { kind: 'subscribe', rewardId: ROSE, featuredFanartId: 'fan-rose' },
+    ]);
+  });
+
+  it('sans récompense désignée : la créer (ou la reprendre par son titre), puis l’abonner', () => {
+    expect(
+      repairSteps(state({ rewardId: null, featured: [], subscriptions: [] }))
+    ).toEqual([{ kind: 'setupThenSubscribe' }]);
+  });
+
+  it('état illisible : le chemin de création, comme avant', () => {
+    expect(repairSteps(null)).toEqual([{ kind: 'setupThenSubscribe' }]);
   });
 });
