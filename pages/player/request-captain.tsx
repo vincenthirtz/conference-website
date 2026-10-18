@@ -102,7 +102,9 @@ function RequestCaptainPage() {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  // `created` : une manager qui crée une NOUVELLE équipe ne passe pas par la
+  // validation admin — l'API rend `autoApproved`, l'équipe existe déjà.
+  const [success, setSuccess] = useState<null | 'sent' | 'created'>(null);
   const [successTeamName, setSuccessTeamName] = useState('');
 
   const debouncedSearch = useDebounce(teamSearch, 300);
@@ -276,10 +278,13 @@ function RequestCaptainPage() {
         }
       }
 
-      await adminFetchJson('/api/demandes/captain', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      });
+      const result = await adminFetchJson<{ autoApproved?: boolean }>(
+        '/api/demandes/captain',
+        {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }
+      );
 
       if (mode === 'existing') {
         const team = teams.find((tm) => tm.id === selectedTeamId);
@@ -288,7 +293,7 @@ function RequestCaptainPage() {
         setSuccessTeamName(teamName.trim());
       }
 
-      setSuccess(true);
+      setSuccess(result?.autoApproved === true ? 'created' : 'sent');
     } catch (err: unknown) {
       setError((err as Error).message || t.errGeneric);
     } finally {
@@ -337,9 +342,18 @@ function RequestCaptainPage() {
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold mb-4">{t.successHeading}</h1>
+            <h1 className="text-2xl font-bold mb-4">
+              {success === 'created'
+                ? t.successCreatedHeading
+                : t.successHeading}
+            </h1>
             <p className="text-gray-400 mb-6">
-              {format(t.successBody, { teamName: successTeamName })}
+              {format(
+                success === 'created' ? t.successCreatedBody : t.successBody,
+                {
+                  teamName: successTeamName,
+                }
+              )}
             </p>
             <Link
               href="/player"

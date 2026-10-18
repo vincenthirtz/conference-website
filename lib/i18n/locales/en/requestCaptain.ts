@@ -24,12 +24,15 @@ export default {
   successHeading: 'Request sent',
   successBody:
     'Your request to become captain of "{teamName}" has been sent. An admin will review it soon.',
+  successCreatedHeading: 'Team created',
+  successCreatedBody:
+    '"{teamName}" has been created: you are its manager. Your players have received their invitation.',
   backToSpace: 'Back to my space',
   pageTitleTab: "Become a captain | OW Women's Cup",
   backLink: '← Back to my space',
   heading: 'Become a team captain',
   intro:
-    'Choose an existing team or create a new one. An admin will review your request.',
+    'Choose an existing team or create a new one. An admin will review your request — unless you are a manager creating a new team: it is created right away.',
   modeNew: 'Create a team',
   modeExisting: 'Existing team',
   messageLabel: 'Message (optional)',

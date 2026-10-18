@@ -24,12 +24,16 @@ export default ns('requestCaptain', {
   successHeading: 'Demande envoyee',
   successBody:
     'Ta demande pour devenir capitaine de "{teamName}" a bien ete envoyee. Un admin la validera prochainement.',
+  // Une manager qui cree une NOUVELLE equipe : pas de validation admin.
+  successCreatedHeading: 'Equipe creee',
+  successCreatedBody:
+    'L\'equipe "{teamName}" est creee : tu en es la manager. Tes joueuses ont recu leur invitation.',
   backToSpace: 'Retour a mon espace',
   pageTitleTab: "Devenir capitaine | OW Women's Cup",
   backLink: '← Retour a mon espace',
   heading: "Devenir capitaine d'equipe",
   intro:
-    'Choisis une equipe existante ou cree-en une nouvelle. Un admin validera ta demande.',
+    'Choisis une equipe existante ou cree-en une nouvelle. Un admin validera ta demande — sauf si tu es manager et crees une nouvelle equipe : elle est creee tout de suite.',
   modeNew: 'Creer une equipe',
   modeExisting: 'Equipe existante',
   messageLabel: 'Message (optionnel)',
