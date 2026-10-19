@@ -2515,6 +2515,370 @@ export type Database = {
           },
         ]
       }
+      library_avatars: {
+        Row: {
+          adult_attested_at: string | null
+          avatar_id: string
+          created_at: string
+          look: Json
+          nickname: string
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          adult_attested_at?: string | null
+          avatar_id?: string
+          created_at?: string
+          look?: Json
+          nickname: string
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          adult_attested_at?: string | null
+          avatar_id?: string
+          created_at?: string
+          look?: Json
+          nickname?: string
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_avatars_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_bans: {
+        Row: {
+          by_staff_id: string | null
+          created_at: string
+          id: string
+          reason: string | null
+          tenant_id: string
+          until: string | null
+          user_id: string
+        }
+        Insert: {
+          by_staff_id?: string | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+          tenant_id: string
+          until?: string | null
+          user_id: string
+        }
+        Update: {
+          by_staff_id?: string | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+          tenant_id?: string
+          until?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_bans_by_staff_id_fkey"
+            columns: ["by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "library_bans_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_blocks: {
+        Row: {
+          blocked_user_id: string
+          blocker_user_id: string
+          created_at: string
+          tenant_id: string
+        }
+        Insert: {
+          blocked_user_id: string
+          blocker_user_id: string
+          created_at?: string
+          tenant_id: string
+        }
+        Update: {
+          blocked_user_id?: string
+          blocker_user_id?: string
+          created_at?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_blocks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_inventory: {
+        Row: {
+          acquired_at: string
+          furniture_key: string
+          id: string
+          source_ref: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          acquired_at?: string
+          furniture_key: string
+          id?: string
+          source_ref: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          acquired_at?: string
+          furniture_key?: string
+          id?: string
+          source_ref?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_inventory_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_messages: {
+        Row: {
+          body: string
+          created_at: string
+          hidden_at: string | null
+          hidden_by: string | null
+          id: string
+          room_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          hidden_at?: string | null
+          hidden_by?: string | null
+          id?: string
+          room_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          hidden_at?: string | null
+          hidden_by?: string | null
+          id?: string
+          room_id?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_messages_room_fkey"
+            columns: ["room_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "library_rooms"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "library_messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_mutes: {
+        Row: {
+          by_user_id: string | null
+          created_at: string
+          id: string
+          reason: string | null
+          room_id: string | null
+          tenant_id: string
+          until: string
+          user_id: string
+        }
+        Insert: {
+          by_user_id?: string | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+          room_id?: string | null
+          tenant_id: string
+          until: string
+          user_id: string
+        }
+        Update: {
+          by_user_id?: string | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+          room_id?: string | null
+          tenant_id?: string
+          until?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_mutes_room_fkey"
+            columns: ["room_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "library_rooms"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "library_mutes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_room_items: {
+        Row: {
+          gx: number
+          gy: number
+          inventory_id: string
+          placed_at: string
+          room_id: string
+          rotation: number
+          tenant_id: string
+          z: number
+        }
+        Insert: {
+          gx: number
+          gy: number
+          inventory_id: string
+          placed_at?: string
+          room_id: string
+          rotation?: number
+          tenant_id: string
+          z?: number
+        }
+        Update: {
+          gx?: number
+          gy?: number
+          inventory_id?: string
+          placed_at?: string
+          room_id?: string
+          rotation?: number
+          tenant_id?: string
+          z?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_room_items_inventory_fkey"
+            columns: ["inventory_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "library_inventory"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "library_room_items_room_fkey"
+            columns: ["room_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "library_rooms"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "library_room_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_rooms: {
+        Row: {
+          access: string
+          created_at: string
+          decor: Json
+          depth: number
+          id: string
+          kind: string
+          listed: boolean
+          name: string | null
+          owner_user_id: string | null
+          team_id: string | null
+          tenant_id: string
+          version: number
+          width: number
+        }
+        Insert: {
+          access?: string
+          created_at?: string
+          decor?: Json
+          depth?: number
+          id?: string
+          kind: string
+          listed?: boolean
+          name?: string | null
+          owner_user_id?: string | null
+          team_id?: string | null
+          tenant_id: string
+          version?: number
+          width?: number
+        }
+        Update: {
+          access?: string
+          created_at?: string
+          decor?: Json
+          depth?: number
+          id?: string
+          kind?: string
+          listed?: boolean
+          name?: string | null
+          owner_user_id?: string | null
+          team_id?: string | null
+          tenant_id?: string
+          version?: number
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_rooms_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "library_rooms_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lobbies: {
         Row: {
           best_of: number | null
@@ -9338,6 +9702,26 @@ export type Database = {
           source_table: string
           target_table: string
         }[]
+      }
+      library_buy_furniture: {
+        Args: {
+          p_key: string
+          p_price: number
+          p_source_ref: string
+          p_tenant_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      library_save_room_items: {
+        Args: {
+          p_expected_version: number
+          p_items: Json
+          p_room_id: string
+          p_tenant_id: string
+          p_user_id: string
+        }
+        Returns: Json
       }
       pool_place: {
         Args: {

@@ -35,5 +35,6 @@ export default ns('playerTopBar', {
     discovery: 'Réseau',
     notifications: 'Notifications',
     profile: 'Mon profil',
+    library: 'Women’s Library',
   },
 });

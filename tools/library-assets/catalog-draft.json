@@ -1,0 +1,556 @@
+{
+  "note": "Généré par tools/library-assets/build.mjs depuis le manifeste rendu et sources.json. À reporter dans config/library/furniture.ts (conference-api).",
+  "tile": {
+    "width": 64,
+    "height": 32,
+    "meters": 0.5
+  },
+  "furniture": {
+    "bookshelf": {
+      "category": "storage",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 2.06,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250
+    },
+    "armchair": {
+      "category": "seating",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.07,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "lamp": {
+      "category": "lighting",
+      "footprint": {
+        "w": 1,
+        "d": 2
+      },
+      "heightM": 0.89,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 100
+    },
+    "bookshelf_filled": {
+      "category": "storage",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 2.06,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 450
+    },
+    "bookshelf_double": {
+      "category": "storage",
+      "footprint": {
+        "w": 3,
+        "d": 2
+      },
+      "heightM": 2.06,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 850
+    },
+    "shelf_small": {
+      "category": "storage",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.13,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "display_shelves": {
+      "category": "storage",
+      "footprint": {
+        "w": 2,
+        "d": 1
+      },
+      "heightM": 1.56,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "wardrobe": {
+      "category": "storage",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 2.57,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 500
+    },
+    "cabinet": {
+      "category": "storage",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 1.13,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250
+    },
+    "drawer_cabinet": {
+      "category": "storage",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 1.88,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "sideboard": {
+      "category": "storage",
+      "footprint": {
+        "w": 5,
+        "d": 1
+      },
+      "heightM": 0.68,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 350
+    },
+    "armchair_green": {
+      "category": "seating",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.06,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "chair": {
+      "category": "seating",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.97,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 80
+    },
+    "chair_painted": {
+      "category": "seating",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.96,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 70
+    },
+    "sofa": {
+      "category": "seating",
+      "footprint": {
+        "w": 3,
+        "d": 2
+      },
+      "heightM": 0.8,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 500
+    },
+    "sofa_large": {
+      "category": "seating",
+      "footprint": {
+        "w": 6,
+        "d": 2
+      },
+      "heightM": 1.12,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 800
+    },
+    "bench": {
+      "category": "seating",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 0.89,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "ottoman": {
+      "category": "seating",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.62,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 100
+    },
+    "lounge_chair": {
+      "category": "seating",
+      "footprint": {
+        "w": 2,
+        "d": 3
+      },
+      "heightM": 1.17,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 600
+    },
+    "rocking_chair": {
+      "category": "seating",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.99,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 350
+    },
+    "stool": {
+      "category": "seating",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.44,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 50
+    },
+    "reading_table": {
+      "category": "table",
+      "footprint": {
+        "w": 5,
+        "d": 2
+      },
+      "heightM": 1.14,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 600
+    },
+    "desk": {
+      "category": "table",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 0.83,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250
+    },
+    "coffee_table": {
+      "category": "table",
+      "footprint": {
+        "w": 3,
+        "d": 2
+      },
+      "heightM": 0.52,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 200
+    },
+    "coffee_table_round": {
+      "category": "table",
+      "footprint": {
+        "w": 3,
+        "d": 3
+      },
+      "heightM": 0.49,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 220
+    },
+    "side_table": {
+      "category": "table",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.55,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 90
+    },
+    "nightstand": {
+      "category": "table",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.7,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 100
+    },
+    "round_table": {
+      "category": "table",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.75,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 180
+    },
+    "console_table": {
+      "category": "table",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 0.95,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250
+    },
+    "reception_desk": {
+      "category": "table",
+      "footprint": {
+        "w": 5,
+        "d": 2
+      },
+      "heightM": 1.42,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 900
+    },
+    "bankers_lamp": {
+      "category": "lighting",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.38,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 120
+    },
+    "floor_lamp": {
+      "category": "lighting",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.65,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "bed": {
+      "category": "bed",
+      "footprint": {
+        "w": 3,
+        "d": 4
+      },
+      "heightM": 1.53,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 800
+    },
+    "daybed": {
+      "category": "bed",
+      "footprint": {
+        "w": 4,
+        "d": 2
+      },
+      "heightM": 1.13,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 600
+    },
+    "plant_tall": {
+      "category": "plant",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.22,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "plant_medium": {
+      "category": "plant",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.67,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 100
+    },
+    "cactus": {
+      "category": "plant",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.27,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 50
+    },
+    "rug_red": {
+      "category": "rug",
+      "footprint": {
+        "w": 6,
+        "d": 4
+      },
+      "heightM": 0.02,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 400,
+      "layer": "floor"
+    },
+    "rug_green": {
+      "category": "rug",
+      "footprint": {
+        "w": 8,
+        "d": 6
+      },
+      "heightM": 0.02,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 450,
+      "layer": "floor"
+    },
+    "rug_round": {
+      "category": "rug",
+      "footprint": {
+        "w": 4,
+        "d": 4
+      },
+      "heightM": 0.02,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 300,
+      "layer": "floor"
+    },
+    "globe": {
+      "category": "decor",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.9,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 500
+    },
+    "library_ladder": {
+      "category": "decor",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 2.21,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250
+    },
+    "notice_board": {
+      "category": "decor",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 1.92,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "bust_pedestal": {
+      "category": "decor",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.56,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 650
+    },
+    "vase": {
+      "category": "decor",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.44,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 80
+    },
+    "frame_painting": {
+      "category": "decor",
+      "footprint": {
+        "w": 2,
+        "d": 1
+      },
+      "heightM": 2.02,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 200,
+      "layer": "wall"
+    },
+    "frame_modern": {
+      "category": "decor",
+      "footprint": {
+        "w": 2,
+        "d": 1
+      },
+      "heightM": 1.85,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 120,
+      "layer": "wall"
+    },
+    "mirror": {
+      "category": "decor",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.84,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250,
+      "layer": "wall"
+    },
+    "wall_clock": {
+      "category": "decor",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 2.07,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 100,
+      "layer": "wall"
+    }
+  }
+}

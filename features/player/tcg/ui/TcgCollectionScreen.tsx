@@ -29,6 +29,7 @@ import TcgHeaderLinks from './TcgHeaderLinks';
 import TcgLoadError from './TcgLoadError';
 import PacksPanel from './PacksPanel';
 import WalletHistoryPanel from './WalletHistoryPanel';
+import TcgLibraryTile from './TcgLibraryTile';
 import PredictionsTeaser from './PredictionsTeaser';
 import RecycleConfirmBody from './RecycleConfirmBody';
 import { CollectionEmpty, CollectionSkeleton } from './CollectionStates';
@@ -216,6 +217,8 @@ export default function TcgCollectionScreen() {
         wallet={wallet.wallet}
         onToggle={() => void wallet.toggle()}
       />
+      {/* La boutique de meubles : là où les pièces se dépensent aussi. */}
+      {ready && <TcgLibraryTile />}
       {ready && (
         <TcgCollectionProgress
           owned={{ distinct: totals.distinct, total: totals.total }}

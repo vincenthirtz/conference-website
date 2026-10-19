@@ -931,6 +931,107 @@ export const PERSONAL_DATA_TABLES: readonly PersonalDataTable[] = [
       columns: ['twitch_user_id', 'twitch_login', 'linked_at', 'updated_at'],
     },
   },
+  /* ------------------------------------------------- Women's Library --- */
+  // Toutes en ON DELETE CASCADE vers auth.users (database/migrations/
+  // library_core.sql) : la suppression de compte n'a rien à y exécuter.
+  {
+    table: 'library_avatars',
+    columns: ['user_id'],
+    policy: { kind: 'cascade', onDelete: { user_id: 'CASCADE' } },
+    why: 'Son avatar dans la Women’s Library : pseudo, apparence et date de son attestation de majorité.',
+    export: {
+      columns: [
+        'tenant_id',
+        'nickname',
+        'avatar_id',
+        'look',
+        'adult_attested_at',
+        'created_at',
+        'updated_at',
+      ],
+    },
+  },
+  {
+    table: 'library_inventory',
+    columns: ['user_id'],
+    policy: { kind: 'cascade', onDelete: { user_id: 'CASCADE' } },
+    why: 'Les meubles qu’elle a achetés avec ses pièces ; les meubles posés (library_room_items) partent avec eux.',
+    export: {
+      columns: ['id', 'tenant_id', 'furniture_key', 'acquired_at'],
+    },
+  },
+  {
+    table: 'library_rooms',
+    columns: ['owner_user_id'],
+    policy: { kind: 'cascade', onDelete: { owner_user_id: 'CASCADE' } },
+    why: 'Son appartement dans la Library, avec ce qui y est posé et ce qui s’y est dit.',
+    export: {
+      columns: [
+        'id',
+        'tenant_id',
+        'kind',
+        'name',
+        'access',
+        'listed',
+        'width',
+        'depth',
+        'created_at',
+      ],
+    },
+  },
+  {
+    table: 'library_messages',
+    columns: ['user_id'],
+    policy: { kind: 'cascade', onDelete: { user_id: 'CASCADE' } },
+    why: 'Ses messages dans le chat de la Library. Un message signalé survit seulement dans la copie figée du ticket de signalement.',
+    export: {
+      columns: [
+        'id',
+        'tenant_id',
+        'room_id',
+        'body',
+        'created_at',
+        'hidden_at',
+      ],
+    },
+  },
+  {
+    table: 'library_blocks',
+    // Les DEUX sens, comme tcg_trade_blocks : ceux qu'elle a posés et ceux
+    // posés contre elle partent avec son compte.
+    columns: ['blocker_user_id', 'blocked_user_id'],
+    policy: {
+      kind: 'cascade',
+      onDelete: { blocker_user_id: 'CASCADE', blocked_user_id: 'CASCADE' },
+    },
+    why: 'Ses blocages dans la Library, dans les deux sens : ceux qu’elle a posés n’ont plus d’objet, et garder « untel a bloqué ce compte » conserverait un jugement sur quelqu’un qui n’est plus là.',
+    export: {
+      // Même raison que tcg_trade_blocks : l'exporteur lit chaque colonne
+      // déclarée, il lui dirait donc QUI l'a bloquée — ce qui défait la
+      // protection, silencieuse par construction.
+      omit: 'Vos blocages dans la Library se consultent dans la Library. Ils ne figurent pas ici parce que la table mêle vos décisions et celles d’autres personnes, et que révéler les secondes défairait la protection qu’elles ont posée.',
+    },
+  },
+  {
+    table: 'library_mutes',
+    columns: ['user_id'],
+    policy: { kind: 'cascade', onDelete: { user_id: 'CASCADE' } },
+    why: 'Les sourdines qui la concernent dans la Library.',
+    export: {
+      // Sans `by_user_id` : qui a posé la sourdine n'est pas sa donnée à elle.
+      columns: ['tenant_id', 'room_id', 'until', 'reason', 'created_at'],
+    },
+  },
+  {
+    table: 'library_bans',
+    columns: ['user_id'],
+    policy: { kind: 'cascade', onDelete: { user_id: 'CASCADE' } },
+    why: 'Les bannissements de la Library qui la concernent. Supprimer le compte ne lève rien : un nouveau compte est une autre identité, qui doit attester à nouveau.',
+    export: {
+      // Sans `by_staff_id` : le membre du staff qui a décidé n'est pas sa donnée.
+      columns: ['tenant_id', 'reason', 'until', 'created_at'],
+    },
+  },
 ];
 
 /**
@@ -964,6 +1065,10 @@ export const NOT_PERSONAL_DATA_COLUMNS: Readonly<Record<string, string>> = {
     'Lien d’invitation d’une ÉQUIPE : il appartient à l’équipe (FK SET NULL).',
   'teams.captain_id':
     'Attribut de l’équipe. Le capitanat se transfère avant de partir ; il n’est pas une donnée de la capitaine.',
+  'library_messages.hidden_by':
+    'Personne (staff, propriétaire, capitaine) qui a masqué un message de la Library (FK SET NULL).',
+  'library_mutes.by_user_id':
+    'Personne (staff, propriétaire) qui a posé une sourdine dans la Library (FK SET NULL).',
 
   // Identifiants Discord / Twitch : un compte TIERS, pas le compte du site.
   'user_discord_links.discord_user_id':

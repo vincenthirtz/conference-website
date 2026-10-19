@@ -1,15 +1,29 @@
 // pages/support/index.tsx
 // Public support / safety reporting form. Anyone can submit, optionally
 // anonymously. HIGH severity submissions ping the moderation role on Discord.
+//
+// Deux règles côté client, miroir de /api/support/ticket :
+//   - captcha maison (`usePublicFormGuard`) : exigé par l'API en mode web.
+//     Chargé à la première interaction, redemandé s'il a plus de 4 minutes
+//     quand on arrive dessus (le défi expire à 5 : un signalement prend du
+//     temps à écrire), et après chaque refus. Le message n'est jamais effacé ;
+//   - Bearer de la session joueuse envoyé SEULEMENT pour un signalement non
+//     anonyme (rattachement `reporter_user_id`). Anonyme : rien ne part qui
+//     puisse relier la personne au ticket.
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { parseSupportPrefill } from '@/utils/support/prefill';
-import { useT } from '@/lib/i18n/useT';
+import { useSession } from '@/hooks/useSession';
+import { usePublicFormGuard } from '@/hooks/usePublicFormGuard';
+import { useT, format } from '@/lib/i18n/useT';
 import nsSupportPage from '@/lib/i18n/locales/fr/supportPage';
 
 type SupportDict = typeof nsSupportPage.fr;
+
+/** Au-delà, le défi (5 min de vie côté serveur) est redemandé avant usage. */
+const CAPTCHA_STALE_MS = 4 * 60_000;
 
 type Category = 'dispute' | 'behavior' | 'technical' | 'other';
 type Severity = 'low' | 'medium' | 'high';
@@ -104,7 +118,26 @@ export default function SupportPage() {
     if (prefill.category) setCategory(prefill.category);
     if (prefill.subject) setSubject(prefill.subject);
     if (prefill.message) setMessage(prefill.message);
+    if (prefill.anonymous) setIsAnonymous(true);
   }, [router.isReady, router.query]);
+
+  const { token: sessionToken } = useSession();
+  const guard = usePublicFormGuard();
+  const { refresh: refreshGuard } = guard;
+  const captchaLoadedAt = useRef<number | null>(null);
+  useEffect(() => {
+    if (guard.question) captchaLoadedAt.current = Date.now();
+  }, [guard.question]);
+  const refreshCaptcha = useCallback(async () => {
+    await refreshGuard();
+    captchaLoadedAt.current = Date.now();
+  }, [refreshGuard]);
+  const onCaptchaFocus = () => {
+    const loadedAt = captchaLoadedAt.current;
+    if (loadedAt !== null && Date.now() - loadedAt > CAPTCHA_STALE_MS) {
+      void refreshCaptcha();
+    }
+  };
 
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<{ ref: string } | null>(null);
@@ -126,12 +159,28 @@ export default function SupportPage() {
       setError(t.errReportedNameRequired);
       return;
     }
+    if (!guard.payload.captchaToken) {
+      setError(t.errCaptchaUnavailable);
+      void refreshCaptcha();
+      return;
+    }
+    if (!guard.captchaAnswer.trim()) {
+      setError(t.errCaptchaMissing);
+      return;
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (!isAnonymous && sessionToken) {
+      headers.Authorization = `Bearer ${sessionToken}`;
+    }
 
     setSubmitting(true);
     try {
       const res = await fetch('/api/support/ticket', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           category,
           severity,
@@ -149,11 +198,19 @@ export default function SupportPage() {
                   : {}),
               }
             : {}),
+          captchaToken: guard.payload.captchaToken,
+          captchaAnswer: guard.captchaAnswer.trim(),
         }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(json.error || t.errSubmit);
+        // Le défi est à usage unique : après un refus, on en redemande un.
+        await refreshCaptcha();
+        throw new Error(
+          json.code === 'CAPTCHA_INVALID'
+            ? t.errCaptchaInvalid
+            : json.error || t.errSubmit
+        );
       }
       setSuccess({ ref: json.referenceShort });
     } catch (err) {
@@ -209,6 +266,8 @@ export default function SupportPage() {
                 setReportedType('');
                 setReportedName('');
                 setReportedBattleTag('');
+                // Le défi précédent a été consommé par l'envoi réussi.
+                void refreshCaptcha();
               }}
               className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm font-medium transition-colors"
             >
@@ -218,6 +277,7 @@ export default function SupportPage() {
         ) : (
           <form
             onSubmit={handleSubmit}
+            onFocus={guard.ensure}
             className="bg-neutral-800/50 backdrop-blur border border-neutral-700/50 rounded-2xl p-6 md:p-8 space-y-6"
           >
             {/* Category */}
@@ -452,6 +512,41 @@ export default function SupportPage() {
                 {message.length} / 5000
               </p>
             </div>
+
+            {/* Captcha (mode web de /api/support/ticket) */}
+            {guard.question && (
+              <div>
+                <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
+                  <label
+                    htmlFor="support-captcha"
+                    className="block text-sm text-neutral-400"
+                  >
+                    {format(t.captchaLabel, { question: guard.question })}{' '}
+                    <span className="text-red-400">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => void refreshCaptcha()}
+                    className="text-xs text-neutral-400 underline underline-offset-2 hover:text-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
+                  >
+                    {t.captchaRefresh}
+                  </button>
+                </div>
+                <input
+                  id="support-captcha"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={guard.captchaAnswer}
+                  onChange={(e) => guard.setCaptchaAnswer(e.target.value)}
+                  onFocus={onCaptchaFocus}
+                  required
+                  maxLength={8}
+                  className="w-full sm:w-48 px-3 py-2 rounded-xl bg-neutral-900/50 border border-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder={t.captchaPlaceholder}
+                />
+              </div>
+            )}
 
             {/* Error */}
             {error && (

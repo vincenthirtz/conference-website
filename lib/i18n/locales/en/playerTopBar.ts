@@ -36,5 +36,6 @@ export default {
     discovery: 'Network',
     notifications: 'Notifications',
     profile: 'My profile',
+    library: 'Women’s Library',
   },
 };

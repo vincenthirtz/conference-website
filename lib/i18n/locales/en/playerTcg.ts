@@ -256,6 +256,11 @@ export default {
   walletMatchPrediction: 'Correct prediction',
   walletPublicMvp: "Viewers' MVP",
   walletTournamentParticipation: 'Tournament participation',
+  walletFurniturePurchase: 'Furniture purchase (Women’s Library)',
+  libraryTileTitle: 'Women’s Library',
+  libraryTileBody:
+    'Spend your coins on furniture and decorate your apartment in the Library.',
+  libraryTileLink: 'Enter the Library',
 
   twitchPitchTitle: 'Earn coins by watching our streams',
   twitchPitchBody:

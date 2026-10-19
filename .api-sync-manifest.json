@@ -1,6 +1,6 @@
 {
-  "apiCommit": "cd3b86308bbbd59369c12023175810edfde3dce3",
-  "syncedAt": "2026-10-18T16:37:03.213Z",
+  "apiCommit": "e27d9cac19c09027668028d7a49cb9394b2d8028",
+  "syncedAt": "2026-10-19T18:51:19.417Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -13,6 +13,8 @@
     "config/games/r6-siege.ts",
     "config/games/rocket-league.ts",
     "config/games/valorant.ts",
+    "config/library/decor.ts",
+    "config/library/furniture.ts",
     "config/maps/overwatch.ts",
     "config/socials.ts",
     "config/tournament-help.json",
@@ -52,6 +54,9 @@
     "features/player/dashboard/schemas.ts",
     "features/player/demandes/model.ts",
     "features/player/demandes/schemas.ts",
+    "features/player/library/placement.ts",
+    "features/player/library/responses.ts",
+    "features/player/library/schemas.ts",
     "features/player/linked-accounts/schemas.ts",
     "features/player/matches/schemas.ts",
     "features/player/messages/schemas.ts",

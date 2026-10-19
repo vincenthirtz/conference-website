@@ -328,6 +328,14 @@ export default ns('playerTcg', {
   walletMatchPrediction: 'Pronostic juste',
   walletPublicMvp: 'MVP du public',
   walletTournamentParticipation: 'Participation au tournoi',
+  // Dépense de la Women's Library (lot 4) : sans ce libellé, l'achat d'un
+  // meuble tombait dans le repli neutre « Mouvement ».
+  walletFurniturePurchase: 'Achat d’un meuble (Women’s Library)',
+  // Tuile d'entrée vers la Women's Library, sur l'écran de la collection.
+  libraryTileTitle: 'Women’s Library',
+  libraryTileBody:
+    'Dépense tes pièces en meubles et décore ton appartement dans la Library.',
+  libraryTileLink: 'Entrer dans la Library',
 
   // Rattachement Twitch, contextualisé : ce qu'on gagne, en une phrase. Affiché
   // SEULEMENT si le drop est réellement branché (montant rendu par l'API).

@@ -1,0 +1,1413 @@
+{
+  "hdri": {
+    "provider": "polyhaven",
+    "id": "brown_photostudio_02",
+    "resolution": "1k"
+  },
+  "textures": {
+    "dark_wood": {
+      "provider": "polyhaven",
+      "id": "dark_wood",
+      "resolution": "1k"
+    },
+    "walnut_veneer": {
+      "provider": "polyhaven",
+      "id": "walnut_veneer",
+      "resolution": "1k"
+    },
+    "white_stucco": {
+      "provider": "polyhaven",
+      "id": "white_stucco",
+      "resolution": "1k"
+    },
+    "oriented_strand_board": {
+      "provider": "polyhaven",
+      "id": "oriented_strand_board",
+      "resolution": "1k"
+    },
+    "marble_01": {
+      "provider": "polyhaven",
+      "id": "marble_01",
+      "resolution": "1k"
+    },
+    "quatrefoil_jacquard_fabric": {
+      "provider": "polyhaven",
+      "id": "quatrefoil_jacquard_fabric",
+      "resolution": "1k"
+    },
+    "velour_velvet": {
+      "provider": "polyhaven",
+      "id": "velour_velvet",
+      "resolution": "1k"
+    },
+    "floral_jacquard": {
+      "provider": "polyhaven",
+      "id": "floral_jacquard",
+      "resolution": "1k"
+    },
+    "poly_wool_herringbone": {
+      "provider": "polyhaven",
+      "id": "poly_wool_herringbone",
+      "resolution": "1k"
+    },
+    "herringbone_parquet": {
+      "provider": "polyhaven",
+      "id": "herringbone_parquet",
+      "resolution": "1k"
+    },
+    "floor_tiles_06": {
+      "provider": "polyhaven",
+      "id": "floor_tiles_06",
+      "resolution": "1k"
+    },
+    "terracotta_floor_tiles": {
+      "provider": "polyhaven",
+      "id": "terracotta_floor_tiles",
+      "resolution": "1k"
+    }
+  },
+  "furniture": {
+    "bookshelf": {
+      "provider": "polyhaven",
+      "id": "wooden_bookshelf_worn",
+      "resolution": "1k",
+      "catalog": {
+        "category": "storage",
+        "price": 250,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "armchair": {
+      "provider": "polyhaven",
+      "id": "ArmChair_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 300,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "lamp": {
+      "provider": "polyhaven",
+      "id": "desk_lamp_arm_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "lighting",
+        "price": 100,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+    "bookshelf_filled": {
+      "provider": "polyhaven",
+      "id": "wooden_bookshelf_worn",
+      "resolution": "1k",
+      "fill": {
+        "books": "book_encyclopedia_set_01",
+        "seed": 3
+      },
+      "catalog": {
+        "category": "storage",
+        "price": 450,
+        "sittable": false,
+        "stackable": false
+      },
+      "tint": [
+        176,
+        128,
+        92
+      ]
+    },
+    "bookshelf_double": {
+      "provider": "polyhaven",
+      "id": "wooden_bookshelf_worn",
+      "resolution": "1k",
+      "fill": {
+        "books": "book_encyclopedia_set_01",
+        "seed": 11
+      },
+      "parts": [
+        {
+          "model": "wooden_bookshelf_worn",
+          "fill": {
+            "books": "book_encyclopedia_set_01",
+            "seed": 12
+          },
+          "location": [
+            0,
+            0.51,
+            0
+          ],
+          "rotation": 180,
+          "tint": [
+            176,
+            128,
+            92
+          ]
+        }
+      ],
+      "catalog": {
+        "category": "storage",
+        "price": 850,
+        "sittable": false,
+        "stackable": false
+      },
+      "tint": [
+        176,
+        128,
+        92
+      ]
+    },
+    "shelf_small": {
+      "provider": "polyhaven",
+      "id": "painted_wooden_shelves",
+      "resolution": "1k",
+      "fill": {
+        "books": "book_encyclopedia_set_01",
+        "seed": 5
+      },
+      "catalog": {
+        "category": "storage",
+        "price": 150,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "display_shelves": {
+      "provider": "polyhaven",
+      "id": "wooden_display_shelves_01",
+      "resolution": "1k",
+      "fill": {
+        "books": "book_encyclopedia_set_01",
+        "seed": 7,
+        "skip": [
+          0
+        ]
+      },
+      "catalog": {
+        "category": "storage",
+        "price": 300,
+        "sittable": false,
+        "stackable": false
+      },
+      "rotate": -90
+    },
+    "wardrobe": {
+      "provider": "polyhaven",
+      "id": "painted_wooden_cabinet_02",
+      "resolution": "1k",
+      "catalog": {
+        "category": "storage",
+        "price": 500,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "cabinet": {
+      "provider": "polyhaven",
+      "id": "painted_wooden_cabinet",
+      "resolution": "1k",
+      "catalog": {
+        "category": "storage",
+        "price": 250,
+        "sittable": false,
+        "stackable": false
+      },
+      "scale": 0.96
+    },
+    "drawer_cabinet": {
+      "provider": "polyhaven",
+      "id": "drawer_cabinet",
+      "resolution": "1k",
+      "catalog": {
+        "category": "storage",
+        "price": 300,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "sideboard": {
+      "provider": "polyhaven",
+      "id": "modern_wooden_cabinet",
+      "resolution": "1k",
+      "catalog": {
+        "category": "storage",
+        "price": 350,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "armchair_green": {
+      "provider": "polyhaven",
+      "id": "GreenChair_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 300,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "chair": {
+      "provider": "polyhaven",
+      "id": "dining_chair_02",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 80,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "chair_painted": {
+      "provider": "polyhaven",
+      "id": "painted_wooden_chair_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 70,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "sofa": {
+      "provider": "polyhaven",
+      "id": "Sofa_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 500,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "sofa_large": {
+      "provider": "polyhaven",
+      "id": "sofa_03",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 800,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "bench": {
+      "provider": "polyhaven",
+      "id": "painted_wooden_bench",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 150,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "ottoman": {
+      "provider": "polyhaven",
+      "id": "Ottoman_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 100,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "lounge_chair": {
+      "provider": "polyhaven",
+      "id": "mid_century_lounge_chair",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 600,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "rocking_chair": {
+      "provider": "polyhaven",
+      "id": "Rockingchair_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 350,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "stool": {
+      "provider": "polyhaven",
+      "id": "wooden_stool_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 50,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "reading_table": {
+      "generate": {
+        "kind": "reading_table",
+        "size": [
+          2.4,
+          0.98,
+          0.76
+        ]
+      },
+      "textures": {
+        "wood": "dark_wood"
+      },
+      "parts": [
+        {
+          "generate": {
+            "kind": "bankers_lamp"
+          },
+          "at": [
+            0.27,
+            0.5
+          ],
+          "on": "surface"
+        },
+        {
+          "generate": {
+            "kind": "bankers_lamp"
+          },
+          "at": [
+            0.73,
+            0.5
+          ],
+          "on": "surface"
+        },
+        {
+          "books": {
+            "model": "book_encyclopedia_set_01",
+            "count": 3,
+            "first": 2,
+            "cover": 1
+          },
+          "at": [
+            0.5,
+            0.42
+          ],
+          "on": "surface",
+          "rotation": 18
+        }
+      ],
+      "catalog": {
+        "category": "table",
+        "price": 600,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "desk": {
+      "provider": "polyhaven",
+      "id": "WoodenTable_03",
+      "resolution": "1k",
+      "catalog": {
+        "category": "table",
+        "price": 250,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "coffee_table": {
+      "provider": "polyhaven",
+      "id": "CoffeeTable_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "table",
+        "price": 200,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "coffee_table_round": {
+      "provider": "polyhaven",
+      "id": "coffee_table_round_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "table",
+        "price": 220,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "side_table": {
+      "provider": "polyhaven",
+      "id": "side_table_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "table",
+        "price": 90,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "nightstand": {
+      "provider": "polyhaven",
+      "id": "ClassicNightstand_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "table",
+        "price": 100,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "round_table": {
+      "provider": "polyhaven",
+      "id": "round_wooden_table_02",
+      "resolution": "1k",
+      "catalog": {
+        "category": "table",
+        "price": 180,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "console_table": {
+      "provider": "polyhaven",
+      "id": "ClassicConsole_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "table",
+        "price": 250,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "reception_desk": {
+      "generate": {
+        "kind": "reception_desk",
+        "size": [
+          2.3,
+          0.75,
+          1.05
+        ]
+      },
+      "textures": {
+        "wood": "dark_wood",
+        "top": "walnut_veneer"
+      },
+      "parts": [
+        {
+          "generate": {
+            "kind": "bankers_lamp"
+          },
+          "at": [
+            0.18,
+            0.5
+          ],
+          "on": "surface"
+        },
+        {
+          "books": {
+            "model": "book_encyclopedia_set_01",
+            "count": 4,
+            "first": 7,
+            "cover": 4
+          },
+          "at": [
+            0.52,
+            0.5
+          ],
+          "on": "surface",
+          "rotation": -12
+        },
+        {
+          "model": "potted_plant_04",
+          "at": [
+            0.86,
+            0.5
+          ],
+          "on": "surface"
+        }
+      ],
+      "catalog": {
+        "category": "table",
+        "price": 900,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "bankers_lamp": {
+      "generate": {
+        "kind": "bankers_lamp"
+      },
+      "catalog": {
+        "category": "lighting",
+        "price": 120,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+    "floor_lamp": {
+      "generate": {
+        "kind": "floor_lamp"
+      },
+      "catalog": {
+        "category": "lighting",
+        "price": 150,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "bed": {
+      "provider": "polyhaven",
+      "id": "GothicBed_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "bed",
+        "price": 800,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "daybed": {
+      "provider": "polyhaven",
+      "id": "vintage_day_bed",
+      "resolution": "1k",
+      "catalog": {
+        "category": "bed",
+        "price": 600,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "plant_tall": {
+      "provider": "polyhaven",
+      "id": "potted_plant_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "plant",
+        "price": 150,
+        "sittable": false,
+        "stackable": false
+      },
+      "scale": 0.9
+    },
+    "plant_medium": {
+      "provider": "polyhaven",
+      "id": "potted_plant_02",
+      "resolution": "1k",
+      "catalog": {
+        "category": "plant",
+        "price": 100,
+        "sittable": false,
+        "stackable": false
+      },
+      "scale": 0.8
+    },
+    "cactus": {
+      "provider": "polyhaven",
+      "id": "potted_plant_04",
+      "resolution": "1k",
+      "catalog": {
+        "category": "plant",
+        "price": 50,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+    "rug_red": {
+      "generate": {
+        "kind": "rug",
+        "size": [
+          2.9,
+          1.9
+        ],
+        "border": 0.16,
+        "pattern": 0.45,
+        "edgePattern": 0.3,
+        "edgeTint": [
+          150,
+          120,
+          110
+        ],
+        "band": [
+          214,
+          186,
+          132
+        ],
+        "medallionColor": [
+          70,
+          30,
+          40
+        ]
+      },
+      "textures": {
+        "fabric": "quatrefoil_jacquard_fabric",
+        "edge": "velour_velvet"
+      },
+      "layer": "floor",
+      "catalog": {
+        "category": "rug",
+        "price": 400,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "rug_green": {
+      "generate": {
+        "kind": "rug",
+        "size": [
+          3.9,
+          2.9
+        ],
+        "border": 0.18,
+        "pattern": 0.3,
+        "tint": [
+          96,
+          150,
+          110
+        ],
+        "edgePattern": 0.45,
+        "edgeTint": [
+          120,
+          150,
+          120
+        ],
+        "band": [
+          200,
+          180,
+          120
+        ],
+        "medallionColor": [
+          40,
+          66,
+          50
+        ]
+      },
+      "textures": {
+        "fabric": "poly_wool_herringbone",
+        "edge": "quatrefoil_jacquard_fabric"
+      },
+      "layer": "floor",
+      "catalog": {
+        "category": "rug",
+        "price": 450,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "rug_round": {
+      "generate": {
+        "kind": "rug",
+        "size": [
+          1.9,
+          1.9
+        ],
+        "round": true,
+        "border": 0.12,
+        "pattern": 0.6,
+        "edgePattern": 0.3,
+        "edgeTint": [
+          120,
+          90,
+          80
+        ],
+        "band": [
+          214,
+          186,
+          132
+        ]
+      },
+      "textures": {
+        "fabric": "floral_jacquard",
+        "edge": "velour_velvet"
+      },
+      "layer": "floor",
+      "catalog": {
+        "category": "rug",
+        "price": 300,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "globe": {
+      "generate": {
+        "kind": "globe"
+      },
+      "textures": {
+        "wood": "dark_wood"
+      },
+      "catalog": {
+        "category": "decor",
+        "price": 500,
+        "sittable": false,
+        "stackable": false
+      },
+      "scale": 0.88
+    },
+    "library_ladder": {
+      "generate": {
+        "kind": "ladder",
+        "height": 2.2,
+        "reach": 0.42
+      },
+      "textures": {
+        "wood": "walnut_veneer"
+      },
+      "catalog": {
+        "category": "decor",
+        "price": 250,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "notice_board": {
+      "generate": {
+        "kind": "notice_board",
+        "size": [
+          1.32,
+          0.95,
+          0.85
+        ]
+      },
+      "textures": {
+        "wood": "dark_wood",
+        "cork": "oriented_strand_board"
+      },
+      "catalog": {
+        "category": "decor",
+        "price": 300,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "bust_pedestal": {
+      "generate": {
+        "kind": "pedestal",
+        "height": 1.05
+      },
+      "textures": {
+        "stone": "marble_01"
+      },
+      "parts": [
+        {
+          "model": "marble_bust_01",
+          "at": [
+            0.5,
+            0.5
+          ],
+          "on": "surface"
+        }
+      ],
+      "catalog": {
+        "category": "decor",
+        "price": 650,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "vase": {
+      "provider": "polyhaven",
+      "id": "antique_ceramic_vase_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 80,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "frame_painting": {
+      "provider": "polyhaven",
+      "id": "fancy_picture_frame_02",
+      "resolution": "1k",
+      "mount": {
+        "wall": true,
+        "elevation": 1.25
+      },
+      "layer": "wall",
+      "catalog": {
+        "category": "decor",
+        "price": 200,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "frame_modern": {
+      "provider": "polyhaven",
+      "id": "hanging_picture_frame_02",
+      "resolution": "1k",
+      "mount": {
+        "wall": true,
+        "elevation": 1.35
+      },
+      "layer": "wall",
+      "catalog": {
+        "category": "decor",
+        "price": 120,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "mirror": {
+      "provider": "polyhaven",
+      "id": "ornate_mirror_01",
+      "resolution": "1k",
+      "mount": {
+        "wall": true,
+        "elevation": 1.1
+      },
+      "layer": "wall",
+      "catalog": {
+        "category": "decor",
+        "price": 250,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "wall_clock": {
+      "provider": "polyhaven",
+      "id": "wall_clock",
+      "resolution": "1k",
+      "mount": {
+        "wall": true,
+        "elevation": 1.75
+      },
+      "layer": "wall",
+      "catalog": {
+        "category": "decor",
+        "price": 100,
+        "sittable": false,
+        "stackable": false
+      }
+    }
+  },
+  "decor": {
+    "floors": {
+      "parquet": {
+        "texture": "herringbone_parquet",
+        "periodTiles": 4,
+        "scaleM": 2
+      },
+      "carpet": {
+        "texture": "poly_wool_herringbone",
+        "periodTiles": 1,
+        "scaleM": 0.25,
+        "tint": [
+          110,
+          150,
+          118
+        ]
+      },
+      "marble": {
+        "texture": "floor_tiles_06",
+        "periodTiles": 4,
+        "scaleM": 2
+      },
+      "tiles": {
+        "texture": "terracotta_floor_tiles",
+        "periodTiles": 4,
+        "scaleM": 2
+      }
+    },
+    "walls": {
+      "library": {
+        "height": 2.8,
+        "thickness": 0.15,
+        "textures": {
+          "plaster": "white_stucco",
+          "wood": "dark_wood",
+          "door": "walnut_veneer"
+        },
+        "plasterTint": [
+          238,
+          226,
+          204
+        ],
+        "books": "book_encyclopedia_set_01",
+        "variants": {
+          "plain": 1,
+          "window": 2,
+          "door": 2,
+          "bookshelf": 3
+        }
+      }
+    }
+  },
+  "avatarBase": {
+    "provider": "blender-studio",
+    "id": "human-base-meshes",
+    "version": "1.4.1",
+    "url": "https://mirror.blender.org/demo/asset-bundles/human-base-meshes/human-base-meshes-bundle-v1.4.1.zip",
+    "blend": "human-base-meshes-bundle-v1.4.1/human_base_meshes_bundle.blend"
+  },
+  "avatars": [
+    {
+      "id": "a01",
+      "skin": [
+        198,
+        150,
+        118
+      ],
+      "hair": {
+        "style": "bob",
+        "color": [
+          52,
+          34,
+          24
+        ]
+      },
+      "top": {
+        "color": [
+          180,
+          60,
+          110
+        ],
+        "sleeves": "short"
+      },
+      "bottom": {
+        "style": "trousers",
+        "color": [
+          38,
+          52,
+          88
+        ]
+      },
+      "shoes": {
+        "color": [
+          240,
+          240,
+          236
+        ]
+      }
+    },
+    {
+      "id": "a02",
+      "skin": [
+        88,
+        56,
+        40
+      ],
+      "hair": {
+        "style": "curly",
+        "color": [
+          20,
+          16,
+          14
+        ]
+      },
+      "top": {
+        "color": [
+          210,
+          170,
+          60
+        ],
+        "sleeves": "short"
+      },
+      "bottom": {
+        "style": "trousers",
+        "color": [
+          28,
+          28,
+          30
+        ]
+      },
+      "shoes": {
+        "color": [
+          240,
+          240,
+          236
+        ]
+      }
+    },
+    {
+      "id": "a03",
+      "skin": [
+        236,
+        200,
+        178
+      ],
+      "hair": {
+        "style": "long",
+        "color": [
+          196,
+          160,
+          104
+        ]
+      },
+      "top": {
+        "color": [
+          110,
+          160,
+          210
+        ],
+        "sleeves": "long"
+      },
+      "bottom": {
+        "style": "trousers",
+        "color": [
+          190,
+          170,
+          140
+        ]
+      },
+      "shoes": {
+        "color": [
+          110,
+          70,
+          45
+        ]
+      }
+    },
+    {
+      "id": "a04",
+      "skin": [
+        128,
+        84,
+        58
+      ],
+      "hair": {
+        "style": "ponytail",
+        "color": [
+          20,
+          16,
+          14
+        ]
+      },
+      "top": {
+        "color": [
+          120,
+          70,
+          170
+        ],
+        "sleeves": "short"
+      },
+      "bottom": {
+        "style": "capri",
+        "color": [
+          100,
+          100,
+          105
+        ]
+      },
+      "shoes": {
+        "color": [
+          28,
+          28,
+          30
+        ]
+      }
+    },
+    {
+      "id": "a05",
+      "skin": [
+        222,
+        180,
+        150
+      ],
+      "hair": {
+        "style": "short",
+        "color": [
+          130,
+          52,
+          28
+        ]
+      },
+      "top": {
+        "color": [
+          236,
+          236,
+          232
+        ],
+        "sleeves": "short"
+      },
+      "bottom": {
+        "style": "trousers",
+        "color": [
+          80,
+          90,
+          60
+        ]
+      },
+      "shoes": {
+        "color": [
+          28,
+          28,
+          30
+        ]
+      }
+    },
+    {
+      "id": "a06",
+      "skin": [
+        168,
+        118,
+        84
+      ],
+      "hair": {
+        "style": "bun",
+        "color": [
+          52,
+          34,
+          24
+        ]
+      },
+      "top": {
+        "color": [
+          40,
+          130,
+          130
+        ],
+        "sleeves": "long"
+      },
+      "bottom": {
+        "style": "trousers",
+        "color": [
+          38,
+          52,
+          88
+        ]
+      },
+      "shoes": {
+        "color": [
+          240,
+          240,
+          236
+        ]
+      }
+    },
+    {
+      "id": "a07",
+      "skin": [
+        88,
+        56,
+        40
+      ],
+      "hair": {
+        "style": "short",
+        "color": [
+          20,
+          16,
+          14
+        ]
+      },
+      "top": {
+        "color": [
+          230,
+          110,
+          90
+        ],
+        "sleeves": "short"
+      },
+      "bottom": {
+        "style": "trousers",
+        "color": [
+          190,
+          170,
+          140
+        ]
+      },
+      "shoes": {
+        "color": [
+          240,
+          240,
+          236
+        ]
+      }
+    },
+    {
+      "id": "a08",
+      "skin": [
+        236,
+        200,
+        178
+      ],
+      "hair": {
+        "style": "ponytail",
+        "color": [
+          96,
+          58,
+          34
+        ]
+      },
+      "top": {
+        "color": [
+          30,
+          30,
+          34
+        ],
+        "sleeves": "long"
+      },
+      "bottom": {
+        "style": "trousers",
+        "color": [
+          100,
+          100,
+          105
+        ]
+      },
+      "shoes": {
+        "color": [
+          170,
+          40,
+          50
+        ]
+      }
+    },
+    {
+      "id": "a09",
+      "skin": [
+        198,
+        150,
+        118
+      ],
+      "hair": {
+        "style": "long",
+        "color": [
+          20,
+          16,
+          14
+        ]
+      },
+      "top": {
+        "color": [
+          170,
+          40,
+          50
+        ],
+        "sleeves": "short"
+      },
+      "bottom": {
+        "style": "trousers",
+        "color": [
+          38,
+          52,
+          88
+        ]
+      },
+      "shoes": {
+        "color": [
+          28,
+          28,
+          30
+        ]
+      }
+    },
+    {
+      "id": "a10",
+      "skin": [
+        128,
+        84,
+        58
+      ],
+      "hair": {
+        "style": "curly",
+        "color": [
+          96,
+          58,
+          34
+        ]
+      },
+      "top": {
+        "color": [
+          236,
+          236,
+          232
+        ],
+        "sleeves": "long"
+      },
+      "bottom": {
+        "style": "trousers",
+        "color": [
+          28,
+          28,
+          30
+        ]
+      },
+      "shoes": {
+        "color": [
+          240,
+          240,
+          236
+        ]
+      }
+    },
+    {
+      "id": "a11",
+      "skin": [
+        222,
+        180,
+        150
+      ],
+      "hair": {
+        "style": "bob",
+        "color": [
+          104,
+          60,
+          140
+        ]
+      },
+      "top": {
+        "color": [
+          40,
+          50,
+          80
+        ],
+        "sleeves": "short"
+      },
+      "bottom": {
+        "style": "trousers",
+        "color": [
+          190,
+          170,
+          140
+        ]
+      },
+      "shoes": {
+        "color": [
+          240,
+          240,
+          236
+        ]
+      }
+    },
+    {
+      "id": "a12",
+      "skin": [
+        168,
+        118,
+        84
+      ],
+      "hair": {
+        "style": "long",
+        "color": [
+          96,
+          58,
+          34
+        ]
+      },
+      "top": {
+        "color": [
+          140,
+          140,
+          145
+        ],
+        "sleeves": "short"
+      },
+      "bottom": {
+        "style": "capri",
+        "color": [
+          80,
+          90,
+          60
+        ]
+      },
+      "shoes": {
+        "color": [
+          240,
+          240,
+          236
+        ]
+      }
+    }
+  ]
+}

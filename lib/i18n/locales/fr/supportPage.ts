@@ -63,6 +63,14 @@ export default ns('supportPage', {
   reportedBattleTagPlaceholder: 'Pseudo#12345',
   errReportedNameRequired:
     'Indiquez le pseudo ou nom concerné (ou remettez le type sur "Aucun")',
+  captchaLabel: 'Vérification anti-robot : combien font {question} ?',
+  captchaPlaceholder: 'Votre réponse',
+  captchaRefresh: 'Autre question',
+  errCaptchaMissing: 'Répondez à la question de vérification.',
+  errCaptchaUnavailable:
+    "La question de vérification n'a pas pu être chargée. Réessayez dans un instant.",
+  errCaptchaInvalid:
+    'Réponse incorrecte ou expirée : une nouvelle question vient de s’afficher. Votre message est conservé.',
   submitting: 'Envoi...',
   submit: 'Envoyer le signalement',
   discordNote:

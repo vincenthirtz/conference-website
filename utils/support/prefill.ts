@@ -30,7 +30,16 @@ export type SupportPrefill = {
   category?: SupportCategory;
   subject?: string;
   message?: string;
+  /**
+   * Propose l'anonymat : la case « Rester anonyme » arrive cochée (page
+   * /securite). Ce n'est qu'un état de départ — la personne la décoche si
+   * elle veut être recontactée. `anonymous=1` dans la query.
+   */
+  anonymous?: boolean;
 };
+
+/** Valeurs de `anonymous` lues comme « oui ». Tout le reste est ignoré. */
+const TRUTHY = new Set(['1', 'true']);
 
 function isSupportCategory(value: unknown): value is SupportCategory {
   return (
@@ -64,6 +73,10 @@ export function parseSupportPrefill(
   if (subject) out.subject = subject;
   const message = clean(query.message, SUPPORT_MESSAGE_MAX);
   if (message) out.message = message;
+  const anonymous = firstString(query.anonymous);
+  if (anonymous !== null && TRUTHY.has(anonymous.trim().toLowerCase())) {
+    out.anonymous = true;
+  }
   return out;
 }
 
@@ -77,6 +90,7 @@ export function buildSupportHref(prefill: SupportPrefill): string {
   if (subject) params.set('subject', subject);
   const message = clean(prefill.message, SUPPORT_MESSAGE_MAX);
   if (message) params.set('message', message);
+  if (prefill.anonymous === true) params.set('anonymous', '1');
   const qs = params.toString();
   return qs ? `/support?${qs}` : '/support';
 }

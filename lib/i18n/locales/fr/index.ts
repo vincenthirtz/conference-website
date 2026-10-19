@@ -180,6 +180,8 @@ import nsPlayerDiscordLink from './playerDiscordLink';
 import nsPlayerTwitchLink from './playerTwitchLink';
 import nsOverlayTcg from './overlayTcg';
 import nsPlayerErrors from './playerErrors';
+import nsSafetyPage from './safetyPage';
+import nsPlayerLibrary from './playerLibrary';
 
 export const frDict = {
   profileSummary: nsProfileSummary.fr,
@@ -355,4 +357,6 @@ export const frDict = {
   playerTwitchLink: nsPlayerTwitchLink.fr,
   overlayTcg: nsOverlayTcg.fr,
   playerErrors: nsPlayerErrors.fr,
+  safetyPage: nsSafetyPage.fr,
+  playerLibrary: nsPlayerLibrary.fr,
 };

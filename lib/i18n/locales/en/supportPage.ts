@@ -63,6 +63,14 @@ export default {
   reportedBattleTagPlaceholder: 'Nickname#12345',
   errReportedNameRequired:
     'Enter the nickname or name concerned (or set the type back to "None")',
+  captchaLabel: 'Anti-bot check: what is {question}?',
+  captchaPlaceholder: 'Your answer',
+  captchaRefresh: 'Another question',
+  errCaptchaMissing: 'Answer the verification question.',
+  errCaptchaUnavailable:
+    'The verification question could not be loaded. Try again in a moment.',
+  errCaptchaInvalid:
+    'Wrong or expired answer: a new question has just appeared. Your message has been kept.',
   submitting: 'Sending...',
   submit: 'Send the report',
   discordNote:

@@ -444,6 +444,9 @@ export function walletSourceLabel(
       return t.walletPublicMvp;
     case 'tournament_participation':
       return t.walletTournamentParticipation;
+    case 'furniture_purchase':
+      // Achat d'un meuble de la Women's Library (lot 4).
+      return t.walletFurniturePurchase;
     default:
       return t.walletUnknownSource;
   }
