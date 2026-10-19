@@ -9,13 +9,27 @@
 // (grande finale 1–2, petite finale 3–4, confirmée par l'organisation) ;
 // rien en base ne la décrit, d'où sa présence ici, écrite une fois.
 //
-// QUALIFIÉE / ÉLIMINÉE. Calculé sur les POINTS seuls, prudemment :
-//   - éliminée si, même en gagnant tout ce qui reste, elle ne peut pas
-//     atteindre les points ACTUELS de l'équipe au dernier rang qualificatif
-//     (les points ne baissent jamais : au moins N équipes finiront au-dessus) ;
-//   - qualifiée si moins de N autres équipes peuvent encore atteindre ses
-//     points actuels (égalité comprise — un départage pourrait la sortir).
-// Tout le reste est « en course ». Aucun pronostic sur les départages.
+// QUALIFIÉE / ÉLIMINÉE. Deux sources, la plus précise d'abord :
+//
+//   1. Les RANGS ENCORE POSSIBLES (`rankBounds`, utils/tournament/
+//      finalsRankBounds.ts) : toutes les issues des matchs restants passées
+//      au calcul officiel du classement, départages compris. Qualifiée si son
+//      pire rang est qualificatif, éliminée si son meilleur ne l'est pas.
+//      Sans eux, une égalité POSSIBLE laissait « en course » une équipe que
+//      la confrontation directe, déjà jouée, avait déjà départagée (Cup 2026,
+//      19/10 : Venom Valkyries, 4e quoi qu'il arrive, restait « en course »).
+//
+//   2. À défaut (trop de matchs restants, format inconnu, poules…), les
+//      POINTS seuls, prudemment :
+//      - éliminée si, même en gagnant tout ce qui reste, elle ne peut pas
+//        atteindre les points ACTUELS de l'équipe au dernier rang qualificatif
+//        (les points ne baissent jamais : au moins N équipes finiront
+//        au-dessus) ;
+//      - qualifiée si moins de N autres équipes peuvent encore atteindre ses
+//        points actuels (égalité comprise — un départage pourrait la sortir).
+//
+// Tout le reste est « en course ». Aucun pronostic dans un cas comme dans
+// l'autre : seul ce qui est acquis dans TOUS les cas s'affiche.
 //
 // Logique PURE : aucun accès base.
 
@@ -60,6 +74,12 @@ export type FinalsCard = {
 
 export type RaceStatus = 'qualified' | 'eliminated' | 'contention';
 
+/**
+ * Meilleur et pire rang qu'une équipe peut encore atteindre en fin de saison
+ * régulière, toutes issues des matchs restants confondues (1 = premier).
+ */
+export type RankBounds = { best: number; worst: number };
+
 export type RaceRow = PublicStandingRow & {
   /** Finale visée au rang actuel (index dans `cards`), null hors qualification. */
   zone: number | null;
@@ -76,6 +96,11 @@ export type FinalsPhase = {
   seasonOver: boolean;
   /** Au moins un match de classement joué. */
   seasonStarted: boolean;
+  /**
+   * Vrai quand les statuts viennent des rangs encore possibles (départages
+   * compris), faux quand ils viennent des points seuls.
+   */
+  tiebreakersIncluded: boolean;
 };
 
 const OPEN_STATUSES = new Set([
@@ -110,11 +135,19 @@ export function buildFinalsPhase(input: {
   standings: PublicStandingRow[];
   finals: FinalsMatch[];
   raceMatches: RaceMatch[];
+  /** Rangs encore possibles par équipe (cf. en-tête) ; absent = points seuls. */
+  rankBounds?: ReadonlyMap<string, RankBounds> | null;
 }): FinalsPhase {
   const rows = [...input.standings].sort((a, b) => a.rank - b.rank);
   // Une équipe disqualifiée (classée en dernier) n'est ni projetée en finale
   // ni rivale de personne.
   const eligible = rows.filter((r) => !r.disqualified);
+  // Tout ou rien : une équipe sans bornes ferait mentir le sous-titre, qui
+  // annonce les départages compris pour tout le tableau.
+  const bounds =
+    input.rankBounds && eligible.every((r) => input.rankBounds?.has(r.teamId))
+      ? input.rankBounds
+      : null;
   const finals = [...input.finals].sort(
     (a, b) => (b.round_number ?? 0) - (a.round_number ?? 0)
   );
@@ -161,16 +194,20 @@ export function buildFinalsPhase(input: {
       return { ...row, zone: null, remaining, maxPoints, status: 'eliminated' };
     }
     let status: RaceStatus = 'contention';
-    if (qualifiers > 0 && cutPoints !== null) {
+    const rankRange = bounds?.get(row.teamId);
+    if (qualifiers > 0 && seasonOver) {
+      status = idx < qualifiers ? 'qualified' : 'eliminated';
+    } else if (qualifiers > 0 && rankRange) {
+      if (rankRange.worst <= qualifiers) status = 'qualified';
+      else if (rankRange.best > qualifiers) status = 'eliminated';
+    } else if (qualifiers > 0 && cutPoints !== null) {
       const rivals = withMax.filter(
         (o) =>
           o.row.teamId !== row.teamId &&
           !o.row.disqualified &&
           o.maxPoints >= row.points
       ).length;
-      if (seasonOver) {
-        status = idx < qualifiers ? 'qualified' : 'eliminated';
-      } else if (rivals < qualifiers) {
+      if (rivals < qualifiers) {
         status = 'qualified';
       } else if (maxPoints < cutPoints) {
         status = 'eliminated';
@@ -185,5 +222,12 @@ export function buildFinalsPhase(input: {
     };
   });
 
-  return { cards, race, qualifiers, seasonOver, seasonStarted };
+  return {
+    cards,
+    race,
+    qualifiers,
+    seasonOver,
+    seasonStarted,
+    tiebreakersIncluded: bounds !== null && !seasonOver,
+  };
 }

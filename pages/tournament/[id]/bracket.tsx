@@ -40,6 +40,10 @@ import {
   type FinalsPhase,
   type RaceMatch,
 } from '@/utils/tournament/finalsPhase';
+import {
+  readFinalsRankBounds,
+  type PageMatchRef,
+} from '@/utils/tournament/finalsRankBounds';
 import FinalsPhaseView from '@/components/tournament/FinalsPhaseView';
 import { gameLabel } from '@/config/games';
 
@@ -144,9 +148,11 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   }
 
   const [stagesResult, matchesResult] = await Promise.all([
+    // `id` et `settings` (ordre de départage) servent aux rangs encore
+    // possibles de la course aux finales — même requête, pas une de plus.
     supabaseAdmin
       .from('tournament_stages')
-      .select('stage_type')
+      .select('id, stage_type, settings')
       .eq('tenant_id', tenantId)
       .eq('tournament_id', tournament.id),
     // Colonnes publiques, non-PII (même projection que la vue embed).
@@ -190,7 +196,11 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
   if (matchesResult.error)
     logger.error('bracket page matches error:', matchesResult.error);
 
-  const stageTypes = (stagesResult.data || []) as { stage_type: string }[];
+  const stageTypes = (stagesResult.data || []) as {
+    id: string;
+    stage_type: string;
+    settings: unknown;
+  }[];
   const hasFfaStage = containsFfaStage(stageTypes);
 
   const matches = (matchesResult.data || []) as unknown as ScheduleMatch[];
@@ -219,6 +229,17 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
     const finalsMatches = matches.filter(
       (m) => !m.stage_id && !m.is_bye
     ) as unknown as FinalsMatch[];
+    // Rangs encore possibles, départages compris (round robin, fin de
+    // saison) ; `null` → la course s'en tient aux points. La clé d'une table
+    // hors poules est l'id de sa phase.
+    const rankBounds =
+      tables.length === 1
+        ? await readFinalsRankBounds(
+            tenantId,
+            stageTypes.find((s) => s.id === tables[0].key) ?? null,
+            matches as unknown as PageMatchRef[]
+          )
+        : null;
     finals = buildFinalsPhase({
       // Plusieurs poules : l'appariement « 1er contre 2e » n'a plus de sens
       // sans règle inter-poules — pas de projection, les affiches restent
@@ -228,6 +249,7 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       raceMatches: matches.filter(
         (m) => !!m.stage_id
       ) as unknown as RaceMatch[],
+      rankBounds,
     });
   }
 

@@ -36,6 +36,8 @@ export default ns('tournamentBracket', {
   raceTitle: 'La course aux finales',
   raceSubtitle:
     '« Qualifiée » et « éliminée » ne s’affichent qu’une fois acquises au nombre de points, départages non compris.',
+  raceSubtitleTiebreakers:
+    '« Qualifiée » et « éliminée » ne s’affichent qu’une fois acquises quels que soient les résultats des matchs restants, départages compris.',
   raceSubtitleOver: 'Saison régulière terminée : les affiches sont fixées.',
   raceColTeam: 'Équipe',
   raceColPoints: 'Pts',

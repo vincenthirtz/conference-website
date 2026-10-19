@@ -222,7 +222,11 @@ function RaceTable({
         <div>
           <h2 className="text-lg font-bold text-white">{t.raceTitle}</h2>
           <p className="mt-1 max-w-2xl text-xs text-gray-400">
-            {phase.seasonOver ? t.raceSubtitleOver : t.raceSubtitle}
+            {phase.seasonOver
+              ? t.raceSubtitleOver
+              : phase.tiebreakersIncluded
+                ? t.raceSubtitleTiebreakers
+                : t.raceSubtitle}
           </p>
         </div>
         <Link

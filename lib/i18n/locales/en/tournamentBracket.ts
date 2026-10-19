@@ -37,6 +37,8 @@ export default {
   raceTitle: 'Race to the finals',
   raceSubtitle:
     '“Qualified” and “eliminated” only show once settled on points, tiebreakers excluded.',
+  raceSubtitleTiebreakers:
+    '“Qualified” and “eliminated” only show once settled whatever the remaining results, tiebreakers included.',
   raceSubtitleOver: 'Regular season over: matchups are set.',
   raceColTeam: 'Team',
   raceColPoints: 'Pts',
