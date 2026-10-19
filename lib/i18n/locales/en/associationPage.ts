@@ -68,9 +68,8 @@ export default {
   perk1: "Financially support the French-speaking women's Overwatch scene.",
   perk2: 'Take part in general meetings and vote on directions.',
   perk3: 'Priority access to workshops, scrims and community events.',
-  perk4: 'Tax receipt as soon as the payment is completed.',
   adhereOnline: 'Become a member online',
-  adhesionSecure: 'Secure payment · Automatic tax receipt',
+  adhesionSecure: 'Secure payment',
   qrAlt: 'QR code to the 2026-2027 membership campaign',
   qrScan: 'Scan to become a member',
   qrHint:

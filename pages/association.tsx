@@ -32,7 +32,10 @@ type AssoDict = typeof nsAssociationPage.fr;
 const ADHESION_URL =
   'https://www.monetico-online-asso.com/association-womens-cup/cotisation-membre';
 
-const getAdhesionPerks = (t: AssoDict) => [t.perk1, t.perk2, t.perk3, t.perk4];
+// Pas de reçu fiscal promis : depuis le passage à Monetico (19/10/2026), rien
+// ne garantit son émission. À rétablir quand le bureau aura confirmé comment
+// l'association les délivre.
+const getAdhesionPerks = (t: AssoDict) => [t.perk1, t.perk2, t.perk3];
 
 import { logger } from '../utils/logger';
 import nsAssociationPage from '@/lib/i18n/locales/fr/associationPage';

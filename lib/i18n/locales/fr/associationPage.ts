@@ -76,9 +76,8 @@ export default ns('associationPage', {
   perk1: 'Soutenir financièrement la scène Overwatch féminine francophone.',
   perk2: 'Participer aux assemblées générales et voter les orientations.',
   perk3: 'Accès prioritaire aux ateliers, scrims et événements communautaires.',
-  perk4: 'Reçu fiscal dès la finalisation du paiement.',
   adhereOnline: 'Adhérer en ligne',
-  adhesionSecure: 'Paiement sécurisé · Reçu fiscal automatique',
+  adhesionSecure: 'Paiement sécurisé',
   qrAlt: "QR code vers la campagne d'adhésion 2026-2027",
   qrScan: 'Scanner pour adhérer',
   qrHint:
