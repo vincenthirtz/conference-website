@@ -104,7 +104,7 @@ const SOURCES = [
   // Les partenaires de l'ASSOCIATION, pas ceux d'un tournoi : même règle que
   // le QR de don, l'espace de l'association est seul à qui ils appartiennent.
   { key: 'partners', size: '1920×160' },
-  // Le QR HelloAsso de la Women's Cup : proposé à son seul espace.
+  // Le QR de don de la Women's Cup : proposé à son seul espace.
   { key: 'don', size: '1920×1080' },
   // Alertes des dons HelloAsso de l'association : même règle que le QR.
   { key: 'donAlert', size: '1920×1080' },

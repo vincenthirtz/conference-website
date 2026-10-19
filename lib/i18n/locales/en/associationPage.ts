@@ -68,13 +68,13 @@ export default {
   perk1: "Financially support the French-speaking women's Overwatch scene.",
   perk2: 'Take part in general meetings and vote on directions.',
   perk3: 'Priority access to workshops, scrims and community events.',
-  perk4: 'HelloAsso tax receipt as soon as the payment is completed.',
-  adhereHelloasso: 'Become a member on HelloAsso',
+  perk4: 'Tax receipt as soon as the payment is completed.',
+  adhereOnline: 'Become a member online',
   adhesionSecure: 'Secure payment · Automatic tax receipt',
   qrAlt: 'QR code to the 2026-2027 membership campaign',
   qrScan: 'Scan to become a member',
   qrHint:
-    'Point your phone at this QR code to go straight to the HelloAsso form.',
+    'Point your phone at this QR code to go straight to the membership form.',
   polesEyebrow: 'Who does what',
   polesTitle: "The team's areas",
   polesIntro:

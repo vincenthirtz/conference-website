@@ -3,36 +3,39 @@ import { test, expect } from '@playwright/test';
 // ─── Page de don (frontend) ────────────────────────────────────
 
 test.describe('Page de don — paiement en ligne ouvert', () => {
-  // Le « coming soon » est levé (`COMING_SOON = false` dans pages/don.tsx) :
-  // ces tests vérifient désormais que le formulaire est UTILISABLE. Pas de
-  // soumission — elle redirigerait vers HelloAsso.
-  test('La page /don n’affiche plus le bandeau "coming soon"', async ({
+  // Le don en ligne passe par la page de paiement de la banque (Monetico),
+  // hébergée et sans API : un lien, plus de formulaire ni de checkout
+  // HelloAsso. Pas de clic — il ouvrirait le site de la banque.
+  const DONATION_URL =
+    'https://www.monetico-online-asso.com/association-womens-cup/don';
+
+  test('Le bloc de don en ligne est là, sans formulaire HelloAsso', async ({
     page,
   }) => {
     await page.goto('/don');
-    await expect(page.locator('#don-prenom')).toBeVisible();
+    await expect(page.locator('#don-en-ligne')).toBeVisible();
+    await expect(page.locator('#don-prenom')).toHaveCount(0);
     await expect(page.getByText('Coming soon')).toHaveCount(0);
+    await expect(page.getByText(/HelloAsso/)).toHaveCount(0);
   });
 
-  test('Le formulaire de don est actif', async ({ page }) => {
+  test('Le bouton « Faire un don » mène à la page de paiement', async ({
+    page,
+  }) => {
     await page.goto('/don');
 
-    await expect(page.locator('#don-prenom')).toBeEnabled();
-    await expect(page.locator('#don-nom')).toBeEnabled();
-    await expect(page.locator('#don-email')).toBeEnabled();
-    await expect(page.getByPlaceholder('Autre (€)')).toBeEnabled();
-    await expect(
-      page.getByRole('button', { name: /Donner.*HelloAsso/ })
-    ).toBeEnabled();
+    const cta = page
+      .locator('#don-en-ligne')
+      .getByRole('link', { name: 'Faire un don', exact: true });
+    await expect(cta).toHaveAttribute('href', DONATION_URL);
+    await expect(cta).toHaveAttribute('target', '_blank');
   });
 
-  test('Les boutons de montant prédéfini sont actifs', async ({ page }) => {
+  test('Les montants indicatifs restent affichés', async ({ page }) => {
     await page.goto('/don');
 
     for (const amount of ['20 €', '50 €', '100 €', '150 €']) {
-      await expect(
-        page.getByRole('button', { name: amount, exact: true })
-      ).toBeEnabled();
+      await expect(page.getByText(amount, { exact: true })).toBeVisible();
     }
   });
 

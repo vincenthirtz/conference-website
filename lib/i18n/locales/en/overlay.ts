@@ -123,8 +123,8 @@ export default {
   donDocTitle: 'Stream source — donate',
   donEyebrow: 'Donate',
   donTitle: 'Support the association',
-  donBody: 'Scan the QR code to donate via HelloAsso.',
-  donQrAlt: 'HelloAsso donation QR code',
+  donBody: 'Scan the QR code to donate.',
+  donQrAlt: 'Donation QR code',
 
   donAlertDocTitle: 'Stream source — donation alert',
   donAlertEyebrow: 'New donation',

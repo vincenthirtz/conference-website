@@ -1,29 +1,19 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useRef, useState } from 'react';
 import Button from '@/components/Buttons/button';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useSiteSetting } from '@/hooks/useSiteSettings';
-import { useToast } from '@/components/Toast';
-import { useT, format } from '@/lib/i18n/useT';
+import { useT } from '@/lib/i18n/useT';
 import nsDonPage from '@/lib/i18n/locales/fr/donPage';
 
 type DonDict = typeof nsDonPage.fr;
 
-// Idempotency-Key pour le checkout HelloAsso (POST public/anonyme : pas de
-// session Supabase, donc useIdempotentMutation ne s'applique pas). Un
-// double-click / retry réseau renvoie la même clé tant que le checkout n'a pas
-// abouti — combiné au verrouillage du bouton jusqu'à la redirection.
-function genIdempotencyKey(): string {
-  if (
-    typeof crypto !== 'undefined' &&
-    typeof crypto.randomUUID === 'function'
-  ) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
+// Le don en ligne se fait sur la page de paiement de notre banque (Monetico) :
+// une page hébergée, sans API — un lien, plus de formulaire. La même adresse
+// que le QR `public/images/qr.png`.
+const DONATION_URL =
+  'https://www.monetico-online-asso.com/association-womens-cup/don';
 
 const getUses = (t: DonDict) => [
   { title: t.use1Title, detail: t.use1Detail },
@@ -38,10 +28,6 @@ const getTiers = (t: DonDict) => [
   { label: t.tier4Label, amount: '150 €', impact: t.tier4Impact },
 ];
 
-const presetAmounts = [2000, 5000, 10000, 15000] as const;
-
-const COMING_SOON = false;
-
 function DonationPage() {
   const router = useRouter();
   const t = useT(nsDonPage);
@@ -49,76 +35,10 @@ function DonationPage() {
   const tiers = getTiers(t);
   const { value: contactEmail } = useSiteSetting('contact_email');
 
-  // Online donation form state
-  const [selectedAmount, setSelectedAmount] = useState<number>(100);
-  const [customAmount, setCustomAmount] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [formError, setFormError] = useState('');
-  const { addToast } = useToast();
-  const idempotencyKeyRef = useRef<string>(genIdempotencyKey());
-
-  // Payment status from redirect
+  // Retour de paiement `?status=success|error`. Plus aucun don n'y revient
+  // depuis le site, mais le paiement d'un plan d'espace (conference-api,
+  // `features/admin/tenants/service/settings.ts`) renvoie toujours ici.
   const paymentStatus = router.query.status as string | undefined;
-
-  const effectiveAmount = customAmount
-    ? Math.round(Number(customAmount) * 100)
-    : selectedAmount;
-
-  async function handleDonate(e: React.FormEvent) {
-    e.preventDefault();
-    // Verrou anti double-checkout : dès le 1er clic, on bloque tant que la
-    // requête est en cours OU jusqu'à la redirection vers HelloAsso.
-    if (loading) return;
-    setFormError('');
-
-    if (effectiveAmount < 100) {
-      setFormError(t.minAmountError);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await fetch('/api/helloasso/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': idempotencyKeyRef.current,
-        },
-        body: JSON.stringify({
-          amount: effectiveAmount,
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          email: email.trim(),
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        // Échec : on régénère la clé pour que la prochaine tentative soit une
-        // nouvelle intention, et on réactive le bouton.
-        idempotencyKeyRef.current = genIdempotencyKey();
-        const message = data.error || t.genericError;
-        setFormError(message);
-        addToast(message, 'error');
-        setLoading(false);
-        return;
-      }
-
-      // Succès : on NE réactive PAS le bouton — la redirection part. Garder le
-      // bouton verrouillé empêche un second checkout pendant la navigation.
-      window.location.href = data.redirectUrl;
-    } catch {
-      idempotencyKeyRef.current = genIdempotencyKey();
-      const message = t.serverError;
-      setFormError(message);
-      addToast(message, 'error');
-      setLoading(false);
-    }
-  }
 
   const donationMail = `mailto:${contactEmail}?subject=Don%20pour%20l%27association%20OW%20Women%27s%20Cup&body=Bonjour%20%21%0AJe%20souhaite%20faire%20un%20don.%20Merci%20de%20m%27indiquer%20la%20marche%20%C3%A0%20suivre.%0A`;
   const sponsorMail = `mailto:${contactEmail}?subject=Partenariat%20ou%20m%C3%A9c%C3%A9nat%20OW%20Women%27s%20Cup&body=Bonjour%20%21%0AJe%20souhaite%20discuter%20d%27un%20partenariat%20ou%20m%C3%A9c%C3%A9nat.%0A`;
@@ -142,24 +62,18 @@ function DonationPage() {
           </p>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-            {COMING_SOON ? (
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-6 py-3 text-sm font-semibold text-gray-300 cursor-default">
-                {t.comingSoonBtn}
-              </span>
-            ) : (
-              <a
-                href="#don-en-ligne"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document
-                    .getElementById('don-prenom')
-                    ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }}
-                className="flex items-center justify-center rounded-full bg-[var(--color-violet-cta)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
-              >
-                {t.donateOnline}
-              </a>
-            )}
+            <a
+              href="#don-en-ligne"
+              onClick={(e) => {
+                e.preventDefault();
+                document
+                  .getElementById('don-en-ligne')
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }}
+              className="flex items-center justify-center rounded-full bg-[var(--color-violet-cta)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
+            >
+              {t.donateOnline}
+            </a>
             <Link
               href="/tournoi"
               className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-[var(--color-yellow)]/60 hover:bg-[var(--color-yellow)]/10 hover:text-[var(--color-yellow)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
@@ -263,26 +177,20 @@ function DonationPage() {
           </div>
         </section>
 
-        {/* Online donation form via HelloAsso */}
-        <section className="section-brand-bg">
+        {/* Don en ligne : la page de paiement de notre banque, par le bouton ou
+            le QR. `id="don-en-ligne"` est l'ancre du bouton du haut de page ET
+            du panneau Discord du bot (`/don#don-en-ligne`) : ne pas la
+            renommer. */}
+        <section
+          id="don-en-ligne"
+          className="section-brand-bg scroll-mt-header"
+        >
           <div className="relative card-brand rounded-3xl bg-gradient-to-r from-[#140a24] via-[#1c0f33] to-[#2a0d3d] p-6 sm:p-10 shadow-2xl">
-            {COMING_SOON && (
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-3xl bg-black/70 backdrop-blur-sm">
-                <p className="text-sm uppercase tracking-[0.18em] text-purple-300">
-                  {t.comingSoonEyebrow}
-                </p>
-                <p className="mt-2 text-2xl font-bold text-white">
-                  {t.comingSoonTitle}
-                </p>
-                <p className="mt-2 max-w-md text-center text-sm text-gray-300">
-                  {t.comingSoonBody}
-                </p>
-              </div>
-            )}
-            <div
-              className={`grid gap-8 md:grid-cols-3${COMING_SOON ? ' select-none' : ''}`}
-            >
-              <div className="md:col-span-1">
+            {/* Colonne du QR à largeur FIXE : centré dans une colonne
+                fractionnaire (1/3 de la carte), il tombait entre deux pixels et
+                l'écran le flouait une seconde fois. */}
+            <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_14rem] md:items-center">
+              <div>
                 <p className="text-sm uppercase tracking-[0.14em] text-gray-200">
                   {t.formEyebrow}
                 </p>
@@ -291,143 +199,42 @@ function DonationPage() {
                 </h3>
                 <span className="brand-rule mt-3" aria-hidden />
                 <p className="mt-3 text-sm text-gray-100">{t.formDesc}</p>
-                <div className="mt-5 flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <Image
-                    src="/images/qr.png"
-                    alt={t.qrAlt}
-                    width={128}
-                    height={128}
-                    className="rounded-lg"
-                  />
-                  <p className="text-xs font-medium text-gray-300">
-                    {t.qrHint}
-                  </p>
-                </div>
+                <a
+                  href={DONATION_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-violet-deep)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)] sm:w-auto"
+                >
+                  {t.donateCta}
+                  <svg
+                    className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M14 5l7 7m0 0l-7 7m7-7H3"
+                    />
+                  </svg>
+                </a>
               </div>
 
-              <form onSubmit={handleDonate} className="md:col-span-2 space-y-5">
-                {/* Amount selection */}
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-200">
-                    {t.amountLabel}
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {presetAmounts.map((cents) => (
-                      <button
-                        key={cents}
-                        type="button"
-                        disabled={COMING_SOON}
-                        onClick={() => {
-                          setSelectedAmount(cents);
-                          setCustomAmount('');
-                        }}
-                        className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
-                          !customAmount && selectedAmount === cents
-                            ? 'border-[var(--color-yellow)] bg-[var(--color-yellow)]/20 text-white'
-                            : 'border-white/15 bg-white/5 text-gray-200 hover:bg-white/10'
-                        }`}
-                      >
-                        {cents / 100} €
-                      </button>
-                    ))}
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      placeholder={t.customAmountPlaceholder}
-                      disabled={COMING_SOON}
-                      value={customAmount}
-                      onChange={(e) => setCustomAmount(e.target.value)}
-                      className="w-28 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-400 outline-none focus:border-purple-400"
-                    />
-                  </div>
-                </div>
-
-                {/* Payer info */}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label
-                      htmlFor="don-prenom"
-                      className="mb-1 block text-sm text-gray-200"
-                    >
-                      {t.firstNameLabel}
-                    </label>
-                    <input
-                      id="don-prenom"
-                      type="text"
-                      required
-                      disabled={COMING_SOON}
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-400 outline-none focus:border-purple-400"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="don-nom"
-                      className="mb-1 block text-sm text-gray-200"
-                    >
-                      {t.lastNameLabel}
-                    </label>
-                    <input
-                      id="don-nom"
-                      type="text"
-                      required
-                      disabled={COMING_SOON}
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-400 outline-none focus:border-purple-400"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label
-                    htmlFor="don-email"
-                    className="mb-1 block text-sm text-gray-200"
-                  >
-                    {t.emailLabel}
-                  </label>
-                  <input
-                    id="don-email"
-                    type="email"
-                    required
-                    disabled={COMING_SOON}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-400 outline-none focus:border-purple-400"
-                  />
-                </div>
-
-                {formError && (
-                  <p
-                    role="alert"
-                    aria-live="polite"
-                    className="text-sm text-red-400"
-                  >
-                    {formError}
-                  </p>
-                )}
-
-                <Button
-                  overlay
-                  type="submit"
-                  disabled={loading || COMING_SOON}
-                  className="h-auto w-full justify-center rounded-lg bg-[var(--color-violet)] px-6 py-3 text-sm font-semibold transition hover:bg-[var(--color-violet-deep)] disabled:opacity-50"
-                >
-                  {loading
-                    ? t.submitRedirecting
-                    : format(t.submitDonate, {
-                        amount:
-                          effectiveAmount >= 100
-                            ? `${effectiveAmount / 100} €`
-                            : '',
-                      })}
-                </Button>
-
-                <p className="text-center text-xs text-gray-400">
-                  {t.redirectNote}
+              <div className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-4">
+                <Image
+                  src="/images/qr.png"
+                  alt={t.qrAlt}
+                  width={128}
+                  height={128}
+                  className="rounded-lg"
+                />
+                <p className="text-center text-xs font-medium text-gray-300">
+                  {t.qrHint}
                 </p>
-              </form>
+              </div>
             </div>
           </div>
         </section>

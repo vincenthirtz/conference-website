@@ -84,7 +84,7 @@ export default {
   source_partners_name: 'Partners',
   source_partners_desc:
     'The association’s partners as a strip on a transparent background — to sit at the bottom of the screen. Suggested source size: 1920×160. A partner with no logo shows its name instead. Add &categories=super,major to show a single tier, &limit=N for how many, &position=top or center to anchor it elsewhere, &heading=0 to keep only the logos.',
-  source_don_name: 'Donate (HelloAsso QR)',
+  source_don_name: 'Donate (QR code)',
   source_don_desc:
     'The association’s donation QR code, same as the /don page. Add &layout=corner for a bottom-right inset to keep on screen during games.',
   source_day_name: 'Today’s matches',

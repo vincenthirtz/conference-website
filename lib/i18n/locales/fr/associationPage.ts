@@ -76,13 +76,13 @@ export default ns('associationPage', {
   perk1: 'Soutenir financièrement la scène Overwatch féminine francophone.',
   perk2: 'Participer aux assemblées générales et voter les orientations.',
   perk3: 'Accès prioritaire aux ateliers, scrims et événements communautaires.',
-  perk4: 'Reçu fiscal HelloAsso dès la finalisation du paiement.',
-  adhereHelloasso: 'Adhérer sur HelloAsso',
+  perk4: 'Reçu fiscal dès la finalisation du paiement.',
+  adhereOnline: 'Adhérer en ligne',
   adhesionSecure: 'Paiement sécurisé · Reçu fiscal automatique',
   qrAlt: "QR code vers la campagne d'adhésion 2026-2027",
   qrScan: 'Scanner pour adhérer',
   qrHint:
-    'Pointe ton téléphone vers ce QR code pour accéder directement au formulaire HelloAsso.',
+    "Pointe ton téléphone vers ce QR code pour accéder directement au formulaire d'adhésion.",
   polesEyebrow: 'Qui fait quoi',
   polesTitle: "Les pôles de l'équipe",
   polesIntro:

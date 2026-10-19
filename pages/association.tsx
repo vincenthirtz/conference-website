@@ -27,8 +27,10 @@ import {
 
 type AssoDict = typeof nsAssociationPage.fr;
 
+// Page de paiement des cotisations (Monetico, le service de notre banque) : la
+// même que le QR `public/images/qradhesion2026.png`.
 const ADHESION_URL =
-  'https://www.helloasso.com/associations/women-s-cup/adhesions/adhesion-2026-2027-women-s-cup';
+  'https://www.monetico-online-asso.com/association-womens-cup/cotisation-membre';
 
 const getAdhesionPerks = (t: AssoDict) => [t.perk1, t.perk2, t.perk3, t.perk4];
 
@@ -756,7 +758,7 @@ function AssociationPage({
                   rel="noopener noreferrer"
                   className="group inline-flex items-center gap-2 rounded-full bg-[var(--color-violet-cta)] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/40 transition-all hover:bg-[var(--color-violet-deep)] hover:shadow-xl hover:shadow-purple-900/50 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet-light)]"
                 >
-                  {t.adhereHelloasso}
+                  {t.adhereOnline}
                   <svg
                     className="h-4 w-4 transition-transform group-hover:translate-x-1"
                     fill="none"

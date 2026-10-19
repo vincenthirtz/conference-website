@@ -14,7 +14,6 @@ export default {
   heroTitle: "Donate to help women's esport grow",
   heroSubtitle:
     "Every contribution helps us open more spots for players, keep events safe, and show that women's performance deserves an ambitious setting.",
-  comingSoonBtn: 'Online payment coming soon',
   donateOnline: 'Donate online',
   discoverProject: 'Discover the project',
   usesTitle: 'What your donation makes possible',
@@ -34,7 +33,7 @@ export default {
   transparency3: 'Priority given to inclusive actions',
   thanksTitle: 'Thank you for your donation!',
   thanksBody:
-    'Your payment has been received. You will get a confirmation email from HelloAsso.',
+    'Your payment has been received. You will get a confirmation email.',
   errorTitle: "The payment didn't go through.",
   errorBody: 'You can try again below or contact us if the problem persists.',
   chooseAmountLabel: 'Choose an amount',
@@ -51,25 +50,13 @@ export default {
   tier4Label: 'Patron',
   tier4Impact:
     'Helps launch a live event (equipment + supervision) in a venue or secure a full recording.',
-  comingSoonEyebrow: 'Coming soon',
-  comingSoonTitle: 'Online payment coming soon',
-  comingSoonBody:
-    'Card donations via HelloAsso will be available very soon. In the meantime, you can contact us to donate by bank transfer.',
   formEyebrow: 'Donate online',
   formTitle: 'Secure payment',
   formDesc:
-    'Pay by card via HelloAsso, the leading platform for French associations. No commission is taken on your donation.',
+    'Pay by card on our bank’s secure payment page, where you choose the amount of your donation.',
+  donateCta: 'Donate',
   qrAlt: 'QR code to donate',
-  qrHint: 'Or scan this QR code',
-  amountLabel: 'Donation amount',
-  customAmountPlaceholder: 'Other (€)',
-  firstNameLabel: 'First name',
-  lastNameLabel: 'Last name',
-  emailLabel: 'Email',
-  submitRedirecting: 'Redirecting...',
-  submitDonate: 'Donate {amount} via HelloAsso',
-  redirectNote:
-    'You will be redirected to HelloAsso to complete the payment securely.',
+  qrHint: 'Or scan this QR code to donate from your phone',
   otherMeansLabel: 'Other ways',
   otherMeansTitle: 'Bank transfer or patronage',
   transferTitle: 'Bank transfer',
@@ -86,7 +73,4 @@ export default {
   questionTitle: "We're here to help",
   questionBody:
     'Need a receipt, want to understand how donations are used, or know about upcoming actions? Write to us — we reply quickly.',
-  minAmountError: 'The minimum amount is 1 €.',
-  genericError: 'Something went wrong.',
-  serverError: 'Unable to reach the server. Please try again later.',
 };

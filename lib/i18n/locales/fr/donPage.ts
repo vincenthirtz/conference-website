@@ -13,7 +13,6 @@ export default ns('donPage', {
   heroTitle: "Faites un don pour faire grandir l'esport féminin",
   heroSubtitle:
     'Chaque contribution nous aide à ouvrir plus de places pour les joueuses, sécuriser les événements et montrer que la performance féminine mérite un cadre ambitieux.',
-  comingSoonBtn: 'Paiement en ligne bientôt disponible',
   donateOnline: 'Faire un don en ligne',
   discoverProject: 'Découvrir le projet',
   usesTitle: 'Ce que votre don rend possible',
@@ -33,7 +32,7 @@ export default ns('donPage', {
   transparency3: 'Priorité donnée aux actions inclusives',
   thanksTitle: 'Merci pour votre don !',
   thanksBody:
-    'Votre paiement a bien été pris en compte. Vous recevrez un email de confirmation de la part de HelloAsso.',
+    'Votre paiement a bien été pris en compte. Vous recevrez un email de confirmation.',
   errorTitle: "Le paiement n'a pas abouti.",
   errorBody:
     'Vous pouvez réessayer ci-dessous ou nous contacter si le problème persiste.',
@@ -53,25 +52,13 @@ export default ns('donPage', {
   tier4Label: 'Mécène',
   tier4Impact:
     'Permet de lancer un live (matériel + encadrement) dans une salle ou de sécuriser une captation entière.',
-  comingSoonEyebrow: 'Coming soon',
-  comingSoonTitle: 'Paiement en ligne bientôt disponible',
-  comingSoonBody:
-    'Le don par carte bancaire via HelloAsso sera disponible très prochainement. En attendant, vous pouvez nous contacter pour faire un don par virement.',
   formEyebrow: 'Faire un don en ligne',
   formTitle: 'Paiement sécurisé',
   formDesc:
-    "Réglez par carte bancaire via HelloAsso, la plateforme de référence des associations françaises. Aucune commission n'est prélevée sur votre don.",
+    'Réglez par carte bancaire sur la page de paiement sécurisée de notre banque : vous choisissez le montant de votre don.',
+  donateCta: 'Faire un don',
   qrAlt: 'QR code pour faire un don',
-  qrHint: 'Ou scannez ce QR code',
-  amountLabel: 'Montant du don',
-  customAmountPlaceholder: 'Autre (€)',
-  firstNameLabel: 'Prénom',
-  lastNameLabel: 'Nom',
-  emailLabel: 'Email',
-  submitRedirecting: 'Redirection...',
-  submitDonate: 'Donner {amount} via HelloAsso',
-  redirectNote:
-    'Vous serez redirigé vers HelloAsso pour finaliser le paiement de façon sécurisée.',
+  qrHint: 'Ou scannez ce QR code pour donner depuis votre téléphone',
   otherMeansLabel: 'Autres moyens',
   otherMeansTitle: 'Virement ou mécénat',
   transferTitle: 'Virement',
@@ -88,7 +75,4 @@ export default ns('donPage', {
   questionTitle: 'On reste disponible',
   questionBody:
     "Besoin d'un reçu, de comprendre l'affectation des dons ou de connaître les prochaines actions ? Écrivez-nous, on vous répond vite.",
-  minAmountError: 'Le montant minimum est 1 €.',
-  genericError: 'Une erreur est survenue.',
-  serverError: 'Impossible de contacter le serveur. Réessayez plus tard.',
 });

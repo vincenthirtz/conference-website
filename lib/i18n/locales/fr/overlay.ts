@@ -138,8 +138,8 @@ export default ns('overlay', {
   donDocTitle: 'Source de stream — faire un don',
   donEyebrow: 'Faire un don',
   donTitle: 'Soutenez l’association',
-  donBody: 'Scannez le QR code pour faire un don via HelloAsso.',
-  donQrAlt: 'QR code de don HelloAsso',
+  donBody: 'Scannez le QR code pour faire un don.',
+  donQrAlt: 'QR code pour faire un don',
 
   // Source « alerte don » (`/overlay/don-alert`). Jamais le nom du donateur :
   // il l'a saisi pour un reçu fiscal, pas pour l'antenne.

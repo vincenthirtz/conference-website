@@ -88,7 +88,7 @@ export default adminNs('adminTournamentEmbed', {
   source_partners_name: 'Partenaires',
   source_partners_desc:
     'Les partenaires de l’association en bandeau, sur fond transparent — à poser en bas d’écran. Source conseillée : 1920×160. Un partenaire sans logo affiche son nom. Ajoutez &categories=super,major pour n’en montrer qu’un palier, &limit=N pour le nombre, &position=top ou center pour le caler ailleurs, &heading=0 pour ne garder que les logos.',
-  source_don_name: 'Faire un don (QR HelloAsso)',
+  source_don_name: 'Faire un don (QR code)',
   source_don_desc:
     'Le QR code de don de l’association, le même que la page /don. Ajoutez &layout=corner pour un encart en bas à droite à garder pendant le jeu.',
   source_day_name: 'Matchs du jour',

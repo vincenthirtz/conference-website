@@ -1,10 +1,10 @@
 // pages/overlay/don.tsx
 //
-// LA SOURCE NAVIGATEUR « FAIRE UN DON » — le QR code HelloAsso de
+// LA SOURCE NAVIGATEUR « FAIRE UN DON » — le QR code de don de
 // l'association, à poser dans une scène OBS (pause, attente, fin de stream).
 //
 // C'est le MÊME QR que la page /don (`public/images/qr.png`) : un seul fichier
-// à remplacer si la campagne HelloAsso change. Page statique, sans API ni
+// à remplacer si le lien de don change. Page statique, sans API ni
 // polling — rien à mettre à jour pendant un direct.
 //
 // URL :
