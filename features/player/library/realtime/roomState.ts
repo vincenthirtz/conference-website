@@ -13,7 +13,10 @@
 //   - un `move` plus ancien que le dernier reçu de la même personne est jeté,
 //     et deux `move` à moins de `MIN_PEER_MOVE_MS` (heure de RÉCEPTION) aussi :
 //     un client qui inonde le canal ne fait pas sauter les avatars ;
-//   - une case hors de la salle est jetée.
+//   - une case hors de la salle est jetée ;
+//   - (lot 14a) la présence reçue est déjà VÉRIFIÉE (`./presenceVerifier.ts`) :
+//     pseudo, avatar et look viennent du jeton ; un avatar dont le jeton
+//     échoit disparaît au `tick` suivant.
 
 import type { LibraryEmoteId, LibraryPhraseId } from './social';
 import { LIBRARY_BUBBLE_MS } from './social';
@@ -21,18 +24,23 @@ import type {
   LibraryEmotePayload,
   LibraryMovePayload,
   LibraryPhrasePayload,
-  LibraryPresencePayload,
 } from './payloads';
+import type { VerifiedPresenceEntry } from './presenceVerifier';
 
 /** Écart minimal entre deux déplacements reçus d'une même personne. */
 export const MIN_PEER_MOVE_MS = 100;
 
 export type RemoteAvatar = {
   userId: string;
+  /** Pseudo, avatar et look : ceux du JETON vérifié (lot 14a). */
   nickname: string;
   avatarId: string;
-  /** Look composé annoncé (lot 13, forme compacte déjà validée) ; null : `avatarId`. */
+  /** Look composé (lot 13, forme compacte déjà validée) ; null : `avatarId`. */
   look: string | null;
+  /** Son jeton de présence vérifié : ce que portent les gestes de modération. */
+  ticket: string;
+  /** Échéance du jeton (ms, mon horloge) : au-delà, l'avatar disparaît. */
+  expiresAt: number;
   /** Dernière case CONNUE (présence) : là où le moteur la pose en arrivant. */
   gx: number;
   gy: number;
@@ -59,7 +67,7 @@ export type RoomSocialState = {
 };
 
 export type RoomSocialAction =
-  | { type: 'presence'; entries: LibraryPresencePayload[]; now: number }
+  | { type: 'presence'; entries: VerifiedPresenceEntry[]; now: number }
   | { type: 'move'; payload: LibraryMovePayload; now: number }
   | { type: 'emote'; payload: LibraryEmotePayload; now: number }
   | { type: 'phrase'; payload: LibraryPhrasePayload; now: number }
@@ -130,12 +138,15 @@ export function roomSocialReducer(
       for (const entry of action.entries) {
         if (!isShown(state, entry.userId, action.now)) continue;
         if (!inRoom(state, entry.gx, entry.gy)) continue;
+        if (entry.expiresAt <= action.now) continue;
         const known = state.avatars[entry.userId];
         next[entry.userId] = {
           userId: entry.userId,
           nickname: entry.nickname,
           avatarId: entry.avatarId,
-          look: entry.look ?? null,
+          look: entry.look,
+          ticket: entry.ticket,
+          expiresAt: entry.expiresAt,
           gx: entry.gx,
           gy: entry.gy,
           dir: entry.dir,
@@ -238,10 +249,15 @@ export function roomSocialReducer(
     }
 
     case 'tick': {
-      // Les bulles échues s'effacent ; les expulsions échues sont oubliées.
+      // Les bulles échues s'effacent ; les expulsions échues sont oubliées ;
+      // un avatar au jeton échu disparaît (lot 14a).
       let changed = false;
       const avatars: Record<string, RemoteAvatar> = {};
       for (const [id, a] of Object.entries(state.avatars)) {
+        if (a.expiresAt <= action.now) {
+          changed = true;
+          continue;
+        }
         const emote =
           a.emote && action.now - a.emote.receivedAt >= LIBRARY_BUBBLE_MS
             ? null

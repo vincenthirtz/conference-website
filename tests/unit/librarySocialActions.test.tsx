@@ -8,7 +8,10 @@
 //     masque rien ;
 //   * lever un blocage ne révèle RIEN en local (le serveur décide) ;
 //   * un refus rend `{ ok: false, code }`, `code` = clé de traduction ;
-//   * un geste à la fois par sorte (le second appel concurrent rend `null`).
+//   * un geste à la fois par sorte (le second appel concurrent rend `null`) ;
+//   * (lot 14a) bloquer, signaler, expulser envoient le JETON DE PRÉSENCE de
+//     la cible (`targetTicket`) ; lever un blocage, le `userId` seul ;
+//     `presence_invalid` est un refus traduit.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
@@ -42,6 +45,9 @@ afterEach(cleanup);
 const IRIS = '00000000-0000-4000-8000-000000000011';
 const ROOM = '00000000-0000-4000-8000-0000000000b1';
 const UNTIL = '2026-10-20T15:30:00.000Z';
+/** La cible d'un geste : un avatar vérifié, et son jeton de présence. */
+const TICKET = 'payload.signature';
+const TARGET = { userId: IRIS, ticket: TICKET };
 
 const refusal = (status: number, code?: string, extra = {}) =>
   new PlayerHttpError('refus', status, { error: 'refus', code, ...extra });
@@ -57,7 +63,7 @@ function makeClient(
   overrides: Partial<LibrarySocialActionsClient> = {}
 ): LibrarySocialActionsClient {
   return {
-    block: vi.fn(async (userId: string) => ({ userId, blocked: true })),
+    block: vi.fn(async (input) => ({ userId: input.userId, blocked: true })),
     unblock: vi.fn(async (userId: string) => ({ userId, blocked: false })),
     report: vi.fn(async () => ({
       reported: true as const,
@@ -86,9 +92,12 @@ describe('useLibrarySocialActions — bloquer', () => {
     const { result, room } = mount(client);
     let outcome: Awaited<ReturnType<typeof result.current.block>> = null;
     await act(async () => {
-      outcome = await result.current.block(IRIS);
+      outcome = await result.current.block(TARGET);
     });
-    expect(client.block).toHaveBeenCalledWith(IRIS);
+    expect(client.block).toHaveBeenCalledWith({
+      userId: IRIS,
+      targetTicket: TICKET,
+    });
     expect(outcome).toEqual({
       ok: true,
       data: { userId: IRIS, blocked: true },
@@ -105,7 +114,7 @@ describe('useLibrarySocialActions — bloquer', () => {
     const { result, room } = mount(client);
     let outcome: Awaited<ReturnType<typeof result.current.block>> = null;
     await act(async () => {
-      outcome = await result.current.block(IRIS);
+      outcome = await result.current.block(TARGET);
     });
     expect(outcome).toMatchObject({ ok: false, code: 'player_not_found' });
     expect(room.hideLocally).not.toHaveBeenCalled();
@@ -115,9 +124,9 @@ describe('useLibrarySocialActions — bloquer', () => {
     let release: () => void = () => {};
     const client = makeClient({
       block: vi.fn(
-        (userId: string) =>
+        (input: { userId: string }) =>
           new Promise<LibraryBlockResponse>((resolve) => {
-            release = () => resolve({ userId, blocked: true });
+            release = () => resolve({ userId: input.userId, blocked: true });
           })
       ),
     });
@@ -125,8 +134,8 @@ describe('useLibrarySocialActions — bloquer', () => {
     let first: Promise<unknown> = Promise.resolve();
     let second: unknown;
     await act(async () => {
-      first = result.current.block(IRIS);
-      second = await result.current.block(IRIS);
+      first = result.current.block(TARGET);
+      second = await result.current.block(TARGET);
     });
     expect(second).toBeNull();
     await waitFor(() => expect(result.current.blockingId).toBe(IRIS));
@@ -153,7 +162,12 @@ describe('useLibrarySocialActions — signaler, expulser', () => {
   it('signaler : la référence courte revient', async () => {
     const client = makeClient();
     const { result } = mount(client);
-    const input = { userId: IRIS, roomId: ROOM, reason: 'harassment' as const };
+    const input = {
+      userId: IRIS,
+      roomId: ROOM,
+      targetTicket: TICKET,
+      reason: 'harassment' as const,
+    };
     let outcome: unknown;
     await act(async () => {
       outcome = await result.current.report(input);
@@ -177,6 +191,7 @@ describe('useLibrarySocialActions — signaler, expulser', () => {
       outcome = await result.current.report({
         userId: IRIS,
         roomId: ROOM,
+        targetTicket: TICKET,
         reason: 'other',
       });
     });
@@ -187,18 +202,39 @@ describe('useLibrarySocialActions — signaler, expulser', () => {
     const client = makeClient();
     const { result, room } = mount(client);
     await act(async () => {
-      await result.current.kick(IRIS, 60);
+      await result.current.kick(TARGET, 60);
     });
     await act(async () => {
-      await result.current.kick(IRIS);
+      await result.current.kick(TARGET);
     });
     expect(client.kick).toHaveBeenNthCalledWith(1, {
       userId: IRIS,
+      targetTicket: TICKET,
       minutes: 60,
     });
-    expect(client.kick).toHaveBeenNthCalledWith(2, { userId: IRIS });
+    expect(client.kick).toHaveBeenNthCalledWith(2, {
+      userId: IRIS,
+      targetTicket: TICKET,
+    });
     // L'expulsion se voit par le `kicked` du canal serveur, pas en local.
     expect(room.hideLocally).not.toHaveBeenCalled();
+  });
+
+  it('lot 14a : un jeton refusé par l’API (`presence_invalid`) rend un code traduit, rien de masqué', async () => {
+    const client = makeClient({
+      block: vi.fn(async () => {
+        throw refusal(403, 'presence_invalid');
+      }),
+    });
+    const { result, room } = mount(client);
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await result.current.block(TARGET);
+    });
+    expect(outcome).toMatchObject({ ok: false, code: 'presence_invalid' });
+    expect(room.hideLocally).not.toHaveBeenCalled();
+    // Traduit (fr et en) : cf. « chaque code de l'API a sa traduction » plus bas.
+    expect(nsSocial.fr.codes.presence_invalid).toBeTruthy();
   });
 });
 

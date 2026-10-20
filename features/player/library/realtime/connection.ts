@@ -5,10 +5,13 @@
 // `./useLibraryRoomChannel.ts` lui passe le vrai (supabase-js).
 //
 // QUATRE SUJETS, tous `config: { private: true }` (policy `library_can_join`) :
-//   - `room`   : Presence (clé = mon userId) + broadcasts des joueuses
+//   - `room`   : Presence (clé = mon userId, payload = ma case et MON JETON
+//                de présence signé, lot 14a) + broadcasts des joueuses
 //                (`move`, `emote`, `phrase`). ÉCRIT PAR LES CLIENTES : on n'y
 //                écoute QUE ces trois événements, validés ; un `kicked` qui y
-//                passerait est un faux et n'est même pas écouté ;
+//                passerait est un faux et n'est même pas écouté. Une présence
+//                n'est montrée que si son jeton se vérifie
+//                (`./presenceVerifier.ts`), sous le pseudo et le look DU JETON ;
 //   - `chat`   : le canal SERVEUR de la salle — `kicked` (et le chat, lot 6) ;
 //   - `tenant` : les événements système de l'espace — `banned` ;
 //   - `user`   : ma boîte — `hide` / `unhide` (blocages), en silence.
@@ -24,7 +27,6 @@
 // une phrase par seconde (au-delà : refusée), la présence au plus chaque
 // seconde.
 
-import { decodeLibraryLook } from '@/config/library/avatarLook';
 import {
   LIBRARY_SERVER_EVENTS,
   LibraryBannedPayload,
@@ -32,16 +34,19 @@ import {
   LibraryKickedPayload,
   LibraryUnhidePayload,
 } from '../realtimeTopics';
-import type { LibraryEnterResponse } from '../socialResponses';
+import type {
+  LibraryEnterResponse,
+  LibraryPresenceGrant,
+} from '../socialResponses';
 import { bindChatEvents, type LibraryChatEvent } from './chatEvents';
 import {
   LIBRARY_PEER_EVENTS,
   LibraryEmotePayload,
   LibraryMovePayload,
   LibraryPhrasePayload,
-  LibraryPresencePayload,
   parsePeerPayload,
 } from './payloads';
+import { createVerifiedPresence } from './presenceVerifier';
 import {
   initialRoomState,
   roomSocialReducer,
@@ -128,6 +133,7 @@ export type LibraryEnterContext = Pick<
   | 'hiddenUserIds'
   | 'discreetByDefault'
   | 'canBeVisible'
+  | 'presence'
 >;
 
 export type LibraryConnectionOptions = {
@@ -137,11 +143,6 @@ export type LibraryConnectionOptions = {
   position: LibraryPosition;
   /** Visible au départ ? Défaut : `!discreetByDefault` (et `canBeVisible`). */
   visible?: boolean;
-  /**
-   * Mon look composé (lot 13, forme compacte), lu à CHAQUE envoi de ma
-   * présence ; absent, invalide ou null : seule `avatarId` part.
-   */
-  look?: () => string | null;
   onState: (state: RoomSocialState) => void;
   onEvicted: (eviction: LibraryEviction) => void;
   onStatus?: (status: LibraryConnectionStatus) => void;
@@ -164,6 +165,13 @@ export type LibraryRoomConnection = {
   sendMove(gx: number, gy: number): SendMoveResult;
   sendEmote(emote: LibraryEmoteId): boolean;
   sendPhrase(phrase: LibraryPhraseId): boolean;
+  /**
+   * Un jeton renouvelé (nouvelle entrée : échéance proche, nouveau look) :
+   * ma présence repart avec lui ; une nouvelle clé relit celle des autres.
+   */
+  renewPresence(grant: LibraryPresenceGrant): void;
+  /** Résolue quand les jetons reçus sont tous jugés (tests). */
+  presenceSettled(): Promise<void>;
   /** Après MON blocage confirmé par l'API : ne plus la montrer, tout de suite. */
   hideLocally(userId: string): void;
   unhideLocally(userId: string): void;
@@ -172,37 +180,6 @@ export type LibraryRoomConnection = {
   getState(): RoomSocialState;
   close(): Promise<void>;
 };
-
-/** Au plus ce nombre d'entrées de présence lues (une salle en tient 30). */
-export const PRESENCE_MAX_ENTRIES = 100;
-
-/** La présence brute d'un canal → des entrées validées, une par clé. */
-export function readPresence(
-  raw: Record<string, Array<Record<string, unknown>>>
-): LibraryPresencePayload[] {
-  const out: LibraryPresencePayload[] = [];
-  for (const [key, metas] of Object.entries(raw ?? {})) {
-    if (out.length >= PRESENCE_MAX_ENTRIES) break;
-    if (!Array.isArray(metas)) continue;
-    // Plusieurs onglets d'une même joueuse : la dernière entrée valable.
-    for (let i = metas.length - 1; i >= 0; i -= 1) {
-      const meta = metas[i];
-      if (!meta || typeof meta !== 'object') continue;
-      const { presence_ref: _ref, ...payload } = meta as Record<
-        string,
-        unknown
-      >;
-      const parsed = parsePeerPayload(LibraryPresencePayload, payload);
-      // La clé de présence est celle que la joueuse a choisie : on exige
-      // seulement qu'elle soit cohérente avec son payload.
-      if (parsed && parsed.userId === key) {
-        out.push(parsed);
-        break;
-      }
-    }
-  }
-  return out;
-}
 
 /** Une fin d'expulsion / de bannissement ISO → ms, ou `null` (inconnue / définitif). */
 function untilMs(until: string | null): number | null {
@@ -253,29 +230,35 @@ export function createLibraryRoomConnection(
     }
   }
 
+  // Lot 14a — mon jeton part dans ma présence ; ceux des autres sont vérifiés.
+  const presence = createVerifiedPresence({
+    grant: enter.presence,
+    roomId: enter.room.id,
+    now,
+    onSettled: () => resync(),
+  });
+
+  /** Relire la présence : seules les identités vérifiées en sortent. */
+  function resync() {
+    if (closed) return;
+    const entries = presence.read(roomChannel.presenceState());
+    dispatch({ type: 'presence', entries, now: now() });
+  }
+
   /** Démasquer, puis relire la présence : elle réapparaît si elle est là. */
   function reveal(userId: string) {
     dispatch({ type: 'unhide', userId });
-    if (subscribed) {
-      dispatch({
-        type: 'presence',
-        entries: readPresence(roomChannel.presenceState()),
-        now: now(),
-      });
-    }
+    if (subscribed) resync();
   }
 
   function presencePayload(): Record<string, unknown> {
-    // Lot 13 : le look ne part que s'il est valide (sinon `avatarId` seul).
-    const look = options.look?.() ?? null;
+    // Qui je suis, c'est mon jeton qui le dit (pseudo, avatar, look).
     return {
       userId: me.userId,
-      nickname: me.nickname,
-      avatarId: me.avatarId,
       gx: position.gx,
       gy: position.gy,
       dir: position.dir,
-      ...(look && decodeLibraryLook(look) ? { look } : {}),
+      ticket: presence.ticket(),
     };
   }
 
@@ -340,13 +323,7 @@ export function createLibraryRoomConnection(
   });
   channels.push(roomChannel);
   roomChannel
-    .on('presence', { event: 'sync' }, () => {
-      dispatch({
-        type: 'presence',
-        entries: readPresence(roomChannel.presenceState()),
-        now: now(),
-      });
-    })
+    .on('presence', { event: 'sync' }, resync)
     .on('broadcast', { event: LIBRARY_PEER_EVENTS.move }, (msg) => {
       const payload = parsePeerPayload(LibraryMovePayload, msg?.payload);
       if (payload) dispatch({ type: 'move', payload, now: now() });
@@ -563,6 +540,14 @@ export function createLibraryRoomConnection(
       broadcast(LIBRARY_PEER_EVENTS.phrase, { userId: me.userId, phraseId });
       return true;
     },
+
+    renewPresence(next) {
+      if (closed) return;
+      if (presence.renew(next)) resync();
+      if (tracked) track();
+    },
+
+    presenceSettled: () => presence.idle(),
 
     hideLocally(userId) {
       dispatch({ type: 'hide', userId });

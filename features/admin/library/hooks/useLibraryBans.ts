@@ -7,7 +7,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminKey } from '../../_shared/query';
-import { libraryBansClient } from '../client';
+import { libraryBansClient, type LibraryBanLiftTarget } from '../client';
 import type { LibraryBanCreateInput } from '../schemas';
 
 export const libraryBanKeys = {
@@ -35,7 +35,8 @@ export function useBanFromLibrary() {
 export function useLiftLibraryBans() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (userId: string) => libraryBansClient.lift(userId),
+    mutationFn: (target: LibraryBanLiftTarget) =>
+      libraryBansClient.lift(target),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: libraryBanKeys.all });
     },

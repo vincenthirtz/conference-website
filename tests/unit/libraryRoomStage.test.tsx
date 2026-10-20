@@ -12,9 +12,11 @@
 //   * le mode discret n'existe que dans la Grande salle de lecture ;
 // et autour : l'appartement ouvert de sa propriétaire montre ses visiteuses
 // (et reste solo, sans message, si l'entrée échoue), et les réglages
-// proposent de copier son lien.
+// proposent de copier son lien. Lot 14a : les présences portent un jeton
+// signé (signataire de test) ; une présence FORGÉE n'apparaît ni dans le
+// moteur ni dans la liste, et un appui sur elle n'ouvre aucun menu.
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   act,
   cleanup,
@@ -28,6 +30,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 const IRIS = '00000000-0000-4000-8000-000000000011';
+const NOVA = '00000000-0000-4000-8000-000000000012';
 
 // Le moteur isométrique n'est pas rendu : un témoin.
 vi.mock('next/dynamic', async () => {
@@ -87,7 +90,11 @@ import {
   type FakeRealtime,
 } from '../../features/player/library/dev/fakeRealtime';
 import { createFakeSocialClient } from '../../features/player/library/dev/fakeSocialClient';
-import type { LibraryEnterResponse } from '../../features/player/library/socialResponses';
+import { createDevPresenceSigner } from '../../features/player/library/dev/presenceSigner';
+import type {
+  LibraryEnterResponse,
+  LibraryPresenceGrant,
+} from '../../features/player/library/socialResponses';
 import type { LibraryApartmentResponse } from '../../features/player/library/responses';
 import { PlayerHttpError } from '../../utils/player/playerHttp';
 import nsSocial from '../../lib/i18n/locales/fr/playerLibrarySocial';
@@ -99,6 +106,24 @@ afterEach(cleanup);
 const t = nsSocial.fr;
 const tl = nsPlayerLibrary.fr;
 const UNTIL = '2026-10-20T15:30:00.000Z';
+
+/** Lot 14a : MON jeton, ceux d'Iris et Nova, et une Iris FORGÉE (autre clé). */
+let selfGrant: LibraryPresenceGrant;
+const tickets: Record<string, string> = {};
+beforeAll(async () => {
+  const signer = await createDevPresenceSigner();
+  const attacker = await createDevPresenceSigner();
+  const subject = (userId: string, nickname: string) => ({
+    roomId: FAKE_ROOM_ID,
+    userId,
+    nickname,
+    avatarId: 'a05',
+  });
+  selfGrant = await signer.grant(subject(FAKE_SELF_ID, 'Lune'));
+  tickets.iris = await signer.sign(subject(IRIS, 'Iris'));
+  tickets.nova = await signer.sign(subject(NOVA, 'Nova'));
+  tickets.forgedIris = await attacker.sign(subject(IRIS, 'Iris'));
+});
 
 function withQuery(children: ReactNode) {
   const client = new QueryClient({
@@ -112,7 +137,7 @@ function mount(
   enterImpl?: () => Promise<LibraryEnterResponse>
 ) {
   const bus = createFakeRealtime();
-  const enter = fakeEnterResponse(kind);
+  const enter = fakeEnterResponse(kind, { presence: selfGrant });
   const enterClient = { enter: vi.fn(enterImpl ?? (async () => enter)) };
   const actions = createFakeSocialClient({ bus, enter });
   render(
@@ -130,19 +155,17 @@ function mount(
   return { bus, enter, enterClient, actions };
 }
 
-const joinIris = (bus: FakeRealtime, topic: string, gx = 1, gy = 1) =>
-  act(() => {
-    bus.peerJoin(topic, {
-      userId: IRIS,
-      nickname: 'Iris',
-      avatarId: 'a05',
-      gx,
-      gy,
-      dir: 4,
-    });
-  });
-
 const view = () => screen.getByTestId('room-view');
+
+/** Iris entre (case, jeton signé) ; on attend que son jeton soit vérifié. */
+async function joinIris(bus: FakeRealtime, topic: string, gx = 1, gy = 1) {
+  act(() => {
+    bus.peerJoin(topic, { userId: IRIS, gx, gy, dir: 4, ticket: tickets.iris });
+  });
+  await waitFor(() =>
+    expect(view().getAttribute('data-remote')).toMatch(/Iris@/)
+  );
+}
 const menuOf = (nickname: string) =>
   screen.findByRole('menu', { name: format(t.menu.label, { nickname }) });
 
@@ -151,7 +174,7 @@ describe('RoomStage — une salle avec les autres', () => {
     const { bus, enter } = mount();
     await screen.findByTestId('room-view');
     expect(screen.getByText(t.room.presentEmpty)).toBeTruthy();
-    joinIris(bus, enter.topics.room);
+    await joinIris(bus, enter.topics.room);
     expect(view().getAttribute('data-remote')).toBe('Iris@1,1');
     const list = screen
       .getByText(t.room.presentTitle)
@@ -173,9 +196,67 @@ describe('RoomStage — une salle avec les autres', () => {
   it('un appui sur elle dans la vue ouvre le même menu', async () => {
     const { bus, enter } = mount();
     await screen.findByTestId('room-view');
-    joinIris(bus, enter.topics.room);
+    await joinIris(bus, enter.topics.room);
     fireEvent.click(screen.getByRole('button', { name: 'stub-tap-iris' }));
     await menuOf('Iris');
+  });
+
+  it('lot 14a : une présence forgée n’apparaît pas — ni vue, ni liste, ni menu', async () => {
+    const { bus, enter } = mount();
+    await waitFor(() =>
+      expect(document.querySelector('[data-phase="connected"]')).toBeTruthy()
+    );
+    const topic = enter.topics.room;
+    act(() => {
+      // Iris signée par une AUTRE clé, avec un pseudo déclaré à côté.
+      bus.peerJoin(topic, {
+        userId: IRIS,
+        nickname: 'Iris',
+        gx: 1,
+        gy: 1,
+        dir: 4,
+        ticket: tickets.forgedIris,
+      });
+      // Une ancienne présence, sans jeton.
+      bus.peerJoin(topic, {
+        userId: '00000000-0000-4000-8000-0000000000f1',
+        nickname: 'Usurpatrice',
+        avatarId: 'a01',
+        gx: 5,
+        gy: 5,
+        dir: 4,
+      });
+    });
+    act(() => {
+      bus.peerJoin(topic, {
+        userId: NOVA,
+        gx: 2,
+        gy: 2,
+        dir: 4,
+        ticket: tickets.nova,
+      });
+    });
+    await waitFor(() =>
+      expect(view().getAttribute('data-remote')).toBe('Nova@2,2')
+    );
+    await act(() => new Promise((r) => setTimeout(r, 30)));
+    expect(view().getAttribute('data-remote')).toBe('Nova@2,2');
+    const list = screen
+      .getByText(t.room.presentTitle)
+      .closest('section') as HTMLElement;
+    expect(within(list).queryByRole('button', { name: 'Iris' })).toBeNull();
+    expect(
+      within(list).queryByRole('button', { name: 'Usurpatrice' })
+    ).toBeNull();
+    // Ses déplacements et ses signes ne valent rien.
+    act(() => {
+      bus.peerSend(topic, 'emote', { userId: IRIS, emote: 'wave' });
+      bus.peerSend(topic, 'move', { userId: IRIS, gx: 3, gy: 3, at: 1 });
+    });
+    expect(view().getAttribute('data-remote')).toBe('Nova@2,2');
+    // Un appui « sur elle » n'ouvre aucun menu : rien à signaler.
+    fireEvent.click(screen.getByRole('button', { name: 'stub-tap-iris' }));
+    expect(screen.queryByRole('menu')).toBeNull();
   });
 
   it('ses signes passent en bulle ; marcher envoie la case visée ; mon signe parti aussi', async () => {
@@ -183,7 +264,7 @@ describe('RoomStage — une salle avec les autres', () => {
     await waitFor(() =>
       expect(document.querySelector('[data-phase="connected"]')).toBeTruthy()
     );
-    joinIris(bus, enter.topics.room);
+    await joinIris(bus, enter.topics.room);
     act(() => {
       bus.peerSend(enter.topics.room, 'emote', { userId: IRIS, emote: 'wave' });
     });
@@ -233,7 +314,7 @@ describe('RoomStage — une salle avec les autres', () => {
   it('bloquer depuis le menu la retire de la salle', async () => {
     const { bus, enter } = mount();
     await screen.findByTestId('room-view');
-    joinIris(bus, enter.topics.room);
+    await joinIris(bus, enter.topics.room);
     fireEvent.click(screen.getByRole('button', { name: 'Iris' }));
     const menu = await menuOf('Iris');
     fireEvent.click(within(menu).getByRole('menuitem', { name: t.menu.block }));
@@ -246,6 +327,26 @@ describe('RoomStage — une salle avec les autres', () => {
     ).toBeTruthy();
     expect(view().getAttribute('data-remote')).toBe('');
     expect(screen.getByText(t.room.presentEmpty)).toBeTruthy();
+  });
+
+  it('lot 14a : le blocage part avec le jeton de présence de la cible', async () => {
+    const { bus, enter, actions } = mount();
+    await screen.findByTestId('room-view');
+    await joinIris(bus, enter.topics.room);
+    const block = vi.spyOn(actions, 'block');
+    fireEvent.click(screen.getByRole('button', { name: 'Iris' }));
+    const menu = await menuOf('Iris');
+    fireEvent.click(within(menu).getByRole('menuitem', { name: t.menu.block }));
+    const confirm = await screen.findByRole('alertdialog');
+    fireEvent.click(
+      within(confirm).getByRole('button', { name: t.menu.blockConfirm })
+    );
+    await waitFor(() =>
+      expect(block).toHaveBeenCalledWith({
+        userId: IRIS,
+        targetTicket: tickets.iris,
+      })
+    );
   });
 
   it('entrée refusée (expulsion en cours) : la notice et le retour à mon appartement', async () => {
@@ -284,7 +385,7 @@ describe('RoomStage — une salle avec les autres', () => {
     let fail = true;
     const { enterClient } = mount('hall', async () => {
       if (fail) throw new TypeError('Failed to fetch');
-      return fakeEnterResponse('hall');
+      return fakeEnterResponse('hall', { presence: selfGrant });
     });
     const retry = await screen.findByRole('button', { name: t.room.retry });
     expect(screen.getByText(t.notice.errorTitle)).toBeTruthy();
@@ -335,7 +436,7 @@ describe('l’appartement de sa propriétaire', () => {
     enterImpl?: () => Promise<LibraryEnterResponse>
   ) {
     const bus = createFakeRealtime();
-    const enter = fakeEnterResponse('apartment');
+    const enter = fakeEnterResponse('apartment', { presence: selfGrant });
     const deps = {
       realtime: bus.client,
       enter: { enter: vi.fn(enterImpl ?? (async () => enter)) },
@@ -363,7 +464,7 @@ describe('l’appartement de sa propriétaire', () => {
   it('ouvert : elle voit ses visiteuses, et peut les expulser', async () => {
     const { bus, enter } = mountOwner('open');
     await screen.findByText(t.room.presentEmpty);
-    joinIris(bus, enter.topics.room, 2, 3);
+    await joinIris(bus, enter.topics.room, 2, 3);
     expect(view().getAttribute('data-remote')).toBe('Iris@2,3');
     fireEvent.click(screen.getByRole('button', { name: 'Iris' }));
     const menu = await menuOf('Iris');

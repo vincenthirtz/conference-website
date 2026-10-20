@@ -7,7 +7,8 @@
 //
 // Lot 5 phase B : le multijoueur aussi est EN MÉMOIRE (aucun réseau). Ouvert
 // à toutes (Réglages), l'appartement rejoint son canal simulé : une visiteuse
-// (Iris) y marche et fait des signes ; son menu propose d'expulser.
+// (Iris) y marche et fait des signes ; son menu propose d'expulser. Lot 14a :
+// les jetons de présence sont signés par la clé de test de la page.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
@@ -17,6 +18,11 @@ import ApartmentScreen from '../ui/apartment/ApartmentScreen';
 import { createFakeLibraryClient, DEV_APARTMENT_ITEMS } from './fakeClient';
 import { createFakeRealtime, fakeEnterResponse } from './fakeRealtime';
 import { createFakeSocialClient } from './fakeSocialClient';
+import {
+  devPresenceSigner,
+  signedEnter,
+  useDevPresenceSigner,
+} from './presenceSigner';
 import { useSimulatedPeers } from './simulatedPeers';
 
 /** L'identifiant de l'appartement du client en mémoire. */
@@ -41,20 +47,26 @@ export default function DevApartmentHarness() {
     });
     return {
       realtime: bus.client,
-      enter: { enter: async () => enter },
+      enter: {
+        enter: async () => signedEnter(enter, await devPresenceSigner()),
+      },
       actions: createFakeSocialClient({ bus, enter }),
     };
   }, [bus]);
+  const signer = useDevPresenceSigner();
   useSimulatedPeers(
     bus,
     {
+      id: DEV_ROOM_ID,
       topic: `library:room:${DEV_ROOM_ID}`,
       kind: 'apartment',
       width: 14,
       depth: 12,
       items: DEV_APARTMENT_ITEMS,
     },
-    1
+    1,
+    undefined,
+    signer
   );
   return (
     <QueryClientProvider client={queryClient}>

@@ -156,6 +156,7 @@
 | 11 | Le grand catalogue : 200 meubles et plus, variantes de couleur, sets thématiques | 🟧 | L | site + api |
 | 12 | Le décor de pièce : sols, papiers peints, fenêtres, portes | 🟧 | M | site + api |
 | 13 | L'avatar personnalisable, par calques | 🟧 | L | site + api |
+| 14 | Durcissement avant la bêta (audit du 2026-10-20, P1) | 🟥 | L | api + site |
 
 **Rien n'ouvre, même en bêta, avant la fin des lots 5, 6 et 8.** Les lots 11 à 13 (ajoutés le
 2026-10-20) ne bloquent pas l'ouverture : ils avancent en parallèle.
@@ -421,6 +422,30 @@ Ajouté le 2026-10-20. Il reprend le premier point du lot 10.
   des looks prédéfinis.
 - **L'éditeur** : un aperçu animé, des choix accessibles au clavier, et l'enregistrement par l'API.
 - **Fini quand** une joueuse compose son avatar, et que les autres le voient tel quel dans la salle.
+
+## Lot 14 · Durcissement avant la bêta — 🟥 / L (api + site)
+
+Ajouté le 2026-10-20, après l'audit de la Library déployée en bêta réservée à l'owner. Ces quatre
+points bloquent l'ouverture de la bêta fermée.
+
+- **14a · Une identité fiable dans les salles.** Jusqu'ici, la présence Realtime est déclarée par la
+  cliente (`userId`, pseudo, look) : une cliente modifiée peut prendre l'identité d'une autre, et le
+  menu Signaler / Bloquer / Expulser viserait alors la victime. L'API remet désormais, à l'entrée
+  dans la salle, un **jeton de présence signé** (salle, joueuse, pseudo, look, échéance). Les
+  clientes ignorent toute présence sans jeton valide, et les gestes de modération ne visent que des
+  identités vérifiées. Les déplacements et les emotes restent cosmétiques.
+- **14b · Des bannissements qui survivent à la suppression du compte.** Un bannissement garde des
+  empreintes d'identité **hachées avec un sel secret** (pas d'adresse en clair), sur le modèle de la
+  blacklist des joueurs. Elles sont vérifiées à l'attestation de majorité et à l'entrée. Le motif
+  « mineure présumée » ne doit plus se contourner en recréant un compte.
+- **14c · Une bêta par liste.** En plus de `owner`, `staff` et `all`, un mode `beta` ouvre la Library
+  au staff et à une liste d'équipes et de joueuses. Le staff règle le mode et la liste depuis l'admin,
+  sans redéployer. Une lecture impossible du réglage laisse la porte fermée.
+- **14d · Un kit de départ.** Quelques meubles offerts **en objets**, une seule fois par joueuse, à la
+  création de son appartement. Aucune pièce n'est créée : la règle « la monnaie se gagne » tient.
+- **Fini quand** une présence forgée n'apparaît pas et ne peut pas être signalée, un compte banni
+  puis supprimé et recréé reste refusé, deux équipes de test entrent pendant que les autres sont
+  refusées, et une nouvelle joueuse trouve son kit dans un appartement qui n'est plus vide.
 
 ---
 

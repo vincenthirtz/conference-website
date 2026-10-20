@@ -17,6 +17,12 @@
 // (`ui/social/SocialNotice.tsx`) — aucune pour un blocage, la salle est
 // simplement « fermée ».
 //
+// Lot 14a : mon jeton de présence (rendu par l'entrée) est RENOUVELÉ par une
+// nouvelle entrée, `PRESENCE_RENEW_MARGIN_MS` avant son échéance, et dès que
+// mon look change (le jeton porte le look enregistré). Un échec réessaie une
+// minute plus tard ; au pire, mon jeton échoit et les autres ne me voient
+// plus, sans autre effet.
+//
 // Le client Realtime et le client HTTP sont injectables (tests, page de
 // développement) ; par défaut, supabase-js du navigateur et l'API.
 
@@ -24,7 +30,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabaseClient } from '@/utils/supabaseBrowser';
 import { PlayerHttpError } from '@/utils/player/playerHttp';
-import type { LibraryEnterResponse } from '../socialResponses';
+import type {
+  LibraryEnterResponse,
+  LibraryPresenceGrant,
+} from '../socialResponses';
 import {
   clearLibraryChat,
   publishLibraryChatContext,
@@ -92,11 +101,16 @@ export type UseLibraryRoomChannelOptions = {
   /** Effacement des bulles échues (ms). */
   tickMs?: number;
   /**
-   * Mon look composé (lot 13, forme compacte), annoncé dans ma présence ; un
-   * changement la renvoie. null : `avatarId` seul.
+   * Mon look composé (lot 13, forme compacte). Ma présence porte celui de mon
+   * JETON (lu en base à l'entrée) : un changement renouvelle le jeton.
    */
   look?: string | null;
 };
+
+/** Le jeton est renouvelé à cette marge de son échéance. */
+export const PRESENCE_RENEW_MARGIN_MS = 15 * 60_000;
+/** Après un renouvellement manqué (réseau), on réessaie après ce délai. */
+const PRESENCE_RENEW_RETRY_MS = 60_000;
 
 export type LibraryRoomChannel = {
   phase: LibraryRoomPhase;
@@ -150,8 +164,8 @@ export function useLibraryRoomChannel(
   // Lus à la connexion seulement : les changer ne recrée pas les canaux.
   const optionsRef = useRef(options);
   optionsRef.current = options;
-  /** Ma dernière case annoncée (lot 13 : un nouveau look la renvoie). */
-  const lastPositionRef = useRef<LibraryPosition | null>(null);
+  /** Renouveler mon jeton de présence maintenant (lot 14a). */
+  const renewRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!enabled || !roomId) {
@@ -160,12 +174,38 @@ export function useLibraryRoomChannel(
     }
     let cancelled = false;
     let connection: LibraryRoomConnection | null = null;
+    let renewTimer: ReturnType<typeof setTimeout> | null = null;
     setPhase('entering');
     setRefusal(null);
     setEviction(null);
     setAvatars([]);
 
     const social = optionsRef.current.social ?? librarySocialClient;
+    // Lot 14a : une nouvelle entrée renouvelle mon jeton de présence.
+    const scheduleRenew = (grant: LibraryPresenceGrant | null) => {
+      if (renewTimer) clearTimeout(renewTimer);
+      const life = grant
+        ? Date.parse(grant.expiresAt) - Date.parse(grant.issuedAt)
+        : Number.NaN;
+      const wait = Number.isFinite(life)
+        ? Math.max(PRESENCE_RENEW_RETRY_MS, life - PRESENCE_RENEW_MARGIN_MS)
+        : PRESENCE_RENEW_RETRY_MS;
+      renewTimer = setTimeout(renew, wait);
+    };
+    const renew = () => {
+      if (renewTimer) clearTimeout(renewTimer);
+      renewTimer = null;
+      social
+        .enter(roomId)
+        .then((again) => {
+          if (cancelled || !connection) return;
+          connection.renewPresence(again.presence);
+          scheduleRenew(again.presence);
+        })
+        .catch(() => {
+          if (!cancelled) scheduleRenew(null);
+        });
+    };
     social
       .enter(roomId)
       .then((entered) => {
@@ -184,12 +224,10 @@ export function useLibraryRoomChannel(
           typeof opts.position === 'function'
             ? opts.position(entered)
             : opts.position;
-        lastPositionRef.current = start;
         connection = createLibraryRoomConnection({
           client: opts.realtime ?? browserRealtime(),
           enter: entered,
           position: start,
-          look: () => optionsRef.current.look ?? null,
           onState: (state) => {
             if (cancelled) return;
             setAvatars(visibleAvatars(state));
@@ -218,6 +256,8 @@ export function useLibraryRoomChannel(
         });
         connectionRef.current = connection;
         setVisibleState(connection.isVisible());
+        renewRef.current = renew;
+        scheduleRenew(entered.presence);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -227,6 +267,8 @@ export function useLibraryRoomChannel(
 
     return () => {
       cancelled = true;
+      if (renewTimer) clearTimeout(renewTimer);
+      renewRef.current = null;
       connectionRef.current = null;
       if (connection) void connection.close();
       clearLibraryChat(roomId);
@@ -250,17 +292,17 @@ export function useLibraryRoomChannel(
   }, []);
 
   const updatePosition = useCallback((position: LibraryPosition) => {
-    lastPositionRef.current = position;
     connectionRef.current?.updatePosition(position);
   }, []);
 
-  // Un nouveau look (enregistré pendant la visite) repart avec ma présence.
+  // Un nouveau look (enregistré pendant la visite) : mon jeton, qui le porte,
+  // est renouvelé, et ma présence repart avec lui.
   const look = options.look ?? null;
+  const lookRef = useRef(look);
   useEffect(() => {
-    const position = lastPositionRef.current;
-    // Le look (null compris) est relu par la présence renvoyée.
-    if (position && look !== undefined)
-      connectionRef.current?.updatePosition(position);
+    if (lookRef.current === look) return;
+    lookRef.current = look;
+    renewRef.current?.();
   }, [look]);
   const sendMove = useCallback(
     (gx: number, gy: number): SendMoveResult =>

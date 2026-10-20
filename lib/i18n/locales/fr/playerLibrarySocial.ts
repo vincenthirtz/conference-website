@@ -199,6 +199,8 @@ export default ns('playerLibrarySocial', {
       'Tu n’as pas encore d’appartement : tu ne peux expulser personne.',
     report_failed:
       'Le signalement n’a pas pu être enregistré. Réessaie, ou écris à l’équipe depuis la page Support.',
+    presence_invalid:
+      'Cette joueuse n’est plus vérifiable dans la salle. Ferme ce menu, rouvre le sien, puis réessaie.',
     rate_limited: 'Trop de demandes d’un coup. Patiente un peu, puis réessaie.',
     library_banned: 'Ton accès à la Women’s Library est suspendu.',
     generic: 'Ça n’a pas marché. Réessaie dans un instant.',

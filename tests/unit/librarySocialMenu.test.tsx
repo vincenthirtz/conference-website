@@ -9,7 +9,9 @@
 //     l'autre n'en est pas avertie ; le focus va à « Annuler » ;
 //   * expulser : 30 min par défaut, la durée choisie part ;
 //   * signaler : dialogue modal titré, focus piégé, Échap ferme, motifs avec
-//     aide, compteur, confidentialité, référence au succès, message au refus.
+//     aide, compteur, confidentialité, référence au succès, message au refus ;
+//   * (lot 14a) la cible est un avatar VÉRIFIÉ : chaque geste emporte son
+//     jeton de présence ; sans jeton, le menu ne propose aucun geste.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -38,6 +40,7 @@ const t = nsSocial.fr;
 const IRIS = {
   userId: '00000000-0000-4000-8000-000000000011',
   nickname: 'Iris',
+  ticket: 'payload.signature',
 };
 const ROOM_ID = '00000000-0000-4000-8000-0000000000b1';
 const UNTIL = '2026-10-20T15:30:00.000Z';
@@ -58,13 +61,13 @@ function MenuHarness(props: MenuOverrides & { initiallyOpen?: boolean }) {
         <AvatarContextMenu
           target={IRIS}
           room={{ kind: 'hall', isOwner: false }}
-          onBlock={async (userId) => ({
+          onBlock={async (target) => ({
             ok: true,
-            data: { userId, blocked: true },
+            data: { userId: target.userId, blocked: true },
           })}
-          onKick={async (userId) => ({
+          onKick={async (target) => ({
             ok: true,
-            data: { kicked: true, userId, until: UNTIL },
+            data: { kicked: true, userId: target.userId, until: UNTIL },
           })}
           onReport={() => {}}
           {...props}
@@ -162,6 +165,17 @@ describe('AvatarContextMenu — le menu', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: t.menu.report }));
     expect(onReport).toHaveBeenCalledWith(IRIS);
   });
+
+  it('lot 14a : une cible sans jeton vérifié — aucun geste proposé', () => {
+    render(
+      <MenuHarness
+        initiallyOpen
+        target={{ ...IRIS, ticket: '' }}
+        room={{ kind: 'apartment', isOwner: true }}
+      />
+    );
+    expect(screen.queryAllByRole('menuitem')).toEqual([]);
+  });
 });
 
 describe('AvatarContextMenu — bloquer', () => {
@@ -209,10 +223,10 @@ describe('AvatarContextMenu — bloquer', () => {
     );
   });
 
-  it('confirmé : `onBlock(userId)`, puis le message de fin', async () => {
-    const onBlock = vi.fn(async (userId: string) => ({
+  it('confirmé : `onBlock(cible)` avec son jeton, puis le message de fin', async () => {
+    const onBlock = vi.fn(async (target: typeof IRIS) => ({
       ok: true as const,
-      data: { userId, blocked: true },
+      data: { userId: target.userId, blocked: true },
     }));
     openMenu({ onBlock });
     fireEvent.click(screen.getByRole('menuitem', { name: t.menu.block }));
@@ -221,7 +235,7 @@ describe('AvatarContextMenu — bloquer', () => {
         screen.getByRole('button', { name: t.menu.blockConfirm })
       );
     });
-    expect(onBlock).toHaveBeenCalledWith(IRIS.userId);
+    expect(onBlock).toHaveBeenCalledWith(IRIS);
     expect(screen.getByRole('status').textContent).toBe(
       format(t.menu.blockDone, { nickname: 'Iris' })
     );
@@ -253,9 +267,9 @@ describe('AvatarContextMenu — bloquer', () => {
 
 describe('AvatarContextMenu — expulser', () => {
   it('30 min par défaut ; la durée choisie part ; la fin est datée', async () => {
-    const onKick = vi.fn(async (userId: string) => ({
+    const onKick = vi.fn(async (target: typeof IRIS) => ({
       ok: true as const,
-      data: { kicked: true as const, userId, until: UNTIL },
+      data: { kicked: true as const, userId: target.userId, until: UNTIL },
     }));
     openMenu({ room: { kind: 'apartment', isOwner: true }, onKick });
     fireEvent.click(screen.getByRole('menuitem', { name: t.menu.kick }));
@@ -273,7 +287,7 @@ describe('AvatarContextMenu — expulser', () => {
         within(dialog).getByRole('button', { name: t.menu.kickConfirm })
       );
     });
-    expect(onKick).toHaveBeenCalledWith(IRIS.userId, 1440);
+    expect(onKick).toHaveBeenCalledWith(IRIS, 1440);
     const done = screen.getByRole('status').textContent ?? '';
     expect(done).toContain('Iris');
     expect(done).toContain('20 octobre');
@@ -385,6 +399,7 @@ describe('ReportDialog', () => {
     expect(onSubmit).toHaveBeenCalledWith({
       userId: IRIS.userId,
       roomId: ROOM_ID,
+      targetTicket: IRIS.ticket,
       reason: 'minor',
       details: 'dans le hall',
     });
@@ -415,6 +430,7 @@ describe('ReportDialog', () => {
     expect(onSubmit).toHaveBeenCalledWith({
       userId: IRIS.userId,
       roomId: ROOM_ID,
+      targetTicket: IRIS.ticket,
       reason: 'harassment',
     });
   });

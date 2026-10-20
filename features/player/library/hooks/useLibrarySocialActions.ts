@@ -3,10 +3,10 @@
 // signaler, expulser de chez soi (lot 5 de docs/PLAN-womens-library.md).
 //
 // TOUT PASSE PAR L'API (`librarySocialClient`), qui identifie l'appelante par
-// sa session et vérifie la cible en base. Le `userId` d'un avatar vient de la
-// présence d'une autre cliente : ce n'est qu'un identifiant à SOUMETTRE,
-// jamais une preuve (cf. realtime/payloads.ts). Rien ne change à l'écran
-// AVANT la réponse :
+// sa session et vérifie la cible en base. La cible est un avatar VÉRIFIÉ : son
+// `userId` ET son jeton de présence (`ticket`, lot 14a), que l'API revérifie
+// (cf. realtime/presenceVerifier.ts). Rien ne change à l'écran AVANT la
+// réponse :
 //   - bloquer : une fois CONFIRMÉ, `room.hideLocally(userId)` la retire tout
 //     de suite (le `hide` du serveur suit, pour mes autres onglets) ;
 //   - lever un blocage : RIEN en local. Le serveur n'envoie `unhide` que si
@@ -26,13 +26,20 @@ import {
   librarySocialClient,
   type LibrarySocialClient,
 } from '../realtime/socialClient';
-import type { LibraryKickInput, LibraryReportInput } from '../socialSchemas';
+import type {
+  LibraryBlockInput,
+  LibraryKickInput,
+  LibraryReportInput,
+} from '../socialSchemas';
 import { type SocialActionResult, socialErrorKey } from '../socialModel';
 
 export type LibrarySocialActionsClient = Pick<
   LibrarySocialClient,
   'block' | 'unblock' | 'report' | 'kick'
 >;
+
+/** La cible d'un geste : un avatar dont le jeton de présence est vérifié. */
+export type SocialActionTarget = { userId: string; ticket: string };
 
 export type UseLibrarySocialActionsOptions = {
   /** La salle en cours (`useLibraryRoomChannel`) : masquer après un blocage. */
@@ -78,7 +85,7 @@ export function useLibrarySocialActions(
   roomRef.current = options.room;
 
   const blockM = useMutation({
-    mutationFn: (userId: string) => client.block(userId),
+    mutationFn: (input: LibraryBlockInput) => client.block(input),
   });
   const unblockM = useMutation({
     mutationFn: (userId: string) => client.unblock(userId),
@@ -101,9 +108,12 @@ export function useLibrarySocialActions(
   const { mutateAsync: kickAsync } = kickM;
 
   const block = useCallback(
-    (userId: string) =>
+    (target: SocialActionTarget) =>
       blockFlight(async () => {
-        const result = await settle(() => blockAsync(userId));
+        const { userId, ticket } = target;
+        const result = await settle(() =>
+          blockAsync({ userId, targetTicket: ticket })
+        );
         // Confirmé par l'API : on ne la voit plus, sans attendre le `hide`.
         if (result.ok) roomRef.current?.hideLocally(userId);
         return result;
@@ -123,19 +133,20 @@ export function useLibrarySocialActions(
   );
 
   const kick = useCallback(
-    (userId: string, minutes?: number) =>
-      kickFlight(() =>
-        settle(() =>
-          kickAsync(minutes === undefined ? { userId } : { userId, minutes })
-        )
-      ),
+    (target: SocialActionTarget, minutes?: number) =>
+      kickFlight(() => {
+        const base = { userId: target.userId, targetTicket: target.ticket };
+        return settle(() =>
+          kickAsync(minutes === undefined ? base : { ...base, minutes })
+        );
+      }),
     [kickFlight, kickAsync]
   );
 
   return {
     block,
     /** La personne en cours de blocage, ou null. */
-    blockingId: blockM.isPending ? (blockM.variables ?? null) : null,
+    blockingId: blockM.isPending ? (blockM.variables?.userId ?? null) : null,
     unblock,
     unblockingId: unblockM.isPending ? (unblockM.variables ?? null) : null,
     report,

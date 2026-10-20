@@ -8,7 +8,9 @@
 //   * un `move` périmé (`at`) ou trop rapproché (réception) est jeté ;
 //   * une case hors de la salle est jetée ;
 //   * `tick` efface les bulles échues et oublie les expulsions échues ;
-//   * démasquée, une personne réapparaît à la synchronisation suivante.
+//   * démasquée, une personne réapparaît à la synchronisation suivante ;
+//   * (lot 14a) les entrées reçues sont DÉJÀ vérifiées : l'avatar garde son
+//     jeton (pour les gestes de modération) et disparaît à son échéance.
 
 import { describe, expect, it } from 'vitest';
 import {
@@ -33,13 +35,19 @@ const base = (hiddenUserIds: string[] = []) =>
     hiddenUserIds,
   });
 
+/** Échéance des jetons des entrées (ms, horloge locale). */
+const EXPIRES = 10_000_000;
+
 const entry = (userId: string, gx = 1, gy = 1, nickname = 'Iris') => ({
   userId,
   nickname,
   avatarId: 'a05',
+  look: null,
   gx,
   gy,
   dir: 4,
+  ticket: `ticket-${userId}`,
+  expiresAt: EXPIRES,
 });
 
 const presence = (
@@ -250,6 +258,21 @@ describe('roomState — tick et reset', () => {
     expect(s.avatars[IRIS].phrase).toMatchObject({ id: 'hello' });
     s = roomSocialReducer(s, { type: 'tick', now: 1_000 + LIBRARY_BUBBLE_MS });
     expect(s.avatars[IRIS].phrase).toBeNull();
+  });
+
+  it('lot 14a : l’avatar garde son jeton ; un jeton échu n’entre pas, et disparaît au tick', () => {
+    let s = reduce(base(), presence([entry(IRIS), entry(NOVA, 2, 2, 'Nova')]));
+    expect(s.avatars[IRIS]).toMatchObject({
+      ticket: `ticket-${IRIS}`,
+      expiresAt: EXPIRES,
+    });
+    // Échu à la réception : pas d'avatar.
+    const late = reduce(base(), presence([entry(IRIS)], EXPIRES));
+    expect(late.avatars).toEqual({});
+    // Échu pendant la visite : il disparaît au tick, ses moves sont jetés.
+    s = roomSocialReducer(s, { type: 'tick', now: EXPIRES });
+    expect(Object.keys(s.avatars)).toEqual([]);
+    expect(roomSocialReducer(s, move(IRIS, 3, 3, 1, EXPIRES + 1))).toBe(s);
   });
 
   it('un tick sans rien d’échu rend le même objet (pas de rendu inutile)', () => {

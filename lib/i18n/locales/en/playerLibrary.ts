@@ -706,4 +706,12 @@ export default {
   closedBody:
     'The Women’s Library is still being prepared and isn’t open yet. It will be waiting for you here once it opens.',
   closedBackLink: 'Back to my space',
+
+  starterKitTitle: 'Your welcome kit has arrived',
+  starterKitItems: 'A gift from the Library, no coins spent: {items}.',
+  starterKitPlaced:
+    'Everything is already set up in your place. Use “Decorate” to move or store it.',
+  starterKitStored:
+    'Everything is waiting in “My furniture”: place it whenever you like with “Decorate”.',
+  starterKitDismiss: 'Got it',
 };

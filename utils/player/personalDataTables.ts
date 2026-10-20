@@ -934,6 +934,8 @@ export const PERSONAL_DATA_TABLES: readonly PersonalDataTable[] = [
   /* ------------------------------------------------- Women's Library --- */
   // Toutes en ON DELETE CASCADE vers auth.users (database/migrations/
   // library_core.sql) : la suppression de compte n'a rien à y exécuter.
+  // SAUF `library_bans`, en ON DELETE SET NULL depuis le lot 14b
+  // (library_bans_identity.sql) : voir son entrée.
   {
     table: 'library_avatars',
     columns: ['user_id'],
@@ -1028,11 +1030,24 @@ export const PERSONAL_DATA_TABLES: readonly PersonalDataTable[] = [
   {
     table: 'library_bans',
     columns: ['user_id'],
-    policy: { kind: 'cascade', onDelete: { user_id: 'CASCADE' } },
-    why: 'Les bannissements de la Library qui la concernent. Supprimer le compte ne lève rien : un nouveau compte est une autre identité, qui doit attester à nouveau.',
+    // CONSERVÉS APRÈS LA SUPPRESSION DU COMPTE (lot 14b, migration
+    // library_bans_identity.sql) — À FAIRE VALIDER PAR L'ASSOCIATION.
+    // Base : l'intérêt légitime de sécurité (un bannissement, notamment pour
+    // « mineure présumée », ne doit pas se contourner en recréant un compte).
+    // Ce qui reste : la ligne détachée du compte (`user_id` NULL), son motif,
+    // ses dates, et `identity_hashes` — des empreintes HMAC-SHA256 à sel
+    // secret de ses identifiants (e-mail normalisé, Discord, Battle.net,
+    // BattleTag, Twitch, identités OAuth), jamais en clair et illisibles sans
+    // le secret de l'API. Durée : tant que le bannissement est en cours, puis
+    // 30 jours après sa fin (échéance ou levée) — le cron quotidien
+    // `library-chat-purge` vide alors les empreintes et supprime la ligne d'un
+    // compte supprimé ; un bannissement DÉFINITIF les garde.
+    policy: { kind: 'cascade', onDelete: { user_id: 'SET NULL' } },
+    why: 'Les bannissements de la Library qui la concernent. Supprimer le compte ne les lève pas : pour la sécurité des joueuses, la base les détache du compte et garde des empreintes de ses identifiants, hachées avec un secret (jamais en clair) — e-mail, Discord, Battle.net, Twitch — afin qu’un nouveau compte qui les reprend reste refusé. Ces empreintes sont effacées 30 jours après la fin du bannissement ; un bannissement définitif les conserve.',
     export: {
       // Sans `by_staff_id` : le membre du staff qui a décidé n'est pas sa donnée.
       columns: ['tenant_id', 'reason', 'until', 'created_at'],
+      note: 'Les empreintes d’identité attachées à un bannissement sont omises : ce sont des condensats hachés avec un secret de l’association, dont on ne peut pas retrouver vos identifiants, et qui ne servent qu’à reconnaître un nouveau compte.',
     },
   },
   {

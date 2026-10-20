@@ -11,6 +11,12 @@
 // (`./simulatedPeers.ts` : 3, ou 29 pour mesurer à 30 avatars). Le panneau de
 // dev joue l'API (expulsion, bannissement, blocage) — dont un `kicked` FORGÉ
 // sur le canal de la salle, que le client doit ignorer.
+//
+// Lot 14a : un signataire de test (`./presenceSigner.ts`) joue la clé de
+// l'API — il signe MON jeton (entrée simulée) et ceux des joueuses simulées.
+// « Forged presences » pose des présences sans jeton valide (autre clé, jeton
+// d'une autre, autre salle, échu, sans jeton) : aucune ne doit apparaître,
+// ni dans la vue ni dans « Présentes dans la salle ».
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -32,7 +38,16 @@ import {
   fakeEnterResponse,
 } from './fakeRealtime';
 import { createFakeSocialClient } from './fakeSocialClient';
+import {
+  createDevPresenceSigner,
+  type DevPresenceSigner,
+  devPresenceSigner,
+  signedEnter,
+  signedPeerMeta,
+  useDevPresenceSigner,
+} from './presenceSigner';
 import { DEV_PEERS, DEV_SPECS, useSimulatedPeers } from './simulatedPeers';
+import type { FakeRealtime } from './fakeRealtime';
 
 const KINDS: LibraryRoomKind[] = ['hall', 'reading_room', 'apartment'];
 
@@ -83,6 +98,48 @@ function refusalFor(mode: EntryMode): PlayerHttpError | null {
   });
 }
 
+/** Identifiants des présences forgées (aucune ne doit apparaître). */
+const FORGED = [1, 2, 3, 4, 5].map(
+  (k) => `00000000-0000-4000-8000-0000000000f${k}`
+);
+
+/**
+ * Des présences qu'une cliente modifiée pourrait poser : chacune doit être
+ * IGNORÉE (lot 14a). Une case libre au milieu de la salle.
+ */
+async function forgePresences(
+  bus: FakeRealtime,
+  topic: string,
+  roomId: string,
+  signer: DevPresenceSigner
+) {
+  const [a, b, c, d, e] = FORGED;
+  const at = { gx: 7, gy: 4, dir: 4 };
+  const who = { nickname: 'Usurpatrice', avatarId: 'a01' };
+  const attacker = await createDevPresenceSigner();
+  const metas = [
+    // Signée par une AUTRE clé que celle de l'API.
+    await signedPeerMeta(attacker, roomId, { userId: a, ...who, ...at }),
+    // Le jeton VALIDE d'Iris, sous une autre clé de présence.
+    {
+      ...(await signedPeerMeta(signer, roomId, { ...DEV_PEERS[0], ...at })),
+      userId: b,
+    },
+    // Un jeton valide… d'une autre salle.
+    await signedPeerMeta(signer, 'another-room', { userId: c, ...who, ...at }),
+    // Un jeton échu.
+    await signedPeerMeta(
+      signer,
+      roomId,
+      { userId: d, ...who, ...at },
+      { iat: 1_000, exp: 2_000 }
+    ),
+  ];
+  for (const meta of metas) bus.peerJoin(topic, meta);
+  // L'ancienne présence, sans jeton : pseudo et avatar déclarés.
+  bus.peerJoin(topic, { userId: e, nickname: 'Iris', avatarId: 'a05', ...at });
+}
+
 function DevButton({
   onClick,
   children,
@@ -121,16 +178,18 @@ function Room({
     () => fakeEnterResponse(kind, { items: DEV_ITEMS }),
     [kind]
   );
+  // Lot 14a : l'entrée simulée rend MON jeton, signé par la clé de la page.
   const enterClient = useMemo(
     () => ({
       enter: async () => {
         const refusal = refusalFor(entry);
         if (refusal) throw refusal;
-        return enter;
+        return signedEnter(enter, await devPresenceSigner());
       },
     }),
     [enter, entry]
   );
+  const signer = useDevPresenceSigner();
   const [fakeApi] = useState(() => createFakeSocialClient({ bus, enter }));
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   fakeApi.onCall = rerender;
@@ -142,6 +201,7 @@ function Room({
   useSimulatedPeers(
     bus,
     {
+      id: enter.room.id,
       topic: enter.topics.room,
       kind,
       width: enter.room.width,
@@ -149,7 +209,8 @@ function Room({
       items: enter.items,
     },
     peers,
-    peers > 3 ? 160 : 1_400
+    peers > 3 ? 160 : 1_400,
+    signer
   );
 
   const { topics } = enter;
@@ -215,6 +276,14 @@ function Room({
             }
           >
             Forged kick on room channel (must be ignored)
+          </DevButton>
+          <DevButton
+            onClick={() => {
+              if (signer)
+                void forgePresences(bus, topics.room, enter.room.id, signer);
+            }}
+          >
+            Forged presences (must not appear)
           </DevButton>
           <DevButton
             onClick={() =>

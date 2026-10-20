@@ -405,6 +405,54 @@ describe('LibraryBansPanel — lever', () => {
     expect(await screen.findByText(t.libEmptyTitle)).toBeTruthy();
   });
 
+  it('compte supprimé (lot 14b) : « Compte supprimé », pas d’identifiant à copier, levée par `?id=`', async () => {
+    const DELETED: LibraryBanItem = {
+      ...GONE,
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-000000000009',
+      userId: null,
+      nickname: null,
+      until: null,
+    };
+    let listed: LibraryBanItem[] = [DELETED];
+    const lift = vi.fn(() => {
+      listed = [];
+      return Promise.resolve({ userId: null, lifted: 1 });
+    });
+    routeApi({
+      list: () => Promise.resolve({ items: listed, total: listed.length }),
+      lift,
+    });
+    renderPanel();
+
+    const [row] = await screen.findAllByTestId('library-ban-row');
+    expect(within(row).getByRole('rowheader').textContent).toBe(
+      t.libAccountDeleted
+    );
+    expect(row.textContent).toContain(t.libAccountDeletedHint);
+    expect(row.textContent).toContain(t.libPermanent);
+    expect(within(row).queryByRole('button', { name: /Copier/ })).toBeNull();
+
+    fireEvent.click(
+      within(row).getByRole('button', {
+        name: `Lever le bannissement de ${t.libAccountDeleted}`,
+      })
+    );
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.textContent).toContain(t.libConfirmLiftDeletedSubtitle);
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: t.libConfirmLiftLabel })
+    );
+    await waitFor(() => expect(lift).toHaveBeenCalledTimes(1));
+    const [url] = callsWith('DELETE')[0] as [string, Init];
+    expect(url).toBe(`/api/admin/library/bans?id=${DELETED.id}`);
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith(
+        `Bannissement levé pour « ${t.libAccountDeleted} ».`,
+        'success'
+      )
+    );
+  });
+
   it('rien à lever (`lifted: 0`) : on le dit, sans prétendre l’avoir fait', async () => {
     routeApi({
       list: listOf([LOLA]),

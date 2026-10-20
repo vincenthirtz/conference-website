@@ -7,10 +7,16 @@
 // expulsion diffuse `kicked` sur le canal SERVEUR de la salle — exactement ce
 // que fait conference-api après l'écriture. Chaque appel est journalisé.
 // `failNext(code, status)` fait échouer l'appel suivant, pour voir les états
-// d'erreur de l'interface.
+// d'erreur de l'interface. Lot 14a : bloquer, signaler, expulser sans jeton de
+// présence de la cible sont refusés (`presence_invalid`), comme par l'API —
+// la signature, elle, n'est vérifiée que par la vraie API.
 
 import { PlayerHttpError } from '@/utils/player/playerHttp';
-import type { LibraryKickInput, LibraryReportInput } from '../socialSchemas';
+import type {
+  LibraryBlockInput,
+  LibraryKickInput,
+  LibraryReportInput,
+} from '../socialSchemas';
 import { LIBRARY_KICK_DEFAULT_MINUTES } from '../socialSchemas';
 import type {
   LibraryBlockResponse,
@@ -58,13 +64,14 @@ export function createFakeSocialClient(args: {
       failure = { code, status };
     },
 
-    async block(userId: string): Promise<LibraryBlockResponse> {
-      await gate('block', { userId });
+    async block(input: LibraryBlockInput): Promise<LibraryBlockResponse> {
+      const { userId } = input;
+      await gate('block', input);
       bus.server(enter.topics.user, LIBRARY_SERVER_EVENTS.hide, {
         userId,
         leaveRoomId: null,
       });
-      log('block', { userId }, 'hide sent');
+      log('block', input, 'hide sent');
       return { userId, blocked: true };
     },
 
@@ -100,16 +107,28 @@ export function createFakeSocialClient(args: {
     input: unknown,
     outcome: string
   ) {
-    client.calls.unshift({ at: Date.now(), route, input, outcome });
+    // Le jeton est long : le journal n'en montre que le début.
+    const ticket = (input as { targetTicket?: unknown } | null)?.targetTicket;
+    const shown =
+      typeof ticket === 'string'
+        ? { ...(input as object), targetTicket: `${ticket.slice(0, 10)}…` }
+        : input;
+    client.calls.unshift({ at: Date.now(), route, input: shown, outcome });
     client.onCall?.();
   }
 
   async function gate(route: FakeSocialCall['route'], input: unknown) {
     await wait(LATENCY_MS);
-    const self =
-      (input as { userId?: string } | null)?.userId === enter.me.userId;
+    const body = input as { userId?: string; targetTicket?: string } | null;
+    const self = body?.userId === enter.me.userId;
+    const unticketed = route !== 'unblock' && !body?.targetTicket;
     const refused =
-      failure ?? (self ? { code: `cannot_${route}_self`, status: 400 } : null);
+      failure ??
+      (self
+        ? { code: `cannot_${route}_self`, status: 400 }
+        : unticketed
+          ? { code: 'presence_invalid', status: 403 }
+          : null);
     failure = null;
     if (refused) {
       log(route, input, `refused ${refused.status} ${refused.code}`);

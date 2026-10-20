@@ -5,6 +5,10 @@
 //   GET    /api/admin/library/bans?active=true&limit=  → { items, total }
 //   POST   /api/admin/library/bans                     → 201 { ban }
 //   DELETE /api/admin/library/bans?userId=             → { userId, lifted }
+//   DELETE /api/admin/library/bans?id=                 → { userId, lifted }
+//
+// `?id=` lève UN bannissement : celui d'un compte supprimé (`userId: null`,
+// lot 14b), que rien d'autre ne désigne.
 //
 // Route gardée `moderate_support` côté conference-api. Ce fichier est PROPRE
 // au site : `model.ts` et `schemas.ts`, à côté, sont des copies synchronisées
@@ -23,6 +27,9 @@ const BASE = '/api/admin/library/bans';
 /** Plafond de la route (`LibraryBanListQuery.limit`). */
 export const LIBRARY_BANS_PAGE_LIMIT = 200;
 
+/** Ce qu'on lève : tous les bannissements d'un compte, ou un bannissement. */
+export type LibraryBanLiftTarget = { userId: string } | { id: string };
+
 export const libraryBansClient = {
   /** Bannissements EN COURS, du plus récent au plus ancien. */
   listActive: () =>
@@ -36,10 +43,15 @@ export const libraryBansClient = {
       json: body,
       idempotent: true,
     }),
-  /** Lève TOUS les bannissements en cours de la joueuse (l'historique reste). */
-  lift: (userId: string) =>
+  /**
+   * Lève les bannissements EN COURS (l'historique reste) : tous ceux du
+   * compte (`userId`), ou ce bannissement-là (`id`, compte supprimé).
+   */
+  lift: (target: LibraryBanLiftTarget) =>
     adminRequest<LibraryBanLiftResponse>(
-      `${BASE}?userId=${encodeURIComponent(userId)}`,
+      'userId' in target
+        ? `${BASE}?userId=${encodeURIComponent(target.userId)}`
+        : `${BASE}?id=${encodeURIComponent(target.id)}`,
       { method: 'DELETE', idempotent: true }
     ),
 };

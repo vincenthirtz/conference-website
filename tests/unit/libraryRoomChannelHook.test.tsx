@@ -7,9 +7,11 @@
 //   * un refus de l'API (`PlayerHttpError`) → `refused`, avec son `code` et
 //     son `until` ; une autre panne → `enter_failed` ;
 //   * une éviction serveur → `evicted`, le rappel `onEvicted` ;
-//   * démonter ferme les canaux.
+//   * démonter ferme les canaux ;
+//   * (lot 14a) les autres n'apparaissent qu'avec un jeton de présence
+//     vérifié ; un nouveau look renouvelle MON jeton par une nouvelle entrée.
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { PlayerHttpError } from '../../utils/player/playerHttp';
 import { useLibraryRoomChannel } from '../../features/player/library/realtime/useLibraryRoomChannel';
@@ -19,7 +21,14 @@ import {
   FAKE_SELF_ID,
   fakeEnterResponse,
 } from '../../features/player/library/dev/fakeRealtime';
-import type { LibraryRoomKind } from '../../features/player/library/socialResponses';
+import {
+  createDevPresenceSigner,
+  signedPeerMeta,
+} from '../../features/player/library/dev/presenceSigner';
+import type {
+  LibraryPresenceGrant,
+  LibraryRoomKind,
+} from '../../features/player/library/socialResponses';
 
 afterEach(cleanup);
 
@@ -27,12 +36,36 @@ const IRIS = '00000000-0000-4000-8000-000000000011';
 const UNTIL = '2026-10-20T15:30:00.000Z';
 const POSITION = { gx: 2, gy: 2, dir: 4 };
 
+/** Lot 14a : mes jetons (l'entrée, puis son renouvellement) et la présence d'Iris. */
+let selfGrant: LibraryPresenceGrant;
+let renewedGrant: LibraryPresenceGrant;
+let irisMeta: Record<string, unknown> & { userId: string };
+beforeAll(async () => {
+  const signer = await createDevPresenceSigner();
+  const me = {
+    roomId: FAKE_ROOM_ID,
+    userId: FAKE_SELF_ID,
+    nickname: 'Lune',
+    avatarId: 'a03',
+  };
+  selfGrant = await signer.grant(me);
+  renewedGrant = await signer.grant({ ...me, look: '1130641' });
+  irisMeta = await signedPeerMeta(signer, FAKE_ROOM_ID, {
+    userId: IRIS,
+    nickname: 'Iris',
+    avatarId: 'a05',
+    gx: 1,
+    gy: 1,
+    dir: 4,
+  });
+});
+
 function mount(
   kind: LibraryRoomKind = 'hall',
   enterImpl?: () => Promise<ReturnType<typeof fakeEnterResponse>>
 ) {
   const bus = createFakeRealtime();
-  const enter = fakeEnterResponse(kind);
+  const enter = fakeEnterResponse(kind, { presence: selfGrant });
   const social = { enter: vi.fn(enterImpl ?? (async () => enter)) };
   const onEvicted = vi.fn();
   const hook = renderHook(
@@ -58,16 +91,12 @@ describe('useLibraryRoomChannel', () => {
     expect(result.current.visible).toBe(true);
 
     act(() => {
-      bus.peerJoin(enter.topics.room, {
-        userId: IRIS,
-        nickname: 'Iris',
-        avatarId: 'a05',
-        gx: 1,
-        gy: 1,
-        dir: 4,
-      });
+      bus.peerJoin(enter.topics.room, irisMeta);
     });
-    expect(result.current.avatars.map((a) => a.nickname)).toEqual(['Iris']);
+    // Le pseudo vient du JETON vérifié (asynchrone).
+    await waitFor(() =>
+      expect(result.current.avatars.map((a) => a.nickname)).toEqual(['Iris'])
+    );
     expect(result.current.sendEmote('wave')).toBe(true);
   });
 
@@ -125,17 +154,43 @@ describe('useLibraryRoomChannel', () => {
     const { result, bus, enter } = mount();
     await waitFor(() => expect(result.current.phase).toBe('connected'));
     act(() => {
-      bus.peerJoin(enter.topics.room, {
-        userId: IRIS,
-        nickname: 'Iris',
-        avatarId: 'a05',
-        gx: 1,
-        gy: 1,
-        dir: 4,
-      });
+      bus.peerJoin(enter.topics.room, irisMeta);
     });
+    await waitFor(() => expect(result.current.avatars).toHaveLength(1));
     act(() => result.current.hideLocally(IRIS));
     expect(result.current.avatars).toEqual([]);
+  });
+
+  it('lot 14a : un nouveau look renouvelle mon jeton (nouvelle entrée), ma présence repart avec lui', async () => {
+    const bus = createFakeRealtime();
+    const grants = [selfGrant, renewedGrant];
+    let calls = 0;
+    const social = {
+      enter: vi.fn(async () =>
+        fakeEnterResponse('hall', {
+          presence: grants[Math.min(calls++, grants.length - 1)],
+        })
+      ),
+    };
+    const { result, rerender } = renderHook(
+      ({ look }: { look: string | null }) =>
+        useLibraryRoomChannel(FAKE_ROOM_ID, {
+          position: POSITION,
+          realtime: bus.client,
+          social,
+          look,
+        }),
+      { initialProps: { look: null as string | null } }
+    );
+    await waitFor(() => expect(result.current.phase).toBe('connected'));
+    const mine = () =>
+      bus.presenceState(`library:room:${FAKE_ROOM_ID}`)[FAKE_SELF_ID]?.[0];
+    await waitFor(() => expect(mine()?.ticket).toBe(selfGrant.ticket));
+    rerender({ look: '1130641' });
+    await waitFor(() => expect(mine()?.ticket).toBe(renewedGrant.ticket));
+    expect(social.enter).toHaveBeenCalledTimes(2);
+    // Même salle, mêmes canaux : seul le jeton a changé.
+    expect(result.current.phase).toBe('connected');
   });
 
   it('démonter (ou quitter la salle) ferme les canaux', async () => {

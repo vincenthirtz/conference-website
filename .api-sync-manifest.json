@@ -1,6 +1,6 @@
 {
-  "apiCommit": "4257aeb1eca43616a7c32634f6ee1325c95ae3bc",
-  "syncedAt": "2026-10-20T13:17:20.677Z",
+  "apiCommit": "1497ff08a77f824ab25b9510abe12fc6eb86991e",
+  "syncedAt": "2026-10-20T17:20:59.079Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -21,6 +21,7 @@
     "config/library/furnitureLot11.ts",
     "config/library/furnitureSets.ts",
     "config/library/furnitureVariants.ts",
+    "config/library/starterKit.ts",
     "config/library/teamHq.ts",
     "config/maps/overwatch.ts",
     "config/socials.ts",
@@ -36,6 +37,8 @@
     "features/admin/demandes/model.ts",
     "features/admin/diffusion/schemas.ts",
     "features/admin/free-players/schemas.ts",
+    "features/admin/library/accessModel.ts",
+    "features/admin/library/accessSchemas.ts",
     "features/admin/library/chatModel.ts",
     "features/admin/library/chatSchemas.ts",
     "features/admin/library/model.ts",
@@ -70,6 +73,7 @@
     "features/player/library/chat/schemas.ts",
     "features/player/library/hallResponses.ts",
     "features/player/library/placement.ts",
+    "features/player/library/presenceTicket.ts",
     "features/player/library/realtimeTopics.ts",
     "features/player/library/responses.ts",
     "features/player/library/schemas.ts",

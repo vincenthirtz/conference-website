@@ -90,6 +90,12 @@ export default adminNs('adminModerationLibrary', {
   libRetry: 'Réessayer',
   libRefresh: 'Actualiser',
   libLoading: 'Chargement des bannissements…',
+  // Lot 14b : un bannissement survit à la suppression du compte.
+  libAccountDeleted: 'Compte supprimé',
+  libAccountDeletedHint:
+    'Le bannissement reste en vigueur : un nouveau compte qui reprend son e-mail, son Discord, son Battle.net ou son Twitch est refusé (empreintes hachées, jamais en clair).',
+  libConfirmLiftDeletedSubtitle:
+    'Ce bannissement d’un compte supprimé est levé : un nouveau compte qui reprend les mêmes identifiants pourra entrer dans la Library. L’historique est conservé.',
 
   // Chat de la Library (lot 6) : interrupteur, messages récents, sourdines.
   chatHeading: 'Chat de la Library',

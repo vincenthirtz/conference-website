@@ -11,7 +11,11 @@
 // de démonstration n'éprouve que le client.
 
 import { LIBRARY_CHAT_CLOSED } from '../chat/responses';
-import type { LibraryEnterResponse, LibraryRoomKind } from '../socialResponses';
+import type {
+  LibraryEnterResponse,
+  LibraryPresenceGrant,
+  LibraryRoomKind,
+} from '../socialResponses';
 import {
   DEFAULT_APARTMENT_DECOR,
   LIBRARY_APARTMENT_SIZE,
@@ -209,6 +213,21 @@ export const FAKE_TENANT_ID = '00000000-0000-4000-8000-0000000000aa';
 export const FAKE_SELF_ID = '00000000-0000-4000-8000-000000000001';
 export const FAKE_ROOM_ID = '00000000-0000-4000-8000-0000000000b1';
 
+/**
+ * Un jeton NON signé (lot 14a) : ma présence part sans identité vérifiable, et
+ * la clé ne vérifie rien — personne n'est montré. Pour voir des joueuses,
+ * signer l'entrée (`./presenceSigner.ts`, `signedEnter`).
+ */
+export function unsignedPresence(): LibraryPresenceGrant {
+  const now = Date.now();
+  return {
+    ticket: '',
+    issuedAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + 2 * 60 * 60_000).toISOString(),
+    key: { kty: 'EC', crv: 'P-256', x: 'A'.repeat(43), y: 'A'.repeat(43) },
+  };
+}
+
 /** Ce que `POST rooms/:id/enter` rendrait, pour une salle du type voulu. */
 export function fakeEnterResponse(
   kind: LibraryRoomKind = 'hall',
@@ -242,6 +261,7 @@ export function fakeEnterResponse(
     me: { userId: selfId, nickname: 'Lune', avatarId: 'a03' },
     // Lot 6 : le chat, fermé comme en production tant qu'on ne l'ouvre pas.
     chat: { ...LIBRARY_CHAT_CLOSED },
+    presence: unsignedPresence(),
     ...overrides,
   };
 }

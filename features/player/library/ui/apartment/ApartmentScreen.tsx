@@ -26,6 +26,7 @@ import ShopPanel from '../shop/ShopPanel';
 import ApartmentSettings from './ApartmentSettings';
 import ApartmentStage from './ApartmentStage';
 import LibraryTabs from './LibraryTabs';
+import StarterKitNotice, { useStarterKitGrant } from './StarterKitNotice';
 
 type TabId = 'shop' | 'inventory' | 'avatar' | 'settings';
 
@@ -37,6 +38,8 @@ export default function ApartmentScreen() {
   const [tab, setTab] = useState<TabId>('shop');
 
   const { me, catalog, apartment } = home;
+  // Lot 14d : le kit de bienvenue, dit une fois.
+  const starterKit = useStarterKitGrant(apartment);
   const specs = useMemo(
     () => placementSpecsOf(catalog?.furniture ?? []),
     [catalog]
@@ -154,6 +157,12 @@ export default function ApartmentScreen() {
     ];
     body = (
       <div className="flex flex-col gap-6">
+        {starterKit.grant ? (
+          <StarterKitNotice
+            grant={starterKit.grant}
+            onDismiss={starterKit.dismiss}
+          />
+        ) : null}
         <section
           aria-label={roomName ?? t.title}
           className="flex flex-col gap-2"

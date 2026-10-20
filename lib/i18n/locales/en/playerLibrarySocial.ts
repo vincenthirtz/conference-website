@@ -176,6 +176,8 @@ export default {
       'You don’t have an apartment yet, so you can’t kick anyone out.',
     report_failed:
       'Your report couldn’t be saved. Try again, or write to the team from the Support page.',
+    presence_invalid:
+      'This player can no longer be verified in the room. Close this menu, open hers again, then retry.',
     rate_limited: 'Too many requests at once. Wait a little, then try again.',
     library_banned: 'Your access to the Women’s Library is suspended.',
     generic: 'That didn’t work. Try again in a moment.',

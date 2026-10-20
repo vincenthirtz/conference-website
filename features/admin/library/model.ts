@@ -4,7 +4,12 @@
 
 export type LibraryBanItem = {
   id: string;
-  userId: string;
+  /**
+   * Compte banni ; `null` quand le compte a été SUPPRIMÉ (lot 14b) : le
+   * bannissement continue de s'appliquer par les empreintes d'identité de la
+   * personne (jamais exposées), et se lève par son `id`.
+   */
+  userId: string | null;
   /** Pseudo de la Library ; `null` si son avatar n'existe plus. */
   nickname: string | null;
   reason: string | null;
@@ -23,8 +28,13 @@ export type LibraryBanListResponse = { items: LibraryBanItem[]; total: number };
 /** POST (201). */
 export type LibraryBanCreateResponse = { ban: LibraryBanItem };
 
-/** DELETE : nombre de bannissements en cours levés (0 = aucun). */
-export type LibraryBanLiftResponse = { userId: string; lifted: number };
+/**
+ * DELETE : nombre de bannissements en cours levés (0 = aucun). Par compte
+ * (`?userId=`) : `userId` est ce compte. Par bannissement (`?id=`) : `userId`
+ * est celui du bannissement levé, `null` si son compte a été supprimé (ou si
+ * rien n'a été levé).
+ */
+export type LibraryBanLiftResponse = { userId: string | null; lifted: number };
 
 /** Codes des refus que le panneau traduit. */
 export const LIBRARY_BAN_CODES = {

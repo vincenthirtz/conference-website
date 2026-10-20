@@ -97,6 +97,8 @@ export default function ReportDialog({
     const result = await onSubmit({
       userId: target.userId,
       roomId,
+      // Lot 14a : le jeton de présence vérifié de la cible, que l'API revérifie.
+      targetTicket: target.ticket,
       reason,
       ...(trimmed ? { details: trimmed } : {}),
     });

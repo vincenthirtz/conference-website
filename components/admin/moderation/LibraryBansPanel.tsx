@@ -6,10 +6,16 @@
 //   GET    /api/admin/library/bans?active=true  → { items, total }
 //   POST   /api/admin/library/bans              → 201 { ban }
 //   DELETE /api/admin/library/bans?userId=      → { userId, lifted }
+//   DELETE /api/admin/library/bans?id=          → { userId, lifted }
 //
 // Le bannissement s'applique SANS RECHARGER côté joueuses : l'API le diffuse
 // sur le sujet temps réel de l'espace. Lever ne diffuse rien : la joueuse
 // retrouve l'accès à sa prochaine entrée.
+//
+// COMPTE SUPPRIMÉ (lot 14b) : la ligne reste, `userId` à `null` — le
+// bannissement continue de refuser un nouveau compte qui reprend ses
+// identifiants (empreintes hachées, jamais montrées ici). Elle se lève par son
+// `id`, faute de compte à désigner.
 //
 // « Par » : la route ne rend que l'identifiant du membre du staff (pas de nom),
 // et l'onglet ne doit pas exiger un droit de plus pour lire l'annuaire du staff.
@@ -83,16 +89,20 @@ export default function LibraryBansPanel({
   }
 
   async function onLift(ban: LibraryBanItem) {
-    const name = ban.nickname ?? ban.userId;
+    const name = ban.nickname ?? ban.userId ?? t.libAccountDeleted;
     const ok = await confirm({
       title: t.libConfirmLiftTitle,
-      subtitle: format(t.libConfirmLiftSubtitle, { name }),
+      subtitle: ban.userId
+        ? format(t.libConfirmLiftSubtitle, { name })
+        : t.libConfirmLiftDeletedSubtitle,
       variant: 'warning',
       confirmLabel: t.libConfirmLiftLabel,
     });
     if (!ok) return;
     try {
-      const res = await lift.mutateAsync(ban.userId);
+      const res = await lift.mutateAsync(
+        ban.userId ? { userId: ban.userId } : { id: ban.id }
+      );
       if (res.lifted > 0) addToast(format(t.libLifted, { name }), 'success');
       else addToast(t.libLiftedNone, 'info');
       // La ligne disparaît avec son bouton : le focus revient sur la liste.
@@ -193,10 +203,16 @@ export default function LibraryBansPanel({
                 </thead>
                 <tbody className="divide-y divide-[var(--line,rgba(194,196,201,.12))]">
                   {items.map((ban) => {
-                    const name = ban.nickname ?? ban.userId;
-                    // La levée en cours vise CETTE joueuse : lu sur la mutation.
+                    const userId = ban.userId;
+                    const name = ban.nickname ?? userId ?? t.libAccountDeleted;
+                    // La levée en cours vise CETTE joueuse (ou ce
+                    // bannissement, compte supprimé) : lu sur la mutation.
+                    const pending = lift.isPending ? lift.variables : undefined;
                     const busy =
-                      lift.isPending && lift.variables === ban.userId;
+                      pending !== undefined &&
+                      ('userId' in pending
+                        ? pending.userId === userId
+                        : pending.id === ban.id);
                     return (
                       <tr
                         key={ban.id}
@@ -209,24 +225,32 @@ export default function LibraryBansPanel({
                         >
                           {ban.nickname ?? (
                             <span className="italic text-neutral-400">
-                              {t.libNoAvatar}
+                              {userId ? t.libNoAvatar : t.libAccountDeleted}
                             </span>
                           )}
                         </th>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <code className="font-mono text-xs text-neutral-300 break-all">
-                              {ban.userId}
-                            </code>
-                            <AdminButton
-                              variant="ghost"
-                              size="xs"
-                              aria-label={format(t.libCopyAria, { name })}
-                              onClick={() => void copyUserId(ban.userId)}
-                            >
-                              {t.libCopy}
-                            </AdminButton>
-                          </div>
+                          {userId ? (
+                            <div className="flex items-center gap-2">
+                              <code className="font-mono text-xs text-neutral-300 break-all">
+                                {userId}
+                              </code>
+                              <AdminButton
+                                variant="ghost"
+                                size="xs"
+                                aria-label={format(t.libCopyAria, { name })}
+                                onClick={() => void copyUserId(userId)}
+                              >
+                                {t.libCopy}
+                              </AdminButton>
+                            </div>
+                          ) : (
+                            // Le nom « Compte supprimé » est déjà en tête de
+                            // ligne : ici, ce que le bannissement fait encore.
+                            <p className="max-w-xs text-xs text-neutral-500">
+                              {t.libAccountDeletedHint}
+                            </p>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-neutral-300 whitespace-pre-line">
                           {ban.reason ?? (

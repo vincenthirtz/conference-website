@@ -196,6 +196,7 @@ import nsAdminStats from './adminStats';
 import nsAdminJournals from './adminJournals';
 import nsAdminModeration from './adminModeration';
 import nsAdminModerationLibrary from './adminModerationLibrary';
+import nsAdminLibraryAccess from './adminLibraryAccess';
 import nsAdminPartnersHub from './adminPartnersHub';
 import nsAdminCommunicationsHub from './adminCommunicationsHub';
 import nsAdminAssociationHub from './adminAssociationHub';
@@ -394,6 +395,7 @@ export const frDict = {
   adminJournals: nsAdminJournals.fr,
   adminModeration: nsAdminModeration.fr,
   adminModerationLibrary: nsAdminModerationLibrary.fr,
+  adminLibraryAccess: nsAdminLibraryAccess.fr,
   adminPartnersHub: nsAdminPartnersHub.fr,
   adminCommunicationsHub: nsAdminCommunicationsHub.fr,
   adminAssociationHub: nsAdminAssociationHub.fr,

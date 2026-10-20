@@ -15,6 +15,7 @@ import { playerRequest } from '@/utils/player/playerHttp';
 import type {
   LibraryApartmentResponse,
   LibraryApartmentSettingsResponse,
+  LibraryApartmentViewResponse,
   LibraryAttestResponse,
   LibraryAvatarResponse,
   LibraryBuyResponse,
@@ -59,8 +60,9 @@ export const libraryClient = {
       json: input,
       idempotent: true,
     }),
+  /** Lot 14d : `starterKit` sur la seule lecture qui vient d'offrir le kit. */
   apartment: () =>
-    playerRequest<LibraryApartmentResponse>(libraryUrls.apartment),
+    playerRequest<LibraryApartmentViewResponse>(libraryUrls.apartment),
   updateApartment: (input: UpdateApartmentInput) =>
     playerRequest<LibraryApartmentSettingsResponse>(libraryUrls.apartment, {
       method: 'PATCH',

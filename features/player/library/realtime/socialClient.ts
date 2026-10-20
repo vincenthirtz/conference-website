@@ -8,11 +8,17 @@
 // `room_kicked` porte `until`, `room_forbidden` ne dit pas pourquoi.
 //
 // TOUTE DÉCISION DE MODÉRATION PASSE PAR ICI : l'API identifie l'appelante
-// par sa session et vérifie la cible en base. Un `userId` lu dans la présence
-// d'une autre n'est qu'un identifiant à soumettre, jamais une preuve.
+// par sa session et vérifie la cible en base. Bloquer, signaler, expulser
+// joignent le JETON DE PRÉSENCE de la cible (`targetTicket`, lot 14a) : l'API
+// le revérifie et refuse une identité forgée (`presence_invalid`). Lever un
+// blocage (liste « mes blocages ») se fait par `userId` seul.
 
 import { playerRequest } from '@/utils/player/playerHttp';
-import type { LibraryKickInput, LibraryReportInput } from '../socialSchemas';
+import type {
+  LibraryBlockInput,
+  LibraryKickInput,
+  LibraryReportInput,
+} from '../socialSchemas';
 import type {
   LibraryBlockResponse,
   LibraryBlocksResponse,
@@ -36,10 +42,10 @@ export const librarySocialClient = {
       method: 'POST',
     }),
   blocks: () => playerRequest<LibraryBlocksResponse>(librarySocialUrls.blocks),
-  block: (userId: string) =>
+  block: (input: LibraryBlockInput) =>
     playerRequest<LibraryBlockResponse>(librarySocialUrls.blocks, {
       method: 'POST',
-      json: { userId },
+      json: input,
       idempotent: true,
     }),
   unblock: (userId: string) =>

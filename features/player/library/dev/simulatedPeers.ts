@@ -7,6 +7,10 @@
 // (broadcast `move`), y arrive au rythme d'une marche (la présence suit,
 // comme le fait une vraie cliente à l'arrivée), et fait parfois un signe
 // permis par la salle (la Grande salle de lecture est silencieuse).
+//
+// Lot 14a : chacune porte un JETON DE PRÉSENCE signé par le signataire de la
+// page (`./presenceSigner.ts`), comme celui que remettrait l'API. Sans
+// signataire, personne n'entre.
 
 import { useEffect } from 'react';
 import {
@@ -24,6 +28,7 @@ import { socialAllowance } from '../realtime/social';
 import type { LibraryApartmentItem } from '../responses';
 import type { LibraryRoomKind } from '../socialResponses';
 import type { FakeRealtime } from './fakeRealtime';
+import { type DevPresenceSigner, signedPeerMeta } from './presenceSigner';
 
 export type DevPeer = {
   userId: string;
@@ -108,6 +113,7 @@ const walkMs = (a: Tile, b: Tile) =>
 export function useSimulatedPeers(
   bus: FakeRealtime,
   room: {
+    id: string;
     topic: string;
     kind: LibraryRoomKind;
     width: number;
@@ -115,19 +121,43 @@ export function useSimulatedPeers(
     items: readonly LibraryApartmentItem[];
   },
   count: number,
-  intervalMs = 1_400
+  intervalMs = 1_400,
+  signer: DevPresenceSigner | null = null
 ) {
-  const { topic, kind, width, depth, items } = room;
+  const { id: roomId, topic, kind, width, depth, items } = room;
   useEffect(() => {
     const peers = DEV_PEERS.slice(0, count);
     const free = freeTilesOf(items, width, depth);
-    if (!peers.length || !free.length) return undefined;
+    if (!signer || !peers.length || !free.length) return undefined;
+    let stopped = false;
     const pick = () => free[Math.floor(Math.random() * free.length)];
     const at = new Map(peers.map((p) => [p.userId, pick()]));
-    for (const p of peers) {
-      const t = at.get(p.userId) as Tile;
-      bus.peerJoin(topic, { ...p, gx: t.i, gy: t.j, dir: 4 });
-    }
+    // Un jeton par joueuse, signé une fois ; la présence le reprend à chaque case.
+    const tickets = new Map<string, string>();
+    const join = (p: DevPeer, t: Tile) => {
+      const ticket = tickets.get(p.userId);
+      if (!stopped && ticket)
+        bus.peerJoin(topic, {
+          userId: p.userId,
+          gx: t.i,
+          gy: t.j,
+          dir: 4,
+          ticket,
+        });
+    };
+    void Promise.all(
+      peers.map(async (p) => {
+        const t = at.get(p.userId) as Tile;
+        const meta = await signedPeerMeta(signer, roomId, {
+          ...p,
+          gx: t.i,
+          gy: t.j,
+          dir: 4,
+        });
+        tickets.set(p.userId, meta.ticket);
+        join(p, t);
+      })
+    );
     const { emotes, phrases } = socialAllowance(kind);
     const timers = new Set<ReturnType<typeof setTimeout>>();
     const id = setInterval(() => {
@@ -144,7 +174,7 @@ export function useSimulatedPeers(
         () => {
           timers.delete(arrive);
           at.set(p.userId, to);
-          bus.peerJoin(topic, { ...p, gx: to.i, gy: to.j, dir: 4 });
+          join(p, to);
         },
         walkMs(from, to)
       );
@@ -164,9 +194,21 @@ export function useSimulatedPeers(
       }
     }, intervalMs);
     return () => {
+      stopped = true;
       clearInterval(id);
       for (const t of timers) clearTimeout(t);
       for (const p of peers) bus.peerLeave(topic, p.userId);
     };
-  }, [bus, topic, kind, width, depth, items, count, intervalMs]);
+  }, [
+    bus,
+    roomId,
+    topic,
+    kind,
+    width,
+    depth,
+    items,
+    count,
+    intervalMs,
+    signer,
+  ]);
 }

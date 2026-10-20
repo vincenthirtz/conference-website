@@ -9,6 +9,7 @@
 import type { LibraryApartmentDecor } from '../../../config/library/decor';
 import type { LibraryChatState } from './chat/responses';
 import type { LibraryApartmentItem } from './responses';
+import type { LibraryPresencePublicKey } from './presenceTicket';
 import type { LibraryTopics } from './realtimeTopics';
 
 export type LibraryRoomKind = 'hall' | 'reading_room' | 'team_hq' | 'apartment';
@@ -54,7 +55,7 @@ export type LibraryEnterResponse = {
   hiddenUserIds: string[];
   /** Les sujets à rejoindre (mêmes noms que `libraryTopics`). */
   topics: LibraryTopics;
-  /** Ce que l'appelante annonce dans sa présence. */
+  /** Qui est l'appelante (sa présence, elle, ne porte que `presence.ticket`). */
   me: { userId: string; nickname: string; avatarId: string };
   /**
    * Le chat de la salle pour l'appelante (lot 6) : ouvert ? (interrupteur de
@@ -62,6 +63,21 @@ export type LibraryEnterResponse = {
    * modérer ? Fermé en cas de doute.
    */
   chat: LibraryChatState;
+  /** Mon jeton de présence signé, et la clé qui vérifie ceux des autres (lot 14a). */
+  presence: LibraryPresenceGrant;
+};
+
+/**
+ * Le jeton de présence remis à l'entrée (lot 14a, `./presenceTicket.ts`) :
+ * à joindre à MA présence ; `key` vérifie les jetons des AUTRES. Une nouvelle
+ * entrée le renouvelle (avant `expiresAt`, ou après un changement de look).
+ */
+export type LibraryPresenceGrant = {
+  ticket: string;
+  /** Émission et échéance (ISO, horloge du serveur). */
+  issuedAt: string;
+  expiresAt: string;
+  key: LibraryPresencePublicKey;
 };
 
 /** `GET /api/player/library/blocks` — mes blocages (jamais ceux posés contre moi). */
@@ -105,4 +121,9 @@ export const LIBRARY_SOCIAL_CODES = {
   /** Expulser suppose un appartement à soi. */
   apartmentNotFound: 'apartment_not_found',
   reportFailed: 'report_failed',
+  /**
+   * Lot 14a : le jeton de présence de la cible est forgé, échu, d'une autre
+   * salle ou d'une autre joueuse. Signaler, bloquer, expulser sont refusés.
+   */
+  presenceInvalid: 'presence_invalid',
 } as const;

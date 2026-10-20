@@ -45,6 +45,10 @@ const LibraryChatMessagesPanel = lazyPanel(
 const LibraryChatMutesList = lazyPanel(
   () => import('@/components/admin/moderation/LibraryChatMutesList')
 );
+// Accès à la Library (lot 14c, bêta par liste) : `manage_settings`, vérifié par le panneau.
+const LibraryAccessPanel = lazyPanel(
+  () => import('@/components/admin/moderation/LibraryAccessPanel')
+);
 // Panneau SÉPARÉ, monté à côté du précédent : le lien d'overlay OBS relève du
 // TCG mais n'a rien à faire dans un fichier qu'on vient d'alléger pour tenir
 // sous le plafond de taille des écrans admin.
@@ -184,6 +188,7 @@ function AdminModerationPage({ staff }: StaffProps) {
             <SupportPanel />
           ) : active === 'library' && canModerateSupport ? (
             <>
+              <LibraryAccessPanel staff={staff} />
               <LibraryChatSwitch />
               <LibraryChatMessagesPanel />
               <LibraryChatMutesList />

@@ -735,4 +735,14 @@ export default ns('playerLibrary', {
   closedBody:
     'La Women’s Library se prépare et n’est pas encore ouverte. Elle t’attendra ici dès son ouverture.',
   closedBackLink: 'Retour à mon espace',
+
+  // Lot 14d — le kit de bienvenue, dit une seule fois. Des meubles offerts,
+  // jamais des pièces : on le dit, sans en faire une fête.
+  starterKitTitle: 'Ton kit de bienvenue est arrivé',
+  starterKitItems: 'Offert par la Library, sans dépenser une pièce : {items}.',
+  starterKitPlaced:
+    'Tout est déjà installé chez toi. « Décorer » pour déplacer ou ranger.',
+  starterKitStored:
+    'Tout t’attend dans « Mes meubles » : pose-les quand tu veux avec « Décorer ».',
+  starterKitDismiss: 'Compris',
 });

@@ -92,6 +92,8 @@ describe('l’état temps réel → le moteur', () => {
     nickname: 'Iris',
     avatarId: 'a05',
     look: null,
+    ticket: 'ticket-iris',
+    expiresAt: 9_999_999,
     gx: 3,
     gy: 4,
     dir: 9,

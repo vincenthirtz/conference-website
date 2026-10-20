@@ -14,9 +14,9 @@
 //   - `done`  : le geste a abouti (message, « Fermer »).
 // Dans une étape, Échap revient au menu ; Tab tourne dans l'étape.
 //
-// La cible (`userId`) vient de la présence : ce n'est qu'un identifiant à
-// SOUMETTRE à l'API, qui identifie l'appelante par sa session et vérifie la
-// cible en base (cf. realtime/payloads.ts).
+// La cible est un avatar VÉRIFIÉ (lot 14a) : son `userId`, le pseudo de son
+// jeton de présence, et ce jeton, que chaque geste soumet à l'API — qui le
+// revérifie (`presence_invalid`). Sans jeton, aucun geste n'est proposé.
 //
 // POSITION : sur mobile, une feuille en bas de l'écran ; à partir de `sm`,
 // posée à `anchor` (coin haut-gauche, px CSS dans le parent positionné) ou,
@@ -56,7 +56,8 @@ import {
   useReturnFocus,
 } from './shared';
 
-export type SocialTarget = { userId: string; nickname: string };
+/** Un avatar vérifié : pseudo et jeton viennent de sa présence (lot 14a). */
+export type SocialTarget = { userId: string; nickname: string; ticket: string };
 
 type MenuItemId = 'block' | 'report' | 'kick';
 
@@ -72,10 +73,10 @@ export type AvatarContextMenuProps = {
   anchor?: { x: number; y: number } | null;
   /** `null` : un blocage est déjà en cours (rien à afficher). */
   onBlock: (
-    userId: string
+    target: SocialTarget
   ) => Promise<SocialActionResult<LibraryBlockResponse> | null>;
   onKick: (
-    userId: string,
+    target: SocialTarget,
     minutes: number
   ) => Promise<SocialActionResult<LibraryKickResponse> | null>;
   /** Ouvrir le signalement : le parent ferme le menu et monte `ReportDialog`. */
@@ -135,13 +136,18 @@ export default function AvatarContextMenu({
     return () => document.removeEventListener('pointerdown', onDown);
   }, []);
 
-  const items: Array<{ id: MenuItemId; label: string; danger: boolean }> = [
-    { id: 'block', label: t.menu.block, danger: true },
-    { id: 'report', label: t.menu.report, danger: false },
-    ...(canKickIn(room)
-      ? [{ id: 'kick' as const, label: t.menu.kick, danger: true }]
-      : []),
-  ];
+  // Une identité non vérifiée (sans jeton) : aucun geste à proposer.
+  const verified = target.ticket.length > 0;
+  const items: Array<{ id: MenuItemId; label: string; danger: boolean }> =
+    verified
+      ? [
+          { id: 'block', label: t.menu.block, danger: true },
+          { id: 'report', label: t.menu.report, danger: false },
+          ...(canKickIn(room)
+            ? [{ id: 'kick' as const, label: t.menu.kick, danger: true }]
+            : []),
+        ]
+      : [];
 
   const backToMenu = (from: MenuItemId) => {
     setError(null);
@@ -158,7 +164,7 @@ export default function AvatarContextMenu({
     if (pending) return;
     setPending(true);
     setError(null);
-    const result = await onBlock(target.userId);
+    const result = await onBlock(target);
     setPending(false);
     if (!result) return;
     if (result.ok) {
@@ -172,7 +178,7 @@ export default function AvatarContextMenu({
     if (pending) return;
     setPending(true);
     setError(null);
-    const result = await onKick(target.userId, minutes);
+    const result = await onKick(target, minutes);
     setPending(false);
     if (!result) return;
     if (result.ok) {

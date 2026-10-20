@@ -5,8 +5,9 @@
 // le menu d'un avatar (ouvert d'un appui dans la vue ou depuis la liste des
 // présentes, et gardé dans le cadre) et le signalement.
 //
-// Les gestes de sécurité passent par `useLibrarySocialActions` (l'API) : un
-// `userId` lu dans la présence n'est qu'un identifiant à soumettre.
+// Les gestes de sécurité passent par `useLibrarySocialActions` (l'API). Le menu
+// ne s'ouvre que sur un avatar VÉRIFIÉ (lot 14a) : présent dans `room.avatars`
+// (jeton signé, de cette salle, pas échu), et la cible emporte son jeton.
 
 import { type RefObject, useCallback, useMemo, useRef, useState } from 'react';
 import { useT } from '@/lib/i18n/useT';
@@ -43,6 +44,15 @@ export type RoomReportState = {
   target: SocialTarget;
   returnFocusRef: RefObject<HTMLElement | null>;
 };
+
+/**
+ * La cible d'un avatar vérifié, ou null (sans jeton). Un jeton échu a déjà
+ * retiré l'avatar de `room.avatars` (`tick`).
+ */
+export function socialTargetOf(a: RemoteAvatar): SocialTarget | null {
+  if (!a.ticket) return null;
+  return { userId: a.userId, nickname: a.nickname, ticket: a.ticket };
+}
 
 export function useRoomSocial({
   room,
@@ -119,9 +129,10 @@ export function useRoomSocial({
   const onAvatarTap = useCallback(
     (tap: AvatarTap) => {
       const a = avatarsRef.current.find((x) => x.userId === tap.userId);
-      if (!a) return;
+      const target = a ? socialTargetOf(a) : null;
+      if (!target) return;
       setMenu({
-        target: { userId: a.userId, nickname: a.nickname },
+        target,
         anchor: clampMenuAnchor(tap.anchor, frameSize()),
         returnFocusRef: frameRef,
       });
@@ -132,10 +143,12 @@ export function useRoomSocial({
   /** Une ligne de la liste des présentes : le menu se pose près de son avatar. */
   const openFromList = useCallback(
     (a: RemoteAvatar, trigger: HTMLElement) => {
+      const target = socialTargetOf(a);
+      if (!target) return;
       triggerRef.current = trigger;
       const head = engineRef.current?.avatarAnchor(a.userId) ?? { x: 0, y: 0 };
       setMenu({
-        target: { userId: a.userId, nickname: a.nickname },
+        target,
         anchor: clampMenuAnchor(head, frameSize()),
         returnFocusRef: triggerRef,
       });

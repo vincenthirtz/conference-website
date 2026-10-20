@@ -13,6 +13,7 @@ import type {
   FurnitureWindow,
 } from '../../../config/library/furniture';
 import type { LibraryApartmentDecor } from '../../../config/library/decor';
+import type { StarterKitVersion } from '../../../config/library/starterKit';
 
 /**
  * Les refus d'ACCÈS (403) : le client les lit pour choisir un écran, pas un
@@ -210,3 +211,31 @@ export const LIBRARY_APARTMENT_CODES = {
   /** `listed: true` sur un appartement privé. */
   listedRequiresOpen: 'listed_requires_open',
 } as const;
+
+/* ------------------------------------- Le kit de bienvenue (lot 14d) --- */
+
+/**
+ * Le kit de bienvenue (`config/library/starterKit.ts`) : des meubles offerts
+ * EN OBJETS (lignes d'inventaire), jamais des pièces. Rendu SEULEMENT par la
+ * requête qui vient de l'offrir : les lectures suivantes ne le rendent plus.
+ */
+export type LibraryStarterKitGrant = {
+  granted: true;
+  /** La version du kit (`STARTER_KIT_VERSION`). */
+  version: StarterKitVersion;
+  /** Les clés offertes par CETTE requête, dans l'ordre du kit. */
+  keys: string[];
+  /**
+   * Vrai : l'appartement était vide, les meubles y sont posés (`items`).
+   * Faux : ils sont rangés dans l'inventaire.
+   */
+  placed: boolean;
+};
+
+/**
+ * `GET /api/player/library/apartment` : l'appartement, et `starterKit` sur
+ * la seule requête qui vient d'offrir le kit (absent sinon).
+ */
+export type LibraryApartmentViewResponse = LibraryApartmentResponse & {
+  starterKit?: LibraryStarterKitGrant;
+};

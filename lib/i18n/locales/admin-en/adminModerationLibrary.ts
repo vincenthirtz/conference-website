@@ -83,6 +83,11 @@ export default {
   libRetry: 'Retry',
   libRefresh: 'Refresh',
   libLoading: 'Loading bans…',
+  libAccountDeleted: 'Account deleted',
+  libAccountDeletedHint:
+    'The ban still applies: a new account that reuses her email, Discord, Battle.net or Twitch is refused (hashed fingerprints, never in clear text).',
+  libConfirmLiftDeletedSubtitle:
+    'This ban on a deleted account is lifted: a new account reusing the same identifiers will be able to enter the Library. The history is kept.',
 
   chatHeading: 'Library chat',
   chatSubtitle:

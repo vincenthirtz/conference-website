@@ -187,6 +187,7 @@ import enAdminStats from './adminStats';
 import enAdminJournals from './adminJournals';
 import enAdminModeration from './adminModeration';
 import enAdminModerationLibrary from './adminModerationLibrary';
+import enAdminLibraryAccess from './adminLibraryAccess';
 import enAdminPartnersHub from './adminPartnersHub';
 import enAdminCommunicationsHub from './adminCommunicationsHub';
 import enAdminAssociationHub from './adminAssociationHub';
@@ -385,6 +386,7 @@ const adminEnDict = {
   adminJournals: enAdminJournals,
   adminModeration: enAdminModeration,
   adminModerationLibrary: enAdminModerationLibrary,
+  adminLibraryAccess: enAdminLibraryAccess,
   adminPartnersHub: enAdminPartnersHub,
   adminCommunicationsHub: enAdminCommunicationsHub,
   adminAssociationHub: enAdminAssociationHub,

@@ -54,6 +54,24 @@ export const LibraryBanCreateBody = z
   });
 export type LibraryBanCreateInput = z.infer<typeof LibraryBanCreateBody>;
 
-/** DELETE — lever TOUS les bannissements en cours de la joueuse. */
-export const LibraryBanLiftQuery = z.object({ userId });
+/**
+ * DELETE — lever les bannissements EN COURS :
+ *   - `userId` : tous ceux de la joueuse, y compris ceux qui la visent par une
+ *     empreinte d'identité (compte recréé, lot 14b) ;
+ *   - `id` : ce bannissement-là — le seul moyen pour celui d'un compte
+ *     supprimé (`userId` null dans la liste).
+ * L'un OU l'autre, jamais les deux.
+ */
+export const LibraryBanLiftQuery = z
+  .object({
+    userId: userId.optional(),
+    id: z
+      .string({ error: 'Bannissement invalide.' })
+      .regex(UUID_RE, { error: 'Bannissement invalide.' })
+      .optional(),
+  })
+  .refine((q) => (q.userId === undefined) !== (q.id === undefined), {
+    error: 'Désigner la joueuse (userId) OU le bannissement (id).',
+    path: ['userId'],
+  });
 export type LibraryBanLiftInput = z.infer<typeof LibraryBanLiftQuery>;

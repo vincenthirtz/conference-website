@@ -287,6 +287,9 @@ export type StaffLogAction =
   | 'library_mute_add'
   | 'library_mute_lift'
   | 'library_chat_settings'
+  // Accès à la Library (lot 14c) : qui entre (owner, staff, bêta par liste,
+  // tous) — le journal dit qui a ouvert à qui, et qui en a été retiré.
+  | 'library_access_update'
   // --- TCG (cartes joueuses) ---
   // Relire la photo d'une personne réelle est un acte à tracer : on doit
   // pouvoir dire QUI a approuvé ou refusé, et quand.

@@ -2561,28 +2561,31 @@ export type Database = {
           by_staff_id: string | null
           created_at: string
           id: string
+          identity_hashes: string[]
           reason: string | null
           tenant_id: string
           until: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           by_staff_id?: string | null
           created_at?: string
           id?: string
+          identity_hashes?: string[]
           reason?: string | null
           tenant_id: string
           until?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           by_staff_id?: string | null
           created_at?: string
           id?: string
+          identity_hashes?: string[]
           reason?: string | null
           tenant_id?: string
           until?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {

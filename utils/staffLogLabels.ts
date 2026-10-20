@@ -257,6 +257,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   library_mute_add: 'Sourdine dans le chat de la Library',
   library_mute_lift: 'Sourdine du chat de la Library levée',
   library_chat_settings: 'Chat de la Library ouvert ou fermé',
+  library_access_update: 'Accès à la Library modifié',
   // TCG (cartes joueuses)
   tcg_photo_approve: 'Photo de carte TCG approuvée',
   tcg_photo_reject: 'Photo de carte TCG refusée',
