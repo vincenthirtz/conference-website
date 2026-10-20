@@ -25,6 +25,7 @@ export default ns('playerLibraryHall', {
   // Noms des zones de la vue (infobulle au survol).
   spots: {
     board: 'Panneau d’annonces',
+    tournamentBoard: 'Tableau du tournoi',
     readingRoom: 'Porte de la Grande salle de lecture',
     apartments: 'Porte des appartements',
     teamHq: 'Porte des QG d’équipe',
@@ -48,6 +49,46 @@ export default ns('playerLibraryHall', {
     truncated: 'La suite de cette annonce est à lire sur le site.',
     readOnSite: 'Lire sur le site',
     articleLoading: 'Mise en page de l’annonce…',
+  },
+
+  // Le tableau du tournoi en cours, à côté du panneau d'annonces.
+  tournament: {
+    title: 'Tournoi en cours',
+    intro:
+      'Les matchs du moment, puis le classement ou le tableau de la phase en cours.',
+    open: 'Voir le tableau',
+    opening: 'Ouverture du tableau…',
+    loading: 'Lecture du tournoi…',
+    error: 'Le tournoi n’a pas pu être lu.',
+    retry: 'Réessayer',
+    empty:
+      'Aucun tournoi en cours ni annoncé pour le moment. Le tableau se remplira avec le prochain.',
+    seeAllTournaments: 'Voir les tournois',
+    running: 'En cours',
+    upcoming: 'À venir',
+    stage: 'Phase : {stage}',
+    live: 'En direct',
+    next: 'Prochains matchs',
+    recent: 'Derniers résultats',
+    noMatches: 'Aucun match programmé pour le moment.',
+    tbd: 'À déterminer',
+    versus: 'contre',
+    score: '{score1} – {score2}',
+    noTime: 'Horaire à venir',
+    forfeit: 'Forfait',
+    forfeitWinner: '{team} l’emporte',
+    standings: 'Classement',
+    standingsEmpty: 'Le classement se remplit au premier match joué.',
+    standingsUnavailable:
+      'Le classement ne s’affiche pas ici : il est sur la page du tournoi.',
+    group: 'Poule {key}',
+    seeStandings: 'Voir le classement',
+    bracket: 'Tableau',
+    round: 'Tour {round}',
+    sideLower: 'Tableau des perdantes',
+    sideFinal: 'Grande finale',
+    seeBracket: 'Voir le bracket',
+    seeTournament: 'Voir le tournoi',
   },
 
   doors: {

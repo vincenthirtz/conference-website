@@ -19,17 +19,20 @@ import type { HallSpotId } from '../../layouts/hall';
 import { type LibraryPlace, placeHref } from '../../roomStageModel';
 import { LINK, TEXT_MUTED } from '../social/shared';
 
-/** Les panneaux que le hall ouvre en dialogue. */
-export type HallPanel = 'board' | 'apartments' | 'team_hq';
+/**
+ * Les panneaux que le hall ouvre en dialogue : deux panneaux muraux (annonces,
+ * tournoi en cours) et ceux de deux portes.
+ */
+export type HallPanel = 'board' | 'tournament' | 'apartments' | 'team_hq';
 
 export type HallDoorAction =
   | { kind: 'place'; place: LibraryPlace }
-  | { kind: 'panel'; panel: Exclude<HallPanel, 'board'> };
+  | { kind: 'panel'; panel: Exclude<HallPanel, 'board' | 'tournament'> };
 
 type DoorText = 'readingRoom' | 'apartments' | 'teamHq';
 
 export type HallDoor = {
-  id: Exclude<HallSpotId, 'board'>;
+  id: Exclude<HallSpotId, 'board' | 'tournament_board'>;
   /** Clés de `playerLibraryHall.doors` : `<text>` et `<text>Hint`. */
   text: DoorText;
   action: HallDoorAction;

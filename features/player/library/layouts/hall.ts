@@ -6,6 +6,7 @@
 //     encastré derrière l'accueil, porte vers les QG d'équipe (gx 22) ;
 //   - l'accueil (comptoir et sa chaise) devant le rayonnage encastré ;
 //   - le panneau d'annonces, bien en vue, contre le mur droit ;
+//   - le tableau du tournoi en cours (un tableau noir), à sa droite ;
 //   - un salon (tapis, canapé, fauteuils, table basse), des bancs, des
 //     plantes, deux lampadaires et un buste.
 // Positions pensées pour les empreintes du manifeste (test :
@@ -13,8 +14,9 @@
 //
 // SALLE VIVANTE (lot 7) : les dimensions sont celles que l'API donne à la
 // salle (`config/library/commonRooms.ts`, copie synchronisée) ; les ZONES
-// (`HALL_HOTSPOTS`, engine/hotspots.ts) sont le panneau d'annonces et les
-// trois portes, routées par `ui/places/useRoomHotspots.ts`.
+// (`HALL_HOTSPOTS`, engine/hotspots.ts) sont le panneau d'annonces, le
+// tableau du tournoi et les trois portes, routées par
+// `ui/places/useRoomHotspots.ts`.
 
 import { LIBRARY_COMMON_ROOMS } from '@/config/library/commonRooms';
 import type { HotspotDecl } from '../engine/hotspots';
@@ -34,6 +36,7 @@ export const DOOR_HEIGHT_M = 2.2;
 /** Les zones du hall : leur `id` est ce que reçoit l'écran du hall. */
 export const HALL_SPOT_IDS = [
   'board',
+  'tournament_board',
   'reading_room',
   'apartments',
   'team_hq',
@@ -44,15 +47,20 @@ const door = (d: { side: 'left' | 'right'; at: number }) =>
   ({ kind: 'wall', ...d, span: DOOR_SPAN, heightM: DOOR_HEIGHT_M }) as const;
 
 /**
- * Le panneau d'annonces (son image), la porte de la Grande salle de lecture,
- * celle des appartements (l'entrée, côté rue) et celle des QG d'équipe.
- * `labelKey` : clé de `playerLibraryHall.spots`.
+ * Le panneau d'annonces (son image), le tableau du tournoi (le sien), la
+ * porte de la Grande salle de lecture, celle des appartements (l'entrée, côté
+ * rue) et celle des QG d'équipe. `labelKey` : clé de `playerLibraryHall.spots`.
  */
 export const HALL_HOTSPOTS: readonly (HotspotDecl & { id: HallSpotId })[] = [
   {
     id: 'board',
     labelKey: 'board',
     shape: { kind: 'item', itemId: 'notice-board' },
+  },
+  {
+    id: 'tournament_board',
+    labelKey: 'tournamentBoard',
+    shape: { kind: 'item', itemId: 'tournament-board' },
   },
   {
     id: 'reading_room',
@@ -77,6 +85,10 @@ const items: RoomItem[] = [
   // Une case de plus vers la fenêtre (lot 7) : posé en gx 5, son image
   // couvrait le bas de la porte, qui ne se visait plus.
   { id: 'notice-board', key: 'notice_board', gx: 6, gy: 1, r: 0 },
+  // Tableau du tournoi en cours, contre le mur droit, à droite du panneau
+  // d'annonces : une case d'écart à l'écran (ni le panneau ni une porte ne
+  // passent derrière lui — tests/unit/libraryHallModel.test.ts).
+  { id: 'tournament-board', key: 'chalkboard', gx: 11, gy: 0, r: 0 },
   // Salon.
   { id: 'lounge-rug', key: 'rug_red', gx: 10, gy: 12, r: 0 },
   { id: 'lounge-sofa', key: 'sofa', gx: 11, gy: 10, r: 0 },

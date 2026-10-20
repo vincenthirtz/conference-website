@@ -217,7 +217,18 @@ function PanelLink({
   );
 }
 
-function StandingsMini({ table, t }: { table: PublicStandingsTable; t: Dict }) {
+/**
+ * Exporté : le tableau du tournoi de la Women's Library (hall) le réutilise,
+ * dans un panneau chargé à la demande
+ * (features/player/library/ui/hall/TournamentBoardPanel.tsx).
+ */
+export function StandingsMini({
+  table,
+  t,
+}: {
+  table: PublicStandingsTable;
+  t: Dict;
+}) {
   return (
     <table className="w-full text-sm">
       <thead>

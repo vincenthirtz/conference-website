@@ -2,8 +2,9 @@
 // salle (engine/hotspots.ts) et où va leur appui, par sorte de salle (lot 7
 // de docs/PLAN-womens-library.md). `RoomStage` les donne au moteur ; chaque
 // lot garde ses panneaux chez lui et ne reçoit que les appuis sur SES zones :
-//   - `hall` (lot 7)         : panneau d'annonces et trois portes
-//                              (`layouts/hall.ts`) → `requestHallSpot` ;
+//   - `hall` (lot 7)         : panneau d'annonces, tableau du tournoi et
+//                              trois portes (`layouts/hall.ts`) →
+//                              `requestHallSpot` ;
 //   - `reading_room` (lot 8) : rayonnages et guichet (`readingRoom/hotspots`)
 //                              → `requestReadingRoomSpot` ; la porte du hall
 //                              (lot 7) → le hall ;

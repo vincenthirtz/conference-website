@@ -2,7 +2,8 @@
 //   * les décors fixes ont les dimensions que l'API donne aux salles
 //     (`config/library/commonRooms.ts`, copie synchronisée) ;
 //   * les zones du hall visent des meubles et des portes qui existent, et
-//     chaque porte se vise (le panneau d'annonces ne la cache pas) ;
+//     chaque porte se vise (ni le panneau d'annonces ni le tableau du tournoi
+//     ne la cachent ; le tableau ne cache pas le panneau) ;
 //   * la salle de lecture a son guichet (lot 8 le trouve) et sa porte du hall ;
 //   * une salle commune où l'on entre prend son décor fixe (`sceneOf`) et son
 //     arrivée ; `?room=` l'emporte sur `?place=` ;
@@ -22,6 +23,7 @@ import {
 } from '../../features/player/library/engine/assets';
 import { hotspotAt } from '../../features/player/library/engine/hotspots';
 import { gridToScreen } from '../../features/player/library/engine/projection';
+import { itemBox, specOf } from '../../features/player/library/engine/room';
 import { subscribeHallSpots } from '../../features/player/library/hall/spotRequests';
 import {
   DOOR_HEIGHT_M,
@@ -100,10 +102,61 @@ describe('les zones du hall', () => {
     }
     expect(HALL_HOTSPOTS.map((s) => s.id)).toEqual([
       'board',
+      'tournament_board',
       'reading_room',
       'apartments',
       'team_hq',
     ]);
+  });
+
+  it('le tableau du tournoi est un meuble du catalogue, nommé dans le hall', () => {
+    const spot = HALL_HOTSPOTS.find((s) => s.id === 'tournament_board');
+    expect(spot).toMatchObject({
+      labelKey: 'tournamentBoard',
+      shape: { kind: 'item', itemId: 'tournament-board' },
+    });
+    const item = HALL_ROOM.items.find((i) => i.id === 'tournament-board');
+    expect(item?.key).toBe('chalkboard');
+    expect(Object.hasOwn(manifest.furniture, 'chalkboard')).toBe(true);
+  });
+
+  it('le tableau du tournoi ne cache ni une porte, ni le panneau d’annonces', () => {
+    // Boîte projetée à l'écran (px du monde) : celle du tableau ne touche ni
+    // celle du panneau d'annonces, ni le pan de mur d'une porte.
+    type Rect = { x0: number; x1: number; y0: number; y1: number };
+    const rectOf = (pts: { x: number; y: number }[]): Rect => ({
+      x0: Math.min(...pts.map((p) => p.x)),
+      x1: Math.max(...pts.map((p) => p.x)),
+      y0: Math.min(...pts.map((p) => p.y)),
+      y1: Math.max(...pts.map((p) => p.y)),
+    });
+    const itemRect = (id: string): Rect => {
+      const item = HALL_ROOM.items.find((i) => i.id === id);
+      if (!item) throw new Error(id);
+      const box = itemBox(item, specOf(catalog, item.key));
+      const pts = [];
+      for (const gx of [box.minX, box.maxX])
+        for (const gy of [box.minY, box.maxY])
+          for (const z of [box.minZ, box.maxZ])
+            pts.push(gridToScreen(gx, gy, z));
+      return rectOf(pts);
+    };
+    const doorRect = (d: { side: 'left' | 'right'; at: number }): Rect => {
+      const pts = [];
+      for (const k of [d.at, d.at + DOOR_SPAN])
+        for (const z of [0, DOOR_HEIGHT_M])
+          pts.push(
+            d.side === 'right' ? gridToScreen(k, 0, z) : gridToScreen(0, k, z)
+          );
+      return rectOf(pts);
+    };
+    const overlaps = (a: Rect, b: Rect) =>
+      a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+
+    const board = itemRect('tournament-board');
+    expect(overlaps(board, itemRect('notice-board'))).toBe(false);
+    for (const door of Object.values(HALL_DOORS))
+      expect(overlaps(board, doorRect(door))).toBe(false);
   });
 
   it('chaque porte se vise sur toute sa hauteur utile, le panneau sur son image', () => {
@@ -119,6 +172,9 @@ describe('les zones du hall', () => {
     expect(hit(teamHq.at + 1, 0, 1)).toBe('team_hq');
     expect(hit(0, entrance.at + 1, 1)).toBe('apartments');
     expect(hit(7.5, 1.5, 1)).toBe('board');
+    // Le panneau sur toute sa largeur, puis le tableau du tournoi en son milieu.
+    expect(hit(8.9, 1.5, 1.5)).toBe('board');
+    expect(hit(12, 1, 1)).toBe('tournament_board');
   });
 });
 
@@ -247,9 +303,24 @@ describe('roomHotspotsOf — où va un appui', () => {
     const heard = vi.fn();
     unsubscribers.push(subscribeHallSpots(heard));
     onHotspotTap({ id: 'board', anchor });
+    onHotspotTap({ id: 'tournament_board', anchor });
     onHotspotTap({ id: 'reading_room', anchor });
-    expect(heard.mock.calls).toEqual([['board'], ['reading_room']]);
+    expect(heard.mock.calls).toEqual([
+      ['board'],
+      ['tournament_board'],
+      ['reading_room'],
+    ]);
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('hall : le tableau du tournoi est nommé (infobulle)', () => {
+    const { hotspots } = roomHotspotsOf('hall', {
+      ...labels,
+      tournamentBoard: 'Tableau du tournoi',
+    });
+    expect(hotspots.find((h) => h.id === 'tournament_board')?.label).toBe(
+      'Tableau du tournoi'
+    );
   });
 
   it('hall sans écran abonné : la porte de la salle de lecture mène quand même', () => {
