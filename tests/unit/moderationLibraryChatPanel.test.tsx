@@ -22,7 +22,7 @@ import {
 } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import nsAdminModeration from '@/lib/i18n/locales/admin-fr/adminModeration';
+import nsAdminModerationLibrary from '@/lib/i18n/locales/admin-fr/adminModerationLibrary';
 import { format } from '@/lib/i18n/useAdminT';
 import type {
   AdminLibraryChatMessage,
@@ -43,7 +43,7 @@ import LibraryChatSwitch from '@/components/admin/moderation/LibraryChatSwitch';
 import LibraryChatMessagesPanel from '@/components/admin/moderation/LibraryChatMessagesPanel';
 import LibraryChatMutesList from '@/components/admin/moderation/LibraryChatMutesList';
 
-const t = nsAdminModeration.fr;
+const t = nsAdminModerationLibrary.fr;
 const HALL = '00000000-0000-4000-8000-0000000000a1';
 const FLAT = '00000000-0000-4000-8000-0000000000a2';
 const LUNE = '11111111-1111-4111-8111-111111111111';

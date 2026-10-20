@@ -18,7 +18,7 @@ import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { errorDomId, useSchemaForm } from '@/hooks/forms/useSchemaForm';
 import { format } from '@/lib/i18n/useAdminT';
-import type nsAdminModeration from '@/lib/i18n/locales/admin-fr/adminModeration';
+import type nsAdminModerationLibrary from '@/lib/i18n/locales/admin-fr/adminModerationLibrary';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import { useBanFromLibrary } from '@/features/admin/library/hooks/useLibraryBans';
 import { LIBRARY_BAN_CODES } from '@/features/admin/library/model';
@@ -31,7 +31,7 @@ import {
   type BanFormValues,
 } from './libraryBans';
 
-type Dict = typeof nsAdminModeration.fr;
+type Dict = typeof nsAdminModerationLibrary.fr;
 
 const FIELD_CLASS =
   'w-full px-3 py-2 rounded-[var(--r-ctrl,4px)] border bg-[var(--s2,#1d1520)] focus:border-[var(--or,#b467d1)] focus:outline-none text-sm';

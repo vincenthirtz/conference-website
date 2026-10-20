@@ -18,7 +18,7 @@ import { useRef } from 'react';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import nsAdminModeration from '@/lib/i18n/locales/admin-fr/adminModeration';
+import nsAdminModerationLibrary from '@/lib/i18n/locales/admin-fr/adminModerationLibrary';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import AlertBanner from '@/components/admin/AlertBanner';
@@ -32,7 +32,7 @@ import type { LibraryBanItem } from '@/features/admin/library/model';
 import { adminErrorMessage } from '@/utils/admin/adminHttp';
 import LibraryBanForm from './LibraryBanForm';
 
-type Dict = typeof nsAdminModeration.fr;
+type Dict = typeof nsAdminModerationLibrary.fr;
 
 function formatDate(value: string): string {
   const date = new Date(value);
@@ -63,7 +63,7 @@ export default function LibraryBansPanel({
   /** Pour écrire « Vous » sur les bannissements qu'on a soi-même décidés. */
   currentStaffId?: string;
 }) {
-  const t = useAdminT(nsAdminModeration);
+  const t = useAdminT(nsAdminModerationLibrary);
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
   const bans = useActiveLibraryBans();

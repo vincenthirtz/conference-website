@@ -195,6 +195,7 @@ import nsAdminApiTokenReveal from './adminApiTokenReveal';
 import nsAdminStats from './adminStats';
 import nsAdminJournals from './adminJournals';
 import nsAdminModeration from './adminModeration';
+import nsAdminModerationLibrary from './adminModerationLibrary';
 import nsAdminPartnersHub from './adminPartnersHub';
 import nsAdminCommunicationsHub from './adminCommunicationsHub';
 import nsAdminAssociationHub from './adminAssociationHub';
@@ -392,6 +393,7 @@ export const frDict = {
   adminStats: nsAdminStats.fr,
   adminJournals: nsAdminJournals.fr,
   adminModeration: nsAdminModeration.fr,
+  adminModerationLibrary: nsAdminModerationLibrary.fr,
   adminPartnersHub: nsAdminPartnersHub.fr,
   adminCommunicationsHub: nsAdminCommunicationsHub.fr,
   adminAssociationHub: nsAdminAssociationHub.fr,

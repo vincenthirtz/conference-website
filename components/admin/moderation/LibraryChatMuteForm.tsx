@@ -17,7 +17,7 @@ import * as z from 'zod';
 import { useToast } from '@/components/Toast';
 import { errorDomId, useAdminForm } from '@/hooks/admin/useAdminForm';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import nsAdminModeration from '@/lib/i18n/locales/admin-fr/adminModeration';
+import nsAdminModerationLibrary from '@/lib/i18n/locales/admin-fr/adminModerationLibrary';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import { useMuteFromHub } from '@/features/admin/library/hooks/useLibraryChatModeration';
 import type { AdminLibraryChatMessage } from '@/features/admin/library/chatModel';
@@ -32,7 +32,7 @@ import {
   LIBRARY_CHAT_ADMIN_MUTE_REASON_MAX,
 } from './libraryChat';
 
-type Dict = typeof nsAdminModeration.fr;
+type Dict = typeof nsAdminModerationLibrary.fr;
 
 const PRESET_LABEL = {
   '1h': 'chatMute1h',
@@ -98,7 +98,7 @@ export default function LibraryChatMuteForm({
   message: AdminLibraryChatMessage;
   onClose: () => void;
 }) {
-  const t = useAdminT(nsAdminModeration);
+  const t = useAdminT(nsAdminModerationLibrary);
   const { addToast } = useToast();
   const mute = useMuteFromHub();
   const firstRef = useRef<HTMLInputElement>(null);

@@ -186,6 +186,7 @@ import enAdminApiTokenReveal from './adminApiTokenReveal';
 import enAdminStats from './adminStats';
 import enAdminJournals from './adminJournals';
 import enAdminModeration from './adminModeration';
+import enAdminModerationLibrary from './adminModerationLibrary';
 import enAdminPartnersHub from './adminPartnersHub';
 import enAdminCommunicationsHub from './adminCommunicationsHub';
 import enAdminAssociationHub from './adminAssociationHub';
@@ -383,6 +384,7 @@ const adminEnDict = {
   adminStats: enAdminStats,
   adminJournals: enAdminJournals,
   adminModeration: enAdminModeration,
+  adminModerationLibrary: enAdminModerationLibrary,
   adminPartnersHub: enAdminPartnersHub,
   adminCommunicationsHub: enAdminCommunicationsHub,
   adminAssociationHub: enAdminAssociationHub,

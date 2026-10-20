@@ -10,7 +10,7 @@ import { useRef } from 'react';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import nsAdminModeration from '@/lib/i18n/locales/admin-fr/adminModeration';
+import nsAdminModerationLibrary from '@/lib/i18n/locales/admin-fr/adminModerationLibrary';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import AlertBanner from '@/components/admin/AlertBanner';
 import LoadingSpinner from '@/components/admin/LoadingSpinner';
@@ -35,7 +35,7 @@ function formatDate(value: string): string {
 }
 
 export default function LibraryChatMutesList() {
-  const t = useAdminT(nsAdminModeration);
+  const t = useAdminT(nsAdminModerationLibrary);
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
   const mutes = useLibraryChatMutes();

@@ -11,7 +11,7 @@
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT } from '@/lib/i18n/useAdminT';
-import nsAdminModeration from '@/lib/i18n/locales/admin-fr/adminModeration';
+import nsAdminModerationLibrary from '@/lib/i18n/locales/admin-fr/adminModerationLibrary';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import AlertBanner from '@/components/admin/AlertBanner';
@@ -22,7 +22,7 @@ import {
 import { adminErrorMessage } from '@/utils/admin/adminHttp';
 
 export default function LibraryChatSwitch() {
-  const t = useAdminT(nsAdminModeration);
+  const t = useAdminT(nsAdminModerationLibrary);
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
   const settings = useLibraryChatSettings();

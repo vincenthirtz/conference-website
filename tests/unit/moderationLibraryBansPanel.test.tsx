@@ -21,7 +21,7 @@ import {
   within,
 } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import nsAdminModeration from '@/lib/i18n/locales/admin-fr/adminModeration';
+import nsAdminModerationLibrary from '@/lib/i18n/locales/admin-fr/adminModerationLibrary';
 import type {
   LibraryBanItem,
   LibraryBanListResponse,
@@ -39,7 +39,7 @@ vi.mock('@/components/Toast', () => ({ useToast: () => ({ addToast }) }));
 
 import LibraryBansPanel from '@/components/admin/moderation/LibraryBansPanel';
 
-const t = nsAdminModeration.fr;
+const t = nsAdminModerationLibrary.fr;
 
 const ME = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const OTHER_STAFF = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';

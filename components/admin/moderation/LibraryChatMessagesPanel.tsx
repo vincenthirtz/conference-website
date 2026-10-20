@@ -14,7 +14,7 @@ import { useMemo } from 'react';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import nsAdminModeration from '@/lib/i18n/locales/admin-fr/adminModeration';
+import nsAdminModerationLibrary from '@/lib/i18n/locales/admin-fr/adminModerationLibrary';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import AlertBanner from '@/components/admin/AlertBanner';
@@ -29,7 +29,7 @@ import { adminErrorMessage } from '@/utils/admin/adminHttp';
 import LibraryChatMuteForm from './LibraryChatMuteForm';
 import { roomsOf } from './libraryChat';
 
-type Dict = typeof nsAdminModeration.fr;
+type Dict = typeof nsAdminModerationLibrary.fr;
 
 function formatTime(value: string): string {
   const date = new Date(value);
@@ -66,7 +66,7 @@ export function roomLabel(
 }
 
 export default function LibraryChatMessagesPanel() {
-  const t = useAdminT(nsAdminModeration);
+  const t = useAdminT(nsAdminModerationLibrary);
   const { addToast } = useToast();
   const { confirm, dialog } = useConfirmDialog();
   const {
